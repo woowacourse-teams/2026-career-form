@@ -92,6 +92,10 @@
 
 **Files:**
 - Modify: `backend/build.gradle.kts`
+- Modify: `backend/src/test/java/com/careerform/CareerFormApplicationTest.java`
+- Modify: `docs/plans/4-initial-backend-setup.md`
+
+**Implementation Note:** 부트스트랩 클래스를 JaCoCo 대상에서 제외하면 현재 애플리케이션 코드의 측정 대상이 비어 80% 기준을 형식적으로만 통과한다. 따라서 제외 규칙 대신 Spring Boot의 `SpringApplication.from(...)`으로 실제 `main`을 실행하고 생성된 컨텍스트를 닫는 smoke test를 추가해 전체 애플리케이션 클래스를 측정한다.
 
 - [ ] JaCoCo 0.8.15의 XML·HTML 보고서와 라인 커버리지 80% 검증을 구성한다.
 - [ ] 실제 `main` 진입점 smoke test로 부트스트랩을 검증하고 모든 애플리케이션 클래스를 커버리지 대상에 포함한다.
