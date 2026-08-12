@@ -1,0 +1,4 @@
+interface:
+  display_name: "Issue Workflow"
+  short_description: "확정된 GitHub Issue를 검증하고 Draft PR까지 진행"
+  default_prompt: "Use $issue-workflow to implement GitHub Issue #123 through a verified Draft PR."

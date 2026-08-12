@@ -1,0 +1,81 @@
+name: 기능 개발
+description: 사용자 또는 운영자가 사용할 기능을 제안합니다.
+labels:
+  - status:planning
+  - type:feature
+body:
+  - type: markdown
+    attributes:
+      value: 사람이 계약을 확인한 뒤에만 status:ready 라벨을 붙입니다.
+  - type: textarea
+    id: background
+    attributes:
+      label: 배경
+      description: 해결할 문제와 필요한 이유를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 완료 후 관찰할 수 있는 결과를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: 포함 범위
+      description: 이번 Issue에서 바꿀 기능과 대상을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: 제외 범위
+      description: 이번 Issue에서 다루지 않을 내용을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 인수 조건
+      description: 관찰 가능한 결과를 체크리스트로 적습니다.
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: automated-validation
+    attributes:
+      label: 자동 검증
+      description: 필요한 단위, 통합, E2E 테스트를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: manual-validation
+    attributes:
+      label: 수동 검증
+      description: 사람이 확인할 항목과 환경을 적습니다. 없으면 없음을 적습니다.
+    validations:
+      required: true
+  - type: dropdown
+    id: jira_issue_type
+    attributes:
+      label: Jira 이슈 유형
+      description: Jira에서 생성할 작업 유형을 선택합니다.
+      options:
+        - Epic
+        - Story
+    validations:
+      required: true
+  - type: textarea
+    id: risky-operations
+    attributes:
+      label: 위험 작업
+      description: 시크릿, 삭제, 마이그레이션, 배포 포함 여부를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 문서
+      description: 기획서, 디자인, Parent Issue, 의존 Issue를 연결합니다.

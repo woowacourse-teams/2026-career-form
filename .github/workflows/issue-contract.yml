@@ -1,0 +1,20 @@
+name: Issue 계약
+
+on:
+  issues:
+    types: [labeled, edited]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+      - name: Issue 계약 검사
+        run: harness/scripts/validate-issue "$GITHUB_EVENT_PATH"

@@ -1,0 +1,68 @@
+name: 기술 작업
+description: 리팩터링, 인프라, 하네스 변경을 제안합니다.
+labels:
+  - status:planning
+  - type:technical
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 배경
+      description: 현재 제약과 해결해야 할 기술 문제를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 완료 후 유지할 속성과 결과를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: 포함 범위
+      description: 변경할 시스템과 파일 영역을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: 제외 범위
+      description: 이번 작업에서 다루지 않을 항목을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 인수 조건
+      description: 동작 또는 운영 속성을 체크리스트로 적습니다.
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: automated-validation
+    attributes:
+      label: 자동 검증
+      description: 테스트, 린트, 빌드, 정책 검사를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: manual-validation
+    attributes:
+      label: 수동 검증
+      description: 사람이 확인할 항목을 적습니다. 없으면 없음을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: risky-operations
+    attributes:
+      label: 위험 작업
+      description: 시크릿, 삭제, 마이그레이션, 배포 포함 여부와 사람 담당자를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 문서
+      description: 설계 결정, Parent Issue, 의존 Issue를 연결합니다.

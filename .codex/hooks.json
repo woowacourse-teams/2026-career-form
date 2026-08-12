@@ -1,0 +1,18 @@
+{
+  "description": "위험 작업과 장기 브랜치 수정을 실행 전에 차단합니다.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^.*$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/harness/scripts/guard-tool-use\"",
+            "timeout": 10,
+            "statusMessage": "프로젝트 안전 정책을 확인하는 중"
+          }
+        ]
+      }
+    ]
+  }
+}

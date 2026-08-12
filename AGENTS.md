@@ -1,0 +1,40 @@
+# 프로젝트 작업 지침
+
+## 작업 시작
+
+- 모든 개발 작업은 사람이 `status:ready`로 확정한 GitHub Issue에서 시작한다.
+- Issue 본문을 작업 범위와 완료 기준의 정본으로 사용한다.
+- 작업 브랜치는 `feature/<Issue 번호>-<slug>` 또는 `hotfix/<Issue 번호>-<slug>` 형식으로 만든다.
+- 작업 계획은 필요할 때 `docs/plans/<Issue 번호>-<slug>.md`에 기록한다.
+- 공용 `HANDOFF.md`를 작업 상태 기록에 사용하지 않는다.
+
+## 구현과 검증
+
+- 관련 없는 사용자 변경을 보존하고 현재 Issue 범위만 수정한다.
+- 동작을 바꾸기 전에 실패하는 테스트를 만들고, 변경 뒤 관련 테스트와 전체 검증을 실행한다.
+- 완료 전 `harness/scripts/verify`를 실행하고 최신 결과를 PR에 기록한다.
+- 컨벤션은 `docs/conventions/common.md`와 작업 스택에 맞는 문서를 따른다.
+- 커밋과 PR 제목은 `docs/conventions/commit.md`, 브랜치와 병합은 `docs/conventions/branching.md`를 따른다.
+
+## 범위와 승인
+
+- Issue 범위를 넘는 작업은 현재 작업에 섞지 않고 후속 Issue 후보로 분리한다.
+- 실제 채용 지원서 제출, 임시저장, 페이지 이동, 미리보기는 사용자가 수행한다.
+- 시크릿 접근, 파괴적 명령, 데이터 마이그레이션, 배포는 AI가 실행하지 않는다.
+- PR 최종 승인과 머지는 사람이 수행한다.
+- 공유 보호 영역은 별도 하네스 Issue와 `harness-change` 라벨로 변경한다.
+
+## 개인정보
+
+- 실제 지원서 입력값, 계정 정보, 브라우저 세션 상태를 개인정보로 취급한다.
+- 문서, Issue, PR, 로그에는 비식별 처리한 구조와 검증 결과만 기록한다.
+
+## 회사 어댑터
+
+회사 어댑터를 만들거나 수정하기 전에 아래 문서를 순서대로 읽는다.
+
+1. `docs/adapters/adapter-development.md`
+2. `docs/adapters/companies/<company>/`의 대상 회사 문서
+3. `docs/adapters/field-inventory.md`
+
+어댑터 동작을 바꾸면 코드, 자동화 테스트, 대상 회사 문서, 지원 현황표를 함께 갱신한다. 페이지 구조가 달라져 안전한 매핑을 검증할 수 없으면 범용 매처로 우회하지 않고 해당 필드를 입력 불가로 표시한다.

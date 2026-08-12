@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
+.venv/
+.worktrees/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example

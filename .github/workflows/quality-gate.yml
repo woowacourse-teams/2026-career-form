@@ -1,0 +1,26 @@
+name: 품질 게이트
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: harness/requirements.txt
+      - name: 하네스 의존성 설치
+        run: python3 -m pip install -r harness/requirements.txt
+      - name: Codex CLI 설치
+        run: npm install --global @openai/codex@0.146.0
+      - name: 전체 검증
+        run: harness/scripts/verify

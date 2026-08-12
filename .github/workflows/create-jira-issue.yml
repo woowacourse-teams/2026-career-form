@@ -1,0 +1,133 @@
+name: Create Jira Issue
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    paths:
+      - .github/ISSUE_TEMPLATE/bug.yml
+      - .github/ISSUE_TEMPLATE/feature.yml
+      - .github/ISSUE_TEMPLATE/technical-task.yml
+      - .github/workflows/create-jira-issue.yml
+      - scripts/jira_issue_payload.mjs
+      - scripts/jira_issue_payload.test.mjs
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Jira 생성 계획을 확인할 GitHub Issue 번호
+        required: true
+        type: string
+      dry_run:
+        default: true
+        description: Jira API와 GitHub 댓글 API를 호출하지 않고 생성 계획만 확인
+        required: true
+        type: boolean
+
+jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    name: Test Jira issue workflow
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Test Jira payload generation
+        run: node --test scripts/jira_issue_payload.test.mjs
+      - name: Lint GitHub Actions workflows
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint"
+
+  sync:
+    if: github.event_name != 'pull_request'
+    name: Create Jira issue
+    permissions:
+      contents: read
+      issues: write
+    runs-on: ubuntu-latest
+    concurrency:
+      cancel-in-progress: false
+      group: jira-issue-${{ github.event_name == 'workflow_dispatch' && inputs.issue_number || github.event.issue.number }}
+    env:
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+      ISSUE_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.issue_number || github.event.issue.number }}
+      JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY || 'CF' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Validate issue numbe
+        run: |
+          if ! [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo 'issue_number는 0보다 큰 정수여야 합니다.' >&2
+            exit 1
+          fi
+      - name: Read GitHub Issue and comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" > "$RUNNER_TEMP/jira-source-issue.json"
+          gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}/comments?per_page=100" \
+            | jq 'add // []' > "$RUNNER_TEMP/jira-source-comments.json"
+      - name: Prepare Jira request
+        run: |
+          node scripts/jira_issue_payload.mjs \
+            --comments "$RUNNER_TEMP/jira-source-comments.json" \
+            --issue "$RUNNER_TEMP/jira-source-issue.json" \
+            --output "$RUNNER_TEMP/jira-plan.json" \
+            --project-key "$JIRA_PROJECT_KEY" \
+            --repository "$GITHUB_REPOSITORY"
+      - name: Log sync plan
+        run: |
+          jq '{shouldCreate, reason, issueType: .payload.fields.issuetype.name, project: .payload.fields.project.key}' \
+            "$RUNNER_TEMP/jira-plan.json"
+      - name: Stop when Jira creation is unnecessary
+        id: creation-plan
+        run: |
+          if jq -e '.shouldCreate == true' "$RUNNER_TEMP/jira-plan.json" > /dev/null; then
+            echo 'should_create=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'should_create=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Stop after dry run
+        if: env.DRY_RUN == 'true' && steps.creation-plan.outputs.should_create == 'true'
+        run: echo 'dry_run=true 이므로 Jira 이슈를 생성하지 않습니다.'
+      - name: Create Jira issue
+        if: env.DRY_RUN != 'true' && steps.creation-plan.outputs.should_create == 'true'
+        env:
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+        run: |
+          jq --exit-status '.payload' "$RUNNER_TEMP/jira-plan.json" > "$RUNNER_TEMP/jira-request.json"
+          curl --fail --silent --show-error \
+            --request POST \
+            --user "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data @"$RUNNER_TEMP/jira-request.json" \
+            "${JIRA_BASE_URL%/}/rest/api/3/issue" > "$RUNNER_TEMP/jira-created-issue.json"
+          JIRA_KEY="$(jq --raw-output --exit-status '.key' "$RUNNER_TEMP/jira-created-issue.json")"
+          echo "JIRA_KEY=${JIRA_KEY}" >> "$GITHUB_ENV"
+          echo "JIRA_URL=${JIRA_BASE_URL%/}/browse/${JIRA_KEY}" >> "$GITHUB_ENV"
+      - name: Prefix GitHub Issue title with Jira key
+        if: env.DRY_RUN != 'true' && steps.creation-plan.outputs.should_create == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREFIXED_ISSUE_TITLE="$(
+            JIRA_KEY="$JIRA_KEY" ISSUE_JSON_PATH="$RUNNER_TEMP/jira-source-issue.json" \
+              node --input-type=module --eval '
+                import { readFileSync } from "node:fs";
+                import { createPrefixedGitHubIssueTitle } from "./scripts/jira_issue_payload.mjs";
+                const issue = JSON.parse(readFileSync(process.env.ISSUE_JSON_PATH, "utf8"));
+                process.stdout.write(createPrefixedGitHubIssueTitle(process.env.JIRA_KEY, issue.title));
+              '
+          )"
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" \
+            --raw-field "title=${PREFIXED_ISSUE_TITLE}" > /dev/null
+      - name: Add Jira link comment
+        if: env.DRY_RUN != 'true' && steps.creation-plan.outputs.should_create == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "<!-- jira-sync:${GITHUB_REPOSITORY}#${ISSUE_NUMBER}:${JIRA_KEY} -->
+          Jira Issue Created: [${JIRA_KEY}](${JIRA_URL})"

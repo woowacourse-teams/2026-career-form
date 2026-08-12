@@ -1,0 +1,33 @@
+name: 공유 파일 계약
+
+on:
+  pull_request:
+    types: [opened, edited, labeled, unlabeled, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+      - name: 변경 경로 수집
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: git diff --name-only "origin/$BASE_REF"...HEAD > "$RUNNER_TEMP/changed-paths.txt"
+      - name: 현재 PR 상태 수집
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr view "${{ github.event.pull_request.number }}" --json body,labels > "$RUNNER_TEMP/current-pr.json"
+      - name: 공유 파일 계약 검사
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: harness/scripts/validate-shared-files "$RUNNER_TEMP/changed-paths.txt" "$RUNNER_TEMP/current-pr.json"
