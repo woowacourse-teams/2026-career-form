@@ -16,13 +16,15 @@ AI는 사람이 확정한 Issue에서 시작해 Draft PR 생성까지 담당한�
         ↓
 Project draft를 Issue로 승격하고 In Progress 전환
         ↓
-Issue 본문과 커밋 단위 계획을 사람이 status:ready로 확정
+Issue 본문과 커밋 단위 계획을 사람이 승인하고 AI가 게시 후 status:ready 전환
         ↓
 issue-workflow 실행
         ↓
 워크트리 -> 구현 계획 -> TDD -> 검증 -> AI 리뷰
         ↓
 AI가 Draft PR 생성
+        ↓
+사람이 Ready for review로 전환
         ↓
 사람이 최종 승인 및 머지
 ```
@@ -76,6 +78,7 @@ GitHub Project draft는 기능 단위 백로그다. FE, BE, Infra처럼 독립 �
 | 범위 초과 처리 | AI | 독립 draft 제안, 현재 작업 제외 |
 | draft 승격과 Issue 확정 | 사람 | 원격 변경 승인, `status:ready` |
 | Draft PR 생성 | AI | PR 계약 검사 |
+| Ready for review 전환 | 사람 | GitHub PR 상태 |
 | PR 최종 승인과 머지 | 사람 | GitHub Ruleset |
 | 시크릿, 삭제, 마이그레이션 | 사람 | Codex 훅으로 AI 실행 차단 |
 | 배포 | 별도 담당자 | 하네스 실행 권한에서 제외 |

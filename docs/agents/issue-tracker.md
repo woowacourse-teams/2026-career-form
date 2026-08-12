@@ -30,10 +30,11 @@ Issue와 PR 제목은 같은 `[영역] 작업명`을 사용한다. 브랜치는 
 1. 사람이 Project draft를 만들고 AI가 대상을 정확히 하나로 확정한다.
 2. AI가 제목을 `[영역] 작업명`으로 보정한 뒤 repository Issue로 승격하고 `status:planning`과 Project Status `In Progress`를 함께 적용한다.
 3. Issue 본문과 단일 PR의 논리적 커밋 계획을 작성한다.
-4. 사람 승인 후 `status:ready`로 전환한다.
+4. 사람이 Issue 본문과 계획 전문을 승인하면 AI가 원격 본문을 게시하고 확인한 뒤 `status:ready`로 전환한다.
 5. 구현 시작 시 `status:in-progress`로 바꾸고 `CF-<Issue 번호>` 브랜치를 만든다.
 6. TDD, 전체 검증, 두 축 코드 리뷰를 수행한다.
 7. Issue와 같은 제목의 Draft PR을 만들고 Issue label을 `status:review`, Project Status를 `On Review`로 바꾼다.
-8. 사람이 최종 승인, Squash Commit 제목 입력, 머지를 수행한다.
+8. 사람이 Draft PR을 Ready for review로 전환한다.
+9. 사람이 최종 승인, Squash Commit 제목 입력, 머지를 수행한다.
 
 상태 변경이 일부 실패하면 완료된 앞 단계를 반복하지 않는다. 같은 Issue와 Project item을 다시 조회해 첫 미완료 단계부터 재개한다.

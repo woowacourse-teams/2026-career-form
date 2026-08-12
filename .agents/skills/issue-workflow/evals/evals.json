@@ -12,6 +12,7 @@
         "CF-123 브랜치에서 작업한다",
         "Issue와 같은 제목의 Draft PR 하나가 Closes #123 하나만 포함한다",
         "Draft PR 뒤 status:review와 Project On Review를 적용한다",
+        "Ready for review 전환은 사람에게 넘긴다",
         "PR을 승인하거나 머지하지 않는다"
       ]
     },

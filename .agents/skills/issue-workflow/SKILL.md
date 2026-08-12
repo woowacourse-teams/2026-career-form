@@ -64,7 +64,7 @@ Project 상태 변경이 실패하면 Issue 승격이나 브랜치 생성을 반
 7. Project Status를 `On Review`로 바꾸고 다시 조회한다.
 8. 사람에게 자동 검증 결과, 수동 확인 항목, 독립 draft 후보를 전달한다.
 
-PR을 ready 상태로 바꾸거나 승인하거나 머지하지 않는다. 최종 Squash Commit 제목은 사람이 GitHub 머지 화면에서 입력한다.
+PR을 ready 상태로 바꾸거나 승인하거나 머지하지 않는다. 사람은 검토를 시작하기 전에 Draft PR을 Ready for review로 전환하고, 최종 Squash Commit 제목을 GitHub 머지 화면에서 입력한다.
 
 ## 선택 스킬
 
