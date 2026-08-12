@@ -30,7 +30,10 @@ INLINE_CODE_PATTERN = re.compile(r"(?P<ticks>`+).*?(?P=ticks)", re.DOTALL)
 INDENTED_CODE_PATTERN = re.compile(r"^(?: {4}|\t).*$", re.MULTILINE)
 
 
-def validate_pr(payload: Mapping[str, object]) -> ValidationResult:
+def validate_pr(
+    payload: Mapping[str, object],
+    linked_issue_title: str | None = None,
+) -> ValidationResult:
     title = payload.get("title")
     body = payload.get("body")
     head = _branch_ref(payload.get("head"))
@@ -48,12 +51,16 @@ def validate_pr(payload: Mapping[str, object]) -> ValidationResult:
     )
     results = [title_result, validate_branch_flow(head, base)]
     errors: list[str] = []
-    sections = extract_sections(body)
+    sections = extract_sections(_markdown_prose(body))
     for name in REQUIRED_SECTIONS:
         if name not in sections or not sections[name]:
             errors.append(f"PR 필수 섹션이 없습니다: {name}")
 
     results.append(ValidationResult(tuple(errors)))
+    if not release_pr and linked_issue_title is not None and title != linked_issue_title:
+        results.append(
+            ValidationResult(("PR 제목은 연결 Issue 제목과 같아야 합니다",))
+        )
     results.append(
         _validate_closing_references(
             body=body,
@@ -73,7 +80,7 @@ def _validate_closing_references(
     base_repository: str | None,
 ) -> ValidationResult:
     close_matches = tuple(
-        CLOSE_REFERENCE_PATTERN.finditer(_closing_keyword_prose(body))
+        CLOSE_REFERENCE_PATTERN.finditer(_markdown_prose(body))
     )
     errors: list[str] = []
     if release_pr and close_matches:
@@ -103,7 +110,7 @@ def _validate_closing_references(
     return ValidationResult(tuple(errors))
 
 
-def _closing_keyword_prose(body: str) -> str:
+def _markdown_prose(body: str) -> str:
     without_comments = HTML_COMMENT_PATTERN.sub("", body)
     without_fences = _without_fenced_code(without_comments)
     without_inline_code = INLINE_CODE_PATTERN.sub("", without_fences)

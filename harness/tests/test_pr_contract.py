@@ -1,34 +1,7 @@
 import unittest
 
 from harness.lib.pr_contract import validate_pr
-
-
-VALID_BODY = """## 해결하려는 문제가 무엇인가요?
-- 삼성 채용 사이트 지원이 없다
-
-## 왜 해야 하나요?
-- 반복 입력 비용을 줄여야 한다
-
-## 어떻게 해결했나요?
-- 삼성 Adapter와 자동화 테스트를 추가했다
-
-## 이 PR의 한계 & 트레이드오프
-- 실제 제출은 자동화하지 않는다
-
-## 기존 기능에 미치는 영향
-- 기존 Adapter 동작은 유지한다
-
-## Edge Case & 실패 시나리오
-- 알 수 없는 필드는 입력 불가로 표시한다
-
-## 검토한 대안과 선택 이유
-- 범용 매처보다 회사별 Adapter가 안전하다
-
-## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)
-- 🔴 Adapter 필드 매핑
-
-Closes #123
-"""
+from harness.tests.pr_fixtures import VALID_PR_BODY
 
 
 class PullRequestContractTest(unittest.TestCase):
@@ -36,7 +9,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY,
+                "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -48,7 +21,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace("Closes #123", "CLOSES: #123"),
+                "body": VALID_PR_BODY.replace("Closes #123", "CLOSES: #123"),
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -60,7 +33,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace(
+                "body": VALID_PR_BODY.replace(
                     "Closes #123",
                     "Closes woowacourse-teams/2026-career-form#123",
                 ),
@@ -91,7 +64,7 @@ class PullRequestContractTest(unittest.TestCase):
                 result = validate_pr(
                     {
                         "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                        "body": VALID_BODY + "\n" + ignored,
+                        "body": VALID_PR_BODY + "\n" + ignored,
                         "head": {"ref": "CF-123"},
                         "base": {"ref": "develop"},
                     }
@@ -103,7 +76,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace(
+                "body": VALID_PR_BODY.replace(
                     "Closes #123",
                     "```text\nCloses #123\n```",
                 ),
@@ -118,7 +91,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[Release] 프로덕션 배포",
-                "body": VALID_BODY.replace("\nCloses #123\n", "\n"),
+                "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
                 "head": {"ref": "develop"},
                 "base": {"ref": "main"},
             }
@@ -130,7 +103,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[Release] 프로덕션 배포",
-                "body": VALID_BODY,
+                "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -145,7 +118,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[Release] 프로덕션 배포",
-                "body": VALID_BODY,
+                "body": VALID_PR_BODY,
                 "head": {"ref": "develop"},
                 "base": {"ref": "main"},
             }
@@ -157,7 +130,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace("Closes #123", "Refs #123"),
+                "body": VALID_PR_BODY.replace("Closes #123", "Refs #123"),
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -169,7 +142,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "feat: 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY,
+                "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -181,7 +154,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace(
+                "body": VALID_PR_BODY.replace(
                     "## 이 PR의 한계 & 트레이드오프",
                     "## 기타",
                 ),
@@ -199,7 +172,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace(
+                "body": VALID_PR_BODY.replace(
                     "## 기존 기능에 미치는 영향\n- 기존 Adapter 동작은 유지한다",
                     "## 기존 기능에 미치는 영향",
                 ),
@@ -213,11 +186,53 @@ class PullRequestContractTest(unittest.TestCase):
             result.errors,
         )
 
+    def test_rejects_required_sections_inside_fenced_code(self) -> None:
+        fenced_sections = "\n\n".join(
+            (
+                "## 해결하려는 문제가 무엇인가요?\n- 예시",
+                "## 왜 해야 하나요?\n- 예시",
+                "## 어떻게 해결했나요?\n- 예시",
+                "## 이 PR의 한계 & 트레이드오프\n- 예시",
+                "## 기존 기능에 미치는 영향\n- 예시",
+                "## Edge Case & 실패 시나리오\n- 예시",
+                "## 검토한 대안과 선택 이유\n- 예시",
+                "## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)\n- 예시",
+            )
+        )
+        body = f"```markdown\n{fenced_sections}\n```\n\nCloses #123\n"
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn(
+            "PR 필수 섹션이 없습니다: 해결하려는 문제가 무엇인가요?",
+            result.errors,
+        )
+
+    def test_rejects_title_that_differs_from_linked_issue(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            },
+            linked_issue_title="[FE] CJ 채용 사이트 필드 자동 입력",
+        )
+
+        self.assertIn("PR 제목은 연결 Issue 제목과 같아야 합니다", result.errors)
+
     def test_rejects_issue_number_mismatch_between_branch_and_body(self) -> None:
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace("Closes #123", "Closes #456"),
+                "body": VALID_PR_BODY.replace("Closes #123", "Closes #456"),
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -232,7 +247,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY + "\nCloses #456\n",
+                "body": VALID_PR_BODY + "\nCloses #456\n",
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -244,7 +259,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY + "\nFixes #456\n",
+                "body": VALID_PR_BODY + "\nFixes #456\n",
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
@@ -256,7 +271,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY
+                "body": VALID_PR_BODY
                 + "\nFIXES: woowacourse-teams/other-repository#456\n",
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
@@ -269,7 +284,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[Release] 프로덕션 배포",
-                "body": VALID_BODY.replace(
+                "body": VALID_PR_BODY.replace(
                     "Closes #123",
                     "Resolves: woowacourse-teams/other-repository#123",
                 ),
@@ -284,7 +299,7 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력을 지원한다",
-                "body": VALID_BODY,
+                "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }

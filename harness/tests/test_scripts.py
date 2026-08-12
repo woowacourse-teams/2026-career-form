@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from harness.tests.pr_fixtures import VALID_PR_BODY
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "harness" / "scripts"
@@ -35,6 +37,31 @@ class HarnessScriptsTest(unittest.TestCase):
             result = self._run("validate-issue", payload.name)
 
         self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_script_rejects_title_different_from_linked_issue(self) -> None:
+        event = {
+            "pull_request": {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        }
+        linked_issue = {"title": "[FE] CJ 채용 사이트 필드 자동 입력"}
+
+        with (
+            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as payload,
+            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as issue,
+        ):
+            json.dump(event, payload, ensure_ascii=False)
+            payload.flush()
+            json.dump(linked_issue, issue, ensure_ascii=False)
+            issue.flush()
+
+            result = self._run("validate-pr", payload.name, issue.name)
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("PR 제목은 연결 Issue 제목과 같아야 합니다", result.stderr)
 
     def test_project_issue_script_rejects_string_booleans(self) -> None:
         for name in (
@@ -168,7 +195,6 @@ class HarnessScriptsTest(unittest.TestCase):
 ## 위험 작업
 - 없음
 """
-
 
 if __name__ == "__main__":
     unittest.main()
