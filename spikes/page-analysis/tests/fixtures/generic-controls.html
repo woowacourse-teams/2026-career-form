@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <body>
+    <input type="text" required>
+    <textarea></textarea>
+    <select><option>Option A</option></select>
+    <input type="radio">
+    <input type="checkbox">
+    <div contenteditable="true"></div>
+
+    <input type="hidden">
+    <input type="text" hidden>
+    <input type="text" disabled>
+    <input type="password">
+
+    <iframe srcdoc="<input type='text'>"></iframe>
+    <iframe sandbox srcdoc="<input type='text'>"></iframe>
+    <open-field></open-field>
+    <closed-picker role="combobox"></closed-picker>
+
+    <script>
+      customElements.define('open-field', class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' }).innerHTML = '<input type="text">';
+        }
+      });
+      customElements.define('closed-picker', class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'closed' }).innerHTML = '<input type="text">';
+        }
+      });
+      queueMicrotask(() => {
+        const dynamic = document.createElement('input');
+        dynamic.type = 'text';
+        dynamic.dataset.dynamic = 'true';
+        document.body.append(dynamic);
+      });
+    </script>
+  </body>
+</html>
