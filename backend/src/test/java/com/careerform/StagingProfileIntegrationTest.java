@@ -1,8 +1,8 @@
 package com.careerform;
 
-import com.careerform.support.AbstractProfileIntegrationTest;
+import com.careerform.support.AbstractOpenApiDisabledProfileIntegrationTest;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("staging")
-class StagingProfileIntegrationTest extends AbstractProfileIntegrationTest {
+class StagingProfileIntegrationTest extends AbstractOpenApiDisabledProfileIntegrationTest {
 }

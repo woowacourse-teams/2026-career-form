@@ -1,8 +1,8 @@
 package com.careerform;
 
-import com.careerform.support.AbstractProfileIntegrationTest;
+import com.careerform.support.AbstractOpenApiDisabledProfileIntegrationTest;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("prod")
-class ProdProfileIntegrationTest extends AbstractProfileIntegrationTest {
+class ProdProfileIntegrationTest extends AbstractOpenApiDisabledProfileIntegrationTest {
 }
