@@ -42,6 +42,19 @@ class RepositoryContractTest(unittest.TestCase):
             encoding="utf-8"
         )
 
+        self.assertEqual(
+            (
+                "해결하려는 문제가 무엇인가요?",
+                "왜 해야 하나요?",
+                "어떻게 해결했나요?",
+                "이 PR의 한계 & 트레이드오프",
+                "기존 기능에 미치는 영향",
+                "Edge Case & 실패 시나리오",
+                "검토한 대안과 선택 이유",
+                "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
+            ),
+            PR_SECTIONS,
+        )
         self.assertTrue(set(PR_SECTIONS).issubset(extract_sections(body)))
 
     def test_workflows_are_valid_yaml_mappings(self) -> None:

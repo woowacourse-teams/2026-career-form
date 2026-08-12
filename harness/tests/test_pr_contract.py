@@ -3,23 +3,29 @@ import unittest
 from harness.lib.pr_contract import validate_pr
 
 
-VALID_BODY = """## 변경 요약
-- 삼성 Adapter를 추가한다
+VALID_BODY = """## 해결하려는 문제가 무엇인가요?
+- 삼성 채용 사이트 지원이 없다
 
-## 인수 조건 충족 근거
-- 지원 필드 테스트 통과
+## 왜 해야 하나요?
+- 반복 입력 비용을 줄여야 한다
 
-## 자동 검증
-- `python3 -m unittest discover harness/tests`
+## 어떻게 해결했나요?
+- 삼성 Adapter와 자동화 테스트를 추가했다
 
-## 수동 확인
-- 개발 서버 확인 필요
+## 이 PR의 한계 & 트레이드오프
+- 실제 제출은 자동화하지 않는다
 
-## 제외 범위 및 후속 작업
-- 실제 제출 제외
+## 기존 기능에 미치는 영향
+- 기존 Adapter 동작은 유지한다
 
-## 롤백
-- PR 커밋 revert
+## Edge Case & 실패 시나리오
+- 알 수 없는 필드는 입력 불가로 표시한다
+
+## 검토한 대안과 선택 이유
+- 범용 매처보다 회사별 Adapter가 안전하다
+
+## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)
+- 🔴 Adapter 필드 매핑
 
 Closes #123
 """
@@ -93,13 +99,37 @@ class PullRequestContractTest(unittest.TestCase):
         result = validate_pr(
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
-                "body": VALID_BODY.replace("## 롤백", "## 기타"),
+                "body": VALID_BODY.replace(
+                    "## 이 PR의 한계 & 트레이드오프",
+                    "## 기타",
+                ),
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
         )
 
-        self.assertIn("PR 필수 섹션이 없습니다: 롤백", result.errors)
+        self.assertIn(
+            "PR 필수 섹션이 없습니다: 이 PR의 한계 & 트레이드오프",
+            result.errors,
+        )
+
+    def test_rejects_empty_pr_section(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_BODY.replace(
+                    "## 기존 기능에 미치는 영향\n- 기존 Adapter 동작은 유지한다",
+                    "## 기존 기능에 미치는 영향",
+                ),
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn(
+            "PR 필수 섹션이 없습니다: 기존 기능에 미치는 영향",
+            result.errors,
+        )
 
     def test_rejects_issue_number_mismatch_between_branch_and_body(self) -> None:
         result = validate_pr(

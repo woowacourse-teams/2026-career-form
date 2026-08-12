@@ -90,7 +90,7 @@
 - `REQUIRED_SECTIONS`는 회의에서 확정한 여덟 개 제목을 순서와 무관하게 검증한다.
 - PR 본문은 `Closes #<Issue 번호>`를 계속 요구한다.
 
-- [ ] **Step 1: 여덟 섹션 계약 테스트 작성**
+- [x] **Step 1: 여덟 섹션 계약 테스트 작성**
 
   다음 섹션 중 하나가 없거나 비어 있으면 실패하고 모두 채워지면 통과하도록 테스트한다.
 
@@ -105,17 +105,17 @@
   리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)
   ```
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_pr_contract harness.tests.test_repository_contract -v`
 
   Expected: 기존 여섯 섹션을 요구하므로 FAIL.
 
-- [ ] **Step 3: 템플릿과 검증기 교체**
+- [x] **Step 3: 템플릿과 검증기 교체**
 
   각 섹션에 작성 안내와 예시 체크리스트를 제공하고 마지막에 `Closes #`를 둔다. Markdown 산문 문구는 검사하지 않고 파서가 소비하는 섹션 존재와 비어 있지 않은 값만 검증한다.
 
-- [ ] **Step 4: GREEN 확인과 커밋**
+- [x] **Step 4: GREEN 확인과 커밋**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_pr_contract harness.tests.test_repository_contract -v`
 

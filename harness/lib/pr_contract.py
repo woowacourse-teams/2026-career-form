@@ -8,12 +8,14 @@ from harness.lib.work_title import validate_release_title, validate_work_title
 
 
 REQUIRED_SECTIONS = (
-    "변경 요약",
-    "인수 조건 충족 근거",
-    "자동 검증",
-    "수동 확인",
-    "제외 범위 및 후속 작업",
-    "롤백",
+    "해결하려는 문제가 무엇인가요?",
+    "왜 해야 하나요?",
+    "어떻게 해결했나요?",
+    "이 PR의 한계 & 트레이드오프",
+    "기존 기능에 미치는 영향",
+    "Edge Case & 실패 시나리오",
+    "검토한 대안과 선택 이유",
+    "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
 )
 CLOSE_PATTERN = re.compile(r"(?im)^Closes\s+#(?P<issue>[1-9][0-9]*)\s*$")
 
