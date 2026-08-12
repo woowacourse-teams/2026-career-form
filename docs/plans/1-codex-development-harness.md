@@ -135,32 +135,33 @@
 - Create: `.agents/skills/github-project-onboarding/SKILL.md`
 - Create: `.agents/skills/github-project-onboarding/evals/evals.json`
 - Modify: `harness/README.md`
-- Modify: `harness/scripts/verify`
+- Modify: `harness/lib/skill_inventory.py`
+- Modify: `harness/tests/test_skill_inventory.py`
 
 **Interfaces:**
 - `load_project_config(path) -> ProjectConfig`
 - `diagnose_project_access(gh_available, auth_exit_code, project_exit_code, project_error) -> AccessDiagnosis`
 - 진단 code: `gh_missing`, `unauthenticated`, `project_scope_missing`, `project_unavailable`, `ready`
 
-- [ ] **Step 1: 설정과 진단 분기 테스트 작성**
+- [x] **Step 1: 설정과 진단 분기 테스트 작성**
 
   Project `149`, owner `woowacourse-teams`, repository `2026-career-form`을 파싱한다. `gh` 미설치, 미로그인, project scope 누락, 조직 접근 실패와 성공을 서로 다른 결과로 판정한다.
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_project_config harness.tests.test_project_access -v`
 
   Expected: 모듈이 없어 ERROR.
 
-- [ ] **Step 3: 진단 모듈과 CLI 구현**
+- [x] **Step 3: 진단 모듈과 CLI 구현**
 
   CLI는 `gh auth status`와 `gh project view`의 종료 코드만 분류하고 토큰이나 원문 인증 출력을 반환하지 않는다. scope 누락 결과에는 `gh auth refresh -s project`만 해결 명령으로 제공한다.
 
-- [ ] **Step 4: 온보딩 스킬과 eval 추가**
+- [x] **Step 4: 온보딩 스킬과 eval 추가**
 
   스킬은 로컬 설치 진단과 온라인 접근 진단을 분리하고 사용자 인증이 끝나기 전에 원격 변경을 수행하지 않는다. eval은 권한 누락, 조직 접근 실패와 성공 프롬프트를 포함한다.
 
-- [ ] **Step 5: GREEN 확인과 커밋**
+- [x] **Step 5: GREEN 확인과 커밋**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_project_config harness.tests.test_project_access -v`
 

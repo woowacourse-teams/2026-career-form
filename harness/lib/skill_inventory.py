@@ -8,7 +8,7 @@ import yaml
 from harness.lib.result import ValidationResult
 
 
-PROJECT_SKILLS = ("issue-workflow",)
+PROJECT_SKILLS = ("github-project-onboarding", "issue-workflow")
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 REQUIRED_METADATA = ("repository", "path", "commit", "retrieved_at", "license")
 

@@ -34,6 +34,7 @@ harness/scripts/verify
 ## 문제 해결
 
 - `harness/scripts/doctor`로 필수 명령, 파일, Git 훅 경로를 확인한다.
+- `harness/scripts/diagnose-project-access`로 GitHub CLI 인증과 Project 접근을 안전하게 진단한다. Project 좌표는 `harness/project.json`에서 관리한다.
 - Codex 훅이 실행되지 않으면 프로젝트를 신뢰했는지 확인하고 `/hooks`에서 훅을 검토한다.
 - 공유 하네스 파일을 바꾸는 PR에는 `harness-change` 라벨과 다른 팀원 리뷰가 필요하다.
 - 서버 설정은 `policies/github-setup.md`와 `policies/github-ruleset.md`의 체크리스트를 따른다.
