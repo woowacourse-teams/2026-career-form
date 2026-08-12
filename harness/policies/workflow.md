@@ -11,3 +11,15 @@
 9. 사람이 최종 승인하고 Squash Commit 제목을 확인한 뒤 머지한다.
 
 범위가 커지거나 새로운 결정이 필요하면 현재 Issue를 수정하지 않고 독립 draft 후보를 만든다. 사람이 draft를 Issue로 승격하고 확정하기 전에는 해당 범위를 구현하지 않는다.
+
+## Issue label과 Project Status
+
+| Issue label | Project Status |
+|---|---|
+| `status:planning` | `In Progress` |
+| `status:ready` | `In Progress` |
+| `status:in-progress` | `In Progress` |
+| `status:blocked` | `In Progress` |
+| `status:review` | `On Review` |
+
+draft 승격 직후 Project Status는 `In Progress`로 바꾼다. planning과 ready 라벨을 적용해도 `In Progress`를 유지한다. 구현 시작과 Draft PR 생성 시에는 Issue label과 Project Status를 각각 `status:in-progress`와 `In Progress`, `status:review`와 `On Review`로 함께 확인한다.

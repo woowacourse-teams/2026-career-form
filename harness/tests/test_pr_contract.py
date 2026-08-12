@@ -71,6 +71,18 @@ class PullRequestContractTest(unittest.TestCase):
             result.errors,
         )
 
+    def test_rejects_release_pr_that_closes_issue(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Release] 프로덕션 배포",
+                "body": VALID_BODY,
+                "head": {"ref": "develop"},
+                "base": {"ref": "main"},
+            }
+        )
+
+        self.assertIn("배포 PR은 Issue를 종료하지 않습니다", result.errors)
+
     def test_rejects_pr_without_closing_issue(self) -> None:
         result = validate_pr(
             {
@@ -145,6 +157,30 @@ class PullRequestContractTest(unittest.TestCase):
             "브랜치의 Issue 번호와 PR이 종료하는 Issue 번호가 다릅니다",
             result.errors,
         )
+
+    def test_rejects_pr_that_closes_multiple_issues(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_BODY + "\nCloses #456\n",
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR은 하나의 Issue만 종료해야 합니다", result.errors)
+
+    def test_rejects_multiple_github_closing_keywords(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_BODY + "\nFixes #456\n",
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR은 하나의 Issue만 종료해야 합니다", result.errors)
 
     def test_rejects_pr_title_with_declarative_handa_ending(self) -> None:
         result = validate_pr(

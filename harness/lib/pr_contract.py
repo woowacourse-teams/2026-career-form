@@ -17,7 +17,10 @@ REQUIRED_SECTIONS = (
     "검토한 대안과 선택 이유",
     "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
 )
-CLOSE_PATTERN = re.compile(r"(?im)^Closes\s+#(?P<issue>[1-9][0-9]*)\s*$")
+CLOSE_PATTERN = re.compile(
+    r"(?im)^(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+"
+    r"#(?P<issue>[1-9][0-9]*)\s*$"
+)
 
 
 def validate_pr(payload: Mapping[str, object]) -> ValidationResult:
@@ -42,12 +45,19 @@ def validate_pr(payload: Mapping[str, object]) -> ValidationResult:
         if name not in sections or not sections[name]:
             errors.append(f"PR 필수 섹션이 없습니다: {name}")
 
-    close_match = CLOSE_PATTERN.search(body)
-    if close_match is None and not release_pr:
+    close_matches = tuple(CLOSE_PATTERN.finditer(body))
+    if release_pr and close_matches:
+        errors.append("배포 PR은 Issue를 종료하지 않습니다")
+    elif not close_matches and not release_pr:
         errors.append("PR은 Closes #<Issue 번호>를 포함해야 합니다")
-    elif close_match is not None and not release_pr:
+    elif len(close_matches) > 1 and not release_pr:
+        errors.append("PR은 하나의 Issue만 종료해야 합니다")
+    elif not release_pr:
         branch_issue = issue_number_from_branch(head)
-        if branch_issue is not None and branch_issue != close_match.group("issue"):
+        if (
+            branch_issue is not None
+            and branch_issue != close_matches[0].group("issue")
+        ):
             errors.append("브랜치의 Issue 번호와 PR이 종료하는 Issue 번호가 다릅니다")
 
     results.append(ValidationResult(tuple(errors)))

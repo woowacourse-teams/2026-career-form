@@ -222,30 +222,33 @@
 - Create: `.agents/skills/issue-workflow/evals/evals.json`
 - Modify: `harness/policies/workflow.md`
 - Modify: `harness/README.md`
+- Modify: `harness/lib/pr_contract.py`
+- Modify: `harness/tests/test_pr_contract.py`
+- Modify: `docs/conventions/branching.md`
 
 **Interfaces:**
 - `project_status_for_label("status:in-progress") -> "In Progress"`
 - `project_status_for_label("status:review") -> "On Review"`
 
-- [ ] **Step 1: 상태 매핑과 단일 PR 테스트 작성**
+- [x] **Step 1: 상태 매핑과 단일 PR 테스트 작성**
 
-  planning과 ready는 Todo, in-progress와 blocked는 In Progress, review는 On Review로 매핑한다. `CF-<Issue 번호>` 브랜치가 같은 번호의 Issue 하나만 `Closes`하는 PR과 연결되는 계약을 검증한다.
+  planning, ready, in-progress와 blocked는 In Progress, review는 On Review로 매핑한다. `CF-<Issue 번호>` 브랜치가 GitHub 종료 키워드 전체를 기준으로 같은 번호의 Issue 하나만 종료하는 PR과 연결되는 계약을 검증한다.
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_project_status harness.tests.test_pr_contract -v`
 
   Expected: 상태 모듈이 없어 ERROR.
 
-- [ ] **Step 3: issue-workflow 수정**
+- [x] **Step 3: issue-workflow 수정**
 
   ready Issue 하나를 읽고 `CF-<번호>` 워크트리에서 구현한다. 시작 시 Issue `status:in-progress`와 Project `In Progress`, Draft PR 생성 시 `status:review`와 `On Review`를 함께 적용한다. 범위 밖 작업은 독립 draft 후보로 제안한다.
 
-- [ ] **Step 4: GitHub Issue tracker 문서와 eval 추가**
+- [x] **Step 4: GitHub Issue tracker 문서와 eval 추가**
 
   Issue 본문을 spec 정본으로 읽고 현재 Issue 하나만 종료하는 방법을 문서화한다. Parent와 Sub-issue 요구를 거부하는 eval을 포함한다.
 
-- [ ] **Step 5: GREEN 확인과 커밋**
+- [x] **Step 5: GREEN 확인과 커밋**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_project_status harness.tests.test_pr_contract -v`
 

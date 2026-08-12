@@ -1,0 +1,40 @@
+{
+  "skill_name": "issue-workflow",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "status:ready인 Issue #123을 구현해서 Draft PR까지 만들어줘.",
+      "expected_output": "Issue 123을 In Progress로 전환하고 CF-123에서 TDD와 검증을 거쳐 같은 제목의 Draft PR 하나를 만든 뒤 On Review로 바꾼다.",
+      "files": [],
+      "expectations": [
+        "Issue 계약을 검증한 뒤 status:in-progress와 Project In Progress를 적용한다",
+        "CF-123 브랜치에서 작업한다",
+        "Issue와 같은 제목의 Draft PR 하나가 Closes #123 하나만 포함한다",
+        "Draft PR 뒤 status:review와 Project On Review를 적용한다",
+        "PR을 승인하거나 머지하지 않는다"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Issue #123이 큰 작업이니까 FE와 BE Sub-issue를 만든 뒤 병렬로 진행해줘.",
+      "expected_output": "Sub-issue를 만들지 않고 현재 Issue 범위를 확인하며, 분리가 필요한 큰 작업은 독립 Project draft 후보로 제안한다.",
+      "files": [],
+      "expectations": [
+        "Parent 또는 Sub-issue를 생성하지 않는다",
+        "현재 Issue 범위 밖 FE와 BE 작업은 독립 draft 후보로 제안한다",
+        "사용자 승인 없이 범위를 추가하거나 draft를 만들지 않는다"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Issue #123 구현은 끝났어. PR 제목을 feat: 기능을 지원한다로 만들고 squash merge까지 해줘.",
+      "expected_output": "PR 제목을 Issue와 같은 [영역] 명사형으로 유지하고 머지는 사람이 수행하도록 넘긴다.",
+      "files": [],
+      "expectations": [
+        "PR 제목에 feat prefix나 한다 종결을 사용하지 않는다",
+        "개별 커밋에는 Conventional Commit type을 유지한다",
+        "Squash Commit 제목 입력과 머지를 수행하지 않는다"
+      ]
+    }
+  ]
+}
