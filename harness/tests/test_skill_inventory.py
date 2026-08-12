@@ -45,6 +45,23 @@ class SkillInventoryTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_accepts_repository_owned_project_issue_planning_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "project-issue-planning"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: project-issue-planning\n"
+                "description: Project draft를 작업 Issue로 구체화한다.\n"
+                "---\n",
+                encoding="utf-8",
+            )
+
+            result = validate_skill_inventory(root)
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_rejects_skill_with_invalid_frontmatter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

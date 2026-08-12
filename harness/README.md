@@ -18,6 +18,10 @@ harness/scripts/verify
 
 이 명령은 하네스 테스트, 하네스 코드 커버리지 80%, Git 공백 오류를 검사한다. 애플리케이션 스택이 확정되면 포맷, 린트, 애플리케이션 테스트, 빌드 명령을 이 진입점에 추가한다.
 
+## Project Issue 기획
+
+`project-issue-planning` 스킬은 Project draft 하나를 repository Issue로 승격하고 같은 item의 상태를 `In Progress`로 바꾼다. 이후 Issue 본문과 한 PR의 논리적 커밋 계획을 작성하며, 사람 승인 전에는 `status:ready`나 구현 브랜치를 만들지 않는다. 상태 전이를 재개할 때는 `harness/scripts/plan-project-issue <snapshot JSON>`으로 첫 미완료 action을 확인한다.
+
 ## 강제 지점
 
 | 지점 | 검사 |

@@ -36,6 +36,30 @@ class HarnessScriptsTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_project_issue_script_rejects_string_booleans(self) -> None:
+        for name in (
+            "contract_drafted",
+            "plan_exists",
+            "approved",
+            "contract_published",
+        ):
+            with self.subTest(name=name):
+                result = self._run_project_issue_plan(
+                    {
+                        "draft_matches": 1,
+                        name: "false",
+                    }
+                )
+
+                self.assertEqual(2, result.returncode)
+                self.assertIn(f"{name}는 boolean이어야 합니다", result.stderr)
+
+    def test_project_issue_script_accepts_missing_boolean_fields(self) -> None:
+        result = self._run_project_issue_plan({"draft_matches": 1})
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue(result.stdout.startswith("promote_draft:"), result.stdout)
+
     def test_guard_script_denies_destructive_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             self._init_issue_repository(directory)
@@ -104,6 +128,14 @@ class HarnessScriptsTest(unittest.TestCase):
             cwd=directory,
             check=True,
         )
+
+    def _run_project_issue_plan(
+        self, payload: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as snapshot:
+            json.dump(payload, snapshot, ensure_ascii=False)
+            snapshot.flush()
+            return self._run("plan-project-issue", snapshot.name)
 
     def _valid_issue_body(self) -> str:
         return """## 배경

@@ -1,0 +1,38 @@
+{
+  "skill_name": "project-issue-planning",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Project 149의 '검색 기능' draft를 Issue로 승격하고 작업 계획까지 잡아줘.",
+      "expected_output": "접근을 진단하고 정확히 일치하는 draft 하나를 승격한 직후 In Progress로 바꾸며, Issue 본문과 단일 PR의 커밋 계획 전문을 제안하고 승인에서 멈춘다.",
+      "files": [],
+      "expectations": [
+        "원격 변경 전에 Project 접근 진단을 수행한다",
+        "승격 직후 같은 Project item을 In Progress로 바꾸고 확인한다",
+        "Sub-issue 없이 한 PR의 논리적 커밋 단위로 계획한다",
+        "Issue 본문과 계획 전문을 제시한다",
+        "승인 전에 원격 Issue 본문을 수정하거나 status:ready나 구현 브랜치를 만들지 않는다"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "동일한 제목의 draft가 두 개 보여. 알아서 하나 골라서 승격해줘.",
+      "expected_output": "모호한 대상을 임의 선택하지 않고 후보를 제시해 사용자 결정을 기다린다.",
+      "files": [],
+      "expectations": [
+        "동일 제목 후보 중 하나를 추정해 승격하지 않는다",
+        "후보 제목과 Project item ID를 제시하고 사용자 선택을 기다린다"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "이미 Issue로 바뀐 항목인데 상태 변경 중 실패했어. 처음부터 다시 해줘.",
+      "expected_output": "기존 Issue를 다시 승격하지 않고 같은 item의 In Progress 전환부터 재개한다.",
+      "files": [],
+      "expectations": [
+        "기존 Issue 번호를 확인해 승격 mutation을 반복하지 않는다",
+        "Project 상태 변경부터 재시도하고 결과를 다시 조회한다"
+      ]
+    }
+  ]
+}
