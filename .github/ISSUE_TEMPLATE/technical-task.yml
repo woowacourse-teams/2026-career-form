@@ -4,6 +4,9 @@ labels:
   - status:planning
   - type:technical
 body:
+  - type: markdown
+    attributes:
+      value: 실제 지원서 값, 계정 정보, 브라우저 세션 정보는 기록하지 않습니다. 비식별 처리한 구조와 검증 결과만 작성해 주세요.
   - type: textarea
     id: background
     attributes:
@@ -65,4 +68,4 @@ body:
     id: references
     attributes:
       label: 참고 문서
-      description: 설계 결정, Parent Issue, 의존 Issue를 연결합니다.
+      description: 설계 결정과 의존 Issue를 연결합니다.

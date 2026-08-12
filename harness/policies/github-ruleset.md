@@ -21,8 +21,9 @@
 
 - 필수 검사: `PR 계약`, `품질 게이트`, `공유 파일 계약`
 - 승인 리뷰 1개를 요구한다.
-- `develop` 승격은 일반 Merge 또는 Fast-forward를 사용한다.
-- `hotfix/*`는 Squash Merge를 사용하고, 머지 뒤 `main`을 `develop`에 반영한다.
+- `develop`에서 보내는 프로덕션 배포 PR만 허용한다.
+- `develop` 승격은 Merge Commit을 사용한다.
+- `CF-*`의 직접 병합은 허용하지 않는다.
 
 ## CODEOWNERS
 

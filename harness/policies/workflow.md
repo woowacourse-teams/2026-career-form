@@ -1,12 +1,26 @@
 # Issue 기반 작업 흐름
 
-1. 기획 내용을 Parent Issue와 독립적으로 머지 가능한 Sub-issue로 나눈다.
-2. 사람이 Issue 본문과 인수 조건을 확인한 뒤 `status:ready`로 확정한다.
-3. AI가 Issue를 다시 읽고 위험 작업과 누락 정보를 검사한다.
-4. `feature/<Issue 번호>-<slug>` 또는 `hotfix/<Issue 번호>-<slug>` 워크트리에서 작업한다.
-5. 실패하는 테스트, 최소 구현, 리팩터링 순서로 진행한다.
-6. 전체 검증과 코드 리뷰를 통과하면 Draft PR을 만든다.
-7. AI는 Issue 상태를 `status:review`로 전환하고 사람에게 넘긴다.
-8. 사람이 최종 승인하고 정책에 맞는 방식으로 머지한다.
+1. 사람이 GitHub Project draft를 기능 단위로 작성한다. FE, BE, Infra처럼 독립 구현이 필요할 때만 별도 draft로 나눈다.
+2. AI가 draft 제목을 `[영역] 작업명`으로 검사하고 필요한 경우 보정한 뒤 Issue로 승격한다. Issue에는 `status:planning`, Project에는 In Progress를 적용하고 함께 확인한다.
+3. AI가 Issue 본문과 커밋 단위 구현 계획을 제안한다. 사람이 전문을 승인하면 AI가 원격 본문을 게시하고 확인한 뒤 `status:ready`로 전환한다.
+4. AI가 Issue를 다시 읽고 위험 작업과 누락 정보를 검사한다.
+5. `CF-<Issue 번호>` 워크트리에서 논리적 커밋 단위로 작업한다.
+6. 실패하는 테스트, 최소 구현, 리팩터링 순서로 진행한다.
+7. 전체 검증과 코드 리뷰를 통과하면 Issue 하나만 종료하는 Draft PR 하나를 만든다.
+8. AI는 Issue 상태와 Project Status를 리뷰 단계로 전환하고 사람에게 넘긴다.
+9. 사람이 Draft PR을 Ready for review로 전환한다.
+10. 사람이 최종 승인하고 Squash Commit 제목을 확인한 뒤 머지한다.
 
-범위가 커지거나 새로운 결정이 필요하면 현재 Issue를 수정하지 않고 후속 Issue 후보를 만든다. 사람이 후속 Issue를 확정하기 전에는 해당 범위를 구현하지 않는다.
+범위가 커지거나 새로운 결정이 필요하면 현재 Issue를 수정하지 않고 독립 draft 후보를 제안한다. 사람이 별도 draft를 만들고 그 draft를 Issue로 승격해 확정하기 전에는 해당 범위를 구현하지 않는다.
+
+## Issue label과 Project Status
+
+| Issue label | Project Status |
+|---|---|
+| `status:planning` | `In Progress` |
+| `status:ready` | `In Progress` |
+| `status:in-progress` | `In Progress` |
+| `status:blocked` | `In Progress` |
+| `status:review` | `On Review` |
+
+draft 승격 직후 Project Status는 `In Progress`로 바꾼다. planning과 ready 라벨을 적용해도 `In Progress`를 유지한다. 구현 시작과 Draft PR 생성 시에는 Issue label과 Project Status를 각각 `status:in-progress`와 `In Progress`, `status:review`와 `On Review`로 함께 확인한다.

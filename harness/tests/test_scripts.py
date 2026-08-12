@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from harness.tests.pr_fixtures import VALID_PR_BODY
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "harness" / "scripts"
@@ -12,7 +14,7 @@ SCRIPTS = ROOT / "harness" / "scripts"
 class HarnessScriptsTest(unittest.TestCase):
     def test_commit_message_script_accepts_valid_file(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as message:
-            message.write("feat: 지원서 필드 자동 입력을 지원한다\n")
+            message.write("feat: 지원서 필드 자동 입력 지원\n")
             message.flush()
 
             result = self._run("validate-commit-message", message.name)
@@ -22,6 +24,7 @@ class HarnessScriptsTest(unittest.TestCase):
     def test_issue_script_reads_github_event_payload(self) -> None:
         event = {
             "issue": {
+                "title": "[FE] 지원서 필드 자동 입력",
                 "body": self._valid_issue_body(),
                 "labels": [{"name": "status:ready"}],
             }
@@ -35,9 +38,71 @@ class HarnessScriptsTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_pr_script_rejects_title_different_from_linked_issue(self) -> None:
+        event = {
+            "pull_request": {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        }
+        linked_issue = {"title": "[FE] CJ 채용 사이트 필드 자동 입력"}
+
+        with (
+            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as payload,
+            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as issue,
+        ):
+            json.dump(event, payload, ensure_ascii=False)
+            payload.flush()
+            json.dump(linked_issue, issue, ensure_ascii=False)
+            issue.flush()
+
+            result = self._run("validate-pr", payload.name, issue.name)
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("PR 제목은 연결 Issue 제목과 같아야 합니다", result.stderr)
+
+    def test_project_issue_script_rejects_string_booleans(self) -> None:
+        for name in (
+            "title_valid",
+            "contract_drafted",
+            "plan_exists",
+            "approved",
+            "contract_published",
+        ):
+            with self.subTest(name=name):
+                result = self._run_project_issue_plan(
+                    {
+                        "draft_matches": 1,
+                        name: "false",
+                    }
+                )
+
+                self.assertEqual(2, result.returncode)
+                self.assertIn(f"{name}는 boolean이어야 합니다", result.stderr)
+
+    def test_project_issue_script_accepts_missing_boolean_fields(self) -> None:
+        result = self._run_project_issue_plan({"draft_matches": 1})
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue(result.stdout.startswith("promote_draft:"), result.stdout)
+
+    def test_project_issue_script_rejects_invalid_status_label_type(self) -> None:
+        result = self._run_project_issue_plan(
+            {
+                "draft_matches": 0,
+                "issue_number": 1,
+                "issue_status_label": False,
+            }
+        )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("issue_status_label은 문자열이어야 합니다", result.stderr)
+
     def test_guard_script_denies_destructive_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            self._init_feature_repository(directory)
+            self._init_issue_repository(directory)
             payload = json.dumps(
                 {
                     "cwd": directory,
@@ -55,7 +120,7 @@ class HarnessScriptsTest(unittest.TestCase):
 
     def test_guard_script_allows_safe_command_without_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            self._init_feature_repository(directory)
+            self._init_issue_repository(directory)
             payload = json.dumps(
                 {
                     "cwd": directory,
@@ -97,12 +162,20 @@ class HarnessScriptsTest(unittest.TestCase):
             check=False,
         )
 
-    def _init_feature_repository(self, directory: str) -> None:
+    def _init_issue_repository(self, directory: str) -> None:
         subprocess.run(
-            ("git", "init", "-q", "-b", "feature/123-harness"),
+            ("git", "init", "-q", "-b", "CF-123"),
             cwd=directory,
             check=True,
         )
+
+    def _run_project_issue_plan(
+        self, payload: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as snapshot:
+            json.dump(payload, snapshot, ensure_ascii=False)
+            snapshot.flush()
+            return self._run("plan-project-issue", snapshot.name)
 
     def _valid_issue_body(self) -> str:
         return """## 배경
@@ -122,7 +195,6 @@ class HarnessScriptsTest(unittest.TestCase):
 ## 위험 작업
 - 없음
 """
-
 
 if __name__ == "__main__":
     unittest.main()

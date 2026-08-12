@@ -6,7 +6,9 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: 사람이 계약을 확인한 뒤에만 status:ready 라벨을 붙입니다.
+      value: |
+        실제 지원서 값, 계정 정보, 브라우저 세션 정보는 기록하지 않습니다. 비식별 처리한 구조와 검증 결과만 작성해 주세요.
+        사람이 계약을 확인한 뒤에만 status:ready 라벨을 붙입니다.
   - type: textarea
     id: background
     attributes:
@@ -57,16 +59,6 @@ body:
       description: 사람이 확인할 항목과 환경을 적습니다. 없으면 없음을 적습니다.
     validations:
       required: true
-  - type: dropdown
-    id: jira_issue_type
-    attributes:
-      label: Jira 이슈 유형
-      description: Jira에서 생성할 작업 유형을 선택합니다.
-      options:
-        - Epic
-        - Story
-    validations:
-      required: true
   - type: textarea
     id: risky-operations
     attributes:
@@ -78,4 +70,4 @@ body:
     id: references
     attributes:
       label: 참고 문서
-      description: 기획서, 디자인, Parent Issue, 의존 Issue를 연결합니다.
+      description: 기획서, 디자인, 의존 Issue, 독립 draft 후보를 연결합니다.

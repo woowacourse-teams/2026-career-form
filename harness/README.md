@@ -4,11 +4,21 @@
 
 ## 로컬 설치
 
+사람이 저장소를 직접 clone해 사용하는 경우 한 번 실행한다.
+
 ```bash
 harness/scripts/bootstrap
 ```
 
 `bootstrap`은 `.venv`에 하네스 의존성을 설치하고 현재 저장소의 `core.hooksPath`만 `.githooks`로 설정한다. 사용자 전역 Git 설정은 바꾸지 않는다.
+
+AI가 `issue-workflow`로 작업할 때는 별도 수동 설치가 필요하지 않다. AI는 실제 작업 clone 또는 worktree에 들어온 직후 다음 진입점을 실행한다.
+
+```bash
+harness/scripts/ensure-environment
+```
+
+`ensure-environment`는 먼저 `doctor`로 설치 상태를 확인한다. 준비되지 않았을 때만 `bootstrap`을 실행하고 `doctor`로 다시 검증한다. 자동 구성에 실패하면 AI는 파일 수정과 Issue 상태 변경 전에 멈추고 원인을 보고한다.
 
 ## 단일 검증 명령
 
@@ -17,6 +27,12 @@ harness/scripts/verify
 ```
 
 이 명령은 하네스 테스트, 하네스 코드 커버리지 80%, Git 공백 오류를 검사한다. 애플리케이션 스택이 확정되면 포맷, 린트, 애플리케이션 테스트, 빌드 명령을 이 진입점에 추가한다.
+
+## Project Issue 기획
+
+`project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다. 이후 Issue 본문과 한 PR의 논리적 커밋 계획을 작성하며, 사람 승인 전에는 `status:ready`나 구현 브랜치를 만들지 않는다. 상태 전이를 재개할 때는 `harness/scripts/plan-project-issue <snapshot JSON>`으로 첫 미완료 action을 확인한다.
+
+확정된 Issue 구현은 `issue-workflow` 스킬이 이어받는다. Issue label과 Project Status의 대응, 브랜치와 PR 연결 계약은 `docs/agents/issue-tracker.md`에서 확인한다.
 
 ## 강제 지점
 
@@ -34,6 +50,7 @@ harness/scripts/verify
 ## 문제 해결
 
 - `harness/scripts/doctor`로 필수 명령, 파일, Git 훅 경로를 확인한다.
+- `harness/scripts/diagnose-project-access`로 GitHub CLI 인증과 Project 접근을 안전하게 진단한다. Project 좌표는 `harness/project.json`에서 관리한다.
 - Codex 훅이 실행되지 않으면 프로젝트를 신뢰했는지 확인하고 `/hooks`에서 훅을 검토한다.
 - 공유 하네스 파일을 바꾸는 PR에는 `harness-change` 라벨과 다른 팀원 리뷰가 필요하다.
 - 서버 설정은 `policies/github-setup.md`와 `policies/github-ruleset.md`의 체크리스트를 따른다.

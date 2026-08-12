@@ -14,15 +14,17 @@ AI는 사람이 확정한 Issue에서 시작해 Draft PR 생성까지 담당한�
 ```text
 기획과 요구사항 구체화
         ↓
-Parent Issue와 Sub-issue 작성
+Project draft를 Issue로 승격하고 In Progress 전환
         ↓
-사람이 status:ready로 확정
+Issue 본문과 커밋 단위 계획을 사람이 승인하고 AI가 게시 후 status:ready 전환
         ↓
 issue-workflow 실행
         ↓
-워크트리 → 구현 계획 → TDD → 검증 → AI 리뷰
+워크트리 -> 구현 계획 -> TDD -> 검증 -> AI 리뷰
         ↓
 AI가 Draft PR 생성
+        ↓
+사람이 Ready for review로 전환
         ↓
 사람이 최종 승인 및 머지
 ```
@@ -42,7 +44,7 @@ Issue 본문은 다음 정보를 담는 작업 계약이다.
 
 `status:ready` 이후에는 Issue 본문을 변경하지 않는다. 정정이 필요하면 사람이 먼저
 `status:planning`으로 되돌리고 본문을 고친 뒤 다시 `status:ready`로 확정한다.
-범위가 커지면 기존 Issue에 추가하지 않고 후속 Issue로 분리한다.
+범위가 커지면 기존 Issue에 추가하지 않고 Project의 독립 draft 후보로 제안한다.
 
 Issue의 작업 상태는 본문이 아니라 라벨, 담당자, 연결 PR로 표현한다.
 
@@ -58,9 +60,11 @@ Issue의 작업 상태는 본문이 아니라 라벨, 담당자, 연결 PR로 �
 진행 상황을 Issue 댓글에 반복해서 남기지 않는다. 다음 작업자가 반드시 알아야 하는
 차단 사유만 댓글로 기록하고, 구현과 검증 근거는 PR에 기록한다.
 
-GitHub는 Issue Form과 Sub-issue 계층을 지원한다.
+GitHub Project draft는 기능 단위 백로그다. FE, BE, Infra처럼 독립 구현이 필요한 큰
+영역만 별도 draft로 나누고 Sub-issue는 사용하지 않는다. 승격된 Issue 하나는
+`CF-<Issue 번호>` 브랜치 하나와 PR 하나로 완료한다.
 [GitHub Issue Form 문서](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms),
-[GitHub Sub-issue 문서](https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues)
+[GitHub Projects 문서](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
 
 ## 책임과 승인 경계
 
@@ -71,9 +75,10 @@ GitHub는 Issue Form과 Sub-issue 계층을 지원한다.
 | Issue 최종 확정 | 사람 | `status:ready` |
 | 코드 조사, 계획, 구현 | AI | 오케스트레이션 |
 | TDD와 완료 검증 | AI | 스킬, 테스트, CI |
-| 범위 초과 처리 | AI | 후속 Issue 생성, 현재 작업 제외 |
-| 후속 Issue 확정 | 사람 | `status:ready` |
+| 범위 초과 처리 | AI | 독립 draft 제안, 현재 작업 제외 |
+| draft 승격과 Issue 확정 | 사람 | 원격 변경 승인, `status:ready` |
 | Draft PR 생성 | AI | PR 계약 검사 |
+| Ready for review 전환 | 사람 | GitHub PR 상태 |
 | PR 최종 승인과 머지 | 사람 | GitHub Ruleset |
 | 시크릿, 삭제, 마이그레이션 | 사람 | Codex 훅으로 AI 실행 차단 |
 | 배포 | 별도 담당자 | 하네스 실행 권한에서 제외 |
@@ -86,7 +91,8 @@ GitHub는 Issue Form과 Sub-issue 계층을 지원한다.
 |---|---|
 | 요구사항 구체화 | `deep-interview` |
 | 고위험 설계 검토 | `grill-me`, 선택 사용 |
-| Sub-issue 분해 | `to-tickets` |
+| Project 접근 진단 | `github-project-onboarding` |
+| draft 승격과 Issue 계획 | `project-issue-planning` |
 | 구현 계획 | `writing-plans` |
 | 작업 격리 | `using-git-worktrees` |
 | 계획 실행 | `executing-plans` |
@@ -106,16 +112,16 @@ Codex는 저장소의 `.agents/skills`에서 프로젝트 스킬을 발견한다
 
 ```text
 AGENTS.md와 docs/conventions
-    → AI에게 작성 방법을 안내
+    -> AI에게 작성 방법을 안내
 
 .codex/rules와 Codex 훅
-    → 위험한 명령과 도구 실행을 통제
+    -> 위험한 명령과 도구 실행을 통제
 
 Git 훅
-    → 커밋 메시지와 로컬 변경을 검사
+    -> 커밋 메시지와 로컬 변경을 검사
 
 GitHub Actions와 Ruleset
-    → PR과 머지를 서버에서 강제
+    -> PR과 머지를 서버에서 강제
 ```
 
 `docs/conventions`는 사람이 읽는 작성 기준이며 자체 강제성이 없다. `AGENTS.md`와
@@ -145,11 +151,14 @@ GitHub Ruleset은 PR, 필수 검사, 사람 승인, force push 금지를 서버�
 - 문장 끝에 마침표를 붙이지 않는다.
 - 한 커밋에는 하나의 논리적 변경만 담는다.
 - 하위 호환성을 깨면 `type!`과 `BREAKING CHANGE` Footer를 함께 사용한다.
-- PR 제목도 같은 형식을 사용한다.
+- 설명은 명사형으로 작성하고 `한다`로 끝내지 않는다.
 
 AI는 `docs/conventions/commit.md`를 따라 메시지를 작성한다. `commit-msg` Git 훅은
 type, scope 미사용, 한글 포함, 마침표, Breaking Change 형식을 검사한다.
-`pr-contract.yml`은 Squash Merge의 최종 메시지가 되는 PR 제목을 같은 기준으로
+
+Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. `feat:`, `fix:` 같은 type을 붙이지
+않고 명사형으로 작성한다. 최종 승인자는 GitHub 머지 화면에서 Squash Commit 제목과
+본문을 직접 확인한다. `pr-contract.yml`은 PR 제목, 브랜치 번호와 종료 Issue 번호를
 검사한다.
 
 ## 브랜치와 환경
@@ -157,21 +166,20 @@ type, scope 미사용, 한글 포함, 마침표, Breaking Change 형식을 검�
 Release 브랜치가 없는 Git Flow를 사용한다.
 
 ```text
-feature/* → develop → main
-hotfix/* ───────────→ main → develop
+CF-* -> develop -> main
 ```
 
 | 브랜치 | 시작점 | 병합 대상과 방식 | 환경 |
 |---|---|---|---|
-| `feature/<issue>-<slug>` | `develop` | `develop`으로 Squash Merge | 개발 서버 |
-| `develop` | 장기 브랜치 | `main`으로 일반 Merge 또는 Fast-forward | 스테이징 서버 |
-| `hotfix/<issue>-<slug>` | `main` | `main`으로 Squash Merge | 개발 서버에서 선검증 |
-| `main` | 운영 기준 | Hotfix 후 `develop`으로 일반 Merge | 운영 서버 |
+| `CF-<issue>` | `develop` | `develop`으로 Squash Merge | 개발 서버 |
+| `develop` | 장기 브랜치 | `main`으로 Merge Commit | 스테이징 서버 |
+| `main` | 운영 기준 | 프로덕션 배포 기준 | 운영 서버 |
 
-일반 버그 수정도 `develop`에서 시작하면 `feature/*`를 사용한다. 운영 장애를 직접
-고칠 때만 `hotfix/*`를 사용한다. 실제 배포는 별도 CI/CD 담당자가 구축한다.
+모든 Issue 작업은 `develop`에서 시작하고 `CF-<Issue 번호>` 형식을 사용한다.
+프로덕션 배포는 `develop`에서 `main`으로 보내는 별도 Release PR을 Merge Commit으로
+병합해 시작한다. `CF-*`에서 `main`으로 직접 병합하지 않는다.
 
-현재 저장소의 기본 브랜치는 `main`이며 `develop`도 생성되어 있다. 두 장기 브랜치는
+현재 저장소의 기본 브랜치는 `develop`이다. `main`과 `develop` 두 장기 브랜치는
 GitHub Ruleset으로 직접 push, force push, 삭제를 막고 사람 승인 1명을 요구한다.
 
 ## 네 명의 병렬 작업을 위한 충돌 방지
@@ -244,7 +252,7 @@ docs/conventions/**
 │   ├── README.md                      # 하네스 구조와 문제 해결 방법
 │   ├── policies/
 │   │   ├── workflow.md                # Issue에서 Draft PR까지의 단계 정의
-│   │   ├── issue-contract.md          # Issue 불변 정책과 후속 Issue 기준
+│   │   ├── issue-contract.md          # Issue 불변 정책과 독립 draft 기준
 │   │   ├── approval-matrix.md         # 사람, AI, 자동 게이트의 책임
 │   │   ├── environments.md            # 브랜치와 개발, 스테이징, 운영 환경 관계
 │   │   ├── github-setup.md             # 사람이 수행할 GitHub 최초 설정 체크리스트
