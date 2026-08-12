@@ -1,6 +1,6 @@
 ---
 name: issue-workflow
-description: 사람이 status:ready로 확정한 GitHub Issue 하나를 검증하고 CF-<Issue 번호> 브랜치에서 TDD 구현, 검증, 코드 리뷰, 같은 제목의 Draft PR 생성까지 연결한다. 사용자가 "Issue #123 작업해줘", "이슈에서 개발 시작해줘", "Draft PR까지 진행해줘"처럼 이 저장소의 확정된 Issue 구현을 요청할 때 사용한다. Project draft 기획, Sub-issue 생성, PR 머지에는 사용하지 않는다.
+description: 사람이 status:ready로 확정한 GitHub Issue 하나를 검증하고 작업 환경 자동 구성, CF-이슈번호 브랜치의 TDD 구현, 검증, 코드 리뷰, 같은 제목의 Draft PR 생성까지 연결한다. 사용자가 "Issue #123 작업해줘", "이슈에서 개발 시작해줘", "Draft PR까지 진행해줘"처럼 이 저장소의 확정된 Issue 구현을 요청할 때 사용한다. Project draft 기획, Sub-issue 생성, PR 머지에는 사용하지 않는다.
 ---
 
 # Issue Workflow
@@ -18,13 +18,16 @@ Issue 본문을 작업 계약의 정본으로 유지하고 하나의 Issue, 하�
 
 이 스킬을 Issue 번호와 함께 명시적으로 실행한 요청은 해당 Issue의 `status:in-progress` 전환, 현재 작업 브랜치 push, Draft PR 생성까지 승인한 것으로 본다. PR 최종 승인, Squash Commit 제목 입력, 머지는 포함하지 않는다.
 
-## 2. 상태 전환과 작업 격리
+## 2. 작업 격리와 상태 전환
 
-1. `status:ready`를 제거하고 `status:in-progress`를 적용한다.
-2. `harness/project.json`의 Project에서 같은 Issue item을 찾고 Status를 `In Progress`로 맞춘 뒤 다시 조회한다.
-3. 모든 Issue 작업은 `develop`을 기준으로 `CF-<Issue 번호>` 브랜치를 만든다.
-4. 다른 작업과 격리가 필요하면 `using-git-worktrees`를 사용한다. Orca 관리 저장소라면 `orca-cli`를 우선한다.
-5. 브랜치 번호, Issue 번호, 구현 계획 번호가 모두 같은지 확인한다.
+1. 모든 Issue 작업은 `develop`을 기준으로 `CF-<Issue 번호>` 브랜치를 만든다.
+2. 다른 작업과 격리가 필요하면 `using-git-worktrees`를 사용한다. Orca 관리 저장소라면 `orca-cli`를 우선한다.
+3. 실제 작업할 clone 또는 worktree에 들어간다.
+4. 파일 수정과 원격 상태 변경 전에 `harness/scripts/ensure-environment`를 실행한다. 이 진입점은 `doctor`로 현재 상태를 확인하고, 필요한 경우에만 `bootstrap`을 실행한 뒤 `doctor`로 다시 검증한다.
+5. 자동 구성에 실패하면 파일을 수정하거나 Issue와 Project 상태를 바꾸지 않고 실패 원인을 보고한다. 사용자에게 기본 절차로 `bootstrap` 수동 실행을 요구하지 않는다.
+6. 브랜치 번호, Issue 번호, 구현 계획 번호가 모두 같은지 확인한다.
+7. `status:ready`를 제거하고 `status:in-progress`를 적용한다.
+8. `harness/project.json`의 Project에서 같은 Issue item을 찾고 Status를 `In Progress`로 맞춘 뒤 다시 조회한다.
 
 Project 상태 변경이 실패하면 Issue 승격이나 브랜치 생성을 반복하지 않는다. 같은 Issue item의 상태 전환부터 재시도한다.
 

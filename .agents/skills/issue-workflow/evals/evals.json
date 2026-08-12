@@ -7,6 +7,7 @@
       "expected_output": "Issue 123을 In Progress로 전환하고 CF-123에서 TDD와 검증을 거쳐 같은 제목의 Draft PR 하나를 만든 뒤 On Review로 바꾼다.",
       "files": [],
       "expectations": [
+        "실제 작업 clone 또는 worktree에서 파일 수정과 원격 상태 변경 전에 작업 환경을 자동 구성한다",
         "Issue 계약을 검증한 뒤 status:in-progress와 Project In Progress를 적용한다",
         "CF-123 브랜치에서 작업한다",
         "Issue와 같은 제목의 Draft PR 하나가 Closes #123 하나만 포함한다",
@@ -34,6 +35,19 @@
         "PR 제목에 feat prefix나 한다 종결을 사용하지 않는다",
         "개별 커밋에는 Conventional Commit type을 유지한다",
         "Squash Commit 제목 입력과 머지를 수행하지 않는다"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "새로 clone한 저장소라 .venv와 Git Hook 설정이 없어. Issue #123 작업을 시작해줘.",
+      "expected_output": "실제 작업 clone 또는 worktree에서 환경을 자동 점검하고 필요한 경우 bootstrap과 재검증을 마친 뒤에만 Issue 상태 전환과 구현을 시작한다.",
+      "files": [],
+      "expectations": [
+        "실제 작업 clone 또는 worktree에서 ensure-environment를 실행한다",
+        "doctor가 성공하면 bootstrap을 실행하지 않는다",
+        "doctor가 실패하면 bootstrap을 실행하고 doctor로 다시 검증한다",
+        "자동 구성 실패 시 파일 수정과 원격 상태 변경 전에 중단한다",
+        "사용자에게 기본 절차로 bootstrap 수동 실행을 요구하지 않는다"
       ]
     }
   ]

@@ -316,3 +316,45 @@
   Run: `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`
 
   Commit: `chore: Jira 연동 제거`
+
+### Task 7: AI 작업 환경 자동 구성
+
+**Commit:** `fix: AI 작업 환경 자동 구성`
+
+**Files:**
+- Create: `harness/lib/environment_setup.py`
+- Create: `harness/scripts/ensure-environment`
+- Create: `harness/tests/test_environment_setup.py`
+- Modify: `AGENTS.md`
+- Modify: `.agents/skills/issue-workflow/SKILL.md`
+- Modify: `.agents/skills/issue-workflow/agents/openai.yaml`
+- Modify: `.agents/skills/issue-workflow/evals/evals.json`
+- Modify: `harness/README.md`
+
+**Interfaces:**
+- `ensure_environment(root) -> EnvironmentSetupResult`
+- `harness/scripts/ensure-environment`
+
+- [x] **Step 1: 자동 구성 계약 테스트 작성**
+
+  준비된 환경에서는 `bootstrap`을 생략한다. 준비되지 않은 환경에서는 `bootstrap` 뒤 `doctor`를 다시 실행한다. 설치 또는 재검증이 실패하면 진입점과 원인을 포함한 준비되지 않은 결과를 반환한다. 진입점 누락도 별도 경계로 검증한다.
+
+- [x] **Step 2: RED 확인**
+
+  Run: `.venv/bin/python -m unittest harness.tests.test_environment_setup -v`
+
+  Expected: `harness.lib.environment_setup` 모듈이 없어 ERROR.
+
+- [x] **Step 3: 자동 구성 진입점 구현**
+
+  실제 작업 clone 또는 worktree에서 `doctor`, 조건부 `bootstrap`, `doctor` 재검증을 순서대로 수행하는 진입점을 추가한다.
+
+- [x] **Step 4: Issue workflow와 사용 문서 수정**
+
+  AI가 파일 수정과 원격 상태 변경 전에 환경을 자동 구성하고, 실패하면 중단하도록 규칙, 스킬, eval, README를 맞춘다.
+
+- [x] **Step 5: GREEN 확인과 커밋**
+
+  Run: `.venv/bin/python -m unittest harness.tests.test_environment_setup -v`
+
+  Commit: `fix: AI 작업 환경 자동 구성`

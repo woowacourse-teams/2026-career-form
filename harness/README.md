@@ -4,11 +4,21 @@
 
 ## 로컬 설치
 
+사람이 저장소를 직접 clone해 사용하는 경우 한 번 실행한다.
+
 ```bash
 harness/scripts/bootstrap
 ```
 
 `bootstrap`은 `.venv`에 하네스 의존성을 설치하고 현재 저장소의 `core.hooksPath`만 `.githooks`로 설정한다. 사용자 전역 Git 설정은 바꾸지 않는다.
+
+AI가 `issue-workflow`로 작업할 때는 별도 수동 설치가 필요하지 않다. AI는 실제 작업 clone 또는 worktree에 들어온 직후 다음 진입점을 실행한다.
+
+```bash
+harness/scripts/ensure-environment
+```
+
+`ensure-environment`는 먼저 `doctor`로 설치 상태를 확인한다. 준비되지 않았을 때만 `bootstrap`을 실행하고 `doctor`로 다시 검증한다. 자동 구성에 실패하면 AI는 파일 수정과 Issue 상태 변경 전에 멈추고 원인을 보고한다.
 
 ## 단일 검증 명령
 
