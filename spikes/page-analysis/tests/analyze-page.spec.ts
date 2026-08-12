@@ -83,6 +83,8 @@ test('fails closed for hidden disabled and sensitive controls', async ({ page })
     .flatMap(({ reasons }) => reasons);
 
   expect(unsupportedReasons).toEqual(expect.arrayContaining(['hidden', 'disabled', 'sensitive']));
+  expect(unsupportedReasons.filter((reason) => reason === 'hidden')).toHaveLength(4);
+  expect(unsupportedReasons.filter((reason) => reason === 'disabled')).toHaveLength(2);
 });
 
 test('reports dynamic frame and shadow structures explicitly', async ({ page }) => {
@@ -99,6 +101,7 @@ test('reports dynamic frame and shadow structures explicitly', async ({ page }) 
     status: 'review-required',
     reasons: expect.arrayContaining(['inaccessible-custom-element']),
   }));
+  expect(result.controls.filter(({ element }) => element === 'closed-picker')).toHaveLength(1);
 });
 
 test('does not mutate the analyzed document', async ({ page }) => {

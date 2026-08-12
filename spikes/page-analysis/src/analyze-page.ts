@@ -34,6 +34,7 @@ function visitRoot(
   boundaries: BoundaryAnalysis[],
 ): void {
   for (const element of root.querySelectorAll<HTMLElement>(CONTROL_SELECTOR)) {
+    if (isInaccessibleCustomElement(element)) continue;
     controls.push(classifyControl(element, context));
   }
 
@@ -63,7 +64,7 @@ function visitElementBoundary(
     return;
   }
 
-  if (element.localName.includes('-')) {
+  if (isInaccessibleCustomElement(element)) {
     controls.push({
       element: element.localName,
       control: roleOf(element) ?? 'custom',
@@ -73,6 +74,10 @@ function visitElementBoundary(
       ...context,
     });
   }
+}
+
+function isInaccessibleCustomElement(element: HTMLElement): boolean {
+  return element.localName.includes('-') && element.shadowRoot === null;
 }
 
 function visitFrame(
@@ -147,16 +152,22 @@ function isNativeControl(element: HTMLElement): boolean {
 
 function isHidden(element: HTMLElement): boolean {
   if (isInput(element) && element.type === 'hidden') return true;
-  if (element.hidden || element.getAttribute('aria-hidden') === 'true') return true;
   const view = element.ownerDocument.defaultView;
-  if (view === null) return false;
-  const style = view.getComputedStyle(element);
-  return style.display === 'none' || style.visibility === 'hidden';
+  let current: HTMLElement | null = element;
+  while (current !== null) {
+    if (current.hidden || current.getAttribute('aria-hidden') === 'true') return true;
+    if (view !== null) {
+      const style = view.getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden') return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
 }
 
 function isDisabled(element: HTMLElement): boolean {
   return (isInput(element) || isTextarea(element) || isSelect(element))
-    ? element.disabled
+    ? element.matches(':disabled')
     : element.getAttribute('aria-disabled') === 'true';
 }
 

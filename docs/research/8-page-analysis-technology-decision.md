@@ -17,8 +17,11 @@
 | --- | --- | --- | --- |
 | 확장 프로그램 런타임 적합성 | 높음 | 낮음 | 중간 |
 | 현재 동적 DOM 관찰 | 가능 | 가능 | 불가능 |
+| 일반·custom control 탐지 | native/ARIA 직접 분류 | role·label locator 제공 | 전달된 markup selector에 한정 |
 | 열린 Shadow DOM | 직접 순회 가능 | locator 지원 | 브라우저 상태 없음 |
 | iframe | same-origin만 직접 접근 | frame locator 제공 | 전달된 문자열만 분석 |
+| 읽기 전용·네트워크 없음 | 분석 함수로 보장 가능 | navigation/network 기능을 별도 제한해야 함 | 전달된 문자열만 읽을 수 있음 |
+| 개인정보 노출 위험 | 결과 schema에서 원문 차단 필요 | trace·screenshot·log 설정 주의 필요 | 전달할 HTML 자체가 노출면이 됨 |
 | 자동 회귀 | 브라우저 harness 필요 | 높음 | 정적 markup에 한정 |
 | 런타임 비용 | 낮음 | 높음 | 낮음 |
 | 선택 | 운영 채택 | 테스트 채택 | 운영 제외 |

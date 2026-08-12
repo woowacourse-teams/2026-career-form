@@ -22,4 +22,6 @@ test('probe sources contain no mutation persistence navigation or network APIs',
   const combined = sources.join('\n');
 
   expect(combined).not.toMatch(/fetch\s*\(|XMLHttpRequest|chrome\.storage|\.click\s*\(|\.submit\s*\(|location\s*=|location\.(assign|replace)|window\.open|form\.requestSubmit/);
+  expect(combined).toContain('catch');
+  expect(combined).toContain('분석 실패');
 });
