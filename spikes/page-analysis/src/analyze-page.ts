@@ -5,7 +5,11 @@ import type {
   PageAnalysis,
 } from './types';
 
-const CONTROL_SELECTOR = 'input, textarea, select, [contenteditable]';
+const SUPPORTED_ARIA_ROLES = ['combobox', 'listbox', 'textbox', 'checkbox', 'radio'] as const;
+const CONTROL_SELECTOR = [
+  'input', 'textarea', 'select', '[contenteditable]',
+  ...SUPPORTED_ARIA_ROLES.map((role) => `[role="${role}"]`),
+].join(', ');
 const SENSITIVE_AUTOCOMPLETE = new Set(['current-password', 'new-password', 'one-time-code']);
 const ACTION_INPUT_TYPES = new Set(['button', 'submit', 'reset', 'image']);
 
