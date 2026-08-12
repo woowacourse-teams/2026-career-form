@@ -37,6 +37,28 @@ class RepositoryContractTest(unittest.TestCase):
             self.assertIn("status:planning", labels, name)
             self.assertTrue(set(ISSUE_SECTIONS).issubset(section_labels), name)
 
+    def test_feature_form_has_no_jira_specific_input(self) -> None:
+        form = self._yaml(ROOT / ".github" / "ISSUE_TEMPLATE" / "feature.yml")
+        input_ids = {
+            item.get("id")
+            for item in form.get("body", [])
+            if isinstance(item, dict)
+        }
+
+        self.assertNotIn("jira_issue_type", input_ids)
+
+    def test_jira_runtime_files_are_absent(self) -> None:
+        runtime_paths = (
+            ROOT / ".github" / "workflows" / "create-jira-issue.yml",
+            ROOT / "scripts" / "jira_issue_payload.mjs",
+            ROOT / "scripts" / "jira_issue_payload.test.mjs",
+        )
+
+        self.assertFalse(
+            any(path.exists() for path in runtime_paths),
+            tuple(str(path.relative_to(ROOT)) for path in runtime_paths if path.exists()),
+        )
+
     def test_pr_template_supplies_validator_sections(self) -> None:
         body = (ROOT / ".github" / "pull_request_template.md").read_text(
             encoding="utf-8"

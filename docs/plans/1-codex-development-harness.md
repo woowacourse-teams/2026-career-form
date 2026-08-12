@@ -273,25 +273,25 @@
 - Feature Form은 Jira 입력을 노출하지 않는다.
 - 활성 workflow와 runtime 경로에는 Jira 호출이 없다.
 
-- [ ] **Step 1: Jira 입력과 runtime 부재 테스트 작성**
+- [x] **Step 1: Jira 입력과 runtime 부재 테스트 작성**
 
   Feature Form의 machine-consumed id 집합에 `jira_issue_type`이 없어야 하고 알려진 Jira runtime 경로가 없어야 한다.
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_repository_contract.RepositoryContractTest.test_feature_form_has_no_jira_specific_input harness.tests.test_repository_contract.RepositoryContractTest.test_jira_runtime_files_are_absent -v`
 
   Expected: 입력과 세 runtime 파일이 존재하므로 FAIL.
 
-- [ ] **Step 3: 삭제가 아닌 수정 범위 구현**
+- [x] **Step 3: 삭제가 아닌 수정 범위 구현**
 
   Feature Form dropdown과 GitHub 초기 설정의 Jira 안내를 제거한다.
 
-- [ ] **Step 4: 사람 파일 삭제 게이트**
+- [x] **Step 4: 사람 파일 삭제 게이트**
 
   사용자가 위 여섯 파일을 삭제한 뒤 `git status --short`로 정확한 삭제 범위를 확인한다.
 
-- [ ] **Step 5: GREEN 확인과 커밋**
+- [x] **Step 5: GREEN 확인과 커밋**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`
 

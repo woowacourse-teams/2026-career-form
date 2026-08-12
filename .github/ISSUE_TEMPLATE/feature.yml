@@ -57,16 +57,6 @@ body:
       description: 사람이 확인할 항목과 환경을 적습니다. 없으면 없음을 적습니다.
     validations:
       required: true
-  - type: dropdown
-    id: jira_issue_type
-    attributes:
-      label: Jira 이슈 유형
-      description: Jira에서 생성할 작업 유형을 선택합니다.
-      options:
-        - Epic
-        - Story
-    validations:
-      required: true
   - type: textarea
     id: risky-operations
     attributes:
@@ -78,4 +68,4 @@ body:
     id: references
     attributes:
       label: 참고 문서
-      description: 기획서, 디자인, Parent Issue, 의존 Issue를 연결합니다.
+      description: 기획서, 디자인, 의존 Issue, 독립 draft 후보를 연결합니다.
