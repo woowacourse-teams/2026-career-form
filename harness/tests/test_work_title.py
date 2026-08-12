@@ -5,9 +5,16 @@ from harness.lib.work_title import validate_work_title
 
 class WorkTitleTest(unittest.TestCase):
     def test_accepts_supported_area(self) -> None:
-        result = validate_work_title("[Harness] Codex 개발 하네스 구축")
+        for title in (
+            "[FE] 지원서 자동 입력",
+            "[BE] 지원서 저장 API",
+            "[Infra] 개발 서버 배포 환경",
+            "[Harness] Codex 개발 하네스 구축",
+        ):
+            with self.subTest(title=title):
+                result = validate_work_title(title)
 
-        self.assertTrue(result.is_valid)
+                self.assertTrue(result.is_valid)
 
     def test_rejects_unknown_area(self) -> None:
         result = validate_work_title("[Docs] 개발 가이드 정리")
