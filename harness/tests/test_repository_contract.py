@@ -14,6 +14,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class RepositoryContractTest(unittest.TestCase):
+    def test_issue_forms_do_not_suggest_parent_or_sub_issues(self) -> None:
+        for path in (ROOT / ".github" / "ISSUE_TEMPLATE").glob("*.yml"):
+            with self.subTest(path=path.name):
+                content = path.read_text(encoding="utf-8")
+                self.assertNotIn("Parent Issue", content)
+                self.assertNotIn("Sub-issue", content)
+
     def test_issue_forms_do_not_define_default_titles(self) -> None:
         template_root = ROOT / ".github" / "ISSUE_TEMPLATE"
 

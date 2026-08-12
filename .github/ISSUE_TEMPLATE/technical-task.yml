@@ -65,4 +65,4 @@ body:
     id: references
     attributes:
       label: 참고 문서
-      description: 설계 결정, Parent Issue, 의존 Issue를 연결합니다.
+      description: 설계 결정과 의존 Issue를 연결합니다.

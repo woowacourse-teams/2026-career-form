@@ -44,6 +44,76 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid)
 
+    def test_accepts_colon_closing_keyword(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_BODY.replace("Closes #123", "CLOSES: #123"),
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
+    def test_accepts_current_repository_qualified_reference(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_BODY.replace(
+                    "Closes #123",
+                    "Closes woowacourse-teams/2026-career-form#123",
+                ),
+                "head": {"ref": "CF-123"},
+                "base": {
+                    "ref": "develop",
+                    "repo": {
+                        "full_name": "woowacourse-teams/2026-career-form",
+                    },
+                },
+            }
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
+    def test_ignores_closing_keywords_in_markdown_code_and_comments(self) -> None:
+        ignored_examples = (
+            "`Closes #456`",
+            "```text\nCloses #456\n```",
+            "```text\nCloses #456\n````",
+            "~~~text\nCloses #456\n~~~",
+            "~~~text\nCloses #456\n~~~~",
+            "    Closes #456",
+            "<!-- Fixes #456 -->",
+        )
+        for ignored in ignored_examples:
+            with self.subTest(ignored=ignored):
+                result = validate_pr(
+                    {
+                        "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                        "body": VALID_BODY + "\n" + ignored,
+                        "head": {"ref": "CF-123"},
+                        "base": {"ref": "develop"},
+                    }
+                )
+
+                self.assertTrue(result.is_valid, result.errors)
+
+    def test_rejects_code_example_without_real_closing_keyword(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_BODY.replace(
+                    "Closes #123",
+                    "```text\nCloses #123\n```",
+                ),
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR은 Closes #<Issue 번호>를 포함해야 합니다", result.errors)
+
     def test_accepts_release_pr_without_closing_issue(self) -> None:
         result = validate_pr(
             {
@@ -181,6 +251,34 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn("PR은 하나의 Issue만 종료해야 합니다", result.errors)
+
+    def test_rejects_colon_keyword_that_closes_external_issue(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_BODY
+                + "\nFIXES: woowacourse-teams/other-repository#456\n",
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR은 하나의 Issue만 종료해야 합니다", result.errors)
+
+    def test_rejects_release_pr_with_external_closing_reference(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Release] 프로덕션 배포",
+                "body": VALID_BODY.replace(
+                    "Closes #123",
+                    "Resolves: woowacourse-teams/other-repository#123",
+                ),
+                "head": {"ref": "develop"},
+                "base": {"ref": "main"},
+            }
+        )
+
+        self.assertIn("배포 PR은 Issue를 종료하지 않습니다", result.errors)
 
     def test_rejects_pr_title_with_declarative_handa_ending(self) -> None:
         result = validate_pr(

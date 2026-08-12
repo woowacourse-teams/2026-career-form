@@ -20,7 +20,7 @@ harness/scripts/verify
 
 ## Project Issue 기획
 
-`project-issue-planning` 스킬은 Project draft 하나를 repository Issue로 승격하고 같은 item의 상태를 `In Progress`로 바꾼다. 이후 Issue 본문과 한 PR의 논리적 커밋 계획을 작성하며, 사람 승인 전에는 `status:ready`나 구현 브랜치를 만들지 않는다. 상태 전이를 재개할 때는 `harness/scripts/plan-project-issue <snapshot JSON>`으로 첫 미완료 action을 확인한다.
+`project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다. 이후 Issue 본문과 한 PR의 논리적 커밋 계획을 작성하며, 사람 승인 전에는 `status:ready`나 구현 브랜치를 만들지 않는다. 상태 전이를 재개할 때는 `harness/scripts/plan-project-issue <snapshot JSON>`으로 첫 미완료 action을 확인한다.
 
 확정된 Issue 구현은 `issue-workflow` 스킬이 이어받는다. Issue label과 Project Status의 대응, 브랜치와 PR 연결 계약은 `docs/agents/issue-tracker.md`에서 확인한다.
 

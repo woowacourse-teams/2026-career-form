@@ -8,10 +8,10 @@ from harness.lib.project_issue import (
 
 
 class ProjectIssuePlanningTest(unittest.TestCase):
-    def test_selects_draft_when_none_matches(self) -> None:
+    def test_awaits_human_draft_when_none_matches(self) -> None:
         action = next_planning_action(ProjectIssueSnapshot(draft_matches=0))
 
-        self.assertEqual("select_draft", action.code)
+        self.assertEqual("await_draft", action.code)
 
     def test_selects_draft_when_multiple_match(self) -> None:
         action = next_planning_action(ProjectIssueSnapshot(draft_matches=2))
@@ -23,9 +23,38 @@ class ProjectIssuePlanningTest(unittest.TestCase):
 
         self.assertEqual("promote_draft", action.code)
 
+    def test_fixes_nonconforming_draft_title_before_promotion(self) -> None:
+        action = next_planning_action(
+            ProjectIssueSnapshot(draft_matches=1, title_valid=False)
+        )
+
+        self.assertEqual("fix_title", action.code)
+
+    def test_fixes_nonconforming_existing_issue_title(self) -> None:
+        action = next_planning_action(
+            ProjectIssueSnapshot(
+                draft_matches=0,
+                issue_number=21,
+                title_valid=False,
+            )
+        )
+
+        self.assertEqual("fix_title", action.code)
+
     def test_existing_issue_is_not_promoted_again(self) -> None:
         action = next_planning_action(
             ProjectIssueSnapshot(draft_matches=0, issue_number=21)
+        )
+
+        self.assertEqual("set_planning", action.code)
+
+    def test_sets_project_in_progress_after_planning_label(self) -> None:
+        action = next_planning_action(
+            ProjectIssueSnapshot(
+                draft_matches=0,
+                issue_number=21,
+                issue_status_label="status:planning",
+            )
         )
 
         self.assertEqual("set_in_progress", action.code)
@@ -34,6 +63,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
         snapshot = ProjectIssueSnapshot(
             draft_matches=0,
             issue_number=21,
+            issue_status_label="status:planning",
             project_status="Todo",
         )
 
@@ -48,6 +78,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
             ProjectIssueSnapshot(
                 draft_matches=0,
                 issue_number=21,
+                issue_status_label="status:planning",
                 project_status="In Progress",
             )
         )
@@ -59,6 +90,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
             ProjectIssueSnapshot(
                 draft_matches=0,
                 issue_number=21,
+                issue_status_label="status:planning",
                 project_status="In Progress",
                 contract_drafted=True,
             )
@@ -71,6 +103,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
             ProjectIssueSnapshot(
                 draft_matches=0,
                 issue_number=21,
+                issue_status_label="status:planning",
                 project_status="In Progress",
                 contract_drafted=True,
                 plan_exists=True,
@@ -84,6 +117,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
             ProjectIssueSnapshot(
                 draft_matches=0,
                 issue_number=21,
+                issue_status_label="status:planning",
                 project_status="In Progress",
                 contract_drafted=True,
                 plan_exists=True,
@@ -98,6 +132,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
             ProjectIssueSnapshot(
                 draft_matches=0,
                 issue_number=1,
+                issue_status_label="status:ready",
                 project_status="In Progress",
                 contract_drafted=True,
                 plan_exists=True,
@@ -108,8 +143,25 @@ class ProjectIssuePlanningTest(unittest.TestCase):
 
         self.assertEqual("complete", action.code)
 
+    def test_sets_ready_after_contract_is_published(self) -> None:
+        action = next_planning_action(
+            ProjectIssueSnapshot(
+                draft_matches=0,
+                issue_number=1,
+                issue_status_label="status:planning",
+                project_status="In Progress",
+                contract_drafted=True,
+                plan_exists=True,
+                approved=True,
+                contract_published=True,
+            )
+        )
+
+        self.assertEqual("set_ready", action.code)
+
     def test_never_exposes_sub_issue_action(self) -> None:
         self.assertNotIn("create_sub_issue", PLANNING_ACTIONS)
+        self.assertNotIn("create_draft", PLANNING_ACTIONS)
 
 
 if __name__ == "__main__":

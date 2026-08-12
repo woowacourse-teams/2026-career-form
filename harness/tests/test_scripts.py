@@ -38,6 +38,7 @@ class HarnessScriptsTest(unittest.TestCase):
 
     def test_project_issue_script_rejects_string_booleans(self) -> None:
         for name in (
+            "title_valid",
             "contract_drafted",
             "plan_exists",
             "approved",
@@ -59,6 +60,18 @@ class HarnessScriptsTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(result.stdout.startswith("promote_draft:"), result.stdout)
+
+    def test_project_issue_script_rejects_invalid_status_label_type(self) -> None:
+        result = self._run_project_issue_plan(
+            {
+                "draft_matches": 0,
+                "issue_number": 1,
+                "issue_status_label": False,
+            }
+        )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("issue_status_label은 문자열이어야 합니다", result.stderr)
 
     def test_guard_script_denies_destructive_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

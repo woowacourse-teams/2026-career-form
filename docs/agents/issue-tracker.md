@@ -27,8 +27,8 @@ Issue와 PR 제목은 같은 `[영역] 작업명`을 사용한다. 브랜치는 
 
 ## 작업 흐름
 
-1. Project draft 대상을 정확히 하나로 확정한다.
-2. repository Issue로 승격하고 Project Status를 `In Progress`로 바꾼다.
+1. 사람이 Project draft를 만들고 AI가 대상을 정확히 하나로 확정한다.
+2. AI가 제목을 `[영역] 작업명`으로 보정한 뒤 repository Issue로 승격하고 `status:planning`과 Project Status `In Progress`를 함께 적용한다.
 3. Issue 본문과 단일 PR의 논리적 커밋 계획을 작성한다.
 4. 사람 승인 후 `status:ready`로 전환한다.
 5. 구현 시작 시 `status:in-progress`로 바꾸고 `CF-<Issue 번호>` 브랜치를 만든다.

@@ -27,11 +27,11 @@
 
 ## Ruleset
 
-- [x] `harness/policies/github-ruleset.md`의 `main` 설정을 적용한다.
-- [x] 같은 문서의 `develop` 설정을 적용한다.
+- [ ] `harness/policies/github-ruleset.md`의 `main` 설정을 적용한다.
+- [ ] 같은 문서의 `develop` 설정을 적용한다.
 - [ ] 세 GitHub Actions 검사를 필수 상태 검사로 지정한다.
-- [x] 최소 한 명의 사람 승인을 요구한다.
-- [x] force push와 브랜치 삭제를 금지한다.
+- [ ] 최소 한 명의 사람 승인을 요구한다.
+- [ ] force push와 브랜치 삭제를 금지한다.
 
 ## 리뷰 소유권
 

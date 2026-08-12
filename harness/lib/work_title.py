@@ -8,7 +8,11 @@ TITLE_PATTERN = re.compile(
 )
 KOREAN_PATTERN = re.compile(r"[가-힣]")
 CONVENTIONAL_PREFIX_PATTERN = re.compile(
-    r"^(?:build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test):\s*"
+    r"^(?:build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)"
+    r"(?:\([^()\r\n]+\))?!?:\s*"
+)
+FORMAL_DECLARATIVE_ENDING_PATTERN = re.compile(
+    r"(?:합니다|했습니다|됩니다)$"
 )
 ALLOWED_AREAS = frozenset(("FE", "BE", "Infra", "Harness"))
 RELEASE_TITLE_PATTERN = re.compile(r"^\[Release\] (?P<description>.+)$")
@@ -28,12 +32,7 @@ def validate_work_title(title: str) -> ValidationResult:
         errors += (
             "Issue와 PR 제목에 Conventional Commit type을 사용할 수 없습니다",
         )
-    if KOREAN_PATTERN.search(description) is None:
-        errors += ("작업명에는 한글이 포함되어야 합니다",)
-    if description.endswith("한다"):
-        errors += ("작업명은 한다로 끝낼 수 없습니다",)
-    if description.endswith("."):
-        errors += ("작업명 끝에 마침표를 사용할 수 없습니다",)
+    errors += _validate_description(description)
     return ValidationResult(errors)
 
 
@@ -43,11 +42,17 @@ def validate_release_title(title: str) -> ValidationResult:
         return ValidationResult(("배포 PR 제목은 [Release] 작업명 형식이어야 합니다",))
 
     description = match.group("description")
+    return ValidationResult(_validate_description(description))
+
+
+def _validate_description(description: str) -> tuple[str, ...]:
     errors: tuple[str, ...] = ()
     if KOREAN_PATTERN.search(description) is None:
         errors += ("작업명에는 한글이 포함되어야 합니다",)
     if description.endswith("한다"):
         errors += ("작업명은 한다로 끝낼 수 없습니다",)
+    elif FORMAL_DECLARATIVE_ENDING_PATTERN.search(description) is not None:
+        errors += ("작업명은 명사형이어야 합니다",)
     if description.endswith("."):
         errors += ("작업명 끝에 마침표를 사용할 수 없습니다",)
-    return ValidationResult(errors)
+    return errors

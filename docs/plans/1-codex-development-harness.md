@@ -183,11 +183,11 @@
 
 **Interfaces:**
 - `next_planning_action(snapshot: ProjectIssueSnapshot) -> PlanningAction`
-- action: `select_draft`, `promote_draft`, `set_in_progress`, `draft_contract`, `write_plan`, `await_approval`, `publish_contract`, `complete`
+- action: `await_draft`, `select_draft`, `fix_title`, `promote_draft`, `set_planning`, `set_in_progress`, `draft_contract`, `write_plan`, `await_approval`, `publish_contract`, `set_ready`, `complete`
 
 - [x] **Step 1: 재실행 가능한 상태 전이 테스트 작성**
 
-  draft 없음, 같은 제목 여러 개, 단일 draft, 이미 승격된 Issue, In Progress 변경 실패 뒤 재실행, 계약과 계획 작성 완료를 각각 검증한다. 어떤 분기에서도 Sub-issue 생성 action은 반환하지 않는다.
+  사람이 만든 draft 없음, 같은 제목 여러 개, 제목 계약 위반, 단일 draft, 이미 승격된 Issue, In Progress 변경 실패 뒤 재실행, 계약과 계획 작성 완료를 각각 검증한다. 어떤 분기에서도 draft나 Sub-issue 생성 action은 반환하지 않는다.
 
 - [x] **Step 2: RED 확인**
 
@@ -197,17 +197,37 @@
 
 - [x] **Step 3: 순수 상태 전이와 CLI 구현**
 
-  `ProjectIssueSnapshot`은 draft 일치 수, Issue 번호, Project Status, 계약 초안, 계획 파일, 승인과 원격 게시 여부를 보유한다. 이미 Issue 번호가 있으면 다시 승격하지 않고 다음 미완료 action을 반환한다. CLI는 외부 JSON의 boolean 타입을 엄격하게 검증한다.
+  `ProjectIssueSnapshot`은 draft 일치 수, Issue 번호, 제목 계약 충족 여부, Issue 상태 라벨, Project Status, 계약 초안, 계획 파일, 승인과 원격 게시 여부를 보유한다. 이미 Issue 번호가 있으면 다시 승격하지 않고 다음 미완료 action을 반환한다. CLI는 외부 JSON의 boolean 타입을 엄격하게 검증한다.
 
 - [x] **Step 4: 기획 스킬 작성**
 
-  스킬은 접근 진단, 대상 식별, Issue 승격, In Progress 전환, Issue 계약과 구현 계획 전문 제안, 사람 승인, 원격 게시 순서로 동작한다. 큰 FE, BE, Infra 영역은 별도 draft 후보로 제안하되 현재 Issue의 Sub-issue로 연결하지 않는다.
+  스킬은 접근 진단, 사람이 만든 대상 식별, 제목 보정, Issue 승격, In Progress 전환, Issue 계약과 구현 계획 전문 제안, 사람 승인, 원격 게시 순서로 동작한다. AI는 draft를 만들지 않고 큰 FE, BE, Infra 영역은 사람이 만들 별도 draft 후보로만 제안하며 현재 Issue의 Sub-issue로 연결하지 않는다.
 
 - [x] **Step 5: GREEN 확인과 커밋**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_project_issue -v`
 
   Commit: `feat: Project Issue 기획 흐름 추가`
+
+### Task 4A: 사람 작성 draft의 제목 보정
+
+**Commit:** `fix: 사람이 만든 Draft 제목 보정`
+
+**Files:**
+- Modify: `harness/lib/project_issue.py`
+- Modify: `harness/scripts/plan-project-issue`
+- Modify: `harness/tests/test_project_issue.py`
+- Modify: `.agents/skills/project-issue-planning/SKILL.md`
+- Modify: `.agents/skills/project-issue-planning/evals/evals.json`
+- Modify: `.agents/skills/issue-workflow/SKILL.md`
+- Modify: `harness/policies/workflow.md`
+- Modify: `harness/README.md`
+- Modify: `docs/agents/issue-tracker.md`
+
+- [x] 사람이 만든 draft가 없으면 `await_draft`에서 멈추고 AI 생성 action을 노출하지 않는다.
+- [x] draft 또는 승격된 Issue 제목이 계약을 어기면 `fix_title`을 먼저 반환한다.
+- [x] 영역이 명확하면 `[영역] 작업명`으로 보정하고, 모호하면 사용자 확인을 받도록 스킬을 수정한다.
+- [x] 관련 테스트와 스킬 구조 검증을 통과시킨다.
 
 ### Task 5: Issue 작업 흐름 개편
 

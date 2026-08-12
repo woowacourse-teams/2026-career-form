@@ -3,12 +3,13 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Project 149의 '검색 기능' draft를 Issue로 승격하고 작업 계획까지 잡아줘.",
-      "expected_output": "접근을 진단하고 정확히 일치하는 draft 하나를 승격한 직후 In Progress로 바꾸며, Issue 본문과 단일 PR의 커밋 계획 전문을 제안하고 승인에서 멈춘다.",
+      "prompt": "Project 149에 사람이 만들어 둔 '검색 기능을 구현한다' FE draft를 Issue로 승격하고 작업 계획까지 잡아줘.",
+      "expected_output": "접근을 진단하고 draft 제목을 [FE] 검색 기능 구현으로 보정한 뒤 승격해 In Progress로 바꾸며, Issue 본문과 단일 PR의 커밋 계획 전문을 제안하고 승인에서 멈춘다.",
       "files": [],
       "expectations": [
         "원격 변경 전에 Project 접근 진단을 수행한다",
-        "승격 직후 같은 Project item을 In Progress로 바꾸고 확인한다",
+        "draft 제목을 [영역] 작업명 형식의 명사형으로 보정하고 다시 확인한다",
+        "승격 직후 status:planning과 같은 Project item의 In Progress를 함께 적용하고 확인한다",
         "Sub-issue 없이 한 PR의 논리적 커밋 단위로 계획한다",
         "Issue 본문과 계획 전문을 제시한다",
         "승인 전에 원격 Issue 본문을 수정하거나 status:ready나 구현 브랜치를 만들지 않는다"
@@ -16,6 +17,16 @@
     },
     {
       "id": 2,
+      "prompt": "Project에서 작업을 시작하려는데 아직 draft를 안 만들었어. 네가 적당히 하나 만들어서 진행해줘.",
+      "expected_output": "AI가 draft를 만들지 않고 사람이 대상 draft를 만들도록 요청한 뒤 중단한다.",
+      "files": [],
+      "expectations": [
+        "Project draft를 생성하지 않는다",
+        "사람이 대상 draft를 만들도록 요청하고 원격 변경 전에 중단한다"
+      ]
+    },
+    {
+      "id": 3,
       "prompt": "동일한 제목의 draft가 두 개 보여. 알아서 하나 골라서 승격해줘.",
       "expected_output": "모호한 대상을 임의 선택하지 않고 후보를 제시해 사용자 결정을 기다린다.",
       "files": [],
@@ -25,7 +36,7 @@
       ]
     },
     {
-      "id": 3,
+      "id": 4,
       "prompt": "이미 Issue로 바뀐 항목인데 상태 변경 중 실패했어. 처음부터 다시 해줘.",
       "expected_output": "기존 Issue를 다시 승격하지 않고 같은 item의 In Progress 전환부터 재개한다.",
       "files": [],

@@ -38,7 +38,7 @@ Project 상태 변경이 실패하면 Issue 승격이나 브랜치 생성을 반
 6. 기존 사용자 변경과 Issue 밖 파일을 보존한다.
 7. 회사 어댑터 작업은 `AGENTS.md`의 문서 순서와 동반 갱신 규칙을 따른다.
 
-새 범위가 발견되면 현재 구현에 섞지 않는다. FE, BE, Infra처럼 독립 구현이 필요한 큰 범위는 Project의 별도 draft 후보로 제안하고, 사용자가 승인한 경우에만 draft를 만든다. 현재 Issue의 Parent 또는 Sub-issue로 연결하지 않는다.
+새 범위가 발견되면 현재 구현에 섞지 않는다. FE, BE, Infra처럼 독립 구현이 필요한 큰 범위는 Project의 별도 draft 후보로 제안하고 사람이 draft를 만들도록 넘긴다. 현재 Issue의 Parent 또는 Sub-issue로 연결하지 않는다.
 
 ## 4. 검증과 리뷰
 
