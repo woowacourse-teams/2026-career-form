@@ -6,7 +6,7 @@
 
 - [x] `main` 브랜치를 운영 기준 브랜치로 둔다.
 - [x] `develop` 브랜치를 개발 통합 브랜치로 둔다.
-- [x] 기본 브랜치를 `main`으로 지정한다.
+- [x] 기본 브랜치를 `develop`으로 지정한다.
 - [ ] Squash Merge와 일반 Merge를 활성화하고 Rebase Merge 사용 여부를 팀에서 정한다.
 
 ## 라벨
@@ -53,4 +53,4 @@
 - [ ] 기본 브랜치 반영 뒤 비식별 Issue로 workflow dispatch dry-run을 실행한다.
 - [ ] 테스트 프로젝트에서 Bug, Technical, Feature(Epic), Feature(Story) 생성과 GitHub 링크 댓글을 사람이 확인한다.
 
-Jira API 토큰은 로그, Issue, PR, Fixture에 기록하지 않는다. AI는 시크릿을 등록·열람하지 않으며, 실제 Jira 이슈 삭제나 운영 프로젝트 정리 작업을 수행하지 않는다.
+Jira API 토큰은 로그, Issue, PR, Fixture에 기록하지 않는다. AI는 시크릿을 등록,열람하지 않으며, 실제 Jira 이슈 삭제나 운영 프로젝트 정리 작업을 수행하지 않는다.

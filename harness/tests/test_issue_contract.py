@@ -32,14 +32,22 @@ VALID_BODY = """## 배경
 class IssueContractTest(unittest.TestCase):
     def test_accepts_ready_issue_with_contract_sections(self) -> None:
         result = validate_issue(
-            {"body": VALID_BODY, "labels": [{"name": "status:ready"}]}
+            {
+                "title": "[FE] 삼성 채용 사이트 자동 입력",
+                "body": VALID_BODY,
+                "labels": [{"name": "status:ready"}],
+            }
         )
 
         self.assertTrue(result.is_valid)
 
     def test_rejects_issue_that_is_not_ready(self) -> None:
         result = validate_issue(
-            {"body": VALID_BODY, "labels": [{"name": "status:planning"}]}
+            {
+                "title": "[FE] 삼성 채용 사이트 자동 입력",
+                "body": VALID_BODY,
+                "labels": [{"name": "status:planning"}],
+            }
         )
 
         self.assertIn("status:ready 라벨이 필요합니다", result.errors)
@@ -48,6 +56,7 @@ class IssueContractTest(unittest.TestCase):
         result = validate_issue(
             {
                 "body": VALID_BODY.replace("## 제외 범위", "## 기타"),
+                "title": "[FE] 삼성 채용 사이트 자동 입력",
                 "labels": [{"name": "status:ready"}],
             }
         )
@@ -61,6 +70,7 @@ class IssueContractTest(unittest.TestCase):
                     "- [ ] 지원하는 필드가 한 번씩 입력된다",
                     "결과를 확인한다",
                 ),
+                "title": "[FE] 삼성 채용 사이트 자동 입력",
                 "labels": [{"name": "status:ready"}],
             }
         )
@@ -74,6 +84,7 @@ class IssueContractTest(unittest.TestCase):
                     "- [ ] 지원하는 필드가 한 번씩 입력된다",
                     "- [ ] ",
                 ),
+                "title": "[FE] 삼성 채용 사이트 자동 입력",
                 "labels": [{"name": "status:ready"}],
             }
         )
@@ -86,6 +97,7 @@ class IssueContractTest(unittest.TestCase):
                 "action": "edited",
                 "changes": {"body": {"from": "이전 본문"}},
                 "issue": {
+                    "title": "[FE] 삼성 채용 사이트 자동 입력",
                     "body": VALID_BODY,
                     "labels": [{"name": "status:in-progress"}],
                 },
@@ -100,6 +112,7 @@ class IssueContractTest(unittest.TestCase):
                 "action": "edited",
                 "changes": {"body": {"from": "이전 본문"}},
                 "issue": {
+                    "title": "[FE] 삼성 채용 사이트 자동 입력",
                     "body": VALID_BODY,
                     "labels": [{"name": "status:planning"}],
                 },
@@ -107,6 +120,28 @@ class IssueContractTest(unittest.TestCase):
         )
 
         self.assertTrue(result.is_valid)
+
+    def test_rejects_ready_issue_without_area_prefix(self) -> None:
+        result = validate_issue(
+            {
+                "title": "삼성 채용 사이트 자동 입력",
+                "body": VALID_BODY,
+                "labels": [{"name": "status:ready"}],
+            }
+        )
+
+        self.assertIn("제목은 [영역] 작업명 형식이어야 합니다", result.errors)
+
+    def test_rejects_ready_issue_with_declarative_handa_ending(self) -> None:
+        result = validate_issue(
+            {
+                "title": "[FE] 삼성 채용 사이트 자동 입력을 지원한다",
+                "body": VALID_BODY,
+                "labels": [{"name": "status:ready"}],
+            }
+        )
+
+        self.assertIn("작업명은 한다로 끝낼 수 없습니다", result.errors)
 
 
 if __name__ == "__main__":

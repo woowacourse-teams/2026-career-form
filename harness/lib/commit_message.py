@@ -49,6 +49,8 @@ def validate_commit_message(message: str) -> ValidationResult:
         errors.append("설명에는 한글이 포함되어야 합니다")
     if description.endswith("."):
         errors.append("제목 끝에 마침표를 사용할 수 없습니다")
+    if description.endswith("한다"):
+        errors.append("커밋 설명은 한다로 끝낼 수 없습니다")
     if breaking and not has_breaking_footer:
         errors.append("Breaking Change에는 BREAKING CHANGE Footer가 필요합니다")
     if has_breaking_footer and not breaking:

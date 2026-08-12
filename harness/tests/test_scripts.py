@@ -12,7 +12,7 @@ SCRIPTS = ROOT / "harness" / "scripts"
 class HarnessScriptsTest(unittest.TestCase):
     def test_commit_message_script_accepts_valid_file(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as message:
-            message.write("feat: 지원서 필드 자동 입력을 지원한다\n")
+            message.write("feat: 지원서 필드 자동 입력 지원\n")
             message.flush()
 
             result = self._run("validate-commit-message", message.name)
@@ -22,6 +22,7 @@ class HarnessScriptsTest(unittest.TestCase):
     def test_issue_script_reads_github_event_payload(self) -> None:
         event = {
             "issue": {
+                "title": "[FE] 지원서 필드 자동 입력",
                 "body": self._valid_issue_body(),
                 "labels": [{"name": "status:ready"}],
             }
@@ -37,7 +38,7 @@ class HarnessScriptsTest(unittest.TestCase):
 
     def test_guard_script_denies_destructive_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            self._init_feature_repository(directory)
+            self._init_issue_repository(directory)
             payload = json.dumps(
                 {
                     "cwd": directory,
@@ -55,7 +56,7 @@ class HarnessScriptsTest(unittest.TestCase):
 
     def test_guard_script_allows_safe_command_without_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            self._init_feature_repository(directory)
+            self._init_issue_repository(directory)
             payload = json.dumps(
                 {
                     "cwd": directory,
@@ -97,9 +98,9 @@ class HarnessScriptsTest(unittest.TestCase):
             check=False,
         )
 
-    def _init_feature_repository(self, directory: str) -> None:
+    def _init_issue_repository(self, directory: str) -> None:
         subprocess.run(
-            ("git", "init", "-q", "-b", "feature/123-harness"),
+            ("git", "init", "-q", "-b", "CF-123"),
             cwd=directory,
             check=True,
         )

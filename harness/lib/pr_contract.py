@@ -2,9 +2,9 @@ import re
 from collections.abc import Mapping
 
 from harness.lib.branching import issue_number_from_branch, validate_branch_flow
-from harness.lib.commit_message import validate_commit_message
 from harness.lib.markdown_sections import extract_sections
 from harness.lib.result import ValidationResult, merge_results
+from harness.lib.work_title import validate_release_title, validate_work_title
 
 
 REQUIRED_SECTIONS = (
@@ -29,7 +29,11 @@ def validate_pr(payload: Mapping[str, object]) -> ValidationResult:
     if head is None or base is None:
         return ValidationResult(("PR head와 base 브랜치가 필요합니다",))
 
-    results = [validate_commit_message(title), validate_branch_flow(head, base)]
+    release_pr = (head, base) == ("develop", "main")
+    title_result = (
+        validate_release_title(title) if release_pr else validate_work_title(title)
+    )
+    results = [title_result, validate_branch_flow(head, base)]
     errors: list[str] = []
     sections = extract_sections(body)
     for name in REQUIRED_SECTIONS:
@@ -37,9 +41,9 @@ def validate_pr(payload: Mapping[str, object]) -> ValidationResult:
             errors.append(f"PR 필수 섹션이 없습니다: {name}")
 
     close_match = CLOSE_PATTERN.search(body)
-    if close_match is None:
+    if close_match is None and not release_pr:
         errors.append("PR은 Closes #<Issue 번호>를 포함해야 합니다")
-    else:
+    elif close_match is not None and not release_pr:
         branch_issue = issue_number_from_branch(head)
         if branch_issue is not None and branch_issue != close_match.group("issue"):
             errors.append("브랜치의 Issue 번호와 PR이 종료하는 Issue 번호가 다릅니다")

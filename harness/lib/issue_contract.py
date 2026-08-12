@@ -3,6 +3,7 @@ from collections.abc import Mapping
 
 from harness.lib.markdown_sections import extract_sections
 from harness.lib.result import ValidationResult
+from harness.lib.work_title import validate_work_title
 
 
 REQUIRED_SECTIONS = (
@@ -49,12 +50,18 @@ def validate_issue_event(event: Mapping[str, object]) -> ValidationResult:
 
 
 def validate_issue(payload: Mapping[str, object]) -> ValidationResult:
+    title = payload.get("title")
     body = payload.get("body")
     labels = payload.get("labels")
     errors: list[str] = []
 
+    if not isinstance(title, str):
+        errors.append("Issue 제목이 필요합니다")
+    else:
+        errors.extend(validate_work_title(title).errors)
     if not isinstance(body, str):
-        return ValidationResult(("Issue 본문이 필요합니다",))
+        errors.append("Issue 본문이 필요합니다")
+        return ValidationResult(tuple(errors))
 
     label_names = _label_names(labels)
     if "status:ready" not in label_names:

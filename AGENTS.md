@@ -4,7 +4,8 @@
 
 - 모든 개발 작업은 사람이 `status:ready`로 확정한 GitHub Issue에서 시작한다.
 - Issue 본문을 작업 범위와 완료 기준의 정본으로 사용한다.
-- 작업 브랜치는 `feature/<Issue 번호>-<slug>` 또는 `hotfix/<Issue 번호>-<slug>` 형식으로 만든다.
+- 하나의 Issue는 하나의 작업 브랜치와 하나의 PR로 완료한다. Sub-issue는 만들지 않는다.
+- 작업 브랜치는 `CF-<Issue 번호>` 형식으로 만든다.
 - 작업 계획은 필요할 때 `docs/plans/<Issue 번호>-<slug>.md`에 기록한다.
 - 공용 `HANDOFF.md`를 작업 상태 기록에 사용하지 않는다.
 
@@ -14,11 +15,11 @@
 - 동작을 바꾸기 전에 실패하는 테스트를 만들고, 변경 뒤 관련 테스트와 전체 검증을 실행한다.
 - 완료 전 `harness/scripts/verify`를 실행하고 최신 결과를 PR에 기록한다.
 - 컨벤션은 `docs/conventions/common.md`와 작업 스택에 맞는 문서를 따른다.
-- 커밋과 PR 제목은 `docs/conventions/commit.md`, 브랜치와 병합은 `docs/conventions/branching.md`를 따른다.
+- 개별 커밋과 PR 제목은 서로 다른 형식을 사용하며 `docs/conventions/commit.md`를 따른다. 브랜치와 병합은 `docs/conventions/branching.md`를 따른다.
 
 ## 범위와 승인
 
-- Issue 범위를 넘는 작업은 현재 작업에 섞지 않고 후속 Issue 후보로 분리한다.
+- Issue 범위를 넘는 작업은 현재 작업에 섞지 않는다. 독립 기능이나 FE, BE, Infra 영역으로 나눌 필요가 있으면 GitHub Project의 별도 draft 후보로 제안한다.
 - 실제 채용 지원서 제출, 임시저장, 페이지 이동, 미리보기는 사용자가 수행한다.
 - 시크릿 접근, 파괴적 명령, 데이터 마이그레이션, 배포는 AI가 실행하지 않는다.
 - PR 최종 승인과 머지는 사람이 수행한다.
