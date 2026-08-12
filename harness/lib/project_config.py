@@ -17,7 +17,7 @@ class ProjectConfig:
 def load_project_config(path: Path) -> ProjectConfig:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise ProjectConfigError(f"Project 설정을 읽을 수 없습니다: {error}") from error
 
     if not isinstance(value, dict):

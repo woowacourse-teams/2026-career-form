@@ -35,6 +35,14 @@ class ProjectConfigTest(unittest.TestCase):
             with self.assertRaisesRegex(ProjectConfigError, "number"):
                 load_project_config(path)
 
+    def test_normalizes_invalid_utf8_as_project_config_error(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "project.json"
+            path.write_bytes(b"\xff")
+
+            with self.assertRaisesRegex(ProjectConfigError, "읽을 수 없습니다"):
+                load_project_config(path)
+
 
 if __name__ == "__main__":
     unittest.main()

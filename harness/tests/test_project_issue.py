@@ -159,6 +159,29 @@ class ProjectIssuePlanningTest(unittest.TestCase):
 
         self.assertEqual("set_ready", action.code)
 
+    def test_preserves_human_block_during_planning(self) -> None:
+        for contract_published in (False, True):
+            for title_valid in (False, True):
+                with self.subTest(
+                    contract_published=contract_published,
+                    title_valid=title_valid,
+                ):
+                    action = next_planning_action(
+                        ProjectIssueSnapshot(
+                            draft_matches=0,
+                            issue_number=1,
+                            title_valid=title_valid,
+                            issue_status_label="status:blocked",
+                            project_status="In Progress",
+                            contract_drafted=True,
+                            plan_exists=True,
+                            approved=True,
+                            contract_published=contract_published,
+                        )
+                    )
+
+                    self.assertEqual("await_unblock", action.code)
+
     def test_never_exposes_sub_issue_action(self) -> None:
         self.assertNotIn("create_sub_issue", PLANNING_ACTIONS)
         self.assertNotIn("create_draft", PLANNING_ACTIONS)

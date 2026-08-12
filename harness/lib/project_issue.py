@@ -10,6 +10,7 @@ PLANNING_ACTIONS = (
     "set_in_progress",
     "draft_contract",
     "write_plan",
+    "await_unblock",
     "await_approval",
     "publish_contract",
     "set_ready",
@@ -39,6 +40,11 @@ class PlanningAction:
 def next_planning_action(snapshot: ProjectIssueSnapshot) -> PlanningAction:
     if snapshot.issue_number is None:
         return _next_draft_action(snapshot)
+    if snapshot.issue_status_label == "status:blocked":
+        return PlanningAction(
+            code="await_unblock",
+            reason="사람이 Issue 차단을 해제할 때까지 상태를 유지해야 합니다.",
+        )
     return _next_issue_action(snapshot)
 
 

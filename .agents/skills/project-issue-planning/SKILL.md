@@ -16,11 +16,12 @@ description: 사람이 만든 GitHub Project draft issue 하나의 제목을 작
 
 ## 2. 대상 확정
 
-1. `gh project item-list <Project 번호> --owner <owner> --format json`으로 항목을 읽는다.
-2. 사용자가 지정한 제목과 정확히 일치하는 `DraftIssue`를 찾는다.
-3. 일치 항목이 없으면 사람이 draft를 만들도록 요청하고 중단한다. AI가 대신 만들지 않는다.
-4. 일치 항목이 둘 이상이면 후보 제목과 Project item ID만 보여주고 사용자에게 하나를 지정받는다.
-5. 같은 제목의 repository Issue가 이미 있으면 승격을 반복하지 않고 그 Issue 번호를 사용한다.
+1. `gh project item-list <Project 번호> --owner <owner> --format json --limit 1000`으로 항목을 읽는다.
+2. 응답의 `totalCount`와 `items` 개수를 비교한다. 일부만 조회됐으면 대상 부재를 확정하지 않고 조회가 불완전하다고 보고한다.
+3. 사용자가 지정한 제목과 정확히 일치하는 `DraftIssue`를 찾는다.
+4. 일치 항목이 없으면 사람이 draft를 만들도록 요청하고 중단한다. AI가 대신 만들지 않는다.
+5. 일치 항목이 둘 이상이면 후보 제목과 Project item ID만 보여주고 사용자에게 하나를 지정받는다.
+6. 같은 제목의 repository Issue가 이미 있으면 승격을 반복하지 않고 그 Issue 번호를 사용한다.
 
 제목만 비슷하다는 이유로 대상을 추정하지 않는다. 다른 Issue와 draft는 변경하지 않는다.
 
@@ -31,7 +32,7 @@ description: 사람이 만든 GitHub Project draft issue 하나의 제목을 작
 1. 영역이 Issue 설명, Project 맥락, 사용자 요청에서 하나로 명확하면 `FE`, `BE`, `Infra`, `Harness` 중 하나를 선택한다.
 2. 작업명은 한글을 포함한 명사형으로 다듬고 `한다` 종결, 마침표, Conventional Commit prefix를 제거한다.
 3. 영역이 둘 이상 가능하면 제목 후보를 제시하고 사용자에게 영역을 확인받는다.
-4. draft의 `content.id`를 사용해 `gh project item-edit --id <draft-content-id> --title '<보정 제목>'`로 제목을 바꾼다.
+4. draft의 Project item `id`를 사용해 `gh project item-edit --id <item-id> --title '<보정 제목>'`로 제목을 바꾼다. `content.id`는 사용하지 않는다.
 5. Project item을 다시 조회해 제목이 반영됐는지 확인한다.
 
 이미 승격된 Issue의 제목이 계약을 어기면 `gh issue edit <번호> --title '<보정 제목>'`로 수정하고 다시 읽는다. 제목 보정은 지정된 작업 항목 하나에만 적용한다.
@@ -80,3 +81,5 @@ Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`
 ## 재실행
 
 현재 상태를 `draft_matches`, `issue_number`, `title_valid`, `issue_status_label`, `project_status`, `contract_drafted`, `plan_exists`, `approved`, `contract_published`가 포함된 JSON snapshot으로 정리해 `harness/scripts/plan-project-issue <snapshot JSON>`으로 다음 action을 확인할 수 있다. boolean 필드는 JSON boolean만 사용한다. 이미 완료한 원격 변경은 반복하지 않고 반환된 첫 미완료 action부터 계속한다.
+
+Issue가 `status:blocked`면 `await_unblock`에서 멈춘다. 제목, 라벨, Project 상태, 계약을 수정하지 않고 사람이 차단을 해제할 때까지 현재 상태를 보존한다.

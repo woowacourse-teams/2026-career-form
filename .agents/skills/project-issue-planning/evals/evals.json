@@ -44,6 +44,28 @@
         "기존 Issue 번호를 확인해 승격 mutation을 반복하지 않는다",
         "Project 상태 변경부터 재시도하고 결과를 다시 조회한다"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "Project에 항목이 아주 많은데 '검색 기능을 구현한다' Draft가 없다고 나와. 정말 없는지 다시 확인해줘.",
+      "expected_output": "기본 조회 제한에 의존하지 않고 충분한 한도로 전체 항목을 조회하며, 응답이 불완전하면 Draft 부재를 확정하거나 새 Draft를 요청하지 않는다.",
+      "files": [],
+      "expectations": [
+        "Project item을 1000개 한도로 조회한다",
+        "totalCount와 실제 조회 항목 수를 비교한다",
+        "조회가 불완전하면 대상 부재를 확정하지 않는다"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Issue #123 기획을 계속해줘. 지금 status:blocked인데 제목도 고쳐야 하고 본문 게시도 남아 있어.",
+      "expected_output": "사람이 차단을 해제할 때까지 Issue와 Project를 수정하지 않고 await_unblock에서 멈춘다.",
+      "files": [],
+      "expectations": [
+        "status:blocked를 다른 상태 라벨로 덮지 않는다",
+        "차단 중에는 제목, Project 상태, Issue 본문을 수정하지 않는다",
+        "사람에게 차단 해제를 요청한다"
+      ]
     }
   ]
 }
