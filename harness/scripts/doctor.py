@@ -18,7 +18,7 @@ REQUIRED_PATHS = (
     ".githooks/commit-msg",
     ".githooks/pre-commit",
     ".githooks/pre-push",
-    ".agents/skills/issue-workflow/SKILL.md",
+    ".agents/skills/cf-issue-workflow/SKILL.md",
 )
 
 
