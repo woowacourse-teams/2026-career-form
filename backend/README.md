@@ -4,19 +4,19 @@ Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 현재 범
 
 ## 기술 기준
 
-- Java 25 LTS
+- Java 21 LTS
 - Spring Boot 4.1.0
 - Gradle Wrapper 9.6.1
 - Spring MVC와 내장 Tomcat 11
 - springdoc-openapi 3.0.3
 - JaCoCo 0.8.15
 
-시스템 Gradle 설치는 필요하지 않다. 모든 명령은 저장소에 포함된 Gradle Wrapper로 실행한다. Java Toolchain이 25로 고정되어 있으므로 JDK 25가 설치되어 있어야 한다.
+시스템 Gradle 설치는 필요하지 않다. 모든 명령은 저장소에 포함된 Gradle Wrapper로 실행한다. Java Toolchain이 21로 고정되어 있으므로 JDK 21이 설치되어 있어야 한다.
 
-macOS에서 현재 셸이 JDK 25를 사용하도록 설정하는 예시는 다음과 같다.
+macOS에서 현재 셸이 JDK 21을 사용하도록 설정하는 예시는 다음과 같다.
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
 
 ## 빌드와 검증
