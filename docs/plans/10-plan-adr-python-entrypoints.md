@@ -131,7 +131,7 @@
 - [x] `git diff --check`를 실행한다.
 - [x] `harness/scripts/verify.py`를 실행한다.
 - [x] `origin/develop...HEAD` 기준 Standards와 Issue #10 Spec 코드 리뷰를 수행한다.
-- [ ] 발견 사항을 수정하고 전체 검증을 다시 실행한다.
-- [ ] 논리적 변경별 커밋을 만들고 `CF-10`을 push한다.
-- [ ] Issue와 같은 제목의 Draft PR을 만들고 `Closes #10`을 하나만 포함한다.
-- [ ] PR에 `harness-change`를 적용하고 Issue와 Project를 review 상태로 전환한다.
+- [x] 발견 사항을 수정하고 전체 검증을 다시 실행한다.
+- [x] 논리적 변경별 커밋을 만들고 `CF-10`을 push한다.
+- [x] Issue와 같은 제목의 Draft PR을 만들고 `Closes #10`을 하나만 포함한다.
+- [x] PR에 `harness-change`를 적용하고 Issue와 Project를 review 상태로 전환한다.
