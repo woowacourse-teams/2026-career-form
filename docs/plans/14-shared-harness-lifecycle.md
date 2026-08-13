@@ -51,3 +51,13 @@
 - [x] `harness/scripts/verify.py`와 코드 리뷰를 통과한다.
 
 커밋: `test: CF 스킬 라우팅 및 생명주기 검증`
+
+## 6. Issue와 PR 영역 prefix 대문자 통일
+
+- [x] `[INFRA]`, `[HARNESS]`, `[RELEASE]`를 포함한 모든 영역 prefix를 대문자로 제한하는 실패 테스트를 추가한다.
+- [x] 제목 검증기와 배포 PR 계약이 대문자 prefix만 허용하게 한다.
+- [x] 기획 스킬, 정책, 컨벤션과 예시 제목을 대문자 계약에 맞춘다.
+- [x] Issue #14와 PR #15 제목을 `[HARNESS]`로 맞춘다.
+- [x] 관련 테스트와 전체 검증을 통과한다.
+
+커밋: `fix: Issue와 PR 영역 prefix 대문자 강제`

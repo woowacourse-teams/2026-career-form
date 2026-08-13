@@ -7,7 +7,7 @@ GitHub Project draft, repository Issue, `CF-<Issue 번호>` 브랜치, Draft PR�
 - 하나의 Issue는 하나의 브랜치와 하나의 PR로 종료한다.
 - Sub-issue와 Parent 관계를 작업 분해에 사용하지 않는다.
 - 한 Issue 안의 구현 순서는 계획 문서와 논리적 커밋으로 관리한다.
-- FE, BE, Infra처럼 독립 구현과 리뷰가 필요한 큰 범위는 별도 Project draft로 둔다.
+- FE, BE, INFRA처럼 독립 구현과 리뷰가 필요한 큰 범위는 별도 Project draft로 둔다.
 
 ## 상태 대응
 
@@ -23,8 +23,8 @@ Project draft를 Issue로 승격한 직후 Project Status는 `In Progress`로 �
 
 ## 연결 계약
 
-Issue와 PR 제목은 같은 `[영역] 작업명`을 사용하며 `FE`, `BE`, `Infra`,
-`Harness`, `PLAN` 영역을 허용한다. `PLAN`은 조사, 요구사항 정리, 문서 기획 같은
+Issue와 PR 제목은 같은 `[영역] 작업명`을 사용하며 `FE`, `BE`, `INFRA`,
+`HARNESS`, `PLAN` 영역을 대문자로 허용한다. `PLAN`은 조사, 요구사항 정리, 문서 기획 같은
 구현 전 작업에 사용한다. 브랜치는 `CF-<Issue 번호>`이며 PR 본문에는 같은 번호의
 `Closes #<Issue 번호>`를 정확히 하나만 둔다. PR 제목에는 `feat:`나 `fix:`를 붙이지
 않고, 개별 커밋에는 Conventional Commit type을 유지한다.

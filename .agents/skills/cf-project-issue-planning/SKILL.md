@@ -37,7 +37,7 @@ metadata:
 
 승격 전에 draft 제목을 `[영역] 작업명` 계약으로 검사한다.
 
-1. 영역이 Issue 설명, Project 맥락, 사용자 요청에서 하나로 명확하면 `FE`, `BE`, `Infra`, `Harness`, `PLAN` 중 하나를 선택한다. `PLAN`은 조사, 요구사항 정리와 문서 기획 같은 구현 전 작업에 사용한다.
+1. 영역이 Issue 설명, Project 맥락, 사용자 요청에서 하나로 명확하면 `FE`, `BE`, `INFRA`, `HARNESS`, `PLAN` 중 하나를 선택한다. `PLAN`은 조사, 요구사항 정리와 문서 기획 같은 구현 전 작업에 사용한다.
 2. 작업명은 한글을 포함한 명사형으로 다듬고 `한다` 종결, 마침표, Conventional Commit prefix를 제거한다.
 3. 영역이 둘 이상 가능하면 제목 후보를 제시하고 사용자에게 영역을 확인받는다.
 4. draft의 `content.id`인 DraftIssue ID를 사용해 `gh project item-edit --id <draft-content-id> --title '<보정 제목>'`로 제목을 바꾼다. Project item ID는 제목 변경에 사용하지 않는다.
@@ -72,7 +72,7 @@ metadata:
 
 ## 6. Issue 계약 초안 작성
 
-Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`, `[BE]`, `[Infra]`, `[Harness]`, `[PLAN]` 중 하나를 사용하고 작업명은 `한다`로 끝내지 않는다.
+Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`, `[BE]`, `[INFRA]`, `[HARNESS]`, `[PLAN]` 중 하나를 사용하고 모든 영역 prefix를 대문자로 작성한다. 작업명은 `한다`로 끝내지 않는다.
 
 선택한 `.github/ISSUE_TEMPLATE/*.yml`의 실제 `body`를 원본으로 사용한다. 각 입력 응답을 JSON으로 준비하고 선택한 Python으로 `harness/scripts/render-template-body.py issue`를 실행해 OS 임시 UTF-8 Markdown 파일을 만든다. 원격 Issue 본문을 수정하기 전에 다음 정보를 포함한 전체 본문 초안을 작성한다.
 
@@ -85,7 +85,7 @@ Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`
 - 의존성과 후속 draft 후보
 - ADR 판단과 필요한 경우 파일 경로 및 전문
 
-현재 Issue 안에서 완료할 수 없는 큰 FE, BE, Infra 작업은 독립 draft 후보로 제안한다. 사람이 별도 Project draft로 만들며 Parent나 Sub-issue 관계를 사용하지 않는다.
+현재 Issue 안에서 완료할 수 없는 큰 FE, BE, INFRA 작업은 독립 draft 후보로 제안한다. 사람이 별도 Project draft로 만들며 Parent나 Sub-issue 관계를 사용하지 않는다.
 
 ## 7. 구현 계획 작성과 승인
 

@@ -63,7 +63,7 @@ Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고,
 `docs/adr/<Issue 번호>-<slug>.md`로 작성해 같은 PR에 포함한다. 기획 중 새로 발견된
 구현 범위는 현재 Issue에 추가하지 않는다.
 
-새 범위가 발견되면 현재 구현에 섞지 않는다. FE, BE, Infra처럼 독립 구현이 필요한 큰 범위는 Project의 별도 draft 후보로 제안하고 사람이 draft를 만들도록 넘긴다. 현재 Issue의 Parent 또는 Sub-issue로 연결하지 않는다.
+새 범위가 발견되면 현재 구현에 섞지 않는다. FE, BE, INFRA처럼 독립 구현이 필요한 큰 범위는 Project의 별도 draft 후보로 제안하고 사람이 draft를 만들도록 넘긴다. 현재 Issue의 Parent 또는 Sub-issue로 연결하지 않는다.
 
 ## 4. 검증과 리뷰
 

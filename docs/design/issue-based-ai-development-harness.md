@@ -60,7 +60,7 @@ Issue의 작업 상태는 본문이 아니라 라벨, 담당자, 연결 PR로 �
 진행 상황을 Issue 댓글에 반복해서 남기지 않는다. 다음 작업자가 반드시 알아야 하는
 차단 사유만 댓글로 기록하고, 구현과 검증 근거는 PR에 기록한다.
 
-GitHub Project draft는 기능 단위 백로그다. FE, BE, Infra처럼 독립 구현이 필요한 큰
+GitHub Project draft는 기능 단위 백로그다. FE, BE, INFRA처럼 독립 구현이 필요한 큰
 영역만 별도 draft로 나누고 Sub-issue는 사용하지 않는다. 승격된 Issue 하나는
 `CF-<Issue 번호>` 브랜치 하나와 PR 하나로 완료한다.
 [GitHub Issue Form 문서](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms),
@@ -158,8 +158,8 @@ GitHub Ruleset은 PR, 필수 검사, 사람 승인, force push 금지를 서버�
 AI는 `docs/conventions/commit.md`를 따라 메시지를 작성한다. `commit-msg` Git 훅은
 type, scope 미사용, 한글 포함, 마침표, Breaking Change 형식을 검사한다.
 
-Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE`, `BE`, `Infra`,
-`Harness`, `PLAN`을 허용하며 `PLAN`은 구현 전 조사와 기획에 사용한다. `feat:`,
+Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE`, `BE`, `INFRA`,
+`HARNESS`, `PLAN`을 대문자로 허용하며 `PLAN`은 구현 전 조사와 기획에 사용한다. `feat:`,
 `fix:` 같은 type을 붙이지 않고 명사형으로 작성한다. 최종 승인자는 GitHub 머지
 화면에서 Squash Commit 제목과 본문을 직접 확인한다. `pr-contract.yml`은 PR 제목,
 브랜치 번호와 종료 Issue 번호를 검사한다.
