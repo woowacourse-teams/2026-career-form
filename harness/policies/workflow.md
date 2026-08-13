@@ -1,7 +1,7 @@
 # Issue 기반 작업 흐름
 
-1. 사람이 GitHub Project draft를 기능 단위로 작성한다. FE, BE, INFRA처럼 독립 구현이 필요할 때만 별도 draft로 나눈다.
-2. AI가 draft 제목을 `[영역] 작업명`으로 검사하고 필요한 경우 보정한 뒤 Issue로 승격한다. 영역은 대문자 `FE`, `BE`, `INFRA`, `HARNESS`, `PLAN`을 허용한다. Issue에는 `status:planning`, Project에는 In Progress를 적용하고 함께 확인한다.
+1. 사람이 GitHub Project draft를 기능 단위로 작성한다. FE, BE, Infra처럼 독립 구현이 필요할 때만 별도 draft로 나눈다.
+2. AI가 draft 제목을 `[영역] 작업명`으로 검사하고 필요한 경우 보정한 뒤 Issue로 승격한다. 영역은 `FE`, `BE`, `Infra`, `Harness`, `Plan`을 허용하며 `FE`, `BE`만 전체를 대문자로 쓴다. Issue에는 `status:planning`, Project에는 In Progress를 적용하고 함께 확인한다.
 3. AI가 Issue 본문과 커밋 단위 구현 계획을 제안한다. 사람이 전문을 승인하면 AI가 원격 본문을 게시하고 확인한 뒤 `status:ready`로 전환한다.
 4. AI가 Issue를 다시 읽고 위험 작업과 누락 정보를 검사한다.
 5. `CF-<Issue 번호>` 워크트리에서 논리적 커밋 단위로 작업한다.

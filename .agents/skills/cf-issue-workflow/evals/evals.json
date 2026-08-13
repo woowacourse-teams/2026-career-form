@@ -53,7 +53,7 @@
     },
     {
       "id": 5,
-      "prompt": "status:ready인 [PLAN] Issue #123에 승인된 ADR 전문과 경로가 있어. 작업해줘.",
+      "prompt": "status:ready인 [Plan] Issue #123에 승인된 ADR 전문과 경로가 있어. 작업해줘.",
       "expected_output": "CF-123 브랜치를 만든 뒤 승인된 전문을 docs/adr 경로에 작성하고 같은 Draft PR에 포함한다.",
       "files": [],
       "expectations": [
@@ -64,18 +64,18 @@
     },
     {
       "id": 6,
-      "prompt": "status:ready인 [PLAN] Issue #123은 조사 결과와 요구사항 문서만 범위야. 구현도 알아서 해줘.",
+      "prompt": "status:ready인 [Plan] Issue #123은 조사 결과와 요구사항 문서만 범위야. 구현도 알아서 해줘.",
       "expected_output": "승인된 기획 문서 범위만 수행하고 요청된 구현은 현재 작업에 추가하지 않으며 별도 Project draft 후보로 제안한다.",
       "files": [],
       "expectations": [
-        "PLAN Issue의 승인된 포함 범위를 정본으로 사용한다",
+        "Plan Issue의 승인된 포함 범위를 정본으로 사용한다",
         "승인되지 않은 구현을 같은 Issue에 추가하지 않는다",
         "새 구현은 사람이 만들 별도 Project draft 후보로 제안한다"
       ]
     },
     {
       "id": 7,
-      "prompt": "status:ready인 [PLAN] Issue #123 본문에 조사와 검증기 구현이 모두 포함돼 있어. Draft PR까지 진행해줘.",
+      "prompt": "status:ready인 [Plan] Issue #123 본문에 조사와 검증기 구현이 모두 포함돼 있어. Draft PR까지 진행해줘.",
       "expected_output": "승인된 기획과 구현 범위를 CF-123의 한 PR에서 함께 수행한다.",
       "files": [],
       "expectations": [

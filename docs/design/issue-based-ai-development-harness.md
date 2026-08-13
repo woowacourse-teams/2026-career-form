@@ -158,8 +158,9 @@ GitHub Ruleset은 PR, 필수 검사, 사람 승인, force push 금지를 서버�
 AI는 `docs/conventions/commit.md`를 따라 메시지를 작성한다. `commit-msg` Git 훅은
 type, scope 미사용, 한글 포함, 마침표, Breaking Change 형식을 검사한다.
 
-Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE`, `BE`, `INFRA`,
-`HARNESS`, `PLAN`을 대문자로 허용하며 `PLAN`은 구현 전 조사와 기획에 사용한다. `feat:`,
+Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE`, `BE`, `Infra`,
+`Harness`, `Plan`을 허용한다. `FE`, `BE`만 전체를 대문자로 쓰며 `Plan`은 구현 전
+조사와 기획에 사용한다. `feat:`,
 `fix:` 같은 type을 붙이지 않고 명사형으로 작성한다. 최종 승인자는 GitHub 머지
 화면에서 Squash Commit 제목과 본문을 직접 확인한다. `pr-contract.yml`은 PR 제목,
 브랜치 번호와 종료 Issue 번호를 검사한다.

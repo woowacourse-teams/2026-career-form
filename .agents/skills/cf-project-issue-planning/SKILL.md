@@ -1,6 +1,6 @@
 ---
 name: cf-project-issue-planning
-description: 사람이 만든 GitHub Project draft issue 하나를 실행 가능한 작업 계약으로 구체화한다. 제목 보정, Issue 승격, In Progress 전환, 요구사항 인터뷰, PLAN 및 ADR 판단, Issue 본문과 단일 PR 계획의 사람 승인까지 연결한다. 사용자가 "draft issue를 이슈로 승격해줘", "Project 항목을 작업 Issue로 구체화해줘", "이슈 본문과 계획을 채워줘"처럼 구현 전 기획을 요청하거나 목표, 정책, 범위와 완료 기준을 함께 결정해야 할 때 사용한다. draft 생성, 확정된 ready Issue의 구현, Sub-issue 생성에는 사용하지 않는다.
+description: 사람이 만든 GitHub Project draft issue 하나를 실행 가능한 작업 계약으로 구체화한다. 제목 보정, Issue 승격, In Progress 전환, 요구사항 인터뷰, Plan 및 ADR 판단, Issue 본문과 단일 PR 계획의 사람 승인까지 연결한다. 사용자가 "draft issue를 이슈로 승격해줘", "Project 항목을 작업 Issue로 구체화해줘", "이슈 본문과 계획을 채워줘"처럼 구현 전 기획을 요청하거나 목표, 정책, 범위와 완료 기준을 함께 결정해야 할 때 사용한다. draft 생성, 확정된 ready Issue의 구현, Sub-issue 생성에는 사용하지 않는다.
 metadata:
   calls:
     - cf-github-project-onboarding
@@ -37,7 +37,7 @@ metadata:
 
 승격 전에 draft 제목을 `[영역] 작업명` 계약으로 검사한다.
 
-1. 영역이 Issue 설명, Project 맥락, 사용자 요청에서 하나로 명확하면 `FE`, `BE`, `INFRA`, `HARNESS`, `PLAN` 중 하나를 선택한다. `PLAN`은 조사, 요구사항 정리와 문서 기획 같은 구현 전 작업에 사용한다.
+1. 영역이 Issue 설명, Project 맥락, 사용자 요청에서 하나로 명확하면 `FE`, `BE`, `Infra`, `Harness`, `Plan` 중 하나를 선택한다. `FE`, `BE`만 전체를 대문자로 쓰며 `Plan`은 조사, 요구사항 정리와 문서 기획 같은 구현 전 작업에 사용한다.
 2. 작업명은 한글을 포함한 명사형으로 다듬고 `한다` 종결, 마침표, Conventional Commit prefix를 제거한다.
 3. 영역이 둘 이상 가능하면 제목 후보를 제시하고 사용자에게 영역을 확인받는다.
 4. draft의 `content.id`인 DraftIssue ID를 사용해 `gh project item-edit --id <draft-content-id> --title '<보정 제목>'`로 제목을 바꾼다. Project item ID는 제목 변경에 사용하지 않는다.
@@ -65,14 +65,14 @@ metadata:
 2. 요청이 항목별로 구체적이어도 정책의 의미, 적용 시점, 범위와 완료 기준을 AI가 대신 결정해야 하면 `cf-deep-interview`를 사용한다.
 3. 한 번에 가장 중요한 질문 하나만 하고 목표, 포함 및 제외 범위, 제약과 완료 기준이 정리될 때까지 Issue 계약을 확정하지 않는다.
 4. 정책, 보안, 데이터, 공용 워크플로우처럼 실패 비용이 크거나 대안 간 장단점을 압박 검토할 가치가 있으면 `cf-grill-me`를 사용한다. 작고 되돌리기 쉬운 결정에는 강제하지 않는다.
-5. `[PLAN]`은 기획 자산만 반영하는 작업을 기본으로 한다. 처음 승인할 Issue 계약에 구현이 포함돼 있으면 같은 Issue와 PR에서 구현까지 진행할 수 있다.
+5. `[Plan]`은 기획 자산만 반영하는 작업을 기본으로 한다. 처음 승인할 Issue 계약에 구현이 포함돼 있으면 같은 Issue와 PR에서 구현까지 진행할 수 있다.
 6. 여러 대안을 검토했고 결과가 후속 작업, 제품 정책, 아키텍처, 보안, 데이터 또는 공용 워크플로우에 지속적으로 영향을 주는지 판단한다.
 7. 장기 결정이 없으면 Issue 본문에 ADR이 필요하지 않은 이유를 기록한다.
 8. 장기 결정이 있으면 `docs/adr/README.md`를 기준으로 파일 경로와 ADR 전문을 작성해 Issue 계약과 함께 제안한다. 승인 전에는 ADR 파일을 만들지 않는다.
 
 ## 6. Issue 계약 초안 작성
 
-Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`, `[BE]`, `[INFRA]`, `[HARNESS]`, `[PLAN]` 중 하나를 사용하고 모든 영역 prefix를 대문자로 작성한다. 작업명은 `한다`로 끝내지 않는다.
+Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`, `[BE]`, `[Infra]`, `[Harness]`, `[Plan]` 중 하나를 사용한다. `FE`, `BE`만 전체를 대문자로 쓰고 나머지 영역은 첫 문자만 대문자로 작성한다. 작업명은 `한다`로 끝내지 않는다.
 
 선택한 `.github/ISSUE_TEMPLATE/*.yml`의 실제 `body`를 원본으로 사용한다. 각 입력 응답을 JSON으로 준비하고 선택한 Python으로 `harness/scripts/render-template-body.py issue`를 실행해 OS 임시 UTF-8 Markdown 파일을 만든다. 원격 Issue 본문을 수정하기 전에 다음 정보를 포함한 전체 본문 초안을 작성한다.
 
@@ -85,7 +85,7 @@ Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`
 - 의존성과 후속 draft 후보
 - ADR 판단과 필요한 경우 파일 경로 및 전문
 
-현재 Issue 안에서 완료할 수 없는 큰 FE, BE, INFRA 작업은 독립 draft 후보로 제안한다. 사람이 별도 Project draft로 만들며 Parent나 Sub-issue 관계를 사용하지 않는다.
+현재 Issue 안에서 완료할 수 없는 큰 FE, BE, Infra 작업은 독립 draft 후보로 제안한다. 사람이 별도 Project draft로 만들며 Parent나 Sub-issue 관계를 사용하지 않는다.
 
 ## 7. 구현 계획 작성과 승인
 

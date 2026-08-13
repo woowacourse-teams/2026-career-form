@@ -111,7 +111,7 @@ Closes #
         )
         issue_result = validate_issue(
             {
-                "title": "[HARNESS] 공용 하네스 실행 경로 정비",
+                "title": "[Harness] 공용 하네스 실행 경로 정비",
                 "body": issue_body,
                 "labels": [{"name": "status:ready"}],
             }
@@ -127,12 +127,12 @@ Closes #
         )
         pr_result = validate_pr(
             {
-                "title": "[HARNESS] 공용 하네스 실행 경로 정비",
+                "title": "[Harness] 공용 하네스 실행 경로 정비",
                 "body": pr_body,
                 "head": {"ref": "CF-14"},
                 "base": {"ref": "develop"},
             },
-            linked_issue_title="[HARNESS] 공용 하네스 실행 경로 정비",
+            linked_issue_title="[Harness] 공용 하네스 실행 경로 정비",
         )
 
         self.assertTrue(issue_result.is_valid, issue_result.errors)

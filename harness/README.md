@@ -42,7 +42,7 @@ python3 harness/scripts/ensure-environment.py
 
 ## Project Issue 기획
 
-`cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[PLAN]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.
+`cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[Plan]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.
 
 기획 중 대안을 비교한 장기 결정이 제품, 아키텍처, 보안, 데이터 또는 공용 워크플로우에 영향을 주면 `docs/adr/`의 ADR 대상으로 판단한다. 승인 전에는 Issue 계약에 전체 ADR 초안과 저장 경로만 제안하고 파일을 만들지 않는다. 승인 뒤 `cf-issue-workflow`가 `CF-*` 브랜치에서 ADR 파일을 작성해 같은 PR에 포함한다. 일반 조사 결과나 쉽게 되돌릴 수 있는 선택에는 ADR을 강제하지 않는다. 상태 전이를 재개할 때는 선택한 Python으로 `harness/scripts/plan-project-issue.py <snapshot 파일>`을 실행해 첫 미완료 action을 확인한다.
 

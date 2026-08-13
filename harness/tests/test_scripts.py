@@ -27,7 +27,7 @@ class HarnessScriptsTest(unittest.TestCase):
             "action": "labeled",
             "label": {"name": "status:ready"},
             "issue": {
-                "title": "[PLAN] 지원서 필드 구조 결정",
+                "title": "[Plan] 지원서 필드 구조 결정",
                 "body": self._valid_issue_body(),
                 "labels": [{"name": "status:ready"}],
             }
@@ -44,13 +44,13 @@ class HarnessScriptsTest(unittest.TestCase):
     def test_pr_script_accepts_plan_title(self) -> None:
         event = {
             "pull_request": {
-                "title": "[PLAN] 지원서 필드 구조 결정",
+                "title": "[Plan] 지원서 필드 구조 결정",
                 "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
             }
         }
-        linked_issue = {"title": "[PLAN] 지원서 필드 구조 결정"}
+        linked_issue = {"title": "[Plan] 지원서 필드 구조 결정"}
 
         with tempfile.TemporaryDirectory() as directory:
             payload = Path(directory) / "event.json"

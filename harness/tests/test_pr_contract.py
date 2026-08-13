@@ -20,7 +20,7 @@ class PullRequestContractTest(unittest.TestCase):
     def test_accepts_plan_pr_to_develop(self) -> None:
         result = validate_pr(
             {
-                "title": "[PLAN] 프로필 저장 구조 결정",
+                "title": "[Plan] 프로필 저장 구조 결정",
                 "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
@@ -102,7 +102,7 @@ class PullRequestContractTest(unittest.TestCase):
     def test_accepts_release_pr_without_closing_issue(self) -> None:
         result = validate_pr(
             {
-                "title": "[RELEASE] 프로덕션 배포",
+                "title": "[Release] 프로덕션 배포",
                 "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
                 "head": {"ref": "develop"},
                 "base": {"ref": "main"},
@@ -111,10 +111,10 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
-    def test_rejects_release_prefix_that_is_not_all_uppercase(self) -> None:
+    def test_rejects_release_prefix_that_is_all_uppercase(self) -> None:
         result = validate_pr(
             {
-                "title": "[Release] 프로덕션 배포",
+                "title": "[RELEASE] 프로덕션 배포",
                 "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
                 "head": {"ref": "develop"},
                 "base": {"ref": "main"},
@@ -122,14 +122,14 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "배포 PR 제목은 [RELEASE] 작업명 형식이어야 합니다",
+            "배포 PR 제목은 [Release] 작업명 형식이어야 합니다",
             result.errors,
         )
 
     def test_rejects_release_title_on_feature_pr(self) -> None:
         result = validate_pr(
             {
-                "title": "[RELEASE] 프로덕션 배포",
+                "title": "[Release] 프로덕션 배포",
                 "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "develop"},
@@ -137,14 +137,14 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "영역은 FE, BE, INFRA, HARNESS, PLAN 중 하나여야 합니다",
+            "영역은 FE, BE, Infra, Harness, Plan 중 하나여야 합니다",
             result.errors,
         )
 
     def test_rejects_release_pr_that_closes_issue(self) -> None:
         result = validate_pr(
             {
-                "title": "[RELEASE] 프로덕션 배포",
+                "title": "[Release] 프로덕션 배포",
                 "body": VALID_PR_BODY,
                 "head": {"ref": "develop"},
                 "base": {"ref": "main"},
@@ -310,7 +310,7 @@ class PullRequestContractTest(unittest.TestCase):
     def test_rejects_release_pr_with_external_closing_reference(self) -> None:
         result = validate_pr(
             {
-                "title": "[RELEASE] 프로덕션 배포",
+                "title": "[Release] 프로덕션 배포",
                 "body": VALID_PR_BODY.replace(
                     "Closes #123",
                     "Resolves: woowacourse-teams/other-repository#123",

@@ -44,7 +44,7 @@ class IssueContractTest(unittest.TestCase):
     def test_accepts_ready_plan_issue(self) -> None:
         result = validate_issue(
             {
-                "title": "[PLAN] 프로필 저장 구조 결정",
+                "title": "[Plan] 프로필 저장 구조 결정",
                 "body": VALID_BODY,
                 "labels": [{"name": "status:ready"}],
             }

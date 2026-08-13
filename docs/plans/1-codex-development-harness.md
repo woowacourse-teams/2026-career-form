@@ -13,7 +13,7 @@
 - 작업 Issue는 #1 하나이며 기능 PR도 하나만 만든다.
 - Sub-issue를 생성하거나 Parent 관계를 요구하지 않는다.
 - 작업 브랜치는 `CF-1`이다.
-- Issue와 PR 제목은 `[HARNESS] Codex 개발 하네스 구축`이다.
+- Issue와 PR 제목은 `[Harness] Codex 개발 하네스 구축`이다.
 - 개별 커밋은 Conventional Commit type을 유지하고 설명 끝에 `한다`를 사용하지 않는다.
 - PR 제목에는 Conventional Commit type을 붙이지 않는다.
 - PR 최종 승인, Squash Merge와 최종 커밋 제목 입력은 사람이 수행한다.
@@ -49,12 +49,12 @@
 
 **Interfaces:**
 - `issue_number_from_branch("CF-1") -> "1"`
-- `validate_work_title("[HARNESS] Codex 개발 하네스 구축") -> ValidationResult`
+- `validate_work_title("[Harness] Codex 개발 하네스 구축") -> ValidationResult`
 - `validate_commit_message("feat: GitHub Project 접근 진단 추가") -> ValidationResult`
 
 - [x] **Step 1: 새 브랜치와 제목 계약의 실패 테스트 작성**
 
-  `CF-123`에서 `develop`으로 병합할 수 있고, `main` 직접 병합과 `feature/123-slug`는 거부되는 테스트를 작성한다. `develop`에서 `main`으로 보내는 배포 PR은 허용한다. Issue와 PR 제목은 `[FE]`, `[BE]`, `[INFRA]`, `[HARNESS]` 영역을 허용하고 Conventional Commit prefix와 `한다` 종결을 거부한다.
+  `CF-123`에서 `develop`으로 병합할 수 있고, `main` 직접 병합과 `feature/123-slug`는 거부되는 테스트를 작성한다. `develop`에서 `main`으로 보내는 배포 PR은 허용한다. Issue와 PR 제목은 `[FE]`, `[BE]`, `[Infra]`, `[Harness]` 영역을 허용하고 Conventional Commit prefix와 `한다` 종결을 거부한다.
 
 - [x] **Step 2: RED 확인**
 
@@ -201,7 +201,7 @@
 
 - [x] **Step 4: 기획 스킬 작성**
 
-  스킬은 접근 진단, 사람이 만든 대상 식별, 제목 보정, Issue 승격, In Progress 전환, Issue 계약과 구현 계획 전문 제안, 사람 승인, 원격 게시 순서로 동작한다. AI는 draft를 만들지 않고 큰 FE, BE, INFRA 영역은 사람이 만들 별도 draft 후보로만 제안하며 현재 Issue의 Sub-issue로 연결하지 않는다.
+  스킬은 접근 진단, 사람이 만든 대상 식별, 제목 보정, Issue 승격, In Progress 전환, Issue 계약과 구현 계획 전문 제안, 사람 승인, 원격 게시 순서로 동작한다. AI는 draft를 만들지 않고 큰 FE, BE, Infra 영역은 사람이 만들 별도 draft 후보로만 제안하며 현재 Issue의 Sub-issue로 연결하지 않는다.
 
 - [x] **Step 5: GREEN 확인과 커밋**
 
