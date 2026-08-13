@@ -56,7 +56,7 @@ class EnvironmentSetupTest(unittest.TestCase):
             root = Path(directory)
             scripts = root / "harness" / "scripts"
             scripts.mkdir(parents=True)
-            bootstrap = scripts / "bootstrap"
+            bootstrap = scripts / "bootstrap.py"
             bootstrap.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             bootstrap.chmod(0o755)
 
@@ -64,13 +64,13 @@ class EnvironmentSetupTest(unittest.TestCase):
 
             self.assertFalse(result.is_ready)
             self.assertEqual("entrypoint_missing", result.code)
-            self.assertIn("doctor", result.message)
+            self.assertIn("doctor.py", result.message)
 
     def test_preserves_bootstrap_execution_error(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self._write_scripts(root, ready=False)
-            bootstrap = root / "harness" / "scripts" / "bootstrap"
+            bootstrap = root / "harness" / "scripts" / "bootstrap.py"
             bootstrap.chmod(0o644)
 
             result = ensure_environment(root)
@@ -93,7 +93,7 @@ class EnvironmentSetupTest(unittest.TestCase):
         if ready:
             (root / ".ready").touch()
 
-        doctor = scripts / "doctor"
+        doctor = scripts / "doctor.py"
         doctor.write_text(
             "#!/bin/sh\n"
             "count=0\n"
@@ -105,7 +105,7 @@ class EnvironmentSetupTest(unittest.TestCase):
         )
         doctor.chmod(0o755)
 
-        bootstrap = scripts / "bootstrap"
+        bootstrap = scripts / "bootstrap.py"
         ready_command = "touch .ready\n" if bootstrap_creates_ready else ""
         bootstrap.write_text(
             "#!/bin/sh\n"

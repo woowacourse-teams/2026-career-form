@@ -7,7 +7,7 @@
       "expected_output": "저장소 진단 명령으로 원인을 분류하고 Project scope 갱신은 사용자에게 맡긴 뒤 재진단한다.",
       "files": [],
       "expectations": [
-        "harness/scripts/diagnose-project-access를 먼저 사용한다",
+        "harness/scripts/diagnose-project-access.py를 먼저 사용한다",
         "project scope 부족이면 gh auth refresh -s project를 안내한다",
         "토큰을 읽거나 원격 Project를 변경하지 않는다"
       ]

@@ -26,7 +26,7 @@ def main() -> int:
     if completed.returncode != 0:
         print("Git 훅 경로를 설정하지 못했습니다", file=sys.stderr)
         return 1
-    doctor = ROOT / "harness" / "scripts" / "doctor"
+    doctor = ROOT / "harness" / "scripts" / "doctor.py"
     return subprocess.run((str(doctor),), cwd=ROOT, check=False).returncode
 
 

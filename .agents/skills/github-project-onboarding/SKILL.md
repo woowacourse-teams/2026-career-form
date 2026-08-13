@@ -9,7 +9,7 @@ description: GitHub Project 접근이 처음부터 안 되거나 gh 인증, proj
 
 ## 진단 순서
 
-1. 저장소 루트에서 `harness/scripts/diagnose-project-access`를 실행한다.
+1. 저장소 루트에서 `harness/scripts/diagnose-project-access.py`를 실행한다.
 2. 출력 code에 해당하는 한 단계만 안내한다.
 3. 사람의 인증 작업이 끝나면 같은 명령을 다시 실행한다.
 4. `ready`가 확인된 뒤 원래 요청으로 돌아간다. 이 스킬만 실행한 경우 Issue, Project item, label을 변경하지 않는다.
