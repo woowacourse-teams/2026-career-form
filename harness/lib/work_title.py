@@ -14,7 +14,7 @@ CONVENTIONAL_PREFIX_PATTERN = re.compile(
 FORMAL_DECLARATIVE_ENDING_PATTERN = re.compile(
     r"(?:합니다|했습니다|됩니다)$"
 )
-ALLOWED_AREAS = frozenset(("FE", "BE", "Infra", "Harness"))
+ALLOWED_AREAS = frozenset(("FE", "BE", "Infra", "Harness", "PLAN"))
 RELEASE_TITLE_PATTERN = re.compile(r"^\[Release\] (?P<description>.+)$")
 
 
@@ -27,7 +27,7 @@ def validate_work_title(title: str) -> ValidationResult:
     description = match.group("description")
     errors: tuple[str, ...] = ()
     if area not in ALLOWED_AREAS:
-        errors += ("영역은 FE, BE, Infra, Harness 중 하나여야 합니다",)
+        errors += ("영역은 FE, BE, Infra, Harness, PLAN 중 하나여야 합니다",)
     if CONVENTIONAL_PREFIX_PATTERN.match(description) is not None:
         errors += (
             "Issue와 PR 제목에 Conventional Commit type을 사용할 수 없습니다",

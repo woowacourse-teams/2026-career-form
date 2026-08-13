@@ -23,7 +23,11 @@ Project draft를 Issue로 승격한 직후 Project Status는 `In Progress`로 �
 
 ## 연결 계약
 
-Issue와 PR 제목은 같은 `[영역] 작업명`을 사용한다. 브랜치는 `CF-<Issue 번호>`이며 PR 본문에는 같은 번호의 `Closes #<Issue 번호>`를 정확히 하나만 둔다. PR 제목에는 `feat:`나 `fix:`를 붙이지 않고, 개별 커밋에는 Conventional Commit type을 유지한다.
+Issue와 PR 제목은 같은 `[영역] 작업명`을 사용하며 `FE`, `BE`, `Infra`,
+`Harness`, `PLAN` 영역을 허용한다. `PLAN`은 조사, 요구사항 정리, 문서 기획 같은
+구현 전 작업에 사용한다. 브랜치는 `CF-<Issue 번호>`이며 PR 본문에는 같은 번호의
+`Closes #<Issue 번호>`를 정확히 하나만 둔다. PR 제목에는 `feat:`나 `fix:`를 붙이지
+않고, 개별 커밋에는 Conventional Commit type을 유지한다.
 
 ## 작업 흐름
 

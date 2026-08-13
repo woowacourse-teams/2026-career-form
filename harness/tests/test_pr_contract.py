@@ -17,6 +17,18 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid)
 
+    def test_accepts_plan_pr_to_develop(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[PLAN] 프로필 저장 구조 결정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_accepts_colon_closing_keyword(self) -> None:
         result = validate_pr(
             {
@@ -110,7 +122,7 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "영역은 FE, BE, Infra, Harness 중 하나여야 합니다",
+            "영역은 FE, BE, Infra, Harness, PLAN 중 하나여야 합니다",
             result.errors,
         )
 

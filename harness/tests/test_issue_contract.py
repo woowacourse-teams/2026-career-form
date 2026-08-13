@@ -41,6 +41,17 @@ class IssueContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid)
 
+    def test_accepts_ready_plan_issue(self) -> None:
+        result = validate_issue(
+            {
+                "title": "[PLAN] 프로필 저장 구조 결정",
+                "body": VALID_BODY,
+                "labels": [{"name": "status:ready"}],
+            }
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_rejects_issue_that_is_not_ready(self) -> None:
         result = validate_issue(
             {
