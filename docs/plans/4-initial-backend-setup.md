@@ -125,7 +125,7 @@
 - [x] Swagger가 `local`, `dev`에만 노출되는 정책과 접근 경로를 기록한다.
 - [x] `./gradlew clean check`, `./gradlew bootJar`, `git diff --check`를 실행한다.
 - [x] `harness/scripts/verify`와 Issue 인수 조건별 근거를 새로 확인한다.
-- [ ] `code-review`로 `origin/develop...HEAD`의 Standards와 Issue #4 계약 일치를 독립 검토한다.
+- [x] `code-review`로 `origin/develop...HEAD`의 Standards와 Issue #4 계약 일치를 독립 검토한다.
 
 ### Task 6: Springdoc 버전 정합화
 
@@ -210,7 +210,7 @@
 - [x] 표준 검증 순서를 `./gradlew clean check` 후 Docker Compose 빌드·실행으로 기록한다.
 - [x] 공통 Compose와 local override의 책임, 포트 변경, 향후 동일 이미지 승격과 DB 추가 원칙을 기록한다.
 - [x] `./gradlew clean check`, `./gradlew bootJar`, Docker smoke, `harness/scripts/verify`, `git diff --check`를 새로 실행한다.
-- [ ] Issue 인수 조건을 근거와 대조하고 `code-review`의 Standards·Spec 결과를 반영한다.
+- [x] Issue 인수 조건을 근거와 대조하고 `code-review`의 Standards·Spec 결과를 반영한다.
 
 ## 보류 및 후속 후보
 
