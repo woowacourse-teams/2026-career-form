@@ -5,14 +5,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from harness.lib.python_runtime import python_command, virtual_environment_python
 
 
 def main() -> int:
     environment = ROOT / ".venv"
     dependencies = ROOT / "harness" / "requirements.txt"
+    environment_python = virtual_environment_python(ROOT)
     setup = (
         (sys.executable, "-m", "venv", str(environment)),
-        (str(environment / "bin" / "python"), "-m", "pip", "install", "-r", str(dependencies)),
+        (str(environment_python), "-m", "pip", "install", "-r", str(dependencies)),
     )
     for command in setup:
         if subprocess.run(command, cwd=ROOT, check=False).returncode != 0:
@@ -27,7 +31,7 @@ def main() -> int:
         print("Git 훅 경로를 설정하지 못했습니다", file=sys.stderr)
         return 1
     doctor = ROOT / "harness" / "scripts" / "doctor.py"
-    return subprocess.run((str(doctor),), cwd=ROOT, check=False).returncode
+    return subprocess.run(python_command(ROOT, doctor), cwd=ROOT, check=False).returncode
 
 
 if __name__ == "__main__":

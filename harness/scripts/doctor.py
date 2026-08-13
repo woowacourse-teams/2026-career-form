@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-REQUIRED_COMMANDS = ("codex", "gh", "git", "python3")
+sys.path.insert(0, str(ROOT))
+
+from harness.lib.python_runtime import virtual_environment_python
+
+
+REQUIRED_COMMANDS = ("codex", "gh", "git")
 REQUIRED_PATHS = (
     ".codex/config.toml",
     ".codex/hooks.json",
@@ -13,7 +19,6 @@ REQUIRED_PATHS = (
     ".githooks/pre-commit",
     ".githooks/pre-push",
     ".agents/skills/issue-workflow/SKILL.md",
-    ".venv/bin/python",
 )
 
 
@@ -39,6 +44,11 @@ def main() -> int:
         for path in REQUIRED_PATHS
         if not (ROOT / path).is_file()
     )
+    environment_python = virtual_environment_python(ROOT)
+    if not environment_python.is_file():
+        errors.append(
+            f"필수 파일이 없습니다: {environment_python.relative_to(ROOT)}"
+        )
     if git_hooks_path() != ".githooks":
         errors.append("core.hooksPath가 .githooks로 설정되지 않았습니다")
     if errors:

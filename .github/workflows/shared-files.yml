@@ -30,4 +30,4 @@ jobs:
       - name: 공유 파일 계약 검사
         env:
           GH_TOKEN: ${{ github.token }}
-        run: harness/scripts/validate-shared-files.py "$RUNNER_TEMP/changed-paths.txt" "$RUNNER_TEMP/current-pr.json"
+        run: python harness/scripts/validate-shared-files.py "$RUNNER_TEMP/changed-paths.txt" "$RUNNER_TEMP/current-pr.json"

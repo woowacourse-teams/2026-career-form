@@ -5,8 +5,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-VENV_PYTHON = ROOT / ".venv" / "bin" / "python"
-PYTHON = str(VENV_PYTHON) if VENV_PYTHON.is_file() else sys.executable
+sys.path.insert(0, str(ROOT))
+
+from harness.lib.python_runtime import select_python
+
+
+PYTHON = str(select_python(ROOT))
 
 
 def run(command: tuple[str, ...]) -> int:
