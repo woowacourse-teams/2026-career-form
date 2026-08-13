@@ -1,0 +1,18 @@
+services:
+  backend:
+    init: true
+    stop_grace_period: 30s
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - http://127.0.0.1:8080/actuator/health
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5

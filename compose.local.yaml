@@ -1,0 +1,10 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: career-form-backend:local
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
