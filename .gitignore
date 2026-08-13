@@ -6,6 +6,7 @@ htmlcov/
 .worktrees/
 .DS_Store
 *.log
+spikes/page-analysis/*.zip
 .env
 .env.*
 !.env.example
