@@ -1,6 +1,6 @@
 # Codex Development Harness Implementation Plan
 
-> **For agentic workers:** `test-driven-development`로 각 행동의 실패를 먼저 확인하고, 커밋 단위마다 관련 테스트를 통과시킨다. 완료 전 `verification-before-completion`과 `code-review`를 적용한다.
+> **For agentic workers:** `cf-test-driven-development`로 각 행동의 실패를 먼저 확인하고, 커밋 단위마다 관련 테스트를 통과시킨다. 완료 전 `cf-verification-before-completion`과 `cf-code-review`를 적용한다.
 
 **Goal:** GitHub Project draft에서 시작해 하나의 Issue, `CF-<Issue 번호>` 브랜치, 하나의 PR로 끝나는 Codex 개발 하네스를 제공한다.
 
@@ -129,11 +129,11 @@
 - Create: `harness/project.json`
 - Create: `harness/lib/project_config.py`
 - Create: `harness/lib/project_access.py`
-- Create: `harness/scripts/diagnose-project-access`
+- Create: `harness/scripts/diagnose-project-access.py`
 - Create: `harness/tests/test_project_config.py`
 - Create: `harness/tests/test_project_access.py`
-- Create: `.agents/skills/github-project-onboarding/SKILL.md`
-- Create: `.agents/skills/github-project-onboarding/evals/evals.json`
+- Create: `.agents/skills/cf-github-project-onboarding/SKILL.md`
+- Create: `.agents/skills/cf-github-project-onboarding/evals/evals.json`
 - Modify: `harness/README.md`
 - Modify: `harness/lib/skill_inventory.py`
 - Modify: `harness/tests/test_skill_inventory.py`
@@ -173,10 +173,10 @@
 
 **Files:**
 - Create: `harness/lib/project_issue.py`
-- Create: `harness/scripts/plan-project-issue`
+- Create: `harness/scripts/plan-project-issue.py`
 - Create: `harness/tests/test_project_issue.py`
-- Create: `.agents/skills/project-issue-planning/SKILL.md`
-- Create: `.agents/skills/project-issue-planning/evals/evals.json`
+- Create: `.agents/skills/cf-project-issue-planning/SKILL.md`
+- Create: `.agents/skills/cf-project-issue-planning/evals/evals.json`
 - Modify: `harness/README.md`
 - Modify: `harness/lib/skill_inventory.py`
 - Modify: `harness/tests/test_skill_inventory.py`
@@ -215,11 +215,11 @@
 
 **Files:**
 - Modify: `harness/lib/project_issue.py`
-- Modify: `harness/scripts/plan-project-issue`
+- Modify: `harness/scripts/plan-project-issue.py`
 - Modify: `harness/tests/test_project_issue.py`
-- Modify: `.agents/skills/project-issue-planning/SKILL.md`
-- Modify: `.agents/skills/project-issue-planning/evals/evals.json`
-- Modify: `.agents/skills/issue-workflow/SKILL.md`
+- Modify: `.agents/skills/cf-project-issue-planning/SKILL.md`
+- Modify: `.agents/skills/cf-project-issue-planning/evals/evals.json`
+- Modify: `.agents/skills/cf-issue-workflow/SKILL.md`
 - Modify: `harness/policies/workflow.md`
 - Modify: `harness/README.md`
 - Modify: `docs/agents/issue-tracker.md`
@@ -237,9 +237,9 @@
 - Create: `harness/lib/project_status.py`
 - Create: `harness/tests/test_project_status.py`
 - Create: `docs/agents/issue-tracker.md`
-- Modify: `.agents/skills/issue-workflow/SKILL.md`
-- Modify: `.agents/skills/issue-workflow/agents/openai.yaml`
-- Create: `.agents/skills/issue-workflow/evals/evals.json`
+- Modify: `.agents/skills/cf-issue-workflow/SKILL.md`
+- Modify: `.agents/skills/cf-issue-workflow/agents/openai.yaml`
+- Create: `.agents/skills/cf-issue-workflow/evals/evals.json`
 - Modify: `harness/policies/workflow.md`
 - Modify: `harness/README.md`
 - Modify: `harness/lib/pr_contract.py`
@@ -260,7 +260,7 @@
 
   Expected: 상태 모듈이 없어 ERROR.
 
-- [x] **Step 3: issue-workflow 수정**
+- [x] **Step 3: cf-issue-workflow 수정**
 
   ready Issue 하나를 읽고 `CF-<번호>` 워크트리에서 구현한다. 시작 시 Issue `status:in-progress`와 Project `In Progress`, Draft PR 생성 시 `status:review`와 `On Review`를 함께 적용한다. 범위 밖 작업은 독립 draft 후보로 제안한다.
 
@@ -323,17 +323,17 @@
 
 **Files:**
 - Create: `harness/lib/environment_setup.py`
-- Create: `harness/scripts/ensure-environment`
+- Create: `harness/scripts/ensure-environment.py`
 - Create: `harness/tests/test_environment_setup.py`
 - Modify: `AGENTS.md`
-- Modify: `.agents/skills/issue-workflow/SKILL.md`
-- Modify: `.agents/skills/issue-workflow/agents/openai.yaml`
-- Modify: `.agents/skills/issue-workflow/evals/evals.json`
+- Modify: `.agents/skills/cf-issue-workflow/SKILL.md`
+- Modify: `.agents/skills/cf-issue-workflow/agents/openai.yaml`
+- Modify: `.agents/skills/cf-issue-workflow/evals/evals.json`
 - Modify: `harness/README.md`
 
 **Interfaces:**
 - `ensure_environment(root) -> EnvironmentSetupResult`
-- `harness/scripts/ensure-environment`
+- `harness/scripts/ensure-environment.py`
 
 - [x] **Step 1: 자동 구성 계약 테스트 작성**
 

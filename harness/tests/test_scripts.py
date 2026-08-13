@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,28 +14,51 @@ SCRIPTS = ROOT / "harness" / "scripts"
 
 class HarnessScriptsTest(unittest.TestCase):
     def test_commit_message_script_accepts_valid_file(self) -> None:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as message:
-            message.write("feat: 지원서 필드 자동 입력 지원\n")
-            message.flush()
+        with tempfile.TemporaryDirectory() as directory:
+            message = Path(directory) / "message.txt"
+            message.write_text("feat: 지원서 필드 자동 입력 지원\n", encoding="utf-8")
 
-            result = self._run("validate-commit-message", message.name)
+            result = self._run("validate-commit-message", str(message))
 
         self.assertEqual(0, result.returncode, result.stderr)
 
     def test_issue_script_reads_github_event_payload(self) -> None:
         event = {
+            "action": "labeled",
+            "label": {"name": "status:ready"},
             "issue": {
-                "title": "[FE] 지원서 필드 자동 입력",
+                "title": "[Plan] 지원서 필드 구조 결정",
                 "body": self._valid_issue_body(),
                 "labels": [{"name": "status:ready"}],
             }
         }
 
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as payload:
-            json.dump(event, payload, ensure_ascii=False)
-            payload.flush()
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "event.json"
+            payload.write_text(json.dumps(event, ensure_ascii=False), encoding="utf-8")
 
-            result = self._run("validate-issue", payload.name)
+            result = self._run("validate-issue", str(payload))
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_script_accepts_plan_title(self) -> None:
+        event = {
+            "pull_request": {
+                "title": "[Plan] 지원서 필드 구조 결정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        }
+        linked_issue = {"title": "[Plan] 지원서 필드 구조 결정"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "event.json"
+            issue = Path(directory) / "issue.json"
+            payload.write_text(json.dumps(event, ensure_ascii=False), encoding="utf-8")
+            issue.write_text(json.dumps(linked_issue, ensure_ascii=False), encoding="utf-8")
+
+            result = self._run("validate-pr", str(payload), str(issue))
 
         self.assertEqual(0, result.returncode, result.stderr)
 
@@ -49,16 +73,13 @@ class HarnessScriptsTest(unittest.TestCase):
         }
         linked_issue = {"title": "[FE] CJ 채용 사이트 필드 자동 입력"}
 
-        with (
-            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as payload,
-            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as issue,
-        ):
-            json.dump(event, payload, ensure_ascii=False)
-            payload.flush()
-            json.dump(linked_issue, issue, ensure_ascii=False)
-            issue.flush()
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "event.json"
+            issue = Path(directory) / "issue.json"
+            payload.write_text(json.dumps(event, ensure_ascii=False), encoding="utf-8")
+            issue.write_text(json.dumps(linked_issue, ensure_ascii=False), encoding="utf-8")
 
-            result = self._run("validate-pr", payload.name, issue.name)
+            result = self._run("validate-pr", str(payload), str(issue))
 
         self.assertEqual(1, result.returncode)
         self.assertIn("PR 제목은 연결 Issue 제목과 같아야 합니다", result.stderr)
@@ -99,6 +120,39 @@ class HarnessScriptsTest(unittest.TestCase):
 
         self.assertEqual(2, result.returncode)
         self.assertIn("issue_status_label은 문자열이어야 합니다", result.stderr)
+
+    def test_issue_lifecycle_script_selects_ready_issue_delivery(self) -> None:
+        result = self._run_with_json(
+            "plan-issue-lifecycle",
+            {"issue_number": 14, "issue_status": "status:ready"},
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("cf-issue-workflow", json.loads(result.stdout)["skill"])
+
+    def test_post_merge_cleanup_script_blocks_unmerged_pr(self) -> None:
+        result = self._run_with_json(
+            "plan-post-merge-cleanup",
+            {
+                "issue_number": 14,
+                "issue_state": "OPEN",
+                "pr_state": "OPEN",
+                "head_branch": "CF-14",
+                "base_branch": "develop",
+                "merge_commit": None,
+                "merge_in_origin_develop": False,
+                "local_branch_exists": True,
+                "worktrees": [],
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("blocked", json.loads(result.stdout)["status"])
+
+    def test_shell_syntax_script_runs_with_selected_shell(self) -> None:
+        result = self._run("validate-shell-syntax")
+
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_guard_script_denies_destructive_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -154,7 +208,7 @@ class HarnessScriptsTest(unittest.TestCase):
         self, script: str, *arguments: str, input_text: str | None = None
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            (str(SCRIPTS / script), *arguments),
+            (sys.executable, str(SCRIPTS / f"{script}.py"), *arguments),
             cwd=ROOT,
             input=input_text,
             capture_output=True,
@@ -172,10 +226,15 @@ class HarnessScriptsTest(unittest.TestCase):
     def _run_project_issue_plan(
         self, payload: dict[str, object]
     ) -> subprocess.CompletedProcess[str]:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as snapshot:
-            json.dump(payload, snapshot, ensure_ascii=False)
-            snapshot.flush()
-            return self._run("plan-project-issue", snapshot.name)
+        return self._run_with_json("plan-project-issue", payload)
+
+    def _run_with_json(
+        self, script: str, payload: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = Path(directory) / "snapshot.json"
+            snapshot.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            return self._run(script, str(snapshot))
 
     def _valid_issue_body(self) -> str:
         return """## 배경

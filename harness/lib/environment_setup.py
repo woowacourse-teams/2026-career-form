@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from harness.lib.python_runtime import python_command
+
 
 class EnvironmentSetupCode(Enum):
     ENTRYPOINT_MISSING = "entrypoint_missing"
@@ -37,8 +39,8 @@ class CommandRunResult:
 
 def ensure_environment(root: Path) -> EnvironmentSetupResult:
     scripts = root / "harness" / "scripts"
-    doctor = scripts / "doctor"
-    bootstrap = scripts / "bootstrap"
+    doctor = scripts / "doctor.py"
+    bootstrap = scripts / "bootstrap.py"
     missing = tuple(path for path in (doctor, bootstrap) if not path.is_file())
     if missing:
         names = ", ".join(path.name for path in missing)
@@ -80,7 +82,7 @@ def ensure_environment(root: Path) -> EnvironmentSetupResult:
 
 def _run(path: Path, root: Path) -> CommandRunResult:
     try:
-        completed = subprocess.run((str(path),), cwd=root, check=False)
+        completed = subprocess.run(python_command(root, path), cwd=root, check=False)
         return CommandRunResult(returncode=completed.returncode)
     except OSError as error:
         return CommandRunResult(returncode=1, error=str(error))

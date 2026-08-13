@@ -1,0 +1,29 @@
+{
+  "skill_name": "cf-issue-lifecycle",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "이 Project draft를 기획부터 구현, PR, 머지 후 정리까지 원 플로우로 진행해줘.",
+      "expected_output": "cf-project-issue-planning, cf-issue-workflow, cf-post-merge-cleanup 순서로 진행하고 사람 승인과 머지에서는 멈춘 뒤 원격 상태를 기준으로 재개한다.",
+      "files": [],
+      "expectations": [
+        "기획은 cf-project-issue-planning에 위임한다",
+        "status:ready 이후 구현은 cf-issue-workflow에 위임한다",
+        "사람의 PR 승인과 머지를 대신하지 않는다",
+        "MERGED와 origin/develop 포함 관계를 증명한 뒤 cf-post-merge-cleanup을 사용한다"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "내 로컬에 이름이 비슷한 issue-workflow와 superpowers 스킬도 설치돼 있어. Issue #123을 처음부터 끝까지 처리해줘.",
+      "expected_output": "중복된 로컬 스킬이 있어도 저장소의 cf-issue-lifecycle을 선택하고 모든 하위 호출을 cf-* 이름으로 한정한다.",
+      "files": [],
+      "expectations": [
+        "비접두사 issue-workflow를 호출하지 않는다",
+        "superpowers 스킬을 호출하지 않는다",
+        "orca-cli에 의존하지 않는다",
+        "cf-project-issue-planning, cf-issue-workflow, cf-post-merge-cleanup만 생명주기 단계로 사용한다"
+      ]
+    }
+  ]
+}

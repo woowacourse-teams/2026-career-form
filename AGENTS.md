@@ -6,15 +6,21 @@
 - Issue 본문을 작업 범위와 완료 기준의 정본으로 사용한다.
 - 하나의 Issue는 하나의 작업 브랜치와 하나의 PR로 완료한다. Sub-issue는 만들지 않는다.
 - 작업 브랜치는 `CF-<Issue 번호>` 형식으로 만든다.
-- AI는 새 clone 또는 worktree에서 파일을 수정하기 전에 `harness/scripts/ensure-environment`로 작업 환경을 자동 구성한다. 자동 구성에 실패하면 수정하지 않고 원인을 보고한다.
+- AI는 새 clone 또는 worktree에서 파일을 수정하기 전에 운영체제에 맞는 Python으로 `harness/scripts/ensure-environment.py`를 실행해 작업 환경을 자동 구성한다. 자동 구성에 실패하면 수정하지 않고 원인을 보고한다.
 - 작업 계획은 필요할 때 `docs/plans/<Issue 번호>-<slug>.md`에 기록한다.
 - 공용 `HANDOFF.md`를 작업 상태 기록에 사용하지 않는다.
 
 ## 구현과 검증
 
+프로젝트의 기획, 설계, 구현과 검토를 시작하기 전에 작업과 관련된 범위에서 다음
+기준 문서를 읽는다.
+
+1. `docs/PRODUCT_CONCEPT.md`
+2. `docs/PROFILE_FIELDS.md`
+
 - 관련 없는 사용자 변경을 보존하고 현재 Issue 범위만 수정한다.
 - 동작을 바꾸기 전에 실패하는 테스트를 만들고, 변경 뒤 관련 테스트와 전체 검증을 실행한다.
-- 완료 전 `harness/scripts/verify`를 실행하고 최신 결과를 PR에 기록한다.
+- 완료 전 운영체제에 맞는 가상환경 Python으로 `harness/scripts/verify.py`를 실행하고 최신 결과를 PR에 기록한다.
 - 컨벤션은 `docs/conventions/common.md`와 작업 스택에 맞는 문서를 따른다.
 - 개별 커밋과 PR 제목은 서로 다른 형식을 사용하며 `docs/conventions/commit.md`를 따른다. 브랜치와 병합은 `docs/conventions/branching.md`를 따른다.
 

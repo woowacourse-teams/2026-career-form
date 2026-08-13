@@ -17,4 +17,4 @@ jobs:
         with:
           python-version: "3.13"
       - name: Issue 계약 검사
-        run: harness/scripts/validate-issue "$GITHUB_EVENT_PATH"
+        run: python harness/scripts/validate-issue.py "$GITHUB_EVENT_PATH"

@@ -138,6 +138,31 @@ class ToolGuardTest(unittest.TestCase):
         self.assertTrue(decision.blocked)
         self.assertIn("PR 최종 승인과 머지", decision.reason)
 
+    def test_blocks_inline_github_issue_or_pr_body(self) -> None:
+        for command in (
+            "gh issue edit 14 --body '본문'",
+            "gh pr create --body=본문",
+        ):
+            with self.subTest(command=command):
+                decision = evaluate_tool_use(
+                    {"tool_name": "Bash", "tool_input": {"command": command}},
+                    branch="CF-14",
+                )
+
+                self.assertTrue(decision.blocked)
+                self.assertIn("body-file", decision.reason)
+
+    def test_allows_github_body_file(self) -> None:
+        decision = evaluate_tool_use(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "gh pr create --body-file /tmp/pr.md"},
+            },
+            branch="CF-14",
+        )
+
+        self.assertFalse(decision.blocked)
+
     def test_blocks_migration_execution(self) -> None:
         decision = evaluate_tool_use(
             {

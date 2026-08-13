@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/harness/scripts/guard-tool-use\"",
+            "command": "python \"$(git rev-parse --show-toplevel)/harness/scripts/guard-tool-use.py\"",
             "timeout": 10,
             "statusMessage": "프로젝트 안전 정책을 확인하는 중"
           }

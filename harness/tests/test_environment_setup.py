@@ -56,29 +56,28 @@ class EnvironmentSetupTest(unittest.TestCase):
             root = Path(directory)
             scripts = root / "harness" / "scripts"
             scripts.mkdir(parents=True)
-            bootstrap = scripts / "bootstrap"
-            bootstrap.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-            bootstrap.chmod(0o755)
+            bootstrap = scripts / "bootstrap.py"
+            bootstrap.write_text("raise SystemExit(0)\n", encoding="utf-8")
 
             result = ensure_environment(root)
 
             self.assertFalse(result.is_ready)
             self.assertEqual("entrypoint_missing", result.code)
-            self.assertIn("doctor", result.message)
+            self.assertIn("doctor.py", result.message)
 
-    def test_preserves_bootstrap_execution_error(self) -> None:
+    def test_preserves_bootstrap_failure_detail(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self._write_scripts(root, ready=False)
-            bootstrap = root / "harness" / "scripts" / "bootstrap"
-            bootstrap.chmod(0o644)
+            bootstrap = root / "harness" / "scripts" / "bootstrap.py"
+            bootstrap.write_text("raise SystemExit(9)\n", encoding="utf-8")
 
             result = ensure_environment(root)
 
             self.assertFalse(result.is_ready)
             self.assertEqual("bootstrap_failed", result.code)
             self.assertIn(str(bootstrap), result.message)
-            self.assertIn("Permission denied", result.message)
+            self.assertIn("종료 코드 9", result.message)
 
     def _write_scripts(
         self,
@@ -93,28 +92,25 @@ class EnvironmentSetupTest(unittest.TestCase):
         if ready:
             (root / ".ready").touch()
 
-        doctor = scripts / "doctor"
+        doctor = scripts / "doctor.py"
         doctor.write_text(
-            "#!/bin/sh\n"
-            "count=0\n"
-            "if [ -f .doctor-count ]; then count=$(cat .doctor-count); fi\n"
-            "count=$((count + 1))\n"
-            "printf '%s' \"$count\" > .doctor-count\n"
-            "test -f .ready\n",
+            "from pathlib import Path\n"
+            "counter = Path('.doctor-count')\n"
+            "count = int(counter.read_text()) if counter.is_file() else 0\n"
+            "counter.write_text(str(count + 1))\n"
+            "raise SystemExit(0 if Path('.ready').is_file() else 1)\n",
             encoding="utf-8",
         )
-        doctor.chmod(0o755)
 
-        bootstrap = scripts / "bootstrap"
-        ready_command = "touch .ready\n" if bootstrap_creates_ready else ""
+        bootstrap = scripts / "bootstrap.py"
+        ready_command = "Path('.ready').touch()\n" if bootstrap_creates_ready else ""
         bootstrap.write_text(
-            "#!/bin/sh\n"
-            "touch .bootstrap-ran\n"
+            "from pathlib import Path\n"
+            "Path('.bootstrap-ran').touch()\n"
             f"{ready_command}"
-            f"exit {bootstrap_exit_code}\n",
+            f"raise SystemExit({bootstrap_exit_code})\n",
             encoding="utf-8",
         )
-        bootstrap.chmod(0o755)
 
 
 if __name__ == "__main__":

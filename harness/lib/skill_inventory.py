@@ -9,10 +9,15 @@ from harness.lib.result import ValidationResult
 
 
 PROJECT_SKILLS = (
-    "github-project-onboarding",
-    "issue-workflow",
-    "project-issue-planning",
+    "cf-github-project-onboarding",
+    "cf-issue-lifecycle",
+    "cf-issue-workflow",
+    "cf-post-merge-cleanup",
+    "cf-project-issue-planning",
 )
+DESCRIPTION_MARKERS = {
+    "cf-issue-workflow": ("#123", "Draft PR까지 진행해줘"),
+}
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 REQUIRED_METADATA = ("repository", "path", "commit", "retrieved_at", "license")
 
@@ -28,6 +33,10 @@ def validate_skill_inventory(root: Path) -> ValidationResult:
 
 def _validate_skill(skill: Path) -> tuple[str, ...]:
     errors: list[str] = []
+    if not skill.name.startswith("cf-"):
+        errors.append(
+            f"저장소 스킬 이름은 cf-로 시작해야 합니다: {skill.name}"
+        )
     if skill.is_symlink():
         errors.append(f"스킬은 심볼릭 링크일 수 없습니다: {skill.name}")
     skill_file = skill / "SKILL.md"
@@ -35,6 +44,9 @@ def _validate_skill(skill: Path) -> tuple[str, ...]:
         errors.append(f"SKILL.md가 없습니다: {skill.name}")
     else:
         errors.extend(_validate_skill_file(skill.name, skill_file))
+    evals = skill / "evals" / "evals.json"
+    if evals.is_file():
+        errors.extend(_validate_eval_name(skill.name, evals))
     if skill.name in PROJECT_SKILLS:
         return tuple(errors)
 
@@ -67,6 +79,12 @@ def _validate_skill_file(name: str, path: Path) -> tuple[str, ...]:
         errors.append(f"스킬 name이 폴더 이름과 다릅니다: {name}")
     if not isinstance(value.get("description"), str) or not value["description"].strip():
         errors.append(f"스킬 description이 없습니다: {name}")
+    else:
+        for marker in DESCRIPTION_MARKERS.get(name, ()):
+            if marker not in value["description"]:
+                errors.append(
+                    f"스킬 description 트리거가 손상되었습니다: {name}: {marker}"
+                )
     return tuple(errors)
 
 
@@ -80,3 +98,13 @@ def _validate_metadata(name: str, path: Path) -> tuple[str, ...]:
     if not SHA_PATTERN.match(str(value.get("commit", ""))):
         errors.append(f"외부 스킬 commit은 40자 SHA여야 합니다: {name}")
     return tuple(errors)
+
+
+def _validate_eval_name(name: str, path: Path) -> tuple[str, ...]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        return (f"스킬 eval을 읽을 수 없습니다: {name}: {error}",)
+    if not isinstance(value, Mapping) or value.get("skill_name") != name:
+        return (f"스킬 eval 이름이 폴더와 다릅니다: {name}",)
+    return ()

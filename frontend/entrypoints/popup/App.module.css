@@ -1,0 +1,38 @@
+.popup {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  width: 360px;
+  min-height: 240px;
+  color: #1f2937;
+  background: #ffffff;
+}
+
+.header,
+.footer {
+  padding: 16px 20px;
+  background: #f8fafc;
+}
+
+.header {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.main {
+  padding: 20px;
+}
+
+.main p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.footer {
+  color: #475569;
+  font-size: 12px;
+  border-top: 1px solid #e2e8f0;
+}

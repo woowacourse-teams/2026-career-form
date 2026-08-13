@@ -17,6 +17,18 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid)
 
+    def test_accepts_plan_pr_to_develop(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Plan] 프로필 저장 구조 결정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_accepts_colon_closing_keyword(self) -> None:
         result = validate_pr(
             {
@@ -99,6 +111,21 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_rejects_release_prefix_that_is_all_uppercase(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[RELEASE] 프로덕션 배포",
+                "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
+                "head": {"ref": "develop"},
+                "base": {"ref": "main"},
+            }
+        )
+
+        self.assertIn(
+            "배포 PR 제목은 [Release] 작업명 형식이어야 합니다",
+            result.errors,
+        )
+
     def test_rejects_release_title_on_feature_pr(self) -> None:
         result = validate_pr(
             {
@@ -110,7 +137,7 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "영역은 FE, BE, Infra, Harness 중 하나여야 합니다",
+            "영역은 FE, BE, Infra, Harness, Plan 중 하나여야 합니다",
             result.errors,
         )
 
