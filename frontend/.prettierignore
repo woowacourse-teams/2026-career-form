@@ -1,0 +1,4 @@
+.output/
+.wxt/
+coverage/
+node_modules/

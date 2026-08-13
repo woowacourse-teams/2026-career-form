@@ -9,3 +9,7 @@ htmlcov/
 .env
 .env.*
 !.env.example
+frontend/node_modules/
+frontend/.output/
+frontend/.wxt/
+frontend/coverage/
