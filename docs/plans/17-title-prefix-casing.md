@@ -32,19 +32,19 @@
 - Consumes: `validate_work_title(title: str) -> ValidationResult`, `validate_release_title(title: str) -> ValidationResult`
 - Produces: 새 영역 표기를 허용하고 이전 대문자 및 잘못된 혼합 표기를 거부하는 제목 계약
 
-- [ ] **Step 1: 새 허용 표기와 이전 표기 거부 테스트 작성**
+- [x] **Step 1: 새 허용 표기와 이전 표기 거부 테스트 작성**
 
   `test_work_title.py`에서 `[Infra]`, `[Harness]`, `[Plan]`을 유효 사례로 두고 `[INFRA]`, `[HARNESS]`, `[PLAN]`을 거부 사례로 둔다. `FE`, `BE`는 기존 표기를 유지하며 소문자와 혼합 표기를 거부한다.
 
-- [ ] **Step 2: 배포 PR의 새 표기 테스트 작성**
+- [x] **Step 2: 배포 PR의 새 표기 테스트 작성**
 
   `test_pr_contract.py`에서 `[Release]`를 허용하고 `[RELEASE]`를 거부하며 오류 메시지가 새 표기를 안내하도록 기대값을 변경한다.
 
-- [ ] **Step 3: 관련 계약 fixture를 새 표기로 변경**
+- [x] **Step 3: 관련 계약 fixture를 새 표기로 변경**
 
   Issue, PR, CLI와 템플릿 렌더링 fixture의 `[PLAN]`, `[HARNESS]`를 각각 `[Plan]`, `[Harness]`로 바꾼다.
 
-- [ ] **Step 4: RED 확인**
+- [x] **Step 4: RED 확인**
 
   Run:
 
@@ -59,11 +59,11 @@
 
   Expected: 기존 검증기가 `[Infra]`, `[Harness]`, `[Plan]`, `[Release]`를 거부하고 이전 대문자를 허용해 FAIL.
 
-- [ ] **Step 5: 최소 검증 구현**
+- [x] **Step 5: 최소 검증 구현**
 
   `ALLOWED_AREAS`를 `("FE", "BE", "Infra", "Harness", "Plan")`으로 바꾸고 배포 제목 패턴과 오류 메시지를 `[Release]`로 변경한다.
 
-- [ ] **Step 6: GREEN 확인**
+- [x] **Step 6: GREEN 확인**
 
   Step 4의 명령을 다시 실행해 모든 관련 테스트가 통과하는지 확인한다.
 
@@ -91,19 +91,19 @@
 - Consumes: Task 1의 허용 영역 목록
 - Produces: 사람이 읽는 정책과 에이전트 행동 지침에서 동일한 prefix 표기
 
-- [ ] **Step 1: 현행 정책과 스킬 갱신**
+- [x] **Step 1: 현행 정책과 스킬 갱신**
 
   모든 현행 문서와 스킬에서 영역 목록을 `FE`, `BE`, `Infra`, `Harness`, `Plan`으로, 배포 prefix를 `Release`로 안내한다. `Plan`의 의미와 기존 승인 게이트는 유지한다.
 
-- [ ] **Step 2: eval과 예시 갱신**
+- [x] **Step 2: eval과 예시 갱신**
 
   eval prompt와 저장소 예시를 새 표기로 변경한다. 산문 문구 자체를 검사하는 테스트는 추가하지 않고 기존 구조 및 라우팅 검증을 사용한다.
 
-- [ ] **Step 3: ADR 결정 갱신**
+- [x] **Step 3: ADR 결정 갱신**
 
   ADR #14의 관련 Issue에 #17을 추가하고 prefix 대소문자 결정을 명시한다. 과거 계획 문서는 새 결정이 이전 대문자 규칙을 대체했음을 드러내도록 갱신한다.
 
-- [ ] **Step 4: 문서 및 스킬 검증**
+- [x] **Step 4: 문서 및 스킬 검증**
 
   Run:
 
@@ -127,11 +127,11 @@
 - Consumes: Task 1과 Task 2의 코드 및 문서 변경
 - Produces: 검증된 `CF-17` 브랜치와 Issue #17을 종료하는 Draft PR
 
-- [ ] **Step 1: Issue Form 제목 기본값 확인**
+- [x] **Step 1: Issue Form 제목 기본값 확인**
 
   세 Issue Form에 `title` 기본값이 없고 새 prefix를 방해하는 생성 설정이 없는지 저장소 계약 테스트로 확인한다.
 
-- [ ] **Step 2: 전체 검증**
+- [x] **Step 2: 전체 검증**
 
   Run:
 
@@ -142,11 +142,11 @@
 
   Expected: 0 failures, 전체 커버리지 80% 이상, exit 0.
 
-- [ ] **Step 3: 두 축 코드 리뷰**
+- [x] **Step 3: 두 축 코드 리뷰**
 
   `origin/develop...HEAD`를 저장소 Standards와 Issue #17 Spec 기준으로 각각 검토한다. 발견한 치명적 문제와 높은 위험 문제를 수정하고 전체 검증을 다시 실행한다.
 
-- [ ] **Step 4: GitHub 제목 정리**
+- [x] **Step 4: GitHub 제목 정리**
 
   현재 GitHub Issue와 PR을 조회해 `INFRA`, `HARNESS`, `PLAN`, `RELEASE` prefix가 남은 제목만 새 표기로 바꾼다. Issue #17은 `[Harness] Issue와 PR 영역 prefix 표기 통일`로 바꾸고 결과를 다시 조회한다.
 
