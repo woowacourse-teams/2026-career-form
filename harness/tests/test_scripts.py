@@ -23,8 +23,10 @@ class HarnessScriptsTest(unittest.TestCase):
 
     def test_issue_script_reads_github_event_payload(self) -> None:
         event = {
+            "action": "labeled",
+            "label": {"name": "status:ready"},
             "issue": {
-                "title": "[FE] 지원서 필드 자동 입력",
+                "title": "[PLAN] 지원서 필드 구조 결정",
                 "body": self._valid_issue_body(),
                 "labels": [{"name": "status:ready"}],
             }
@@ -35,6 +37,30 @@ class HarnessScriptsTest(unittest.TestCase):
             payload.flush()
 
             result = self._run("validate-issue", payload.name)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_script_accepts_plan_title(self) -> None:
+        event = {
+            "pull_request": {
+                "title": "[PLAN] 지원서 필드 구조 결정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        }
+        linked_issue = {"title": "[PLAN] 지원서 필드 구조 결정"}
+
+        with (
+            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as payload,
+            tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as issue,
+        ):
+            json.dump(event, payload, ensure_ascii=False)
+            payload.flush()
+            json.dump(linked_issue, issue, ensure_ascii=False)
+            issue.flush()
+
+            result = self._run("validate-pr", payload.name, issue.name)
 
         self.assertEqual(0, result.returncode, result.stderr)
 
@@ -154,7 +180,7 @@ class HarnessScriptsTest(unittest.TestCase):
         self, script: str, *arguments: str, input_text: str | None = None
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            (str(SCRIPTS / script), *arguments),
+            (str(SCRIPTS / f"{script}.py"), *arguments),
             cwd=ROOT,
             input=input_text,
             capture_output=True,

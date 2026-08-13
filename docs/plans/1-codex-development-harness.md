@@ -129,7 +129,7 @@
 - Create: `harness/project.json`
 - Create: `harness/lib/project_config.py`
 - Create: `harness/lib/project_access.py`
-- Create: `harness/scripts/diagnose-project-access`
+- Create: `harness/scripts/diagnose-project-access.py`
 - Create: `harness/tests/test_project_config.py`
 - Create: `harness/tests/test_project_access.py`
 - Create: `.agents/skills/github-project-onboarding/SKILL.md`
@@ -173,7 +173,7 @@
 
 **Files:**
 - Create: `harness/lib/project_issue.py`
-- Create: `harness/scripts/plan-project-issue`
+- Create: `harness/scripts/plan-project-issue.py`
 - Create: `harness/tests/test_project_issue.py`
 - Create: `.agents/skills/project-issue-planning/SKILL.md`
 - Create: `.agents/skills/project-issue-planning/evals/evals.json`
@@ -215,7 +215,7 @@
 
 **Files:**
 - Modify: `harness/lib/project_issue.py`
-- Modify: `harness/scripts/plan-project-issue`
+- Modify: `harness/scripts/plan-project-issue.py`
 - Modify: `harness/tests/test_project_issue.py`
 - Modify: `.agents/skills/project-issue-planning/SKILL.md`
 - Modify: `.agents/skills/project-issue-planning/evals/evals.json`
@@ -323,7 +323,7 @@
 
 **Files:**
 - Create: `harness/lib/environment_setup.py`
-- Create: `harness/scripts/ensure-environment`
+- Create: `harness/scripts/ensure-environment.py`
 - Create: `harness/tests/test_environment_setup.py`
 - Modify: `AGENTS.md`
 - Modify: `.agents/skills/issue-workflow/SKILL.md`
@@ -333,7 +333,7 @@
 
 **Interfaces:**
 - `ensure_environment(root) -> EnvironmentSetupResult`
-- `harness/scripts/ensure-environment`
+- `harness/scripts/ensure-environment.py`
 
 - [x] **Step 1: 자동 구성 계약 테스트 작성**
 

@@ -34,7 +34,7 @@ class SharedFilesTest(unittest.TestCase):
 
     def test_requires_linked_harness_issue_for_shared_file(self) -> None:
         result = validate_shared_file_change(
-            paths=("harness/scripts/verify",),
+            paths=("harness/scripts/verify.py",),
             labels=("harness-change",),
             linked_issue_labels=("status:in-progress",),
         )

@@ -27,7 +27,7 @@ jobs:
       - name: PR 계약 검사
         run: |
           if [[ -f "$RUNNER_TEMP/linked-issue.json" ]]; then
-            harness/scripts/validate-pr "$GITHUB_EVENT_PATH" "$RUNNER_TEMP/linked-issue.json"
+            harness/scripts/validate-pr.py "$GITHUB_EVENT_PATH" "$RUNNER_TEMP/linked-issue.json"
           else
-            harness/scripts/validate-pr "$GITHUB_EVENT_PATH"
+            harness/scripts/validate-pr.py "$GITHUB_EVENT_PATH"
           fi

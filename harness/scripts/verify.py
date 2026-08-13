@@ -32,9 +32,9 @@ def main() -> int:
             "-v",
         ),
         (PYTHON, "-m", "coverage", "report", "--fail-under=80"),
-        (PYTHON, str(ROOT / "harness" / "scripts" / "validate-shell-syntax")),
-        (PYTHON, str(ROOT / "harness" / "scripts" / "validate-skills")),
-        (PYTHON, str(ROOT / "harness" / "scripts" / "validate-execpolicy")),
+        (PYTHON, str(ROOT / "harness" / "scripts" / "validate-shell-syntax.py")),
+        (PYTHON, str(ROOT / "harness" / "scripts" / "validate-skills.py")),
+        (PYTHON, str(ROOT / "harness" / "scripts" / "validate-execpolicy.py")),
         ("git", "diff", "--check"),
     )
     for command in commands:

@@ -117,15 +117,27 @@ class RepositoryContractTest(unittest.TestCase):
 
         self.assertEqual("^.*$", matcher)
 
+    def test_python_entrypoints_have_py_extension(self) -> None:
+        scripts = ROOT / "harness" / "scripts"
+        extensionless_python = tuple(
+            path.name
+            for path in scripts.iterdir()
+            if path.is_file()
+            and path.suffix != ".py"
+            and path.read_bytes().startswith(b"#!/usr/bin/env python3")
+        )
+
+        self.assertEqual((), extensionless_python)
+
     def test_verify_covers_syntax_skills_and_execpolicy(self) -> None:
-        verify = (ROOT / "harness" / "scripts" / "verify").read_text(
+        verify = (ROOT / "harness" / "scripts" / "verify.py").read_text(
             encoding="utf-8"
         )
 
         self.assertIn('"compileall"', verify)
-        self.assertIn('"validate-shell-syntax"', verify)
-        self.assertIn('"validate-skills"', verify)
-        self.assertIn('"validate-execpolicy"', verify)
+        self.assertIn('"validate-shell-syntax.py"', verify)
+        self.assertIn('"validate-skills.py"', verify)
+        self.assertIn('"validate-execpolicy.py"', verify)
 
     def test_quality_gate_installs_pinned_codex_cli(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "quality-gate.yml").read_text(

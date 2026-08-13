@@ -5,8 +5,8 @@
 ## 시작하기
 
 ```bash
-harness/scripts/bootstrap
-harness/scripts/verify
+harness/scripts/bootstrap.py
+harness/scripts/verify.py
 ```
 
 Codex를 시작한 뒤 프로젝트 훅이 검토 대상으로 표시되면 `/hooks`에서 `.codex/hooks.json`의 내용을 확인하고 신뢰한다.

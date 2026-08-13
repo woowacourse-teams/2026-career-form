@@ -37,8 +37,8 @@ class CommandRunResult:
 
 def ensure_environment(root: Path) -> EnvironmentSetupResult:
     scripts = root / "harness" / "scripts"
-    doctor = scripts / "doctor"
-    bootstrap = scripts / "bootstrap"
+    doctor = scripts / "doctor.py"
+    bootstrap = scripts / "bootstrap.py"
     missing = tuple(path for path in (doctor, bootstrap) if not path.is_file())
     if missing:
         names = ", ".join(path.name for path in missing)

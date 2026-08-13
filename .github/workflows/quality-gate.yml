@@ -23,4 +23,4 @@ jobs:
       - name: Codex CLI 설치
         run: npm install --global @openai/codex@0.146.0
       - name: 전체 검증
-        run: harness/scripts/verify
+        run: harness/scripts/verify.py
