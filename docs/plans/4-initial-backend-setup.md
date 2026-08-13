@@ -1,6 +1,6 @@
 # 초기 백엔드 세팅 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: `executing-plans`와 `test-driven-development`로 실행 가능한 동작의 실패를 먼저 확인하고, 커밋 단위마다 관련 테스트를 통과시킨다. 완료 전 `verification-before-completion`과 `code-review`를 적용한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: `cf-executing-plans`와 `cf-test-driven-development`로 실행 가능한 동작의 실패를 먼저 확인하고, 커밋 단위마다 관련 테스트를 통과시킨다. 완료 전 `cf-verification-before-completion`과 `cf-code-review`를 적용한다.
 
 **Goal:** `backend/`에 JDK 21, Spring Boot 4.1.0, Gradle 9.6.1 기반의 독립 실행 가능한 Spring MVC 애플리케이션을 만들고 네 환경 프로파일, OpenAPI 3.0 문서, 80% 커버리지 검증과 로컬 컨테이너 실행 기반을 제공한다.
 
@@ -124,8 +124,8 @@
 - [x] 네 프로파일의 목적과 실행 예시를 기록한다.
 - [x] Swagger가 `local`, `dev`에만 노출되는 정책과 접근 경로를 기록한다.
 - [x] `./gradlew clean check`, `./gradlew bootJar`, `git diff --check`를 실행한다.
-- [x] `harness/scripts/verify`와 Issue 인수 조건별 근거를 새로 확인한다.
-- [x] `code-review`로 `origin/develop...HEAD`의 Standards와 Issue #4 계약 일치를 독립 검토한다.
+- [x] `.venv/bin/python harness/scripts/verify.py`와 Issue 인수 조건별 근거를 새로 확인한다.
+- [x] `cf-code-review`로 `origin/develop...HEAD`의 Standards와 Issue #4 계약 일치를 독립 검토한다.
 
 ### Task 6: Springdoc 버전 정합화
 
@@ -209,13 +209,13 @@
 - [x] JDK 21, springdoc 3.1.0, OpenAPI 3.0, JaCoCo와 Sonar 선언 범위를 기록한다.
 - [x] 표준 검증 순서를 `./gradlew clean check` 후 Docker Compose 빌드·실행으로 기록한다.
 - [x] 공통 Compose와 local override의 책임, 포트 변경, 향후 동일 이미지 승격과 DB 추가 원칙을 기록한다.
-- [x] `./gradlew clean check`, `./gradlew bootJar`, Docker smoke, `harness/scripts/verify`, `git diff --check`를 새로 실행한다.
-- [x] Issue 인수 조건을 근거와 대조하고 `code-review`의 Standards·Spec 결과를 반영한다.
+- [x] `./gradlew clean check`, `./gradlew bootJar`, Docker smoke, `.venv/bin/python harness/scripts/verify.py`, `git diff --check`를 새로 실행한다.
+- [x] Issue 인수 조건을 근거와 대조하고 `cf-code-review`의 Standards·Spec 결과를 반영한다.
 
 ## 보류 및 후속 후보
 
 - JDK 21 CI, Codecov 업로드와 SonarCloud 실제 분석은 후속 Infra 범위다. 이번 PR은 로컬 검증과 후속 연동 준비만 제공한다.
 - `compose.dev.yaml`, `compose.staging.yaml`, `compose.prod.yaml`, 이미지 레지스트리와 digest 승격은 배포 환경 확정 후 추가한다.
 - DB가 확정되면 로컬 컨테이너 DB 또는 관리형 DB 접속 정책에 맞춰 환경별 Compose 책임을 정한다.
-- 루트 `harness/scripts/verify`의 Gradle 연동과 Java/Spring 컨벤션은 별도 Harness draft 후보로 제안한다.
+- 루트 `harness/scripts/verify.py`의 Gradle 연동과 Java/Spring 컨벤션은 별도 Harness draft 후보로 제안한다.
 - GPT 계약, 입력 정제, 인증·인가, 요청 제한과 비용 제한은 별도 BE draft 후보로 제안한다.
