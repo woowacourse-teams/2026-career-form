@@ -57,7 +57,7 @@ Project 상태 변경이 실패하면 Issue 승격이나 브랜치 생성을 반
 7. 기존 사용자 변경과 Issue 밖 파일을 보존한다.
 8. 회사 어댑터 작업은 `AGENTS.md`의 문서 순서와 동반 갱신 규칙을 따른다.
 
-`[PLAN]` Issue는 기획 문서만 반영하는 작업을 기본으로 한다. 승인된 Issue 계약에
+`[Plan]` Issue는 기획 문서만 반영하는 작업을 기본으로 한다. 승인된 Issue 계약에
 구현이 포함돼 있으면 같은 Issue에서 구현까지 진행한다. ADR이 필요하다고 승인된
 Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고, `CF-*` 브랜치에서
 `docs/adr/<Issue 번호>-<slug>.md`로 작성해 같은 PR에 포함한다. 기획 중 새로 발견된

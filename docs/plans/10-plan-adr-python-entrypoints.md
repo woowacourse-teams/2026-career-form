@@ -1,8 +1,8 @@
-# PLAN 및 ADR 워크플로우와 Python 진입점 구현 계획
+# Plan 및 ADR 워크플로우와 Python 진입점 구현 계획
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `cf-executing-plans` to implement this plan task by task. Steps use checkbox syntax for tracking.
 
-**Goal:** `[PLAN]` 작업 영역, 제품 기준 문서 라우팅, ADR 자산화 흐름과 `.py`가 명시된 Python 하네스 진입점을 한 Issue와 한 PR로 제공한다.
+**Goal:** `[Plan]` 작업 영역, 제품 기준 문서 라우팅, ADR 자산화 흐름과 `.py`가 명시된 Python 하네스 진입점을 한 Issue와 한 PR로 제공한다.
 
 **Architecture:** 제목 영역은 `harness.lib.work_title`의 단일 허용 목록을 Issue와 PR 검증기가 공유한다. 기획 정책은 `AGENTS.md`, 프로젝트 스킬과 `docs/adr/` 규약으로 연결하고 대표 eval로 행동을 검토한다. Python 진입점은 기존 이름에 `.py`만 추가하고 모든 호출 경로를 함께 바꾼다.
 
@@ -19,7 +19,7 @@
 
 ---
 
-### Task 1: PLAN 제목 영역 계약
+### Task 1: Plan 제목 영역 계약
 
 **Files:**
 - Modify: `harness/tests/test_work_title.py`
@@ -35,11 +35,11 @@
 
 **Interfaces:**
 - Consumes: `validate_work_title(title: str) -> ValidationResult`
-- Produces: `PLAN`을 포함한 공용 작업 영역 검증
+- Produces: `Plan`을 포함한 공용 작업 영역 검증
 
-- [x] `[PLAN]` 제목의 직접 검증, Issue 계약, PR 계약과 CLI 실패 테스트를 추가한다.
-- [x] 관련 unittest를 실행해 `PLAN` 미지원으로 실패하는지 확인한다.
-- [x] `ALLOWED_AREAS`와 오류 메시지에 `PLAN`을 추가한다.
+- [x] `[Plan]` 제목의 직접 검증, Issue 계약, PR 계약과 CLI 실패 테스트를 추가한다.
+- [x] 관련 unittest를 실행해 `Plan` 미지원으로 실패하는지 확인한다.
+- [x] `ALLOWED_AREAS`와 오류 메시지에 `Plan`을 추가한다.
 - [x] 관련 unittest를 다시 실행해 기존 영역과 알 수 없는 영역의 동작까지 통과하는지 확인한다.
 - [x] 현재 정책과 컨벤션 문서의 작업 영역 목록을 갱신한다.
 
@@ -68,14 +68,14 @@
 - Modify: `harness/README.md`
 
 **Interfaces:**
-- Consumes: 승인 전 Issue 계약, 승인된 `[PLAN]` Issue와 `CF-*` 브랜치
+- Consumes: 승인 전 Issue 계약, 승인된 `[Plan]` Issue와 `CF-*` 브랜치
 - Produces: 장기 결정 판정, ADR 전문 사전 검토, 승인 후 `docs/adr/<issue>-<slug>.md` 작성 흐름
 
 - [x] 대표 eval에 일반 기획 작업과 장기 결정이 있는 기획 작업을 구분하는 기대 행동을 추가한다.
 - [x] 승인 전 ADR 파일을 만들지 않고 전문을 Issue 계약과 함께 제안하는 기대 행동을 추가한다.
-- [x] 승인된 `[PLAN]` Issue가 ADR을 같은 PR에 반영하는 기대 행동을 추가한다.
+- [x] 승인된 `[Plan]` Issue가 ADR을 같은 PR에 반영하는 기대 행동을 추가한다.
 - [x] ADR 규약에 상태, 날짜, 관련 Issue, 배경, 대안, 결정과 결과를 정의한다.
-- [x] Issue #10의 PLAN 및 ADR 흐름 결정을 첫 ADR로 작성한다.
+- [x] Issue #10의 Plan 및 ADR 흐름 결정을 첫 ADR로 작성한다.
 - [x] Issue #10의 Python 진입점 확장자 결정을 별도 ADR로 작성한다.
 - [x] `cf-project-issue-planning`과 `cf-issue-workflow`를 규약과 eval에 맞게 갱신한다.
 - [x] `validate-skills`와 JSON 파싱으로 스킬 형식과 eval 문법을 확인한다.
