@@ -40,5 +40,7 @@ Issue와 PR 제목은 같은 `[영역] 작업명`을 사용하며 `FE`, `BE`, `I
 7. Issue와 같은 제목의 Draft PR을 만들고 Issue label을 `status:review`, Project Status를 `On Review`로 바꾼다.
 8. 사람이 Draft PR을 Ready for review로 전환한다.
 9. 사람이 최종 승인, Squash Commit 제목 입력, 머지를 수행한다.
+10. AI가 PR의 `MERGED` 상태와 merge commit의 `origin/develop` 포함 관계를 증명한다.
+11. clean한 관리 worktree와 안전한 로컬 브랜치만 정리하고 dirty 또는 외부 관리 worktree는 보존한다.
 
 상태 변경이 일부 실패하면 완료된 앞 단계를 반복하지 않는다. 같은 Issue와 Project item을 다시 조회해 첫 미완료 단계부터 재개한다.

@@ -3,7 +3,7 @@
 ## 개요
 
 이 저장소에서는 모든 개발자가 Codex와 같은 하네스 안에서 작업한다. GitHub
-Issue가 작업 범위와 완료 기준의 정본이며, 프로젝트 전용 `issue-workflow` 스킬이
+Issue가 작업 범위와 완료 기준의 정본이며, 프로젝트 전용 `cf-issue-workflow` 스킬이
 기획, 구현, 검증, Git 작업에 필요한 개별 스킬을 연결한다.
 
 AI는 사람이 확정한 Issue에서 시작해 Draft PR 생성까지 담당한다. PR 최종 승인과
@@ -18,7 +18,7 @@ Project draft를 Issue로 승격하고 In Progress 전환
         ↓
 Issue 본문과 커밋 단위 계획을 사람이 승인하고 AI가 게시 후 status:ready 전환
         ↓
-issue-workflow 실행
+cf-issue-workflow 실행
         ↓
 워크트리 -> 구현 계획 -> TDD -> 검증 -> AI 리뷰
         ↓
@@ -85,20 +85,22 @@ GitHub Project draft는 기능 단위 백로그다. FE, BE, Infra처럼 독립 �
 
 ## 외부 스킬
 
-단계별 스킬은 독립적으로 두고 `issue-workflow`가 입출력과 실행 순서를 연결한다.
+단계별 스킬은 독립적으로 두고 `cf-issue-lifecycle`이 기획, 구현, 사람 머지 대기와 정리를 연결한다. `cf-issue-workflow`는 ready Issue에서 Draft PR까지의 구현 단계만 담당한다.
 
 | 단계 | 후보 |
 |---|---|
-| 요구사항 구체화 | `deep-interview` |
-| 고위험 설계 검토 | `grill-me`, 선택 사용 |
-| Project 접근 진단 | `github-project-onboarding` |
-| draft 승격과 Issue 계획 | `project-issue-planning` |
-| 구현 계획 | `writing-plans` |
-| 작업 격리 | `using-git-worktrees` |
-| 계획 실행 | `executing-plans` |
-| TDD | `test-driven-development` |
-| 완료 검증 | `verification-before-completion` |
-| 코드 리뷰 | `code-review` |
+| 요구사항 구체화 | `cf-deep-interview` |
+| 고위험 설계 검토 | `cf-grill-me`, 선택 사용 |
+| Project 접근 진단 | `cf-github-project-onboarding` |
+| draft 승격과 Issue 계획 | `cf-project-issue-planning` |
+| 구현 계획 | `cf-writing-plans` |
+| 작업 격리 | `cf-using-git-worktrees` |
+| 계획 실행 | `cf-executing-plans` |
+| TDD | `cf-test-driven-development` |
+| 완료 검증 | `cf-verification-before-completion` |
+| 코드 리뷰 | `cf-code-review` |
+| 전체 생명주기 | `cf-issue-lifecycle` |
+| 머지 후 정리 | `cf-post-merge-cleanup` |
 
 외부 스킬은 심볼릭 링크나 사용자 전역 설치로 공유하지 않는다. 검토한 원본을
 `.agents/skills/<skill-name>/`에 직접 저장한다. 각 외부 스킬 폴더에는 원본 저장소,
@@ -219,8 +221,10 @@ docs/conventions/**
 ├── .gitignore                         # 워크트리, 캐시, 생성 로그 제외 규칙
 │
 ├── .agents/skills/
-│   ├── issue-workflow/SKILL.md        # Issue에서 Draft PR까지 연결하는 프로젝트 오케스트레이터
-│   └── <external-skill>/
+│   ├── cf-issue-lifecycle/SKILL.md       # 기획부터 머지 후 정리까지 연결하는 오케스트레이터
+│   ├── cf-issue-workflow/SKILL.md        # ready Issue에서 Draft PR까지 연결
+│   ├── cf-post-merge-cleanup/SKILL.md    # 검증된 머지 뒤 로컬 작업 자원 정리
+│   └── cf-<external-skill>/
 │       ├── SKILL.md                   # 저장소에 직접 포함한 외부 스킬 원본
 │       ├── UPSTREAM.json              # 원본 저장소, 경로, 고정 SHA 기록
 │       ├── LICENSE                    # 외부 스킬 원본 라이선스

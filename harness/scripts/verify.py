@@ -38,6 +38,10 @@ def main() -> int:
         (PYTHON, "-m", "coverage", "report", "--fail-under=80"),
         (PYTHON, str(ROOT / "harness" / "scripts" / "validate-shell-syntax.py")),
         (PYTHON, str(ROOT / "harness" / "scripts" / "validate-skills.py")),
+        (
+            PYTHON,
+            str(ROOT / "harness" / "scripts" / "validate-skill-routing-evals.py"),
+        ),
         (PYTHON, str(ROOT / "harness" / "scripts" / "validate-execpolicy.py")),
         ("git", "diff", "--check"),
     )

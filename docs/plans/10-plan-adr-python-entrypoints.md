@@ -1,6 +1,6 @@
 # PLAN 및 ADR 워크플로우와 Python 진입점 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `executing-plans` to implement this plan task by task. Steps use checkbox syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `cf-executing-plans` to implement this plan task by task. Steps use checkbox syntax for tracking.
 
 **Goal:** `[PLAN]` 작업 영역, 제품 기준 문서 라우팅, ADR 자산화 흐름과 `.py`가 명시된 Python 하네스 진입점을 한 Issue와 한 PR로 제공한다.
 
@@ -61,10 +61,10 @@
 - Create: `docs/adr/README.md`
 - Create: `docs/adr/10-plan-and-adr-workflow.md`
 - Create: `docs/adr/10-python-entrypoint-extensions.md`
-- Modify: `.agents/skills/project-issue-planning/SKILL.md`
-- Modify: `.agents/skills/project-issue-planning/evals/evals.json`
-- Modify: `.agents/skills/issue-workflow/SKILL.md`
-- Modify: `.agents/skills/issue-workflow/evals/evals.json`
+- Modify: `.agents/skills/cf-project-issue-planning/SKILL.md`
+- Modify: `.agents/skills/cf-project-issue-planning/evals/evals.json`
+- Modify: `.agents/skills/cf-issue-workflow/SKILL.md`
+- Modify: `.agents/skills/cf-issue-workflow/evals/evals.json`
 - Modify: `harness/README.md`
 
 **Interfaces:**
@@ -77,7 +77,7 @@
 - [x] ADR 규약에 상태, 날짜, 관련 Issue, 배경, 대안, 결정과 결과를 정의한다.
 - [x] Issue #10의 PLAN 및 ADR 흐름 결정을 첫 ADR로 작성한다.
 - [x] Issue #10의 Python 진입점 확장자 결정을 별도 ADR로 작성한다.
-- [x] `project-issue-planning`과 `issue-workflow`를 규약과 eval에 맞게 갱신한다.
+- [x] `cf-project-issue-planning`과 `cf-issue-workflow`를 규약과 eval에 맞게 갱신한다.
 - [x] `validate-skills`와 JSON 파싱으로 스킬 형식과 eval 문법을 확인한다.
 
 ### Task 4: Python 하네스 진입점 확장자

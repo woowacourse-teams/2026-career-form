@@ -21,7 +21,7 @@
 - [x] `type:feature`
 - [x] `type:technical`
 
-작업 상태 라벨은 한 Issue에 하나만 유지한다. `status:ready`는 사람만 붙이고, 이후 작업 상태 라벨은 `issue-workflow`가 전환한다.
+작업 상태 라벨은 한 Issue에 하나만 유지한다. `status:ready`는 사람만 붙이고, 이후 작업 상태 라벨은 `cf-issue-workflow`가 전환한다.
 
 `type:bug`, `type:feature`, `type:technical`은 GitHub Issue의 작업 성격을 분류하는 라벨이다. 작업 상태 라벨이 아니므로 `status:*` 라벨과 함께 유지한다.
 

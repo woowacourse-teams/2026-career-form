@@ -10,6 +10,9 @@
 8. AI는 Issue 상태와 Project Status를 리뷰 단계로 전환하고 사람에게 넘긴다.
 9. 사람이 Draft PR을 Ready for review로 전환한다.
 10. 사람이 최종 승인하고 Squash Commit 제목을 확인한 뒤 머지한다.
+11. AI가 PR의 `MERGED` 상태와 merge commit의 `origin/develop` 포함 관계를 확인한 뒤 clean한 관리 worktree와 안전한 로컬 브랜치만 정리한다.
+
+`cf-issue-lifecycle`은 2단계부터 11단계를 연결한다. 사람의 Issue 계약 승인과 PR 머지에서는 멈추고, 재개 시 원격 상태를 읽어 완료된 쓰기를 반복하지 않는다. dirty 또는 외부 관리 worktree는 보존한다.
 
 범위가 커지거나 새로운 결정이 필요하면 현재 Issue를 수정하지 않고 독립 draft 후보를 제안한다. 사람이 별도 draft를 만들고 그 draft를 Issue로 승격해 확정하기 전에는 해당 범위를 구현하지 않는다.
 
