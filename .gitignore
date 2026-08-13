@@ -9,3 +9,13 @@ htmlcov/
 .env
 .env.*
 !.env.example
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# JVM diagnostics
+hs_err_pid*
+replay_pid*
+*.hprof
