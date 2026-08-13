@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -126,6 +127,34 @@ class HarnessScriptsTest(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertIn("issue_status_label은 문자열이어야 합니다", result.stderr)
 
+    def test_issue_lifecycle_script_selects_ready_issue_delivery(self) -> None:
+        result = self._run_with_json(
+            "plan-issue-lifecycle",
+            {"issue_number": 14, "issue_status": "status:ready"},
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("cf-issue-workflow", json.loads(result.stdout)["skill"])
+
+    def test_post_merge_cleanup_script_blocks_unmerged_pr(self) -> None:
+        result = self._run_with_json(
+            "plan-post-merge-cleanup",
+            {
+                "issue_number": 14,
+                "issue_state": "OPEN",
+                "pr_state": "OPEN",
+                "head_branch": "CF-14",
+                "base_branch": "develop",
+                "merge_commit": None,
+                "merge_in_origin_develop": False,
+                "local_branch_exists": True,
+                "worktrees": [],
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("blocked", json.loads(result.stdout)["status"])
+
     def test_guard_script_denies_destructive_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             self._init_issue_repository(directory)
@@ -180,7 +209,7 @@ class HarnessScriptsTest(unittest.TestCase):
         self, script: str, *arguments: str, input_text: str | None = None
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            (str(SCRIPTS / f"{script}.py"), *arguments),
+            (sys.executable, str(SCRIPTS / f"{script}.py"), *arguments),
             cwd=ROOT,
             input=input_text,
             capture_output=True,
@@ -202,6 +231,14 @@ class HarnessScriptsTest(unittest.TestCase):
             json.dump(payload, snapshot, ensure_ascii=False)
             snapshot.flush()
             return self._run("plan-project-issue", snapshot.name)
+
+    def _run_with_json(
+        self, script: str, payload: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as snapshot:
+            json.dump(payload, snapshot, ensure_ascii=False)
+            snapshot.flush()
+            return self._run(script, snapshot.name)
 
     def _valid_issue_body(self) -> str:
         return """## 배경
