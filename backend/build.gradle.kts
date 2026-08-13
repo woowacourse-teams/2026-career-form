@@ -3,6 +3,7 @@ plugins {
     jacoco
     id("org.springframework.boot") version "4.1.0"
     id("io.spring.dependency-management") version "1.1.7"
+    id("org.sonarqube") version "7.4.0.8496" apply false
 }
 
 group = "com.careerform"
@@ -63,5 +64,5 @@ tasks.jacocoTestCoverageVerification {
 }
 
 tasks.check {
-    dependsOn(tasks.jacocoTestCoverageVerification)
+    dependsOn(tasks.jacocoTestReport, tasks.jacocoTestCoverageVerification)
 }
