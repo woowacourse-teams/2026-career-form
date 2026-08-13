@@ -18,21 +18,23 @@ from harness.lib.result import ValidationResult
 
 class CliTest(unittest.TestCase):
     def test_reads_json_object(self) -> None:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as payload:
-            json.dump({"body": "내용"}, payload, ensure_ascii=False)
-            payload.flush()
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "payload.json"
+            payload.write_text(
+                json.dumps({"body": "내용"}, ensure_ascii=False), encoding="utf-8"
+            )
 
-            result = read_json(payload.name)
+            result = read_json(payload)
 
         self.assertEqual("내용", result["body"])
 
     def test_rejects_non_object_json(self) -> None:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as payload:
-            json.dump([], payload)
-            payload.flush()
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "payload.json"
+            payload.write_text(json.dumps([]), encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "객체여야 합니다"):
-                read_json(payload.name)
+                read_json(payload)
 
     def test_extracts_nested_payload(self) -> None:
         issue = {"body": "내용"}

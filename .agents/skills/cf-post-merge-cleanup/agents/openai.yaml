@@ -1,0 +1,4 @@
+interface:
+  display_name: "CF Post Merge Cleanup"
+  short_description: "머지 증명 뒤 CF 로컬 작업 안전 정리"
+  default_prompt: "Use $cf-post-merge-cleanup after a human merges a CF Issue pull request."

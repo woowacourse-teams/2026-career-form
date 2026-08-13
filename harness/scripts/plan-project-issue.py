@@ -13,7 +13,7 @@ from harness.lib.project_issue import ProjectIssueSnapshot, next_planning_action
 
 def main() -> int:
     if len(sys.argv) != 2:
-        print("사용법: plan-project-issue <snapshot JSON>", file=sys.stderr)
+        print("사용법: plan-project-issue <snapshot 파일>", file=sys.stderr)
         return 2
     try:
         payload = read_json(sys.argv[1])

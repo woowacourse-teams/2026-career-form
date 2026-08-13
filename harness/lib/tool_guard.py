@@ -13,6 +13,13 @@ DANGEROUS_TOOL_NAME_PATTERN = re.compile(
 )
 RULES = (
     (
+        "GitHub Issue와 PR 본문은 템플릿 파일과 --body-file을 사용해야 합니다",
+        re.compile(
+            r"gh\s+(?:issue|pr)\s+(?:create|edit)(?:\s|$)[^\n]*"
+            r"--body(?:=|\s)"
+        ),
+    ),
+    (
         "삭제 명령은 AI가 실행할 수 없습니다",
         re.compile(
             r"(^|[;&|]\s*|\s)(?:rm|unlink|shred|rmdir)\s|"

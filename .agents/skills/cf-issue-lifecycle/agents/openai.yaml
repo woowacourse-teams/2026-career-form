@@ -1,0 +1,4 @@
+interface:
+  display_name: "CF Issue Lifecycle"
+  short_description: "Project draft부터 머지 후 정리까지 연결"
+  default_prompt: "Use $cf-issue-lifecycle to continue one CF Issue from its current remote state."

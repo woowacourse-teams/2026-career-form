@@ -129,6 +129,25 @@ class RepositoryContractTest(unittest.TestCase):
 
         self.assertEqual((), extensionless_python)
 
+    def test_git_hooks_invoke_python_scripts_through_an_interpreter(self) -> None:
+        hooks = ROOT / ".githooks"
+
+        for name in ("commit-msg", "pre-commit", "pre-push"):
+            content = (hooks / name).read_text(encoding="utf-8")
+            with self.subTest(name=name):
+                self.assertIn("python-runtime.sh", content)
+                self.assertNotRegex(content, r'exec "\$ROOT/harness/scripts/[^\"]+\.py"')
+
+    def test_codex_and_github_hooks_do_not_execute_python_files_directly(self) -> None:
+        hooks = (ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8")
+        workflows = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (ROOT / ".github" / "workflows").glob("*.yml")
+        )
+
+        self.assertNotIn('"command": "python3 ', hooks)
+        self.assertNotRegex(workflows, r"(?m)^\s*run: harness/scripts/[^\s]+\.py")
+
     def test_verify_covers_syntax_skills_and_execpolicy(self) -> None:
         verify = (ROOT / "harness" / "scripts" / "verify.py").read_text(
             encoding="utf-8"

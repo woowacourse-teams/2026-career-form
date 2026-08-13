@@ -1,0 +1,18 @@
+{
+  "skill_name": "cf-post-merge-cleanup",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "PR #123 머지했어. CF-123 브랜치와 worktree를 정리해줘.",
+      "expected_output": "PR의 MERGED 상태와 merge commit의 origin/develop 포함 관계를 확인하고 clean한 관리 worktree와 안전한 로컬 브랜치만 정리한다.",
+      "files": [],
+      "expectations": [
+        "원격 PR과 Issue 상태를 다시 읽는다",
+        "merge commit이 origin/develop의 ancestor인지 확인한다",
+        "dirty 또는 외부 관리 worktree를 보존한다",
+        "원격 브랜치를 직접 삭제하지 않는다",
+        "반복 실행에서 이미 없는 대상을 성공으로 취급한다"
+      ]
+    }
+  ]
+}

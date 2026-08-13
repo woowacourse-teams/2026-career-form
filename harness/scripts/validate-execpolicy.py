@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from harness.lib.codex_runtime import select_codex
+
+
 RULES = ROOT / ".codex" / "rules" / "command-policy.rules"
 
 
 def check(command: tuple[str, ...]) -> dict[str, object]:
     completed = subprocess.run(
-        ("codex", "execpolicy", "check", "--rules", str(RULES), *command),
+        (str(select_codex()), "execpolicy", "check", "--rules", str(RULES), *command),
         cwd=ROOT,
         check=False,
         capture_output=True,
