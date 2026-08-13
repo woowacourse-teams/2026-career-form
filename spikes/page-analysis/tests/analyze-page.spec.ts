@@ -8,6 +8,13 @@ import { build } from 'esbuild';
 type Control = {
   element: string;
   control: string;
+  domId: string;
+  domName: string;
+  displayName: string;
+  profileField: string;
+  section: string;
+  confidence: string;
+  visibility: 'visible' | 'hidden';
   status: 'supported' | 'review-required' | 'unsupported';
   reasons: string[];
   required: boolean;
@@ -17,6 +24,10 @@ type Control = {
 
 type Analysis = {
   controls: Control[];
+  actions: Array<{
+    action: string; element: string; domId: string; domName: string; displayName: string;
+    kind: string; visibility: string; safeToInvoke: boolean;
+  }>;
   boundaries: Array<{ kind: string; reason: string; frameDepth: number; shadowDepth: number }>;
 };
 
@@ -72,9 +83,25 @@ test('classifies native controls without exposing page content', async ({ page }
     return value;
   });
   expect(keys).not.toContain('Option A');
+  expect(result.controls).toContainEqual(expect.objectContaining({
+    domId: 'applicant-email', domName: 'emailAddress', displayName: '이메일주소',
+    profileField: 'email', section: 'contact', confidence: 'exact', visibility: 'visible',
+  }));
+  expect(result.controls).toContainEqual(expect.objectContaining({
+    profileField: 'name', section: 'qualification', visibility: 'hidden', status: 'supported',
+  }));
+  expect(result.actions).toContainEqual(expect.objectContaining({
+    action: 'qualification.add', domId: 'add-license', domName: 'addLicense',
+    displayName: '+자격 추가', kind: 'reveal', visibility: 'visible', safeToInvoke: true,
+  }));
+  expect(result.actions).toContainEqual(expect.objectContaining({
+    action: 'application.save', displayName: '저장', kind: 'unsafe',
+    visibility: 'visible', safeToInvoke: false,
+  }));
+  expect(JSON.stringify(result)).not.toContain('private@example.com');
 });
 
-test('fails closed for hidden disabled and sensitive controls', async ({ page }) => {
+test('keeps hidden fields discoverable and fails closed for disabled and sensitive controls', async ({ page }) => {
   await loadAnalyzer(page);
 
   const result = await analyze(page);
@@ -82,9 +109,12 @@ test('fails closed for hidden disabled and sensitive controls', async ({ page })
     .filter(({ status }) => status === 'unsupported')
     .flatMap(({ reasons }) => reasons);
 
-  expect(unsupportedReasons).toEqual(expect.arrayContaining(['hidden', 'disabled', 'sensitive']));
-  expect(unsupportedReasons.filter((reason) => reason === 'hidden')).toHaveLength(4);
+  expect(unsupportedReasons).toEqual(expect.arrayContaining(['disabled', 'sensitive']));
   expect(unsupportedReasons.filter((reason) => reason === 'disabled')).toHaveLength(2);
+  expect(result.controls.filter(({ visibility }) => visibility === 'hidden')).toHaveLength(4);
+  expect(result.controls).toContainEqual(expect.objectContaining({
+    profileField: 'name', visibility: 'hidden', status: 'supported', reasons: ['hidden'],
+  }));
 });
 
 test('reports dynamic frame and shadow structures explicitly', async ({ page }) => {

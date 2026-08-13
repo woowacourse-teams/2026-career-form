@@ -7,6 +7,7 @@ import { build } from 'esbuild';
 
 type Analysis = {
   controls: Array<{ control: string; status: string; required: boolean }>;
+  actions: Array<{ action: string }>;
   boundaries: Array<{ kind: string; reason: string }>;
 };
 

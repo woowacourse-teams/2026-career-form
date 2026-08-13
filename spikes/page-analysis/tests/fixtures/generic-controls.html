@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
   <body>
-    <input type="text" required>
+    <label>이메일주소<input id="applicant-email" name="emailAddress" type="text" value="private@example.com" required></label>
     <textarea></textarea>
     <select><option>Option A</option></select>
     <input type="radio">
@@ -9,7 +9,7 @@
     <div contenteditable="true"></div>
 
     <input type="hidden">
-    <input type="text" hidden>
+    <label hidden>자격증명<input type="text"></label>
     <input type="text" disabled>
     <input type="password">
     <div style="display: none"><input type="email"></div>
@@ -20,6 +20,8 @@
     <iframe sandbox srcdoc="<input type='text'>"></iframe>
     <open-field></open-field>
     <closed-picker role="combobox"></closed-picker>
+    <button id="add-license" name="addLicense" type="button">+자격 추가</button>
+    <button type="submit">저장</button>
 
     <script>
       customElements.define('open-field', class extends HTMLElement {

@@ -1,9 +1,11 @@
 import type {
+  ActionAnalysis,
   AnalysisStatus,
   BoundaryAnalysis,
   ControlAnalysis,
   PageAnalysis,
 } from './types';
+import { controlIdentifiers, inferAction, inferFieldSemantics } from './infer-semantics';
 
 const SUPPORTED_ARIA_ROLES = ['combobox', 'listbox', 'textbox', 'checkbox', 'radio'] as const;
 const CONTROL_SELECTOR = [
@@ -12,6 +14,7 @@ const CONTROL_SELECTOR = [
 ].join(', ');
 const SENSITIVE_AUTOCOMPLETE = new Set(['current-password', 'new-password', 'one-time-code']);
 const ACTION_INPUT_TYPES = new Set(['button', 'submit', 'reset', 'image']);
+const ACTION_SELECTOR = 'button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]';
 
 interface TraversalContext {
   frameDepth: number;
@@ -20,17 +23,19 @@ interface TraversalContext {
 
 export function analyzePage(root: Document): PageAnalysis {
   const controls: ControlAnalysis[] = [];
+  const actions: ActionAnalysis[] = [];
   const boundaries: BoundaryAnalysis[] = [];
 
-  visitRoot(root, { frameDepth: 0, shadowDepth: 0 }, controls, boundaries);
+  visitRoot(root, { frameDepth: 0, shadowDepth: 0 }, controls, actions, boundaries);
 
-  return { controls, boundaries };
+  return { controls, actions, boundaries };
 }
 
 function visitRoot(
   root: Document | ShadowRoot,
   context: TraversalContext,
   controls: ControlAnalysis[],
+  actions: ActionAnalysis[],
   boundaries: BoundaryAnalysis[],
 ): void {
   for (const element of root.querySelectorAll<HTMLElement>(CONTROL_SELECTOR)) {
@@ -38,8 +43,12 @@ function visitRoot(
     controls.push(classifyControl(element, context));
   }
 
+  for (const element of root.querySelectorAll<HTMLElement>(ACTION_SELECTOR)) {
+    actions.push(inferAction(element, visibilityOf(element)));
+  }
+
   for (const element of root.querySelectorAll<HTMLElement>('*')) {
-    visitElementBoundary(element, context, controls, boundaries);
+    visitElementBoundary(element, context, controls, actions, boundaries);
   }
 }
 
@@ -47,20 +56,21 @@ function visitElementBoundary(
   element: HTMLElement,
   context: TraversalContext,
   controls: ControlAnalysis[],
+  actions: ActionAnalysis[],
   boundaries: BoundaryAnalysis[],
 ): void {
   if (element.shadowRoot !== null) {
     visitRoot(
       element.shadowRoot,
       { ...context, shadowDepth: context.shadowDepth + 1 },
-      controls,
+      controls, actions,
       boundaries,
     );
     return;
   }
 
   if (element.localName === 'iframe') {
-    visitFrame(element as HTMLIFrameElement, context, controls, boundaries);
+    visitFrame(element as HTMLIFrameElement, context, controls, actions, boundaries);
     return;
   }
 
@@ -68,6 +78,11 @@ function visitElementBoundary(
     controls.push({
       element: element.localName,
       control: roleOf(element) ?? 'custom',
+      ...controlIdentifiers(element),
+      profileField: 'unknown',
+      section: 'unknown',
+      confidence: 'unknown',
+      visibility: visibilityOf(element),
       status: 'review-required',
       reasons: ['inaccessible-custom-element'],
       required: element.getAttribute('aria-required') === 'true',
@@ -84,6 +99,7 @@ function visitFrame(
   frame: HTMLIFrameElement,
   context: TraversalContext,
   controls: ControlAnalysis[],
+  actions: ActionAnalysis[],
   boundaries: BoundaryAnalysis[],
 ): void {
   const frameContext = { ...context, frameDepth: context.frameDepth + 1 };
@@ -101,16 +117,21 @@ function visitFrame(
     });
     return;
   }
-  visitRoot(document, frameContext, controls, boundaries);
+  visitRoot(document, frameContext, controls, actions, boundaries);
 }
 
 function classifyControl(element: HTMLElement, context: TraversalContext): ControlAnalysis {
   const reasons = failureReasons(element);
   const status = statusFor(element, reasons);
+  const semantics = inferFieldSemantics(element);
+  const identifiers = controlIdentifiers(element);
 
   return {
     element: element.localName,
     control: controlType(element),
+    ...identifiers,
+    ...semantics,
+    visibility: visibilityOf(element),
     status,
     reasons,
     required: isRequired(element),
@@ -121,6 +142,7 @@ function classifyControl(element: HTMLElement, context: TraversalContext): Contr
 function failureReasons(element: HTMLElement): string[] {
   const reasons: string[] = [];
   if (isHidden(element)) reasons.push('hidden');
+  if (isInput(element) && element.type === 'hidden') reasons.push('hidden-input');
   if (isDisabled(element)) reasons.push('disabled');
   if (isSensitive(element)) reasons.push('sensitive');
   if (isActionControl(element)) reasons.push('action-control');
@@ -129,9 +151,13 @@ function failureReasons(element: HTMLElement): string[] {
 }
 
 function statusFor(element: HTMLElement, reasons: string[]): AnalysisStatus {
-  if (reasons.length > 0) return 'unsupported';
+  if (reasons.some((reason) => reason !== 'hidden')) return 'unsupported';
   if (roleOf(element) !== null && !isNativeControl(element)) return 'review-required';
   return 'supported';
+}
+
+function visibilityOf(element: HTMLElement): 'visible' | 'hidden' {
+  return isHidden(element) ? 'hidden' : 'visible';
 }
 
 function controlType(element: HTMLElement): string {
