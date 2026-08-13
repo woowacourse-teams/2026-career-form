@@ -150,6 +150,6 @@
 
   현재 GitHub Issue와 PR을 조회해 `INFRA`, `HARNESS`, `PLAN`, `RELEASE` prefix가 남은 제목만 새 표기로 바꾼다. Issue #17은 `[Harness] Issue와 PR 영역 prefix 표기 통일`로 바꾸고 결과를 다시 조회한다.
 
-- [ ] **Step 5: 커밋과 Draft PR 생성**
+- [x] **Step 5: 커밋과 Draft PR 생성**
 
   논리적 변경을 커밋하고 `CF-17`을 push한다. PR 템플릿을 렌더링해 `[Harness] Issue와 PR 영역 prefix 표기 통일` 제목의 Draft PR을 만들고 `Closes #17`을 정확히 하나 포함한다.
