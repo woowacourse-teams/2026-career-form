@@ -1,7 +1,12 @@
 import re
 from collections.abc import Mapping
 
-from harness.lib.branching import issue_number_from_branch, validate_branch_flow
+from harness.lib.branching import (
+    is_release_branch,
+    is_system_pr,
+    issue_number_from_branch,
+    validate_branch_flow,
+)
 from harness.lib.markdown_sections import extract_sections
 from harness.lib.result import ValidationResult, merge_results
 from harness.lib.work_title import validate_release_title, validate_work_title
@@ -33,6 +38,7 @@ INDENTED_CODE_PATTERN = re.compile(r"^(?: {4}|\t).*$", re.MULTILINE)
 def validate_pr(
     payload: Mapping[str, object],
     linked_issue_title: str | None = None,
+    linked_issue_labels: tuple[str, ...] = (),
 ) -> ValidationResult:
     title = payload.get("title")
     body = payload.get("body")
@@ -45,9 +51,9 @@ def validate_pr(
     if head is None or base is None:
         return ValidationResult(("PR head와 base 브랜치가 필요합니다",))
 
-    release_pr = (head, base) == ("develop", "main")
+    system_pr = is_system_pr(head, base)
     title_result = (
-        validate_release_title(title) if release_pr else validate_work_title(title)
+        validate_release_title(title) if system_pr else validate_work_title(title)
     )
     results = [title_result, validate_branch_flow(head, base)]
     errors: list[str] = []
@@ -57,15 +63,25 @@ def validate_pr(
             errors.append(f"PR 필수 섹션이 없습니다: {name}")
 
     results.append(ValidationResult(tuple(errors)))
-    if not release_pr and linked_issue_title is not None and title != linked_issue_title:
+    if not system_pr and linked_issue_title is not None and title != linked_issue_title:
         results.append(
             ValidationResult(("PR 제목은 연결 Issue 제목과 같아야 합니다",))
         )
     results.append(
+        _validate_hotfix_labels(
+            head=head,
+            base=base,
+            pr_labels=_label_names(payload.get("labels")),
+            linked_issue_labels=frozenset(
+                label.casefold() for label in linked_issue_labels
+            ),
+        )
+    )
+    results.append(
         _validate_closing_references(
             body=body,
             head=head,
-            release_pr=release_pr,
+            system_pr=system_pr,
             base_repository=base_repository,
         )
     )
@@ -76,20 +92,20 @@ def _validate_closing_references(
     *,
     body: str,
     head: str,
-    release_pr: bool,
+    system_pr: bool,
     base_repository: str | None,
 ) -> ValidationResult:
     close_matches = tuple(
         CLOSE_REFERENCE_PATTERN.finditer(_markdown_prose(body))
     )
     errors: list[str] = []
-    if release_pr and close_matches:
-        errors.append("배포 PR은 Issue를 종료하지 않습니다")
-    elif not close_matches and not release_pr:
+    if system_pr and close_matches:
+        errors.append("시스템 PR은 Issue를 종료하지 않습니다")
+    elif not close_matches and not system_pr:
         errors.append("PR은 Closes #<Issue 번호>를 포함해야 합니다")
-    elif len(close_matches) > 1 and not release_pr:
+    elif len(close_matches) > 1 and not system_pr:
         errors.append("PR은 하나의 Issue만 종료해야 합니다")
-    elif not release_pr:
+    elif not system_pr:
         branch_issue = issue_number_from_branch(head)
         referenced_repository = close_matches[0].group("repository")
         if (
@@ -108,6 +124,39 @@ def _validate_closing_references(
         ):
             errors.append("브랜치의 Issue 번호와 PR이 종료하는 Issue 번호가 다릅니다")
     return ValidationResult(tuple(errors))
+
+
+def _validate_hotfix_labels(
+    *,
+    head: str,
+    base: str,
+    pr_labels: frozenset[str],
+    linked_issue_labels: frozenset[str],
+) -> ValidationResult:
+    if head.startswith("CF-") and base == "main":
+        if "hotfix" not in pr_labels | linked_issue_labels:
+            return ValidationResult(
+                ("main 직접 병합에는 hotfix 라벨이 필요합니다",)
+            )
+    if head == "main" and (base == "develop" or is_release_branch(base)):
+        if "hotfix" not in pr_labels:
+            return ValidationResult(
+                ("main 동기화 PR에는 hotfix 라벨이 필요합니다",)
+            )
+    return ValidationResult()
+
+
+def _label_names(value: object) -> frozenset[str]:
+    if not isinstance(value, (list, tuple)):
+        return frozenset()
+    names: set[str] = set()
+    for label in value:
+        if not isinstance(label, Mapping):
+            continue
+        name = label.get("name")
+        if isinstance(name, str):
+            names.add(name.casefold())
+    return frozenset(names)
 
 
 def _markdown_prose(body: str) -> str:

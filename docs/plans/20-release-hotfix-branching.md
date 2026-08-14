@@ -34,12 +34,12 @@
 
 **Interfaces:** `is_release_branch`, `is_revert_branch`, `is_system_pr`, `validate_branch_flow(head, base)`, `validate_pr(payload, linked_issue_title=None, linked_issue_labels=())`를 제공한다.
 
-- [ ] release는 숫자 세 부분, revert는 소문자 16진수 7~40자로 제한하고 정의된 병합 행렬만 허용한다.
-- [ ] PR·Issue 라벨을 정규화하고 CF→main과 main 동기화에 경로별 hotfix 조건을 적용한다.
-- [ ] 시스템 PR에는 `[Release]`와 Issue 종료 금지, 작업 PR에는 `[영역]`과 단일 Issue 종료를 적용한다.
-- [ ] validate-pr 진입점에서 연결 Issue 제목과 라벨을 함께 파싱한다.
-- [ ] 관련 테스트가 통과하는지 확인한다.
-- [ ] `feat: 릴리스와 핫픽스 병합 경로 허용`으로 커밋한다.
+- [x] release는 숫자 세 부분, revert는 소문자 16진수 7~40자로 제한하고 정의된 병합 행렬만 허용한다.
+- [x] PR·Issue 라벨을 정규화하고 CF→main과 main 동기화에 경로별 hotfix 조건을 적용한다.
+- [x] 시스템 PR에는 `[Release]`와 Issue 종료 금지, 작업 PR에는 `[영역]`과 단일 Issue 종료를 적용한다.
+- [x] validate-pr 진입점에서 연결 Issue 제목과 라벨을 함께 파싱한다.
+- [x] 관련 테스트가 통과하는지 확인한다.
+- [x] `feat: 릴리스와 핫픽스 병합 경로 허용`으로 커밋한다.
 
 ### Task 3: GitHub Actions 라벨 전달
 
