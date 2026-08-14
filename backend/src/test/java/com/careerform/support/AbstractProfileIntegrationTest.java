@@ -3,19 +3,27 @@ package com.careerform.support;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.mongodb.ConnectionString;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.mongodb.autoconfigure.MongoConnectionDetails;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.env.Environment;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {
+            "SPRING_MONGODB_URI=mongodb://mongo-test.invalid:27017/career-form-test",
+            "management.health.mongodb.enabled=false"
+        })
 public abstract class AbstractProfileIntegrationTest {
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -27,6 +35,9 @@ public abstract class AbstractProfileIntegrationTest {
 
     @Autowired
     private Environment environment;
+
+    @Autowired
+    private MongoConnectionDetails mongoConnectionDetails;
 
     @Test
     void healthEndpointReturnsUp() throws IOException, InterruptedException {
@@ -48,6 +59,14 @@ public abstract class AbstractProfileIntegrationTest {
         assertEquals(
                 Boolean.TRUE,
                 environment.getProperty("spring.threads.virtual.enabled", Boolean.class));
+    }
+
+    @Test
+    void mongoConnectionUsesInjectedUri() {
+        ConnectionString connectionString = mongoConnectionDetails.getConnectionString();
+
+        assertEquals(List.of("mongo-test.invalid:27017"), connectionString.getHosts());
+        assertEquals("career-form-test", connectionString.getDatabase());
     }
 
     protected HttpResponse<String> get(String path) throws IOException, InterruptedException {

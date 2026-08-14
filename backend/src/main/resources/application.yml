@@ -1,6 +1,8 @@
 spring:
   application:
     name: career-form-backend
+  mongodb:
+    uri: ${SPRING_MONGODB_URI}
   threads:
     virtual:
       enabled: true
