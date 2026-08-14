@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="760" viewBox="0 0 420 760" role="img" aria-labelledby="title desc">
+  <title id="title">S-02 사이드 패널 지원서 분석 중</title>
+  <desc id="desc">지원서 필드 탐지, 프로필 연결과 입력 예정 값 준비 단계를 보여주는 회색조 와이어프레임</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif; fill: #111827; }
+    .frame { fill: #ffffff; stroke: #111827; stroke-width: 2; }
+    .surface { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 1; }
+    .title { font-size: 19px; font-weight: 600; }
+    .heading { font-size: 14px; font-weight: 600; }
+    .body { font-size: 13px; }
+    .small { font-size: 11px; fill: #4b5563; }
+    .done { fill: #111827; }
+    .pending { fill: #ffffff; stroke: #9ca3af; stroke-width: 2; }
+    .track { stroke: #d1d5db; stroke-width: 4; }
+    .progress { stroke: #111827; stroke-width: 4; }
+  </style>
+
+  <rect class="frame" x="1" y="1" width="418" height="758"/>
+  <text class="small" x="22" y="27">S-02 , 브라우저 사이드 패널</text>
+  <text class="title" x="22" y="61">지원서를 분석하고 있어요</text>
+  <text class="body" x="22" y="90">현재 페이지의 입력 항목을 안전하게 확인합니다.</text>
+
+  <circle cx="210" cy="164" r="38" fill="none" stroke="#d1d5db" stroke-width="8"/>
+  <path d="M210 126 A38 38 0 0 1 246 152" fill="none" stroke="#111827" stroke-width="8" stroke-linecap="round"/>
+  <text class="small" x="210" y="218" text-anchor="middle">분석 중</text>
+
+  <line class="track" x1="58" y1="290" x2="58" y2="488"/>
+  <line class="progress" x1="58" y1="290" x2="58" y2="377"/>
+
+  <circle class="done" cx="58" cy="290" r="13"/>
+  <text x="58" y="295" text-anchor="middle" font-size="12" fill="#ffffff">✓</text>
+  <text class="heading" x="88" y="286">지원서 필드 찾기</text>
+  <text class="small" x="88" y="307">레이블과 입력 형식을 확인했습니다</text>
+
+  <circle class="done" cx="58" cy="377" r="13"/>
+  <text x="58" y="382" text-anchor="middle" font-size="12" fill="#ffffff">•••</text>
+  <text class="heading" x="88" y="373">프로필 정보 연결</text>
+  <text class="small" x="88" y="394">안전하게 연결할 수 있는 항목을 판단 중입니다</text>
+
+  <circle class="pending" cx="58" cy="464" r="13"/>
+  <text class="heading" x="88" y="460">입력 예정 값 준비</text>
+  <text class="small" x="88" y="481">확인 화면을 만들기 전 단계입니다</text>
+
+  <rect class="surface" x="22" y="548" width="376" height="108" rx="7"/>
+  <text class="heading" x="40" y="579">아직 지원서 값은 바뀌지 않았습니다</text>
+  <text class="body" x="40" y="607">분석이 끝나면 어디에 어떤 값이 들어갈지</text>
+  <text class="body" x="40" y="630">먼저 확인하고 선택할 수 있습니다.</text>
+  <text class="small" x="22" y="714">저장, 다음 단계 이동과 제출은 실행하지 않음</text>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="560" viewBox="0 0 360 560" role="img" aria-labelledby="title desc">
+  <title id="title">P-01 확장 프로그램 팝업 준비 상태</title>
+  <desc id="desc">서비스 설명, 프로필 준비 상태, 사이드 패널 열기, 프로필 관리와 안전 안내를 보여주는 회색조 와이어프레임</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif; fill: #111827; }
+    .frame { fill: #ffffff; stroke: #111827; stroke-width: 2; }
+    .surface { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 1; }
+    .title { font-size: 20px; font-weight: 600; }
+    .heading { font-size: 15px; font-weight: 600; }
+    .body { font-size: 13px; }
+    .small { font-size: 11px; fill: #4b5563; }
+    .primary { fill: #111827; stroke: #111827; }
+    .secondary { fill: #ffffff; stroke: #111827; }
+    .primary-text { fill: #ffffff; font-size: 14px; font-weight: 600; }
+    .button-text { font-size: 14px; font-weight: 600; }
+    .divider { stroke: #d1d5db; stroke-width: 1; }
+  </style>
+
+  <rect class="frame" x="1" y="1" width="358" height="558" rx="10"/>
+  <text class="small" x="24" y="28">P-01 , 확장 프로그램 팝업</text>
+  <text class="title" x="24" y="62">채용 지원 정보 도우미</text>
+  <text class="body" x="24" y="88">지원서에 필요한 정보를 안전하게 불러옵니다.</text>
+
+  <rect class="surface" x="24" y="116" width="312" height="126" rx="8"/>
+  <text class="heading" x="42" y="146">프로필 준비 상태</text>
+  <text class="title" x="42" y="185">N / 10 범주 등록</text>
+  <text class="small" x="42" y="212">마지막 수정 시각</text>
+  <line class="divider" x1="214" y1="139" x2="214" y2="219"/>
+  <text class="small" x="232" y="157">실제 값은</text>
+  <text class="small" x="232" y="177">팝업에</text>
+  <text class="small" x="232" y="197">표시하지 않음</text>
+
+  <rect class="primary" x="24" y="270" width="312" height="50" rx="8"/>
+  <text class="primary-text" x="180" y="301" text-anchor="middle">사이드 패널 열기</text>
+
+  <rect class="secondary" x="24" y="334" width="312" height="46" rx="8"/>
+  <text class="button-text" x="180" y="363" text-anchor="middle">프로필 관리</text>
+
+  <line class="divider" x1="24" y1="410" x2="336" y2="410"/>
+  <text class="heading" x="24" y="440">작업 전 확인</text>
+  <text class="body" x="24" y="466">선택하고 승인한 항목만 기입합니다.</text>
+  <text class="body" x="24" y="489">지원서 저장, 다음 단계 이동과 제출은</text>
+  <text class="body" x="24" y="510">실행하지 않습니다.</text>
+  <text class="small" x="24" y="540">페이지 분석과 입력 확인은 사이드 패널에서 진행</text>
+</svg>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="760" viewBox="0 0 420 760" role="img" aria-labelledby="title desc">
+  <title id="title">S-05 사이드 패널 기입 중</title>
+  <desc id="desc">승인된 항목의 완료, 처리 중과 대기 상태를 보여주는 회색조 와이어프레임</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif; fill: #111827; }
+    .frame { fill: #ffffff; stroke: #111827; stroke-width: 2; }
+    .surface { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 1; }
+    .row { fill: #ffffff; stroke: #d1d5db; stroke-width: 1; }
+    .title { font-size: 19px; font-weight: 600; }
+    .heading { font-size: 14px; font-weight: 600; }
+    .body { font-size: 13px; }
+    .small { font-size: 11px; fill: #4b5563; }
+    .bar { fill: #e5e7eb; }
+    .bar-progress { fill: #111827; }
+    .done { fill: #111827; }
+    .current { fill: #ffffff; stroke: #111827; stroke-width: 3; }
+    .pending { fill: #ffffff; stroke: #9ca3af; stroke-width: 2; }
+  </style>
+
+  <rect class="frame" x="1" y="1" width="418" height="758"/>
+  <text class="small" x="22" y="27">S-05 , 브라우저 사이드 패널</text>
+  <text class="title" x="22" y="61">선택한 항목을 기입하고 있어요</text>
+  <text class="body" x="22" y="89">승인한 N개 항목만 처리합니다.</text>
+
+  <rect class="bar" x="22" y="119" width="376" height="10" rx="5"/>
+  <rect class="bar-progress" x="22" y="119" width="218" height="10" rx="5"/>
+  <text class="small" x="398" y="154" text-anchor="end">N / N 완료</text>
+
+  <rect class="row" x="22" y="184" width="376" height="76" rx="6"/>
+  <circle class="done" cx="54" cy="222" r="13"/>
+  <text x="54" y="227" text-anchor="middle" font-size="12" fill="#ffffff">✓</text>
+  <text class="heading" x="82" y="216">기본 인적사항</text>
+  <text class="small" x="82" y="239">N개 항목 기입 완료</text>
+
+  <rect class="row" x="22" y="276" width="376" height="76" rx="6"/>
+  <circle class="current" cx="54" cy="314" r="13"/>
+  <text class="heading" x="82" y="308">연락처와 주소</text>
+  <text class="small" x="82" y="331">현재 처리 중</text>
+
+  <rect class="row" x="22" y="368" width="376" height="76" rx="6"/>
+  <circle class="pending" cx="54" cy="406" r="13"/>
+  <text class="heading" x="82" y="400">학력과 어학</text>
+  <text class="small" x="82" y="423">처리 대기</text>
+
+  <rect class="surface" x="22" y="486" width="376" height="132" rx="7"/>
+  <text class="heading" x="40" y="517">진행 중에도 제품 경계는 유지됩니다</text>
+  <text class="body" x="40" y="547">선택하지 않은 항목은 변경하지 않습니다.</text>
+  <text class="body" x="40" y="574">지원서 저장, 이동과 제출을 실행하지 않습니다.</text>
+  <text class="small" x="40" y="600">완료되면 성공과 실패를 나눠 보여줍니다</text>
+
+  <text class="small" x="210" y="704" text-anchor="middle">기입이 끝날 때까지 현재 지원서 페이지 유지</text>
+</svg>

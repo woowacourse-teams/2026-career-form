@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="780" viewBox="0 0 920 780" role="img" aria-labelledby="title desc">
+  <title id="title">E-01부터 E-04 사이드 패널 예외 상태</title>
+  <desc id="desc">지원하지 않는 페이지, 분석 실패, 검색 결과 없음과 일부 기입 실패를 네 개의 회색조 화면으로 보여주는 와이어프레임</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif; fill: #111827; }
+    .board { fill: #f3f4f6; stroke: #111827; stroke-width: 2; }
+    .panel { fill: #ffffff; stroke: #4b5563; stroke-width: 2; }
+    .surface { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 1; }
+    .title { font-size: 18px; font-weight: 600; }
+    .heading { font-size: 14px; font-weight: 600; }
+    .body { font-size: 12px; }
+    .small { font-size: 10px; fill: #4b5563; }
+    .primary { fill: #111827; stroke: #111827; }
+    .secondary { fill: #ffffff; stroke: #111827; }
+    .primary-text { fill: #ffffff; font-size: 12px; font-weight: 600; }
+    .button-text { font-size: 12px; font-weight: 600; }
+  </style>
+
+  <rect class="board" x="1" y="1" width="918" height="778" rx="8"/>
+  <text class="small" x="24" y="28">사이드 패널 예외 상태 모음</text>
+
+  <rect class="panel" x="24" y="50" width="424" height="330" rx="7"/>
+  <text class="small" x="44" y="78">E-01</text>
+  <text class="title" x="44" y="111">이 페이지는 자동 기입할 수 없어요</text>
+  <text class="body" x="44" y="141">안전하게 분석할 수 있는 지원서 입력란을</text>
+  <text class="body" x="44" y="162">확인하지 못했습니다.</text>
+  <rect class="surface" x="44" y="188" width="384" height="66" rx="6"/>
+  <text class="heading" x="62" y="216">수동 복사는 계속 사용할 수 있습니다</text>
+  <text class="small" x="62" y="238">프로필 검색과 항목별 복사 유지</text>
+  <rect class="primary" x="44" y="280" width="184" height="44" rx="6"/>
+  <text class="primary-text" x="136" y="307" text-anchor="middle">수동 복사 보기</text>
+  <rect class="secondary" x="244" y="280" width="184" height="44" rx="6"/>
+  <text class="button-text" x="336" y="307" text-anchor="middle">자동 기입 비활성</text>
+
+  <rect class="panel" x="472" y="50" width="424" height="330" rx="7"/>
+  <text class="small" x="492" y="78">E-02</text>
+  <text class="title" x="492" y="111">지원서 분석을 완료하지 못했어요</text>
+  <text class="body" x="492" y="141">지원서 값은 변경되지 않았습니다.</text>
+  <rect class="surface" x="492" y="170" width="384" height="84" rx="6"/>
+  <text class="heading" x="510" y="199">비식별 실패 안내</text>
+  <text class="small" x="510" y="222">실제 페이지 구조와 프로필 값은 표시하지 않음</text>
+  <text class="small" x="510" y="242">잠시 후 다시 시도하거나 수동 복사 사용</text>
+  <rect class="secondary" x="492" y="280" width="184" height="44" rx="6"/>
+  <text class="button-text" x="584" y="307" text-anchor="middle">수동 복사</text>
+  <rect class="primary" x="692" y="280" width="184" height="44" rx="6"/>
+  <text class="primary-text" x="784" y="307" text-anchor="middle">다시 시도</text>
+
+  <rect class="panel" x="24" y="414" width="424" height="330" rx="7"/>
+  <text class="small" x="44" y="442">E-03</text>
+  <text class="title" x="44" y="475">검색 결과가 없어요</text>
+  <rect class="surface" x="44" y="501" width="384" height="44" rx="6"/>
+  <text class="body" x="62" y="529">현재 검색어</text>
+  <text class="small" x="408" y="529" text-anchor="end">검색어 지우기</text>
+  <text class="body" x="44" y="583">다른 표현으로 검색하거나 정보 범주를</text>
+  <text class="body" x="44" y="604">직접 펼쳐보세요.</text>
+  <text class="small" x="44" y="636">저장되지 않은 값은 생성하거나 추측하지 않음</text>
+  <rect class="primary" x="44" y="666" width="384" height="44" rx="6"/>
+  <text class="primary-text" x="236" y="693" text-anchor="middle">전체 범주 보기</text>
+
+  <rect class="panel" x="472" y="414" width="424" height="330" rx="7"/>
+  <text class="small" x="492" y="442">E-04</text>
+  <text class="title" x="492" y="475">일부 항목을 기입하지 못했어요</text>
+  <text class="body" x="492" y="505">성공 N개, 실패 N개, 직접 입력 N개</text>
+  <rect class="surface" x="492" y="532" width="384" height="94" rx="6"/>
+  <text class="heading" x="510" y="560">실패 항목</text>
+  <text class="body" x="510" y="586">학교 검색형 입력란 외 N개</text>
+  <text class="small" x="510" y="609">성공으로 합치지 않고 직접 보완 경로 제공</text>
+  <rect class="secondary" x="492" y="654" width="184" height="44" rx="6"/>
+  <text class="button-text" x="584" y="681" text-anchor="middle">지원서 확인</text>
+  <rect class="primary" x="692" y="654" width="184" height="44" rx="6"/>
+  <text class="primary-text" x="784" y="681" text-anchor="middle">수동 복사로 보완</text>
+</svg>

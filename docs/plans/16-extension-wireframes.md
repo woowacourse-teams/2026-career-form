@@ -55,7 +55,7 @@
 
   Expected: 공백 오류가 없고 하네스 전체 검증이 통과한다. 승인된 산문을 특정 문구로 고정하는 테스트는 추가하지 않는다.
 
-- [ ] **Step 5: 첫 번째 논리적 변경 커밋**
+- [x] **Step 5: 첫 번째 논리적 변경 커밋**
 
   ```bash
   git add docs/adr/16-popup-side-panel-boundary.md docs/design/16-extension-wireframes.md docs/plans/16-extension-wireframes.md
@@ -82,7 +82,7 @@
 - Consumes: Task 1의 화면 ID, 상태 전이와 선택 정책
 - Produces: 각 화면 ID와 일대일로 연결되는 회색조 SVG와 Markdown 삽입 링크
 
-- [ ] **Step 1: SVG 경계 검사의 RED 확인**
+- [x] **Step 1: SVG 경계 검사의 RED 확인**
 
   Run:
 
@@ -92,23 +92,23 @@
 
   Expected: `AssertionError: Issue #16 SVG가 아직 없음`으로 실패한다.
 
-- [ ] **Step 2: 팝업과 수동 복사 화면 작성**
+- [x] **Step 2: 팝업과 수동 복사 화면 작성**
 
   `popup-readiness.svg`에는 서비스 설명, 실제 값을 노출하지 않는 프로필 준비 상태, `사이드 패널 열기`, `프로필 관리`와 자동 제출 금지 안내를 배치한다. `side-panel-manual-copy.svg`에는 검색, 범주 목록, 항목별 복사, 민감정보 가림과 `자동 기입`을 배치한다.
 
-- [ ] **Step 3: 자동 기입 상태 화면 작성**
+- [x] **Step 3: 자동 기입 상태 화면 작성**
 
   분석 중, 검토, 최종 승인, 기입 중과 결과 요약을 각각 독립 SVG로 작성한다. 검토 화면은 일반 입력 가능만 선택하고 확인 필요, 충돌과 민감정보는 선택 해제하며 입력 불가는 비활성화한다. 결과 화면은 성공, 실패와 직접 입력 필요를 구분한다.
 
-- [ ] **Step 4: 예외 상태 화면 작성**
+- [x] **Step 4: 예외 상태 화면 작성**
 
   `side-panel-exceptions.svg`에 지원하지 않는 페이지, 분석 실패, 검색 결과 없음과 일부 기입 실패 상태를 한 보드에 구분해 작성한다. 수동 복사 경로는 지원하지 않는 페이지에서도 유지한다.
 
-- [ ] **Step 5: SVG를 정본 문서에 연결**
+- [x] **Step 5: SVG를 정본 문서에 연결**
 
   각 SVG를 해당 화면 설명 아래 상대 경로로 삽입하고 목적, 표시 정보, 주요 행동, 다음 상태와 예외 상태를 적는다.
 
-- [ ] **Step 6: SVG 경계 검사의 GREEN 확인**
+- [x] **Step 6: SVG 경계 검사의 GREEN 확인**
 
   Run:
 
