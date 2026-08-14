@@ -45,11 +45,11 @@
 
 **Files:** `.github/workflows/pr-contract.yml`, `harness/tests/test_repository_contract.py`
 
-- [ ] workflow가 연결 Issue의 `title,labels`를 조회하고 최소 권한을 유지하는 실패 테스트를 작성한다.
-- [ ] `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`로 RED를 확인한다.
-- [ ] 연결 Issue 수집 JSON에 labels를 추가하고 PR 라벨은 event payload에서 읽게 유지한다.
-- [ ] repository contract 테스트가 통과하는지 확인한다.
-- [ ] `ci: PR 계약에 연결 Issue 라벨 전달`로 커밋한다.
+- [x] workflow가 연결 Issue의 `title,labels`를 조회하고 최소 권한을 유지하는 실패 테스트를 작성한다.
+- [x] `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`로 RED를 확인한다.
+- [x] 연결 Issue 수집 JSON에 labels를 추가하고 PR 라벨은 event payload에서 읽게 유지한다.
+- [x] repository contract 테스트가 통과하는지 확인한다.
+- [x] `ci: PR 계약에 핫픽스 라벨 검증 연결`로 커밋한다.
 
 ### Task 4: 브랜치·환경·Ruleset 문서 동기화
 

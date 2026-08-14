@@ -17,13 +17,13 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.13"
-      - name: 연결 Issue 제목 수집
+      - name: 연결 Issue 제목과 라벨 수집
         if: startsWith(github.head_ref, 'CF-')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           issue_number="${GITHUB_HEAD_REF#CF-}"
-          gh issue view "$issue_number" --repo "$GITHUB_REPOSITORY" --json title > "$RUNNER_TEMP/linked-issue.json"
+          gh issue view "$issue_number" --repo "$GITHUB_REPOSITORY" --json title,labels > "$RUNNER_TEMP/linked-issue.json"
       - name: PR 계약 검사
         run: |
           if [[ -f "$RUNNER_TEMP/linked-issue.json" ]]; then

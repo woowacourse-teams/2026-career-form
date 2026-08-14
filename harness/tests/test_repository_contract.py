@@ -190,6 +190,20 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn("gh pr view", workflow)
         self.assertIn("current-pr.json", workflow)
 
+    def test_pr_contract_collects_linked_issue_title_and_labels(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
+        steps = workflow["jobs"]["validate"]["steps"]
+        issue_steps = tuple(
+            step
+            for step in steps
+            if "연결 Issue" in step.get("name", "")
+        )
+        self.assertEqual(1, len(issue_steps))
+        issue_step = issue_steps[0]
+
+        self.assertEqual("${{ github.token }}", issue_step["env"]["GH_TOKEN"])
+        self.assertIn("--json title,labels", issue_step["run"])
+
     def _yaml(self, path: Path) -> dict[str, object]:
         value = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
         self.assertIsInstance(value, dict, path.name)
