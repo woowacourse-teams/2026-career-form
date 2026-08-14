@@ -611,9 +611,15 @@
   테스트와 87% 커버리지, Compose `config --quiet`, `git diff --check`도
   통과했다.
 
-- [ ] **Step 7: 독립 리뷰와 기존 Draft PR 갱신을 수행한다.**
+- [x] **Step 7: 독립 리뷰와 기존 Draft PR 갱신을 수행한다.**
 
   `origin/develop...HEAD`의 Standards와 갱신된 Issue #4 계약을 각각 독립 검토한다. 높은 위험 문제를 수정하고 최신 검증을 반복한 뒤 논리적 커밋을 `CF-4`에 push한다. 기존 Draft PR #7 본문과 Issue/Project 검토 상태만 갱신하고 새 PR은 만들지 않는다.
+
+  2026-08-14 독립 리뷰에서 Standards finding은 없었다. Spec 리뷰의 P1은
+  새 스크립트 커밋과 PR 본문이 원격에 아직 없다는 전달 순서상의 지적으로,
+  `CF-4` push와 기존 Draft PR #7 본문 갱신으로 해소했다. P2인 Windows
+  실기기 실행은 팀원 확인 전이므로 완료로 과장하지 않고 PR 수동 미검증
+  항목으로 남겼다. PR은 Draft를 유지하며 새 Issue나 PR은 만들지 않는다.
 
 ## 보류 및 후속 후보
 
