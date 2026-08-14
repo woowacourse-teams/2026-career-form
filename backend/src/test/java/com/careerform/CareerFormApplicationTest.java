@@ -1,15 +1,21 @@
 package com.careerform;
 
+import static com.careerform.support.MongoTestProperties.MONGODB_HEALTH_DISABLED_COMMAND_LINE_PROPERTY;
+import static com.careerform.support.MongoTestProperties.MONGODB_HEALTH_DISABLED_PROPERTY;
+import static com.careerform.support.MongoTestProperties.VALID_URI_COMMAND_LINE_PROPERTY;
+import static com.careerform.support.MongoTestProperties.VALID_URI_ENVIRONMENT_PROPERTY;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.StandardEnvironment;
 
 @SpringBootTest(properties = {
-    "SPRING_MONGODB_URI=mongodb://mongo-test.invalid:27017/career-form-test",
-    "management.health.mongodb.enabled=false"
+    VALID_URI_ENVIRONMENT_PROPERTY,
+    MONGODB_HEALTH_DISABLED_PROPERTY
 })
 class CareerFormApplicationTest {
 
@@ -23,10 +29,24 @@ class CareerFormApplicationTest {
                 .from(CareerFormApplication::main)
                 .run(
                         "--spring.main.web-application-type=none",
-                        "--spring.mongodb.uri=mongodb://mongo-test.invalid:27017/career-form-test",
-                        "--management.health.mongodb.enabled=false")
+                        VALID_URI_COMMAND_LINE_PROPERTY,
+                        MONGODB_HEALTH_DISABLED_COMMAND_LINE_PROPERTY)
                 .getApplicationContext()) {
             assertTrue(context.isActive());
         }
+    }
+
+    @Test
+    void missingMongoUriPreventsApplicationStart() {
+        SpringApplication application = new SpringApplication(CareerFormApplication.class);
+        StandardEnvironment environment = new StandardEnvironment();
+        environment.getPropertySources().remove(
+                StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);
+        environment.getPropertySources().remove(
+                StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
+        application.setEnvironment(environment);
+
+        assertThrows(RuntimeException.class, () -> application.run(
+                "--spring.main.web-application-type=none"));
     }
 }

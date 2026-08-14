@@ -1,5 +1,7 @@
 package com.careerform.support;
 
+import static com.careerform.support.MongoTestProperties.MONGODB_HEALTH_DISABLED_PROPERTY;
+import static com.careerform.support.MongoTestProperties.VALID_URI_ENVIRONMENT_PROPERTY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,8 +23,8 @@ import org.springframework.core.env.Environment;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-            "SPRING_MONGODB_URI=mongodb://mongo-test.invalid:27017/career-form-test",
-            "management.health.mongodb.enabled=false"
+            VALID_URI_ENVIRONMENT_PROPERTY,
+            MONGODB_HEALTH_DISABLED_PROPERTY
         })
 public abstract class AbstractProfileIntegrationTest {
 
