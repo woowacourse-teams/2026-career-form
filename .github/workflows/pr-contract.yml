@@ -2,7 +2,14 @@ name: PR 계약
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+    types: [opened, edited, labeled, unlabeled, synchronize, reopened, ready_for_review]
+  issues:
+    types: [edited, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 다시 검증할 PR 번호
+        required: true
 
 permissions:
   contents: read
@@ -10,24 +17,54 @@ permissions:
   pull-requests: read
 
 jobs:
+  revalidate:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    steps:
+      - name: 연결 작업 PR 재검증 요청
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t pr_numbers < <(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "CF-${{ github.event.issue.number }}" --limit 2 --json number --jq '.[].number')
+          if (( ${#pr_numbers[@]} > 1 )); then
+            echo "같은 Issue 브랜치의 열린 PR이 여러 개입니다" >&2
+            exit 1
+          fi
+          if (( ${#pr_numbers[@]} == 1 )); then
+            gh workflow run pr-contract.yml --repo "$GITHUB_REPOSITORY" --ref "CF-${{ github.event.issue.number }}" -f pr_number="${pr_numbers[0]}"
+          fi
+
   validate:
+    if: github.event_name != 'issues'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.13"
+      - name: 현재 PR 상태와 라벨 수집
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '{pull_request: .}' > "$RUNNER_TEMP/current-pr-event.json"
       - name: 연결 Issue 제목과 라벨 수집
-        if: startsWith(github.head_ref, 'CF-')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          issue_number="${GITHUB_HEAD_REF#CF-}"
-          gh issue view "$issue_number" --repo "$GITHUB_REPOSITORY" --json title,labels > "$RUNNER_TEMP/linked-issue.json"
+          head_ref=$(jq -r '.pull_request.head.ref' "$RUNNER_TEMP/current-pr-event.json")
+          if [[ "$head_ref" == CF-* ]]; then
+            issue_number="${head_ref#CF-}"
+            gh issue view "$issue_number" --repo "$GITHUB_REPOSITORY" --json title,labels > "$RUNNER_TEMP/linked-issue.json"
+          fi
       - name: PR 계약 검사
         run: |
           if [[ -f "$RUNNER_TEMP/linked-issue.json" ]]; then
-            python harness/scripts/validate-pr.py "$GITHUB_EVENT_PATH" "$RUNNER_TEMP/linked-issue.json"
+            python harness/scripts/validate-pr.py "$RUNNER_TEMP/current-pr-event.json" "$RUNNER_TEMP/linked-issue.json"
           else
-            python harness/scripts/validate-pr.py "$GITHUB_EVENT_PATH"
+            python harness/scripts/validate-pr.py "$RUNNER_TEMP/current-pr-event.json"
           fi

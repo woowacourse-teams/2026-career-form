@@ -192,17 +192,40 @@ class RepositoryContractTest(unittest.TestCase):
 
     def test_pr_contract_collects_linked_issue_title_and_labels(self) -> None:
         workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
+        pr_events = workflow["on"]["pull_request"]["types"]
         steps = workflow["jobs"]["validate"]["steps"]
+        pr_steps = tuple(
+            step for step in steps if "현재 PR 상태" in step.get("name", "")
+        )
         issue_steps = tuple(
             step
             for step in steps
             if "연결 Issue" in step.get("name", "")
         )
+        self.assertIn("labeled", pr_events)
+        self.assertIn("unlabeled", pr_events)
+        self.assertEqual(1, len(pr_steps))
+        self.assertIn("gh api", pr_steps[0]["run"])
+        self.assertIn("current-pr-event.json", pr_steps[0]["run"])
         self.assertEqual(1, len(issue_steps))
         issue_step = issue_steps[0]
 
         self.assertEqual("${{ github.token }}", issue_step["env"]["GH_TOKEN"])
         self.assertIn("--json title,labels", issue_step["run"])
+
+    def test_pr_contract_revalidates_when_linked_issue_labels_change(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
+        self.assertIn("issues", workflow["on"])
+        self.assertIn("revalidate", workflow["jobs"])
+        issue_events = workflow["on"]["issues"]["types"]
+        revalidate = workflow["jobs"]["revalidate"]
+        run = revalidate["steps"][0]["run"]
+
+        self.assertEqual(["edited", "labeled", "unlabeled"], issue_events)
+        self.assertEqual("write", revalidate["permissions"]["actions"])
+        self.assertIn("gh pr list", run)
+        self.assertIn("gh workflow run", run)
+        self.assertIn("--ref", run)
 
     def test_release_and_hotfix_policy_is_synchronized_across_documents(self) -> None:
         paths = (
