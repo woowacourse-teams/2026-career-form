@@ -471,7 +471,12 @@
   git diff --check
   ```
 
-- [ ] **Step 5: 문서와 완료된 계획을 커밋한다.**
+  2026-08-14 검증에서 Gradle `clean check`와 `bootJar`, 기본 포트와
+  `BACKEND_PORT=18080`의 실제 Compose smoke, 하네스 195개 테스트와
+  87% 커버리지, `git diff --check`가 모두 통과했다. 일반 `down` 뒤에도
+  `cf-4_mongodb-data` named volume이 보존됨을 확인했다.
+
+- [x] **Step 5: 문서와 완료된 계획을 커밋한다.**
 
   ```bash
   git add backend/README.md docs/plans/4-initial-backend-setup.md
