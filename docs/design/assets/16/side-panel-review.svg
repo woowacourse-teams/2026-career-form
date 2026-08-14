@@ -70,6 +70,6 @@
 
   <line class="divider" x1="0" y1="934" x2="420" y2="934"/>
   <rect class="primary" x="22" y="955" width="376" height="52" rx="7"/>
-  <text class="primary-text" x="210" y="987" text-anchor="middle">선택한 N개 항목 확인</text>
+  <text class="primary-text" style="fill:#ffffff" x="210" y="987" text-anchor="middle">선택한 N개 항목 확인</text>
   <text class="small" x="22" y="1027">저장, 이동과 제출은 자동으로 실행하지 않음</text>
 </svg>

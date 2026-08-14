@@ -75,6 +75,6 @@
 
   <line class="divider" x1="0" y1="796" x2="420" y2="796"/>
   <rect class="primary" x="22" y="820" width="376" height="52" rx="7"/>
-  <text class="primary-text" x="210" y="852" text-anchor="middle">자동 기입</text>
+  <text class="primary-text" style="fill:#ffffff" x="210" y="852" text-anchor="middle">자동 기입</text>
   <text class="small" x="210" y="892" text-anchor="middle">선택 후 분석과 검토를 시작합니다</text>
 </svg>

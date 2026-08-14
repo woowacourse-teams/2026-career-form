@@ -31,7 +31,7 @@
   <text class="small" x="232" y="197">표시하지 않음</text>
 
   <rect class="primary" x="24" y="270" width="312" height="50" rx="8"/>
-  <text class="primary-text" x="180" y="301" text-anchor="middle">사이드 패널 열기</text>
+  <text class="primary-text" style="fill:#ffffff" x="180" y="301" text-anchor="middle">사이드 패널 열기</text>
 
   <rect class="secondary" x="24" y="334" width="312" height="46" rx="8"/>
   <text class="button-text" x="180" y="363" text-anchor="middle">프로필 관리</text>

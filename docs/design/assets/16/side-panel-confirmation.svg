@@ -47,6 +47,6 @@
   <rect class="secondary" x="22" y="626" width="178" height="50" rx="7"/>
   <text class="button-text" x="111" y="657" text-anchor="middle">검토로 돌아가기</text>
   <rect class="primary" x="220" y="626" width="178" height="50" rx="7"/>
-  <text class="primary-text" x="309" y="657" text-anchor="middle">기입하기</text>
+  <text class="primary-text" style="fill:#ffffff" x="309" y="657" text-anchor="middle">기입하기</text>
   <text class="small" x="210" y="724" text-anchor="middle">이 버튼이 실제 기입을 시작하는 최종 승인</text>
 </svg>

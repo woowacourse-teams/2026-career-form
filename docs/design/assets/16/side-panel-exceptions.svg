@@ -28,7 +28,7 @@
   <text class="heading" x="62" y="216">수동 복사는 계속 사용할 수 있습니다</text>
   <text class="small" x="62" y="238">프로필 검색과 항목별 복사 유지</text>
   <rect class="primary" x="44" y="280" width="184" height="44" rx="6"/>
-  <text class="primary-text" x="136" y="307" text-anchor="middle">수동 복사 보기</text>
+  <text class="primary-text" style="fill:#ffffff" x="136" y="307" text-anchor="middle">수동 복사 보기</text>
   <rect class="secondary" x="244" y="280" width="184" height="44" rx="6"/>
   <text class="button-text" x="336" y="307" text-anchor="middle">자동 기입 비활성</text>
 
@@ -43,7 +43,7 @@
   <rect class="secondary" x="492" y="280" width="184" height="44" rx="6"/>
   <text class="button-text" x="584" y="307" text-anchor="middle">수동 복사</text>
   <rect class="primary" x="692" y="280" width="184" height="44" rx="6"/>
-  <text class="primary-text" x="784" y="307" text-anchor="middle">다시 시도</text>
+  <text class="primary-text" style="fill:#ffffff" x="784" y="307" text-anchor="middle">다시 시도</text>
 
   <rect class="panel" x="24" y="414" width="424" height="330" rx="7"/>
   <text class="small" x="44" y="442">E-03</text>
@@ -55,7 +55,7 @@
   <text class="body" x="44" y="604">직접 펼쳐보세요.</text>
   <text class="small" x="44" y="636">저장되지 않은 값은 생성하거나 추측하지 않음</text>
   <rect class="primary" x="44" y="666" width="384" height="44" rx="6"/>
-  <text class="primary-text" x="236" y="693" text-anchor="middle">전체 범주 보기</text>
+  <text class="primary-text" style="fill:#ffffff" x="236" y="693" text-anchor="middle">전체 범주 보기</text>
 
   <rect class="panel" x="472" y="414" width="424" height="330" rx="7"/>
   <text class="small" x="492" y="442">E-04</text>
@@ -68,5 +68,5 @@
   <rect class="secondary" x="492" y="654" width="184" height="44" rx="6"/>
   <text class="button-text" x="584" y="681" text-anchor="middle">지원서 확인</text>
   <rect class="primary" x="692" y="654" width="184" height="44" rx="6"/>
-  <text class="primary-text" x="784" y="681" text-anchor="middle">수동 복사로 보완</text>
+  <text class="primary-text" style="fill:#ffffff" x="784" y="681" text-anchor="middle">수동 복사로 보완</text>
 </svg>

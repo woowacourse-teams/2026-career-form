@@ -118,7 +118,7 @@
 
   Expected: 출력 없이 exit 0.
 
-- [ ] **Step 7: 두 번째 논리적 변경 커밋**
+- [x] **Step 7: 두 번째 논리적 변경 커밋**
 
   ```bash
   git add docs/design/16-extension-wireframes.md docs/design/assets/16 docs/plans/16-extension-wireframes.md
@@ -138,19 +138,19 @@
 - Consumes: Task 1과 Task 2의 Markdown, Mermaid와 SVG
 - Produces: 인수 조건별 검증 근거와 Draft PR에 기록할 자동 및 수동 검증 결과
 
-- [ ] **Step 1: 모든 SVG를 PNG로 렌더링**
+- [x] **Step 1: 모든 SVG를 PNG로 렌더링**
 
   macOS Quick Look 또는 설치된 SVG 렌더러를 사용해 각 SVG의 PNG 미리보기를 OS 임시 디렉토리에 만든다. 저장소에는 렌더링 결과를 추가하지 않는다.
 
-- [ ] **Step 2: 화면별 시각 검토**
+- [x] **Step 2: 화면별 시각 검토**
 
   각 PNG를 열어 잘림, 겹침, 읽을 수 없는 텍스트, 잘못된 기본 선택, 실제 개인정보와 최종 UI 디자인 표현이 없는지 확인한다. 발견한 문제는 SVG와 Markdown을 함께 수정한다.
 
-- [ ] **Step 3: 인수 조건 추적 검토**
+- [x] **Step 3: 인수 조건 추적 검토**
 
   팝업에서 사이드 패널로 이동하고, 수동 복사와 자동 기입 두 경로가 결과 요약까지 이어지는지 Mermaid와 화면 ID를 대조한다. 지원하지 않는 페이지, 분석 실패, 검색 결과 없음과 일부 기입 실패를 각각 확인한다.
 
-- [ ] **Step 4: 최종 자동 검증**
+- [x] **Step 4: 최종 자동 검증**
 
   Run:
 
@@ -162,11 +162,11 @@
 
   Expected: SVG 8개가 유효한 XML이고 공백 오류가 없으며 하네스 전체 검증이 통과한다.
 
-- [ ] **Step 5: 계획 완료 상태 반영**
+- [x] **Step 5: 계획 완료 상태 반영**
 
   이 계획의 완료한 체크박스를 `[x]`로 바꾸고 자동 검증 결과와 남은 GitHub Mermaid 수동 확인을 Draft PR 본문에 기록한다.
 
-- [ ] **Step 6: 계획 완료 기록 커밋**
+- [x] **Step 6: 계획 완료 기록 커밋**
 
   ```bash
   git add docs/plans/16-extension-wireframes.md docs/design/16-extension-wireframes.md docs/design/assets/16

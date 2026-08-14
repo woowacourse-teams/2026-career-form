@@ -59,6 +59,6 @@
   <rect class="secondary" x="22" y="795" width="178" height="50" rx="7"/>
   <text class="button-text" x="111" y="826" text-anchor="middle">수동 복사 보기</text>
   <rect class="primary" x="220" y="795" width="178" height="50" rx="7"/>
-  <text class="primary-text" x="309" y="826" text-anchor="middle">지원서에서 확인</text>
+  <text class="primary-text" style="fill:#ffffff" x="309" y="826" text-anchor="middle">지원서에서 확인</text>
   <text class="small" x="210" y="884" text-anchor="middle">성공 표시도 지원서의 실제 값 확인을 대신하지 않음</text>
 </svg>
