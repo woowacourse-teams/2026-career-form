@@ -157,7 +157,7 @@ Spring Boot 4.1의 연결 속성은 `spring.mongodb.uri`이며 `application.yml`
 - 저장소는 외부 MongoDB 인스턴스, 계정, TLS, 네트워크와 백업을 생성하거나 관리하지 않는다.
 - 현재는 연결 기반만 제공하며 실제 프로필·지원서 데이터를 MongoDB에 저장하거나 전송하지 않는다.
 
-MongoDB URI가 없으면 애플리케이션 설정 해석이 실패한다. URI, DNS, 네트워크 또는 자격증명이 잘못되거나 MongoDB가 중단되면 MongoDB health indicator 때문에 전역 `/actuator/health`와 backend 컨테이너 health가 `DOWN`이 된다.
+MongoDB URI가 없거나 connection string 형식이 잘못되면 설정 해석 또는 MongoDB client 생성 중 애플리케이션 기동이 실패하므로 health 엔드포인트가 생성되지 않는다. URI 형식은 유효하지만 DNS·네트워크·자격증명 문제로 연결할 수 없거나 MongoDB가 중단되면 애플리케이션 기동 후 전역 `/actuator/health`가 HTTP 503과 `DOWN`을 반환하고 backend 컨테이너도 unhealthy 상태가 된다.
 
 ## 상태 확인과 API 문서
 

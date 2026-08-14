@@ -694,9 +694,9 @@
 - [x] **Step 5: 전체 검증과 독립 리뷰를 수행한다.**
 
   ```bash
-  cd backend && ./gradlew clean check --no-daemon && cd ..
-  .venv/bin/python harness/scripts/verify.py
-  git diff --check
+  (cd backend && ./gradlew clean check --no-daemon) && \
+    .venv/bin/python harness/scripts/verify.py && \
+    git diff --check
   ```
 
   최신 JUnit XML의 총 테스트 수와 각 suite의 실패·오류 0건을 기록하고,
