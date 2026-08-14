@@ -4,9 +4,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     image: career-form-backend:local
-    environment:
-      SPRING_PROFILES_ACTIVE: local
-      SPRING_MONGODB_URI: mongodb://mongodb:27017/career-form
+    env_file:
+      .env.local
     depends_on:
       mongodb:
         condition: service_healthy
