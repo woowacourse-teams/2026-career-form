@@ -492,9 +492,12 @@
   하네스가 force push를 금지하므로 이력을 재작성하지 않는다. 두 제목은
   `CF-*` 브랜치를 `develop`에 Squash Merge할 때 최종 이력에 남지 않는다.
 
-- [ ] **Step 7: 기존 Draft PR #7을 갱신한다.**
+- [x] **Step 7: 기존 Draft PR #7을 갱신한다.**
 
   최신 커밋을 `CF-4`에 push하고 PR 본문의 자동·수동 검증, MongoDB health 영향, named volume과 외부 URI 한계를 새 결과로 교체한다. PR은 Draft를 유지하고 Issue는 `status:review`, Project는 `On Review`로 복귀한다.
+
+  최종 상태는 Draft PR #7, Issue `status:review`, Project `On Review`이며
+  새 Issue·Sub-issue·PR을 만들지 않고 기존 작업 단위를 유지했다.
 
 ## 보류 및 후속 후보
 
