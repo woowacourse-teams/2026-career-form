@@ -407,10 +407,10 @@ class PullRequestContractTest(unittest.TestCase):
                 self.assertTrue(result.is_valid, result.errors)
 
     def test_accepts_release_and_revert_system_prs_without_closing_issue(self) -> None:
-        for head, base in (
-            ("release/1.2.3", "main"),
-            ("release/1.2.3", "develop"),
-            ("revert/0123abc", "main"),
+        for head, base, draft in (
+            ("release/1.2.3", "main", False),
+            ("release/1.2.3", "develop", False),
+            ("revert/0123abc", "main", True),
         ):
             with self.subTest(head=head, base=base):
                 result = validate_pr(
@@ -419,10 +419,44 @@ class PullRequestContractTest(unittest.TestCase):
                         "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
                         "head": {"ref": head},
                         "base": {"ref": base},
+                        "draft": draft,
                     }
                 )
 
                 self.assertTrue(result.is_valid, result.errors)
+
+    def test_rejects_ready_revert_pr(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Release] 운영 배포 되돌림",
+                "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
+                "head": {"ref": "revert/0123abc"},
+                "base": {"ref": "main"},
+                "draft": False,
+            }
+        )
+
+        self.assertIn("되돌림 PR은 Draft 상태여야 합니다", result.errors)
+
+    def test_rejects_malformed_pr_label_payload(self) -> None:
+        malformed = (
+            ("hotfix", "PR labels는 배열이어야 합니다"),
+            ([{"color": "b60205"}], "PR labels[].name이 필요합니다"),
+        )
+        for labels, expected_error in malformed:
+            with self.subTest(labels=labels):
+                result = validate_pr(
+                    {
+                        "title": "[Harness] 운영 긴급 수정",
+                        "body": VALID_PR_BODY,
+                        "head": {"ref": "CF-123"},
+                        "base": {"ref": "main"},
+                        "labels": labels,
+                    },
+                    linked_issue_title="[Harness] 운영 긴급 수정",
+                )
+
+                self.assertIn(expected_error, result.errors)
 
     def test_rejects_work_title_and_closing_issue_on_system_pr(self) -> None:
         result = validate_pr(

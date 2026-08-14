@@ -1,12 +1,14 @@
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from harness.lib.branching import (
     is_release_branch,
+    is_revert_branch,
     is_system_pr,
     issue_number_from_branch,
     validate_branch_flow,
 )
+from harness.lib.cli import labels_from_payload
 from harness.lib.markdown_sections import extract_sections
 from harness.lib.result import ValidationResult, merge_results
 from harness.lib.work_title import validate_release_title, validate_work_title
@@ -56,6 +58,8 @@ def validate_pr(
         validate_release_title(title) if system_pr else validate_work_title(title)
     )
     results = [title_result, validate_branch_flow(head, base)]
+    results.append(_validate_pr_labels(payload.get("labels")))
+    results.append(_validate_revert_draft(payload, head, base))
     errors: list[str] = []
     sections = extract_sections(_markdown_prose(body))
     for name in REQUIRED_SECTIONS:
@@ -71,7 +75,9 @@ def validate_pr(
         _validate_hotfix_labels(
             head=head,
             base=base,
-            pr_labels=_label_names(payload.get("labels")),
+            pr_labels=frozenset(
+                label.casefold() for label in labels_from_payload(payload)
+            ),
             linked_issue_labels=frozenset(
                 label.casefold() for label in linked_issue_labels
             ),
@@ -146,17 +152,26 @@ def _validate_hotfix_labels(
     return ValidationResult()
 
 
-def _label_names(value: object) -> frozenset[str]:
-    if not isinstance(value, (list, tuple)):
-        return frozenset()
-    names: set[str] = set()
+def _validate_pr_labels(value: object) -> ValidationResult:
+    if value is None:
+        return ValidationResult()
+    if not isinstance(value, Sequence) or isinstance(value, str):
+        return ValidationResult(("PR labels는 배열이어야 합니다",))
     for label in value:
         if not isinstance(label, Mapping):
-            continue
+            return ValidationResult(("PR labels 항목은 객체여야 합니다",))
         name = label.get("name")
-        if isinstance(name, str):
-            names.add(name.casefold())
-    return frozenset(names)
+        if not isinstance(name, str) or not name.strip():
+            return ValidationResult(("PR labels[].name이 필요합니다",))
+    return ValidationResult()
+
+
+def _validate_revert_draft(
+    payload: Mapping[str, object], head: str, base: str
+) -> ValidationResult:
+    if is_revert_branch(head) and base == "main" and payload.get("draft") is not True:
+        return ValidationResult(("되돌림 PR은 Draft 상태여야 합니다",))
+    return ValidationResult()
 
 
 def _markdown_prose(body: str) -> str:
