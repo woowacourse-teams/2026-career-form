@@ -1,6 +1,7 @@
 # GitHub Ruleset 적용안
 
-이 문서는 저장소 파일만으로 만들 수 없는 GitHub 서버 설정의 체크리스트다. 저장소 관리자가 `main`과 `develop`을 만든 뒤 적용한다.
+이 문서는 저장소 파일만으로 만들 수 없는 GitHub 서버 설정의 체크리스트다. 저장소
+관리자가 `main`, `develop`, `release/*` 대상 Ruleset에 적용한다.
 
 ## 공통 보호
 
@@ -14,16 +15,35 @@
 
 - 필수 검사: `PR 계약`, `품질 게이트`, `공유 파일 계약`
 - 승인 리뷰 1개를 요구한다.
-- 기능 PR은 Squash Merge만 사용한다.
+- `CF-*` 작업 PR은 Squash Merge를 사용한다.
+- `release/*` 동기화와 hotfix의 `main` 동기화는 Merge Commit을 사용한다.
 - 공유 보호 영역은 `harness-change` 라벨과 다른 팀원 1명의 리뷰를 요구한다.
+
+## `release/*`
+
+- 필수 검사: `PR 계약`, `품질 게이트`, `공유 파일 계약`
+- 승인 리뷰 1개를 요구한다.
+- `CF-*` 릴리스 수정은 Squash Merge를 사용한다.
+- `main`에서 오는 hotfix 동기화만 Merge Commit을 사용한다.
+- Start release는 현재 `develop` HEAD에서 만들고 활성 release 브랜치는 하나만 둔다.
 
 ## `main`
 
 - 필수 검사: `PR 계약`, `품질 게이트`, `공유 파일 계약`
 - 승인 리뷰 1개를 요구한다.
-- `develop`에서 보내는 프로덕션 배포 PR만 허용한다.
-- `develop` 승격은 Merge Commit을 사용한다.
-- `CF-*`의 직접 병합은 허용하지 않는다.
+- `release/*` 배포와 `revert/*` 되돌림은 Merge Commit을 사용한다.
+- PR 또는 연결 Issue에 `hotfix` 라벨이 있는 `CF-*` 직접 병합만 Squash Merge로
+  허용한다.
+- 임의의 `develop` → `main`은 허용하지 않는다.
+
+## 사람이 확인할 항목
+
+- `PR 계약` 검사가 head/base, PR·연결 Issue 라벨, 제목, Issue 종료 계약을
+  통과했는지 확인한다.
+- release·동기화·revert 시스템 PR은 `[Release]` 제목이며 Issue를 종료하지 않는다.
+- Ruleset만으로 경로별 Squash/Merge Commit을 완전히 강제할 수 없으면 머지 담당자가
+  경로별 방식을 확인한다.
+- 실제 Ruleset 변경, Start release, 승인, 병합, 브랜치 삭제는 사람이 수행한다.
 
 ## CODEOWNERS
 

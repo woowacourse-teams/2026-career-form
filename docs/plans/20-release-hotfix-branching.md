@@ -55,11 +55,11 @@
 
 **Files:** `docs/conventions/branching.md`, `docs/conventions/commit.md`, `harness/policies/environments.md`, `harness/policies/github-ruleset.md`, `docs/design/issue-based-ai-development-harness.md`, `harness/tests/test_repository_contract.py`
 
-- [ ] 정본 문서가 release·hotfix 경로를 포함하고 과거 release 없는 흐름을 제거하는 실패 테스트를 작성한다.
-- [ ] repository contract 테스트로 RED를 확인한다.
-- [ ] 환경, Start release 운영 규칙, 병합 방식, hotfix 승인, revert, 정적 Harness 한계를 문서화한다.
-- [ ] `.venv/bin/python harness/scripts/verify.py`와 `git diff --check`를 실행한다.
-- [ ] `docs: 릴리스와 핫픽스 브랜치 운영 규칙 기록`으로 커밋한다.
+- [x] 정본 문서가 release·hotfix 경로를 포함하고 과거 release 없는 흐름을 제거하는 실패 테스트를 작성한다.
+- [x] repository contract 테스트로 RED를 확인한다.
+- [x] 환경, Start release 운영 규칙, 병합 방식, hotfix 승인, revert, 정적 Harness 한계를 문서화한다.
+- [x] `.venv/bin/python harness/scripts/verify.py`와 `git diff --check`를 실행한다.
+- [x] `docs: 릴리스와 핫픽스 브랜치 운영 규칙 기록`으로 커밋한다.
 
 ## 수동 확인과 보류
 

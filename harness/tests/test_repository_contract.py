@@ -204,6 +204,28 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertEqual("${{ github.token }}", issue_step["env"]["GH_TOKEN"])
         self.assertIn("--json title,labels", issue_step["run"])
 
+    def test_release_and_hotfix_policy_is_synchronized_across_documents(self) -> None:
+        paths = (
+            ROOT / "docs" / "conventions" / "branching.md",
+            ROOT / "docs" / "conventions" / "commit.md",
+            ROOT / "harness" / "policies" / "environments.md",
+            ROOT / "harness" / "policies" / "github-ruleset.md",
+            ROOT / "docs" / "design" / "issue-based-ai-development-harness.md",
+        )
+
+        for path in paths:
+            content = path.read_text(encoding="utf-8")
+            with self.subTest(path=str(path.relative_to(ROOT))):
+                self.assertIn("release/", content)
+                self.assertIn("hotfix", content)
+
+        branching = paths[0].read_text(encoding="utf-8")
+        self.assertIn("release/<MAJOR.MINOR.PATCH>", branching)
+        self.assertIn("revert/<main-merge-sha>", branching)
+        self.assertIn("Start release", branching)
+        self.assertNotIn("Release 브랜치가 없는", branching)
+        self.assertNotIn("`release/*` 브랜치는 만들지 않는다", branching)
+
     def _yaml(self, path: Path) -> dict[str, object]:
         value = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
         self.assertIsInstance(value, dict, path.name)
