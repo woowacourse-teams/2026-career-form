@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `cf-executing-plans`와 `cf-test-driven-development`로 실행 가능한 동작의 실패를 먼저 확인하고, 커밋 단위마다 관련 테스트를 통과시킨다. 완료 전 `cf-verification-before-completion`과 `cf-code-review`를 적용한다.
 
-**Goal:** `backend/`에 JDK 21, Spring Boot 4.1.0, Gradle 9.6.1 기반의 독립 실행 가능한 Spring MVC 애플리케이션을 만들고 네 환경 프로파일, OpenAPI 3.0 문서, 80% 커버리지 검증과 MongoDB를 포함한 로컬 컨테이너 실행 기반을 제공한다.
+**Goal:** `backend/`에 JDK 21, Spring Boot 4.1.0, Gradle 9.6.1 기반의 독립 실행 가능한 Spring MVC 애플리케이션을 만들고 네 환경 프로파일, OpenAPI 3.0 문서, 80% 커버리지 검증과 MongoDB를 포함한 로컬 컨테이너 실행 기반 및 운영체제 공통 실행 진입점을 제공한다.
 
-**Architecture:** 루트 하네스와 독립된 단일 Spring Boot 프로젝트를 `backend/`에 둔다. 공통 실행 정책은 `application.yml`에 두고 `local`, `dev`, `staging`, `prod` 프로파일 파일이 환경 차이를 표현한다. OpenAPI는 공통 설정에서 닫고 `local`, `dev`에서만 열며 실제 HTTP 통합 테스트로 문서 규격과 노출 계약을 검증한다. MongoDB 연결은 Boot 4의 `spring.mongodb.uri`에 `SPRING_MONGODB_URI`를 주입하고, JVM 테스트에서는 실제 DB 연결을 격리한다. 환경 중립 멀티 스테이지 Dockerfile과 공통 Compose 파일을 두고, 로컬 override가 백엔드 빌드·프로파일·호스트 포트와 내부 전용 MongoDB를 책임진다.
+**Architecture:** 루트 하네스와 독립된 단일 Spring Boot 프로젝트를 `backend/`에 둔다. 공통 실행 정책은 `application.yml`에 두고 `local`, `dev`, `staging`, `prod` 프로파일 파일이 환경 차이를 표현한다. OpenAPI는 공통 설정에서 닫고 `local`, `dev`에서만 열며 실제 HTTP 통합 테스트로 문서 규격과 노출 계약을 검증한다. MongoDB 연결은 Boot 4의 `spring.mongodb.uri`에 `SPRING_MONGODB_URI`를 주입하고, JVM 테스트에서는 실제 DB 연결을 격리한다. 환경 중립 멀티 스테이지 Dockerfile과 공통 Compose 파일을 두고, 로컬 override가 백엔드 빌드·프로파일·호스트 포트와 내부 전용 MongoDB를 책임진다. Python 표준 라이브러리 기반 로컬 스크립트가 공통·로컬 Compose 파일과 Git에서 제외된 `.env.local`을 안전하게 조합한다.
 
-**Tech Stack:** Java 21, Spring Boot 4.1.0, Spring MVC, Spring Data MongoDB, Tomcat 11, Gradle Wrapper 9.6.1, Kotlin DSL, springdoc-openapi 3.1.0, OpenAPI 3.0, JaCoCo 0.8.15, SonarQube Gradle Plugin 7.4.0.8496 (`apply false`), Eclipse Temurin 21 Noble, MongoDB 8.0, Docker Compose, JUnit 5
+**Tech Stack:** Java 21, Spring Boot 4.1.0, Spring MVC, Spring Data MongoDB, Tomcat 11, Gradle Wrapper 9.6.1, Kotlin DSL, springdoc-openapi 3.1.0, OpenAPI 3.0, JaCoCo 0.8.15, SonarQube Gradle Plugin 7.4.0.8496 (`apply false`), Eclipse Temurin 21 Noble, MongoDB 8.0, Docker Compose, JUnit 5, Python 3.9+
 
 ## Global Constraints
 
@@ -28,13 +28,16 @@
 - 로컬 MongoDB 데이터는 `mongodb-data` named volume에 보존하며 자동 검증에서 volume을 삭제하지 않는다.
 - JVM 통합 테스트에서는 비식별 dummy URI와 `management.health.mongodb.enabled=false`만 사용하고, 실제 MongoDB health는 Compose smoke에서 검증한다.
 - 향후 dev, staging, prod는 같은 이미지 digest를 승격하며 환경별로 다시 빌드하지 않는다.
+- `scripts/local.py`는 Python 표준 라이브러리만 사용하고 로컬 Compose 실행만 책임지며 CI/CD·배포 기능을 포함하지 않는다.
+- `.env.local`은 팀 내부에서 별도 공유하고 Git, Issue, PR과 로그에 포함하지 않는다.
 
 ## 진행 현황
 
 - Task 1~5는 커밋 `510f29f`부터 `3dc22c8`까지 완료했다.
 - JDK 21 정합화와 로컬 산출물 제외는 커밋 `f782182`, `17aaf2d`로 완료했다.
 - Task 6~10은 커밋 `f301dac`부터 `ff0195c`까지 완료했다.
-- 아래 Task 11~13을 2026-08-14에 사람이 승인한 MongoDB 추가 범위로 이어서 수행한다.
+- Task 11~13은 2026-08-14에 사람이 승인한 MongoDB 추가 범위로 완료했다.
+- 아래 Task 14를 같은 날 사람이 승인한 운영체제 공통 로컬 실행 범위로 이어서 수행한다.
 
 ---
 
@@ -498,6 +501,119 @@
 
   최종 상태는 Draft PR #7, Issue `status:review`, Project `On Review`이며
   새 Issue·Sub-issue·PR을 만들지 않고 기존 작업 단위를 유지했다.
+
+### Task 14: 운영체제 공통 로컬 Compose 실행 진입점
+
+**Commit:** `feat: 로컬 Compose 실행 스크립트 추가`
+
+**Files:**
+- Create: `scripts/local.py`
+- Create: `scripts/tests/test_local.py`
+- Modify: `.gitignore`
+- Modify: `compose.local.yaml`
+- Modify: `README.md`
+- Modify: `backend/README.md`
+- Modify: `docs/plans/4-initial-backend-setup.md`
+
+**Interfaces:**
+- macOS entrypoint: `python3 scripts/local.py [up|down|logs|status]`
+- Windows entrypoint: `py scripts/local.py [up|down|logs|status]`
+- Default action: `up`
+- Runtime env file: repository root `.env.local`
+- Compose inputs: `compose.yaml`, `compose.local.yaml`
+- Local services: `backend`, `mongodb`
+
+- [x] **Step 1: 실제 스크립트 프로세스의 실패 테스트를 작성한다.**
+
+  `scripts/tests/test_local.py`는 production 스크립트를 임시 프로젝트로 복사하고 외부 Docker CLI만 기록 가능한 fake 실행 파일로 대체한다. 테스트는 소스 문자열이 아니라 프로세스 종료 코드와 Docker 경계 호출을 검증한다.
+
+  ```python
+  result = self._run_local("up")
+
+  self.assertEqual(0, result.returncode, result.stderr)
+  self.assertEqual(
+      [
+          [*compose_prefix, "config", "--quiet"],
+          [*compose_prefix, "up", "--build", "--detach", "--wait"],
+      ],
+      self._docker_calls(),
+  )
+  ```
+
+  다음 파손을 각각 잡는다.
+
+  - `.env.local` 누락인데 Docker를 실행하는 동작
+  - `config --quiet` 실패 뒤에도 `up`을 실행하는 동작
+  - 기본 동작 또는 `up`, `down`, `logs`, `status` 분기 오류
+  - 저장소 루트가 아닌 현재 디렉터리를 Compose 기준으로 사용하는 동작
+
+- [x] **Step 2: RED를 확인한다.**
+
+  ```bash
+  python3 -m unittest discover -s scripts/tests -v
+  ```
+
+  예상 결과: `scripts/local.py`가 없어 모든 실행 계약 테스트가 실패한다.
+
+- [x] **Step 3: 최소 로컬 실행 스크립트를 구현한다.**
+
+  `scripts/local.py`는 `pathlib`, `argparse`, `subprocess`만 사용한다. `.env.local`의 내용은 읽거나 shell에서 실행하지 않고 파일 존재만 확인한다. Docker는 인자 배열과 `shell=False` 기본값으로 호출한다.
+
+  ```python
+  compose = [
+      "docker",
+      "compose",
+      "--env-file",
+      str(root / ".env.local"),
+      "--project-directory",
+      str(root),
+      "-f",
+      str(root / "compose.yaml"),
+      "-f",
+      str(root / "compose.local.yaml"),
+  ]
+  ```
+
+  `up`만 값 노출 없는 `config --quiet` 사전 검증을 수행하며 실패 코드를 그대로 반환한다. 일반 `down`에는 volume 삭제 옵션을 추가하지 않는다.
+
+- [x] **Step 4: GREEN과 실패 경계를 확인한다.**
+
+  ```bash
+  python3 -m unittest discover -s scripts/tests -v
+  docker compose --env-file .env.local \
+    -f compose.yaml -f compose.local.yaml config --quiet
+  ```
+
+  예상 결과: 스크립트 테스트와 실제 Compose 병합 검증이 모두 성공하고 `.env.local` 값은 출력되지 않는다.
+
+- [x] **Step 5: 로컬 사용법과 보안 경계를 문서화한다.**
+
+  루트 README와 백엔드 README에 macOS·Windows 실행 명령, `up`, `down`, `logs`, `status`, `.env.local` 전달 위치, named volume 보존과 CI/CD 비범위를 기록한다. 긴 Compose 원본 명령은 장애 진단용으로만 남기고 `config --quiet`를 사용한다.
+
+- [x] **Step 6: 실제 smoke와 전체 검증을 실행한다.**
+
+  ```bash
+  python3 scripts/local.py up
+  python3 scripts/local.py status
+  curl --fail --silent --show-error http://127.0.0.1:8080/actuator/health
+  python3 scripts/local.py down
+  cd backend && ./gradlew clean check --no-daemon && cd ..
+  .venv/bin/python harness/scripts/verify.py
+  git diff --check
+  ```
+
+  일반 `down` 뒤 `mongodb-data` named volume이 보존되고 MongoDB 27017이 호스트에 publish되지 않는지 확인한다.
+
+  2026-08-14 검증에서 Python 3.9의 스크립트 테스트 5개, 실제 Compose
+  build와 MongoDB·backend health, MongoDB ping, health `UP`, OpenAPI 3.0.1,
+  non-root 사용자와 27017 미게시를 확인했다. `local.py down` 뒤
+  `cf-4_mongodb-data` volume이 보존됐다. Gradle `clean check`, 하네스 195개
+  테스트와 87% 커버리지, Compose `config --quiet`, `git diff --check`도
+  통과했다.
+
+- [ ] **Step 7: 독립 리뷰와 기존 Draft PR 갱신을 수행한다.**
+
+  `origin/develop...HEAD`의 Standards와 갱신된 Issue #4 계약을 각각 독립 검토한다. 높은 위험 문제를 수정하고 최신 검증을 반복한 뒤 논리적 커밋을 `CF-4`에 push한다. 기존 Draft PR #7 본문과 Issue/Project 검토 상태만 갱신하고 새 PR은 만들지 않는다.
 
 ## 보류 및 후속 후보
 

@@ -77,29 +77,45 @@ SPRING_MONGODB_URI=mongodb://127.0.0.1:27017/career-form \
 
 Dockerfile은 JDK 21 빌드 단계와 JRE 21 실행 단계를 분리한다. Spring Boot layered JAR를 사용하며 최종 컨테이너는 `careerform` non-root 사용자로 실행된다. Dockerfile에는 Spring 프로파일과 비밀값을 넣지 않는다.
 
-저장소 루트에서 품질 검증을 먼저 수행한다.
+팀 내부의 승인된 비공개 채널에서 공유받은 `.env.local`을 저장소 루트에 둔다. 이 파일은 Git ignore 대상이므로 Issue, PR, 커밋 또는 로그에 첨부하지 않는다. 로컬 실행에는 다음 환경 변수가 필요하다.
+
+- `SPRING_PROFILES_ACTIVE`
+- `SPRING_MONGODB_URI`
+
+저장소 루트에서 운영체제에 맞는 Python 명령으로 로컬 Spring과 MongoDB를 함께 실행한다. 인자 없는 실행은 `up`과 같다.
 
 ```bash
-cd backend
-./gradlew clean check
-cd ..
+# macOS
+python3 scripts/local.py
+
+# Windows PowerShell
+py scripts/local.py
 ```
 
-공통 Compose와 로컬 override의 병합 결과를 확인한 뒤 실행한다.
+스크립트는 `.env.local` 존재 여부와 `docker compose config --quiet`을 먼저 확인하고, 값은 출력하지 않은 채 공통 Compose와 로컬 override를 조합한다. 검증이 성공하면 이미지를 빌드하고 backend와 MongoDB가 healthy가 될 때까지 기다린다.
+
+상태·로그·종료도 같은 진입점을 사용한다.
+
+```bash
+python3 scripts/local.py status
+python3 scripts/local.py logs
+python3 scripts/local.py down
+```
+
+Windows에서는 `python3` 대신 `py`를 사용한다. 이 스크립트는 로컬 개발 전용이며 CI/CD, staging 또는 prod 배포를 수행하지 않는다.
+
+Compose 문제를 직접 진단해야 할 때만 다음 원본 검증 명령을 사용한다. `config`는 해석된 환경값을 출력할 수 있으므로 `--quiet`을 생략하지 않는다.
 
 ```bash
 docker compose \
+  --env-file .env.local \
+  --project-directory . \
   -f compose.yaml \
   -f compose.local.yaml \
-  config
-
-docker compose \
-  -f compose.yaml \
-  -f compose.local.yaml \
-  up --build --detach --wait
+  config --quiet
 ```
 
-`compose.yaml`은 환경 중립 기반 파일이므로 단독 실행하지 않는다. `compose.local.yaml`이 다음 로컬 설정을 제공한다.
+`compose.yaml`은 환경 중립 기반 파일이므로 단독 실행하지 않는다. `compose.local.yaml`과 팀에서 공유하는 `.env.local`이 다음 로컬 설정을 제공한다.
 
 - 이미지 이름 `career-form-backend:local`
 - `SPRING_PROFILES_ACTIVE=local`
@@ -114,24 +130,17 @@ docker compose \
 기본 호스트 포트는 8080이다. 다른 worktree나 프로세스와 충돌하면 다음처럼 변경한다.
 
 ```bash
-BACKEND_PORT=18080 docker compose \
-  -f compose.yaml \
-  -f compose.local.yaml \
-  up --build --detach --wait
+# macOS
+BACKEND_PORT=18080 python3 scripts/local.py up
+
+# Windows PowerShell
+$env:BACKEND_PORT=18080
+py scripts/local.py up
 ```
 
-변경된 소스는 컨테이너에 마운트하지 않는다. 코드를 변경한 뒤 같은 `up --build` 명령으로 이미지를 다시 만든다.
+변경된 소스는 컨테이너에 마운트하지 않는다. 코드를 변경한 뒤 `local.py up`으로 이미지를 다시 만든다.
 
-종료할 때는 이 Compose 프로젝트가 만든 컨테이너와 네트워크를 제거한다.
-
-```bash
-docker compose \
-  -f compose.yaml \
-  -f compose.local.yaml \
-  down
-```
-
-일반 `down`은 `mongodb-data` named volume을 삭제하지 않으므로 다음 실행에서도 데이터를 보존한다. volume 삭제는 로컬 데이터를 제거하는 파괴적 작업이므로 초기화가 필요할 때 사용자가 별도로 판단한다.
+`local.py down`은 Compose의 일반 `down`만 실행하므로 `mongodb-data` named volume을 삭제하지 않고 다음 실행에서도 데이터를 보존한다. volume 삭제는 로컬 데이터를 제거하는 파괴적 작업이므로 초기화가 필요할 때 사용자가 별도로 판단한다.
 
 `compose.yaml`은 공통 내부 포트와 Actuator healthcheck를 책임진다. `compose.local.yaml`만 MongoDB 컨테이너, 내부 연결 URI, healthcheck 의존성과 named volume을 책임진다. `dev`, `staging`, `prod`는 DB 컨테이너를 추가하지 않고 외부 연결 정보만 안전하게 주입한다.
 
@@ -143,7 +152,7 @@ docker compose \
 
 Spring Boot 4.1의 연결 속성은 `spring.mongodb.uri`이며 `application.yml`은 이를 필수 환경 변수 `SPRING_MONGODB_URI`에서 읽는다. 과거 Boot 버전의 `spring.data.mongodb.uri`는 사용하지 않는다.
 
-- `local`: Compose가 자격증명 없는 내부 URI를 주입하고 MongoDB 포트를 호스트에 공개하지 않는다.
+- `local`: Compose가 `.env.local`의 자격증명 없는 내부 URI를 주입하고 MongoDB 포트를 호스트에 공개하지 않는다.
 - `dev`, `staging`, `prod`: 관리형 또는 외부 MongoDB의 URI를 secret manager나 런타임 환경에서 주입한다.
 - 저장소는 외부 MongoDB 인스턴스, 계정, TLS, 네트워크와 백업을 생성하거나 관리하지 않는다.
 - 현재는 연결 기반만 제공하며 실제 프로필·지원서 데이터를 MongoDB에 저장하거나 전송하지 않는다.

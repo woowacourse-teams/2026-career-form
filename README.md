@@ -16,6 +16,28 @@ python3 harness/scripts/bootstrap.py
 
 Codex를 시작한 뒤 프로젝트 훅이 검토 대상으로 표시되면 `/hooks`에서 `.codex/hooks.json`의 내용을 확인하고 신뢰한다.
 
+## 로컬 백엔드 실행
+
+팀 내부의 승인된 비공개 채널에서 공유받은 `.env.local`을 저장소 루트에 둔 뒤 로컬 Spring과 MongoDB를 함께 실행한다. 이 파일은 Git에 포함하지 않는다.
+
+```bash
+# macOS
+python3 scripts/local.py
+
+# Windows PowerShell
+py scripts/local.py
+```
+
+인자 없는 실행은 `up`과 같다. 같은 스크립트에서 다음 명령을 사용할 수 있다.
+
+```bash
+python3 scripts/local.py status
+python3 scripts/local.py logs
+python3 scripts/local.py down
+```
+
+Windows에서는 `python3` 대신 `py`를 사용한다. `down`은 MongoDB named volume을 삭제하지 않는다. 자세한 프로파일·Docker·MongoDB 계약은 [백엔드 안내](backend/README.md)를 참고한다.
+
 ## 작업 흐름
 
 1. 사람이 GitHub Project draft를 만든다.
