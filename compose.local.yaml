@@ -6,5 +6,30 @@ services:
     image: career-form-backend:local
     environment:
       SPRING_PROFILES_ACTIVE: local
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/career-form
+    depends_on:
+      mongodb:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+
+  mongodb:
+    image: mongo:8.0-noble
+    expose:
+      - "27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mongodb-data:
