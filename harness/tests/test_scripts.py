@@ -1,9 +1,11 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from harness.tests.pr_fixtures import VALID_PR_BODY
 
@@ -204,6 +206,74 @@ class HarnessScriptsTest(unittest.TestCase):
         self.assertEqual("deny", decision["permissionDecision"])
         self.assertIn("브랜치", decision["permissionDecisionReason"])
 
+    def test_initializes_fixture_repository_without_hook_git_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, linked_git_dir, clean_environment = (
+                self._init_linked_repository(root)
+            )
+            target = root / "target"
+            target.mkdir()
+
+            with patch.dict(os.environ, {"GIT_DIR": linked_git_dir}):
+                initialization = self._init_issue_repository(str(target))
+
+            bare = subprocess.run(
+                (
+                    "git",
+                    "config",
+                    "--file",
+                    str(source / ".git" / "config"),
+                    "--get",
+                    "core.bare",
+                ),
+                env=clean_environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            branch = subprocess.run(
+                ("git", "branch", "--show-current"),
+                cwd=target,
+                env=clean_environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual("false", bare.stdout.strip())
+        self.assertNotIn("re-init", initialization.stderr)
+        self.assertEqual(0, branch.returncode, branch.stderr)
+        self.assertEqual("CF-123", branch.stdout.strip())
+
+    def _init_linked_repository(
+        self, root: Path
+    ) -> tuple[Path, str, dict[str, str]]:
+        source = root / "source"
+        linked = root / "linked"
+        source.mkdir()
+        clean_environment = os.environ.copy()
+        for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE"):
+            clean_environment.pop(name, None)
+        commands = (
+            ("git", "init", "-q", "-b", "develop"),
+            ("git", "config", "user.name", "Harness Test"),
+            ("git", "config", "user.email", "harness@example.com"),
+            ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+            ("git", "worktree", "add", "-q", "-b", "CF-hook", str(linked)),
+        )
+        for command in commands:
+            subprocess.run(
+                command,
+                cwd=source,
+                env=clean_environment,
+                check=True,
+            )
+        linked_git_dir = linked.joinpath(".git").read_text(
+            encoding="utf-8"
+        ).removeprefix("gitdir: ").strip()
+        return source, linked_git_dir, clean_environment
+
     def _run(
         self, script: str, *arguments: str, input_text: str | None = None
     ) -> subprocess.CompletedProcess[str]:
@@ -216,12 +286,30 @@ class HarnessScriptsTest(unittest.TestCase):
             check=False,
         )
 
-    def _init_issue_repository(self, directory: str) -> None:
-        subprocess.run(
+    def _init_issue_repository(
+        self, directory: str
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
             ("git", "init", "-q", "-b", "CF-123"),
             cwd=directory,
+            env=self._without_local_git_environment(),
+            capture_output=True,
+            text=True,
             check=True,
         )
+
+    def _without_local_git_environment(self) -> dict[str, str]:
+        environment = os.environ.copy()
+        local_variables = subprocess.run(
+            ("git", "rev-parse", "--local-env-vars"),
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+        for name in local_variables:
+            environment.pop(name, None)
+        return environment
 
     def _run_project_issue_plan(
         self, payload: dict[str, object]
