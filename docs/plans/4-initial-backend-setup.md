@@ -483,9 +483,14 @@
   git commit -m "docs: MongoDB 실행 계약 반영"
   ```
 
-- [ ] **Step 6: Issue #4 인수 조건과 두 축 코드 리뷰를 통과시킨다.**
+- [x] **Step 6: Issue #4 인수 조건과 두 축 코드 리뷰를 통과시킨다.**
 
   문서 커밋까지 포함된 `origin/develop...HEAD`의 Standards와 갱신된 Issue #4 Spec을 독립 sub-agent로 검토하고 높은 위험 문제를 수정한 뒤 관련 검증을 다시 실행한다.
+
+  최종 리뷰에서 현재 코드·문서의 Standards hard violation과 Spec finding은
+  각각 0건이었다. 원격에 이미 게시된 두 기존 커밋 제목은 컨벤션에 맞지 않지만
+  하네스가 force push를 금지하므로 이력을 재작성하지 않는다. 두 제목은
+  `CF-*` 브랜치를 `develop`에 Squash Merge할 때 최종 이력에 남지 않는다.
 
 - [ ] **Step 7: 기존 Draft PR #7을 갱신한다.**
 
