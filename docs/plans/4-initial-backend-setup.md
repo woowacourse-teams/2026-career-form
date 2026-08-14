@@ -26,7 +26,9 @@
 - MongoDB 연결은 `SPRING_MONGODB_URI`로만 주입하고 실제 URI와 자격증명을 저장소, 문서, 로그에 남기지 않는다.
 - 로컬 MongoDB는 `compose.local.yaml`의 내부 네트워크에만 두고 호스트 27017 포트를 publish하지 않는다.
 - 로컬 MongoDB 데이터는 `mongodb-data` named volume에 보존하며 자동 검증에서 volume을 삭제하지 않는다.
-- JVM 통합 테스트에서는 비식별 dummy URI와 `management.health.mongodb.enabled=false`만 사용하고, 실제 MongoDB health는 Compose smoke에서 검증한다.
+- 일반 JVM 통합 테스트는 비식별 dummy URI와 `management.health.mongodb.enabled=false`로
+  실제 연결을 격리한다. 전용 MongoDB 실패 통합 테스트만 연결할 수 없는 loopback
+  URI와 health indicator를 사용하며, 정상 MongoDB health는 Compose smoke에서 검증한다.
 - 향후 dev, staging, prod는 같은 이미지 digest를 승격하며 환경별로 다시 빌드하지 않는다.
 - `scripts/local.py`는 Python 표준 라이브러리만 사용하고 로컬 Compose 실행만 책임지며 CI/CD·배포 기능을 포함하지 않는다.
 - `.env.local`은 팀 내부에서 별도 공유하고 Git, Issue, PR과 로그에 포함하지 않는다.
@@ -620,6 +622,94 @@
   `CF-4` push와 기존 Draft PR #7 본문 갱신으로 해소했다. P2인 Windows
   실기기 실행은 팀원 확인 전이므로 완료로 과장하지 않고 PR 수동 미검증
   항목으로 남겼다. PR은 Draft를 유지하며 새 Issue나 PR은 만들지 않는다.
+
+### Task 15: 통합 테스트 책임 구조 정리
+
+**Commit:** `test: 백엔드 통합 테스트 책임 정리`
+
+**Files:**
+- Delete: `backend/src/test/java/com/careerform/CareerFormApplicationTest.java`
+- Delete: `backend/src/test/java/com/careerform/DefaultProfileIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/DevProfileIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/LocalProfileIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/MongoUnavailableHealthIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/ProdProfileIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/StagingProfileIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/support/AbstractProfileIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/support/AbstractOpenApiEnabledProfileIntegrationTest.java`
+- Delete: `backend/src/test/java/com/careerform/support/AbstractOpenApiDisabledProfileIntegrationTest.java`
+- Create: `backend/src/test/java/com/careerform/CommonApplicationIntegrationTest.java`
+- Create: `backend/src/test/java/com/careerform/LocalDevDocumentationTest.java`
+- Create: `backend/src/test/java/com/careerform/StagingProdDocumentationTest.java`
+- Create: `backend/src/test/java/com/careerform/MongoFailureIntegrationTest.java`
+- Modify: `backend/src/test/java/com/careerform/support/MongoTestProperties.java`
+- Modify: `docs/plans/4-initial-backend-setup.md`
+
+**Interfaces:**
+- Common health contract: `GET /actuator/health` → HTTP 200과 `UP`
+- Documentation enabled profiles: `local`, `dev`
+- Documentation disabled profiles: no-profile, `staging`, `prod`
+- Mongo failure inputs: missing URI, malformed URI, unreachable URI
+- Review decision: 가상 스레드는 공통 설정을 유지하되 전용 자동 테스트를 추가하지 않는다.
+
+- [x] **Step 1: 공통 애플리케이션 계약을 한 컨텍스트로 통합한다.**
+
+  `CommonApplicationIntegrationTest`는 `useMainMethod=ALWAYS`로 실제 main 진입점과
+  JaCoCo 계약을 유지한다. health HTTP 응답, health 이외 Actuator 비노출,
+  `MongoConnectionDetails`의 dummy URI 반영을 각각 한 번만 검증한다. 모든 테스트에
+  의도를 드러내는 한국어 `@DisplayName`을 선언한다.
+
+- [x] **Step 2: 문서 노출 계약을 프로필 차이만 검증하도록 통합한다.**
+
+  `LocalDevDocumentationTest`의 독립 nested context가 `local`, `dev`를 각각
+  활성화해 OpenAPI와 Swagger UI 노출을 검증한다. DTO·파라미터·Validation을 포함한
+  상세 OpenAPI 3.0 계약은 `local`에서 한 번만 검증한다.
+
+  `StagingProdDocumentationTest`의 독립 nested context가 no-profile, `staging`,
+  `prod`에서 `/v3/api-docs`와 `/swagger-ui/index.html`이 모두 404인지 검증한다.
+  여러 프로필을 한 컨텍스트에서 동시에 활성화하지 않는다.
+
+- [x] **Step 3: MongoDB 실패 계약을 한 파일로 통합한다.**
+
+  `MongoFailureIntegrationTest`는 URI 누락과 malformed URI가 애플리케이션 시작을
+  실패시키는지 구분해 검증한다. 별도 nested Spring context는 unreachable URI로
+  기동한 뒤 `/actuator/health`가 HTTP 503과 `DOWN`을 반환하는지 검증한다.
+
+- [x] **Step 4: 기존 상속 기반 테스트를 제거하고 GREEN을 확인한다.**
+
+  ```bash
+  cd backend
+  ./gradlew test --tests 'com.careerform.*IntegrationTest' \
+    --tests 'com.careerform.*DocumentationTest' \
+    --rerun-tasks --no-daemon
+  ```
+
+  예상 결과: 네 책임 파일의 계약이 모두 통과하고 공통 health·Mongo 연결 정보 및
+  상세 OpenAPI 계약이 프로필 수만큼 반복되지 않는다.
+
+  2026-08-14에 기존 테스트 파일 10개와 상속 계층을 제거한 뒤 네 책임 파일의
+  테스트 12개가 실패·오류 없이 통과했다. 가상 스레드 전용 테스트는 사람의 리뷰
+  결정에 따라 포함하지 않았다.
+
+- [x] **Step 5: 전체 검증과 독립 리뷰를 수행한다.**
+
+  ```bash
+  cd backend && ./gradlew clean check --no-daemon && cd ..
+  .venv/bin/python harness/scripts/verify.py
+  git diff --check
+  ```
+
+  최신 JUnit XML의 총 테스트 수와 각 suite의 실패·오류 0건을 기록하고,
+  `origin/develop...HEAD`를 Standards와 Issue #4 Spec 축으로 독립 검토한다.
+  GitHub 리뷰 코멘트에 답하거나 resolve하는 작업은 사용자가 별도로 요청할 때만 한다.
+
+  2026-08-14에 JDK 21 백엔드 `clean check`와 JaCoCo 80% 품질 게이트가 통과했고,
+  최신 JUnit XML은 테스트 12개, 실패 0개, 오류 0개였다. 하네스 테스트
+  196개와 87% 커버리지, `git diff --check`도 통과했다. Spec 리뷰에서 발견한
+  기본 프로필 컨텍스트의 외부 `SPRING_PROFILES_ACTIVE` 상속 가능성은
+  `SPRING_PROFILES_ACTIVE=local` 조건에서 실패를 재현한 뒤
+  `spring.profiles.active=`로 격리하고 같은 조건의 성공을 확인했다. 수정 후
+  Standards와 Spec 재검토 결과 중요 finding은 모두 0건이다.
 
 ## 보류 및 후속 후보
 
