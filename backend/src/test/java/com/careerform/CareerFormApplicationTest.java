@@ -4,6 +4,7 @@ import static com.careerform.support.MongoTestProperties.MONGODB_HEALTH_DISABLED
 import static com.careerform.support.MongoTestProperties.MONGODB_HEALTH_DISABLED_PROPERTY;
 import static com.careerform.support.MongoTestProperties.VALID_URI_COMMAND_LINE_PROPERTY;
 import static com.careerform.support.MongoTestProperties.VALID_URI_ENVIRONMENT_PROPERTY;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,7 +47,16 @@ class CareerFormApplicationTest {
                 StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
         application.setEnvironment(environment);
 
-        assertThrows(RuntimeException.class, () -> application.run(
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> application.run(
                 "--spring.main.web-application-type=none"));
+
+        Throwable rootCause = exception;
+        while (rootCause.getCause() != null) {
+            rootCause = rootCause.getCause();
+        }
+        IllegalArgumentException connectionStringFailure =
+                assertInstanceOf(IllegalArgumentException.class, rootCause);
+        assertTrue(connectionStringFailure.getMessage()
+                .contains("Connection strings must start with either"));
     }
 }

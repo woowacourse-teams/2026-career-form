@@ -7,11 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mongodb.ConnectionString;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +24,7 @@ import org.springframework.core.env.Environment;
         })
 public abstract class AbstractProfileIntegrationTest {
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private final TestHttpClient testHttpClient = new TestHttpClient();
 
     @LocalServerPort
     private int port;
@@ -72,11 +66,6 @@ public abstract class AbstractProfileIntegrationTest {
     }
 
     protected HttpResponse<String> get(String path) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + path))
-                .timeout(Duration.ofSeconds(5))
-                .GET()
-                .build();
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return testHttpClient.get(port, path);
     }
 }
