@@ -34,10 +34,17 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ./gradlew bootJar
 ```
 
-`check`는 전체 테스트, JaCoCo 보고서 생성과 프로젝트 전체 라인 커버리지 80% 검증을 수행한다.
+`check`는 전체 테스트와 JaCoCo 검증을 수행한다. 프레임워크 부트스트랩인
+`CareerFormApplication`은 커버리지 대상에서 제외한다. 그 밖의 측정 가능한 production
+class가 없으면 `JaCoCo coverage: N/A`를 명시한다. 측정 가능한 class가 하나라도 생기면
+테스트 실행 데이터가 없을 때 빌드가 실패하고, 실행 데이터가 있으면 XML·HTML 보고서와
+전체 라인 커버리지 80%를 검증한다.
 
-- XML 보고서: `build/reports/jacoco/test/jacocoTestReport.xml`
-- HTML 보고서: `build/reports/jacoco/test/html/index.html`
+커버리지 검증 증거는 과거 보고서가 남지 않는 fresh `./gradlew clean check` 결과를 기준으로
+판단한다.
+
+- XML 보고서(측정 대상이 있을 때): `build/reports/jacoco/test/jacocoTestReport.xml`
+- HTML 보고서(측정 대상이 있을 때): `build/reports/jacoco/test/html/index.html`
 
 XML 보고서는 후속 CI에서 Codecov와 SonarCloud가 사용할 수 있다. 현재는 Codecov 업로드 설정과 토큰이 없으며, Codecov를 Java 런타임 의존성으로 추가하지 않는다. SonarQube Gradle Plugin도 `apply false`로 버전만 고정했기 때문에 `sonar` 태스크와 외부 분석은 활성화되지 않는다.
 

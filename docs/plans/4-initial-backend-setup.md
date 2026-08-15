@@ -711,6 +711,72 @@
   `spring.profiles.active=`로 격리하고 같은 조건의 성공을 확인했다. 수정 후
   Standards와 Spec 재검토 결과 중요 finding은 모두 0건이다.
 
+### Task 16: 측정 가능 코드 기반 JaCoCo 검증
+
+**Commit:** `build: 측정 가능 코드 기반 JaCoCo 검증 적용`
+
+**Files:**
+- Modify: `backend/build.gradle.kts`
+- Modify: `backend/README.md`
+- Modify: `docs/plans/4-initial-backend-setup.md`
+- Temporary RED/GREEN fixtures: `backend/src/main/java/com/careerform/CoverageProbe.java`,
+  `backend/src/test/java/com/careerform/CoverageProbeTest.java` (검증 뒤 삭제, 커밋 제외)
+
+**Interfaces:**
+- Excluded bootstrap class: `com/careerform/CareerFormApplication.class`
+- No coverable production classes: `check` 성공과 `JaCoCo coverage: N/A` 명시
+- Coverable production classes without test execution data: `check` 실패
+- Coverable production classes with execution data: XML·HTML 보고서와 라인 커버리지 80% 검증
+
+**Decision (2026-08-15):** 통합 테스트 삭제 뒤 사용자가 측정 대상이 없는 초기 상태를
+명시적 `N/A`로 다루는 조건부 정책을 선택했다. 이 결정은 Task 4의 main smoke test 방식을
+대체한다. 80% 기준은 낮추지 않으며, 이후 측정 가능한 production class가 추가되면 테스트
+실행 데이터와 실제 커버리지 검증을 강제한다.
+
+- [x] **Step 1: 기존 false-green을 RED로 재현한다.**
+
+  임시 `CoverageProbe` production class를 추가하고 JDK 21에서 `clean check`를 실행한다.
+  변경 전 빌드는 테스트 실행 데이터가 없어도 성공하고 JaCoCo 작업을 생략하므로,
+  측정 가능 코드가 생기면 실패해야 한다는 새 계약 기준으로 RED다.
+
+- [x] **Step 2: 커버리지 적용 범위와 fail-closed guard를 최소 구현한다.**
+
+  `CareerFormApplication.class`만 `classDirectories`에서 제외한다. 별도
+  `verifyCoverageApplicability` task는 main `classes`와 `test` 이후 측정 가능 class
+  파일을 확인한다. class가 없으면 `N/A`를 기록한다. class가 있으면 JaCoCo가
+  활성화된 test의 실제 execution data 경로를 사용하고, 이번 빌드에서 test가 실행,
+  UP-TO-DATE 또는 cache 복원된 상태가 아니거나 execution data가 없을 때
+  `GradleException`으로 실패한다. 80% 기준은 변경하지 않는다.
+
+- [x] **Step 3: fail-closed와 실제 80% 경계를 검증한다.**
+
+  2026-08-15에 임시 `CoverageProbe`만 둔 `clean check`는
+  `Coverable production classes require JaCoCo test execution data`로 실패했다. 테스트를
+  추가하되 production line을 실행하지 않으면 XML·HTML 보고서를 먼저 생성하고 line
+  coverage 0.00이 최소 0.80에 미달해 실패했다. 두 production line을 모두 실행하면
+  보고서 생성과 80% 검증이 성공했다. 그 뒤 기존 execution data를 남긴 채
+  `check -x test`를 실행해도 guard가 실패했고, `UP-TO-DATE`와 `FROM-CACHE` 결과는 실제
+  execution data가 있을 때 재사용되는 것을 확인했다.
+
+- [x] **Step 4: 현재 초기 상태가 명시적 N/A로 통과하는지 확인한다.**
+
+  임시 `CoverageProbe`를 삭제하고 `clean check`를 실행한다. 예상 결과는 main compile
+  성공, `test NO-SOURCE`, `JaCoCo coverage: N/A (no coverable production classes)` 기록,
+  JaCoCo 보고서·검증 task의 사유 있는 skip과 전체 빌드 성공이다.
+
+  2026-08-15에 임시 production·test fixture를 모두 삭제한 fresh JDK 21 실행에서 위
+  결과와 `BUILD SUCCESSFUL`을 확인했다.
+
+- [x] **Step 5: 문서, 전체 검증과 PR 근거를 정합화한다.**
+
+  `backend/README.md`와 PR 본문에 N/A·fail-closed·80% 유지 정책을 기록한다.
+  스크립트 테스트, 하네스 196개, `git diff --check`를 실행하고 임시 fixture가
+  남지 않았는지 확인한 뒤 단일 build 커밋으로 기존 CF-4 PR에 push한다.
+
+  2026-08-15에 JDK 21 fresh `clean check`, 스크립트 테스트 5개, 하네스 196개와
+  87% 커버리지, `git diff --check`가 통과했다. 독립 Standards·Spec·구현 재검토에서
+  P1·P2·P3 finding은 없었다.
+
 ## 보류 및 후속 후보
 
 - JDK 21 CI, Codecov 업로드와 SonarCloud 실제 분석은 후속 Infra 범위다. 이번 PR은 로컬 검증과 후속 연동 준비만 제공한다.

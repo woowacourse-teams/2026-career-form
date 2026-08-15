@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
 plugins {
     java
     jacoco
@@ -38,12 +40,60 @@ jacoco {
     toolVersion = "0.8.15"
 }
 
+val coverageClassExclusions = listOf(
+    "com/careerform/CareerFormApplication.class",
+)
+val coverableClassDirectories = sourceSets.named("main").map {
+    it.output.classesDirs.asFileTree.matching {
+        exclude(coverageClassExclusions)
+    }
+}
+val classesTask = tasks.named("classes")
+val testTask = tasks.named<Test>("test")
+val jacocoTestExtension = testTask.map {
+    it.extensions.getByType<JacocoTaskExtension>()
+}
+val jacocoTestExecutionData = jacocoTestExtension.map {
+    it.destinationFile
+}
+
+val verifyCoverageApplicability = tasks.register("verifyCoverageApplicability") {
+    group = "verification"
+    description = "Fails when coverable production code has no JaCoCo test execution data."
+    dependsOn(classesTask, testTask)
+
+    doLast {
+        val coverableClasses = coverableClassDirectories.get()
+        if (coverableClasses.isEmpty) {
+            logger.lifecycle("JaCoCo coverage: N/A (no coverable production classes)")
+            return@doLast
+        }
+
+        val testState = testTask.get().state
+        val hasReusableTestExecution =
+            testState.didWork || testState.upToDate || testState.skipMessage == "FROM-CACHE"
+        if (
+            !jacocoTestExtension.get().isEnabled ||
+            !hasReusableTestExecution ||
+            !jacocoTestExecutionData.get().isFile
+        ) {
+            throw GradleException(
+                "Coverable production classes require JaCoCo test execution data",
+            )
+        }
+    }
+}
+
 tasks.test {
     finalizedBy(tasks.jacocoTestReport)
 }
 
 tasks.jacocoTestReport {
-    dependsOn(tasks.test)
+    dependsOn(verifyCoverageApplicability)
+    classDirectories.setFrom(coverableClassDirectories)
+    onlyIf("coverable production classes exist") {
+        !coverableClassDirectories.get().isEmpty
+    }
     reports {
         xml.required = true
         html.required = true
@@ -52,7 +102,11 @@ tasks.jacocoTestReport {
 }
 
 tasks.jacocoTestCoverageVerification {
-    dependsOn(tasks.test)
+    dependsOn(tasks.jacocoTestReport)
+    classDirectories.setFrom(coverableClassDirectories)
+    onlyIf("coverable production classes exist") {
+        !coverableClassDirectories.get().isEmpty
+    }
     violationRules {
         rule {
             limit {
