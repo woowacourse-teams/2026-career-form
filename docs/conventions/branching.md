@@ -13,6 +13,8 @@ release/<MAJOR.MINOR.PATCH> -> main
 
 hotfix/CF-* -> main -> develop
                     \-> active release/*
+
+revert/<main-merge-sha> -> main
 ```
 
 ## 브랜치 형식
