@@ -18,8 +18,8 @@ class PostMergeCleanupTest(unittest.TestCase):
         self.assertEqual((), plan.remove_worktrees)
         self.assertFalse(plan.delete_local_branch)
 
-    def test_blocks_cleanup_until_merge_commit_is_in_origin_develop(self) -> None:
-        snapshot = self._snapshot(merge_in_origin_develop=False)
+    def test_blocks_cleanup_until_merge_commit_is_in_origin_base(self) -> None:
+        snapshot = self._snapshot(merge_in_origin_base=False)
 
         plan = plan_cleanup(snapshot)
 
@@ -59,6 +59,47 @@ class PostMergeCleanupTest(unittest.TestCase):
         self.assertEqual("ready", plan.status)
         self.assertTrue(plan.delete_local_branch)
 
+    def test_allows_hotfix_cleanup_after_merge_is_proven_on_main(self) -> None:
+        snapshot = self._snapshot(
+            head_branch="hotfix/CF-14",
+            base_branch="main",
+        )
+
+        plan = plan_cleanup(snapshot)
+
+        self.assertEqual("ready", plan.status)
+        self.assertTrue(plan.delete_local_branch)
+
+    def test_allows_release_fix_cleanup_after_merge_is_proven_on_release(self) -> None:
+        snapshot = self._snapshot(base_branch="release/1.2.3")
+
+        plan = plan_cleanup(snapshot)
+
+        self.assertEqual("ready", plan.status)
+        self.assertTrue(plan.delete_local_branch)
+
+    def test_blocks_cleanup_for_invalid_issue_branch_routes(self) -> None:
+        invalid_routes = (
+            ("hotfix/CF-14", "develop"),
+            ("CF-14", "main"),
+            ("CF-14", "release/1.2"),
+            ("CF-15", "develop"),
+            ("hotfix/CF-15", "main"),
+        )
+
+        for head_branch, base_branch in invalid_routes:
+            with self.subTest(head_branch=head_branch, base_branch=base_branch):
+                plan = plan_cleanup(
+                    self._snapshot(
+                        head_branch=head_branch,
+                        base_branch=base_branch,
+                    )
+                )
+
+                self.assertEqual("blocked", plan.status)
+                self.assertIn("브랜치 연결", plan.reason)
+                self.assertFalse(plan.delete_local_branch)
+
     def test_is_complete_when_safe_targets_are_already_absent(self) -> None:
         snapshot = self._snapshot(worktrees=(), local_branch_exists=False)
 
@@ -77,7 +118,7 @@ class PostMergeCleanupTest(unittest.TestCase):
                 "head_branch": "CF-14",
                 "base_branch": "develop",
                 "merge_commit": "a" * 40,
-                "merge_in_origin_develop": True,
+                "merge_in_origin_base": True,
                 "local_branch_exists": True,
                 "worktrees": [
                     {"path": "/managed", "clean": True, "managed": True}
@@ -95,12 +136,12 @@ class PostMergeCleanupTest(unittest.TestCase):
             "head_branch": "CF-14",
             "base_branch": "develop",
             "merge_commit": "a" * 40,
-            "merge_in_origin_develop": "true",
+            "merge_in_origin_base": "true",
             "local_branch_exists": True,
             "worktrees": [],
         }
 
-        with self.assertRaisesRegex(ValueError, "merge_in_origin_develop"):
+        with self.assertRaisesRegex(ValueError, "merge_in_origin_base"):
             cleanup_snapshot_from(payload)
 
     def _snapshot(self, **changes: object) -> CleanupSnapshot:
@@ -111,7 +152,7 @@ class PostMergeCleanupTest(unittest.TestCase):
             "head_branch": "CF-14",
             "base_branch": "develop",
             "merge_commit": "a" * 40,
-            "merge_in_origin_develop": True,
+            "merge_in_origin_base": True,
             "local_branch_exists": True,
             "worktrees": (),
         }

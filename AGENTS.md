@@ -5,7 +5,8 @@
 - 모든 개발 작업은 사람이 `status:ready`로 확정한 GitHub Issue에서 시작한다.
 - Issue 본문을 작업 범위와 완료 기준의 정본으로 사용한다.
 - 하나의 Issue는 하나의 작업 브랜치와 하나의 PR로 완료한다. Sub-issue는 만들지 않는다.
-- 작업 브랜치는 `CF-<Issue 번호>` 형식으로 만든다.
+- 일반·릴리스 수정 작업 브랜치는 `CF-<Issue 번호>`, 운영 hotfix 작업 브랜치는
+  `hotfix/CF-<Issue 번호>` 형식으로 만든다.
 - AI는 새 clone 또는 worktree에서 파일을 수정하기 전에 운영체제에 맞는 Python으로 `harness/scripts/ensure-environment.py`를 실행해 작업 환경을 자동 구성한다. 자동 구성에 실패하면 수정하지 않고 원인을 보고한다.
 - 작업 계획은 필요할 때 `docs/plans/<Issue 번호>-<slug>.md`에 기록한다.
 - 공용 `HANDOFF.md`를 작업 상태 기록에 사용하지 않는다.

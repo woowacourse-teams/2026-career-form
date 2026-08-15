@@ -2,7 +2,7 @@
 name: cf-issue-workflow
 description: >-
   사람이 status:ready로 확정한 GitHub Issue 하나를 검증하고 작업 환경 자동 구성,
-  CF-이슈번호 브랜치의 TDD 구현, 검증, 코드 리뷰, 같은 제목의 Draft PR 생성까지 연결한다.
+  Issue 계약에 맞는 CF 또는 hotfix/CF 브랜치의 TDD 구현, 검증, 코드 리뷰, 같은 제목의 Draft PR 생성까지 연결한다.
   사용자가 "Issue #123 작업해줘", "이슈에서 개발 시작해줘", "Draft PR까지 진행해줘"처럼
   이 저장소의 확정된 Issue 구현을 요청할 때 사용한다. Project draft 기획, Sub-issue 생성,
   PR 머지에는 사용하지 않는다.
@@ -35,12 +35,12 @@ Issue 본문을 작업 계약의 정본으로 유지하고 하나의 Issue, 하�
 
 ## 2. 작업 격리와 상태 전환
 
-1. 모든 Issue 작업은 `develop`을 기준으로 `CF-<Issue 번호>` 브랜치를 만든다.
+1. 일반 작업은 `develop`, 명시된 release 수정은 대상 release를 기준으로 `CF-<Issue 번호>` 브랜치를 만든다. 사람이 승인한 Issue 계약이 운영 hotfix를 명시하면 `main`을 기준으로 `hotfix/CF-<Issue 번호>` 브랜치를 만든다. 계약에 기준 브랜치가 없으면 hotfix나 release 수정을 추측하지 않는다.
 2. 다른 작업과 격리가 필요하면 `cf-using-git-worktrees`를 사용한다.
 3. 실제 작업할 clone 또는 worktree에 들어간다.
 4. 파일 수정과 원격 상태 변경 전에 현재 Python으로 `harness/scripts/ensure-environment.py`를 실행한다. 이 진입점은 `doctor.py`로 현재 상태를 확인하고, 필요한 경우에만 `bootstrap.py`를 실행한 뒤 `doctor.py`로 다시 검증한다.
 5. 자동 구성에 실패하면 파일을 수정하거나 Issue와 Project 상태를 바꾸지 않고 실패 원인을 보고한다. 사용자에게 기본 절차로 `bootstrap` 수동 실행을 요구하지 않는다.
-6. 브랜치 번호, Issue 번호, 구현 계획 번호가 모두 같은지 확인한다.
+6. `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>`의 브랜치 번호, Issue 번호, 구현 계획 번호가 모두 같은지 확인한다.
 7. `status:ready`를 제거하고 `status:in-progress`를 적용한다.
 8. `harness/project.json`의 Project에서 같은 Issue item을 찾고 Status를 `In Progress`로 맞춘 뒤 다시 조회한다.
 
@@ -59,7 +59,7 @@ Project 상태 변경이 실패하면 Issue 승격이나 브랜치 생성을 반
 
 `[Plan]` Issue는 기획 문서만 반영하는 작업을 기본으로 한다. 승인된 Issue 계약에
 구현이 포함돼 있으면 같은 Issue에서 구현까지 진행한다. ADR이 필요하다고 승인된
-Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고, `CF-*` 브랜치에서
+Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고, 현재 작업 브랜치에서
 `docs/adr/<Issue 번호>-<slug>.md`로 작성해 같은 PR에 포함한다. 기획 중 새로 발견된
 구현 범위는 현재 Issue에 추가하지 않는다.
 
@@ -78,7 +78,7 @@ Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고,
 ## 5. Git과 Draft PR
 
 1. 논리적 변경별로 `<type>: <한글 명사형 설명>` 커밋을 만든다. Conventional Commit type은 유지하고 설명을 `한다`로 끝내지 않는다.
-2. 현재 `CF-<Issue 번호>` 브랜치만 push한다. force push하지 않는다.
+2. 현재 Issue의 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치만 push한다. force push하지 않는다.
 3. 전체 diff와 커밋 이력을 검토한다.
 4. Issue와 같은 `[영역] 작업명` 제목으로 Draft PR 하나를 만든다. PR 제목에 Conventional Commit type을 붙이지 않는다.
 5. `.github/pull_request_template.md`의 여덟 섹션 응답을 JSON으로 준비하고 선택한 Python으로 `harness/scripts/render-template-body.py pr`을 실행해 OS 임시 UTF-8 Markdown 파일을 만든다.

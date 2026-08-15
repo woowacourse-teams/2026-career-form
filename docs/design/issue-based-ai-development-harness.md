@@ -163,28 +163,34 @@ Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE
 조사와 기획에 사용한다. `feat:`,
 `fix:` 같은 type을 붙이지 않고 명사형으로 작성한다. 최종 승인자는 GitHub 머지
 화면에서 Squash Commit 제목과 본문을 직접 확인한다. `pr-contract.yml`은 PR 제목,
-브랜치 번호와 종료 Issue 번호를 검사한다.
+브랜치 번호, 종료 Issue 번호와 시스템 PR 종류를 검사한다.
 
 ## 브랜치와 환경
 
-Release 브랜치가 없는 Git Flow를 사용한다.
+`develop`의 계속되는 개발과 스테이징 검증을 분리하는 release 브랜치 기반 Git Flow를
+사용한다.
 
 ```text
-CF-* -> develop -> main
+CF-* -> develop -> release/<MAJOR.MINOR.PATCH> -> main
 ```
 
 | 브랜치 | 시작점 | 병합 대상과 방식 | 환경 |
 |---|---|---|---|
-| `CF-<issue>` | `develop` | `develop`으로 Squash Merge | 개발 서버 |
-| `develop` | 장기 브랜치 | `main`으로 Merge Commit | 스테이징 서버 |
+| `CF-<issue>` | `develop` 또는 수정 대상 release | `develop`, `release/*`로 Squash Merge | 개발 서버 |
+| `hotfix/CF-<issue>` | `main` | `main`으로 Squash Merge | 운영 긴급 수정 |
+| `develop` | 장기 브랜치 | Start release의 기준 | 통합 기준 |
+| `release/<MAJOR.MINOR.PATCH>` | 현재 `develop` HEAD | `main`, `develop`으로 Merge Commit | 스테이징 서버 |
 | `main` | 운영 기준 | 프로덕션 배포 기준 | 운영 서버 |
+| `revert/<main-merge-sha>` | 운영 실패 병합 | `main`으로 Merge Commit | 운영 복구 |
 
-모든 Issue 작업은 `develop`에서 시작하고 `CF-<Issue 번호>` 형식을 사용한다.
-프로덕션 배포는 `develop`에서 `main`으로 보내는 별도 Release PR을 Merge Commit으로
-병합해 시작한다. `CF-*`에서 `main`으로 직접 병합하지 않는다.
+Start release는 현재 `develop` HEAD에서 만들고 활성 release 브랜치는 하나만 둔다.
+release·hotfix 동기화·revert 시스템 PR은 `[Release]` 제목을 사용하며 Issue를
+종료하지 않는다. `hotfix/CF-*` → `main`만 운영 긴급 수정으로 허용하고 일반
+`CF-*` → `main`과 임의의 `develop` → `main`은 거부한다.
 
-현재 저장소의 기본 브랜치는 `develop`이다. `main`과 `develop` 두 장기 브랜치는
-GitHub Ruleset으로 직접 push, force push, 삭제를 막고 사람 승인 1명을 요구한다.
+현재 저장소의 기본 브랜치는 `develop`이다. `main`, `develop`, `release/*`는 GitHub
+Ruleset으로 직접 push, force push, 삭제를 막고 사람 승인 1명을 요구한다. 실제
+브랜치 생성, Ruleset 변경, 승인, 병합, 배포와 되돌림은 사람이 수행한다.
 
 ## 네 명의 병렬 작업을 위한 충돌 방지
 
@@ -285,7 +291,7 @@ docs/conventions/**
     ├── conventions/
     │   ├── common.md                  # 스택 독립 코드와 테스트 원칙
     │   ├── commit.md                  # 팀 커밋 컨벤션 전체
-    │   ├── branching.md               # Release 없는 Git Flow와 병합 정책
+    │   ├── branching.md               # release와 hotfix Git Flow 및 병합 정책
     │   └── stacks/README.md           # 스택별 컨벤션 추가 방법
     └── plans/
         ├── README.md                  # Issue별 구현 계획 이름과 보관 규칙

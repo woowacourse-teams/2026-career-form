@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -189,6 +192,89 @@ class RepositoryContractTest(unittest.TestCase):
 
         self.assertIn("gh pr view", workflow)
         self.assertIn("current-pr.json", workflow)
+
+    def test_pr_contract_collects_linked_issue_title_without_label_events(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
+        pr_events = workflow["on"]["pull_request"]["types"]
+        steps = workflow["jobs"]["validate"]["steps"]
+        issue_steps = tuple(
+            step
+            for step in steps
+            if "연결 Issue" in step.get("name", "")
+        )
+        self.assertNotIn("labeled", pr_events)
+        self.assertNotIn("unlabeled", pr_events)
+        self.assertEqual(1, len(issue_steps))
+        issue_step = issue_steps[0]
+
+        self.assertEqual("${{ github.token }}", issue_step["env"]["GH_TOKEN"])
+        self.assertIn("^hotfix/CF-", issue_step["run"])
+        self.assertIn("BASH_REMATCH", issue_step["run"])
+        self.assertIn("--json title", issue_step["run"])
+        self.assertNotIn("labels", issue_step["run"])
+
+    def test_pr_contract_skips_issue_lookup_for_malformed_work_branch(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
+        issue_step = next(
+            step
+            for step in workflow["jobs"]["validate"]["steps"]
+            if "연결 Issue" in step.get("name", "")
+        )
+        with tempfile.TemporaryDirectory() as runner_temp:
+            environment = {
+                **os.environ,
+                "HEAD_REF": "hotfix/CF-not-a-number",
+                "GITHUB_REPOSITORY": "owner/repository",
+                "RUNNER_TEMP": runner_temp,
+                "PATH": "",
+            }
+            result = subprocess.run(
+                ("/bin/bash", "-c", issue_step["run"]),
+                check=False,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_contract_revalidates_when_linked_issue_title_changes(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
+        self.assertIn("issues", workflow["on"])
+        self.assertEqual(["edited"], workflow["on"]["issues"]["types"])
+        self.assertIn("workflow_dispatch", workflow["on"])
+        revalidate = workflow["jobs"]["revalidate"]
+        run = revalidate["steps"][0]["run"]
+
+        self.assertEqual("write", revalidate["permissions"]["actions"])
+        self.assertIn('"CF-${{ github.event.issue.number }}"', run)
+        self.assertIn('"hotfix/CF-${{ github.event.issue.number }}"', run)
+        self.assertIn("gh workflow run", run)
+
+    def test_release_and_hotfix_policy_is_synchronized_across_documents(self) -> None:
+        paths = (
+            ROOT / "docs" / "conventions" / "branching.md",
+            ROOT / "docs" / "conventions" / "commit.md",
+            ROOT / "harness" / "policies" / "environments.md",
+            ROOT / "harness" / "policies" / "github-ruleset.md",
+            ROOT / "docs" / "design" / "issue-based-ai-development-harness.md",
+        )
+
+        for path in paths:
+            content = path.read_text(encoding="utf-8")
+            with self.subTest(path=str(path.relative_to(ROOT))):
+                self.assertIn("release/", content)
+                self.assertIn("hotfix", content)
+
+        branching = paths[0].read_text(encoding="utf-8")
+        self.assertIn("hotfix/CF-<Issue 번호>", branching)
+        self.assertNotIn("| `CF-*` → `main` |", branching)
+        self.assertIn("라벨을 병합 허용\n조건으로 사용하지 않는다", branching)
+        self.assertIn("release/<MAJOR.MINOR.PATCH>", branching)
+        self.assertIn("revert/<main-merge-sha>", branching)
+        self.assertIn("Start release", branching)
+        self.assertNotIn("Release 브랜치가 없는", branching)
+        self.assertNotIn("`release/*` 브랜치는 만들지 않는다", branching)
 
     def _yaml(self, path: Path) -> dict[str, object]:
         value = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)

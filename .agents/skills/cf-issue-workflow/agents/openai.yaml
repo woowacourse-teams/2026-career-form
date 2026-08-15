@@ -1,4 +1,4 @@
 interface:
   display_name: "Issue Workflow"
-  short_description: "ready Issue의 환경 구성부터 Draft PR까지 연결"
-  default_prompt: "Use $cf-issue-workflow to configure the work environment and implement ready GitHub Issue #123 on CF-123 through one verified Draft PR."
+  short_description: "ready Issue를 계약 브랜치에서 Draft PR까지 연결"
+  default_prompt: "Use $cf-issue-workflow to implement ready GitHub Issue #123 on its approved CF or hotfix branch through one verified Draft PR."

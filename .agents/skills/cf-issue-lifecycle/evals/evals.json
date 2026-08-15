@@ -10,7 +10,7 @@
         "기획은 cf-project-issue-planning에 위임한다",
         "status:ready 이후 구현은 cf-issue-workflow에 위임한다",
         "사람의 PR 승인과 머지를 대신하지 않는다",
-        "MERGED와 origin/develop 포함 관계를 증명한 뒤 cf-post-merge-cleanup을 사용한다"
+        "MERGED와 origin의 PR 대상 브랜치 포함 관계를 증명한 뒤 cf-post-merge-cleanup을 사용한다"
       ]
     },
     {

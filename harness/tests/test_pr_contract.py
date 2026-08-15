@@ -104,7 +104,7 @@ class PullRequestContractTest(unittest.TestCase):
             {
                 "title": "[Release] 프로덕션 배포",
                 "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
-                "head": {"ref": "develop"},
+                "head": {"ref": "release/1.2.3"},
                 "base": {"ref": "main"},
             }
         )
@@ -116,7 +116,7 @@ class PullRequestContractTest(unittest.TestCase):
             {
                 "title": "[RELEASE] 프로덕션 배포",
                 "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
-                "head": {"ref": "develop"},
+                "head": {"ref": "release/1.2.3"},
                 "base": {"ref": "main"},
             }
         )
@@ -146,12 +146,12 @@ class PullRequestContractTest(unittest.TestCase):
             {
                 "title": "[Release] 프로덕션 배포",
                 "body": VALID_PR_BODY,
-                "head": {"ref": "develop"},
+                "head": {"ref": "release/1.2.3"},
                 "base": {"ref": "main"},
             }
         )
 
-        self.assertIn("배포 PR은 Issue를 종료하지 않습니다", result.errors)
+        self.assertIn("시스템 PR은 Issue를 종료하지 않습니다", result.errors)
 
     def test_rejects_pr_without_closing_issue(self) -> None:
         result = validate_pr(
@@ -315,12 +315,132 @@ class PullRequestContractTest(unittest.TestCase):
                     "Closes #123",
                     "Resolves: woowacourse-teams/other-repository#123",
                 ),
-                "head": {"ref": "develop"},
+                "head": {"ref": "release/1.2.3"},
                 "base": {"ref": "main"},
             }
         )
 
-        self.assertIn("배포 PR은 Issue를 종료하지 않습니다", result.errors)
+        self.assertIn("시스템 PR은 Issue를 종료하지 않습니다", result.errors)
+
+    def test_accepts_issue_branch_to_release_as_work_pr(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Harness] 릴리스 수정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "release/1.2.3"},
+            },
+            linked_issue_title="[Harness] 릴리스 수정",
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
+    def test_rejects_regular_issue_branch_to_main(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Harness] 운영 긴급 수정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "main"},
+            },
+            linked_issue_title="[Harness] 운영 긴급 수정",
+        )
+
+        self.assertIn(
+            "일반 작업 브랜치는 main으로 병합할 수 없습니다",
+            result.errors,
+        )
+
+    def test_accepts_hotfix_issue_branch_to_main_without_label(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Harness] 운영 긴급 수정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "hotfix/CF-123"},
+                "base": {"ref": "main"},
+            },
+            linked_issue_title="[Harness] 운영 긴급 수정",
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
+    def test_rejects_hotfix_issue_number_mismatch(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Harness] 운영 긴급 수정",
+                "body": VALID_PR_BODY.replace("Closes #123", "Closes #456"),
+                "head": {"ref": "hotfix/CF-123"},
+                "base": {"ref": "main"},
+            },
+            linked_issue_title="[Harness] 운영 긴급 수정",
+        )
+
+        self.assertIn(
+            "브랜치의 Issue 번호와 PR이 종료하는 Issue 번호가 다릅니다",
+            result.errors,
+        )
+
+    def test_accepts_main_sync_without_hotfix_label(self) -> None:
+        for base in ("develop", "release/1.2.3"):
+            with self.subTest(base=base):
+                result = validate_pr(
+                    {
+                        "title": "[Release] 핫픽스 동기화",
+                        "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
+                        "head": {"ref": "main"},
+                        "base": {"ref": base},
+                    }
+                )
+
+                self.assertTrue(result.is_valid, result.errors)
+
+    def test_accepts_release_and_revert_system_prs_without_closing_issue(self) -> None:
+        for head, base, draft in (
+            ("release/1.2.3", "main", False),
+            ("release/1.2.3", "develop", False),
+            ("revert/0123abc", "main", True),
+        ):
+            with self.subTest(head=head, base=base):
+                result = validate_pr(
+                    {
+                        "title": "[Release] 릴리스 상태 반영",
+                        "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
+                        "head": {"ref": head},
+                        "base": {"ref": base},
+                        "draft": draft,
+                    }
+                )
+
+                self.assertTrue(result.is_valid, result.errors)
+
+    def test_rejects_ready_revert_pr(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Release] 운영 배포 되돌림",
+                "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
+                "head": {"ref": "revert/0123abc"},
+                "base": {"ref": "main"},
+                "draft": False,
+            }
+        )
+
+        self.assertIn("되돌림 PR은 Draft 상태여야 합니다", result.errors)
+
+    def test_rejects_work_title_and_closing_issue_on_system_pr(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[Harness] 릴리스 상태 반영",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "release/1.2.3"},
+                "base": {"ref": "main"},
+            }
+        )
+
+        self.assertIn(
+            "배포 PR 제목은 [Release] 작업명 형식이어야 합니다",
+            result.errors,
+        )
+        self.assertIn("시스템 PR은 Issue를 종료하지 않습니다", result.errors)
 
     def test_rejects_pr_title_with_declarative_handa_ending(self) -> None:
         result = validate_pr(

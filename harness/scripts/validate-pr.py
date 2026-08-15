@@ -17,17 +17,16 @@ def main() -> int:
         return 2
     try:
         payload = nested_payload(read_json(sys.argv[1]), "pull_request")
-        linked_issue_title = (
-            _linked_issue_title(sys.argv[2]) if len(sys.argv) == 3 else None
-        )
+        linked_issue_title = _linked_issue(sys.argv[2]) if len(sys.argv) == 3 else None
     except ValueError as error:
         print(error, file=sys.stderr)
         return 2
     return print_result(validate_pr(payload, linked_issue_title))
 
 
-def _linked_issue_title(path: str) -> str:
-    title = read_json(path).get("title")
+def _linked_issue(path: str) -> str:
+    payload = read_json(path)
+    title = payload.get("title")
     if not isinstance(title, str) or not title.strip():
         raise ValueError("연결 Issue 제목이 필요합니다")
     return title

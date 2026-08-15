@@ -62,9 +62,13 @@ API 필드 제거, 필수 요청 필드 추가, 호환되지 않는 응답 구�
 - 평가 기준과 제품 로직 변경
 - 의존성 업그레이드와 기능 구현
 
-## Squash Merge
+## 병합 커밋
 
-`CF-*` 작업 브랜치를 `develop`에 합칠 때 Squash Merge를 사용한다. 최종 승인자는 GitHub 머지 화면에서 Squash Commit 제목과 본문을 직접 확인하고 입력한다. 프로덕션 배포를 위한 `develop`에서 `main` 승격은 Merge Commit을 사용한다.
+`CF-*` 작업 브랜치를 `develop`, `release/*`에 합치거나 `hotfix/CF-*`를 `main`에
+합칠 때 Squash Merge를 사용한다. `release/*` → `main`·`develop`, hotfix의 `main` →
+`develop`·`release/*`, `revert/*` → `main`은 Merge Commit을 사용한다. 최종
+승인자는 GitHub 머지 화면에서 경로에 맞는 방식을 선택하고 Squash Commit인 경우
+제목과 본문을 직접 확인한다.
 
 ## Issue와 PR 제목
 
@@ -79,8 +83,10 @@ Issue와 PR 제목은 개별 커밋과 다른 형식을 사용한다.
 - `Plan`은 조사, 요구사항 정리, 문서 기획 같은 구현 전 작업에 사용한다.
 - `feat:`, `fix:` 같은 Conventional Commit type을 붙이지 않는다.
 - 작업명은 한글을 포함한 명사형으로 작성하고 `한다`로 끝내지 않는다.
-- Issue와 연결 PR은 같은 제목을 사용한다.
-- `develop`에서 `main`으로 보내는 배포 PR은 `[Release] 작업명` 형식을 사용한다.
+- `CF-*`와 `hotfix/CF-*` 작업 PR은 Issue와 같은 제목을 사용하고 Issue 하나를 종료한다.
+- `release/*`, hotfix 동기화, `revert/*` 시스템 PR은 `[Release] 작업명` 형식을
+  사용하고 Issue를 종료하지 않는다.
+- 임의의 `develop` → `main` PR은 만들지 않는다.
 
 ```text
 [FE] 삼성 채용 사이트 자동 입력
