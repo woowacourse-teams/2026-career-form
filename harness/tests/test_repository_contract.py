@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -205,16 +208,48 @@ class RepositoryContractTest(unittest.TestCase):
         issue_step = issue_steps[0]
 
         self.assertEqual("${{ github.token }}", issue_step["env"]["GH_TOKEN"])
-        self.assertIn("hotfix/CF-", issue_step["if"])
-        self.assertIn("${GITHUB_HEAD_REF#hotfix/CF-}", issue_step["run"])
+        self.assertIn("^hotfix/CF-", issue_step["run"])
+        self.assertIn("BASH_REMATCH", issue_step["run"])
         self.assertIn("--json title", issue_step["run"])
         self.assertNotIn("labels", issue_step["run"])
 
-    def test_pr_contract_does_not_revalidate_for_issue_label_changes(self) -> None:
+    def test_pr_contract_skips_issue_lookup_for_malformed_work_branch(self) -> None:
         workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
-        self.assertNotIn("issues", workflow["on"])
-        self.assertNotIn("workflow_dispatch", workflow["on"])
-        self.assertNotIn("revalidate", workflow["jobs"])
+        issue_step = next(
+            step
+            for step in workflow["jobs"]["validate"]["steps"]
+            if "연결 Issue" in step.get("name", "")
+        )
+        with tempfile.TemporaryDirectory() as runner_temp:
+            environment = {
+                **os.environ,
+                "HEAD_REF": "hotfix/CF-not-a-number",
+                "GITHUB_REPOSITORY": "owner/repository",
+                "RUNNER_TEMP": runner_temp,
+                "PATH": "",
+            }
+            result = subprocess.run(
+                ("/bin/bash", "-c", issue_step["run"]),
+                check=False,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_contract_revalidates_when_linked_issue_title_changes(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")
+        self.assertIn("issues", workflow["on"])
+        self.assertEqual(["edited"], workflow["on"]["issues"]["types"])
+        self.assertIn("workflow_dispatch", workflow["on"])
+        revalidate = workflow["jobs"]["revalidate"]
+        run = revalidate["steps"][0]["run"]
+
+        self.assertEqual("write", revalidate["permissions"]["actions"])
+        self.assertIn('"CF-${{ github.event.issue.number }}"', run)
+        self.assertIn('"hotfix/CF-${{ github.event.issue.number }}"', run)
+        self.assertIn("gh workflow run", run)
 
     def test_release_and_hotfix_policy_is_synchronized_across_documents(self) -> None:
         paths = (

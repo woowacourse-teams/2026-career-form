@@ -37,11 +37,11 @@
 - [x] release는 숫자 세 부분, revert는 소문자 16진수 7~40자로 제한하고 정의된 병합 행렬만 허용한다.
 - [x] `hotfix/CF-*` 형식을 검증하고 main으로만 병합하며 일반 CF→main을 거부한다.
 - [x] 시스템 PR에는 `[Release]`와 Issue 종료 금지, 작업 PR에는 `[영역]`과 단일 Issue 종료를 적용한다.
-- [x] validate-pr 진입점에서 연결 Issue 제목과 라벨을 함께 파싱한다.
+- [x] validate-pr 진입점에서 연결 Issue 제목을 파싱한다.
 - [x] 관련 테스트가 통과하는지 확인한다.
 - [x] `feat: 릴리스와 핫픽스 병합 경로 허용`으로 커밋한다.
 
-### Task 3: GitHub Actions Issue 연결
+### Task 3: GitHub Actions Issue 연결 중간 구현 (Task 5에서 라벨 의존성 제거)
 
 **Files:** `.github/workflows/pr-contract.yml`, `harness/tests/test_repository_contract.py`
 
@@ -49,7 +49,7 @@
 - [x] `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`로 RED를 확인한다.
 - [x] 브랜치 형식에 맞게 Issue 번호를 추출하고 연결 Issue 제목을 전달한다.
 - [x] repository contract 테스트가 통과하는지 확인한다.
-- [x] `ci: PR 계약에 핫픽스 라벨 검증 연결`로 커밋한다.
+- [x] 중간 구현을 `ci: PR 계약에 핫픽스 라벨 검증 연결`로 커밋한다.
 
 ### Task 4: 브랜치·환경·Ruleset 문서 동기화
 
@@ -60,6 +60,17 @@
 - [x] 환경, Start release 운영 규칙, 병합 방식, hotfix 전용 브랜치, revert, 정적 Harness 한계를 문서화한다.
 - [x] `.venv/bin/python harness/scripts/verify.py`와 `git diff --check`를 실행한다.
 - [x] `docs: 릴리스와 핫픽스 브랜치 운영 규칙 기록`으로 커밋한다.
+
+### Task 5: 리뷰 반영과 hotfix 전용 브랜치 단순화
+
+**Files:** `AGENTS.md`, `.agents/skills/`, `.github/workflows/pr-contract.yml`, `docs/`, `harness/lib/`, `harness/scripts/`, `harness/tests/`
+
+- [x] 일반 `CF-*` → `main`을 거부하고 `hotfix/CF-*` → `main`만 허용하는 실패 테스트를 작성한다.
+- [x] hotfix 라벨 검증과 PR·Issue 라벨 변경 재검증을 제거한다.
+- [x] Issue 제목 변경 시 CF 및 hotfix/CF PR 계약을 재검증한다.
+- [x] hotfix/CF → main과 CF → release의 사후 정리를 대상 원격 브랜치 기준으로 검증한다.
+- [x] 작업 지침, skill, 브랜치·Ruleset·환경 문서를 최종 계약과 동기화한다.
+- [x] `fix: 핫픽스 전용 브랜치 계약 적용`으로 커밋한다.
 
 ## 수동 확인과 보류
 

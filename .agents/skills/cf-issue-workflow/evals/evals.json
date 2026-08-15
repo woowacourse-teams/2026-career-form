@@ -83,6 +83,19 @@
         "기획과 구현을 Issue #123의 한 브랜치와 한 PR로 완료한다",
         "Issue 범위를 넘어서는 구현은 추가하지 않는다"
       ]
+    },
+    {
+      "id": 8,
+      "prompt": "status:ready인 Issue #123은 main 긴급 수정이 승인돼 있어. hotfix 작업을 Draft PR까지 진행해줘.",
+      "expected_output": "main에서 hotfix/CF-123 브랜치를 만들고 TDD와 검증을 거쳐 main으로 향하는 같은 제목의 Draft PR 하나를 만든다.",
+      "files": [],
+      "expectations": [
+        "Issue 계약이 운영 hotfix를 명시하는지 확인한다",
+        "main을 기준으로 hotfix/CF-123 브랜치를 만든다",
+        "PR base를 main으로 설정한다",
+        "hotfix 라벨을 병합 허용 조건으로 요구하지 않는다",
+        "PR을 승인하거나 머지하지 않는다"
+      ]
     }
   ]
 }

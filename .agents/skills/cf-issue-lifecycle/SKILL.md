@@ -12,7 +12,7 @@ metadata:
 
 # CF Issue Lifecycle
 
-하나의 Issue, `CF-<Issue 번호>` 브랜치 하나, PR 하나의 생명주기를 단계별 정본에 따라 연결한다. 사람 승인과 머지 대기에서는 멈추고, 같은 스킬을 다시 호출하면 원격 상태를 읽어 첫 미완료 단계부터 재개한다.
+하나의 Issue, 계약에 맞는 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치 하나, PR 하나의 생명주기를 단계별 정본에 따라 연결한다. 사람 승인과 머지 대기에서는 멈추고, 같은 스킬을 다시 호출하면 원격 상태를 읽어 첫 미완료 단계부터 재개한다.
 
 ## 1. 입력과 현재 상태 확인
 
@@ -31,14 +31,14 @@ repository Issue가 아직 `status:ready`가 아니면 `cf-project-issue-plannin
 
 ## 4. 머지 후 정리
 
-사용자가 머지를 완료했다고 알리거나 원격 PR이 `MERGED`인 상태로 재개되면 `cf-post-merge-cleanup`을 사용한다. 원격 머지와 `origin/develop` 포함 관계가 모두 증명되지 않으면 정리하지 않는다.
+사용자가 머지를 완료했다고 알리거나 원격 PR이 `MERGED`인 상태로 재개되면 `cf-post-merge-cleanup`을 사용한다. 원격 머지와 `origin/<baseRefName>` 포함 관계가 모두 증명되지 않으면 정리하지 않는다.
 
 ## 완료 조건
 
 - Issue가 닫혀 있다.
 - 연결 PR이 `MERGED`다.
-- merge commit이 `origin/develop`에 포함되어 있다.
-- 안전하게 제거할 수 있었던 `CF-*` 로컬 브랜치와 관리 worktree가 정리됐다.
+- merge commit이 `origin/<baseRefName>`에 포함되어 있다.
+- 안전하게 제거할 수 있었던 `CF-*` 또는 `hotfix/CF-*` 로컬 브랜치와 관리 worktree가 정리됐다.
 - dirty 또는 외부 관리 worktree는 경로와 보존 이유가 보고됐다.
 
 `cf-finishing-a-development-branch`는 이 표준 생명주기에 포함하지 않는다.

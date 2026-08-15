@@ -163,7 +163,7 @@ class HarnessScriptsTest(unittest.TestCase):
                 "head_branch": "CF-14",
                 "base_branch": "develop",
                 "merge_commit": None,
-                "merge_in_origin_develop": False,
+                "merge_in_origin_base": False,
                 "local_branch_exists": True,
                 "worktrees": [],
             },

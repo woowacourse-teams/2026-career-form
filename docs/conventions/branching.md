@@ -10,6 +10,9 @@ CF-* -> develop
 release/<MAJOR.MINOR.PATCH> -> main
           |
           +-----------------> develop
+
+hotfix/CF-* -> main -> develop
+                    \-> active release/*
 ```
 
 ## 브랜치 형식

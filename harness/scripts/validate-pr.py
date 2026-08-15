@@ -21,9 +21,7 @@ def main() -> int:
     except ValueError as error:
         print(error, file=sys.stderr)
         return 2
-    return print_result(
-        validate_pr(payload, linked_issue_title)
-    )
+    return print_result(validate_pr(payload, linked_issue_title))
 
 
 def _linked_issue(path: str) -> str:

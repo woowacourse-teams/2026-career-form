@@ -83,7 +83,7 @@ Issue와 PR 제목은 개별 커밋과 다른 형식을 사용한다.
 - `Plan`은 조사, 요구사항 정리, 문서 기획 같은 구현 전 작업에 사용한다.
 - `feat:`, `fix:` 같은 Conventional Commit type을 붙이지 않는다.
 - 작업명은 한글을 포함한 명사형으로 작성하고 `한다`로 끝내지 않는다.
-- `CF-*` 작업 PR은 Issue와 같은 제목을 사용하고 Issue 하나를 종료한다.
+- `CF-*`와 `hotfix/CF-*` 작업 PR은 Issue와 같은 제목을 사용하고 Issue 하나를 종료한다.
 - `release/*`, hotfix 동기화, `revert/*` 시스템 PR은 `[Release] 작업명` 형식을
   사용하고 Issue를 종료하지 않는다.
 - 임의의 `develop` → `main` PR은 만들지 않는다.
