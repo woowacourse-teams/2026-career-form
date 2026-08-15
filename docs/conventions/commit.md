@@ -64,8 +64,8 @@ API 필드 제거, 필수 요청 필드 추가, 호환되지 않는 응답 구�
 
 ## 병합 커밋
 
-`CF-*` 작업 브랜치를 `develop`, `release/*`, hotfix의 `main`에 합칠 때 Squash
-Merge를 사용한다. `release/*` → `main`·`develop`, hotfix의 `main` →
+`CF-*` 작업 브랜치를 `develop`, `release/*`에 합치거나 `hotfix/CF-*`를 `main`에
+합칠 때 Squash Merge를 사용한다. `release/*` → `main`·`develop`, hotfix의 `main` →
 `develop`·`release/*`, `revert/*` → `main`은 Merge Commit을 사용한다. 최종
 승인자는 GitHub 머지 화면에서 경로에 맞는 방식을 선택하고 Squash Commit인 경우
 제목과 본문을 직접 확인한다.

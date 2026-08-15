@@ -86,20 +86,16 @@ class HarnessScriptsTest(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("PR 제목은 연결 Issue 제목과 같아야 합니다", result.stderr)
 
-    def test_pr_script_passes_linked_issue_hotfix_label(self) -> None:
+    def test_pr_script_accepts_hotfix_issue_branch(self) -> None:
         event = {
             "pull_request": {
                 "title": "[Harness] 운영 긴급 수정",
                 "body": VALID_PR_BODY,
-                "head": {"ref": "CF-123"},
+                "head": {"ref": "hotfix/CF-123"},
                 "base": {"ref": "main"},
-                "labels": [],
             }
         }
-        linked_issue = {
-            "title": "[Harness] 운영 긴급 수정",
-            "labels": [{"name": "hotfix"}],
-        }
+        linked_issue = {"title": "[Harness] 운영 긴급 수정"}
 
         with tempfile.TemporaryDirectory() as directory:
             payload = Path(directory) / "event.json"

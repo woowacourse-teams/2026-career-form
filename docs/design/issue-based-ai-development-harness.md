@@ -163,7 +163,7 @@ Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE
 조사와 기획에 사용한다. `feat:`,
 `fix:` 같은 type을 붙이지 않고 명사형으로 작성한다. 최종 승인자는 GitHub 머지
 화면에서 Squash Commit 제목과 본문을 직접 확인한다. `pr-contract.yml`은 PR 제목,
-브랜치 번호, 종료 Issue 번호, 시스템 PR 종류와 hotfix 라벨을 검사한다.
+브랜치 번호, 종료 Issue 번호와 시스템 PR 종류를 검사한다.
 
 ## 브랜치와 환경
 
@@ -176,7 +176,8 @@ CF-* -> develop -> release/<MAJOR.MINOR.PATCH> -> main
 
 | 브랜치 | 시작점 | 병합 대상과 방식 | 환경 |
 |---|---|---|---|
-| `CF-<issue>` | `develop` 또는 수정 대상 | `develop`, `release/*`, hotfix의 `main`으로 Squash Merge | 개발 서버 |
+| `CF-<issue>` | `develop` 또는 수정 대상 release | `develop`, `release/*`로 Squash Merge | 개발 서버 |
+| `hotfix/CF-<issue>` | `main` | `main`으로 Squash Merge | 운영 긴급 수정 |
 | `develop` | 장기 브랜치 | Start release의 기준 | 통합 기준 |
 | `release/<MAJOR.MINOR.PATCH>` | 현재 `develop` HEAD | `main`, `develop`으로 Merge Commit | 스테이징 서버 |
 | `main` | 운영 기준 | 프로덕션 배포 기준 | 운영 서버 |
@@ -184,8 +185,8 @@ CF-* -> develop -> release/<MAJOR.MINOR.PATCH> -> main
 
 Start release는 현재 `develop` HEAD에서 만들고 활성 release 브랜치는 하나만 둔다.
 release·hotfix 동기화·revert 시스템 PR은 `[Release]` 제목을 사용하며 Issue를
-종료하지 않는다. `CF-*` → `main`과 `main` → `develop`·`release/*`는 경로에 맞는
-`hotfix` 라벨이 있어야 한다. 임의의 `develop` → `main`은 거부한다.
+종료하지 않는다. `hotfix/CF-*` → `main`만 운영 긴급 수정으로 허용하고 일반
+`CF-*` → `main`과 임의의 `develop` → `main`은 거부한다.
 
 현재 저장소의 기본 브랜치는 `develop`이다. `main`, `develop`, `release/*`는 GitHub
 Ruleset으로 직접 push, force push, 삭제를 막고 사람 승인 1명을 요구한다. 실제

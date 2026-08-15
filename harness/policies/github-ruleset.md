@@ -32,13 +32,13 @@
 - 필수 검사: `PR 계약`, `품질 게이트`, `공유 파일 계약`
 - 승인 리뷰 1개를 요구한다.
 - `release/*` 배포와 `revert/*` 되돌림은 Merge Commit을 사용한다.
-- PR 또는 연결 Issue에 `hotfix` 라벨이 있는 `CF-*` 직접 병합만 Squash Merge로
-  허용한다.
+- `hotfix/CF-*`에서 오는 운영 긴급 수정만 Squash Merge로 허용한다.
+- 일반 `CF-*`에서 오는 직접 병합은 허용하지 않는다.
 - 임의의 `develop` → `main`은 허용하지 않는다.
 
 ## 사람이 확인할 항목
 
-- `PR 계약` 검사가 head/base, PR·연결 Issue 라벨, 제목, Issue 종료 계약을
+- `PR 계약` 검사가 head/base, 제목, Issue 종료 계약을
   통과했는지 확인한다.
 - release·동기화·revert 시스템 PR은 `[Release]` 제목이며 Issue를 종료하지 않는다.
 - Ruleset만으로 경로별 Squash/Merge Commit을 완전히 강제할 수 없으면 머지 담당자가

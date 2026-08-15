@@ -1,6 +1,6 @@
 # GitHub Issue Tracker
 
-GitHub Project draft, repository Issue, `CF-<Issue 번호>` 브랜치, Draft PR을 하나의 작업 식별자로 연결한다. Issue 본문은 범위와 완료 기준의 정본이다.
+GitHub Project draft, repository Issue, 작업 브랜치, Draft PR을 하나의 작업 식별자로 연결한다. Issue 본문은 범위와 완료 기준의 정본이다.
 
 ## 작업 단위
 
@@ -26,8 +26,9 @@ Project draft를 Issue로 승격한 직후 Project Status는 `In Progress`로 �
 Issue와 PR 제목은 같은 `[영역] 작업명`을 사용하며 `FE`, `BE`, `Infra`,
 `Harness`, `Plan` 영역을 허용한다. `FE`, `BE`만 전체를 대문자로 쓰고 나머지는 첫
 문자만 대문자로 쓴다. `Plan`은 조사, 요구사항 정리, 문서 기획 같은
-구현 전 작업에 사용한다. 브랜치는 `CF-<Issue 번호>`이며 PR 본문에는 같은 번호의
-`Closes #<Issue 번호>`를 정확히 하나만 둔다. PR 제목에는 `feat:`나 `fix:`를 붙이지
+구현 전 작업에 사용한다. 일반·릴리스 수정 브랜치는 `CF-<Issue 번호>`, 운영 hotfix
+브랜치는 `hotfix/CF-<Issue 번호>`이며 PR 본문에는 같은 번호의 `Closes #<Issue 번호>`를
+정확히 하나만 둔다. PR 제목에는 `feat:`나 `fix:`를 붙이지
 않고, 개별 커밋에는 Conventional Commit type을 유지한다.
 
 ## 작업 흐름
@@ -36,7 +37,7 @@ Issue와 PR 제목은 같은 `[영역] 작업명`을 사용하며 `FE`, `BE`, `I
 2. AI가 제목을 `[영역] 작업명`으로 보정한 뒤 repository Issue로 승격하고 `status:planning`과 Project Status `In Progress`를 함께 적용한다.
 3. Issue 본문과 단일 PR의 논리적 커밋 계획을 작성한다.
 4. 사람이 Issue 본문과 계획 전문을 승인하면 AI가 원격 본문을 게시하고 확인한 뒤 `status:ready`로 전환한다.
-5. 구현 시작 시 `status:in-progress`로 바꾸고 `CF-<Issue 번호>` 브랜치를 만든다.
+5. 구현 시작 시 `status:in-progress`로 바꾸고 계약에 맞는 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치를 만든다.
 6. TDD, 전체 검증, 두 축 코드 리뷰를 수행한다.
 7. Issue와 같은 제목의 Draft PR을 만들고 Issue label을 `status:review`, Project Status를 `On Review`로 바꾼다.
 8. 사람이 Draft PR을 Ready for review로 전환한다.

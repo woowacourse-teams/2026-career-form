@@ -1,5 +1,5 @@
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 
 from harness.lib.branching import (
     is_release_branch,
@@ -8,7 +8,6 @@ from harness.lib.branching import (
     issue_number_from_branch,
     validate_branch_flow,
 )
-from harness.lib.cli import labels_from_payload
 from harness.lib.markdown_sections import extract_sections
 from harness.lib.result import ValidationResult, merge_results
 from harness.lib.work_title import validate_release_title, validate_work_title
@@ -40,7 +39,6 @@ INDENTED_CODE_PATTERN = re.compile(r"^(?: {4}|\t).*$", re.MULTILINE)
 def validate_pr(
     payload: Mapping[str, object],
     linked_issue_title: str | None = None,
-    linked_issue_labels: tuple[str, ...] = (),
 ) -> ValidationResult:
     title = payload.get("title")
     body = payload.get("body")
@@ -58,7 +56,6 @@ def validate_pr(
         validate_release_title(title) if system_pr else validate_work_title(title)
     )
     results = [title_result, validate_branch_flow(head, base)]
-    results.append(_validate_pr_labels(payload.get("labels")))
     results.append(_validate_revert_draft(payload, head, base))
     errors: list[str] = []
     sections = extract_sections(_markdown_prose(body))
@@ -71,18 +68,6 @@ def validate_pr(
         results.append(
             ValidationResult(("PR 제목은 연결 Issue 제목과 같아야 합니다",))
         )
-    results.append(
-        _validate_hotfix_labels(
-            head=head,
-            base=base,
-            pr_labels=frozenset(
-                label.casefold() for label in labels_from_payload(payload)
-            ),
-            linked_issue_labels=frozenset(
-                label.casefold() for label in linked_issue_labels
-            ),
-        )
-    )
     results.append(
         _validate_closing_references(
             body=body,
@@ -130,40 +115,6 @@ def _validate_closing_references(
         ):
             errors.append("브랜치의 Issue 번호와 PR이 종료하는 Issue 번호가 다릅니다")
     return ValidationResult(tuple(errors))
-
-
-def _validate_hotfix_labels(
-    *,
-    head: str,
-    base: str,
-    pr_labels: frozenset[str],
-    linked_issue_labels: frozenset[str],
-) -> ValidationResult:
-    if head.startswith("CF-") and base == "main":
-        if "hotfix" not in pr_labels | linked_issue_labels:
-            return ValidationResult(
-                ("main 직접 병합에는 hotfix 라벨이 필요합니다",)
-            )
-    if head == "main" and (base == "develop" or is_release_branch(base)):
-        if "hotfix" not in pr_labels:
-            return ValidationResult(
-                ("main 동기화 PR에는 hotfix 라벨이 필요합니다",)
-            )
-    return ValidationResult()
-
-
-def _validate_pr_labels(value: object) -> ValidationResult:
-    if value is None:
-        return ValidationResult()
-    if not isinstance(value, Sequence) or isinstance(value, str):
-        return ValidationResult(("PR labels는 배열이어야 합니다",))
-    for label in value:
-        if not isinstance(label, Mapping):
-            return ValidationResult(("PR labels 항목은 객체여야 합니다",))
-        name = label.get("name")
-        if not isinstance(name, str) or not name.strip():
-            return ValidationResult(("PR labels[].name이 필요합니다",))
-    return ValidationResult()
 
 
 def _validate_revert_draft(

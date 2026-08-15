@@ -335,63 +335,52 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
-    def test_rejects_issue_branch_to_main_without_hotfix_label(self) -> None:
+    def test_rejects_regular_issue_branch_to_main(self) -> None:
         result = validate_pr(
             {
                 "title": "[Harness] 운영 긴급 수정",
                 "body": VALID_PR_BODY,
                 "head": {"ref": "CF-123"},
                 "base": {"ref": "main"},
-                "labels": [],
             },
             linked_issue_title="[Harness] 운영 긴급 수정",
         )
 
-        self.assertIn("main 직접 병합에는 hotfix 라벨이 필요합니다", result.errors)
+        self.assertIn(
+            "일반 작업 브랜치는 main으로 병합할 수 없습니다",
+            result.errors,
+        )
 
-    def test_accepts_issue_branch_to_main_with_pr_hotfix_label(self) -> None:
+    def test_accepts_hotfix_issue_branch_to_main_without_label(self) -> None:
         result = validate_pr(
             {
                 "title": "[Harness] 운영 긴급 수정",
                 "body": VALID_PR_BODY,
-                "head": {"ref": "CF-123"},
+                "head": {"ref": "hotfix/CF-123"},
                 "base": {"ref": "main"},
-                "labels": [{"name": "hotfix"}],
             },
             linked_issue_title="[Harness] 운영 긴급 수정",
         )
 
         self.assertTrue(result.is_valid, result.errors)
 
-    def test_accepts_issue_branch_to_main_with_issue_hotfix_label(self) -> None:
+    def test_rejects_hotfix_issue_number_mismatch(self) -> None:
         result = validate_pr(
             {
                 "title": "[Harness] 운영 긴급 수정",
-                "body": VALID_PR_BODY,
-                "head": {"ref": "CF-123"},
+                "body": VALID_PR_BODY.replace("Closes #123", "Closes #456"),
+                "head": {"ref": "hotfix/CF-123"},
                 "base": {"ref": "main"},
-                "labels": [],
             },
             linked_issue_title="[Harness] 운영 긴급 수정",
-            linked_issue_labels=("hotfix",),
         )
 
-        self.assertTrue(result.is_valid, result.errors)
-
-    def test_rejects_main_sync_without_pr_hotfix_label(self) -> None:
-        result = validate_pr(
-            {
-                "title": "[Release] 핫픽스 동기화",
-                "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
-                "head": {"ref": "main"},
-                "base": {"ref": "develop"},
-                "labels": [],
-            }
+        self.assertIn(
+            "브랜치의 Issue 번호와 PR이 종료하는 Issue 번호가 다릅니다",
+            result.errors,
         )
 
-        self.assertIn("main 동기화 PR에는 hotfix 라벨이 필요합니다", result.errors)
-
-    def test_accepts_main_sync_with_pr_hotfix_label(self) -> None:
+    def test_accepts_main_sync_without_hotfix_label(self) -> None:
         for base in ("develop", "release/1.2.3"):
             with self.subTest(base=base):
                 result = validate_pr(
@@ -400,7 +389,6 @@ class PullRequestContractTest(unittest.TestCase):
                         "body": VALID_PR_BODY.replace("\nCloses #123\n", "\n"),
                         "head": {"ref": "main"},
                         "base": {"ref": base},
-                        "labels": [{"name": "hotfix"}],
                     }
                 )
 
@@ -437,26 +425,6 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn("되돌림 PR은 Draft 상태여야 합니다", result.errors)
-
-    def test_rejects_malformed_pr_label_payload(self) -> None:
-        malformed = (
-            ("hotfix", "PR labels는 배열이어야 합니다"),
-            ([{"color": "b60205"}], "PR labels[].name이 필요합니다"),
-        )
-        for labels, expected_error in malformed:
-            with self.subTest(labels=labels):
-                result = validate_pr(
-                    {
-                        "title": "[Harness] 운영 긴급 수정",
-                        "body": VALID_PR_BODY,
-                        "head": {"ref": "CF-123"},
-                        "base": {"ref": "main"},
-                        "labels": labels,
-                    },
-                    linked_issue_title="[Harness] 운영 긴급 수정",
-                )
-
-                self.assertIn(expected_error, result.errors)
 
     def test_rejects_work_title_and_closing_issue_on_system_pr(self) -> None:
         result = validate_pr(

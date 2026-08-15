@@ -4,6 +4,9 @@ from harness.lib.result import ValidationResult
 
 
 WORK_BRANCH_PATTERN = re.compile(r"^CF-(?P<issue>[1-9][0-9]*)$")
+HOTFIX_BRANCH_PATTERN = re.compile(
+    r"^hotfix/CF-(?P<issue>[1-9][0-9]*)$"
+)
 VERSION_PART = r"(?:0|[1-9][0-9]*)"
 RELEASE_BRANCH_PATTERN = re.compile(
     rf"^release/(?P<version>{VERSION_PART}\.{VERSION_PART}\.{VERSION_PART})$"
@@ -38,6 +41,17 @@ def validate_branch_flow(head: str, base: str) -> ValidationResult:
             return ValidationResult()
         return ValidationResult(("되돌림 브랜치는 main으로만 병합합니다",))
 
+    if head.startswith("hotfix/"):
+        if not is_hotfix_branch(head):
+            return ValidationResult(
+                (
+                    "hotfix 브랜치는 hotfix/CF-<Issue 번호> 형식이어야 합니다",
+                )
+            )
+        if base == "main":
+            return ValidationResult()
+        return ValidationResult(("hotfix 브랜치는 main으로만 병합합니다",))
+
     if head == "main":
         if base == "develop" or is_release_branch(base):
             return ValidationResult()
@@ -49,16 +63,20 @@ def validate_branch_flow(head: str, base: str) -> ValidationResult:
     if match is None:
         return ValidationResult(("작업 브랜치는 CF-<Issue 번호> 형식이어야 합니다",))
 
-    if base not in ("develop", "main") and not is_release_branch(base):
+    if base == "main":
         return ValidationResult(
-            ("작업 브랜치는 develop, release 또는 hotfix의 main으로만 병합합니다",)
+            ("일반 작업 브랜치는 main으로 병합할 수 없습니다",)
+        )
+    if base != "develop" and not is_release_branch(base):
+        return ValidationResult(
+            ("작업 브랜치는 develop 또는 release로만 병합합니다",)
         )
 
     return ValidationResult()
 
 
 def issue_number_from_branch(branch: str) -> str | None:
-    match = WORK_BRANCH_PATTERN.match(branch)
+    match = WORK_BRANCH_PATTERN.match(branch) or HOTFIX_BRANCH_PATTERN.match(branch)
     return match.group("issue") if match is not None else None
 
 
@@ -68,6 +86,10 @@ def is_release_branch(branch: str) -> bool:
 
 def is_revert_branch(branch: str) -> bool:
     return REVERT_BRANCH_PATTERN.fullmatch(branch) is not None
+
+
+def is_hotfix_branch(branch: str) -> bool:
+    return HOTFIX_BRANCH_PATTERN.fullmatch(branch) is not None
 
 
 def is_system_pr(head: str, base: str) -> bool:
