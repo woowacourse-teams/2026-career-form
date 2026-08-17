@@ -101,6 +101,21 @@ deploy_image() {
   wait_until_ready
 }
 
+digest_is_in_use_on_host() {
+  local candidate="$1"
+  local state_file
+  local state_digest
+
+  for state_file in \
+    "$DEPLOY_STATE_DIR"/*/current-digest \
+    "$DEPLOY_STATE_DIR"/*/previous-digest; do
+    [[ -f "$state_file" ]] || continue
+    state_digest="$(read_digest "$state_file")"
+    [[ "$candidate" == "$state_digest" ]] && return 0
+  done
+  return 1
+}
+
 cleanup_stale_images() {
   local current="$1"
   local previous="$2"
@@ -118,6 +133,7 @@ cleanup_stale_images() {
     [[ "$local_image" == "$IMAGE_REPOSITORY@sha256:"* ]] || continue
     [[ "$local_image" == "$current" ]] && continue
     [[ -n "$previous" && "$local_image" == "$previous" ]] && continue
+    digest_is_in_use_on_host "$local_image" && continue
     docker image rm "$local_image" || true
   done
 }

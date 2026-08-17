@@ -10,7 +10,8 @@ SCRIPT = ROOT / "infra" / "scripts" / "deploy.sh"
 NEW_IMAGE = "registry.example/career-form@sha256:" + ("a" * 64)
 OLD_IMAGE = "registry.example/career-form@sha256:" + ("b" * 64)
 STALE_IMAGE = "registry.example/career-form@sha256:" + ("c" * 64)
-OTHER_IMAGE = "registry.example/another-service@sha256:" + ("d" * 64)
+SHARED_HOST_IMAGE = "registry.example/career-form@sha256:" + ("d" * 64)
+OTHER_IMAGE = "registry.example/another-service@sha256:" + ("e" * 64)
 
 
 class DeployScriptTest(unittest.TestCase):
@@ -164,6 +165,24 @@ printf '{"status":"UP"}'
                 encoding="utf-8"
             ).strip(),
         )
+
+    def test_cleanup_preserves_digests_used_by_another_environment_on_host(self) -> None:
+        development_state = self.state / "development"
+        development_state.mkdir(parents=True)
+        (development_state / "current-digest").write_text(
+            SHARED_HOST_IMAGE + "\n", encoding="utf-8"
+        )
+
+        completed = self._run(
+            FAKE_IMAGE_LIST="\n".join(
+                (NEW_IMAGE, SHARED_HOST_IMAGE, STALE_IMAGE)
+            )
+        )
+
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        log = self.docker_log.read_text(encoding="utf-8")
+        self.assertNotIn(f"image rm {SHARED_HOST_IMAGE}", log)
+        self.assertIn(f"image rm {STALE_IMAGE}", log)
 
     def _run(self, **overrides: str) -> subprocess.CompletedProcess[str]:
         environment = {
