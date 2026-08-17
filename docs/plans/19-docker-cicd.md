@@ -136,17 +136,17 @@
 - Produces state: `<DEPLOY_STATE_DIR>/<environment>/current-digest`, `previous-digest`
 - Exit: `0` success, non-zero validation/deploy/readiness failure; rollback success never changes original failure exit
 
-- [ ] **Step 1: 입력 경계 실패 테스트 작성**
+- [x] **Step 1: 입력 경계 실패 테스트 작성**
 
   fake `docker`와 fake `curl`을 PATH 앞에 두고 script를 실제 실행한다. digest가 `repository@sha256:<64 hex>`가 아니거나 environment/profile 조합이 다르면 Docker 호출 전 종료해야 한다.
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest infra.tests.test_deploy -v`
 
   Expected: `infra/scripts/deploy.sh` 부재로 FAIL.
 
-- [ ] **Step 3: 정상 배포 최소 구현**
+- [x] **Step 3: 정상 배포 최소 구현**
 
   script는 `set -euo pipefail`과 `umask 077`을 사용하고 secret 값을 출력하지 않는다. state directory를 만들고 이전 `current-digest`를 읽은 뒤 다음 순서를 실행한다.
 
@@ -159,15 +159,15 @@
 
   readiness는 5초 간격, 최대 24회다. 성공 시 기존 current를 previous로 옮기고 새 digest를 current에 atomic rename으로 기록한다.
 
-- [ ] **Step 4: 실패 rollback 테스트 작성 및 RED 확인**
+- [x] **Step 4: 실패 rollback 테스트 작성 및 RED 확인**
 
   새 digest readiness가 24회 실패하면 이전 digest로 Compose를 다시 올리고 readiness를 재확인해야 한다. 이전 digest가 없으면 복구 불가 오류를 내고 실패해야 한다. rollback이 성공해도 exit는 non-zero다.
 
-- [ ] **Step 5: rollback과 안전한 이미지 정리 구현**
+- [x] **Step 5: rollback과 안전한 이미지 정리 구현**
 
   실패 시 `BACKEND_IMAGE`를 이전 digest로 바꿔 같은 Compose 명령을 실행한다. 성공 뒤 repository의 local digest 중 current·previous에 해당하지 않는 것만 `docker image rm` 대상으로 넘기고 다른 repository 이미지는 건드리지 않는다.
 
-- [ ] **Step 6: GREEN 확인**
+- [x] **Step 6: GREEN 확인**
 
   Run:
 
@@ -178,7 +178,7 @@
 
   Expected: 정상, validation, readiness failure, rollback success/failure, cleanup 경계 모두 PASS.
 
-- [ ] **Step 7: 커밋**
+- [x] **Step 7: 커밋**
 
   ```bash
   git add infra/scripts/deploy.sh infra/tests/test_deploy.py
