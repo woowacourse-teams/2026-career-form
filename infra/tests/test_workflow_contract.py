@@ -115,6 +115,7 @@ class WorkflowContractTest(unittest.TestCase):
         workflow = self._workflow("deploy-staging.yml")
 
         self.assertIn("workflow_dispatch", workflow["on"])
+        self.assertNotIn("paths", workflow["on"]["push"])
         build = workflow["jobs"]["build"]
         checkout = next(
             step

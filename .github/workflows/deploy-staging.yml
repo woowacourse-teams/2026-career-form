@@ -3,12 +3,6 @@ name: 스테이징 환경 배포
 on:
   push:
     branches: ["release/**"]
-    paths:
-      - "backend/**"
-      - "compose.yaml"
-      - "infra/compose.deploy.yaml"
-      - "infra/scripts/deploy.sh"
-      - ".github/workflows/deploy-staging.yml"
   workflow_dispatch:
 
 permissions:
