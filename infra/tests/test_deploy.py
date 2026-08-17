@@ -143,6 +143,19 @@ printf '{"status":"UP"}'
         self.assertNotEqual(0, completed.returncode)
         self.assertIn("no previous digest", completed.stderr)
 
+    def test_initial_failure_removes_container_and_unreferenced_images(self) -> None:
+        completed = self._run(
+            FAKE_CURL_FAILURES="1",
+            READINESS_ATTEMPTS="1",
+            FAKE_IMAGE_LIST="\n".join((NEW_IMAGE, STALE_IMAGE)),
+        )
+
+        self.assertNotEqual(0, completed.returncode)
+        log = self.docker_log.read_text(encoding="utf-8")
+        self.assertIn("rm --stop --force backend", log)
+        self.assertIn(f"image rm {NEW_IMAGE}", log)
+        self.assertIn(f"image rm {STALE_IMAGE}", log)
+
     def test_rollback_failure_requires_manual_recovery(self) -> None:
         environment_state = self.state / "production"
         environment_state.mkdir(parents=True)

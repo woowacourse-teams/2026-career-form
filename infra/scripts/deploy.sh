@@ -165,6 +165,11 @@ cleanup_stale_images() {
   done
 }
 
+remove_failed_container() {
+  BACKEND_IMAGE="$BACKEND_IMAGE" docker compose "${COMPOSE_FILES[@]}" \
+    rm --stop --force backend || true
+}
+
 current_digest="$(read_digest "$CURRENT_DIGEST_FILE")"
 
 if deploy_image "$BACKEND_IMAGE"; then
@@ -180,6 +185,8 @@ fi
 
 printf 'deploy error: readiness or container replacement failed\n' >&2
 if [[ -z "$current_digest" ]]; then
+  remove_failed_container
+  cleanup_stale_images "" ""
   printf 'deploy error: no previous digest is available for rollback\n' >&2
   exit 1
 fi
