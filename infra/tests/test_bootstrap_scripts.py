@@ -1,4 +1,7 @@
+import os
+import stat
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -54,6 +57,31 @@ class BootstrapScriptContractTest(unittest.TestCase):
                 self.assertNotIn("RUNNER_TOKEN", content)
                 self.assertNotIn("MONGODB_PASSWORD", content)
                 self.assertIn("set -euo pipefail", content)
+
+    def test_app_state_directory_is_group_writable_for_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory) / "deploy-state"
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; DEPLOY_STATE_DIR="$2"; '
+                    'DEPLOY_RUNNER_GROUP="$(id -gn)"; '
+                    "prepare_deploy_state_directory",
+                    "bootstrap-state-test",
+                    str(APP_SCRIPT),
+                    str(state),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            state_stat = state.stat()
+            self.assertEqual(0o770, stat.S_IMODE(state_stat.st_mode))
+            self.assertEqual(os.getgid(), state_stat.st_gid)
 
     def test_setup_document_lists_required_github_configuration_names(self) -> None:
         setup = (ROOT / "docs" / "operations" / "cicd-setup.md").read_text(

@@ -1,4 +1,6 @@
 import os
+import grp
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -22,6 +24,7 @@ class DeployScriptTest(unittest.TestCase):
         self.bin = self.temp / "bin"
         self.bin.mkdir()
         self.docker_log = self.temp / "docker.log"
+        self.curl_log = self.temp / "curl.log"
         self.curl_count = self.temp / "curl.count"
         self.state = self.temp / "state"
         self._write_executable(
@@ -41,6 +44,7 @@ fi
             "curl",
             """#!/usr/bin/env bash
 set -eu
+printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
 count=0
 if [[ -f "$FAKE_CURL_COUNT" ]]; then
   count="$(cat "$FAKE_CURL_COUNT")"
@@ -84,6 +88,24 @@ printf '{"status":"UP"}'
             ).strip(),
         )
         self.assertNotIn("redacted-password", completed.stdout + completed.stderr)
+        self.assertEqual(
+            0o770,
+            stat.S_IMODE((self.state / "staging").stat().st_mode),
+        )
+        self.assertEqual(
+            0o660,
+            stat.S_IMODE(
+                (self.state / "staging" / "current-digest").stat().st_mode
+            ),
+        )
+
+    def test_readiness_requests_have_bounded_connect_and_total_time(self) -> None:
+        completed = self._run()
+
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        invocation = self.curl_log.read_text(encoding="utf-8")
+        self.assertIn("--connect-timeout", invocation)
+        self.assertIn("--max-time", invocation)
 
     def test_readiness_failure_rolls_back_and_preserves_original_failure(self) -> None:
         environment_state = self.state / "production"
@@ -139,6 +161,28 @@ printf '{"status":"UP"}'
         self.assertNotEqual(0, completed.returncode)
         self.assertIn("rollback failed", completed.stderr)
         self.assertIn("manual recovery", completed.stderr)
+
+    def test_successful_rollback_removes_failed_and_stale_images(self) -> None:
+        environment_state = self.state / "production"
+        environment_state.mkdir(parents=True)
+        (environment_state / "current-digest").write_text(
+            OLD_IMAGE + "\n", encoding="utf-8"
+        )
+
+        completed = self._run(
+            DEPLOY_ENVIRONMENT="production",
+            SPRING_PROFILES_ACTIVE="prod",
+            FAKE_CURL_FAILURES="1",
+            READINESS_ATTEMPTS="1",
+            FAKE_IMAGE_LIST="\n".join((NEW_IMAGE, OLD_IMAGE, STALE_IMAGE)),
+        )
+
+        self.assertNotEqual(0, completed.returncode)
+        log = self.docker_log.read_text(encoding="utf-8")
+        self.assertIn("rollback succeeded", completed.stderr)
+        self.assertIn(f"image rm {NEW_IMAGE}", log)
+        self.assertIn(f"image rm {STALE_IMAGE}", log)
+        self.assertNotIn(f"image rm {OLD_IMAGE}", log)
 
     def test_cleanup_removes_only_stale_digests_from_same_repository(self) -> None:
         environment_state = self.state / "staging"
@@ -196,8 +240,10 @@ printf '{"status":"UP"}'
             "DEPLOY_STATE_DIR": str(self.state),
             "READINESS_ATTEMPTS": "1",
             "READINESS_INTERVAL_SECONDS": "0",
+            "DEPLOY_RUNNER_GROUP": grp.getgrgid(os.getgid()).gr_name,
             "FAKE_DOCKER_LOG": str(self.docker_log),
             "FAKE_CURL_COUNT": str(self.curl_count),
+            "FAKE_CURL_LOG": str(self.curl_log),
             "FAKE_CURL_FAILURES": "0",
         }
         environment.update(overrides)

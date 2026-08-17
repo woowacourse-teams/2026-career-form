@@ -9,8 +9,13 @@ on:
         type: string
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
+
+concurrency:
+  group: start-release
+  cancel-in-progress: false
 
 jobs:
   start:
@@ -40,7 +45,8 @@ jobs:
         run: |
           set -euo pipefail
           branch="release/$VERSION"
-          git switch --create "$branch" origin/develop
+          release_sha="$(git rev-parse origin/develop)"
+          git switch --create "$branch" "$release_sha"
           git push origin "$branch"
           body="$RUNNER_TEMP/release-pr.md"
           printf '%s\n' \
@@ -67,3 +73,5 @@ jobs:
             --head "$branch" \
             --title "[Release] $VERSION 운영 반영" \
             --body-file "$body"
+          gh workflow run deploy-staging.yml \
+            --ref "$branch"

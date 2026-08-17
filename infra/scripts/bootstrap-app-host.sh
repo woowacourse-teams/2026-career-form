@@ -2,6 +2,8 @@
 set -euo pipefail
 
 readonly REQUIRED_SWAP_KIB=2097152
+DEPLOY_STATE_DIR="${DEPLOY_STATE_DIR:-/var/lib/career-form/deploy}"
+DEPLOY_RUNNER_GROUP="${DEPLOY_RUNNER_GROUP:-docker}"
 
 usage() {
   printf 'usage: %s --check | --apply\n' "$0" >&2
@@ -133,6 +135,13 @@ install_cloudflared_repository() {
     > /etc/apt/sources.list.d/cloudflared.list
 }
 
+prepare_deploy_state_directory() {
+  install -d \
+    -m 0770 \
+    -g "$DEPLOY_RUNNER_GROUP" \
+    "$DEPLOY_STATE_DIR"
+}
+
 apply_bootstrap() {
   [[ "${BOOTSTRAP_CONFIRM:-}" == "APPLY_APP_HOST" ]] || {
     printf 'bootstrap error: set BOOTSTRAP_CONFIRM=APPLY_APP_HOST to continue\n' >&2
@@ -156,18 +165,20 @@ apply_bootstrap() {
     docker-ce-cli \
     docker-compose-plugin
   ensure_swap
-  install -d -m 0700 /var/lib/career-form/deploy
+  prepare_deploy_state_directory
   systemctl enable --now docker nginx
   printf '%s\n' \
     'application host base installation completed' \
     'register the GitHub Actions runner and configure cloudflared manually'
 }
 
-case "${1:-}" in
-  --check) check_host ;;
-  --apply) apply_bootstrap ;;
-  *)
-    usage
-    exit 2
-    ;;
-esac
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  case "${1:-}" in
+    --check) check_host ;;
+    --apply) apply_bootstrap ;;
+    *)
+      usage
+      exit 2
+      ;;
+  esac
+fi

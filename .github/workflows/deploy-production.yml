@@ -46,21 +46,28 @@ jobs:
       digest: ${{ steps.result.outputs.digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: needs.classify.outputs.kind == 'hotfix'
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
-        if: needs.classify.outputs.kind == 'hotfix'
         with:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@67621b124fd2e251c5e8a0e6e3b91318f2287669 # v6.3.0
-        if: needs.classify.outputs.kind == 'hotfix'
         with:
           cache-provider: basic
-      - name: hotfix 백엔드 검증
-        if: needs.classify.outputs.kind == 'hotfix'
+      - name: release tree 일치 확인
+        if: needs.classify.outputs.kind == 'release'
+        run: |
+          set -euo pipefail
+          git diff --quiet \
+            "${{ needs.classify.outputs.head_sha }}^{tree}" \
+            "${GITHUB_SHA}^{tree}" || {
+              echo "main merge tree가 staging 검증 release tree와 다릅니다" >&2
+              exit 1
+            }
+      - name: 운영 소스 검증
         working-directory: backend
         run: ./gradlew clean check bootJar --console=plain
       - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
@@ -115,6 +122,8 @@ jobs:
     concurrency:
       group: deploy-production
       cancel-in-progress: false
+    outputs:
+      attempted: ${{ steps.deployment.outputs.attempted }}
     env:
       DEPLOY_ENVIRONMENT: production
       BACKEND_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}@${{ needs.image.outputs.digest }}
@@ -127,14 +136,18 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Digest 이미지 배포
-        run: ./infra/scripts/deploy.sh
+        id: deployment
+        run: |
+          printf 'attempted=true\n' >> "$GITHUB_OUTPUT"
+          ./infra/scripts/deploy.sh
 
   revert:
     needs: [classify, image, deploy]
     if: >-
       always() &&
       needs.classify.outputs.kind != 'revert' &&
-      (needs.image.result == 'failure' || needs.deploy.result == 'failure')
+      needs.deploy.outputs.attempted == 'true' &&
+      needs.deploy.result == 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-umask 077
+umask 007
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
@@ -15,6 +15,9 @@ ROOT_DIR="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 DEPLOY_STATE_DIR="${DEPLOY_STATE_DIR:-/var/lib/career-form/deploy}"
 READINESS_ATTEMPTS="${READINESS_ATTEMPTS:-24}"
 READINESS_INTERVAL_SECONDS="${READINESS_INTERVAL_SECONDS:-5}"
+READINESS_TIMEOUT_SECONDS="${READINESS_TIMEOUT_SECONDS:-120}"
+READINESS_REQUEST_TIMEOUT_SECONDS="${READINESS_REQUEST_TIMEOUT_SECONDS:-5}"
+DEPLOY_RUNNER_GROUP="${DEPLOY_RUNNER_GROUP:-docker}"
 
 fail() {
   printf 'deploy error: %s\n' "$1" >&2
@@ -42,6 +45,12 @@ fi
 if [[ ! "$READINESS_INTERVAL_SECONDS" =~ ^[0-9]+$ ]]; then
   fail "READINESS_INTERVAL_SECONDS must be a non-negative integer"
 fi
+if [[ ! "$READINESS_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+  fail "READINESS_TIMEOUT_SECONDS must be a positive integer"
+fi
+if [[ ! "$READINESS_REQUEST_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+  fail "READINESS_REQUEST_TIMEOUT_SECONDS must be a positive integer"
+fi
 
 ENVIRONMENT_STATE_DIR="$DEPLOY_STATE_DIR/$DEPLOY_ENVIRONMENT"
 CURRENT_DIGEST_FILE="$ENVIRONMENT_STATE_DIR/current-digest"
@@ -55,6 +64,8 @@ COMPOSE_FILES=(
 )
 
 mkdir -p -- "$ENVIRONMENT_STATE_DIR"
+chgrp "$DEPLOY_RUNNER_GROUP" "$ENVIRONMENT_STATE_DIR"
+chmod 0770 "$ENVIRONMENT_STATE_DIR"
 
 read_digest() {
   local path="$1"
@@ -69,22 +80,38 @@ write_digest() {
   local value="$2"
   local temporary="$path.tmp.$$"
   printf '%s\n' "$value" > "$temporary"
+  chgrp "$DEPLOY_RUNNER_GROUP" "$temporary"
+  chmod 0660 "$temporary"
   mv -f -- "$temporary" "$path"
 }
 
 wait_until_ready() {
   local attempt
+  local deadline=$((SECONDS + READINESS_TIMEOUT_SECONDS))
+  local remaining
+  local request_timeout
+  local sleep_duration
   for ((attempt = 1; attempt <= READINESS_ATTEMPTS; attempt += 1)); do
+    remaining=$((deadline - SECONDS))
+    (( remaining > 0 )) || return 1
+    request_timeout="$READINESS_REQUEST_TIMEOUT_SECONDS"
+    (( request_timeout <= remaining )) || request_timeout="$remaining"
     if curl \
       --fail \
       --silent \
       --show-error \
+      --connect-timeout 2 \
+      --max-time "$request_timeout" \
       "http://127.0.0.1:$BACKEND_PORT/actuator/health" \
       >/dev/null; then
       return 0
     fi
     if (( attempt < READINESS_ATTEMPTS )); then
-      sleep "$READINESS_INTERVAL_SECONDS"
+      remaining=$((deadline - SECONDS))
+      (( remaining > 0 )) || return 1
+      sleep_duration="$READINESS_INTERVAL_SECONDS"
+      (( sleep_duration <= remaining )) || sleep_duration="$remaining"
+      sleep "$sleep_duration"
     fi
   done
   return 1
@@ -158,6 +185,8 @@ if [[ -z "$current_digest" ]]; then
 fi
 
 if deploy_image "$current_digest"; then
+  previous_digest="$(read_digest "$PREVIOUS_DIGEST_FILE")"
+  cleanup_stale_images "$current_digest" "$previous_digest"
   printf 'deploy error: rollback succeeded; original deployment remains failed\n' >&2
 else
   printf 'deploy error: rollback failed; manual recovery is required\n' >&2

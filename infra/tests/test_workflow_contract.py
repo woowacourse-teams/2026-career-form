@@ -48,7 +48,8 @@ class WorkflowContractTest(unittest.TestCase):
                 )
                 self.assertEqual("linux/arm64", image_step["with"]["platforms"])
                 self.assertEqual("true", image_step["with"]["push"])
-                self.assertIn("${{ github.sha }}", image_step["with"]["tags"])
+                expected_sha = "${{ github.sha }}"
+                self.assertIn(expected_sha, image_step["with"]["tags"])
                 self.assertEqual(
                     ["self-hosted", "linux", "ARM64", environment],
                     deploy["runs-on"],
@@ -68,7 +69,7 @@ class WorkflowContractTest(unittest.TestCase):
                     for step in deploy["steps"]
                     if step.get("uses", "").startswith("actions/checkout@")
                 )
-                self.assertEqual("${{ github.sha }}", checkout["with"]["ref"])
+                self.assertEqual(expected_sha, checkout["with"]["ref"])
                 self.assertIn("infra/scripts/deploy.sh", deploy["steps"][-1]["run"])
 
     def test_start_release_creates_one_release_branch_and_draft_pr(self) -> None:
@@ -78,6 +79,9 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertEqual("true", release_input["required"])
         self.assertEqual("write", workflow["permissions"]["contents"])
         self.assertEqual("write", workflow["permissions"]["pull-requests"])
+        self.assertEqual("write", workflow["permissions"]["actions"])
+        self.assertEqual("start-release", workflow["concurrency"]["group"])
+        self.assertEqual("false", workflow["concurrency"]["cancel-in-progress"])
         script = "\n".join(
             step.get("run", "") for step in workflow["jobs"]["start"]["steps"]
         )
@@ -92,6 +96,9 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertIn("--draft", script)
         self.assertIn("--base main", script)
         self.assertIn("--body-file", script)
+        self.assertIn("gh workflow run deploy-staging.yml", script)
+        self.assertIn('--ref "$branch"', script)
+        self.assertNotIn("commit_sha", script)
         for section in (
             "해결하려는 문제가 무엇인가요?",
             "왜 해야 하나요?",
@@ -103,6 +110,26 @@ class WorkflowContractTest(unittest.TestCase):
             "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
         ):
             self.assertIn(section, script)
+
+    def test_dispatched_staging_deploy_uses_the_dispatched_release_ref_sha(self) -> None:
+        workflow = self._workflow("deploy-staging.yml")
+
+        self.assertIn("workflow_dispatch", workflow["on"])
+        build = workflow["jobs"]["build"]
+        checkout = next(
+            step
+            for step in build["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        image = next(step for step in build["steps"] if step.get("id") == "image")
+        deploy_checkout = next(
+            step
+            for step in workflow["jobs"]["deploy"]["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertEqual("${{ github.sha }}", checkout["with"]["ref"])
+        self.assertIn("${{ github.sha }}", image["with"]["tags"])
+        self.assertEqual("${{ github.sha }}", deploy_checkout["with"]["ref"])
 
     def test_production_reuses_release_digest_and_builds_hotfix(self) -> None:
         workflow = self._workflow("deploy-production.yml")
@@ -143,7 +170,9 @@ class WorkflowContractTest(unittest.TestCase):
         revert = workflow["jobs"]["revert"]
         script = "\n".join(step.get("run", "") for step in revert["steps"])
 
+        self.assertIn("needs.deploy.outputs.attempted == 'true'", revert["if"])
         self.assertIn("needs.deploy.result == 'failure'", revert["if"])
+        self.assertNotIn("needs.image.result == 'failure'", revert["if"])
         self.assertEqual("write", revert["permissions"]["contents"])
         self.assertEqual("write", revert["permissions"]["pull-requests"])
         self.assertIn("revert/${GITHUB_SHA}", script)
@@ -153,6 +182,20 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertIn("--draft", script)
         self.assertIn("--base main", script)
         self.assertIn("kind != 'revert'", revert["if"])
+
+    def test_release_production_deploy_validates_the_merged_source_tree(self) -> None:
+        workflow = self._workflow("deploy-production.yml")
+        image = workflow["jobs"]["image"]
+        script = "\n".join(step.get("run", "") for step in image["steps"])
+        gradle_step = next(
+            step for step in image["steps"] if "./gradlew" in step.get("run", "")
+        )
+
+        self.assertIn("needs.classify.outputs.head_sha", script)
+        self.assertIn("git diff --quiet", script)
+        self.assertIn("^{tree}", script)
+        self.assertIn("clean check bootJar", gradle_step["run"])
+        self.assertNotIn("if", gradle_step)
 
     def test_successful_production_deploy_creates_sync_metadata(self) -> None:
         workflow = self._workflow("deploy-production.yml")
