@@ -10,7 +10,9 @@ from harness.lib.shell_runtime import select_shell
 
 
 def main() -> int:
-    paths = sorted(path for path in (ROOT / ".githooks").iterdir() if path.is_file())
+    git_hooks = (path for path in (ROOT / ".githooks").iterdir() if path.is_file())
+    infra_scripts = (ROOT / "infra" / "scripts").glob("*.sh")
+    paths = sorted((*git_hooks, *infra_scripts))
     for path in paths:
         completed = subprocess.run(
             (str(select_shell()), "-n", str(path)), cwd=ROOT, check=False
