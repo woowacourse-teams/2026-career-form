@@ -324,17 +324,17 @@
 - Bootstrap scripts: 설치 계획을 `--check`로 검증하며 secret이나 runner registration token을 받지 않음
 - Runbook: GitHub Environment vars/secrets 이름, Docker Hub push/pull 계정 경계, 최초 배포·재실행·rollback 절차
 
-- [ ] **Step 1: bootstrap 안전 경계 실패 테스트 작성**
+- [x] **Step 1: bootstrap 안전 경계 실패 테스트 작성**
 
   scripts의 `--check`를 실제 실행해 지원 OS, 필수 명령, 2GiB swap·Docker·host service 상태를 읽기 전용으로 보고하는지 검증한다. 인자 없이 실행하면 관리자 확인 없이는 설치를 시작하지 않아야 하고 secret 값을 인자로 받지 않아야 한다.
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest infra.tests.test_bootstrap_scripts -v`
 
   Expected: bootstrap script 부재로 FAIL.
 
-- [ ] **Step 3: scripts와 운영 문서 구현**
+- [x] **Step 3: scripts와 운영 문서 구현**
 
   설치 script는 재현 가능한 명령과 systemd unit 예시를 제공하되 이 작업에서 실행하지 않는다. 문서는 다음 사람 작업을 체크리스트로 분리한다.
 
@@ -343,12 +343,12 @@
   Docker Hub push/pull-only accounts
   Nginx/cloudflared/swap/MongoDB systemd
   환경별 DB와 readWrite 계정
-  deploy.sh 설치 경로와 비민감 state directory
+  신뢰된 push commit checkout과 비민감 state directory
   최초 배포, 재실행, readiness rollback, Draft revert PR 확인
   secret·실제 URI·registration token 기록 금지
   ```
 
-- [ ] **Step 4: 전체 GREEN 확인**
+- [x] **Step 4: 전체 GREEN 확인**
 
   Run:
 
@@ -361,7 +361,7 @@
 
   Expected: 전부 exit 0, harness coverage 80% 이상.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
   ```bash
   git add infra/scripts infra/tests docs/operations backend/README.md docs/plans/19-docker-cicd.md
