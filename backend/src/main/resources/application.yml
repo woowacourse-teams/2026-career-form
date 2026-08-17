@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: career-form-backend
+  mongodb:
+    uri: ${SPRING_MONGODB_URI}
+  threads:
+    virtual:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: false
+    version: OPENAPI_3_0
+  swagger-ui:
+    enabled: false

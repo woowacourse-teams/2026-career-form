@@ -7,6 +7,7 @@ htmlcov/
 .DS_Store
 *.log
 spikes/page-analysis/*.zip
+# `.env.local`을 포함한 팀 공유 환경 파일은 Git에 기록하지 않는다.
 .env
 .env.*
 !.env.example
@@ -14,3 +15,13 @@ frontend/node_modules/
 frontend/.output/
 frontend/.wxt/
 frontend/coverage/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# JVM diagnostics
+hs_err_pid*
+replay_pid*
+*.hprof
