@@ -378,6 +378,9 @@
 - [x] rollback 성공 뒤 실패 digest와 stale image를 정리한다.
 - [x] release 운영 배포 전에 main merge tree 일치와 Gradle source 검증을 수행한다.
 - [x] Nginx, Cloudflare Tunnel, MongoDB 인증·계정 격리 절차를 비밀값 없는 예제로 보강한다.
+- [x] Cloudflare APT source가 내려받은 signing key를 명시적으로 사용한다.
+- [x] release의 모든 변경을 staging에 배포해 release HEAD SHA digest를 보장한다.
+- [x] 이전 digest가 없는 최초 실패에서도 실패 container와 image를 정리한다.
 
 ## 수동 확인과 사람 담당
 

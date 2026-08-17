@@ -11,7 +11,7 @@ checkout해 `infra/scripts/deploy.sh`를 실행한다.
 | backend 변경 PR | Java 21 `clean check bootJar` |
 | `develop` push | 새 image build/push 후 development 배포 |
 | Start release 실행 | `release/<version>`과 main 대상 Draft PR 생성 후 staging workflow 명시적 dispatch |
-| `release/*` push | 새 image build/push 후 staging 배포 |
+| `release/*` push | 변경 경로와 무관하게 새 image build/push 후 staging 배포 |
 | `release/*` → `main` Merge Commit | staging의 release head SHA digest를 production으로 재사용 |
 | `hotfix/CF-*` → `main` Squash Merge | main SHA image를 새로 빌드해 production으로 직접 배포 |
 | production 성공 | release tag와 필요한 동기화 PR 생성 |
@@ -31,7 +31,8 @@ sudo find /var/lib/career-form/deploy -maxdepth 2 \
 ```
 
 최초 배포에는 `previous-digest`가 없다. readiness가 실패하면 자동 복구 대상이 없으므로
-workflow가 실패하고 사람이 MongoDB, network, profile, port와 container log를 확인한다.
+실패 container와 참조되지 않는 image를 제거한 뒤 workflow가 실패한다. 사람은 MongoDB,
+network, profile, port와 workflow 실행 중 수집한 container log를 확인한다.
 
 ## Release 배포
 
