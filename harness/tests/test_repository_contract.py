@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import tomllib
@@ -148,8 +149,28 @@ class RepositoryContractTest(unittest.TestCase):
             for path in (ROOT / ".github" / "workflows").glob("*.yml")
         )
 
-        self.assertNotIn('"command": "python3 ', hooks)
+        self.assertIn('"command": "python3 ', hooks)
         self.assertNotRegex(workflows, r"(?m)^\s*run: harness/scripts/[^\s]+\.py")
+
+    def test_git_hook_scripts_are_forced_to_lf(self) -> None:
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+
+        self.assertIn(".githooks/** text eol=lf", attributes)
+        self.assertIn("*.sh text eol=lf", attributes)
+        for path in (ROOT / ".githooks").iterdir():
+            if path.is_file():
+                with self.subTest(path=path.name):
+                    self.assertNotIn(b"\r\n", path.read_bytes())
+
+    def test_harness_documents_wsl_linux_as_the_only_official_runtime(self) -> None:
+        documents = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (ROOT / "AGENTS.md", ROOT / "harness" / "README.md")
+        )
+
+        self.assertIn("WSL/Linux", documents)
+        self.assertIn("/home/", documents)
+        self.assertIn("Windows PowerShell 직접 실행은 지원 대상이 아니다", documents)
 
     def test_verify_covers_syntax_skills_and_execpolicy(self) -> None:
         verify = (ROOT / "harness" / "scripts" / "verify.py").read_text(
@@ -167,6 +188,7 @@ class RepositoryContractTest(unittest.TestCase):
         )
 
         self.assertIn("@openai/codex@0.146.0", workflow)
+        self.assertIn("python3 harness/scripts/verify.py", workflow)
 
     def test_default_worktree_directory_is_ignored(self) -> None:
         patterns = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
@@ -228,8 +250,10 @@ class RepositoryContractTest(unittest.TestCase):
                 "RUNNER_TEMP": runner_temp,
                 "PATH": "",
             }
+            shell = shutil.which("bash")
+            self.assertIsNotNone(shell)
             result = subprocess.run(
-                ("/bin/bash", "-c", issue_step["run"]),
+                (shell, "-c", issue_step["run"]),
                 check=False,
                 capture_output=True,
                 text=True,

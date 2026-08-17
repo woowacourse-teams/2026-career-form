@@ -8,6 +8,7 @@
 - 일반·릴리스 수정 작업 브랜치는 `CF-<Issue 번호>`, 운영 hotfix 작업 브랜치는
   `hotfix/CF-<Issue 번호>` 형식으로 만든다.
 - AI는 새 clone 또는 worktree에서 파일을 수정하기 전에 운영체제에 맞는 Python으로 `harness/scripts/ensure-environment.py`를 실행해 작업 환경을 자동 구성한다. 자동 구성에 실패하면 수정하지 않고 원인을 보고한다.
+- 하네스, Git 훅, 에이전트 검증의 공식 실행 환경은 WSL/Linux다. Windows 사용자는 WSL 내부 파일시스템의 `/home/...` 아래에 저장소를 clone하고 WSL의 `git`, `python3`, 가상환경으로 검증한다. Windows PowerShell 직접 실행은 지원 대상이 아니다.
 - 작업 계획은 필요할 때 `docs/plans/<Issue 번호>-<slug>.md`에 기록한다.
 - 공용 `HANDOFF.md`를 작업 상태 기록에 사용하지 않는다.
 

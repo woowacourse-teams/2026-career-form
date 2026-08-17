@@ -1,5 +1,13 @@
 # 브랜치와 환경
 
+## 하네스 실행 환경
+
+하네스, Git 훅, Codex 에이전트 검증은 WSL/Linux를 공식 실행 환경으로 사용한다. Windows 사용자는 WSL 내부 파일시스템의 `/home/...` clone에서 WSL `git`, `python3`, `.venv/bin/python`을 사용한다. Windows PowerShell 직접 실행과 Windows 파일시스템의 `/mnt/<drive>/...` clone은 지원 대상이 아니다.
+
+Codex는 WSL 내부 Node.js로 설치한 실행기만 사용한다. `command -v codex`가 `/mnt/<drive>/...`를 가리키면 Windows 설치가 섞인 상태이므로 하네스 검증을 시작하지 않는다.
+
+로컬과 Linux CI는 각각 `python3 harness/scripts/ensure-environment.py`와 `python3 harness/scripts/verify.py`를 같은 검증 진입점으로 사용한다.
+
 | 기준 | 개발 서버 | 스테이징 서버 | 운영 서버 |
 |---|---|---|---|
 | 소스 | `CF-*`, `develop` | `release/<MAJOR.MINOR.PATCH>` | `hotfix/CF-*`, `main` |

@@ -4,12 +4,8 @@ from pathlib import Path
 
 
 def virtual_environment_python(root: Path, *, os_name: str = os.name) -> Path:
-    relative = (
-        Path("Scripts") / "python.exe"
-        if os_name == "nt"
-        else Path("bin") / "python"
-    )
-    return root / ".venv" / relative
+    _ = os_name
+    return root / ".venv" / "bin" / "python"
 
 
 def select_python(

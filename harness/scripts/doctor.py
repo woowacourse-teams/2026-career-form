@@ -9,9 +9,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from harness.lib.python_runtime import virtual_environment_python
+from harness.lib.codex_runtime import select_codex
 
 
-REQUIRED_COMMANDS = ("codex", "gh", "git")
+REQUIRED_COMMANDS = ("gh", "git")
 REQUIRED_PATHS = (
     ".codex/config.toml",
     ".codex/hooks.json",
@@ -39,6 +40,10 @@ def main() -> int:
         for command in REQUIRED_COMMANDS
         if shutil.which(command) is None
     ]
+    try:
+        select_codex()
+    except FileNotFoundError as error:
+        errors.append(str(error))
     errors.extend(
         f"필수 파일이 없습니다: {path}"
         for path in REQUIRED_PATHS
