@@ -368,6 +368,17 @@
   git commit -m "docs: 서버 초기화와 배포 운영 절차 기록"
   ```
 
+## 독립 리뷰 반영
+
+- [x] Start release가 `GITHUB_TOKEN` push에 의존하지 않고 staging workflow를 명시적으로 dispatch한다.
+- [x] Start release 동시 실행을 직렬화해 활성 release 중복 생성 경쟁을 막는다.
+- [x] runner 공용 group이 배포 digest 상태를 읽고 쓸 수 있도록 디렉터리와 파일 권한을 제한한다.
+- [x] 운영 revert PR은 image job 실패가 아니라 실제 deploy step 실패에만 생성한다.
+- [x] readiness 요청별 timeout과 전체 120초 deadline을 적용한다.
+- [x] rollback 성공 뒤 실패 digest와 stale image를 정리한다.
+- [x] release 운영 배포 전에 main merge tree 일치와 Gradle source 검증을 수행한다.
+- [x] Nginx, Cloudflare Tunnel, MongoDB 인증·계정 격리 절차를 비밀값 없는 예제로 보강한다.
+
 ## 수동 확인과 사람 담당
 
 - GitHub Environment, variables, secrets와 self-hosted runner label 생성

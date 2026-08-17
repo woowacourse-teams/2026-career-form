@@ -70,6 +70,20 @@ GitHub-hosted job만 PR 코드를 실행한다. public repository의 PR이 appli
 
 runner 서비스 사용자를 Docker group에 추가한 뒤 다시 로그인하고 다음을 확인한다.
 
+development와 staging runner를 서로 다른 Linux 사용자로 등록했다면 두 사용자 모두
+`docker` group에 포함한다. 이 group은 Docker 접근뿐 아니라 비민감 배포 digest 상태를
+공유하는 데 사용한다.
+
+```bash
+sudo usermod -aG docker <development-runner-user>
+sudo usermod -aG docker <staging-runner-user>
+sudo usermod -aG docker <production-runner-user>
+sudo chgrp docker /var/lib/career-form/deploy
+sudo chmod 0770 /var/lib/career-form/deploy
+```
+
+각 host에는 실제 존재하는 runner 사용자만 적용하고 runner 서비스를 재시작한다.
+
 ```bash
 docker version
 docker compose version
@@ -98,8 +112,82 @@ sudo env BOOTSTRAP_CONFIRM=APPLY_APP_HOST \
 ```
 
 `--apply`는 OS 패키지, Docker 공식 apt repository, cloudflared package, 2 GiB swap,
-`/var/lib/career-form/deploy` state directory와 Docker/Nginx 서비스를 준비한다. runner
-등록, Nginx virtual host, Cloudflare Tunnel 생성과 credential 배치는 자동화하지 않는다.
+`root:docker` 소유의 `/var/lib/career-form/deploy` state directory와 Docker/Nginx 서비스를
+준비한다. runner 등록, Nginx virtual host, Cloudflare Tunnel 생성과 credential 배치는
+자동화하지 않는다.
+
+## Nginx reverse proxy
+
+development/staging host의 `/etc/nginx/sites-available/career-form`에 다음 형태로 저장한다.
+`<...>` 값은 GitHub Environment의 `BACKEND_PORT` 및 실제 hostname으로 치환한다.
+
+```nginx
+server {
+    listen 127.0.0.1:80;
+    server_name <development-hostname>;
+
+    location / {
+        proxy_pass http://127.0.0.1:<development-backend-port>;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+
+server {
+    listen 127.0.0.1:80;
+    server_name <staging-hostname>;
+
+    location / {
+        proxy_pass http://127.0.0.1:<staging-backend-port>;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+production host에는 같은 형식의 server block 하나만 두고 production hostname과 port를
+사용한다. 적용 전에 placeholder가 남지 않았는지 확인하고 다음 순서로 활성화한다.
+
+```bash
+sudo ln -s /etc/nginx/sites-available/career-form /etc/nginx/sites-enabled/career-form
+sudo unlink /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+해당 symlink가 실제로 존재할 때만 `ln` 또는 `unlink`를 실행한다. 앱 배포 workflow는
+Nginx 파일과 서비스를 변경하지 않는다.
+
+## Cloudflare Tunnel
+
+Cloudflare 관리자 화면에서 host별 tunnel과 DNS hostname을 만든 뒤, 화면이 제공하는
+일회성 설치 명령은 관리자 터미널에서만 실행한다. token과 생성된 credential JSON을
+Issue·PR·셸 history에 복사하지 않는다. locally-managed tunnel을 사용한다면
+`/etc/cloudflared/config.yml`을 다음 형태로 두고 mode를 `0600`으로 제한한다.
+
+```yaml
+tunnel: <tunnel-uuid>
+credentials-file: /etc/cloudflared/<tunnel-uuid>.json
+
+ingress:
+  - hostname: <development-hostname>
+    service: http://127.0.0.1:80
+  - hostname: <staging-hostname>
+    service: http://127.0.0.1:80
+  - service: http_status:404
+```
+
+production host는 production hostname 항목 하나만 둔다. 설정 후 다음을 확인한다.
+
+```bash
+sudo chmod 0600 /etc/cloudflared/config.yml /etc/cloudflared/<tunnel-uuid>.json
+sudo cloudflared tunnel ingress validate
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+sudo systemctl status cloudflared --no-pager
+```
 
 ## MongoDB host bootstrap
 
@@ -112,13 +200,57 @@ sudo env BOOTSTRAP_CONFIRM=APPLY_MONGODB_HOST \
 ```
 
 `--apply`는 MongoDB 8.0 공식 apt repository, MongoDB systemd service와 2 GiB swap만
-준비한다. 다음 항목은 사람이 private network에서 수행한다.
+준비한다. MongoDB가 기본 loopback bind 상태일 때 host 내부 `mongosh`에서 관리자 계정을
+먼저 만들고, 비밀번호는 `passwordPrompt()`로만 입력한다.
 
-- private interface만 허용하는 bind 설정과 security group
-- 인증 활성화와 관리자 계정
-- development, staging, production database 및 환경별 `readWrite` 계정
-- TLS, backup, restore rehearsal, 저장 공간과 경보
-- 생성한 환경별 URI를 해당 GitHub Environment의 `SPRING_MONGODB_URI`에 입력
+```javascript
+use admin
+db.createUser({
+  user: "career_form_admin",
+  pwd: passwordPrompt(),
+  roles: [{ role: "userAdminAnyDatabase", db: "admin" }]
+})
+```
+
+이후 application host security group에서 오는 TCP 27017만 MongoDB host에 허용한다.
+`/etc/mongod.conf`에는 인증과 private bind를 함께 적용하고 재시작한다. public IP나
+`0.0.0.0`은 사용하지 않는다.
+
+```yaml
+net:
+  port: 27017
+  bindIp: 127.0.0.1,<mongodb-private-ip>
+
+security:
+  authorization: enabled
+```
+
+```bash
+sudo systemctl restart mongod
+sudo systemctl is-active mongod
+mongosh --host 127.0.0.1 --authenticationDatabase admin \
+  --username career_form_admin --password
+```
+
+인증된 `mongosh`에서 환경마다 다음 블록의 database와 username만 바꿔 세 계정을 만든다.
+각 계정에는 자기 database의 `readWrite`만 부여한다.
+
+```javascript
+use career_form_development
+db.createUser({
+  user: "career_form_development",
+  pwd: passwordPrompt(),
+  roles: [{ role: "readWrite", db: "career_form_development" }]
+})
+```
+
+같은 방식으로 `career_form_staging`, `career_form_production`을 각각 생성한다. 비밀번호를
+URI에 넣을 때는 percent-encoding하고 완성된 URI는 해당 GitHub Environment Secret에만
+입력한다. 계정 격리는 각 계정으로 자기 DB의 읽기·쓰기 성공과 다른 DB의 쓰기 실패를
+확인한다.
+
+운영 중에는 security group·bind·계정 권한을 주기적으로 재확인하고 TLS, backup, restore
+rehearsal, 저장 공간과 경보는 별도 운영 정책으로 관리한다.
 
 ## 활성화 전 확인
 

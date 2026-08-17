@@ -10,7 +10,7 @@ checkout해 `infra/scripts/deploy.sh`를 실행한다.
 |---|---|
 | backend 변경 PR | Java 21 `clean check bootJar` |
 | `develop` push | 새 image build/push 후 development 배포 |
-| Start release 실행 | `release/<version>`과 main 대상 Draft PR 생성 |
+| Start release 실행 | `release/<version>`과 main 대상 Draft PR 생성 후 staging workflow 명시적 dispatch |
 | `release/*` push | 새 image build/push 후 staging 배포 |
 | `release/*` → `main` Merge Commit | staging의 release head SHA digest를 production으로 재사용 |
 | `hotfix/CF-*` → `main` Squash Merge | main SHA image를 새로 빌드해 production으로 직접 배포 |
@@ -65,12 +65,13 @@ hotfix label은 사용하지 않으며 staging을 우회한다. 일반 `CF-*` �
 1. digest image pull
 2. Compose 설정을 `config --quiet`으로 검증
 3. `up --detach --no-build backend`
-4. loopback `/actuator/health`를 5초 간격으로 최대 24회 확인
+4. 요청별 timeout을 두고 loopback `/actuator/health`를 5초 간격, 전체 최대 120초 확인
 5. 성공 시 `current-digest`와 `previous-digest`를 atomic하게 갱신
 
 새 image가 준비되지 않으면 기존 `current-digest`를 다시 올리고 readiness를 재확인한다.
 rollback이 성공해도 원래 workflow는 실패 상태를 유지한다. development와 staging이 같은
-host를 사용하므로 image 정리는 host의 모든 환경 current/previous digest를 보존한다.
+host를 사용하므로 image 정리는 host의 모든 환경 current/previous digest를 보존하며,
+실패한 신규 digest도 rollback 성공 직후 정리한다.
 
 production 실패 시 CI가 `revert/<main-merge-sha>` Draft PR을 만든다. 사람은 다음을
 확인한 뒤에만 승인·병합한다.
