@@ -4,6 +4,8 @@ set -euo pipefail
 readonly REQUIRED_SWAP_KIB=2097152
 DEPLOY_STATE_DIR="${DEPLOY_STATE_DIR:-/var/lib/career-form/deploy}"
 DEPLOY_RUNNER_GROUP="${DEPLOY_RUNNER_GROUP:-docker}"
+CLOUDFLARED_KEYRING_DIR="${CLOUDFLARED_KEYRING_DIR:-/usr/share/keyrings}"
+APT_SOURCES_DIR="${APT_SOURCES_DIR:-/etc/apt/sources.list.d}"
 
 usage() {
   printf 'usage: %s --check | --apply\n' "$0" >&2
@@ -127,12 +129,12 @@ install_docker_repository() {
 }
 
 install_cloudflared_repository() {
-  install -m 0755 -d /usr/share/keyrings
+  install -m 0755 -d "$CLOUDFLARED_KEYRING_DIR" "$APT_SOURCES_DIR"
   curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-    -o /usr/share/keyrings/cloudflare-main.gpg
+    -o "$CLOUDFLARED_KEYRING_DIR/cloudflare-main.gpg"
   printf '%s\n' \
-    'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' \
-    > /etc/apt/sources.list.d/cloudflared.list
+    "deb [signed-by=$CLOUDFLARED_KEYRING_DIR/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \
+    > "$APT_SOURCES_DIR/cloudflared.list"
 }
 
 prepare_deploy_state_directory() {

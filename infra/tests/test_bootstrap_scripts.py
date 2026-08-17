@@ -83,6 +83,59 @@ class BootstrapScriptContractTest(unittest.TestCase):
             self.assertEqual(0o770, stat.S_IMODE(state_stat.st_mode))
             self.assertEqual(os.getgid(), state_stat.st_gid)
 
+    def test_cloudflared_repository_uses_the_downloaded_signing_key(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary_directory = root / "bin"
+            binary_directory.mkdir()
+            fake_curl = binary_directory / "curl"
+            fake_curl.write_text(
+                """#!/usr/bin/env bash
+set -eu
+output=''
+while (( $# > 0 )); do
+  if [[ "$1" == "-o" ]]; then
+    output="$2"
+    shift 2
+  else
+    shift
+  fi
+done
+: > "$output"
+""",
+                encoding="utf-8",
+            )
+            fake_curl.chmod(0o755)
+            environment = {
+                **os.environ,
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; CLOUDFLARED_KEYRING_DIR="$2/keyrings"; '
+                    'APT_SOURCES_DIR="$2/sources"; '
+                    "install_cloudflared_repository",
+                    "cloudflared-repository-test",
+                    str(APP_SCRIPT),
+                    str(root),
+                ),
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            source = (root / "sources" / "cloudflared.list").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(
+                f"signed-by={root}/keyrings/cloudflare-main.gpg", source
+            )
+
     def test_setup_document_lists_required_github_configuration_names(self) -> None:
         setup = (ROOT / "docs" / "operations" / "cicd-setup.md").read_text(
             encoding="utf-8"
