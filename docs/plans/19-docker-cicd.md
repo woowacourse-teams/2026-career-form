@@ -37,17 +37,17 @@
 - Consumes: repository root, Docker Compose CLI, YAML workflow files
 - Produces: `python -m unittest discover -s infra/tests -p 'test_*.py'` 검증 진입점
 
-- [ ] **Step 1: 검증 진입점 실패 테스트 작성**
+- [x] **Step 1: 검증 진입점 실패 테스트 작성**
 
   `harness/tests/test_repository_contract.py`에서 전체 검증이 `infra/tests`를 실행하고 shell syntax 검사가 `infra/scripts/*.sh`를 포함해야 한다는 계약을 추가한다. production 검증 코드를 제거하거나 경로를 누락하면 실패해야 한다.
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`
 
   Expected: `infra/tests` 또는 `infra/scripts` 검증 연결이 없어 FAIL.
 
-- [ ] **Step 3: 최소 검증 연결 구현**
+- [x] **Step 3: 최소 검증 연결 구현**
 
   `harness/scripts/verify.py`에 다음 명령을 coverage report 이후 추가한다.
 
@@ -57,13 +57,13 @@
 
   `validate-shell-syntax.py`는 `.githooks/*`와 `infra/scripts/*.sh`를 합쳐 `bash -n`으로 검사한다.
 
-- [ ] **Step 4: GREEN 확인**
+- [x] **Step 4: GREEN 확인**
 
   Run: `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`
 
   Expected: PASS.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
   ```bash
   git add harness infra/tests
@@ -83,7 +83,7 @@
 - Consumes: `BACKEND_IMAGE`, `BACKEND_PORT`, `SPRING_PROFILES_ACTIVE`, `SPRING_MONGODB_URI`
 - Produces: digest-pinned `backend` service with loopback port, healthcheck, and `json-file` rotation
 
-- [ ] **Step 1: Compose 실패 테스트 작성**
+- [x] **Step 1: Compose 실패 테스트 작성**
 
   실제 `docker compose --project-directory <root> -f compose.yaml -f infra/compose.deploy.yaml config --format json`을 비식별 dummy 환경값으로 실행한다. 렌더링 결과가 다음을 만족하지 않으면 실패한다.
 
@@ -97,17 +97,17 @@
   no build section
   ```
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest infra.tests.test_compose_contract -v`
 
   Expected: `infra/compose.deploy.yaml` 부재로 FAIL.
 
-- [ ] **Step 3: Compose와 runtime health 도구 구현**
+- [x] **Step 3: Compose와 runtime health 도구 구현**
 
   `infra/compose.deploy.yaml`은 기존 `compose.yaml`의 backend에 registry digest, 환경값, loopback port와 로그 순환만 overlay한다. `backend/Dockerfile` runtime stage에는 Compose healthcheck가 호출하는 `curl`만 `--no-install-recommends`로 설치하고 apt index를 제거한다.
 
-- [ ] **Step 4: GREEN 및 ARM64 build 확인**
+- [x] **Step 4: GREEN 및 ARM64 build 확인**
 
   Run:
 
@@ -118,7 +118,7 @@
 
   Expected: Compose test PASS, Docker build exit 0.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
   ```bash
   git add backend/Dockerfile compose.yaml infra/compose.deploy.yaml infra/tests/test_compose_contract.py

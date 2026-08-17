@@ -19,7 +19,10 @@ RUN java -Djarmode=tools -jar application.jar \
 FROM eclipse-temurin:21-jre-noble AS runtime
 WORKDIR /application
 
-RUN groupadd --system careerform \
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system careerform \
     && useradd \
         --system \
         --gid careerform \
