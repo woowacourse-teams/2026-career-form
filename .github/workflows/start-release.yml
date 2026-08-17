@@ -42,9 +42,28 @@ jobs:
           branch="release/$VERSION"
           git switch --create "$branch" origin/develop
           git push origin "$branch"
+          body="$RUNNER_TEMP/release-pr.md"
+          printf '%s\n' \
+            '## 해결하려는 문제가 무엇인가요?' \
+            "release/$VERSION 후보를 스테이징에서 고정 검증하고 운영에 반영합니다." \
+            '## 왜 해야 하나요?' \
+            '다음 develop 작업과 현재 릴리스 후보 검증을 분리해야 합니다.' \
+            '## 어떻게 해결했나요?' \
+            "develop HEAD에서 release/$VERSION 브랜치와 Draft PR을 생성했습니다." \
+            '## 이 PR의 한계 & 트레이드오프' \
+            '스테이징 E2E, 최종 승인과 병합은 사람이 수행합니다.' \
+            '## 기존 기능에 미치는 영향' \
+            '검증된 release digest만 운영 배포 대상으로 승격됩니다.' \
+            '## Edge Case & 실패 시나리오' \
+            '스테이징 검증 실패 시 원인을 수정하고 release 브랜치에서 다시 검증합니다.' \
+            '## 검토한 대안과 선택 이유' \
+            'develop 직접 승격 대신 고정된 release 브랜치를 선택했습니다.' \
+            '## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)' \
+            '🔴 스테이징 digest와 운영 승격 digest가 동일한지 확인합니다.' \
+            > "$body"
           gh pr create \
             --draft \
             --base main \
             --head "$branch" \
             --title "[Release] $VERSION 운영 반영" \
-            --body "release/$VERSION 스테이징 검증과 운영 반영을 추적합니다."
+            --body-file "$body"

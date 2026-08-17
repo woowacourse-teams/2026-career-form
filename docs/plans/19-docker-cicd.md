@@ -254,24 +254,24 @@
 
 **Interfaces:**
 - `classify-main-merge.py <event-json> <associated-prs-json>` stdout JSON: `kind`, `head_ref`, `head_sha`, optional `version`
-- Kinds: `release`, `hotfix`; any other main push is rejected
+- Kinds: `release`, `hotfix`, `revert`; any other main push is rejected. `revert` 병합은 이미 rollback된 서버를 재배포하지 않고 main 소스만 정렬한다.
 - Production runner: `[self-hosted, linux, ARM64, production]`, environment `production`
 
-- [ ] **Step 1: main merge 분류 실패 테스트 작성**
+- [x] **Step 1: main merge 분류 실패 테스트 작성**
 
   실제 GitHub push와 associated PR 구조를 완전한 비식별 fixture로 전달한다. `release/1.2.3` Merge Commit은 release, `hotfix/CF-19` Squash Merge는 hotfix로 분류하고 일반 CF, 누락 PR, 여러 matching PR은 실패해야 한다.
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest infra.tests.test_release_metadata -v`
 
   Expected: 분류 script 부재로 FAIL.
 
-- [ ] **Step 3: 분류기 구현과 GREEN 확인**
+- [x] **Step 3: 분류기 구현과 GREEN 확인**
 
   외부 JSON type을 경계에서 검증하고 release version은 branch 계약과 같은 세 부분 숫자만 허용한다. hotfix는 `hotfix/CF-<positive issue>`만 허용한다.
 
-- [ ] **Step 4: production workflow 실패 테스트 작성**
+- [x] **Step 4: production workflow 실패 테스트 작성**
 
   YAML 구조로 다음을 검증한다.
 
@@ -286,13 +286,13 @@
   sync merged: release branch 삭제
   ```
 
-- [ ] **Step 5: production·revert·동기화 구현**
+- [x] **Step 5: production·revert·동기화 구현**
 
   배포 job은 `continue-on-error`로 성공을 위장하지 않는다. 후속 job은 `needs.deploy.result`를 기준으로 성공과 실패를 분리한다. revert job은 merge commit이면 `git revert -m 1`, 단일 parent이면 `git revert`를 사용해 Draft PR만 만들고 main에 직접 push하지 않는다.
 
   `docs/conventions/branching.md`는 운영 실패 시 CI가 Draft revert PR을 만들고 사람은 승인·머지를 담당하도록 갱신한다.
 
-- [ ] **Step 6: GREEN 확인**
+- [x] **Step 6: GREEN 확인**
 
   Run:
 
@@ -303,7 +303,7 @@
 
   Expected: PASS.
 
-- [ ] **Step 7: 커밋**
+- [x] **Step 7: 커밋**
 
   ```bash
   git add .github/workflows infra/scripts/classify-main-merge.py infra/tests docs/conventions/branching.md

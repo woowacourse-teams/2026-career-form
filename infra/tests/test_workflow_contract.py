@@ -91,6 +91,105 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertIn("gh pr create", script)
         self.assertIn("--draft", script)
         self.assertIn("--base main", script)
+        self.assertIn("--body-file", script)
+        for section in (
+            "해결하려는 문제가 무엇인가요?",
+            "왜 해야 하나요?",
+            "어떻게 해결했나요?",
+            "이 PR의 한계 & 트레이드오프",
+            "기존 기능에 미치는 영향",
+            "Edge Case & 실패 시나리오",
+            "검토한 대안과 선택 이유",
+            "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
+        ):
+            self.assertIn(section, script)
+
+    def test_production_reuses_release_digest_and_builds_hotfix(self) -> None:
+        workflow = self._workflow("deploy-production.yml")
+
+        self.assertEqual(["main"], workflow["on"]["push"]["branches"])
+        classify_script = "\n".join(
+            step.get("run", "")
+            for step in workflow["jobs"]["classify"]["steps"]
+        )
+        self.assertIn("commits/${GITHUB_SHA}/pulls", classify_script)
+        self.assertIn("classify-main-merge.py", classify_script)
+
+        image = workflow["jobs"]["image"]
+        release = next(step for step in image["steps"] if step.get("id") == "release")
+        hotfix = next(step for step in image["steps"] if step.get("id") == "hotfix")
+        self.assertIn("needs.classify.outputs.head_sha", release["env"]["IMAGE_TAG"])
+        self.assertIn("imagetools inspect", release["run"])
+        self.assertEqual("linux/arm64", hotfix["with"]["platforms"])
+        self.assertEqual("true", hotfix["with"]["push"])
+        self.assertIn("${{ github.sha }}", hotfix["with"]["tags"])
+
+        deploy = workflow["jobs"]["deploy"]
+        self.assertEqual(
+            ["self-hosted", "linux", "ARM64", "production"], deploy["runs-on"]
+        )
+        self.assertEqual("production", deploy["environment"])
+        self.assertEqual("prod", deploy["env"]["SPRING_PROFILES_ACTIVE"])
+        self.assertIn("kind != 'revert'", deploy["if"])
+        checkout = next(
+            step
+            for step in deploy["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertEqual("${{ github.sha }}", checkout["with"]["ref"])
+
+    def test_production_failure_creates_draft_revert_pr(self) -> None:
+        workflow = self._workflow("deploy-production.yml")
+        revert = workflow["jobs"]["revert"]
+        script = "\n".join(step.get("run", "") for step in revert["steps"])
+
+        self.assertIn("needs.deploy.result == 'failure'", revert["if"])
+        self.assertEqual("write", revert["permissions"]["contents"])
+        self.assertEqual("write", revert["permissions"]["pull-requests"])
+        self.assertIn("revert/${GITHUB_SHA}", script)
+        self.assertIn("git revert --no-edit -m 1", script)
+        self.assertIn("git revert --no-edit", script)
+        self.assertIn("gh pr create", script)
+        self.assertIn("--draft", script)
+        self.assertIn("--base main", script)
+        self.assertIn("kind != 'revert'", revert["if"])
+
+    def test_successful_production_deploy_creates_sync_metadata(self) -> None:
+        workflow = self._workflow("deploy-production.yml")
+        release = workflow["jobs"]["release-success"]
+        hotfix = workflow["jobs"]["hotfix-success"]
+        release_script = "\n".join(
+            step.get("run", "") for step in release["steps"]
+        )
+        hotfix_script = "\n".join(
+            step.get("run", "") for step in hotfix["steps"]
+        )
+
+        self.assertIn("needs.deploy.result == 'success'", release["if"])
+        self.assertIn("git tag", release_script)
+        self.assertIn("--base develop", release_script)
+        self.assertIn("--head", release_script)
+        self.assertIn("needs.deploy.result == 'success'", hotfix["if"])
+        self.assertIn("--head main", hotfix_script)
+        self.assertIn('gh pr create --base "$base" --head main', hotfix_script)
+        self.assertIn("create_sync_pr develop", hotfix_script)
+        self.assertIn('startswith("release/")', hotfix_script)
+
+    def test_release_sync_merge_deletes_release_branch(self) -> None:
+        workflow = self._workflow("complete-release-sync.yml")
+
+        self.assertEqual(
+            ["closed"], workflow["on"]["pull_request"]["types"]
+        )
+        self.assertEqual(
+            ["develop"], workflow["on"]["pull_request"]["branches"]
+        )
+        cleanup = workflow["jobs"]["cleanup"]
+        script = "\n".join(step.get("run", "") for step in cleanup["steps"])
+        self.assertIn("pull_request.merged == true", cleanup["if"])
+        self.assertIn("release/", cleanup["if"])
+        self.assertIn("--method DELETE", script)
+        self.assertIn("git/refs/heads/release/", script)
 
     def test_new_workflows_pin_external_actions_to_full_commit_sha(self) -> None:
         for filename in (
@@ -98,6 +197,8 @@ class WorkflowContractTest(unittest.TestCase):
             "deploy-development.yml",
             "start-release.yml",
             "deploy-staging.yml",
+            "deploy-production.yml",
+            "complete-release-sync.yml",
         ):
             workflow = self._workflow(filename)
             for job in workflow["jobs"].values():
