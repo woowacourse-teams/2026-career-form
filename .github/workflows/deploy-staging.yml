@@ -1,0 +1,67 @@
+name: 스테이징 환경 배포
+
+on:
+  push:
+    branches: ["release/**"]
+    paths:
+      - "backend/**"
+      - "compose.yaml"
+      - "infra/compose.deploy.yaml"
+      - "infra/scripts/deploy.sh"
+      - ".github/workflows/deploy-staging.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@67621b124fd2e251c5e8a0e6e3b91318f2287669 # v6.3.0
+        with:
+          cache-provider: basic
+      - name: 백엔드 검증
+        working-directory: backend
+        run: ./gradlew clean check bootJar --console=plain
+      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: ARM64 이미지 빌드와 push
+        id: image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: backend
+          platforms: linux/arm64
+          push: true
+          tags: ${{ vars.DOCKERHUB_IMAGE }}:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, linux, ARM64, staging]
+    environment: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    env:
+      DEPLOY_ENVIRONMENT: staging
+      BACKEND_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}@${{ needs.build.outputs.digest }}
+      BACKEND_PORT: ${{ vars.BACKEND_PORT }}
+      SPRING_PROFILES_ACTIVE: staging
+      SPRING_MONGODB_URI: ${{ secrets.SPRING_MONGODB_URI }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Digest 이미지 배포
+        run: ./infra/scripts/deploy.sh

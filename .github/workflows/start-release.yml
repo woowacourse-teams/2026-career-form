@@ -1,0 +1,50 @@
+name: 릴리스 시작
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "release/<MAJOR.MINOR.PATCH>에 사용할 버전"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: 버전과 활성 릴리스 확인
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "version은 선행 0 없는 MAJOR.MINOR.PATCH 형식이어야 합니다" >&2
+            exit 1
+          fi
+          if [[ -n "$(git ls-remote --heads origin 'refs/heads/release/*')" ]]; then
+            echo "활성 release 브랜치는 하나만 허용됩니다" >&2
+            exit 1
+          fi
+      - name: 릴리스 브랜치와 Draft PR 생성
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          branch="release/$VERSION"
+          git switch --create "$branch" origin/develop
+          git push origin "$branch"
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$branch" \
+            --title "[Release] $VERSION 운영 반영" \
+            --body "release/$VERSION 스테이징 검증과 운영 반영을 추적합니다."

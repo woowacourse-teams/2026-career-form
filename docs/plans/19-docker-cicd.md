@@ -200,7 +200,7 @@
 - Runner labels: `[self-hosted, linux, ARM64, development]`, `[self-hosted, linux, ARM64, staging]`
 - Environments: `development`, `staging`
 
-- [ ] **Step 1: workflow 행위 실패 테스트 작성**
+- [x] **Step 1: workflow 행위 실패 테스트 작성**
 
   YAML을 구조적으로 파싱해 다음을 검증한다.
 
@@ -212,19 +212,19 @@
   deploy jobs: self-hosted 환경 label, environment, concurrency 1, 현재 신뢰된 push commit checkout
   ```
 
-- [ ] **Step 2: RED 확인**
+- [x] **Step 2: RED 확인**
 
   Run: `.venv/bin/python -m unittest infra.tests.test_workflow_contract -v`
 
   Expected: workflow 파일 부재로 FAIL.
 
-- [ ] **Step 3: 최소 권한 workflow 구현**
+- [x] **Step 3: 최소 권한 workflow 구현**
 
   build job은 GitHub-hosted runner에서 checkout, Java 21 setup, Gradle 검증, QEMU/Buildx, Docker Hub login, `linux/arm64` push를 수행한다. deploy job은 신뢰된 push의 정확한 commit을 checkout하고 GitHub Environment secret을 process environment로 전달해 그 commit의 `deploy.sh`를 호출한다.
 
   Start release는 `contents: write`, `pull-requests: write`만 사용하고 version을 `^[0-9]+\.[0-9]+\.[0-9]+$`로 검증한다. 활성 `release/*`가 있으면 변경 없이 실패한다.
 
-- [ ] **Step 4: GREEN 확인**
+- [x] **Step 4: GREEN 확인**
 
   Run:
 
@@ -235,7 +235,7 @@
 
   Expected: PASS.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
   ```bash
   git add .github/workflows infra/tests/test_workflow_contract.py
