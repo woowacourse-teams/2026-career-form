@@ -7,16 +7,18 @@ from harness.lib.python_runtime import python_command, select_python
 
 
 class PythonRuntimeTest(unittest.TestCase):
-    def test_selects_windows_virtual_environment_python(self) -> None:
+    def test_ignores_windows_virtual_environment_python(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             python = root / ".venv" / "Scripts" / "python.exe"
             python.parent.mkdir(parents=True)
             python.touch()
 
-            selected = select_python(root, os_name="nt")
+            selected = select_python(
+                root, fallback="fallback-python", os_name="nt"
+            )
 
-            self.assertEqual(python, selected)
+            self.assertEqual(Path("fallback-python"), selected)
 
     def test_selects_posix_virtual_environment_python(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

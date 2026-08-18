@@ -2,15 +2,17 @@
 
 이 폴더는 팀의 작업 계약을 실행 가능한 검사로 연결한다. `policies/`는 사람이 읽는 정책이고, `lib/`와 `scripts/`는 Codex 훅, Git 훅, GitHub Actions가 호출하는 강제 장치다. `tests/`는 강제 장치의 동작을 검증한다.
 
-## 로컬 설치
+## 공식 실행 환경
 
-사람이 저장소를 직접 clone해 사용하는 경우 한 번 실행한다.
+하네스, Git 훅, Codex 에이전트 검증의 공식 실행 환경은 WSL/Linux다. Windows PowerShell 직접 실행은 지원 대상이 아니다.
+
+Windows 사용자는 Windows 파일시스템의 `/mnt/<drive>/...` clone 대신 WSL 내부 파일시스템의 `/home/<사용자>/...`에 새 clone을 만든다. WSL 터미널에서 `git`과 `python3`을 사용하고, VS Code는 Remote - WSL로 해당 `/home/...` clone을 연다.
+
+Codex도 WSL 내부에 설치한 실행기를 사용해야 한다. `command -v codex` 결과가 `/mnt/<drive>/...`이면 Windows 설치를 참조하는 혼합 환경이므로, WSL의 Node.js를 준비한 뒤 WSL 터미널에서 `npm install --global @openai/codex@0.146.0`을 실행한다. `codex --version`으로 WSL 실행기를 확인한 뒤 하네스 명령을 실행한다.
+
+사람이 새 clone을 직접 준비할 때 한 번 실행한다.
 
 ```bash
-# Windows PowerShell
-python harness/scripts/bootstrap.py
-
-# POSIX shell
 python3 harness/scripts/bootstrap.py
 ```
 
@@ -19,10 +21,6 @@ python3 harness/scripts/bootstrap.py
 AI가 `cf-issue-workflow`로 작업할 때는 별도 수동 설치가 필요하지 않다. AI는 실제 작업 clone 또는 worktree에 들어온 직후 다음 진입점을 실행한다.
 
 ```bash
-# Windows PowerShell
-python harness/scripts/ensure-environment.py
-
-# POSIX shell
 python3 harness/scripts/ensure-environment.py
 ```
 
@@ -31,10 +29,6 @@ python3 harness/scripts/ensure-environment.py
 ## 단일 검증 명령
 
 ```bash
-# Windows PowerShell
-.venv/Scripts/python.exe harness/scripts/verify.py
-
-# POSIX shell
 .venv/bin/python harness/scripts/verify.py
 ```
 
