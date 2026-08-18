@@ -13,17 +13,20 @@
 
 기능, 버그, 기술 작업 모두 같은 계약 제목을 사용하므로 자동 검사가 양식을 해석할 수 있다.
 
-Issue 제목은 `[영역] 작업명` 형식으로 작성한다. 영역은 `FE`, `BE`, `Infra`,
-`Harness`, `Plan` 중 하나를 사용한다. `FE`, `BE`만 전체를 대문자로 쓰고 나머지는 첫
-문자만 대문자로 쓴다. `Plan`은 조사, 요구사항 정리, 문서 기획
+Issue 제목은 `[영역] 작업명` 형식으로 작성한다. 영역은 `FE`, `BE`, `AI`, `Infra`,
+`Harness`, `Plan` 중 하나를 사용한다. `FE`, `BE`, `AI`만 전체를 대문자로 쓰고 나머지는 첫
+문자만 대문자로 쓴다. `AI`는 제품의 LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용하고
+`Harness`는 개발 하네스와 워크플로우 변경에 사용한다. `Plan`은 조사, 요구사항 정리, 문서 기획
 같은 구현 전 작업에 사용한다. 하나의 Issue는 하나의 `CF-<Issue 번호>` 또는
 `hotfix/CF-<Issue 번호>` 브랜치와 하나의 PR로 완료하며 Sub-issue를 만들지 않는다.
 
 ## 확정과 변경
 
-`status:ready`는 사람이 범위와 완료 기준을 확정했다는 뜻이다. 이후 본문은 수정하지
-않는다. 정정이 필요하면 사람이 `status:planning`으로 되돌려 수정하고 다시
-`status:ready`로 확정한다. 새 요구사항이나 다른 컴포넌트 작업은 현재 Issue에 섞지
+AI가 계약 초안을 원격 Issue에 게시한 뒤에는 `status:planning`을 유지한다. 사람이
+GitHub에서 제목과 본문을 수정하고 재개를 요청하면 AI가 원격 계약을 다시 읽어 검증한다.
+검증을 통과해 `status:ready`가 적용되면 사람이 범위와 완료 기준을 확정했다는 뜻이며
+이후 본문은 수정하지 않는다. 정정이 필요하면 사람이 `status:planning`으로 되돌려
+수정하고 같은 검증을 거쳐 다시 `status:ready`로 확정한다. 새 요구사항이나 다른 컴포넌트 작업은 현재 Issue에 섞지
 않고 GitHub Project의 독립 draft 후보로 제안한다.
 
 작업 상태는 본문을 고쳐 표시하지 않는다. `status:planning`, `status:ready`, `status:in-progress`, `status:blocked`, `status:review` 라벨과 담당자, 연결 PR로 표시한다.

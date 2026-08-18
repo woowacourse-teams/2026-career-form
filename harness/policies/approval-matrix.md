@@ -3,10 +3,12 @@
 | 작업 | AI | 사람 | 자동 게이트 |
 |---|---|---|---|
 | 요구사항 질문과 초안 | 수행 | 결정 | Issue Form |
-| Issue 확정 | 제안 | 승인 | `status:ready` 검사 |
+| Issue 초안 게시 | 수행 | GitHub에서 수정 | `status:planning` 유지 |
+| Issue 재개와 확정 | 원격 계약 검증 및 상태 전환 | 재개 요청 | `status:ready` 검사 |
 | 조사, 계획, 구현 | 수행 | 필요 시 답변 | 작업 브랜치 검사 |
 | 테스트와 리뷰 | 수행 | 최종 검토 | 품질 검사 |
-| Draft PR 생성 | 수행 | 확인 | PR 계약 검사 |
+| Draft PR 생성 | 수행 | GitHub에서 수정 | `status:in-progress` 유지 |
+| Draft PR 재개와 검토 | 원격 PR 검증 및 상태 전환 | 재개 요청 | PR 계약 검사 |
 | Ready for review 전환 | 수행하지 않음 | 수행 | GitHub PR 상태 |
 | PR 최종 승인과 머지 | 수행하지 않음 | 수행 | Ruleset |
 | 머지 사실과 포함 관계 검증 | 수행 | 확인 | GitHub와 Git 이력 |

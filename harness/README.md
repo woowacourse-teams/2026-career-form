@@ -36,13 +36,13 @@ python3 harness/scripts/ensure-environment.py
 
 ## Project Issue 기획
 
-`cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[Plan]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.
+`cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[AI]`는 제품의 LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용하고 `[Harness]`는 개발 하네스와 워크플로우 변경에 사용한다. `[Plan]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.
 
-기획 중 대안을 비교한 장기 결정이 제품, 아키텍처, 보안, 데이터 또는 공용 워크플로우에 영향을 주면 `docs/adr/`의 ADR 대상으로 판단한다. 승인 전에는 Issue 계약에 전체 ADR 초안과 저장 경로만 제안하고 파일을 만들지 않는다. 승인 뒤 `cf-issue-workflow`가 `CF-*` 브랜치에서 ADR 파일을 작성해 같은 PR에 포함한다. 일반 조사 결과나 쉽게 되돌릴 수 있는 선택에는 ADR을 강제하지 않는다. 상태 전이를 재개할 때는 선택한 Python으로 `harness/scripts/plan-project-issue.py <snapshot 파일>`을 실행해 첫 미완료 action을 확인한다.
+기획 중 대안을 비교한 장기 결정이 제품, 아키텍처, 보안, 데이터 또는 공용 워크플로우에 영향을 주면 `docs/adr/`의 ADR 대상으로 판단한다. Issue 계약에는 전체 ADR 초안과 저장 경로를 제안하고, `cf-issue-workflow`가 `CF-*` 브랜치에서 ADR 파일을 작성해 같은 PR에 포함한다. 일반 조사 결과나 쉽게 되돌릴 수 있는 선택에는 ADR을 강제하지 않는다. 상태 전이를 재개할 때는 선택한 Python으로 `harness/scripts/plan-project-issue.py <snapshot 파일>`을 실행해 첫 미완료 action을 확인한다.
 
-확정된 Issue 구현은 `cf-issue-workflow` 스킬이 이어받는다. Issue label과 Project Status의 대응, 브랜치와 PR 연결 계약은 `docs/agents/issue-tracker.md`에서 확인한다.
+AI가 Issue 계약 초안을 GitHub에 게시하면 사람이 원격 제목과 본문을 수정하고 재개할 때까지 planning 상태로 멈춘다. 재개하면 사용자 변경을 덮어쓰지 않고 원격 계약을 검증하며, 통과한 경우에만 `status:ready`로 전환한다. 확정된 Issue 구현은 `cf-issue-workflow` 스킬이 이어받는다. 이 스킬도 Draft PR을 게시한 뒤 in-progress 상태에서 멈추고, 사람의 GitHub 수정과 재개 후 원격 PR을 검증한 경우에만 review 상태로 전환한다. Issue label과 Project Status의 대응, 브랜치와 PR 연결 계약은 `docs/agents/issue-tracker.md`에서 확인한다.
 
-전체 흐름은 `cf-issue-lifecycle`이 기획, 구현, 사람 머지 대기와 `cf-post-merge-cleanup`을 연결한다. 재개할 때는 GitHub Issue와 PR 상태를 다시 읽고 첫 미완료 단계부터 진행한다. 공용 흐름은 Orca와 개인 플러그인에 의존하지 않는다.
+전체 흐름은 `cf-issue-lifecycle`이 기획, 구현, Issue와 Draft PR의 수동 편집 대기, 사람 머지 대기와 `cf-post-merge-cleanup`을 연결한다. 재개할 때는 GitHub Issue와 PR 상태를 다시 읽고 첫 미완료 단계부터 진행한다. 공용 흐름은 Orca와 개인 플러그인에 의존하지 않는다.
 
 Issue와 PR 본문은 각각 선택한 `.github/ISSUE_TEMPLATE/*.yml`과 `.github/pull_request_template.md`를 원본으로 `render-template-body.py`가 OS 임시 UTF-8 Markdown 파일에 만든다. GitHub CLI에는 `--body-file`로 전달하고 원격 본문을 다시 읽어 독립 계약 검증기로 확인한다.
 

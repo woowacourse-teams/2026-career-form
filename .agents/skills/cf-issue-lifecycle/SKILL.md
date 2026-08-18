@@ -12,22 +12,22 @@ metadata:
 
 # CF Issue Lifecycle
 
-하나의 Issue, 계약에 맞는 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치 하나, PR 하나의 생명주기를 단계별 정본에 따라 연결한다. 사람 승인과 머지 대기에서는 멈추고, 같은 스킬을 다시 호출하면 원격 상태를 읽어 첫 미완료 단계부터 재개한다.
+하나의 Issue, 계약에 맞는 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치 하나, PR 하나의 생명주기를 단계별 정본에 따라 연결한다. Issue와 Draft PR의 GitHub 수정, 사람 승인과 머지 대기에서는 멈추고, 같은 스킬을 다시 호출하면 원격 상태를 읽어 첫 미완료 단계부터 재개한다.
 
 ## 1. 입력과 현재 상태 확인
 
 1. draft 제목 또는 Issue 번호 중 사용자가 제공한 식별자를 확인한다.
 2. Project와 repository에서 현재 DraftIssue, Issue, PR, label, Project Status를 읽는다.
-3. 현재 상태를 JSON snapshot으로 정리하고 선택한 Python으로 `harness/scripts/plan-issue-lifecycle.py <snapshot 파일>`을 실행해 첫 미완료 단계를 확인한다.
+3. 현재 상태를 `pull_request_is_draft`와 사용자의 재개 신호인 `pr_edit_confirmed`를 포함한 JSON snapshot으로 정리하고 선택한 Python으로 `harness/scripts/plan-issue-lifecycle.py <snapshot 파일>`을 실행해 첫 미완료 단계를 확인한다. 두 필드는 JSON boolean만 사용한다.
 4. 이미 완료된 원격 쓰기를 반복하지 않는다.
 
 ## 2. 기획
 
-repository Issue가 아직 `status:ready`가 아니면 `cf-project-issue-planning`을 사용한다. 이 단계가 사람의 계약 승인에서 멈추면 생명주기도 멈춘다. 사용자가 승인해 재개하면 승인된 계약 게시와 `status:ready` 확인까지 수행한다.
+repository Issue가 아직 `status:ready`가 아니면 `cf-project-issue-planning`을 사용한다. 이 스킬이 계약 초안을 GitHub에 게시하면 `status:planning`에서 멈춘다. 사용자가 원격 Issue를 수정하고 재개하면 수정된 원격 계약을 검증하고 `status:ready` 확인까지 수행한다.
 
 ## 3. 구현과 Draft PR
 
-`status:ready` Issue는 `cf-issue-workflow`에 넘긴다. 환경 구성, 격리, 계획, TDD, 검증, 코드 리뷰, Draft PR 생성과 `status:review` 전환까지 완료한다. 사람의 PR 승인과 머지는 대신하지 않는다.
+`status:ready` Issue는 `cf-issue-workflow`에 넘긴다. 환경 구성, 격리, 계획, TDD, 검증과 코드 리뷰 뒤 Draft PR을 만들면 Issue `status:in-progress`에서 멈춘다. 열린 Draft PR이 있고 `pr_edit_confirmed`가 false면 `await_pr_edit`에서 기다린다. 사용자가 GitHub PR을 수정하고 재개하면 `pr_edit_confirmed`를 true로 해 `review_draft_pr` action을 선택하고 기존 PR을 다시 검증한다. 검증 통과 뒤에만 Issue `status:review`와 Project `On Review`로 전환하며, 사람의 Ready for review 전환, PR 승인과 머지는 대신하지 않는다.
 
 ## 4. 머지 후 정리
 
