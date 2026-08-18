@@ -252,7 +252,7 @@
 - Consumes: Task 1부터 Task 4까지의 구현과 문서
 - Produces: 검증된 `CF-29` 브랜치와 사용자가 직접 수정할 Draft PR 하나
 
-- [ ] **Step 1: 관련 테스트와 전체 검증**
+- [x] **Step 1: 관련 테스트와 전체 검증**
 
   Run:
 
@@ -270,7 +270,7 @@
 
   Expected: 0 failures, 전체 커버리지 80% 이상, 모든 명령 exit 0.
 
-- [ ] **Step 2: Standards와 Issue Spec 두 축 리뷰**
+- [x] **Step 2: Standards와 Issue Spec 두 축 리뷰**
 
   `origin/develop...HEAD`를 저장소 Standards와 Issue #29 계약 기준으로 각각 검토한다. 치명적 문제와 높은 위험 문제를 수정한 뒤 전체 검증을 다시 실행한다.
 
