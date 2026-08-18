@@ -78,9 +78,20 @@ def _next_issue_action(snapshot: ProjectIssueSnapshot) -> PlanningAction:
             code="fix_title",
             reason="Issue 제목을 [영역] 작업명 형식으로 보정해야 합니다.",
         )
+    contract_complete = (
+        snapshot.contract_drafted
+        and snapshot.plan_exists
+        and snapshot.approved
+        and snapshot.contract_published
+        and snapshot.contract_valid
+    )
+    ready_contract_observed = (
+        contract_complete
+        and snapshot.issue_status_label == "status:ready"
+    )
     if (
-        not snapshot.contract_published
-        and snapshot.issue_status_label != "status:planning"
+        snapshot.issue_status_label != "status:planning"
+        and not ready_contract_observed
     ):
         return PlanningAction(
             code="set_planning",
