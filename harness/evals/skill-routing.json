@@ -1,6 +1,20 @@
 {
   "cases": [
     {
+      "id": "llm-wiki-positive",
+      "prompt": "제품 원칙 문서를 LLM Wiki에 비식별 원본과 근거 링크로 수집해줘.",
+      "expected_skill": "cf-karpathy-llm-wiki",
+      "should_trigger": true,
+      "reason": "사용자가 Wiki 수집을 명시적으로 요청했다."
+    },
+    {
+      "id": "llm-wiki-negative",
+      "prompt": "PRODUCT_CONCEPT.md 내용을 이 대화에서만 요약해줘.",
+      "expected_skill": "cf-karpathy-llm-wiki",
+      "should_trigger": false,
+      "reason": "저장이나 Wiki 수집 없이 일회성 요약만 요청했다."
+    },
+    {
       "id": "planning-positive",
       "prompt": "Project의 결제 정책 draft를 Issue로 승격하고 요구사항과 계획을 잡아줘.",
       "expected_skill": "cf-project-issue-planning",
