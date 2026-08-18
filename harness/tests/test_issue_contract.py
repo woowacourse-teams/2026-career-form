@@ -52,6 +52,17 @@ class IssueContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_accepts_ready_ai_issue(self) -> None:
+        result = validate_issue(
+            {
+                "title": "[AI] LLM 필드 매핑",
+                "body": VALID_BODY,
+                "labels": [{"name": "status:ready"}],
+            }
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_rejects_issue_that_is_not_ready(self) -> None:
         result = validate_issue(
             {

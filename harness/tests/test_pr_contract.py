@@ -29,6 +29,19 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_accepts_ai_pr_to_develop(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[AI] LLM 필드 매핑",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            },
+            linked_issue_title="[AI] LLM 필드 매핑",
+        )
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_accepts_colon_closing_keyword(self) -> None:
         result = validate_pr(
             {
@@ -137,7 +150,7 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "영역은 FE, BE, Infra, Harness, Plan 중 하나여야 합니다",
+            "영역은 FE, BE, AI, Infra, Harness, Plan 중 하나여야 합니다",
             result.errors,
         )
 
