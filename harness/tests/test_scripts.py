@@ -114,6 +114,7 @@ class HarnessScriptsTest(unittest.TestCase):
             "plan_exists",
             "approved",
             "contract_published",
+            "contract_valid",
         ):
             with self.subTest(name=name):
                 result = self._run_project_issue_plan(
@@ -152,6 +153,46 @@ class HarnessScriptsTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("cf-issue-workflow", json.loads(result.stdout)["skill"])
+
+    def test_issue_lifecycle_script_waits_for_draft_pr_edit(self) -> None:
+        result = self._run_with_json(
+            "plan-issue-lifecycle",
+            {
+                "issue_number": 14,
+                "issue_status": "status:in-progress",
+                "pull_request_state": "OPEN",
+                "pull_request_is_draft": True,
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("await_pr_edit", json.loads(result.stdout)["code"])
+
+    def test_issue_lifecycle_script_reviews_confirmed_draft_pr(self) -> None:
+        result = self._run_with_json(
+            "plan-issue-lifecycle",
+            {
+                "issue_number": 14,
+                "issue_status": "status:in-progress",
+                "pull_request_state": "OPEN",
+                "pull_request_is_draft": True,
+                "pr_edit_confirmed": True,
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("review_draft_pr", json.loads(result.stdout)["code"])
+
+    def test_issue_lifecycle_script_rejects_string_edit_booleans(self) -> None:
+        for name in ("pull_request_is_draft", "pr_edit_confirmed"):
+            with self.subTest(name=name):
+                result = self._run_with_json(
+                    "plan-issue-lifecycle",
+                    {name: "false"},
+                )
+
+                self.assertEqual(2, result.returncode)
+                self.assertIn(f"{name}는 boolean이어야 합니다", result.stderr)
 
     def test_post_merge_cleanup_script_blocks_unmerged_pr(self) -> None:
         result = self._run_with_json(

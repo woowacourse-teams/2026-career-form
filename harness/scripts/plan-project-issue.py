@@ -57,6 +57,7 @@ def snapshot_from(payload: Mapping[str, object]) -> ProjectIssueSnapshot:
         plan_exists=optional_boolean(payload, "plan_exists"),
         approved=optional_boolean(payload, "approved"),
         contract_published=optional_boolean(payload, "contract_published"),
+        contract_valid=optional_boolean(payload, "contract_valid"),
     )
 
 

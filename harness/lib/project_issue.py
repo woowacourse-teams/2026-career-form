@@ -11,8 +11,9 @@ PLANNING_ACTIONS = (
     "draft_contract",
     "write_plan",
     "await_unblock",
-    "await_approval",
     "publish_contract",
+    "await_approval",
+    "validate_contract",
     "set_ready",
     "complete",
 )
@@ -29,6 +30,7 @@ class ProjectIssueSnapshot:
     plan_exists: bool = False
     approved: bool = False
     contract_published: bool = False
+    contract_valid: bool = False
 
 
 @dataclass(frozen=True)
@@ -99,15 +101,20 @@ def _next_issue_action(snapshot: ProjectIssueSnapshot) -> PlanningAction:
             code="write_plan",
             reason="하나의 PR 안에서 수행할 논리적 커밋 계획이 필요합니다.",
         )
-    if not snapshot.approved:
-        return PlanningAction(
-            code="await_approval",
-            reason="Issue 계약과 구현 계획에 사람 승인이 필요합니다.",
-        )
     if not snapshot.contract_published:
         return PlanningAction(
             code="publish_contract",
-            reason="승인된 Issue 계약을 원격 Issue 본문에 게시해야 합니다.",
+            reason="Issue 계약 초안을 원격 Issue 본문에 게시해야 합니다.",
+        )
+    if not snapshot.approved:
+        return PlanningAction(
+            code="await_approval",
+            reason="사람이 원격 Issue를 수정하고 재개할 때까지 기다려야 합니다.",
+        )
+    if not snapshot.contract_valid:
+        return PlanningAction(
+            code="validate_contract",
+            reason="사람이 수정한 원격 Issue 계약을 다시 검증해야 합니다.",
         )
     if snapshot.issue_status_label != "status:ready":
         return PlanningAction(
