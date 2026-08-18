@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="1040" viewBox="0 0 420 1040" role="img" aria-labelledby="title desc">
+  <title id="title">S-03 사이드 패널 입력 예정 항목 검토</title>
+  <desc id="desc">입력 가능, 확인 필요, 충돌, 민감정보와 입력 불가 상태를 기본 선택 정책과 함께 보여주는 회색조 와이어프레임</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif; fill: #111827; }
+    .frame { fill: #ffffff; stroke: #111827; stroke-width: 2; }
+    .surface { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 1; }
+    .row { fill: #ffffff; stroke: #d1d5db; stroke-width: 1; }
+    .disabled { fill: #f3f4f6; stroke: #d1d5db; stroke-width: 1; }
+    .title { font-size: 19px; font-weight: 600; }
+    .heading { font-size: 14px; font-weight: 600; }
+    .body { font-size: 12px; }
+    .small { font-size: 10px; fill: #4b5563; }
+    .primary { fill: #111827; stroke: #111827; }
+    .primary-text { fill: #ffffff; font-size: 14px; font-weight: 600; }
+    .check { fill: #111827; stroke: #111827; }
+    .uncheck { fill: #ffffff; stroke: #6b7280; stroke-width: 1.5; }
+    .lock { fill: #e5e7eb; stroke: #9ca3af; }
+    .divider { stroke: #d1d5db; stroke-width: 1; }
+  </style>
+
+  <rect class="frame" x="1" y="1" width="418" height="1038"/>
+  <text class="small" x="22" y="27">S-03 , 브라우저 사이드 패널</text>
+  <text class="title" x="22" y="58">입력할 항목을 확인하세요</text>
+  <text class="body" x="22" y="83">지원서에 아직 값을 기입하지 않았습니다.</text>
+
+  <rect class="surface" x="22" y="103" width="376" height="74" rx="7"/>
+  <text class="heading" x="40" y="133">분석 결과</text>
+  <text class="body" x="40" y="158">입력 가능 N , 확인 필요 N , 입력 불가 N</text>
+  <text class="small" x="380" y="157" text-anchor="end">선택 N개</text>
+
+  <text class="heading" x="22" y="211">입력 가능 , 기본 선택</text>
+  <rect class="row" x="22" y="226" width="376" height="70" rx="5"/>
+  <rect class="check" x="38" y="244" width="20" height="20" rx="3"/>
+  <text x="48" y="259" text-anchor="middle" font-size="12" fill="#ffffff">✓</text>
+  <text class="body" x="72" y="250">이메일주소</text>
+  <text class="small" x="72" y="274">a***@example.com → 이메일 입력란</text>
+
+  <rect class="row" x="22" y="296" width="376" height="70" rx="5"/>
+  <rect class="check" x="38" y="314" width="20" height="20" rx="3"/>
+  <text x="48" y="329" text-anchor="middle" font-size="12" fill="#ffffff">✓</text>
+  <text class="body" x="72" y="320">국문 성</text>
+  <text class="small" x="72" y="344">[국문 성] → 성 입력란</text>
+
+  <text class="heading" x="22" y="401">확인 필요 , 기본 선택 해제</text>
+  <rect class="row" x="22" y="416" width="376" height="76" rx="5"/>
+  <rect class="uncheck" x="38" y="436" width="20" height="20" rx="3"/>
+  <text class="body" x="72" y="442">학위구분</text>
+  <text class="small" x="72" y="466">지원서 선택지와 의미가 맞는지 확인 필요</text>
+
+  <text class="heading" x="22" y="527">기존 값 충돌 , 기본 선택 해제</text>
+  <rect class="row" x="22" y="542" width="376" height="98" rx="5"/>
+  <rect class="uncheck" x="38" y="562" width="20" height="20" rx="3"/>
+  <text class="body" x="72" y="568">연락처</text>
+  <text class="small" x="72" y="592">기존 값 있음</text>
+  <text class="small" x="72" y="614">입력 예정: 010-****-0000</text>
+
+  <text class="heading" x="22" y="675">민감정보 , 기본 선택 해제</text>
+  <rect class="row" x="22" y="690" width="376" height="92" rx="5"/>
+  <rect class="uncheck" x="38" y="710" width="20" height="20" rx="3"/>
+  <text class="body" x="72" y="716">병역 정보</text>
+  <text class="small" x="72" y="740">가려진 민감정보 , 펼친 뒤 개별 확인</text>
+  <text class="small" x="380" y="763" text-anchor="end">값 펼치기</text>
+
+  <text class="heading" x="22" y="817">입력 불가 , 선택 불가</text>
+  <rect class="disabled" x="22" y="832" width="376" height="76" rx="5"/>
+  <rect class="lock" x="38" y="852" width="20" height="20" rx="3"/>
+  <text class="body" x="72" y="858" fill="#6b7280">학교 검색형 입력란</text>
+  <text class="small" x="72" y="882">안전한 자동 선택을 확인할 수 없음</text>
+
+  <line class="divider" x1="0" y1="934" x2="420" y2="934"/>
+  <rect class="primary" x="22" y="955" width="376" height="52" rx="7"/>
+  <text class="primary-text" style="fill:#ffffff" x="210" y="987" text-anchor="middle">선택한 N개 항목 확인</text>
+  <text class="small" x="22" y="1027">저장, 이동과 제출은 자동으로 실행하지 않음</text>
+</svg>
