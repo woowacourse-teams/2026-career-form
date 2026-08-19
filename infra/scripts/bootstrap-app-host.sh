@@ -59,6 +59,7 @@ check_host() {
     mark_missing "compose"
   fi
   check_command "nginx" nginx
+  check_command "certbot" certbot
   check_command "cloudflared" cloudflared
   check_command "curl" curl
   check_command "jq" jq
@@ -137,6 +138,18 @@ install_cloudflared_repository() {
     > "$APT_SOURCES_DIR/cloudflared.list"
 }
 
+install_application_packages() {
+  apt-get install --yes \
+    ca-certificates \
+    certbot \
+    curl \
+    git \
+    gnupg \
+    jq \
+    nginx \
+    python3-certbot-nginx
+}
+
 prepare_deploy_state_directory() {
   install -d \
     -m 0770 \
@@ -155,7 +168,7 @@ apply_bootstrap() {
   }
   require_supported_host
   apt-get update
-  apt-get install --yes ca-certificates curl git gnupg jq nginx
+  install_application_packages
   install_docker_repository
   install_cloudflared_repository
   apt-get update
@@ -171,7 +184,7 @@ apply_bootstrap() {
   systemctl enable --now docker nginx
   printf '%s\n' \
     'application host base installation completed' \
-    'register the GitHub Actions runner and configure cloudflared manually'
+    'configure Nginx HTTPS and the SSH-only cloudflared tunnel manually'
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

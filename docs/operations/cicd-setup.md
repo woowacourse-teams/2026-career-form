@@ -1,8 +1,8 @@
 # CI/CD 초기 설정
 
 이 문서는 저장소의 CI/CD workflow를 처음 활성화할 때 사람이 수행할 설정을 정리한다.
-실제 credential, MongoDB URI, GitHub Actions runner registration token과 Cloudflare
-Tunnel credential은 저장소, Issue, PR, 문서와 로그에 기록하지 않는다.
+실제 credential, MongoDB URI, GitHub Actions runner registration token과 SSH용
+Cloudflare Tunnel credential은 저장소, Issue, PR, 문서와 로그에 기록하지 않는다.
 
 ## 서버 구성
 
@@ -11,8 +11,8 @@ Tunnel credential은 저장소, Issue, PR, 문서와 로그에 기록하지 않�
 - production은 별도의 Ubuntu ARM64 application host를 사용한다.
 - MongoDB는 application host와 분리하고 private network에서만 접근시킨다. 환경별
   database와 최소 `readWrite` 권한 계정을 분리한다.
-- 모든 application port는 `127.0.0.1`에만 publish하고 외부 연결은 Nginx와
-  cloudflared를 통과시킨다.
+- 모든 application port는 `127.0.0.1`에만 publish한다. 일반 HTTPS 요청은 Elastic IP의
+  Nginx로 직접 받고, cloudflared는 SSH 접속에만 사용한다.
 
 ## GitHub Repository 설정
 
@@ -102,46 +102,63 @@ Docker config에 저장한다. pull credential을 GitHub Secrets에 중복 저�
 sudo infra/scripts/bootstrap-app-host.sh --check
 ```
 
-Ubuntu ARM64, 2 GiB swap, Docker Compose v2, Nginx, cloudflared, curl, jq, git과 runner
-서비스 상태를 보고한다. 설치가 필요하면 스크립트를 검토한 관리자가 명시적 확인값과
-함께 실행한다.
+Ubuntu ARM64, 2 GiB swap, Docker Compose v2, Nginx, Certbot, SSH용 cloudflared, curl,
+jq, git과 runner 서비스 상태를 보고한다. 설치가 필요하면 스크립트를 검토한 관리자가
+명시적 확인값과 함께 실행한다.
 
 ```bash
 sudo env BOOTSTRAP_CONFIRM=APPLY_APP_HOST \
   infra/scripts/bootstrap-app-host.sh --apply
 ```
 
-`--apply`는 OS 패키지, Docker 공식 apt repository, cloudflared package, 2 GiB swap,
-`root:docker` 소유의 `/var/lib/career-form/deploy` state directory와 Docker/Nginx 서비스를
-준비한다. runner 등록, Nginx virtual host, Cloudflare Tunnel 생성과 credential 배치는
-자동화하지 않는다.
+`--apply`는 OS 패키지, Docker 공식 apt repository, Nginx, Certbot Nginx plugin,
+cloudflared package, 2 GiB swap, `root:docker` 소유의
+`/var/lib/career-form/deploy` state directory와 Docker/Nginx 서비스를 준비한다. runner
+등록, Nginx virtual host, 인증서 발급과 SSH Tunnel 생성·credential 배치는 자동화하지
+않는다.
+
+## Public network와 DNS
+
+각 application host에는 재시작 뒤에도 유지되는 Elastic IP를 연결한다. DNS provider에서
+application hostname의 A record를 해당 Elastic IP로 지정한다. Cloudflare DNS를 사용한다면
+application hostname은 Proxy가 아닌 **DNS only(회색 구름)** 로 둔다. development와
+staging hostname은 같은 Elastic IP를 가리키고 production hostname은 별도 Elastic IP를
+가리킨다.
+
+application host security group은 TCP 80과 443만 public ingress로 허용한다. backend
+container port 8080과 `BACKEND_PORT`, SSH 22는 public ingress에서 제거한다. SSH는 별도
+Cloudflare Tunnel을 통해서만 접속한다.
 
 ## Nginx reverse proxy
 
-development/staging host의 `/etc/nginx/sites-available/career-form`에 다음 형태로 저장한다.
-`<...>` 값은 GitHub Environment의 `BACKEND_PORT` 및 실제 hostname으로 치환한다.
+development/staging host의 `/etc/nginx/sites-available/career-form`에 인증서 발급 전
+HTTP server block을 다음 형태로 저장한다. `development.example.com`과
+`staging.example.com`은 실제 DNS-only hostname으로, port는 GitHub Environment의
+`BACKEND_PORT` 값으로 치환한다.
 
 ```nginx
 server {
-    listen 127.0.0.1:80;
-    server_name <development-hostname>;
+    listen 80;
+    listen [::]:80;
+    server_name development.example.com;
 
     location / {
-        proxy_pass http://127.0.0.1:<development-backend-port>;
+        proxy_pass http://127.0.0.1:18080;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
 
 server {
-    listen 127.0.0.1:80;
-    server_name <staging-hostname>;
+    listen 80;
+    listen [::]:80;
+    server_name staging.example.com;
 
     location / {
-        proxy_pass http://127.0.0.1:<staging-backend-port>;
+        proxy_pass http://127.0.0.1:18081;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
@@ -157,34 +174,33 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-해당 symlink가 실제로 존재할 때만 `ln` 또는 `unlink`를 실행한다. 앱 배포 workflow는
-Nginx 파일과 서비스를 변경하지 않는다.
-
-## Cloudflare Tunnel
-
-Cloudflare 관리자 화면에서 host별 tunnel과 DNS hostname을 만든 뒤, 화면이 제공하는
-일회성 설치 명령은 관리자 터미널에서만 실행한다. token과 생성된 credential JSON을
-Issue·PR·셸 history에 복사하지 않는다. locally-managed tunnel을 사용한다면
-`/etc/cloudflared/config.yml`을 다음 형태로 두고 mode를 `0600`으로 제한한다.
-
-```yaml
-tunnel: <tunnel-uuid>
-credentials-file: /etc/cloudflared/<tunnel-uuid>.json
-
-ingress:
-  - hostname: <development-hostname>
-    service: http://127.0.0.1:80
-  - hostname: <staging-hostname>
-    service: http://127.0.0.1:80
-  - service: http_status:404
-```
-
-production host는 production hostname 항목 하나만 둔다. 설정 후 다음을 확인한다.
+해당 symlink가 실제로 존재할 때만 `ln` 또는 `unlink`를 실행한다. DNS 전파와 HTTP 접근을
+확인한 뒤 실제 hostname으로 인증서를 발급한다.
 
 ```bash
-sudo chmod 0600 /etc/cloudflared/config.yml /etc/cloudflared/<tunnel-uuid>.json
+sudo certbot --nginx --redirect \
+  -d development.example.com \
+  -d staging.example.com
+sudo systemctl enable --now certbot.timer
+sudo certbot renew --dry-run
+```
+
+production host는 production hostname 하나로 같은 절차를 수행한다. Certbot이 443 TLS
+server block과 80에서 HTTPS로 가는 redirect를 관리한다. 앱 배포 workflow는 Nginx 설정,
+인증서와 Certbot timer를 변경하지 않는다.
+
+## SSH 전용 Cloudflare Tunnel
+
+기존 Cloudflare Tunnel은 SSH 접속에만 사용한다. Tunnel ingress에 application HTTP/HTTPS
+hostname이나 `http://127.0.0.1:80` service를 추가하지 않는다. SSH hostname과
+`ssh://localhost:22` service만 유지하고, token과 credential JSON은 관리자 터미널과
+host의 제한된 파일에서만 다룬다. 설정 후 다음을 확인한다.
+
+```bash
+sudo find /etc/cloudflared -maxdepth 1 -type f \
+  \( -name 'config.yml' -o -name '*.json' \) \
+  -exec chmod 0600 {} +
 sudo cloudflared tunnel ingress validate
-sudo cloudflared service install
 sudo systemctl enable --now cloudflared
 sudo systemctl status cloudflared --no-pager
 ```
@@ -258,7 +274,9 @@ rehearsal, 저장 공간과 경보는 별도 운영 정책으로 관리한다.
 - 세 Environment에 `BACKEND_PORT`와 `SPRING_MONGODB_URI`가 존재한다.
 - runner가 workflow의 정확한 환경 label로 online 상태다.
 - 각 host가 pull-only 계정으로 private image를 pull할 수 있다.
-- application port는 loopback에만 열리고 Nginx/cloudflared 경로만 외부에 노출된다.
+- DNS-only application hostname이 각 host의 Elastic IP를 가리킨다.
+- security group은 public 80/443만 허용하고 22, 8080과 `BACKEND_PORT`를 허용하지 않는다.
+- Nginx HTTPS와 Certbot 자동 갱신이 정상이며 cloudflared는 SSH ingress만 갖는다.
 - MongoDB는 application host의 private network에서만 접근할 수 있다.
 - 실제 값을 출력하지 않고 `--check`와 GitHub UI의 이름만 대조한다.
 

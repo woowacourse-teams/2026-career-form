@@ -24,6 +24,7 @@ class BootstrapScriptContractTest(unittest.TestCase):
             "docker",
             "compose",
             "nginx",
+            "certbot",
             "cloudflared",
             "github actions runner",
         ):
@@ -135,6 +136,47 @@ done
             self.assertIn(
                 f"signed-by={root}/keyrings/cloudflare-main.gpg", source
             )
+
+    def test_app_package_installation_includes_certbot_nginx_support(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary_directory = root / "bin"
+            binary_directory.mkdir()
+            apt_log = root / "apt.log"
+            fake_apt_get = binary_directory / "apt-get"
+            fake_apt_get.write_text(
+                """#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >> "$APT_LOG"
+""",
+                encoding="utf-8",
+            )
+            fake_apt_get.chmod(0o755)
+            environment = {
+                **os.environ,
+                "APT_LOG": str(apt_log),
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; install_application_packages',
+                    "app-package-test",
+                    str(APP_SCRIPT),
+                ),
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            invocation = apt_log.read_text(encoding="utf-8")
+            self.assertIn("install --yes", invocation)
+            self.assertIn("certbot", invocation.split())
+            self.assertIn("python3-certbot-nginx", invocation.split())
 
     def test_setup_document_lists_required_github_configuration_names(self) -> None:
         setup = (ROOT / "docs" / "operations" / "cicd-setup.md").read_text(

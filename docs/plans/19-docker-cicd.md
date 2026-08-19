@@ -341,7 +341,7 @@
   ```text
   GitHub Environments와 runner labels
   Docker Hub push/pull-only accounts
-  Nginx/cloudflared/swap/MongoDB systemd
+  Nginx/Certbot/cloudflared SSH Tunnel/swap/MongoDB systemd
   환경별 DB와 readWrite 계정
   신뢰된 push commit checkout과 비민감 state directory
   최초 배포, 재실행, readiness rollback, Draft revert PR 확인
@@ -377,16 +377,74 @@
 - [x] readiness 요청별 timeout과 전체 120초 deadline을 적용한다.
 - [x] rollback 성공 뒤 실패 digest와 stale image를 정리한다.
 - [x] release 운영 배포 전에 main merge tree 일치와 Gradle source 검증을 수행한다.
-- [x] Nginx, Cloudflare Tunnel, MongoDB 인증·계정 격리 절차를 비밀값 없는 예제로 보강한다.
+- [x] Nginx 직접 HTTPS, SSH 전용 Cloudflare Tunnel, MongoDB 인증·계정 격리 절차를 비밀값 없는 예제로 보강한다.
 - [x] Cloudflare APT source가 내려받은 signing key를 명시적으로 사용한다.
 - [x] release의 모든 변경을 staging에 배포해 release HEAD SHA digest를 보장한다.
 - [x] 이전 digest가 없는 최초 실패에서도 실패 container와 image를 정리한다.
+
+## 애플리케이션 직접 HTTPS 요구사항 정정
+
+Cloudflare Tunnel은 SSH 접속에만 사용한다. 일반 애플리케이션 요청은 Elastic IP를
+가리키는 DNS-only 도메인에서 EC2의 Nginx 80/443으로 직접 받고, Nginx가 Certbot으로
+발급한 Let's Encrypt 인증서로 TLS를 종료한 뒤 loopback backend port로 전달한다.
+
+- [x] **Step 1: Certbot host 계약 실패 테스트 작성**
+
+  application host `--check`가 `certbot`을 필수 명령으로 보고하고, 설치 함수가
+  `certbot`과 `python3-certbot-nginx`를 함께 설치하는지 fake `apt-get`으로 검증한다.
+
+- [x] **Step 2: RED 확인**
+
+  Run: `.venv/bin/python -m unittest infra.tests.test_bootstrap_scripts -v`
+
+  Expected: `certbot` 점검과 설치 함수가 없어 FAIL.
+
+- [x] **Step 3: Certbot bootstrap 구현과 GREEN 확인**
+
+  `bootstrap-app-host.sh`에 `certbot` 점검을 추가하고 application package 설치를
+  `install_application_packages` 함수로 분리한다. Ubuntu package 설치 목록에 `certbot`과
+  `python3-certbot-nginx`를 포함하되 SSH용 `cloudflared` 설치는 유지한다.
+
+  Run: `.venv/bin/python -m unittest infra.tests.test_bootstrap_scripts -v`
+
+  Expected: PASS.
+
+- [x] **Step 4: 직접 HTTPS 운영 문서 갱신**
+
+  `cicd-setup.md`와 `deployment-runbook.md`에 다음 계약을 기록한다.
+
+  ```text
+  DNS-only domain -> Elastic IP -> Nginx 80/443 -> 127.0.0.1:<BACKEND_PORT>
+  security group 80/443 허용, 22/8080 차단
+  certbot --nginx --redirect 기반 인증서 발급·자동 갱신
+  cloudflared는 SSH Tunnel 전용이며 애플리케이션 hostname ingress를 갖지 않음
+  ```
+
+- [x] **Step 5: 전체 검증과 커밋**
+
+  Run:
+
+  ```bash
+  .venv/bin/python harness/scripts/verify.py
+  cd backend && ./gradlew clean check bootJar
+  docker buildx build --platform linux/arm64 --load -t career-form-backend:cf-19 ./backend
+  git diff --check
+  ```
+
+  Expected: 전부 exit 0.
+
+  ```bash
+  git add docs/plans/19-docker-cicd.md infra/scripts/bootstrap-app-host.sh \
+    infra/tests/test_bootstrap_scripts.py docs/operations/cicd-setup.md \
+    docs/operations/deployment-runbook.md
+  git commit -m "fix: 애플리케이션 직접 HTTPS 진입 경로 구성"
+  ```
 
 ## 수동 확인과 사람 담당
 
 - GitHub Environment, variables, secrets와 self-hosted runner label 생성
 - Docker Hub private repository, push account와 host별 pull-only account 생성
-- EC2·MongoDB·Nginx·cloudflared·swap 실제 설치와 권한 설정
+- EC2·MongoDB·Nginx·Certbot·SSH용 cloudflared·swap 실제 설치와 권한 설정
 - development, Start release, staging 수동 E2E, production 자동 배포 실행
 - readiness 실패를 유도한 rollback과 Draft revert PR 확인
 - PR Ready 전환, 승인, 병합과 release 동기화 PR 병합
