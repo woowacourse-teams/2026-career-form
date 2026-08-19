@@ -308,35 +308,44 @@ git commit -m "docs: Issue와 PR 본문 작성 원칙 정비"
 - Consumes: `origin/develop...HEAD` diff와 Issue #32 인수 조건
 - Produces: 자동 검증 결과, 수동 검증 상태와 두 축 리뷰 결과
 
-- [ ] **Step 1: 관련 테스트 실행**
+- [x] **Step 1: 관련 테스트 실행**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_issue_contract harness.tests.test_pr_contract harness.tests.test_template_body harness.tests.test_repository_contract -v`
 
 Expected: PASS
 
-- [ ] **Step 2: 전체 검증 실행**
+- [x] **Step 2: 전체 검증 실행**
 
 Run: `.venv/bin/python harness/scripts/verify.py`
 
 Expected: 전체 테스트 PASS, 커버리지 80% 이상
 
-- [ ] **Step 3: diff 형식 검증**
+- [x] **Step 3: diff 형식 검증**
 
 Run: `git diff --check`
 
 Expected: 출력 없음
 
-- [ ] **Step 4: Issue #29와 PR #31 수동 비교**
+- [x] **Step 4: Issue #29와 PR #31 수동 비교**
 
 새 원칙으로 작성한 Issue와 PR 초안에서 보호 대상 계약 정보는 남고 같은 사실의 반복과 리뷰 판단에 쓰이지 않는 설명은 제거됐는지 확인한다. GitHub 렌더링에서는 여섯 리뷰 섹션이 보이고 안내 주석은 숨겨지며 `검증 기록`은 접힌 상태인지 확인한다.
 
-- [ ] **Step 5: 두 축 코드 리뷰**
+- [x] **Step 5: 두 축 코드 리뷰**
 
 `origin/develop...HEAD`를 저장소 Standards와 Issue #32 Spec으로 나눠 검토한다. 치명적 문제와 높은 위험 문제를 수정한 뒤 전체 검증을 다시 실행한다.
 
-- [ ] **Step 6: 검증 결과 반영 커밋**
+- [x] **Step 6: 검증 결과 반영 커밋**
 
 ```bash
 git add docs/plans/32-issue-pr-body-writing.md
 git commit -m "docs: Issue 32 검증 결과 반영"
 ```
+
+## 검증 결과
+
+- 관련 테스트 84개 통과
+- 전체 테스트 250개 통과, 커버리지 89%
+- 스킬 구조 검사와 `git diff --check` 통과
+- #29와 #31 비교에서 Issue 계약 정보 보존과 PR 반복 제거 확인
+- GitHub Markdown 렌더링에서 여섯 리뷰 섹션, 숨겨진 안내, 기본으로 접힌 검증 기록 확인
+- Standards 및 Issue Spec 리뷰에서 발견한 오류 조합과 검증 기록 위치 문제 수정, 남은 높은 위험 문제 없음
