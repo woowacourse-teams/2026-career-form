@@ -326,7 +326,9 @@
 
 - [x] **Step 1: bootstrap 안전 경계 실패 테스트 작성**
 
-  scripts의 `--check`를 실제 실행해 지원 OS, 필수 명령, Docker·host service 상태를 읽기 전용으로 보고하는지 검증한다. 인자 없이 실행하면 관리자 확인 없이는 설치를 시작하지 않아야 하고 secret 값을 인자로 받지 않아야 한다.
+  scripts의 `--check`를 실제 실행해 지원 OS, 필수 명령, application host의 2GiB
+  swap·Docker·host service 상태를 읽기 전용으로 보고하는지 검증한다. 인자 없이 실행하면
+  관리자 확인 없이는 설치를 시작하지 않아야 하고 secret 값을 인자로 받지 않아야 한다.
 
 - [x] **Step 2: RED 확인**
 
@@ -341,7 +343,7 @@
   ```text
   GitHub Environments와 runner labels
   Docker Hub push/pull-only accounts
-  Nginx/Certbot/cloudflared SSH Tunnel/MongoDB host runtime
+  Nginx/Certbot/cloudflared SSH Tunnel/application host swap/MongoDB host runtime
   환경별 DB와 readWrite 계정
   신뢰된 push commit checkout과 비민감 state directory
   최초 배포, 재실행, readiness rollback, Draft revert PR 확인
@@ -444,7 +446,7 @@ Cloudflare Tunnel은 SSH 접속에만 사용한다. 일반 애플리케이션 �
 
 - GitHub Environment, variables, secrets와 self-hosted runner label 생성
 - Docker Hub private repository, push account와 host별 pull-only account 생성
-- EC2·MongoDB·Nginx·Certbot·SSH용 cloudflared 실제 설치와 권한 설정
+- EC2·MongoDB·Nginx·Certbot·SSH용 cloudflared와 application host swap 실제 설치·권한 설정
 - development, Start release, staging 수동 E2E, production 자동 배포 실행
 - readiness 실패를 유도한 rollback과 Draft revert PR 확인
 - PR Ready 전환, 승인, 병합과 release 동기화 PR 병합

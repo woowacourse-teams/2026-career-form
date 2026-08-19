@@ -102,8 +102,8 @@ Docker config에 저장한다. pull credential을 GitHub Secrets에 중복 저�
 sudo infra/scripts/bootstrap-app-host.sh --check
 ```
 
-Ubuntu ARM64, Docker Compose v2, Nginx, Certbot, SSH용 cloudflared, curl, jq, git과
-runner 서비스 상태를 보고한다. 설치가 필요하면 스크립트를 검토한 관리자가
+Ubuntu ARM64, 2 GiB swap, Docker Compose v2, Nginx, Certbot, SSH용 cloudflared, curl,
+jq, git과 runner 서비스 상태를 보고한다. 설치가 필요하면 스크립트를 검토한 관리자가
 명시적 확인값과 함께 실행한다.
 
 ```bash
@@ -112,8 +112,8 @@ sudo env BOOTSTRAP_CONFIRM=APPLY_APP_HOST \
 ```
 
 `--apply`는 OS 패키지, Docker 공식 apt repository, Nginx, Certbot Nginx plugin,
-cloudflared package, `root:docker` 소유의 `/var/lib/career-form/deploy` state directory와
-Docker/Nginx 서비스를 준비한다. runner
+cloudflared package, 2 GiB swap, `root:docker` 소유의
+`/var/lib/career-form/deploy` state directory와 Docker/Nginx 서비스를 준비한다. runner
 등록, Nginx virtual host, 인증서 발급과 SSH Tunnel 생성·credential 배치는 자동화하지
 않는다.
 

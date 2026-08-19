@@ -20,6 +20,7 @@ class BootstrapScriptContractTest(unittest.TestCase):
         for phrase in (
             "operating system",
             "architecture",
+            "swap",
             "docker",
             "compose",
             "nginx",
@@ -28,7 +29,6 @@ class BootstrapScriptContractTest(unittest.TestCase):
             "github actions runner",
         ):
             self.assertIn(phrase, output)
-        self.assertNotIn("swap:", output)
 
     def test_check_mode_reports_mongodb_host_requirements_without_mutation(self) -> None:
         completed = self._run(MONGODB_SCRIPT, "--check")
@@ -263,6 +263,32 @@ printf '%s\n' "$*" >> "$APT_LOG"
             self.assertEqual(0o700, stat.S_IMODE(data.stat().st_mode))
             self.assertEqual(0o700, stat.S_IMODE(config.stat().st_mode))
             self.assertEqual(0o755, stat.S_IMODE(compose.stat().st_mode))
+
+    def test_app_host_accepts_two_gib_swapfile_usable_capacity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            swaps = Path(directory) / "swaps"
+            swaps.write_text(
+                "Filename Type Size Used Priority\n"
+                "/swapfile file 2097148 0 -2\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; SWAPS_FILE="$2"; check_swap',
+                    "app-swap-capacity-test",
+                    str(APP_SCRIPT),
+                    str(swaps),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertIn("2097148 KiB", completed.stdout)
 
     def test_setup_document_lists_required_github_configuration_names(self) -> None:
         setup = (ROOT / "docs" / "operations" / "cicd-setup.md").read_text(
