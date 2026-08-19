@@ -11,28 +11,28 @@ body:
     id: background
     attributes:
       label: 배경
-      description: 실제 동작, 기대 동작, 비식별 재현 조건을 적습니다.
+      description: 실제 동작, 기대 동작과 비식별 재현 조건만 적습니다.
     validations:
       required: true
   - type: textarea
     id: goal
     attributes:
       label: 목표
-      description: 수정 후 보장할 동작을 적습니다.
+      description: 수정 후 달라지는 동작과 결과만 적습니다.
     validations:
       required: true
   - type: textarea
     id: in-scope
     attributes:
       label: 포함 범위
-      description: 원인 조사와 수정 범위를 적습니다.
+      description: 실제 원인 조사와 수정 대상을 적습니다.
     validations:
       required: true
   - type: textarea
     id: out-of-scope
     attributes:
       label: 제외 범위
-      description: 함께 고치지 않을 문제를 적습니다.
+      description: 함께 고친다고 오해할 수 있지만 다루지 않을 문제를 적습니다.
     validations:
       required: true
   - type: textarea
@@ -47,25 +47,25 @@ body:
     id: automated-validation
     attributes:
       label: 자동 검증
-      description: 재현 테스트와 회귀 테스트를 적습니다.
+      description: 실행할 재현 및 회귀 검증 명령을 적습니다.
     validations:
       required: true
   - type: textarea
     id: manual-validation
     attributes:
       label: 수동 검증
-      description: 사람이 확인할 항목을 적습니다. 없으면 없음을 적습니다.
+      description: 자동화할 수 없는 확인과 사람 담당 작업을 적습니다. 없으면 없음을 적습니다.
     validations:
       required: true
   - type: textarea
     id: risky-operations
     attributes:
       label: 위험 작업
-      description: 시크릿, 삭제, 마이그레이션, 배포 포함 여부를 적습니다.
+      description: 실제 위험과 시크릿, 삭제, 마이그레이션, 배포의 사람 담당 경계를 적습니다.
     validations:
       required: true
   - type: textarea
     id: references
     attributes:
       label: 참고 문서
-      description: 관련 로그는 개인정보와 시크릿을 제거한 뒤 연결합니다.
+      description: 작업 판단에 사용한 로그와 정본만 개인정보와 시크릿을 제거해 연결합니다.

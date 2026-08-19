@@ -249,7 +249,7 @@ git commit -m "feat: PR 본문 리뷰와 검증 구조 분리"
 - Consumes: `status:planning` Issue 초안과 구현 완료 diff
 - Produces: 계약 정보는 보존하고 판단에 쓰이지 않는 반복은 제거한 Issue와 PR 초안
 
-- [ ] **Step 1: Issue Form의 입력 안내를 섹션 역할에 맞게 수정**
+- [x] **Step 1: Issue Form의 입력 안내를 섹션 역할에 맞게 수정**
 
 세 Issue Form의 설명은 다음 의미를 각 작업 유형에 맞게 표현한다.
 
@@ -261,7 +261,7 @@ git commit -m "feat: PR 본문 리뷰와 검증 구조 분리"
 - 위험 작업은 실제 위험과 금지 작업의 경계만 받는다.
 - 참고 문서는 작업 판단에 사용한 정본만 받는다.
 
-- [ ] **Step 2: Issue 계약 정책에 보호 정보와 편집 기준 반영**
+- [x] **Step 2: Issue 계약 정책에 보호 정보와 편집 기준 반영**
 
 ```markdown
 ## 작성 원칙
@@ -269,7 +269,7 @@ git commit -m "feat: PR 본문 리뷰와 검증 구조 분리"
 실제 변경 대상, 범위 경계, 인수 조건, 자동 및 수동 검증, 위험 작업과 사람 담당 경계는 생략하지 않는다. 정보는 역할에 맞는 섹션 한 곳에만 작성한다. 문장을 제거해도 계약 판단이 달라지지 않으면 제거하며 글자 수나 항목 수로 분량을 제한하지 않는다.
 ```
 
-- [ ] **Step 3: 기획 및 구현 스킬의 생성 규칙 갱신**
+- [x] **Step 3: 기획 및 구현 스킬의 생성 규칙 갱신**
 
 `cf-project-issue-planning`에는 Issue 보호 정보와 섹션별 역할을 반영한다. `cf-issue-workflow`에는 다음 PR 작성 순서를 반영한다.
 
@@ -278,11 +278,11 @@ git commit -m "feat: PR 본문 리뷰와 검증 구조 분리"
 3. Issue와 ADR의 배경 및 결정 전문을 반복하지 않는다.
 4. 사용자 수동 편집과 재개 검증 흐름은 유지한다.
 
-- [ ] **Step 4: 공용 컨벤션과 하네스 안내 동기화**
+- [x] **Step 4: 공용 컨벤션과 하네스 안내 동기화**
 
 `docs/conventions/common.md`, `harness/README.md`, `docs/design/issue-based-ai-development-harness.md`에서 PR 본문의 역할과 접힌 검증 기록을 설명한다. 순수 산문 문구 검사는 추가하지 않는다.
 
-- [ ] **Step 5: YAML과 스킬 구조 검증**
+- [x] **Step 5: YAML과 스킬 구조 검증**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_repository_contract -v`
 
@@ -290,7 +290,7 @@ Run: `.venv/bin/python harness/scripts/validate-skills.py`
 
 Expected: PASS
 
-- [ ] **Step 6: 문서 변경 커밋**
+- [x] **Step 6: 문서 변경 커밋**
 
 ```bash
 git add .github/ISSUE_TEMPLATE harness/policies/issue-contract.md .agents/skills/cf-project-issue-planning/SKILL.md .agents/skills/cf-issue-workflow/SKILL.md docs/conventions/common.md harness/README.md docs/design/issue-based-ai-development-harness.md
