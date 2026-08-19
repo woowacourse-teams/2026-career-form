@@ -102,8 +102,8 @@ Docker config에 저장한다. pull credential을 GitHub Secrets에 중복 저�
 sudo infra/scripts/bootstrap-app-host.sh --check
 ```
 
-Ubuntu ARM64, 2 GiB swap, Docker Compose v2, Nginx, Certbot, SSH용 cloudflared, curl,
-jq, git과 runner 서비스 상태를 보고한다. 설치가 필요하면 스크립트를 검토한 관리자가
+Ubuntu ARM64, Docker Compose v2, Nginx, Certbot, SSH용 cloudflared, curl, jq, git과
+runner 서비스 상태를 보고한다. 설치가 필요하면 스크립트를 검토한 관리자가
 명시적 확인값과 함께 실행한다.
 
 ```bash
@@ -112,8 +112,8 @@ sudo env BOOTSTRAP_CONFIRM=APPLY_APP_HOST \
 ```
 
 `--apply`는 OS 패키지, Docker 공식 apt repository, Nginx, Certbot Nginx plugin,
-cloudflared package, 2 GiB swap, `root:docker` 소유의
-`/var/lib/career-form/deploy` state directory와 Docker/Nginx 서비스를 준비한다. runner
+cloudflared package, `root:docker` 소유의 `/var/lib/career-form/deploy` state directory와
+Docker/Nginx 서비스를 준비한다. runner
 등록, Nginx virtual host, 인증서 발급과 SSH Tunnel 생성·credential 배치는 자동화하지
 않는다.
 
@@ -222,8 +222,8 @@ scp infra/scripts/mongodb-compose.sh project-db:/tmp/
 scp infra/mongodb/compose.yaml project-db:/tmp/mongodb-compose.yaml
 ```
 
-DB host에서 읽기 전용 검사 후 관리자 확인을 분리한다. 첫 `--check`는 Docker, swap과
-directory가 아직 없으면 exit 1을 반환하는 것이 정상이다.
+DB host에서 읽기 전용 검사 후 관리자 확인을 분리한다. 첫 `--check`는 Docker와 directory가
+아직 없으면 exit 1을 반환하는 것이 정상이다.
 
 ```bash
 sudo /tmp/bootstrap-mongodb-host.sh --check
@@ -235,7 +235,7 @@ sudo install -o root -g root -m 0755 /tmp/mongodb-compose.sh \
   /usr/local/sbin/career-form-mongodb
 ```
 
-`--apply`는 Docker 공식 apt repository, Engine, Compose plugin, 2 GiB swap,
+`--apply`는 Docker 공식 apt repository, Engine, Compose plugin,
 `/var/lib/career-form/mongodb`, `/etc/career-form`과 `/opt/career-form/mongodb`만 준비한다.
 MongoDB package, database, 사용자와 credential은 만들지 않는다.
 
