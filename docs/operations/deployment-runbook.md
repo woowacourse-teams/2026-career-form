@@ -22,7 +22,9 @@ checkout해 `infra/scripts/deploy.sh`를 실행한다.
 
 1. [CI/CD 초기 설정](cicd-setup.md)의 secret, variable, runner와 host 점검을 끝낸다.
    Elastic IP, DNS-only application hostname, public 80/443, Nginx TLS와 Certbot timer를
-   확인하고 22, 8080 및 backend host port가 public ingress에 없는지 확인한다.
+   확인하고 22, 8080 및 backend host port가 public ingress에 없는지 확인한다. DB host의
+   MongoDB Compose가 healthy이고 27017은 application security group에서만 허용되는지
+   확인한다.
 2. development workflow를 실행할 backend 또는 배포 구성 변경을 `develop`에 병합한다.
 3. build job의 full SHA tag와 digest 출력, deploy job의 readiness 성공을 확인한다.
 4. host에서 실제 secret 값을 출력하지 않고 다음 상태 파일의 존재만 확인한다.
@@ -106,6 +108,15 @@ docker compose --project-name career-form-development ps
 docker compose --project-name career-form-staging ps
 curl --fail --silent --show-error http://127.0.0.1:<port>/actuator/health
 sudo certbot renew --dry-run
+```
+
+DB host에서는 실제 환경값을 출력하지 않는 `config --quiet`과 container 상태만 확인한다.
+
+```bash
+sudo env MONGODB_BIND_IP=<mongodb-private-ip> \
+  /usr/local/sbin/career-form-mongodb --check
+sudo env MONGODB_BIND_IP=<mongodb-private-ip> \
+  /usr/local/sbin/career-form-mongodb --status
 ```
 
 `docker compose config`는 해석된 URI를 출력할 수 있으므로 운영 진단에서도 `--quiet`을

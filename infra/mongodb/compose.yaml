@@ -1,0 +1,32 @@
+services:
+  mongodb:
+    image: mongo:8.0.26-noble@sha256:b49841837cd7688885d7479d14a71733bacae4c99faaae615622384eaee045a0
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    env_file:
+      - ${MONGODB_ENV_FILE:-/etc/career-form/mongodb.env}
+    ports:
+      - "${MONGODB_BIND_IP:?MONGODB_BIND_IP must be the MongoDB host private IPv4 address}:27017:27017"
+    volumes:
+      - type: bind
+        source: ${MONGODB_DATA_DIR:-/var/lib/career-form/mongodb}
+        target: /data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --host 127.0.0.1
+          --username "$$MONGO_INITDB_ROOT_USERNAME"
+          --password "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin
+          --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)'
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

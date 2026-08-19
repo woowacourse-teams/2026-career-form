@@ -205,47 +205,78 @@ sudo systemctl enable --now cloudflared
 sudo systemctl status cloudflared --no-pager
 ```
 
-## MongoDB host bootstrap
+## MongoDB Docker host bootstrap
 
-MongoDB host에서도 검사 후 관리자 확인을 분리한다.
+MongoDB host는 Ubuntu 26.04 ARM64 host에 MongoDB apt package를 직접 설치하지 않는다.
+Docker Engine은 host OS repository에서 설치하고, MongoDB는 ARM64를 제공하는
+`mongo:8.0.26-noble`의 검증된 multi-platform digest로 실행한다. host 교체 없이
+container userland를 MongoDB 지원 Ubuntu release에 고정하며, application 배포
+Compose와 DB Compose는 분리한다.
+
+작업 PC의 CF-19 worktree에서 검토한 세 파일을 DB host로 전송한다. `project-db`는 로컬
+SSH config의 ProxyJump alias다.
 
 ```bash
-sudo infra/scripts/bootstrap-mongodb-host.sh --check
+scp infra/scripts/bootstrap-mongodb-host.sh project-db:/tmp/
+scp infra/scripts/mongodb-compose.sh project-db:/tmp/
+scp infra/mongodb/compose.yaml project-db:/tmp/mongodb-compose.yaml
+```
+
+DB host에서 읽기 전용 검사 후 관리자 확인을 분리한다. 첫 `--check`는 Docker, swap과
+directory가 아직 없으면 exit 1을 반환하는 것이 정상이다.
+
+```bash
+sudo /tmp/bootstrap-mongodb-host.sh --check
 sudo env BOOTSTRAP_CONFIRM=APPLY_MONGODB_HOST \
-  infra/scripts/bootstrap-mongodb-host.sh --apply
+  /tmp/bootstrap-mongodb-host.sh --apply
+sudo install -o root -g root -m 0644 /tmp/mongodb-compose.yaml \
+  /opt/career-form/mongodb/compose.yaml
+sudo install -o root -g root -m 0755 /tmp/mongodb-compose.sh \
+  /usr/local/sbin/career-form-mongodb
 ```
 
-`--apply`는 MongoDB 8.0 공식 apt repository, MongoDB systemd service와 2 GiB swap만
-준비한다. MongoDB가 기본 loopback bind 상태일 때 host 내부 `mongosh`에서 관리자 계정을
-먼저 만들고, 비밀번호는 `passwordPrompt()`로만 입력한다.
+`--apply`는 Docker 공식 apt repository, Engine, Compose plugin, 2 GiB swap,
+`/var/lib/career-form/mongodb`, `/etc/career-form`과 `/opt/career-form/mongodb`만 준비한다.
+MongoDB package, database, 사용자와 credential은 만들지 않는다.
 
-```javascript
-use admin
-db.createUser({
-  user: "career_form_admin",
-  pwd: passwordPrompt(),
-  roles: [{ role: "userAdminAnyDatabase", db: "admin" }]
-})
-```
-
-이후 application host security group에서 오는 TCP 27017만 MongoDB host에 허용한다.
-`/etc/mongod.conf`에는 인증과 private bind를 함께 적용하고 재시작한다. public IP나
-`0.0.0.0`은 사용하지 않는다.
-
-```yaml
-net:
-  port: 27017
-  bindIp: 127.0.0.1,<mongodb-private-ip>
-
-security:
-  authorization: enabled
-```
+관리자가 password manager에서 새 root password를 만들고 host의 mode 0600 파일에 직접
+입력한다. 실제 값을 shell command 인자나 history에 넣지 않는다.
 
 ```bash
-sudo systemctl restart mongod
-sudo systemctl is-active mongod
-mongosh --host 127.0.0.1 --authenticationDatabase admin \
-  --username career_form_admin --password
+sudo touch /etc/career-form/mongodb.env
+sudo chown root:root /etc/career-form/mongodb.env
+sudo chmod 0600 /etc/career-form/mongodb.env
+sudoedit /etc/career-form/mongodb.env
+```
+
+```dotenv
+MONGO_INITDB_ROOT_USERNAME=career_form_admin
+MONGO_INITDB_ROOT_PASSWORD=<password-manager에서 생성한 실제 값>
+```
+
+placeholder를 실제 값으로 바꾸고 저장한다. root 계정 자동 생성은 data directory가 비어
+있는 최초 기동에서만 실행된다. DB host의 private IPv4를 명시해 설정 검증, image pull과
+기동을 순서대로 수행한다. `config`에는 반드시 `--quiet`을 사용한다.
+
+```bash
+sudo env MONGODB_BIND_IP=<mongodb-private-ip> \
+  /usr/local/sbin/career-form-mongodb --check
+sudo env MONGODB_BIND_IP=<mongodb-private-ip> \
+  /usr/local/sbin/career-form-mongodb --pull
+sudo env MONGODB_BIND_IP=<mongodb-private-ip> \
+  /usr/local/sbin/career-form-mongodb --up
+```
+
+application host security group에서 오는 TCP 27017만 MongoDB host security group에
+허용한다. public IP, `0.0.0.0/0` 또는 application 이외 security group에는 27017을
+허용하지 않는다. 관리 script도 RFC1918 private IPv4가 아니면 Docker 실행 전에
+거부하고, Compose는 검증된 host private IPv4에만 port를 publish한다.
+
+root로 인증된 `mongosh`에 들어갈 때 password는 prompt에 입력한다.
+
+```bash
+sudo env MONGODB_BIND_IP=<mongodb-private-ip> \
+  /usr/local/sbin/career-form-mongodb --shell
 ```
 
 인증된 `mongosh`에서 환경마다 다음 블록의 database와 username만 바꿔 세 계정을 만든다.
@@ -265,8 +296,16 @@ URI에 넣을 때는 percent-encoding하고 완성된 URI는 해당 GitHub Envir
 입력한다. 계정 격리는 각 계정으로 자기 DB의 읽기·쓰기 성공과 다른 DB의 쓰기 실패를
 확인한다.
 
-운영 중에는 security group·bind·계정 권한을 주기적으로 재확인하고 TLS, backup, restore
-rehearsal, 저장 공간과 경보는 별도 운영 정책으로 관리한다.
+development Environment URI 형식은 다음과 같다.
+
+```text
+mongodb://career_form_development:<percent-encoded-password>@<mongodb-private-ip>:27017/career_form_development?authSource=career_form_development
+```
+
+운영 중에는 container image 갱신을 자동으로 따라가지 않는다. patch tag와 digest 변경은
+별도 검토와 backup·restore rehearsal 뒤 함께 적용한다. `/var/lib/career-form/mongodb`의
+backup과 restore, security group·private bind·계정 권한, 저장 공간과 경보는 별도 운영
+정책으로 관리한다.
 
 ## 활성화 전 확인
 
@@ -277,7 +316,7 @@ rehearsal, 저장 공간과 경보는 별도 운영 정책으로 관리한다.
 - DNS-only application hostname이 각 host의 Elastic IP를 가리킨다.
 - security group은 public 80/443만 허용하고 22, 8080과 `BACKEND_PORT`를 허용하지 않는다.
 - Nginx HTTPS와 Certbot 자동 갱신이 정상이며 cloudflared는 SSH ingress만 갖는다.
-- MongoDB는 application host의 private network에서만 접근할 수 있다.
+- MongoDB container가 healthy이며 application host의 private network에서만 접근할 수 있다.
 - 실제 값을 출력하지 않고 `--check`와 GitHub UI의 이름만 대조한다.
 
 실제 실행 순서와 장애 대응은 [배포 운영 Runbook](deployment-runbook.md)을 따른다.

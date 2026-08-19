@@ -35,7 +35,16 @@ class BootstrapScriptContractTest(unittest.TestCase):
         output = (completed.stdout + completed.stderr).lower()
 
         self.assertIn(completed.returncode, (0, 1))
-        for phrase in ("operating system", "architecture", "swap", "mongodb"):
+        for phrase in (
+            "operating system",
+            "architecture",
+            "swap",
+            "docker",
+            "compose",
+            "mongodb data directory",
+            "mongodb config directory",
+            "mongodb compose directory",
+        ):
             self.assertIn(phrase, output)
 
     def test_bootstrap_requires_explicit_mode_and_apply_confirmation(self) -> None:
@@ -177,6 +186,83 @@ printf '%s\n' "$*" >> "$APT_LOG"
             self.assertIn("install --yes", invocation)
             self.assertIn("certbot", invocation.split())
             self.assertIn("python3-certbot-nginx", invocation.split())
+
+    def test_mongodb_host_installs_docker_without_host_mongodb_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary_directory = root / "bin"
+            binary_directory.mkdir()
+            apt_log = root / "apt.log"
+            fake_apt_get = binary_directory / "apt-get"
+            fake_apt_get.write_text(
+                """#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >> "$APT_LOG"
+""",
+                encoding="utf-8",
+            )
+            fake_apt_get.chmod(0o755)
+            environment = {
+                **os.environ,
+                "APT_LOG": str(apt_log),
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; install_mongodb_host_packages',
+                    "mongodb-package-test",
+                    str(MONGODB_SCRIPT),
+                ),
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            packages = apt_log.read_text(encoding="utf-8").split()
+            for package in (
+                "docker-ce",
+                "docker-ce-cli",
+                "containerd.io",
+                "docker-buildx-plugin",
+                "docker-compose-plugin",
+            ):
+                self.assertIn(package, packages)
+            self.assertNotIn("mongodb-org", packages)
+
+    def test_mongodb_host_prepares_private_persistent_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = root / "data"
+            config = root / "config"
+            compose = root / "compose"
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; MONGODB_DATA_DIR="$2"; '
+                    'MONGODB_CONFIG_DIR="$3"; MONGODB_COMPOSE_DIR="$4"; '
+                    "prepare_mongodb_directories",
+                    "mongodb-directory-test",
+                    str(MONGODB_SCRIPT),
+                    str(data),
+                    str(config),
+                    str(compose),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertEqual(0o700, stat.S_IMODE(data.stat().st_mode))
+            self.assertEqual(0o700, stat.S_IMODE(config.stat().st_mode))
+            self.assertEqual(0o755, stat.S_IMODE(compose.stat().st_mode))
 
     def test_setup_document_lists_required_github_configuration_names(self) -> None:
         setup = (ROOT / "docs" / "operations" / "cicd-setup.md").read_text(

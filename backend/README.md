@@ -159,7 +159,9 @@ Spring Boot 4.1의 연결 속성은 `spring.mongodb.uri`이며 `application.yml`
 
 - `local`: Compose가 `.env.local`의 자격증명 없는 내부 URI를 주입하고 MongoDB 포트를 호스트에 공개하지 않는다.
 - `dev`, `staging`, `prod`: 관리형 또는 외부 MongoDB의 URI를 secret manager나 런타임 환경에서 주입한다.
-- 저장소는 외부 MongoDB 인스턴스, 계정, TLS, 네트워크와 백업을 생성하거나 관리하지 않는다.
+- 원격 application 배포는 MongoDB를 함께 기동하지 않는다. DB host의 Docker bootstrap과
+  Compose 계약은 `infra/mongodb/`와 `docs/operations/cicd-setup.md`에 분리되어 있으며,
+  실제 계정·네트워크·backup·restore 작업은 관리자가 수행한다.
 - 현재는 연결 기반만 제공하며 실제 프로필·지원서 데이터를 MongoDB에 저장하거나 전송하지 않는다.
 
 MongoDB URI가 없거나 connection string 형식이 잘못되면 설정 해석 또는 MongoDB client 생성 중 애플리케이션 기동이 실패하므로 health 엔드포인트가 생성되지 않는다. URI 형식은 유효하지만 DNS·네트워크·자격증명 문제로 연결할 수 없거나 MongoDB가 중단되면 애플리케이션 기동 후 전역 `/actuator/health`가 HTTP 503과 `DOWN`을 반환하고 backend 컨테이너도 unhealthy 상태가 된다.

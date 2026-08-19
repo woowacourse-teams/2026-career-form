@@ -341,7 +341,7 @@
   ```text
   GitHub Environments와 runner labels
   Docker Hub push/pull-only accounts
-  Nginx/Certbot/cloudflared SSH Tunnel/swap/MongoDB systemd
+  Nginx/Certbot/cloudflared SSH Tunnel/swap/MongoDB host runtime
   환경별 DB와 readWrite 계정
   신뢰된 push commit checkout과 비민감 state directory
   최초 배포, 재실행, readiness rollback, Draft revert PR 확인
@@ -448,3 +448,67 @@ Cloudflare Tunnel은 SSH 접속에만 사용한다. 일반 애플리케이션 �
 - development, Start release, staging 수동 E2E, production 자동 배포 실행
 - readiness 실패를 유도한 rollback과 Draft revert PR 확인
 - PR Ready 전환, 승인, 병합과 release 동기화 PR 병합
+
+## MongoDB Docker 호스트 전환
+
+Ubuntu 26.04 ARM64 DB EC2를 교체할 권한이 없으므로 MongoDB apt repository를 host에
+직접 연결하지 않는다. Ubuntu 26.04 ARM64를 지원하는 Docker Engine 위에서 patch version을
+고정한 MongoDB 8.0 ARM64 image를 실행한다. 실제 설치·계정 생성·secret 입력은 사람이
+수행한다.
+
+- [x] **Step 1: Docker 기반 MongoDB 계약 실패 테스트 작성**
+
+  `infra/mongodb/compose.yaml`을 실제 `docker compose config`로 렌더링해 private IPv4
+  host binding, 인증 환경 파일, `/data/db` 영구 저장소, healthcheck와 자동 재시작을
+  검증한다. bootstrap은 fake `apt-get`으로 Docker Engine과 Compose만 설치하며 MongoDB
+  host package를 설치하지 않는 동작을 검증한다.
+
+- [x] **Step 2: RED 확인**
+
+  Run:
+
+  ```bash
+  .venv/bin/python -m unittest infra.tests.test_bootstrap_scripts \
+    infra.tests.test_mongodb_compose -v
+  ```
+
+  Expected: MongoDB Compose 파일과 Docker host bootstrap 동작이 없어 FAIL.
+
+- [x] **Step 3: Docker host bootstrap과 MongoDB Compose 구현**
+
+  `bootstrap-mongodb-host.sh`는 Ubuntu ARM64에서 Docker 공식 apt repository, Engine,
+  Compose plugin, 2 GiB swap과 제한된 MongoDB data/config directory만 준비한다.
+  `infra/mongodb/compose.yaml`은 `mongo:8.0.26-noble`의 검증된 multi-platform digest,
+  `unless-stopped`, 인증 환경 파일, private IPv4의 `27017`, host bind mount와 인증
+  healthcheck를 사용한다.
+
+- [x] **Step 4: GREEN 확인**
+
+  Run:
+
+  ```bash
+  .venv/bin/python -m unittest infra.tests.test_bootstrap_scripts \
+    infra.tests.test_mongodb_compose -v
+  ```
+
+  Expected: PASS.
+
+- [x] **Step 5: 운영 문서 전환**
+
+  `cicd-setup.md`와 `deployment-runbook.md`에서 직접 `mongod` systemd 설정을 제거하고,
+  root credential을 mode 0600 host env file에 입력한 뒤 Compose를 `config --quiet`,
+  `pull`, `up -d`, 인증 healthcheck 순으로 기동하는 절차를 기록한다. 환경별 application
+  user는 인증된 `mongosh`의 `passwordPrompt()`로 생성하고 URI에는 DB private IP만 쓴다.
+
+- [x] **Step 6: 전체 검증과 커밋**
+
+  Run:
+
+  ```bash
+  .venv/bin/python harness/scripts/verify.py
+  cd backend && ./gradlew clean check bootJar
+  docker buildx build --platform linux/arm64 --load -t career-form-backend:cf-19 ./backend
+  git diff --check
+  ```
+
+  Expected: 전부 exit 0.
