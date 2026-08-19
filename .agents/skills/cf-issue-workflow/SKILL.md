@@ -2,7 +2,7 @@
 name: cf-issue-workflow
 description: >-
   사람이 status:ready로 확정한 GitHub Issue 하나를 검증하고 작업 환경 자동 구성,
-  Issue 계약에 맞는 CF 또는 hotfix/CF 브랜치의 TDD 구현, 검증, 코드 리뷰, 같은 제목의 Draft PR 생성까지 연결한다.
+  Issue 계약에 맞는 CF 또는 hotfix/CF 브랜치의 TDD 구현, 검증, 코드 리뷰, 같은 제목의 Draft PR 게시와 사람 수정 후 재검증까지 연결한다.
   사용자가 "Issue #123 작업해줘", "이슈에서 개발 시작해줘", "Draft PR까지 진행해줘"처럼
   이 저장소의 확정된 Issue 구현을 요청할 때 사용한다. Project draft 기획, Sub-issue 생성,
   PR 머지에는 사용하지 않는다.
@@ -31,7 +31,7 @@ Issue 본문을 작업 계약의 정본으로 유지하고 하나의 Issue, 하�
 5. 조건이 부족하면 필요한 계약을 보고하고 중단한다. AI가 Issue 본문을 임의로 확정하지 않는다.
 6. 시크릿 접근, 파일 삭제, 실제 마이그레이션, 배포가 필요하면 사람 담당 범위를 분리한다.
 
-이 스킬을 Issue 번호와 함께 명시적으로 실행한 요청은 해당 Issue의 `status:in-progress` 전환, 현재 작업 브랜치 push, Draft PR 생성까지 승인한 것으로 본다. PR 최종 승인, Squash Commit 제목 입력, 머지는 포함하지 않는다.
+이 스킬을 Issue 번호와 함께 명시적으로 실행한 요청은 해당 Issue의 `status:in-progress` 전환, 현재 작업 브랜치 push, Draft PR 생성까지 승인한 것으로 본다. Draft PR 생성 직후의 `status:review` 전환, PR 최종 승인, Squash Commit 제목 입력, 머지는 포함하지 않는다.
 
 ## 2. 작업 격리와 상태 전환
 
@@ -75,20 +75,26 @@ Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고,
 
 검증 실패를 통과로 표현하지 않는다. 사람 수동 검증이 남으면 PR 본문에 미완료 상태로 남긴다.
 
-## 5. Git과 Draft PR
+## 5. Git과 Draft PR 편집 체크포인트
 
 1. 논리적 변경별로 `<type>: <한글 명사형 설명>` 커밋을 만든다. Conventional Commit type은 유지하고 설명을 `한다`로 끝내지 않는다.
 2. 현재 Issue의 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치만 push한다. force push하지 않는다.
 3. 전체 diff와 커밋 이력을 검토한다.
-4. Issue와 같은 `[영역] 작업명` 제목으로 Draft PR 하나를 만든다. PR 제목에 Conventional Commit type을 붙이지 않는다.
+4. 현재 브랜치에 연결된 열린 PR을 조회한다. 없을 때만 Issue와 같은 `[영역] 작업명` 제목으로 Draft PR을 만든다. 하나가 이미 있으면 생성과 본문 게시를 반복하지 않고 재개 절차로 이동하며, 둘 이상이면 대상을 추측하지 않고 중단한다.
 5. `.github/pull_request_template.md`의 여덟 섹션 응답을 JSON으로 준비하고 선택한 Python으로 `harness/scripts/render-template-body.py pr`을 실행해 OS 임시 UTF-8 Markdown 파일을 만든다.
 6. `gh pr create --draft --body-file <임시 파일>`로 `Closes #<Issue 번호>`가 하나인 PR을 만든다. 인라인 `--body`를 사용하지 않는다.
-7. `gh pr view`로 원격 제목과 본문을 다시 읽고 선택한 Python으로 실행한 `harness/scripts/validate-pr.py`와 같은 기준으로 검증한다.
-8. `status:in-progress`를 제거하고 `status:review`를 적용한다.
-9. Project Status를 `On Review`로 바꾸고 다시 조회한다.
-10. 사람에게 자동 검증 결과, 수동 확인 항목, 독립 draft 후보를 전달한다.
+7. `gh pr view`로 Draft PR이 하나 생성됐는지만 확인한다. Issue는 `status:in-progress`, Project는 `In Progress`로 유지하고 사람이 GitHub에서 PR 제목과 본문을 수정한 뒤 재개를 요청할 때까지 중단한다.
 
-PR을 ready 상태로 바꾸거나 승인하거나 머지하지 않는다. 사람은 검토를 시작하기 전에 Draft PR을 Ready for review로 전환하고, 최종 Squash Commit 제목을 GitHub 머지 화면에서 입력한다.
+사용자가 수정 완료나 재개를 알리면 다음 순서로 기존 PR을 검토한다.
+
+1. 현재 브랜치에 연결된 열린 PR을 다시 조회하고 하나의 Draft PR로 확정한다. PR 생성, push와 본문 게시를 반복하지 않는다.
+2. `gh pr view`로 원격 제목, 본문, head, base와 Draft 상태를 읽는다. 사람이 Ready for review로 먼저 전환했다면 Draft 상태로 되돌리도록 요청하고 상태 전이를 진행하지 않는다.
+3. 현재 Issue 제목을 다시 읽고 선택한 Python으로 `harness/scripts/validate-pr.py`를 실행한다.
+4. 검증에 실패하면 오류를 보고하고 사용자 변경을 덮어쓰지 않으며 Issue `status:in-progress`와 Project `In Progress`를 유지한다.
+5. 검증에 통과하면 `status:in-progress`를 제거하고 `status:review`를 적용한 뒤 Project Status를 `On Review`로 바꾸고 둘을 다시 조회한다.
+6. 사람에게 자동 검증 결과, 수동 확인 항목, 독립 draft 후보를 전달한다.
+
+PR을 Ready for review 상태로 바꾸거나 승인하거나 머지하지 않는다. 사람은 AI의 재개 검증과 리뷰 상태 전환이 끝난 뒤 Draft PR을 Ready for review로 전환하고, 최종 Squash Commit 제목을 GitHub 머지 화면에서 입력한다.
 
 ## 선택 스킬
 

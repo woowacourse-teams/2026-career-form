@@ -65,8 +65,8 @@ API 필드 제거, 필수 요청 필드 추가, 호환되지 않는 응답 구�
 ## 병합 커밋
 
 `CF-*` 작업 브랜치를 `develop`, `release/*`에 합치거나 `hotfix/CF-*`를 `main`에
-합칠 때 Squash Merge를 사용한다. `release/*` → `main`·`develop`, hotfix의 `main` →
-`develop`·`release/*`, `revert/*` → `main`은 Merge Commit을 사용한다. 최종
+합칠 때 Squash Merge를 사용한다. `release/*` → `main`, `develop`, hotfix의 `main` →
+`develop`, `release/*`, `revert/*` → `main`은 Merge Commit을 사용한다. 최종
 승인자는 GitHub 머지 화면에서 경로에 맞는 방식을 선택하고 Squash Commit인 경우
 제목과 본문을 직접 확인한다.
 
@@ -78,8 +78,10 @@ Issue와 PR 제목은 개별 커밋과 다른 형식을 사용한다.
 [영역] 작업명
 ```
 
-- 영역은 `FE`, `BE`, `Infra`, `Harness`, `Plan` 중 하나를 사용한다.
-- `FE`, `BE`만 전체를 대문자로 쓰고 나머지는 첫 문자만 대문자로 쓴다.
+- 영역은 `FE`, `BE`, `AI`, `Infra`, `Harness`, `Plan` 중 하나를 사용한다.
+- `FE`, `BE`, `AI`만 전체를 대문자로 쓰고 나머지는 첫 문자만 대문자로 쓴다.
+- `AI`는 제품의 LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용한다.
+- `Harness`는 개발 하네스와 워크플로우 변경에 사용한다.
 - `Plan`은 조사, 요구사항 정리, 문서 기획 같은 구현 전 작업에 사용한다.
 - `feat:`, `fix:` 같은 Conventional Commit type을 붙이지 않는다.
 - 작업명은 한글을 포함한 명사형으로 작성하고 `한다`로 끝내지 않는다.
@@ -90,6 +92,7 @@ Issue와 PR 제목은 개별 커밋과 다른 형식을 사용한다.
 
 ```text
 [FE] 삼성 채용 사이트 자동 입력
+[AI] LLM 필드 매핑
 [Harness] Codex 개발 하네스 구축
 [Plan] 프로필 저장 구조 결정
 ```

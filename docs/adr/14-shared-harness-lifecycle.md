@@ -12,6 +12,7 @@
 
 - #14
 - #17
+- #29
 
 ## 배경
 
@@ -37,7 +38,8 @@
 7. `cf-post-merge-cleanup`은 검증된 병합 자원만 멱등적으로 정리한다. `cf-finishing-a-development-branch`는 표준 Issue 생명주기에 사용하지 않는다.
 8. 공용 스킬은 Orca와 특정 로컬 플러그인에 의존하지 않는다.
 9. 비식별 사용자 프롬프트를 라우팅 eval로 보존하고 중복 스킬 환경의 포함 및 배제 결과를 기록한다. 정적 HTML viewer는 만들지 않는다.
-10. Issue와 PR 영역 prefix는 `FE`, `BE`, `Infra`, `Harness`, `Plan`을 사용한다. `FE`, `BE`만 전체를 대문자로 쓰고 나머지는 첫 문자만 대문자로 쓴다. 배포 PR은 `Release`를 사용한다.
+10. Issue와 PR 영역 prefix는 `FE`, `BE`, `AI`, `Infra`, `Harness`, `Plan`을 사용한다. `FE`, `BE`, `AI`만 전체를 대문자로 쓰고 나머지는 첫 문자만 대문자로 쓴다. 배포 PR은 `Release`를 사용한다.
+11. Issue 계약과 Draft PR은 GitHub에 먼저 게시하고 사람이 원격 내용을 수정해 재개할 때까지 각각 planning과 in-progress 상태를 유지한다. 재개 후 원격 계약 검증을 통과한 경우에만 ready와 review 상태로 전환한다.
 
 ## 결과
 
@@ -47,3 +49,4 @@
 - 스킬 이름과 문서 및 eval을 함께 변경하므로 diff가 크고 외부 upstream 갱신 시 이름과 내부 참조를 다시 맞춰야 한다.
 - 원 플로우는 사람의 승인과 머지를 대신하지 않으며 여러 세션에서 원격 상태를 다시 확인해야 한다.
 - prefix의 고정된 대소문자를 제목 검증기, 정책, 스킬과 eval에서 함께 유지해야 한다.
+- Issue와 Draft PR의 수동 편집 체크포인트가 원격 상태로 구분되고 완료한 게시를 재개 시 반복하지 않는다.

@@ -6,8 +6,9 @@
 Issue가 작업 범위와 완료 기준의 정본이며, 프로젝트 전용 `cf-issue-workflow` 스킬이
 기획, 구현, 검증, Git 작업에 필요한 개별 스킬을 연결한다.
 
-AI는 사람이 확정한 Issue에서 시작해 Draft PR 생성까지 담당한다. PR 최종 승인과
-머지, 시크릿 접근, 파괴적 명령, 마이그레이션, 배포는 사람이 담당한다.
+AI는 사람이 확정한 Issue에서 시작해 Draft PR 생성과 원격 계약 검증까지 담당한다.
+Issue와 Draft PR의 원격 수정, PR 최종 승인과 머지, 시크릿 접근, 파괴적 명령,
+마이그레이션, 배포는 사람이 담당한다.
 
 ## 작업 흐름
 
@@ -16,13 +17,21 @@ AI는 사람이 확정한 Issue에서 시작해 Draft PR 생성까지 담당한�
         ↓
 Project draft를 Issue로 승격하고 In Progress 전환
         ↓
-Issue 본문과 커밋 단위 계획을 사람이 승인하고 AI가 게시 후 status:ready 전환
+AI가 Issue 본문을 게시하고 status:planning에서 중단
+        ↓
+사람이 GitHub Issue를 수정하고 재개
+        ↓
+AI가 원격 Issue를 검증하고 status:ready 전환
         ↓
 cf-issue-workflow 실행
         ↓
 워크트리 -> 구현 계획 -> TDD -> 검증 -> AI 리뷰
         ↓
 AI가 Draft PR 생성
+        ↓
+사람이 GitHub Draft PR을 수정하고 재개
+        ↓
+AI가 원격 PR을 검증하고 status:review 전환
         ↓
 사람이 Ready for review로 전환
         ↓
@@ -42,17 +51,19 @@ Issue 본문은 다음 정보를 담는 작업 계약이다.
 - 의존 Issue와 차단 관계
 - 위험 작업 여부와 참고 문서
 
-`status:ready` 이후에는 Issue 본문을 변경하지 않는다. 정정이 필요하면 사람이 먼저
-`status:planning`으로 되돌리고 본문을 고친 뒤 다시 `status:ready`로 확정한다.
+AI가 Issue 초안을 게시한 뒤에는 `status:planning`을 유지한다. 사람이 GitHub에서
+제목과 본문을 수정하고 재개하면 AI가 원격 계약을 검증한 뒤 `status:ready`로
+전환한다. `status:ready` 이후에는 Issue 본문을 변경하지 않는다. 정정이 필요하면
+사람이 먼저 `status:planning`으로 되돌리고 본문을 고친 뒤 같은 검증을 거쳐 다시 확정한다.
 범위가 커지면 기존 Issue에 추가하지 않고 Project의 독립 draft 후보로 제안한다.
 
 Issue의 작업 상태는 본문이 아니라 라벨, 담당자, 연결 PR로 표현한다.
 
 | 상태 | 의미 | 전환 주체 |
 |---|---|---|
-| `status:planning` | 기획 또는 요구사항 정리 중 | 사람, AI 보조 |
-| `status:ready` | 사람이 범위와 완료 기준을 확정함 | 사람 |
-| `status:in-progress` | AI가 작업 중이며 담당자가 정해짐 | AI |
+| `status:planning` | 기획, 요구사항 정리 또는 Issue 수동 편집 중 | 사람, AI 보조 |
+| `status:ready` | 사람이 범위와 완료 기준을 확인하고 AI 검증을 통과함 | 사람 확인, AI 전환 |
+| `status:in-progress` | 구현, 검증 또는 Draft PR 수동 편집 중 | 사람, AI |
 | `status:blocked` | 외부 판단이나 권한이 필요함 | AI |
 | `status:review` | Draft PR과 검증 근거가 준비됨 | AI |
 | Closed | 연결 PR이 머지됨 | GitHub |
@@ -72,12 +83,16 @@ GitHub Project draft는 기능 단위 백로그다. FE, BE, INFRA처럼 독립 �
 |---|---|---|
 | 기획 방향 결정 | 사람 | 승인 체크포인트 |
 | 요구사항 질문과 정리 | AI | 스킬 |
-| Issue 최종 확정 | 사람 | `status:ready` |
+| Issue 초안 게시 | AI | `status:planning` 유지 |
+| Issue 수정과 재개 | 사람 | GitHub 원격 정본 |
+| Issue 최종 확정 | 사람 확인, AI 검증 | `status:ready` |
 | 코드 조사, 계획, 구현 | AI | 오케스트레이션 |
 | TDD와 완료 검증 | AI | 스킬, 테스트, CI |
 | 범위 초과 처리 | AI | 독립 draft 제안, 현재 작업 제외 |
-| draft 승격과 Issue 확정 | 사람 | 원격 변경 승인, `status:ready` |
-| Draft PR 생성 | AI | PR 계약 검사 |
+| draft 승격 | AI | `status:planning`, Project `In Progress` |
+| Draft PR 생성 | AI | `status:in-progress` 유지 |
+| Draft PR 수정과 재개 | 사람 | GitHub 원격 정본 |
+| Draft PR 검증과 리뷰 전환 | AI | PR 계약 검사, `status:review` |
 | Ready for review 전환 | 사람 | GitHub PR 상태 |
 | PR 최종 승인과 머지 | 사람 | GitHub Ruleset |
 | 시크릿, 삭제, 마이그레이션 | 사람 | Codex 훅으로 AI 실행 차단 |
@@ -85,7 +100,9 @@ GitHub Project draft는 기능 단위 백로그다. FE, BE, INFRA처럼 독립 �
 
 ## 외부 스킬
 
-단계별 스킬은 독립적으로 두고 `cf-issue-lifecycle`이 기획, 구현, 사람 머지 대기와 정리를 연결한다. `cf-issue-workflow`는 ready Issue에서 Draft PR까지의 구현 단계만 담당한다.
+단계별 스킬은 독립적으로 두고 `cf-issue-lifecycle`이 기획, 구현, Issue와 Draft PR의
+수동 편집 대기, 사람 머지 대기와 정리를 연결한다. `cf-issue-workflow`는 ready Issue의
+구현, Draft PR 게시와 사람 재개 후 원격 PR 검증을 담당한다.
 
 | 단계 | 후보 |
 |---|---|
@@ -158,9 +175,10 @@ GitHub Ruleset은 PR, 필수 검사, 사람 승인, force push 금지를 서버�
 AI는 `docs/conventions/commit.md`를 따라 메시지를 작성한다. `commit-msg` Git 훅은
 type, scope 미사용, 한글 포함, 마침표, Breaking Change 형식을 검사한다.
 
-Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE`, `BE`, `Infra`,
-`Harness`, `Plan`을 허용한다. `FE`, `BE`만 전체를 대문자로 쓰며 `Plan`은 구현 전
-조사와 기획에 사용한다. `feat:`,
+Issue와 PR 제목은 `[영역] 작업명` 형식을 사용한다. 영역은 `FE`, `BE`, `AI`, `Infra`,
+`Harness`, `Plan`을 허용한다. `FE`, `BE`, `AI`만 전체를 대문자로 쓴다. `AI`는 제품의
+LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용하고 `Harness`는 개발 하네스와
+워크플로우 변경에 사용한다. `Plan`은 구현 전 조사와 기획에 사용한다. `feat:`,
 `fix:` 같은 type을 붙이지 않고 명사형으로 작성한다. 최종 승인자는 GitHub 머지
 화면에서 Squash Commit 제목과 본문을 직접 확인한다. `pr-contract.yml`은 PR 제목,
 브랜치 번호, 종료 Issue 번호와 시스템 PR 종류를 검사한다.
@@ -184,7 +202,7 @@ CF-* -> develop -> release/<MAJOR.MINOR.PATCH> -> main
 | `revert/<main-merge-sha>` | 운영 실패 병합 | `main`으로 Merge Commit | 운영 복구 |
 
 Start release는 현재 `develop` HEAD에서 만들고 활성 release 브랜치는 하나만 둔다.
-release·hotfix 동기화·revert 시스템 PR은 `[Release]` 제목을 사용하며 Issue를
+release, hotfix 동기화, revert 시스템 PR은 `[Release]` 제목을 사용하며 Issue를
 종료하지 않는다. `hotfix/CF-*` → `main`만 운영 긴급 수정으로 허용하고 일반
 `CF-*` → `main`과 임의의 `develop` → `main`은 거부한다.
 

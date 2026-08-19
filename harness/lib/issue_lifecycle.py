@@ -7,6 +7,8 @@ class LifecycleSnapshot:
     issue_number: int | None = None
     issue_status: str | None = None
     pull_request_state: str | None = None
+    pull_request_is_draft: bool = False
+    pr_edit_confirmed: bool = False
     cleanup_complete: bool = False
 
 
@@ -27,14 +29,13 @@ def lifecycle_snapshot_from(payload: Mapping[str, object]) -> LifecycleSnapshot:
         raise ValueError("issue_number는 양의 정수여야 합니다")
     issue_status = _optional_string(payload, "issue_status")
     pull_request_state = _optional_string(payload, "pull_request_state")
-    cleanup_complete = payload.get("cleanup_complete", False)
-    if type(cleanup_complete) is not bool:
-        raise ValueError("cleanup_complete는 boolean이어야 합니다")
     return LifecycleSnapshot(
         issue_number=issue_number,
         issue_status=issue_status,
         pull_request_state=pull_request_state,
-        cleanup_complete=cleanup_complete,
+        pull_request_is_draft=_boolean(payload, "pull_request_is_draft"),
+        pr_edit_confirmed=_boolean(payload, "pr_edit_confirmed"),
+        cleanup_complete=_boolean(payload, "cleanup_complete"),
     )
 
 
@@ -42,6 +43,13 @@ def _optional_string(payload: Mapping[str, object], name: str) -> str | None:
     value = payload.get(name)
     if value is not None and not isinstance(value, str):
         raise ValueError(f"{name}은 문자열이어야 합니다")
+    return value
+
+
+def _boolean(payload: Mapping[str, object], name: str) -> bool:
+    value = payload.get(name, False)
+    if type(value) is not bool:
+        raise ValueError(f"{name}는 boolean이어야 합니다")
     return value
 
 
@@ -55,7 +63,7 @@ def next_lifecycle_action(snapshot: LifecycleSnapshot) -> LifecycleAction:
             "Issue 계약과 사람 승인이 필요합니다.",
             "cf-project-issue-planning",
         )
-    if snapshot.issue_status in ("status:ready", "status:in-progress"):
+    if snapshot.issue_status == "status:ready":
         return LifecycleAction(
             "deliver_issue",
             "확정된 Issue를 구현하고 Draft PR을 만들어야 합니다.",
@@ -65,6 +73,26 @@ def next_lifecycle_action(snapshot: LifecycleSnapshot) -> LifecycleAction:
         return LifecycleAction(
             "await_unblock",
             "사람이 Issue 차단을 해제할 때까지 현재 상태를 유지해야 합니다.",
+        )
+    if snapshot.issue_status == "status:in-progress":
+        if (
+            snapshot.pull_request_state == "OPEN"
+            and snapshot.pull_request_is_draft
+        ):
+            if not snapshot.pr_edit_confirmed:
+                return LifecycleAction(
+                    "await_pr_edit",
+                    "사람이 Draft PR을 수정하고 재개할 때까지 기다려야 합니다.",
+                )
+            return LifecycleAction(
+                "review_draft_pr",
+                "사람이 수정한 기존 Draft PR을 다시 검증해야 합니다.",
+                "cf-issue-workflow",
+            )
+        return LifecycleAction(
+            "deliver_issue",
+            "구현 중인 Issue의 첫 미완료 작업부터 재개해야 합니다.",
+            "cf-issue-workflow",
         )
     if snapshot.pull_request_state != "MERGED":
         return LifecycleAction(

@@ -98,7 +98,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
 
         self.assertEqual("write_plan", action.code)
 
-    def test_awaits_human_approval_after_plan(self) -> None:
+    def test_publishes_contract_after_plan(self) -> None:
         action = next_planning_action(
             ProjectIssueSnapshot(
                 draft_matches=0,
@@ -110,9 +110,39 @@ class ProjectIssuePlanningTest(unittest.TestCase):
             )
         )
 
+        self.assertEqual("publish_contract", action.code)
+
+    def test_awaits_human_approval_after_contract_is_published(self) -> None:
+        action = next_planning_action(
+            ProjectIssueSnapshot(
+                draft_matches=0,
+                issue_number=21,
+                issue_status_label="status:planning",
+                project_status="In Progress",
+                contract_drafted=True,
+                plan_exists=True,
+                contract_published=True,
+            )
+        )
+
         self.assertEqual("await_approval", action.code)
 
-    def test_publishes_contract_after_approval(self) -> None:
+    def test_restores_planning_label_during_remote_issue_edit(self) -> None:
+        action = next_planning_action(
+            ProjectIssueSnapshot(
+                draft_matches=0,
+                issue_number=21,
+                issue_status_label=None,
+                project_status="In Progress",
+                contract_drafted=True,
+                plan_exists=True,
+                contract_published=True,
+            )
+        )
+
+        self.assertEqual("set_planning", action.code)
+
+    def test_validates_remote_contract_after_human_approval(self) -> None:
         action = next_planning_action(
             ProjectIssueSnapshot(
                 draft_matches=0,
@@ -122,10 +152,11 @@ class ProjectIssuePlanningTest(unittest.TestCase):
                 contract_drafted=True,
                 plan_exists=True,
                 approved=True,
+                contract_published=True,
             )
         )
 
-        self.assertEqual("publish_contract", action.code)
+        self.assertEqual("validate_contract", action.code)
 
     def test_completes_planning_after_contract_is_published(self) -> None:
         action = next_planning_action(
@@ -138,6 +169,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
                 plan_exists=True,
                 approved=True,
                 contract_published=True,
+                contract_valid=True,
             )
         )
 
@@ -154,6 +186,7 @@ class ProjectIssuePlanningTest(unittest.TestCase):
                 plan_exists=True,
                 approved=True,
                 contract_published=True,
+                contract_valid=True,
             )
         )
 
