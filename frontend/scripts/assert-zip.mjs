@@ -18,6 +18,22 @@ const entryNames = new Set(
     .map((entry) => entry.entryName),
 );
 
-if (!entryNames.has("manifest.json") || !entryNames.has("popup.html")) {
-  throw new Error("ZIP에 manifest.json과 popup.html이 포함되어야 합니다.");
+for (const requiredEntry of [
+  "manifest.json",
+  "popup.html",
+  "options.html",
+  "sidepanel.html",
+]) {
+  if (!entryNames.has(requiredEntry)) {
+    throw new Error(`ZIP에 ${requiredEntry}이(가) 포함되어야 합니다.`);
+  }
+}
+
+const zip = new AdmZip(resolve(outputDirectory, archive));
+const manifest = JSON.parse(zip.readAsText("manifest.json"));
+if (
+  manifest.options_ui?.page !== "options.html" ||
+  manifest.side_panel?.default_path !== "sidepanel.html"
+) {
+  throw new Error("ZIP Manifest가 options와 side panel을 가리켜야 합니다.");
 }
