@@ -10,8 +10,11 @@ from pathlib import Path
 import yaml
 
 from harness.lib.issue_contract import REQUIRED_SECTIONS as ISSUE_SECTIONS
-from harness.lib.markdown_sections import extract_sections
-from harness.lib.pr_contract import REQUIRED_SECTIONS as PR_SECTIONS
+from harness.lib.markdown_sections import extract_sections, extract_subsections
+from harness.lib.pr_contract import (
+    REQUIRED_SECTIONS as PR_SECTIONS,
+    REQUIRED_VERIFICATION_SECTIONS as PR_VERIFICATION_SECTIONS,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -77,18 +80,20 @@ class RepositoryContractTest(unittest.TestCase):
 
         self.assertEqual(
             (
-                "해결하려는 문제가 무엇인가요?",
-                "왜 해야 하나요?",
-                "어떻게 해결했나요?",
-                "이 PR의 한계 & 트레이드오프",
+                "무엇이 바뀌었나요?",
+                "왜 바꿨나요?",
+                "어떻게 바꿨나요?",
                 "기존 기능에 미치는 영향",
-                "Edge Case & 실패 시나리오",
                 "검토한 대안과 선택 이유",
-                "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
+                "리뷰 포인트",
             ),
             PR_SECTIONS,
         )
-        self.assertTrue(set(PR_SECTIONS).issubset(extract_sections(body)))
+        self.assertEqual(PR_SECTIONS, tuple(extract_sections(body)))
+        self.assertEqual(
+            PR_VERIFICATION_SECTIONS,
+            tuple(extract_subsections(body)),
+        )
 
     def test_workflows_are_valid_yaml_mappings(self) -> None:
         workflow_root = ROOT / ".github" / "workflows"

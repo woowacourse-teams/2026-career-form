@@ -1,7 +1,7 @@
 import unittest
 
 from harness.lib.pr_contract import validate_pr
-from harness.tests.pr_fixtures import VALID_PR_BODY
+from harness.tests.pr_fixtures import VALID_PR_BODY, VALID_VERIFICATION_RECORD
 
 
 class PullRequestContractTest(unittest.TestCase):
@@ -195,7 +195,7 @@ class PullRequestContractTest(unittest.TestCase):
             {
                 "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
                 "body": VALID_PR_BODY.replace(
-                    "## 이 PR의 한계 & 트레이드오프",
+                    "## 무엇이 바뀌었나요?",
                     "## 기타",
                 ),
                 "head": {"ref": "CF-123"},
@@ -204,7 +204,7 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "PR 필수 섹션이 없습니다: 이 PR의 한계 & 트레이드오프",
+            "PR 필수 섹션이 없습니다: 무엇이 바뀌었나요?",
             result.errors,
         )
 
@@ -226,17 +226,34 @@ class PullRequestContractTest(unittest.TestCase):
             result.errors,
         )
 
+    def test_rejects_required_sections_in_wrong_order(self) -> None:
+        body = VALID_PR_BODY.replace(
+            "## 무엇이 바뀌었나요?\n- 삼성 채용 사이트 자동 입력이 추가됐다\n\n"
+            "## 왜 바꿨나요?\n- 반복 입력 비용을 줄인다",
+            "## 왜 바꿨나요?\n- 반복 입력 비용을 줄인다\n\n"
+            "## 무엇이 바뀌었나요?\n- 삼성 채용 사이트 자동 입력이 추가됐다",
+        )
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 필수 섹션 순서가 올바르지 않습니다", result.errors)
+
     def test_rejects_required_sections_inside_fenced_code(self) -> None:
         fenced_sections = "\n\n".join(
             (
-                "## 해결하려는 문제가 무엇인가요?\n- 예시",
-                "## 왜 해야 하나요?\n- 예시",
-                "## 어떻게 해결했나요?\n- 예시",
-                "## 이 PR의 한계 & 트레이드오프\n- 예시",
+                "## 무엇이 바뀌었나요?\n- 예시",
+                "## 왜 바꿨나요?\n- 예시",
+                "## 어떻게 바꿨나요?\n- 예시",
                 "## 기존 기능에 미치는 영향\n- 예시",
-                "## Edge Case & 실패 시나리오\n- 예시",
                 "## 검토한 대안과 선택 이유\n- 예시",
-                "## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)\n- 예시",
+                "## 리뷰 포인트\n- 예시",
             )
         )
         body = f"```markdown\n{fenced_sections}\n```\n\nCloses #123\n"
@@ -251,9 +268,107 @@ class PullRequestContractTest(unittest.TestCase):
         )
 
         self.assertIn(
-            "PR 필수 섹션이 없습니다: 해결하려는 문제가 무엇인가요?",
+            "PR 필수 섹션이 없습니다: 무엇이 바뀌었나요?",
             result.errors,
         )
+
+    def test_rejects_missing_verification_record(self) -> None:
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_PR_BODY.replace(VALID_VERIFICATION_RECORD, ""),
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 검증 기록이 필요합니다", result.errors)
+
+    def test_rejects_duplicate_verification_records(self) -> None:
+        body = VALID_PR_BODY.replace(
+            VALID_VERIFICATION_RECORD,
+            f"{VALID_VERIFICATION_RECORD}\n\n{VALID_VERIFICATION_RECORD}",
+        )
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 검증 기록은 하나만 작성해야 합니다", result.errors)
+
+    def test_rejects_verification_record_before_review_sections(self) -> None:
+        body_without_record = VALID_PR_BODY.replace(
+            f"{VALID_VERIFICATION_RECORD}\n\n",
+            "",
+        )
+        body = f"{VALID_VERIFICATION_RECORD}\n\n{body_without_record}"
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn(
+            "PR 검증 기록은 리뷰 섹션 뒤에 있어야 합니다",
+            result.errors,
+        )
+
+    def test_rejects_verification_record_open_by_default(self) -> None:
+        body = VALID_PR_BODY.replace("<details>", "<details open>")
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 검증 기록이 필요합니다", result.errors)
+
+    def test_rejects_empty_verification_section(self) -> None:
+        body = VALID_PR_BODY.replace(
+            "### 자동 검증\n- 전체 검증 통과",
+            "### 자동 검증\n<!-- 아직 검증하지 않음 -->",
+        )
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 검증 기록이 없습니다: 자동 검증", result.errors)
+
+    def test_rejects_verification_record_inside_fenced_code(self) -> None:
+        body = VALID_PR_BODY.replace(
+            VALID_VERIFICATION_RECORD,
+            f"```markdown\n{VALID_VERIFICATION_RECORD}\n```",
+        )
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 검증 기록이 필요합니다", result.errors)
 
     def test_rejects_title_that_differs_from_linked_issue(self) -> None:
         result = validate_pr(

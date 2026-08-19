@@ -13,28 +13,28 @@ body:
     id: background
     attributes:
       label: 배경
-      description: 해결할 문제와 필요한 이유를 적습니다.
+      description: 현재 문제와 작업이 필요한 맥락만 적습니다.
     validations:
       required: true
   - type: textarea
     id: goal
     attributes:
       label: 목표
-      description: 완료 후 관찰할 수 있는 결과를 적습니다.
+      description: 완료 후 달라지는 사용자 동작과 결과만 적습니다.
     validations:
       required: true
   - type: textarea
     id: in-scope
     attributes:
       label: 포함 범위
-      description: 이번 Issue에서 바꿀 기능과 대상을 적습니다.
+      description: 실제로 바꿀 기능과 대상만 적습니다.
     validations:
       required: true
   - type: textarea
     id: out-of-scope
     attributes:
       label: 제외 범위
-      description: 이번 Issue에서 다루지 않을 내용을 적습니다.
+      description: 포함 범위로 오해할 수 있지만 다루지 않을 항목을 적습니다.
     validations:
       required: true
   - type: textarea
@@ -49,25 +49,25 @@ body:
     id: automated-validation
     attributes:
       label: 자동 검증
-      description: 필요한 단위, 통합, E2E 테스트를 적습니다.
+      description: 실행할 단위, 통합, E2E 검증 명령을 적습니다.
     validations:
       required: true
   - type: textarea
     id: manual-validation
     attributes:
       label: 수동 검증
-      description: 사람이 확인할 항목과 환경을 적습니다. 없으면 없음을 적습니다.
+      description: 자동화할 수 없는 확인과 사람 담당 작업을 적습니다. 없으면 없음을 적습니다.
     validations:
       required: true
   - type: textarea
     id: risky-operations
     attributes:
       label: 위험 작업
-      description: 시크릿, 삭제, 마이그레이션, 배포 포함 여부를 적습니다.
+      description: 실제 위험과 시크릿, 삭제, 마이그레이션, 배포의 사람 담당 경계를 적습니다.
     validations:
       required: true
   - type: textarea
     id: references
     attributes:
       label: 참고 문서
-      description: 기획서, 디자인, 의존 Issue, 독립 draft 후보를 연결합니다.
+      description: 작업 판단에 사용한 기획서, 디자인, 의존 Issue와 draft 후보만 연결합니다.

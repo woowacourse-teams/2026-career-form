@@ -7,6 +7,9 @@ import yaml
 
 HEADING_PATTERN = re.compile(r"(?m)^## (?P<name>[^\n]+)\s*$")
 CLOSE_PATTERN = re.compile(r"(?m)^Closes #(?:[1-9][0-9]*)?\s*$")
+ANSWER_PATTERN = re.compile(
+    r"<!--\s*cf-answer:\s*(?P<name>[^\n]+?)\s*-->",
+)
 
 
 def render_issue_form(path: Path, answers: Mapping[str, str]) -> str:
@@ -63,6 +66,23 @@ def render_pr_template(
     close = CLOSE_PATTERN.search(template)
     if close is None:
         raise ValueError("PR 템플릿에 Closes # 줄이 필요합니다")
+    answer_markers = tuple(ANSWER_PATTERN.finditer(template))
+    if answer_markers:
+        names = tuple(
+            marker.group("name").strip()
+            for marker in answer_markers
+        )
+        _validate_pr_answers(names, answers)
+        template_with_closing = CLOSE_PATTERN.sub(
+            f"Closes #{issue_number}",
+            template,
+            count=1,
+        )
+        rendered = ANSWER_PATTERN.sub(
+            lambda marker: answers[marker.group("name").strip()].strip(),
+            template_with_closing,
+        )
+        return rendered.rstrip() + "\n"
     content = template[: close.start()].rstrip()
     suffix = template[close.start() :]
     headings = tuple(HEADING_PATTERN.finditer(content))
@@ -70,6 +90,23 @@ def render_pr_template(
         raise ValueError("PR 템플릿에 ## 섹션이 필요합니다")
 
     names = tuple(match.group("name").strip() for match in headings)
+    _validate_pr_answers(names, answers)
+
+    preamble = content[: headings[0].start()].rstrip()
+    blocks = [preamble] if preamble else []
+    blocks.extend(f"## {name}\n\n{answers[name].strip()}" for name in names)
+    closing = CLOSE_PATTERN.sub(f"Closes #{issue_number}", suffix, count=1).strip()
+    blocks.append(closing)
+    return "\n\n".join(blocks).rstrip() + "\n"
+
+
+def _validate_pr_answers(
+    names: tuple[str, ...],
+    answers: Mapping[str, str],
+) -> None:
+    duplicates = tuple(sorted({name for name in names if names.count(name) > 1}))
+    if duplicates:
+        raise ValueError(f"PR 템플릿 응답 표식이 중복됩니다: {', '.join(duplicates)}")
     missing = tuple(name for name in names if not answers.get(name, "").strip())
     unknown = tuple(sorted(set(answers) - set(names)))
     if missing or unknown:
@@ -79,10 +116,3 @@ def render_pr_template(
         if unknown:
             details.append(f"알 수 없음: {', '.join(unknown)}")
         raise ValueError(f"PR 템플릿 섹션 응답이 올바르지 않습니다: {'; '.join(details)}")
-
-    preamble = content[: headings[0].start()].rstrip()
-    blocks = [preamble] if preamble else []
-    blocks.extend(f"## {name}\n\n{answers[name].strip()}" for name in names)
-    closing = CLOSE_PATTERN.sub(f"Closes #{issue_number}", suffix, count=1).strip()
-    blocks.append(closing)
-    return "\n\n".join(blocks).rstrip() + "\n"

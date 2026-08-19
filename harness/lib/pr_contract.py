@@ -8,21 +8,20 @@ from harness.lib.branching import (
     issue_number_from_branch,
     validate_branch_flow,
 )
-from harness.lib.markdown_sections import extract_sections
+from harness.lib.markdown_sections import extract_sections, extract_subsections
 from harness.lib.result import ValidationResult, merge_results
 from harness.lib.work_title import validate_release_title, validate_work_title
 
 
 REQUIRED_SECTIONS = (
-    "해결하려는 문제가 무엇인가요?",
-    "왜 해야 하나요?",
-    "어떻게 해결했나요?",
-    "이 PR의 한계 & 트레이드오프",
+    "무엇이 바뀌었나요?",
+    "왜 바꿨나요?",
+    "어떻게 바꿨나요?",
     "기존 기능에 미치는 영향",
-    "Edge Case & 실패 시나리오",
     "검토한 대안과 선택 이유",
-    "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
+    "리뷰 포인트",
 )
+REQUIRED_VERIFICATION_SECTIONS = ("자동 검증", "수동 검증")
 CLOSE_REFERENCE_PATTERN = re.compile(
     r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+"
     r"(?:(?P<repository>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+))?"
@@ -34,6 +33,11 @@ FENCE_OPEN_PATTERN = re.compile(
 )
 INLINE_CODE_PATTERN = re.compile(r"(?P<ticks>`+).*?(?P=ticks)", re.DOTALL)
 INDENTED_CODE_PATTERN = re.compile(r"^(?: {4}|\t).*$", re.MULTILINE)
+DETAILS_PATTERN = re.compile(
+    r"<details>\s*<summary>\s*(?P<name>[^<\n]+?)\s*</summary>"
+    r"(?P<body>.*?)</details>",
+    re.DOTALL | re.IGNORECASE,
+)
 
 
 def validate_pr(
@@ -57,11 +61,23 @@ def validate_pr(
     )
     results = [title_result, validate_branch_flow(head, base)]
     results.append(_validate_revert_draft(payload, head, base))
-    errors: list[str] = []
-    sections = extract_sections(_markdown_prose(body))
-    for name in REQUIRED_SECTIONS:
-        if name not in sections or not sections[name]:
-            errors.append(f"PR 필수 섹션이 없습니다: {name}")
+    prose = _markdown_prose(body)
+    sections = extract_sections(prose)
+    errors = tuple(
+        f"PR 필수 섹션이 없습니다: {name}"
+        for name in REQUIRED_SECTIONS
+        if name not in sections or not sections[name]
+    )
+    if all(name in sections for name in REQUIRED_SECTIONS):
+        section_order = tuple(name for name in sections if name in REQUIRED_SECTIONS)
+        if section_order != REQUIRED_SECTIONS:
+            errors += ("PR 필수 섹션 순서가 올바르지 않습니다",)
+    errors += (
+        _validate_verification_record(
+            prose,
+            sections.get(REQUIRED_SECTIONS[-1]),
+        )
+    )
 
     results.append(ValidationResult(tuple(errors)))
     if not system_pr and linked_issue_title is not None and title != linked_issue_title:
@@ -77,6 +93,30 @@ def validate_pr(
         )
     )
     return merge_results(*results)
+
+
+def _validate_verification_record(
+    body: str,
+    review_section: str | None,
+) -> tuple[str, ...]:
+    records = tuple(
+        match
+        for match in DETAILS_PATTERN.finditer(body)
+        if match.group("name").strip() == "검증 기록"
+    )
+    if not records:
+        return ("PR 검증 기록이 필요합니다",)
+    if len(records) > 1:
+        return ("PR 검증 기록은 하나만 작성해야 합니다",)
+    if review_section is not None and records[0].group(0) not in review_section:
+        return ("PR 검증 기록은 리뷰 섹션 뒤에 있어야 합니다",)
+
+    sections = extract_subsections(records[0].group("body"))
+    return tuple(
+        f"PR 검증 기록이 없습니다: {name}"
+        for name in REQUIRED_VERIFICATION_SECTIONS
+        if name not in sections or not sections[name]
+    )
 
 
 def _validate_closing_references(

@@ -73,7 +73,8 @@ Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고,
 4. `cf-code-review`로 `origin/<base>...HEAD`의 Standards와 Issue spec 일치를 독립 검토한다.
 5. 치명적 문제와 높은 위험 문제를 수정하고 전체 검증을 다시 실행한다.
 
-검증 실패를 통과로 표현하지 않는다. 사람 수동 검증이 남으면 PR 본문에 미완료 상태로 남긴다.
+검증 실패를 통과로 표현하지 않는다. 자동 및 수동 검증의 최신 상태는 PR 본문 하단의
+접힌 `검증 기록`에 남긴다.
 
 ## 5. Git과 Draft PR 편집 체크포인트
 
@@ -81,9 +82,10 @@ Issue는 `docs/adr/README.md`와 본문의 승인된 ADR 전문을 확인하고,
 2. 현재 Issue의 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치만 push한다. force push하지 않는다.
 3. 전체 diff와 커밋 이력을 검토한다.
 4. 현재 브랜치에 연결된 열린 PR을 조회한다. 없을 때만 Issue와 같은 `[영역] 작업명` 제목으로 Draft PR을 만든다. 하나가 이미 있으면 생성과 본문 게시를 반복하지 않고 재개 절차로 이동하며, 둘 이상이면 대상을 추측하지 않고 중단한다.
-5. `.github/pull_request_template.md`의 여덟 섹션 응답을 JSON으로 준비하고 선택한 Python으로 `harness/scripts/render-template-body.py pr`을 실행해 OS 임시 UTF-8 Markdown 파일을 만든다.
-6. `gh pr create --draft --body-file <임시 파일>`로 `Closes #<Issue 번호>`가 하나인 PR을 만든다. 인라인 `--body`를 사용하지 않는다.
-7. `gh pr view`로 Draft PR이 하나 생성됐는지만 확인한다. Issue는 `status:in-progress`, Project는 `In Progress`로 유지하고 사람이 GitHub에서 PR 제목과 본문을 수정한 뒤 재개를 요청할 때까지 중단한다.
+5. `.github/pull_request_template.md`의 여섯 리뷰 섹션과 접힌 자동 및 수동 검증 응답을 JSON으로 준비한다. 같은 정보는 한 섹션에만 쓰고, 문장을 제거해도 리뷰 판단이 달라지지 않으면 제거한다. Issue와 ADR의 배경 및 결정 전문을 반복하지 않는다.
+6. 선택한 Python으로 `harness/scripts/render-template-body.py pr`을 실행해 OS 임시 UTF-8 Markdown 파일을 만든다.
+7. `gh pr create --draft --body-file <임시 파일>`로 `Closes #<Issue 번호>`가 하나인 PR을 만든다. 인라인 `--body`를 사용하지 않는다.
+8. `gh pr view`로 Draft PR이 하나 생성됐는지만 확인한다. Issue는 `status:in-progress`, Project는 `In Progress`로 유지하고 사람이 GitHub에서 PR 제목과 본문을 수정한 뒤 재개를 요청할 때까지 중단한다.
 
 사용자가 수정 완료나 재개를 알리면 다음 순서로 기존 PR을 검토한다.
 
