@@ -61,6 +61,41 @@ body:
             with self.assertRaisesRegex(ValueError, "알 수 없는 Issue Form 입력"):
                 render_issue_form(form, {"missing": "값"})
 
+    def test_pr_body_replaces_answer_markers_and_preserves_template_structure(
+        self,
+    ) -> None:
+        template = """## 무엇이 바뀌었나요?
+<!-- 결과를 작성합니다. -->
+<!-- cf-answer: 무엇이 바뀌었나요? -->
+
+<details>
+<summary>검증 기록</summary>
+
+### 자동 검증
+<!-- cf-answer: 자동 검증 -->
+</details>
+
+Closes #
+"""
+
+        try:
+            body = render_pr_template(
+                template,
+                {
+                    "무엇이 바뀌었나요?": "- 새 동작",
+                    "자동 검증": "- 전체 검증 통과",
+                },
+                issue_number=32,
+            )
+        except ValueError as error:
+            self.fail(f"답변 표식을 사용한 렌더링이 실패했습니다: {error}")
+
+        self.assertIn("<!-- 결과를 작성합니다. -->", body)
+        self.assertIn("<details>", body)
+        self.assertIn("- 전체 검증 통과", body)
+        self.assertNotIn("cf-answer:", body)
+        self.assertIn("Closes #32", body)
+
     def test_pr_body_uses_actual_template_and_closing_issue(self) -> None:
         template = """안내문
 
@@ -92,6 +127,17 @@ Closes #
 
         with self.assertRaisesRegex(ValueError, "PR 템플릿 섹션 응답"):
             render_pr_template(template, {"문제": "문제"}, issue_number=14)
+
+    def test_pr_body_rejects_duplicate_answer_markers(self) -> None:
+        template = """## 변경
+<!-- cf-answer: 변경 -->
+<!-- cf-answer: 변경 -->
+
+Closes #
+"""
+
+        with self.assertRaisesRegex(ValueError, "중복"):
+            render_pr_template(template, {"변경": "새 동작"}, issue_number=14)
 
     def test_repository_templates_render_bodies_that_pass_independent_contracts(self) -> None:
         issue_answers = {
