@@ -195,6 +195,25 @@ class RepositoryContractTest(unittest.TestCase):
 
         self.assertIn(".worktrees/", patterns)
 
+    def test_llm_wiki_skill_tracks_pinned_mit_upstream(self) -> None:
+        skill = ROOT / ".agents" / "skills" / "cf-karpathy-llm-wiki"
+        metadata = json.loads((skill / "UPSTREAM.json").read_text(encoding="utf-8"))
+
+        self.assertEqual("cf-karpathy-llm-wiki", skill.name)
+        self.assertEqual("eafcc77001e496cc43499e4923b663aec722c813", metadata["commit"])
+        self.assertEqual("MIT", metadata["license"])
+        self.assertIn("MIT License", (skill / "LICENSE").read_text(encoding="utf-8"))
+
+    def test_agents_and_adr_define_llm_wiki_collection_boundaries(self) -> None:
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        adr = (ROOT / "docs" / "adr" / "25-llm-wiki.md").read_text(encoding="utf-8")
+
+        self.assertIn("사용자 요청", agents)
+        self.assertIn("사람 승인", agents)
+        self.assertIn("정본", agents)
+        self.assertIn("#25", adr)
+        self.assertIn("정본", adr)
+
     def test_issue_contract_runs_for_ready_labels_and_edits(self) -> None:
         workflow = self._yaml(ROOT / ".github" / "workflows" / "issue-contract.yml")
         issue_events = workflow["on"]["issues"]["types"]

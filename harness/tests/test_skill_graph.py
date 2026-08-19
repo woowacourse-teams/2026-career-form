@@ -20,6 +20,7 @@ class SkillGraphTest(unittest.TestCase):
             "cf-grilling",
             "cf-issue-lifecycle",
             "cf-issue-workflow",
+            "cf-karpathy-llm-wiki",
             "cf-post-merge-cleanup",
             "cf-project-issue-planning",
             "cf-test-driven-development",
