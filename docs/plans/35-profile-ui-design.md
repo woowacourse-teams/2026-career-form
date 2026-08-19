@@ -274,8 +274,9 @@
 
 ## 검증 결과
 
-- 2026-08-19: 프런트 테스트 36개 통과
-- 커버리지: statements 90.87%, branches 81.76%, functions 86.46%, lines 91.92%
+- 2026-08-20: 사용자 와이어프레임 피드백에 따라 사이드 패널을 범주별 아코디언 구조로 보정
+- 프런트 테스트 39개 통과
+- 커버리지: statements 91.35%, branches 83.16%, functions 87.41%, lines 92.54%
 - typecheck, lint, format check, build, ZIP 산출물 검증 통과
 - 저장소 하네스 검증 250개 통과, 하네스 커버리지 89%
 - SVG 10개 XML·문서 링크 검사 및 대표 시안 렌더링 확인

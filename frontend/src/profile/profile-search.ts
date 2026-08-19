@@ -1,8 +1,14 @@
 import { PROFILE_CATEGORIES } from "./field-definitions";
-import type { FieldValues, Profile, ProfileEntry } from "./model";
+import type {
+  FieldValues,
+  Profile,
+  ProfileCategoryId,
+  ProfileEntry,
+} from "./model";
 
 export interface ProfileSearchItem {
   id: string;
+  categoryId: ProfileCategoryId;
   categoryLabel: string;
   fieldLabel: string;
   value: string;
@@ -12,6 +18,7 @@ export interface ProfileSearchItem {
 function itemsFromValues(
   idPrefix: string,
   values: FieldValues,
+  categoryId: ProfileCategoryId,
   categoryLabel: string,
   sensitive: boolean,
   fields: readonly { id: string; label: string }[],
@@ -22,6 +29,7 @@ function itemsFromValues(
       ? [
           {
             id: `${idPrefix}-${field.id}`,
+            categoryId,
             categoryLabel,
             fieldLabel: field.label,
             value,
@@ -42,6 +50,7 @@ function itemsFromEntry(
   return itemsFromValues(
     `${category.id}-${entry.id}`,
     entry.values,
+    category.id,
     category.label,
     category.sensitive,
     section.fields,
@@ -57,6 +66,7 @@ export function buildSearchItems(profile: Profile): ProfileSearchItem[] {
     return itemsFromValues(
       category.id,
       categoryValue,
+      category.id,
       category.label,
       category.sensitive,
       category.sections[0].fields,

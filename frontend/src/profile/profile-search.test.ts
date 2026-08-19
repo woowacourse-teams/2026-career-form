@@ -12,12 +12,14 @@ describe("profile search", () => {
 
     expect(buildSearchItems(profile)).toEqual([
       expect.objectContaining({
+        categoryId: "personal",
         categoryLabel: "기본 인적사항",
         fieldLabel: "국문 성",
         value: "비식별 성",
         sensitive: false,
       }),
       expect.objectContaining({
+        categoryId: "military",
         categoryLabel: "병역",
         fieldLabel: "병역 상태",
         value: "비식별 상태",
