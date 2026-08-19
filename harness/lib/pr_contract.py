@@ -67,6 +67,10 @@ def validate_pr(
     for name in REQUIRED_SECTIONS:
         if name not in sections or not sections[name]:
             errors.append(f"PR 필수 섹션이 없습니다: {name}")
+    if all(name in sections for name in REQUIRED_SECTIONS):
+        section_order = tuple(name for name in sections if name in REQUIRED_SECTIONS)
+        if section_order != REQUIRED_SECTIONS:
+            errors.append("PR 필수 섹션 순서가 올바르지 않습니다")
     errors.extend(_validate_verification_record(prose))
 
     results.append(ValidationResult(tuple(errors)))

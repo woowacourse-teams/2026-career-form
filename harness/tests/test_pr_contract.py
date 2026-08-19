@@ -226,6 +226,25 @@ class PullRequestContractTest(unittest.TestCase):
             result.errors,
         )
 
+    def test_rejects_required_sections_in_wrong_order(self) -> None:
+        body = VALID_PR_BODY.replace(
+            "## 무엇이 바뀌었나요?\n- 삼성 채용 사이트 자동 입력이 추가됐다\n\n"
+            "## 왜 바꿨나요?\n- 반복 입력 비용을 줄인다",
+            "## 왜 바꿨나요?\n- 반복 입력 비용을 줄인다\n\n"
+            "## 무엇이 바뀌었나요?\n- 삼성 채용 사이트 자동 입력이 추가됐다",
+        )
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 필수 섹션 순서가 올바르지 않습니다", result.errors)
+
     def test_rejects_required_sections_inside_fenced_code(self) -> None:
         fenced_sections = "\n\n".join(
             (
