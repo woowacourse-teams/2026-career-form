@@ -61,17 +61,18 @@ def validate_pr(
     )
     results = [title_result, validate_branch_flow(head, base)]
     results.append(_validate_revert_draft(payload, head, base))
-    errors: list[str] = []
     prose = _markdown_prose(body)
     sections = extract_sections(prose)
-    for name in REQUIRED_SECTIONS:
-        if name not in sections or not sections[name]:
-            errors.append(f"PR 필수 섹션이 없습니다: {name}")
+    errors = tuple(
+        f"PR 필수 섹션이 없습니다: {name}"
+        for name in REQUIRED_SECTIONS
+        if name not in sections or not sections[name]
+    )
     if all(name in sections for name in REQUIRED_SECTIONS):
         section_order = tuple(name for name in sections if name in REQUIRED_SECTIONS)
         if section_order != REQUIRED_SECTIONS:
-            errors.append("PR 필수 섹션 순서가 올바르지 않습니다")
-    errors.extend(
+            errors += ("PR 필수 섹션 순서가 올바르지 않습니다",)
+    errors += (
         _validate_verification_record(
             prose,
             sections.get(REQUIRED_SECTIONS[-1]),
