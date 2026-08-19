@@ -2,6 +2,8 @@
 set -euo pipefail
 
 readonly REQUIRED_SWAP_KIB=2097152
+readonly SWAP_METADATA_TOLERANCE_KIB=16
+SWAPS_FILE="${SWAPS_FILE:-/proc/swaps}"
 DEPLOY_STATE_DIR="${DEPLOY_STATE_DIR:-/var/lib/career-form/deploy}"
 DEPLOY_RUNNER_GROUP="${DEPLOY_RUNNER_GROUP:-docker}"
 CLOUDFLARED_KEYRING_DIR="${CLOUDFLARED_KEYRING_DIR:-/usr/share/keyrings}"
@@ -26,6 +28,24 @@ check_command() {
   fi
 }
 
+read_swap_kib() {
+  [[ -r "$SWAPS_FILE" ]] \
+    && awk 'NR > 1 { total += $3 } END { print total + 0 }' "$SWAPS_FILE" \
+    || printf '0\n'
+}
+
+swap_capacity_sufficient() {
+  local swap_kib="$1"
+  (( swap_kib + SWAP_METADATA_TOLERANCE_KIB >= REQUIRED_SWAP_KIB ))
+}
+
+check_swap() {
+  local swap_kib
+  swap_kib="$(read_swap_kib)"
+  printf 'swap: %s KiB (required: %s KiB)\n' "$swap_kib" "$REQUIRED_SWAP_KIB"
+  swap_capacity_sufficient "$swap_kib"
+}
+
 check_host() {
   CHECK_FAILED=0
   local os_name="unsupported"
@@ -45,12 +65,7 @@ check_host() {
   [[ "$architecture" == "aarch64" || "$architecture" == "arm64" ]] \
     || CHECK_FAILED=1
 
-  local swap_kib=0
-  if [[ -r /proc/swaps ]]; then
-    swap_kib="$(awk 'NR > 1 { total += $3 } END { print total + 0 }' /proc/swaps)"
-  fi
-  printf 'swap: %s KiB (required: %s KiB)\n' "$swap_kib" "$REQUIRED_SWAP_KIB"
-  (( swap_kib >= REQUIRED_SWAP_KIB )) || CHECK_FAILED=1
+  check_swap || CHECK_FAILED=1
 
   check_command "docker" docker
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
@@ -98,8 +113,8 @@ require_supported_host() {
 
 ensure_swap() {
   local swap_kib
-  swap_kib="$(awk 'NR > 1 { total += $3 } END { print total + 0 }' /proc/swaps)"
-  (( swap_kib >= REQUIRED_SWAP_KIB )) && return 0
+  swap_kib="$(read_swap_kib)"
+  swap_capacity_sufficient "$swap_kib" && return 0
   [[ ! -e /swapfile ]] || {
     printf 'bootstrap error: /swapfile exists but active swap is below 2 GiB\n' >&2
     exit 1
