@@ -301,6 +301,41 @@ class PullRequestContractTest(unittest.TestCase):
 
         self.assertIn("PR 검증 기록은 하나만 작성해야 합니다", result.errors)
 
+    def test_rejects_verification_record_before_review_sections(self) -> None:
+        body_without_record = VALID_PR_BODY.replace(
+            f"{VALID_VERIFICATION_RECORD}\n\n",
+            "",
+        )
+        body = f"{VALID_VERIFICATION_RECORD}\n\n{body_without_record}"
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn(
+            "PR 검증 기록은 리뷰 섹션 뒤에 있어야 합니다",
+            result.errors,
+        )
+
+    def test_rejects_verification_record_open_by_default(self) -> None:
+        body = VALID_PR_BODY.replace("<details>", "<details open>")
+
+        result = validate_pr(
+            {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": body,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        )
+
+        self.assertIn("PR 검증 기록이 필요합니다", result.errors)
+
     def test_rejects_empty_verification_section(self) -> None:
         body = VALID_PR_BODY.replace(
             "### 자동 검증\n- 전체 검증 통과",

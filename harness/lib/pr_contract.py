@@ -71,7 +71,12 @@ def validate_pr(
         section_order = tuple(name for name in sections if name in REQUIRED_SECTIONS)
         if section_order != REQUIRED_SECTIONS:
             errors.append("PR 필수 섹션 순서가 올바르지 않습니다")
-    errors.extend(_validate_verification_record(prose))
+    errors.extend(
+        _validate_verification_record(
+            prose,
+            sections.get(REQUIRED_SECTIONS[-1]),
+        )
+    )
 
     results.append(ValidationResult(tuple(errors)))
     if not system_pr and linked_issue_title is not None and title != linked_issue_title:
@@ -89,7 +94,10 @@ def validate_pr(
     return merge_results(*results)
 
 
-def _validate_verification_record(body: str) -> tuple[str, ...]:
+def _validate_verification_record(
+    body: str,
+    review_section: str | None,
+) -> tuple[str, ...]:
     records = tuple(
         match
         for match in DETAILS_PATTERN.finditer(body)
@@ -99,6 +107,8 @@ def _validate_verification_record(body: str) -> tuple[str, ...]:
         return ("PR 검증 기록이 필요합니다",)
     if len(records) > 1:
         return ("PR 검증 기록은 하나만 작성해야 합니다",)
+    if review_section is not None and records[0].group(0) not in review_section:
+        return ("PR 검증 기록은 리뷰 섹션 뒤에 있어야 합니다",)
 
     sections = extract_subsections(records[0].group("body"))
     return tuple(
