@@ -73,15 +73,16 @@ def render_pr_template(
             for marker in answer_markers
         )
         _validate_pr_answers(names, answers)
+        template_with_closing = CLOSE_PATTERN.sub(
+            f"Closes #{issue_number}",
+            template,
+            count=1,
+        )
         rendered = ANSWER_PATTERN.sub(
             lambda marker: answers[marker.group("name").strip()].strip(),
-            template,
+            template_with_closing,
         )
-        return CLOSE_PATTERN.sub(
-            f"Closes #{issue_number}",
-            rendered,
-            count=1,
-        ).rstrip() + "\n"
+        return rendered.rstrip() + "\n"
     content = template[: close.start()].rstrip()
     suffix = template[close.start() :]
     headings = tuple(HEADING_PATTERN.finditer(content))

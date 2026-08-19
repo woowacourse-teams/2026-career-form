@@ -3,7 +3,11 @@ import unittest
 from pathlib import Path
 
 from harness.lib.issue_contract import validate_issue
-from harness.lib.pr_contract import REQUIRED_SECTIONS, validate_pr
+from harness.lib.pr_contract import (
+    REQUIRED_SECTIONS,
+    REQUIRED_VERIFICATION_SECTIONS,
+    validate_pr,
+)
 from harness.lib.template_body import render_issue_form, render_pr_template
 
 
@@ -139,6 +143,22 @@ Closes #
         with self.assertRaisesRegex(ValueError, "중복"):
             render_pr_template(template, {"변경": "새 동작"}, issue_number=14)
 
+    def test_pr_body_does_not_replace_closing_example_inside_answer(self) -> None:
+        template = """## 변경
+<!-- cf-answer: 변경 -->
+
+Closes #
+"""
+
+        body = render_pr_template(
+            template,
+            {"변경": "예시:\nCloses #"},
+            issue_number=14,
+        )
+
+        self.assertIn("예시:\nCloses #", body)
+        self.assertTrue(body.rstrip().endswith("Closes #14"))
+
     def test_repository_templates_render_bodies_that_pass_independent_contracts(self) -> None:
         issue_answers = {
             "background": "Windows와 POSIX 실행 경로가 다릅니다.",
@@ -168,7 +188,10 @@ Closes #
         )
         pr_body = render_pr_template(
             pr_template,
-            {section: f"{section}에 대한 검증된 내용" for section in REQUIRED_SECTIONS},
+            {
+                section: f"{section}에 대한 검증된 내용"
+                for section in (*REQUIRED_SECTIONS, *REQUIRED_VERIFICATION_SECTIONS)
+            },
             issue_number=14,
         )
         pr_result = validate_pr(

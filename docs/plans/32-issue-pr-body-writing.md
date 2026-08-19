@@ -126,7 +126,7 @@ git commit -m "feat: PR 템플릿 구조 보존 렌더링"
 - Consumes: 여섯 `##` 리뷰 섹션과 `<details><summary>검증 기록</summary>` 안의 `### 자동 검증`, `### 수동 검증`
 - Produces: 공개 리뷰 정보와 운영 검증 기록을 분리해 검증하는 `ValidationResult`
 
-- [ ] **Step 1: 새 PR 본문 fixture와 실패 계약 테스트 작성**
+- [x] **Step 1: 새 PR 본문 fixture와 실패 계약 테스트 작성**
 
 ```python
 VALID_PR_BODY = """## 무엇이 바뀌었나요?
@@ -169,13 +169,13 @@ Closes #123
 - `검증 기록`, `자동 검증`, `수동 검증` 중 하나가 없거나 비어 있으면 거부한다.
 - HTML 주석과 fenced code 안의 가짜 검증 기록은 실제 내용으로 인정하지 않는다.
 
-- [ ] **Step 2: 새 계약 테스트가 기존 여덟 섹션 검증에서 실패하는지 확인**
+- [x] **Step 2: 새 계약 테스트가 기존 여덟 섹션 검증에서 실패하는지 확인**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_pr_contract -v`
 
 Expected: 기존 섹션 누락 오류와 새 검증 기록 미검사로 FAIL
 
-- [ ] **Step 3: Markdown 3단계 소제목 추출과 PR 계약 구현**
+- [x] **Step 3: Markdown 3단계 소제목 추출과 PR 계약 구현**
 
 ```python
 def extract_subsections(body: str) -> dict[str, str]:
@@ -195,7 +195,7 @@ REQUIRED_VERIFICATION_SECTIONS = ("자동 검증", "수동 검증")
 
 `_markdown_prose()`로 주석과 코드 블록을 제거한 뒤 `검증 기록` details 하나를 찾고, 그 내부의 3단계 소제목을 검증한다. 같은 이름의 details가 중복되면 거부한다.
 
-- [ ] **Step 4: 실제 PR 템플릿을 새 구조로 변경**
+- [x] **Step 4: 실제 PR 템플릿을 새 구조로 변경**
 
 ```markdown
 ## 무엇이 바뀌었나요?
@@ -213,17 +213,17 @@ REQUIRED_VERIFICATION_SECTIONS = ("자동 검증", "수동 검증")
 
 나머지 세 리뷰 섹션도 같은 표식 구조를 사용한다. 본문 하단에는 `검증 기록` details와 `자동 검증`, `수동 검증` 답변 표식을 둔다.
 
-- [ ] **Step 5: 통합 렌더링과 독립 계약 테스트 갱신**
+- [x] **Step 5: 통합 렌더링과 독립 계약 테스트 갱신**
 
 `harness/tests/test_template_body.py`는 여섯 리뷰 응답과 두 검증 응답으로 실제 템플릿을 렌더링하고 `validate_pr()`가 통과하는지 확인한다. `harness/tests/test_repository_contract.py`는 템플릿이 검증기에 필요한 구조를 제공하는지 소비 결과로 확인한다.
 
-- [ ] **Step 6: PR 계약 관련 테스트 통과 확인**
+- [x] **Step 6: PR 계약 관련 테스트 통과 확인**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_pr_contract harness.tests.test_template_body harness.tests.test_repository_contract -v`
 
 Expected: PASS
 
-- [ ] **Step 7: PR 계약 변경 커밋**
+- [x] **Step 7: PR 계약 변경 커밋**
 
 ```bash
 git add .github/pull_request_template.md harness/lib/markdown_sections.py harness/lib/pr_contract.py harness/tests/pr_fixtures.py harness/tests/test_pr_contract.py harness/tests/test_template_body.py harness/tests/test_repository_contract.py
