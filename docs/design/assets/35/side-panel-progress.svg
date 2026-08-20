@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="560" height="900" viewBox="0 0 560 900" role="img" aria-labelledby="title desc"><title id="title">승인 항목 기입 중</title><desc id="desc">완료, 처리 중과 대기 상태를 보여주는 패널</desc>
+  <style>text { font-family: "Pretendard Variable", Pretendard, Arial, sans-serif; }</style>
   <rect width="560" height="900" fill="#F6F9FC"/><rect x="42" y="28" width="476" height="844" rx="22" fill="#FFFFFF" stroke="#D6E0E8"/>
   <text x="74" y="82" fill="#2196F3" font-family="Arial,sans-serif" font-size="11" font-weight="700">4 / 4</text><text x="74" y="120" fill="#0D47A1" font-family="Arial,sans-serif" font-size="26" font-weight="700">기입 중</text>
   <rect x="74" y="166" width="412" height="12" rx="6" fill="#E3F2FD"/><rect x="74" y="166" width="258" height="12" rx="6" fill="#2196F3"/>

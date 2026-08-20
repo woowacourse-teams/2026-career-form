@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="760" viewBox="0 0 760 760" role="img" aria-labelledby="title desc">
+  <style>text { font-family: "Pretendard Variable", Pretendard, Arial, sans-serif; }</style>
   <title id="title">Career Form 팝업 준비 상태</title>
   <desc id="desc">프로필 준비 개수와 사이드 패널 및 프로필 관리 버튼을 표시하는 컬러 팝업</desc>
   <defs><filter id="shadow"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#0D47A1" flood-opacity=".14"/></filter></defs>

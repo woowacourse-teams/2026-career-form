@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const outputDirectory = resolve(".output/chrome-mv3");
@@ -35,3 +35,24 @@ await Promise.all(
     readFile(resolve(outputDirectory, fileName)),
   ),
 );
+
+const assetNames = await readdir(resolve(outputDirectory, "assets"));
+const fontAssets = assetNames.filter((fileName) => fileName.endsWith(".woff2"));
+
+if (fontAssets.length === 0) {
+  throw new Error("Pretendard 로컬 WOFF2 폰트가 빌드에 포함되어야 합니다.");
+}
+
+const styleSheets = await Promise.all(
+  assetNames
+    .filter((fileName) => fileName.endsWith(".css"))
+    .map((fileName) =>
+      readFile(resolve(outputDirectory, "assets", fileName), "utf8"),
+    ),
+);
+
+if (
+  !styleSheets.some((styleSheet) => styleSheet.includes("Pretendard Variable"))
+) {
+  throw new Error("확장 프로그램의 기본 서체가 Pretendard여야 합니다.");
+}

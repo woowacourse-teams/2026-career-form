@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="560" height="900" viewBox="0 0 560 900" role="img" aria-labelledby="title desc">
+  <style>text { font-family: "Pretendard Variable", Pretendard, Arial, sans-serif; }</style>
   <title id="title">범주별로 모아 보는 사이드 패널</title>
   <desc id="desc">기본 인적사항과 연락처는 펼쳐 보고 나머지 범주는 요약해서 탐색하는 지원 정보 패널</desc>
   <rect width="560" height="900" fill="#F6F9FC"/>

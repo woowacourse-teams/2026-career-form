@@ -29,6 +29,10 @@ for (const requiredEntry of [
   }
 }
 
+if (![...entryNames].some((entryName) => entryName.endsWith(".woff2"))) {
+  throw new Error("ZIP에 Pretendard 로컬 WOFF2 폰트가 포함되어야 합니다.");
+}
+
 const zip = new AdmZip(resolve(outputDirectory, archive));
 const manifest = JSON.parse(zip.readAsText("manifest.json"));
 if (
