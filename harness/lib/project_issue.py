@@ -11,9 +11,9 @@ PLANNING_ACTIONS = (
     "draft_contract",
     "write_plan",
     "await_unblock",
-    "publish_contract",
+    "publish_planning_contract",
     "await_approval",
-    "validate_contract",
+    "validate_latest_contract",
     "set_ready",
     "complete",
 )
@@ -31,6 +31,8 @@ class ProjectIssueSnapshot:
     approved: bool = False
     contract_published: bool = False
     contract_valid: bool = False
+    approved_contract_digest: str | None = None
+    latest_contract_digest: str | None = None
 
 
 @dataclass(frozen=True)
@@ -114,17 +116,22 @@ def _next_issue_action(snapshot: ProjectIssueSnapshot) -> PlanningAction:
         )
     if not snapshot.contract_published:
         return PlanningAction(
-            code="publish_contract",
+            code="publish_planning_contract",
             reason="Issue 계약 초안을 원격 Issue 본문에 게시해야 합니다.",
         )
-    if not snapshot.approved:
+    approval_matches_latest = (
+        snapshot.approved_contract_digest is None
+        or snapshot.latest_contract_digest is None
+        or snapshot.approved_contract_digest == snapshot.latest_contract_digest
+    )
+    if not snapshot.approved or not approval_matches_latest:
         return PlanningAction(
             code="await_approval",
-            reason="사람이 원격 Issue를 수정하고 재개할 때까지 기다려야 합니다.",
+            reason="사람이 최신 원격 Issue 계약을 승인할 때까지 기다려야 합니다.",
         )
     if not snapshot.contract_valid:
         return PlanningAction(
-            code="validate_contract",
+            code="validate_latest_contract",
             reason="사람이 수정한 원격 Issue 계약을 다시 검증해야 합니다.",
         )
     if snapshot.issue_status_label != "status:ready":

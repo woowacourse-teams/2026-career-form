@@ -145,6 +145,16 @@ class HarnessScriptsTest(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertIn("issue_status_label은 문자열이어야 합니다", result.stderr)
 
+    def test_project_issue_script_rejects_invalid_contract_digest_type(self) -> None:
+        for name in ("approved_contract_digest", "latest_contract_digest"):
+            with self.subTest(name=name):
+                result = self._run_project_issue_plan(
+                    {"draft_matches": 0, name: False}
+                )
+
+                self.assertEqual(2, result.returncode)
+                self.assertIn(f"{name}은 문자열이어야 합니다", result.stderr)
+
     def test_issue_lifecycle_script_selects_ready_issue_delivery(self) -> None:
         result = self._run_with_json(
             "plan-issue-lifecycle",
