@@ -338,6 +338,6 @@
 
   새 스타일은 `global.css`의 기존 의미 색상 토큰만 사용하고, 그룹 카드 구조와 Pretendard 전역 서체 선언을 변경하지 않는다.
 
-- [ ] **Step 8: 전체 검증과 Draft PR 반영**
+- [x] **Step 8: 전체 검증과 Draft PR 반영**
 
   Issue의 전체 자동 검증, `harness/scripts/verify.py`, `git diff --check`, 두 축 코드 리뷰를 실행한다. 논리적 커밋을 push하고 Draft PR #36의 검증 기록을 최신 결과로 갱신한다.
