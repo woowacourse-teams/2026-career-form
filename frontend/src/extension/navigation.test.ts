@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { openOptionsPage, openSidePanel } from "./navigation";
+import {
+  openAutofillOverlay,
+  openOptionsPage,
+  openSidePanel,
+} from "./navigation";
 
 describe("extension navigation", () => {
   it("opens the options page through the runtime API", async () => {
@@ -28,5 +32,34 @@ describe("extension navigation", () => {
       "현재 창을 확인할 수 없습니다",
     );
     expect(sidePanel.open).not.toHaveBeenCalled();
+  });
+
+  it("asks the active tab to open the autofill overlay", async () => {
+    const tabs = {
+      query: vi.fn(async () => [{ id: 27 }]),
+      sendMessage: vi.fn(async () => undefined),
+    };
+
+    await openAutofillOverlay(tabs);
+
+    expect(tabs.query).toHaveBeenCalledWith({
+      active: true,
+      currentWindow: true,
+    });
+    expect(tabs.sendMessage).toHaveBeenCalledWith(27, {
+      type: "career-form:open-autofill-overlay",
+    });
+  });
+
+  it("does not send an autofill message when the active tab has no id", async () => {
+    const tabs = {
+      query: vi.fn(async () => [{}]),
+      sendMessage: vi.fn(async () => undefined),
+    };
+
+    await expect(openAutofillOverlay(tabs)).rejects.toThrow(
+      "현재 페이지를 확인할 수 없습니다",
+    );
+    expect(tabs.sendMessage).not.toHaveBeenCalled();
   });
 });

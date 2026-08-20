@@ -25,15 +25,32 @@ if (manifest.side_panel?.default_path !== "sidepanel.html") {
   throw new Error("side_panel.default_path가 sidepanel.html이어야 합니다.");
 }
 
+const autofillContentScript = manifest.content_scripts?.find((contentScript) =>
+  contentScript.js?.includes("content-scripts/autofill.js"),
+);
+if (
+  !autofillContentScript ||
+  !autofillContentScript.matches?.includes("http://*/*") ||
+  !autofillContentScript.matches?.includes("https://*/*")
+) {
+  throw new Error(
+    "HTTP(S) 지원서 페이지용 autofill content script가 필요합니다.",
+  );
+}
+
 const permissions = new Set(manifest.permissions);
 if (!permissions.has("storage") || !permissions.has("sidePanel")) {
   throw new Error("프로필 저장과 side panel 권한이 필요합니다.");
 }
 
 await Promise.all(
-  ["popup.html", "options.html", "sidepanel.html"].map((fileName) =>
-    readFile(resolve(outputDirectory, fileName)),
-  ),
+  [
+    "popup.html",
+    "options.html",
+    "sidepanel.html",
+    "content-scripts/autofill.js",
+    "content-scripts/autofill.css",
+  ].map((fileName) => readFile(resolve(outputDirectory, fileName))),
 );
 
 const assetNames = await readdir(resolve(outputDirectory, "assets"));

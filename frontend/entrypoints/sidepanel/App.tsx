@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { AutofillDemo } from "../../src/autofill-demo/AutofillDemo";
-import { openOptionsPage } from "../../src/extension/navigation";
+import {
+  openAutofillOverlay,
+  openOptionsPage,
+} from "../../src/extension/navigation";
 import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import type { Profile, ProfileCategoryId } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
@@ -18,6 +20,7 @@ interface AppProps {
   copyText?: (value: string) => Promise<void>;
   closePanel?: () => void;
   openOptions?: () => Promise<void> | void;
+  openAutofill?: () => Promise<void>;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -96,6 +99,7 @@ export function App({
   copyText = (value) => navigator.clipboard.writeText(value),
   closePanel = () => window.close(),
   openOptions = openOptionsPage,
+  openAutofill = openAutofillOverlay,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -108,9 +112,7 @@ export function App({
   const [copiedId, setCopiedId] = useState<string>();
   const [copyFailed, setCopyFailed] = useState(false);
   const [navigationFailed, setNavigationFailed] = useState(false);
-  const [showAutofillDemo, setShowAutofillDemo] = useState(false);
-  const autofillTriggerRef = useRef<HTMLButtonElement>(null);
-  const wasAutofillOpen = useRef(false);
+  const [autofillFailed, setAutofillFailed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<PanelGroupId>>(
     () => new Set(DEFAULT_OPEN_GROUPS),
   );
@@ -124,27 +126,6 @@ export function App({
       })
       .catch(() => setLoadStatus("error"));
   }, [repository]);
-
-  useEffect(() => {
-    if (!showAutofillDemo) return;
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setShowAutofillDemo(false);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [showAutofillDemo]);
-
-  useEffect(() => {
-    if (showAutofillDemo) {
-      wasAutofillOpen.current = true;
-      return;
-    }
-    if (!wasAutofillOpen.current) return;
-
-    wasAutofillOpen.current = false;
-    autofillTriggerRef.current?.focus();
-  }, [showAutofillDemo]);
 
   const items = profile ? buildSearchItems(profile) : [];
   const results = searchProfileItems(items, query);
@@ -186,13 +167,18 @@ export function App({
     }
   };
 
+  const startAutofill = async () => {
+    try {
+      setAutofillFailed(false);
+      await openAutofill();
+    } catch {
+      setAutofillFailed(true);
+    }
+  };
+
   return (
     <div className={styles.panel}>
-      <header
-        className={styles.header}
-        aria-hidden={showAutofillDemo || undefined}
-        inert={showAutofillDemo || undefined}
-      >
+      <header className={styles.header}>
         <div>
           <p>S-01, 브라우저 사이드 패널</p>
           <h1>내 지원 정보</h1>
@@ -210,11 +196,7 @@ export function App({
           </button>
         </div>
       </header>
-      <main
-        className={styles.main}
-        aria-hidden={showAutofillDemo || undefined}
-        inert={showAutofillDemo || undefined}
-      >
+      <main className={styles.main}>
         {navigationFailed && (
           <p className={styles.navigationError} role="alert">
             프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
@@ -355,45 +337,18 @@ export function App({
           )}
         </section>
       </main>
-      <footer
-        className={styles.footer}
-        aria-hidden={showAutofillDemo || undefined}
-        inert={showAutofillDemo || undefined}
-      >
-        <button
-          ref={autofillTriggerRef}
-          type="button"
-          onClick={() => setShowAutofillDemo(true)}
-        >
+      <footer className={styles.footer}>
+        <button type="button" onClick={() => void startAutofill()}>
           자동 기입
         </button>
         <p>선택 후 분석과 검토를 시작합니다</p>
+        {autofillFailed && (
+          <p className={styles.autofillError} role="alert">
+            현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서 페이지에서
+            다시 시도해 주세요.
+          </p>
+        )}
       </footer>
-      {showAutofillDemo && (
-        <div className={styles.modalBackdrop}>
-          <section
-            className={styles.modal}
-            role="dialog"
-            aria-label="지원서 자동 기입"
-            aria-modal="true"
-          >
-            <div className={styles.modalHeader}>
-              <strong>지원서 자동 기입</strong>
-              <button
-                type="button"
-                aria-label="자동 기입 모달 닫기"
-                autoFocus
-                onClick={() => setShowAutofillDemo(false)}
-              >
-                닫기
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <AutofillDemo onExit={() => setShowAutofillDemo(false)} />
-            </div>
-          </section>
-        </div>
-      )}
     </div>
   );
 }

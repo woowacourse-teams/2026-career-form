@@ -341,3 +341,70 @@
 - [x] **Step 8: 전체 검증과 Draft PR 반영**
 
   Issue의 전체 자동 검증, `harness/scripts/verify.py`, `git diff --check`, 두 축 코드 리뷰를 실행한다. 논리적 커밋을 push하고 Draft PR #36의 검증 기록을 최신 결과로 갱신한다.
+
+---
+
+### Task 8: 웹페이지 영역 자동 기입 모달로 교정
+
+**Files:**
+- Create: `frontend/entrypoints/autofill.content/index.tsx`
+- Create: `frontend/entrypoints/autofill.content/style.css`
+- Create: `frontend/src/autofill-demo/AutofillOverlay.tsx`
+- Create: `frontend/src/autofill-demo/AutofillOverlay.module.css`
+- Create: `frontend/src/autofill-demo/AutofillOverlay.test.tsx`
+- Create: `frontend/src/autofill-demo/messages.ts`
+- Create: `frontend/src/autofill-demo/messages.test.ts`
+- Modify: `frontend/src/extension/navigation.ts`
+- Modify: `frontend/src/extension/navigation.test.ts`
+- Modify: `frontend/entrypoints/sidepanel/App.tsx`
+- Modify: `frontend/entrypoints/sidepanel/App.test.tsx`
+- Modify: `frontend/entrypoints/sidepanel/App.module.css`
+- Modify: `frontend/scripts/assert-build.mjs`
+- Modify: `frontend/scripts/assert-zip.mjs`
+- Modify: `frontend/README.md`
+
+**Interfaces:**
+- `openAutofillOverlay(tabs?): Promise<void>`는 현재 창의 활성 탭 하나에 `{ type: "career-form:open-autofill-overlay" }` 메시지를 보낸다.
+- `AutofillOverlay({ onClose })`는 웹페이지 Shadow DOM 안에서 `지원서 자동 기입` dialog와 기존 `AutofillDemo` 상태 흐름을 렌더링한다.
+- `autofill.content`는 HTTP(S) 페이지에서 메시지를 받을 때만 UI를 mount하며, 같은 모달을 중복 mount하지 않는다.
+
+- [x] **Step 1: RED — side panel과 활성 탭 메시지 경계 테스트**
+
+  `navigation.test.ts`에는 활성 탭 ID `27`로 아래 메시지가 전달되는 동작과 탭 ID가 없을 때 전송하지 않는 동작을 작성한다.
+
+  ```ts
+  { type: "career-form:open-autofill-overlay" }
+  ```
+
+  `App.test.tsx`에는 `자동 기입`을 누르면 주입한 `openAutofill`이 호출되고 side panel DOM에는 dialog가 생기지 않는 테스트를 작성한다.
+
+- [x] **Step 2: RED — 웹페이지 모달 계약 테스트**
+
+  `AutofillOverlay.test.tsx`에 접근 가능한 dialog, 기존 분석→검토 단계 이동, 닫기와 Escape 동작을 작성한다. `messages.test.ts`에는 지정된 메시지만 모달 open 함수를 실행하는 테스트를 작성한다.
+
+- [x] **Step 3: RED 실행**
+
+  ```bash
+  npm --prefix frontend test -- src/extension/navigation.test.ts entrypoints/sidepanel/App.test.tsx src/autofill-demo/AutofillOverlay.test.tsx src/autofill-demo/messages.test.ts
+  ```
+
+  Expected: 활성 탭 메시지 함수와 웹페이지 overlay가 없고 side panel이 자체 dialog를 열어 실패한다.
+
+- [x] **Step 4: GREEN — 메시지 경계와 content-script UI 구현**
+
+  side panel의 로컬 dialog 상태·스타일을 제거하고 실패 시 비식별 경고만 표시한다. WXT `createShadowRootUi`의 `position: "modal"`, `cssInjectionMode: "ui"`, `isolateEvents: true`를 사용해 페이지 CSS와 격리하며 기존 의미 색상 토큰과 Pretendard를 import한다.
+
+- [x] **Step 5: GREEN 실행과 빌드 계약 보강**
+
+  ```bash
+  npm --prefix frontend test -- src/extension/navigation.test.ts entrypoints/sidepanel/App.test.tsx src/autofill-demo/AutofillOverlay.test.tsx src/autofill-demo/messages.test.ts
+  npm --prefix frontend run typecheck
+  npm --prefix frontend run build
+  npm --prefix frontend run zip
+  ```
+
+  산출물 Manifest와 ZIP에 `content-scripts/autofill.js`와 HTTP(S) match가 포함되는지 assert 스크립트로 검증한다.
+
+- [ ] **Step 6: 전체 검증·시각 확인·Draft PR 재반영**
+
+  전체 frontend 검증, `harness/scripts/verify.py`, `git diff --check`, 두 축 리뷰를 실행한다. side panel과 웹페이지를 나란히 둔 로컬 확장 환경에서 모달 위치와 단계 전환을 확인하고 논리적 커밋을 push한 뒤 Draft PR #36을 최신화한다.
