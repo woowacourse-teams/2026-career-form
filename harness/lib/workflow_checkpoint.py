@@ -111,6 +111,9 @@ def resume_stage(
     head: str,
 ) -> WorkflowCheckpoint:
     _non_empty(head, "head")
+    current = stage_checkpoint(checkpoint, checkpoint.current_stage)
+    if stage == current.name and current.status == "running":
+        return checkpoint
     names = tuple(record.name for record in checkpoint.stages)
     if stage not in names:
         return begin_stage(checkpoint, stage=stage, head=head)

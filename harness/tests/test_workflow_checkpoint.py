@@ -275,6 +275,28 @@ class WorkflowCheckpointTest(unittest.TestCase):
         self.assertEqual("changed-head", verification.started_head)
         self.assertIsNone(verification.completed_head)
 
+    def test_preserves_start_head_when_running_stage_resumes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = self._init_repository(Path(directory) / "repository")
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=34,
+                branch="CF-34",
+                head="original-head",
+            )
+
+            resumed = resume_stage(
+                checkpoint,
+                stage="plan",
+                head="later-head",
+            )
+
+        self.assertEqual(checkpoint, resumed)
+        self.assertEqual(
+            "original-head",
+            stage_checkpoint(resumed, "plan").started_head,
+        )
+
     def test_ignores_parent_git_environment_for_target_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
