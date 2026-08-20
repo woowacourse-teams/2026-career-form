@@ -50,7 +50,7 @@ Project 상태 변경이 실패하면 Issue 승격이나 브랜치 생성을 반
 
 ## 3. 계획과 구현
 
-작업을 시작하거나 사용자가 재개를 명시하면 GitHub에서 현재 브랜치의 열린 PR을 조회해 Issue 번호와 PR 번호 및 head OID를 JSON snapshot으로 만든다. 선택한 Python으로 `harness/scripts/plan-issue-delivery.py --cwd . <snapshot 파일>`을 실행하고 반환된 action 하나만 처리한다.
+작업을 시작하거나 사용자가 재개를 명시하면 GitHub에서 현재 브랜치의 열린 PR을 조회해 Issue 번호와 PR 번호 및 head OID를 OS 임시 JSON snapshot으로 만든다. 선택한 Python으로 `harness/scripts/plan-issue-delivery.py --cwd . <snapshot 파일>`을 실행하고 반환된 action 하나만 처리한다.
 
 - `resume_plan`: `manage-workflow-checkpoint.py --cwd . resume plan`을 실행한 뒤 계획 확인
 - `resume_implementation`: `manage-workflow-checkpoint.py --cwd . resume implementation`을 실행한 뒤 구현

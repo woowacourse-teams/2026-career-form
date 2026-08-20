@@ -175,7 +175,10 @@ class IssueDeliveryTest(unittest.TestCase):
             checkpoint,
             stage="verification",
             head="verified-head",
-            evidence={"command": "harness/scripts/verify.py"},
+            evidence={
+                "command": "harness/scripts/verify.py",
+                "result": "passed",
+            },
         )
 
 

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import tempfile
 from collections.abc import Mapping
@@ -146,6 +147,7 @@ def complete_stage(
     normalized_evidence = _evidence_from(evidence)
     if not normalized_evidence:
         raise CheckpointError("단계 완료에는 완료 근거가 필요합니다")
+    _validate_completion_evidence(stage, normalized_evidence, head)
     completed = replace(
         current,
         status="completed",
@@ -291,6 +293,8 @@ def _stage_from(value: object) -> StageCheckpoint:
     normalized_evidence = _evidence_from(evidence)
     if status == "completed" and not normalized_evidence:
         raise CheckpointError("완료 단계에는 완료 근거가 필요합니다")
+    if status == "completed":
+        _validate_completion_evidence(name, normalized_evidence, completed_head)
     return StageCheckpoint(
         name=name,
         status=status,
@@ -306,6 +310,40 @@ def _evidence_from(value: Mapping[object, object]) -> tuple[tuple[str, str], ...
     if any(not key or not item for key, item in value.items()):
         raise CheckpointError("완료 근거의 이름과 값은 비어 있을 수 없습니다")
     return tuple(sorted(value.items()))
+
+
+def _validate_completion_evidence(
+    stage: str,
+    evidence: tuple[tuple[str, str], ...],
+    completed_head: str,
+) -> None:
+    values = dict(evidence)
+    if stage == "plan" and "plan_path" not in values:
+        raise CheckpointError("plan 완료 근거에는 plan_path가 필요합니다")
+    if stage == "implementation" and values.get("commit") != completed_head:
+        raise CheckpointError("implementation commit은 완료 HEAD와 같아야 합니다")
+    if stage == "verification" and (
+        "command" not in values or values.get("result") != "passed"
+    ):
+        raise CheckpointError(
+            "verification 완료 근거에는 command와 result=passed가 필요합니다"
+        )
+    if stage == "draft_pr" and not _valid_pull_request_evidence(values):
+        raise CheckpointError("Draft PR 완료 근거에는 유효한 번호와 URL이 필요합니다")
+
+
+def _valid_pull_request_evidence(values: Mapping[str, str]) -> bool:
+    number = values.get("pr_number", "")
+    url = values.get("pr_url", "")
+    if not number.isdigit() or int(number) < 1:
+        return False
+    return (
+        re.fullmatch(
+            rf"https://github\.com/[^/]+/[^/]+/pull/{re.escape(number)}",
+            url,
+        )
+        is not None
+    )
 
 
 def _positive_issue_number(value: object) -> None:

@@ -62,7 +62,7 @@ git rev-parse --git-path cf-workflow/checkpoint.json
 .venv/bin/python harness/scripts/manage-workflow-checkpoint.py --cwd . complete implementation --evidence commit=<현재 HEAD>
 ```
 
-재개 시에는 GitHub에서 확인한 Issue 번호, Draft PR 번호와 head OID를 JSON snapshot에 넣고 다음 명령으로 첫 미완료 단계를 확인한다.
+재개 시에는 GitHub에서 확인한 Issue 번호, Draft PR 번호와 head OID를 OS 임시 JSON snapshot에 넣고 다음 명령으로 첫 미완료 단계를 확인한다.
 
 ```bash
 .venv/bin/python harness/scripts/plan-issue-delivery.py --cwd . <snapshot 파일>

@@ -360,7 +360,10 @@ class HarnessScriptsTest(unittest.TestCase):
                 checkpoint,
                 stage="verification",
                 head=head,
-                evidence={"command": "harness/scripts/verify.py"},
+                evidence={
+                    "command": "harness/scripts/verify.py",
+                    "result": "passed",
+                },
             )
             save_checkpoint(repository, checkpoint)
             payload = json.dumps(

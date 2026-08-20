@@ -8,6 +8,8 @@ from unittest.mock import patch
 
 from harness.lib.workflow_checkpoint import (
     CheckpointError,
+    StageCheckpoint,
+    WorkflowCheckpoint,
     begin_stage,
     checkpoint_path,
     complete_stage,
@@ -124,6 +126,47 @@ class WorkflowCheckpointTest(unittest.TestCase):
                     head="plan-head",
                     evidence={},
                 )
+
+    def test_requires_stage_specific_completion_evidence(self) -> None:
+        cases = (
+            (
+                self._running_checkpoint("plan"),
+                "plan",
+                "plan-head",
+                {"note": "done"},
+                "plan_path",
+            ),
+            (
+                self._running_checkpoint("implementation"),
+                "implementation",
+                "implementation-head",
+                {"commit": "different-head"},
+                "commit",
+            ),
+            (
+                self._running_checkpoint("verification"),
+                "verification",
+                "verified-head",
+                {"command": "harness/scripts/verify.py"},
+                "result",
+            ),
+            (
+                self._running_checkpoint("draft_pr"),
+                "draft_pr",
+                "verified-head",
+                {"pr_number": "0", "pr_url": "not-a-url"},
+                "Draft PR",
+            ),
+        )
+        for checkpoint, stage, head, evidence, message in cases:
+            with self.subTest(stage=stage):
+                with self.assertRaisesRegex(CheckpointError, message):
+                    complete_stage(
+                        checkpoint,
+                        stage=stage,
+                        head=head,
+                        evidence=evidence,
+                    )
 
     def test_rejects_corrupted_checkpoint(self) -> None:
         invalid_payloads = (
@@ -260,7 +303,10 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 checkpoint,
                 stage="verification",
                 head="verified-head",
-                evidence={"command": "harness/scripts/verify.py"},
+                evidence={
+                    "command": "harness/scripts/verify.py",
+                    "result": "passed",
+                },
             )
 
             restarted = resume_stage(
@@ -364,6 +410,44 @@ class WorkflowCheckpointTest(unittest.TestCase):
         ):
             environment.pop(name, None)
         return environment
+
+    def _running_checkpoint(self, stage: str) -> WorkflowCheckpoint:
+        records = (
+            StageCheckpoint(
+                "plan",
+                "completed",
+                "start-head",
+                "plan-head",
+                (("plan_path", "docs/plans/34-plan.md"),),
+            ),
+            StageCheckpoint(
+                "implementation",
+                "completed",
+                "plan-head",
+                "implementation-head",
+                (("commit", "implementation-head"),),
+            ),
+            StageCheckpoint(
+                "verification",
+                "completed",
+                "implementation-head",
+                "verified-head",
+                (
+                    ("command", "harness/scripts/verify.py"),
+                    ("result", "passed"),
+                ),
+            ),
+        )
+        index = ("plan", "implementation", "verification", "draft_pr").index(
+            stage
+        )
+        return WorkflowCheckpoint(
+            schema_version=1,
+            issue_number=34,
+            branch="CF-34",
+            current_stage=stage,
+            stages=(*records[:index], StageCheckpoint(stage, "running", "head")),
+        )
 
 
 if __name__ == "__main__":

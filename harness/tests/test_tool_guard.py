@@ -184,6 +184,22 @@ class ToolGuardTest(unittest.TestCase):
         self.assertTrue(decision.blocked)
         self.assertIn("검증", decision.reason)
 
+    def test_blocks_draft_pr_for_codex_shell_payload(self) -> None:
+        for tool_name, tool_input in (
+            ("Shell", {"command": "gh pr create --draft --body-file /tmp/pr.md"}),
+            ("shell", {"command": "gh pr create --draft --body-file /tmp/pr.md"}),
+            ("exec_command", {"cmd": "gh pr create --draft --body-file /tmp/pr.md"}),
+        ):
+            with self.subTest(tool_name=tool_name):
+                decision = evaluate_tool_use(
+                    {"tool_name": tool_name, "tool_input": tool_input},
+                    branch="CF-34",
+                    current_head="verified-head",
+                )
+
+                self.assertTrue(decision.blocked)
+                self.assertIn("검증", decision.reason)
+
     def test_blocks_draft_pr_when_verified_head_changed(self) -> None:
         decision = evaluate_tool_use(
             {
@@ -310,7 +326,10 @@ class ToolGuardTest(unittest.TestCase):
             checkpoint,
             stage="verification",
             head="verified-head",
-            evidence={"command": "harness/scripts/verify.py"},
+            evidence={
+                "command": "harness/scripts/verify.py",
+                "result": "passed",
+            },
         )
 
 

@@ -250,7 +250,7 @@ Run: `git diff --check`
 
 Expected: 출력 없음
 
-- [ ] **Step 6: 두 축 코드 리뷰와 수동 검증 상태 기록**
+- [x] **Step 6: 두 축 코드 리뷰와 수동 검증 상태 기록**
 
 `origin/develop...HEAD`를 저장소 Standards와 Issue #34 Spec으로 나눠 검토한다. macOS에서 자동 검증 결과를 기록하고, WSL/Linux ESC 재개와 GitHub 원격 수정 흐름, 다른 팀원 리뷰는 사람 확인 항목으로 남긴다.
 
@@ -260,3 +260,11 @@ Expected: 출력 없음
 git add .agents/skills/cf-project-issue-planning .agents/skills/cf-issue-lifecycle .agents/skills/cf-issue-workflow docs/adr/34-worktree-workflow-checkpoint.md docs/adr/README.md harness/README.md docs/plans/34-workflow-checkpoint.md
 git commit -m "docs: 재개 가능한 Issue 워크플로우 반영"
 ```
+
+## 리뷰 결과
+
+- 고정점: `origin/develop`의 `4a752ed`
+- Standards: 완료 근거가 빈 값만 아니면 통과하던 문제와 Codex shell payload를 놓칠 수 있던 문제를 수정. 남은 치명적 또는 높은 위험 지적 없음
+- Issue Spec: 자동 검증 대상 인수 조건의 누락 없음. 범위 밖 기능 추가 없음
+- macOS 자동 검증: 278개 테스트 통과, 전체 커버리지 86%
+- 사람 확인 대기: WSL/Linux ESC 재개, GitHub 원격 수정 흐름, 다른 팀원의 `harness-change` 리뷰

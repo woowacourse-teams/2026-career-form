@@ -11,6 +11,13 @@ from harness.lib.workflow_checkpoint import (
 
 LONG_LIVED_BRANCHES = ("master", "main", "develop")
 WRITE_TOOLS = ("apply_patch", "Edit", "Write")
+SHELL_TOOLS = (
+    "Bash",
+    "Shell",
+    "shell",
+    "exec_command",
+    "functions.exec_command",
+)
 DANGEROUS_TOOL_NAME_PATTERN = re.compile(
     r"(?:^|__|_)(?:delete|destroy|drop|deploy|migrate|merge_pull_request|"
     r"approve_pull_request|secret|credential|token)(?:$|__|_)|"
@@ -100,7 +107,7 @@ def evaluate_tool_use(
     if isinstance(tool_name, str) and DANGEROUS_TOOL_NAME_PATTERN.search(tool_name):
         return HookDecision(True, "위험 도구는 AI가 실행할 수 없습니다")
 
-    if tool_name in (*WRITE_TOOLS, "Bash") and command is None:
+    if tool_name in (*WRITE_TOOLS, *SHELL_TOOLS) and command is None:
         return HookDecision(True, "도구 입력을 확인할 수 없습니다")
     if command is None:
         if _contains_secret(tool_input):
@@ -115,7 +122,7 @@ def evaluate_tool_use(
         if SECRET_FILE_PATTERN.search(command):
             return HookDecision(True, "시크릿 파일은 AI가 수정할 수 없습니다")
 
-    if tool_name != "Bash":
+    if tool_name not in SHELL_TOOLS:
         return HookDecision(False)
 
     if SECRET_FILE_PATTERN.search(command):
@@ -146,7 +153,7 @@ def needs_workflow_checkpoint(
 ) -> bool:
     command = _command(payload.get("tool_input"))
     return (
-        payload.get("tool_name") == "Bash"
+        payload.get("tool_name") in SHELL_TOOLS
         and command is not None
         and DRAFT_PR_CREATE_PATTERN.search(command) is not None
         and branch is not None
@@ -184,8 +191,11 @@ def _draft_pr_decision(
 def _command(tool_input: object) -> str | None:
     if not isinstance(tool_input, Mapping):
         return None
-    command = tool_input.get("command")
-    return command if isinstance(command, str) else None
+    for name in ("command", "cmd"):
+        command = tool_input.get(name)
+        if isinstance(command, str):
+            return command
+    return None
 
 
 def _contains_secret(value: object) -> bool:
