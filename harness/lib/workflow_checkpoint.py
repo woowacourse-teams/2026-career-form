@@ -104,6 +104,29 @@ def begin_stage(
     )
 
 
+def resume_stage(
+    checkpoint: WorkflowCheckpoint,
+    *,
+    stage: str,
+    head: str,
+) -> WorkflowCheckpoint:
+    _non_empty(head, "head")
+    names = tuple(record.name for record in checkpoint.stages)
+    if stage not in names:
+        return begin_stage(checkpoint, stage=stage, head=head)
+    index = names.index(stage)
+    if any(record.status != "completed" for record in checkpoint.stages[:index]):
+        raise CheckpointError("이전 단계를 완료한 뒤 재개해야 합니다")
+    return replace(
+        checkpoint,
+        current_stage=stage,
+        stages=(
+            *checkpoint.stages[:index],
+            StageCheckpoint(stage, "running", head),
+        ),
+    )
+
+
 def complete_stage(
     checkpoint: WorkflowCheckpoint,
     *,
@@ -199,6 +222,13 @@ def git_value(cwd: str | Path, *arguments: str) -> str:
     if completed.returncode != 0 or not value:
         raise CheckpointError("Git 상태를 확인할 수 없습니다")
     return value
+
+
+def git_is_clean(cwd: str | Path) -> bool:
+    completed = _run_git(cwd, "status", "--porcelain")
+    if completed.returncode != 0:
+        raise CheckpointError("Git 상태를 확인할 수 없습니다")
+    return not completed.stdout.strip()
 
 
 def checkpoint_from(payload: object) -> WorkflowCheckpoint:

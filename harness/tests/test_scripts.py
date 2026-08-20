@@ -8,6 +8,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from harness.tests.pr_fixtures import VALID_PR_BODY
+from harness.lib.workflow_checkpoint import (
+    begin_stage,
+    complete_stage,
+    initialize_checkpoint,
+    save_checkpoint,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -278,6 +284,100 @@ class HarnessScriptsTest(unittest.TestCase):
         self.assertEqual("deny", decision["permissionDecision"])
         self.assertIn("브랜치", decision["permissionDecisionReason"])
 
+    def test_guard_script_denies_draft_pr_without_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self._init_issue_repository(directory)
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=directory,
+                env=self._without_local_git_environment(),
+                check=True,
+            )
+            payload = json.dumps(
+                {
+                    "cwd": directory,
+                    "tool_name": "Bash",
+                    "tool_input": {
+                        "command": "gh pr create --draft --body-file /tmp/pr.md"
+                    },
+                }
+            )
+
+            result = self._run("guard-tool-use", input_text=payload)
+
+        output = json.loads(result.stdout)
+        decision = output["hookSpecificOutput"]
+        self.assertEqual("deny", decision["permissionDecision"])
+        self.assertIn("체크포인트", decision["permissionDecisionReason"])
+
+    def test_guard_script_allows_verified_draft_pr(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            self._init_issue_repository(directory)
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=self._without_local_git_environment(),
+                check=True,
+            )
+            head = subprocess.run(
+                ("git", "rev-parse", "HEAD"),
+                cwd=repository,
+                env=self._without_local_git_environment(),
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=123,
+                branch="CF-123",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head=head,
+                evidence={"plan_path": "docs/plans/123-plan.md"},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+                evidence={"commit": head},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="verification",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="verification",
+                head=head,
+                evidence={"command": "harness/scripts/verify.py"},
+            )
+            save_checkpoint(repository, checkpoint)
+            payload = json.dumps(
+                {
+                    "cwd": directory,
+                    "tool_name": "Bash",
+                    "tool_input": {
+                        "command": "gh pr create --draft --body-file /tmp/pr.md"
+                    },
+                }
+            )
+
+            result = self._run("guard-tool-use", input_text=payload)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout)
+
     def test_workflow_checkpoint_script_initializes_current_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository = Path(directory) / "repository"
@@ -317,6 +417,83 @@ class HarnessScriptsTest(unittest.TestCase):
         self.assertEqual(34, payload["issue_number"])
         self.assertEqual("CF-34", payload["branch"])
         self.assertEqual("plan", payload["current_stage"])
+
+    def test_issue_delivery_script_selects_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = root / "repository"
+            repository.mkdir()
+            self._init_issue_repository(str(repository))
+            plan = repository / "docs" / "plans" / "123-plan.md"
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
+            environment = self._without_local_git_environment()
+            subprocess.run(
+                ("git", "add", "docs/plans/123-plan.md"),
+                cwd=repository,
+                env=environment,
+                check=True,
+            )
+            subprocess.run(
+                ("git", "commit", "-q", "-m", "docs: 계획 추가"),
+                cwd=repository,
+                env=environment,
+                check=True,
+            )
+            head = subprocess.run(
+                ("git", "rev-parse", "HEAD"),
+                cwd=repository,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=123,
+                branch="CF-123",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head=head,
+                evidence={"plan_path": "docs/plans/123-plan.md"},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+                evidence={"commit": head},
+            )
+            save_checkpoint(repository, checkpoint)
+            snapshot = root / "snapshot.json"
+            snapshot.write_text(
+                json.dumps({"issue_number": 123}),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "plan-issue-delivery.py"),
+                    "--cwd",
+                    str(repository),
+                    str(snapshot),
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("resume_verification", json.loads(result.stdout)["code"])
 
     def test_initializes_fixture_repository_without_hook_git_environment(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

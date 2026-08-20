@@ -137,7 +137,9 @@ git commit -m "feat: worktree 워크플로우 체크포인트 추가"
 ### Task 3: 실제 상태 대조와 Draft PR 전이 차단
 
 **Files:**
+- Modify: `harness/lib/workflow_checkpoint.py`
 - Create: `harness/lib/issue_delivery.py`
+- Modify: `harness/scripts/manage-workflow-checkpoint.py`
 - Create: `harness/scripts/plan-issue-delivery.py`
 - Modify: `harness/lib/tool_guard.py`
 - Modify: `harness/scripts/guard-tool-use.py`
@@ -150,7 +152,7 @@ git commit -m "feat: worktree 워크플로우 체크포인트 추가"
 - Produces: `resume_plan`, `resume_implementation`, `resume_verification`, `create_draft_pr`, `record_draft_pr`, `complete` 중 하나인 `DeliveryAction`
 - Guards: Issue 브랜치의 `gh pr create`는 같은 브랜치와 현재 HEAD의 완료된 verification 기록이 있을 때만 허용
 
-- [ ] **Step 1: 첫 미완료 단계와 상태 불일치 실패 테스트 작성**
+- [x] **Step 1: 첫 미완료 단계와 상태 불일치 실패 테스트 작성**
 
 다음 분기를 각각 검증한다.
 
@@ -161,31 +163,31 @@ git commit -m "feat: worktree 워크플로우 체크포인트 추가"
 - Draft PR 생성 중 실제 PR이 발견되면 다시 만들지 않고 완료 기록 action을 반환한다.
 - 체크포인트가 없거나 손상됐거나 Issue, 브랜치가 다르면 진행 action을 반환하지 않는다.
 
-- [ ] **Step 2: Draft PR 훅 차단 실패 테스트 작성**
+- [x] **Step 2: Draft PR 훅 차단 실패 테스트 작성**
 
 `gh pr create --draft --body-file ...`에 대해 체크포인트 없음, 다른 HEAD, 실행 중 verification은 차단하고 현재 HEAD의 verification 완료는 허용하는 테스트를 작성한다. 일반 테스트 명령과 읽기 명령은 체크포인트가 없어도 허용되는지 함께 확인한다.
 
-- [ ] **Step 3: 재개와 훅 테스트의 예상 실패 확인**
+- [x] **Step 3: 재개와 훅 테스트의 예상 실패 확인**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_issue_delivery harness.tests.test_tool_guard harness.tests.test_scripts -v`
 
 Expected: delivery planner가 없고 Draft PR 명령이 허용돼 FAIL
 
-- [ ] **Step 4: 순수 재개 판정과 JSON CLI 구현**
+- [x] **Step 4: 순수 재개 판정과 JSON CLI 구현**
 
 `next_delivery_action()`은 저장 기록을 관찰값과 대조해 첫 미완료 단계를 반환한다. `plan-issue-delivery.py`는 checkpoint 경로와 snapshot 파일을 받아 JSON action을 출력하며, 체크포인트 부재와 손상은 종료 코드 2로 보고한다.
 
-- [ ] **Step 5: 현재 HEAD 검증 기반 Draft PR 훅 구현**
+- [x] **Step 5: 현재 HEAD 검증 기반 Draft PR 훅 구현**
 
 `guard-tool-use.py`는 Issue 브랜치에서 Draft PR 생성 명령을 볼 때만 현재 HEAD와 체크포인트를 읽는다. `tool_guard.evaluate_tool_use()`는 완료된 verification의 완료 HEAD가 현재 HEAD와 같은지 확인하고, 다르면 거부 이유를 반환한다. 다른 도구와 질문은 기존 동작을 유지한다.
 
-- [ ] **Step 6: 재개 planner와 훅 테스트 통과 확인**
+- [x] **Step 6: 재개 planner와 훅 테스트 통과 확인**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_issue_delivery harness.tests.test_tool_guard harness.tests.test_scripts -v`
 
 Expected: PASS
 
-- [ ] **Step 7: 재개 및 전이 차단 커밋**
+- [x] **Step 7: 재개 및 전이 차단 커밋**
 
 ```bash
 git add harness/lib/issue_delivery.py harness/scripts/plan-issue-delivery.py harness/lib/tool_guard.py harness/scripts/guard-tool-use.py harness/tests/test_issue_delivery.py harness/tests/test_tool_guard.py harness/tests/test_scripts.py docs/plans/34-workflow-checkpoint.md

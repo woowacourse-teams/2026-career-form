@@ -13,6 +13,7 @@ from harness.lib.workflow_checkpoint import (
     complete_stage,
     initialize_checkpoint,
     load_checkpoint,
+    resume_stage,
     save_checkpoint,
     stage_checkpoint,
 )
@@ -223,6 +224,56 @@ class WorkflowCheckpointTest(unittest.TestCase):
             names = tuple(path.name for path in checkpoint_path(repository).parent.iterdir())
 
         self.assertEqual(("checkpoint.json",), names)
+
+    def test_restarts_completed_stage_with_current_head(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = self._init_repository(Path(directory) / "repository")
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=34,
+                branch="CF-34",
+                head="start-head",
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head="plan-head",
+                evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="implementation",
+                head="plan-head",
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head="implementation-head",
+                evidence={"commit": "implementation-head"},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="verification",
+                head="implementation-head",
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="verification",
+                head="verified-head",
+                evidence={"command": "harness/scripts/verify.py"},
+            )
+
+            restarted = resume_stage(
+                checkpoint,
+                stage="verification",
+                head="changed-head",
+            )
+
+        self.assertEqual("verification", restarted.current_stage)
+        verification = stage_checkpoint(restarted, "verification")
+        self.assertEqual("running", verification.status)
+        self.assertEqual("changed-head", verification.started_head)
+        self.assertIsNone(verification.completed_head)
 
     def test_ignores_parent_git_environment_for_target_worktree(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

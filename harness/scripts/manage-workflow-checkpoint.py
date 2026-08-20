@@ -16,6 +16,7 @@ from harness.lib.workflow_checkpoint import (
     git_value,
     initialize_checkpoint,
     load_checkpoint,
+    resume_stage,
     save_checkpoint,
 )
 
@@ -48,6 +49,8 @@ def _execute(arguments: argparse.Namespace):
     head = git_value(arguments.cwd, "rev-parse", "HEAD")
     if arguments.action == "begin":
         updated = begin_stage(checkpoint, stage=arguments.stage, head=head)
+    elif arguments.action == "resume":
+        updated = resume_stage(checkpoint, stage=arguments.stage, head=head)
     else:
         updated = complete_stage(
             checkpoint,
@@ -68,6 +71,8 @@ def _parser() -> argparse.ArgumentParser:
     actions.add_parser("show")
     begin = actions.add_parser("begin")
     begin.add_argument("stage")
+    resume = actions.add_parser("resume")
+    resume.add_argument("stage")
     complete = actions.add_parser("complete")
     complete.add_argument("stage")
     complete.add_argument("--evidence", action="append", default=[])
