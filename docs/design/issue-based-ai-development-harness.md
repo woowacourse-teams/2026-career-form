@@ -25,9 +25,11 @@ AI가 원격 Issue를 검증하고 status:ready 전환
         ↓
 cf-issue-workflow 실행
         ↓
-워크트리 -> 구현 계획 -> TDD -> 검증 -> AI 리뷰
+worktree 체크포인트 초기화
         ↓
-AI가 Draft PR 생성
+계획 확인 -> 구현 -> 검증을 단계 시작 전에 기록
+        ↓
+현재 HEAD 검증 근거 확인 뒤 AI가 Draft PR 생성
         ↓
 사람이 GitHub Draft PR을 수정하고 재개
         ↓
@@ -95,6 +97,7 @@ GitHub Project draft는 기능 단위 백로그다. FE, BE, INFRA처럼 독립 �
 | Issue 수정과 재개 | 사람 | GitHub 원격 정본 |
 | Issue 최종 확정 | 사람 확인, AI 검증 | `status:ready` |
 | 코드 조사, 계획, 구현 | AI | 오케스트레이션 |
+| 중단 뒤 작업 재개 | AI | worktree 체크포인트와 실제 Git 및 PR 대조 |
 | TDD와 완료 검증 | AI | 스킬, 테스트, CI |
 | 범위 초과 처리 | AI | 독립 draft 제안, 현재 작업 제외 |
 | draft 승격 | AI | `status:planning`, Project `In Progress` |
@@ -110,7 +113,7 @@ GitHub Project draft는 기능 단위 백로그다. FE, BE, INFRA처럼 독립 �
 
 단계별 스킬은 독립적으로 두고 `cf-issue-lifecycle`이 기획, 구현, Issue와 Draft PR의
 수동 편집 대기, 사람 머지 대기와 정리를 연결한다. `cf-issue-workflow`는 ready Issue의
-구현, Draft PR 게시와 사람 재개 후 원격 PR 검증을 담당한다.
+구현, worktree 체크포인트, Draft PR 게시와 사람 재개 후 원격 PR 검증을 담당한다.
 
 | 단계 | 후보 |
 |---|---|
@@ -220,9 +223,10 @@ Ruleset으로 직접 push, force push, 삭제를 막고 사람 승인 1명을 �
 
 ## 네 명의 병렬 작업을 위한 충돌 방지
 
-실시간 작업 상태를 공용 `HANDOFF.md`에 기록하지 않는다. Issue, 연결 PR,
-`docs/plans/<issue-number>-<slug>.md`, 현재 브랜치 순서로 재개 상태를 확인한다.
-하네스 구축이 끝나면 현재 `AGENTS.md`의 작업별 `HANDOFF.md` 갱신 규칙을 제거한다.
+실시간 작업 상태를 공용 `HANDOFF.md`에 기록하지 않는다. Issue와 연결 PR은 원격 협업
+상태의 정본이고, 단계 실행 상태는 worktree 전용 Git 디렉터리의 체크포인트에 둔다.
+재개 시 체크포인트를 현재 브랜치, HEAD, 계획 파일, 검증 결과와 Draft PR에 대조한다.
+환경변수와 `MEMORY.md`는 완료 상태의 기준으로 사용하지 않는다.
 
 다음 경로는 일반 기능 PR에서 수정하지 않는 공유 보호 영역이다.
 

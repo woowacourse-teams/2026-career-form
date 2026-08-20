@@ -32,6 +32,10 @@ def snapshot_from(payload: Mapping[str, object]) -> ProjectIssueSnapshot:
     issue_number = payload.get("issue_number")
     issue_status_label = payload.get("issue_status_label")
     project_status = payload.get("project_status")
+    approved_contract_digest = optional_string(
+        payload, "approved_contract_digest"
+    )
+    latest_contract_digest = optional_string(payload, "latest_contract_digest")
     if isinstance(draft_matches, bool) or not isinstance(draft_matches, int):
         raise ValueError("draft_matches는 정수여야 합니다")
     if draft_matches < 0:
@@ -58,6 +62,8 @@ def snapshot_from(payload: Mapping[str, object]) -> ProjectIssueSnapshot:
         approved=optional_boolean(payload, "approved"),
         contract_published=optional_boolean(payload, "contract_published"),
         contract_valid=optional_boolean(payload, "contract_valid"),
+        approved_contract_digest=approved_contract_digest,
+        latest_contract_digest=latest_contract_digest,
     )
 
 
@@ -69,6 +75,15 @@ def optional_boolean(
     value = payload[name]
     if type(value) is not bool:
         raise ValueError(f"{name}는 boolean이어야 합니다")
+    return value
+
+
+def optional_string(
+    payload: Mapping[str, object], name: str
+) -> str | None:
+    value = payload.get(name)
+    if value is not None and not isinstance(value, str):
+        raise ValueError(f"{name}은 문자열이어야 합니다")
     return value
 
 

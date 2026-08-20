@@ -5,8 +5,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from harness.lib.cli import current_branch
-from harness.lib.tool_guard import evaluate_tool_use
+from harness.lib.tool_guard import evaluate_tool_use, needs_workflow_checkpoint
+from harness.lib.workflow_checkpoint import (
+    CheckpointError,
+    git_is_clean,
+    git_value,
+    load_checkpoint,
+)
 
 
 def deny(reason: str) -> None:
@@ -35,11 +40,30 @@ def main() -> int:
         return 2
 
     try:
-        branch = current_branch(payload.get("cwd"))
-    except RuntimeError as error:
-        deny(str(error))
+        cwd = payload.get("cwd")
+        directory = cwd if isinstance(cwd, str) else "."
+        branch = git_value(directory, "branch", "--show-current")
+    except CheckpointError:
+        deny("현재 브랜치를 확인할 수 없습니다")
         return 0
-    decision = evaluate_tool_use(payload, branch)
+    checkpoint = None
+    current_head = None
+    worktree_clean = None
+    if needs_workflow_checkpoint(payload, branch):
+        try:
+            checkpoint = load_checkpoint(directory)
+            current_head = git_value(directory, "rev-parse", "HEAD")
+            worktree_clean = git_is_clean(directory)
+        except CheckpointError as error:
+            deny(str(error))
+            return 0
+    decision = evaluate_tool_use(
+        payload,
+        branch,
+        checkpoint=checkpoint,
+        current_head=current_head,
+        worktree_clean=worktree_clean,
+    )
     if not decision.blocked:
         return 0
     deny(decision.reason)

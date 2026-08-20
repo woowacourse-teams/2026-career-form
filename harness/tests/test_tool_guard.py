@@ -1,6 +1,12 @@
 import unittest
 
 from harness.lib.tool_guard import evaluate_tool_use
+from harness.lib.workflow_checkpoint import (
+    StageCheckpoint,
+    WorkflowCheckpoint,
+    begin_stage,
+    complete_stage,
+)
 
 
 class ToolGuardTest(unittest.TestCase):
@@ -152,13 +158,77 @@ class ToolGuardTest(unittest.TestCase):
                 self.assertTrue(decision.blocked)
                 self.assertIn("body-file", decision.reason)
 
-    def test_allows_github_body_file(self) -> None:
+    def test_allows_github_issue_body_file(self) -> None:
         decision = evaluate_tool_use(
             {
                 "tool_name": "Bash",
-                "tool_input": {"command": "gh pr create --body-file /tmp/pr.md"},
+                "tool_input": {"command": "gh issue edit 14 --body-file /tmp/issue.md"},
             },
             branch="CF-14",
+        )
+
+        self.assertFalse(decision.blocked)
+
+    def test_blocks_draft_pr_without_checkpoint(self) -> None:
+        decision = evaluate_tool_use(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "gh pr create --draft --body-file /tmp/pr.md"
+                },
+            },
+            branch="CF-34",
+            current_head="verified-head",
+        )
+
+        self.assertTrue(decision.blocked)
+        self.assertIn("검증", decision.reason)
+
+    def test_blocks_draft_pr_for_codex_shell_payload(self) -> None:
+        for tool_name, tool_input in (
+            ("Shell", {"command": "gh pr create --draft --body-file /tmp/pr.md"}),
+            ("shell", {"command": "gh pr create --draft --body-file /tmp/pr.md"}),
+            ("exec_command", {"cmd": "gh pr create --draft --body-file /tmp/pr.md"}),
+        ):
+            with self.subTest(tool_name=tool_name):
+                decision = evaluate_tool_use(
+                    {"tool_name": tool_name, "tool_input": tool_input},
+                    branch="CF-34",
+                    current_head="verified-head",
+                )
+
+                self.assertTrue(decision.blocked)
+                self.assertIn("검증", decision.reason)
+
+    def test_blocks_draft_pr_when_verified_head_changed(self) -> None:
+        decision = evaluate_tool_use(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "gh pr create --draft --body-file /tmp/pr.md"
+                },
+            },
+            branch="CF-34",
+            checkpoint=self._verified_checkpoint(),
+            current_head="changed-head",
+            worktree_clean=True,
+        )
+
+        self.assertTrue(decision.blocked)
+        self.assertIn("현재 HEAD", decision.reason)
+
+    def test_allows_draft_pr_for_verified_current_head(self) -> None:
+        decision = evaluate_tool_use(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "gh pr create --draft --body-file /tmp/pr.md"
+                },
+            },
+            branch="CF-34",
+            checkpoint=self._verified_checkpoint(),
+            current_head="verified-head",
+            worktree_clean=True,
         )
 
         self.assertFalse(decision.blocked)
@@ -221,6 +291,46 @@ class ToolGuardTest(unittest.TestCase):
 
         self.assertTrue(decision.blocked)
         self.assertIn("파일 삭제", decision.reason)
+
+    def _verified_checkpoint(self) -> WorkflowCheckpoint:
+        checkpoint = WorkflowCheckpoint(
+            schema_version=1,
+            issue_number=34,
+            branch="CF-34",
+            current_stage="plan",
+            stages=(StageCheckpoint("plan", "running", "start-head"),),
+        )
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="plan",
+            head="plan-head",
+            evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+        )
+        checkpoint = begin_stage(
+            checkpoint,
+            stage="implementation",
+            head="plan-head",
+        )
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="implementation",
+            head="verified-head",
+            evidence={"commit": "verified-head"},
+        )
+        checkpoint = begin_stage(
+            checkpoint,
+            stage="verification",
+            head="verified-head",
+        )
+        return complete_stage(
+            checkpoint,
+            stage="verification",
+            head="verified-head",
+            evidence={
+                "command": "harness/scripts/verify.py",
+                "result": "passed",
+            },
+        )
 
 
 if __name__ == "__main__":
