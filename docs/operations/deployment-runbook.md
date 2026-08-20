@@ -21,10 +21,10 @@ checkout해 `infra/scripts/deploy.sh`를 실행한다.
 ## 최초 배포
 
 1. [CI/CD 초기 설정](cicd-setup.md)의 secret, variable, runner와 host 점검을 끝낸다.
-   Elastic IP, DNS-only application hostname, public 80/443, Nginx TLS와 Certbot timer를
-   확인하고 22, 8080 및 backend host port가 public ingress에 없는지 확인한다. DB host의
-   MongoDB Compose가 healthy이고 27017은 application security group에서만 허용되는지
-   확인한다.
+   도메인 도입 전 비공개 운영에서는 public ingress가 없고 22, 8080 및 backend host
+   port가 공개되지 않았는지 확인한다. 외부 공개 시에는 Elastic IP, DNS-only application
+   hostname, public 80/443, Nginx TLS와 Certbot timer도 확인한다. DB host의 MongoDB
+   Compose가 healthy이고 27017은 application security group에서만 허용되는지 확인한다.
 2. development workflow를 실행할 backend 또는 배포 구성 변경을 `develop`에 병합한다.
 3. build job의 full SHA tag와 digest 출력, deploy job의 readiness 성공을 확인한다.
 4. host에서 실제 secret 값을 출력하지 않고 다음 상태 파일의 존재만 확인한다.
@@ -34,8 +34,10 @@ sudo find /var/lib/career-form/deploy -maxdepth 2 \
   -type f -name '*-digest' -printf '%p\n'
 ```
 
-외부에서는 실제 environment hostname의 HTTPS `/actuator/health`만 확인한다. application
-요청은 Cloudflare Tunnel을 통과하지 않으며 cloudflared는 SSH 접속에만 사용한다.
+비공개 운영에서는 host의 loopback 주소로 확인하며, 관리자 PC에서 확인해야 하면 SSH
+local port forwarding을 사용한다. 외부 공개 뒤에는 실제 environment hostname의 HTTPS
+`/actuator/health`만 확인한다. application 요청은 Cloudflare Tunnel을 통과하지 않으며
+cloudflared는 SSH 접속에만 사용한다.
 
 최초 배포에는 `previous-digest`가 없다. readiness가 실패하면 자동 복구 대상이 없으므로
 실패 container와 참조되지 않는 image를 제거한 뒤 workflow가 실패한다. 사람은 MongoDB,
@@ -107,6 +109,7 @@ docker ps --filter 'name=career-form-'
 docker compose --project-name career-form-development ps
 docker compose --project-name career-form-staging ps
 curl --fail --silent --show-error http://127.0.0.1:<port>/actuator/health
+# 외부 공개 시에만 실행
 sudo certbot renew --dry-run
 ```
 

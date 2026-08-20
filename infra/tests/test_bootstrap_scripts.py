@@ -47,6 +47,14 @@ class BootstrapScriptContractTest(unittest.TestCase):
             self.assertIn(phrase, output)
         self.assertNotIn("swap:", output)
 
+    def test_mongodb_host_requires_ubuntu_24_04(self) -> None:
+        supported = self._validate_mongodb_host("24.04")
+        unsupported = self._validate_mongodb_host("26.04")
+
+        self.assertEqual(0, supported.returncode, supported.stderr)
+        self.assertNotEqual(0, unsupported.returncode)
+        self.assertIn("Ubuntu 24.04 is required", unsupported.stderr)
+
     def test_bootstrap_requires_explicit_mode_and_apply_confirmation(self) -> None:
         for script in (APP_SCRIPT, MONGODB_SCRIPT):
             with self.subTest(script=script.name, mode="missing"):
@@ -317,6 +325,31 @@ printf '%s\n' "$*" >> "$APT_LOG"
             capture_output=True,
             text=True,
         )
+
+    def _validate_mongodb_host(
+        self, version: str
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            os_release = Path(directory) / "os-release"
+            os_release.write_text(
+                f'ID=ubuntu\nVERSION_ID="{version}"\n', encoding="utf-8"
+            )
+            return subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; OS_RELEASE_FILE="$2"; '
+                    "uname() { printf '%s\\n' aarch64; }; "
+                    "require_supported_host",
+                    "mongodb-host-os-test",
+                    str(MONGODB_SCRIPT),
+                    str(os_release),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ MONGODB_CONFIG_DIR="${MONGODB_CONFIG_DIR:-/etc/career-form}"
 MONGODB_COMPOSE_DIR="${MONGODB_COMPOSE_DIR:-/opt/career-form/mongodb}"
 DOCKER_KEYRING_DIR="${DOCKER_KEYRING_DIR:-/etc/apt/keyrings}"
 APT_SOURCES_DIR="${APT_SOURCES_DIR:-/etc/apt/sources.list.d}"
+OS_RELEASE_FILE="${OS_RELEASE_FILE:-/etc/os-release}"
 
 usage() {
   printf 'usage: %s --check | --apply\n' "$0" >&2
@@ -40,14 +41,15 @@ check_host() {
   CHECK_FAILED=0
   local os_name="unsupported"
   local os_version="unknown"
-  if [[ -r /etc/os-release ]]; then
-    # shellcheck disable=SC1091
-    . /etc/os-release
+  if [[ -r "$OS_RELEASE_FILE" ]]; then
+    # shellcheck disable=SC1090
+    . "$OS_RELEASE_FILE"
     os_name="${ID:-unknown}"
     os_version="${VERSION_ID:-unknown}"
   fi
   printf 'operating system: %s %s\n' "$os_name" "$os_version"
-  [[ "$os_name" == "ubuntu" ]] || CHECK_FAILED=1
+  [[ "$os_name" == "ubuntu" && "$os_version" == "24.04" ]] \
+    || CHECK_FAILED=1
 
   local architecture
   architecture="$(uname -m)"
@@ -69,14 +71,14 @@ check_host() {
 }
 
 require_supported_host() {
-  [[ -r /etc/os-release ]] || {
+  [[ -r "$OS_RELEASE_FILE" ]] || {
     printf 'bootstrap error: operating system metadata is unavailable\n' >&2
     exit 1
   }
-  # shellcheck disable=SC1091
-  . /etc/os-release
-  [[ "${ID:-}" == "ubuntu" ]] || {
-    printf 'bootstrap error: Ubuntu is required\n' >&2
+  # shellcheck disable=SC1090
+  . "$OS_RELEASE_FILE"
+  [[ "${ID:-}" == "ubuntu" && "${VERSION_ID:-}" == "24.04" ]] || {
+    printf 'bootstrap error: Ubuntu 24.04 is required\n' >&2
     exit 1
   }
   case "$(uname -m)" in

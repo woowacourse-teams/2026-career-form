@@ -446,17 +446,24 @@ Cloudflare Tunnel은 SSH 접속에만 사용한다. 일반 애플리케이션 �
 
 - GitHub Environment, variables, secrets와 self-hosted runner label 생성
 - Docker Hub private repository, push account와 host별 pull-only account 생성
-- EC2·MongoDB·Nginx·Certbot·SSH용 cloudflared와 application host swap 실제 설치·권한 설정
+- EC2·MongoDB Docker host·Nginx·Certbot·SSH용 cloudflared와 application host swap 실제
+  설치·권한 설정
 - development, Start release, staging 수동 E2E, production 자동 배포 실행
 - readiness 실패를 유도한 rollback과 Draft revert PR 확인
 - PR Ready 전환, 승인, 병합과 release 동기화 PR 병합
 
 ## MongoDB Docker 호스트 전환
 
-Ubuntu 26.04 ARM64 DB EC2를 교체할 권한이 없으므로 MongoDB apt repository를 host에
-직접 연결하지 않는다. Ubuntu 26.04 ARM64를 지원하는 Docker Engine 위에서 patch version을
-고정한 MongoDB 8.0 ARM64 image를 실행한다. 실제 설치·계정 생성·secret 입력은 사람이
-수행한다.
+MongoDB 전용 EC2는 Ubuntu 24.04 ARM64로 교체하고 MongoDB apt repository를 host에 직접
+연결하지 않는다. Docker Engine 위에서 patch version과 digest를 고정한 MongoDB 8.0 ARM64
+image를 실행한다. bootstrap은 다른 Ubuntu 버전을 거부해 검증한 host 계약이 조용히
+바뀌지 않게 한다. 실제 설치·계정 생성·secret 입력은 사람이 수행한다.
+
+- [x] **운영 기준 정정: Ubuntu 24.04 ARM64 호스트 검증**
+
+  실제 초기화 결과에 맞춰 Issue와 운영 문서의 MongoDB host를 Ubuntu 24.04 ARM64로
+  정렬하고, bootstrap의 검사·적용 경로가 정확한 OS 버전만 허용하도록 회귀 테스트를
+  추가한다.
 
 - [x] **Step 1: Docker 기반 MongoDB 계약 실패 테스트 작성**
 

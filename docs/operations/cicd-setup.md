@@ -11,8 +11,8 @@ Cloudflare Tunnel credential은 저장소, Issue, PR, 문서와 로그에 기록
 - production은 별도의 Ubuntu ARM64 application host를 사용한다.
 - MongoDB는 application host와 분리하고 private network에서만 접근시킨다. 환경별
   database와 최소 `readWrite` 권한 계정을 분리한다.
-- 모든 application port는 `127.0.0.1`에만 publish한다. 일반 HTTPS 요청은 Elastic IP의
-  Nginx로 직접 받고, cloudflared는 SSH 접속에만 사용한다.
+- 모든 application port는 `127.0.0.1`에만 publish한다. 외부 공개 뒤 일반 HTTPS 요청은
+  Elastic IP의 Nginx로 직접 받고, cloudflared는 SSH 접속에만 사용한다.
 
 ## GitHub Repository 설정
 
@@ -117,13 +117,44 @@ cloudflared package, 2 GiB swap, `root:docker` 소유의
 등록, Nginx virtual host, 인증서 발급과 SSH Tunnel 생성·credential 배치는 자동화하지
 않는다.
 
-## Public network와 DNS
+## 도메인 도입 전 비공개 운영
 
-각 application host에는 재시작 뒤에도 유지되는 Elastic IP를 연결한다. DNS provider에서
-application hostname의 A record를 해당 Elastic IP로 지정한다. Cloudflare DNS를 사용한다면
-application hostname은 Proxy가 아닌 **DNS only(회색 구름)** 로 둔다. development와
-staging hostname은 같은 Elastic IP를 가리키고 production hostname은 별도 Elastic IP를
-가리킨다.
+application hostname을 확보하기 전에도 배포 workflow와 loopback readiness 검증은 사용할
+수 있다. 이 단계에서는 application host의 security group에 public 80/443을 추가하지
+않고, DNS A record, Nginx virtual host와 Certbot 인증서 설정을 보류한다. backend
+container port 8080과 환경별 `BACKEND_PORT`, SSH 22도 public ingress로 허용하지 않는다.
+
+development와 staging은 서로 다른 `BACKEND_PORT`를 계속 사용하며 host 내부에서 다음과
+같이 확인한다.
+
+```bash
+curl --fail --silent --show-error \
+  http://127.0.0.1:<development-port>/actuator/health
+curl --fail --silent --show-error \
+  http://127.0.0.1:<staging-port>/actuator/health
+```
+
+관리자 PC에서 확인해야 하면 기존 SSH 전용 Cloudflare Tunnel 연결에 local port
+forwarding을 추가한다. application port 자체를 public ingress로 열어 우회하지 않는다.
+
+```bash
+ssh \
+  -L 18080:127.0.0.1:<development-port> \
+  -L 18081:127.0.0.1:<staging-port> \
+  <application-host-ssh-alias>
+```
+
+연결 중에는 관리자 PC에서 `http://127.0.0.1:18080`과
+`http://127.0.0.1:18081`로 접근할 수 있다. 도메인을 확보해 외부 공개하기 전까지 다음
+Public network, DNS, Nginx와 Certbot 절차는 적용하지 않는다.
+
+## 외부 공개 시 Public network와 DNS
+
+도메인을 확보한 뒤 각 application host에는 재시작 뒤에도 유지되는 Elastic IP를 연결한다.
+DNS provider에서 application hostname의 A record를 해당 Elastic IP로 지정한다.
+Cloudflare DNS를 사용한다면 application hostname은 Proxy가 아닌 **DNS only(회색
+구름)** 로 둔다. development와 staging hostname은 같은 Elastic IP를 가리키고
+production hostname은 별도 Elastic IP를 가리킨다.
 
 application host security group은 TCP 80과 443만 public ingress로 허용한다. backend
 container port 8080과 `BACKEND_PORT`, SSH 22는 public ingress에서 제거한다. SSH는 별도
@@ -207,11 +238,11 @@ sudo systemctl status cloudflared --no-pager
 
 ## MongoDB Docker host bootstrap
 
-MongoDB host는 Ubuntu 26.04 ARM64 host에 MongoDB apt package를 직접 설치하지 않는다.
-Docker Engine은 host OS repository에서 설치하고, MongoDB는 ARM64를 제공하는
-`mongo:8.0.26-noble`의 검증된 multi-platform digest로 실행한다. host 교체 없이
-container userland를 MongoDB 지원 Ubuntu release에 고정하며, application 배포
-Compose와 DB Compose는 분리한다.
+MongoDB host는 Ubuntu 24.04 ARM64를 사용하고 MongoDB apt package를 직접 설치하지
+않는다. Docker Engine은 Docker 공식 apt repository에서 설치하고, MongoDB는 ARM64를
+제공하는 `mongo:8.0.26-noble`의 검증된 multi-platform digest로 실행한다. host OS와
+container userland를 MongoDB 지원 Ubuntu release에 맞추고, application 배포 Compose와
+DB Compose는 분리한다.
 
 작업 PC의 CF-19 worktree에서 검토한 세 파일을 DB host로 전송한다. `project-db`는 로컬
 SSH config의 ProxyJump alias다.
@@ -313,9 +344,13 @@ backup과 restore, security group·private bind·계정 권한, 저장 공간과
 - 세 Environment에 `BACKEND_PORT`와 `SPRING_MONGODB_URI`가 존재한다.
 - runner가 workflow의 정확한 환경 label로 online 상태다.
 - 각 host가 pull-only 계정으로 private image를 pull할 수 있다.
-- DNS-only application hostname이 각 host의 Elastic IP를 가리킨다.
-- security group은 public 80/443만 허용하고 22, 8080과 `BACKEND_PORT`를 허용하지 않는다.
-- Nginx HTTPS와 Certbot 자동 갱신이 정상이며 cloudflared는 SSH ingress만 갖는다.
+- 비공개 운영에서는 public ingress를 열지 않고 host의 loopback readiness 또는 SSH local
+  port forwarding으로 환경별 접근을 확인한다.
+- 외부 공개 시에는 DNS-only application hostname이 각 host의 Elastic IP를 가리킨다.
+- 외부 공개 시 security group은 public 80/443만 허용하고 22, 8080과 `BACKEND_PORT`를
+  허용하지 않는다.
+- 외부 공개 시 Nginx HTTPS와 Certbot 자동 갱신이 정상이다.
+- 공개 여부와 관계없이 cloudflared는 SSH ingress만 갖는다.
 - MongoDB container가 healthy이며 application host의 private network에서만 접근할 수 있다.
 - 실제 값을 출력하지 않고 `--check`와 GitHub UI의 이름만 대조한다.
 
