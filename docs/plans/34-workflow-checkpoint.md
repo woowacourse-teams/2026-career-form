@@ -206,15 +206,15 @@ git commit -m "feat: 검증 기반 Draft PR 전이 차단"
 - Modify: `.agents/skills/cf-issue-workflow/SKILL.md`
 - Modify: `.agents/skills/cf-issue-workflow/evals/evals.json`
 - Create: `docs/adr/34-worktree-workflow-checkpoint.md`
-- Modify: `docs/adr/README.md`
 - Modify: `harness/README.md`
+- Modify: `docs/design/issue-based-ai-development-harness.md`
 - Modify: `docs/plans/34-workflow-checkpoint.md`
 
 **Interfaces:**
 - Consumes: 기획 action CLI, 체크포인트 관리 CLI, delivery action CLI와 PreToolUse 결과
 - Produces: 게시 후 승인, 단계 시작 전 기록, 실제 상태 대조 재개, 검증 후 Draft PR 생성 순서의 저장소 Skill 계약
 
-- [ ] **Step 1: Skill eval에 중단과 재개 시나리오 추가**
+- [x] **Step 1: Skill eval에 중단과 재개 시나리오 추가**
 
 다음 행동을 구별하는 eval을 추가한다.
 
@@ -224,15 +224,15 @@ git commit -m "feat: 검증 기반 Draft PR 전이 차단"
 - 중단 중 다른 질문을 처리해도 체크포인트를 지우거나 질문을 거부하지 않는다.
 - 현재 HEAD가 검증 HEAD와 다르면 Draft PR 대신 검증을 다시 수행한다.
 
-- [ ] **Step 2: 세 Skill의 실행 순서 갱신**
+- [x] **Step 2: 세 Skill의 실행 순서 갱신**
 
 기획 Skill은 `publish_planning_contract`, `await_approval`, `validate_latest_contract`, `set_ready` 순서를 사용하고 승인 대상 digest를 비교한다. Lifecycle Skill은 `status:ready`의 새 작업에서는 체크포인트를 초기화하고 `status:in-progress` 재개에서는 기존 체크포인트와 실제 상태를 조회한다. Workflow Skill은 각 단계 실행 전에 `begin`, 완료 뒤 근거를 포함한 `complete`를 호출하고 delivery action이 지시한 단계만 실행한다.
 
-- [ ] **Step 3: ADR과 하네스 안내 작성**
+- [x] **Step 3: ADR과 하네스 안내 작성**
 
 ADR에는 환경변수, `MEMORY.md`, worktree Git 디렉터리 체크포인트 대안을 비교하고 선택 이유, 같은 worktree만 지원하는 비용, 실제 상태 대조와 단계 단위 복구 경계를 기록한다. `harness/README.md`에는 관리 및 재개 CLI와 손상 시 중단 원칙을 설명한다.
 
-- [ ] **Step 4: Skill 구조와 routing eval 검증**
+- [x] **Step 4: Skill 구조와 routing eval 검증**
 
 Run: `.venv/bin/python harness/scripts/validate-skills.py`
 
@@ -240,7 +240,7 @@ Run: `.venv/bin/python harness/scripts/validate-skill-routing-evals.py`
 
 Expected: PASS
 
-- [ ] **Step 5: 전체 자동 검증**
+- [x] **Step 5: 전체 자동 검증**
 
 Run: `.venv/bin/python harness/scripts/verify.py`
 
@@ -254,7 +254,7 @@ Expected: 출력 없음
 
 `origin/develop...HEAD`를 저장소 Standards와 Issue #34 Spec으로 나눠 검토한다. macOS에서 자동 검증 결과를 기록하고, WSL/Linux ESC 재개와 GitHub 원격 수정 흐름, 다른 팀원 리뷰는 사람 확인 항목으로 남긴다.
 
-- [ ] **Step 7: 문서와 Skill 커밋**
+- [x] **Step 7: 문서와 Skill 커밋**
 
 ```bash
 git add .agents/skills/cf-project-issue-planning .agents/skills/cf-issue-lifecycle .agents/skills/cf-issue-workflow docs/adr/34-worktree-workflow-checkpoint.md docs/adr/README.md harness/README.md docs/plans/34-workflow-checkpoint.md

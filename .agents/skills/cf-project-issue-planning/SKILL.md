@@ -95,14 +95,17 @@ Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`
 2. 여러 세션이 필요하면 `docs/plans/<Issue 번호>-<slug>.md`에 계획을 기록한다.
 3. 각 단위에 예상 파일, 실패 테스트, 구현, 검증 명령, 커밋 제목을 적는다.
 4. 개별 커밋 제목은 Conventional Commit type을 유지하고 설명을 `한다`로 끝내지 않는다.
-5. `gh issue edit --body-file <임시 파일>`로 초안을 원격 Issue에 게시하고 `gh issue view`로 게시 결과를 확인한다. 인라인 `--body`를 사용하지 않는다.
-6. Issue는 `status:planning`, Project는 `In Progress`로 유지하고 사람이 GitHub에서 제목과 본문을 수정한 뒤 재개를 요청할 때까지 중단한다.
-7. 이 체크포인트에서는 `status:ready`를 붙이거나 구현 브랜치를 만들거나 ADR 파일을 만들지 않는다.
+5. `publish_planning_contract`에서 `gh issue edit --body-file <임시 파일>`로 초안을 원격 Issue에 게시하고 `gh issue view`로 게시 결과를 확인한다. 인라인 `--body`를 사용하지 않는다.
+6. 게시한 원격 제목과 본문을 UTF-8로 직렬화한 SHA-256 digest를 계산한다. 이 값은 게시 여부를 확인하는 근거이며 사람 승인으로 간주하지 않는다.
+7. Issue는 `status:planning`, Project는 `In Progress`로 유지하고 `await_approval`에서 사람이 GitHub 제목과 본문을 수정한 뒤 재개를 명시할 때까지 중단한다.
+8. 이 체크포인트에서는 `status:ready`를 붙이거나 구현 브랜치를 만들거나 ADR 파일을 만들지 않는다.
 
-사용자가 수정 완료나 재개를 알리면 AI가 `gh issue view`로 원격 제목과 본문을 다시 읽는다. 사용자 변경을 로컬 초안으로 덮어쓰지 않고 선택한 Python으로 실행한 독립 `harness/scripts/validate-issue.py` 기준으로 검사한다. 검증에 실패하면 오류를 보고하고 `status:planning`과 Project `In Progress`를 유지한다. 통과하면 `status:planning`을 제거하고 `status:ready`를 적용해 다시 확인한다. 라벨 전환이 실패하면 본문 게시를 반복하지 않고 `set_ready`부터 재시도한다. ADR 파일은 만들지 않고 구현을 `cf-issue-workflow`에 넘긴다.
+사용자가 최신 원격 계약의 수정 완료나 승인을 알리면 AI가 `gh issue view`로 제목과 본문을 다시 읽고 그 SHA-256 digest를 `approved_contract_digest`로 사용한다. 사용자 변경을 로컬 초안으로 덮어쓰지 않고 `validate_latest_contract`에서 선택한 Python으로 `harness/scripts/validate-issue.py`를 실행한다. 검증에 실패하면 오류를 보고하고 `status:planning`과 Project `In Progress`를 유지한다.
+
+검증 통과 뒤 `set_ready` 직전에 원격 제목과 본문을 다시 읽어 `latest_contract_digest`를 계산한다. 두 digest가 다르면 그 사이에 본문이 바뀐 것이므로 ready로 전환하지 않고 `await_approval`로 돌아간다. 같으면 `status:planning`을 제거하고 `status:ready`를 적용해 다시 확인한다. 라벨 전환이 실패하면 본문 게시와 승인을 반복하지 않고 `set_ready`부터 재시도한다. 이미 `status:ready`인 Issue에는 같은 승인을 다시 요구하지 않는다. ADR 파일은 만들지 않고 구현을 `cf-issue-workflow`에 넘긴다.
 
 ## 재실행
 
-현재 상태를 `draft_matches`, `issue_number`, `title_valid`, `issue_status_label`, `project_status`, `contract_drafted`, `plan_exists`, `approved`, `contract_published`, `contract_valid`가 포함된 JSON snapshot으로 정리해 선택한 Python으로 `harness/scripts/plan-project-issue.py <snapshot 파일>`을 실행하고 다음 action을 확인할 수 있다. `approved`는 사용자가 GitHub 수정 완료와 재개를 알렸다는 뜻이고 `contract_valid`는 수정된 원격 계약의 검증 결과다. boolean 필드는 JSON boolean만 사용한다. 이미 완료한 원격 변경은 반복하지 않고 반환된 첫 미완료 action부터 계속한다.
+현재 상태를 `draft_matches`, `issue_number`, `title_valid`, `issue_status_label`, `project_status`, `contract_drafted`, `plan_exists`, `approved`, `contract_published`, `contract_valid`, `approved_contract_digest`, `latest_contract_digest`가 포함된 JSON snapshot으로 정리해 선택한 Python으로 `harness/scripts/plan-project-issue.py <snapshot 파일>`을 실행한다. action은 `publish_planning_contract`, `await_approval`, `validate_latest_contract`, `set_ready` 순서를 유지한다. `approved`는 사용자가 최신 원격 계약의 수정 완료나 승인을 알렸다는 뜻이고 `contract_valid`는 그 계약의 검증 결과다. boolean 필드는 JSON boolean만 사용한다. 이미 완료한 원격 변경은 반복하지 않고 반환된 첫 미완료 action부터 계속한다.
 
 Issue가 `status:blocked`면 `await_unblock`에서 멈춘다. 제목, 라벨, Project 상태, 계약을 수정하지 않고 사람이 차단을 해제할 때까지 현재 상태를 보존한다.

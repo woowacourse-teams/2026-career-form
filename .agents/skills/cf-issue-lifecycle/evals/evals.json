@@ -38,6 +38,30 @@
         "review_draft_pr action으로 기존 PR 검증을 cf-issue-workflow에 위임한다",
         "Draft PR 생성을 반복하지 않는다"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "Issue #123 구현하다가 멈췄는데 지금은 체크포인트 설명만 해줘. 작업은 나중에 재개할게.",
+      "expected_output": "질문에 답하되 이를 작업 재개 신호로 해석하지 않고 기존 worktree 체크포인트와 원격 상태를 변경하지 않는다.",
+      "files": [],
+      "expectations": [
+        "사용자의 설명 요청을 구현 재개로 해석하지 않는다",
+        "체크포인트를 지우거나 다음 단계로 바꾸지 않는다",
+        "질문을 거부하지 않고 답한다",
+        "이후 명시적 재개 요청에서 상태를 대조한다고 안내한다"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Issue #123 검증 중 ESC로 끊었어. 같은 worktree에서 작업 재개해줘.",
+      "expected_output": "대화 내용으로 단계를 추측하지 않고 체크포인트와 현재 Git 및 PR 상태를 대조해 verification 단계부터 재개한다.",
+      "files": [],
+      "expectations": [
+        "같은 worktree의 체크포인트를 읽는다",
+        "현재 브랜치 HEAD 계획 파일 worktree 변경과 Draft PR을 대조한다",
+        "running인 verification의 시작 HEAD를 보존하고 같은 단계를 재개한다",
+        "체크포인트가 없거나 손상됐으면 임의로 진행하지 않는다"
+      ]
     }
   ]
 }

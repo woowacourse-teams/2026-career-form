@@ -111,6 +111,30 @@
         "검증 실패 시 status:in-progress와 Project In Progress를 유지한다",
         "검증 통과 시에만 status:review와 Project On Review로 전환한다"
       ]
+    },
+    {
+      "id": 10,
+      "prompt": "Issue #123 구현과 검증을 끝냈는데 검증 뒤에 커밋 하나를 더 추가했어. Draft PR까지 진행해줘.",
+      "expected_output": "저장된 검증 HEAD와 현재 HEAD가 다르므로 Draft PR을 만들지 않고 verification 단계부터 다시 실행한다.",
+      "files": [],
+      "expectations": [
+        "delivery planner로 체크포인트와 현재 HEAD를 대조한다",
+        "검증 완료 HEAD와 현재 HEAD가 다르면 resume_verification을 선택한다",
+        "현재 HEAD의 전체 검증 완료 근거를 새로 기록한다",
+        "검증 근거가 맞기 전에는 gh pr create를 실행하지 않는다"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "Issue #123 Draft PR 생성 명령 직후 세션이 끊겼어. GitHub에는 PR #456이 이미 보여. 재개해줘.",
+      "expected_output": "실제 기존 PR을 확인해 새 PR을 만들지 않고 record_draft_pr로 체크포인트 완료 근거만 보완한다.",
+      "files": [],
+      "expectations": [
+        "현재 브랜치의 기존 Draft PR 번호와 head OID를 읽는다",
+        "기존 PR head와 현재 검증 HEAD가 같은지 확인한다",
+        "record_draft_pr action으로 PR 번호와 URL을 완료 근거에 기록한다",
+        "gh pr create와 본문 게시를 반복하지 않는다"
+      ]
     }
   ]
 }
