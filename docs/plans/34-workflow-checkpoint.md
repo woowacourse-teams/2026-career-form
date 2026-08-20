@@ -94,7 +94,7 @@ git commit -m "feat: Issue 계약 승인 대상 검증 강화"
 - Produces: `WorkflowCheckpoint`, `StageCheckpoint`, `load_checkpoint()`, `initialize_checkpoint()`, `begin_stage()`, `complete_stage()`
 - Persists: `<git-path>/cf-workflow/checkpoint.json`의 schema version, Issue 번호, 브랜치, 현재 단계, 단계 상태, 시작 HEAD, 완료 HEAD와 완료 근거
 
-- [ ] **Step 1: 저장, 중단, 손상, worktree 격리 실패 테스트 작성**
+- [x] **Step 1: 저장, 중단, 손상, worktree 격리 실패 테스트 작성**
 
 다음 실제 동작을 독립 테스트로 작성한다.
 
@@ -105,27 +105,27 @@ git commit -m "feat: Issue 계약 승인 대상 검증 강화"
 - linked worktree 두 곳에 같은 Issue 번호를 기록해도 서로 다른 경로와 내용이 사용된다.
 - 갱신 뒤 임시 파일은 남지 않고 완성된 JSON만 읽힌다.
 
-- [ ] **Step 2: 체크포인트 테스트의 예상 실패 확인**
+- [x] **Step 2: 체크포인트 테스트의 예상 실패 확인**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_workflow_checkpoint -v`
 
 Expected: `harness.lib.workflow_checkpoint`가 없어 ERROR
 
-- [ ] **Step 3: 불변 모델과 원자적 저장 구현**
+- [x] **Step 3: 불변 모델과 원자적 저장 구현**
 
 `WORKFLOW_STAGES = ("plan", "implementation", "verification", "draft_pr")` 순서를 사용한다. 저장 경로는 대상 worktree에서 `git rev-parse --git-path cf-workflow/checkpoint.json`으로 구한다. 같은 디렉터리의 임시 파일에 UTF-8 JSON을 쓰고 `os.replace()`로 교체한다. 필수 필드와 단계 순서를 읽을 때마다 검증한다.
 
-- [ ] **Step 4: 체크포인트 관리 CLI 구현**
+- [x] **Step 4: 체크포인트 관리 CLI 구현**
 
 `manage-workflow-checkpoint.py`에 `init`, `show`, `begin`, `complete` 명령을 둔다. `init`은 현재 브랜치와 HEAD를 읽어 계획 단계를 먼저 기록한다. `begin`은 앞 단계 완료 없이는 다음 단계로 진행하지 않는다. `complete`는 현재 단계의 완료 HEAD와 `--evidence key=value` 값을 저장한다.
 
-- [ ] **Step 5: 체크포인트와 CLI 테스트 통과 확인**
+- [x] **Step 5: 체크포인트와 CLI 테스트 통과 확인**
 
 Run: `.venv/bin/python -m unittest harness.tests.test_workflow_checkpoint harness.tests.test_scripts -v`
 
 Expected: PASS
 
-- [ ] **Step 6: 체크포인트 저장 커밋**
+- [x] **Step 6: 체크포인트 저장 커밋**
 
 ```bash
 git add harness/lib/workflow_checkpoint.py harness/scripts/manage-workflow-checkpoint.py harness/tests/test_workflow_checkpoint.py harness/tests/test_scripts.py docs/plans/34-workflow-checkpoint.md

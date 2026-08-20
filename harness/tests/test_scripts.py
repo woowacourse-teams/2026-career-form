@@ -278,6 +278,46 @@ class HarnessScriptsTest(unittest.TestCase):
         self.assertEqual("deny", decision["permissionDecision"])
         self.assertIn("브랜치", decision["permissionDecisionReason"])
 
+    def test_workflow_checkpoint_script_initializes_current_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "repository"
+            repository.mkdir()
+            environment = self._without_local_git_environment()
+            commands = (
+                ("git", "init", "-q", "-b", "CF-34"),
+                ("git", "config", "user.name", "Harness Test"),
+                ("git", "config", "user.email", "harness@example.com"),
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+            )
+            for command in commands:
+                subprocess.run(
+                    command,
+                    cwd=repository,
+                    env=environment,
+                    check=True,
+                )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "manage-workflow-checkpoint.py"),
+                    "--cwd",
+                    str(repository),
+                    "init",
+                    "34",
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(34, payload["issue_number"])
+        self.assertEqual("CF-34", payload["branch"])
+        self.assertEqual("plan", payload["current_stage"])
+
     def test_initializes_fixture_repository_without_hook_git_environment(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
