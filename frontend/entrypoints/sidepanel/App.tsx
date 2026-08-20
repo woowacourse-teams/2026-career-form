@@ -196,7 +196,7 @@ export function App({
           </button>
         </div>
       </header>
-      <main className={styles.main}>
+      <main className={styles.main} aria-label="지원 정보 목록">
         {navigationFailed && (
           <p className={styles.navigationError} role="alert">
             프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.

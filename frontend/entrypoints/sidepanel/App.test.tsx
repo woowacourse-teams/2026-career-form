@@ -192,6 +192,19 @@ describe("side panel App", () => {
     expect(screen.getByText("copy@example.com")).toBeInTheDocument();
   });
 
+  it("keeps the autofill action outside the scrollable profile list", async () => {
+    render(<App repository={createRepository()} copyText={vi.fn()} />);
+    await screen.findByText("copy@example.com");
+
+    const profileList = screen.getByRole("main", {
+      name: "지원 정보 목록",
+    });
+    const autofillButton = screen.getByRole("button", { name: "자동 기입" });
+
+    expect(profileList).not.toContainElement(autofillButton);
+    expect(autofillButton.closest("footer")).not.toBeNull();
+  });
+
   it("reports when the current webpage cannot open the autofill overlay", async () => {
     const openAutofill = vi.fn(async () => {
       throw new Error("content script unavailable");
