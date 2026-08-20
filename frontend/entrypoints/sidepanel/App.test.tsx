@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
@@ -28,6 +28,8 @@ function createRepository(): ProfileRepository {
 }
 
 describe("side panel App", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it("closes the side panel from the header action", async () => {
     const closePanel = vi.fn();
     render(
@@ -172,7 +174,20 @@ describe("side panel App", () => {
     expect(copyText).toHaveBeenCalledWith("비식별 병역 상태");
   });
 
+  it("hides experimental autofill and guides copying by default", async () => {
+    render(<App repository={createRepository()} copyText={vi.fn()} />);
+    await screen.findByText("copy@example.com");
+
+    expect(
+      screen.getByText("직접 복사해 지원서에 기입하세요"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "자동 기입" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("asks the active webpage to open autofill without adding a side panel dialog", async () => {
+    vi.stubEnv("VITE_AUTOFILL_DEMO", "true");
     const openAutofill = vi.fn(async () => undefined);
     render(
       <App
@@ -193,6 +208,7 @@ describe("side panel App", () => {
   });
 
   it("keeps the autofill action outside the scrollable profile list", async () => {
+    vi.stubEnv("VITE_AUTOFILL_DEMO", "true");
     render(<App repository={createRepository()} copyText={vi.fn()} />);
     await screen.findByText("copy@example.com");
 
@@ -206,6 +222,7 @@ describe("side panel App", () => {
   });
 
   it("reports when the current webpage cannot open the autofill overlay", async () => {
+    vi.stubEnv("VITE_AUTOFILL_DEMO", "true");
     const openAutofill = vi.fn(async () => {
       throw new Error("content script unavailable");
     });

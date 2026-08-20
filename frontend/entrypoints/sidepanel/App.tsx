@@ -101,6 +101,7 @@ export function App({
   openOptions = openOptionsPage,
   openAutofill = openAutofillOverlay,
 }: AppProps) {
+  const isAutofillDemoEnabled = import.meta.env.VITE_AUTOFILL_DEMO === "true";
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
@@ -215,7 +216,9 @@ export function App({
         {loadStatus === "ready" && (
           <p className={styles.readiness}>
             <span>{registeredCategoryCount} / 10 범주 등록</span>
-            직접 복사하거나 자동 기입을 시작하세요
+            {isAutofillDemoEnabled
+              ? "직접 복사하거나 자동 기입을 시작하세요"
+              : "직접 복사해 지원서에 기입하세요"}
           </p>
         )}
 
@@ -337,18 +340,20 @@ export function App({
           )}
         </section>
       </main>
-      <footer className={styles.footer}>
-        <button type="button" onClick={() => void startAutofill()}>
-          자동 기입
-        </button>
-        <p>선택 후 분석과 검토를 시작합니다</p>
-        {autofillFailed && (
-          <p className={styles.autofillError} role="alert">
-            현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서 페이지에서
-            다시 시도해 주세요.
-          </p>
-        )}
-      </footer>
+      {isAutofillDemoEnabled && (
+        <footer className={styles.footer}>
+          <button type="button" onClick={() => void startAutofill()}>
+            자동 기입
+          </button>
+          <p>선택 후 분석과 검토를 시작합니다</p>
+          {autofillFailed && (
+            <p className={styles.autofillError} role="alert">
+              현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서 페이지에서
+              다시 시도해 주세요.
+            </p>
+          )}
+        </footer>
+      )}
     </div>
   );
 }
