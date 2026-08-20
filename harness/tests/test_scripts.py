@@ -581,14 +581,26 @@ class HarnessScriptsTest(unittest.TestCase):
     def _init_issue_repository(
         self, directory: str
     ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
+        environment = self._without_local_git_environment()
+        initialization = subprocess.run(
             ("git", "init", "-q", "-b", "CF-123"),
             cwd=directory,
-            env=self._without_local_git_environment(),
+            env=environment,
             capture_output=True,
             text=True,
             check=True,
         )
+        for key, value in (
+            ("user.name", "Harness Test"),
+            ("user.email", "harness@example.com"),
+        ):
+            subprocess.run(
+                ("git", "config", key, value),
+                cwd=directory,
+                env=environment,
+                check=True,
+            )
+        return initialization
 
     def _without_local_git_environment(self) -> dict[str, str]:
         environment = os.environ.copy()
