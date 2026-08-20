@@ -1,4 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
@@ -42,6 +48,43 @@ describe("side panel App", () => {
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
 
     expect(closePanel).toHaveBeenCalledOnce();
+  });
+
+  it("opens profile management from the side panel header", async () => {
+    const openOptions = vi.fn(async () => undefined);
+    render(
+      <App
+        repository={createRepository()}
+        copyText={vi.fn()}
+        openOptions={openOptions}
+      />,
+    );
+    await screen.findByText("copy@example.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
+
+    expect(openOptions).toHaveBeenCalledOnce();
+  });
+
+  it("reports profile management navigation failure without exposing profile values", async () => {
+    const openOptions = vi.fn(async () => {
+      throw new Error("options unavailable");
+    });
+    render(
+      <App
+        repository={createRepository()}
+        copyText={vi.fn()}
+        openOptions={openOptions}
+      />,
+    );
+    await screen.findByText("copy@example.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "프로필 관리 화면을 열지 못했습니다",
+    );
+    expect(screen.getByRole("alert")).not.toHaveTextContent("copy@example.com");
   });
 
   it("groups the profile into scannable summary sections", async () => {
@@ -135,15 +178,74 @@ describe("side panel App", () => {
     expect(copyText).toHaveBeenCalledWith("비식별 병역 상태");
   });
 
-  it("enters the mock autofill flow only after an explicit action", async () => {
+  it("opens the mock autofill flow in a modal without replacing manual copy", async () => {
     render(<App repository={createRepository()} copyText={vi.fn()} />);
     await screen.findByText("copy@example.com");
 
     expect(screen.queryByText("지원서 분석 중")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
+
+    const dialog = screen.getByRole("dialog", { name: "지원서 자동 기입" });
     expect(
-      screen.getByRole("heading", { name: "지원서 분석 중" }),
+      within(dialog).getByRole("heading", { name: "지원서 분석 중" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("copy@example.com")).toBeInTheDocument();
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "분석 결과 보기" }),
+    );
+    expect(
+      within(dialog).getByRole("heading", { name: "입력 예정 항목 검토" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "자동 기입 모달 닫기" }),
+    );
+    expect(
+      screen.queryByRole("dialog", { name: "지원서 자동 기입" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("searchbox", { name: "프로필 검색" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps modal navigation separate from the inert side panel and closes on Escape", async () => {
+    render(<App repository={createRepository()} copyText={vi.fn()} />);
+    await screen.findByText("copy@example.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "지원서 자동 기입" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("searchbox", { name: "프로필 검색" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(
+      screen.queryByRole("dialog", { name: "지원서 자동 기입" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("searchbox", { name: "프로필 검색" }),
+    ).toBeInTheDocument();
+  });
+
+  it("returns focus to the autofill trigger after the modal closes", async () => {
+    render(<App repository={createRepository()} copyText={vi.fn()} />);
+    await screen.findByText("copy@example.com");
+    const trigger = screen.getByRole("button", { name: "자동 기입" });
+
+    trigger.focus();
+    fireEvent.click(trigger);
+    expect(
+      screen.getByRole("button", { name: "자동 기입 모달 닫기" }),
+    ).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it("distinguishes profile load failure from loading", async () => {

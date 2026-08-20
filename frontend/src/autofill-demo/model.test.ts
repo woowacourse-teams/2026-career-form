@@ -1,8 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import { createMockReviewItems, toggleReviewItem } from "./model";
+import {
+  createMockReviewItems,
+  groupReviewItems,
+  toggleReviewItem,
+} from "./model";
 
 describe("autofill demo review policy", () => {
+  it("classifies detailed statuses into three user decision groups", () => {
+    const groups = groupReviewItems(createMockReviewItems()).map((group) => ({
+      id: group.id,
+      label: group.label,
+      itemIds: group.items.map((item) => item.id),
+    }));
+
+    expect(groups).toEqual([
+      {
+        id: "available",
+        label: "입력 가능",
+        itemIds: ["email"],
+      },
+      {
+        id: "needs-human-review",
+        label: "사람 확인 필요",
+        itemIds: ["nationality", "phone", "veteran"],
+      },
+      {
+        id: "unavailable",
+        label: "입력 불가",
+        itemIds: ["motivation"],
+      },
+    ]);
+  });
+
   it("selects only clearly available fields by default", () => {
     const items = createMockReviewItems();
 

@@ -11,6 +11,33 @@ export interface ReviewItem {
   reason: string;
 }
 
+export type ReviewGroupId = "available" | "needs-human-review" | "unavailable";
+
+export interface ReviewGroup {
+  id: ReviewGroupId;
+  label: string;
+  description: string;
+  items: ReviewItem[];
+}
+
+const REVIEW_GROUPS: readonly Omit<ReviewGroup, "items">[] = [
+  {
+    id: "available",
+    label: "입력 가능",
+    description: "연결이 명확해 바로 선택할 수 있습니다.",
+  },
+  {
+    id: "needs-human-review",
+    label: "사람 확인 필요",
+    description: "선택지, 기존 값과 민감정보를 직접 확인해 주세요.",
+  },
+  {
+    id: "unavailable",
+    label: "입력 불가",
+    description: "안전하게 입력할 수 없어 선택할 수 없습니다.",
+  },
+];
+
 const MOCK_REVIEW_ITEMS: readonly Omit<ReviewItem, "selected" | "disabled">[] =
   [
     {
@@ -55,6 +82,19 @@ export function createMockReviewItems(): ReviewItem[] {
     ...item,
     selected: item.status === "available",
     disabled: item.status === "unavailable",
+  }));
+}
+
+function groupIdForStatus(status: ReviewStatus): ReviewGroupId {
+  if (status === "available") return "available";
+  if (status === "unavailable") return "unavailable";
+  return "needs-human-review";
+}
+
+export function groupReviewItems(items: readonly ReviewItem[]): ReviewGroup[] {
+  return REVIEW_GROUPS.map((group) => ({
+    ...group,
+    items: items.filter((item) => groupIdForStatus(item.status) === group.id),
   }));
 }
 

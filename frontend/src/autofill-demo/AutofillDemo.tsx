@@ -2,7 +2,9 @@ import { useState } from "react";
 
 import {
   createMockReviewItems,
+  groupReviewItems,
   toggleReviewItem,
+  type ReviewGroup,
   type ReviewItem,
   type ReviewStatus,
 } from "./model";
@@ -59,23 +61,24 @@ function Header({ step, title }: { step: string; title: string }) {
   );
 }
 
-function Review({
-  items,
+function ReviewGroupSection({
+  group,
   onChange,
-  onNext,
 }: {
-  items: ReviewItem[];
+  group: ReviewGroup;
   onChange(id: string): void;
-  onNext(): void;
 }) {
+  const headingId = `review-group-${group.id}`;
   return (
-    <div className={styles.screen}>
-      <Header step="2 / 4" title="입력 예정 항목 검토" />
-      <p className={styles.lead}>
-        상태와 예정 값을 확인하고 변경할 항목만 선택하세요.
-      </p>
+    <section className={styles.reviewGroup} aria-labelledby={headingId}>
+      <div className={styles.reviewGroupHeader}>
+        <h3 id={headingId}>
+          {group.label} <span>{group.items.length}개</span>
+        </h3>
+        <p>{group.description}</p>
+      </div>
       <div className={styles.reviewList}>
-        {items.map((item) => (
+        {group.items.map((item) => (
           <label
             className={styles.reviewItem}
             data-status={item.status}
@@ -94,6 +97,36 @@ function Review({
             </span>
             <em>{STATUS_LABEL[item.status]}</em>
           </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Review({
+  items,
+  onChange,
+  onNext,
+}: {
+  items: ReviewItem[];
+  onChange(id: string): void;
+  onNext(): void;
+}) {
+  const groups = groupReviewItems(items);
+
+  return (
+    <div className={styles.screen}>
+      <Header step="2 / 4" title="입력 예정 항목 검토" />
+      <p className={styles.lead}>
+        상태와 예정 값을 확인하고 변경할 항목만 선택하세요.
+      </p>
+      <div className={styles.reviewGroups}>
+        {groups.map((group) => (
+          <ReviewGroupSection
+            group={group}
+            key={group.id}
+            onChange={onChange}
+          />
         ))}
       </div>
       <button className={styles.primary} type="button" onClick={onNext}>

@@ -1,9 +1,35 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AutofillDemo } from "./AutofillDemo";
 
 describe("AutofillDemo", () => {
+  it("groups review items by actionability while preserving detailed statuses", () => {
+    render(<AutofillDemo onExit={vi.fn()} initialStage="review" />);
+
+    const available = screen.getByRole("region", {
+      name: "입력 가능 1개",
+    });
+    const needsHumanReview = screen.getByRole("region", {
+      name: "사람 확인 필요 3개",
+    });
+    const unavailable = screen.getByRole("region", {
+      name: "입력 불가 1개",
+    });
+
+    expect(
+      within(available).getByRole("checkbox", { name: /이메일주소/ }),
+    ).toBeChecked();
+    expect(within(needsHumanReview).getByText("확인 필요")).toBeInTheDocument();
+    expect(
+      within(needsHumanReview).getByText("기존 값 충돌"),
+    ).toBeInTheDocument();
+    expect(within(needsHumanReview).getByText("민감정보")).toBeInTheDocument();
+    expect(
+      within(unavailable).getByRole("checkbox", { name: /지원 동기/ }),
+    ).toBeDisabled();
+  });
+
   it("moves through analysis, review, confirmation, progress, and result", () => {
     render(<AutofillDemo onExit={vi.fn()} />);
 

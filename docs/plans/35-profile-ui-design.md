@@ -283,3 +283,61 @@
 - 저장소 Standards와 Issue #35 Spec 순차 리뷰 후 Critical/Important 미해결 항목 없음
 
   완료한 체크박스를 갱신하고 변경을 기능 단위 커밋으로 나눈다. Draft PR 본문에는 최신 자동 검증과 사람이 수행할 Chrome·GitHub 렌더링 검증만 기록한다.
+
+---
+
+### Task 7: 사이드 패널 진입과 자동 기입 모달 재구성
+
+**Files:**
+- Modify: `frontend/entrypoints/sidepanel/App.tsx`
+- Modify: `frontend/entrypoints/sidepanel/App.module.css`
+- Modify: `frontend/entrypoints/sidepanel/App.test.tsx`
+- Modify: `frontend/src/autofill-demo/AutofillDemo.tsx`
+- Modify: `frontend/src/autofill-demo/AutofillDemo.module.css`
+- Modify: `frontend/src/autofill-demo/AutofillDemo.test.tsx`
+- Modify: `frontend/src/autofill-demo/model.ts`
+- Modify: `frontend/src/autofill-demo/model.test.ts`
+
+**Interfaces:**
+- side panel은 `openOptions(): Promise<void> | void` 경계를 통해 프로필 관리 options 탭을 연다.
+- 자동 기입 목업은 side panel의 그룹·검색·복사 화면을 유지한 채 `role="dialog"`, `aria-modal="true"`인 모달 안에서 실행한다.
+- 검토 화면은 `available`, `needs-review | conflict | sensitive`, `unavailable`을 각각 `입력 가능`, `사람 확인 필요`, `입력 불가` 그룹으로 묶되 기존 선택 정책과 세부 상태를 보존한다.
+
+- [x] **Step 1: RED — 사이드 패널 프로필 관리 진입 테스트**
+
+  헤더의 `프로필 관리` 버튼을 누르면 주입한 `openOptions`가 한 번 호출되고, 실패하면 실제 값을 노출하지 않는 경고가 표시되는 테스트를 작성한다.
+
+- [x] **Step 2: RED — 자동 기입 모달 유지 테스트**
+
+  `자동 기입`을 누르면 side panel 본문이 사라지지 않고 `지원서 자동 기입` dialog가 열리며, 분석부터 결과까지 같은 dialog 안에서 이동하고 닫으면 수동 복사 화면으로 돌아오는 테스트를 작성한다.
+
+- [x] **Step 3: RED — 검토 상태 그룹 테스트**
+
+  검토 화면에 `입력 가능`, `사람 확인 필요`, `입력 불가` 제목과 각각 `1`, `3`, `1`개 항목이 노출되고, 확인 필요 그룹 안에서 `확인 필요`, `기존 값 충돌`, `민감정보` 세부 상태가 유지되며 입력 불가는 비활성인 테스트를 작성한다.
+
+- [x] **Step 4: RED 실행**
+
+  ```bash
+  npm --prefix frontend test -- entrypoints/sidepanel/App.test.tsx src/autofill-demo/AutofillDemo.test.tsx src/autofill-demo/model.test.ts
+  ```
+
+  Expected: 프로필 관리 동작, dialog와 검토 그룹이 아직 없어 실패한다.
+
+- [x] **Step 5: GREEN — 최소 구현**
+
+  기존 `openOptionsPage` 경계를 side panel에 주입하고, 현재 그룹형 수동 복사 화면 위에 접근 가능한 모달을 배치한다. 상태별 항목 배열을 세 그룹으로 투영하고 기존 선택·비활성 정책을 그대로 사용한다.
+
+- [x] **Step 6: GREEN 실행과 회귀 확인**
+
+  ```bash
+  npm --prefix frontend test -- entrypoints/sidepanel/App.test.tsx src/autofill-demo/AutofillDemo.test.tsx src/autofill-demo/model.test.ts
+  npm --prefix frontend run typecheck
+  ```
+
+- [x] **Step 7: 기존 시각 체계 보존 확인**
+
+  새 스타일은 `global.css`의 기존 의미 색상 토큰만 사용하고, 그룹 카드 구조와 Pretendard 전역 서체 선언을 변경하지 않는다.
+
+- [ ] **Step 8: 전체 검증과 Draft PR 반영**
+
+  Issue의 전체 자동 검증, `harness/scripts/verify.py`, `git diff --check`, 두 축 코드 리뷰를 실행한다. 논리적 커밋을 push하고 Draft PR #36의 검증 기록을 최신 결과로 갱신한다.

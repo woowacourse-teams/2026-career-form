@@ -46,9 +46,31 @@
   cursor: pointer;
 }
 
+.headerActions {
+  display: grid;
+  flex: none;
+  gap: 6px;
+  justify-items: end;
+}
+
+.header .profileButton {
+  color: var(--color-on-action);
+  background: var(--color-action-strong);
+}
+
 .main {
   overflow: auto;
   padding: 8px 20px 24px;
+}
+
+.navigationError {
+  margin: 0 0 10px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-control);
+  padding: 10px;
+  color: var(--color-danger-text);
+  background: var(--color-surface);
+  font-size: 11px;
 }
 
 .search input {
@@ -260,4 +282,58 @@
   color: var(--color-text-muted);
   font-size: 10px;
   text-align: center;
+}
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: color-mix(in srgb, var(--color-action-strong) 28%, transparent);
+}
+
+.modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(100%, 420px);
+  max-height: calc(100vh - 28px);
+  overflow: hidden;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border);
+  padding: 11px 14px;
+  color: var(--color-action-strong);
+  background: var(--color-accent-soft);
+}
+
+.modalHeader strong {
+  font-size: 13px;
+}
+
+.modalHeader button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: var(--color-action-strong);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.modalBody {
+  min-height: 0;
+  overflow: auto;
 }
