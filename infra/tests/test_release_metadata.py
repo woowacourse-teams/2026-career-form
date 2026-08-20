@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -119,7 +120,7 @@ class MainMergeClassificationTest(unittest.TestCase):
             pulls_path.write_text(json.dumps(pulls), encoding="utf-8")
             return subprocess.run(
                 (
-                    str(ROOT / ".venv" / "bin" / "python"),
+                    sys.executable,
                     str(SCRIPT),
                     str(event_path),
                     str(pulls_path),
