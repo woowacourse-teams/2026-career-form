@@ -140,6 +140,12 @@ Ollama 같은 별도 추론 서비스의 API로 연결한다.
 
 사전 spike에서 Spring AI와 LangChain4j 모두 샘플 컴파일과 OpenAI/Gemini 교체 가능성을 확인했다. 그러나 표본이 1회이고 실행 로그와 자동 단언이 보존되지 않았으며 구조화 출력 조건도 같지 않았다. 특히 LangChain4j의 OpenAI 실험은 네이티브 strict JSON Schema를 사용했지만 Gemini Boot4 starter 실험은 같은 보장을 설정만으로 활성화하지 못했다. 그러므로 spike는 가능성과 통합 마찰을 찾은 탐색 근거로만 사용하고 성공률이나 변경 줄 수를 비교 지표로 사용하지 않는다.
 
+## 버전 선정 근거
+
+- [Spring AI 공식 Getting Started](https://docs.spring.io/spring-ai/reference/getting-started.html)는 Spring AI 2.0.x가 Spring Boot 4.0.x와 4.1.x를 지원한다고 명시한다. 또한 릴리스 artifact는 Maven Central에서 제공하며, 의존성 관리 예시에서 `spring-ai-bom:2.0.0`을 사용한다.
+- [Spring AI 2.0.0 GA 발표](https://spring.io/blog/2026/06/12/spring-ai-2-0-0-GA-available-now/)는 2.0.0이 GA로 출시되어 Maven Central에 배포됐고 Spring Boot 4.0/4.1 및 Spring Framework 7.0을 기준으로 설계됐다고 설명한다.
+- 따라서 Spring Boot 4.1.0을 사용하는 이 프로젝트는 공식 호환 계열의 GA 버전인 2.0.0을 선택한다. milestone, release candidate, snapshot은 기반 의존성으로 사용하지 않는다.
+
 ## 검토한 대안
 
 1. Spring AI 2.0.0
@@ -175,12 +181,12 @@ Ollama 같은 별도 추론 서비스의 API로 연결한다.
 Run:
 
 ```bash
-rg -n "Spring AI 2\.0\.0|spring-ai-client-chat|별도 추론 서비스" backend/README.md docs/adr/30-spring-ai-library.md
+rg -n "Spring AI 2\.0\.0|spring-ai-client-chat|별도 추론 서비스|버전 선정 근거" backend/README.md docs/adr/30-spring-ai-library.md
 rg -n "API 키|모델|base URL|후속 Issue" backend/README.md docs/adr/30-spring-ai-library.md
 git diff --check
 ```
 
-Expected: 선택 버전, 공급자 중립 모듈, 후속 설정 경계와 로컬 추론 서비스 경계가 모두 검색되고 whitespace 오류가 없다.
+Expected: 선택 버전과 공식 근거, 공급자 중립 모듈, 후속 설정 경계와 로컬 추론 서비스 경계가 모두 검색되고 whitespace 오류가 없다.
 
 - [ ] **Step 4: 문서 변경 커밋**
 

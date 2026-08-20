@@ -26,6 +26,19 @@
 그러므로 spike는 가능성과 통합 마찰을 찾은 탐색 근거로만 사용하고 성공률이나 변경 줄
 수를 비교 지표로 사용하지 않는다.
 
+## 버전 선정 근거
+
+- [Spring AI 공식 Getting Started](https://docs.spring.io/spring-ai/reference/getting-started.html)는
+  Spring AI 2.0.x가 Spring Boot 4.0.x와 4.1.x를 지원한다고 명시한다. 또한 릴리스
+  artifact는 Maven Central에서 제공하며, 의존성 관리 예시에서
+  `spring-ai-bom:2.0.0`을 사용한다.
+- [Spring AI 2.0.0 GA 발표](https://spring.io/blog/2026/06/12/spring-ai-2-0-0-GA-available-now/)는
+  2.0.0이 GA로 출시되어 Maven Central에 배포됐고 Spring Boot 4.0/4.1 및 Spring
+  Framework 7.0을 기준으로 설계됐다고 설명한다.
+- 따라서 Spring Boot 4.1.0을 사용하는 이 프로젝트는 공식 호환 계열의 GA 버전인
+  2.0.0을 선택한다. milestone, release candidate, snapshot은 기반 의존성으로 사용하지
+  않는다.
+
 ## 검토한 대안
 
 1. Spring AI 2.0.0
