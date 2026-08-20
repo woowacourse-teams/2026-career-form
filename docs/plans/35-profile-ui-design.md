@@ -405,6 +405,6 @@
 
   산출물 Manifest와 ZIP에 `content-scripts/autofill.js`와 HTTP(S) match가 포함되는지 assert 스크립트로 검증한다.
 
-- [ ] **Step 6: 전체 검증·시각 확인·Draft PR 재반영**
+- [x] **Step 6: 전체 검증·시각 확인·Draft PR 재반영**
 
   전체 frontend 검증, `harness/scripts/verify.py`, `git diff --check`, 두 축 리뷰를 실행한다. side panel과 웹페이지를 나란히 둔 로컬 확장 환경에서 모달 위치와 단계 전환을 확인하고 논리적 커밋을 push한 뒤 Draft PR #36을 최신화한다.
