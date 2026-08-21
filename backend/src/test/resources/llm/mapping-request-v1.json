@@ -1,0 +1,25 @@
+{
+  "contextFields": [
+    {
+      "fieldId": "context-1",
+      "element": "input",
+      "control": "text",
+      "domId": "known-email",
+      "domName": "email",
+      "displayName": "이메일",
+      "required": true,
+      "profileFieldKey": "contact.email"
+    }
+  ],
+  "targetFields": [
+    {
+      "fieldId": "target-1",
+      "element": "input",
+      "control": "text",
+      "domId": "unknown-phone",
+      "domName": "contact-field",
+      "displayName": "연락 항목",
+      "required": true
+    }
+  ]
+}

@@ -3,9 +3,21 @@ spring:
     name: career-form-backend
   mongodb:
     uri: ${SPRING_MONGODB_URI}
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
   threads:
     virtual:
       enabled: true
+
+career-form:
+  llm:
+    enabled: ${CAREER_FORM_LLM_ENABLED:false}
+    model: ${CAREER_FORM_LLM_MODEL:}
+    max-context-fields: 50
+    max-target-fields: 50
+    max-request-bytes: 65536
+    max-output-tokens: ${CAREER_FORM_LLM_MAX_OUTPUT_TOKENS:2048}
 
 management:
   endpoints:
