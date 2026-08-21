@@ -234,6 +234,47 @@ class HarnessScriptsTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_shell_syntax_uses_bash_for_infrastructure_scripts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            binary_directory = Path(directory)
+            fake_sh = binary_directory / "sh"
+            fake_sh.write_text(
+                """#!/bin/sh
+case "$2" in
+  */infra/scripts/*)
+    echo 'infrastructure script was checked with sh' >&2
+    exit 42
+    ;;
+esac
+exec /bin/sh "$@"
+""",
+                encoding="utf-8",
+            )
+            fake_sh.chmod(0o755)
+            fake_bash = binary_directory / "bash"
+            fake_bash.write_text(
+                """#!/bin/sh
+exec /bin/bash "$@"
+""",
+                encoding="utf-8",
+            )
+            fake_bash.chmod(0o755)
+            environment = {
+                **os.environ,
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+
+            result = subprocess.run(
+                (sys.executable, str(SCRIPTS / "validate-shell-syntax.py")),
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
     def test_guard_script_denies_destructive_command(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             self._init_issue_repository(directory)

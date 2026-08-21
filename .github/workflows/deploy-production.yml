@@ -1,0 +1,341 @@
+name: 운영 환경 배포
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.classification.outputs.kind }}
+      head_ref: ${{ steps.classification.outputs.head_ref }}
+      head_sha: ${{ steps.classification.outputs.head_sha }}
+      version: ${{ steps.classification.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: main 병합 경로 분류
+        id: classification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pulls="$RUNNER_TEMP/associated-prs.json"
+          gh api \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" > "$pulls"
+          result="$(python3 infra/scripts/classify-main-merge.py "$GITHUB_EVENT_PATH" "$pulls")"
+          for name in kind head_ref head_sha version; do
+            value="$(jq -r --arg name "$name" '.[$name] // ""' <<< "$result")"
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_OUTPUT"
+          done
+
+  image:
+    needs: classify
+    if: needs.classify.outputs.kind != 'revert'
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.result.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@67621b124fd2e251c5e8a0e6e3b91318f2287669 # v6.3.0
+        with:
+          cache-provider: basic
+      - name: release tree 일치 확인
+        if: needs.classify.outputs.kind == 'release'
+        run: |
+          set -euo pipefail
+          git diff --quiet \
+            "${{ needs.classify.outputs.head_sha }}^{tree}" \
+            "${GITHUB_SHA}^{tree}" || {
+              echo "main merge tree가 staging 검증 release tree와 다릅니다" >&2
+              exit 1
+            }
+      - name: 운영 소스 검증
+        working-directory: backend
+        run: ./gradlew clean check bootJar --console=plain
+      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        if: needs.classify.outputs.kind == 'hotfix'
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: 스테이징 검증 digest 조회
+        id: release
+        if: needs.classify.outputs.kind == 'release'
+        env:
+          IMAGE_TAG: ${{ vars.DOCKERHUB_IMAGE }}:${{ needs.classify.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          manifest="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{json .Manifest}}')"
+          digest="$(jq -r '.digest' <<< "$manifest")"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "release 이미지 digest를 확인할 수 없습니다" >&2
+            exit 1
+          fi
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+      - name: hotfix ARM64 이미지 빌드와 push
+        id: hotfix
+        if: needs.classify.outputs.kind == 'hotfix'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: backend
+          platforms: linux/arm64
+          push: true
+          tags: ${{ vars.DOCKERHUB_IMAGE }}:${{ github.sha }}
+      - name: 배포 digest 확정
+        id: result
+        env:
+          RELEASE_DIGEST: ${{ steps.release.outputs.digest }}
+          HOTFIX_DIGEST: ${{ steps.hotfix.outputs.digest }}
+        run: |
+          set -euo pipefail
+          digest="${RELEASE_DIGEST:-$HOTFIX_DIGEST}"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "배포 이미지 digest가 올바르지 않습니다" >&2
+            exit 1
+          fi
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: [classify, image]
+    if: needs.classify.outputs.kind != 'revert'
+    runs-on: [self-hosted, linux, ARM64, production]
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    outputs:
+      attempted: ${{ steps.deployment.outputs.attempted }}
+    env:
+      DEPLOY_ENVIRONMENT: production
+      BACKEND_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}@${{ needs.image.outputs.digest }}
+      BACKEND_PORT: ${{ vars.BACKEND_PORT }}
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_MONGODB_URI: ${{ secrets.SPRING_MONGODB_URI }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Digest 이미지 배포
+        id: deployment
+        run: |
+          printf 'attempted=true\n' >> "$GITHUB_OUTPUT"
+          ./infra/scripts/deploy.sh
+
+  revert:
+    needs: [classify, image, deploy]
+    if: >-
+      always() &&
+      needs.classify.outputs.kind != 'revert' &&
+      needs.deploy.outputs.attempted == 'true' &&
+      needs.deploy.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Draft revert PR 생성
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="revert/${GITHUB_SHA}"
+          existing_pr="$(gh pr list --state all --base main --head "$branch" --json number --jq '.[0].number // empty')"
+          if [[ -n "$existing_pr" ]]; then
+            echo "revert PR #$existing_pr 이 이미 존재합니다"
+            exit 0
+          fi
+
+          if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git switch --create "$branch" "$GITHUB_SHA"
+            set -- $(git rev-list --parents -n 1 "$GITHUB_SHA")
+            if (( $# > 2 )); then
+              git revert --no-edit -m 1 "$GITHUB_SHA"
+            else
+              git revert --no-edit "$GITHUB_SHA"
+            fi
+            git push origin "$branch"
+          fi
+
+          body="$RUNNER_TEMP/revert-pr.md"
+          printf '%s\n' \
+            '## 해결하려는 문제가 무엇인가요?' \
+            '운영 배포 실패 뒤 main 소스를 이전 상태와 다시 맞춥니다.' \
+            '## 왜 해야 하나요?' \
+            '서버의 자동 digest rollback과 저장소 상태가 달라지는 것을 방지합니다.' \
+            '## 어떻게 해결했나요?' \
+            '실패한 main 병합 커밋을 되돌리는 커밋을 생성했습니다.' \
+            '## 이 PR의 한계 & 트레이드오프' \
+            '자동 병합하지 않으며 원인 확인과 승인은 사람이 수행합니다.' \
+            '## 기존 기능에 미치는 영향' \
+            '병합할 경우 실패한 운영 변경이 main에서 제거됩니다.' \
+            '## Edge Case & 실패 시나리오' \
+            '충돌하거나 자동 rollback도 실패했다면 수동 복구가 필요합니다.' \
+            '## 검토한 대안과 선택 이유' \
+            'main 직접 변경 대신 검토 가능한 Draft PR을 선택했습니다.' \
+            '## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)' \
+            '🔴 되돌림 범위가 실패한 병합 커밋과 정확히 일치하는지 확인합니다.' \
+            > "$body"
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$branch" \
+            --title "[Release] 운영 배포 실패 되돌림 ${GITHUB_SHA:0:7}" \
+            --body-file "$body"
+
+  release-success:
+    needs: [classify, deploy]
+    if: >-
+      always() &&
+      needs.classify.outputs.kind == 'release' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+      - name: 릴리스 tag와 개발선 동기화 PR 생성
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.classify.outputs.version }}
+          RELEASE_BRANCH: ${{ needs.classify.outputs.head_ref }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+            if [[ "$(git rev-list -n 1 "$tag")" != "$GITHUB_SHA" ]]; then
+              echo "$tag 가 다른 commit을 가리킵니다" >&2
+              exit 1
+            fi
+          else
+            git tag --annotate "$tag" --message "Release $VERSION" "$GITHUB_SHA"
+            git push origin "$tag"
+          fi
+
+          existing="$(gh pr list --state open --base develop --head "$RELEASE_BRANCH" --json number --jq '.[0].number // empty')"
+          if [[ -z "$existing" ]]; then
+            body="$RUNNER_TEMP/release-sync-pr.md"
+            printf '%s\n' \
+              '## 해결하려는 문제가 무엇인가요?' \
+              '운영 반영이 끝난 release 변경을 develop에 동기화합니다.' \
+              '## 왜 해야 하나요?' \
+              '릴리스 수정이 다음 개발선에서 누락되지 않아야 합니다.' \
+              '## 어떻게 해결했나요?' \
+              '운영 반영에 사용한 release 브랜치를 develop으로 병합합니다.' \
+              '## 이 PR의 한계 & 트레이드오프' \
+              '최종 승인과 병합은 사람이 수행합니다.' \
+              '## 기존 기능에 미치는 영향' \
+              '릴리스 변경이 develop에 합류합니다.' \
+              '## Edge Case & 실패 시나리오' \
+              '충돌이 있으면 원인을 확인하고 수동으로 해소해야 합니다.' \
+              '## 검토한 대안과 선택 이유' \
+              '직접 push 대신 변경 이력이 남는 PR을 선택했습니다.' \
+              '## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)' \
+              '🟡 release와 develop 사이의 충돌 및 누락을 확인합니다.' \
+              > "$body"
+            gh pr create \
+              --base develop \
+              --head "$RELEASE_BRANCH" \
+              --title "[Release] $VERSION 개발선 동기화" \
+              --body-file "$body"
+          fi
+
+  hotfix-success:
+    needs: [classify, deploy]
+    if: >-
+      always() &&
+      needs.classify.outputs.kind == 'hotfix' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: 개발선과 활성 release 동기화 PR 생성
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/hotfix-sync-pr.md"
+          printf '%s\n' \
+            '## 해결하려는 문제가 무엇인가요?' \
+            '운영 hotfix 변경을 장기 개발선과 활성 release에 동기화합니다.' \
+            '## 왜 해야 하나요?' \
+            '운영 수정이 다음 릴리스에서 다시 사라지는 것을 방지합니다.' \
+            '## 어떻게 해결했나요?' \
+            'main을 대상 개발선으로 병합하는 동기화 PR을 생성합니다.' \
+            '## 이 PR의 한계 & 트레이드오프' \
+            '최종 승인과 병합은 사람이 수행합니다.' \
+            '## 기존 기능에 미치는 영향' \
+            '운영 hotfix 변경이 대상 브랜치에 합류합니다.' \
+            '## Edge Case & 실패 시나리오' \
+            '기존 동기화 PR이 있으면 새 PR을 만들지 않습니다.' \
+            '## 검토한 대안과 선택 이유' \
+            '직접 push 대신 검토 가능한 PR을 선택했습니다.' \
+            '## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)' \
+            '🟡 main과 대상 브랜치 사이의 충돌 및 누락을 확인합니다.' \
+            > "$body"
+
+          create_sync_pr() {
+            local base="$1"
+            local title="$2"
+            local existing
+            existing="$(gh pr list --state open --base "$base" --head main --json number --jq '.[0].number // empty')"
+            if [[ -z "$existing" ]]; then
+              gh pr create --base "$base" --head main --title "$title" --body-file "$body"
+            fi
+          }
+
+          create_sync_pr develop '[Release] hotfix 개발선 동기화'
+          mapfile -t releases < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/branches?per_page=100" \
+              --jq '.[].name | select(startswith("release/"))'
+          )
+          if (( ${#releases[@]} > 1 )); then
+            echo "활성 release 브랜치가 여러 개입니다" >&2
+            exit 1
+          fi
+          if (( ${#releases[@]} == 1 )); then
+            create_sync_pr "${releases[0]}" '[Release] hotfix 활성 릴리스 동기화'
+          fi
+
+  revert-aligned:
+    needs: classify
+    if: needs.classify.outputs.kind == 'revert'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 자동 rollback과 main 소스 정렬 확인
+        run: echo "revert PR 병합으로 main 소스가 자동 rollback digest와 정렬되었습니다"

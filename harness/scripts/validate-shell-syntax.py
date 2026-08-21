@@ -10,14 +10,22 @@ from harness.lib.shell_runtime import select_shell
 
 
 def main() -> int:
-    paths = sorted(path for path in (ROOT / ".githooks").iterdir() if path.is_file())
-    for path in paths:
-        completed = subprocess.run(
-            (str(select_shell()), "-n", str(path)), cwd=ROOT, check=False
-        )
-        if completed.returncode != 0:
-            return 1
-    print(f"셸 문법 검증을 통과했습니다: {len(paths)}개")
+    git_hooks = sorted(
+        path for path in (ROOT / ".githooks").iterdir() if path.is_file()
+    )
+    infra_scripts = sorted((ROOT / "infra" / "scripts").glob("*.sh"))
+    checks = ((str(select_shell()), git_hooks), ("bash", infra_scripts))
+    for shell, paths in checks:
+        for path in paths:
+            completed = subprocess.run(
+                (shell, "-n", str(path)), cwd=ROOT, check=False
+            )
+            if completed.returncode != 0:
+                return 1
+    print(
+        "셸 문법 검증을 통과했습니다: "
+        f"{len(git_hooks) + len(infra_scripts)}개"
+    )
     return 0
 
 

@@ -55,7 +55,9 @@ Issue를 종료하지 않는다.
 
 운영 배포 자체가 실패하면 배포된 main 병합 커밋을 기준으로
 `revert/<main-merge-sha>`를 만들고 `[Release]` Draft PR을 `main`으로 보낸다.
-되돌림 PR 생성, 승인, 병합과 실제 운영 복구는 사람이 수행한다.
+서버는 직전 image digest로 자동 rollback하고 CI는 되돌림 커밋과 Draft PR을
+생성한다. 사람은 실패 원인과 되돌림 범위를 확인한 뒤 승인·병합하며, revert PR
+병합은 이미 rollback된 서버를 다시 배포하지 않고 main 소스 상태만 정렬한다.
 
 원격의 장기 브랜치는 `main`과 `develop`이며 기본 브랜치는 `develop`이다.
 `main`, `develop`, `release/*`는 GitHub Ruleset으로 직접 push, force push, 삭제를

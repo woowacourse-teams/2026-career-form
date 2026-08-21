@@ -1,0 +1,13 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE must be a digest-pinned image}
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:?SPRING_PROFILES_ACTIVE is required}
+      SPRING_MONGODB_URI: ${SPRING_MONGODB_URI:?SPRING_MONGODB_URI is required}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:?BACKEND_PORT is required}:8080"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,1 @@
+"""Infrastructure contract tests."""

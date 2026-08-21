@@ -187,6 +187,22 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn('"validate-skills.py"', verify)
         self.assertIn('"validate-execpolicy.py"', verify)
 
+    def test_verify_runs_infrastructure_contract_tests(self) -> None:
+        verify = (ROOT / "harness" / "scripts" / "verify.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('"infra/tests"', verify)
+        self.assertIn('"test_*.py"', verify)
+
+    def test_shell_syntax_validation_covers_infrastructure_scripts(self) -> None:
+        validator = (
+            ROOT / "harness" / "scripts" / "validate-shell-syntax.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('ROOT / "infra" / "scripts"', validator)
+        self.assertIn('glob("*.sh")', validator)
+
     def test_quality_gate_installs_pinned_codex_cli(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "quality-gate.yml").read_text(
             encoding="utf-8"

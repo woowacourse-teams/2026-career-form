@@ -1,0 +1,356 @@
+import os
+import stat
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+APP_SCRIPT = ROOT / "infra" / "scripts" / "bootstrap-app-host.sh"
+MONGODB_SCRIPT = ROOT / "infra" / "scripts" / "bootstrap-mongodb-host.sh"
+
+
+class BootstrapScriptContractTest(unittest.TestCase):
+    def test_check_mode_reports_app_host_requirements_without_mutation(self) -> None:
+        completed = self._run(APP_SCRIPT, "--check")
+        output = (completed.stdout + completed.stderr).lower()
+
+        self.assertIn(completed.returncode, (0, 1))
+        for phrase in (
+            "operating system",
+            "architecture",
+            "swap",
+            "docker",
+            "compose",
+            "nginx",
+            "certbot",
+            "cloudflared",
+            "github actions runner",
+        ):
+            self.assertIn(phrase, output)
+
+    def test_check_mode_reports_mongodb_host_requirements_without_mutation(self) -> None:
+        completed = self._run(MONGODB_SCRIPT, "--check")
+        output = (completed.stdout + completed.stderr).lower()
+
+        self.assertIn(completed.returncode, (0, 1))
+        for phrase in (
+            "operating system",
+            "architecture",
+            "docker",
+            "compose",
+            "mongodb data directory",
+            "mongodb config directory",
+            "mongodb compose directory",
+        ):
+            self.assertIn(phrase, output)
+        self.assertNotIn("swap:", output)
+
+    def test_mongodb_host_requires_ubuntu_24_04(self) -> None:
+        supported = self._validate_mongodb_host("24.04")
+        unsupported = self._validate_mongodb_host("26.04")
+
+        self.assertEqual(0, supported.returncode, supported.stderr)
+        self.assertNotEqual(0, unsupported.returncode)
+        self.assertIn("Ubuntu 24.04 is required", unsupported.stderr)
+
+    def test_bootstrap_requires_explicit_mode_and_apply_confirmation(self) -> None:
+        for script in (APP_SCRIPT, MONGODB_SCRIPT):
+            with self.subTest(script=script.name, mode="missing"):
+                completed = self._run(script)
+                self.assertNotEqual(0, completed.returncode)
+                self.assertIn("--check", completed.stderr)
+                self.assertIn("--apply", completed.stderr)
+            with self.subTest(script=script.name, mode="unconfirmed"):
+                completed = self._run(script, "--apply")
+                self.assertNotEqual(0, completed.returncode)
+                self.assertIn("BOOTSTRAP_CONFIRM", completed.stderr)
+
+    def test_bootstrap_interfaces_never_accept_secret_values(self) -> None:
+        for script in (APP_SCRIPT, MONGODB_SCRIPT):
+            content = script.read_text(encoding="utf-8")
+            with self.subTest(script=script.name):
+                self.assertNotIn("--token", content)
+                self.assertNotIn("RUNNER_TOKEN", content)
+                self.assertNotIn("MONGODB_PASSWORD", content)
+                self.assertIn("set -euo pipefail", content)
+
+    def test_app_state_directory_is_group_writable_for_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory) / "deploy-state"
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; DEPLOY_STATE_DIR="$2"; '
+                    'DEPLOY_RUNNER_GROUP="$(id -gn)"; '
+                    "prepare_deploy_state_directory",
+                    "bootstrap-state-test",
+                    str(APP_SCRIPT),
+                    str(state),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            state_stat = state.stat()
+            self.assertEqual(0o770, stat.S_IMODE(state_stat.st_mode))
+            self.assertEqual(os.getgid(), state_stat.st_gid)
+
+    def test_cloudflared_repository_uses_the_downloaded_signing_key(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary_directory = root / "bin"
+            binary_directory.mkdir()
+            fake_curl = binary_directory / "curl"
+            fake_curl.write_text(
+                """#!/usr/bin/env bash
+set -eu
+output=''
+while (( $# > 0 )); do
+  if [[ "$1" == "-o" ]]; then
+    output="$2"
+    shift 2
+  else
+    shift
+  fi
+done
+: > "$output"
+""",
+                encoding="utf-8",
+            )
+            fake_curl.chmod(0o755)
+            environment = {
+                **os.environ,
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; CLOUDFLARED_KEYRING_DIR="$2/keyrings"; '
+                    'APT_SOURCES_DIR="$2/sources"; '
+                    "install_cloudflared_repository",
+                    "cloudflared-repository-test",
+                    str(APP_SCRIPT),
+                    str(root),
+                ),
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            source = (root / "sources" / "cloudflared.list").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(
+                f"signed-by={root}/keyrings/cloudflare-main.gpg", source
+            )
+
+    def test_app_package_installation_includes_certbot_nginx_support(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary_directory = root / "bin"
+            binary_directory.mkdir()
+            apt_log = root / "apt.log"
+            fake_apt_get = binary_directory / "apt-get"
+            fake_apt_get.write_text(
+                """#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >> "$APT_LOG"
+""",
+                encoding="utf-8",
+            )
+            fake_apt_get.chmod(0o755)
+            environment = {
+                **os.environ,
+                "APT_LOG": str(apt_log),
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; install_application_packages',
+                    "app-package-test",
+                    str(APP_SCRIPT),
+                ),
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            invocation = apt_log.read_text(encoding="utf-8")
+            self.assertIn("install --yes", invocation)
+            self.assertIn("certbot", invocation.split())
+            self.assertIn("python3-certbot-nginx", invocation.split())
+
+    def test_mongodb_host_installs_docker_without_host_mongodb_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary_directory = root / "bin"
+            binary_directory.mkdir()
+            apt_log = root / "apt.log"
+            fake_apt_get = binary_directory / "apt-get"
+            fake_apt_get.write_text(
+                """#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >> "$APT_LOG"
+""",
+                encoding="utf-8",
+            )
+            fake_apt_get.chmod(0o755)
+            environment = {
+                **os.environ,
+                "APT_LOG": str(apt_log),
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; install_mongodb_host_packages',
+                    "mongodb-package-test",
+                    str(MONGODB_SCRIPT),
+                ),
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            packages = apt_log.read_text(encoding="utf-8").split()
+            for package in (
+                "docker-ce",
+                "docker-ce-cli",
+                "containerd.io",
+                "docker-buildx-plugin",
+                "docker-compose-plugin",
+            ):
+                self.assertIn(package, packages)
+            self.assertNotIn("mongodb-org", packages)
+
+    def test_mongodb_host_prepares_private_persistent_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            data = root / "data"
+            config = root / "config"
+            compose = root / "compose"
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; MONGODB_DATA_DIR="$2"; '
+                    'MONGODB_CONFIG_DIR="$3"; MONGODB_COMPOSE_DIR="$4"; '
+                    "prepare_mongodb_directories",
+                    "mongodb-directory-test",
+                    str(MONGODB_SCRIPT),
+                    str(data),
+                    str(config),
+                    str(compose),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertEqual(0o700, stat.S_IMODE(data.stat().st_mode))
+            self.assertEqual(0o700, stat.S_IMODE(config.stat().st_mode))
+            self.assertEqual(0o755, stat.S_IMODE(compose.stat().st_mode))
+
+    def test_app_host_accepts_two_gib_swapfile_usable_capacity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            swaps = Path(directory) / "swaps"
+            swaps.write_text(
+                "Filename Type Size Used Priority\n"
+                "/swapfile file 2097148 0 -2\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; SWAPS_FILE="$2"; check_swap',
+                    "app-swap-capacity-test",
+                    str(APP_SCRIPT),
+                    str(swaps),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertIn("2097148 KiB", completed.stdout)
+
+    def test_setup_document_lists_required_github_configuration_names(self) -> None:
+        setup = (ROOT / "docs" / "operations" / "cicd-setup.md").read_text(
+            encoding="utf-8"
+        )
+
+        for name in (
+            "DOCKERHUB_USERNAME",
+            "DOCKERHUB_TOKEN",
+            "DOCKERHUB_IMAGE",
+            "BACKEND_PORT",
+            "SPRING_MONGODB_URI",
+        ):
+            self.assertIn(name, setup)
+        self.assertIn("development", setup)
+        self.assertIn("staging", setup)
+        self.assertIn("production", setup)
+        self.assertIn("registration token", setup)
+        self.assertIn("저장하지", setup)
+
+    def _run(self, script: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ("/bin/bash", str(script), *arguments),
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    def _validate_mongodb_host(
+        self, version: str
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            os_release = Path(directory) / "os-release"
+            os_release.write_text(
+                f'ID=ubuntu\nVERSION_ID="{version}"\n', encoding="utf-8"
+            )
+            return subprocess.run(
+                (
+                    "/bin/bash",
+                    "-c",
+                    'source "$1"; OS_RELEASE_FILE="$2"; '
+                    "uname() { printf '%s\\n' aarch64; }; "
+                    "require_supported_host",
+                    "mongodb-host-os-test",
+                    str(MONGODB_SCRIPT),
+                    str(os_release),
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

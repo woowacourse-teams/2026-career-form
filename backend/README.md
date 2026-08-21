@@ -160,9 +160,7 @@ py scripts/local.py up
 
 `local.py down`은 Compose의 일반 `down`만 실행하므로 `mongodb-data` named volume을 삭제하지 않고 다음 실행에서도 데이터를 보존한다. volume 삭제는 로컬 데이터를 제거하는 파괴적 작업이므로 초기화가 필요할 때 사용자가 별도로 판단한다.
 
-`compose.yaml`은 공통 내부 포트와 Actuator healthcheck를 책임진다. `compose.local.yaml`만 MongoDB 컨테이너, 내부 연결 URI, healthcheck 의존성과 named volume을 책임진다. `dev`, `staging`, `prod`는 DB 컨테이너를 추가하지 않고 외부 연결 정보만 안전하게 주입한다.
-
-향후 `compose.dev.yaml`, `compose.staging.yaml`, `compose.prod.yaml`은 레지스트리에서 동일한 이미지 digest를 받아 프로파일과 환경값만 다르게 적용한다. 환경마다 소스를 다시 빌드하지 않는다.
+`compose.yaml`은 공통 내부 포트와 Actuator healthcheck를 책임진다. `compose.local.yaml`만 MongoDB 컨테이너, 내부 연결 URI, healthcheck 의존성과 named volume을 책임진다. `dev`, `staging`, `prod`는 `infra/compose.deploy.yaml`을 조합해 외부 MongoDB URI, 환경별 loopback port와 registry digest를 주입하며 DB 컨테이너를 추가하지 않는다.
 
 공개 Temurin 이미지 pull이 레이어 출력 전에 멈추고 `error getting credentials`를 반환하면 Dockerfile 문제가 아니라 Docker Desktop credential store 문제일 수 있다. Docker Desktop과 credential helper 상태를 복구한 뒤 다시 실행하며, 인증값이나 임시 우회 설정을 저장소에 기록하지 않는다.
 
@@ -172,7 +170,9 @@ Spring Boot 4.1의 연결 속성은 `spring.mongodb.uri`이며 `application.yml`
 
 - `local`: Compose가 `.env.local`의 자격증명 없는 내부 URI를 주입하고 MongoDB 포트를 호스트에 공개하지 않는다.
 - `dev`, `staging`, `prod`: 관리형 또는 외부 MongoDB의 URI를 secret manager나 런타임 환경에서 주입한다.
-- 저장소는 외부 MongoDB 인스턴스, 계정, TLS, 네트워크와 백업을 생성하거나 관리하지 않는다.
+- 원격 application 배포는 MongoDB를 함께 기동하지 않는다. DB host의 Docker bootstrap과
+  Compose 계약은 `infra/mongodb/`와 `docs/operations/cicd-setup.md`에 분리되어 있으며,
+  실제 계정·네트워크·backup·restore 작업은 관리자가 수행한다.
 - 현재는 연결 기반만 제공하며 실제 프로필·지원서 데이터를 MongoDB에 저장하거나 전송하지 않는다.
 
 MongoDB URI가 없거나 connection string 형식이 잘못되면 설정 해석 또는 MongoDB client 생성 중 애플리케이션 기동이 실패하므로 health 엔드포인트가 생성되지 않는다. URI 형식은 유효하지만 DNS·네트워크·자격증명 문제로 연결할 수 없거나 MongoDB가 중단되면 애플리케이션 기동 후 전역 `/actuator/health`가 HTTP 503과 `DOWN`을 반환하고 backend 컨테이너도 unhealthy 상태가 된다.
@@ -186,3 +186,14 @@ MongoDB URI가 없거나 connection string 형식이 잘못되면 설정 해석 
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 
 Actuator의 HTTP 노출 범위는 모든 프로파일에서 `health`로 제한한다. OpenAPI JSON은 3.0.1 규격으로 생성된다. OpenAPI JSON과 Swagger UI는 `local`, `dev`에서만 노출되며 `staging`, `prod` 및 프로파일 미지정 실행에서는 404를 반환한다.
+
+## CI/CD와 원격 배포
+
+PR 백엔드 검증, development·staging·production digest 배포, release·hotfix 승격과
+readiness rollback은 저장소 루트의 `.github/workflows/`와 `infra/`가 담당한다.
+애플리케이션 프로젝트는 환경 credential이나 원격 host 정보를 포함하지 않는다.
+
+- 최초 GitHub Environment, runner, Docker Hub와 host 설정:
+  [`docs/operations/cicd-setup.md`](../docs/operations/cicd-setup.md)
+- 배포, hotfix, 자동 rollback과 Draft revert 대응:
+  [`docs/operations/deployment-runbook.md`](../docs/operations/deployment-runbook.md)
