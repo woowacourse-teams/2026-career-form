@@ -366,6 +366,7 @@ public record LlmMappingProperties(
 career-form:
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:false}
+    provider: ${CAREER_FORM_LLM_PROVIDER:openai}
     model: ${CAREER_FORM_LLM_MODEL:}
     max-context-fields: 50
     max-target-fields: 50
@@ -451,6 +452,7 @@ git commit -m "feat: 비식별 LLM 매핑 HTTP API 추가"
 
 - Modify: `backend/build.gradle.kts`
 - Create: `backend/src/main/java/com/careerform/llm/mapping/infrastructure/openai/LlmProviderSettings.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/infrastructure/openai/OpenAiMappingConfiguration.java`
 - Create: `backend/src/main/java/com/careerform/llm/mapping/infrastructure/openai/OpenAiMappingModelClient.java`
 - Modify: `backend/src/main/java/com/careerform/llm/mapping/config/LlmMappingConfiguration.java`
 - Modify: `backend/src/main/resources/application.yml`
@@ -678,6 +680,7 @@ git commit -m "feat: OpenAI 구조화 매핑 호출 연결"
 SPRING_PROFILES_ACTIVE=local
 SPRING_MONGODB_URI=mongodb://mongodb:27017/career-form
 CAREER_FORM_LLM_ENABLED=false
+CAREER_FORM_LLM_PROVIDER=openai
 CAREER_FORM_LLM_MODEL=gpt-5.6-luna
 CAREER_FORM_LLM_TIMEOUT=10s
 CAREER_FORM_LLM_MAX_RETRIES=1
@@ -695,7 +698,7 @@ README에는 다음 사실을 한 번씩만 기록한다.
 ## LLM 매핑 API
 
 LLM 매핑은 기본 비활성화되어 API key 없이도 애플리케이션과 CI가 기동한다.
-활성화할 때는 `CAREER_FORM_LLM_ENABLED=true`,
+활성화할 때는 `CAREER_FORM_LLM_ENABLED=true`, `CAREER_FORM_LLM_PROVIDER=openai`,
 `CAREER_FORM_LLM_MODEL=gpt-5.6-luna`, `OPENAI_API_KEY`를 실행 환경에 주입한다.
 운영 프로파일도 같은 명시적 설정으로 활성화할 수 있지만 인증, rate limit,
 동시 호출 제한과 비용 경보는 아직 없으므로 공개 인터넷 노출 여부는 사람이 판단한다.

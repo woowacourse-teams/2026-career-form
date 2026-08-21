@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 
 import com.careerform.llm.mapping.application.LlmMappingService;
 import com.careerform.llm.mapping.application.MappingModelClient;
-import com.careerform.llm.mapping.infrastructure.openai.LlmProviderSettings;
+import com.careerform.llm.mapping.infrastructure.openai.OpenAiMappingConfiguration;
 import com.careerform.llm.mapping.infrastructure.openai.OpenAiMappingModelClient;
 
 import tools.jackson.databind.ObjectMapper;
@@ -21,6 +21,7 @@ class LlmConfigurationContextTest {
         new WebApplicationContextRunner()
             .withUserConfiguration(
                 LlmMappingConfiguration.class,
+                OpenAiMappingConfiguration.class,
                 TestDependencies.class
             )
             .withPropertyValues(
@@ -39,7 +40,6 @@ class LlmConfigurationContextTest {
             )
             .run(context -> {
                 assertThat(context).hasNotFailed();
-                assertThat(context).doesNotHaveBean(LlmProviderSettings.class);
                 assertThat(context).doesNotHaveBean(MappingModelClient.class);
                 assertThat(context).doesNotHaveBean(LlmMappingService.class);
             });
@@ -102,13 +102,29 @@ class LlmConfigurationContextTest {
             )
             .run(context -> {
                 assertThat(context).hasNotFailed();
-                assertThat(context).hasSingleBean(LlmProviderSettings.class);
                 assertThat(context).hasSingleBean(MappingModelClient.class);
                 assertThat(context).hasSingleBean(LlmMappingService.class);
-                assertThat(context.getBean(LlmProviderSettings.class))
-                    .isEqualTo(new LlmProviderSettings("gpt-5.6-luna", "none", 2048));
                 assertThat(context.getBean(MappingModelClient.class))
                     .isInstanceOf(OpenAiMappingModelClient.class);
+            });
+    }
+
+    @Test
+    void alternativeModelPortDoesNotRequireOpenAiConfiguration() {
+        contextRunner
+            .withUserConfiguration(AlternativeModelConfiguration.class)
+            .withPropertyValues(
+                "career-form.llm.enabled=true",
+                "career-form.llm.provider=alternative",
+                "career-form.llm.model=alternative-model",
+                "spring.ai.openai.api-key="
+            )
+            .run(context -> {
+                assertThat(context).hasNotFailed();
+                assertThat(context).hasSingleBean(MappingModelClient.class);
+                assertThat(context).hasSingleBean(LlmMappingService.class);
+                assertThat(context.getBean(MappingModelClient.class))
+                    .isSameAs(context.getBean("alternativeMappingModelClient"));
             });
     }
 
@@ -140,6 +156,15 @@ class LlmConfigurationContextTest {
             return ChatClient.builder(prompt -> {
                 throw new AssertionError("설정 검증 중 모델을 호출하면 안 됩니다");
             });
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class AlternativeModelConfiguration {
+
+        @Bean
+        MappingModelClient alternativeMappingModelClient() {
+            return request -> null;
         }
     }
 }

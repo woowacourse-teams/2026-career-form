@@ -28,6 +28,7 @@ spring:
 career-form:
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:false}
+    provider: ${CAREER_FORM_LLM_PROVIDER:openai}
     model: ${CAREER_FORM_LLM_MODEL:}
     max-context-fields: 50
     max-target-fields: 50

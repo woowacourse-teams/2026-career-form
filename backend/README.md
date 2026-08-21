@@ -58,6 +58,7 @@ Git에 추가하지 않는다.
 | 환경 변수 | 기본값 | 설명 |
 |---|---:|---|
 | `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때만 매핑 API를 노출한다. |
+| `CAREER_FORM_LLM_PROVIDER` | `openai` | 모델 포트 구현을 고른다. 현재 지원값은 `openai`다. |
 | `CAREER_FORM_LLM_MODEL` | 빈 값 | 활성화 시 `gpt-5.6-luna`여야 한다. |
 | `OPENAI_API_KEY` | 빈 값 | 활성화 시 공백이 아닌 실행 환경 시크릿이어야 한다. |
 | `CAREER_FORM_LLM_TIMEOUT` | `10s` | OpenAI 요청 timeout이다. |
@@ -76,6 +77,7 @@ effort는 `none`, provider-side response 저장은 비활성화한다.
 
 ```dotenv
 CAREER_FORM_LLM_ENABLED=true
+CAREER_FORM_LLM_PROVIDER=openai
 CAREER_FORM_LLM_MODEL=gpt-5.6-luna
 OPENAI_API_KEY=<실행 환경에서만 설정>
 ```
