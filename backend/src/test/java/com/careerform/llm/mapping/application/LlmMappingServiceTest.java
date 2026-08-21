@@ -169,6 +169,19 @@ class LlmMappingServiceTest {
                     "career.companyName"
                 )),
                 REQUEST.targetFields()
+            ),
+            new LlmMappingRequest(
+                List.of(new LlmMappingRequest.ContextField(
+                    context.fieldId(),
+                    context.element(),
+                    context.control(),
+                    context.domId(),
+                    context.domName(),
+                    context.displayName(),
+                    context.required(),
+                    null
+                )),
+                REQUEST.targetFields()
             )
         );
     }

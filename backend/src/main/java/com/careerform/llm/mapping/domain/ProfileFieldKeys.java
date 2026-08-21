@@ -76,7 +76,7 @@ public final class ProfileFieldKeys {
     }
 
     public static boolean isAllowed(String key) {
-        return ALLOWED.contains(key);
+        return key != null && ALLOWED.contains(key);
     }
 
     public static Set<String> values() {
