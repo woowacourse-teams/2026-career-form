@@ -9,6 +9,7 @@ Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 현재 범
 - Gradle Wrapper 9.6.1
 - Spring MVC와 내장 Tomcat 11
 - Spring Data MongoDB
+- Spring AI 2.0.0의 공급자 중립 chat client
 - springdoc-openapi 3.1.0
 - OpenAPI 3.0.1 문서 규격
 - JaCoCo 0.8.15
@@ -23,6 +24,16 @@ macOS에서 현재 셸이 JDK 21을 사용하도록 설정하는 예시는 다�
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
+
+## LLM 연동 기반
+
+현재 백엔드는 Spring AI 2.0.0 BOM과 공급자 중립 `spring-ai-client-chat`만 포함한다.
+OpenAI, Gemini, Ollama용 starter와 API 키·모델·base URL 같은 런타임 설정은 아직
+추가하지 않았으므로 실제 LLM bean이나 외부 호출은 생성되지 않는다.
+
+공급자 선택과 런타임 설정, 구조화 출력 및 설정 검증은 비식별 데이터 기반 매핑을
+구현하는 후속 Issue에서 함께 추가한다. 로컬 LLM을 채택하면 JVM에 모델을 내장하지 않고
+Ollama 같은 별도 추론 서비스의 API로 연결한다.
 
 ## 빌드와 검증
 
