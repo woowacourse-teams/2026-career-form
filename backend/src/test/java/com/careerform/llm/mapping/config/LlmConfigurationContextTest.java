@@ -1,4 +1,4 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,6 +7,11 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import com.careerform.llm.mapping.application.LlmMappingService;
+import com.careerform.llm.mapping.application.MappingModelClient;
+import com.careerform.llm.mapping.infrastructure.openai.LlmProviderSettings;
+import com.careerform.llm.mapping.infrastructure.openai.OpenAiMappingModelClient;
 
 import tools.jackson.databind.ObjectMapper;
 

@@ -1,4 +1,4 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.api;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -23,6 +23,10 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.careerform.llm.mapping.application.MappingModelClient;
+import com.careerform.llm.mapping.domain.LlmMappingRequest;
+import com.careerform.llm.mapping.domain.LlmMappingResponse;
 
 @SpringBootTest(properties = {
     "spring.mongodb.uri=mongodb://localhost/career-form-test",

@@ -1,4 +1,4 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.application;
 
 public final class InvalidLlmMappingRequestException extends RuntimeException {
 

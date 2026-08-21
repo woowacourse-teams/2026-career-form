@@ -1,9 +1,13 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.api;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.careerform.llm.mapping.application.LlmMappingService;
+import com.careerform.llm.mapping.domain.LlmMappingRequest;
+import com.careerform.llm.mapping.domain.LlmMappingResponse;
 
 import jakarta.validation.Valid;
 

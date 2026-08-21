@@ -1,8 +1,8 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.domain;
 
 import java.util.Set;
 
-final class ProfileFieldKeys {
+public final class ProfileFieldKeys {
 
     private static final Set<String> ALLOWED = Set.of(
         "personal.koreanFamilyName",
@@ -75,11 +75,11 @@ final class ProfileFieldKeys {
     private ProfileFieldKeys() {
     }
 
-    static boolean isAllowed(String key) {
+    public static boolean isAllowed(String key) {
         return ALLOWED.contains(key);
     }
 
-    static Set<String> values() {
+    public static Set<String> values() {
         return ALLOWED;
     }
 }

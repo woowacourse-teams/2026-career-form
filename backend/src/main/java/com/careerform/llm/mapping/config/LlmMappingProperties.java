@@ -1,4 +1,4 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;

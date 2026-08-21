@@ -4,7 +4,7 @@
 
 **Goal:** 비식별 페이지 필드 메타데이터를 받아 OpenAI `gpt-5.6-luna`의 네이티브 structured output으로 미해결 필드를 프로필 키 또는 `NO_MATCH`에 매핑하는 백엔드 v1 API를 만든다.
 
-**Architecture:** `POST /api/v1/llm/mappings`의 DTO와 애플리케이션 검증기는 HTTP 및 공급자와 분리한다. `MappingModelClient` 포트 뒤에 Spring AI `ChatClient` 기반 OpenAI 어댑터를 두고, 모델 응답 전체가 target 집합·허용 키·confidence 계약을 만족할 때만 반환한다. 기능 플래그가 꺼져 있으면 LLM용 빈이 생성되지 않으며, 켜진 경우에는 시크릿 값을 출력하지 않는 설정 검증을 먼저 통과해야 한다.
+**Architecture:** LLM 매핑 기능 안을 `domain`, `application`, `api`, `infrastructure.openai`, `config`로 나눈다. `POST /api/v1/llm/mappings`의 DTO와 애플리케이션 검증기는 HTTP 및 공급자와 분리하고, `MappingModelClient` 포트 뒤에 Spring AI `ChatClient` 기반 OpenAI 어댑터를 둔다. 모델 응답 전체가 target 집합·허용 키·confidence 계약을 만족할 때만 반환한다. 기능 플래그가 꺼져 있으면 LLM용 빈이 생성되지 않으며, 켜진 경우에는 시크릿 값을 출력하지 않는 설정 검증을 먼저 통과해야 한다. 특정 회사 페이지 어댑터는 LLM 공급자 어댑터와 다른 확장 축이므로 이 패키지에 섞지 않는다.
 
 **Tech Stack:** Java 21, Spring Boot 4.1.0, Spring MVC, Bean Validation, Spring AI 2.0.0, OpenAI Chat model starter, JUnit 5, MockMvc, JaCoCo
 
@@ -28,20 +28,15 @@
 
 **Files:**
 
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingRequest.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingResponse.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/ProfileFieldKeys.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/MappingModelClient.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingValidator.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingService.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/InvalidLlmMappingRequestException.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmUpstreamException.java`
-- Test: `backend/src/test/java/com/careerform/llm/mapping/LlmMappingServiceTest.java`
-
-**Interfaces:**
-
-- Consumes: `LlmMappingRequest(contextFields, targetFields)`와 `MappingModelClient.map(request)`
-- Produces: 검증을 통과한 `LlmMappingResponse(schemaVersion=1, mappings)` 또는 입력 오류/전체 upstream 거부 예외
+- Create: `backend/src/main/java/com/careerform/llm/mapping/domain/LlmMappingRequest.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/domain/LlmMappingResponse.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/domain/ProfileFieldKeys.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/application/MappingModelClient.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/application/LlmMappingValidator.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/application/LlmMappingService.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/application/InvalidLlmMappingRequestException.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/application/LlmUpstreamException.java`
+- Test: `backend/src/test/java/com/careerform/llm/mapping/application/LlmMappingServiceTest.java`
 
 - [x] **Step 1: 정상 결과와 잘못된 공급자 결과를 표현하는 실패 테스트 작성**
 
@@ -116,7 +111,7 @@ Run:
 
 ```bash
 cd backend
-./gradlew test --tests com.careerform.llm.mapping.LlmMappingServiceTest
+./gradlew test --tests com.careerform.llm.mapping.application.LlmMappingServiceTest
 ```
 
 Expected: 새 DTO와 서비스가 없어서 컴파일 실패한다.
@@ -269,7 +264,7 @@ Run:
 
 ```bash
 cd backend
-./gradlew test --tests com.careerform.llm.mapping.LlmMappingServiceTest
+./gradlew test --tests com.careerform.llm.mapping.application.LlmMappingServiceTest
 ```
 
 Expected: 정상, 누락, 중복, unknown/context ID, 허용 목록 밖 키, `NO_MATCH`, confidence 경계와 모델 예외 테스트가 모두 통과한다.
@@ -277,7 +272,7 @@ Expected: 정상, 누락, 중복, unknown/context ID, 허용 목록 밖 키, `NO
 - [x] **Step 8: Task 1 커밋**
 
 ```bash
-git add backend/src/main/java/com/careerform/llm/mapping backend/src/test/java/com/careerform/llm/mapping/LlmMappingServiceTest.java
+git add backend/src/main/java/com/careerform/llm/mapping backend/src/test/java/com/careerform/llm/mapping/application/LlmMappingServiceTest.java
 git commit -m "feat: LLM 매핑 계약과 전체 응답 검증 추가"
 ```
 
@@ -287,19 +282,15 @@ git commit -m "feat: LLM 매핑 계약과 전체 응답 검증 추가"
 
 **Files:**
 
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingProperties.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingConfiguration.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingController.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingExceptionHandler.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmRequestTooLargeException.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/config/LlmMappingProperties.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/config/LlmMappingConfiguration.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmMappingController.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmMappingExceptionHandler.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmRequestLimits.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmRequestTooLargeException.java`
 - Create: `backend/src/test/resources/llm/mapping-request-v1.json`
-- Test: `backend/src/test/java/com/careerform/llm/mapping/LlmMappingApiTest.java`
+- Test: `backend/src/test/java/com/careerform/llm/mapping/api/LlmMappingApiTest.java`
 - Modify: `backend/src/main/resources/application.yml`
-
-**Interfaces:**
-
-- Consumes: Task 1의 `LlmMappingService`, `MappingModelClient`, v1 DTO
-- Produces: `POST /api/v1/llm/mappings`, 기본 비활성화, 400/413/502의 비노출 오류 계약
 
 - [x] **Step 1: fake 모델을 거치는 실패하는 MockMvc 테스트 작성**
 
@@ -347,7 +338,7 @@ Run:
 
 ```bash
 cd backend
-./gradlew test --tests com.careerform.llm.mapping.LlmMappingApiTest
+./gradlew test --tests com.careerform.llm.mapping.api.LlmMappingApiTest
 ```
 
 Expected: `/api/v1/llm/mappings` handler가 없어 테스트가 실패한다.
@@ -446,7 +437,7 @@ Expected: fake 모델 요청-응답 한 사이클, 비활성 context, 입력 오
 - [x] **Step 7: Task 2 커밋**
 
 ```bash
-git add backend/src/main/java/com/careerform/llm/mapping backend/src/main/resources/application.yml backend/src/test/java/com/careerform/llm/mapping/LlmMappingApiTest.java backend/src/test/resources/llm/mapping-request-v1.json
+git add backend/src/main/java/com/careerform/llm/mapping backend/src/main/resources/application.yml backend/src/test/java/com/careerform/llm/mapping/api/LlmMappingApiTest.java backend/src/test/resources/llm/mapping-request-v1.json
 git commit -m "feat: 비식별 LLM 매핑 HTTP API 추가"
 ```
 
@@ -457,17 +448,12 @@ git commit -m "feat: 비식별 LLM 매핑 HTTP API 추가"
 **Files:**
 
 - Modify: `backend/build.gradle.kts`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/LlmProviderSettings.java`
-- Create: `backend/src/main/java/com/careerform/llm/mapping/OpenAiMappingModelClient.java`
-- Modify: `backend/src/main/java/com/careerform/llm/mapping/LlmMappingConfiguration.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/infrastructure/openai/LlmProviderSettings.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/infrastructure/openai/OpenAiMappingModelClient.java`
+- Modify: `backend/src/main/java/com/careerform/llm/mapping/config/LlmMappingConfiguration.java`
 - Modify: `backend/src/main/resources/application.yml`
-- Test: `backend/src/test/java/com/careerform/llm/mapping/OpenAiMappingModelClientTest.java`
-- Test: `backend/src/test/java/com/careerform/llm/mapping/LlmConfigurationContextTest.java`
-
-**Interfaces:**
-
-- Consumes: Spring AI `ChatClient.Builder`, `OpenAiChatOptions`, Task 1의 모델 포트와 Task 2의 feature properties
-- Produces: `gpt-5.6-luna`/`none`/strict JSON Schema 호출 옵션, 10초 timeout, 최대 1 retry와 최대 2048 completion tokens
+- Test: `backend/src/test/java/com/careerform/llm/mapping/infrastructure/openai/OpenAiMappingModelClientTest.java`
+- Test: `backend/src/test/java/com/careerform/llm/mapping/config/LlmConfigurationContextTest.java`
 
 - [x] **Step 1: OpenAI starter 부재와 실패하는 adapter 테스트 작성**
 
@@ -516,7 +502,7 @@ Run:
 
 ```bash
 cd backend
-./gradlew test --tests com.careerform.llm.mapping.OpenAiMappingModelClientTest
+./gradlew test --tests com.careerform.llm.mapping.infrastructure.openai.OpenAiMappingModelClientTest
 ```
 
 Expected: OpenAI starter/options 또는 adapter 타입이 없어 컴파일 실패한다.
@@ -662,7 +648,7 @@ Run:
 ```bash
 cd backend
 ./gradlew dependencyInsight --dependency spring-ai-starter-model-openai --configuration runtimeClasspath
-./gradlew test --tests com.careerform.llm.mapping.OpenAiMappingModelClientTest --tests com.careerform.llm.mapping.LlmConfigurationContextTest
+./gradlew test --tests com.careerform.llm.mapping.infrastructure.openai.OpenAiMappingModelClientTest --tests com.careerform.llm.mapping.config.LlmConfigurationContextTest
 ```
 
 Expected: `spring-ai-starter-model-openai:2.0.0`, native JSON Schema와 고정 옵션, 세 설정 context가 확인되고 실제 외부 호출은 없다.
@@ -670,7 +656,7 @@ Expected: `spring-ai-starter-model-openai:2.0.0`, native JSON Schema와 고정 �
 - [x] **Step 8: Task 3 커밋**
 
 ```bash
-git add backend/build.gradle.kts backend/src/main/java/com/careerform/llm/mapping backend/src/main/resources/application.yml backend/src/test/java/com/careerform/llm/mapping/OpenAiMappingModelClientTest.java backend/src/test/java/com/careerform/llm/mapping/LlmConfigurationContextTest.java
+git add backend/build.gradle.kts backend/src/main/java/com/careerform/llm/mapping backend/src/main/resources/application.yml backend/src/test/java/com/careerform/llm/mapping/infrastructure/openai/OpenAiMappingModelClientTest.java backend/src/test/java/com/careerform/llm/mapping/config/LlmConfigurationContextTest.java
 git commit -m "feat: OpenAI 구조화 매핑 호출 연결"
 ```
 
@@ -683,11 +669,6 @@ git commit -m "feat: OpenAI 구조화 매핑 호출 연결"
 - Create: `.env.example`
 - Modify: `backend/README.md`
 - Modify: `docs/plans/40-llm-mapping.md`
-
-**Interfaces:**
-
-- Consumes: Task 2와 Task 3의 실제 설정 이름, 기본값과 사람 담당 smoke test 경계
-- Produces: 시크릿 없는 로컬/운영 활성화 안내, 잠정 모델 한계와 후속 평가 계획
 
 - [x] **Step 1: 빈 시크릿과 안전한 기본값만 있는 환경 예시 작성**
 
@@ -759,11 +740,6 @@ git commit -m "docs: LLM 매핑 설정과 평가 계획 기록"
 - Verify: `.env.example`
 - Verify: `backend/README.md`
 - Verify: `docs/plans/40-llm-mapping.md`
-
-**Interfaces:**
-
-- Consumes: Task 1~4의 논리적 커밋과 Issue #40 인수 조건
-- Produces: 현재 HEAD에 귀속된 Draft PR 자동 검증 및 수동 확인 기록
 
 - [ ] **Step 1: 관련 테스트와 clean backend 검증 실행**
 

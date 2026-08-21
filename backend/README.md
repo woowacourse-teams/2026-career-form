@@ -35,6 +35,22 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 요청에 넣지 않는다. 서버도 요청·응답 원문과 시크릿을 로그에 남기지 않도록 Spring AI
 prompt/completion/error logging을 비활성화한다.
 
+LLM 매핑 코드는 책임과 변경 이유가 섞이지 않도록 다음처럼 나눈다.
+
+```text
+com.careerform.llm.mapping
+├── domain/                 요청·응답 계약과 허용 프로필 키
+├── application/            매핑 유스케이스, 검증과 모델 포트
+├── api/                    HTTP 진입점, 요청 제한과 오류 응답
+├── infrastructure/openai/ OpenAI 공급자 구현과 호출 설정
+└── config/                 기능 플래그와 의존성 조립
+```
+
+의존성은 API와 OpenAI 구현에서 애플리케이션·도메인 쪽으로 향한다. 특정 회사나 채용
+사이트의 페이지 구조를 다루는 전용 어댑터는 LLM 공급자 어댑터와 다른 확장 축이다.
+따라서 이 패키지 아래에 추가하지 않고, 대상 회사와 실행 환경이 확정된 별도 Issue에서
+페이지 분석·자동 입력 기능 루트와 회사별 하위 패키지를 함께 정의한다.
+
 LLM 매핑은 기본 비활성화되어 API key 없이도 애플리케이션과 CI가 기동한다. 활성화할
 때는 다음 값을 프로세스 실행 환경에 주입한다. 실제 값이 담긴 `.env`와 `.env.local`은
 Git에 추가하지 않는다.

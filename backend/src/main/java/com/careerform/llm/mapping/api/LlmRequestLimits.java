@@ -1,8 +1,21 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.api;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
+import com.careerform.llm.mapping.application.InvalidLlmMappingRequestException;
+import com.careerform.llm.mapping.config.LlmMappingProperties;
+import com.careerform.llm.mapping.domain.LlmMappingRequest;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+@Component
+@ConditionalOnProperty(
+    prefix = "career-form.llm",
+    name = "enabled",
+    havingValue = "true"
+)
 final class LlmRequestLimits {
 
     private static final String INVALID_REQUEST = "LLM 매핑 요청 계약이 올바르지 않습니다";

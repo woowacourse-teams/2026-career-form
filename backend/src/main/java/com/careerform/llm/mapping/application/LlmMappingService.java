@@ -1,6 +1,9 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.application;
 
 import java.util.List;
+
+import com.careerform.llm.mapping.domain.LlmMappingRequest;
+import com.careerform.llm.mapping.domain.LlmMappingResponse;
 
 public final class LlmMappingService {
 

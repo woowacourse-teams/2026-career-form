@@ -1,4 +1,4 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.infrastructure.openai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -15,6 +15,10 @@ import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
+
+import com.careerform.llm.mapping.application.LlmUpstreamException;
+import com.careerform.llm.mapping.domain.LlmMappingRequest;
+import com.careerform.llm.mapping.domain.LlmMappingResponse;
 
 import tools.jackson.databind.ObjectMapper;
 

@@ -1,8 +1,12 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.application;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import com.careerform.llm.mapping.domain.LlmMappingRequest;
+import com.careerform.llm.mapping.domain.LlmMappingResponse;
+import com.careerform.llm.mapping.domain.ProfileFieldKeys;
 
 public final class LlmMappingValidator {
 

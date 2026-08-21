@@ -1,4 +1,4 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.config;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +8,12 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
+
+import com.careerform.llm.mapping.application.LlmMappingService;
+import com.careerform.llm.mapping.application.LlmMappingValidator;
+import com.careerform.llm.mapping.application.MappingModelClient;
+import com.careerform.llm.mapping.infrastructure.openai.LlmProviderSettings;
+import com.careerform.llm.mapping.infrastructure.openai.OpenAiMappingModelClient;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -25,19 +31,6 @@ class LlmMappingConfiguration {
     )
     LlmMappingValidator llmMappingValidator() {
         return new LlmMappingValidator();
-    }
-
-    @Bean
-    @ConditionalOnProperty(
-        prefix = "career-form.llm",
-        name = "enabled",
-        havingValue = "true"
-    )
-    LlmRequestLimits llmRequestLimits(
-        LlmMappingProperties properties,
-        ObjectMapper objectMapper
-    ) {
-        return new LlmRequestLimits(properties, objectMapper);
     }
 
     @Bean

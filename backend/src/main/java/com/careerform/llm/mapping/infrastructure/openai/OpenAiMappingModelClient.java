@@ -1,9 +1,15 @@
-package com.careerform.llm.mapping;
+package com.careerform.llm.mapping.infrastructure.openai;
 
 import java.util.stream.Collectors;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatOptions;
+
+import com.careerform.llm.mapping.application.LlmUpstreamException;
+import com.careerform.llm.mapping.application.MappingModelClient;
+import com.careerform.llm.mapping.domain.LlmMappingRequest;
+import com.careerform.llm.mapping.domain.LlmMappingResponse;
+import com.careerform.llm.mapping.domain.ProfileFieldKeys;
 
 import tools.jackson.databind.ObjectMapper;
 
