@@ -746,7 +746,7 @@ git commit -m "docs: LLM 매핑 설정과 평가 계획 기록"
 - Verify: `backend/README.md`
 - Verify: `docs/plans/40-llm-mapping.md`
 
-- [ ] **Step 1: 관련 테스트와 clean backend 검증 실행**
+- [x] **Step 1: 관련 테스트와 clean backend 검증 실행**
 
 ```bash
 cd backend
@@ -757,7 +757,7 @@ cd backend
 
 Expected: 네트워크 호출 없이 모든 테스트, JaCoCo 80% 검증과 bootJar가 종료 코드 0으로 끝난다.
 
-- [ ] **Step 2: 저장소 전체 검증 실행**
+- [x] **Step 2: 저장소 전체 검증 실행**
 
 ```bash
 cd ..
@@ -767,7 +767,7 @@ git diff --check
 
 Expected: 하네스 전체 검증과 whitespace 검사가 종료 코드 0으로 끝난다.
 
-- [ ] **Step 3: 개인정보, 출력 계약과 범위 점검**
+- [x] **Step 3: 개인정보, 출력 계약과 범위 점검**
 
 ```bash
 git diff --name-only origin/develop...HEAD
@@ -778,11 +778,11 @@ rg -n "gpt-5\.6-luna|reasoning-effort|max-completion-tokens|max-retries|timeout|
 
 Expected: 변경은 Issue #40 파일에 한정되고 실제 시크릿이 없으며, 금지된 프로필 키가 allowlist에 없고 고정 모델·reasoning·상한·로그 비노출 설정이 확인된다.
 
-- [ ] **Step 4: Standards와 Issue spec 두 축 코드 리뷰**
+- [x] **Step 4: Standards와 Issue spec 두 축 코드 리뷰**
 
 `origin/develop...HEAD`를 기준으로 `cf-code-review`를 실행한다. 저장소 규칙, 경계 검증, 개인정보/시크릿 비노출, Issue #40의 정상·실패·설정 인수 조건을 각각 추적한다. 치명적 또는 높은 위험 finding은 수정하고 Task 5 검증을 처음부터 다시 실행한다.
 
-- [ ] **Step 5: 최종 Git 상태 확인**
+- [x] **Step 5: 최종 Git 상태 확인**
 
 ```bash
 git status --short
