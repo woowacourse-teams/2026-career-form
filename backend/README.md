@@ -1,6 +1,8 @@
 # Career Form Backend
 
-Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 현재 범위는 이후 API 구현을 위한 실행 기반과 MongoDB 연결 기반이다. 비즈니스 API, GPT 연동, MongoDB Repository·컬렉션 모델과 실제 프로필·지원서 정보 저장은 포함하지 않는다.
+Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 비식별 필드 메타데이터를
+매핑하는 선택적 LLM API와 MongoDB 연결 기반을 제공한다. MongoDB Repository·컬렉션
+모델과 실제 프로필·지원서 정보 저장은 포함하지 않는다.
 
 ## 기술 기준
 
@@ -9,7 +11,7 @@ Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 현재 범
 - Gradle Wrapper 9.6.1
 - Spring MVC와 내장 Tomcat 11
 - Spring Data MongoDB
-- Spring AI 2.0.0의 공급자 중립 chat client
+- Spring AI 2.0.0의 공급자 중립 chat client와 OpenAI provider
 - springdoc-openapi 3.1.0
 - OpenAPI 3.0.1 문서 규격
 - JaCoCo 0.8.15
@@ -25,15 +27,55 @@ macOS에서 현재 셸이 JDK 21을 사용하도록 설정하는 예시는 다�
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
 
-## LLM 연동 기반
+## LLM 매핑 API
 
-현재 백엔드는 Spring AI 2.0.0 BOM과 공급자 중립 `spring-ai-client-chat`만 포함한다.
-OpenAI, Gemini, Ollama용 starter와 API 키·모델·base URL 같은 런타임 설정은 아직
-추가하지 않았으므로 실제 LLM bean이나 외부 호출은 생성되지 않는다.
+`POST /api/v1/llm/mappings`는 현재 페이지의 비식별 필드 메타데이터를 받아, 규칙으로
+확정된 `contextFields`를 문맥으로 사용하고 미해결 `targetFields`만 프로필 필드 키 또는
+`NO_MATCH`로 매핑한다. 실제 프로필 값, 원본 DOM, URL, 쿠키, 계정·세션·인증 정보는
+요청에 넣지 않는다. 서버도 요청·응답 원문과 시크릿을 로그에 남기지 않도록 Spring AI
+prompt/completion/error logging을 비활성화한다.
 
-공급자 선택과 런타임 설정, 구조화 출력 및 설정 검증은 비식별 데이터 기반 매핑을
-구현하는 후속 Issue에서 함께 추가한다. 로컬 LLM을 채택하면 JVM에 모델을 내장하지 않고
-Ollama 같은 별도 추론 서비스의 API로 연결한다.
+LLM 매핑은 기본 비활성화되어 API key 없이도 애플리케이션과 CI가 기동한다. 활성화할
+때는 다음 값을 프로세스 실행 환경에 주입한다. 실제 값이 담긴 `.env`와 `.env.local`은
+Git에 추가하지 않는다.
+
+| 환경 변수 | 기본값 | 설명 |
+|---|---:|---|
+| `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때만 매핑 API를 노출한다. |
+| `CAREER_FORM_LLM_MODEL` | 빈 값 | 활성화 시 `gpt-5.6-luna`여야 한다. |
+| `OPENAI_API_KEY` | 빈 값 | 활성화 시 공백이 아닌 실행 환경 시크릿이어야 한다. |
+| `CAREER_FORM_LLM_TIMEOUT` | `10s` | OpenAI 요청 timeout이다. |
+| `CAREER_FORM_LLM_MAX_RETRIES` | `1` | OpenAI client 최대 retry 횟수다. |
+| `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | `2048` | completion token 상한이다. |
+
+입력 상한은 context 50개, target 50개, canonical JSON 65,536 bytes이며 각 문자열에는
+DTO별 절대 길이 상한이 있다. 입력 계약 위반은 400, 요청 byte 상한 초과는 413, 공급자
+오류나 출력 전체 계약 위반은 원문 없는 502로 반환한다. 모델 호출은 Spring AI의 OpenAI
+네이티브 strict JSON Schema를 사용하며 모델은 `gpt-5.6-luna`, reasoning effort는
+`none`, provider-side response 저장은 비활성화한다.
+
+로컬 Compose에서는 [`.env.example`](../.env.example)을 `.env.local`의 출발점으로
+사용할 수 있다. LLM을 활성화하려면 아래 세 설정을 명시하고 나머지 제한값은 필요할 때만
+조정한다.
+
+```dotenv
+CAREER_FORM_LLM_ENABLED=true
+CAREER_FORM_LLM_MODEL=gpt-5.6-luna
+OPENAI_API_KEY=<실행 환경에서만 설정>
+```
+
+`local`, `dev`, `staging`, `prod` 프로파일 자체에는 LLM 하드 차단이 없다. 운영에서도
+같은 명시적 런타임 설정으로 활성화할 수 있지만 현재 API에는 인증, rate limit, 동시 호출
+제한과 비용 경보가 없다. 공개 인터넷 노출과 운영 활성화 여부는 사람이 판단하며, 현재
+배포 환경 변수 전달 구성과 시크릿 등록은 이 기능의 범위에 포함되지 않는다.
+
+실제 API key를 넣고 비식별 합성 요청으로 OpenAI를 한 번 호출하는 연결 smoke test는
+사람이 수행한다. 성공 여부와 비식별 검증 결과만 기록하고 요청 본문, 공급자 원문 응답과
+key는 로그·Issue·PR에 남기지 않는다. 이 확인은 연결 점검일 뿐 모델 성능 평가가 아니다.
+
+현재 모델 선택은 세로 단면 데모를 위한 잠정값이다. 후속 평가는 동일한 비식별 사례에서
+Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, 오매핑,
+매핑 범위, confidence 보정과 응답 속도를 비교하고 모델 선택 ADR을 작성한다.
 
 ## 빌드와 검증
 
