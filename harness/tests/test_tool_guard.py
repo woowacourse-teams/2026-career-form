@@ -6,6 +6,8 @@ from harness.lib.workflow_checkpoint import (
     WorkflowCheckpoint,
     begin_stage,
     complete_stage,
+    approve_knowledge,
+    knowledge_digest,
 )
 
 
@@ -217,6 +219,23 @@ class ToolGuardTest(unittest.TestCase):
         self.assertTrue(decision.blocked)
         self.assertIn("현재 HEAD", decision.reason)
 
+    def test_blocks_draft_pr_without_completed_knowledge_decision(self) -> None:
+        decision = evaluate_tool_use(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "gh pr create --draft --body-file /tmp/pr.md"
+                },
+            },
+            branch="CF-34",
+            checkpoint=self._verified_without_knowledge_checkpoint(),
+            current_head="verified-head",
+            worktree_clean=True,
+        )
+
+        self.assertTrue(decision.blocked)
+        self.assertIn("지식", decision.reason)
+
     def test_allows_draft_pr_for_verified_current_head(self) -> None:
         decision = evaluate_tool_use(
             {
@@ -294,7 +313,7 @@ class ToolGuardTest(unittest.TestCase):
 
     def _verified_checkpoint(self) -> WorkflowCheckpoint:
         checkpoint = WorkflowCheckpoint(
-            schema_version=1,
+            schema_version=2,
             issue_number=34,
             branch="CF-34",
             current_stage="plan",
@@ -319,6 +338,21 @@ class ToolGuardTest(unittest.TestCase):
         )
         checkpoint = begin_stage(
             checkpoint,
+            stage="knowledge",
+            head="verified-head",
+        )
+        checkpoint = approve_knowledge(checkpoint, knowledge_digest(checkpoint))
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="knowledge",
+            head="verified-head",
+            evidence={
+                "outcome": "No reusable knowledge",
+                "approval_digest": knowledge_digest(checkpoint),
+            },
+        )
+        checkpoint = begin_stage(
+            checkpoint,
             stage="verification",
             head="verified-head",
         )
@@ -330,6 +364,40 @@ class ToolGuardTest(unittest.TestCase):
                 "command": "harness/scripts/verify.py",
                 "result": "passed",
             },
+        )
+
+    def _verified_without_knowledge_checkpoint(self) -> WorkflowCheckpoint:
+        return WorkflowCheckpoint(
+            schema_version=2,
+            issue_number=34,
+            branch="CF-34",
+            current_stage="verification",
+            stages=(
+                StageCheckpoint(
+                    "plan",
+                    "completed",
+                    "start-head",
+                    "plan-head",
+                    (("plan_path", "cf-workflow/plan.md"),),
+                ),
+                StageCheckpoint(
+                    "implementation",
+                    "completed",
+                    "plan-head",
+                    "verified-head",
+                    (("commit", "verified-head"),),
+                ),
+                StageCheckpoint(
+                    "verification",
+                    "completed",
+                    "verified-head",
+                    "verified-head",
+                    (
+                        ("command", "harness/scripts/verify.py"),
+                        ("result", "passed"),
+                    ),
+                ),
+            ),
         )
 
 

@@ -9,9 +9,11 @@ from unittest.mock import patch
 
 from harness.tests.pr_fixtures import VALID_PR_BODY
 from harness.lib.workflow_checkpoint import (
+    approve_knowledge,
     begin_stage,
     complete_stage,
     initialize_checkpoint,
+    knowledge_digest,
     save_checkpoint,
 )
 
@@ -394,6 +396,24 @@ exec /bin/bash "$@"
             )
             checkpoint = begin_stage(
                 checkpoint,
+                stage="knowledge",
+                head=head,
+            )
+            checkpoint = approve_knowledge(
+                checkpoint,
+                knowledge_digest(checkpoint),
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="knowledge",
+                head=head,
+                evidence={
+                    "outcome": "No reusable knowledge",
+                    "approval_digest": knowledge_digest(checkpoint),
+                },
+            )
+            checkpoint = begin_stage(
+                checkpoint,
                 stage="verification",
                 head=head,
             )
@@ -461,6 +481,62 @@ exec /bin/bash "$@"
         self.assertEqual(34, payload["issue_number"])
         self.assertEqual("CF-34", payload["branch"])
         self.assertEqual("plan", payload["current_stage"])
+
+    def test_workflow_checkpoint_script_replaces_and_approves_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "repository"
+            repository.mkdir()
+            self._init_issue_repository(str(repository))
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=self._without_local_git_environment(),
+                check=True,
+            )
+            script = str(SCRIPTS / "manage-workflow-checkpoint.py")
+            subprocess.run(
+                (sys.executable, script, "--cwd", str(repository), "init", "123"),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            replaced = subprocess.run(
+                (
+                    sys.executable,
+                    script,
+                    "--cwd",
+                    str(repository),
+                    "replace-candidates",
+                    "--candidate",
+                    "raw는 병합 뒤 수정하지 않는다",
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, replaced.returncode, replaced.stderr)
+            digest = json.loads(replaced.stdout)["knowledge_candidate_digest"]
+            approved = subprocess.run(
+                (
+                    sys.executable,
+                    script,
+                    "--cwd",
+                    str(repository),
+                    "approve-knowledge",
+                    digest,
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, approved.returncode, approved.stderr)
+        payload = json.loads(approved.stdout)
+        self.assertEqual(digest, payload["knowledge_approval_digest"])
 
     def test_issue_delivery_script_selects_verification(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -537,7 +613,7 @@ exec /bin/bash "$@"
             )
 
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual("resume_verification", json.loads(result.stdout)["code"])
+        self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
 
     def test_initializes_fixture_repository_without_hook_git_environment(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

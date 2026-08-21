@@ -46,6 +46,14 @@ def next_delivery_action(
             "resume_implementation",
             "구현 단계부터 이어서 작업해야 합니다.",
         )
+    knowledge = records.get("knowledge")
+    if checkpoint.schema_version >= 2 and (
+        knowledge is None or knowledge.status != "completed"
+    ):
+        return DeliveryAction(
+            "resume_knowledge",
+            "지식 후보를 한 번에 확인하고 확정해야 합니다.",
+        )
     verification = records.get("verification")
     if verification is None or verification.status != "completed":
         return DeliveryAction(

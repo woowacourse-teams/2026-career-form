@@ -176,6 +176,13 @@ def _draft_pr_decision(
         return HookDecision(True, "현재 HEAD를 확인할 수 없습니다")
     if worktree_clean is not True:
         return HookDecision(True, "커밋되지 않은 변경이 있어 Draft PR을 만들 수 없습니다")
+    if checkpoint.schema_version >= 2:
+        try:
+            knowledge = stage_checkpoint(checkpoint, "knowledge")
+        except CheckpointError:
+            return HookDecision(True, "지식 후보 확정 체크포인트가 없습니다")
+        if knowledge.status != "completed":
+            return HookDecision(True, "지식 후보 확정이 완료되지 않았습니다")
     try:
         verification = stage_checkpoint(checkpoint, "verification")
     except CheckpointError:
