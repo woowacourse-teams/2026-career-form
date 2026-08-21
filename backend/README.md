@@ -64,11 +64,11 @@ Git에 추가하지 않는다.
 | `CAREER_FORM_LLM_MAX_RETRIES` | `1` | OpenAI client 최대 retry 횟수다. |
 | `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | `2048` | completion token 상한이다. |
 
-입력 상한은 context 50개, target 50개, canonical JSON 65,536 bytes이며 각 문자열에는
-DTO별 절대 길이 상한이 있다. 입력 계약 위반은 400, 요청 byte 상한 초과는 413, 공급자
-오류나 출력 전체 계약 위반은 원문 없는 502로 반환한다. 모델 호출은 Spring AI의 OpenAI
-네이티브 strict JSON Schema를 사용하며 모델은 `gpt-5.6-luna`, reasoning effort는
-`none`, provider-side response 저장은 비활성화한다.
+입력 상한은 context 50개, target 50개, 원문과 canonical JSON 각각 65,536 bytes이며 각
+문자열에는 DTO별 절대 길이 상한이 있다. 입력 계약 위반은 400, 요청 byte 상한 초과는
+413, 공급자 오류나 출력 전체 계약 위반은 원문 없는 502로 반환한다. 모델 호출은 Spring
+AI의 OpenAI 네이티브 strict JSON Schema를 사용하며 모델은 `gpt-5.6-luna`, reasoning
+effort는 `none`, provider-side response 저장은 비활성화한다.
 
 로컬 Compose에서는 [`.env.example`](../.env.example)을 `.env.local`의 출발점으로
 사용할 수 있다. LLM을 활성화하려면 아래 세 설정을 명시하고 나머지 제한값은 필요할 때만

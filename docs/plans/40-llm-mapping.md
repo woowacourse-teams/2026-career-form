@@ -286,10 +286,12 @@ git commit -m "feat: LLM 매핑 계약과 전체 응답 검증 추가"
 - Create: `backend/src/main/java/com/careerform/llm/mapping/config/LlmMappingConfiguration.java`
 - Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmMappingController.java`
 - Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmMappingExceptionHandler.java`
+- Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmMappingRequestBodyAdvice.java`
 - Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmRequestLimits.java`
 - Create: `backend/src/main/java/com/careerform/llm/mapping/api/LlmRequestTooLargeException.java`
 - Create: `backend/src/test/resources/llm/mapping-request-v1.json`
 - Test: `backend/src/test/java/com/careerform/llm/mapping/api/LlmMappingApiTest.java`
+- Test: `backend/src/test/java/com/careerform/llm/mapping/api/LlmMappingRequestBodyAdviceTest.java`
 - Modify: `backend/src/main/resources/application.yml`
 
 - [x] **Step 1: fake 모델을 거치는 실패하는 MockMvc 테스트 작성**
@@ -358,7 +360,7 @@ public record LlmMappingProperties(
 ) {}
 ```
 
-`application.yml`에는 아래 안전한 기본값을 둔다. accepted request의 canonical JSON byte 수는 서비스 진입 시 `ObjectMapper.writeValueAsBytes(request)`로 측정하고 `max-request-bytes`를 넘으면 413용 예외를 던진다. context/target 개수는 properties 값과 DTO의 절대 상한을 모두 확인한다.
+`application.yml`에는 아래 안전한 기본값을 둔다. 역직렬화 전 원문 stream과 accepted request의 canonical JSON byte 수를 각각 확인하고 `max-request-bytes`를 넘으면 413용 예외를 던진다. context/target 개수는 properties 값과 DTO의 절대 상한을 모두 확인한다.
 
 ```yaml
 career-form:

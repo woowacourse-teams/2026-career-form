@@ -66,7 +66,12 @@ class OpenAiMappingModelClientTest {
         assertThat(chatModel.lastPrompt().getUserMessage().getText())
             .isEqualTo(objectMapper.writeValueAsString(request));
         assertThat(chatModel.lastPrompt().getSystemMessage().getText())
-            .contains("NO_MATCH", "contact.email", "health.healthDetails");
+            .contains(
+                "schemaVersion must be 1",
+                "NO_MATCH",
+                "contact.email",
+                "health.healthDetails"
+            );
     }
 
     @Test

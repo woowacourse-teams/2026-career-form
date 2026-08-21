@@ -161,6 +161,17 @@ class LlmMappingApiTest {
     }
 
     @Test
+    void rejectsRawRequestByteLimitBeforeCanonicalization() throws Exception {
+        String paddedRequest = fixture() + " ".repeat(1024);
+
+        mockMvc.perform(post("/api/v1/llm/mappings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(paddedRequest))
+            .andExpect(status().isContentTooLarge())
+            .andExpect(jsonPath("$.code").value("llm_mapping_request_too_large"));
+    }
+
+    @Test
     void rejectsTheWholeInvalidUpstreamResponse() throws Exception {
         fakeModel.respondWith(new LlmMappingResponse(1, List.of(
             new LlmMappingResponse.Mapping("unknown-target", "NO_MATCH", 0.5)

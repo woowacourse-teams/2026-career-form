@@ -66,6 +66,7 @@ public final class OpenAiMappingModelClient implements MappingModelClient {
             .collect(Collectors.joining(", "));
         return """
             You map anonymized form-field metadata to supported profile field keys.
+            The response schemaVersion must be 1.
             Return every target field exactly once and never return a context field ID.
             Use NO_MATCH when the metadata is insufficient or no allowed key applies.
             Report confidence as a finite number from 0.0 through 1.0.
