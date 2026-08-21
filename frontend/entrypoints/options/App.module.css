@@ -1,0 +1,248 @@
+.page {
+  min-height: 100vh;
+  padding: 36px clamp(24px, 5vw, 72px) 64px;
+  background: var(--color-page);
+}
+
+.loading {
+  margin: 80px auto;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1280px;
+  margin: 0 auto 22px;
+}
+
+.eyebrow,
+.sectionHeading p {
+  margin: 0 0 6px;
+  color: var(--color-action);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--color-action-strong);
+  font-size: clamp(30px, 4vw, 44px);
+}
+
+.description {
+  margin: 9px 0 0;
+  color: var(--color-text-muted);
+}
+
+.toolbar {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.layoutSwitch {
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.layoutSwitch button {
+  min-width: 64px;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: var(--color-text-muted);
+  background: transparent;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.layoutSwitch button[aria-pressed="true"] {
+  color: var(--color-on-action);
+  background: var(--color-action-strong);
+}
+
+.saveState {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.saveState span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+
+.saveState span[data-status="saving"] {
+  background: var(--color-action);
+}
+
+.saveState span[data-status="saved"] {
+  background: var(--color-success);
+}
+
+.saveState span[data-status="error"] {
+  background: var(--color-danger);
+}
+
+.saveState button {
+  border: 0;
+  color: var(--color-action-strong);
+  background: transparent;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.notice {
+  max-width: 1280px;
+  margin: 0 auto 18px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-card);
+  padding: 12px 16px;
+  color: var(--color-action-strong);
+  background: var(--color-accent-soft);
+  font-size: 13px;
+}
+
+.preferenceError {
+  max-width: 1280px;
+  margin: -6px auto 18px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-control);
+  padding: 11px 15px;
+  color: var(--color-danger-text);
+  background: var(--color-surface);
+  font-size: 12px;
+}
+
+.layoutA {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1280px;
+  margin: auto;
+}
+
+.categoryNav,
+.formPanel,
+.accordion {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.categoryNav {
+  align-self: start;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.categoryNav button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  padding: 12px;
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.categoryNav button span,
+.accordion summary > span {
+  color: var(--color-action);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.categoryNav button[aria-current="page"] {
+  color: var(--color-action-strong);
+  background: var(--color-accent-soft);
+}
+
+.formPanel {
+  min-height: 620px;
+  padding: clamp(24px, 4vw, 42px);
+}
+
+.sectionHeading {
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 18px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  color: var(--color-action-strong);
+  font-size: 26px;
+}
+
+.layoutB {
+  display: grid;
+  gap: 12px;
+  max-width: 980px;
+  margin: auto;
+}
+
+.accordion {
+  overflow: hidden;
+}
+
+.accordion summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px;
+  color: var(--color-action-strong);
+  cursor: pointer;
+}
+
+.accordion summary em {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.accordionBody {
+  border-top: 1px solid var(--color-border);
+  padding: 22px;
+}
+
+@media (max-width: 760px) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbar {
+    justify-items: start;
+  }
+
+  .layoutA {
+    grid-template-columns: 1fr;
+  }
+
+  .categoryNav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

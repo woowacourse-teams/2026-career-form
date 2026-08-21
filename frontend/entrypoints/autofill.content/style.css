@@ -1,0 +1,17 @@
+@import "../../src/styles/global.css";
+
+:host {
+  color: var(--color-text);
+  font-family:
+    "Pretendard Variable",
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}

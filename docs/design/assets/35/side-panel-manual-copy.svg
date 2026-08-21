@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="900" viewBox="0 0 560 900" role="img" aria-labelledby="title desc">
+  <style>text { font-family: "Pretendard Variable", Pretendard, Arial, sans-serif; }</style>
+  <title id="title">범주별로 모아 보는 사이드 패널</title>
+  <desc id="desc">기본 인적사항과 연락처는 펼쳐 보고 나머지 범주는 요약해서 탐색하는 지원 정보 패널</desc>
+  <rect width="560" height="900" fill="#F6F9FC"/>
+  <rect x="42" y="20" width="476" height="860" rx="18" fill="#FFFFFF" stroke="#D6E0E8"/>
+
+  <text x="70" y="55" fill="#2196F3" font-family="Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="1">S-01, 브라우저 사이드 패널</text>
+  <text x="70" y="88" fill="#0D47A1" font-family="Arial,sans-serif" font-size="22" font-weight="700">내 지원 정보</text>
+  <rect x="448" y="65" width="42" height="28" rx="14" fill="#E3F2FD"/>
+  <text x="469" y="84" text-anchor="middle" fill="#0D47A1" font-family="Arial,sans-serif" font-size="11" font-weight="700">닫기</text>
+
+  <rect x="70" y="108" width="420" height="48" rx="9" fill="#FFFFFF" stroke="#90CAF9"/>
+  <text x="90" y="138" fill="#526272" font-family="Arial,sans-serif" font-size="12">정보 검색, 예: 이메일, 자격증, 학교</text>
+  <text x="70" y="178" fill="#0D47A1" font-family="Arial,sans-serif" font-size="10" font-weight="700">N / 10 범주 등록</text>
+  <text x="158" y="178" fill="#526272" font-family="Arial,sans-serif" font-size="10">직접 복사하거나 자동 기입을 시작하세요</text>
+
+  <rect x="70" y="198" width="420" height="150" rx="9" fill="#FFFFFF" stroke="#90CAF9"/>
+  <path d="M79 198h402a9 9 0 0 1 9 9v35H70v-35a9 9 0 0 1 9-9Z" fill="#E3F2FD"/>
+  <text x="88" y="225" fill="#0D47A1" font-family="Arial,sans-serif" font-size="13" font-weight="700">기본 인적사항</text>
+  <text x="472" y="225" text-anchor="end" fill="#2196F3" font-family="Arial,sans-serif" font-size="10">접기</text>
+  <line x1="70" y1="294" x2="490" y2="294" stroke="#D6E0E8"/>
+  <text x="88" y="263" fill="#2196F3" font-family="Arial,sans-serif" font-size="10" font-weight="700">국문 성</text>
+  <text x="88" y="282" fill="#172534" font-family="Arial,sans-serif" font-size="12">[국문 성]</text>
+  <rect x="426" y="252" width="48" height="30" rx="8" fill="#E3F2FD" stroke="#2196F3"/>
+  <text x="450" y="272" text-anchor="middle" fill="#0D47A1" font-family="Arial,sans-serif" font-size="10" font-weight="700">복사</text>
+  <text x="88" y="316" fill="#2196F3" font-family="Arial,sans-serif" font-size="10" font-weight="700">국문 이름</text>
+  <text x="88" y="335" fill="#172534" font-family="Arial,sans-serif" font-size="12">[국문 이름]</text>
+  <rect x="426" y="305" width="48" height="30" rx="8" fill="#E3F2FD" stroke="#2196F3"/>
+  <text x="450" y="325" text-anchor="middle" fill="#0D47A1" font-family="Arial,sans-serif" font-size="10" font-weight="700">복사</text>
+
+  <rect x="70" y="362" width="420" height="150" rx="9" fill="#FFFFFF" stroke="#90CAF9"/>
+  <path d="M79 362h402a9 9 0 0 1 9 9v35H70v-35a9 9 0 0 1 9-9Z" fill="#E3F2FD"/>
+  <text x="88" y="389" fill="#0D47A1" font-family="Arial,sans-serif" font-size="13" font-weight="700">연락처와 주소</text>
+  <text x="472" y="389" text-anchor="end" fill="#2196F3" font-family="Arial,sans-serif" font-size="10">접기</text>
+  <line x1="70" y1="458" x2="490" y2="458" stroke="#D6E0E8"/>
+  <text x="88" y="427" fill="#2196F3" font-family="Arial,sans-serif" font-size="10" font-weight="700">이메일주소</text>
+  <text x="88" y="446" fill="#172534" font-family="Arial,sans-serif" font-size="12">a***@example.com</text>
+  <rect x="426" y="416" width="48" height="30" rx="8" fill="#E3F2FD" stroke="#2196F3"/>
+  <text x="450" y="436" text-anchor="middle" fill="#0D47A1" font-family="Arial,sans-serif" font-size="10" font-weight="700">복사</text>
+  <text x="88" y="480" fill="#2196F3" font-family="Arial,sans-serif" font-size="10" font-weight="700">연락처</text>
+  <text x="88" y="499" fill="#172534" font-family="Arial,sans-serif" font-size="12">010-****-0000</text>
+  <rect x="426" y="469" width="48" height="30" rx="8" fill="#E3F2FD" stroke="#2196F3"/>
+  <text x="450" y="489" text-anchor="middle" fill="#0D47A1" font-family="Arial,sans-serif" font-size="10" font-weight="700">복사</text>
+
+  <rect x="70" y="526" width="420" height="50" rx="9" fill="#E3F2FD" stroke="#90CAF9"/>
+  <text x="88" y="557" fill="#0D47A1" font-family="Arial,sans-serif" font-size="13" font-weight="700">학력</text>
+  <text x="472" y="557" text-anchor="end" fill="#2196F3" font-family="Arial,sans-serif" font-size="10">N건, 펼치기</text>
+
+  <rect x="70" y="588" width="420" height="50" rx="9" fill="#E3F2FD" stroke="#90CAF9"/>
+  <text x="88" y="619" fill="#0D47A1" font-family="Arial,sans-serif" font-size="13" font-weight="700">어학, 자격증, 프로젝트</text>
+  <text x="472" y="619" text-anchor="end" fill="#2196F3" font-family="Arial,sans-serif" font-size="10">N건, 펼치기</text>
+
+  <rect x="70" y="650" width="420" height="112" rx="9" fill="#E3F2FD" stroke="#90CAF9"/>
+  <text x="88" y="681" fill="#0D47A1" font-family="Arial,sans-serif" font-size="13" font-weight="700">민감정보</text>
+  <text x="88" y="704" fill="#526272" font-family="Arial,sans-serif" font-size="10">병역, 보훈, 장애와 건강</text>
+  <text x="88" y="740" fill="#526272" font-family="Arial,sans-serif" font-size="12">••••••••, 값 가림</text>
+  <rect x="408" y="715" width="66" height="32" rx="8" fill="#FFFFFF" stroke="#2196F3"/>
+  <text x="441" y="736" text-anchor="middle" fill="#0D47A1" font-family="Arial,sans-serif" font-size="10" font-weight="700">펼치기</text>
+
+  <line x1="42" y1="790" x2="518" y2="790" stroke="#D6E0E8"/>
+  <rect x="70" y="812" width="420" height="46" rx="9" fill="#0D47A1"/>
+  <text x="280" y="841" text-anchor="middle" fill="#FFFFFF" font-family="Arial,sans-serif" font-size="14" font-weight="700">자동 기입</text>
+  <text x="280" y="873" text-anchor="middle" fill="#526272" font-family="Arial,sans-serif" font-size="10">선택 후 분석과 검토를 시작합니다</text>
+</svg>

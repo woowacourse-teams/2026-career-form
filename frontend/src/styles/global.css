@@ -1,7 +1,41 @@
+@import "pretendard/dist/web/variable/pretendardvariable.css";
+
 :root {
-  font-family: Arial, sans-serif;
-  color: #1f2937;
-  background: #ffffff;
+  --palette-blue-050: #e3f2fd;
+  --palette-blue-200: #90caf9;
+  --palette-blue-500: #2196f3;
+  --palette-blue-900: #0d47a1;
+  --color-page: #f6f9fc;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f7fa;
+  --color-accent-soft: var(--palette-blue-050);
+  --color-accent: var(--palette-blue-200);
+  --color-action: var(--palette-blue-500);
+  --color-action-strong: var(--palette-blue-900);
+  --color-on-action: #ffffff;
+  --color-text: #263442;
+  --color-text-strong: #172534;
+  --color-text-muted: #526272;
+  --color-border: #d6e0e8;
+  --color-border-strong: #8c9baa;
+  --color-focus: rgb(33 150 243 / 24%);
+  --color-success: #18794e;
+  --color-danger: #c62828;
+  --color-danger-border: #ef9a9a;
+  --color-danger-text: #9f1d1d;
+  --radius-control: 9px;
+  --radius-card: 14px;
+  --shadow-card: 0 10px 28px rgb(13 71 161 / 8%);
+  color: var(--color-text);
+  background: var(--color-page);
+  font-family:
+    "Pretendard Variable",
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
 }
 
 body {
@@ -10,4 +44,16 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
 }

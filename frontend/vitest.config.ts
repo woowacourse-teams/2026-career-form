@@ -3,7 +3,11 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     coverage: {
-      include: ["entrypoints/popup/App.tsx"],
+      exclude: ["**/*.test.{ts,tsx}", "**/main.tsx"],
+      include: [
+        "entrypoints/{options,popup,sidepanel}/App.tsx",
+        "src/**/*.{ts,tsx}",
+      ],
       provider: "v8",
       thresholds: {
         branches: 80,
