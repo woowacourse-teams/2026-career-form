@@ -211,6 +211,16 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn("@openai/codex@0.146.0", workflow)
         self.assertIn("python3 harness/scripts/verify.py", workflow)
 
+    def test_quality_gate_fetches_develop_for_raw_immutability(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "quality-gate.yml")
+        checkout = next(
+            step
+            for step in workflow["jobs"]["verify"]["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+
+        self.assertEqual("0", checkout.get("with", {}).get("fetch-depth"))
+
     def test_default_worktree_directory_is_ignored(self) -> None:
         patterns = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
 
