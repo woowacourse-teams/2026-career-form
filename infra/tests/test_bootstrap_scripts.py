@@ -1,4 +1,5 @@
 import os
+import re
 import stat
 import subprocess
 import tempfile
@@ -9,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 APP_SCRIPT = ROOT / "infra" / "scripts" / "bootstrap-app-host.sh"
 MONGODB_SCRIPT = ROOT / "infra" / "scripts" / "bootstrap-mongodb-host.sh"
+CICD_TOPIC = ROOT / "llm-wiki" / "wiki" / "topics" / "cicd-setup.md"
+CURRENT_LINK_PATTERN = re.compile(r"(?m)^> Current: \[[^\]]+\]\(([^)]+)\)$")
 
 
 class BootstrapScriptContractTest(unittest.TestCase):
@@ -299,9 +302,13 @@ printf '%s\n' "$*" >> "$APT_LOG"
             self.assertIn("2097148 KiB", completed.stdout)
 
     def test_setup_document_lists_required_github_configuration_names(self) -> None:
-        setup = (ROOT / "docs" / "operations" / "cicd-setup.md").read_text(
-            encoding="utf-8"
-        )
+        topic = CICD_TOPIC.read_text(encoding="utf-8")
+        current_match = CURRENT_LINK_PATTERN.search(topic)
+        if current_match is None:
+            self.fail("CI/CD topic Wiki에 Current raw 링크가 없습니다")
+        current = (CICD_TOPIC.parent / current_match.group(1)).resolve()
+        self.assertTrue(current.is_relative_to(ROOT / "llm-wiki" / "raw"))
+        setup = current.read_text(encoding="utf-8")
 
         for name in (
             "DOCKERHUB_USERNAME",
