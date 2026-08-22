@@ -16,23 +16,21 @@ class KnowledgeEntry:
     topic: str
     payload: Path
     supersedes: tuple[Path, ...]
-    manifest: Path
 
 
 def validate_issue_bundles(raw_root: Path, wiki_root: Path) -> list[str]:
     errors: list[str] = []
     entries: list[KnowledgeEntry] = []
     issues_root = raw_root / "issues"
-    if not issues_root.exists():
-        return errors
-    for bundle in sorted(path for path in issues_root.iterdir() if path.is_dir()):
-        manifest = bundle / "manifest.md"
-        if not manifest.is_file():
-            errors.append(f"Issue raw manifest가 없습니다: {bundle.name}")
-            continue
-        parsed, manifest_errors = _parse_manifest(manifest, raw_root)
-        entries.extend(parsed)
-        errors.extend(manifest_errors)
+    if issues_root.exists():
+        for bundle in sorted(path for path in issues_root.iterdir() if path.is_dir()):
+            manifest = bundle / "manifest.md"
+            if not manifest.is_file():
+                errors.append(f"Issue raw manifest가 없습니다: {bundle.name}")
+                continue
+            parsed, manifest_errors = _parse_manifest(manifest, raw_root)
+            entries.extend(parsed)
+            errors.extend(manifest_errors)
     errors.extend(_validate_topic_graph(tuple(entries), raw_root, wiki_root))
     return errors
 
@@ -117,7 +115,7 @@ def _entry_from(
             else:
                 resolved.append(target)
         supersedes = tuple(resolved)
-    return KnowledgeEntry(topic, payload, supersedes, manifest), errors
+    return KnowledgeEntry(topic, payload, supersedes), errors
 
 
 def _validate_payload_links(topic: str, payload: Path, bundle: Path) -> list[str]:
@@ -143,6 +141,14 @@ def _validate_topic_graph(
     for entry in entries:
         by_topic[entry.topic].append(entry)
     errors: list[str] = []
+    topic_root = wiki_root / "topics"
+    page_topics = {
+        page.stem for page in topic_root.glob("*.md") if page.is_file()
+    }
+    for topic in sorted(page_topics - by_topic.keys()):
+        errors.append(
+            f"manifest 근거가 없는 topic Wiki 문서가 있습니다: {topic}"
+        )
     for topic, topic_entries in sorted(by_topic.items()):
         if _has_cycle(tuple(topic_entries)):
             errors.append(f"Supersedes 순환이 있습니다: {topic}")

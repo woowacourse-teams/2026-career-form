@@ -111,6 +111,24 @@ class LlmWikiTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_rejects_topic_page_without_issue_manifest_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._write_valid_wiki(root)
+            self._write_topic_page(
+                root,
+                status="Current",
+                current=("../../raw/business/product-concept.md",),
+                history=("../../raw/business/product-concept.md",),
+            )
+
+            result = validate_wiki(root)
+
+        self.assertIn(
+            "manifest 근거가 없는 topic Wiki 문서가 있습니다: product-safety",
+            result.errors,
+        )
+
     def test_rejects_manifest_payload_that_does_not_exist(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

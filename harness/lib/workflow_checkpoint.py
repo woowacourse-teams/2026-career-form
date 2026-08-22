@@ -444,14 +444,17 @@ def _workflow_stages(version: int) -> tuple[str, ...]:
 
 
 def _upgrade_v1(checkpoint: WorkflowCheckpoint) -> WorkflowCheckpoint:
-    if checkpoint.current_stage == "draft_pr":
+    if (
+        checkpoint.current_stage == "draft_pr"
+        and stage_checkpoint(checkpoint, "draft_pr").status == "completed"
+    ):
         return checkpoint
     records = tuple(
         record
         for record in checkpoint.stages
         if record.name in ("plan", "implementation")
     )
-    if checkpoint.current_stage in ("verification",):
+    if checkpoint.current_stage in ("verification", "draft_pr"):
         implementation = stage_checkpoint(checkpoint, "implementation")
         head = implementation.completed_head or implementation.started_head
         return replace(

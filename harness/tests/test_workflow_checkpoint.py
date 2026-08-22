@@ -70,6 +70,25 @@ class WorkflowCheckpointTest(unittest.TestCase):
         self.assertEqual("draft_pr", checkpoint.current_stage)
         self.assertEqual("completed", stage_checkpoint(checkpoint, "draft_pr").status)
 
+    def test_upgrades_running_v1_draft_pr_before_knowledge_stage(self) -> None:
+        payload = self._completed_v1_payload()
+        payload["stages"] = [
+            *payload["stages"][:-1],
+            {
+                "name": "draft_pr",
+                "status": "running",
+                "started_head": "verified-head",
+                "completed_head": None,
+                "evidence": {},
+            },
+        ]
+
+        checkpoint = checkpoint_from(payload)
+
+        self.assertEqual(2, checkpoint.schema_version)
+        self.assertEqual("knowledge", checkpoint.current_stage)
+        self.assertEqual("running", stage_checkpoint(checkpoint, "knowledge").status)
+
     def test_replacing_candidates_invalidates_existing_approval(self) -> None:
         checkpoint = self._running_knowledge_checkpoint()
         checkpoint = replace_knowledge_candidates(checkpoint, ("결정 A",))
