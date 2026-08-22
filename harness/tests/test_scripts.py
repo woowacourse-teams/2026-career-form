@@ -619,6 +619,83 @@ exec /bin/bash "$@"
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
 
+    def test_issue_delivery_accepts_linked_worktree_git_metadata_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            linked = root / "linked"
+            source.mkdir()
+            environment = self._without_local_git_environment()
+            for command in (
+                ("git", "init", "-q", "-b", "develop"),
+                ("git", "config", "user.name", "Harness Test"),
+                ("git", "config", "user.email", "harness@example.com"),
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                ("git", "worktree", "add", "-q", "-b", "CF-123", str(linked)),
+            ):
+                subprocess.run(command, cwd=source, env=environment, check=True)
+            plan_value = subprocess.run(
+                ("git", "rev-parse", "--git-path", "cf-workflow/plan.md"),
+                cwd=linked,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            plan = Path(plan_value)
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
+            head = subprocess.run(
+                ("git", "rev-parse", "HEAD"),
+                cwd=linked,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint = initialize_checkpoint(
+                linked,
+                issue_number=123,
+                branch="CF-123",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head=head,
+                evidence={"plan_path": str(plan)},
+            )
+            checkpoint = begin_stage(checkpoint, stage="implementation", head=head)
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+                evidence={"commit": head},
+            )
+            save_checkpoint(linked, checkpoint)
+            snapshot = root / "snapshot.json"
+            snapshot.write_text(
+                json.dumps({"issue_number": 123}),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "plan-issue-delivery.py"),
+                    "--cwd",
+                    str(linked),
+                    str(snapshot),
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
+
     def test_initializes_fixture_repository_without_hook_git_environment(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
