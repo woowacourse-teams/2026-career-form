@@ -381,7 +381,7 @@ exec /bin/bash "$@"
                 checkpoint,
                 stage="plan",
                 head=head,
-                evidence={"plan_path": "docs/plans/123-plan.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -544,22 +544,26 @@ exec /bin/bash "$@"
             repository = root / "repository"
             repository.mkdir()
             self._init_issue_repository(str(repository))
-            plan = repository / "docs" / "plans" / "123-plan.md"
-            plan.parent.mkdir(parents=True)
-            plan.write_text("# Plan\n", encoding="utf-8")
             environment = self._without_local_git_environment()
             subprocess.run(
-                ("git", "add", "docs/plans/123-plan.md"),
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
                 cwd=repository,
                 env=environment,
                 check=True,
             )
-            subprocess.run(
-                ("git", "commit", "-q", "-m", "docs: 계획 추가"),
+            plan_value = subprocess.run(
+                ("git", "rev-parse", "--git-path", "cf-workflow/plan.md"),
                 cwd=repository,
                 env=environment,
+                capture_output=True,
+                text=True,
                 check=True,
-            )
+            ).stdout.strip()
+            plan = Path(plan_value)
+            if not plan.is_absolute():
+                plan = repository / plan
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
             head = subprocess.run(
                 ("git", "rev-parse", "HEAD"),
                 cwd=repository,
@@ -578,7 +582,7 @@ exec /bin/bash "$@"
                 checkpoint,
                 stage="plan",
                 head=head,
-                evidence={"plan_path": "docs/plans/123-plan.md"},
+                evidence={"plan_path": str(plan)},
             )
             checkpoint = begin_stage(
                 checkpoint,

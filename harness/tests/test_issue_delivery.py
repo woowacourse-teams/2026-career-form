@@ -168,7 +168,7 @@ class IssueDeliveryTest(unittest.TestCase):
             self._initial_checkpoint(),
             stage="plan",
             head="plan-head",
-            evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+            evidence={"plan_path": ".git/cf-workflow/plan.md"},
         )
         checkpoint = begin_stage(
             checkpoint,

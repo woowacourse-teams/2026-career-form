@@ -161,7 +161,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 checkpoint,
                 stage="plan",
                 head="plan-head",
-                evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -176,7 +176,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
         self.assertEqual("completed", plan.status)
         self.assertEqual("plan-head", plan.completed_head)
         self.assertEqual(
-            (("plan_path", "docs/plans/34-workflow-checkpoint.md"),),
+            (("plan_path", ".git/cf-workflow/plan.md"),),
             plan.evidence,
         )
         self.assertEqual("implementation", restored.current_stage)
@@ -352,7 +352,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 checkpoint,
                 stage="plan",
                 head="plan-head",
-                evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             save_checkpoint(repository, checkpoint)
 
@@ -373,7 +373,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 checkpoint,
                 stage="plan",
                 head="plan-head",
-                evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -528,7 +528,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 "completed",
                 "start-head",
                 "plan-head",
-                (("plan_path", "docs/plans/34-plan.md"),),
+                (("plan_path", ".git/cf-workflow/plan.md"),),
             ),
             StageCheckpoint(
                 "implementation",
@@ -595,7 +595,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 "status": "completed",
                 "started_head": "start-head",
                 "completed_head": "plan-head",
-                "evidence": {"plan_path": "docs/plans/34-plan.md"},
+                "evidence": {"plan_path": ".git/cf-workflow/plan.md"},
             },
             {
                 "name": "implementation",

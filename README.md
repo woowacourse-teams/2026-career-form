@@ -36,7 +36,7 @@ python3 scripts/local.py logs
 python3 scripts/local.py down
 ```
 
-Windows에서는 `python3` 대신 `py`를 사용한다. `down`은 MongoDB named volume을 삭제하지 않는다. 자세한 프로파일·Docker·MongoDB 계약은 [백엔드 안내](backend/README.md)를 참고한다.
+Windows에서는 `python3` 대신 `py`를 사용한다. `down`은 MongoDB named volume을 삭제하지 않는다. 자세한 프로파일, Docker, MongoDB 계약은 [백엔드 안내](backend/README.md)를 참고한다.
 
 ## 작업 흐름
 
@@ -47,4 +47,4 @@ Windows에서는 `python3` 대신 `py`를 사용한다. `down`은 MongoDB named 
 5. 사람이 최종 리뷰하고 머지한다.
 6. Codex가 `cf-post-merge-cleanup`으로 검증된 로컬 작업 자원을 정리한다.
 
-세부 정책은 [하네스 안내](harness/README.md)와 [설계 문서](docs/design/issue-based-ai-development-harness.md)를 참고한다.
+세부 정책은 [하네스 안내](harness/README.md)와 [Issue 개발 흐름 Wiki](llm-wiki/wiki/topics/issue-development-workflow.md)를 참고한다.
