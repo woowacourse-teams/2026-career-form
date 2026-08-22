@@ -622,18 +622,7 @@ exec /bin/bash "$@"
     def test_issue_delivery_accepts_linked_worktree_git_metadata_plan(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            source = root / "source"
-            linked = root / "linked"
-            source.mkdir()
-            environment = self._without_local_git_environment()
-            for command in (
-                ("git", "init", "-q", "-b", "develop"),
-                ("git", "config", "user.name", "Harness Test"),
-                ("git", "config", "user.email", "harness@example.com"),
-                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
-                ("git", "worktree", "add", "-q", "-b", "CF-123", str(linked)),
-            ):
-                subprocess.run(command, cwd=source, env=environment, check=True)
+            linked, environment = self._init_delivery_linked_worktree(root)
             plan_value = subprocess.run(
                 ("git", "rev-parse", "--git-path", "cf-workflow/plan.md"),
                 cwd=linked,
@@ -645,34 +634,7 @@ exec /bin/bash "$@"
             plan = Path(plan_value)
             plan.parent.mkdir(parents=True)
             plan.write_text("# Plan\n", encoding="utf-8")
-            head = subprocess.run(
-                ("git", "rev-parse", "HEAD"),
-                cwd=linked,
-                env=environment,
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout.strip()
-            checkpoint = initialize_checkpoint(
-                linked,
-                issue_number=123,
-                branch="CF-123",
-                head=head,
-            )
-            checkpoint = complete_stage(
-                checkpoint,
-                stage="plan",
-                head=head,
-                evidence={"plan_path": str(plan)},
-            )
-            checkpoint = begin_stage(checkpoint, stage="implementation", head=head)
-            checkpoint = complete_stage(
-                checkpoint,
-                stage="implementation",
-                head=head,
-                evidence={"commit": head},
-            )
-            save_checkpoint(linked, checkpoint)
+            self._save_completed_implementation(linked, plan, environment)
             snapshot = root / "snapshot.json"
             snapshot.write_text(
                 json.dumps({"issue_number": 123}),
@@ -763,6 +725,58 @@ exec /bin/bash "$@"
             encoding="utf-8"
         ).removeprefix("gitdir: ").strip()
         return source, linked_git_dir, clean_environment
+
+    def _init_delivery_linked_worktree(
+        self, root: Path
+    ) -> tuple[Path, dict[str, str]]:
+        source = root / "source"
+        linked = root / "linked"
+        source.mkdir()
+        environment = self._without_local_git_environment()
+        for command in (
+            ("git", "init", "-q", "-b", "develop"),
+            ("git", "config", "user.name", "Harness Test"),
+            ("git", "config", "user.email", "harness@example.com"),
+            ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+            ("git", "worktree", "add", "-q", "-b", "CF-123", str(linked)),
+        ):
+            subprocess.run(command, cwd=source, env=environment, check=True)
+        return linked, environment
+
+    def _save_completed_implementation(
+        self,
+        repository: Path,
+        plan: Path,
+        environment: dict[str, str],
+    ) -> None:
+        head = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            cwd=repository,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        checkpoint = initialize_checkpoint(
+            repository,
+            issue_number=123,
+            branch="CF-123",
+            head=head,
+        )
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="plan",
+            head=head,
+            evidence={"plan_path": str(plan)},
+        )
+        checkpoint = begin_stage(checkpoint, stage="implementation", head=head)
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="implementation",
+            head=head,
+            evidence={"commit": head},
+        )
+        save_checkpoint(repository, checkpoint)
 
     def _run(
         self, script: str, *arguments: str, input_text: str | None = None
