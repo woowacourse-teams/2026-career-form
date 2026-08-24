@@ -31,19 +31,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/SnapshotTooLargeError'
         '429':
           description: 분석 요청 제한 초과
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/RateLimitedError'
         '500':
           description: 서버 내부 분석 실패
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/InternalError'
 components:
   schemas:
     AnalyzeRequest:
@@ -291,7 +291,40 @@ components:
       properties:
         code:
           type: string
-          enum: [INVALID_REQUEST, SNAPSHOT_TOO_LARGE, RATE_LIMITED, INTERNAL_ERROR]
+          const: INVALID_REQUEST
+        message:
+          type: string
+          minLength: 1
+    SnapshotTooLargeError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          const: SNAPSHOT_TOO_LARGE
+        message:
+          type: string
+          minLength: 1
+    RateLimitedError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          const: RATE_LIMITED
+        message:
+          type: string
+          minLength: 1
+    InternalError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          const: INTERNAL_ERROR
         message:
           type: string
           minLength: 1

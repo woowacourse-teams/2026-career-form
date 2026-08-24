@@ -4,6 +4,7 @@ import textwrap
 import unittest
 from pathlib import Path
 
+import yaml
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 VALIDATOR_PATH = REPOSITORY_ROOT / "scripts" / "validate-application-form-api.py"
@@ -102,6 +103,27 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
                 raw_root / "application-form-analysis-api.md",
             ),
         )
+
+    def test_repository_error_codes_match_http_statuses(self) -> None:
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        responses = document["paths"]["/api/v1/application-forms/analyze"]["post"]["responses"]
+        schemas = document["components"]["schemas"]
+
+        expected = {
+            "400": "INVALID_REQUEST",
+            "413": "SNAPSHOT_TOO_LARGE",
+            "429": "RATE_LIMITED",
+            "500": "INTERNAL_ERROR",
+        }
+        for status, code in expected.items():
+            reference = responses[status]["content"]["application/json"]["schema"]["$ref"]
+            schema = schemas[reference.rsplit("/", maxsplit=1)[1]]
+            self.assertEqual(code, schema["properties"]["code"]["const"])
 
     def _replace(self, old: str, new: str, count: int = -1) -> None:
         reference = self.reference_path.read_text(encoding="utf-8")
