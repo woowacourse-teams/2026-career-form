@@ -70,6 +70,39 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         self.assertTrue(any("enum" in error for error in errors))
         self.assertTrue(any("preparationPlans and writePlan" in error for error in errors))
 
+    def test_rejects_unresolved_ref_and_object_without_unknown_property_guard(self) -> None:
+        validator = load_validator()
+        self.openapi_path.write_text(
+            self.openapi_path.read_text(encoding="utf-8").replace(
+                "additionalProperties: false", "additionalProperties: true", 1
+            ),
+            encoding="utf-8",
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("additionalProperties: false" in error for error in errors))
+        self.openapi_path.write_text(
+            self.openapi_path.read_text(encoding="utf-8").replace(
+                "#/components/schemas/Candidate", "#/components/schemas/Missing"
+            ),
+            encoding="utf-8",
+        )
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+        self.assertTrue(any("$ref" in error for error in errors))
+
+    def test_repository_raw_contract_passes(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+
+        self.assertEqual(
+            [],
+            validator.validate_contract(
+                raw_root / "application-form-analysis.openapi.yaml",
+                raw_root / "application-form-analysis-api.md",
+            ),
+        )
+
     def _replace(self, old: str, new: str, count: int = -1) -> None:
         reference = self.reference_path.read_text(encoding="utf-8")
         self.assertIn(old, reference)
@@ -79,6 +112,9 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
 OPENAPI = textwrap.dedent(
     """
     openapi: 3.1.0
+    paths:
+      /api/v1/application-forms/analyze:
+        post: {}
     components:
       schemas:
         AnalyzeRequest:

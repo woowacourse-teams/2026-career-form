@@ -51,7 +51,7 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
     if not isinstance(request_schema, Mapping) or not isinstance(response_schema, Mapping):
         return ["AnalyzeRequest와 AnalyzeResponse schema가 필요합니다"]
 
-    errors: list[str] = []
+    errors = _openapi_structure_errors(document)
     requests: dict[str, Mapping[str, Any]] = {}
     try:
         examples = _examples(reference_path)
@@ -60,7 +60,10 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
     for index, (kind, example) in enumerate(examples, start=1):
         prefix = f"example {index} ({kind})"
         schema = request_schema if kind == "request" else response_schema
-        errors.extend(_validate_schema(example, schema, document, prefix))
+        try:
+            errors.extend(_validate_schema(example, schema, document, prefix))
+        except (KeyError, ValueError) as error:
+            errors.append(f"{prefix}: $ref를 해석할 수 없습니다: {error}")
         errors.extend(_forbidden_property_errors(example, prefix))
         if kind == "request" and isinstance(example, Mapping):
             snapshot_id = example.get("snapshotId")
@@ -69,6 +72,33 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
             errors.extend(_request_relationship_errors(example, prefix))
         if kind == "response" and isinstance(example, Mapping):
             errors.extend(_response_relationship_errors(example, requests, prefix))
+    return errors
+
+
+def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
+    errors: list[str] = []
+    paths = document.get("paths")
+    if not isinstance(paths, Mapping) or set(paths) != {"/api/v1/application-forms/analyze"}:
+        errors.append("외부 API path는 POST /api/v1/application-forms/analyze 하나여야 합니다")
+    elif set(paths["/api/v1/application-forms/analyze"]) != {"post"}:
+        errors.append("외부 API method는 POST 하나여야 합니다")
+
+    def visit(value: Any, path: str) -> None:
+        if isinstance(value, Mapping):
+            if "$ref" in value:
+                try:
+                    _resolve(value, document)
+                except (KeyError, ValueError) as error:
+                    errors.append(f"{path}: $ref를 해석할 수 없습니다: {error}")
+            if value.get("type") == "object" and value.get("additionalProperties") is not False:
+                errors.append(f"{path}: object는 additionalProperties: false가 필요합니다")
+            for name, child in value.items():
+                visit(child, f"{path}.{name}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+
+    visit(document, "openapi")
     return errors
 
 
