@@ -1,8 +1,8 @@
 # Career Form Backend
 
 Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 비식별 필드 메타데이터를
-매핑하는 선택적 LLM API와 MongoDB 연결 기반을 제공한다. MongoDB Repository·컬렉션
-모델과 실제 프로필·지원서 정보 저장은 포함하지 않는다.
+매핑하는 선택적 LLM API와 MongoDB 연결 기반을 제공한다. MongoDB Repository, 컬렉션
+모델과 실제 프로필, 지원서 정보 저장은 포함하지 않는다.
 
 ## 기술 기준
 
@@ -108,7 +108,7 @@ Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, �
 `check`는 전체 테스트와 JaCoCo 검증을 수행한다. 프레임워크 부트스트랩인
 `CareerFormApplication`은 커버리지 대상에서 제외한다. 그 밖의 측정 가능한 production
 class가 없으면 `JaCoCo coverage: N/A`를 명시한다. 측정 가능한 class가 하나라도 생기면
-테스트 실행 데이터가 없을 때 빌드가 실패하고, 실행 데이터가 있으면 XML·HTML 보고서와
+테스트 실행 데이터가 없을 때 빌드가 실패하고, 실행 데이터가 있으면 XML, HTML 보고서와
 전체 라인 커버리지 80%를 검증한다.
 
 커버리지 검증 증거는 과거 보고서가 남지 않는 fresh `./gradlew clean check` 결과를 기준으로
@@ -149,7 +149,7 @@ SPRING_MONGODB_URI=mongodb://127.0.0.1:27017/career-form \
     --spring.profiles.active=local
 ```
 
-예시 URI에는 자격증명이 없다. 실제 외부 URI와 사용자명·비밀번호는 저장소, 문서, Issue, PR과 로그에 기록하지 않는다.
+예시 URI에는 자격증명이 없다. 실제 외부 URI와 사용자명, 비밀번호는 저장소, 문서, Issue, PR과 로그에 기록하지 않는다.
 
 ## 로컬 컨테이너 실행
 
@@ -172,7 +172,7 @@ py scripts/local.py
 
 스크립트는 `.env.local` 존재 여부와 `docker compose config --quiet`을 먼저 확인하고, 값은 출력하지 않은 채 공통 Compose와 로컬 override를 조합한다. 검증이 성공하면 이미지를 빌드하고 backend와 MongoDB가 healthy가 될 때까지 기다린다.
 
-상태·로그·종료도 같은 진입점을 사용한다.
+상태, 로그, 종료도 같은 진입점을 사용한다.
 
 ```bash
 python3 scripts/local.py status
@@ -231,11 +231,11 @@ Spring Boot 4.1의 연결 속성은 `spring.mongodb.uri`이며 `application.yml`
 - `local`: Compose가 `.env.local`의 자격증명 없는 내부 URI를 주입하고 MongoDB 포트를 호스트에 공개하지 않는다.
 - `dev`, `staging`, `prod`: 관리형 또는 외부 MongoDB의 URI를 secret manager나 런타임 환경에서 주입한다.
 - 원격 application 배포는 MongoDB를 함께 기동하지 않는다. DB host의 Docker bootstrap과
-  Compose 계약은 `infra/mongodb/`와 `docs/operations/cicd-setup.md`에 분리되어 있으며,
-  실제 계정·네트워크·backup·restore 작업은 관리자가 수행한다.
-- 현재는 연결 기반만 제공하며 실제 프로필·지원서 데이터를 MongoDB에 저장하거나 전송하지 않는다.
+  Compose 계약은 `infra/mongodb/`와 [CI/CD 설정 Wiki](../llm-wiki/wiki/topics/cicd-setup.md)에 분리되어 있으며,
+  실제 계정, 네트워크, backup, restore 작업은 관리자가 수행한다.
+- 현재는 연결 기반만 제공하며 실제 프로필, 지원서 데이터를 MongoDB에 저장하거나 전송하지 않는다.
 
-MongoDB URI가 없거나 connection string 형식이 잘못되면 설정 해석 또는 MongoDB client 생성 중 애플리케이션 기동이 실패하므로 health 엔드포인트가 생성되지 않는다. URI 형식은 유효하지만 DNS·네트워크·자격증명 문제로 연결할 수 없거나 MongoDB가 중단되면 애플리케이션 기동 후 전역 `/actuator/health`가 HTTP 503과 `DOWN`을 반환하고 backend 컨테이너도 unhealthy 상태가 된다.
+MongoDB URI가 없거나 connection string 형식이 잘못되면 설정 해석 또는 MongoDB client 생성 중 애플리케이션 기동이 실패하므로 health 엔드포인트가 생성되지 않는다. URI 형식은 유효하지만 DNS, 네트워크, 자격증명 문제로 연결할 수 없거나 MongoDB가 중단되면 애플리케이션 기동 후 전역 `/actuator/health`가 HTTP 503과 `DOWN`을 반환하고 backend 컨테이너도 unhealthy 상태가 된다.
 
 ## 상태 확인과 API 문서
 
@@ -249,11 +249,11 @@ Actuator의 HTTP 노출 범위는 모든 프로파일에서 `health`로 제한�
 
 ## CI/CD와 원격 배포
 
-PR 백엔드 검증, development·staging·production digest 배포, release·hotfix 승격과
+PR 백엔드 검증, development, staging, production digest 배포, release, hotfix 승격과
 readiness rollback은 저장소 루트의 `.github/workflows/`와 `infra/`가 담당한다.
 애플리케이션 프로젝트는 환경 credential이나 원격 host 정보를 포함하지 않는다.
 
 - 최초 GitHub Environment, runner, Docker Hub와 host 설정:
-  [`docs/operations/cicd-setup.md`](../docs/operations/cicd-setup.md)
+  [CI/CD 설정 Wiki](../llm-wiki/wiki/topics/cicd-setup.md)
 - 배포, hotfix, 자동 rollback과 Draft revert 대응:
-  [`docs/operations/deployment-runbook.md`](../docs/operations/deployment-runbook.md)
+  [배포 Runbook Wiki](../llm-wiki/wiki/topics/deployment-runbook.md)

@@ -9,9 +9,11 @@ from unittest.mock import patch
 
 from harness.tests.pr_fixtures import VALID_PR_BODY
 from harness.lib.workflow_checkpoint import (
+    approve_knowledge,
     begin_stage,
     complete_stage,
     initialize_checkpoint,
+    knowledge_digest,
     save_checkpoint,
 )
 
@@ -379,7 +381,7 @@ exec /bin/bash "$@"
                 checkpoint,
                 stage="plan",
                 head=head,
-                evidence={"plan_path": "docs/plans/123-plan.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -391,6 +393,24 @@ exec /bin/bash "$@"
                 stage="implementation",
                 head=head,
                 evidence={"commit": head},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="knowledge",
+                head=head,
+            )
+            checkpoint = approve_knowledge(
+                checkpoint,
+                knowledge_digest(checkpoint),
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="knowledge",
+                head=head,
+                evidence={
+                    "outcome": "No reusable knowledge",
+                    "approval_digest": knowledge_digest(checkpoint),
+                },
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -462,28 +482,88 @@ exec /bin/bash "$@"
         self.assertEqual("CF-34", payload["branch"])
         self.assertEqual("plan", payload["current_stage"])
 
+    def test_workflow_checkpoint_script_replaces_and_approves_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "repository"
+            repository.mkdir()
+            self._init_issue_repository(str(repository))
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=self._without_local_git_environment(),
+                check=True,
+            )
+            script = str(SCRIPTS / "manage-workflow-checkpoint.py")
+            subprocess.run(
+                (sys.executable, script, "--cwd", str(repository), "init", "123"),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            replaced = subprocess.run(
+                (
+                    sys.executable,
+                    script,
+                    "--cwd",
+                    str(repository),
+                    "replace-candidates",
+                    "--candidate",
+                    "raw는 병합 뒤 수정하지 않는다",
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, replaced.returncode, replaced.stderr)
+            digest = json.loads(replaced.stdout)["knowledge_candidate_digest"]
+            approved = subprocess.run(
+                (
+                    sys.executable,
+                    script,
+                    "--cwd",
+                    str(repository),
+                    "approve-knowledge",
+                    digest,
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, approved.returncode, approved.stderr)
+        payload = json.loads(approved.stdout)
+        self.assertEqual(digest, payload["knowledge_approval_digest"])
+
     def test_issue_delivery_script_selects_verification(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             repository = root / "repository"
             repository.mkdir()
             self._init_issue_repository(str(repository))
-            plan = repository / "docs" / "plans" / "123-plan.md"
-            plan.parent.mkdir(parents=True)
-            plan.write_text("# Plan\n", encoding="utf-8")
             environment = self._without_local_git_environment()
             subprocess.run(
-                ("git", "add", "docs/plans/123-plan.md"),
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
                 cwd=repository,
                 env=environment,
                 check=True,
             )
-            subprocess.run(
-                ("git", "commit", "-q", "-m", "docs: 계획 추가"),
+            plan_value = subprocess.run(
+                ("git", "rev-parse", "--git-path", "cf-workflow/plan.md"),
                 cwd=repository,
                 env=environment,
+                capture_output=True,
+                text=True,
                 check=True,
-            )
+            ).stdout.strip()
+            plan = Path(plan_value)
+            if not plan.is_absolute():
+                plan = repository / plan
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
             head = subprocess.run(
                 ("git", "rev-parse", "HEAD"),
                 cwd=repository,
@@ -502,7 +582,7 @@ exec /bin/bash "$@"
                 checkpoint,
                 stage="plan",
                 head=head,
-                evidence={"plan_path": "docs/plans/123-plan.md"},
+                evidence={"plan_path": str(plan)},
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -537,7 +617,46 @@ exec /bin/bash "$@"
             )
 
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual("resume_verification", json.loads(result.stdout)["code"])
+        self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
+
+    def test_issue_delivery_accepts_linked_worktree_git_metadata_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            linked, environment = self._init_delivery_linked_worktree(root)
+            plan_value = subprocess.run(
+                ("git", "rev-parse", "--git-path", "cf-workflow/plan.md"),
+                cwd=linked,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            plan = Path(plan_value)
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
+            self._save_completed_implementation(linked, plan, environment)
+            snapshot = root / "snapshot.json"
+            snapshot.write_text(
+                json.dumps({"issue_number": 123}),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "plan-issue-delivery.py"),
+                    "--cwd",
+                    str(linked),
+                    str(snapshot),
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
 
     def test_initializes_fixture_repository_without_hook_git_environment(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -606,6 +725,58 @@ exec /bin/bash "$@"
             encoding="utf-8"
         ).removeprefix("gitdir: ").strip()
         return source, linked_git_dir, clean_environment
+
+    def _init_delivery_linked_worktree(
+        self, root: Path
+    ) -> tuple[Path, dict[str, str]]:
+        source = root / "source"
+        linked = root / "linked"
+        source.mkdir()
+        environment = self._without_local_git_environment()
+        for command in (
+            ("git", "init", "-q", "-b", "develop"),
+            ("git", "config", "user.name", "Harness Test"),
+            ("git", "config", "user.email", "harness@example.com"),
+            ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+            ("git", "worktree", "add", "-q", "-b", "CF-123", str(linked)),
+        ):
+            subprocess.run(command, cwd=source, env=environment, check=True)
+        return linked, environment
+
+    def _save_completed_implementation(
+        self,
+        repository: Path,
+        plan: Path,
+        environment: dict[str, str],
+    ) -> None:
+        head = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            cwd=repository,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        checkpoint = initialize_checkpoint(
+            repository,
+            issue_number=123,
+            branch="CF-123",
+            head=head,
+        )
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="plan",
+            head=head,
+            evidence={"plan_path": str(plan)},
+        )
+        checkpoint = begin_stage(checkpoint, stage="implementation", head=head)
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="implementation",
+            head=head,
+            evidence={"commit": head},
+        )
+        save_checkpoint(repository, checkpoint)
 
     def _run(
         self, script: str, *arguments: str, input_text: str | None = None

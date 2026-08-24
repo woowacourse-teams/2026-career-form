@@ -55,11 +55,12 @@
     {
       "id": 5,
       "prompt": "status:ready인 [Plan] Issue #123에 승인된 ADR 전문과 경로가 있어. 작업해줘.",
-      "expected_output": "CF-123 브랜치를 만든 뒤 승인된 전문을 docs/adr 경로에 작성하고 같은 Draft PR에 포함한다.",
+      "expected_output": "CF-123에서 승인된 ADR을 지식 후보로 보존하고 일괄 승인 뒤 Issue raw에 기록해 같은 Draft PR에 포함한다.",
       "files": [],
       "expectations": [
         "승인 전 단계가 아니라 CF-123 작업 브랜치에서 ADR 파일을 만든다",
-        "Issue에서 승인된 ADR 전문과 docs/adr 규약을 보존한다",
+        "Issue에서 승인된 ADR 전문과 topic Wiki의 ADR 작성 규약을 보존한다",
+        "raw 작성 직전에 전체 지식 후보와 digest를 사람에게 확인받는다",
         "ADR을 Issue #123의 Draft PR에 포함한다"
       ]
     },
@@ -134,6 +135,18 @@
         "기존 PR head와 현재 검증 HEAD가 같은지 확인한다",
         "record_draft_pr action으로 PR 번호와 URL을 완료 근거에 기록한다",
         "gh pr create와 본문 게시를 반복하지 않는다"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "Issue #123 구현은 끝났어. 작업 중 결정은 없으니 바로 Draft PR 만들어줘.",
+      "expected_output": "No reusable knowledge 판단과 빈 후보 digest를 한 번에 제시하고 사람 승인 뒤에만 knowledge 단계를 완료해 Draft PR로 진행한다.",
+      "files": [],
+      "expectations": [
+        "구현 완료 뒤 resume_knowledge를 선택한다",
+        "No reusable knowledge도 사람 승인 대상에 포함한다",
+        "승인 전에는 knowledge 완료와 Draft PR 생성을 수행하지 않는다",
+        "승인 digest와 현재 후보 digest가 같아야 다음 단계로 진행한다"
       ]
     }
   ]

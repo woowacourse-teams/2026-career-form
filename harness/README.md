@@ -38,9 +38,9 @@ python3 harness/scripts/ensure-environment.py
 
 `cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[AI]`는 제품의 LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용하고 `[Harness]`는 개발 하네스와 워크플로우 변경에 사용한다. `[Plan]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.
 
-기획 중 대안을 비교한 장기 결정이 제품, 아키텍처, 보안, 데이터 또는 공용 워크플로우에 영향을 주면 `docs/adr/`의 ADR 대상으로 판단한다. Issue 계약에는 전체 ADR 초안과 저장 경로를 제안하고, `cf-issue-workflow`가 `CF-*` 브랜치에서 ADR 파일을 작성해 같은 PR에 포함한다. 일반 조사 결과나 쉽게 되돌릴 수 있는 선택에는 ADR을 강제하지 않는다. 상태 전이를 재개할 때는 선택한 Python으로 `harness/scripts/plan-project-issue.py <snapshot 파일>`을 실행해 첫 미완료 action을 확인한다.
+기획 중 대안을 비교한 장기 결정이 제품, 아키텍처, 보안, 데이터 또는 공용 워크플로우에 영향을 주면 ADR 대상으로 판단한다. Issue 계약에는 전체 ADR 초안과 예상 Issue raw 경로를 제안하고, `cf-issue-workflow`가 작업 중 지식 후보에 보존한다. raw 작성 직전 사람 승인 뒤 `llm-wiki/raw/issues/CF-<번호>/documents/adr/`에 기록해 같은 PR에 포함한다. 일반 조사 결과나 쉽게 되돌릴 수 있는 선택에는 ADR을 강제하지 않는다. 상태 전이를 재개할 때는 선택한 Python으로 `harness/scripts/plan-project-issue.py <snapshot 파일>`을 실행해 첫 미완료 action을 확인한다.
 
-AI가 Issue 계약 초안을 GitHub에 게시하면 사람이 원격 제목과 본문을 수정하고 재개할 때까지 planning 상태로 멈춘다. 재개하면 사용자 변경을 덮어쓰지 않고 원격 계약을 검증한다. 사용자가 승인한 원격 본문의 SHA-256 digest와 ready 직전 최신 digest가 같은 경우에만 `status:ready`로 전환한다. 확정된 Issue 구현은 `cf-issue-workflow` 스킬이 이어받는다. 이 스킬도 Draft PR을 게시한 뒤 in-progress 상태에서 멈추고, 사람의 GitHub 수정과 재개 후 원격 PR을 검증한 경우에만 review 상태로 전환한다. Issue label과 Project Status의 대응, 브랜치와 PR 연결 계약은 `docs/agents/issue-tracker.md`에서 확인한다.
+AI가 Issue 계약 초안을 GitHub에 게시하면 사람이 원격 제목과 본문을 수정하고 재개할 때까지 planning 상태로 멈춘다. 재개하면 사용자 변경을 덮어쓰지 않고 원격 계약을 검증한다. 사용자가 승인한 원격 본문의 SHA-256 digest와 ready 직전 최신 digest가 같은 경우에만 `status:ready`로 전환한다. 확정된 Issue 구현은 `cf-issue-workflow` 스킬이 이어받는다. 이 스킬도 Draft PR을 게시한 뒤 in-progress 상태에서 멈추고, 사람의 GitHub 수정과 재개 후 원격 PR을 검증한 경우에만 review 상태로 전환한다. Issue label과 Project Status의 대응, 브랜치와 PR 연결 계약은 `llm-wiki/wiki/topics/issue-development-workflow.md`에서 확인한다.
 
 전체 흐름은 `cf-issue-lifecycle`이 기획, 구현, Issue와 Draft PR의 수동 편집 대기, 사람 머지 대기와 `cf-post-merge-cleanup`을 연결한다. 재개할 때는 GitHub Issue와 PR 상태, worktree 체크포인트를 실제 Git 상태와 대조하고 첫 미완료 단계부터 진행한다. 공용 흐름은 Orca와 개인 플러그인에 의존하지 않는다.
 
@@ -48,10 +48,11 @@ Issue와 PR 본문은 각각 선택한 `.github/ISSUE_TEMPLATE/*.yml`과 `.githu
 
 ## worktree 워크플로우 체크포인트
 
-`cf-issue-workflow`는 계획 확인, 구현, 검증, Draft PR 생성 전에 상태와 시작 HEAD를 기록한다. 저장 위치는 다음 명령이 반환하는 worktree 전용 Git 디렉터리이며 Git 추적 파일이 아니다.
+`cf-issue-workflow`는 계획 확인, 구현, 지식 판정, 검증, Draft PR 생성 전에 상태와 시작 HEAD를 기록한다. 저장 위치는 다음 명령이 반환하는 worktree 전용 Git 디렉터리이며 Git 추적 파일이 아니다.
 
 ```bash
 git rev-parse --git-path cf-workflow/checkpoint.json
+git rev-parse --git-path cf-workflow/plan.md
 ```
 
 새 작업은 체크포인트를 초기화하고, 각 단계는 시작 전에 `resume`, 완료 뒤 실제 근거와 함께 `complete`를 호출한다.
@@ -60,6 +61,8 @@ git rev-parse --git-path cf-workflow/checkpoint.json
 .venv/bin/python harness/scripts/manage-workflow-checkpoint.py --cwd . init 34
 .venv/bin/python harness/scripts/manage-workflow-checkpoint.py --cwd . resume implementation
 .venv/bin/python harness/scripts/manage-workflow-checkpoint.py --cwd . complete implementation --evidence commit=<현재 HEAD>
+.venv/bin/python harness/scripts/manage-workflow-checkpoint.py --cwd . replace-candidates --candidate '<확정 후보>'
+.venv/bin/python harness/scripts/manage-workflow-checkpoint.py --cwd . approve-knowledge <후보 digest>
 ```
 
 재개 시에는 GitHub에서 확인한 Issue 번호, Draft PR 번호와 head OID를 OS 임시 JSON snapshot에 넣고 다음 명령으로 첫 미완료 단계를 확인한다.
@@ -68,13 +71,13 @@ git rev-parse --git-path cf-workflow/checkpoint.json
 .venv/bin/python harness/scripts/plan-issue-delivery.py --cwd . <snapshot 파일>
 ```
 
-체크포인트가 없거나 손상됐거나 현재 Issue와 브랜치가 다르면 자동으로 진행하지 않는다. 검증 완료 HEAD와 현재 HEAD가 다르면 검증부터 다시 수행한다. 현재 HEAD의 검증 완료 근거가 없거나 worktree가 깨끗하지 않으면 PreToolUse 훅이 `gh pr create`를 차단한다. 다른 질문과 읽기 작업은 차단하지 않으며, 환경변수와 `MEMORY.md`는 완료 상태의 기준으로 사용하지 않는다.
+체크포인트가 없거나 손상됐거나 현재 Issue와 브랜치가 다르면 자동으로 진행하지 않는다. 구현 뒤 후보 전체 또는 `No reusable knowledge`를 사람에게 한 번에 제시하고 승인 digest를 기록해야 한다. 후보가 바뀌면 승인이 무효화된다. 지식 판정 완료, 현재 HEAD의 검증 완료 근거가 없거나 worktree가 깨끗하지 않으면 PreToolUse 훅이 `gh pr create`를 차단한다. 다른 질문과 읽기 작업은 차단하지 않으며, 환경변수와 `MEMORY.md`는 완료 상태의 기준으로 사용하지 않는다.
 
 ## 강제 지점
 
 | 지점 | 검사 |
 |---|---|
-| Codex `PreToolUse` | 삭제, 시크릿, 마이그레이션, 배포, 장기 브랜치 수정, 검증되지 않은 HEAD의 PR 생성 차단 |
+| Codex `PreToolUse` | 삭제, 시크릿, 마이그레이션, 배포, 장기 브랜치 수정, 지식 미확정 또는 검증되지 않은 HEAD의 PR 생성 차단 |
 | `commit-msg` | 커밋 type, 한글 설명, scope 미사용, Breaking Change |
 | `pre-commit` | 빠른 하네스 테스트, 스테이지된 공백 오류 |
 | `pre-push` | 전체 하네스 검증 |

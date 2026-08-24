@@ -49,7 +49,12 @@ def main() -> int:
         ),
         (PYTHON, str(ROOT / "harness" / "scripts" / "validate-shell-syntax.py")),
         (PYTHON, str(ROOT / "harness" / "scripts" / "validate-skills.py")),
-        (PYTHON, str(ROOT / "harness" / "scripts" / "validate-llm-wiki.py")),
+        (
+            PYTHON,
+            str(ROOT / "harness" / "scripts" / "validate-llm-wiki.py"),
+            "--base-ref",
+            "origin/develop",
+        ),
         (
             PYTHON,
             str(ROOT / "harness" / "scripts" / "validate-skill-routing-evals.py"),

@@ -10,11 +10,15 @@ from harness.lib.workflow_checkpoint import (
     CheckpointError,
     StageCheckpoint,
     WorkflowCheckpoint,
+    approve_knowledge,
     begin_stage,
+    checkpoint_from,
     checkpoint_path,
     complete_stage,
     initialize_checkpoint,
+    knowledge_digest,
     load_checkpoint,
+    replace_knowledge_candidates,
     resume_stage,
     save_checkpoint,
     stage_checkpoint,
@@ -22,6 +26,113 @@ from harness.lib.workflow_checkpoint import (
 
 
 class WorkflowCheckpointTest(unittest.TestCase):
+    def test_upgrades_unfinished_v1_checkpoint_before_knowledge_stage(self) -> None:
+        checkpoint = checkpoint_from(
+            {
+                "schema_version": 1,
+                "issue_number": 34,
+                "branch": "CF-34",
+                "current_stage": "implementation",
+                "stages": [
+                    {
+                        "name": "plan",
+                        "status": "completed",
+                        "started_head": "start-head",
+                        "completed_head": "plan-head",
+                        "evidence": {"plan_path": "cf-workflow/plan.md"},
+                    },
+                    {
+                        "name": "implementation",
+                        "status": "completed",
+                        "started_head": "plan-head",
+                        "completed_head": "implementation-head",
+                        "evidence": {"commit": "implementation-head"},
+                    },
+                ],
+            }
+        )
+
+        advanced = begin_stage(
+            checkpoint,
+            stage="knowledge",
+            head="implementation-head",
+        )
+
+        self.assertEqual(2, advanced.schema_version)
+        self.assertEqual("knowledge", advanced.current_stage)
+
+    def test_preserves_completed_v1_draft_pr_without_new_knowledge_gate(self) -> None:
+        payload = self._completed_v1_payload()
+
+        checkpoint = checkpoint_from(payload)
+
+        self.assertEqual(1, checkpoint.schema_version)
+        self.assertEqual("draft_pr", checkpoint.current_stage)
+        self.assertEqual("completed", stage_checkpoint(checkpoint, "draft_pr").status)
+
+    def test_upgrades_running_v1_draft_pr_before_knowledge_stage(self) -> None:
+        payload = self._completed_v1_payload()
+        payload["stages"] = [
+            *payload["stages"][:-1],
+            {
+                "name": "draft_pr",
+                "status": "running",
+                "started_head": "verified-head",
+                "completed_head": None,
+                "evidence": {},
+            },
+        ]
+
+        checkpoint = checkpoint_from(payload)
+
+        self.assertEqual(2, checkpoint.schema_version)
+        self.assertEqual("knowledge", checkpoint.current_stage)
+        self.assertEqual("running", stage_checkpoint(checkpoint, "knowledge").status)
+
+    def test_replacing_candidates_invalidates_existing_approval(self) -> None:
+        checkpoint = self._running_knowledge_checkpoint()
+        checkpoint = replace_knowledge_candidates(checkpoint, ("결정 A",))
+        approved = approve_knowledge(checkpoint, knowledge_digest(checkpoint))
+
+        changed = replace_knowledge_candidates(approved, ("결정 B",))
+
+        self.assertIsNotNone(approved.knowledge_approval_digest)
+        self.assertIsNone(changed.knowledge_approval_digest)
+
+    def test_rejects_recorded_knowledge_without_matching_approval(self) -> None:
+        checkpoint = replace_knowledge_candidates(
+            self._running_knowledge_checkpoint(),
+            ("Issue raw는 병합 뒤 수정하지 않는다",),
+        )
+
+        with self.assertRaisesRegex(CheckpointError, "승인"):
+            complete_stage(
+                checkpoint,
+                stage="knowledge",
+                head="implementation-head",
+                evidence={
+                    "outcome": "Recorded",
+                    "approval_digest": knowledge_digest(checkpoint),
+                    "manifest": "llm-wiki/raw/issues/CF-34/manifest.md",
+                },
+            )
+
+    def test_completes_no_reusable_knowledge_with_approved_empty_candidates(self) -> None:
+        checkpoint = self._running_knowledge_checkpoint()
+        checkpoint = approve_knowledge(checkpoint, knowledge_digest(checkpoint))
+
+        completed = complete_stage(
+            checkpoint,
+            stage="knowledge",
+            head="implementation-head",
+            evidence={
+                "outcome": "No reusable knowledge",
+                "approval_digest": knowledge_digest(checkpoint),
+            },
+        )
+
+        self.assertEqual("completed", stage_checkpoint(completed, "knowledge").status)
+
     def test_initializes_plan_before_work_starts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository = self._init_repository(Path(directory) / "repository")
@@ -69,7 +180,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 checkpoint,
                 stage="plan",
                 head="plan-head",
-                evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -84,7 +195,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
         self.assertEqual("completed", plan.status)
         self.assertEqual("plan-head", plan.completed_head)
         self.assertEqual(
-            (("plan_path", "docs/plans/34-workflow-checkpoint.md"),),
+            (("plan_path", ".git/cf-workflow/plan.md"),),
             plan.evidence,
         )
         self.assertEqual("implementation", restored.current_stage)
@@ -260,7 +371,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 checkpoint,
                 stage="plan",
                 head="plan-head",
-                evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             save_checkpoint(repository, checkpoint)
 
@@ -281,7 +392,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 checkpoint,
                 stage="plan",
                 head="plan-head",
-                evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -293,6 +404,24 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 stage="implementation",
                 head="implementation-head",
                 evidence={"commit": "implementation-head"},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="knowledge",
+                head="implementation-head",
+            )
+            checkpoint = approve_knowledge(
+                checkpoint,
+                knowledge_digest(checkpoint),
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="knowledge",
+                head="implementation-head",
+                evidence={
+                    "outcome": "No reusable knowledge",
+                    "approval_digest": knowledge_digest(checkpoint),
+                },
             )
             checkpoint = begin_stage(
                 checkpoint,
@@ -418,7 +547,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
                 "completed",
                 "start-head",
                 "plan-head",
-                (("plan_path", "docs/plans/34-plan.md"),),
+                (("plan_path", ".git/cf-workflow/plan.md"),),
             ),
             StageCheckpoint(
                 "implementation",
@@ -448,6 +577,80 @@ class WorkflowCheckpointTest(unittest.TestCase):
             current_stage=stage,
             stages=(*records[:index], StageCheckpoint(stage, "running", "head")),
         )
+
+    def _running_knowledge_checkpoint(self) -> WorkflowCheckpoint:
+        checkpoint = WorkflowCheckpoint(
+            schema_version=2,
+            issue_number=34,
+            branch="CF-34",
+            current_stage="implementation",
+            stages=(
+                StageCheckpoint(
+                    "plan",
+                    "completed",
+                    "start-head",
+                    "plan-head",
+                    (("plan_path", "cf-workflow/plan.md"),),
+                ),
+                StageCheckpoint(
+                    "implementation",
+                    "completed",
+                    "plan-head",
+                    "implementation-head",
+                    (("commit", "implementation-head"),),
+                ),
+            ),
+        )
+        return begin_stage(
+            checkpoint,
+            stage="knowledge",
+            head="implementation-head",
+        )
+
+    def _completed_v1_payload(self) -> dict[str, object]:
+        stages = [
+            {
+                "name": "plan",
+                "status": "completed",
+                "started_head": "start-head",
+                "completed_head": "plan-head",
+                "evidence": {"plan_path": ".git/cf-workflow/plan.md"},
+            },
+            {
+                "name": "implementation",
+                "status": "completed",
+                "started_head": "plan-head",
+                "completed_head": "verified-head",
+                "evidence": {"commit": "verified-head"},
+            },
+            {
+                "name": "verification",
+                "status": "completed",
+                "started_head": "verified-head",
+                "completed_head": "verified-head",
+                "evidence": {
+                    "command": "harness/scripts/verify.py",
+                    "result": "passed",
+                },
+            },
+            {
+                "name": "draft_pr",
+                "status": "completed",
+                "started_head": "verified-head",
+                "completed_head": "verified-head",
+                "evidence": {
+                    "pr_number": "36",
+                    "pr_url": "https://github.com/acme/repo/pull/36",
+                },
+            },
+        ]
+        return {
+            "schema_version": 1,
+            "issue_number": 34,
+            "branch": "CF-34",
+            "current_stage": "draft_pr",
+            "stages": stages,
+        }
 
 
 if __name__ == "__main__":

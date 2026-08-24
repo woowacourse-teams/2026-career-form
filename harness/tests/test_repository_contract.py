@@ -211,6 +211,16 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn("@openai/codex@0.146.0", workflow)
         self.assertIn("python3 harness/scripts/verify.py", workflow)
 
+    def test_quality_gate_fetches_develop_for_raw_immutability(self) -> None:
+        workflow = self._yaml(ROOT / ".github" / "workflows" / "quality-gate.yml")
+        checkout = next(
+            step
+            for step in workflow["jobs"]["verify"]["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+
+        self.assertEqual("0", checkout.get("with", {}).get("fetch-depth"))
+
     def test_default_worktree_directory_is_ignored(self) -> None:
         patterns = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
 
@@ -225,15 +235,26 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertEqual("MIT", metadata["license"])
         self.assertIn("MIT License", (skill / "LICENSE").read_text(encoding="utf-8"))
 
-    def test_agents_and_adr_define_llm_wiki_collection_boundaries(self) -> None:
-        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        adr = (ROOT / "docs" / "adr" / "25-llm-wiki.md").read_text(encoding="utf-8")
+    def test_docs_contains_only_the_wiki_bridge(self) -> None:
+        files = tuple(
+            sorted(
+                path.relative_to(ROOT / "docs").as_posix()
+                for path in (ROOT / "docs").rglob("*")
+                if path.is_file()
+            )
+        )
 
-        self.assertIn("사용자 요청", agents)
-        self.assertIn("사람 승인", agents)
-        self.assertIn("정본", agents)
-        self.assertIn("#25", adr)
-        self.assertIn("정본", adr)
+        self.assertEqual(("README.md",), files)
+        self.assertTrue(
+            (
+                ROOT
+                / "llm-wiki"
+                / "raw"
+                / "issues"
+                / "CF-41"
+                / "manifest.md"
+            ).is_file()
+        )
 
     def test_issue_contract_runs_for_ready_labels_and_edits(self) -> None:
         workflow = self._yaml(ROOT / ".github" / "workflows" / "issue-contract.yml")
@@ -314,31 +335,6 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn('"CF-${{ github.event.issue.number }}"', run)
         self.assertIn('"hotfix/CF-${{ github.event.issue.number }}"', run)
         self.assertIn("gh workflow run", run)
-
-    def test_release_and_hotfix_policy_is_synchronized_across_documents(self) -> None:
-        paths = (
-            ROOT / "docs" / "conventions" / "branching.md",
-            ROOT / "docs" / "conventions" / "commit.md",
-            ROOT / "harness" / "policies" / "environments.md",
-            ROOT / "harness" / "policies" / "github-ruleset.md",
-            ROOT / "docs" / "design" / "issue-based-ai-development-harness.md",
-        )
-
-        for path in paths:
-            content = path.read_text(encoding="utf-8")
-            with self.subTest(path=str(path.relative_to(ROOT))):
-                self.assertIn("release/", content)
-                self.assertIn("hotfix", content)
-
-        branching = paths[0].read_text(encoding="utf-8")
-        self.assertIn("hotfix/CF-<Issue 번호>", branching)
-        self.assertNotIn("| `CF-*` → `main` |", branching)
-        self.assertIn("라벨을 병합 허용\n조건으로 사용하지 않는다", branching)
-        self.assertIn("release/<MAJOR.MINOR.PATCH>", branching)
-        self.assertIn("revert/<main-merge-sha>", branching)
-        self.assertIn("Start release", branching)
-        self.assertNotIn("Release 브랜치가 없는", branching)
-        self.assertNotIn("`release/*` 브랜치는 만들지 않는다", branching)
 
     def _yaml(self, path: Path) -> dict[str, object]:
         value = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
