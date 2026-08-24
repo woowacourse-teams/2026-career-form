@@ -46,3 +46,5 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [회사 어댑터 개발](topics/adapter-development.md) | 안전한 어댑터 개발 경계 | 2026-08-22 |
 | [어댑터 필드 현황](topics/adapter-field-inventory.md) | 필드 지원 상태 확인 경계 | 2026-08-22 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
+| [지원서 분석 API](topics/application-form-analysis-api.md) | section 중심 비식별 snapshot 분석 계약 | 2026-08-24 |
+| [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | browser, backend, LLM 최소 전송 경계 | 2026-08-24 |

@@ -13,3 +13,11 @@
 - Source-Tree: acc0c186e310f2582bbae0d5f48694ca159fd7cf
 - Raw: llm-wiki/raw/issues/CF-41/manifest.md
 - Topics: 16
+
+## [2026-08-24] ingest | CF-44 지원서 분석 API와 데이터 경계
+
+- Disposition: New
+- Approval-Digest: 82759db7cd94a01a18eccbc2074396c9900b4fb09e299f4e364664af4bf060ed
+- Source-Tree: b6bb3eff9d590ddf43b1f906b7e7cccd9c4ec6c9
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2
