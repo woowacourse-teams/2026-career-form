@@ -10,6 +10,8 @@ from harness.lib.workflow_checkpoint import (
     WorkflowCheckpoint,
     begin_stage,
     complete_stage,
+    knowledge_digest,
+    approve_knowledge,
 )
 
 
@@ -44,8 +46,23 @@ class IssueDeliveryTest(unittest.TestCase):
 
         self.assertEqual("resume_plan", action.code)
 
-    def test_selects_verification_after_implementation(self) -> None:
+    def test_selects_knowledge_review_after_implementation(self) -> None:
         checkpoint = self._completed_implementation()
+
+        action = next_delivery_action(
+            checkpoint,
+            DeliveryObservation(
+                issue_number=34,
+                branch="CF-34",
+                head="implementation-head",
+                plan_exists=True,
+            ),
+        )
+
+        self.assertEqual("resume_knowledge", action.code)
+
+    def test_selects_verification_after_knowledge_decision(self) -> None:
+        checkpoint = self._completed_knowledge()
 
         action = next_delivery_action(
             checkpoint,
@@ -139,7 +156,7 @@ class IssueDeliveryTest(unittest.TestCase):
 
     def _initial_checkpoint(self) -> WorkflowCheckpoint:
         return WorkflowCheckpoint(
-            schema_version=1,
+            schema_version=2,
             issue_number=34,
             branch="CF-34",
             current_stage="plan",
@@ -151,7 +168,7 @@ class IssueDeliveryTest(unittest.TestCase):
             self._initial_checkpoint(),
             stage="plan",
             head="plan-head",
-            evidence={"plan_path": "docs/plans/34-workflow-checkpoint.md"},
+            evidence={"plan_path": ".git/cf-workflow/plan.md"},
         )
         checkpoint = begin_stage(
             checkpoint,
@@ -167,7 +184,7 @@ class IssueDeliveryTest(unittest.TestCase):
 
     def _completed_verification(self) -> WorkflowCheckpoint:
         checkpoint = begin_stage(
-            self._completed_implementation(),
+            self._completed_knowledge(),
             stage="verification",
             head="implementation-head",
         )
@@ -178,6 +195,23 @@ class IssueDeliveryTest(unittest.TestCase):
             evidence={
                 "command": "harness/scripts/verify.py",
                 "result": "passed",
+            },
+        )
+
+    def _completed_knowledge(self) -> WorkflowCheckpoint:
+        checkpoint = begin_stage(
+            self._completed_implementation(),
+            stage="knowledge",
+            head="implementation-head",
+        )
+        checkpoint = approve_knowledge(checkpoint, knowledge_digest(checkpoint))
+        return complete_stage(
+            checkpoint,
+            stage="knowledge",
+            head="implementation-head",
+            evidence={
+                "outcome": "No reusable knowledge",
+                "approval_digest": knowledge_digest(checkpoint),
             },
         )
 

@@ -10,13 +10,16 @@ sys.path.insert(0, str(ROOT))
 
 from harness.lib.workflow_checkpoint import (
     CheckpointError,
+    approve_knowledge,
     begin_stage,
     checkpoint_payload,
     complete_stage,
     git_value,
     initialize_checkpoint,
+    knowledge_digest,
     load_checkpoint,
     resume_stage,
+    replace_knowledge_candidates,
     save_checkpoint,
 )
 
@@ -29,7 +32,10 @@ def main() -> int:
     except CheckpointError as error:
         print(error, file=sys.stderr)
         return 2
-    print(json.dumps(checkpoint_payload(checkpoint), ensure_ascii=False))
+    payload = checkpoint_payload(checkpoint)
+    if checkpoint.schema_version >= 2:
+        payload["knowledge_candidate_digest"] = knowledge_digest(checkpoint)
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
@@ -47,7 +53,14 @@ def _execute(arguments: argparse.Namespace):
     if arguments.action == "show":
         return checkpoint
     head = git_value(arguments.cwd, "rev-parse", "HEAD")
-    if arguments.action == "begin":
+    if arguments.action == "replace-candidates":
+        updated = replace_knowledge_candidates(
+            checkpoint,
+            tuple(arguments.candidate),
+        )
+    elif arguments.action == "approve-knowledge":
+        updated = approve_knowledge(checkpoint, arguments.digest)
+    elif arguments.action == "begin":
         updated = begin_stage(checkpoint, stage=arguments.stage, head=head)
     elif arguments.action == "resume":
         updated = resume_stage(checkpoint, stage=arguments.stage, head=head)
@@ -69,6 +82,10 @@ def _parser() -> argparse.ArgumentParser:
     initialize = actions.add_parser("init")
     initialize.add_argument("issue_number", type=int)
     actions.add_parser("show")
+    candidates = actions.add_parser("replace-candidates")
+    candidates.add_argument("--candidate", action="append", default=[])
+    approval = actions.add_parser("approve-knowledge")
+    approval.add_argument("digest")
     begin = actions.add_parser("begin")
     begin.add_argument("stage")
     resume = actions.add_parser("resume")

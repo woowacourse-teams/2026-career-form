@@ -20,8 +20,9 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `cf-using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+**Save plans to:** `git rev-parse --git-path cf-workflow/plan.md`가 반환하는 worktree별 Git 메타데이터 경로
+- 계획은 Git 추적 파일이 아니며 Issue raw 후보도 아니다.
+- 사용자가 다른 위치를 명시하면 그 지시를 우선한다.
 
 ## Scope Check
 
@@ -156,18 +157,18 @@ If you find issues, fix them inline. No need to re-review - just fix and move on
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to the worktree `cf-workflow/plan.md`. Two execution options:**
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+**1. Inline Execution (recommended)** - Execute tasks in this session using cf-executing-plans, batch execution with checkpoints
 
-**2. Inline Execution** - Execute tasks in this session using cf-executing-plans, batch execution with checkpoints
+**2. Subagent-Driven** - Use only when the user explicitly authorizes delegation
 
 **Which approach?"**
 
-**If Subagent-Driven chosen:**
+**If Subagent-Driven is explicitly chosen:**
 - **REQUIRED SUB-SKILL:** Use `cf-executing-plans`
 - Fresh subagent per task + two-stage review
 
-**If Inline Execution chosen:**
+**If Inline Execution is chosen:**
 - **REQUIRED SUB-SKILL:** Use `cf-executing-plans`
 - Batch execution with checkpoints for review

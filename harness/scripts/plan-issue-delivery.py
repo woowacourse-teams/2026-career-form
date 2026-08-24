@@ -89,9 +89,19 @@ def _plan_exists(checkpoint: WorkflowCheckpoint, cwd: Path) -> bool:
     path_value = dict(plan.evidence).get("plan_path")
     if not path_value:
         return False
-    root = cwd.resolve()
-    path = (root / path_value).resolve()
-    return path.is_relative_to(root) and path.is_file()
+    expected_value = git_value(
+        cwd,
+        "rev-parse",
+        "--git-path",
+        "cf-workflow/plan.md",
+    )
+    expected = Path(expected_value)
+    if not expected.is_absolute():
+        expected = cwd / expected
+    recorded = Path(path_value)
+    if not recorded.is_absolute():
+        recorded = cwd / recorded
+    return recorded.resolve() == expected.resolve() and expected.is_file()
 
 
 if __name__ == "__main__":

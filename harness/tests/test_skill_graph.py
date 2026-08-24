@@ -59,6 +59,7 @@ class SkillGraphTest(unittest.TestCase):
             "cf-test-driven-development",
             "cf-verification-before-completion",
             "cf-code-review",
+            "cf-karpathy-llm-wiki",
         )
 
     def test_shared_lifecycle_has_no_local_plugin_dependency(self) -> None:

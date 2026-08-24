@@ -17,7 +17,7 @@ metadata:
 
 ## 1. 접근 확인
 
-1. `AGENTS.md`, `docs/PRODUCT_CONCEPT.md`, `docs/PROFILE_FIELDS.md`, `harness/policies/issue-contract.md`, `docs/conventions/commit.md`, `docs/conventions/branching.md`를 읽는다.
+1. `AGENTS.md`, `llm-wiki/wiki/topics/product-concept.md`, `llm-wiki/wiki/topics/profile-fields.md`, `llm-wiki/wiki/topics/project-conventions.md`, `harness/policies/issue-contract.md`를 읽는다.
 2. 선택한 Python으로 `harness/scripts/diagnose-project-access.py`를 실행한다.
 3. 결과가 `ready`가 아니면 `cf-github-project-onboarding`으로 전환하고 원격 변경 전에 중단한다.
 4. `harness/project.json`에서 owner, Project number, repository를 읽는다.
@@ -68,7 +68,7 @@ metadata:
 5. `[Plan]`은 기획 자산만 반영하는 작업을 기본으로 한다. 처음 승인할 Issue 계약에 구현이 포함돼 있으면 같은 Issue와 PR에서 구현까지 진행할 수 있다.
 6. 여러 대안을 검토했고 결과가 후속 작업, 제품 정책, 아키텍처, 보안, 데이터 또는 공용 워크플로우에 지속적으로 영향을 주는지 판단한다.
 7. 장기 결정이 없으면 Issue 본문에 ADR이 필요하지 않은 이유를 기록한다.
-8. 장기 결정이 있으면 `docs/adr/README.md`를 기준으로 파일 경로와 ADR 전문을 작성해 Issue 계약과 함께 제안한다. 승인 전에는 ADR 파일을 만들지 않는다.
+8. 장기 결정이 있으면 `llm-wiki/wiki/topics/adr-authoring.md`를 기준으로 ADR 전문과 구현 뒤 예상 raw 경로 `llm-wiki/raw/issues/CF-<Issue 번호>/documents/adr/<Issue 번호>-<slug>.md`를 Issue 계약과 함께 제안한다. 승인 전에는 raw 파일을 만들지 않는다.
 
 ## 6. Issue 계약 초안 작성
 
@@ -92,7 +92,7 @@ Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`
 ## 7. 구현 계획과 GitHub 편집 체크포인트
 
 1. Issue 범위를 한 PR 안의 논리적 커밋 단위로 나눈다.
-2. 여러 세션이 필요하면 `docs/plans/<Issue 번호>-<slug>.md`에 계획을 기록한다.
+2. 기획 중 논리적 커밋 계획은 Issue 본문에 둔다. 구현 세션의 상세 계획은 worktree가 만들어진 뒤 `git rev-parse --git-path cf-workflow/plan.md` 경로에 기록한다.
 3. 각 단위에 예상 파일, 실패 테스트, 구현, 검증 명령, 커밋 제목을 적는다.
 4. 개별 커밋 제목은 Conventional Commit type을 유지하고 설명을 `한다`로 끝내지 않는다.
 5. `publish_planning_contract`에서 `gh issue edit --body-file <임시 파일>`로 초안을 원격 Issue에 게시하고 `gh issue view`로 게시 결과를 확인한다. 인라인 `--body`를 사용하지 않는다.

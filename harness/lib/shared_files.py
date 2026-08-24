@@ -12,7 +12,6 @@ PROTECTED_PREFIXES = (
     ".github/workflows/",
     ".githooks/",
     "harness/",
-    "docs/conventions/",
 )
 CLOSING_ISSUE_PATTERN = re.compile(
     r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)"

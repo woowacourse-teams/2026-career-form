@@ -1,6 +1,8 @@
 import re
 from pathlib import Path
 
+from harness.lib.llm_wiki_bundle import validate_issue_bundles
+from harness.lib.raw_immutability import validate_raw_immutability
 from harness.lib.result import ValidationResult
 
 
@@ -10,7 +12,7 @@ REQUIRED_RAW_METADATA = ("Source", "Collected", "Published")
 REQUIRED_WIKI_METADATA = ("Sources", "Raw", "Updated")
 
 
-def validate_wiki(root: Path) -> ValidationResult:
+def validate_wiki(root: Path, *, base_ref: str | None = None) -> ValidationResult:
     wiki_root = root / "llm-wiki"
     raw_root = wiki_root / "raw"
     article_root = wiki_root / "wiki"
@@ -19,11 +21,16 @@ def validate_wiki(root: Path) -> ValidationResult:
         return ValidationResult(tuple(errors))
 
     errors.extend(_validate_raw_files(raw_root))
+    errors.extend(validate_issue_bundles(raw_root, article_root))
+    if base_ref is not None:
+        errors.extend(validate_raw_immutability(root, base_ref))
     index = article_root / "index.md"
     indexed = _indexed_articles(index)
+    errors.extend(_validate_index_links(article_root, indexed))
     for article in _articles(article_root):
         relative = article.relative_to(article_root).as_posix()
-        errors.extend(_validate_article(article, raw_root))
+        if not relative.startswith("topics/"):
+            errors.extend(_validate_article(article, raw_root))
         if relative not in indexed:
             errors.append(f"색인에 없는 Wiki 문서가 있습니다: {relative}")
     return ValidationResult(tuple(errors))
@@ -37,10 +44,16 @@ def _required_structure(raw_root: Path, article_root: Path) -> list[str]:
 def _validate_raw_files(raw_root: Path) -> list[str]:
     errors: list[str] = []
     for raw in raw_root.rglob("*.md"):
+        if raw.is_relative_to(raw_root / "issues"):
+            continue
         metadata = _metadata(raw.read_text(encoding="utf-8"))
         for name in REQUIRED_RAW_METADATA:
             if name not in metadata:
                 errors.append(f"raw 메타데이터가 없습니다: {raw.relative_to(raw_root)}: {name}")
+            elif not metadata[name]:
+                errors.append(
+                    f"raw 메타데이터 값이 비어 있습니다: {raw.relative_to(raw_root)}: {name}"
+                )
     return errors
 
 
@@ -77,6 +90,15 @@ def _metadata(content: str) -> dict[str, str]:
 
 def _indexed_articles(index: Path) -> set[str]:
     return set(INDEX_LINK_PATTERN.findall(index.read_text(encoding="utf-8")))
+
+
+def _validate_index_links(article_root: Path, indexed: set[str]) -> list[str]:
+    errors: list[str] = []
+    for relative in indexed:
+        target = (article_root / relative).resolve()
+        if not target.is_relative_to(article_root.resolve()) or not target.is_file():
+            errors.append(f"존재하지 않는 Wiki 색인 링크가 있습니다: {relative}")
+    return errors
 
 
 def _articles(article_root: Path) -> tuple[Path, ...]:
