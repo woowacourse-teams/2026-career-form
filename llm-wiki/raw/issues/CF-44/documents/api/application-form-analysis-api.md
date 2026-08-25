@@ -159,7 +159,7 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
 
 ## Backend에서 LLM으로의 최소 payload
 
-backend는 회사 어댑터와 결정 규칙을 먼저 적용한다. 미지원 사이트에서 규칙으로 확정하지 못한 field와 의미 판단에 필요한 section 이름·parent 관계·label/ARIA·control type·option 표시명만 LLM에 전달한다. preparation snapshot 전체와 `actionCandidates`는 LLM에 전달하지 않는다.
+backend는 회사 어댑터와 결정 규칙을 먼저 적용한다. 미지원 사이트의 입력field와 의미 판단에 필요한 section 이름·parent 관계·label/ARIA·control type·option 표시명만 LLM에 전달한다. preparation snapshot 전체와 `actionCandidates`는 LLM에 전달하지 않는다.
 
 LLM structured output은 `candidateId`와 allowlist profile field key 또는 `NO_MATCH`만 반환한다. LLM 결과는 `LLM_SUGGESTED`이며 사용자 확인 전 실행 근거가 아니다.
 
