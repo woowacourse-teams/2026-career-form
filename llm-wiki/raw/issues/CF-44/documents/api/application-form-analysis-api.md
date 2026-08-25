@@ -4,13 +4,15 @@
 
 외부 API는 역할이 다른 두 POST endpoint로 분리한다. `POST /api/v1/preparation/analyze`는 DOM 준비 후보만 분석하고, `POST /api/v1/fields/analyze`는 준비가 끝난 DOM의 field만 매핑한다. 인증 방식은 이 계약 범위 밖이다.
 
-두 요청 모두 비식별 `site`와 평평한 `sections[]`를 사용한다. `parentSectionId`는 같은 snapshot의 다른 section만 가리키며 순환할 수 없다. candidate는 자신을 포함한 section으로 소속을 표현하므로 `sectionId`를 중복하지 않고, 소속이 불분명하면 `section-root` section에 넣는다.
+두 요청 모두 비식별 `site`와 평평한 `sections[]`를 사용한다. `parentSectionId`는 같은 snapshot의 다른 section만 가리키며 순환할 수 없다. candidate는 자신을 포함한 section 또는 `items[]`로 소속을 표현하므로 `sectionId`와 `itemId`를 중복하지 않는다. section 소속이 불분명한 candidate는 `section-root` section에 넣는다.
+
+반복되는 자격·학력·경력처럼 한 레코드에 여러 field가 함께 속하면 `items[]`로 한 번 더 묶는다. `itemId`는 snapshot 안에서만 유일한 불투명 ID이며 DOM class 이름이나 순번을 장기 locator로 사용하지 않는다. section에 직접 속한 단일 field는 `sections[].fields[]`, 반복 레코드의 field는 `sections[].items[].fields[]`에 둔다. DOM 복제용 template과 비활성 원본은 item으로 수집하지 않는다.
 
 실제 프로필 값과 control value, HTML, 전체 URL·query·fragment, checked/selected 상태, 쿠키·세션·계정 정보, selector와 실행 코드는 요청·예시·LLM payload에 금지한다. 선택지는 실제 value 대신 `optionId`와 표시명만 보낼 수 있다. `displayName`, `domId`, `domName`, `placeholder`는 발견한 짧은 문자열만 보내며 빈 문자열과 `null`은 보내지 않는다.
 
 ## Snapshot A: preparation 분석
 
-`POST /api/v1/preparation/analyze`는 아직 실행하지 않은 `actionCandidates`만 받는다. field candidate와 write plan은 이 endpoint에 존재하지 않는다. 응답의 `preparationPlans`는 사용자 승인 뒤에만 브라우저가 실행한다.
+`POST /api/v1/preparation/analyze`는 아직 실행하지 않은 `actionCandidates`만 받는다. section 전체에 영향을 주는 후보는 `sections[].actionCandidates[]`, 반복 item 내부에 실제로 속한 후보는 `sections[].items[].actionCandidates[]`에 둔다. field candidate와 write plan은 이 endpoint에 존재하지 않는다. 응답의 `preparationPlans`는 사용자 승인 뒤에만 브라우저가 실행한다.
 
 <!-- api-example: preparation-request -->
 ```json
@@ -20,14 +22,21 @@
   "site": {"host": "careers.example.test", "pathPattern": "/apply/*"},
   "sections": [
     {
-      "sectionId": "section-root",
-      "actionCandidates": [
+      "sectionId": "section-qualification",
+      "displayName": "자격",
+      "actionCandidates": [],
+      "items": [
         {
-          "candidateId": "action-certification-add",
-          "element": "button",
-          "control": "button",
-          "visibility": "visible",
-          "displayName": "자격 항목 추가"
+          "itemId": "qualification-item-01",
+          "actionCandidates": [
+            {
+              "candidateId": "action-certification-add",
+              "element": "button",
+              "control": "button",
+              "visibility": "visible",
+              "displayName": "자격 항목 추가"
+            }
+          ]
         }
       ]
     }
@@ -63,7 +72,7 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
 
 ## Snapshot B: field 분석
 
-`POST /api/v1/fields/analyze`는 준비가 끝난 DOM의 `fields`만 받는다. action candidate와 preparation plan은 이 endpoint에 존재하지 않는다. 응답은 `candidateId`로 참조하는 최상위 `fields`와 제한된 write plan만 반환한다.
+`POST /api/v1/fields/analyze`는 준비가 끝난 DOM의 `fields`만 받는다. section 직접 field와 반복 item field를 함께 허용하지만 한 candidate를 두 위치에 중복하지 않는다. action candidate와 preparation plan은 이 endpoint에 존재하지 않는다. 응답은 중첩 위치와 무관하게 `candidateId`로 참조하는 최상위 `fields`와 제한된 write plan만 반환한다.
 
 <!-- api-example: fields-request -->
 ```json
@@ -75,21 +84,47 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
     {
       "sectionId": "section-qualification",
       "displayName": "자격",
-      "fields": [
+      "fields": [],
+      "items": [
         {
-          "candidateId": "field-certificate-name",
-          "element": "input",
-          "control": "text",
-          "visibility": "visible",
-          "displayName": "자격 명칭",
-          "domName": "certificateName"
+          "itemId": "qualification-item-01",
+          "fields": [
+            {
+              "candidateId": "field-certificate-name-01",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "자격 명칭",
+              "domName": "certificateName"
+            },
+            {
+              "candidateId": "field-certificate-issuer-01",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "발급 기관"
+            }
+          ]
         },
         {
-          "candidateId": "field-certificate-issuer",
-          "element": "input",
-          "control": "text",
-          "visibility": "visible",
-          "displayName": "발급 기관"
+          "itemId": "qualification-item-02",
+          "fields": [
+            {
+              "candidateId": "field-certificate-name-02",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "자격 명칭",
+              "domName": "certificateName"
+            },
+            {
+              "candidateId": "field-certificate-issuer-02",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "발급 기관"
+            }
+          ]
         }
       ]
     }
@@ -105,14 +140,28 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
   "analysisStatus": "COMPLETE",
   "fields": [
     {
-      "candidateId": "field-certificate-name",
+      "candidateId": "field-certificate-name-01",
       "profileField": "testName",
       "mappingStatus": "RULE_MATCHED",
       "interactionStatus": "READY",
       "writePlan": {"command": "SET_TEXT"}
     },
     {
-      "candidateId": "field-certificate-issuer",
+      "candidateId": "field-certificate-issuer-01",
+      "profileField": "issuer",
+      "mappingStatus": "LLM_SUGGESTED",
+      "interactionStatus": "READY",
+      "writePlan": {"command": "SET_TEXT"}
+    },
+    {
+      "candidateId": "field-certificate-name-02",
+      "profileField": "testName",
+      "mappingStatus": "RULE_MATCHED",
+      "interactionStatus": "READY",
+      "writePlan": {"command": "SET_TEXT"}
+    },
+    {
+      "candidateId": "field-certificate-issuer-02",
       "profileField": "issuer",
       "mappingStatus": "LLM_SUGGESTED",
       "interactionStatus": "READY",
@@ -148,7 +197,7 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
   "warningCodes": ["UNRESOLVED_FIELD"],
   "fields": [
     {
-      "candidateId": "field-certificate-name",
+      "candidateId": "field-certificate-name-01",
       "mappingStatus": "UNKNOWN",
       "interactionStatus": "UNVERIFIED",
       "reasonCodes": ["UNKNOWN", "UNVERIFIED"]
@@ -159,7 +208,7 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
 
 ## Backend에서 LLM으로의 최소 payload
 
-backend는 회사 어댑터와 결정 규칙을 먼저 적용한다. 미지원 사이트의 입력field와 의미 판단에 필요한 section 이름·parent 관계·label/ARIA·control type·option 표시명만 LLM에 전달한다. preparation snapshot 전체와 `actionCandidates`는 LLM에 전달하지 않는다.
+backend는 회사 어댑터와 결정 규칙을 먼저 적용한다. 미지원 사이트의 입력 field와 의미 판단에 필요한 section 이름·parent 관계·`itemId`·label/ARIA·control type·option 표시명만 LLM에 전달한다. 같은 `itemId`의 field는 하나의 반복 레코드 문맥으로 유지한다. preparation snapshot 전체와 `actionCandidates`는 LLM에 전달하지 않는다.
 
 LLM structured output은 `candidateId`와 allowlist profile field key 또는 `NO_MATCH`만 반환한다. LLM 결과는 `LLM_SUGGESTED`이며 사용자 확인 전 실행 근거가 아니다.
 

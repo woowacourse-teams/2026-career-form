@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Application Form Analysis API
-  version: 2.2.0
+  version: 2.3.0
   description: 비식별 지원서 DOM snapshot의 preparation과 field 분석을 분리한 계약이다. 인증은 이 명세 범위 밖이다.
 paths:
   /api/v1/preparation/analyze:
@@ -120,6 +120,19 @@ components:
         displayName: {type: string, minLength: 1}
         actionCandidates:
           type: array
+          items: {$ref: '#/components/schemas/ActionCandidate'}
+        items:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/PreparationItem'}
+    PreparationItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, actionCandidates]
+      properties:
+        itemId: {type: string, minLength: 1}
+        actionCandidates:
+          type: array
           minItems: 1
           items: {$ref: '#/components/schemas/ActionCandidate'}
     FieldsSection:
@@ -132,6 +145,20 @@ components:
         displayName: {type: string, minLength: 1}
         fields:
           type: array
+          items: {$ref: '#/components/schemas/FieldCandidate'}
+        items:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/FieldsItem'}
+    FieldsItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, fields]
+      properties:
+        itemId: {type: string, minLength: 1}
+        fields:
+          type: array
+          minItems: 1
           items: {$ref: '#/components/schemas/FieldCandidate'}
     ActionCandidate:
       type: object

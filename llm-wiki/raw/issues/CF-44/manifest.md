@@ -2,7 +2,7 @@
 
 > Issue: CF-44
 > Collected: 2026-08-25
-> Approval-Digest: 70cb0b1946eb0f058fc3b92d1920a8650a76f27e3bb50a044dd2e7e487261c10
+> Approval-Digest: 39378e4cefce4574a1305bf1fdcfb1cfd091803d3b7114b737086fff53117a92
 > Source-Revision: b6bb3eff9d590ddf43b1f906b7e7cccd9c4ec6c9
 > Source-Tree: b6bb3eff9d590ddf43b1f906b7e7cccd9c4ec6c9
 

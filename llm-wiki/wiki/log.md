@@ -42,3 +42,10 @@
 - Approval-Digest: 70cb0b1946eb0f058fc3b92d1920a8650a76f27e3bb50a044dd2e7e487261c10
 - Raw: llm-wiki/raw/issues/CF-44/manifest.md
 - Topics: 2
+
+## [2026-08-25] revise | CF-44 반복 레코드 item 문맥 추가
+
+- Disposition: Revised before merge
+- Approval-Digest: 39378e4cefce4574a1305bf1fdcfb1cfd091803d3b7114b737086fff53117a92
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2

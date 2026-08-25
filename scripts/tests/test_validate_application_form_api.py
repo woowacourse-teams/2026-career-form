@@ -228,6 +228,73 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
             response["preparationPlans"][0],
         )
 
+    def test_repository_groups_repeatable_records_into_items(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        schemas = document["components"]["schemas"]
+
+        self.assertEqual(
+            {"$ref": "#/components/schemas/PreparationItem"},
+            schemas["PreparationSection"]["properties"]["items"]["items"],
+        )
+        self.assertEqual(
+            {"$ref": "#/components/schemas/FieldsItem"},
+            schemas["FieldsSection"]["properties"]["items"]["items"],
+        )
+        self.assertEqual(
+            ["itemId", "fields"], schemas["FieldsItem"]["required"]
+        )
+
+        examples = validator._examples(raw_root / "application-form-analysis-api.md")
+        request = next(example for kind, example in examples if kind == "fields-request")
+        qualification = next(
+            section
+            for section in request["sections"]
+            if section["sectionId"] == "section-qualification"
+        )
+
+        self.assertEqual([], qualification["fields"])
+        self.assertEqual(
+            ["qualification-item-01", "qualification-item-02"],
+            [item["itemId"] for item in qualification["items"]],
+        )
+        self.assertTrue(all(item["fields"] for item in qualification["items"]))
+
+    def test_rejects_duplicate_nested_item_and_candidate_ids(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        self.openapi_path.write_text(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            ),
+            encoding="utf-8",
+        )
+        reference = (raw_root / "application-form-analysis-api.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"itemId": "qualification-item-02"', reference)
+        self.assertIn('"candidateId": "field-certificate-name-02"', reference)
+        reference = reference.replace(
+            '"itemId": "qualification-item-02"',
+            '"itemId": "qualification-item-01"',
+            1,
+        ).replace(
+            '"candidateId": "field-certificate-name-02"',
+            '"candidateId": "field-certificate-name-01"',
+            1,
+        )
+        self.reference_path.write_text(reference, encoding="utf-8")
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("duplicate itemId" in error for error in errors))
+        self.assertTrue(any("duplicate candidateId" in error for error in errors))
+
     def test_repository_rejects_execution_count_in_preparation_response(self) -> None:
         validator = load_validator()
         raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"

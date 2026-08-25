@@ -216,6 +216,7 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
     section_ids = {section.get("sectionId") for section in sections if isinstance(section, Mapping)}
     errors: list[str] = []
     candidate_ids: set[str] = set()
+    item_ids: set[str] = set()
     parents: dict[str, str] = {}
     for section in sections:
         if not isinstance(section, Mapping):
@@ -226,8 +227,15 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
             if parent not in section_ids:
                 errors.append(f"{path}: parentSectionId가 존재하지 않습니다: {parent}")
             parents[section_id] = parent
+        for item in section.get("items", []):
+            if not isinstance(item, Mapping) or not isinstance(item.get("itemId"), str):
+                continue
+            item_id = item["itemId"]
+            if item_id in item_ids:
+                errors.append(f"{path}: duplicate itemId: {item_id}")
+            item_ids.add(item_id)
         for collection in ("fields", "actionCandidates"):
-            for candidate in section.get(collection, []):
+            for candidate in _section_candidates(section, collection):
                 if isinstance(candidate, Mapping) and isinstance(candidate.get("candidateId"), str):
                     candidate_id = candidate["candidateId"]
                     if candidate_id in candidate_ids:
@@ -286,15 +294,23 @@ def _request_candidate_ids(request: Mapping[str, Any]) -> tuple[set[str], set[st
             continue
         fields.update(
             candidate["candidateId"]
-            for candidate in section.get("fields", [])
+            for candidate in _section_candidates(section, "fields")
             if isinstance(candidate, Mapping) and isinstance(candidate.get("candidateId"), str)
         )
         actions.update(
             candidate["candidateId"]
-            for candidate in section.get("actionCandidates", [])
+            for candidate in _section_candidates(section, "actionCandidates")
             if isinstance(candidate, Mapping) and isinstance(candidate.get("candidateId"), str)
         )
     return fields, actions
+
+
+def _section_candidates(section: Mapping[str, Any], collection: str) -> list[Any]:
+    candidates = list(section.get(collection, []))
+    for item in section.get("items", []):
+        if isinstance(item, Mapping):
+            candidates.extend(item.get(collection, []))
+    return candidates
 
 
 def main() -> int:
