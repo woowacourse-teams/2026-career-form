@@ -155,15 +155,14 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         )
         valid_plan = (
             '"command": "ADD_REPEATABLE_GROUP",\n'
-            '      "expectedEffect": "GROUP_COUNT_INCREMENT",\n'
-            '      "maxExecutions": 3'
+            '      "expectedEffect": "GROUP_COUNT_INCREMENT"'
         )
         self.assertIn(valid_plan, reference)
         reference = reference.replace(
             valid_plan,
             '"command": "REVEAL_SECTION",\n'
             '      "expectedEffect": "TARGET_VISIBLE",\n'
-            '      "maxExecutions": 3,\n'
+            '      "maxExecutions": 2,\n'
             '      "targetSectionId": "section-root"',
             1,
         )
@@ -185,15 +184,13 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         )
         valid_plan = (
             '"command": "ADD_REPEATABLE_GROUP",\n'
-            '      "expectedEffect": "GROUP_COUNT_INCREMENT",\n'
-            '      "maxExecutions": 3'
+            '      "expectedEffect": "GROUP_COUNT_INCREMENT"'
         )
         self.assertIn(valid_plan, reference)
         reference = reference.replace(
             valid_plan,
             '"command": "REVEAL_SECTION",\n'
             '      "expectedEffect": "TARGET_VISIBLE",\n'
-            '      "maxExecutions": 1,\n'
             '      "targetSectionId": "missing-section"',
             1,
         )
@@ -203,7 +200,18 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
 
         self.assertTrue(any("targetSectionId가 요청에 없습니다" in error for error in errors))
 
-    def test_repository_repeatable_group_example_uses_safety_ceiling(self) -> None:
+    def test_repository_preparation_plans_omit_execution_count(self) -> None:
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(encoding="utf-8")
+        )
+
+        for name in ("RevealSectionPlan", "AddRepeatableGroupPlan"):
+            schema = document["components"]["schemas"][name]
+            self.assertNotIn("maxExecutions", schema["required"])
+            self.assertNotIn("maxExecutions", schema["properties"])
+
+    def test_repository_repeatable_group_example_omits_execution_count(self) -> None:
         validator = load_validator()
         raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
         examples = validator._examples(raw_root / "application-form-analysis-api.md")
@@ -216,10 +224,30 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
                 "actionCandidateId": "action-certification-add",
                 "command": "ADD_REPEATABLE_GROUP",
                 "expectedEffect": "GROUP_COUNT_INCREMENT",
-                "maxExecutions": 3,
             },
             response["preparationPlans"][0],
         )
+
+    def test_repository_rejects_execution_count_in_preparation_response(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        self.openapi_path.write_text(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        reference = (raw_root / "application-form-analysis-api.md").read_text(
+            encoding="utf-8"
+        )
+        valid_effect = '"expectedEffect": "GROUP_COUNT_INCREMENT"'
+        self.assertIn(valid_effect, reference)
+        self.reference_path.write_text(
+            reference.replace(valid_effect, f'{valid_effect},\n      "maxExecutions": 3', 1),
+            encoding="utf-8",
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("oneOf" in error for error in errors))
 
     def _replace(self, old: str, new: str, count: int = -1) -> None:
         reference = self.reference_path.read_text(encoding="utf-8")

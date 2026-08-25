@@ -35,3 +35,10 @@
 - Approval-Digest: eb5dd4337e91f7503dfeed6582f2f81fca0c06a225196185fb709f014449c3cb
 - Raw: llm-wiki/raw/issues/CF-44/manifest.md
 - Topics: 2
+
+## [2026-08-25] revise | CF-44 반복 실행 횟수의 browser 책임화
+
+- Disposition: Revised before merge
+- Approval-Digest: 70cb0b1946eb0f058fc3b92d1920a8650a76f27e3bb50a044dd2e7e487261c10
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2

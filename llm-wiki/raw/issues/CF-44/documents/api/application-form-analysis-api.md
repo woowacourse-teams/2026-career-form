@@ -45,23 +45,21 @@
     {
       "actionCandidateId": "action-certification-add",
       "command": "ADD_REPEATABLE_GROUP",
-      "expectedEffect": "GROUP_COUNT_INCREMENT",
-      "maxExecutions": 3
+      "expectedEffect": "GROUP_COUNT_INCREMENT"
     }
   ]
 }
 ```
 
-`maxExecutions`는 브라우저가 반드시 실행할 횟수가 아니라 backend가 승인한 안전 상한이다. 실제 프로필 값과 프로필 항목 수는 요청에 넣지 않고 브라우저 로컬에 둔다. 브라우저는 현재 DOM의 반복 행 수를 관측하고 다음과 같이 실제 실행 횟수를 계산한다.
+backend는 action의 의미와 실행 후 확인할 효과만 반환한다. 실행 횟수, 프로필 항목 수와 실제 프로필 값은 요청과 응답에 넣지 않고 브라우저 로컬에 둔다. 브라우저는 현재 DOM의 반복 행 수를 관측하고 필요한 추가 횟수를 계산한다.
 
 ```text
-neededExecutions = max(0, localItemCount - currentDomGroupCount)
-actualExecutions = min(neededExecutions, maxExecutions)
+requiredAdditions = max(0, localItemCount - currentDomGroupCount)
 ```
 
-예를 들어 로컬 자격 항목이 3개이고 화면에 빈 자격 행이 처음부터 1개 있으면 `actualExecutions`는 2이다. 브라우저는 이 실제 횟수를 사용자에게 제시해 승인받고, 같은 `ADD_REPEATABLE_GROUP` plan을 한 번씩 순차 실행한다. 매 실행 직후 `GROUP_COUNT_INCREMENT`를 확인하고 행이 증가하지 않거나 같은 action target을 안전하게 다시 찾을 수 없으면 즉시 중단한다.
+예를 들어 로컬 자격 항목이 3개이고 화면에 빈 자격 행이 처음부터 1개 있으면 `requiredAdditions`는 2이다. 브라우저는 이 횟수를 사용자에게 제시해 승인받고, 검증된 같은 `ADD_REPEATABLE_GROUP` plan을 한 번씩 순차 실행한다. 매 실행 직후 `GROUP_COUNT_INCREMENT`를 확인하고 행이 증가하지 않거나 같은 action target을 안전하게 다시 찾을 수 없으면 즉시 중단한다.
 
-반복 실행은 `ADD_REPEATABLE_GROUP`과 `GROUP_COUNT_INCREMENT` 조합에만 허용한다. `REVEAL_SECTION`은 `TARGET_VISIBLE`, `maxExecutions: 1`, `targetSectionId`를 사용한다. 브라우저는 승인된 실행이 끝나면 이전 DOM handle을 폐기하고 새 DOM을 수집한다. 안전 상한까지 실행해도 목표 행이 부족하거나 중간에 안전한 재탐색이 불가능하면 이 endpoint를 새 Snapshot A로 다시 호출한다. preparation request에 field나 프로필 유래 목표 개수를 섞거나 preparation response에 write plan을 넣지 않는다.
+반복 실행은 검증된 `ADD_REPEATABLE_GROUP`과 `GROUP_COUNT_INCREMENT` 조합에만 허용한다. 과도한 실행을 막는 횟수 제한은 backend가 추측해 반환하지 않고 browser executor의 로컬 안전 정책으로 둔다. 검증되지 않은 범용 후보는 임의 횟수로 반복하지 않고 한 번 실행하거나 차단·수동 처리한다. `REVEAL_SECTION`은 `TARGET_VISIBLE`, `targetSectionId`를 사용하며 명령 의미상 한 번만 실행한다. 브라우저는 승인된 실행이 끝나면 이전 DOM handle을 폐기하고 새 DOM을 수집한다. 효과 확인 또는 안전한 재탐색에 실패하면 즉시 중단하고 이 endpoint를 새 Snapshot A로 다시 호출한다. preparation request에 field나 프로필 유래 목표 개수를 섞거나 preparation response에 write plan을 넣지 않는다.
 
 ## Snapshot B: field 분석
 
