@@ -4,12 +4,12 @@
 > Status: Current
 > Current: [현재 근거](../../raw/issues/CF-44/documents/api/application-form-analysis-api.md)
 > History: [근거 1](../../raw/issues/CF-44/documents/api/application-form-analysis-api.md)
-> Updated: 2026-08-24
+> Updated: 2026-08-25
 
 ## 현재 상태
 
-section 중심 비식별 snapshot을 단일 분석 API로 보내고, Snapshot A preparation과 Snapshot B field analysis를 분리하는 계약을 사용한다.
+section 중심 비식별 snapshot을 두 전용 API로 보낸다. Snapshot A는 `/api/v1/preparation/analyze`의 action candidate 전용 요청이고, Snapshot B는 `/api/v1/fields/analyze`의 field 전용 요청이다. 추가 준비가 필요하면 새 Snapshot A로 되돌아간다.
 
 ## 변경 이유
 
-field와 action candidate의 소속·ID 관계, 금지 데이터, 오류·상태 enum을 OpenAPI와 한국어 참조에서 같은 방식으로 검증할 수 있게 한다.
+서로 다른 수명주기의 candidate와 plan을 한 schema에 섞지 않고, OpenAPI에서 cross-endpoint property를 거부하게 한다.

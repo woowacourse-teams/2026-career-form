@@ -21,3 +21,10 @@
 - Source-Tree: b6bb3eff9d590ddf43b1f906b7e7cccd9c4ec6c9
 - Raw: llm-wiki/raw/issues/CF-44/manifest.md
 - Topics: 2
+
+## [2026-08-25] revise | CF-44 Snapshot 전용 endpoint 분리
+
+- Disposition: Revised before merge
+- Approval-Digest: ddf207c25e086b724918aea420f1718266069d9920ad8bef08a955620f222cbf
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2

@@ -32,11 +32,7 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
 
     def test_valid_examples_pass_schema_and_relationship_checks(self) -> None:
         validator = load_validator()
-
-        self.assertEqual(
-            [],
-            validator.validate_contract(self.openapi_path, self.reference_path),
-        )
+        self.assertEqual([], validator.validate_contract(self.openapi_path, self.reference_path))
 
     def test_rejects_unknown_and_forbidden_request_properties(self) -> None:
         validator = load_validator()
@@ -57,19 +53,18 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         self.assertTrue(any("duplicate candidateId" in error for error in errors))
         self.assertTrue(any("parentSectionId" in error for error in errors))
 
-    def test_rejects_unapproved_enums_and_mixed_response_plans(self) -> None:
+    def test_rejects_unapproved_enum_and_cross_endpoint_candidate(self) -> None:
         validator = load_validator()
         self._replace('"control": "text"', '"control": "slider"', 1)
         self._replace(
-            '"fields": []\n}',
-            '"fields": [{"candidateId": "field-1", "mappingStatus": "RULE_MATCHED", "interactionStatus": "READY", "writePlan": {"command": "SET_TEXT"}}]\n}',
-            1,
+            '"sectionId": "root",\n     "actionCandidates"',
+            '"sectionId": "root",\n     "fields": [],\n     "actionCandidates"',
         )
 
         errors = validator.validate_contract(self.openapi_path, self.reference_path)
 
         self.assertTrue(any("enum" in error for error in errors))
-        self.assertTrue(any("preparationPlans and writePlan" in error for error in errors))
+        self.assertTrue(any("unknown property: fields" in error for error in errors))
 
     def test_rejects_unresolved_ref_and_object_without_unknown_property_guard(self) -> None:
         validator = load_validator()
@@ -79,13 +74,12 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-
         errors = validator.validate_contract(self.openapi_path, self.reference_path)
-
         self.assertTrue(any("additionalProperties: false" in error for error in errors))
+
         self.openapi_path.write_text(
             self.openapi_path.read_text(encoding="utf-8").replace(
-                "#/components/schemas/Candidate", "#/components/schemas/Missing"
+                "#/components/schemas/FieldCandidate", "#/components/schemas/Missing"
             ),
             encoding="utf-8",
         )
@@ -95,7 +89,6 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
     def test_repository_raw_contract_passes(self) -> None:
         validator = load_validator()
         raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
-
         self.assertEqual(
             [],
             validator.validate_contract(
@@ -107,23 +100,33 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
     def test_repository_error_codes_match_http_statuses(self) -> None:
         raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
         document = yaml.safe_load(
-            (raw_root / "application-form-analysis.openapi.yaml").read_text(
-                encoding="utf-8"
-            )
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(encoding="utf-8")
         )
-        responses = document["paths"]["/api/v1/application-forms/analyze"]["post"]["responses"]
-        schemas = document["components"]["schemas"]
-
         expected = {
             "400": "INVALID_REQUEST",
             "413": "SNAPSHOT_TOO_LARGE",
             "429": "RATE_LIMITED",
             "500": "INTERNAL_ERROR",
         }
-        for status, code in expected.items():
-            reference = responses[status]["content"]["application/json"]["schema"]["$ref"]
-            schema = schemas[reference.rsplit("/", maxsplit=1)[1]]
-            self.assertEqual(code, schema["properties"]["code"]["const"])
+        for path in document["paths"].values():
+            for status, code in expected.items():
+                response_ref = path["post"]["responses"][status]["$ref"]
+                response = document["components"]["responses"][response_ref.rsplit("/", 1)[1]]
+                schema_ref = response["content"]["application/json"]["schema"]["$ref"]
+                schema = document["components"]["schemas"][schema_ref.rsplit("/", 1)[1]]
+                self.assertEqual(code, schema["properties"]["code"]["const"])
+
+    def test_repository_splits_preparation_and_fields_endpoints(self) -> None:
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            {"/api/v1/preparation/analyze", "/api/v1/fields/analyze"},
+            set(document["paths"]),
+        )
+        for path in document["paths"].values():
+            self.assertEqual({"post"}, set(path))
 
     def _replace(self, old: str, new: str, count: int = -1) -> None:
         reference = self.reference_path.read_text(encoding="utf-8")
@@ -135,57 +138,118 @@ OPENAPI = textwrap.dedent(
     """
     openapi: 3.1.0
     paths:
-      /api/v1/application-forms/analyze:
-        post: {}
+      /api/v1/preparation/analyze:
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema: {$ref: '#/components/schemas/PreparationRequest'}
+          responses:
+            '200':
+              content:
+                application/json:
+                  schema: {$ref: '#/components/schemas/PreparationResponse'}
+      /api/v1/fields/analyze:
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema: {$ref: '#/components/schemas/FieldsRequest'}
+          responses:
+            '200':
+              content:
+                application/json:
+                  schema: {$ref: '#/components/schemas/FieldsResponse'}
     components:
       schemas:
-        AnalyzeRequest:
+        PreparationRequest:
           type: object
           additionalProperties: false
           required: [schemaVersion, snapshotId, site, sections]
           properties:
-            schemaVersion: {type: integer, const: 1}
+            schemaVersion: {type: integer, const: 2}
             snapshotId: {type: string}
-            site:
-              type: object
-              additionalProperties: false
-              required: [host, pathPattern]
-              properties:
-                host: {type: string}
-                pathPattern: {type: string}
+            site: {$ref: '#/components/schemas/Site'}
             sections:
               type: array
-              items:
-                type: object
-                additionalProperties: false
-                required: [sectionId, fields]
-                properties:
-                  sectionId: {type: string}
-                  parentSectionId: {type: string}
-                  fields:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Candidate'
-                  actionCandidates:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Candidate'
-        Candidate:
+              items: {$ref: '#/components/schemas/PreparationSection'}
+        FieldsRequest:
+          type: object
+          additionalProperties: false
+          required: [schemaVersion, snapshotId, site, sections]
+          properties:
+            schemaVersion: {type: integer, const: 2}
+            snapshotId: {type: string}
+            site: {$ref: '#/components/schemas/Site'}
+            sections:
+              type: array
+              items: {$ref: '#/components/schemas/FieldsSection'}
+        Site:
+          type: object
+          additionalProperties: false
+          required: [host, pathPattern]
+          properties:
+            host: {type: string}
+            pathPattern: {type: string}
+        PreparationSection:
+          type: object
+          additionalProperties: false
+          required: [sectionId, actionCandidates]
+          properties:
+            sectionId: {type: string}
+            parentSectionId: {type: string}
+            actionCandidates:
+              type: array
+              items: {$ref: '#/components/schemas/ActionCandidate'}
+        FieldsSection:
+          type: object
+          additionalProperties: false
+          required: [sectionId, fields]
+          properties:
+            sectionId: {type: string}
+            parentSectionId: {type: string}
+            fields:
+              type: array
+              items: {$ref: '#/components/schemas/FieldCandidate'}
+        ActionCandidate:
           type: object
           additionalProperties: false
           required: [candidateId, element, control, visibility]
           properties:
             candidateId: {type: string}
-            element: {type: string, enum: [input, button]}
-            control: {type: string, enum: [text, button]}
+            element: {type: string, enum: [button]}
+            control: {type: string, enum: [button]}
             visibility: {type: string, enum: [visible, hidden]}
-        AnalyzeResponse:
+        FieldCandidate:
           type: object
           additionalProperties: false
-          required: [snapshotId, analysisStatus, fields]
+          required: [candidateId, element, control, visibility]
+          properties:
+            candidateId: {type: string}
+            element: {type: string, enum: [input]}
+            control: {type: string, enum: [text]}
+            visibility: {type: string, enum: [visible, hidden]}
+        PreparationResponse:
+          type: object
+          additionalProperties: false
+          required: [snapshotId, preparationPlans]
           properties:
             snapshotId: {type: string}
-            analysisStatus: {type: string, enum: [COMPLETE, PARTIAL, BLOCKED]}
+            preparationPlans:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [actionCandidateId, command]
+                properties:
+                  actionCandidateId: {type: string}
+                  command: {type: string, enum: [REVEAL_SECTION]}
+        FieldsResponse:
+          type: object
+          additionalProperties: false
+          required: [snapshotId, fields]
+          properties:
+            snapshotId: {type: string}
             fields:
               type: array
               items:
@@ -202,46 +266,45 @@ OPENAPI = textwrap.dedent(
                     required: [command]
                     properties:
                       command: {type: string, enum: [SET_TEXT]}
-            preparationPlans:
-              type: array
-              items:
-                type: object
-                additionalProperties: false
-                required: [actionCandidateId, command]
-                properties:
-                  actionCandidateId: {type: string}
-                  command: {type: string, enum: [REVEAL_SECTION]}
     """
 ).lstrip()
 
 REFERENCE = textwrap.dedent(
     """
-    <!-- api-example: request -->
+    <!-- api-example: preparation-request -->
     ```json
     {
-      "schemaVersion": 1,
-      "snapshotId": "snapshot-a",
+      "schemaVersion": 2,
+      "snapshotId": "preparation-a",
       "site": {"host": "example.test", "pathPattern": "/apply/*"},
       "sections": [
-        {"sectionId": "root", "fields": [
-          {"candidateId": "field-1", "element": "input", "control": "text", "visibility": "visible"},
-          {"candidateId": "field-2", "element": "input", "control": "text", "visibility": "visible"}
-        ]},
-        {"sectionId": "education", "fields": [], "actionCandidates": [
-          {"candidateId": "action-1", "element": "button", "control": "button", "visibility": "visible"}
-        ]}
+        {"sectionId": "root",
+         "actionCandidates": [{"candidateId": "action-1", "element": "button", "control": "button", "visibility": "visible"}]}
       ]
     }
     ```
 
-    <!-- api-example: response -->
+    <!-- api-example: preparation-response -->
+    ```json
+    {"snapshotId": "preparation-a", "preparationPlans": [{"actionCandidateId": "action-1", "command": "REVEAL_SECTION"}]}
+    ```
+
+    <!-- api-example: fields-request -->
     ```json
     {
-      "snapshotId": "snapshot-a",
-      "analysisStatus": "COMPLETE",
-      "preparationPlans": [{"actionCandidateId": "action-1", "command": "REVEAL_SECTION"}],
-      "fields": []
+      "schemaVersion": 2,
+      "snapshotId": "fields-b",
+      "site": {"host": "example.test", "pathPattern": "/apply/*"},
+      "sections": [
+        {"sectionId": "root", "fields": [{"candidateId": "field-1", "element": "input", "control": "text", "visibility": "visible"}]},
+        {"sectionId": "education", "fields": [{"candidateId": "field-2", "element": "input", "control": "text", "visibility": "visible"}]}
+      ]
     }
+    ```
+
+    <!-- api-example: fields-response -->
+    ```json
+    {"snapshotId": "fields-b", "fields": [{"candidateId": "field-1", "mappingStatus": "RULE_MATCHED", "interactionStatus": "READY", "writePlan": {"command": "SET_TEXT"}}]}
     ```
     """
 ).lstrip()

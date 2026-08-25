@@ -1,8 +1,8 @@
 # CF-44 Knowledge Bundle
 
 > Issue: CF-44
-> Collected: 2026-08-24
-> Approval-Digest: 82759db7cd94a01a18eccbc2074396c9900b4fb09e299f4e364664af4bf060ed
+> Collected: 2026-08-25
+> Approval-Digest: ddf207c25e086b724918aea420f1718266069d9920ad8bef08a955620f222cbf
 > Source-Revision: b6bb3eff9d590ddf43b1f906b7e7cccd9c4ec6c9
 > Source-Tree: b6bb3eff9d590ddf43b1f906b7e7cccd9c4ec6c9
 

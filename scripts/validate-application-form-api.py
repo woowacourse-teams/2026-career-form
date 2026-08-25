@@ -30,9 +30,15 @@ FORBIDDEN_PROPERTIES = {
     "authorization",
 }
 EXAMPLE_PATTERN = re.compile(
-    r"<!-- api-example: (request|response) -->\s*```json\s*(.*?)```",
+    r"<!-- api-example: (preparation-request|preparation-response|fields-request|fields-response) -->\s*```json\s*(.*?)```",
     re.DOTALL,
 )
+EXAMPLE_OPERATIONS = {
+    "preparation-request": ("/api/v1/preparation/analyze", "request"),
+    "preparation-response": ("/api/v1/preparation/analyze", "response"),
+    "fields-request": ("/api/v1/fields/analyze", "request"),
+    "fields-response": ("/api/v1/fields/analyze", "response"),
+}
 
 
 def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
@@ -46,42 +52,38 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
     schemas = document.get("components", {}).get("schemas", {})
     if not isinstance(schemas, Mapping):
         return ["OpenAPI components.schemas가 없습니다"]
-    request_schema = schemas.get("AnalyzeRequest")
-    response_schema = schemas.get("AnalyzeResponse")
-    if not isinstance(request_schema, Mapping) or not isinstance(response_schema, Mapping):
-        return ["AnalyzeRequest와 AnalyzeResponse schema가 필요합니다"]
-
     errors = _openapi_structure_errors(document)
-    requests: dict[str, Mapping[str, Any]] = {}
+    requests: dict[tuple[str, str], Mapping[str, Any]] = {}
     try:
         examples = _examples(reference_path)
     except (OSError, ValueError) as error:
         return [str(error)]
     for index, (kind, example) in enumerate(examples, start=1):
         prefix = f"example {index} ({kind})"
-        schema = request_schema if kind == "request" else response_schema
         try:
+            schema = _example_schema(document, kind)
             errors.extend(_validate_schema(example, schema, document, prefix))
         except (KeyError, ValueError) as error:
             errors.append(f"{prefix}: $ref를 해석할 수 없습니다: {error}")
         errors.extend(_forbidden_property_errors(example, prefix))
-        if kind == "request" and isinstance(example, Mapping):
+        if kind.endswith("-request") and isinstance(example, Mapping):
             snapshot_id = example.get("snapshotId")
             if isinstance(snapshot_id, str):
-                requests[snapshot_id] = example
+                requests[(kind, snapshot_id)] = example
             errors.extend(_request_relationship_errors(example, prefix))
-        if kind == "response" and isinstance(example, Mapping):
-            errors.extend(_response_relationship_errors(example, requests, prefix))
+        if kind.endswith("-response") and isinstance(example, Mapping):
+            errors.extend(_response_relationship_errors(kind, example, requests, prefix))
     return errors
 
 
 def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     paths = document.get("paths")
-    if not isinstance(paths, Mapping) or set(paths) != {"/api/v1/application-forms/analyze"}:
-        errors.append("외부 API path는 POST /api/v1/application-forms/analyze 하나여야 합니다")
-    elif set(paths["/api/v1/application-forms/analyze"]) != {"post"}:
-        errors.append("외부 API method는 POST 하나여야 합니다")
+    expected_paths = {"/api/v1/preparation/analyze", "/api/v1/fields/analyze"}
+    if not isinstance(paths, Mapping) or set(paths) != expected_paths:
+        errors.append("외부 API path는 preparation 및 fields POST 두 개여야 합니다")
+    elif any(set(paths[path]) != {"post"} for path in expected_paths):
+        errors.append("외부 API method는 각 path마다 POST 하나여야 합니다")
 
     def visit(value: Any, path: str) -> None:
         if isinstance(value, Mapping):
@@ -100,6 +102,14 @@ def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
 
     visit(document, "openapi")
     return errors
+
+
+def _example_schema(document: Mapping[str, Any], kind: str) -> Mapping[str, Any]:
+    path, direction = EXAMPLE_OPERATIONS[kind]
+    operation = document["paths"][path]["post"]
+    if direction == "request":
+        return operation["requestBody"]["content"]["application/json"]["schema"]
+    return operation["responses"]["200"]["content"]["application/json"]["schema"]
 
 
 def _examples(reference_path: Path) -> list[tuple[str, Any]]:
@@ -231,25 +241,26 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
     return errors
 
 
-def _response_relationship_errors(response: Mapping[str, Any], requests: Mapping[str, Mapping[str, Any]], path: str) -> list[str]:
+def _response_relationship_errors(
+    kind: str,
+    response: Mapping[str, Any],
+    requests: Mapping[tuple[str, str], Mapping[str, Any]],
+    path: str,
+) -> list[str]:
     errors: list[str] = []
-    has_preparation = bool(response.get("preparationPlans"))
-    has_write_plan = any(
-        isinstance(field, Mapping) and "writePlan" in field
-        for field in response.get("fields", [])
-    )
-    if has_preparation and has_write_plan:
-        errors.append(f"{path}: preparationPlans and writePlan은 함께 반환할 수 없습니다")
-    request = requests.get(response.get("snapshotId"))
+    request_kind = kind.replace("-response", "-request")
+    request = requests.get((request_kind, response.get("snapshotId")))
     if request is None:
         return errors
     field_ids, action_ids = _request_candidate_ids(request)
-    for field in response.get("fields", []):
-        if isinstance(field, Mapping) and field.get("candidateId") not in field_ids:
-            errors.append(f"{path}: field candidateId가 요청에 없습니다")
-    for plan in response.get("preparationPlans", []):
-        if isinstance(plan, Mapping) and plan.get("actionCandidateId") not in action_ids:
-            errors.append(f"{path}: actionCandidateId가 요청에 없습니다")
+    if kind == "fields-response":
+        for field in response.get("fields", []):
+            if isinstance(field, Mapping) and field.get("candidateId") not in field_ids:
+                errors.append(f"{path}: field candidateId가 요청에 없습니다")
+    if kind == "preparation-response":
+        for plan in response.get("preparationPlans", []):
+            if isinstance(plan, Mapping) and plan.get("actionCandidateId") not in action_ids:
+                errors.append(f"{path}: actionCandidateId가 요청에 없습니다")
     return errors
 
 

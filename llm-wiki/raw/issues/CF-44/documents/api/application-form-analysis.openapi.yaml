@@ -1,286 +1,254 @@
 openapi: 3.1.0
 info:
   title: Application Form Analysis API
-  version: 1.0.0
-  description: 비식별 지원서 DOM snapshot 분석 계약이다. 인증 방식은 이 명세 범위 밖이다.
+  version: 2.0.0
+  description: 비식별 지원서 DOM snapshot의 preparation과 field 분석을 분리한 계약이다. 인증은 이 명세 범위 밖이다.
 paths:
-  /api/v1/application-forms/analyze:
+  /api/v1/preparation/analyze:
     post:
-      summary: 지원서 snapshot 분석
+      summary: Snapshot A preparation 후보 분석
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AnalyzeRequest'
+              $ref: '#/components/schemas/PreparationAnalyzeRequest'
       responses:
         '200':
-          description: preparation 또는 field analysis 결과
+          description: preparation plan 또는 차단 결과
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnalyzeResponse'
+                $ref: '#/components/schemas/PreparationAnalyzeResponse'
         '400':
-          description: schema, ID 관계 또는 enum이 올바르지 않은 요청
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/InvalidRequest'
         '413':
-          description: snapshot 크기 또는 section/candidate 수 제한 초과
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SnapshotTooLargeError'
+          $ref: '#/components/responses/SnapshotTooLarge'
         '429':
-          description: 분석 요청 제한 초과
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RateLimitedError'
+          $ref: '#/components/responses/RateLimited'
         '500':
-          description: 서버 내부 분석 실패
+          $ref: '#/components/responses/InternalError'
+  /api/v1/fields/analyze:
+    post:
+      summary: Snapshot B field mapping 분석
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FieldsAnalyzeRequest'
+      responses:
+        '200':
+          description: field analysis/write plan 또는 차단·partial 결과
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InternalError'
+                $ref: '#/components/schemas/FieldsAnalyzeResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '413':
+          $ref: '#/components/responses/SnapshotTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
+  responses:
+    InvalidRequest:
+      description: schema, 금지 field, ID 관계 또는 enum이 올바르지 않은 요청
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    SnapshotTooLarge:
+      description: snapshot 크기 또는 section/candidate 수 제한 초과
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SnapshotTooLargeError'
+    RateLimited:
+      description: 분석 요청 제한 초과
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RateLimitedError'
+    InternalError:
+      description: 서버 내부 분석 실패
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalError'
   schemas:
-    AnalyzeRequest:
+    PreparationAnalyzeRequest:
       type: object
       additionalProperties: false
       required: [schemaVersion, snapshotId, site, sections]
       properties:
-        schemaVersion:
-          type: integer
-          const: 1
-        snapshotId:
-          type: string
-          minLength: 1
-        site:
-          $ref: '#/components/schemas/Site'
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1}
+        site: {$ref: '#/components/schemas/Site'}
         sections:
           type: array
           minItems: 1
-          items:
-            $ref: '#/components/schemas/Section'
+          items: {$ref: '#/components/schemas/PreparationSection'}
+    FieldsAnalyzeRequest:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, site, sections]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1}
+        site: {$ref: '#/components/schemas/Site'}
+        sections:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/FieldsSection'}
     Site:
       type: object
       additionalProperties: false
       required: [host, pathPattern]
       properties:
-        host:
-          type: string
-          minLength: 1
-        pathPattern:
-          type: string
-          minLength: 1
-    Section:
+        host: {type: string, minLength: 1}
+        pathPattern: {type: string, minLength: 1}
+    PreparationSection:
+      type: object
+      additionalProperties: false
+      required: [sectionId, actionCandidates]
+      properties:
+        sectionId: {type: string, minLength: 1}
+        parentSectionId: {type: string, minLength: 1}
+        displayName: {type: string, minLength: 1}
+        actionCandidates:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/ActionCandidate'}
+    FieldsSection:
       type: object
       additionalProperties: false
       required: [sectionId, fields]
       properties:
-        sectionId:
-          type: string
-          minLength: 1
-        parentSectionId:
-          type: string
-          minLength: 1
-        displayName:
-          type: string
-          minLength: 1
+        sectionId: {type: string, minLength: 1}
+        parentSectionId: {type: string, minLength: 1}
+        displayName: {type: string, minLength: 1}
         fields:
           type: array
-          items:
-            $ref: '#/components/schemas/FieldCandidate'
-        actionCandidates:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/ActionCandidate'
-    FieldCandidate:
-      type: object
-      additionalProperties: false
-      required: [candidateId, element, control, visibility]
-      properties:
-        candidateId:
-          type: string
-          minLength: 1
-        element:
-          type: string
-          enum: [input, select, textarea, custom]
-        control:
-          type: string
-          enum: [text, select, radio, checkbox, textarea, custom]
-        visibility:
-          type: string
-          enum: [visible, hidden]
-        groupId:
-          type: string
-          minLength: 1
-        displayName:
-          type: string
-          minLength: 1
-        domId:
-          type: string
-          minLength: 1
-        domName:
-          type: string
-          minLength: 1
-        placeholder:
-          type: string
-          minLength: 1
-        disabled:
-          type: boolean
-          const: true
-        readonly:
-          type: boolean
-          const: true
-        inert:
-          type: boolean
-          const: true
-        options:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/Option'
+          items: {$ref: '#/components/schemas/FieldCandidate'}
     ActionCandidate:
       type: object
       additionalProperties: false
       required: [candidateId, element, control, visibility]
       properties:
-        candidateId:
-          type: string
-          minLength: 1
-        element:
-          type: string
-          enum: [button, custom]
-        control:
-          type: string
-          enum: [button, custom]
-        visibility:
-          type: string
-          enum: [visible, hidden]
-        displayName:
-          type: string
-          minLength: 1
-        domId:
-          type: string
-          minLength: 1
-        domName:
-          type: string
-          minLength: 1
-        disabled:
-          type: boolean
-          const: true
-        inert:
-          type: boolean
-          const: true
+        candidateId: {type: string, minLength: 1}
+        element: {type: string, enum: [button, input, custom]}
+        control: {type: string, enum: [button, custom]}
+        visibility: {type: string, enum: [visible, hidden]}
+        displayName: {type: string, minLength: 1}
+        domId: {type: string, minLength: 1}
+        domName: {type: string, minLength: 1}
+        disabled: {type: boolean, const: true}
+        readonly: {type: boolean, const: true}
+        inert: {type: boolean, const: true}
+    FieldCandidate:
+      type: object
+      additionalProperties: false
+      required: [candidateId, element, control, visibility]
+      properties:
+        candidateId: {type: string, minLength: 1}
+        element: {type: string, enum: [input, select, textarea, custom]}
+        control: {type: string, enum: [text, select, radio, checkbox, textarea, custom]}
+        visibility: {type: string, enum: [visible, hidden]}
+        displayName: {type: string, minLength: 1}
+        domId: {type: string, minLength: 1}
+        domName: {type: string, minLength: 1}
+        placeholder: {type: string, minLength: 1}
+        disabled: {type: boolean, const: true}
+        readonly: {type: boolean, const: true}
+        inert: {type: boolean, const: true}
+        options:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/Option'}
     Option:
       type: object
       additionalProperties: false
       required: [optionId, displayName]
       properties:
-        optionId:
+        optionId: {type: string, minLength: 1}
+        displayName: {type: string, minLength: 1}
+    PreparationAnalyzeResponse:
+      type: object
+      additionalProperties: false
+      required: [snapshotId, mode, analysisStatus, preparationPlans]
+      properties:
+        snapshotId: {type: string, minLength: 1}
+        mode: {type: string, enum: [ADAPTER, GENERIC]}
+        analysisStatus: {type: string, enum: [COMPLETE, PARTIAL, BLOCKED]}
+        preparationPlans:
+          type: array
+          items: {$ref: '#/components/schemas/PreparationPlan'}
+        warningCodes:
+          type: array
+          minItems: 1
+          items: {type: string, enum: [MANUAL_REVEAL_REQUIRED]}
+        blockCode:
           type: string
-          minLength: 1
-        displayName:
-          type: string
-          minLength: 1
-    AnalyzeResponse:
+          enum: [ADAPTER_STRUCTURE_MISMATCH, UNSUPPORTED_SNAPSHOT]
+    FieldsAnalyzeResponse:
       type: object
       additionalProperties: false
       required: [snapshotId, mode, analysisStatus, fields]
       properties:
-        snapshotId:
-          type: string
-          minLength: 1
-        mode:
-          type: string
-          enum: [ADAPTER, GENERIC]
-        analysisStatus:
-          type: string
-          enum: [COMPLETE, PARTIAL, BLOCKED]
+        snapshotId: {type: string, minLength: 1}
+        mode: {type: string, enum: [ADAPTER, GENERIC]}
+        analysisStatus: {type: string, enum: [COMPLETE, PARTIAL, BLOCKED]}
         fields:
           type: array
-          items:
-            $ref: '#/components/schemas/FieldAnalysis'
-        preparationPlans:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/PreparationPlan'
+          items: {$ref: '#/components/schemas/FieldAnalysis'}
         warningCodes:
           type: array
           minItems: 1
-          items:
-            type: string
-            enum: [UNRESOLVED_FIELD, MANUAL_REVEAL_REQUIRED, LLM_UNAVAILABLE]
+          items: {type: string, enum: [UNRESOLVED_FIELD, LLM_UNAVAILABLE]}
         blockCode:
           type: string
           enum: [ADAPTER_STRUCTURE_MISMATCH, UNSUPPORTED_SNAPSHOT]
-    FieldAnalysis:
-      type: object
-      additionalProperties: false
-      required: [candidateId, mappingStatus, interactionStatus]
-      properties:
-        candidateId:
-          type: string
-          minLength: 1
-        profileField:
-          type: string
-          enum: [koreanFamilyName, koreanGivenName, englishFamilyName, englishGivenName, email, phoneNumber, birthDate, nationality, schoolName, degreeLevel, majorName, startDate, endDate, language, testName, registrationNo, acquisitionDate, grade, issuer, projectName, role, activityDetails, NO_MATCH]
-        mappingStatus:
-          type: string
-          enum: [ADAPTER_VERIFIED, RULE_MATCHED, LLM_SUGGESTED, UNKNOWN, OUT_OF_SCOPE]
-        interactionStatus:
-          type: string
-          enum: [READY, REVEAL_REQUIRED, MANUAL_REVEAL_REQUIRED, BLOCKED, SYSTEM_CONTROL, UNVERIFIED]
-        writePlan:
-          $ref: '#/components/schemas/WritePlan'
-        reasonCodes:
-          type: array
-          minItems: 1
-          items:
-            type: string
-            enum: [UNKNOWN, BLOCKED, UNVERIFIED, OUT_OF_SCOPE]
-    WritePlan:
-      type: object
-      additionalProperties: false
-      required: [command]
-      properties:
-        command:
-          type: string
-          enum: [SET_TEXT, SELECT_OPTION, CHECK_RADIO, CHECK_CHECKBOX]
     PreparationPlan:
       type: object
       additionalProperties: false
       required: [actionCandidateId, command, expectedEffect, maxExecutions]
       properties:
-        actionCandidateId:
+        actionCandidateId: {type: string, minLength: 1}
+        command: {type: string, enum: [REVEAL_SECTION, ADD_REPEATABLE_GROUP]}
+        expectedEffect: {type: string, enum: [TARGET_VISIBLE, GROUP_COUNT_INCREMENT, DOM_MUTATION]}
+        maxExecutions: {type: integer, minimum: 1, maximum: 3}
+        targetSectionId: {type: string, minLength: 1}
+    FieldAnalysis:
+      type: object
+      additionalProperties: false
+      required: [candidateId, mappingStatus, interactionStatus]
+      properties:
+        candidateId: {type: string, minLength: 1}
+        profileField:
           type: string
-          minLength: 1
-        command:
-          type: string
-          enum: [REVEAL_SECTION, ADD_REPEATABLE_GROUP]
-        expectedEffect:
-          type: string
-          enum: [TARGET_VISIBLE, GROUP_COUNT_INCREMENT, DOM_MUTATION]
-        maxExecutions:
-          type: integer
-          minimum: 1
-          maximum: 3
-        targetSectionId:
-          type: string
-          minLength: 1
+          enum: [koreanFamilyName, koreanGivenName, englishFamilyName, englishGivenName, email, phoneNumber, birthDate, nationality, schoolName, degreeLevel, majorName, startDate, endDate, language, testName, registrationNo, acquisitionDate, grade, issuer, projectName, role, activityDetails, NO_MATCH]
+        mappingStatus: {type: string, enum: [ADAPTER_VERIFIED, RULE_MATCHED, LLM_SUGGESTED, UNKNOWN, OUT_OF_SCOPE]}
+        interactionStatus: {type: string, enum: [READY, MANUAL_REVEAL_REQUIRED, BLOCKED, SYSTEM_CONTROL, UNVERIFIED]}
+        writePlan: {$ref: '#/components/schemas/WritePlan'}
+        reasonCodes:
+          type: array
+          minItems: 1
+          items: {type: string, enum: [UNKNOWN, BLOCKED, UNVERIFIED, OUT_OF_SCOPE]}
+    WritePlan:
+      type: object
+      additionalProperties: false
+      required: [command]
+      properties:
+        command: {type: string, enum: [SET_TEXT, SELECT_OPTION, CHECK_RADIO, CHECK_CHECKBOX]}
     LlmMappingOutput:
       type: object
       additionalProperties: false
       required: [candidateId, profileField]
       properties:
-        candidateId:
-          type: string
-          minLength: 1
+        candidateId: {type: string, minLength: 1}
         profileField:
           type: string
           enum: [koreanFamilyName, koreanGivenName, englishFamilyName, englishGivenName, email, phoneNumber, birthDate, nationality, schoolName, degreeLevel, majorName, startDate, endDate, language, testName, registrationNo, acquisitionDate, grade, issuer, projectName, role, activityDetails, NO_MATCH]
@@ -289,42 +257,26 @@ components:
       additionalProperties: false
       required: [code, message]
       properties:
-        code:
-          type: string
-          const: INVALID_REQUEST
-        message:
-          type: string
-          minLength: 1
+        code: {type: string, const: INVALID_REQUEST}
+        message: {type: string, minLength: 1}
     SnapshotTooLargeError:
       type: object
       additionalProperties: false
       required: [code, message]
       properties:
-        code:
-          type: string
-          const: SNAPSHOT_TOO_LARGE
-        message:
-          type: string
-          minLength: 1
+        code: {type: string, const: SNAPSHOT_TOO_LARGE}
+        message: {type: string, minLength: 1}
     RateLimitedError:
       type: object
       additionalProperties: false
       required: [code, message]
       properties:
-        code:
-          type: string
-          const: RATE_LIMITED
-        message:
-          type: string
-          minLength: 1
+        code: {type: string, const: RATE_LIMITED}
+        message: {type: string, minLength: 1}
     InternalError:
       type: object
       additionalProperties: false
       required: [code, message]
       properties:
-        code:
-          type: string
-          const: INTERNAL_ERROR
-        message:
-          type: string
-          minLength: 1
+        code: {type: string, const: INTERNAL_ERROR}
+        message: {type: string, minLength: 1}
