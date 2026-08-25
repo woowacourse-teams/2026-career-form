@@ -13,3 +13,46 @@
 - Source-Tree: acc0c186e310f2582bbae0d5f48694ca159fd7cf
 - Raw: llm-wiki/raw/issues/CF-41/manifest.md
 - Topics: 16
+
+## [2026-08-24] ingest | CF-44 지원서 분석 API와 데이터 경계
+
+- Disposition: New
+- Approval-Digest: 82759db7cd94a01a18eccbc2074396c9900b4fb09e299f4e364664af4bf060ed
+- Source-Tree: b6bb3eff9d590ddf43b1f906b7e7cccd9c4ec6c9
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2
+
+## [2026-08-25] revise | CF-44 Snapshot 전용 endpoint 분리
+
+- Disposition: Revised before merge
+- Approval-Digest: ddf207c25e086b724918aea420f1718266069d9920ad8bef08a955620f222cbf
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2
+
+## [2026-08-25] revise | CF-44 반복 입력 action 실행 경계
+
+- Disposition: Revised before merge
+- Approval-Digest: eb5dd4337e91f7503dfeed6582f2f81fca0c06a225196185fb709f014449c3cb
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2
+
+## [2026-08-25] revise | CF-44 반복 실행 횟수의 browser 책임화
+
+- Disposition: Revised before merge
+- Approval-Digest: 70cb0b1946eb0f058fc3b92d1920a8650a76f27e3bb50a044dd2e7e487261c10
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2
+
+## [2026-08-25] revise | CF-44 반복 레코드 item 문맥 추가
+
+- Disposition: Revised before merge
+- Approval-Digest: 39378e4cefce4574a1305bf1fdcfb1cfd091803d3b7114b737086fff53117a92
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2
+
+## [2026-08-25] revise | CF-44 canonical field key와 LLM 전체 candidate 계약
+
+- Disposition: Revised before merge
+- Approval-Digest: 35b4142c8c0e9e7f8483e1e434433071033273d5c35481d1825a409c7188c050
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2
