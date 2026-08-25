@@ -28,3 +28,10 @@
 - Approval-Digest: ddf207c25e086b724918aea420f1718266069d9920ad8bef08a955620f222cbf
 - Raw: llm-wiki/raw/issues/CF-44/manifest.md
 - Topics: 2
+
+## [2026-08-25] revise | CF-44 반복 입력 action 실행 경계
+
+- Disposition: Revised before merge
+- Approval-Digest: eb5dd4337e91f7503dfeed6582f2f81fca0c06a225196185fb709f014449c3cb
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2

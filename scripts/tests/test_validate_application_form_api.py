@@ -43,6 +43,21 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         self.assertTrue(any("forbidden property: value" in error for error in errors))
         self.assertTrue(any("unknown property: value" in error for error in errors))
 
+    def test_rejects_profile_derived_execution_count_in_request(self) -> None:
+        validator = load_validator()
+        self._replace(
+            '"visibility": "visible"',
+            '"visibility": "visible", "desiredGroupCount": 3',
+            1,
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(
+            any("forbidden property: desiredGroupCount" in error for error in errors)
+        )
+        self.assertTrue(any("unknown property: desiredGroupCount" in error for error in errors))
+
     def test_rejects_duplicate_candidate_and_invalid_section_parent(self) -> None:
         validator = load_validator()
         self._replace('"candidateId": "field-2"', '"candidateId": "field-1"')
@@ -127,6 +142,51 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         )
         for path in document["paths"].values():
             self.assertEqual({"post"}, set(path))
+
+    def test_repository_rejects_repeated_reveal_section_plan(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        self.openapi_path.write_text(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        reference = (raw_root / "application-form-analysis-api.md").read_text(
+            encoding="utf-8"
+        )
+        valid_plan = (
+            '"command": "ADD_REPEATABLE_GROUP",\n'
+            '      "expectedEffect": "GROUP_COUNT_INCREMENT",\n'
+            '      "maxExecutions": 3'
+        )
+        self.assertIn(valid_plan, reference)
+        reference = reference.replace(
+            valid_plan,
+            '"command": "REVEAL_SECTION",\n      "expectedEffect": "TARGET_VISIBLE",\n      "maxExecutions": 3',
+            1,
+        )
+        self.reference_path.write_text(reference, encoding="utf-8")
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("oneOf" in error for error in errors))
+
+    def test_repository_repeatable_group_example_uses_safety_ceiling(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        examples = validator._examples(raw_root / "application-form-analysis-api.md")
+        response = next(
+            example for kind, example in examples if kind == "preparation-response"
+        )
+
+        self.assertEqual(
+            {
+                "actionCandidateId": "action-certification-add",
+                "command": "ADD_REPEATABLE_GROUP",
+                "expectedEffect": "GROUP_COUNT_INCREMENT",
+                "maxExecutions": 3,
+            },
+            response["preparationPlans"][0],
+        )
 
     def _replace(self, old: str, new: str, count: int = -1) -> None:
         reference = self.reference_path.read_text(encoding="utf-8")

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Application Form Analysis API
-  version: 2.0.0
+  version: 2.1.0
   description: 비식별 지원서 DOM snapshot의 preparation과 field 분석을 분리한 계약이다. 인증은 이 명세 범위 밖이다.
 paths:
   /api/v1/preparation/analyze:
@@ -212,15 +212,28 @@ components:
           type: string
           enum: [ADAPTER_STRUCTURE_MISMATCH, UNSUPPORTED_SNAPSHOT]
     PreparationPlan:
+      oneOf:
+        - {$ref: '#/components/schemas/RevealSectionPlan'}
+        - {$ref: '#/components/schemas/AddRepeatableGroupPlan'}
+    RevealSectionPlan:
+      type: object
+      additionalProperties: false
+      required: [actionCandidateId, command, expectedEffect, maxExecutions, targetSectionId]
+      properties:
+        actionCandidateId: {type: string, minLength: 1}
+        command: {type: string, const: REVEAL_SECTION}
+        expectedEffect: {type: string, const: TARGET_VISIBLE}
+        maxExecutions: {type: integer, const: 1}
+        targetSectionId: {type: string, minLength: 1}
+    AddRepeatableGroupPlan:
       type: object
       additionalProperties: false
       required: [actionCandidateId, command, expectedEffect, maxExecutions]
       properties:
         actionCandidateId: {type: string, minLength: 1}
-        command: {type: string, enum: [REVEAL_SECTION, ADD_REPEATABLE_GROUP]}
-        expectedEffect: {type: string, enum: [TARGET_VISIBLE, GROUP_COUNT_INCREMENT, DOM_MUTATION]}
+        command: {type: string, const: ADD_REPEATABLE_GROUP}
+        expectedEffect: {type: string, const: GROUP_COUNT_INCREMENT}
         maxExecutions: {type: integer, minimum: 1, maximum: 3}
-        targetSectionId: {type: string, minLength: 1}
     FieldAnalysis:
       type: object
       additionalProperties: false

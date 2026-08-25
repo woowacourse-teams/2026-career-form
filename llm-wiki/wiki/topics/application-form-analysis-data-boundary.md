@@ -8,8 +8,8 @@
 
 ## 현재 상태
 
-preparation과 field mapping을 전용 endpoint로 분리한다. 프로필 값과 action candidate는 LLM에 전달하지 않고, backend가 미해결 field와 필요한 비식별 section 문맥만 최소 payload로 전달한다.
+preparation과 field mapping을 전용 endpoint로 분리한다. 프로필 값과 항목 개수는 browser 로컬에 남고, 반복 입력의 실제 실행 횟수도 browser가 계산한다. backend는 action별 안전 상한만 반환하며 action candidate는 LLM에 전달하지 않는다. LLM에는 backend가 미해결 field와 필요한 비식별 section 문맥만 최소 payload로 전달한다.
 
 ## 변경 이유
 
-결합 snapshot의 모호함을 없애고, 전체 browser snapshot 전달과 field 단위의 문맥 손실 사이에서 개인정보 최소화와 안전한 의미 추론을 함께 보존한다.
+결합 snapshot의 모호함을 없애고, 전체 browser snapshot 전달과 field 단위의 문맥 손실 사이에서 개인정보 최소화와 안전한 의미 추론을 함께 보존한다. 클릭별 효과 검증으로 반복 action의 과다 실행을 막으면서 프로필 유래 목표 개수의 외부 전송도 피한다.
