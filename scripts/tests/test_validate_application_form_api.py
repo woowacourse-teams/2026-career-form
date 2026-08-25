@@ -161,7 +161,10 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         self.assertIn(valid_plan, reference)
         reference = reference.replace(
             valid_plan,
-            '"command": "REVEAL_SECTION",\n      "expectedEffect": "TARGET_VISIBLE",\n      "maxExecutions": 3',
+            '"command": "REVEAL_SECTION",\n'
+            '      "expectedEffect": "TARGET_VISIBLE",\n'
+            '      "maxExecutions": 3,\n'
+            '      "targetSectionId": "section-root"',
             1,
         )
         self.reference_path.write_text(reference, encoding="utf-8")
@@ -169,6 +172,36 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         errors = validator.validate_contract(self.openapi_path, self.reference_path)
 
         self.assertTrue(any("oneOf" in error for error in errors))
+
+    def test_repository_rejects_reveal_target_section_not_in_request(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        self.openapi_path.write_text(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        reference = (raw_root / "application-form-analysis-api.md").read_text(
+            encoding="utf-8"
+        )
+        valid_plan = (
+            '"command": "ADD_REPEATABLE_GROUP",\n'
+            '      "expectedEffect": "GROUP_COUNT_INCREMENT",\n'
+            '      "maxExecutions": 3'
+        )
+        self.assertIn(valid_plan, reference)
+        reference = reference.replace(
+            valid_plan,
+            '"command": "REVEAL_SECTION",\n'
+            '      "expectedEffect": "TARGET_VISIBLE",\n'
+            '      "maxExecutions": 1,\n'
+            '      "targetSectionId": "missing-section"',
+            1,
+        )
+        self.reference_path.write_text(reference, encoding="utf-8")
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("targetSectionId가 요청에 없습니다" in error for error in errors))
 
     def test_repository_repeatable_group_example_uses_safety_ceiling(self) -> None:
         validator = load_validator()

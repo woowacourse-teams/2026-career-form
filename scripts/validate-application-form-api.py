@@ -262,9 +262,19 @@ def _response_relationship_errors(
             if isinstance(field, Mapping) and field.get("candidateId") not in field_ids:
                 errors.append(f"{path}: field candidateId가 요청에 없습니다")
     if kind == "preparation-response":
+        section_ids = {
+            section["sectionId"]
+            for section in request.get("sections", [])
+            if isinstance(section, Mapping) and isinstance(section.get("sectionId"), str)
+        }
         for plan in response.get("preparationPlans", []):
-            if isinstance(plan, Mapping) and plan.get("actionCandidateId") not in action_ids:
+            if not isinstance(plan, Mapping):
+                continue
+            if plan.get("actionCandidateId") not in action_ids:
                 errors.append(f"{path}: actionCandidateId가 요청에 없습니다")
+            target_section_id = plan.get("targetSectionId")
+            if isinstance(target_section_id, str) and target_section_id not in section_ids:
+                errors.append(f"{path}: targetSectionId가 요청에 없습니다")
     return errors
 
 
