@@ -489,6 +489,7 @@ def _response_relationship_errors(
         return [f"{path}: 같은 endpoint와 snapshotId의 일치하는 요청 예시가 없습니다"]
     field_ids, action_ids = _request_candidate_ids(request)
     if kind == "fields-response":
+        errors.extend(_fields_response_route_errors(response, path))
         for field in response.get("fields", []):
             if isinstance(field, Mapping) and field.get("candidateId") not in field_ids:
                 errors.append(f"{path}: field candidateId가 요청에 없습니다")
@@ -506,6 +507,34 @@ def _response_relationship_errors(
             target_section_id = plan.get("targetSectionId")
             if isinstance(target_section_id, str) and target_section_id not in section_ids:
                 errors.append(f"{path}: targetSectionId가 요청에 없습니다")
+    return errors
+
+
+def _fields_response_route_errors(
+    response: Mapping[str, Any], path: str
+) -> list[str]:
+    mode = response.get("mode")
+    status = response.get("analysisStatus")
+    block_code = response.get("blockCode")
+    fields = [
+        field for field in response.get("fields", []) if isinstance(field, Mapping)
+    ]
+    errors: list[str] = []
+    if mode == "GENERIC":
+        if status == "BLOCKED" or block_code is not None:
+            errors.append(f"{path}: GENERIC route는 adapter block 결과를 반환할 수 없습니다")
+        if any(field.get("mappingStatus") != "LLM_SUGGESTED" for field in fields):
+            errors.append(f"{path}: GENERIC field는 LLM_SUGGESTED여야 합니다")
+    if mode == "ADAPTER":
+        if status == "BLOCKED":
+            if block_code != "ADAPTER_STRUCTURE_MISMATCH" or fields:
+                errors.append(
+                    f"{path}: adapter mismatch는 빈 fields와 ADAPTER_STRUCTURE_MISMATCH가 필요합니다"
+                )
+        elif block_code is not None or any(
+            field.get("mappingStatus") != "ADAPTER_VERIFIED" for field in fields
+        ):
+            errors.append(f"{path}: 정상 ADAPTER field는 ADAPTER_VERIFIED여야 합니다")
     return errors
 
 

@@ -385,6 +385,65 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
             set(schemas["LlmFieldCandidate"]["properties"]),
         )
 
+    def test_repository_declares_three_exclusive_field_analysis_routes(
+        self,
+    ) -> None:
+        validator = load_validator()
+        route_errors = getattr(validator, "_fields_response_route_errors", None)
+        self.assertIsNotNone(route_errors)
+        document = yaml.safe_load(
+            (
+                REPOSITORY_ROOT
+                / "llm-wiki/raw/issues/CF-44/documents/api/application-form-analysis.openapi.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        routes = document["components"]["schemas"]["FieldsAnalyzeResponse"].get(
+            "x-analysis-routes"
+        )
+        self.assertEqual(
+            {
+                "ADAPTER_VERIFIED",
+                "ADAPTER_STRUCTURE_MISMATCH",
+                "GENERIC_LLM",
+            },
+            set(routes or {}),
+        )
+        generic_field = {
+            "candidateId": "field-1",
+            "matchType": "MATCH",
+            "profileFieldKey": "contact.contact.email",
+            "autofillPolicy": "ALLOWED",
+            "mappingStatus": "LLM_SUGGESTED",
+            "interactionStatus": "READY",
+        }
+        generic = {
+            "mode": "GENERIC",
+            "analysisStatus": "COMPLETE",
+            "fields": [generic_field],
+        }
+        self.assertEqual([], route_errors(generic, "fields response"))
+        self.assertTrue(
+            route_errors(
+                {
+                    **generic,
+                    "fields": [
+                        {**generic_field, "mappingStatus": "ADAPTER_VERIFIED"}
+                    ],
+                },
+                "fields response",
+            )
+        )
+        self.assertTrue(
+            route_errors(
+                {
+                    "mode": "ADAPTER",
+                    "analysisStatus": "BLOCKED",
+                    "fields": [],
+                },
+                "fields response",
+            )
+        )
+
     def test_llm_schema_rejects_browser_and_profile_only_data(self) -> None:
         validator = load_validator()
         document = yaml.safe_load(

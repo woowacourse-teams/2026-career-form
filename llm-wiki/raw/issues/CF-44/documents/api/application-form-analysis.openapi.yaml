@@ -226,6 +226,22 @@ components:
     FieldsAnalyzeResponse:
       type: object
       additionalProperties: false
+      x-analysis-routes:
+        ADAPTER_VERIFIED:
+          mode: ADAPTER
+          analysisStatus: [COMPLETE, PARTIAL]
+          mappingStatus: ADAPTER_VERIFIED
+          sendsFieldsToLlm: false
+        ADAPTER_STRUCTURE_MISMATCH:
+          mode: ADAPTER
+          analysisStatus: [BLOCKED]
+          blockCode: ADAPTER_STRUCTURE_MISMATCH
+          sendsFieldsToLlm: false
+        GENERIC_LLM:
+          mode: GENERIC
+          analysisStatus: [COMPLETE, PARTIAL]
+          mappingStatus: LLM_SUGGESTED
+          llmInputCandidateSet: ALL
       required: [snapshotId, mode, analysisStatus, fields]
       properties:
         snapshotId: {type: string, minLength: 1}
@@ -240,7 +256,7 @@ components:
           items: {type: string, enum: [UNRESOLVED_FIELD, LLM_UNAVAILABLE]}
         blockCode:
           type: string
-          enum: [ADAPTER_STRUCTURE_MISMATCH, UNSUPPORTED_SNAPSHOT]
+          const: ADAPTER_STRUCTURE_MISMATCH
     PreparationPlan:
       oneOf:
         - {$ref: '#/components/schemas/RevealSectionPlan'}
