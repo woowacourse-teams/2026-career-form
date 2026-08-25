@@ -32,6 +32,15 @@ FORBIDDEN_PROPERTIES = {
     "session",
     "sessionid",
     "authorization",
+    "selector",
+    "cssselector",
+    "xpath",
+    "script",
+    "executablecode",
+    "href",
+    "query",
+    "fragment",
+    "domhandle",
 }
 EXAMPLE_PATTERN = re.compile(
     r"<!-- api-example: (preparation-request|preparation-response|fields-request|fields-response) -->\s*```json\s*(.*?)```",
@@ -62,6 +71,11 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
         examples = _examples(reference_path)
     except (OSError, ValueError) as error:
         return [str(error)]
+    for kind, example in examples:
+        if kind.endswith("-request") and isinstance(example, Mapping):
+            snapshot_id = example.get("snapshotId")
+            if isinstance(snapshot_id, str):
+                requests[(kind, snapshot_id)] = example
     for index, (kind, example) in enumerate(examples, start=1):
         prefix = f"example {index} ({kind})"
         try:
@@ -71,9 +85,6 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
             errors.append(f"{prefix}: $ref를 해석할 수 없습니다: {error}")
         errors.extend(_forbidden_property_errors(example, prefix))
         if kind.endswith("-request") and isinstance(example, Mapping):
-            snapshot_id = example.get("snapshotId")
-            if isinstance(snapshot_id, str):
-                requests[(kind, snapshot_id)] = example
             errors.extend(_request_relationship_errors(example, prefix))
         if kind.endswith("-response") and isinstance(example, Mapping):
             errors.extend(_response_relationship_errors(kind, example, requests, prefix))
@@ -98,6 +109,13 @@ def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
                     errors.append(f"{path}: $ref를 해석할 수 없습니다: {error}")
             if value.get("type") == "object" and value.get("additionalProperties") is not False:
                 errors.append(f"{path}: object는 additionalProperties: false가 필요합니다")
+            properties = value.get("properties")
+            if value.get("type") == "object" and isinstance(properties, Mapping):
+                errors.extend(
+                    f"{path}: forbidden schema property: {name}"
+                    for name in properties
+                    if name.lower() in FORBIDDEN_PROPERTIES
+                )
             for name, child in value.items():
                 visit(child, f"{path}.{name}")
         elif isinstance(value, list):
@@ -150,6 +168,13 @@ def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[st
     expected_type = schema.get("type")
     if expected_type and not _has_type(value, expected_type):
         return [f"{path}: {expected_type} 타입이 아닙니다"]
+    if expected_type == "string":
+        minimum_length = schema.get("minLength")
+        if isinstance(minimum_length, int) and len(value) < minimum_length:
+            errors.append(f"{path}: minLength를 만족하지 않습니다")
+        pattern = schema.get("pattern")
+        if isinstance(pattern, str) and re.fullmatch(pattern, value) is None:
+            errors.append(f"{path}: pattern을 만족하지 않습니다")
     if expected_type == "object":
         properties = schema.get("properties", {})
         required = schema.get("required", [])
@@ -163,6 +188,12 @@ def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[st
                 continue
             errors.extend(_validate_schema(child, properties[name], document, f"{path}.{name}"))
     if expected_type == "array":
+        minimum_items = schema.get("minItems")
+        if isinstance(minimum_items, int) and len(value) < minimum_items:
+            errors.append(f"{path}: minItems를 만족하지 않습니다")
+        maximum_items = schema.get("maxItems")
+        if isinstance(maximum_items, int) and len(value) > maximum_items:
+            errors.append(f"{path}: maxItems를 만족하지 않습니다")
         for index, child in enumerate(value):
             errors.extend(_validate_schema(child, schema.get("items", {}), document, f"{path}[{index}]"))
     return errors
@@ -263,7 +294,7 @@ def _response_relationship_errors(
     request_kind = kind.replace("-response", "-request")
     request = requests.get((request_kind, response.get("snapshotId")))
     if request is None:
-        return errors
+        return [f"{path}: 같은 endpoint와 snapshotId의 일치하는 요청 예시가 없습니다"]
     field_ids, action_ids = _request_candidate_ids(request)
     if kind == "fields-response":
         for field in response.get("fields", []):

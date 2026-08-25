@@ -43,6 +43,92 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         self.assertTrue(any("forbidden property: value" in error for error in errors))
         self.assertTrue(any("unknown property: value" in error for error in errors))
 
+    def test_rejects_forbidden_properties_declared_by_schema(self) -> None:
+        validator = load_validator()
+        document = self.openapi_path.read_text(encoding="utf-8")
+        self.assertIn("        visibility: {type: string", document)
+        self.openapi_path.write_text(
+            document.replace(
+                "        visibility: {type: string",
+                "        selector: {type: string}\n        visibility: {type: string",
+                1,
+            ),
+            encoding="utf-8",
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(
+            any("forbidden schema property: selector" in error for error in errors),
+            errors,
+        )
+
+    def test_rejects_site_values_outside_host_and_path_boundary(self) -> None:
+        validator = load_validator()
+        original = self.reference_path.read_text(encoding="utf-8")
+        invalid_replacements = (
+            ('"host": "example.test"', '"host": "https://example.test"'),
+            ('"host": "example.test"', '"host": "example.test?token=x"'),
+            ('"host": "example.test"', '"host": "example.test#form"'),
+            ('"pathPattern": "/apply/*"', '"pathPattern": "apply/*"'),
+            ('"pathPattern": "/apply/*"', '"pathPattern": "/apply/?token=x"'),
+            ('"pathPattern": "/apply/*"', '"pathPattern": "/apply/#form"'),
+        )
+        for old, new in invalid_replacements:
+            with self.subTest(value=new):
+                self.reference_path.write_text(
+                    original.replace(old, new, 1), encoding="utf-8"
+                )
+                errors = validator.validate_contract(
+                    self.openapi_path, self.reference_path
+                )
+                self.assertTrue(any("pattern" in error for error in errors))
+
+    def test_rejects_schema_minimum_keyword_violations(self) -> None:
+        validator = load_validator()
+        document = yaml.safe_load(self.openapi_path.read_text(encoding="utf-8"))
+        schemas = document["components"]["schemas"]
+
+        self.assertTrue(
+            validator._validate_schema(
+                "", schemas["PreparationRequest"]["properties"]["snapshotId"], document, "snapshotId"
+            )
+        )
+        self.assertTrue(
+            validator._validate_schema(
+                [], schemas["PreparationRequest"]["properties"]["sections"], document, "sections"
+            )
+        )
+
+    def test_rejects_response_without_matching_request(self) -> None:
+        validator = load_validator()
+        self._replace('"snapshotId": "fields-b", "fields"', '"snapshotId": "fields-typo", "fields"')
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("일치하는 요청 예시가 없습니다" in error for error in errors))
+
+    def test_response_relationship_check_is_independent_of_example_order(self) -> None:
+        validator = load_validator()
+        reference = self.reference_path.read_text(encoding="utf-8")
+        response_marker = "<!-- api-example: fields-response -->"
+        request_marker = "<!-- api-example: fields-request -->"
+        prefix, response = reference.split(response_marker, 1)
+        preparation, request = prefix.split(request_marker, 1)
+        reordered = (
+            preparation
+            + response_marker
+            + response
+            + "\n"
+            + request_marker
+            + request
+        )
+        self.reference_path.write_text(reordered, encoding="utf-8")
+
+        self.assertEqual(
+            [], validator.validate_contract(self.openapi_path, self.reference_path)
+        )
+
     def test_rejects_profile_derived_execution_count_in_request(self) -> None:
         validator = load_validator()
         self._replace(
@@ -356,10 +442,11 @@ OPENAPI = textwrap.dedent(
           required: [schemaVersion, snapshotId, site, sections]
           properties:
             schemaVersion: {type: integer, const: 2}
-            snapshotId: {type: string}
+            snapshotId: {type: string, minLength: 1}
             site: {$ref: '#/components/schemas/Site'}
             sections:
               type: array
+              minItems: 1
               items: {$ref: '#/components/schemas/PreparationSection'}
         FieldsRequest:
           type: object
@@ -367,18 +454,19 @@ OPENAPI = textwrap.dedent(
           required: [schemaVersion, snapshotId, site, sections]
           properties:
             schemaVersion: {type: integer, const: 2}
-            snapshotId: {type: string}
+            snapshotId: {type: string, minLength: 1}
             site: {$ref: '#/components/schemas/Site'}
             sections:
               type: array
+              minItems: 1
               items: {$ref: '#/components/schemas/FieldsSection'}
         Site:
           type: object
           additionalProperties: false
           required: [host, pathPattern]
           properties:
-            host: {type: string}
-            pathPattern: {type: string}
+            host: {type: string, minLength: 1, pattern: '^[A-Za-z0-9.-]+(?::[0-9]{1,5})?$'}
+            pathPattern: {type: string, minLength: 1, pattern: '^/[^?#]*$'}
         PreparationSection:
           type: object
           additionalProperties: false
