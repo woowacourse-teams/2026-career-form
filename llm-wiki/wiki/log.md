@@ -49,3 +49,10 @@
 - Approval-Digest: 39378e4cefce4574a1305bf1fdcfb1cfd091803d3b7114b737086fff53117a92
 - Raw: llm-wiki/raw/issues/CF-44/manifest.md
 - Topics: 2
+
+## [2026-08-25] revise | CF-44 canonical field key와 LLM 전체 candidate 계약
+
+- Disposition: Revised before merge
+- Approval-Digest: 35b4142c8c0e9e7f8483e1e434433071033273d5c35481d1825a409c7188c050
+- Raw: llm-wiki/raw/issues/CF-44/manifest.md
+- Topics: 2

@@ -43,6 +43,16 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
         self.assertTrue(any("forbidden property: value" in error for error in errors))
         self.assertTrue(any("unknown property: value" in error for error in errors))
 
+    def test_rejects_account_property_as_forbidden_data(self) -> None:
+        validator = load_validator()
+        self._replace(
+            '"control": "text"', '"control": "text", "account": "synthetic"'
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("forbidden property: account" in error for error in errors))
+
     def test_rejects_forbidden_properties_declared_by_schema(self) -> None:
         validator = load_validator()
         document = self.openapi_path.read_text(encoding="utf-8")
@@ -197,6 +207,317 @@ class ApplicationFormApiValidatorTest(unittest.TestCase):
                 raw_root / "application-form-analysis-api.md",
             ),
         )
+
+    def test_repository_uses_one_canonical_profile_field_contract(self) -> None:
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        schemas = document["components"]["schemas"]
+        profile_field_key = schemas.get("ProfileFieldKey")
+        self.assertIsNotNone(profile_field_key)
+        keys = set(profile_field_key["enum"])
+        policies = profile_field_key["x-autofill-policies"]
+
+        self.assertEqual(keys, set(policies))
+        self.assertIn("certifications.certificate.name", keys)
+        self.assertIn("languages.languageTest.testName", keys)
+        self.assertIn("education.university.startDate", keys)
+        self.assertIn("projects.project.startDate", keys)
+        self.assertNotIn("startDate", keys)
+        self.assertNotIn("grade", keys)
+        self.assertNotIn("testName", keys)
+        self.assertNotIn("languages.languageTest.evidenceDocumentPath", keys)
+        self.assertNotIn(
+            "certifications.certificate.evidenceDocumentPath", keys
+        )
+        self.assertEqual(
+            "SENSITIVE_CONFIRMATION",
+            policies["military.military.militaryStatus"],
+        )
+        self.assertEqual(
+            {"$ref": "#/components/schemas/ProfileFieldKey"},
+            schemas["MatchedFieldAnalysis"]["properties"]["profileFieldKey"],
+        )
+        self.assertEqual(
+            {"$ref": "#/components/schemas/ProfileFieldKey"},
+            schemas["LlmMatchedResult"]["properties"]["profileFieldKey"],
+        )
+        self.assertEqual(
+            ["ADAPTER_VERIFIED", "LLM_SUGGESTED"],
+            schemas["MatchedFieldAnalysis"]["properties"]["mappingStatus"][
+                "enum"
+            ],
+        )
+        self.assertNotIn(
+            "profileFieldKey", schemas["NoMatchFieldAnalysis"]["properties"]
+        )
+
+    def test_field_analysis_rejects_flat_key_rule_status_and_invalid_no_match(
+        self,
+    ) -> None:
+        validator = load_validator()
+        document = yaml.safe_load(
+            (
+                REPOSITORY_ROOT
+                / "llm-wiki/raw/issues/CF-44/documents/api/application-form-analysis.openapi.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        schema = document["components"]["schemas"]["FieldAnalysis"]
+        valid_match = {
+            "candidateId": "field-1",
+            "matchType": "MATCH",
+            "profileFieldKey": "certifications.certificate.name",
+            "autofillPolicy": "CONDITIONAL",
+            "mappingStatus": "LLM_SUGGESTED",
+            "interactionStatus": "READY",
+            "writePlan": {"command": "SET_TEXT"},
+        }
+        valid_no_match = {
+            "candidateId": "field-1",
+            "matchType": "NO_MATCH",
+            "mappingStatus": "LLM_SUGGESTED",
+            "interactionStatus": "BLOCKED",
+            "reasonCodes": ["NO_MATCH"],
+        }
+        self.assertEqual(
+            [], validator._validate_schema(valid_match, schema, document, "field")
+        )
+        self.assertEqual(
+            [],
+            validator._validate_schema(valid_no_match, schema, document, "field"),
+        )
+
+        invalid_results = (
+            {**valid_match, "profileFieldKey": "startDate"},
+            {**valid_match, "mappingStatus": "RULE_MATCHED"},
+            {
+                **valid_no_match,
+                "profileFieldKey": "certifications.certificate.name",
+            },
+        )
+        for result in invalid_results:
+            with self.subTest(result=result):
+                self.assertTrue(
+                    validator._validate_schema(result, schema, document, "field")
+                )
+
+    def test_repository_profile_field_allowlist_matches_ui_and_product_policy(
+        self,
+    ) -> None:
+        validator = load_validator()
+        audit = getattr(validator, "profile_field_contract_errors", None)
+        self.assertIsNotNone(audit)
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        self.assertEqual(
+            [],
+            audit(
+                document,
+                REPOSITORY_ROOT / "frontend/src/profile/field-definitions.ts",
+                REPOSITORY_ROOT
+                / "llm-wiki/raw/issues/CF-41/documents/docs/PROFILE_FIELDS.md",
+            ),
+        )
+
+    def test_profile_field_audit_rejects_missing_extra_and_wrong_policy(
+        self,
+    ) -> None:
+        validator = load_validator()
+        audit = getattr(validator, "profile_field_contract_errors", None)
+        self.assertIsNotNone(audit)
+        document = yaml.safe_load(
+            (
+                REPOSITORY_ROOT
+                / "llm-wiki/raw/issues/CF-44/documents/api/application-form-analysis.openapi.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        schema = document["components"]["schemas"].get("ProfileFieldKey")
+        self.assertIsNotNone(schema)
+        schema["enum"].remove("certifications.certificate.name")
+        schema["enum"].append("certifications.certificate.unknown")
+        schema["x-autofill-policies"]["personal.personal.koreanFamilyName"] = (
+            "SENSITIVE_CONFIRMATION"
+        )
+
+        errors = audit(
+            document,
+            REPOSITORY_ROOT / "frontend/src/profile/field-definitions.ts",
+            REPOSITORY_ROOT
+            / "llm-wiki/raw/issues/CF-41/documents/docs/PROFILE_FIELDS.md",
+        )
+
+        self.assertTrue(any("누락" in error for error in errors))
+        self.assertTrue(any("허용되지 않은 key" in error for error in errors))
+        self.assertTrue(any("policy 불일치" in error for error in errors))
+
+    def test_repository_defines_minimal_llm_input_and_discriminated_output(
+        self,
+    ) -> None:
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        schemas = document["components"]["schemas"]
+        llm_input = schemas.get("LlmMappingInput")
+        result = schemas.get("LlmMappingResult")
+        self.assertIsNotNone(llm_input)
+        self.assertIsNotNone(result)
+        self.assertNotIn("site", llm_input["properties"])
+        self.assertEqual("matchType", result["discriminator"]["propertyName"])
+        self.assertEqual(
+            {
+                "candidateId",
+                "displayName",
+                "element",
+                "control",
+                "options",
+            },
+            set(schemas["LlmFieldCandidate"]["properties"]),
+        )
+
+    def test_llm_schema_rejects_browser_and_profile_only_data(self) -> None:
+        validator = load_validator()
+        document = yaml.safe_load(
+            (
+                REPOSITORY_ROOT
+                / "llm-wiki/raw/issues/CF-44/documents/api/application-form-analysis.openapi.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        schemas = document["components"]["schemas"]
+        candidate = {
+            "candidateId": "field-1",
+            "element": "input",
+            "control": "text",
+            "displayName": "합성 필드",
+        }
+        forbidden_candidate_properties = (
+            "value",
+            "profileValue",
+            "visibility",
+            "domName",
+            "selector",
+            "actionCandidates",
+        )
+        for property_name in forbidden_candidate_properties:
+            with self.subTest(property_name=property_name):
+                errors = validator._validate_schema(
+                    {**candidate, property_name: "synthetic"},
+                    schemas["LlmFieldCandidate"],
+                    document,
+                    "candidate",
+                )
+                self.assertTrue(any("unknown property" in error for error in errors))
+
+        llm_input = {
+            "schemaVersion": 2,
+            "snapshotId": "snapshot-1",
+            "sections": [{"sectionId": "root", "fields": [candidate]}],
+            "site": {"host": "example.test"},
+        }
+        errors = validator._validate_schema(
+            llm_input, schemas["LlmMappingInput"], document, "llm input"
+        )
+        self.assertTrue(any("unknown property: site" in error for error in errors))
+
+    def test_llm_output_candidate_ids_exactly_match_input(self) -> None:
+        validator = load_validator()
+        relationship_errors = getattr(validator, "_llm_relationship_errors", None)
+        self.assertIsNotNone(relationship_errors)
+        llm_input = {
+            "sections": [
+                {
+                    "sectionId": "qualification",
+                    "fields": [{"candidateId": "field-1"}],
+                    "items": [
+                        {
+                            "itemId": "item-1",
+                            "fields": [{"candidateId": "field-2"}],
+                        }
+                    ],
+                }
+            ]
+        }
+        valid_results = [
+            {"candidateId": "field-1", "matchType": "NO_MATCH"},
+            {"candidateId": "field-2", "matchType": "NO_MATCH"},
+        ]
+        self.assertEqual(
+            [], relationship_errors(llm_input, {"results": valid_results}, "llm")
+        )
+
+        invalid_outputs = (
+            {"results": valid_results[:1]},
+            {"results": [valid_results[0], valid_results[0]]},
+            {
+                "results": valid_results
+                + [{"candidateId": "field-3", "matchType": "NO_MATCH"}]
+            },
+        )
+        for output in invalid_outputs:
+            with self.subTest(output=output):
+                self.assertTrue(relationship_errors(llm_input, output, "llm"))
+
+    def test_llm_input_candidate_ids_exactly_match_fields_request(self) -> None:
+        validator = load_validator()
+        relationship_errors = getattr(
+            validator, "_llm_input_relationship_errors", None
+        )
+        self.assertIsNotNone(relationship_errors)
+        fields_request = {
+            "sections": [
+                {
+                    "sectionId": "qualification",
+                    "fields": [{"candidateId": "field-1"}],
+                    "items": [
+                        {
+                            "itemId": "item-1",
+                            "fields": [{"candidateId": "field-2"}],
+                        }
+                    ],
+                }
+            ]
+        }
+        complete_input = {
+            "sections": [
+                {
+                    "sectionId": "qualification",
+                    "fields": [{"candidateId": "field-1"}],
+                    "items": [
+                        {
+                            "itemId": "item-1",
+                            "fields": [{"candidateId": "field-2"}],
+                        }
+                    ],
+                }
+            ]
+        }
+        self.assertEqual(
+            [], relationship_errors(fields_request, complete_input, "llm input")
+        )
+
+        incomplete_input = {
+            "sections": [
+                {
+                    "sectionId": "qualification",
+                    "fields": [{"candidateId": "field-1"}],
+                }
+            ]
+        }
+        errors = relationship_errors(
+            fields_request, incomplete_input, "llm input"
+        )
+
+        self.assertTrue(any("누락" in error for error in errors))
 
     def test_repository_error_codes_match_http_statuses(self) -> None:
         raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-44/documents/api"
@@ -534,7 +855,7 @@ OPENAPI = textwrap.dedent(
                 required: [candidateId, mappingStatus, interactionStatus]
                 properties:
                   candidateId: {type: string}
-                  mappingStatus: {type: string, enum: [RULE_MATCHED, UNKNOWN]}
+                  mappingStatus: {type: string, enum: [LLM_SUGGESTED, UNKNOWN]}
                   interactionStatus: {type: string, enum: [READY, UNVERIFIED]}
                   writePlan:
                     type: object
@@ -580,7 +901,7 @@ REFERENCE = textwrap.dedent(
 
     <!-- api-example: fields-response -->
     ```json
-    {"snapshotId": "fields-b", "fields": [{"candidateId": "field-1", "mappingStatus": "RULE_MATCHED", "interactionStatus": "READY", "writePlan": {"command": "SET_TEXT"}}]}
+    {"snapshotId": "fields-b", "fields": [{"candidateId": "field-1", "mappingStatus": "LLM_SUGGESTED", "interactionStatus": "READY", "writePlan": {"command": "SET_TEXT"}}]}
     ```
     """
 ).lstrip()

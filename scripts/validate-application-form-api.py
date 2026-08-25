@@ -31,6 +31,8 @@ FORBIDDEN_PROPERTIES = {
     "cookies",
     "session",
     "sessionid",
+    "account",
+    "accountid",
     "authorization",
     "selector",
     "cssselector",
@@ -43,7 +45,7 @@ FORBIDDEN_PROPERTIES = {
     "domhandle",
 }
 EXAMPLE_PATTERN = re.compile(
-    r"<!-- api-example: (preparation-request|preparation-response|fields-request|fields-response) -->\s*```json\s*(.*?)```",
+    r"<!-- (?:api-example: (preparation-request|preparation-response|fields-request|fields-response)|llm-example: (mapping-input|mapping-output)) -->\s*```json\s*(.*?)```",
     re.DOTALL,
 )
 EXAMPLE_OPERATIONS = {
@@ -67,6 +69,7 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
         return ["OpenAPI components.schemas가 없습니다"]
     errors = _openapi_structure_errors(document)
     requests: dict[tuple[str, str], Mapping[str, Any]] = {}
+    llm_inputs: dict[str, Mapping[str, Any]] = {}
     try:
         examples = _examples(reference_path)
     except (OSError, ValueError) as error:
@@ -76,6 +79,10 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
             snapshot_id = example.get("snapshotId")
             if isinstance(snapshot_id, str):
                 requests[(kind, snapshot_id)] = example
+        if kind == "llm-mapping-input" and isinstance(example, Mapping):
+            snapshot_id = example.get("snapshotId")
+            if isinstance(snapshot_id, str):
+                llm_inputs[snapshot_id] = example
     for index, (kind, example) in enumerate(examples, start=1):
         prefix = f"example {index} ({kind})"
         try:
@@ -88,6 +95,23 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
             errors.extend(_request_relationship_errors(example, prefix))
         if kind.endswith("-response") and isinstance(example, Mapping):
             errors.extend(_response_relationship_errors(kind, example, requests, prefix))
+        if kind == "llm-mapping-input" and isinstance(example, Mapping):
+            errors.extend(_request_relationship_errors(example, prefix))
+            fields_request = requests.get(("fields-request", example.get("snapshotId")))
+            if fields_request is None:
+                errors.append(
+                    f"{prefix}: 같은 snapshotId의 fields request 예시가 없습니다"
+                )
+            else:
+                errors.extend(
+                    _llm_input_relationship_errors(fields_request, example, prefix)
+                )
+        if kind == "llm-mapping-output" and isinstance(example, Mapping):
+            llm_input = llm_inputs.get(example.get("snapshotId"))
+            if llm_input is None:
+                errors.append(f"{prefix}: 같은 snapshotId의 LLM input 예시가 없습니다")
+            else:
+                errors.extend(_llm_relationship_errors(llm_input, example, prefix))
     return errors
 
 
@@ -127,6 +151,10 @@ def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
 
 
 def _example_schema(document: Mapping[str, Any], kind: str) -> Mapping[str, Any]:
+    if kind == "llm-mapping-input":
+        return document["components"]["schemas"]["LlmMappingInput"]
+    if kind == "llm-mapping-output":
+        return document["components"]["schemas"]["LlmMappingOutput"]
     path, direction = EXAMPLE_OPERATIONS[kind]
     operation = document["paths"][path]["post"]
     if direction == "request":
@@ -137,7 +165,8 @@ def _example_schema(document: Mapping[str, Any], kind: str) -> Mapping[str, Any]
 def _examples(reference_path: Path) -> list[tuple[str, Any]]:
     content = reference_path.read_text(encoding="utf-8")
     examples: list[tuple[str, Any]] = []
-    for kind, body in EXAMPLE_PATTERN.findall(content):
+    for api_kind, llm_kind, body in EXAMPLE_PATTERN.findall(content):
+        kind = api_kind or f"llm-{llm_kind}"
         try:
             examples.append((kind, json.loads(body)))
         except json.JSONDecodeError as error:
@@ -145,6 +174,169 @@ def _examples(reference_path: Path) -> list[tuple[str, Any]]:
     if not examples:
         raise ValueError("api-example 표식이 있는 JSON 예시가 없습니다")
     return examples
+
+
+def profile_field_contract_errors(
+    document: Mapping[str, Any],
+    field_definitions_path: Path,
+    profile_fields_path: Path,
+) -> list[str]:
+    try:
+        expected, discovery_errors = _expected_profile_field_policies(
+            field_definitions_path.read_text(encoding="utf-8"),
+            profile_fields_path.read_text(encoding="utf-8"),
+        )
+    except OSError as error:
+        return [f"프로필 필드 기준을 읽을 수 없습니다: {error}"]
+    errors = list(discovery_errors)
+    schema = document.get("components", {}).get("schemas", {}).get(
+        "ProfileFieldKey"
+    )
+    if not isinstance(schema, Mapping):
+        return errors + ["ProfileFieldKey schema가 없습니다"]
+    enum = schema.get("enum")
+    policies = schema.get("x-autofill-policies")
+    if not isinstance(enum, list) or not all(isinstance(key, str) for key in enum):
+        return errors + ["ProfileFieldKey enum이 문자열 배열이 아닙니다"]
+    if not isinstance(policies, Mapping):
+        return errors + ["ProfileFieldKey x-autofill-policies가 없습니다"]
+
+    actual_keys = set(enum)
+    expected_keys = set(expected)
+    missing = sorted(expected_keys - actual_keys)
+    extra = sorted(actual_keys - expected_keys)
+    if missing:
+        errors.append(f"ProfileFieldKey 누락: {', '.join(missing)}")
+    if extra:
+        errors.append(f"ProfileFieldKey 허용되지 않은 key: {', '.join(extra)}")
+    if set(policies) != actual_keys:
+        errors.append("ProfileFieldKey enum과 x-autofill-policies key가 일치하지 않습니다")
+    mismatches = sorted(
+        key
+        for key in expected_keys & set(policies)
+        if policies[key] != expected[key]
+    )
+    if mismatches:
+        errors.append(f"ProfileFieldKey policy 불일치: {', '.join(mismatches)}")
+    return errors
+
+
+def _expected_profile_field_policies(
+    definitions: str, profile_fields: str
+) -> tuple[dict[str, str], list[str]]:
+    policy_names = {
+        "허용": "ALLOWED",
+        "조건부": "CONDITIONAL",
+        "민감 확인": "SENSITIVE_CONFIRMATION",
+        "미입력": "NEVER_AUTOFILL",
+    }
+    policies_by_field: dict[str, str] = {}
+    errors: list[str] = []
+    row_pattern = re.compile(
+        r"^\|\s*`([^`]+)`\s*\|[^|]*\|[^|]*\|\s*(허용|조건부|민감 확인|미입력)\s*\|",
+        re.MULTILINE,
+    )
+    for field_id, policy_name in row_pattern.findall(profile_fields):
+        policy = policy_names[policy_name]
+        existing = policies_by_field.get(field_id)
+        if existing is not None and existing != policy:
+            errors.append(f"PROFILE_FIELDS policy가 중복 충돌합니다: {field_id}")
+        policies_by_field[field_id] = policy
+
+    expected: dict[str, str] = {}
+    try:
+        category_blocks = _array_object_blocks(definitions, "PROFILE_CATEGORIES")
+        for category in category_blocks:
+            category_id = _declared_id(category)
+            for section in _array_object_blocks(category, "sections:"):
+                section_id = _declared_id(section)
+                fields = _array_content(section, "fields:")
+                field_ids = re.findall(r'(?:text|date)\("([^"]+)"', fields)
+                field_ids.extend(re.findall(r'\{\s*id:\s*"([^"]+)"', fields))
+                if not field_ids:
+                    raise ValueError(
+                        f"profile section에 field 선언이 없습니다: {category_id}.{section_id}"
+                    )
+                for field_id in field_ids:
+                    policy = policies_by_field.get(field_id)
+                    if policy is None:
+                        errors.append(
+                            f"PROFILE_FIELDS 자동 입력 policy가 없습니다: {category_id}.{section_id}.{field_id}"
+                        )
+                    elif policy != "NEVER_AUTOFILL":
+                        expected[f"{category_id}.{section_id}.{field_id}"] = policy
+    except ValueError as error:
+        errors.append(str(error))
+    if not expected:
+        errors.append("UI 선언에서 canonical profile field key를 찾지 못했습니다")
+    return expected, errors
+
+
+def _array_object_blocks(source: str, marker: str) -> list[str]:
+    content = _array_content(source, marker)
+    blocks: list[str] = []
+    index = 0
+    while index < len(content):
+        start = content.find("{", index)
+        if start < 0:
+            break
+        end = _matching_delimiter(content, start, "{", "}")
+        blocks.append(content[start : end + 1])
+        index = end + 1
+    if not blocks:
+        raise ValueError(f"배열 object 선언을 찾을 수 없습니다: {marker}")
+    return blocks
+
+
+def _array_content(source: str, marker: str) -> str:
+    marker_index = source.find(marker)
+    if marker_index < 0:
+        raise ValueError(f"배열 marker를 찾을 수 없습니다: {marker}")
+    search_start = marker_index + len(marker)
+    if marker == "PROFILE_CATEGORIES":
+        assignment = source.find("=", search_start)
+        if assignment < 0:
+            raise ValueError("PROFILE_CATEGORIES 할당을 찾을 수 없습니다")
+        search_start = assignment + 1
+    start = source.find("[", search_start)
+    if start < 0:
+        raise ValueError(f"배열 시작을 찾을 수 없습니다: {marker}")
+    end = _matching_delimiter(source, start, "[", "]")
+    return source[start + 1 : end]
+
+
+def _matching_delimiter(
+    source: str, start: int, opening: str, closing: str
+) -> int:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(source)):
+        character = source[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {'"', "'", "`"}:
+            quote = character
+        elif character == opening:
+            depth += 1
+        elif character == closing:
+            depth -= 1
+            if depth == 0:
+                return index
+    raise ValueError(f"닫히지 않은 delimiter가 있습니다: {opening}")
+
+
+def _declared_id(block: str) -> str:
+    match = re.search(r'^\s*id:\s*"([^"]+)"', block, re.MULTILINE)
+    if match is None:
+        raise ValueError("profile category 또는 section id를 찾을 수 없습니다")
+    return match.group(1)
 
 
 def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[str, Any], path: str) -> list[str]:
@@ -317,6 +509,67 @@ def _response_relationship_errors(
     return errors
 
 
+def _llm_relationship_errors(
+    llm_input: Mapping[str, Any],
+    llm_output: Mapping[str, Any],
+    path: str,
+) -> list[str]:
+    input_ids = _nested_field_candidate_ids(llm_input)
+    output_ids = [
+        result["candidateId"]
+        for result in llm_output.get("results", [])
+        if isinstance(result, Mapping)
+        and isinstance(result.get("candidateId"), str)
+    ]
+    errors: list[str] = []
+    if len(input_ids) != len(set(input_ids)):
+        errors.append(f"{path}: LLM input candidateId가 중복됩니다")
+    if len(output_ids) != len(set(output_ids)):
+        errors.append(f"{path}: LLM output candidateId가 중복됩니다")
+    missing = sorted(set(input_ids) - set(output_ids))
+    unexpected = sorted(set(output_ids) - set(input_ids))
+    if missing:
+        errors.append(f"{path}: LLM output candidateId가 누락됐습니다: {', '.join(missing)}")
+    if unexpected:
+        errors.append(
+            f"{path}: LLM input에 없는 candidateId입니다: {', '.join(unexpected)}"
+        )
+    return errors
+
+
+def _llm_input_relationship_errors(
+    fields_request: Mapping[str, Any],
+    llm_input: Mapping[str, Any],
+    path: str,
+) -> list[str]:
+    request_ids = _nested_field_candidate_ids(fields_request)
+    input_ids = _nested_field_candidate_ids(llm_input)
+    errors: list[str] = []
+    missing = sorted(set(request_ids) - set(input_ids))
+    unexpected = sorted(set(input_ids) - set(request_ids))
+    if missing:
+        errors.append(f"{path}: LLM input candidateId가 누락됐습니다: {', '.join(missing)}")
+    if unexpected:
+        errors.append(
+            f"{path}: fields request에 없는 candidateId입니다: {', '.join(unexpected)}"
+        )
+    return errors
+
+
+def _nested_field_candidate_ids(payload: Mapping[str, Any]) -> list[str]:
+    candidate_ids: list[str] = []
+    for section in payload.get("sections", []):
+        if not isinstance(section, Mapping):
+            continue
+        candidate_ids.extend(
+            candidate["candidateId"]
+            for candidate in _section_candidates(section, "fields")
+            if isinstance(candidate, Mapping)
+            and isinstance(candidate.get("candidateId"), str)
+        )
+    return candidate_ids
+
+
 def _request_candidate_ids(request: Mapping[str, Any]) -> tuple[set[str], set[str]]:
     fields: set[str] = set()
     actions: set[str] = set()
@@ -351,6 +604,19 @@ def main() -> int:
     parser.add_argument("--reference", type=Path, default=root / "llm-wiki/raw/issues/CF-44/documents/api/application-form-analysis-api.md")
     arguments = parser.parse_args()
     errors = validate_contract(arguments.openapi, arguments.reference)
+    try:
+        document = yaml.safe_load(arguments.openapi.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        document = None
+    if isinstance(document, Mapping):
+        errors.extend(
+            profile_field_contract_errors(
+                document,
+                root / "frontend/src/profile/field-definitions.ts",
+                root
+                / "llm-wiki/raw/issues/CF-41/documents/docs/PROFILE_FIELDS.md",
+            )
+        )
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

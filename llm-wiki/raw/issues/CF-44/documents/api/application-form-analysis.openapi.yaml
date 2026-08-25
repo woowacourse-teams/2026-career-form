@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Application Form Analysis API
-  version: 2.3.0
+  version: 2.4.0
   description: 비식별 지원서 DOM snapshot의 preparation과 field 분석을 분리한 계약이다. 인증은 이 명세 범위 밖이다.
 paths:
   /api/v1/preparation/analyze:
@@ -61,7 +61,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
     SnapshotTooLarge:
-      description: snapshot 크기 또는 section/candidate 수 제한 초과
+      description: 직렬화된 snapshot request 크기 제한 초과
       content:
         application/json:
           schema:
@@ -108,8 +108,11 @@ components:
       additionalProperties: false
       required: [host, pathPattern]
       properties:
-        host: {type: string, minLength: 1}
-        pathPattern: {type: string, minLength: 1}
+        host:
+          type: string
+          minLength: 1
+          pattern: '^(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?::[0-9]{1,5})?$'
+        pathPattern: {type: string, minLength: 1, pattern: '^/[^?#]*$'}
     PreparationSection:
       type: object
       additionalProperties: false
@@ -260,36 +263,294 @@ components:
         command: {type: string, const: ADD_REPEATABLE_GROUP}
         expectedEffect: {type: string, const: GROUP_COUNT_INCREMENT}
     FieldAnalysis:
+      oneOf:
+        - {$ref: '#/components/schemas/MatchedFieldAnalysis'}
+        - {$ref: '#/components/schemas/NoMatchFieldAnalysis'}
+      discriminator:
+        propertyName: matchType
+        mapping:
+          MATCH: '#/components/schemas/MatchedFieldAnalysis'
+          NO_MATCH: '#/components/schemas/NoMatchFieldAnalysis'
+    MatchedFieldAnalysis:
       type: object
       additionalProperties: false
-      required: [candidateId, mappingStatus, interactionStatus]
+      required: [candidateId, matchType, profileFieldKey, autofillPolicy, mappingStatus, interactionStatus]
       properties:
         candidateId: {type: string, minLength: 1}
-        profileField:
-          type: string
-          enum: [koreanFamilyName, koreanGivenName, englishFamilyName, englishGivenName, email, phoneNumber, birthDate, nationality, schoolName, degreeLevel, majorName, startDate, endDate, language, testName, registrationNo, acquisitionDate, grade, issuer, projectName, role, activityDetails, NO_MATCH]
-        mappingStatus: {type: string, enum: [ADAPTER_VERIFIED, RULE_MATCHED, LLM_SUGGESTED, UNKNOWN, OUT_OF_SCOPE]}
+        matchType: {type: string, const: MATCH}
+        profileFieldKey: {$ref: '#/components/schemas/ProfileFieldKey'}
+        autofillPolicy: {type: string, enum: [ALLOWED, CONDITIONAL, SENSITIVE_CONFIRMATION]}
+        mappingStatus: {type: string, enum: [ADAPTER_VERIFIED, LLM_SUGGESTED]}
         interactionStatus: {type: string, enum: [READY, MANUAL_REVEAL_REQUIRED, BLOCKED, SYSTEM_CONTROL, UNVERIFIED]}
         writePlan: {$ref: '#/components/schemas/WritePlan'}
+    NoMatchFieldAnalysis:
+      type: object
+      additionalProperties: false
+      required: [candidateId, matchType, mappingStatus, interactionStatus, reasonCodes]
+      properties:
+        candidateId: {type: string, minLength: 1}
+        matchType: {type: string, const: NO_MATCH}
+        mappingStatus: {type: string, enum: [ADAPTER_VERIFIED, LLM_SUGGESTED]}
+        interactionStatus: {type: string, const: BLOCKED}
         reasonCodes:
           type: array
           minItems: 1
-          items: {type: string, enum: [UNKNOWN, BLOCKED, UNVERIFIED, OUT_OF_SCOPE]}
+          maxItems: 1
+          items: {type: string, const: NO_MATCH}
     WritePlan:
       type: object
       additionalProperties: false
       required: [command]
       properties:
         command: {type: string, enum: [SET_TEXT, SELECT_OPTION, CHECK_RADIO, CHECK_CHECKBOX]}
+    LlmMappingInput:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, sections]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1}
+        sections:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmMappingSection'}
+    LlmMappingSection:
+      type: object
+      additionalProperties: false
+      required: [sectionId, fields]
+      properties:
+        sectionId: {type: string, minLength: 1}
+        parentSectionId: {type: string, minLength: 1}
+        displayName: {type: string, minLength: 1}
+        fields:
+          type: array
+          items: {$ref: '#/components/schemas/LlmFieldCandidate'}
+        items:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmMappingItem'}
+    LlmMappingItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, fields]
+      properties:
+        itemId: {type: string, minLength: 1}
+        fields:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmFieldCandidate'}
+    LlmFieldCandidate:
+      type: object
+      additionalProperties: false
+      required: [candidateId, element, control]
+      properties:
+        candidateId: {type: string, minLength: 1}
+        displayName: {type: string, minLength: 1}
+        element: {type: string, enum: [input, select, textarea, custom]}
+        control: {type: string, enum: [text, select, radio, checkbox, textarea, custom]}
+        options:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmOption'}
+    LlmOption:
+      type: object
+      additionalProperties: false
+      required: [displayName]
+      properties:
+        displayName: {type: string, minLength: 1}
     LlmMappingOutput:
       type: object
       additionalProperties: false
-      required: [candidateId, profileField]
+      required: [schemaVersion, snapshotId, results]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1}
+        results:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmMappingResult'}
+    LlmMappingResult:
+      oneOf:
+        - {$ref: '#/components/schemas/LlmMatchedResult'}
+        - {$ref: '#/components/schemas/LlmNoMatchResult'}
+      discriminator:
+        propertyName: matchType
+        mapping:
+          MATCH: '#/components/schemas/LlmMatchedResult'
+          NO_MATCH: '#/components/schemas/LlmNoMatchResult'
+    LlmMatchedResult:
+      type: object
+      additionalProperties: false
+      required: [candidateId, matchType, profileFieldKey]
       properties:
         candidateId: {type: string, minLength: 1}
-        profileField:
-          type: string
-          enum: [koreanFamilyName, koreanGivenName, englishFamilyName, englishGivenName, email, phoneNumber, birthDate, nationality, schoolName, degreeLevel, majorName, startDate, endDate, language, testName, registrationNo, acquisitionDate, grade, issuer, projectName, role, activityDetails, NO_MATCH]
+        matchType: {type: string, const: MATCH}
+        profileFieldKey: {$ref: '#/components/schemas/ProfileFieldKey'}
+    LlmNoMatchResult:
+      type: object
+      additionalProperties: false
+      required: [candidateId, matchType]
+      properties:
+        candidateId: {type: string, minLength: 1}
+        matchType: {type: string, const: NO_MATCH}
+    ProfileFieldKey:
+      type: string
+      enum:
+        - personal.personal.koreanFamilyName
+        - personal.personal.koreanGivenName
+        - personal.personal.hanjaFamilyName
+        - personal.personal.hanjaGivenName
+        - personal.personal.englishFamilyName
+        - personal.personal.englishGivenName
+        - personal.personal.gender
+        - personal.personal.birthDate
+        - personal.personal.nationality
+        - contact.contact.postalCode
+        - contact.contact.addressLine1
+        - contact.contact.addressLine2
+        - contact.contact.email
+        - contact.contact.phoneNumber
+        - education.highSchool.schoolName
+        - education.highSchool.startDate
+        - education.highSchool.endDate
+        - education.university.degreeLevel
+        - education.university.schoolName
+        - education.university.startDate
+        - education.university.endDate
+        - education.university.completionStatus
+        - education.university.gpaScore
+        - education.university.majorName
+        - education.university.additionalMajorName
+        - education.graduateSchool.degreeLevel
+        - education.graduateSchool.country
+        - education.graduateSchool.schoolName
+        - education.graduateSchool.startDate
+        - education.graduateSchool.endDate
+        - education.graduateSchool.admissionType
+        - education.graduateSchool.completionStatus
+        - education.graduateSchool.gpaScore
+        - education.graduateSchool.gpaScale
+        - education.graduateSchool.majorClassification
+        - education.graduateSchool.majorField
+        - education.graduateSchool.majorName
+        - education.graduateSchool.additionalMajorClassification
+        - education.graduateSchool.additionalMajorField
+        - education.graduateSchool.additionalMajorName
+        - languages.languageTest.language
+        - languages.languageTest.testName
+        - languages.languageTest.registrationNo
+        - languages.languageTest.acquisitionDate
+        - languages.languageTest.grade
+        - languages.languageSkill.language
+        - languages.languageSkill.conversationalLevel
+        - certifications.certificate.name
+        - certifications.certificate.grade
+        - certifications.certificate.registrationNo
+        - certifications.certificate.issuer
+        - certifications.certificate.acquisitionDate
+        - projects.project.startDate
+        - projects.project.endDate
+        - projects.project.projectName
+        - projects.project.role
+        - projects.project.activityDetails
+        - military.military.militaryStatus
+        - military.military.militaryBranch
+        - military.military.militarySpecialty
+        - military.military.militaryRank
+        - military.military.serviceStartDate
+        - military.military.serviceEndDate
+        - military.military.dischargeType
+        - military.military.exemptionReason
+        - veteran.veteran.veteranStatus
+        - veteran.veteran.veteranType
+        - veteran.veteran.veteranRelation
+        - veteran.veteran.veteranNumber
+        - disability.disability.disabilityStatus
+        - disability.disability.disabilityType
+        - disability.disability.disabilityGrade
+        - disability.disability.disabilityRegistrationDate
+        - health.health.healthItemName
+        - health.health.healthStatusOrValue
+        - health.health.healthDate
+        - health.health.healthDetails
+      x-autofill-policies:
+        personal.personal.koreanFamilyName: ALLOWED
+        personal.personal.koreanGivenName: ALLOWED
+        personal.personal.hanjaFamilyName: ALLOWED
+        personal.personal.hanjaGivenName: ALLOWED
+        personal.personal.englishFamilyName: ALLOWED
+        personal.personal.englishGivenName: ALLOWED
+        personal.personal.gender: CONDITIONAL
+        personal.personal.birthDate: ALLOWED
+        personal.personal.nationality: CONDITIONAL
+        contact.contact.postalCode: CONDITIONAL
+        contact.contact.addressLine1: CONDITIONAL
+        contact.contact.addressLine2: ALLOWED
+        contact.contact.email: ALLOWED
+        contact.contact.phoneNumber: ALLOWED
+        education.highSchool.schoolName: CONDITIONAL
+        education.highSchool.startDate: ALLOWED
+        education.highSchool.endDate: ALLOWED
+        education.university.degreeLevel: CONDITIONAL
+        education.university.schoolName: CONDITIONAL
+        education.university.startDate: ALLOWED
+        education.university.endDate: ALLOWED
+        education.university.completionStatus: CONDITIONAL
+        education.university.gpaScore: ALLOWED
+        education.university.majorName: CONDITIONAL
+        education.university.additionalMajorName: CONDITIONAL
+        education.graduateSchool.degreeLevel: CONDITIONAL
+        education.graduateSchool.country: CONDITIONAL
+        education.graduateSchool.schoolName: CONDITIONAL
+        education.graduateSchool.startDate: ALLOWED
+        education.graduateSchool.endDate: ALLOWED
+        education.graduateSchool.admissionType: CONDITIONAL
+        education.graduateSchool.completionStatus: CONDITIONAL
+        education.graduateSchool.gpaScore: ALLOWED
+        education.graduateSchool.gpaScale: CONDITIONAL
+        education.graduateSchool.majorClassification: CONDITIONAL
+        education.graduateSchool.majorField: CONDITIONAL
+        education.graduateSchool.majorName: CONDITIONAL
+        education.graduateSchool.additionalMajorClassification: CONDITIONAL
+        education.graduateSchool.additionalMajorField: CONDITIONAL
+        education.graduateSchool.additionalMajorName: CONDITIONAL
+        languages.languageTest.language: CONDITIONAL
+        languages.languageTest.testName: CONDITIONAL
+        languages.languageTest.registrationNo: ALLOWED
+        languages.languageTest.acquisitionDate: ALLOWED
+        languages.languageTest.grade: ALLOWED
+        languages.languageSkill.language: CONDITIONAL
+        languages.languageSkill.conversationalLevel: CONDITIONAL
+        certifications.certificate.name: CONDITIONAL
+        certifications.certificate.grade: ALLOWED
+        certifications.certificate.registrationNo: ALLOWED
+        certifications.certificate.issuer: CONDITIONAL
+        certifications.certificate.acquisitionDate: ALLOWED
+        projects.project.startDate: ALLOWED
+        projects.project.endDate: ALLOWED
+        projects.project.projectName: ALLOWED
+        projects.project.role: ALLOWED
+        projects.project.activityDetails: ALLOWED
+        military.military.militaryStatus: SENSITIVE_CONFIRMATION
+        military.military.militaryBranch: SENSITIVE_CONFIRMATION
+        military.military.militarySpecialty: SENSITIVE_CONFIRMATION
+        military.military.militaryRank: SENSITIVE_CONFIRMATION
+        military.military.serviceStartDate: SENSITIVE_CONFIRMATION
+        military.military.serviceEndDate: SENSITIVE_CONFIRMATION
+        military.military.dischargeType: SENSITIVE_CONFIRMATION
+        military.military.exemptionReason: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranStatus: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranType: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranRelation: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranNumber: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityStatus: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityType: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityGrade: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityRegistrationDate: SENSITIVE_CONFIRMATION
+        health.health.healthItemName: SENSITIVE_CONFIRMATION
+        health.health.healthStatusOrValue: SENSITIVE_CONFIRMATION
+        health.health.healthDate: SENSITIVE_CONFIRMATION
+        health.health.healthDetails: SENSITIVE_CONFIRMATION
     ErrorResponse:
       type: object
       additionalProperties: false

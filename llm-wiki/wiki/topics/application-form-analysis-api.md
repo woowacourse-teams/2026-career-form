@@ -8,8 +8,10 @@
 
 ## 현재 상태
 
-section 중심 비식별 snapshot을 두 전용 API로 보낸다. Snapshot A는 `/api/v1/preparation/analyze`의 action candidate 전용 요청이고, Snapshot B는 `/api/v1/fields/analyze`의 field 전용 요청이다. section 직접 candidate는 section 배열에 두고, 자격·학력·경력처럼 반복되는 한 레코드의 candidate는 snapshot 로컬 `itemId`를 가진 `items[]`로 묶는다. 반복 입력 추가 plan은 action 의미와 기대 효과만 반환한다. browser가 로컬 목표 항목 수와 현재 DOM 행 수로 실행 횟수를 계산하고 로컬 안전 정책과 클릭별 행 증가 검증을 적용한다. 효과 확인이나 안전한 재탐색에 실패하면 새 Snapshot A로 되돌아간다.
+section 중심 비식별 snapshot을 두 전용 API로 보낸다. Snapshot A는 `/api/v1/preparation/analyze`의 action candidate 전용 요청이고, Snapshot B는 `/api/v1/fields/analyze`의 field 전용 요청이다. section 직접 candidate는 section 배열에 두고, 반복되는 한 레코드의 candidate는 snapshot 로컬 `itemId`를 가진 `items[]`로 묶는다. 반복 입력 추가 plan은 action 의미와 기대 효과만 반환하며 browser가 실행 횟수와 안전 정책을 소유한다.
+
+어댑터가 일치하면 어댑터가 field mapping을 독점하고, fingerprint 불일치는 fallback 없이 차단한다. 비어댑터 사이트에서는 Snapshot B의 모든 field candidate를 비식별 LLM input으로 보내며 결과는 candidate마다 정확히 하나의 `MATCH | NO_MATCH`다. `MATCH`는 `categoryId.sectionId.fieldId` canonical key와 자동 입력 정책을 사용한다.
 
 ## 변경 이유
 
-서로 다른 수명주기의 candidate와 plan을 한 schema에 섞지 않고, OpenAPI에서 cross-endpoint property와 실행 횟수 속성을 거부한다. `items[]`는 회사별 DOM wrapper 이름을 계약에 노출하지 않으면서 같은 반복 레코드의 field가 다른 레코드와 교차 결합되는 것을 막는다. 응답은 중첩 위치와 관계없이 `candidateId` 기준 평면 배열을 유지한다. 프로필 항목 개수를 backend에 보내지 않으면서 반복 행을 한 승인 plan으로 준비하고, 실행 시점 상태를 아는 browser가 횟수와 과다 실행 방지를 책임진다.
+서로 다른 수명주기의 candidate와 plan을 한 schema에 섞지 않는다. canonical key는 중복되는 평평한 field ID의 저장 위치 모호성을 없애고, LLM 전용 schema와 exact candidate set 검사는 전체 DOM·개인정보 전송 없이 모든 generic field를 일관된 producer가 분류하게 한다.

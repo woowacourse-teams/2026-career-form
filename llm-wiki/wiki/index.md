@@ -46,5 +46,5 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [회사 어댑터 개발](topics/adapter-development.md) | 안전한 어댑터 개발 경계 | 2026-08-22 |
 | [어댑터 필드 현황](topics/adapter-field-inventory.md) | 필드 지원 상태 확인 경계 | 2026-08-22 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
-| [지원서 분석 API](topics/application-form-analysis-api.md) | preparation·field 전용 endpoint를 가진 비식별 snapshot 계약 | 2026-08-25 |
-| [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | browser, backend, LLM 최소 전송과 endpoint 분리 경계 | 2026-08-25 |
+| [지원서 분석 API](topics/application-form-analysis-api.md) | 전용 endpoint, canonical field key와 LLM 1:1 계약 | 2026-08-25 |
+| [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | adapter 배타성, 비식별 LLM 전송과 browser 실행 경계 | 2026-08-25 |

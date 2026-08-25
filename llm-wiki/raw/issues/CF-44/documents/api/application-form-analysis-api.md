@@ -10,6 +10,8 @@
 
 실제 프로필 값과 control value, HTML, 전체 URL·query·fragment, checked/selected 상태, 쿠키·세션·계정 정보, selector와 실행 코드는 요청·예시·LLM payload에 금지한다. 선택지는 실제 value 대신 `optionId`와 표시명만 보낼 수 있다. `displayName`, `domId`, `domName`, `placeholder`는 발견한 짧은 문자열만 보내며 빈 문자열과 `null`은 보내지 않는다.
 
+`site.host`는 scheme·path·query·fragment가 없는 host와 선택적 port만 허용한다. `site.pathPattern`은 `/`로 시작하고 query·fragment를 포함하지 않는 비식별 경로 패턴이다.
+
 ## Snapshot A: preparation 분석
 
 `POST /api/v1/preparation/analyze`는 아직 실행하지 않은 `actionCandidates`만 받는다. section 전체에 영향을 주는 후보는 `sections[].actionCandidates[]`, 반복 item 내부에 실제로 속한 후보는 `sections[].items[].actionCandidates[]`에 둔다. field candidate와 write plan은 이 endpoint에 존재하지 않는다. 응답의 `preparationPlans`는 사용자 승인 뒤에만 브라우저가 실행한다.
@@ -141,28 +143,36 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
   "fields": [
     {
       "candidateId": "field-certificate-name-01",
-      "profileField": "testName",
-      "mappingStatus": "RULE_MATCHED",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.name",
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "LLM_SUGGESTED",
       "interactionStatus": "READY",
       "writePlan": {"command": "SET_TEXT"}
     },
     {
       "candidateId": "field-certificate-issuer-01",
-      "profileField": "issuer",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.issuer",
+      "autofillPolicy": "CONDITIONAL",
       "mappingStatus": "LLM_SUGGESTED",
       "interactionStatus": "READY",
       "writePlan": {"command": "SET_TEXT"}
     },
     {
       "candidateId": "field-certificate-name-02",
-      "profileField": "testName",
-      "mappingStatus": "RULE_MATCHED",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.name",
+      "autofillPolicy": "CONDITIONAL",
+      "mappingStatus": "LLM_SUGGESTED",
       "interactionStatus": "READY",
       "writePlan": {"command": "SET_TEXT"}
     },
     {
       "candidateId": "field-certificate-issuer-02",
-      "profileField": "issuer",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.issuer",
+      "autofillPolicy": "CONDITIONAL",
       "mappingStatus": "LLM_SUGGESTED",
       "interactionStatus": "READY",
       "writePlan": {"command": "SET_TEXT"}
@@ -186,7 +196,7 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
 }
 ```
 
-일부 field만 안전하게 분석하지 못하면 확인 가능한 결과는 보존하고 `PARTIAL`과 warning을 반환한다.
+LLM 호출 실패처럼 일부 field의 결과를 만들 수 없으면 확인 가능한 결과만 보존하고 `PARTIAL`과 warning을 반환한다. 이때 결과가 없는 candidate를 `UNKNOWN` mapping으로 꾸미지 않는다. LLM 호출이 정상 완료된 경우에는 아래 LLM output의 candidate 1:1 규칙을 적용한다.
 
 <!-- api-example: fields-response -->
 ```json
@@ -194,29 +204,113 @@ requiredAdditions = max(0, localItemCount - currentDomGroupCount)
   "snapshotId": "synthetic-fields-b",
   "mode": "GENERIC",
   "analysisStatus": "PARTIAL",
-  "warningCodes": ["UNRESOLVED_FIELD"],
-  "fields": [
-    {
-      "candidateId": "field-certificate-name-01",
-      "mappingStatus": "UNKNOWN",
-      "interactionStatus": "UNVERIFIED",
-      "reasonCodes": ["UNKNOWN", "UNVERIFIED"]
-    }
-  ]
+  "warningCodes": ["LLM_UNAVAILABLE"],
+  "fields": []
 }
 ```
 
 ## Backend에서 LLM으로의 최소 payload
 
-backend는 회사 어댑터와 결정 규칙을 먼저 적용한다. 미지원 사이트의 입력 field와 의미 판단에 필요한 section 이름·parent 관계·`itemId`·label/ARIA·control type·option 표시명만 LLM에 전달한다. 같은 `itemId`의 field는 하나의 반복 레코드 문맥으로 유지한다. preparation snapshot 전체와 `actionCandidates`는 LLM에 전달하지 않는다.
+회사 전용 어댑터가 존재하고 fingerprint가 일치하면 어댑터가 모든 field mapping을 독점하며 field candidate를 LLM에 보내지 않는다. fingerprint가 불일치하면 `ADAPTER_STRUCTURE_MISMATCH`로 차단하고 generic 또는 LLM으로 우회하지 않는다.
 
-LLM structured output은 `candidateId`와 allowlist profile field key 또는 `NO_MATCH`만 반환한다. LLM 결과는 `LLM_SUGGESTED`이며 사용자 확인 전 실행 근거가 아니다.
+회사 전용 어댑터가 없는 사이트에서는 Snapshot B의 일부가 아니라 모든 field candidate의 의미 매핑을 LLM이 담당한다. backend는 외부 fields request를 그대로 전달하지 않고 LLM 전용 `LlmMappingInput`을 만든다. 이 payload에는 `candidateId`, section 이름과 parent 관계, snapshot-local `itemId`, label/ARIA에서 정규화한 선택적 `displayName`, element/control type과 option 표시명만 포함한다. 같은 `itemId`의 field는 하나의 반복 레코드 문맥으로 유지한다.
+
+다음은 위 Snapshot B의 네 field를 모두 포함한 LLM input이다. `site`, visibility, DOM id/name, placeholder, option ID는 의미 추론에 불필요하므로 제거된다.
+
+<!-- llm-example: mapping-input -->
+```json
+{
+  "schemaVersion": 2,
+  "snapshotId": "synthetic-fields-b",
+  "sections": [
+    {
+      "sectionId": "section-qualification",
+      "displayName": "자격",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "qualification-item-01",
+          "fields": [
+            {
+              "candidateId": "field-certificate-name-01",
+              "element": "input",
+              "control": "text",
+              "displayName": "자격 명칭"
+            },
+            {
+              "candidateId": "field-certificate-issuer-01",
+              "element": "input",
+              "control": "text",
+              "displayName": "발급 기관"
+            }
+          ]
+        },
+        {
+          "itemId": "qualification-item-02",
+          "fields": [
+            {
+              "candidateId": "field-certificate-name-02",
+              "element": "input",
+              "control": "text",
+              "displayName": "자격 명칭"
+            },
+            {
+              "candidateId": "field-certificate-issuer-02",
+              "element": "input",
+              "control": "text",
+              "displayName": "발급 기관"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+<!-- llm-example: mapping-output -->
+```json
+{
+  "schemaVersion": 2,
+  "snapshotId": "synthetic-fields-b",
+  "results": [
+    {
+      "candidateId": "field-certificate-name-01",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.name"
+    },
+    {
+      "candidateId": "field-certificate-issuer-01",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.issuer"
+    },
+    {
+      "candidateId": "field-certificate-name-02",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.name"
+    },
+    {
+      "candidateId": "field-certificate-issuer-02",
+      "matchType": "MATCH",
+      "profileFieldKey": "certifications.certificate.issuer"
+    }
+  ]
+}
+```
+
+LLM output은 input의 각 `candidateId`마다 정확히 하나의 결과를 반환한다. 결과는 canonical `ProfileFieldKey`를 가진 `MATCH` 또는 `profileFieldKey`가 없는 `NO_MATCH` 중 하나다. duplicate, 누락, input에 없던 candidate ID는 backend가 거부한다. `NO_MATCH`는 profile field enum에 섞인 문자열이 아니다.
+
+canonical key는 현재 로컬 저장 위치를 완전히 표현하는 `categoryId.sectionId.fieldId` 형식이다. 예를 들어 어학 시험명은 `languages.languageTest.testName`, 자격 명칭은 `certifications.certificate.name`, 대학교 입학일은 `education.university.startDate`, 프로젝트 시작일은 `projects.project.startDate`다. 평평한 `testName`, `startDate`, `grade`는 결과로 반환할 수 없다.
+
+OpenAPI의 단일 `ProfileFieldKey` allowlist는 현재 `PROFILE_FIELDS.md`와 UI field 선언을 따른다. 파일을 읽거나 업로드하지 않는 `evidenceDocumentPath`는 제외한다. `MATCH`인 외부 field analysis에는 `ALLOWED`, `CONDITIONAL`, `SENSITIVE_CONFIRMATION` 중 하나의 `autofillPolicy`를 함께 반환한다. 민감 field의 의미 분류는 가능하지만 실제 프로필 값 연결과 입력은 browser가 지원 건마다 별도 확인한다.
+
+LLM 결과를 외부 field analysis로 변환할 때 `mappingStatus`는 `LLM_SUGGESTED`다. `RULE_MATCHED`는 비어댑터 route의 producer가 없으므로 계약에서 제거한다. LLM 결과는 사용자 확인 전 자동 실행의 단독 근거가 아니다.
 
 ## 오류 계약
 
 | HTTP | code | 의미 |
 | --- | --- | --- |
 | 400 | `INVALID_REQUEST` | schema, 금지 field, ID 관계 또는 enum 위반 |
-| 413 | `SNAPSHOT_TOO_LARGE` | snapshot 크기 또는 후보 수 제한 초과 |
+| 413 | `SNAPSHOT_TOO_LARGE` | 직렬화된 snapshot request 크기 제한 초과 |
 | 429 | `RATE_LIMITED` | 분석 요청 제한 초과 |
 | 500 | `INTERNAL_ERROR` | 서버 내부 분석 실패 |
