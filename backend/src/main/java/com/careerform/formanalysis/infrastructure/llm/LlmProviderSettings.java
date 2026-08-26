@@ -1,4 +1,4 @@
-package com.careerform.llm.mapping.infrastructure.openai;
+package com.careerform.formanalysis.infrastructure.llm;
 
 public record LlmProviderSettings(
     String model,

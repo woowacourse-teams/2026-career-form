@@ -1,6 +1,9 @@
 package com.careerform.formanalysis.infrastructure.llm;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -9,6 +12,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.careerform.formanalysis.domain.FieldsSnapshot;
 import com.careerform.formanalysis.domain.FormControl;
 import com.careerform.formanalysis.domain.FormElement;
+
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.databind.jsontype.TypeDeserializer;
 
 public final class LlmFieldMappingContract {
 
@@ -105,6 +115,7 @@ public final class LlmFieldMappingContract {
         @JsonSubTypes.Type(Match.class),
         @JsonSubTypes.Type(NoMatch.class)
     })
+    @JsonDeserialize(using = ResultDeserializer.class)
     public sealed interface Result permits Match, NoMatch {
         String candidateId();
     }
@@ -128,5 +139,101 @@ public final class LlmFieldMappingContract {
 
     public enum NoMatchDecision {
         NO_MATCH
+    }
+
+    public static final class ResultDeserializer extends StdDeserializer<Result> {
+
+        public ResultDeserializer() {
+            super(Result.class);
+        }
+
+        @Override
+        public Result deserialize(
+            JsonParser parser,
+            DeserializationContext context
+        ) {
+            JsonNode node = context.readTree(parser);
+            String decision = requiredText(node, "matchType", context);
+            return switch (decision) {
+                case "MATCH" -> match(node, context);
+                case "NO_MATCH" -> noMatch(node, context);
+                default -> context.reportInputMismatch(
+                    Result.class,
+                    "지원하지 않는 matchType입니다"
+                );
+            };
+        }
+
+        @Override
+        public Result deserializeWithType(
+            JsonParser parser,
+            DeserializationContext context,
+            TypeDeserializer typeDeserializer
+        ) {
+            return deserialize(parser, context);
+        }
+
+        private static Match match(
+            JsonNode node,
+            DeserializationContext context
+        ) {
+            requireProperties(
+                node,
+                Set.of("candidateId", "matchType", "profileFieldKey"),
+                context
+            );
+            return new Match(
+                requiredText(node, "candidateId", context),
+                MatchDecision.MATCH,
+                requiredText(node, "profileFieldKey", context)
+            );
+        }
+
+        private static NoMatch noMatch(
+            JsonNode node,
+            DeserializationContext context
+        ) {
+            requireProperties(
+                node,
+                Set.of("candidateId", "matchType"),
+                context
+            );
+            return new NoMatch(
+                requiredText(node, "candidateId", context),
+                NoMatchDecision.NO_MATCH
+            );
+        }
+
+        private static void requireProperties(
+            JsonNode node,
+            Set<String> expected,
+            DeserializationContext context
+        ) {
+            Set<String> actual = node.properties().stream()
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+            if (!actual.equals(expected)) {
+                context.reportInputMismatch(
+                    Result.class,
+                    "field result property 계약이 일치하지 않습니다"
+                );
+            }
+        }
+
+        private static String requiredText(
+            JsonNode node,
+            String property,
+            DeserializationContext context
+        ) {
+            JsonNode value = node.get(property);
+            if (value == null || !value.isString()) {
+                return context.reportInputMismatch(
+                    Result.class,
+                    "%s 문자열이 필요합니다",
+                    property
+                );
+            }
+            return value.stringValue();
+        }
     }
 }

@@ -27,53 +27,66 @@ macOS에서 현재 셸이 JDK 21을 사용하도록 설정하는 예시는 다�
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
 
-## LLM 매핑 API
+## 지원서 분석 API
 
-`POST /api/v1/llm/mappings`는 현재 페이지의 비식별 필드 메타데이터를 받아, 규칙으로
-확정된 `contextFields`를 문맥으로 사용하고 미해결 `targetFields`만 프로필 필드 키 또는
-`NO_MATCH`로 매핑한다. 실제 프로필 값, 원본 DOM, URL, 쿠키, 계정·세션·인증 정보는
-요청에 넣지 않는다. 서버도 요청·응답 원문과 시크릿을 로그에 남기지 않도록 Spring AI
-prompt/completion/error logging을 비활성화한다.
+schema v2 지원서 분석은 항상 노출되는 두 전용 endpoint로 나뉜다.
 
-LLM 매핑 코드는 책임과 변경 이유가 섞이지 않도록 다음처럼 나눈다.
+- `POST /api/v1/preparation/analyze`: 모든 action candidate를 `ACTION | NO_ACTION`으로
+  분석하고 검증된 준비 plan만 반환한다. Backend는 클릭하지 않으며 실행 횟수 산정,
+  사용자 승인, 실행, 기대 효과 확인과 새 DOM 수집은 browser가 담당한다.
+- `POST /api/v1/fields/analyze`: 준비가 끝난 모든 field candidate를 canonical 77개
+  프로필 필드 키의 `MATCH | NO_MATCH`로 분석한다. 상호작용 상태와 제한된 write command는
+  Backend의 결정론적 정책이 만들고 실제 값 연결과 입력은 browser가 담당한다.
+
+두 API와 Resolver 확장 경계는 다음 패키지가 소유한다. 현재 production 구현은 범용 LLM
+Resolver 두 개뿐이며 회사별 정적 Resolver, DB mapping과 Resolver router는 후속 범위다.
 
 ```text
-com.careerform.llm.mapping
-├── domain/                 요청·응답 계약과 허용 프로필 키
-├── application/            매핑 유스케이스, 검증과 모델 포트
-├── api/                    HTTP 진입점, 요청 제한과 오류 응답
-├── infrastructure/openai/ OpenAI 공급자 구현과 호출 설정
-└── config/                 기능 플래그와 의존성 조립
+com.careerform.formanalysis
+├── api/                       HTTP 진입점, 요청 제한과 일반화된 오류
+├── application/
+│   └── port/                  ActionResolver, FieldMappingResolver
+├── domain/                    schema v2 계약, canonical key와 안전 정책
+└── infrastructure/
+    └── llm/
+        └── openai/            strict structured output와 조건부 공급자 조립
 ```
 
-의존성은 API와 OpenAI 구현에서 애플리케이션·도메인 쪽으로 향한다. 특정 회사나 채용
-사이트의 페이지 구조를 다루는 전용 어댑터는 LLM 공급자 어댑터와 다른 확장 축이다.
-따라서 이 패키지 아래에 추가하지 않고, 대상 회사와 실행 환경이 확정된 별도 Issue에서
-페이지 분석·자동 입력 기능 루트와 회사별 하위 패키지를 함께 정의한다.
+LLM은 외부 snapshot 전체를 그대로 받지 않는다. field 분석에는 section/item 관계,
+candidate ID, 표시명, element/control과 option 표시명만 전달한다. action 분석에는 같은
+구조와 candidate 표시명, element/control/visibility, domId/domName 및 true 상태 flag를
+전달한다. 두 경로 모두 실제 프로필/control 값, HTML, 전체 URL·query·fragment,
+cookie/session/account/authorization, selector·실행 코드와 DOM handle을 보내지 않는다.
+Spring AI prompt/completion/error logging과 provider-side 저장도 비활성화한다.
 
-LLM 매핑은 기본 비활성화되어 API key 없이도 애플리케이션과 CI가 기동한다. 활성화할
-때는 다음 값을 프로세스 실행 환경에 주입한다. 실제 값이 담긴 `.env`와 `.env.local`은
-Git에 추가하지 않는다.
+LLM Resolver는 기본 비활성화되지만 두 HTTP endpoint는 숨지 않는다. 비활성 상태,
+공급자 실행 장애 또는 출력 전체 계약 위반이면 `200 + GENERIC + PARTIAL +
+[LLM_UNAVAILABLE]`와 빈 결과를 반환한다. 유효한 all-`NO_ACTION`과 all-`NO_MATCH`는
+`COMPLETE`다. 잘못된 client snapshot은 400, 원문 또는 canonical JSON 65,536-byte
+상한 초과는 413, 예상하지 않은 로컬 오류는 500이며 502를 사용하지 않는다.
+
+선택 속성은 생략할 수 있지만 명시적 `null`과 빈 문자열은 허용하지 않는다. ID는 최대
+128자, displayName/domId/domName/placeholder는 최대 120자, site host는 253자,
+path pattern은 512자다. Resolver 결과는 candidate exact set, snapshot/schema header,
+action tuple/상태/target과 field key를 모두 검증한 뒤 원자적으로 채택한다.
+
+LLM Resolver를 활성화할 때는 다음 값을 프로세스 실행 환경에 주입한다. 실제 값이 담긴
+`.env`와 `.env.local`은 Git에 추가하지 않는다.
 
 | 환경 변수 | 기본값 | 설명 |
 |---|---:|---|
-| `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때만 매핑 API를 노출한다. |
-| `CAREER_FORM_LLM_PROVIDER` | `openai` | 모델 포트 구현을 고른다. 현재 지원값은 `openai`다. |
-| `CAREER_FORM_LLM_MODEL` | 빈 값 | 활성화 시 `gpt-5.6-luna`여야 한다. |
+| `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때 범용 LLM Resolver 두 개를 활성화한다. |
+| `CAREER_FORM_LLM_PROVIDER` | 빈 값 | 활성화 시 정확히 `openai`여야 한다. |
+| `CAREER_FORM_LLM_MODEL` | 빈 값 | 활성화 시 정확히 `gpt-5.6-luna`여야 한다. |
 | `OPENAI_API_KEY` | 빈 값 | 활성화 시 공백이 아닌 실행 환경 시크릿이어야 한다. |
 | `CAREER_FORM_LLM_TIMEOUT` | `10s` | OpenAI 요청 timeout이다. |
 | `CAREER_FORM_LLM_MAX_RETRIES` | `1` | OpenAI client 최대 retry 횟수다. |
 | `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | `2048` | completion token 상한이다. |
 
-입력 상한은 context 50개, target 50개, 원문과 canonical JSON 각각 65,536 bytes이며 각
-문자열에는 DTO별 절대 길이 상한이 있다. 입력 계약 위반은 400, 요청 byte 상한 초과는
-413, 공급자 오류나 출력 전체 계약 위반은 원문 없는 502로 반환한다. 모델 호출은 Spring
-AI의 OpenAI 네이티브 strict JSON Schema를 사용하며 모델은 `gpt-5.6-luna`, reasoning
-effort는 `none`, provider-side response 저장은 비활성화한다.
-
+모델 호출은 Spring AI의 OpenAI 네이티브 strict JSON Schema를 사용한다. 모델은
+`gpt-5.6-luna`, reasoning effort는 `none`, completion 상한은 2,048 tokens다.
 로컬 Compose에서는 [`.env.example`](../.env.example)을 `.env.local`의 출발점으로
-사용할 수 있다. LLM을 활성화하려면 아래 세 설정을 명시하고 나머지 제한값은 필요할 때만
-조정한다.
+사용할 수 있다.
 
 ```dotenv
 CAREER_FORM_LLM_ENABLED=true
@@ -82,18 +95,15 @@ CAREER_FORM_LLM_MODEL=gpt-5.6-luna
 OPENAI_API_KEY=<실행 환경에서만 설정>
 ```
 
-`local`, `dev`, `staging`, `prod` 프로파일 자체에는 LLM 하드 차단이 없다. 운영에서도
-같은 명시적 런타임 설정으로 활성화할 수 있지만 현재 API에는 인증, rate limit, 동시 호출
-제한과 비용 경보가 없다. 공개 인터넷 노출과 운영 활성화 여부는 사람이 판단하며, 현재
-배포 환경 변수 전달 구성과 시크릿 등록은 이 기능의 범위에 포함되지 않는다.
-
-실제 API key를 넣고 비식별 합성 요청으로 OpenAI를 한 번 호출하는 연결 smoke test는
-사람이 수행한다. 성공 여부와 비식별 검증 결과만 기록하고 요청 본문, 공급자 원문 응답과
-key는 로그·Issue·PR에 남기지 않는다. 이 확인은 연결 점검일 뿐 모델 성능 평가가 아니다.
+자동 테스트는 fake Resolver 또는 fake `ChatModel`만 사용하며 실제 OpenAI 호출을 하지
+않는다. 실제 API key를 넣은 연결 smoke test는 사람이 비식별 합성 snapshot으로 두
+endpoint를 각각 한 번 호출해 수행한다. 성공 여부와 비식별 검증 결과만 기록하고 요청
+본문, 공급자 원문 응답과 key는 로그·Issue·PR에 남기지 않는다. 실제 지원서 클릭과 입력도
+smoke test 범위에 포함하지 않는다.
 
 현재 모델 선택은 세로 단면 데모를 위한 잠정값이다. 후속 평가는 동일한 비식별 사례에서
 Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, 오매핑,
-매핑 범위, confidence 보정과 응답 속도를 비교하고 모델 선택 ADR을 작성한다.
+매핑 범위와 응답 속도를 비교하고 모델 선택 ADR을 작성한다.
 
 ## 빌드와 검증
 
