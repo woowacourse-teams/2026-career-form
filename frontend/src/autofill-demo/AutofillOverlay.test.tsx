@@ -187,6 +187,91 @@ describe("AutofillOverlay", () => {
     expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();
   });
 
+  it("keeps profile values hidden when field analysis reports the page as blocked", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<label>이메일 <input type="email" /></label>`;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [],
+      })),
+      analyzeFields: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "BLOCKED" as const,
+        fields: [],
+        blockCode: "ADAPTER_STRUCTURE_MISMATCH" as const,
+      })),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "이 페이지에서는 자동 기입을 진행할 수 없습니다",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();
+    expect(pageDocument.querySelector("input")?.value).toBe("");
+  });
+
+  it("stops before field analysis when an approved reveal action has no verified effect", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `
+      <section><button type="button">추가 정보 열기</button></section>
+      <section hidden><button type="button">보조 동작</button><label>이메일 <input type="email" /></label></section>
+    `;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [
+          {
+            actionCandidateId:
+              request.sections[0]?.actionCandidates[0]!.candidateId,
+            command: "REVEAL_SECTION" as const,
+            expectedEffect: "TARGET_VISIBLE" as const,
+            targetSectionId: request.sections[1]!.sectionId,
+          },
+        ],
+      })),
+      analyzeFields: vi.fn(),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "지원서 준비 동작 검토" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "승인한 준비 동작 실행" }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "준비 동작을 안전하게 완료하지 못했습니다",
+      }),
+    ).toBeInTheDocument();
+    expect(apiClient.analyzeFields).not.toHaveBeenCalled();
+    expect(pageDocument.querySelector("input")?.value).toBe("");
+  });
+
   it("closes from its action and the Escape key", () => {
     const closeFromAction = vi.fn();
     const pageDocument = document.implementation.createHTMLDocument("지원서");

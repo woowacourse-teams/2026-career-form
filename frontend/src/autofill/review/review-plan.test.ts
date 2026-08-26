@@ -6,7 +6,11 @@ import {
   createStructuralSignature,
 } from "../dom/candidate-registry";
 import { createEmptyProfile, type Profile } from "../../profile/model";
-import { buildReviewPlan, resolveProfileFieldValue } from "./review-plan";
+import {
+  buildReviewPlan,
+  resolveProfileFieldValue,
+  revealSensitiveReviewItem,
+} from "./review-plan";
 
 function response(
   fields: FieldsAnalyzeResponse["fields"],
@@ -88,6 +92,43 @@ describe("profile value resolution", () => {
     expect(
       resolveProfileFieldValue(profile, "certifications.certificate.name"),
     ).toEqual({ status: "ambiguous", sensitive: false });
+  });
+
+  it("keeps a repeated field unavailable when its only matching entry has no value", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      certifications: [
+        {
+          id: "certificate-1",
+          sectionId: "certificate",
+          values: { name: "" },
+        },
+      ],
+    };
+
+    expect(
+      resolveProfileFieldValue(profile, "certifications.certificate.name"),
+    ).toEqual({ status: "missing", sensitive: false });
+  });
+
+  it("rejects an excluded evidence document path instead of resolving it", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      certifications: [
+        {
+          id: "certificate-1",
+          sectionId: "certificate",
+          values: { evidenceDocumentPath: "/local/evidence.pdf" },
+        },
+      ],
+    };
+
+    expect(
+      resolveProfileFieldValue(
+        profile,
+        "certifications.certificate.evidenceDocumentPath",
+      ),
+    ).toEqual({ status: "unknown", sensitive: false });
   });
 });
 
@@ -192,6 +233,53 @@ describe("review plan", () => {
     expect(plan).toMatchObject({
       status: "ready",
       items: [{ status: "unavailable", selected: false, disabled: true }],
+    });
+  });
+
+  it("does not make a manual-reveal field selectable even with a saved value", () => {
+    const profile = createEmptyProfile();
+    profile.contact.email = "me@example.test";
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          interactionStatus: "MANUAL_REVEAL_REQUIRED",
+          writePlan: undefined,
+        },
+      ]),
+      profile,
+      registry: registryWithTextField(),
+    }).items;
+
+    expect(item).toMatchObject({
+      status: "unavailable",
+      selected: false,
+      disabled: true,
+      reason: "현재 상태에서는 안전하게 입력할 수 없습니다.",
+    });
+  });
+
+  it("reveals a sensitive value only after the explicit reveal action", () => {
+    const profile = createEmptyProfile();
+    profile.military.militaryStatus = "복무 완료";
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          profileFieldKey: "military.military.militaryStatus",
+          autofillPolicy: "SENSITIVE_CONFIRMATION",
+        },
+      ]),
+      profile,
+      registry: registryWithTextField(),
+    }).items;
+
+    expect(revealSensitiveReviewItem(item)).toMatchObject({
+      previewValue: "복무 완료",
+      selected: false,
+      disabled: false,
+      revealed: true,
     });
   });
 
