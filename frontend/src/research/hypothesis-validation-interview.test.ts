@@ -1,93 +1,35 @@
-// @ts-expect-error jsdom is a test-only dependency without a checked-in type package.
-import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 
-import html from "./hypothesis-validation-interview.html?raw";
-
-function createResearchDom() {
-  return new JSDOM(html, {
-    pretendToBeVisual: true,
-    runScripts: "dangerously",
-    url: "file:///research/hypothesis-validation-interview.html",
-  });
-}
-
-function getElement<T extends HTMLElement>(document: Document, id: string): T {
-  const element = document.getElementById(id);
-  if (!element) {
-    throw new Error(`필수 요소가 없습니다: ${id}`);
-  }
-  return element as T;
-}
-
-function fillInput(document: Document, id: string, value: string): void {
-  getElement<HTMLInputElement>(document, id).value = value;
-}
-
-function startAssistedTaskForTest() {
-  const dom = createResearchDom();
-  const { document } = dom.window;
-
-  fillInput(document, "participant-code", "P01");
-  getElement<HTMLButtonElement>(document, "start-session").click();
-  getElement<HTMLButtonElement>(document, "start-manual-task").click();
-
-  const manualValues = {
-    "manual-name": "김가온",
-    "manual-email": "gaon.kim@example.com",
-    "manual-phone": "010-0000-1001",
-    "manual-birth-date": "2000-05-21",
-    "manual-university": "한빛대학교(가상)",
-    "manual-language-score": "TOEIC 900",
-    "manual-veteran-status": "비해당",
-    "manual-certificate-number": "CF-A-2024-0614",
-  };
-  Object.entries(manualValues).forEach(([id, value]) =>
-    fillInput(document, id, value),
-  );
-  getElement<HTMLButtonElement>(document, "complete-manual-task").click();
-  getElement<HTMLButtonElement>(document, "start-assisted-task").click();
-
-  return dom;
-}
-
-function completeAssistedTaskForTest() {
-  const dom = startAssistedTaskForTest();
-  const { document } = dom.window;
-  getElement<HTMLButtonElement>(document, "approve-autofill").click();
-
-  const remainingValues = {
-    "assisted-university": "새봄대학교(가상)",
-    "assisted-language-score": "OPIc IH",
-    "assisted-certificate-number": "CF-B-2023-1120",
-    "assisted-veteran-status": "비해당",
-  };
-  Object.entries(remainingValues).forEach(([id, value]) =>
-    fillInput(document, id, value),
-  );
-  getElement<HTMLButtonElement>(document, "complete-assisted-task").click();
-
-  return dom;
-}
-
-function selectAllSurveyResponses(document: Document) {
-  const selectedResponses = {
-    "repeat-friction": "specific",
-    "time-saving": "5",
-    "partial-value": "5",
-    "reason-understanding": "yes",
-    trust: "4",
-    intention: "yes",
-    "automation-boundary": "fields",
-  };
-  Object.entries(selectedResponses).forEach(([name, value]) => {
-    const input = document.querySelector<HTMLInputElement>(
-      `#post-task-survey input[name="${name}"][value="${value}"]`,
-    );
-    if (!input) throw new Error(`사후 응답 항목이 없습니다: ${name}`);
-    input.checked = true;
-  });
-}
+import {
+  ASSISTED_DIRECT_INPUT_VALUES,
+  completeAssistedTaskForTest,
+  createResearchDom,
+  DEFAULT_APPROVED_ASSISTED_VALUES,
+  EMPTY_FORM_VALUES,
+  EXPECTED_ASSISTED_SOURCE_CARD_TITLES,
+  EXPECTED_ASSISTED_SOURCE_CARD_VALUES,
+  EXPECTED_DETAIL_FIELDS,
+  EXPECTED_FIELD_KEYS,
+  EXPECTED_FIELD_KEYS_BY_SECTION,
+  EXPECTED_MANUAL_SOURCE_CARD_TITLES,
+  EXPECTED_MANUAL_SOURCE_CARD_VALUES,
+  EXPECTED_REVIEW_KEYS,
+  EXPECTED_REVIEW_VALUES,
+  EXPECTED_SECTIONS,
+  EXPECTED_STATUS_LABELS,
+  fillInput,
+  fillInputs,
+  getElement,
+  html,
+  MANUAL_INPUT_VALUES,
+  normalizeText,
+  readDefinitionPairs,
+  readFormValues,
+  readReviewInputs,
+  REDACTED_FIXTURE_VALUES,
+  selectAllSurveyResponses,
+  startAssistedTaskForTest,
+} from "./hypothesis-validation-interview.test-support";
 
 describe("hypothesis validation interview prototype", () => {
   it("exposes the fixed interview landmarks and controls", () => {
@@ -130,16 +72,8 @@ describe("hypothesis validation interview prototype", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("groups both applications into numbered sections with credential and language cards", () => {
+  it("groups exactly seventeen application fields into the required sections", () => {
     const { document } = createResearchDom().window;
-    const expectedSections = [
-      "01 기본 정보",
-      "02 학력사항",
-      "03 자격증·면허증",
-      "04 어학",
-      "05 보훈",
-    ];
-
     ["manual", "assisted"].forEach((task) => {
       const form = getElement<HTMLFormElement>(document, `${task}-form`);
       const sections = [
@@ -150,32 +84,38 @@ describe("hypothesis validation interview prototype", () => {
 
       expect(
         sections.map((section) =>
-          section
-            .querySelector("legend")
-            ?.textContent?.replace(/\s+/g, " ")
-            .trim(),
+          normalizeText(section.querySelector("legend")?.textContent),
         ),
-      ).toEqual(expectedSections);
-      expect(form.querySelectorAll("input[data-fixture-key]")).toHaveLength(8);
+      ).toEqual(EXPECTED_SECTIONS);
+      const fixtureInputs = [
+        ...form.querySelectorAll<HTMLInputElement>("input[data-fixture-key]"),
+      ];
+      expect(fixtureInputs.length).toBe(17);
+      expect(fixtureInputs.map((input) => input.dataset.fixtureKey)).toEqual(
+        EXPECTED_FIELD_KEYS,
+      );
 
-      const expectedFieldSections = {
-        name: "basic",
-        email: "basic",
-        phone: "basic",
-        birthDate: "basic",
-        university: "education",
-        certificateNumber: "certification",
-        languageScore: "language",
-        veteranStatus: "veteran",
-      };
+      Object.entries(EXPECTED_FIELD_KEYS_BY_SECTION).forEach(
+        ([section, expectedKeys]) => {
+          const sectionFields = form.querySelector(
+            `fieldset[data-application-section="${section}"]`,
+          );
+          expect(sectionFields).not.toBeNull();
+          expect(
+            [
+              ...(sectionFields?.querySelectorAll<HTMLInputElement>(
+                "input[data-fixture-key]",
+              ) ?? []),
+            ].map((input) => input.dataset.fixtureKey),
+          ).toEqual(expectedKeys);
+        },
+      );
 
-      Object.entries(expectedFieldSections).forEach(([key, section]) => {
-        const input = form.querySelector(`[data-fixture-key="${key}"]`);
-        expect(input).not.toBeNull();
-        expect(
-          input?.closest(`fieldset[data-application-section="${section}"]`),
-        ).not.toBeNull();
-      });
+      if (task === "assisted") {
+        expect(fixtureInputs.map((input) => input.dataset.assistedKey)).toEqual(
+          EXPECTED_FIELD_KEYS,
+        );
+      }
 
       expect(
         form.querySelector(
@@ -186,6 +126,86 @@ describe("hypothesis validation interview prototype", () => {
         form.querySelector('[data-application-section="language"] article h3'),
       ).toHaveTextContent("공인외국어시험 1");
     });
+  });
+
+  it("labels each credential and language detail as an independent input", () => {
+    const { document } = createResearchDom().window;
+
+    ["manual", "assisted"].forEach((task) => {
+      const form = getElement<HTMLFormElement>(document, `${task}-form`);
+
+      Object.entries(EXPECTED_DETAIL_FIELDS).forEach(
+        ([key, { label: expectedLabel, type: expectedType }]) => {
+          const input = form.querySelector<HTMLInputElement>(
+            `input[data-fixture-key="${key}"]`,
+          );
+          expect(input).not.toBeNull();
+          expect(input?.type).toBe(expectedType);
+
+          const label = input
+            ? form.querySelector<HTMLLabelElement>(`label[for="${input.id}"]`)
+            : null;
+          expect(normalizeText(label?.textContent)).toBe(expectedLabel);
+        },
+      );
+    });
+  });
+
+  it("shows person A's seventeen values across exactly four source cards", () => {
+    const { document } = createResearchDom().window;
+    const sourceBoard = getElement<HTMLElement>(
+      document,
+      "manual-source-board",
+    );
+    const cards = [
+      ...sourceBoard.querySelectorAll<HTMLElement>("article.source-card"),
+    ];
+
+    expect(cards.length).toBe(4);
+    expect(
+      cards.map((card) => normalizeText(card.querySelector("h3")?.textContent)),
+    ).toEqual(EXPECTED_MANUAL_SOURCE_CARD_TITLES);
+    expect(cards.map(readDefinitionPairs)).toEqual(
+      EXPECTED_MANUAL_SOURCE_CARD_VALUES,
+    );
+    expect(
+      normalizeText(
+        document.querySelector("#manual-task .task-heading .muted")
+          ?.textContent,
+      ),
+    ).toContain("왼쪽 네 카드");
+    expect(
+      normalizeText(
+        document.querySelector("#manual-task .task-meta")?.textContent,
+      ),
+    ).toContain("17개 필드 · 4개 정보 카드");
+  });
+
+  it("shows person B's detailed sources without exposing the sensitive value", () => {
+    const { document } = createResearchDom().window;
+    const sourceBoard = getElement<HTMLElement>(
+      document,
+      "assisted-source-board",
+    );
+    const cards = [
+      ...sourceBoard.querySelectorAll<HTMLElement>("article.source-card"),
+    ];
+
+    expect(cards.length).toBe(3);
+    expect(
+      cards.map((card) => normalizeText(card.querySelector("h3")?.textContent)),
+    ).toEqual(EXPECTED_ASSISTED_SOURCE_CARD_TITLES);
+    expect(cards.map(readDefinitionPairs)).toEqual(
+      EXPECTED_ASSISTED_SOURCE_CARD_VALUES,
+    );
+    expect(sourceBoard).not.toHaveTextContent("비해당");
+    expect(
+      normalizeText(
+        document.querySelector("#assisted-task .task-meta")?.textContent,
+      ),
+    ).toContain(
+      "17개 필드 · 입력 가능 4개 · 확인 필요 7개 · 입력 불가 5개 · 민감 확인 1개",
+    );
   });
 
   it("keeps the prototype self-contained and free of persistence or network APIs", () => {
@@ -264,7 +284,7 @@ describe("hypothesis validation interview prototype", () => {
     ).toBeDisabled();
   });
 
-  it("starts task A with eight empty fields and blocks task B until task A is complete", () => {
+  it("starts task A with seventeen empty fields and blocks task B until task A is complete", () => {
     const { window } = createResearchDom();
     const { document } = window;
 
@@ -274,7 +294,7 @@ describe("hypothesis validation interview prototype", () => {
 
     const manualInputs =
       document.querySelectorAll<HTMLInputElement>("#manual-form input");
-    expect(manualInputs).toHaveLength(8);
+    expect(manualInputs).toHaveLength(17);
     expect([...manualInputs].every((input) => input.value === "")).toBe(true);
     expect(
       getElement<HTMLButtonElement>(document, "start-assisted-task"),
@@ -293,13 +313,9 @@ describe("hypothesis validation interview prototype", () => {
     getElement<HTMLButtonElement>(document, "start-session").click();
     getElement<HTMLButtonElement>(document, "start-manual-task").click();
 
-    fillInput(document, "manual-name", "김가온");
-    fillInput(document, "manual-email", "wrong@example.com");
-    fillInput(document, "manual-phone", "010-0000-1001");
-    fillInput(document, "manual-birth-date", "2000-05-21");
-    fillInput(document, "manual-university", "한빛대학교(가상)");
-    fillInput(document, "manual-language-score", "TOEIC 900");
-    fillInput(document, "manual-veteran-status", "비해당");
+    fillInputs(document, MANUAL_INPUT_VALUES);
+    fillInput(document, "manual-certificate-issuer", "");
+    fillInput(document, "manual-language-registration-number", "WRONG");
 
     getElement<HTMLButtonElement>(document, "complete-manual-task").click();
 
@@ -314,43 +330,87 @@ describe("hypothesis validation interview prototype", () => {
     ).toBeEnabled();
   });
 
-  it("selects only four available fields by default and disables the other statuses", () => {
+  it("groups task B into four available, seven review, five unavailable, and one sensitive field", () => {
     const { document } = startAssistedTaskForTest().window;
     const reviewInputs = document.querySelectorAll<HTMLInputElement>(
       "#autofill-review input[data-review-key]",
     );
+    const inputsByStatus = {
+      available: readReviewInputs(document, "is-available"),
+      review: readReviewInputs(document, "is-review"),
+      unavailable: readReviewInputs(document, "is-unavailable"),
+      sensitive: readReviewInputs(document, "is-sensitive"),
+    };
 
-    expect(reviewInputs).toHaveLength(8);
+    expect(reviewInputs).toHaveLength(17);
+    Object.entries(inputsByStatus).forEach(([status, inputs]) => {
+      expect(inputs.map((input) => input.dataset.reviewKey)).toEqual(
+        EXPECTED_REVIEW_KEYS[status as keyof typeof EXPECTED_REVIEW_KEYS],
+      );
+    });
+    expect(
+      inputsByStatus.available.every(
+        (input) => input.checked && !input.disabled,
+      ),
+    ).toBe(true);
+    expect(
+      [...inputsByStatus.review, ...inputsByStatus.unavailable].every(
+        (input) => !input.checked && input.disabled,
+      ),
+    ).toBe(true);
+    expect(
+      inputsByStatus.sensitive.every(
+        (input) => !input.checked && input.disabled,
+      ),
+    ).toBe(true);
     expect(
       [...reviewInputs]
         .filter((input) => input.checked)
         .map((input) => input.dataset.reviewKey),
-    ).toEqual(["name", "email", "phone", "birthDate"]);
-    expect(
-      [...reviewInputs]
-        .filter((input) => input.disabled)
-        .map((input) => input.dataset.reviewKey),
-    ).toEqual([
-      "university",
-      "languageScore",
-      "certificateNumber",
-      "veteranStatus",
-    ]);
-    expect(document.querySelectorAll("#assisted-form input")).toHaveLength(8);
+    ).toEqual(EXPECTED_REVIEW_KEYS.available);
+    expect(document.querySelectorAll("#assisted-form input")).toHaveLength(17);
+
+    Object.entries(inputsByStatus).forEach(([status, inputs]) => {
+      inputs.forEach((input) => {
+        const card = input.closest(".review-card");
+        const key = input.dataset
+          .reviewKey as keyof typeof EXPECTED_REVIEW_VALUES;
+        expect(
+          normalizeText(card?.querySelector(".review-status")?.textContent),
+        ).toBe(
+          EXPECTED_STATUS_LABELS[status as keyof typeof EXPECTED_STATUS_LABELS],
+        );
+        expect(
+          normalizeText(card?.querySelector(".review-value")?.textContent),
+        ).toBe(EXPECTED_REVIEW_VALUES[key]);
+        if (status === "review") {
+          expect(card?.querySelector(".review-reason")).toHaveTextContent(
+            "직접 입력",
+          );
+        }
+        if (status === "unavailable") {
+          expect(card?.querySelector(".review-reason")).toHaveTextContent(
+            "프로필에 값이 없어",
+          );
+          expect(card?.querySelector(".review-reason")).toHaveTextContent(
+            "직접 찾아 입력",
+          );
+        }
+      });
+    });
+
     expect(
       getElement<HTMLElement>(document, "sensitive-status"),
     ).toHaveAttribute("aria-hidden", "true");
     expect(
       getElement<HTMLElement>(document, "sensitive-value"),
     ).toHaveAttribute("aria-hidden", "true");
-    expect(getElement<HTMLInputElement>(document, "assisted-name").value).toBe(
-      "",
+    expect(readFormValues(document, "assisted-form")).toEqual(
+      EMPTY_FORM_VALUES,
     );
     expect(
       getElement<HTMLElement>(document, "autofill-review"),
-    ).toHaveTextContent(
-      "프로필에 값이 없어 자격 정보 카드에서 직접 찾아 입력하세요",
-    );
+    ).toHaveTextContent("프로필에 값이 없어");
   });
 
   it("re-hides the sensitive value and restores review defaults when task B restarts", () => {
@@ -358,6 +418,7 @@ describe("hypothesis validation interview prototype", () => {
     getElement<HTMLButtonElement>(document, "reveal-sensitive").click();
     getElement<HTMLInputElement>(document, "review-veteran-status").checked =
       true;
+    fillInputs(document, ASSISTED_DIRECT_INPUT_VALUES);
 
     getElement<HTMLButtonElement>(document, "start-assisted-task").click();
 
@@ -376,6 +437,9 @@ describe("hypothesis validation interview prototype", () => {
     expect(
       getElement<HTMLInputElement>(document, "review-email"),
     ).toBeChecked();
+    expect(readFormValues(document, "assisted-form")).toEqual(
+      EMPTY_FORM_VALUES,
+    );
   });
 
   it("clears the previous survey and summary when task B restarts", () => {
@@ -410,8 +474,9 @@ describe("hypothesis validation interview prototype", () => {
 
   it("keeps task B values unchanged until final approval and applies only approved fields", () => {
     const { document } = startAssistedTaskForTest().window;
-    const assistedForm = getElement<HTMLFormElement>(document, "assisted-form");
-    const beforeApproval = assistedForm.innerHTML;
+    expect(readFormValues(document, "assisted-form")).toEqual(
+      EMPTY_FORM_VALUES,
+    );
 
     getElement<HTMLButtonElement>(document, "reveal-sensitive").click();
     expect(
@@ -423,9 +488,22 @@ describe("hypothesis validation interview prototype", () => {
     expect(
       getElement<HTMLElement>(document, "sensitive-value"),
     ).toHaveAttribute("aria-hidden", "false");
-    expect(assistedForm.innerHTML).toBe(beforeApproval);
+    expect(
+      normalizeText(
+        getElement<HTMLElement>(document, "sensitive-value").textContent,
+      ),
+    ).toBe("비해당");
+    expect(readFormValues(document, "assisted-form")).toEqual(
+      EMPTY_FORM_VALUES,
+    );
 
     getElement<HTMLInputElement>(document, "review-name").checked = false;
+    getElement<HTMLInputElement>(document, "review-name").dispatchEvent(
+      new document.defaultView!.Event("change", { bubbles: true }),
+    );
+    expect(readFormValues(document, "assisted-form")).toEqual(
+      EMPTY_FORM_VALUES,
+    );
     getElement<HTMLButtonElement>(document, "approve-autofill").click();
 
     expect(getElement<HTMLInputElement>(document, "assisted-name").value).toBe(
@@ -443,6 +521,18 @@ describe("hypothesis validation interview prototype", () => {
     expect(
       getElement<HTMLInputElement>(document, "assisted-certificate-number")
         .value,
+    ).toBe("");
+    expect(
+      getElement<HTMLInputElement>(document, "assisted-certificate-name").value,
+    ).toBe("");
+    expect(
+      getElement<HTMLInputElement>(document, "assisted-language").value,
+    ).toBe("");
+    expect(
+      getElement<HTMLInputElement>(
+        document,
+        "assisted-language-evidence-document-path",
+      ).value,
     ).toBe("");
 
     getElement<HTMLInputElement>(document, "review-veteran-status").checked =
@@ -478,7 +568,7 @@ describe("hypothesis validation interview prototype", () => {
     getElement<HTMLInputElement>(document, "review-veteran-status").checked =
       true;
     getElement<HTMLButtonElement>(document, "approve-autofill").click();
-    fillInput(document, "assisted-university", "새봄대학교(가상)");
+    fillInputs(document, ASSISTED_DIRECT_INPUT_VALUES);
 
     expect(getElement<HTMLInputElement>(document, "assisted-email").value).toBe(
       "seojun.lee@example.com",
@@ -501,21 +591,21 @@ describe("hypothesis validation interview prototype", () => {
     expect(
       getElement<HTMLInputElement>(document, "assisted-university").value,
     ).toBe("새봄대학교(가상)");
+    Object.entries(ASSISTED_DIRECT_INPUT_VALUES)
+      .filter(([id]) => id !== "assisted-veteran-status")
+      .forEach(([id, value]) =>
+        expect(getElement<HTMLInputElement>(document, id).value).toBe(value),
+      );
   });
 
   it("counts task B after approved fields and direct entries are both complete", () => {
     const { document } = startAssistedTaskForTest().window;
     getElement<HTMLButtonElement>(document, "approve-autofill").click();
 
-    const remainingValues = {
-      "assisted-university": "새봄대학교(가상)",
-      "assisted-language-score": "OPIc IH",
-      "assisted-certificate-number": "CF-B-2023-1120",
-      "assisted-veteran-status": "비해당",
-    };
-    Object.entries(remainingValues).forEach(([id, value]) =>
-      fillInput(document, id, value),
+    expect(readFormValues(document, "assisted-form")).toEqual(
+      DEFAULT_APPROVED_ASSISTED_VALUES,
     );
+    fillInputs(document, ASSISTED_DIRECT_INPUT_VALUES);
     getElement<HTMLButtonElement>(document, "complete-assisted-task").click();
 
     expect(
@@ -530,12 +620,9 @@ describe("hypothesis validation interview prototype", () => {
   it("counts task B missing and incorrect values instead of treating every field as correct", () => {
     const { document } = startAssistedTaskForTest().window;
     getElement<HTMLButtonElement>(document, "approve-autofill").click();
+    fillInputs(document, ASSISTED_DIRECT_INPUT_VALUES);
     fillInput(document, "assisted-email", "wrong@example.com");
     fillInput(document, "assisted-phone", "");
-    fillInput(document, "assisted-university", "새봄대학교(가상)");
-    fillInput(document, "assisted-language-score", "OPIc IH");
-    fillInput(document, "assisted-certificate-number", "CF-B-2023-1120");
-    fillInput(document, "assisted-veteran-status", "비해당");
 
     getElement<HTMLButtonElement>(document, "complete-assisted-task").click();
 
@@ -568,20 +655,9 @@ describe("hypothesis validation interview prototype", () => {
     expect(summary).toContain("참가자 코드: P01");
     expect(summary).toContain("승인한 입력 가능 항목: 4개");
     expect(summary).toContain('"automation-boundary":"fields"');
-    [
-      "김가온",
-      "gaon.kim@example.com",
-      "이서준",
-      "seojun.lee@example.com",
-      "010-0000-1001",
-      "010-0000-2002",
-      "CF-A-2024-0614",
-      "CF-B-2023-1120",
-      "한빛대학교(가상)",
-      "새봄대학교(가상)",
-      "TOEIC 900",
-      "OPIc IH",
-    ].forEach((fixtureValue) => expect(summary).not.toContain(fixtureValue));
+    REDACTED_FIXTURE_VALUES.forEach((fixtureValue) =>
+      expect(summary).not.toContain(fixtureValue),
+    );
   });
 
   it("selects the read-only summary when clipboard copying fails", async () => {
@@ -634,6 +710,24 @@ describe("hypothesis validation interview prototype", () => {
         ...document.querySelectorAll<HTMLInputElement>("#manual-form input"),
       ].every((input) => input.disabled && input.value === ""),
     ).toBe(true);
+    expect(readFormValues(document, "assisted-form")).toEqual(
+      EMPTY_FORM_VALUES,
+    );
+    expect(
+      readReviewInputs(document, "is-available").every(
+        (input) => input.checked && !input.disabled,
+      ),
+    ).toBe(true);
+    expect(
+      [
+        ...readReviewInputs(document, "is-review"),
+        ...readReviewInputs(document, "is-unavailable"),
+        ...readReviewInputs(document, "is-sensitive"),
+      ].every((input) => !input.checked && input.disabled),
+    ).toBe(true);
+    expect(
+      getElement<HTMLElement>(document, "sensitive-value"),
+    ).toHaveAttribute("aria-hidden", "true");
   });
 
   it("provides labels, keyboard focus targets, and no submission controls", () => {

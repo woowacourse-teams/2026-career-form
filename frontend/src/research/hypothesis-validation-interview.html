@@ -338,7 +338,7 @@
       .manual-layout {
         display: grid;
         gap: 18px;
-        grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
+        grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
         margin-top: 20px;
       }
 
@@ -382,6 +382,7 @@
       .source-card dd {
         font-weight: 700;
         margin: 0;
+        overflow-wrap: anywhere;
       }
 
       .application-card {
@@ -446,6 +447,18 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .form-field {
+        min-width: 0;
+      }
+
+      .detail-field-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .form-field--span-2 {
+        grid-column: span 2;
+      }
+
       .repeatable-entry {
         background: #fff;
         border: 1px solid #d5e0ec;
@@ -505,7 +518,7 @@
 
       .assisted-review-layout {
         align-items: start;
-        grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
+        grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
       }
 
       .assisted-review-layout #autofill-review {
@@ -556,12 +569,14 @@
 
       .review-value {
         font-weight: 800;
+        overflow-wrap: anywhere;
       }
 
       .review-reason {
         color: var(--muted);
         font-size: 12px;
         grid-column: 2;
+        overflow-wrap: anywhere;
       }
 
       .sensitive-value {
@@ -652,7 +667,7 @@
         padding-top: 0;
       }
 
-      @media (max-width: 1180px) {
+      @media (max-width: 1240px) {
         body {
           min-width: 0;
         }
@@ -671,6 +686,16 @@
         }
 
         .assisted-review-layout #autofill-review {
+          grid-column: auto;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .detail-field-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .form-field--span-2 {
           grid-column: auto;
         }
       }
@@ -751,18 +776,22 @@
               가상 인물의 자료를 찾아 지원서를 작성하세요
             </h2>
             <p class="muted">
-              왼쪽 세 카드에서 값을 찾고 오른쪽 지원서에 직접 입력합니다. 시작
+              왼쪽 네 카드에서 값을 찾고 오른쪽 지원서에 직접 입력합니다. 시작
               전 지원서 값은 비어 있습니다.
             </p>
           </div>
           <div class="task-meta">
-            8개 필드 · 3개 정보 카드<br />
+            17개 필드 · 4개 정보 카드<br />
             회사: 모아테크 채용 · 가상 기업
           </div>
         </div>
 
         <div class="manual-layout">
-          <aside class="source-board" aria-labelledby="manual-source-title">
+          <aside
+            class="source-board"
+            id="manual-source-board"
+            aria-labelledby="manual-source-title"
+          >
             <h3 id="manual-source-title">가상 인물 A 자료</h3>
             <p class="muted">인터뷰 중 필요한 카드만 찾아보세요.</p>
             <article class="source-card">
@@ -779,21 +808,44 @@
               </dl>
             </article>
             <article class="source-card">
-              <h3>이력 정보 카드</h3>
+              <h3>학력·보훈 정보 카드</h3>
               <dl>
                 <dt>대학교명</dt>
                 <dd>한빛대학교(가상)</dd>
-                <dt>어학 성적</dt>
-                <dd>TOEIC 900</dd>
                 <dt>보훈 대상 여부</dt>
                 <dd>비해당</dd>
               </dl>
             </article>
             <article class="source-card">
-              <h3>자격 정보 카드</h3>
+              <h3>자격증·면허증 정보 카드</h3>
               <dl>
-                <dt>자격증 등록번호</dt>
+                <dt>자격증명</dt>
+                <dd>정보처리 역량 인증</dd>
+                <dt>등록번호</dt>
                 <dd>CF-A-2024-0614</dd>
+                <dt>유효 기간</dt>
+                <dd>2024-06-14 ~ 2029-06-13</dd>
+                <dt>등급</dt>
+                <dd>기사급</dd>
+                <dt>발급기관</dt>
+                <dd>한빛자격평가원(가상)</dd>
+              </dl>
+            </article>
+            <article class="source-card">
+              <h3>어학 정보 카드</h3>
+              <dl>
+                <dt>외국어</dt>
+                <dd>영어</dd>
+                <dt>시험명</dt>
+                <dd>TOEIC</dd>
+                <dt>등록번호</dt>
+                <dd>LANG-A-2024-0518</dd>
+                <dt>취득일</dt>
+                <dd>2024-05-18</dd>
+                <dt>등급·점수</dt>
+                <dd>900</dd>
+                <dt>증빙 서류 위치</dt>
+                <dd>가상 문서함 &gt; 어학 &gt; TOEIC 성적표</dd>
               </dl>
             </article>
           </aside>
@@ -891,14 +943,51 @@
                     </h3>
                     <span class="entry-card-state">직접 입력</span>
                   </div>
-                  <div class="section-field-grid">
+                  <div class="section-field-grid detail-field-grid">
                     <div class="form-field">
-                      <label for="manual-certificate-number"
-                        >자격증 등록번호</label
-                      >
+                      <label for="manual-certificate-name">자격증명</label>
+                      <input
+                        id="manual-certificate-name"
+                        data-fixture-key="certificateName"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="manual-certificate-number">등록번호</label>
                       <input
                         id="manual-certificate-number"
                         data-fixture-key="certificateNumber"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="manual-certificate-validity-period"
+                        >유효 기간</label
+                      >
+                      <input
+                        id="manual-certificate-validity-period"
+                        data-fixture-key="certificateValidityPeriod"
+                        disabled
+                        placeholder="YYYY-MM-DD ~ YYYY-MM-DD"
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="manual-certificate-grade">등급</label>
+                      <input
+                        id="manual-certificate-grade"
+                        data-fixture-key="certificateGrade"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field form-field--span-2">
+                      <label for="manual-certificate-issuer">발급기관</label>
+                      <input
+                        id="manual-certificate-issuer"
+                        data-fixture-key="certificateIssuer"
                         disabled
                         type="text"
                       />
@@ -923,12 +1012,63 @@
                     <h3 id="manual-language-card-title">공인외국어시험 1</h3>
                     <span class="entry-card-state">직접 입력</span>
                   </div>
-                  <div class="section-field-grid">
+                  <div class="section-field-grid detail-field-grid">
+                    <div class="form-field">
+                      <label for="manual-language">외국어</label>
+                      <input
+                        id="manual-language"
+                        data-fixture-key="language"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="manual-language-test-name">시험명</label>
+                      <input
+                        id="manual-language-test-name"
+                        data-fixture-key="languageTestName"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="manual-language-registration-number"
+                        >등록번호</label
+                      >
+                      <input
+                        id="manual-language-registration-number"
+                        data-fixture-key="languageRegistrationNumber"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="manual-language-acquisition-date"
+                        >취득일</label
+                      >
+                      <input
+                        id="manual-language-acquisition-date"
+                        data-fixture-key="languageAcquisitionDate"
+                        disabled
+                        type="date"
+                      />
+                    </div>
                     <div class="form-field">
                       <label for="manual-language-score">등급·점수</label>
                       <input
                         id="manual-language-score"
                         data-fixture-key="languageScore"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="manual-language-evidence-document-path"
+                        >증빙 서류 위치</label
+                      >
+                      <input
+                        id="manual-language-evidence-document-path"
+                        data-fixture-key="languageEvidenceDocumentPath"
                         disabled
                         type="text"
                       />
@@ -1012,8 +1152,8 @@
             </p>
           </div>
           <div class="task-meta">
-            8개 필드 · 입력 가능 4개 · 확인 필요 2개 · 입력 불가 1개 · 민감 확인
-            1개<br />
+            17개 필드 · 입력 가능 4개 · 확인 필요 7개 · 입력 불가 5개 · 민감
+            확인 1개<br />
             회사: 누리랩 Careers · 가상 기업
           </div>
         </div>
@@ -1029,7 +1169,7 @@
               저장 프로필과 직접 찾아볼 자료를 구분해 확인하세요.
             </p>
             <article class="source-card">
-              <h3>저장된 프로필</h3>
+              <h3>저장된 기본·학력·민감 프로필</h3>
               <dl>
                 <dt>국문 이름</dt>
                 <dd>이서준</dd>
@@ -1041,17 +1181,43 @@
                 <dd>1999-11-03</dd>
                 <dt>대학교명</dt>
                 <dd>새봄대학교(가상)</dd>
-                <dt>어학 성적</dt>
-                <dd>OPIc IH</dd>
                 <dt>보훈 대상 여부</dt>
-                <dd>비해당</dd>
+                <dd>검토 패널에서 펼쳐 확인</dd>
               </dl>
             </article>
             <article class="source-card">
-              <h3>자격 정보 카드</h3>
+              <h3>확인이 필요한 저장된 어학 프로필</h3>
               <dl>
+                <dt>외국어</dt>
+                <dd>영어</dd>
+                <dt>시험명</dt>
+                <dd>OPIc</dd>
+                <dt>등록번호</dt>
+                <dd>LANG-B-2023-1015</dd>
+                <dt>취득일</dt>
+                <dd>2023-10-15</dd>
+                <dt>등급·점수</dt>
+                <dd>IH</dd>
+                <dt>증빙 서류 위치</dt>
+                <dd>가상 문서함 &gt; 어학 &gt; OPIc 성적표</dd>
+              </dl>
+              <p class="form-hint">
+                성적표와 일치하는지 확인한 뒤 직접 입력합니다.
+              </p>
+            </article>
+            <article class="source-card">
+              <h3>프로필에 없는 자격증·면허증 정보 카드</h3>
+              <dl>
+                <dt>자격증명</dt>
+                <dd>데이터분석 역량 인증</dd>
                 <dt>등록번호</dt>
                 <dd>CF-B-2023-1120</dd>
+                <dt>유효 기간</dt>
+                <dd>2023-11-20 ~ 2028-11-19</dd>
+                <dt>등급</dt>
+                <dd>2급</dd>
+                <dt>발급기관</dt>
+                <dd>새봄자격검정원(가상)</dd>
               </dl>
               <p class="form-hint">프로필에는 없으므로 직접 찾아 입력합니다.</p>
             </article>
@@ -1156,22 +1322,59 @@
                     </h3>
                     <span class="entry-card-state">직접 입력 필요</span>
                   </div>
-                  <div class="section-field-grid">
+                  <div class="section-field-grid detail-field-grid">
                     <div class="form-field">
-                      <label for="assisted-certificate-number"
-                        >자격증 등록번호</label
-                      >
+                      <label for="assisted-certificate-name">자격증명</label>
+                      <input
+                        id="assisted-certificate-name"
+                        data-assisted-key="certificateName"
+                        data-fixture-key="certificateName"
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="assisted-certificate-number">등록번호</label>
                       <input
                         id="assisted-certificate-number"
                         data-assisted-key="certificateNumber"
                         data-fixture-key="certificateNumber"
                         type="text"
                       />
-                      <p class="form-hint">
-                        프로필에 값이 없어 직접 찾아 입력합니다.
-                      </p>
+                    </div>
+                    <div class="form-field">
+                      <label for="assisted-certificate-validity-period"
+                        >유효 기간</label
+                      >
+                      <input
+                        id="assisted-certificate-validity-period"
+                        data-assisted-key="certificateValidityPeriod"
+                        data-fixture-key="certificateValidityPeriod"
+                        placeholder="YYYY-MM-DD ~ YYYY-MM-DD"
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="assisted-certificate-grade">등급</label>
+                      <input
+                        id="assisted-certificate-grade"
+                        data-assisted-key="certificateGrade"
+                        data-fixture-key="certificateGrade"
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field form-field--span-2">
+                      <label for="assisted-certificate-issuer">발급기관</label>
+                      <input
+                        id="assisted-certificate-issuer"
+                        data-assisted-key="certificateIssuer"
+                        data-fixture-key="certificateIssuer"
+                        type="text"
+                      />
                     </div>
                   </div>
+                  <p class="form-hint">
+                    프로필에 값이 없어 자격 정보 카드에서 직접 찾아 입력합니다.
+                  </p>
                 </article>
               </fieldset>
 
@@ -1191,7 +1394,47 @@
                     <h3 id="assisted-language-card-title">공인외국어시험 1</h3>
                     <span class="entry-card-state">확인 필요</span>
                   </div>
-                  <div class="section-field-grid">
+                  <div class="section-field-grid detail-field-grid">
+                    <div class="form-field">
+                      <label for="assisted-language">외국어</label>
+                      <input
+                        id="assisted-language"
+                        data-assisted-key="language"
+                        data-fixture-key="language"
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="assisted-language-test-name">시험명</label>
+                      <input
+                        id="assisted-language-test-name"
+                        data-assisted-key="languageTestName"
+                        data-fixture-key="languageTestName"
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="assisted-language-registration-number"
+                        >등록번호</label
+                      >
+                      <input
+                        id="assisted-language-registration-number"
+                        data-assisted-key="languageRegistrationNumber"
+                        data-fixture-key="languageRegistrationNumber"
+                        type="text"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label for="assisted-language-acquisition-date"
+                        >취득일</label
+                      >
+                      <input
+                        id="assisted-language-acquisition-date"
+                        data-assisted-key="languageAcquisitionDate"
+                        data-fixture-key="languageAcquisitionDate"
+                        type="date"
+                      />
+                    </div>
                     <div class="form-field">
                       <label for="assisted-language-score">등급·점수</label>
                       <input
@@ -1200,11 +1443,22 @@
                         data-fixture-key="languageScore"
                         type="text"
                       />
-                      <p class="form-hint">
-                        시험명과 등급을 성적표에서 직접 확인하세요.
-                      </p>
+                    </div>
+                    <div class="form-field">
+                      <label for="assisted-language-evidence-document-path"
+                        >증빙 서류 위치</label
+                      >
+                      <input
+                        id="assisted-language-evidence-document-path"
+                        data-assisted-key="languageEvidenceDocumentPath"
+                        data-fixture-key="languageEvidenceDocumentPath"
+                        type="text"
+                      />
                     </div>
                   </div>
+                  <p class="form-hint">
+                    시험 정보와 성적표 위치를 확인한 뒤 직접 입력하세요.
+                  </p>
                 </article>
               </fieldset>
 
@@ -1322,6 +1576,80 @@
                   >
                 </span>
               </label>
+              <label class="review-card is-review" for="review-language">
+                <input
+                  id="review-language"
+                  data-review-key="language"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">확인 필요</span>
+                  <br /><span class="review-value">외국어 · 영어</span>
+                  <br /><span class="review-reason"
+                    >지원서의 외국어 선택지와 일치하는지 확인한 뒤 직접
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-review"
+                for="review-language-test-name"
+              >
+                <input
+                  id="review-language-test-name"
+                  data-review-key="languageTestName"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">확인 필요</span>
+                  <br /><span class="review-value">시험명 · OPIc</span>
+                  <br /><span class="review-reason"
+                    >시험 종류를 성적표에서 확인한 뒤 직접 입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-review"
+                for="review-language-registration-number"
+              >
+                <input
+                  id="review-language-registration-number"
+                  data-review-key="languageRegistrationNumber"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">확인 필요</span>
+                  <br /><span class="review-value"
+                    >등록번호 · LANG-B-2023-1015</span
+                  >
+                  <br /><span class="review-reason"
+                    >성적표의 등록번호와 일치하는지 확인한 뒤 직접
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-review"
+                for="review-language-acquisition-date"
+              >
+                <input
+                  id="review-language-acquisition-date"
+                  data-review-key="languageAcquisitionDate"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">확인 필요</span>
+                  <br /><span class="review-value">취득일 · 2023-10-15</span>
+                  <br /><span class="review-reason"
+                    >지원서가 요구하는 날짜 의미를 확인한 뒤 직접
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
               <label class="review-card is-review" for="review-language-score">
                 <input
                   id="review-language-score"
@@ -1331,9 +1659,52 @@
                 />
                 <span>
                   <span class="review-status">확인 필요</span>
-                  <br /><span class="review-value">어학 성적 · OPIc IH</span>
+                  <br /><span class="review-value">등급·점수 · IH</span>
                   <br /><span class="review-reason"
-                    >시험명과 등급을 확인한 뒤 직접 입력하세요.</span
+                    >성적표의 등급과 일치하는지 확인한 뒤 직접 입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-review"
+                for="review-language-evidence-document-path"
+              >
+                <input
+                  id="review-language-evidence-document-path"
+                  data-review-key="languageEvidenceDocumentPath"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">확인 필요</span>
+                  <br /><span class="review-value"
+                    >증빙 서류 위치 · 가상 문서함 &gt; 어학 &gt; OPIc
+                    성적표</span
+                  >
+                  <br /><span class="review-reason"
+                    >성적표를 다시 찾을 수 있는 위치인지 확인한 뒤 직접
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-unavailable"
+                for="review-certificate-name"
+              >
+                <input
+                  id="review-certificate-name"
+                  data-review-key="certificateName"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 불가</span>
+                  <br /><span class="review-value"
+                    >자격증명 · 프로필에 없음</span
+                  >
+                  <br /><span class="review-reason"
+                    >프로필에 값이 없어 자격 정보 카드에서 직접 찾아
+                    입력하세요.</span
                   >
                 </span>
               </label>
@@ -1350,7 +1721,68 @@
                 <span>
                   <span class="review-status">입력 불가</span>
                   <br /><span class="review-value"
-                    >자격증 등록번호 · 프로필에 없음</span
+                    >등록번호 · 프로필에 없음</span
+                  >
+                  <br /><span class="review-reason"
+                    >프로필에 값이 없어 자격 정보 카드에서 직접 찾아
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-unavailable"
+                for="review-certificate-validity-period"
+              >
+                <input
+                  id="review-certificate-validity-period"
+                  data-review-key="certificateValidityPeriod"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 불가</span>
+                  <br /><span class="review-value"
+                    >유효 기간 · 프로필에 없음</span
+                  >
+                  <br /><span class="review-reason"
+                    >프로필에 값이 없어 자격 정보 카드에서 직접 찾아
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-unavailable"
+                for="review-certificate-grade"
+              >
+                <input
+                  id="review-certificate-grade"
+                  data-review-key="certificateGrade"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 불가</span>
+                  <br /><span class="review-value">등급 · 프로필에 없음</span>
+                  <br /><span class="review-reason"
+                    >프로필에 값이 없어 자격 정보 카드에서 직접 찾아
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-unavailable"
+                for="review-certificate-issuer"
+              >
+                <input
+                  id="review-certificate-issuer"
+                  data-review-key="certificateIssuer"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 불가</span>
+                  <br /><span class="review-value"
+                    >발급기관 · 프로필에 없음</span
                   >
                   <br /><span class="review-reason"
                     >프로필에 값이 없어 자격 정보 카드에서 직접 찾아
@@ -1636,9 +2068,18 @@
         phone: "010-0000-1001",
         birthDate: "2000-05-21",
         university: "한빛대학교(가상)",
-        languageScore: "TOEIC 900",
-        veteranStatus: "비해당",
+        certificateName: "정보처리 역량 인증",
         certificateNumber: "CF-A-2024-0614",
+        certificateValidityPeriod: "2024-06-14 ~ 2029-06-13",
+        certificateGrade: "기사급",
+        certificateIssuer: "한빛자격평가원(가상)",
+        language: "영어",
+        languageTestName: "TOEIC",
+        languageRegistrationNumber: "LANG-A-2024-0518",
+        languageAcquisitionDate: "2024-05-18",
+        languageScore: "900",
+        languageEvidenceDocumentPath: "가상 문서함 > 어학 > TOEIC 성적표",
+        veteranStatus: "비해당",
       };
 
       const assistedFixture = {
@@ -1647,9 +2088,18 @@
         phone: "010-0000-2002",
         birthDate: "1999-11-03",
         university: "새봄대학교(가상)",
-        languageScore: "OPIc IH",
-        veteranStatus: "비해당",
+        certificateName: "데이터분석 역량 인증",
         certificateNumber: "CF-B-2023-1120",
+        certificateValidityPeriod: "2023-11-20 ~ 2028-11-19",
+        certificateGrade: "2급",
+        certificateIssuer: "새봄자격검정원(가상)",
+        language: "영어",
+        languageTestName: "OPIc",
+        languageRegistrationNumber: "LANG-B-2023-1015",
+        languageAcquisitionDate: "2023-10-15",
+        languageScore: "IH",
+        languageEvidenceDocumentPath: "가상 문서함 > 어학 > OPIc 성적표",
+        veteranStatus: "비해당",
       };
 
       const availableAutofillKeys = ["name", "email", "phone", "birthDate"];
