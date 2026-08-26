@@ -301,6 +301,9 @@ export function validateFieldsResponse(
     }
     seen.add(candidateId);
   }
+  if (value.analysisStatus === "COMPLETE" && seen.size !== candidates.size) {
+    throw new AnalysisContractError();
+  }
 
   return value as unknown as FieldsAnalyzeResponse;
 }

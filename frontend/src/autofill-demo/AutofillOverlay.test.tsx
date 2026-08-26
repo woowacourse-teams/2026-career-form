@@ -6,6 +6,7 @@ import type {
   FieldsAnalyzeRequest,
   PreparationAnalyzeRequest,
 } from "../autofill/api/types";
+import { AnalysisServiceError } from "../autofill/api/runtime-client";
 import { createEmptyProfile } from "../profile/model";
 import type { ProfileRepository } from "../profile/profile-repository";
 import { AutofillOverlay } from "./AutofillOverlay";
@@ -158,6 +159,223 @@ describe("AutofillOverlay", () => {
     expect(pageInput.value).toBe("me@example.test");
     expect(
       await within(dialog).findByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the target, existing local value, planned value, and result reason for a conflict", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<label>이메일 <input type="email" value="already@page.test" /></label>`;
+    const pageInput = pageDocument.querySelector("input")!;
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={createApiClient()}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByText("현재 입력값: already@page.test"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("입력 예정값: me@example.test"),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "이메일 기존 값 덮어쓰기 승인" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "선택한 항목 확인" }));
+    fireEvent.click(screen.getByRole("button", { name: "기입하기" }));
+
+    expect(pageInput.value).toBe("me@example.test");
+    expect(await screen.findByText("이메일: 기입 성공")).toBeInTheDocument();
+    expect(
+      screen.getByText("지원서에 기존 값이 있습니다."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows only a safe client failure reason when the analysis server is unavailable", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<label>이메일 <input type="email" /></label>`;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async () => {
+        throw new AnalysisServiceError("분석 서버가 아직 설정되지 않았습니다.");
+      }),
+      analyzeFields: vi.fn(),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "분석 서버가 아직 설정되지 않았습니다.",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();
+  });
+
+  it("displays a field warning with its mapping and interaction status", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<label>이메일 <input type="email" /></label>`;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [],
+      })),
+      analyzeFields: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "PARTIAL" as const,
+        warningCodes: ["LLM_UNAVAILABLE" as const],
+        fields: [
+          {
+            candidateId: request.sections[0]?.fields[0]!.candidateId,
+            matchType: "MATCH" as const,
+            profileFieldKey: "contact.contact.email",
+            autofillPolicy: "CONDITIONAL" as const,
+            mappingStatus: "LLM_SUGGESTED" as const,
+            interactionStatus: "UNVERIFIED" as const,
+          },
+        ],
+      })),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByText("분석 경고: LLM 분석 일부 미완료"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("매핑 근거: LLM 제안")).toBeInTheDocument();
+    expect(screen.getByText("입력 상태: 검증되지 않음")).toBeInTheDocument();
+  });
+
+  it("keeps both sensitive current and planned values masked until the user reveals them", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<label>병역 <input value="기존 병역 값" /></label>`;
+    const profile = createEmptyProfile();
+    profile.military.militaryStatus = "복무 완료";
+    const repository: ProfileRepository = {
+      load: vi.fn(async () => profile),
+      save: vi.fn(async () => undefined),
+      loadLayout: vi.fn(async () => "a" as const),
+      saveLayout: vi.fn(async () => undefined),
+    };
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [],
+      })),
+      analyzeFields: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        fields: [
+          {
+            candidateId: request.sections[0]?.fields[0]!.candidateId,
+            matchType: "MATCH" as const,
+            profileFieldKey: "military.military.militaryStatus",
+            autofillPolicy: "SENSITIVE_CONFIRMATION" as const,
+            mappingStatus: "LLM_SUGGESTED" as const,
+            interactionStatus: "READY" as const,
+            writePlan: { command: "SET_TEXT" as const },
+          },
+        ],
+      })),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={repository}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByText("현재 입력값: ••••••••"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("입력 예정값: ••••••••")).toBeInTheDocument();
+    expect(screen.queryByText("복무 완료")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "병역 값 보기" }));
+
+    expect(screen.getByText("입력 예정값: 복무 완료")).toBeInTheDocument();
+    expect(screen.getByText("현재 입력값: 기존 병역 값")).toBeInTheDocument();
+  });
+
+  it("identifies an approved-item omission as skipped instead of a write failure", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<label>이메일 <input type="email" /></label>`;
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={createApiClient()}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    const approval = await screen.findByRole("checkbox", {
+      name: "이메일 입력 승인",
+    });
+    fireEvent.click(approval);
+    fireEvent.click(screen.getByRole("button", { name: "선택한 항목 확인" }));
+    fireEvent.click(screen.getByRole("button", { name: "기입하기" }));
+
+    expect(
+      await screen.findByText("이메일: 승인하지 않아 건너뜀"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("사용자가 승인한 입력 항목이 아닙니다."),
+    ).toBeInTheDocument();
+    expect(pageDocument.querySelector("input")?.value).toBe("");
+  });
+
+  it("shows the locally calculated count before approving a repeatable-group action", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<section><h2>자격증·면허증</h2><button type="button">추가</button></section>`;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [
+          {
+            actionCandidateId:
+              request.sections[0]?.actionCandidates[0]!.candidateId,
+            command: "ADD_REPEATABLE_GROUP" as const,
+            expectedEffect: "GROUP_COUNT_INCREMENT" as const,
+          },
+        ],
+      })),
+      analyzeFields: vi.fn(),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByText("로컬 프로필 기준 실행 필요 수: 0회"),
     ).toBeInTheDocument();
   });
 

@@ -10,6 +10,38 @@ interface Registered<T> {
   blockedReason?: CandidateBlockReason;
 }
 
+function liveBlockReason(element: Element): CandidateBlockReason | undefined {
+  if (
+    element instanceof HTMLElement &&
+    (element.hidden ||
+      element.closest("[hidden], [aria-hidden='true']") ||
+      element.closest("[style*='display: none'], [style*='display:none']"))
+  ) {
+    return "hidden";
+  }
+  if (element instanceof HTMLElement && element.closest("[inert]")) {
+    return "inert";
+  }
+  if (
+    (element instanceof HTMLInputElement ||
+      element instanceof HTMLSelectElement ||
+      element instanceof HTMLTextAreaElement ||
+      element instanceof HTMLButtonElement ||
+      element instanceof HTMLOptionElement) &&
+    element.disabled
+  ) {
+    return "disabled";
+  }
+  if (
+    (element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement) &&
+    element.readOnly
+  ) {
+    return "readonly";
+  }
+  return undefined;
+}
+
 function elementSignature(element: Element): string {
   const input = element instanceof HTMLInputElement ? element.type : "";
   const name =
@@ -70,10 +102,18 @@ export class CandidateRegistry {
     ) {
       return { status: "stale" };
     }
-    if (registered.blockedReason) {
+    const currentBlockReason = [
+      ...elements,
+      ...(registered.handle.kind === "field"
+        ? [...registered.handle.optionElements.values()]
+        : []),
+    ]
+      .map(liveBlockReason)
+      .find((reason) => reason !== undefined);
+    if (registered.blockedReason || currentBlockReason) {
       return {
         status: "blocked",
-        reason: registered.blockedReason,
+        reason: registered.blockedReason ?? currentBlockReason!,
         handle: registered.handle,
       };
     }

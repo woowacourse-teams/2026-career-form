@@ -49,6 +49,25 @@ const fieldsRequest: FieldsAnalyzeRequest = {
   ],
 };
 
+const twoFieldsRequest: FieldsAnalyzeRequest = {
+  ...fieldsRequest,
+  sections: [
+    {
+      ...fieldsRequest.sections[0]!,
+      fields: [
+        ...fieldsRequest.sections[0]!.fields,
+        {
+          candidateId: "field-2",
+          element: "input",
+          control: "text",
+          visibility: "visible",
+          displayName: "전화번호",
+        },
+      ],
+    },
+  ],
+};
+
 describe("analysis API response validation", () => {
   it("accepts a preparation plan that targets a candidate from the same snapshot", () => {
     const result = validatePreparationResponse(preparationRequest, {
@@ -122,6 +141,44 @@ describe("analysis API response validation", () => {
       candidateId: "field-1",
       profileFieldKey: "contact.contact.email",
     });
+  });
+
+  it("rejects a COMPLETE response that omits a collected field", () => {
+    expect(() =>
+      validateFieldsResponse(twoFieldsRequest, {
+        snapshotId: "snapshot-b",
+        mode: "GENERIC",
+        analysisStatus: "COMPLETE",
+        fields: [
+          {
+            candidateId: "field-1",
+            matchType: "NO_MATCH",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "BLOCKED",
+            reasonCodes: ["NO_MATCH"],
+          },
+        ],
+      }),
+    ).toThrow(AnalysisContractError);
+  });
+
+  it("allows a PARTIAL response to omit a collected field", () => {
+    expect(
+      validateFieldsResponse(twoFieldsRequest, {
+        snapshotId: "snapshot-b",
+        mode: "GENERIC",
+        analysisStatus: "PARTIAL",
+        fields: [
+          {
+            candidateId: "field-1",
+            matchType: "NO_MATCH",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "BLOCKED",
+            reasonCodes: ["NO_MATCH"],
+          },
+        ],
+      }).fields,
+    ).toHaveLength(1);
   });
 
   it.each([

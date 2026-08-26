@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { AnalysisServiceError } from "../api/runtime-client";
 import type { AnalysisApiClient, PreparationPlan } from "../api/types";
 import {
   collectFieldsSnapshot,
@@ -107,6 +108,45 @@ function statusLabel(item: ReviewPlanItem): string {
   return labels[item.status];
 }
 
+function safeErrorTitle(error: unknown): string {
+  return error instanceof AnalysisServiceError
+    ? error.message
+    : "분석을 완료하지 못했습니다";
+}
+
+function mappingLabel(item: ReviewPlanItem): string | undefined {
+  if (item.analysis?.mappingStatus === "ADAPTER_VERIFIED") {
+    return "어댑터 검증";
+  }
+  return item.analysis?.mappingStatus === "LLM_SUGGESTED"
+    ? "LLM 제안"
+    : undefined;
+}
+
+function interactionLabel(item: ReviewPlanItem): string | undefined {
+  const labels = {
+    READY: "입력 준비됨",
+    MANUAL_REVEAL_REQUIRED: "수동으로 펼쳐야 함",
+    BLOCKED: "입력 차단됨",
+    SYSTEM_CONTROL: "시스템 제어 항목",
+    UNVERIFIED: "검증되지 않음",
+  } as const;
+  return item.analysis ? labels[item.analysis.interactionStatus] : undefined;
+}
+
+function currentPreview(item: ReviewPlanItem): string {
+  return item.status === "sensitive" && !item.revealed
+    ? "••••••••"
+    : item.currentValue || "입력된 값 없음";
+}
+
+function resultStatusLabel(result: ApprovedWriteResult): string {
+  if (result.status === "written") return "기입 성공";
+  return result.reason === "사용자가 승인한 입력 항목이 아닙니다."
+    ? "승인하지 않아 건너뜀"
+    : "직접 입력 필요";
+}
+
 export function AutofillWorkflow({
   apiClient,
   repository,
@@ -130,6 +170,7 @@ export function AutofillWorkflow({
       CollectedSnapshot<ReturnType<typeof collectFieldsSnapshot>["request"]>
     >();
   const [partial, setPartial] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
@@ -155,6 +196,7 @@ export function AutofillWorkflow({
     setFieldsSnapshot(snapshot);
     setReviewItems(plan.items);
     setPartial(plan.status === "partial");
+    setWarnings(analysis.warningCodes ?? []);
     setStage("review");
   };
 
@@ -185,10 +227,11 @@ export function AutofillWorkflow({
             localItemCount: localItemCount(plan, snapshot, loadedProfile),
           })),
         );
+        setWarnings(analysis.warningCodes ?? []);
         setStage("preparation-review");
-      } catch {
+      } catch (error) {
         if (!active) return;
-        setExceptionTitle("분석을 완료하지 못했습니다");
+        setExceptionTitle(safeErrorTitle(error));
         setStage("exception");
       }
     };
@@ -226,8 +269,8 @@ export function AutofillWorkflow({
     try {
       setStage("analyzing");
       await analyzeFields(profile);
-    } catch {
-      setExceptionTitle("분석을 완료하지 못했습니다");
+    } catch (error) {
+      setExceptionTitle(safeErrorTitle(error));
       setStage("exception");
     }
   };
@@ -319,8 +362,21 @@ export function AutofillWorkflow({
                   : "반복 입력 영역 추가"}
               </strong>
               <small>지원서 저장·이동·제출은 실행하지 않습니다.</small>
+              {item.localItemCount !== undefined && (
+                <small>
+                  로컬 프로필 기준 실행 필요 수: {item.localItemCount}회
+                </small>
+              )}
             </span>
           </label>
+        ))}
+        {warnings.map((warning) => (
+          <aside className={styles.safety} key={warning}>
+            분석 경고:{" "}
+            {warning === "MANUAL_REVEAL_REQUIRED"
+              ? "수동으로 펼쳐야 하는 영역이 있습니다."
+              : warning}
+          </aside>
         ))}
         <button
           className={styles.primary}
@@ -344,6 +400,14 @@ export function AutofillWorkflow({
             일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
           </aside>
         )}
+        {warnings.map((warning) => (
+          <aside className={styles.safety} key={warning}>
+            분석 경고:{" "}
+            {warning === "UNRESOLVED_FIELD"
+              ? "일부 필드를 연결하지 못했습니다."
+              : "LLM 분석 일부 미완료"}
+          </aside>
+        ))}
         <div className={styles.reviewList}>
           {reviewItems.map((item) => (
             <label
@@ -364,8 +428,15 @@ export function AutofillWorkflow({
               />
               <span className={styles.reviewCopy}>
                 <strong>{item.fieldLabel}</strong>
-                <span>{item.previewValue}</span>
+                <span>현재 입력값: {currentPreview(item)}</span>
+                <span>입력 예정값: {item.previewValue}</span>
                 <small>{item.reason}</small>
+                {mappingLabel(item) && (
+                  <small>매핑 근거: {mappingLabel(item)}</small>
+                )}
+                {interactionLabel(item) && (
+                  <small>입력 상태: {interactionLabel(item)}</small>
+                )}
               </span>
               <em>{statusLabel(item)}</em>
               {item.status === "sensitive" && !item.revealed && (
@@ -441,6 +512,24 @@ export function AutofillWorkflow({
           </div>
         </div>
         <p className={styles.safety}>지원서의 실제 값을 직접 확인해 주세요.</p>
+        <ul className={styles.boundaries}>
+          {results.map((result) => {
+            const item = reviewItems.find(
+              (candidate) => candidate.candidateId === result.candidateId,
+            );
+            const reason =
+              result.status === "written" ? item?.reason : result.reason;
+            return (
+              <li key={result.candidateId}>
+                <strong>
+                  {item?.fieldLabel ?? "지원서 필드"}:{" "}
+                  {resultStatusLabel(result)}
+                </strong>
+                {reason && <span>{reason}</span>}
+              </li>
+            );
+          })}
+        </ul>
         <button className={styles.primary} type="button" onClick={onExit}>
           수동 복사로 돌아가기
         </button>

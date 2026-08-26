@@ -322,6 +322,81 @@ describe("approved native-control writes", () => {
     },
   );
 
+  it.each([
+    ["disabled", (input: HTMLInputElement) => (input.disabled = true)],
+    ["readonly", (input: HTMLInputElement) => (input.readOnly = true)],
+    ["hidden", (input: HTMLInputElement) => (input.hidden = true)],
+    ["inert", (input: HTMLInputElement) => input.setAttribute("inert", "")],
+  ])(
+    "does not write when the host makes a collected field %s before final approval",
+    (_state, changeHostState) => {
+      const input = document.createElement("input");
+      const registry = register(input, {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      });
+      changeHostState(input);
+
+      const result = executeApprovedWrites({
+        items: [reviewItem(textAnalysis, "me@example.test")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+
+      expect(input.value).toBe("");
+      expect(result[0]).toMatchObject({ status: "skipped" });
+    },
+  );
+
+  it("does not select a radio option the host disabled after collection", () => {
+    const first = document.createElement("input");
+    first.type = "radio";
+    first.name = "gender";
+    const target = document.createElement("input");
+    target.type = "radio";
+    target.name = "gender";
+    document.body.append(first, target);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "field-1",
+      candidate: {
+        candidateId: "field-1",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [
+          { optionId: "option-1", displayName: "여성" },
+          { optionId: "option-2", displayName: "남성" },
+        ],
+      },
+      elements: [first, target],
+      optionElements: new Map([
+        ["option-1", first],
+        ["option-2", target],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([first, target]),
+    });
+    target.disabled = true;
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          { ...textAnalysis, writePlan: { command: "CHECK_RADIO" } },
+          "남성",
+        ),
+      ],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(target.checked).toBe(false);
+    expect(result[0]).toMatchObject({ status: "skipped" });
+  });
+
   it("does not write when a control command does not match its native control", () => {
     const input = document.createElement("input");
     input.type = "file";

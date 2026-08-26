@@ -133,6 +133,7 @@ function unavailableItem(
   candidateId: string,
   fieldLabel: string,
   reason: string,
+  analysis?: MatchedFieldAnalysis,
 ): ReviewPlanItem {
   return {
     candidateId,
@@ -144,6 +145,7 @@ function unavailableItem(
     disabled: true,
     revealed: false,
     reason,
+    ...(analysis ? { analysis } : {}),
   };
 }
 
@@ -173,6 +175,7 @@ function itemForAnalysis(
       analysis.candidateId,
       fieldLabel,
       "현재 상태에서는 안전하게 입력할 수 없습니다.",
+      analysis,
     );
   }
 
@@ -182,6 +185,7 @@ function itemForAnalysis(
       analysis.candidateId,
       fieldLabel,
       "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
+      analysis,
     );
   }
 
@@ -194,7 +198,7 @@ function itemForAnalysis(
       profileValue.status === "ambiguous"
         ? "반복 프로필 항목을 하나로 안전하게 결정할 수 없습니다."
         : "입력할 프로필 값이 없습니다.";
-    return unavailableItem(analysis.candidateId, fieldLabel, reason);
+    return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
   }
 
   const pageValue = currentValue(lookup.handle);
