@@ -157,6 +157,7 @@ describe("hypothesis validation interview prototype", () => {
     code.value = "P01";
     getElement<HTMLButtonElement>(document, "start-session").click();
     expect(status).toHaveTextContent("세션이 시작되었습니다");
+    expect(getElement<HTMLElement>(document, "manual-task")).toBeVisible();
   });
 
   it("starts task A with eight empty fields and blocks task B until task A is complete", () => {

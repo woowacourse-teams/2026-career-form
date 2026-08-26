@@ -1480,6 +1480,7 @@
         byId("participant-code").value = code;
         byId("header-session").textContent = `${code} · 세션 진행 중`;
         byId("start-manual-task").disabled = false;
+        setVisible("manual-task", true);
         setMessage(
           "session-status",
           "세션이 시작되었습니다. 과업 A를 시작하세요.",
