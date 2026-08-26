@@ -31,6 +31,12 @@ npm run zip
 
 자동 기입 content script는 사이드 패널의 명시적인 메시지를 받은 뒤에만 동작합니다. 분석에는 비식별 화면 구조만 전송하며, 프로필 값과 현재 입력값은 브라우저에만 남습니다. 최종 승인 전에는 지원서 값을 변경하지 않고, 저장·이동·미리보기·제출은 실행하지 않습니다.
 
+## 분석 서버 설정
+
+`VITE_API_BASE_URL`을 지정하지 않은 기본 빌드는 분석 요청을 보내지 않고 안전하게 `NOT_CONFIGURED` 상태를 표시합니다. 현재는 서버 origin이 확정되지 않았으므로 `host_permissions`를 추가하지 않습니다.
+
+서버가 준비된 뒤에는 빌드 시 정확한 HTTP(S) origin만 지정합니다. 예를 들어 `VITE_API_BASE_URL=https://api.example.test npm run build`는 manifest에 `https://api.example.test/*`만 추가합니다. `http://*/*`, `https://*/*`, `<all_urls>` 같은 넓은 host permission은 사용하지 않습니다. base URL에는 path·query·fragment 대신 origin만 넣습니다.
+
 프로필은 외부 서버로 전송하지 않고 `chrome.storage.local`에 저장합니다. 별도 암호화와 잠금은 없으므로 같은 Chrome 프로필이나 기기에 접근할 수 있는 사람에게 값이 보일 수 있습니다.
 
 ## Web Store 제출 전 준비

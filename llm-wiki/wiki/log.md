@@ -56,3 +56,10 @@
 - Approval-Digest: 35b4142c8c0e9e7f8483e1e434433071033273d5c35481d1825a409c7188c050
 - Raw: llm-wiki/raw/issues/CF-44/manifest.md
 - Topics: 2
+
+## [2026-08-26] ingest | CF-47 자동 기입 모달 경계
+
+- Disposition: New
+- Approval-Digest: 47c048bdc2eb40e20be1e1bf88721b0aae256ccbf973be817703029e945f200a
+- Raw: llm-wiki/raw/issues/CF-47/manifest.md
+- Topics: 1

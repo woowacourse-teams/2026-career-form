@@ -43,8 +43,26 @@ if (!permissions.has("storage") || !permissions.has("sidePanel")) {
   throw new Error("프로필 저장과 side panel 권한이 필요합니다.");
 }
 
+const hostPermissions = manifest.host_permissions ?? [];
+if (
+  hostPermissions.some((permission) =>
+    ["<all_urls>", "http://*/*", "https://*/*"].includes(permission),
+  )
+) {
+  throw new Error(
+    "자동 기입 API에는 넓은 host permission을 포함할 수 없습니다.",
+  );
+}
+
+if (manifest.background?.service_worker !== "background.js") {
+  throw new Error(
+    "자동 기입 API 중계를 위한 background service worker가 필요합니다.",
+  );
+}
+
 await Promise.all(
   [
+    "background.js",
     "popup.html",
     "options.html",
     "sidepanel.html",
@@ -52,6 +70,20 @@ await Promise.all(
     "content-scripts/autofill.css",
   ].map((fileName) => readFile(resolve(outputDirectory, fileName))),
 );
+
+const autofillArtifact = await readFile(
+  resolve(outputDirectory, "content-scripts", "autofill.js"),
+  "utf8",
+);
+if (
+  autofillArtifact.includes(
+    "필드 탐지와 프로필 연결을 비식별 목업으로 확인합니다.",
+  )
+) {
+  throw new Error(
+    "프로덕션 자동 기입 산출물에 목업 화면이 포함되어서는 안 됩니다.",
+  );
+}
 
 const assetNames = await readdir(resolve(outputDirectory, "assets"));
 const fontAssets = assetNames.filter((fileName) => fileName.endsWith(".woff2"));

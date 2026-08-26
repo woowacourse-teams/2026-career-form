@@ -54,3 +54,28 @@ if (
 ) {
   throw new Error("ZIP Manifest에 autofill content script가 필요합니다.");
 }
+
+const hostPermissions = manifest.host_permissions ?? [];
+if (
+  hostPermissions.some((permission) =>
+    ["<all_urls>", "http://*/*", "https://*/*"].includes(permission),
+  )
+) {
+  throw new Error(
+    "ZIP에는 넓은 자동 기입 API host permission을 포함할 수 없습니다.",
+  );
+}
+
+if (manifest.background?.service_worker !== "background.js") {
+  throw new Error(
+    "ZIP에는 자동 기입 API 중계를 위한 background service worker가 필요합니다.",
+  );
+}
+
+if (
+  zip
+    .readAsText("content-scripts/autofill.js")
+    .includes("필드 탐지와 프로필 연결을 비식별 목업으로 확인합니다.")
+) {
+  throw new Error("ZIP 자동 기입 산출물에 목업 화면이 포함되어서는 안 됩니다.");
+}
