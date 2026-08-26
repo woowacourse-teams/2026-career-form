@@ -38,18 +38,36 @@ schema v2 지원서 분석은 항상 노출되는 두 전용 endpoint로 나뉜�
   프로필 필드 키의 `MATCH | NO_MATCH`로 분석한다. 상호작용 상태와 제한된 write command는
   Backend의 결정론적 정책이 만들고 실제 값 연결과 입력은 browser가 담당한다.
 
-두 API와 Resolver 확장 경계는 다음 패키지가 소유한다. 현재 production 구현은 범용 LLM
-Resolver 두 개뿐이며 회사별 정적 Resolver, DB mapping과 Resolver router는 후속 범위다.
+두 API와 Resolver 확장 경계는 다음 18개 production class가 소유한다. 현재 구현은 범용
+LLM Resolver 두 개뿐이며 회사별 정적 Resolver, DB mapping과 Resolver router는 후속
+범위다. 요청·응답의 하위 record와 enum은 해당 DTO 안에 함께 둔다.
 
 ```text
 com.careerform.formanalysis
-├── api/                       HTTP 진입점, 요청 제한과 일반화된 오류
+├── api/
+│   ├── PreparationAnalysisController
+│   └── FieldsAnalysisController
+├── dto/
+│   ├── PreparationAnalysisRequest
+│   ├── PreparationAnalysisResponse
+│   ├── FieldsAnalysisRequest
+│   └── FieldsAnalysisResponse
 ├── application/
-│   └── port/                  ActionResolver, FieldMappingResolver
-├── domain/                    schema v2 계약, canonical key와 안전 정책
-└── infrastructure/
-    └── llm/
-        └── openai/            strict structured output와 조건부 공급자 조립
+│   ├── PreparationAnalysisService
+│   ├── FieldsAnalysisService
+│   ├── FieldInteractionPolicy
+│   ├── SupportedProfileFields
+│   └── port/
+│       ├── ActionResolver
+│       └── FieldMappingResolver
+├── exception/
+│   ├── FormAnalysisExceptionHandler
+│   ├── InvalidSnapshotException
+│   └── ResolverException
+└── infrastructure/adapter/openai/
+    ├── OpenAiClient
+    ├── OpenAiActionResolver
+    └── OpenAiFieldMappingResolver
 ```
 
 LLM은 외부 snapshot 전체를 그대로 받지 않는다. field 분석에는 section/item 관계,
@@ -62,13 +80,16 @@ Spring AI prompt/completion/error logging과 provider-side 저장도 비활성�
 LLM Resolver는 기본 비활성화되지만 두 HTTP endpoint는 숨지 않는다. 비활성 상태,
 공급자 실행 장애 또는 출력 전체 계약 위반이면 `200 + GENERIC + PARTIAL +
 [LLM_UNAVAILABLE]`와 빈 결과를 반환한다. 유효한 all-`NO_ACTION`과 all-`NO_MATCH`는
-`COMPLETE`다. 잘못된 client snapshot은 400, 원문 또는 canonical JSON 65,536-byte
-상한 초과는 413, 예상하지 않은 로컬 오류는 500이며 502를 사용하지 않는다.
+`COMPLETE`다. 잘못된 필수 요청은 400, 예상하지 않은 로컬 오류는 500이며 413과 502를
+애플리케이션 계약으로 사용하지 않는다.
 
-선택 속성은 생략할 수 있지만 명시적 `null`과 빈 문자열은 허용하지 않는다. ID는 최대
-128자, displayName/domId/domName/placeholder는 최대 120자, site host는 253자,
-path pattern은 512자다. Resolver 결과는 candidate exact set, snapshot/schema header,
-action tuple/상태/target과 field key를 모두 검증한 뒤 원자적으로 채택한다.
+선택 속성의 명시적 `null`은 생략과 같게 취급하지만 필수 속성의 `null`과 빈 문자열은
+허용하지 않는다. ID는 최대 128자, displayName/domId/domName/placeholder는 최대 120자,
+site host는 253자, path pattern은 512자다. Backend는 candidate ID와 preparation
+section ID의 중복, action target처럼 분석에 꼭 필요한 무결성만 검사한다. section parent
+graph와 item/option ID의 정합성은 snapshot을 만드는 Frontend가 책임진다. Resolver 결과는
+candidate exact set, snapshot/schema header와 field key를 검증한 뒤 원자적으로 채택하고,
+실행 command와 상호작용 상태는 Backend의 결정론적 정책이 만든다.
 
 LLM Resolver를 활성화할 때는 다음 값을 프로세스 실행 환경에 주입한다. 실제 값이 담긴
 `.env`와 `.env.local`은 Git에 추가하지 않는다.
@@ -76,21 +97,19 @@ LLM Resolver를 활성화할 때는 다음 값을 프로세스 실행 환경에 
 | 환경 변수 | 기본값 | 설명 |
 |---|---:|---|
 | `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때 범용 LLM Resolver 두 개를 활성화한다. |
-| `CAREER_FORM_LLM_PROVIDER` | 빈 값 | 활성화 시 정확히 `openai`여야 한다. |
-| `CAREER_FORM_LLM_MODEL` | 빈 값 | 활성화 시 정확히 `gpt-5.6-luna`여야 한다. |
+| `CAREER_FORM_LLM_MODEL` | 빈 값 | Spring AI OpenAI chat model 이름이다. |
 | `OPENAI_API_KEY` | 빈 값 | 활성화 시 공백이 아닌 실행 환경 시크릿이어야 한다. |
 | `CAREER_FORM_LLM_TIMEOUT` | `10s` | OpenAI 요청 timeout이다. |
 | `CAREER_FORM_LLM_MAX_RETRIES` | `1` | OpenAI client 최대 retry 횟수다. |
 | `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | `2048` | completion token 상한이다. |
 
-모델 호출은 Spring AI의 OpenAI 네이티브 strict JSON Schema를 사용한다. 모델은
-`gpt-5.6-luna`, reasoning effort는 `none`, completion 상한은 2,048 tokens다.
+모델 호출은 Spring AI의 OpenAI structured output을 사용한다. 데모 설정은
+`gpt-5.6-luna`, reasoning effort `none`, completion 상한 2,048 tokens를 사용한다.
 로컬 Compose에서는 [`.env.example`](../.env.example)을 `.env.local`의 출발점으로
 사용할 수 있다.
 
 ```dotenv
 CAREER_FORM_LLM_ENABLED=true
-CAREER_FORM_LLM_PROVIDER=openai
 CAREER_FORM_LLM_MODEL=gpt-5.6-luna
 OPENAI_API_KEY=<실행 환경에서만 설정>
 ```
