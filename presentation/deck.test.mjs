@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const deckPath = fileURLToPath(new URL("./deck.js", import.meta.url));
+const indexPath = fileURLToPath(new URL("./index.html", import.meta.url));
+const stylesPath = fileURLToPath(new URL("./styles.css", import.meta.url));
 
 function loadDeck() {
   assert.ok(existsSync(deckPath), "발표 자료 모듈이 존재해야 한다");
@@ -88,4 +90,15 @@ test("슬라이드 이동은 덱 범위를 벗어나지 않는다", () => {
   assert.equal(clampSlideIndex(0, 17), 0);
   assert.equal(clampSlideIndex(8, 17), 8);
   assert.equal(clampSlideIndex(17, 17), 16);
+});
+
+test("발표 캔버스와 제어 요소가 브라우저 계약에 포함된다", () => {
+  const index = readFileSync(indexPath, "utf8");
+  const styles = readFileSync(stylesPath, "utf8");
+
+  for (const action of ["prev", "next", "notes", "fullscreen"]) {
+    assert.match(index, new RegExp(`data-action=["']${action}["']`));
+  }
+  assert.match(styles, /--w:\s*1920px;/);
+  assert.match(styles, /--h:\s*1080px;/);
 });
