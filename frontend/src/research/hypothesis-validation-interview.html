@@ -1652,6 +1652,12 @@
         certificateNumber: "CF-B-2023-1120",
       };
 
+      const availableAutofillKeys = ["name", "email", "phone", "birthDate"];
+      const approvalControlledKeys = [
+        ...availableAutofillKeys,
+        "veteranStatus",
+      ];
+
       const initialState = () => ({
         participantCode: "",
         manual: { started: false, completed: false, startedAt: 0 },
@@ -1694,8 +1700,8 @@
           );
           return;
         }
-        sessionState = initialState();
-        sessionState.participantCode = code;
+        resetSession();
+        sessionState = { ...initialState(), participantCode: code };
         byId("participant-code").value = code;
         byId("header-session").textContent = `${code} · 세션 진행 중`;
         byId("start-manual-task").disabled = false;
@@ -1711,6 +1717,25 @@
 
       function resetForm(formId) {
         byId(formId).reset();
+      }
+
+      function resetAssistedReview() {
+        resetForm("assisted-form");
+        document
+          .querySelectorAll("#autofill-review input[type=checkbox]")
+          .forEach((input) => {
+            input.checked = availableAutofillKeys.includes(
+              input.dataset.reviewKey,
+            );
+            input.disabled = !availableAutofillKeys.includes(
+              input.dataset.reviewKey,
+            );
+          });
+        byId("sensitive-value").classList.remove("is-revealed");
+        byId("sensitive-status").setAttribute("aria-hidden", "true");
+        byId("sensitive-value").setAttribute("aria-hidden", "true");
+        byId("reveal-sensitive").setAttribute("aria-expanded", "false");
+        byId("assisted-result").hidden = true;
       }
 
       function startManualTask() {
@@ -1783,19 +1808,7 @@
           );
           return;
         }
-        resetForm("assisted-form");
-        document
-          .querySelectorAll("#autofill-review input[type=checkbox]")
-          .forEach((input) => {
-            input.checked =
-              input.dataset.reviewKey in
-              {
-                name: true,
-                email: true,
-                phone: true,
-                birthDate: true,
-              };
-          });
+        resetAssistedReview();
         sessionState.assisted = {
           started: true,
           approved: false,
@@ -1843,20 +1856,24 @@
         const selected = document.querySelectorAll(
           "#autofill-review input[data-review-key]:checked",
         );
-        selected.forEach((reviewInput) => {
-          const key = reviewInput.dataset.reviewKey;
+        const selectedKeys = new Set(
+          [...selected].map((reviewInput) => reviewInput.dataset.reviewKey),
+        );
+        approvalControlledKeys.forEach((key) => {
           const target = document.querySelector(
             `#assisted-form [data-assisted-key="${key}"]`,
           );
-          if (target) target.value = assistedFixture[key];
+          if (target) {
+            target.value = selectedKeys.has(key) ? assistedFixture[key] : "";
+          }
         });
         sessionState.assisted = {
           ...sessionState.assisted,
           approved: true,
-          approvedAvailableCount: [...selected].filter(
-            (input) => input.dataset.reviewKey !== "veteranStatus",
+          approvedAvailableCount: availableAutofillKeys.filter((key) =>
+            selectedKeys.has(key),
           ).length,
-          approvedSensitive: byId("review-veteran-status").checked,
+          approvedSensitive: selectedKeys.has("veteranStatus"),
         };
         setMessage(
           "assisted-status",
@@ -1965,34 +1982,16 @@
         byId("copy-summary").disabled = true;
         byId("result-summary").value = "";
         resetForm("manual-form");
-        resetForm("assisted-form");
+        resetAssistedReview();
         document.querySelectorAll("#manual-form input").forEach((input) => {
           input.disabled = true;
         });
-        document
-          .querySelectorAll("#autofill-review input[type=checkbox]")
-          .forEach((input) => {
-            input.checked =
-              input.dataset.reviewKey in
-              { name: true, email: true, phone: true, birthDate: true };
-            input.disabled = [
-              "university",
-              "languageScore",
-              "certificateNumber",
-              "veteranStatus",
-            ].includes(input.dataset.reviewKey);
-          });
-        byId("sensitive-value").classList.remove("is-revealed");
-        byId("sensitive-status").setAttribute("aria-hidden", "true");
-        byId("sensitive-value").setAttribute("aria-hidden", "true");
-        byId("reveal-sensitive").setAttribute("aria-expanded", "false");
         byId("post-task-survey")
           .querySelectorAll("input")
           .forEach((input) => {
             input.checked = false;
           });
         byId("manual-result").hidden = true;
-        byId("assisted-result").hidden = true;
         setVisible("manual-task", false);
         setVisible("assisted-task", false);
         setVisible("post-task-survey", false);

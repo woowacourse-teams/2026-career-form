@@ -218,6 +218,46 @@ describe("hypothesis validation interview prototype", () => {
     expect(getElement<HTMLElement>(document, "manual-task")).toBeVisible();
   });
 
+  it("starts a new participant session without retaining prior task or summary state", () => {
+    const dom = completeAssistedTaskForTest();
+    const { document } = dom.window;
+    selectAllSurveyResponses(document);
+    getElement<HTMLButtonElement>(document, "build-summary").click();
+    expect(
+      getElement<HTMLTextAreaElement>(document, "result-summary").value,
+    ).not.toBe("");
+
+    fillInput(document, "participant-code", "P02");
+    getElement<HTMLButtonElement>(document, "start-session").click();
+
+    expect(
+      getElement<HTMLInputElement>(document, "participant-code").value,
+    ).toBe("P02");
+    expect(getElement<HTMLElement>(document, "manual-task")).toBeVisible();
+    expect(
+      getElement<HTMLElement>(document, "assisted-task"),
+    ).not.toBeVisible();
+    expect(
+      getElement<HTMLElement>(document, "post-task-survey"),
+    ).not.toBeVisible();
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>("#manual-form input"),
+      ].every((input) => input.disabled && input.value === ""),
+    ).toBe(true);
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>("#assisted-form input"),
+      ].every((input) => input.value === ""),
+    ).toBe(true);
+    expect(
+      getElement<HTMLTextAreaElement>(document, "result-summary").value,
+    ).toBe("");
+    expect(
+      getElement<HTMLButtonElement>(document, "start-assisted-task"),
+    ).toBeDisabled();
+  });
+
   it("starts task A with eight empty fields and blocks task B until task A is complete", () => {
     const { window } = createResearchDom();
     const { document } = window;
@@ -307,6 +347,31 @@ describe("hypothesis validation interview prototype", () => {
     );
   });
 
+  it("re-hides the sensitive value and restores review defaults when task B restarts", () => {
+    const { document } = startAssistedTaskForTest().window;
+    getElement<HTMLButtonElement>(document, "reveal-sensitive").click();
+    getElement<HTMLInputElement>(document, "review-veteran-status").checked =
+      true;
+
+    getElement<HTMLButtonElement>(document, "start-assisted-task").click();
+
+    expect(
+      getElement<HTMLElement>(document, "sensitive-value"),
+    ).toHaveAttribute("aria-hidden", "true");
+    expect(
+      getElement<HTMLElement>(document, "sensitive-value"),
+    ).not.toHaveClass("is-revealed");
+    expect(
+      getElement<HTMLInputElement>(document, "review-veteran-status"),
+    ).toBeDisabled();
+    expect(
+      getElement<HTMLInputElement>(document, "review-veteran-status"),
+    ).not.toBeChecked();
+    expect(
+      getElement<HTMLInputElement>(document, "review-email"),
+    ).toBeChecked();
+  });
+
   it("keeps task B values unchanged until final approval and applies only approved fields", () => {
     const { document } = startAssistedTaskForTest().window;
     const assistedForm = getElement<HTMLFormElement>(document, "assisted-form");
@@ -350,6 +415,38 @@ describe("hypothesis validation interview prototype", () => {
     expect(
       getElement<HTMLInputElement>(document, "assisted-veteran-status").value,
     ).toBe("비해당");
+  });
+
+  it("clears deselected autofill values on reapproval without clearing direct entries", () => {
+    const { document } = startAssistedTaskForTest().window;
+
+    getElement<HTMLButtonElement>(document, "reveal-sensitive").click();
+    getElement<HTMLInputElement>(document, "review-veteran-status").checked =
+      true;
+    getElement<HTMLButtonElement>(document, "approve-autofill").click();
+    fillInput(document, "assisted-university", "새봄대학교(가상)");
+
+    expect(getElement<HTMLInputElement>(document, "assisted-email").value).toBe(
+      "seojun.lee@example.com",
+    );
+    expect(
+      getElement<HTMLInputElement>(document, "assisted-veteran-status").value,
+    ).toBe("비해당");
+
+    getElement<HTMLInputElement>(document, "review-email").checked = false;
+    getElement<HTMLInputElement>(document, "review-veteran-status").checked =
+      false;
+    getElement<HTMLButtonElement>(document, "approve-autofill").click();
+
+    expect(getElement<HTMLInputElement>(document, "assisted-email").value).toBe(
+      "",
+    );
+    expect(
+      getElement<HTMLInputElement>(document, "assisted-veteran-status").value,
+    ).toBe("");
+    expect(
+      getElement<HTMLInputElement>(document, "assisted-university").value,
+    ).toBe("새봄대학교(가상)");
   });
 
   it("counts task B after approved fields and direct entries are both complete", () => {
