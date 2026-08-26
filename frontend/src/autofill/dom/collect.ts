@@ -114,7 +114,8 @@ function visibility(element: HTMLElement): "visible" | "hidden" {
 }
 
 function siteOf(document: Document): { host: string; pathPattern: string } {
-  const pathPattern = document.location.pathname
+  const location = document.location;
+  const pathPattern = (location?.pathname ?? "/")
     .split("/")
     .map((segment) =>
       /^\d+$/.test(segment) ||
@@ -125,7 +126,7 @@ function siteOf(document: Document): { host: string; pathPattern: string } {
     )
     .join("/");
   return {
-    host: document.location.host,
+    host: location?.host ?? "",
     pathPattern: pathPattern || "/",
   };
 }

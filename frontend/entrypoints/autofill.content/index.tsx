@@ -3,8 +3,10 @@ import { browser } from "wxt/browser";
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root";
 import { defineContentScript } from "wxt/utils/define-content-script";
 
+import { RuntimeAnalysisApiClient } from "../../src/autofill/api/runtime-client";
 import { AutofillOverlay } from "../../src/autofill-demo/AutofillOverlay";
 import { isOpenAutofillOverlayMessage } from "../../src/autofill-demo/messages";
+import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import "./style.css";
 
 export default defineContentScript({
@@ -25,7 +27,14 @@ export default defineContentScript({
         isolateEvents: true,
         onMount(container) {
           const root = createRoot(container);
-          root.render(<AutofillOverlay onClose={closeOverlay} />);
+          root.render(
+            <AutofillOverlay
+              onClose={closeOverlay}
+              apiClient={new RuntimeAnalysisApiClient()}
+              repository={new ChromeProfileStorage()}
+              pageDocument={document}
+            />,
+          );
           return root;
         },
         onRemove(root) {
