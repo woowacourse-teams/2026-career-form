@@ -6,6 +6,7 @@ import type {
   PreparationAnalyzeResponse,
   WriteCommand,
 } from "./types";
+import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
 
 export class AnalysisContractError extends Error {
   constructor() {
@@ -217,6 +218,7 @@ function validateFieldAnalysis(
     !/^[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*){2}$/.test(
       value.profileFieldKey,
     ) ||
+    !isAutofillProfileFieldKey(value.profileFieldKey) ||
     !isOneOf(value.autofillPolicy, [
       "ALLOWED",
       "CONDITIONAL",

@@ -177,6 +177,38 @@ describe("analysis API response validation", () => {
       },
     ],
     [
+      "a syntactically valid but unknown canonical profile field key",
+      {
+        fields: [
+          {
+            candidateId: "field-1",
+            matchType: "MATCH",
+            profileFieldKey: "contact.contact.notARealField",
+            autofillPolicy: "ALLOWED",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "READY",
+            writePlan: { command: "SET_TEXT" },
+          },
+        ],
+      },
+    ],
+    [
+      "an excluded evidence document profile field key",
+      {
+        fields: [
+          {
+            candidateId: "field-1",
+            matchType: "MATCH",
+            profileFieldKey: "certifications.certificate.evidenceDocumentPath",
+            autofillPolicy: "ALLOWED",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "READY",
+            writePlan: { command: "SET_TEXT" },
+          },
+        ],
+      },
+    ],
+    [
       "a blocked response with executable fields",
       {
         analysisStatus: "BLOCKED",
