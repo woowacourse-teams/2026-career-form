@@ -1,0 +1,1816 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Career Form · 가설 검증 인터뷰</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #617087;
+        --line: #dce3ed;
+        --surface: #ffffff;
+        --canvas: #f3f6fa;
+        --brand: #244d86;
+        --brand-soft: #eaf2ff;
+        --positive: #147a55;
+        --positive-soft: #e8f7f0;
+        --warning: #9a5b00;
+        --warning-soft: #fff5df;
+        --danger: #a83d42;
+        --danger-soft: #fff0f0;
+        --shadow: 0 18px 45px rgba(25, 45, 75, 0.09);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--canvas);
+        color: var(--ink);
+        font-family:
+          "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        line-height: 1.5;
+      }
+
+      body {
+        margin: 0;
+        min-width: 1120px;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 10px 16px;
+        transition:
+          background 160ms ease,
+          border-color 160ms ease,
+          color 160ms ease,
+          transform 160ms ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid #8bbcff;
+        outline-offset: 2px;
+      }
+
+      .primary-button {
+        background: var(--brand);
+        color: #fff;
+      }
+
+      .secondary-button {
+        background: #fff;
+        border: 1px solid var(--line);
+        color: var(--brand);
+      }
+
+      .quiet-button {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+
+      .shell-header {
+        background: #162b4d;
+        color: #fff;
+      }
+
+      .header-inner,
+      .page-content,
+      .shell-footer {
+        margin: 0 auto;
+        max-width: 1440px;
+        padding-left: 32px;
+        padding-right: 32px;
+      }
+
+      .header-inner {
+        align-items: center;
+        display: flex;
+        gap: 24px;
+        min-height: 74px;
+      }
+
+      .brand-lockup {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        margin-right: auto;
+      }
+
+      .brand-mark {
+        align-items: center;
+        background: #7bb2ff;
+        border-radius: 10px;
+        color: #162b4d;
+        display: inline-flex;
+        font-size: 17px;
+        font-weight: 900;
+        height: 36px;
+        justify-content: center;
+        width: 36px;
+      }
+
+      .brand-name {
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .prototype-chip {
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        color: #dceaff;
+        font-size: 12px;
+        padding: 5px 10px;
+      }
+
+      .session-badge {
+        color: #c8d8ef;
+        font-size: 13px;
+      }
+
+      .page-content {
+        padding-bottom: 52px;
+        padding-top: 28px;
+      }
+
+      .notice-bar {
+        align-items: flex-start;
+        background: #fff;
+        border: 1px solid #c8d8ed;
+        border-left: 5px solid var(--brand);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 18px 20px;
+      }
+
+      .notice-icon {
+        align-items: center;
+        background: var(--brand-soft);
+        border-radius: 50%;
+        color: var(--brand);
+        display: flex;
+        flex: 0 0 32px;
+        font-weight: 900;
+        height: 32px;
+        justify-content: center;
+      }
+
+      .notice-bar p {
+        margin: 3px 0 0;
+      }
+
+      .eyebrow {
+        color: var(--brand);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin: 0;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        font-size: 30px;
+        letter-spacing: -0.04em;
+        margin-bottom: 8px;
+      }
+
+      h2 {
+        font-size: 20px;
+        letter-spacing: -0.03em;
+        margin-bottom: 6px;
+      }
+
+      h3 {
+        font-size: 15px;
+        margin-bottom: 5px;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .session-panel,
+      .task-section,
+      .survey-section,
+      .summary-section {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        margin-bottom: 24px;
+        padding: 24px;
+      }
+
+      .session-panel {
+        align-items: end;
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(260px, 360px) 1fr auto;
+      }
+
+      .session-panel label,
+      .form-field label {
+        display: block;
+        font-size: 13px;
+        font-weight: 800;
+        margin-bottom: 7px;
+      }
+
+      input[type="text"],
+      input[type="email"],
+      input[type="tel"],
+      input[type="date"] {
+        background: #fff;
+        border: 1px solid #bfcbdc;
+        border-radius: 8px;
+        color: var(--ink);
+        min-height: 42px;
+        padding: 9px 11px;
+        width: 100%;
+      }
+
+      .session-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .status-message {
+        color: var(--muted);
+        font-size: 13px;
+        min-height: 22px;
+      }
+
+      .status-message[data-tone="success"] {
+        color: var(--positive);
+      }
+
+      .status-message[data-tone="error"] {
+        color: var(--danger);
+      }
+
+      .progress-strip {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+        margin-bottom: 24px;
+      }
+
+      .progress-step {
+        background: #e7edf5;
+        border-radius: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 8px 12px;
+      }
+
+      .progress-step.is-active {
+        background: var(--brand);
+        color: #fff;
+      }
+
+      .task-heading {
+        align-items: start;
+        display: flex;
+        gap: 24px;
+        justify-content: space-between;
+      }
+
+      .task-heading > div:first-child {
+        max-width: 720px;
+      }
+
+      .task-heading .task-number {
+        color: var(--brand);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .task-meta {
+        background: var(--brand-soft);
+        border-radius: 9px;
+        color: var(--brand);
+        font-size: 12px;
+        line-height: 1.45;
+        max-width: 300px;
+        padding: 11px 14px;
+      }
+
+      .task-actions {
+        border-top: 1px solid var(--line);
+        display: flex;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 16px;
+      }
+
+      .manual-layout {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: 0.95fr 1.05fr;
+        margin-top: 20px;
+      }
+
+      .source-board,
+      .application-card,
+      .review-card,
+      .result-card {
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        padding: 18px;
+      }
+
+      .source-board {
+        background: #f8fbff;
+      }
+
+      .source-card {
+        background: #fff;
+        border: 1px solid #dce7f5;
+        border-radius: 9px;
+        margin-top: 10px;
+        padding: 13px;
+      }
+
+      .source-card:first-of-type {
+        margin-top: 14px;
+      }
+
+      .source-card dl {
+        display: grid;
+        font-size: 13px;
+        gap: 5px 12px;
+        grid-template-columns: 102px 1fr;
+        margin: 0;
+      }
+
+      .source-card dt {
+        color: var(--muted);
+      }
+
+      .source-card dd {
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .application-card {
+        background: #fff;
+      }
+
+      .application-topline {
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+      }
+
+      .virtual-company {
+        color: var(--brand);
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .application-state {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-field.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .form-hint {
+        color: var(--muted);
+        font-size: 12px;
+        margin: 6px 0 0;
+      }
+
+      .result-card {
+        background: var(--positive-soft);
+        border-color: #b9e4d1;
+        color: #155b42;
+        margin-top: 16px;
+      }
+
+      .result-card[hidden],
+      [hidden] {
+        display: none !important;
+      }
+
+      .review-layout {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: 1fr 1fr;
+        margin-top: 20px;
+      }
+
+      .assisted-review-layout {
+        grid-template-columns: 0.78fr 1fr 1.15fr;
+      }
+
+      .review-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .review-card {
+        background: #fff;
+        display: grid;
+        gap: 5px;
+        grid-template-columns: auto 1fr;
+      }
+
+      .review-card input {
+        margin-top: 4px;
+      }
+
+      .review-card.is-available {
+        border-left: 4px solid var(--positive);
+      }
+
+      .review-card.is-review {
+        background: var(--warning-soft);
+        border-left: 4px solid var(--warning);
+      }
+
+      .review-card.is-unavailable {
+        background: var(--danger-soft);
+        border-left: 4px solid var(--danger);
+      }
+
+      .review-card.is-sensitive {
+        background: #f7f0ff;
+        border-left: 4px solid #7544a3;
+      }
+
+      .review-status {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+      }
+
+      .review-value {
+        font-weight: 800;
+      }
+
+      .review-reason {
+        color: var(--muted);
+        font-size: 12px;
+        grid-column: 2;
+      }
+
+      .sensitive-value {
+        filter: blur(5px);
+        user-select: none;
+      }
+
+      .sensitive-status {
+        filter: blur(4px);
+      }
+
+      .sensitive-value.is-revealed {
+        filter: none;
+        user-select: text;
+      }
+
+      .review-actions {
+        align-items: center;
+        border-top: 1px solid var(--line);
+        display: flex;
+        gap: 10px;
+        grid-column: 1 / -1;
+        margin-top: 10px;
+        padding-top: 14px;
+      }
+
+      .review-actions .status-message {
+        margin-left: auto;
+        text-align: right;
+      }
+
+      .survey-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 18px;
+      }
+
+      .survey-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px;
+      }
+
+      .survey-item legend {
+        font-size: 13px;
+        font-weight: 800;
+        padding: 0 4px;
+      }
+
+      .survey-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        margin-top: 8px;
+      }
+
+      .survey-options label {
+        align-items: center;
+        display: inline-flex;
+        font-size: 13px;
+        gap: 5px;
+      }
+
+      .summary-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      #result-summary {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        color: var(--ink);
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 12px;
+        min-height: 140px;
+        padding: 14px;
+        white-space: pre-wrap;
+        width: 100%;
+      }
+
+      .shell-footer {
+        color: var(--muted);
+        font-size: 12px;
+        padding-bottom: 28px;
+        padding-top: 0;
+      }
+
+      @media (max-width: 1180px) {
+        body {
+          min-width: 0;
+        }
+
+        .header-inner,
+        .page-content,
+        .shell-footer {
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+
+        .session-panel,
+        .manual-layout,
+        .review-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="shell-header">
+      <div class="header-inner">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">CF</span>
+          <span class="brand-name">Career Form Research</span>
+          <span class="prototype-chip">연구용 프로토타입</span>
+        </div>
+        <span class="session-badge" id="header-session">세션 시작 전</span>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <section class="notice-bar" aria-labelledby="notice-title">
+        <span class="notice-icon" aria-hidden="true">!</span>
+        <div>
+          <p class="eyebrow" id="notice-title">Interview safety boundary</p>
+          <p>
+            이 화면은 가상 정보만 사용하는 방향성 검증용 도구입니다. 실제
+            개인정보를 입력하지 말고, 이 브라우저 탭을 닫으면 입력 내용이
+            사라집니다. 저장·전송·제출은 수행하지 않습니다.
+          </p>
+        </div>
+      </section>
+
+      <section class="session-panel" aria-labelledby="session-title">
+        <div>
+          <p class="eyebrow">Session</p>
+          <h1 id="session-title">지원서 입력 경험 인터뷰</h1>
+          <label for="participant-code">참가자 코드</label>
+          <input
+            id="participant-code"
+            autocomplete="off"
+            inputmode="text"
+            maxlength="3"
+            placeholder="P01"
+            type="text"
+          />
+          <p class="form-hint">이름이나 이메일 대신 P01, P02처럼 입력합니다.</p>
+        </div>
+        <p class="status-message" id="session-status" aria-live="polite">
+          참가자 코드를 입력하면 인터뷰를 시작할 수 있습니다.
+        </p>
+        <div class="session-actions">
+          <button class="primary-button" id="start-session" type="button">
+            세션 시작
+          </button>
+          <button class="quiet-button" id="reset-session" type="button">
+            전체 초기화
+          </button>
+        </div>
+      </section>
+
+      <nav class="progress-strip" aria-label="인터뷰 단계">
+        <span class="progress-step is-active" id="progress-intro">안내</span>
+        <span class="progress-step" id="progress-tasks">A/B 과업</span>
+        <span class="progress-step" id="progress-summary"
+          >사후 응답과 요약</span
+        >
+      </nav>
+
+      <section
+        id="manual-task"
+        class="task-section"
+        aria-labelledby="manual-title"
+        aria-hidden="true"
+        hidden
+      >
+        <div class="task-heading">
+          <div>
+            <p class="task-number">과업 A · 직접 작성</p>
+            <h2 id="manual-title">
+              가상 인물의 자료를 찾아 지원서를 작성하세요
+            </h2>
+            <p class="muted">
+              왼쪽 세 카드에서 값을 찾고 오른쪽 지원서에 직접 입력합니다. 시작
+              전 지원서 값은 비어 있습니다.
+            </p>
+          </div>
+          <div class="task-meta">
+            8개 필드 · 3개 정보 카드<br />
+            회사: 모아테크 채용 · 가상 기업
+          </div>
+        </div>
+
+        <div class="manual-layout">
+          <aside class="source-board" aria-labelledby="manual-source-title">
+            <h3 id="manual-source-title">가상 인물 A 자료</h3>
+            <p class="muted">인터뷰 중 필요한 카드만 찾아보세요.</p>
+            <article class="source-card">
+              <h3>기본 정보 카드</h3>
+              <dl>
+                <dt>국문 이름</dt>
+                <dd>김가온</dd>
+                <dt>이메일</dt>
+                <dd>gaon.kim@example.com</dd>
+                <dt>연락처</dt>
+                <dd>010-0000-1001</dd>
+                <dt>생년월일</dt>
+                <dd>2000-05-21</dd>
+              </dl>
+            </article>
+            <article class="source-card">
+              <h3>이력 정보 카드</h3>
+              <dl>
+                <dt>대학교명</dt>
+                <dd>한빛대학교(가상)</dd>
+                <dt>어학 성적</dt>
+                <dd>TOEIC 900</dd>
+                <dt>보훈 대상 여부</dt>
+                <dd>비해당</dd>
+              </dl>
+            </article>
+            <article class="source-card">
+              <h3>자격 정보 카드</h3>
+              <dl>
+                <dt>자격증 등록번호</dt>
+                <dd>CF-A-2024-0614</dd>
+              </dl>
+            </article>
+          </aside>
+
+          <div class="application-card">
+            <div class="application-topline">
+              <span class="virtual-company">모아테크 채용 · 가상 기업</span>
+              <span class="application-state">지원서 작성 화면 · A</span>
+            </div>
+            <form id="manual-form" novalidate>
+              <fieldset>
+                <legend class="eyebrow">지원자 기본 정보</legend>
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="manual-name">국문 이름</label>
+                    <input
+                      id="manual-name"
+                      data-fixture-key="name"
+                      disabled
+                      type="text"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="manual-email">이메일</label>
+                    <input
+                      id="manual-email"
+                      data-fixture-key="email"
+                      disabled
+                      type="email"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="manual-phone">연락처</label>
+                    <input
+                      id="manual-phone"
+                      data-fixture-key="phone"
+                      disabled
+                      type="tel"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="manual-birth-date">생년월일</label>
+                    <input
+                      id="manual-birth-date"
+                      data-fixture-key="birthDate"
+                      disabled
+                      type="date"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="manual-university">대학교명</label>
+                    <input
+                      id="manual-university"
+                      data-fixture-key="university"
+                      disabled
+                      type="text"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="manual-language-score">어학 성적</label>
+                    <input
+                      id="manual-language-score"
+                      data-fixture-key="languageScore"
+                      disabled
+                      type="text"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="manual-veteran-status">보훈 대상 여부</label>
+                    <input
+                      id="manual-veteran-status"
+                      data-fixture-key="veteranStatus"
+                      disabled
+                      type="text"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="manual-certificate-number"
+                      >자격증 등록번호</label
+                    >
+                    <input
+                      id="manual-certificate-number"
+                      data-fixture-key="certificateNumber"
+                      disabled
+                      type="text"
+                    />
+                  </div>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+        </div>
+
+        <div class="task-actions">
+          <button class="primary-button" id="start-manual-task" type="button">
+            과업 A 시작
+          </button>
+          <button
+            class="secondary-button"
+            id="start-assisted-task"
+            type="button"
+            disabled
+          >
+            과업 B 시작
+          </button>
+          <button
+            class="secondary-button"
+            id="complete-manual-task"
+            type="button"
+            disabled
+          >
+            과업 A 완료 기록
+          </button>
+          <p class="status-message" id="manual-status" aria-live="polite">
+            세션을 시작한 뒤 과업 A를 시작하세요.
+          </p>
+        </div>
+        <div
+          class="result-card"
+          id="manual-result"
+          aria-live="polite"
+          hidden
+        ></div>
+      </section>
+
+      <section
+        id="assisted-task"
+        class="task-section"
+        aria-labelledby="assisted-title"
+        aria-hidden="true"
+        hidden
+      >
+        <div class="task-heading">
+          <div>
+            <p class="task-number">과업 B · 부분 자동 기입 검토</p>
+            <h2 id="assisted-title">
+              적용할 항목을 확인하고 남은 값을 직접 작성하세요
+            </h2>
+            <p class="muted">
+              검토 패널의 상태와 이유를 읽은 뒤 선택한 항목만 승인합니다. 자동
+              기입은 저장이나 제출을 대신하지 않습니다.
+            </p>
+          </div>
+          <div class="task-meta">
+            8개 필드 · 입력 가능 4개 · 확인 필요 2개 · 입력 불가 1개 · 민감 확인
+            1개<br />
+            회사: 누리랩 Careers · 가상 기업
+          </div>
+        </div>
+
+        <div class="review-layout assisted-review-layout">
+          <aside
+            class="source-board"
+            id="assisted-source-board"
+            aria-labelledby="assisted-source-title"
+          >
+            <h3 id="assisted-source-title">가상 인물 B 자료</h3>
+            <p class="muted">
+              저장 프로필과 직접 찾아볼 자료를 구분해 확인하세요.
+            </p>
+            <article class="source-card">
+              <h3>저장된 프로필</h3>
+              <dl>
+                <dt>국문 이름</dt>
+                <dd>이서준</dd>
+                <dt>이메일</dt>
+                <dd>seojun.lee@example.com</dd>
+                <dt>연락처</dt>
+                <dd>010-0000-2002</dd>
+                <dt>생년월일</dt>
+                <dd>1999-11-03</dd>
+                <dt>대학교명</dt>
+                <dd>새봄대학교(가상)</dd>
+                <dt>어학 성적</dt>
+                <dd>OPIc IH</dd>
+                <dt>보훈 대상 여부</dt>
+                <dd>비해당</dd>
+              </dl>
+            </article>
+            <article class="source-card">
+              <h3>자격 정보 카드</h3>
+              <dl>
+                <dt>등록번호</dt>
+                <dd>CF-B-2023-1120</dd>
+              </dl>
+              <p class="form-hint">프로필에는 없으므로 직접 찾아 입력합니다.</p>
+            </article>
+          </aside>
+
+          <section
+            class="application-card"
+            aria-labelledby="assisted-application-title"
+          >
+            <div class="application-topline">
+              <span class="virtual-company" id="assisted-application-title"
+                >누리랩 Careers · 가상 기업</span
+              >
+              <span class="application-state">지원서 작성 화면 · B</span>
+            </div>
+            <form id="assisted-form" novalidate>
+              <fieldset>
+                <legend class="eyebrow">검토 후 지원서 값</legend>
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="assisted-name">국문 이름</label>
+                    <input
+                      id="assisted-name"
+                      data-assisted-key="name"
+                      data-fixture-key="name"
+                      type="text"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="assisted-email">이메일</label>
+                    <input
+                      id="assisted-email"
+                      data-assisted-key="email"
+                      data-fixture-key="email"
+                      type="email"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="assisted-phone">연락처</label>
+                    <input
+                      id="assisted-phone"
+                      data-assisted-key="phone"
+                      data-fixture-key="phone"
+                      type="tel"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="assisted-birth-date">생년월일</label>
+                    <input
+                      id="assisted-birth-date"
+                      data-assisted-key="birthDate"
+                      data-fixture-key="birthDate"
+                      type="date"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="assisted-university">대학교명</label>
+                    <input
+                      id="assisted-university"
+                      data-assisted-key="university"
+                      data-fixture-key="university"
+                      type="text"
+                    />
+                    <p class="form-hint">직접 검색해 확인하세요.</p>
+                  </div>
+                  <div class="form-field">
+                    <label for="assisted-language-score">어학 성적</label>
+                    <input
+                      id="assisted-language-score"
+                      data-assisted-key="languageScore"
+                      data-fixture-key="languageScore"
+                      type="text"
+                    />
+                    <p class="form-hint">성적표에서 직접 확인하세요.</p>
+                  </div>
+                  <div class="form-field">
+                    <label for="assisted-certificate-number"
+                      >자격증 등록번호</label
+                    >
+                    <input
+                      id="assisted-certificate-number"
+                      data-assisted-key="certificateNumber"
+                      data-fixture-key="certificateNumber"
+                      type="text"
+                    />
+                    <p class="form-hint">
+                      프로필에 값이 없어 직접 찾아 입력합니다.
+                    </p>
+                  </div>
+                  <div class="form-field">
+                    <label for="assisted-veteran-status">보훈 대상 여부</label>
+                    <input
+                      id="assisted-veteran-status"
+                      data-assisted-key="veteranStatus"
+                      data-fixture-key="veteranStatus"
+                      type="text"
+                    />
+                    <p class="form-hint">
+                      개별 확인 후 선택한 경우에만 적용됩니다.
+                    </p>
+                  </div>
+                </div>
+              </fieldset>
+            </form>
+          </section>
+
+          <section
+            id="autofill-review"
+            class="application-card"
+            aria-labelledby="review-title"
+          >
+            <div class="application-topline">
+              <span class="virtual-company" id="review-title"
+                >자동 기입 검토 패널</span
+              >
+              <span class="application-state">승인 전 값 변경 없음</span>
+            </div>
+            <div class="review-list">
+              <label class="review-card is-available" for="review-name">
+                <input
+                  id="review-name"
+                  data-review-key="name"
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 가능</span>
+                  <br /><span class="review-value">국문 이름 · 이서준</span>
+                  <br /><span class="review-reason"
+                    >명확하게 대응되는 저장 프로필 값입니다.</span
+                  >
+                </span>
+              </label>
+              <label class="review-card is-available" for="review-email">
+                <input
+                  id="review-email"
+                  data-review-key="email"
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 가능</span>
+                  <br /><span class="review-value"
+                    >이메일 · seojun.lee@example.com</span
+                  >
+                  <br /><span class="review-reason"
+                    >지원서 형식과 명확하게 대응됩니다.</span
+                  >
+                </span>
+              </label>
+              <label class="review-card is-available" for="review-phone">
+                <input
+                  id="review-phone"
+                  data-review-key="phone"
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 가능</span>
+                  <br /><span class="review-value">연락처 · 010-0000-2002</span>
+                  <br /><span class="review-reason"
+                    >지원서 형식과 명확하게 대응됩니다.</span
+                  >
+                </span>
+              </label>
+              <label class="review-card is-available" for="review-birth-date">
+                <input
+                  id="review-birth-date"
+                  data-review-key="birthDate"
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 가능</span>
+                  <br /><span class="review-value">생년월일 · 1999-11-03</span>
+                  <br /><span class="review-reason"
+                    >날짜 입력 형식과 명확하게 대응됩니다.</span
+                  >
+                </span>
+              </label>
+              <label class="review-card is-review" for="review-university">
+                <input
+                  id="review-university"
+                  data-review-key="university"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">확인 필요</span>
+                  <br /><span class="review-value"
+                    >대학교명 · 새봄대학교(가상)</span
+                  >
+                  <br /><span class="review-reason"
+                    >학교 검색 결과와 일치하는지 확인한 뒤 직접
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label class="review-card is-review" for="review-language-score">
+                <input
+                  id="review-language-score"
+                  data-review-key="languageScore"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">확인 필요</span>
+                  <br /><span class="review-value">어학 성적 · OPIc IH</span>
+                  <br /><span class="review-reason"
+                    >시험명과 등급을 확인한 뒤 직접 입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-unavailable"
+                for="review-certificate-number"
+              >
+                <input
+                  id="review-certificate-number"
+                  data-review-key="certificateNumber"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span class="review-status">입력 불가</span>
+                  <br /><span class="review-value"
+                    >자격증 등록번호 · 프로필에 없음</span
+                  >
+                  <br /><span class="review-reason"
+                    >프로필에 값이 없어 자격 정보 카드에서 직접 찾아
+                    입력하세요.</span
+                  >
+                </span>
+              </label>
+              <label
+                class="review-card is-sensitive"
+                for="review-veteran-status"
+              >
+                <input
+                  id="review-veteran-status"
+                  data-review-key="veteranStatus"
+                  disabled
+                  type="checkbox"
+                />
+                <span>
+                  <span
+                    class="review-status sensitive-status"
+                    id="sensitive-status"
+                    aria-hidden="true"
+                    >민감 확인</span
+                  >
+                  <br /><span
+                    class="review-value sensitive-value"
+                    id="sensitive-value"
+                    aria-hidden="true"
+                    >비해당</span
+                  >
+                  <br /><span class="review-reason"
+                    >값을 펼쳐 확인한 뒤 이 항목만 개별 승인할 수
+                    있습니다.</span
+                  >
+                </span>
+              </label>
+            </div>
+            <div class="review-actions">
+              <button
+                class="secondary-button"
+                id="reveal-sensitive"
+                type="button"
+                aria-expanded="false"
+              >
+                민감 값 펼쳐 확인
+              </button>
+              <button
+                class="primary-button"
+                id="approve-autofill"
+                type="button"
+              >
+                선택 항목 최종 승인
+              </button>
+              <p class="status-message" id="assisted-status" aria-live="polite">
+                승인 전에는 지원서 입력값이 바뀌지 않습니다.
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <div class="task-actions">
+          <button
+            class="secondary-button"
+            id="complete-assisted-task"
+            type="button"
+          >
+            과업 B 완료 기록
+          </button>
+          <p
+            class="status-message"
+            id="assisted-completion-status"
+            aria-live="polite"
+          >
+            검토와 승인을 마친 뒤 남은 필드를 직접 입력하세요.
+          </p>
+        </div>
+        <div
+          class="result-card"
+          id="assisted-result"
+          aria-live="polite"
+          hidden
+        ></div>
+      </section>
+
+      <section
+        id="post-task-survey"
+        class="survey-section"
+        aria-labelledby="survey-title"
+        aria-hidden="true"
+        hidden
+      >
+        <p class="eyebrow">Post-task questions</p>
+        <h2 id="survey-title">사후 응답</h2>
+        <p class="muted">
+          각 질문에서 가장 가까운 선택지만 골라 주세요. 자유 서술은 받지
+          않습니다.
+        </p>
+        <div class="survey-grid">
+          <fieldset class="survey-item">
+            <legend>
+              최근 지원 경험에서 반복 입력·정보 탐색의 불편을 겪었나요?
+            </legend>
+            <div class="survey-options">
+              <label
+                ><input name="repeat-friction" type="radio" value="specific" />
+                구체적 사례 있음</label
+              >
+              <label
+                ><input name="repeat-friction" type="radio" value="general" />
+                일반적 불편만 있음</label
+              >
+              <label
+                ><input name="repeat-friction" type="radio" value="none" />
+                없음</label
+              >
+            </div>
+          </fieldset>
+          <fieldset class="survey-item">
+            <legend>과업 B에서 시간 절약을 얼마나 느꼈나요?</legend>
+            <div class="survey-options">
+              <label
+                ><input name="time-saving" type="radio" value="1" /> 1</label
+              >
+              <label
+                ><input name="time-saving" type="radio" value="2" /> 2</label
+              >
+              <label
+                ><input name="time-saving" type="radio" value="3" /> 3</label
+              >
+              <label
+                ><input name="time-saving" type="radio" value="4" /> 4</label
+              >
+              <label
+                ><input name="time-saving" type="radio" value="5" /> 5</label
+              >
+            </div>
+          </fieldset>
+          <fieldset class="survey-item">
+            <legend>일부만 자동 기입돼도 사용할 가치가 있나요?</legend>
+            <div class="survey-options">
+              <label
+                ><input name="partial-value" type="radio" value="1" /> 1</label
+              >
+              <label
+                ><input name="partial-value" type="radio" value="2" /> 2</label
+              >
+              <label
+                ><input name="partial-value" type="radio" value="3" /> 3</label
+              >
+              <label
+                ><input name="partial-value" type="radio" value="4" /> 4</label
+              >
+              <label
+                ><input name="partial-value" type="radio" value="5" /> 5</label
+              >
+            </div>
+          </fieldset>
+          <fieldset class="survey-item">
+            <legend>미적용 사유와 다음 행동을 이해했나요?</legend>
+            <div class="survey-options">
+              <label
+                ><input name="reason-understanding" type="radio" value="yes" />
+                예</label
+              >
+              <label
+                ><input
+                  name="reason-understanding"
+                  type="radio"
+                  value="partial"
+                />
+                일부만</label
+              >
+              <label
+                ><input name="reason-understanding" type="radio" value="no" />
+                아니요</label
+              >
+            </div>
+          </fieldset>
+          <fieldset class="survey-item">
+            <legend>적용 전 확인·선택 흐름을 신뢰했나요?</legend>
+            <div class="survey-options">
+              <label><input name="trust" type="radio" value="1" /> 1</label>
+              <label><input name="trust" type="radio" value="2" /> 2</label>
+              <label><input name="trust" type="radio" value="3" /> 3</label>
+              <label><input name="trust" type="radio" value="4" /> 4</label>
+              <label><input name="trust" type="radio" value="5" /> 5</label>
+            </div>
+          </fieldset>
+          <fieldset class="survey-item">
+            <legend>이 흐름을 실제로 사용할 의향이 있나요?</legend>
+            <div class="survey-options">
+              <label
+                ><input name="intention" type="radio" value="yes" /> 예</label
+              >
+              <label
+                ><input name="intention" type="radio" value="situational" />
+                상황에 따라</label
+              >
+              <label
+                ><input name="intention" type="radio" value="no" />
+                아니요</label
+              >
+            </div>
+          </fieldset>
+          <fieldset class="survey-item">
+            <legend>자동화 범위를 어떻게 이해했나요?</legend>
+            <div class="survey-options">
+              <label
+                ><input
+                  name="automation-boundary"
+                  type="radio"
+                  value="fields"
+                />
+                선택한 지원서 필드만 변경</label
+              >
+              <label
+                ><input name="automation-boundary" type="radio" value="save" />
+                저장까지 수행</label
+              >
+              <label
+                ><input
+                  name="automation-boundary"
+                  type="radio"
+                  value="submit"
+                />
+                제출까지 수행</label
+              >
+              <label
+                ><input
+                  name="automation-boundary"
+                  type="radio"
+                  value="unknown"
+                />
+                모르겠다</label
+              >
+            </div>
+          </fieldset>
+        </div>
+        <div class="task-actions">
+          <button class="primary-button" id="build-summary" type="button">
+            비식별 결과 요약 만들기
+          </button>
+          <p class="status-message" id="survey-status" aria-live="polite">
+            모든 질문은 정형 선택 항목입니다.
+          </p>
+        </div>
+      </section>
+
+      <section class="summary-section" aria-labelledby="summary-title">
+        <p class="eyebrow">Research summary</p>
+        <h2 id="summary-title">비식별 결과 요약</h2>
+        <p class="muted">가상 프로필 필드 값은 결과에 포함하지 않습니다.</p>
+        <textarea
+          id="result-summary"
+          aria-label="비식별 결과 요약"
+          readonly
+        ></textarea>
+        <div class="summary-actions">
+          <button
+            class="secondary-button"
+            id="copy-summary"
+            type="button"
+            disabled
+          >
+            요약 복사
+          </button>
+          <p class="status-message" id="copy-status" aria-live="polite"></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell-footer">
+      <p>
+        연구용 프로토타입 · 가상 브랜드와 가상 값만 사용 · 인터뷰 종료 후 전체
+        초기화
+      </p>
+    </footer>
+
+    <script>
+      const manualFixture = {
+        name: "김가온",
+        email: "gaon.kim@example.com",
+        phone: "010-0000-1001",
+        birthDate: "2000-05-21",
+        university: "한빛대학교(가상)",
+        languageScore: "TOEIC 900",
+        veteranStatus: "비해당",
+        certificateNumber: "CF-A-2024-0614",
+      };
+
+      const assistedFixture = {
+        name: "이서준",
+        email: "seojun.lee@example.com",
+        phone: "010-0000-2002",
+        birthDate: "1999-11-03",
+        university: "새봄대학교(가상)",
+        languageScore: "OPIc IH",
+        veteranStatus: "비해당",
+        certificateNumber: "CF-B-2023-1120",
+      };
+
+      const initialState = () => ({
+        participantCode: "",
+        manual: { started: false, completed: false, startedAt: 0 },
+        assisted: {
+          started: false,
+          approved: false,
+          approvedSensitive: false,
+          startedAt: 0,
+        },
+      });
+
+      let sessionState = initialState();
+
+      const byId = (id) => document.getElementById(id);
+      const setMessage = (id, message, tone = "") => {
+        const element = byId(id);
+        element.textContent = message;
+        element.dataset.tone = tone;
+      };
+      const elapsedSeconds = (startedAt) =>
+        Math.max(0, Math.round((performance.now() - startedAt) / 1000));
+      const setVisible = (id, visible) => {
+        const element = byId(id);
+        element.hidden = !visible;
+        element.setAttribute("aria-hidden", String(!visible));
+      };
+      const setProgress = (activeId) => {
+        document.querySelectorAll(".progress-step").forEach((step) => {
+          step.classList.toggle("is-active", step.id === activeId);
+        });
+      };
+
+      function startSession() {
+        const code = byId("participant-code").value.trim().toUpperCase();
+        if (!/^P\d{2}$/.test(code)) {
+          setMessage(
+            "session-status",
+            "참가자 코드는 P01 형식만 사용할 수 있습니다.",
+            "error",
+          );
+          return;
+        }
+        sessionState = initialState();
+        sessionState.participantCode = code;
+        byId("participant-code").value = code;
+        byId("header-session").textContent = `${code} · 세션 진행 중`;
+        byId("start-manual-task").disabled = false;
+        setMessage(
+          "session-status",
+          "세션이 시작되었습니다. 과업 A를 시작하세요.",
+          "success",
+        );
+        setMessage("manual-status", "과업 A를 시작하면 타이머가 시작됩니다.");
+        setProgress("progress-intro");
+      }
+
+      function resetForm(formId) {
+        byId(formId).reset();
+      }
+
+      function startManualTask() {
+        if (!sessionState.participantCode) {
+          setMessage(
+            "manual-status",
+            "먼저 참가자 코드로 세션을 시작하세요.",
+            "error",
+          );
+          return;
+        }
+        resetForm("manual-form");
+        document.querySelectorAll("#manual-form input").forEach((input) => {
+          input.disabled = false;
+        });
+        sessionState.manual = {
+          started: true,
+          completed: false,
+          startedAt: performance.now(),
+        };
+        byId("start-manual-task").disabled = true;
+        byId("complete-manual-task").disabled = false;
+        setVisible("manual-task", true);
+        setMessage("manual-status", "자료 카드에서 값을 찾아 직접 입력하세요.");
+        setProgress("progress-tasks");
+      }
+
+      function countFormErrors(formId, fixture) {
+        let missing = 0;
+        let incorrect = 0;
+        document
+          .querySelectorAll(`#${formId} input[data-fixture-key]`)
+          .forEach((input) => {
+            const actual = input.value.trim();
+            const expected = fixture[input.dataset.fixtureKey];
+            if (!actual) missing += 1;
+            else if (actual !== expected) incorrect += 1;
+          });
+        return { missing, incorrect };
+      }
+
+      function completeManualTask() {
+        if (!sessionState.manual.started) return;
+        const counts = countFormErrors("manual-form", manualFixture);
+        sessionState.manual = {
+          ...sessionState.manual,
+          completed: true,
+          seconds: elapsedSeconds(sessionState.manual.startedAt),
+          ...counts,
+        };
+        byId("complete-manual-task").disabled = true;
+        byId("start-assisted-task").disabled = false;
+        setMessage("manual-status", "과업 A 기록을 마쳤습니다.", "success");
+        byId("manual-result").innerHTML =
+          `<strong>과업 A 기록 완료</strong><br />경과 시간 ${sessionState.manual.seconds}초 · 누락 ${counts.missing}개 · 오입력 ${counts.incorrect}개`;
+        byId("manual-result").hidden = false;
+        setMessage(
+          "session-status",
+          "과업 A가 완료되었습니다. 이제 과업 B를 시작할 수 있습니다.",
+          "success",
+        );
+      }
+
+      function startAssistedTask() {
+        if (!sessionState.manual.completed) {
+          setMessage(
+            "assisted-completion-status",
+            "과업 A를 먼저 완료해야 합니다.",
+            "error",
+          );
+          return;
+        }
+        resetForm("assisted-form");
+        document
+          .querySelectorAll("#autofill-review input[type=checkbox]")
+          .forEach((input) => {
+            input.checked =
+              input.dataset.reviewKey in
+              {
+                name: true,
+                email: true,
+                phone: true,
+                birthDate: true,
+              };
+          });
+        sessionState.assisted = {
+          started: true,
+          approved: false,
+          approvedSensitive: false,
+          startedAt: performance.now(),
+        };
+        setVisible("assisted-task", true);
+        setVisible("post-task-survey", false);
+        setMessage(
+          "assisted-status",
+          "승인 전에는 지원서 입력값이 바뀌지 않습니다.",
+        );
+        setMessage(
+          "assisted-completion-status",
+          "검토와 승인을 마친 뒤 남은 필드를 직접 입력하세요.",
+        );
+        setProgress("progress-tasks");
+        if (typeof byId("assisted-task").scrollIntoView === "function") {
+          byId("assisted-task").scrollIntoView({ block: "start" });
+        }
+      }
+
+      function revealSensitive() {
+        const value = byId("sensitive-value");
+        const status = byId("sensitive-status");
+        const revealed = value.classList.toggle("is-revealed");
+        byId("reveal-sensitive").setAttribute(
+          "aria-expanded",
+          String(revealed),
+        );
+        byId("review-veteran-status").disabled = !revealed;
+        if (!revealed) byId("review-veteran-status").checked = false;
+        status.setAttribute("aria-hidden", String(!revealed));
+        value.setAttribute("aria-hidden", String(!revealed));
+        setMessage(
+          "assisted-status",
+          revealed
+            ? "민감 값을 확인했습니다. 개별 승인 여부를 선택하세요."
+            : "민감 값이 다시 가려졌습니다.",
+        );
+      }
+
+      function applyApprovedFields() {
+        if (!sessionState.assisted.started) return;
+        const selected = document.querySelectorAll(
+          "#autofill-review input[data-review-key]:checked",
+        );
+        selected.forEach((reviewInput) => {
+          const key = reviewInput.dataset.reviewKey;
+          const target = document.querySelector(
+            `#assisted-form [data-assisted-key="${key}"]`,
+          );
+          if (target) target.value = assistedFixture[key];
+        });
+        sessionState.assisted = {
+          ...sessionState.assisted,
+          approved: true,
+          approvedAvailableCount: [...selected].filter(
+            (input) => input.dataset.reviewKey !== "veteranStatus",
+          ).length,
+          approvedSensitive: byId("review-veteran-status").checked,
+        };
+        setMessage(
+          "assisted-status",
+          "선택한 항목만 지원서에 적용했습니다. 나머지는 직접 입력하세요.",
+          "success",
+        );
+      }
+
+      function completeAssistedTask() {
+        if (!sessionState.assisted.approved) {
+          setMessage(
+            "assisted-completion-status",
+            "먼저 검토 항목을 최종 승인하세요.",
+            "error",
+          );
+          return;
+        }
+        const counts = countFormErrors("assisted-form", assistedFixture);
+        sessionState.assisted = {
+          ...sessionState.assisted,
+          completed: true,
+          seconds: elapsedSeconds(sessionState.assisted.startedAt),
+          ...counts,
+        };
+        setMessage(
+          "assisted-completion-status",
+          "과업 B 기록을 마쳤습니다. 사후 응답을 진행하세요.",
+          "success",
+        );
+        byId("assisted-result").innerHTML =
+          `<strong>과업 B 기록 완료</strong><br />경과 시간 ${sessionState.assisted.seconds}초 · 누락 ${counts.missing}개 · 오입력 ${counts.incorrect}개`;
+        byId("assisted-result").hidden = false;
+        setVisible("post-task-survey", true);
+        setProgress("progress-summary");
+      }
+
+      const getSurveyResponses = () =>
+        Object.fromEntries(
+          [
+            ...document.querySelectorAll(
+              "#post-task-survey input[type=radio]:checked",
+            ),
+          ].map((input) => [input.name, input.value]),
+        );
+      const requiredSurveyNames = [
+        "repeat-friction",
+        "time-saving",
+        "partial-value",
+        "reason-understanding",
+        "trust",
+        "intention",
+        "automation-boundary",
+      ];
+
+      function buildRedactedSummary() {
+        const responses = getSurveyResponses();
+        const missingResponses = requiredSurveyNames.filter(
+          (name) => !responses[name],
+        );
+        if (!sessionState.assisted.completed || missingResponses.length) {
+          setMessage(
+            "survey-status",
+            "과업 B와 모든 사후 질문을 먼저 완료하세요.",
+            "error",
+          );
+          return "";
+        }
+        const summary = [
+          `참가자 코드: ${sessionState.participantCode}`,
+          `과업 A: ${sessionState.manual.seconds}초 · 누락 ${sessionState.manual.missing}개 · 오입력 ${sessionState.manual.incorrect}개`,
+          `과업 B: ${sessionState.assisted.seconds}초 · 누락 ${sessionState.assisted.missing}개 · 오입력 ${sessionState.assisted.incorrect}개`,
+          `승인한 입력 가능 항목: ${sessionState.assisted.approvedAvailableCount}개`,
+          `민감 항목 개별 승인: ${sessionState.assisted.approvedSensitive ? "예" : "아니요"}`,
+          `정형 사후 응답: ${JSON.stringify(responses)}`,
+        ].join("\n");
+        byId("result-summary").value = summary;
+        byId("copy-summary").disabled = false;
+        setMessage("survey-status", "비식별 요약을 만들었습니다.", "success");
+        return summary;
+      }
+
+      async function copySummary() {
+        const summary = byId("result-summary").value;
+        if (!summary) return;
+        try {
+          await navigator.clipboard.writeText(summary);
+          setMessage("copy-status", "요약을 복사했습니다.", "success");
+        } catch {
+          byId("result-summary").focus();
+          byId("result-summary").select();
+          setMessage(
+            "copy-status",
+            "자동 복사를 사용할 수 없어 텍스트를 선택했습니다.",
+          );
+        }
+      }
+
+      function resetSession() {
+        sessionState = initialState();
+        byId("participant-code").value = "";
+        byId("header-session").textContent = "세션 시작 전";
+        byId("start-manual-task").disabled = true;
+        byId("complete-manual-task").disabled = true;
+        byId("start-assisted-task").disabled = true;
+        byId("approve-autofill").disabled = false;
+        byId("copy-summary").disabled = true;
+        byId("result-summary").value = "";
+        resetForm("manual-form");
+        resetForm("assisted-form");
+        document.querySelectorAll("#manual-form input").forEach((input) => {
+          input.disabled = true;
+        });
+        document
+          .querySelectorAll("#autofill-review input[type=checkbox]")
+          .forEach((input) => {
+            input.checked =
+              input.dataset.reviewKey in
+              { name: true, email: true, phone: true, birthDate: true };
+            input.disabled = [
+              "university",
+              "languageScore",
+              "certificateNumber",
+              "veteranStatus",
+            ].includes(input.dataset.reviewKey);
+          });
+        byId("sensitive-value").classList.remove("is-revealed");
+        byId("sensitive-status").setAttribute("aria-hidden", "true");
+        byId("sensitive-value").setAttribute("aria-hidden", "true");
+        byId("reveal-sensitive").setAttribute("aria-expanded", "false");
+        byId("post-task-survey")
+          .querySelectorAll("input")
+          .forEach((input) => {
+            input.checked = false;
+          });
+        byId("manual-result").hidden = true;
+        byId("assisted-result").hidden = true;
+        setVisible("manual-task", false);
+        setVisible("assisted-task", false);
+        setVisible("post-task-survey", false);
+        setMessage(
+          "session-status",
+          "참가자 코드를 입력하면 인터뷰를 시작할 수 있습니다.",
+        );
+        setMessage("manual-status", "세션을 시작한 뒤 과업 A를 시작하세요.");
+        setMessage(
+          "assisted-status",
+          "승인 전에는 지원서 입력값이 바뀌지 않습니다.",
+        );
+        setMessage(
+          "assisted-completion-status",
+          "검토와 승인을 마친 뒤 남은 필드를 직접 입력하세요.",
+        );
+        setMessage("survey-status", "모든 질문은 정형 선택 항목입니다.");
+        setMessage("copy-status", "");
+        setProgress("progress-intro");
+      }
+
+      byId("start-session").addEventListener("click", startSession);
+      byId("reset-session").addEventListener("click", resetSession);
+      byId("start-manual-task").addEventListener("click", startManualTask);
+      byId("complete-manual-task").addEventListener(
+        "click",
+        completeManualTask,
+      );
+      byId("start-assisted-task").addEventListener("click", startAssistedTask);
+      byId("reveal-sensitive").addEventListener("click", revealSensitive);
+      byId("approve-autofill").addEventListener("click", applyApprovedFields);
+      byId("complete-assisted-task").addEventListener(
+        "click",
+        completeAssistedTask,
+      );
+      byId("build-summary").addEventListener("click", buildRedactedSummary);
+      byId("copy-summary").addEventListener("click", copySummary);
+      resetSession();
+    </script>
+  </body>
+</html>
