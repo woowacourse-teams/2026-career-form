@@ -47,6 +47,9 @@ public final class LlmFieldMappingResolver implements FieldMappingResolver {
     private static FieldMappingResolution.Result mapResult(
         LlmFieldMappingContract.Result result
     ) {
+        if (result == null) {
+            return null;
+        }
         if (result instanceof LlmFieldMappingContract.Match match) {
             return new FieldMappingResolution.Match(
                 match.candidateId(),

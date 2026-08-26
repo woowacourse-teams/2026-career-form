@@ -28,6 +28,7 @@ public class OpenAiLlmConfiguration {
 
     private static final String SUPPORTED_PROVIDER = "openai";
     private static final String SUPPORTED_MODEL = "gpt-5.6-luna";
+    private static final int SUPPORTED_MAX_OUTPUT_TOKENS = 2048;
 
     @Bean
     LlmProviderSettings llmProviderSettings(
@@ -42,6 +43,11 @@ public class OpenAiLlmConfiguration {
         if (!SUPPORTED_MODEL.equals(properties.model())) {
             throw new IllegalStateException(
                 "LLM 활성화에는 gpt-5.6-luna model 설정이 필요합니다"
+            );
+        }
+        if (properties.maxOutputTokens() != SUPPORTED_MAX_OUTPUT_TOKENS) {
+            throw new IllegalStateException(
+                "LLM 활성화에는 2048 output token 설정이 필요합니다"
             );
         }
         if (!StringUtils.hasText(apiKey)) {

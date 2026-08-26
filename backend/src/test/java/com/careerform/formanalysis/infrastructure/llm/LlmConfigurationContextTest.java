@@ -112,6 +112,21 @@ class LlmConfigurationContextTest {
     }
 
     @Test
+    void enabledConfigurationFailsWhenOutputTokenLimitIsNotContractValue() {
+        enabledRunner()
+            .withPropertyValues(
+                "career-form.llm.provider=openai",
+                "career-form.llm.model=gpt-5.6-luna",
+                "career-form.llm.max-output-tokens=2049",
+                "spring.ai.openai.api-key=synthetic-private-key"
+            )
+            .run(context -> assertStartupFailure(
+                context.getStartupFailure(),
+                "LLM 활성화에는 2048 output token 설정이 필요합니다"
+            ));
+    }
+
+    @Test
     void enabledValidConfigurationCreatesBothResolversAndServices() {
         String privateKey = "synthetic-private-key";
 

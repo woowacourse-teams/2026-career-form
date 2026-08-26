@@ -1,5 +1,6 @@
 package com.careerform.formanalysis.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
@@ -20,6 +22,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.openai.autoconfigure.OpenAiCommonProperties;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,6 +54,9 @@ class FormAnalysisEnabledProviderApiTest {
 
     @Autowired
     private FakeChatModel model;
+
+    @Autowired
+    private OpenAiCommonProperties openAiCommonProperties;
 
     @BeforeEach
     void resetModel() {
@@ -93,6 +99,13 @@ class FormAnalysisEnabledProviderApiTest {
     }
 
     @Test
+    void pinsProviderTimeoutAndRetryLimits() {
+        assertThat(openAiCommonProperties.getTimeout())
+            .isEqualTo(Duration.ofSeconds(10));
+        assertThat(openAiCommonProperties.getMaxRetries()).isEqualTo(1);
+    }
+
+    @Test
     void convertsEveryInvalidActionProviderResponseToTheSamePartialShape()
         throws Exception {
         List<String> invalidResponses = List.of(
@@ -116,6 +129,12 @@ class FormAnalysisEnabledProviderApiTest {
             """
                 {"schemaVersion":2,"snapshotId":"snapshot-preparation-1","results":[
                   {"candidateId":"unknown-action","actionType":"NO_ACTION"},
+                  {"candidateId":"action-item","actionType":"NO_ACTION"}
+                ]}
+                """,
+            """
+                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1","results":[
+                  null,
                   {"candidateId":"action-item","actionType":"NO_ACTION"}
                 ]}
                 """
@@ -151,6 +170,12 @@ class FormAnalysisEnabledProviderApiTest {
             """
                 {"schemaVersion":2,"snapshotId":"snapshot-fields-1","results":[
                   {"candidateId":"unknown-field","matchType":"NO_MATCH"},
+                  {"candidateId":"field-item","matchType":"NO_MATCH"}
+                ]}
+                """,
+            """
+                {"schemaVersion":2,"snapshotId":"snapshot-fields-1","results":[
+                  null,
                   {"candidateId":"field-item","matchType":"NO_MATCH"}
                 ]}
                 """

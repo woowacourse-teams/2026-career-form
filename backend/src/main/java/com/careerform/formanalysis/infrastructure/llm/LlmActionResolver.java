@@ -46,6 +46,9 @@ public final class LlmActionResolver implements ActionResolver {
     private static ActionResolution.Result mapResult(
         LlmActionContract.Result result
     ) {
+        if (result == null) {
+            return null;
+        }
         if (result instanceof LlmActionContract.RevealAction reveal) {
             return new ActionResolution.RevealAction(
                 reveal.candidateId(),
