@@ -13,8 +13,12 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.careerform.formanalysis.exception.ResolverException;
 
 import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.MapperFeature;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.cfg.CoercionAction;
+import tools.jackson.databind.cfg.CoercionInputShape;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.type.LogicalType;
 
 @Component
 @ConditionalOnProperty(
@@ -71,6 +75,13 @@ public final class OpenAiClient {
     private static JsonMapper strictMapper() {
         return JsonMapper.builder()
             .addModules(JacksonUtils.instantiateAvailableModules())
+            .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
+            .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+            .withCoercionConfig(LogicalType.Textual, config -> {
+                config.setCoercion(CoercionInputShape.Integer, CoercionAction.Fail);
+                config.setCoercion(CoercionInputShape.Float, CoercionAction.Fail);
+                config.setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail);
+            })
             .changeDefaultNullHandling(ignored -> JsonSetter.Value.forValueNulls(
                 Nulls.FAIL,
                 Nulls.FAIL

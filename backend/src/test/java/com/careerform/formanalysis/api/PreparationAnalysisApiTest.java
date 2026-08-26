@@ -151,6 +151,31 @@ class PreparationAnalysisApiTest {
     }
 
     @Test
+    @DisplayName("준비 요청에서 JSON 기본 타입 자동 변환을 거부한다")
+    void rejectsCoercibleScalarTypes() throws Exception {
+        List<String> invalidRequests = List.of(
+            fixture().replace("\"schemaVersion\": 2", "\"schemaVersion\": \"2\""),
+            fixture().replace("\"schemaVersion\": 2", "\"schemaVersion\": 2.5"),
+            fixture().replace(
+                "\"snapshotId\": \"snapshot-preparation-1\"",
+                "\"snapshotId\": 42"
+            ),
+            fixture().replace(
+                "\"displayName\": \"학력 추가\"",
+                "\"displayName\": \"학력 추가\", \"disabled\": \"true\""
+            )
+        );
+
+        for (String request : invalidRequests) {
+            mockMvc.perform(post("/api/v1/preparation/analyze")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        }
+    }
+
+    @Test
     @DisplayName("선택 필드의 명시적 null을 생략과 동일하게 처리한다")
     void acceptsExplicitNullForOptionalValue() throws Exception {
         String explicitNull = fixture().replace(

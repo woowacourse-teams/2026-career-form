@@ -146,6 +146,31 @@ class FieldsAnalysisApiTest {
     }
 
     @Test
+    @DisplayName("필드 요청에서 JSON 기본 타입 자동 변환을 거부한다")
+    void rejectsCoercibleScalarTypes() throws Exception {
+        List<String> invalidRequests = List.of(
+            fixture().replace("\"schemaVersion\": 2", "\"schemaVersion\": \"2\""),
+            fixture().replace("\"schemaVersion\": 2", "\"schemaVersion\": 2.5"),
+            fixture().replace(
+                "\"snapshotId\": \"snapshot-fields-1\"",
+                "\"snapshotId\": 42"
+            ),
+            fixture().replace(
+                "\"displayName\": \"이메일\"",
+                "\"displayName\": \"이메일\", \"disabled\": \"true\""
+            )
+        );
+
+        for (String request : invalidRequests) {
+            mockMvc.perform(post("/api/v1/fields/analyze")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+        }
+    }
+
+    @Test
     @DisplayName("깨진 JSON 요청을 거부한다")
     void rejectsMalformedJson() throws Exception {
         mockMvc.perform(post("/api/v1/fields/analyze")

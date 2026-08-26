@@ -75,6 +75,7 @@ public record FieldsAnalysisResponse(
     }
 
     public enum Mode {
+        ADAPTER,
         GENERIC
     }
 
@@ -85,6 +86,7 @@ public record FieldsAnalysisResponse(
     }
 
     public enum WarningCode {
+        UNRESOLVED_FIELD,
         LLM_UNAVAILABLE
     }
 

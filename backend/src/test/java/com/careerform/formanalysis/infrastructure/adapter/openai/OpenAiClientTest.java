@@ -23,6 +23,8 @@ import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.port.ActionResolver;
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.exception.ResolverException;
+import com.careerform.formanalysis.infrastructure.adapter.openai.OpenAiActionResolver.ActionOutput;
+import com.careerform.formanalysis.infrastructure.adapter.openai.OpenAiFieldMappingResolver.FieldOutput;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -61,6 +63,31 @@ class OpenAiClientTest {
                 .hasMessage(SAFE_FAILURE_MESSAGE)
                 .hasMessageNotContaining("private-provider-output-marker");
         }
+    }
+
+    @Test
+    @DisplayName("액션과 필드 출력에서 JSON 기본 타입 자동 변환을 거부한다")
+    void rejectsScalarCoercionForBothOutputs() {
+        assertInvalidResponse(
+            "{\"schemaVersion\":\"2\",\"snapshotId\":\"snapshot-1\","
+                + "\"revealSections\":[],\"addRepeatableGroups\":[],\"noActions\":[]}",
+            ActionOutput.class
+        );
+        assertInvalidResponse(
+            "{\"schemaVersion\":2.5,\"snapshotId\":\"snapshot-1\","
+                + "\"revealSections\":[],\"addRepeatableGroups\":[],\"noActions\":[]}",
+            ActionOutput.class
+        );
+        assertInvalidResponse(
+            "{\"schemaVersion\":2,\"snapshotId\":42,"
+                + "\"matches\":[],\"noMatches\":[]}",
+            FieldOutput.class
+        );
+        assertInvalidResponse(
+            "{\"schemaVersion\":2,\"snapshotId\":\"snapshot-1\",\"matches\":[],"
+                + "\"noMatches\":[{\"candidateId\":42}]}",
+            FieldOutput.class
+        );
     }
 
     @Test
@@ -110,6 +137,17 @@ class OpenAiClientTest {
             ChatClient.builder(model),
             new ObjectMapper()
         );
+    }
+
+    private static void assertInvalidResponse(String json, Class<?> outputType) {
+        OpenAiClient client = client(prompt -> response(json));
+
+        assertThatThrownBy(() -> client.generate(
+            "synthetic system prompt",
+            new Input("safe-input"),
+            outputType
+        )).isInstanceOf(ResolverException.class)
+            .hasMessage(SAFE_FAILURE_MESSAGE);
     }
 
     private static ChatResponse response(String json) {

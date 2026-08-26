@@ -203,6 +203,16 @@ class FieldsAnalysisServiceTest {
     }
 
     @Test
+    @DisplayName("필드 응답의 예약 enum wire 값을 유지한다")
+    void retainsReservedResponseEnumValues() {
+        assertThat(Mode.values()).containsExactly(Mode.ADAPTER, Mode.GENERIC);
+        assertThat(WarningCode.values()).containsExactly(
+            WarningCode.UNRESOLVED_FIELD,
+            WarningCode.LLM_UNAVAILABLE
+        );
+    }
+
+    @Test
     @DisplayName("필드 snapshot의 candidate ID 중복을 거부한다")
     void rejectsDuplicateCandidateIds() {
         FieldsAnalysisRequest duplicate = new FieldsAnalysisRequest(

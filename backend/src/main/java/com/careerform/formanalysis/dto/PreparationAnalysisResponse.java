@@ -65,6 +65,7 @@ public record PreparationAnalysisResponse(
     }
 
     public enum Mode {
+        ADAPTER,
         GENERIC
     }
 
@@ -75,6 +76,7 @@ public record PreparationAnalysisResponse(
     }
 
     public enum WarningCode {
+        MANUAL_REVEAL_REQUIRED,
         LLM_UNAVAILABLE
     }
 
