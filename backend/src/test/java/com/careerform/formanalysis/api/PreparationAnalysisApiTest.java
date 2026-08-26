@@ -163,6 +163,10 @@ class PreparationAnalysisApiTest {
             fixture().replace(
                 "\"displayName\": \"학력 추가\"",
                 "\"displayName\": \"학력 추가\", \"disabled\": \"true\""
+            ),
+            fixture().replace(
+                "\"element\": \"button\"",
+                "\"element\": 0"
             )
         );
 

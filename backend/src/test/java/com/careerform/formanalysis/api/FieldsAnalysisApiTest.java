@@ -158,6 +158,10 @@ class FieldsAnalysisApiTest {
             fixture().replace(
                 "\"displayName\": \"이메일\"",
                 "\"displayName\": \"이메일\", \"disabled\": \"true\""
+            ),
+            fixture().replace(
+                "\"control\": \"text\"",
+                "\"control\": 0"
             )
         );
 
