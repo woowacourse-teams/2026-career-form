@@ -56,3 +56,11 @@
 - Approval-Digest: 35b4142c8c0e9e7f8483e1e434433071033273d5c35481d1825a409c7188c050
 - Raw: llm-wiki/raw/issues/CF-44/manifest.md
 - Topics: 2
+
+## [2026-08-26] ingest | CF-48 발표 디자인 시스템
+
+- Disposition: New
+- Approval-Digest: 0893d3bc4b52808ffabfc6df1791b6d49f382238d00a86e418d1eb59653a8aa5
+- Source-Tree: e60aef0cd60a5fbe5f62dc1a4018108cdebe4ae7
+- Raw: llm-wiki/raw/issues/CF-48/manifest.md
+- Topics: 1
