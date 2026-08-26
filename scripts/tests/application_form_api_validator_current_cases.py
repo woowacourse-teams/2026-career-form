@@ -58,11 +58,14 @@ class ApplicationFormApiCurrentCases:
         )
         self._replace_after(
             "<!-- llm-example: action-output -->",
-            '{"candidateId": "action-1", "actionType": "NO_ACTION"}',
-            '{"candidateId": "action-1", "actionType": "ACTION", '
-            '"command": "REVEAL_SECTION", '
-            '"expectedEffect": "TARGET_VISIBLE", '
-            '"targetSectionId": "root"}',
+            '"revealSections": []',
+            '"revealSections": '
+            '[{"candidateId": "action-1", "targetSectionId": "root"}]',
+        )
+        self._replace_after(
+            "<!-- llm-example: action-output -->",
+            '"noActions": [{"candidateId": "action-1"}]',
+            '"noActions": []',
         )
 
         errors = validator.validate_contract(self.openapi_path, self.reference_path)
@@ -126,7 +129,7 @@ class ApplicationFormApiCurrentCases:
         self.assertTrue(any("missing candidateId" in error for error in errors))
         self.assertTrue(any("unknown candidateId" in error for error in errors))
 
-    def test_rejects_duplicate_section_option_and_parent_cycle(self) -> None:
+    def test_current_fields_request_allows_producer_owned_relationship_ids(self) -> None:
         validator = load_validator()
         request = {
             "sections": [
@@ -142,11 +145,13 @@ class ApplicationFormApiCurrentCases:
                             ],
                         }
                     ],
+                    "items": [{"itemId": "item-1", "fields": []}],
                 },
                 {
                     "sectionId": "section-b",
                     "parentSectionId": "section-a",
                     "fields": [],
+                    "items": [{"itemId": "item-1", "fields": []}],
                 },
                 {"sectionId": "section-b", "fields": []},
             ]
@@ -154,25 +159,280 @@ class ApplicationFormApiCurrentCases:
 
         errors = validator._request_relationship_errors(request, "request")
 
-        self.assertTrue(any("duplicate sectionId" in error for error in errors))
-        self.assertTrue(any("duplicate optionId" in error for error in errors))
-        self.assertTrue(any("순환" in error for error in errors))
+        self.assertEqual([], errors)
+
+    def test_current_contract_uses_relaxed_fields_relationship_policy(self) -> None:
+        validator = load_validator()
+        self._use_successor_contract()
+        self._replace_after(
+            "<!-- api-example: fields-request -->",
+            '"sectionId": "education"',
+            '"sectionId": "root", "parentSectionId": "missing"',
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertEqual([], errors)
+
+    def test_current_request_still_rejects_duplicate_candidate_id(self) -> None:
+        validator = load_validator()
+        request = {
+            "sections": [
+                {
+                    "sectionId": "section-a",
+                    "fields": [{"candidateId": "field-1"}],
+                },
+                {
+                    "sectionId": "section-a",
+                    "fields": [{"candidateId": "field-1"}],
+                },
+            ]
+        }
+
+        errors = validator._request_relationship_errors(request, "request")
+
+        self.assertEqual(1, len(errors), errors)
+        self.assertIn("duplicate candidateId", errors[0])
+
+    def test_current_preparation_request_rejects_duplicate_section_id(self) -> None:
+        validator = load_validator()
+        request = {
+            "sections": [
+                {"sectionId": "section-a", "actionCandidates": []},
+                {"sectionId": "section-a", "actionCandidates": []},
+            ]
+        }
+
+        errors = validator._request_relationship_errors(request, "request")
+
+        self.assertTrue(any("duplicate sectionId" in error for error in errors), errors)
 
     def test_rejects_llm_schema_and_snapshot_header_mismatch(self) -> None:
         validator = load_validator()
         source = {"schemaVersion": 2, "snapshotId": "snapshot-1", "sections": []}
-        result = {"schemaVersion": 1, "snapshotId": "snapshot-2", "results": []}
+        field_result = {
+            "schemaVersion": 1,
+            "snapshotId": "snapshot-2",
+            "matches": [],
+            "noMatches": [],
+        }
+        action_result = {
+            "schemaVersion": 1,
+            "snapshotId": "snapshot-2",
+            "revealSections": [],
+            "addRepeatableGroups": [],
+            "noActions": [],
+        }
 
-        field_errors = validator._llm_relationship_errors(source, result, "field")
+        field_errors = validator._llm_relationship_errors(
+            source,
+            field_result,
+            "field",
+        )
         action_errors = validator._llm_action_output_relationship_errors(
             source,
-            result,
+            action_result,
             "action",
         )
 
         for errors in (field_errors, action_errors):
             self.assertTrue(any("schemaVersion" in error for error in errors))
             self.assertTrue(any("snapshotId" in error for error in errors))
+
+    def test_rejects_field_output_candidate_mismatch_across_buckets(self) -> None:
+        validator = load_validator()
+        self._use_successor_contract()
+        self._replace_after(
+            "<!-- llm-example: mapping-output -->",
+            '"candidateId": "field-2"',
+            '"candidateId": "unknown-field"',
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(any("missing candidateId: field-2" in error for error in errors))
+        self.assertTrue(any("unknown candidateId: unknown-field" in error for error in errors))
+
+    def test_current_request_accepts_explicit_null_for_optional_property(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-40/documents/api"
+        self.openapi_path.write_text(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            ),
+            encoding="utf-8",
+        )
+        reference = (raw_root / "application-form-analysis-api.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"displayName": "지원서"', reference)
+        self.reference_path.write_text(
+            reference.replace('"displayName": "지원서"', '"displayName": null', 1),
+            encoding="utf-8",
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertEqual([], errors)
+
+    def test_current_relationships_treat_optional_null_arrays_as_omitted(self) -> None:
+        validator = load_validator()
+        request = {
+            "sections": [
+                {
+                    "sectionId": "section-a",
+                    "fields": [
+                        {
+                            "candidateId": "field-1",
+                            "options": None,
+                        }
+                    ],
+                    "items": None,
+                }
+            ]
+        }
+
+        try:
+            errors = validator._request_relationship_errors(request, "request")
+        except TypeError as error:
+            self.fail(f"optional null 배열을 순회하면 안 됩니다: {error}")
+
+        self.assertEqual([], errors)
+
+    def test_current_schema_accepts_null_for_optional_request_properties(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-40/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        schemas = document["components"]["schemas"]
+        cases = (
+            (
+                "PreparationSection",
+                {
+                    "sectionId": "section-a",
+                    "parentSectionId": None,
+                    "displayName": None,
+                    "actionCandidates": [],
+                    "items": None,
+                },
+            ),
+            (
+                "FieldsSection",
+                {
+                    "sectionId": "section-a",
+                    "parentSectionId": None,
+                    "displayName": None,
+                    "fields": [],
+                    "items": None,
+                },
+            ),
+            (
+                "ActionCandidate",
+                {
+                    "candidateId": "action-1",
+                    "element": "button",
+                    "control": "button",
+                    "visibility": "visible",
+                    "displayName": None,
+                    "domId": None,
+                    "domName": None,
+                    "disabled": None,
+                    "readonly": None,
+                    "inert": None,
+                },
+            ),
+            (
+                "FieldCandidate",
+                {
+                    "candidateId": "field-1",
+                    "element": "input",
+                    "control": "text",
+                    "visibility": "visible",
+                    "displayName": None,
+                    "domId": None,
+                    "domName": None,
+                    "placeholder": None,
+                    "disabled": None,
+                    "readonly": None,
+                    "inert": None,
+                    "options": None,
+                },
+            ),
+        )
+
+        for schema_name, value in cases:
+            with self.subTest(schema=schema_name):
+                self.assertEqual(
+                    [],
+                    validator._validate_schema(
+                        value,
+                        schemas[schema_name],
+                        document,
+                        schema_name,
+                    ),
+                )
+
+    def test_current_schema_rejects_null_for_required_request_arrays(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-40/documents/api"
+        document = yaml.safe_load(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        schemas = document["components"]["schemas"]
+        cases = (
+            (
+                "PreparationSection",
+                {"sectionId": "section-a", "actionCandidates": None},
+            ),
+            (
+                "FieldsSection",
+                {"sectionId": "section-a", "fields": None},
+            ),
+        )
+
+        for schema_name, value in cases:
+            with self.subTest(schema=schema_name):
+                errors = validator._validate_schema(
+                    value,
+                    schemas[schema_name],
+                    document,
+                    schema_name,
+                )
+                self.assertTrue(errors, value)
+
+    def test_current_request_rejects_explicit_null_for_required_property(self) -> None:
+        validator = load_validator()
+        raw_root = REPOSITORY_ROOT / "llm-wiki/raw/issues/CF-40/documents/api"
+        self.openapi_path.write_text(
+            (raw_root / "application-form-analysis.openapi.yaml").read_text(
+                encoding="utf-8"
+            ),
+            encoding="utf-8",
+        )
+        reference = (raw_root / "application-form-analysis-api.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"snapshotId": "synthetic-preparation-v2"', reference)
+        self.reference_path.write_text(
+            reference.replace(
+                '"snapshotId": "synthetic-preparation-v2"',
+                '"snapshotId": null',
+                1,
+            ),
+            encoding="utf-8",
+        )
+
+        errors = validator.validate_contract(self.openapi_path, self.reference_path)
+
+        self.assertTrue(
+            any("snapshotId: string 타입이 아닙니다" in error for error in errors),
+            errors,
+        )
 
     def test_requires_complete_field_candidate_exact_set(self) -> None:
         validator = load_validator()

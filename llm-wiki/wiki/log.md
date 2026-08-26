@@ -72,3 +72,11 @@
 - Source-Tree: 5fc6b76a1037746c7dacb58950586d77e63e82e2
 - Raw: llm-wiki/raw/issues/CF-40/manifest.md
 - Topics: 2
+
+## [2026-08-27] revise | CF-40 지원서 분석 구조와 검증 소유권 단순화
+
+- Disposition: Revised before merge
+- Approval-Digest: d101af26fc0cd558a4b4ed3f7e9e64c7bd8b5364d0570f0a5b0ba0ae46e15a04
+- Source-Tree: 86053ddc2ae4b0194aa4d8f99fee1fbd69c30319
+- Raw: llm-wiki/raw/issues/CF-40/manifest.md
+- Topics: 2

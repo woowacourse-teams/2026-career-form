@@ -2,7 +2,7 @@
 
 ## 범위와 정본
 
-이 문서는 schemaVersion 2 지원서 분석의 외부 HTTP 계약과 Backend에서 LLM으로 전달하는 내부 JSON 계약을 함께 정의한다. 기계 판독 정본은 [OpenAPI 3.1 문서](application-form-analysis.openapi.yaml)다. 인증 방식은 이 계약 범위 밖이다.
+이 문서는 schemaVersion 2 지원서 분석의 외부 HTTP 계약과 Backend에서 OpenAI로 전달하는 내부 JSON 계약을 함께 정의한다. 기계 판독 계약은 [OpenAPI 3.1 문서](application-form-analysis.openapi.yaml)와 함께 관리한다. 인증 방식은 이 계약 범위 밖이다.
 
 외부 API는 항상 존재하는 두 POST endpoint로 분리한다.
 
@@ -13,11 +13,16 @@
 
 ## 공통 snapshot 규칙
 
-두 요청은 `schemaVersion`, snapshot-local `snapshotId`, 비식별 `site`와 평평한 `sections[]`를 사용한다. `parentSectionId`는 같은 snapshot의 다른 section만 가리키며 self reference나 순환을 허용하지 않는다. section, item과 candidate ID는 각 snapshot 전체에서 종류별로 유일해야 하고 option ID는 candidate 안에서 유일해야 한다.
+두 요청은 `schemaVersion`, snapshot-local `snapshotId`, 비식별 `site`와 평평한 `sections[]`를 사용한다. 필수 속성의 누락이나 `null`은 400이다. 선택 속성은 생략하거나 `null`로 보낼 수 있으며 두 표현은 같은 의미다. 선택 문자열이 존재할 때 빈 문자열은 허용하지 않는다. `disabled`, `readonly`, `inert`는 `true`, `null` 또는 생략만 허용하고 `false`를 보내지 않는다.
 
-section에 직접 속한 candidate는 section 배열에 두고, 하나의 자격·학력·경력처럼 반복되는 논리 레코드에 속한 candidate는 snapshot-local `itemId`를 가진 `items[]` 아래에 둔다. DOM class 이름, 반복 순번과 복제 template은 item 식별자로 사용하지 않는다. section 소속을 알 수 없는 candidate는 합성 `section-root`에 넣는다.
+Backend는 분석 결과를 안전하게 해석하는 데 필요한 관계만 검증한다.
 
-선택 속성은 생략할 수 있지만 명시적 `null`과 빈 문자열은 허용하지 않는다. `disabled`, `readonly`, `inert`는 `true` 또는 생략만 허용하고 `false`를 보내지 않는다.
+- 두 endpoint 모두 snapshot 전체에서 candidate ID가 유일해야 한다.
+- preparation endpoint는 action target을 판별하기 위해 section ID도 유일해야 한다.
+- Resolver output은 input candidate와 duplicate, 누락 또는 unknown 없이 exact 1:1이어야 한다.
+- ACTION은 실행 가능한 candidate만 대상으로 하며 `REVEAL_SECTION` target은 request에 존재하는 section이어야 한다.
+
+`parentSectionId` graph, item ID와 option ID의 snapshot 내 정합성은 snapshot producer인 Frontend가 책임진다. fields endpoint는 같은 section ID가 반복되어도 분석할 수 있다. section에 직접 속한 candidate는 section 배열에 두고, 하나의 자격·학력·경력처럼 반복되는 논리 레코드에 속한 candidate는 snapshot-local `itemId`를 가진 `items[]` 아래에 둔다. section 소속을 알 수 없는 candidate는 합성 `section-root`에 넣는다.
 
 | 속성 | 최대 길이 |
 | --- | ---: |
@@ -26,7 +31,7 @@ section에 직접 속한 candidate는 section 배열에 두고, 하나의 자격
 | `site.host` | 253자 |
 | `site.pathPattern` | 512자 |
 
-요청의 raw body와 역직렬화 후 canonical JSON은 각각 65,536 bytes 이하여야 한다. 실제 profile/control 값, HTML, 전체 URL·query·fragment, checked/selected 상태, cookie/session/account/authorization, selector·실행 코드와 DOM handle은 외부 요청, LLM payload, 예시와 로그에 넣지 않는다. `site.host`는 scheme과 path가 없는 host 및 선택적 port이고 `pathPattern`은 `/`로 시작하며 query와 fragment가 없는 비식별 패턴이다.
+애플리케이션 고유 request byte 제한은 두지 않는다. 실제 profile/control 값, HTML, 전체 URL·query·fragment, checked/selected 상태, cookie/session/account/authorization, selector·실행 코드와 DOM handle은 외부 요청, OpenAI payload, 예시와 로그에 넣지 않는다. `site.host`는 scheme과 path가 없는 host 및 선택적 port이고 `pathPattern`은 `/`로 시작하며 query와 fragment가 없는 비식별 패턴이다.
 
 ## Snapshot A: preparation 분석
 
@@ -245,9 +250,9 @@ fields endpoint는 준비가 끝난 DOM의 `fields`만 받고 action candidate�
 }
 ```
 
-## Backend ↔ LLM 내부 계약
+## Backend ↔ OpenAI 내부 계약
 
-외부 request를 공급자에게 그대로 보내지 않는다. `LlmActionResolver`와 `LlmFieldMappingResolver`가 각각 목적에 필요한 최소 JSON으로 투영한다. 공급자 중립 호출 단위는 system prompt, 투영한 JSON input, output type과 strict output JSON Schema다. OpenAI adapter는 provider-native structured output을 사용하고 provider-side 저장과 prompt/completion/error logging을 끈다.
+외부 request를 공급자에게 그대로 보내지 않는다. `OpenAiActionResolver`와 `OpenAiFieldMappingResolver`가 각각 목적에 필요한 최소 JSON으로 투영한다. `OpenAiClient`는 Spring AI의 provider-native structured output과 엄격한 Jackson 역직렬화를 공통 적용한다. provider-side 저장과 prompt/completion/error logging은 끈다.
 
 ### Action LLM input
 
@@ -313,27 +318,26 @@ Action LLM에는 `site`와 실행 정보를 제외하고 candidate 의미, secti
 {
   "schemaVersion": 2,
   "snapshotId": "synthetic-preparation-v2",
-  "results": [
+  "revealSections": [
     {
       "candidateId": "action-reveal-qualification",
-      "actionType": "ACTION",
-      "command": "REVEAL_SECTION",
-      "expectedEffect": "TARGET_VISIBLE",
       "targetSectionId": "section-qualification"
-    },
+    }
+  ],
+  "addRepeatableGroups": [
     {
-      "candidateId": "action-hidden-template",
-      "actionType": "NO_ACTION"
-    },
+      "candidateId": "action-add-qualification"
+    }
+  ],
+  "noActions": [
     {
-      "candidateId": "action-add-qualification",
-      "actionType": "ACTION",
-      "command": "ADD_REPEATABLE_GROUP",
-      "expectedEffect": "GROUP_COUNT_INCREMENT"
+      "candidateId": "action-hidden-template"
     }
   ]
 }
 ```
+
+OpenAI output은 판단에 필요한 bucket만 반환한다. `command`와 `expectedEffect`는 공급자 출력에 포함하지 않고 `PreparationAnalysisService`가 bucket 종류로부터 생성한다.
 
 ### Field LLM input
 
@@ -397,33 +401,31 @@ Field LLM에는 `site`, visibility, `domId`, `domName`, placeholder, state flag�
 {
   "schemaVersion": 2,
   "snapshotId": "synthetic-fields-v2",
-  "results": [
+  "matches": [
     {
       "candidateId": "field-certificate-name-01",
-      "matchType": "MATCH",
       "profileFieldKey": "certifications.certificate.name"
     },
     {
       "candidateId": "field-certificate-issuer-01",
-      "matchType": "MATCH",
       "profileFieldKey": "certifications.certificate.issuer"
     },
     {
       "candidateId": "field-certificate-name-02",
-      "matchType": "MATCH",
       "profileFieldKey": "certifications.certificate.name"
-    },
+    }
+  ],
+  "noMatches": [
     {
-      "candidateId": "field-certificate-issuer-02",
-      "matchType": "NO_MATCH"
+      "candidateId": "field-certificate-issuer-02"
     }
   ]
 }
 ```
 
-두 output은 input과 같은 `schemaVersion`, `snapshotId`를 가지며 candidate ID가 duplicate, 누락 또는 unknown 없이 exact 1:1이어야 한다. 각 result는 discriminator별 exact property set을 사용하고 unknown, missing, explicit null과 trailing token을 거부한다. 위반 하나라도 있으면 전체 output을 폐기한다.
+두 output은 input과 같은 `schemaVersion`, `snapshotId`를 가지며 모든 bucket을 합친 candidate ID가 duplicate, 누락 또는 unknown 없이 exact 1:1이어야 한다. 각 bucket entry는 필요한 속성만 가지며 unknown, missing, explicit null과 trailing token을 거부한다. 위반 하나라도 있으면 전체 output을 폐기한다.
 
-OpenAI production adapter는 `gpt-5.6-luna`, reasoning effort `none`, completion 2,048 tokens와 `store=false`를 사용한다. 이 모델 선택은 범용 세로 단면 데모의 잠정 설정이며 provider 선택 자체는 외부 HTTP 계약에 노출하지 않는다.
+OpenAI adapter는 Spring AI 표준 설정에서 model, timeout, retry와 completion token 수를 주입받고 reasoning effort `none`, `store=false`를 사용한다. 별도 provider 설정 클래스나 중복 LLM contract 계층은 두지 않으며 provider 선택 자체는 외부 HTTP 계약에 노출하지 않는다.
 
 ## Field interaction/write 정책
 
@@ -451,8 +453,7 @@ LLM은 의미 mapping만 반환한다. Backend는 아래 순서대로 determinis
 
 | HTTP | code | 의미 |
 | --- | --- | --- |
-| 400 | `INVALID_REQUEST` | schema, 명시적 null, 금지 field, ID 관계 또는 enum 위반 |
-| 413 | `SNAPSHOT_TOO_LARGE` | raw 또는 canonical snapshot 65,536-byte 초과 |
+| 400 | `INVALID_REQUEST` | schema, 필수 속성, 금지 field, Backend 소유 ID 관계 또는 enum 위반 |
 | 500 | `INTERNAL_ERROR` | 예상하지 않은 로컬 서버 오류 |
 
-Resolver 부재와 runtime 공급자 장애는 5xx가 아니라 위에서 정의한 200 partial 응답이다. 현재 구현하지 않는 429와 502는 operation 계약에 없다.
+선택 속성의 `null`은 생략과 같으므로 오류가 아니다. Resolver 부재와 runtime 공급자 장애는 5xx가 아니라 위에서 정의한 200 partial 응답이다. 애플리케이션 고유 413 응답은 없으며 현재 구현하지 않는 429와 502도 operation 계약에 없다.

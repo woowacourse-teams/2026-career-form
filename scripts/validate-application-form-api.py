@@ -77,6 +77,7 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
     schemas = document.get("components", {}).get("schemas", {})
     if not isinstance(schemas, Mapping):
         return ["OpenAPI components.schemas가 없습니다"]
+    current_contract = document.get("info", {}).get("version") == "3.0.0"
     errors = _openapi_structure_errors(document)
     requests: dict[tuple[str, str], Mapping[str, Any]] = {}
     llm_inputs: dict[str, Mapping[str, Any]] = {}
@@ -107,11 +108,25 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
             errors.append(f"{prefix}: $ref를 해석할 수 없습니다: {error}")
         errors.extend(_forbidden_property_errors(example, prefix))
         if kind.endswith("-request") and isinstance(example, Mapping):
-            errors.extend(_request_relationship_errors(example, prefix))
+            errors.extend(
+                _request_relationship_errors(
+                    example,
+                    prefix,
+                    legacy=not current_contract,
+                    enforce_unique_sections=kind == "preparation-request",
+                )
+            )
         if kind.endswith("-response") and isinstance(example, Mapping):
             errors.extend(_response_relationship_errors(kind, example, requests, prefix))
         if kind == "llm-mapping-input" and isinstance(example, Mapping):
-            errors.extend(_request_relationship_errors(example, prefix))
+            errors.extend(
+                _request_relationship_errors(
+                    example,
+                    prefix,
+                    legacy=not current_contract,
+                    enforce_unique_sections=False,
+                )
+            )
             fields_request = requests.get(("fields-request", example.get("snapshotId")))
             if fields_request is None:
                 errors.append(
@@ -128,7 +143,14 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
             else:
                 errors.extend(_llm_relationship_errors(llm_input, example, prefix))
         if kind == "llm-action-input" and isinstance(example, Mapping):
-            errors.extend(_request_relationship_errors(example, prefix))
+            errors.extend(
+                _request_relationship_errors(
+                    example,
+                    prefix,
+                    legacy=not current_contract,
+                    enforce_unique_sections=True,
+                )
+            )
             preparation_request = requests.get(
                 ("preparation-request", example.get("snapshotId"))
             )
@@ -486,10 +508,27 @@ def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[st
         errors.append(f"{path}: const가 일치하지 않습니다")
     if "enum" in schema and value not in schema["enum"]:
         errors.append(f"{path}: enum에 없는 값입니다")
-    expected_type = schema.get("type")
-    if expected_type and not _has_type(value, expected_type):
-        return [f"{path}: {expected_type} 타입이 아닙니다"]
-    if expected_type == "string":
+    declared_type = schema.get("type")
+    expected_types = (
+        [declared_type]
+        if isinstance(declared_type, str)
+        else declared_type
+        if isinstance(declared_type, list)
+        else []
+    )
+    if expected_types and not any(
+        isinstance(expected_type, str) and _has_type(value, expected_type)
+        for expected_type in expected_types
+    ):
+        expected_label = "/".join(
+            expected_type
+            for expected_type in expected_types
+            if isinstance(expected_type, str)
+        )
+        return [f"{path}: {expected_label} 타입이 아닙니다"]
+    if value is None:
+        return errors
+    if "string" in expected_types:
         minimum_length = schema.get("minLength")
         if isinstance(minimum_length, int) and len(value) < minimum_length:
             errors.append(f"{path}: minLength를 만족하지 않습니다")
@@ -499,7 +538,7 @@ def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[st
         pattern = schema.get("pattern")
         if isinstance(pattern, str) and re.fullmatch(pattern, value) is None:
             errors.append(f"{path}: pattern을 만족하지 않습니다")
-    if expected_type == "object":
+    if "object" in expected_types:
         properties = schema.get("properties", {})
         required = schema.get("required", [])
         for name in required:
@@ -511,7 +550,7 @@ def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[st
                     errors.append(f"{path}: unknown property: {name}")
                 continue
             errors.extend(_validate_schema(child, properties[name], document, f"{path}.{name}"))
-    if expected_type == "array":
+    if "array" in expected_types:
         minimum_items = schema.get("minItems")
         if isinstance(minimum_items, int) and len(value) < minimum_items:
             errors.append(f"{path}: minItems를 만족하지 않습니다")
@@ -544,6 +583,7 @@ def _has_type(value: Any, expected: str) -> bool:
         "string": isinstance(value, str),
         "integer": isinstance(value, int) and not isinstance(value, bool),
         "boolean": isinstance(value, bool),
+        "null": value is None,
     }.get(expected, True)
 
 
@@ -564,10 +604,21 @@ def _forbidden_property_errors(value: Any, path: str) -> list[str]:
     return []
 
 
-def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[str]:
+def _request_relationship_errors(
+    request: Mapping[str, Any],
+    path: str,
+    *,
+    legacy: bool = False,
+    enforce_unique_sections: bool | None = None,
+) -> list[str]:
     sections = request.get("sections", [])
     if not isinstance(sections, list):
         return []
+    if enforce_unique_sections is None:
+        enforce_unique_sections = any(
+            isinstance(section, Mapping) and "actionCandidates" in section
+            for section in sections
+        )
     section_ids = {
         section.get("sectionId")
         for section in sections
@@ -584,18 +635,21 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
         section_id = section.get("sectionId")
         parent = section.get("parentSectionId")
         if isinstance(section_id, str):
-            if section_id in seen_section_ids:
+            if (
+                section_id in seen_section_ids
+                and (legacy or enforce_unique_sections)
+            ):
                 errors.append(f"{path}: duplicate sectionId: {section_id}")
             seen_section_ids.add(section_id)
-        if isinstance(section_id, str) and isinstance(parent, str):
+        if legacy and isinstance(section_id, str) and isinstance(parent, str):
             if parent not in section_ids:
                 errors.append(f"{path}: parentSectionId가 존재하지 않습니다: {parent}")
             parents[section_id] = parent
-        for item in section.get("items", []):
+        for item in section.get("items", []) or []:
             if not isinstance(item, Mapping) or not isinstance(item.get("itemId"), str):
                 continue
             item_id = item["itemId"]
-            if item_id in item_ids:
+            if legacy and item_id in item_ids:
                 errors.append(f"{path}: duplicate itemId: {item_id}")
             item_ids.add(item_id)
         for collection in ("fields", "actionCandidates"):
@@ -606,18 +660,18 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
                         errors.append(f"{path}: duplicate candidateId: {candidate_id}")
                     candidate_ids.add(candidate_id)
                     option_ids: set[str] = set()
-                    for option in candidate.get("options", []):
+                    for option in candidate.get("options", []) or []:
                         if not isinstance(option, Mapping):
                             continue
                         option_id = option.get("optionId")
                         if not isinstance(option_id, str):
                             continue
-                        if option_id in option_ids:
+                        if legacy and option_id in option_ids:
                             errors.append(
                                 f"{path}: duplicate optionId: {option_id}"
                             )
                         option_ids.add(option_id)
-    for section_id in parents:
+    for section_id in parents if legacy else ():
         seen: set[str] = set()
         current = section_id
         while current in parents:

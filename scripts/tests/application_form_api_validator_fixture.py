@@ -379,43 +379,38 @@ SUCCESSOR_SCHEMAS = yaml.safe_load(
         LlmActionOutput:
           type: object
           additionalProperties: false
-          required: [schemaVersion, snapshotId, results]
+          required: [schemaVersion, snapshotId, revealSections, addRepeatableGroups, noActions]
           properties:
             schemaVersion: {type: integer, const: 2}
             snapshotId: {type: string, minLength: 1, maxLength: 128}
-            results:
+            revealSections:
               type: array
-              items:
-                oneOf:
-                  - {$ref: '#/components/schemas/LlmRevealActionResult'}
-                  - {$ref: '#/components/schemas/LlmAddActionResult'}
-                  - {$ref: '#/components/schemas/LlmNoActionResult'}
-        LlmRevealActionResult:
+              items: {$ref: '#/components/schemas/LlmRevealSection'}
+            addRepeatableGroups:
+              type: array
+              items: {$ref: '#/components/schemas/LlmAddRepeatableGroup'}
+            noActions:
+              type: array
+              items: {$ref: '#/components/schemas/LlmNoAction'}
+        LlmRevealSection:
           type: object
           additionalProperties: false
-          required: [candidateId, actionType, command, expectedEffect, targetSectionId]
+          required: [candidateId, targetSectionId]
           properties:
             candidateId: {type: string, minLength: 1, maxLength: 128}
-            actionType: {type: string, const: ACTION}
-            command: {type: string, const: REVEAL_SECTION}
-            expectedEffect: {type: string, const: TARGET_VISIBLE}
             targetSectionId: {type: string, minLength: 1, maxLength: 128}
-        LlmAddActionResult:
+        LlmAddRepeatableGroup:
           type: object
           additionalProperties: false
-          required: [candidateId, actionType, command, expectedEffect]
+          required: [candidateId]
           properties:
             candidateId: {type: string, minLength: 1, maxLength: 128}
-            actionType: {type: string, const: ACTION}
-            command: {type: string, const: ADD_REPEATABLE_GROUP}
-            expectedEffect: {type: string, const: GROUP_COUNT_INCREMENT}
-        LlmNoActionResult:
+        LlmNoAction:
           type: object
           additionalProperties: false
-          required: [candidateId, actionType]
+          required: [candidateId]
           properties:
             candidateId: {type: string, minLength: 1, maxLength: 128}
-            actionType: {type: string, const: NO_ACTION}
         LlmMappingInput:
           type: object
           additionalProperties: false
@@ -446,31 +441,29 @@ SUCCESSOR_SCHEMAS = yaml.safe_load(
         LlmMappingOutput:
           type: object
           additionalProperties: false
-          required: [schemaVersion, snapshotId, results]
+          required: [schemaVersion, snapshotId, matches, noMatches]
           properties:
             schemaVersion: {type: integer, const: 2}
             snapshotId: {type: string, minLength: 1, maxLength: 128}
-            results:
+            matches:
               type: array
-              items:
-                oneOf:
-                  - {$ref: '#/components/schemas/LlmMatchedResult'}
-                  - {$ref: '#/components/schemas/LlmNoMatchResult'}
-        LlmMatchedResult:
+              items: {$ref: '#/components/schemas/LlmMatch'}
+            noMatches:
+              type: array
+              items: {$ref: '#/components/schemas/LlmNoMatch'}
+        LlmMatch:
           type: object
           additionalProperties: false
-          required: [candidateId, matchType, profileFieldKey]
+          required: [candidateId, profileFieldKey]
           properties:
             candidateId: {type: string, minLength: 1, maxLength: 128}
-            matchType: {type: string, const: MATCH}
             profileFieldKey: {type: string}
-        LlmNoMatchResult:
+        LlmNoMatch:
           type: object
           additionalProperties: false
-          required: [candidateId, matchType]
+          required: [candidateId]
           properties:
             candidateId: {type: string, minLength: 1, maxLength: 128}
-            matchType: {type: string, const: NO_MATCH}
         """
     )
 )
@@ -500,9 +493,9 @@ SUCCESSOR_REFERENCE_SUFFIX = textwrap.dedent(
     {
       "schemaVersion": 2,
       "snapshotId": "preparation-a",
-      "results": [
-        {"candidateId": "action-1", "actionType": "NO_ACTION"}
-      ]
+      "revealSections": [],
+      "addRepeatableGroups": [],
+      "noActions": [{"candidateId": "action-1"}]
     }
     ```
 
@@ -527,9 +520,10 @@ SUCCESSOR_REFERENCE_SUFFIX = textwrap.dedent(
     {
       "schemaVersion": 2,
       "snapshotId": "fields-b",
-      "results": [
-        {"candidateId": "field-1", "matchType": "NO_MATCH"},
-        {"candidateId": "field-2", "matchType": "NO_MATCH"}
+      "matches": [],
+      "noMatches": [
+        {"candidateId": "field-1"},
+        {"candidateId": "field-2"}
       ]
     }
     ```

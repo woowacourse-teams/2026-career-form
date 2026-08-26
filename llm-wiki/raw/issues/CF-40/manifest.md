@@ -1,10 +1,10 @@
 # CF-40 Knowledge Bundle
 
 > Issue: CF-40
-> Collected: 2026-08-26
-> Approval-Digest: e8635edc3fa60442af7b6f28723a2bfd12379ce5798e83acd282ded5acb8958c
-> Source-Revision: 698b0375572adb7ac6e46de90a4fb7d3dc940287
-> Source-Tree: 5fc6b76a1037746c7dacb58950586d77e63e82e2
+> Collected: 2026-08-27
+> Approval-Digest: d101af26fc0cd558a4b4ed3f7e9e64c7bd8b5364d0570f0a5b0ba0ae46e15a04
+> Source-Revision: 6a7aac4f3ac8016d8bfa02b661aabeae0fd42a17
+> Source-Tree: 86053ddc2ae4b0194aa4d8f99fee1fbd69c30319
 
 ## application-form-analysis-api
 

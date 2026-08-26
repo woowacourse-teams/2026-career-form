@@ -3,9 +3,6 @@ info:
   title: Application Form Analysis API
   version: 3.0.0
   description: 범용 LLM Resolver로 preparation과 field 분석을 수행하는 schemaVersion 2 계약이다. 인증은 이 명세 범위 밖이다.
-x-snapshot-byte-limits:
-  raw: 65536
-  canonical: 65536
 x-current-analysis-routes: [GENERIC_LLM]
 x-reserved-future-values: [ADAPTER, BLOCKED, ADAPTER_STRUCTURE_MISMATCH, ADAPTER_VERIFIED, UNRESOLVED_FIELD, SYSTEM_CONTROL]
 paths:
@@ -27,8 +24,6 @@ paths:
                 $ref: '#/components/schemas/PreparationAnalyzeResponse'
         '400':
           $ref: '#/components/responses/InvalidRequest'
-        '413':
-          $ref: '#/components/responses/SnapshotTooLarge'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/fields/analyze:
@@ -49,24 +44,16 @@ paths:
                 $ref: '#/components/schemas/FieldsAnalyzeResponse'
         '400':
           $ref: '#/components/responses/InvalidRequest'
-        '413':
-          $ref: '#/components/responses/SnapshotTooLarge'
         '500':
           $ref: '#/components/responses/InternalError'
 components:
   responses:
     InvalidRequest:
-      description: schema, 금지 field, ID 관계 또는 enum이 올바르지 않은 요청
+      description: schema, 금지 field, 분석 candidate ID 또는 enum이 올바르지 않은 요청
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    SnapshotTooLarge:
-      description: 직렬화된 snapshot request 크기 제한 초과
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/SnapshotTooLargeError'
     InternalError:
       description: 서버 내부 분석 실패
       content:
@@ -115,13 +102,13 @@ components:
       required: [sectionId, actionCandidates]
       properties:
         sectionId: {type: string, minLength: 1, maxLength: 128}
-        parentSectionId: {type: string, minLength: 1, maxLength: 128}
-        displayName: {type: string, minLength: 1, maxLength: 120}
+        parentSectionId: {type: [string, 'null'], minLength: 1, maxLength: 128}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
         actionCandidates:
           type: array
           items: {$ref: '#/components/schemas/ActionCandidate'}
         items:
-          type: array
+          type: [array, 'null']
           minItems: 1
           items: {$ref: '#/components/schemas/PreparationItem'}
     PreparationItem:
@@ -140,13 +127,13 @@ components:
       required: [sectionId, fields]
       properties:
         sectionId: {type: string, minLength: 1, maxLength: 128}
-        parentSectionId: {type: string, minLength: 1, maxLength: 128}
-        displayName: {type: string, minLength: 1, maxLength: 120}
+        parentSectionId: {type: [string, 'null'], minLength: 1, maxLength: 128}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
         fields:
           type: array
           items: {$ref: '#/components/schemas/FieldCandidate'}
         items:
-          type: array
+          type: [array, 'null']
           minItems: 1
           items: {$ref: '#/components/schemas/FieldsItem'}
     FieldsItem:
@@ -168,12 +155,12 @@ components:
         element: {type: string, enum: [button, input, custom]}
         control: {type: string, enum: [button, custom]}
         visibility: {type: string, enum: [visible, hidden]}
-        displayName: {type: string, minLength: 1, maxLength: 120}
-        domId: {type: string, minLength: 1, maxLength: 120}
-        domName: {type: string, minLength: 1, maxLength: 120}
-        disabled: {type: boolean, const: true}
-        readonly: {type: boolean, const: true}
-        inert: {type: boolean, const: true}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domId: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        disabled: {type: [boolean, 'null'], enum: [true, null]}
+        readonly: {type: [boolean, 'null'], enum: [true, null]}
+        inert: {type: [boolean, 'null'], enum: [true, null]}
     FieldCandidate:
       type: object
       additionalProperties: false
@@ -183,15 +170,15 @@ components:
         element: {type: string, enum: [input, select, textarea, custom]}
         control: {type: string, enum: [text, select, radio, checkbox, textarea, custom]}
         visibility: {type: string, enum: [visible, hidden]}
-        displayName: {type: string, minLength: 1, maxLength: 120}
-        domId: {type: string, minLength: 1, maxLength: 120}
-        domName: {type: string, minLength: 1, maxLength: 120}
-        placeholder: {type: string, minLength: 1, maxLength: 120}
-        disabled: {type: boolean, const: true}
-        readonly: {type: boolean, const: true}
-        inert: {type: boolean, const: true}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domId: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        placeholder: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        disabled: {type: [boolean, 'null'], enum: [true, null]}
+        readonly: {type: [boolean, 'null'], enum: [true, null]}
+        inert: {type: [boolean, 'null'], enum: [true, null]}
         options:
-          type: array
+          type: [array, 'null']
           minItems: 1
           items: {$ref: '#/components/schemas/Option'}
     Option:
@@ -402,45 +389,38 @@ components:
     LlmActionOutput:
       type: object
       additionalProperties: false
-      required: [schemaVersion, snapshotId, results]
+      required: [schemaVersion, snapshotId, revealSections, addRepeatableGroups, noActions]
       properties:
         schemaVersion: {type: integer, const: 2}
         snapshotId: {type: string, minLength: 1, maxLength: 128}
-        results:
+        revealSections:
           type: array
-          items: {$ref: '#/components/schemas/LlmActionResult'}
-    LlmActionResult:
-      oneOf:
-        - {$ref: '#/components/schemas/LlmRevealActionResult'}
-        - {$ref: '#/components/schemas/LlmAddActionResult'}
-        - {$ref: '#/components/schemas/LlmNoActionResult'}
-      x-discriminator-fields: [actionType, command]
-    LlmRevealActionResult:
+          items: {$ref: '#/components/schemas/LlmRevealSection'}
+        addRepeatableGroups:
+          type: array
+          items: {$ref: '#/components/schemas/LlmAddRepeatableGroup'}
+        noActions:
+          type: array
+          items: {$ref: '#/components/schemas/LlmNoAction'}
+    LlmRevealSection:
       type: object
       additionalProperties: false
-      required: [candidateId, actionType, command, expectedEffect, targetSectionId]
+      required: [candidateId, targetSectionId]
       properties:
         candidateId: {type: string, minLength: 1, maxLength: 128}
-        actionType: {type: string, const: ACTION}
-        command: {type: string, const: REVEAL_SECTION}
-        expectedEffect: {type: string, const: TARGET_VISIBLE}
         targetSectionId: {type: string, minLength: 1, maxLength: 128}
-    LlmAddActionResult:
+    LlmAddRepeatableGroup:
       type: object
       additionalProperties: false
-      required: [candidateId, actionType, command, expectedEffect]
+      required: [candidateId]
       properties:
         candidateId: {type: string, minLength: 1, maxLength: 128}
-        actionType: {type: string, const: ACTION}
-        command: {type: string, const: ADD_REPEATABLE_GROUP}
-        expectedEffect: {type: string, const: GROUP_COUNT_INCREMENT}
-    LlmNoActionResult:
+    LlmNoAction:
       type: object
       additionalProperties: false
-      required: [candidateId, actionType]
+      required: [candidateId]
       properties:
         candidateId: {type: string, minLength: 1, maxLength: 128}
-        actionType: {type: string, const: NO_ACTION}
     LlmMappingInput:
       type: object
       additionalProperties: false
@@ -499,38 +479,29 @@ components:
     LlmMappingOutput:
       type: object
       additionalProperties: false
-      required: [schemaVersion, snapshotId, results]
+      required: [schemaVersion, snapshotId, matches, noMatches]
       properties:
         schemaVersion: {type: integer, const: 2}
         snapshotId: {type: string, minLength: 1, maxLength: 128}
-        results:
+        matches:
           type: array
-          minItems: 1
-          items: {$ref: '#/components/schemas/LlmMappingResult'}
-    LlmMappingResult:
-      oneOf:
-        - {$ref: '#/components/schemas/LlmMatchedResult'}
-        - {$ref: '#/components/schemas/LlmNoMatchResult'}
-      discriminator:
-        propertyName: matchType
-        mapping:
-          MATCH: '#/components/schemas/LlmMatchedResult'
-          NO_MATCH: '#/components/schemas/LlmNoMatchResult'
-    LlmMatchedResult:
+          items: {$ref: '#/components/schemas/LlmMatch'}
+        noMatches:
+          type: array
+          items: {$ref: '#/components/schemas/LlmNoMatch'}
+    LlmMatch:
       type: object
       additionalProperties: false
-      required: [candidateId, matchType, profileFieldKey]
+      required: [candidateId, profileFieldKey]
       properties:
         candidateId: {type: string, minLength: 1, maxLength: 128}
-        matchType: {type: string, const: MATCH}
         profileFieldKey: {$ref: '#/components/schemas/ProfileFieldKey'}
-    LlmNoMatchResult:
+    LlmNoMatch:
       type: object
       additionalProperties: false
-      required: [candidateId, matchType]
+      required: [candidateId]
       properties:
         candidateId: {type: string, minLength: 1, maxLength: 128}
-        matchType: {type: string, const: NO_MATCH}
     ProfileFieldKey:
       type: string
       enum:
@@ -695,13 +666,6 @@ components:
       required: [code, message]
       properties:
         code: {type: string, const: INVALID_REQUEST}
-        message: {type: string, minLength: 1}
-    SnapshotTooLargeError:
-      type: object
-      additionalProperties: false
-      required: [code, message]
-      properties:
-        code: {type: string, const: SNAPSHOT_TOO_LARGE}
         message: {type: string, minLength: 1}
     InternalError:
       type: object
