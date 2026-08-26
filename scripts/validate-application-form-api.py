@@ -11,49 +11,22 @@ import yaml
 
 try:
     import application_form_api_relationships as _relationships
+    import application_form_api_schema as _schema
 except ModuleNotFoundError:
     from scripts import application_form_api_relationships as _relationships
+    from scripts import application_form_api_schema as _schema
 
 _llm_relationship_errors = _relationships._llm_relationship_errors
 _llm_input_relationship_errors = _relationships._llm_input_relationship_errors
 _llm_action_output_relationship_errors = _relationships._llm_action_output_relationship_errors
 _partial_response_errors = _relationships._partial_response_errors
-
-
-FORBIDDEN_PROPERTIES = {
-    "value",
-    "controlvalue",
-    "inputvalue",
-    "profile",
-    "profilevalue",
-    "profileitemcount",
-    "localitemcount",
-    "desiredcount",
-    "desiredgroupcount",
-    "html",
-    "innerhtml",
-    "outerhtml",
-    "url",
-    "fullurl",
-    "checked",
-    "selected",
-    "cookie",
-    "cookies",
-    "session",
-    "sessionid",
-    "account",
-    "accountid",
-    "authorization",
-    "selector",
-    "cssselector",
-    "xpath",
-    "script",
-    "executablecode",
-    "href",
-    "query",
-    "fragment",
-    "domhandle",
-}
+_openapi_structure_errors = _schema._openapi_structure_errors
+_current_contract_errors = _schema._current_contract_errors
+_validate_schema = _schema._validate_schema
+_resolve = _schema._resolve
+_has_type = _schema._has_type
+_forbidden_property_errors = _schema._forbidden_property_errors
+FORBIDDEN_PROPERTIES = _schema.FORBIDDEN_PROPERTIES
 EXAMPLE_PATTERN = re.compile(
     r"<!-- (?:api-example: (preparation-request|preparation-response|fields-request|fields-response)|llm-example: (mapping-input|mapping-output|action-input|action-output)) -->\s*```json\s*(.*?)```",
     re.DOTALL,
@@ -77,224 +50,203 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
     schemas = document.get("components", {}).get("schemas", {})
     if not isinstance(schemas, Mapping):
         return ["OpenAPI components.schemas가 없습니다"]
-    current_contract = document.get("info", {}).get("version") == "3.0.0"
     errors = _openapi_structure_errors(document)
-    requests: dict[tuple[str, str], Mapping[str, Any]] = {}
-    llm_inputs: dict[str, Mapping[str, Any]] = {}
-    action_inputs: dict[str, Mapping[str, Any]] = {}
     try:
         examples = _examples(reference_path)
     except (OSError, ValueError) as error:
         return [str(error)]
-    for kind, example in examples:
-        if kind.endswith("-request") and isinstance(example, Mapping):
-            snapshot_id = example.get("snapshotId")
-            if isinstance(snapshot_id, str):
-                requests[(kind, snapshot_id)] = example
-        if kind == "llm-mapping-input" and isinstance(example, Mapping):
-            snapshot_id = example.get("snapshotId")
-            if isinstance(snapshot_id, str):
-                llm_inputs[snapshot_id] = example
-        if kind == "llm-action-input" and isinstance(example, Mapping):
-            snapshot_id = example.get("snapshotId")
-            if isinstance(snapshot_id, str):
-                action_inputs[snapshot_id] = example
+
+    current_contract = document.get("info", {}).get("version") == "3.0.0"
+    requests, llm_inputs, action_inputs = _index_examples(examples)
     for index, (kind, example) in enumerate(examples, start=1):
-        prefix = f"example {index} ({kind})"
-        try:
-            schema = _example_schema(document, kind)
-            errors.extend(_validate_schema(example, schema, document, prefix))
-        except (KeyError, ValueError) as error:
-            errors.append(f"{prefix}: $ref를 해석할 수 없습니다: {error}")
-        errors.extend(_forbidden_property_errors(example, prefix))
-        if kind.endswith("-request") and isinstance(example, Mapping):
-            errors.extend(
-                _request_relationship_errors(
-                    example,
-                    prefix,
-                    legacy=not current_contract,
-                    enforce_unique_sections=kind == "preparation-request",
-                )
+        errors.extend(
+            _example_errors(
+                document,
+                kind,
+                example,
+                f"example {index} ({kind})",
+                current_contract,
+                requests,
+                llm_inputs,
+                action_inputs,
             )
-        if kind.endswith("-response") and isinstance(example, Mapping):
-            errors.extend(_response_relationship_errors(kind, example, requests, prefix))
-        if kind == "llm-mapping-input" and isinstance(example, Mapping):
-            errors.extend(
-                _request_relationship_errors(
-                    example,
-                    prefix,
-                    legacy=not current_contract,
-                    enforce_unique_sections=False,
-                )
-            )
-            fields_request = requests.get(("fields-request", example.get("snapshotId")))
-            if fields_request is None:
-                errors.append(
-                    f"{prefix}: 같은 snapshotId의 fields request 예시가 없습니다"
-                )
-            else:
-                errors.extend(
-                    _llm_input_relationship_errors(fields_request, example, prefix)
-                )
-        if kind == "llm-mapping-output" and isinstance(example, Mapping):
-            llm_input = llm_inputs.get(example.get("snapshotId"))
-            if llm_input is None:
-                errors.append(f"{prefix}: 같은 snapshotId의 LLM input 예시가 없습니다")
-            else:
-                errors.extend(_llm_relationship_errors(llm_input, example, prefix))
-        if kind == "llm-action-input" and isinstance(example, Mapping):
-            errors.extend(
-                _request_relationship_errors(
-                    example,
-                    prefix,
-                    legacy=not current_contract,
-                    enforce_unique_sections=True,
-                )
-            )
-            preparation_request = requests.get(
-                ("preparation-request", example.get("snapshotId"))
-            )
-            if preparation_request is None:
-                errors.append(
-                    f"{prefix}: 같은 snapshotId의 preparation request 예시가 없습니다"
-                )
-            else:
-                errors.extend(
-                    _relationships._llm_action_input_relationship_errors(
-                        preparation_request,
-                        example,
-                        prefix,
-                    )
-                )
-        if kind == "llm-action-output" and isinstance(example, Mapping):
-            llm_input = action_inputs.get(example.get("snapshotId"))
-            if llm_input is None:
-                errors.append(
-                    f"{prefix}: 같은 snapshotId의 action LLM input 예시가 없습니다"
-                )
-            else:
-                errors.extend(
-                    _llm_action_output_relationship_errors(
-                        llm_input,
-                        example,
-                        prefix,
-                    )
-                )
+        )
     return errors
 
 
-def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
+def _index_examples(
+    examples: list[tuple[str, Any]],
+) -> tuple[
+    dict[tuple[str, str], Mapping[str, Any]],
+    dict[str, Mapping[str, Any]],
+    dict[str, Mapping[str, Any]],
+]:
+    requests: dict[tuple[str, str], Mapping[str, Any]] = {}
+    llm_inputs: dict[str, Mapping[str, Any]] = {}
+    action_inputs: dict[str, Mapping[str, Any]] = {}
+    for kind, example in examples:
+        if not isinstance(example, Mapping):
+            continue
+        snapshot_id = example.get("snapshotId")
+        if not isinstance(snapshot_id, str):
+            continue
+        if kind.endswith("-request"):
+            requests[(kind, snapshot_id)] = example
+        elif kind == "llm-mapping-input":
+            llm_inputs[snapshot_id] = example
+        elif kind == "llm-action-input":
+            action_inputs[snapshot_id] = example
+    return requests, llm_inputs, action_inputs
+
+
+def _example_errors(
+    document: Mapping[str, Any],
+    kind: str,
+    example: Any,
+    path: str,
+    current_contract: bool,
+    requests: Mapping[tuple[str, str], Mapping[str, Any]],
+    llm_inputs: Mapping[str, Mapping[str, Any]],
+    action_inputs: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
     errors: list[str] = []
-    paths = document.get("paths")
-    expected_paths = {"/api/v1/preparation/analyze", "/api/v1/fields/analyze"}
-    if not isinstance(paths, Mapping) or set(paths) != expected_paths:
-        errors.append("외부 API path는 preparation 및 fields POST 두 개여야 합니다")
-    elif any(set(paths[path]) != {"post"} for path in expected_paths):
-        errors.append("외부 API method는 각 path마다 POST 하나여야 합니다")
-
-    def visit(value: Any, path: str) -> None:
-        if isinstance(value, Mapping):
-            if "$ref" in value:
-                try:
-                    _resolve(value, document)
-                except (KeyError, ValueError) as error:
-                    errors.append(f"{path}: $ref를 해석할 수 없습니다: {error}")
-            if value.get("type") == "object" and value.get("additionalProperties") is not False:
-                errors.append(f"{path}: object는 additionalProperties: false가 필요합니다")
-            properties = value.get("properties")
-            if value.get("type") == "object" and isinstance(properties, Mapping):
-                errors.extend(
-                    f"{path}: forbidden schema property: {name}"
-                    for name in properties
-                    if name.lower() in FORBIDDEN_PROPERTIES
-                )
-            for name, child in value.items():
-                visit(child, f"{path}.{name}")
-        elif isinstance(value, list):
-            for index, child in enumerate(value):
-                visit(child, f"{path}[{index}]")
-
-    visit(document, "openapi")
-    if document.get("info", {}).get("version") == "3.0.0":
-        errors.extend(_current_contract_errors(document))
-    return errors
-
-
-def _current_contract_errors(document: Mapping[str, Any]) -> list[str]:
-    errors: list[str] = []
-    if "x-snapshot-byte-limits" in document:
-        errors.append("x-snapshot-byte-limits는 현재 계약에서 사용하지 않습니다")
-
-    components = document.get("components", {})
-    if isinstance(components, Mapping):
-        removed_components = {
-            "schemas": {"SnapshotTooLarge", "SnapshotTooLargeError"},
-            "responses": {"SnapshotTooLarge"},
-        }
-        for component_kind, removed_names in removed_components.items():
-            values = components.get(component_kind, {})
-            if not isinstance(values, Mapping):
-                continue
-            for name in sorted(removed_names & set(values)):
-                errors.append(
-                    f"components.{component_kind}.{name}는 현재 계약에서 "
-                    "사용하지 않습니다"
-                )
-
-        def uses_removed_error_code(value: Any) -> bool:
-            if isinstance(value, Mapping):
-                return value.get("const") == "SNAPSHOT_TOO_LARGE" or any(
-                    uses_removed_error_code(child) for child in value.values()
-                )
-            if isinstance(value, list):
-                return any(uses_removed_error_code(child) for child in value)
-            return False
-
-        if uses_removed_error_code(components):
-            errors.append(
-                "SNAPSHOT_TOO_LARGE error code는 현재 계약에서 사용하지 않습니다"
-            )
-
-    expected_statuses = {"200", "400", "500"}
-    expected_codes = {
-        "400": "INVALID_REQUEST",
-        "500": "INTERNAL_ERROR",
-    }
-    paths = document.get("paths", {})
-    if not isinstance(paths, Mapping):
+    try:
+        schema = _example_schema(document, kind)
+        errors.extend(_validate_schema(example, schema, document, path))
+    except (KeyError, ValueError) as error:
+        errors.append(f"{path}: $ref를 해석할 수 없습니다: {error}")
+    errors.extend(_forbidden_property_errors(example, path))
+    if not isinstance(example, Mapping):
         return errors
-    for path, path_item in paths.items():
-        if not isinstance(path_item, Mapping):
-            continue
-        operation = path_item.get("post")
-        if not isinstance(operation, Mapping):
-            continue
-        responses = operation.get("responses")
-        if not isinstance(responses, Mapping):
-            errors.append(f"{path}: responses가 없습니다")
-            continue
-        if set(responses) != expected_statuses:
-            errors.append(
-                f"{path}: response status는 200/400/500만 허용합니다"
-            )
-        for status, expected_code in expected_codes.items():
-            response_schema = responses.get(status)
-            if not isinstance(response_schema, Mapping):
-                continue
-            try:
-                response = _resolve(response_schema, document)
-                schema = _resolve(
-                    response["content"]["application/json"]["schema"],
-                    document,
-                )
-                code_schema = schema["properties"]["code"]
-                if code_schema.get("const") != expected_code:
-                    errors.append(
-                        f"{path} {status}: error code는 {expected_code}여야 합니다"
-                    )
-            except (KeyError, TypeError, ValueError):
-                errors.append(f"{path} {status}: error response schema를 확인할 수 없습니다")
+
+    errors.extend(
+        _api_example_relationship_errors(
+            kind,
+            example,
+            path,
+            current_contract,
+            requests,
+        )
+    )
+    errors.extend(
+        _llm_example_relationship_errors(
+            kind,
+            example,
+            path,
+            current_contract,
+            requests,
+            llm_inputs,
+            action_inputs,
+        )
+    )
     return errors
+
+
+def _api_example_relationship_errors(
+    kind: str,
+    example: Mapping[str, Any],
+    path: str,
+    current_contract: bool,
+    requests: Mapping[tuple[str, str], Mapping[str, Any]],
+) -> list[str]:
+    if kind.endswith("-request"):
+        return _request_relationship_errors(
+            example,
+            path,
+            legacy=not current_contract,
+            enforce_unique_sections=kind == "preparation-request",
+        )
+    if kind.endswith("-response"):
+        return _response_relationship_errors(kind, example, requests, path)
+    return []
+
+
+def _llm_example_relationship_errors(
+    kind: str,
+    example: Mapping[str, Any],
+    path: str,
+    current_contract: bool,
+    requests: Mapping[tuple[str, str], Mapping[str, Any]],
+    llm_inputs: Mapping[str, Mapping[str, Any]],
+    action_inputs: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    if kind == "llm-mapping-input":
+        return _mapping_input_errors(example, path, current_contract, requests)
+    if kind == "llm-mapping-output":
+        return _mapping_output_errors(example, path, llm_inputs)
+    if kind == "llm-action-input":
+        return _action_input_errors(example, path, current_contract, requests)
+    if kind == "llm-action-output":
+        return _action_output_errors(example, path, action_inputs)
+    return []
+
+
+def _mapping_input_errors(
+    example: Mapping[str, Any],
+    path: str,
+    current_contract: bool,
+    requests: Mapping[tuple[str, str], Mapping[str, Any]],
+) -> list[str]:
+    errors = _request_relationship_errors(
+        example,
+        path,
+        legacy=not current_contract,
+        enforce_unique_sections=False,
+    )
+    fields_request = requests.get(("fields-request", example.get("snapshotId")))
+    if fields_request is None:
+        errors.append(f"{path}: 같은 snapshotId의 fields request 예시가 없습니다")
+    else:
+        errors.extend(_llm_input_relationship_errors(fields_request, example, path))
+    return errors
+
+
+def _mapping_output_errors(
+    example: Mapping[str, Any],
+    path: str,
+    llm_inputs: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    llm_input = llm_inputs.get(example.get("snapshotId"))
+    if llm_input is None:
+        return [f"{path}: 같은 snapshotId의 LLM input 예시가 없습니다"]
+    return _llm_relationship_errors(llm_input, example, path)
+
+
+def _action_input_errors(
+    example: Mapping[str, Any],
+    path: str,
+    current_contract: bool,
+    requests: Mapping[tuple[str, str], Mapping[str, Any]],
+) -> list[str]:
+    errors = _request_relationship_errors(
+        example,
+        path,
+        legacy=not current_contract,
+        enforce_unique_sections=True,
+    )
+    request = requests.get(("preparation-request", example.get("snapshotId")))
+    if request is None:
+        errors.append(f"{path}: 같은 snapshotId의 preparation request 예시가 없습니다")
+    else:
+        errors.extend(
+            _relationships._llm_action_input_relationship_errors(
+                request,
+                example,
+                path,
+            )
+        )
+    return errors
+
+
+def _action_output_errors(
+    example: Mapping[str, Any],
+    path: str,
+    action_inputs: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    llm_input = action_inputs.get(example.get("snapshotId"))
+    if llm_input is None:
+        return [f"{path}: 같은 snapshotId의 action LLM input 예시가 없습니다"]
+    return _llm_action_output_relationship_errors(llm_input, example, path)
 
 
 def _example_schema(document: Mapping[str, Any], kind: str) -> Mapping[str, Any]:
@@ -488,120 +440,6 @@ def _declared_id(block: str) -> str:
     if match is None:
         raise ValueError("profile category 또는 section id를 찾을 수 없습니다")
     return match.group(1)
-
-
-def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[str, Any], path: str) -> list[str]:
-    schema = _resolve(schema, document)
-    errors: list[str] = []
-    if "allOf" in schema:
-        for child in schema["allOf"]:
-            errors.extend(_validate_schema(value, child, document, path))
-    if "oneOf" in schema:
-        matches = [
-            _validate_schema(value, child, document, path)
-            for child in schema["oneOf"]
-        ]
-        if sum(not result for result in matches) != 1:
-            errors.append(f"{path}: oneOf 조건을 만족하지 않습니다")
-        return errors
-    if "const" in schema and value != schema["const"]:
-        errors.append(f"{path}: const가 일치하지 않습니다")
-    if "enum" in schema and value not in schema["enum"]:
-        errors.append(f"{path}: enum에 없는 값입니다")
-    declared_type = schema.get("type")
-    expected_types = (
-        [declared_type]
-        if isinstance(declared_type, str)
-        else declared_type
-        if isinstance(declared_type, list)
-        else []
-    )
-    if expected_types and not any(
-        isinstance(expected_type, str) and _has_type(value, expected_type)
-        for expected_type in expected_types
-    ):
-        expected_label = "/".join(
-            expected_type
-            for expected_type in expected_types
-            if isinstance(expected_type, str)
-        )
-        return [f"{path}: {expected_label} 타입이 아닙니다"]
-    if value is None:
-        return errors
-    if "string" in expected_types:
-        minimum_length = schema.get("minLength")
-        if isinstance(minimum_length, int) and len(value) < minimum_length:
-            errors.append(f"{path}: minLength를 만족하지 않습니다")
-        maximum_length = schema.get("maxLength")
-        if isinstance(maximum_length, int) and len(value) > maximum_length:
-            errors.append(f"{path}: maxLength를 만족하지 않습니다")
-        pattern = schema.get("pattern")
-        if isinstance(pattern, str) and re.fullmatch(pattern, value) is None:
-            errors.append(f"{path}: pattern을 만족하지 않습니다")
-    if "object" in expected_types:
-        properties = schema.get("properties", {})
-        required = schema.get("required", [])
-        for name in required:
-            if name not in value:
-                errors.append(f"{path}: required property가 없습니다: {name}")
-        for name, child in value.items():
-            if name not in properties:
-                if schema.get("additionalProperties") is False:
-                    errors.append(f"{path}: unknown property: {name}")
-                continue
-            errors.extend(_validate_schema(child, properties[name], document, f"{path}.{name}"))
-    if "array" in expected_types:
-        minimum_items = schema.get("minItems")
-        if isinstance(minimum_items, int) and len(value) < minimum_items:
-            errors.append(f"{path}: minItems를 만족하지 않습니다")
-        maximum_items = schema.get("maxItems")
-        if isinstance(maximum_items, int) and len(value) > maximum_items:
-            errors.append(f"{path}: maxItems를 만족하지 않습니다")
-        for index, child in enumerate(value):
-            errors.extend(_validate_schema(child, schema.get("items", {}), document, f"{path}[{index}]"))
-    return errors
-
-
-def _resolve(schema: Mapping[str, Any], document: Mapping[str, Any]) -> Mapping[str, Any]:
-    reference = schema.get("$ref")
-    if not isinstance(reference, str):
-        return schema
-    if not reference.startswith("#/"):
-        raise ValueError(f"외부 $ref는 허용하지 않습니다: {reference}")
-    target: Any = document
-    for part in reference[2:].split("/"):
-        target = target[part.replace("~1", "/").replace("~0", "~")]
-    if not isinstance(target, Mapping):
-        raise ValueError(f"$ref 대상이 schema 객체가 아닙니다: {reference}")
-    return target
-
-
-def _has_type(value: Any, expected: str) -> bool:
-    return {
-        "object": isinstance(value, Mapping),
-        "array": isinstance(value, list),
-        "string": isinstance(value, str),
-        "integer": isinstance(value, int) and not isinstance(value, bool),
-        "boolean": isinstance(value, bool),
-        "null": value is None,
-    }.get(expected, True)
-
-
-def _forbidden_property_errors(value: Any, path: str) -> list[str]:
-    if isinstance(value, Mapping):
-        errors = [
-            f"{path}: forbidden property: {name}"
-            for name in value
-            if name.lower() in FORBIDDEN_PROPERTIES
-        ]
-        return errors + [
-            error for name, child in value.items() for error in _forbidden_property_errors(child, f"{path}.{name}")
-        ]
-    if isinstance(value, list):
-        return [
-            error for index, child in enumerate(value) for error in _forbidden_property_errors(child, f"{path}[{index}]")
-        ]
-    return []
 
 
 def _request_relationship_errors(
