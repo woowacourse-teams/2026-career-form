@@ -1,0 +1,82 @@
+import type {
+  ActionCandidateHandle,
+  CandidateBlockReason,
+  CandidateLookup,
+  FieldCandidateHandle,
+} from "./types";
+
+interface Registered<T> {
+  handle: T;
+  blockedReason?: CandidateBlockReason;
+}
+
+function elementSignature(element: Element): string {
+  const input = element instanceof HTMLInputElement ? element.type : "";
+  const name =
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement ||
+    element instanceof HTMLTextAreaElement
+      ? element.name
+      : "";
+  return [element.tagName, input, element.id, name].join("|");
+}
+
+export function createStructuralSignature(elements: Element[]): string {
+  return elements.map(elementSignature).join("||");
+}
+
+export class CandidateRegistry {
+  private readonly actions = new Map<
+    string,
+    Registered<ActionCandidateHandle>
+  >();
+  private readonly fields = new Map<string, Registered<FieldCandidateHandle>>();
+
+  registerAction(
+    handle: ActionCandidateHandle,
+    blockedReason?: CandidateBlockReason,
+  ): void {
+    this.actions.set(handle.candidateId, { handle, blockedReason });
+  }
+
+  registerField(
+    handle: FieldCandidateHandle,
+    blockedReason?: CandidateBlockReason,
+  ): void {
+    this.fields.set(handle.candidateId, { handle, blockedReason });
+  }
+
+  lookupAction(candidateId: string): CandidateLookup<ActionCandidateHandle> {
+    return this.lookup(this.actions.get(candidateId));
+  }
+
+  lookupField(candidateId: string): CandidateLookup<FieldCandidateHandle> {
+    return this.lookup(this.fields.get(candidateId));
+  }
+
+  private lookup<T extends ActionCandidateHandle | FieldCandidateHandle>(
+    registered: Registered<T> | undefined,
+  ): CandidateLookup<T> {
+    if (!registered) {
+      return { status: "unknown" };
+    }
+    const elements =
+      registered.handle.kind === "action"
+        ? [registered.handle.element]
+        : registered.handle.elements;
+    if (
+      elements.some((element) => !element.isConnected) ||
+      createStructuralSignature(elements) !== registered.handle.signature
+    ) {
+      return { status: "stale" };
+    }
+    if (registered.blockedReason) {
+      return {
+        status: "blocked",
+        reason: registered.blockedReason,
+        handle: registered.handle,
+      };
+    }
+    return { status: "ready", handle: registered.handle };
+  }
+}
