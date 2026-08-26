@@ -1735,7 +1735,44 @@
         byId("sensitive-status").setAttribute("aria-hidden", "true");
         byId("sensitive-value").setAttribute("aria-hidden", "true");
         byId("reveal-sensitive").setAttribute("aria-expanded", "false");
+      }
+
+      function resetAssistedOutcome() {
+        byId("assisted-result").textContent = "";
         byId("assisted-result").hidden = true;
+        byId("result-summary").value = "";
+        byId("copy-summary").disabled = true;
+        byId("post-task-survey")
+          .querySelectorAll("input")
+          .forEach((input) => {
+            input.checked = false;
+          });
+        setVisible("post-task-survey", false);
+        setMessage("survey-status", "모든 질문은 정형 선택 항목입니다.");
+        setMessage("copy-status", "");
+      }
+
+      function invalidateAssistedApproval() {
+        if (!sessionState.assisted.started) return;
+        sessionState = {
+          ...sessionState,
+          assisted: {
+            started: true,
+            startedAt: sessionState.assisted.startedAt,
+            approved: false,
+            approvedSensitive: false,
+          },
+        };
+        resetAssistedOutcome();
+        setMessage(
+          "assisted-status",
+          "검토 선택이 바뀌었습니다. 다시 최종 승인하세요.",
+        );
+        setMessage(
+          "assisted-completion-status",
+          "먼저 검토 항목을 최종 승인하세요.",
+        );
+        setProgress("progress-tasks");
       }
 
       function startManualTask() {
@@ -1751,10 +1788,13 @@
         document.querySelectorAll("#manual-form input").forEach((input) => {
           input.disabled = false;
         });
-        sessionState.manual = {
-          started: true,
-          completed: false,
-          startedAt: performance.now(),
+        sessionState = {
+          ...sessionState,
+          manual: {
+            started: true,
+            completed: false,
+            startedAt: performance.now(),
+          },
         };
         byId("start-manual-task").disabled = true;
         byId("complete-manual-task").disabled = false;
@@ -1780,11 +1820,14 @@
       function completeManualTask() {
         if (!sessionState.manual.started) return;
         const counts = countFormErrors("manual-form", manualFixture);
-        sessionState.manual = {
-          ...sessionState.manual,
-          completed: true,
-          seconds: elapsedSeconds(sessionState.manual.startedAt),
-          ...counts,
+        sessionState = {
+          ...sessionState,
+          manual: {
+            ...sessionState.manual,
+            completed: true,
+            seconds: elapsedSeconds(sessionState.manual.startedAt),
+            ...counts,
+          },
         };
         byId("complete-manual-task").disabled = true;
         byId("start-assisted-task").disabled = false;
@@ -1809,11 +1852,15 @@
           return;
         }
         resetAssistedReview();
-        sessionState.assisted = {
-          started: true,
-          approved: false,
-          approvedSensitive: false,
-          startedAt: performance.now(),
+        resetAssistedOutcome();
+        sessionState = {
+          ...sessionState,
+          assisted: {
+            started: true,
+            approved: false,
+            approvedSensitive: false,
+            startedAt: performance.now(),
+          },
         };
         setVisible("assisted-task", true);
         setVisible("post-task-survey", false);
@@ -1840,7 +1887,11 @@
           String(revealed),
         );
         byId("review-veteran-status").disabled = !revealed;
-        if (!revealed) byId("review-veteran-status").checked = false;
+        const sensitiveReview = byId("review-veteran-status");
+        if (!revealed && sensitiveReview.checked) {
+          sensitiveReview.checked = false;
+          invalidateAssistedApproval();
+        }
         status.setAttribute("aria-hidden", String(!revealed));
         value.setAttribute("aria-hidden", String(!revealed));
         setMessage(
@@ -1867,13 +1918,16 @@
             target.value = selectedKeys.has(key) ? assistedFixture[key] : "";
           }
         });
-        sessionState.assisted = {
-          ...sessionState.assisted,
-          approved: true,
-          approvedAvailableCount: availableAutofillKeys.filter((key) =>
-            selectedKeys.has(key),
-          ).length,
-          approvedSensitive: selectedKeys.has("veteranStatus"),
+        sessionState = {
+          ...sessionState,
+          assisted: {
+            ...sessionState.assisted,
+            approved: true,
+            approvedAvailableCount: availableAutofillKeys.filter((key) =>
+              selectedKeys.has(key),
+            ).length,
+            approvedSensitive: selectedKeys.has("veteranStatus"),
+          },
         };
         setMessage(
           "assisted-status",
@@ -1892,11 +1946,14 @@
           return;
         }
         const counts = countFormErrors("assisted-form", assistedFixture);
-        sessionState.assisted = {
-          ...sessionState.assisted,
-          completed: true,
-          seconds: elapsedSeconds(sessionState.assisted.startedAt),
-          ...counts,
+        sessionState = {
+          ...sessionState,
+          assisted: {
+            ...sessionState.assisted,
+            completed: true,
+            seconds: elapsedSeconds(sessionState.assisted.startedAt),
+            ...counts,
+          },
         };
         setMessage(
           "assisted-completion-status",
@@ -1979,18 +2036,13 @@
         byId("complete-manual-task").disabled = true;
         byId("start-assisted-task").disabled = true;
         byId("approve-autofill").disabled = false;
-        byId("copy-summary").disabled = true;
-        byId("result-summary").value = "";
         resetForm("manual-form");
         resetAssistedReview();
+        resetAssistedOutcome();
         document.querySelectorAll("#manual-form input").forEach((input) => {
           input.disabled = true;
         });
-        byId("post-task-survey")
-          .querySelectorAll("input")
-          .forEach((input) => {
-            input.checked = false;
-          });
+        byId("manual-result").textContent = "";
         byId("manual-result").hidden = true;
         setVisible("manual-task", false);
         setVisible("assisted-task", false);
@@ -2008,8 +2060,6 @@
           "assisted-completion-status",
           "검토와 승인을 마친 뒤 남은 필드를 직접 입력하세요.",
         );
-        setMessage("survey-status", "모든 질문은 정형 선택 항목입니다.");
-        setMessage("copy-status", "");
         setProgress("progress-intro");
       }
 
@@ -2023,6 +2073,11 @@
       byId("start-assisted-task").addEventListener("click", startAssistedTask);
       byId("reveal-sensitive").addEventListener("click", revealSensitive);
       byId("approve-autofill").addEventListener("click", applyApprovedFields);
+      document
+        .querySelectorAll("#autofill-review input[data-review-key]")
+        .forEach((input) => {
+          input.addEventListener("change", invalidateAssistedApproval);
+        });
       byId("complete-assisted-task").addEventListener(
         "click",
         completeAssistedTask,

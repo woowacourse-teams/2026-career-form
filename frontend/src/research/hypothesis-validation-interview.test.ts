@@ -254,6 +254,12 @@ describe("hypothesis validation interview prototype", () => {
       getElement<HTMLTextAreaElement>(document, "result-summary").value,
     ).toBe("");
     expect(
+      getElement<HTMLElement>(document, "manual-result"),
+    ).toBeEmptyDOMElement();
+    expect(
+      getElement<HTMLElement>(document, "assisted-result"),
+    ).toBeEmptyDOMElement();
+    expect(
       getElement<HTMLButtonElement>(document, "start-assisted-task"),
     ).toBeDisabled();
   });
@@ -372,6 +378,36 @@ describe("hypothesis validation interview prototype", () => {
     ).toBeChecked();
   });
 
+  it("clears the previous survey and summary when task B restarts", () => {
+    const { document } = completeAssistedTaskForTest().window;
+    selectAllSurveyResponses(document);
+    getElement<HTMLButtonElement>(document, "build-summary").click();
+
+    expect(
+      getElement<HTMLTextAreaElement>(document, "result-summary").value,
+    ).not.toBe("");
+    expect(
+      getElement<HTMLButtonElement>(document, "copy-summary"),
+    ).toBeEnabled();
+
+    getElement<HTMLButtonElement>(document, "start-assisted-task").click();
+
+    expect(
+      getElement<HTMLTextAreaElement>(document, "result-summary").value,
+    ).toBe("");
+    expect(
+      getElement<HTMLButtonElement>(document, "copy-summary"),
+    ).toBeDisabled();
+    expect([
+      ...document.querySelectorAll<HTMLInputElement>(
+        "#post-task-survey input:checked",
+      ),
+    ]).toHaveLength(0);
+    expect(
+      getElement<HTMLElement>(document, "post-task-survey"),
+    ).not.toBeVisible();
+  });
+
   it("keeps task B values unchanged until final approval and applies only approved fields", () => {
     const { document } = startAssistedTaskForTest().window;
     const assistedForm = getElement<HTMLFormElement>(document, "assisted-form");
@@ -415,6 +451,24 @@ describe("hypothesis validation interview prototype", () => {
     expect(
       getElement<HTMLInputElement>(document, "assisted-veteran-status").value,
     ).toBe("비해당");
+  });
+
+  it("requires final approval again after a review selection changes", () => {
+    const dom = startAssistedTaskForTest();
+    const { document, Event } = dom.window;
+    getElement<HTMLButtonElement>(document, "approve-autofill").click();
+
+    const emailReview = getElement<HTMLInputElement>(document, "review-email");
+    emailReview.checked = false;
+    emailReview.dispatchEvent(new Event("change", { bubbles: true }));
+    getElement<HTMLButtonElement>(document, "complete-assisted-task").click();
+
+    expect(
+      getElement<HTMLElement>(document, "assisted-completion-status"),
+    ).toHaveTextContent("먼저 검토 항목을 최종 승인하세요");
+    expect(
+      getElement<HTMLElement>(document, "post-task-survey"),
+    ).not.toBeVisible();
   });
 
   it("clears deselected autofill values on reapproval without clearing direct entries", () => {
