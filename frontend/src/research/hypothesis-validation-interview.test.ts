@@ -130,6 +130,64 @@ describe("hypothesis validation interview prototype", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("groups both applications into numbered sections with credential and language cards", () => {
+    const { document } = createResearchDom().window;
+    const expectedSections = [
+      "01 기본 정보",
+      "02 학력사항",
+      "03 자격증·면허증",
+      "04 어학",
+      "05 보훈",
+    ];
+
+    ["manual", "assisted"].forEach((task) => {
+      const form = getElement<HTMLFormElement>(document, `${task}-form`);
+      const sections = [
+        ...form.querySelectorAll<HTMLElement>(
+          "fieldset[data-application-section]",
+        ),
+      ];
+
+      expect(
+        sections.map((section) =>
+          section
+            .querySelector("legend")
+            ?.textContent?.replace(/\s+/g, " ")
+            .trim(),
+        ),
+      ).toEqual(expectedSections);
+      expect(form.querySelectorAll("input[data-fixture-key]")).toHaveLength(8);
+
+      const expectedFieldSections = {
+        name: "basic",
+        email: "basic",
+        phone: "basic",
+        birthDate: "basic",
+        university: "education",
+        certificateNumber: "certification",
+        languageScore: "language",
+        veteranStatus: "veteran",
+      };
+
+      Object.entries(expectedFieldSections).forEach(([key, section]) => {
+        const input = form.querySelector(`[data-fixture-key="${key}"]`);
+        expect(input).not.toBeNull();
+        expect(
+          input?.closest(`fieldset[data-application-section="${section}"]`),
+        ).not.toBeNull();
+      });
+
+      expect(
+        form.querySelector(
+          '[data-application-section="certification"] article h3',
+        ),
+      ).toHaveTextContent("자격증·면허증 1");
+      expect(
+        form.querySelector('[data-application-section="language"] article h3'),
+      ).toHaveTextContent("공인외국어시험 1");
+    });
+  });
+
   it("keeps the prototype self-contained and free of persistence or network APIs", () => {
     const { document } = createResearchDom().window;
 

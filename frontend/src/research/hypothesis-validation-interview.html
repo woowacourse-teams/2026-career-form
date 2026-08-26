@@ -252,11 +252,11 @@
       input[type="tel"],
       input[type="date"] {
         background: #fff;
-        border: 1px solid #bfcbdc;
-        border-radius: 8px;
+        border: 1px solid #c9d6e5;
+        border-radius: 10px;
         color: var(--ink);
-        min-height: 42px;
-        padding: 9px 11px;
+        min-height: 50px;
+        padding: 12px 14px;
         width: 100%;
       }
 
@@ -338,7 +338,7 @@
       .manual-layout {
         display: grid;
         gap: 18px;
-        grid-template-columns: 0.95fr 1.05fr;
+        grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
         margin-top: 20px;
       }
 
@@ -393,8 +393,7 @@
         border-bottom: 1px solid var(--line);
         display: flex;
         justify-content: space-between;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
+        padding: 0 2px 14px;
       }
 
       .virtual-company {
@@ -408,14 +407,75 @@
         font-size: 12px;
       }
 
-      .form-grid {
+      .application-form {
         display: grid;
-        gap: 14px;
+      }
+
+      .application-section {
+        border: 0;
+        margin: 0;
+        min-width: 0;
+        padding: 22px 2px 24px;
+      }
+
+      .application-section + .application-section {
+        border-top: 1px solid var(--line);
+      }
+
+      .application-section-legend {
+        align-items: center;
+        color: var(--brand);
+        display: flex;
+        font-size: 15px;
+        font-weight: 900;
+        gap: 10px;
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+        padding: 0;
+      }
+
+      .application-section-number {
+        color: #1683ee;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+      }
+
+      .section-field-grid {
+        display: grid;
+        gap: 16px 18px;
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .form-field.full-width {
-        grid-column: 1 / -1;
+      .repeatable-entry {
+        background: #fff;
+        border: 1px solid #d5e0ec;
+        border-radius: 13px;
+        box-shadow: 0 9px 22px rgba(31, 64, 104, 0.07);
+        padding: 18px;
+      }
+
+      .entry-card-header {
+        align-items: center;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .entry-card-header h3 {
+        color: #0f4da0;
+        font-size: 17px;
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+
+      .entry-card-state {
+        background: var(--brand-soft);
+        border-radius: 999px;
+        color: var(--brand);
+        font-size: 11px;
+        font-weight: 800;
+        padding: 5px 9px;
       }
 
       .form-hint {
@@ -444,7 +504,12 @@
       }
 
       .assisted-review-layout {
-        grid-template-columns: 0.78fr 1fr 1.15fr;
+        align-items: start;
+        grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
+      }
+
+      .assisted-review-layout #autofill-review {
+        grid-column: 2;
       }
 
       .review-list {
@@ -604,6 +669,10 @@
         .review-layout {
           grid-template-columns: 1fr;
         }
+
+        .assisted-review-layout #autofill-review {
+          grid-column: auto;
+        }
       }
     </style>
   </head>
@@ -734,10 +803,16 @@
               <span class="virtual-company">모아테크 채용 · 가상 기업</span>
               <span class="application-state">지원서 작성 화면 · A</span>
             </div>
-            <form id="manual-form" novalidate>
-              <fieldset>
-                <legend class="eyebrow">지원자 기본 정보</legend>
-                <div class="form-grid">
+            <form id="manual-form" class="application-form" novalidate>
+              <fieldset
+                class="application-section"
+                data-application-section="basic"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">01</span>
+                  <span>기본 정보</span>
+                </legend>
+                <div class="section-field-grid">
                   <div class="form-field">
                     <label for="manual-name">국문 이름</label>
                     <input
@@ -774,6 +849,18 @@
                       type="date"
                     />
                   </div>
+                </div>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="education"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">02</span>
+                  <span>학력사항</span>
+                </legend>
+                <div class="section-field-grid">
                   <div class="form-field">
                     <label for="manual-university">대학교명</label>
                     <input
@@ -783,31 +870,87 @@
                       type="text"
                     />
                   </div>
-                  <div class="form-field">
-                    <label for="manual-language-score">어학 성적</label>
-                    <input
-                      id="manual-language-score"
-                      data-fixture-key="languageScore"
-                      disabled
-                      type="text"
-                    />
+                </div>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="certification"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">03</span>
+                  <span>자격증·면허증</span>
+                </legend>
+                <article
+                  class="repeatable-entry"
+                  aria-labelledby="manual-certification-card-title"
+                >
+                  <div class="entry-card-header">
+                    <h3 id="manual-certification-card-title">
+                      자격증·면허증 1
+                    </h3>
+                    <span class="entry-card-state">직접 입력</span>
                   </div>
+                  <div class="section-field-grid">
+                    <div class="form-field">
+                      <label for="manual-certificate-number"
+                        >자격증 등록번호</label
+                      >
+                      <input
+                        id="manual-certificate-number"
+                        data-fixture-key="certificateNumber"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                  </div>
+                </article>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="language"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">04</span>
+                  <span>어학</span>
+                </legend>
+                <article
+                  class="repeatable-entry"
+                  aria-labelledby="manual-language-card-title"
+                >
+                  <div class="entry-card-header">
+                    <h3 id="manual-language-card-title">공인외국어시험 1</h3>
+                    <span class="entry-card-state">직접 입력</span>
+                  </div>
+                  <div class="section-field-grid">
+                    <div class="form-field">
+                      <label for="manual-language-score">등급·점수</label>
+                      <input
+                        id="manual-language-score"
+                        data-fixture-key="languageScore"
+                        disabled
+                        type="text"
+                      />
+                    </div>
+                  </div>
+                </article>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="veteran"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">05</span>
+                  <span>보훈</span>
+                </legend>
+                <div class="section-field-grid">
                   <div class="form-field">
                     <label for="manual-veteran-status">보훈 대상 여부</label>
                     <input
                       id="manual-veteran-status"
                       data-fixture-key="veteranStatus"
-                      disabled
-                      type="text"
-                    />
-                  </div>
-                  <div class="form-field">
-                    <label for="manual-certificate-number"
-                      >자격증 등록번호</label
-                    >
-                    <input
-                      id="manual-certificate-number"
-                      data-fixture-key="certificateNumber"
                       disabled
                       type="text"
                     />
@@ -924,10 +1067,16 @@
               >
               <span class="application-state">지원서 작성 화면 · B</span>
             </div>
-            <form id="assisted-form" novalidate>
-              <fieldset>
-                <legend class="eyebrow">검토 후 지원서 값</legend>
-                <div class="form-grid">
+            <form id="assisted-form" class="application-form" novalidate>
+              <fieldset
+                class="application-section"
+                data-application-section="basic"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">01</span>
+                  <span>기본 정보</span>
+                </legend>
+                <div class="section-field-grid">
                   <div class="form-field">
                     <label for="assisted-name">국문 이름</label>
                     <input
@@ -964,6 +1113,18 @@
                       type="date"
                     />
                   </div>
+                </div>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="education"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">02</span>
+                  <span>학력사항</span>
+                </legend>
+                <div class="section-field-grid">
                   <div class="form-field">
                     <label for="assisted-university">대학교명</label>
                     <input
@@ -974,30 +1135,88 @@
                     />
                     <p class="form-hint">직접 검색해 확인하세요.</p>
                   </div>
-                  <div class="form-field">
-                    <label for="assisted-language-score">어학 성적</label>
-                    <input
-                      id="assisted-language-score"
-                      data-assisted-key="languageScore"
-                      data-fixture-key="languageScore"
-                      type="text"
-                    />
-                    <p class="form-hint">성적표에서 직접 확인하세요.</p>
+                </div>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="certification"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">03</span>
+                  <span>자격증·면허증</span>
+                </legend>
+                <article
+                  class="repeatable-entry"
+                  aria-labelledby="assisted-certification-card-title"
+                >
+                  <div class="entry-card-header">
+                    <h3 id="assisted-certification-card-title">
+                      자격증·면허증 1
+                    </h3>
+                    <span class="entry-card-state">직접 입력 필요</span>
                   </div>
-                  <div class="form-field">
-                    <label for="assisted-certificate-number"
-                      >자격증 등록번호</label
-                    >
-                    <input
-                      id="assisted-certificate-number"
-                      data-assisted-key="certificateNumber"
-                      data-fixture-key="certificateNumber"
-                      type="text"
-                    />
-                    <p class="form-hint">
-                      프로필에 값이 없어 직접 찾아 입력합니다.
-                    </p>
+                  <div class="section-field-grid">
+                    <div class="form-field">
+                      <label for="assisted-certificate-number"
+                        >자격증 등록번호</label
+                      >
+                      <input
+                        id="assisted-certificate-number"
+                        data-assisted-key="certificateNumber"
+                        data-fixture-key="certificateNumber"
+                        type="text"
+                      />
+                      <p class="form-hint">
+                        프로필에 값이 없어 직접 찾아 입력합니다.
+                      </p>
+                    </div>
                   </div>
+                </article>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="language"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">04</span>
+                  <span>어학</span>
+                </legend>
+                <article
+                  class="repeatable-entry"
+                  aria-labelledby="assisted-language-card-title"
+                >
+                  <div class="entry-card-header">
+                    <h3 id="assisted-language-card-title">공인외국어시험 1</h3>
+                    <span class="entry-card-state">확인 필요</span>
+                  </div>
+                  <div class="section-field-grid">
+                    <div class="form-field">
+                      <label for="assisted-language-score">등급·점수</label>
+                      <input
+                        id="assisted-language-score"
+                        data-assisted-key="languageScore"
+                        data-fixture-key="languageScore"
+                        type="text"
+                      />
+                      <p class="form-hint">
+                        시험명과 등급을 성적표에서 직접 확인하세요.
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              </fieldset>
+
+              <fieldset
+                class="application-section"
+                data-application-section="veteran"
+              >
+                <legend class="application-section-legend">
+                  <span class="application-section-number">05</span>
+                  <span>보훈</span>
+                </legend>
+                <div class="section-field-grid">
                   <div class="form-field">
                     <label for="assisted-veteran-status">보훈 대상 여부</label>
                     <input
