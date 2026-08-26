@@ -64,3 +64,11 @@
 - Source-Tree: e60aef0cd60a5fbe5f62dc1a4018108cdebe4ae7
 - Raw: llm-wiki/raw/issues/CF-48/manifest.md
 - Topics: 1
+
+## [2026-08-26] ingest | CF-40 범용 LLM 지원서 분석 계약
+
+- Disposition: Supersedes CF-44 application form analysis topics
+- Approval-Digest: e8635edc3fa60442af7b6f28723a2bfd12379ce5798e83acd282ded5acb8958c
+- Source-Tree: 5fc6b76a1037746c7dacb58950586d77e63e82e2
+- Raw: llm-wiki/raw/issues/CF-40/manifest.md
+- Topics: 2

@@ -3,6 +3,7 @@ import argparse
 import json
 import re
 import sys
+from collections import Counter
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -45,7 +46,7 @@ FORBIDDEN_PROPERTIES = {
     "domhandle",
 }
 EXAMPLE_PATTERN = re.compile(
-    r"<!-- (?:api-example: (preparation-request|preparation-response|fields-request|fields-response)|llm-example: (mapping-input|mapping-output)) -->\s*```json\s*(.*?)```",
+    r"<!-- (?:api-example: (preparation-request|preparation-response|fields-request|fields-response)|llm-example: (mapping-input|mapping-output|action-input|action-output)) -->\s*```json\s*(.*?)```",
     re.DOTALL,
 )
 EXAMPLE_OPERATIONS = {
@@ -70,6 +71,7 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
     errors = _openapi_structure_errors(document)
     requests: dict[tuple[str, str], Mapping[str, Any]] = {}
     llm_inputs: dict[str, Mapping[str, Any]] = {}
+    action_inputs: dict[str, Mapping[str, Any]] = {}
     try:
         examples = _examples(reference_path)
     except (OSError, ValueError) as error:
@@ -83,6 +85,10 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
             snapshot_id = example.get("snapshotId")
             if isinstance(snapshot_id, str):
                 llm_inputs[snapshot_id] = example
+        if kind == "llm-action-input" and isinstance(example, Mapping):
+            snapshot_id = example.get("snapshotId")
+            if isinstance(snapshot_id, str):
+                action_inputs[snapshot_id] = example
     for index, (kind, example) in enumerate(examples, start=1):
         prefix = f"example {index} ({kind})"
         try:
@@ -112,6 +118,37 @@ def validate_contract(openapi_path: Path, reference_path: Path) -> list[str]:
                 errors.append(f"{prefix}: 같은 snapshotId의 LLM input 예시가 없습니다")
             else:
                 errors.extend(_llm_relationship_errors(llm_input, example, prefix))
+        if kind == "llm-action-input" and isinstance(example, Mapping):
+            errors.extend(_request_relationship_errors(example, prefix))
+            preparation_request = requests.get(
+                ("preparation-request", example.get("snapshotId"))
+            )
+            if preparation_request is None:
+                errors.append(
+                    f"{prefix}: 같은 snapshotId의 preparation request 예시가 없습니다"
+                )
+            else:
+                errors.extend(
+                    _llm_action_input_relationship_errors(
+                        preparation_request,
+                        example,
+                        prefix,
+                    )
+                )
+        if kind == "llm-action-output" and isinstance(example, Mapping):
+            llm_input = action_inputs.get(example.get("snapshotId"))
+            if llm_input is None:
+                errors.append(
+                    f"{prefix}: 같은 snapshotId의 action LLM input 예시가 없습니다"
+                )
+            else:
+                errors.extend(
+                    _llm_action_output_relationship_errors(
+                        llm_input,
+                        example,
+                        prefix,
+                    )
+                )
     return errors
 
 
@@ -147,10 +184,65 @@ def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
                 visit(child, f"{path}[{index}]")
 
     visit(document, "openapi")
+    if document.get("info", {}).get("version") == "3.0.0":
+        errors.extend(_current_contract_errors(document))
+    return errors
+
+
+def _current_contract_errors(document: Mapping[str, Any]) -> list[str]:
+    errors: list[str] = []
+    limits = document.get("x-snapshot-byte-limits")
+    if limits != {"raw": 65_536, "canonical": 65_536}:
+        errors.append("raw/canonical snapshot byte 상한은 각각 65,536이어야 합니다")
+
+    expected_statuses = {"200", "400", "413", "500"}
+    expected_codes = {
+        "400": "INVALID_REQUEST",
+        "413": "SNAPSHOT_TOO_LARGE",
+        "500": "INTERNAL_ERROR",
+    }
+    paths = document.get("paths", {})
+    if not isinstance(paths, Mapping):
+        return errors
+    for path, path_item in paths.items():
+        if not isinstance(path_item, Mapping):
+            continue
+        operation = path_item.get("post")
+        if not isinstance(operation, Mapping):
+            continue
+        responses = operation.get("responses")
+        if not isinstance(responses, Mapping):
+            errors.append(f"{path}: responses가 없습니다")
+            continue
+        if set(responses) != expected_statuses:
+            errors.append(
+                f"{path}: response status는 200/400/413/500만 허용합니다"
+            )
+        for status, expected_code in expected_codes.items():
+            response_schema = responses.get(status)
+            if not isinstance(response_schema, Mapping):
+                continue
+            try:
+                response = _resolve(response_schema, document)
+                schema = _resolve(
+                    response["content"]["application/json"]["schema"],
+                    document,
+                )
+                code_schema = schema["properties"]["code"]
+                if code_schema.get("const") != expected_code:
+                    errors.append(
+                        f"{path} {status}: error code는 {expected_code}여야 합니다"
+                    )
+            except (KeyError, TypeError, ValueError):
+                errors.append(f"{path} {status}: error response schema를 확인할 수 없습니다")
     return errors
 
 
 def _example_schema(document: Mapping[str, Any], kind: str) -> Mapping[str, Any]:
+    if kind == "llm-action-input":
+        return document["components"]["schemas"]["LlmActionInput"]
+    if kind == "llm-action-output":
+        return document["components"]["schemas"]["LlmActionOutput"]
     if kind == "llm-mapping-input":
         return document["components"]["schemas"]["LlmMappingInput"]
     if kind == "llm-mapping-output":
@@ -364,6 +456,9 @@ def _validate_schema(value: Any, schema: Mapping[str, Any], document: Mapping[st
         minimum_length = schema.get("minLength")
         if isinstance(minimum_length, int) and len(value) < minimum_length:
             errors.append(f"{path}: minLength를 만족하지 않습니다")
+        maximum_length = schema.get("maxLength")
+        if isinstance(maximum_length, int) and len(value) > maximum_length:
+            errors.append(f"{path}: maxLength를 만족하지 않습니다")
         pattern = schema.get("pattern")
         if isinstance(pattern, str) and re.fullmatch(pattern, value) is None:
             errors.append(f"{path}: pattern을 만족하지 않습니다")
@@ -436,8 +531,13 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
     sections = request.get("sections", [])
     if not isinstance(sections, list):
         return []
-    section_ids = {section.get("sectionId") for section in sections if isinstance(section, Mapping)}
+    section_ids = {
+        section.get("sectionId")
+        for section in sections
+        if isinstance(section, Mapping)
+    }
     errors: list[str] = []
+    seen_section_ids: set[str] = set()
     candidate_ids: set[str] = set()
     item_ids: set[str] = set()
     parents: dict[str, str] = {}
@@ -446,6 +546,10 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
             continue
         section_id = section.get("sectionId")
         parent = section.get("parentSectionId")
+        if isinstance(section_id, str):
+            if section_id in seen_section_ids:
+                errors.append(f"{path}: duplicate sectionId: {section_id}")
+            seen_section_ids.add(section_id)
         if isinstance(section_id, str) and isinstance(parent, str):
             if parent not in section_ids:
                 errors.append(f"{path}: parentSectionId가 존재하지 않습니다: {parent}")
@@ -464,6 +568,18 @@ def _request_relationship_errors(request: Mapping[str, Any], path: str) -> list[
                     if candidate_id in candidate_ids:
                         errors.append(f"{path}: duplicate candidateId: {candidate_id}")
                     candidate_ids.add(candidate_id)
+                    option_ids: set[str] = set()
+                    for option in candidate.get("options", []):
+                        if not isinstance(option, Mapping):
+                            continue
+                        option_id = option.get("optionId")
+                        if not isinstance(option_id, str):
+                            continue
+                        if option_id in option_ids:
+                            errors.append(
+                                f"{path}: duplicate optionId: {option_id}"
+                            )
+                        option_ids.add(option_id)
     for section_id in parents:
         seen: set[str] = set()
         current = section_id
@@ -482,7 +598,7 @@ def _response_relationship_errors(
     requests: Mapping[tuple[str, str], Mapping[str, Any]],
     path: str,
 ) -> list[str]:
-    errors: list[str] = []
+    errors = _partial_response_errors(kind, response, path)
     request_kind = kind.replace("-response", "-request")
     request = requests.get((request_kind, response.get("snapshotId")))
     if request is None:
@@ -490,9 +606,25 @@ def _response_relationship_errors(
     field_ids, action_ids = _request_candidate_ids(request)
     if kind == "fields-response":
         errors.extend(_fields_response_route_errors(response, path))
-        for field in response.get("fields", []):
-            if isinstance(field, Mapping) and field.get("candidateId") not in field_ids:
-                errors.append(f"{path}: field candidateId가 요청에 없습니다")
+        actual_field_ids = [
+            field.get("candidateId")
+            for field in response.get("fields", [])
+            if isinstance(field, Mapping)
+        ]
+        if response.get("analysisStatus") == "COMPLETE":
+            errors.extend(
+                _exact_candidate_set_errors(
+                    list(field_ids),
+                    actual_field_ids,
+                    f"{path}: COMPLETE fields",
+                )
+            )
+        else:
+            for candidate_id in actual_field_ids:
+                if candidate_id not in field_ids:
+                    errors.append(f"{path}: field candidateId가 요청에 없습니다")
+        if response.get("mode") == "GENERIC":
+            errors.extend(_field_analysis_errors(request, response, path))
     if kind == "preparation-response":
         section_ids = {
             section["sectionId"]
@@ -538,31 +670,91 @@ def _fields_response_route_errors(
     return errors
 
 
+def _field_analysis_errors(
+    request: Mapping[str, Any],
+    response: Mapping[str, Any],
+    path: str,
+) -> list[str]:
+    if response.get("analysisStatus") != "COMPLETE":
+        return []
+    candidates: dict[str, Mapping[str, Any]] = {}
+    for section in request.get("sections", []):
+        if not isinstance(section, Mapping):
+            continue
+        for candidate in _section_candidates(section, "fields"):
+            if isinstance(candidate, Mapping) and isinstance(
+                candidate.get("candidateId"), str
+            ):
+                candidates[candidate["candidateId"]] = candidate
+
+    commands = {
+        ("input", "text"): "SET_TEXT",
+        ("textarea", "textarea"): "SET_TEXT",
+        ("select", "select"): "SELECT_OPTION",
+        ("input", "radio"): "CHECK_RADIO",
+        ("input", "checkbox"): "CHECK_CHECKBOX",
+    }
+    errors: list[str] = []
+    for field in response.get("fields", []):
+        if not isinstance(field, Mapping):
+            continue
+        candidate_id = field.get("candidateId")
+        candidate = candidates.get(candidate_id)
+        if candidate is None:
+            continue
+        write_plan = field.get("writePlan")
+        actual_command = (
+            write_plan.get("command") if isinstance(write_plan, Mapping) else None
+        )
+        if field.get("matchType") == "NO_MATCH":
+            expected_status = "BLOCKED"
+            expected_command = None
+            if field.get("reasonCodes") != ["NO_MATCH"]:
+                errors.append(f"{path}: {candidate_id} NO_MATCH reasonCodes가 다릅니다")
+        elif (
+            candidate.get("disabled") is True
+            or candidate.get("readonly") is True
+            or candidate.get("inert") is True
+        ):
+            expected_status = "BLOCKED"
+            expected_command = None
+        elif candidate.get("visibility") == "hidden":
+            expected_status = "MANUAL_REVEAL_REQUIRED"
+            expected_command = None
+        else:
+            expected_command = commands.get(
+                (candidate.get("element"), candidate.get("control"))
+            )
+            if expected_command is None:
+                expected_status = "UNVERIFIED"
+            else:
+                expected_status = "READY"
+        if field.get("interactionStatus") != expected_status:
+            errors.append(
+                f"{path}: {candidate_id} interactionStatus는 "
+                f"{expected_status}여야 합니다"
+            )
+        if actual_command != expected_command:
+            errors.append(
+                f"{path}: {candidate_id} write command는 "
+                f"{expected_command or '없음'}이어야 합니다"
+            )
+    return errors
+
+
 def _llm_relationship_errors(
     llm_input: Mapping[str, Any],
     llm_output: Mapping[str, Any],
     path: str,
 ) -> list[str]:
-    input_ids = _nested_field_candidate_ids(llm_input)
+    input_ids = _nested_candidate_ids(llm_input, "fields")
     output_ids = [
-        result["candidateId"]
+        result.get("candidateId")
         for result in llm_output.get("results", [])
         if isinstance(result, Mapping)
-        and isinstance(result.get("candidateId"), str)
     ]
-    errors: list[str] = []
-    if len(input_ids) != len(set(input_ids)):
-        errors.append(f"{path}: LLM input candidateId가 중복됩니다")
-    if len(output_ids) != len(set(output_ids)):
-        errors.append(f"{path}: LLM output candidateId가 중복됩니다")
-    missing = sorted(set(input_ids) - set(output_ids))
-    unexpected = sorted(set(output_ids) - set(input_ids))
-    if missing:
-        errors.append(f"{path}: LLM output candidateId가 누락됐습니다: {', '.join(missing)}")
-    if unexpected:
-        errors.append(
-            f"{path}: LLM input에 없는 candidateId입니다: {', '.join(unexpected)}"
-        )
+    errors = _llm_header_errors(llm_input, llm_output, path)
+    errors.extend(_exact_candidate_set_errors(input_ids, output_ids, path))
     return errors
 
 
@@ -571,32 +763,174 @@ def _llm_input_relationship_errors(
     llm_input: Mapping[str, Any],
     path: str,
 ) -> list[str]:
-    request_ids = _nested_field_candidate_ids(fields_request)
-    input_ids = _nested_field_candidate_ids(llm_input)
-    errors: list[str] = []
-    missing = sorted(set(request_ids) - set(input_ids))
-    unexpected = sorted(set(input_ids) - set(request_ids))
-    if missing:
-        errors.append(f"{path}: LLM input candidateId가 누락됐습니다: {', '.join(missing)}")
-    if unexpected:
-        errors.append(
-            f"{path}: fields request에 없는 candidateId입니다: {', '.join(unexpected)}"
-        )
+    request_ids = _nested_candidate_ids(fields_request, "fields")
+    input_ids = _nested_candidate_ids(llm_input, "fields")
+    errors = _llm_header_errors(fields_request, llm_input, path)
+    errors.extend(_exact_candidate_set_errors(request_ids, input_ids, path))
     return errors
 
 
-def _nested_field_candidate_ids(payload: Mapping[str, Any]) -> list[str]:
+def _llm_action_input_relationship_errors(
+    request: Mapping[str, Any],
+    llm_input: Mapping[str, Any],
+    path: str,
+) -> list[str]:
+    errors = _llm_header_errors(request, llm_input, path)
+    errors.extend(
+        _exact_candidate_set_errors(
+            _nested_candidate_ids(request, "actionCandidates"),
+            _nested_candidate_ids(llm_input, "actionCandidates"),
+            path,
+        )
+    )
+    return errors
+
+
+def _llm_action_output_relationship_errors(
+    llm_input: Mapping[str, Any],
+    llm_output: Mapping[str, Any],
+    path: str,
+) -> list[str]:
+    expected = _nested_candidate_ids(llm_input, "actionCandidates")
+    results = [
+        result
+        for result in llm_output.get("results", [])
+        if isinstance(result, Mapping)
+    ]
+    actual = [result.get("candidateId") for result in results]
+    errors = _llm_header_errors(llm_input, llm_output, path)
+    errors.extend(_exact_candidate_set_errors(expected, actual, path))
+    errors.extend(_action_result_errors(llm_input, results, path))
+    return errors
+
+
+def _exact_candidate_set_errors(
+    expected: list[Any],
+    actual: list[Any],
+    prefix: str,
+) -> list[str]:
+    expected_ids = [value for value in expected if isinstance(value, str)]
+    actual_ids = [value for value in actual if isinstance(value, str)]
+    expected_counts = Counter(expected_ids)
+    actual_counts = Counter(actual_ids)
+    errors = [
+        f"{prefix}: duplicate candidateId: {candidate_id}"
+        for candidate_id, count in actual_counts.items()
+        if count > 1
+    ]
+    missing = sorted(expected_counts.keys() - actual_counts.keys())
+    unknown = sorted(actual_counts.keys() - expected_counts.keys())
+    if missing:
+        errors.append(f"{prefix}: missing candidateId: {', '.join(missing)}")
+    if unknown:
+        errors.append(f"{prefix}: unknown candidateId: {', '.join(unknown)}")
+    return errors
+
+
+def _llm_header_errors(
+    source: Mapping[str, Any],
+    result: Mapping[str, Any],
+    path: str,
+) -> list[str]:
+    errors: list[str] = []
+    if source.get("schemaVersion") != result.get("schemaVersion"):
+        errors.append(f"{path}: schemaVersion이 일치하지 않습니다")
+    if source.get("snapshotId") != result.get("snapshotId"):
+        errors.append(f"{path}: snapshotId가 일치하지 않습니다")
+    return errors
+
+
+def _action_result_errors(
+    llm_input: Mapping[str, Any],
+    results: list[Mapping[str, Any]],
+    path: str,
+) -> list[str]:
+    candidates: dict[str, Mapping[str, Any]] = {}
+    section_ids: set[str] = set()
+    for section in llm_input.get("sections", []):
+        if not isinstance(section, Mapping):
+            continue
+        section_id = section.get("sectionId")
+        if isinstance(section_id, str):
+            section_ids.add(section_id)
+        for candidate in _section_candidates(section, "actionCandidates"):
+            if isinstance(candidate, Mapping) and isinstance(
+                candidate.get("candidateId"), str
+            ):
+                candidates[candidate["candidateId"]] = candidate
+
+    errors: list[str] = []
+    for result in results:
+        if result.get("actionType") != "ACTION":
+            continue
+        candidate_id = result.get("candidateId")
+        candidate = candidates.get(candidate_id)
+        if candidate is None:
+            continue
+        if (
+            candidate.get("visibility") != "visible"
+            or candidate.get("disabled") is True
+            or candidate.get("readonly") is True
+            or candidate.get("inert") is True
+        ):
+            errors.append(
+                f"{path}: ACTION은 실행 불가 candidate를 사용할 수 없습니다: "
+                f"{candidate_id}"
+            )
+        command = result.get("command")
+        effect = result.get("expectedEffect")
+        if command == "REVEAL_SECTION":
+            if effect != "TARGET_VISIBLE":
+                errors.append(f"{path}: REVEAL_SECTION tuple이 올바르지 않습니다")
+            target = result.get("targetSectionId")
+            if target not in section_ids:
+                errors.append(f"{path}: targetSectionId가 LLM input에 없습니다")
+        elif command == "ADD_REPEATABLE_GROUP":
+            if effect != "GROUP_COUNT_INCREMENT":
+                errors.append(
+                    f"{path}: ADD_REPEATABLE_GROUP tuple이 올바르지 않습니다"
+                )
+        else:
+            errors.append(f"{path}: 지원하지 않는 ACTION command입니다")
+    return errors
+
+
+def _partial_response_errors(
+    kind: str,
+    response: Mapping[str, Any],
+    prefix: str,
+) -> list[str]:
+    if response.get("analysisStatus") != "PARTIAL":
+        return []
+    result_name = (
+        "preparationPlans" if kind == "preparation-response" else "fields"
+    )
+    errors: list[str] = []
+    if response.get("warningCodes") != ["LLM_UNAVAILABLE"]:
+        errors.append(f"{prefix}: PARTIAL warningCodes가 올바르지 않습니다")
+    if response.get(result_name) != []:
+        errors.append(f"{prefix}: PARTIAL 결과는 비어 있어야 합니다")
+    return errors
+
+
+def _nested_candidate_ids(
+    payload: Mapping[str, Any], collection_name: str
+) -> list[str]:
     candidate_ids: list[str] = []
     for section in payload.get("sections", []):
         if not isinstance(section, Mapping):
             continue
         candidate_ids.extend(
             candidate["candidateId"]
-            for candidate in _section_candidates(section, "fields")
+            for candidate in _section_candidates(section, collection_name)
             if isinstance(candidate, Mapping)
             and isinstance(candidate.get("candidateId"), str)
         )
     return candidate_ids
+
+
+def _nested_field_candidate_ids(payload: Mapping[str, Any]) -> list[str]:
+    return _nested_candidate_ids(payload, "fields")
 
 
 def _request_candidate_ids(request: Mapping[str, Any]) -> tuple[set[str], set[str]]:
@@ -629,8 +963,22 @@ def _section_candidates(section: Mapping[str, Any], collection: str) -> list[Any
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--openapi", type=Path, default=root / "llm-wiki/raw/issues/CF-44/documents/api/application-form-analysis.openapi.yaml")
-    parser.add_argument("--reference", type=Path, default=root / "llm-wiki/raw/issues/CF-44/documents/api/application-form-analysis-api.md")
+    parser.add_argument(
+        "--openapi",
+        type=Path,
+        default=(
+            root
+            / "llm-wiki/raw/issues/CF-40/documents/api/application-form-analysis.openapi.yaml"
+        ),
+    )
+    parser.add_argument(
+        "--reference",
+        type=Path,
+        default=(
+            root
+            / "llm-wiki/raw/issues/CF-40/documents/api/application-form-analysis-api.md"
+        ),
+    )
     arguments = parser.parse_args()
     errors = validate_contract(arguments.openapi, arguments.reference)
     try:
