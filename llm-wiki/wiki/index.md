@@ -48,3 +48,4 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | 전용 endpoint, canonical field key와 LLM 1:1 계약 | 2026-08-25 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | adapter 배타성, 비식별 LLM 전송과 browser 실행 경계 | 2026-08-25 |
+| [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
