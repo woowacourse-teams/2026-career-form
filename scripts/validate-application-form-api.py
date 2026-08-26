@@ -200,14 +200,42 @@ def _openapi_structure_errors(document: Mapping[str, Any]) -> list[str]:
 
 def _current_contract_errors(document: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
-    limits = document.get("x-snapshot-byte-limits")
-    if limits != {"raw": 65_536, "canonical": 65_536}:
-        errors.append("raw/canonical snapshot byte 상한은 각각 65,536이어야 합니다")
+    if "x-snapshot-byte-limits" in document:
+        errors.append("x-snapshot-byte-limits는 현재 계약에서 사용하지 않습니다")
 
-    expected_statuses = {"200", "400", "413", "500"}
+    components = document.get("components", {})
+    if isinstance(components, Mapping):
+        removed_components = {
+            "schemas": {"SnapshotTooLarge", "SnapshotTooLargeError"},
+            "responses": {"SnapshotTooLarge"},
+        }
+        for component_kind, removed_names in removed_components.items():
+            values = components.get(component_kind, {})
+            if not isinstance(values, Mapping):
+                continue
+            for name in sorted(removed_names & set(values)):
+                errors.append(
+                    f"components.{component_kind}.{name}는 현재 계약에서 "
+                    "사용하지 않습니다"
+                )
+
+        def uses_removed_error_code(value: Any) -> bool:
+            if isinstance(value, Mapping):
+                return value.get("const") == "SNAPSHOT_TOO_LARGE" or any(
+                    uses_removed_error_code(child) for child in value.values()
+                )
+            if isinstance(value, list):
+                return any(uses_removed_error_code(child) for child in value)
+            return False
+
+        if uses_removed_error_code(components):
+            errors.append(
+                "SNAPSHOT_TOO_LARGE error code는 현재 계약에서 사용하지 않습니다"
+            )
+
+    expected_statuses = {"200", "400", "500"}
     expected_codes = {
         "400": "INVALID_REQUEST",
-        "413": "SNAPSHOT_TOO_LARGE",
         "500": "INTERNAL_ERROR",
     }
     paths = document.get("paths", {})
@@ -225,7 +253,7 @@ def _current_contract_errors(document: Mapping[str, Any]) -> list[str]:
             continue
         if set(responses) != expected_statuses:
             errors.append(
-                f"{path}: response status는 200/400/413/500만 허용합니다"
+                f"{path}: response status는 200/400/500만 허용합니다"
             )
         for status, expected_code in expected_codes.items():
             response_schema = responses.get(status)

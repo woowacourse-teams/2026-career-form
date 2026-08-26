@@ -271,12 +271,19 @@ class ApplicationFormApiCurrentCases:
         self.assertTrue(any("field-disabled-hidden" in error for error in errors))
         self.assertTrue(any("field-text" in error for error in errors))
 
-    def test_rejects_current_status_byte_limit_and_error_code_drift(self) -> None:
+    def test_accepts_current_statuses_without_snapshot_byte_limit(self) -> None:
         validator = load_validator()
         current_errors = getattr(validator, "_current_contract_errors", None)
         self.assertIsNotNone(current_errors)
         valid = self._current_contract_document()
+
         self.assertEqual([], current_errors(valid))
+
+    def test_rejects_current_status_and_error_code_drift(self) -> None:
+        validator = load_validator()
+        current_errors = getattr(validator, "_current_contract_errors", None)
+        self.assertIsNotNone(current_errors)
+        valid = self._current_contract_document()
 
         mutations = []
         with_429 = copy.deepcopy(valid)
@@ -289,9 +296,53 @@ class ApplicationFormApiCurrentCases:
             "502"
         ] = {"description": "not used"}
         mutations.append(with_502)
-        wrong_limit = copy.deepcopy(valid)
-        wrong_limit["x-snapshot-byte-limits"]["canonical"] = 65_535
-        mutations.append(wrong_limit)
+        with_413 = copy.deepcopy(valid)
+        with_413["paths"]["/api/v1/fields/analyze"]["post"]["responses"][
+            "413"
+        ] = {"description": "removed contract"}
+        mutations.append(with_413)
+        with_snapshot_limits = copy.deepcopy(valid)
+        with_snapshot_limits["x-snapshot-byte-limits"] = {
+            "raw": 65_536,
+            "canonical": 65_536,
+        }
+        mutations.append(with_snapshot_limits)
+        with_snapshot_too_large_schema = copy.deepcopy(valid)
+        with_snapshot_too_large_schema["components"]["schemas"][
+            "SnapshotTooLargeError"
+        ] = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["code", "message"],
+            "properties": {
+                "code": {"type": "string", "const": "SNAPSHOT_TOO_LARGE"},
+                "message": {"type": "string"},
+            },
+        }
+        with_snapshot_too_large_schema["components"]["responses"][
+            "SnapshotTooLarge"
+        ] = {
+            "description": "removed contract",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/SnapshotTooLargeError"
+                    }
+                }
+            },
+        }
+        mutations.append(with_snapshot_too_large_schema)
+        with_renamed_snapshot_too_large_schema = copy.deepcopy(valid)
+        with_renamed_snapshot_too_large_schema["components"]["schemas"][
+            "RemovedError"
+        ] = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "code": {"type": "string", "const": "SNAPSHOT_TOO_LARGE"},
+            },
+        }
+        mutations.append(with_renamed_snapshot_too_large_schema)
         wrong_code = copy.deepcopy(valid)
         wrong_code["components"]["schemas"]["InternalError"]["properties"][
             "code"

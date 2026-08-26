@@ -43,7 +43,6 @@ class ApplicationFormApiValidatorTestCase(unittest.TestCase):
                     "responses": {
                         "200": {"description": "ok"},
                         "400": {"$ref": "#/components/responses/InvalidRequest"},
-                        "413": {"$ref": "#/components/responses/SnapshotTooLarge"},
                         "500": {"$ref": "#/components/responses/InternalError"},
                     }
                 }
@@ -52,7 +51,6 @@ class ApplicationFormApiValidatorTestCase(unittest.TestCase):
         responses = {}
         for name, code in (
             ("InvalidRequest", "INVALID_REQUEST"),
-            ("SnapshotTooLarge", "SNAPSHOT_TOO_LARGE"),
             ("InternalError", "INTERNAL_ERROR"),
         ):
             schemas[name] = {
@@ -74,7 +72,6 @@ class ApplicationFormApiValidatorTestCase(unittest.TestCase):
             }
         return {
             "info": {"version": "3.0.0"},
-            "x-snapshot-byte-limits": {"raw": 65_536, "canonical": 65_536},
             "paths": operations,
             "components": {"responses": responses, "schemas": schemas},
         }
@@ -83,9 +80,6 @@ class ApplicationFormApiValidatorTestCase(unittest.TestCase):
         document = yaml.safe_load(self.openapi_path.read_text(encoding="utf-8"))
         document["info"] = {"title": "Synthetic successor", "version": "3.0.0"}
         current_contract = self._current_contract_document()
-        document["x-snapshot-byte-limits"] = current_contract[
-            "x-snapshot-byte-limits"
-        ]
         schemas = document["components"]["schemas"]
         schemas.update(SUCCESSOR_SCHEMAS)
         schemas.update(current_contract["components"]["schemas"])
