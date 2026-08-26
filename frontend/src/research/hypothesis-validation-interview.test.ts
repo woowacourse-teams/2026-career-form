@@ -369,6 +369,11 @@ describe("hypothesis validation interview prototype", () => {
         .map((input) => input.dataset.reviewKey),
     ).toEqual(EXPECTED_REVIEW_KEYS.available);
     expect(document.querySelectorAll("#assisted-form input")).toHaveLength(17);
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>("#assisted-form input"),
+      ].every((input) => input.disabled),
+    ).toBe(true);
 
     Object.entries(inputsByStatus).forEach(([status, inputs]) => {
       inputs.forEach((input) => {
@@ -429,6 +434,9 @@ describe("hypothesis validation interview prototype", () => {
       getElement<HTMLElement>(document, "sensitive-value"),
     ).not.toHaveClass("is-revealed");
     expect(
+      getElement<HTMLElement>(document, "sensitive-status"),
+    ).not.toHaveClass("is-revealed");
+    expect(
       getElement<HTMLInputElement>(document, "review-veteran-status"),
     ).toBeDisabled();
     expect(
@@ -440,6 +448,11 @@ describe("hypothesis validation interview prototype", () => {
     expect(readFormValues(document, "assisted-form")).toEqual(
       EMPTY_FORM_VALUES,
     );
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>("#assisted-form input"),
+      ].every((input) => input.disabled),
+    ).toBe(true);
   });
 
   it("clears the previous survey and summary when task B restarts", () => {
@@ -493,6 +506,12 @@ describe("hypothesis validation interview prototype", () => {
         getElement<HTMLElement>(document, "sensitive-value").textContent,
       ),
     ).toBe("비해당");
+    expect(getElement<HTMLElement>(document, "sensitive-status")).toHaveClass(
+      "is-revealed",
+    );
+    expect(html).toMatch(
+      /\.sensitive-status\.is-revealed\s*{[^}]*filter:\s*none/,
+    );
     expect(readFormValues(document, "assisted-form")).toEqual(
       EMPTY_FORM_VALUES,
     );
@@ -505,6 +524,12 @@ describe("hypothesis validation interview prototype", () => {
       EMPTY_FORM_VALUES,
     );
     getElement<HTMLButtonElement>(document, "approve-autofill").click();
+
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>("#assisted-form input"),
+      ].every((input) => !input.disabled),
+    ).toBe(true);
 
     expect(getElement<HTMLInputElement>(document, "assisted-name").value).toBe(
       "",
@@ -551,6 +576,11 @@ describe("hypothesis validation interview prototype", () => {
     const emailReview = getElement<HTMLInputElement>(document, "review-email");
     emailReview.checked = false;
     emailReview.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>("#assisted-form input"),
+      ].every((input) => input.disabled),
+    ).toBe(true);
     getElement<HTMLButtonElement>(document, "complete-assisted-task").click();
 
     expect(
@@ -713,6 +743,11 @@ describe("hypothesis validation interview prototype", () => {
     expect(readFormValues(document, "assisted-form")).toEqual(
       EMPTY_FORM_VALUES,
     );
+    expect(
+      [
+        ...document.querySelectorAll<HTMLInputElement>("#assisted-form input"),
+      ].every((input) => input.disabled),
+    ).toBe(true);
     expect(
       readReviewInputs(document, "is-available").every(
         (input) => input.checked && !input.disabled,

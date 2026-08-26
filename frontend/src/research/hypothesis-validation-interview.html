@@ -588,6 +588,10 @@
         filter: blur(4px);
       }
 
+      .sensitive-status.is-revealed {
+        filter: none;
+      }
+
       .sensitive-value.is-revealed {
         filter: none;
         user-select: text;
@@ -2169,8 +2173,15 @@
         byId(formId).reset();
       }
 
+      function setAssistedFormDisabled(disabled) {
+        document.querySelectorAll("#assisted-form input").forEach((input) => {
+          input.disabled = disabled;
+        });
+      }
+
       function resetAssistedReview() {
         resetForm("assisted-form");
+        setAssistedFormDisabled(true);
         document
           .querySelectorAll("#autofill-review input[type=checkbox]")
           .forEach((input) => {
@@ -2182,6 +2193,7 @@
             );
           });
         byId("sensitive-value").classList.remove("is-revealed");
+        byId("sensitive-status").classList.remove("is-revealed");
         byId("sensitive-status").setAttribute("aria-hidden", "true");
         byId("sensitive-value").setAttribute("aria-hidden", "true");
         byId("reveal-sensitive").setAttribute("aria-expanded", "false");
@@ -2204,6 +2216,7 @@
 
       function invalidateAssistedApproval() {
         if (!sessionState.assisted.started) return;
+        setAssistedFormDisabled(true);
         sessionState = {
           ...sessionState,
           assisted: {
@@ -2332,6 +2345,7 @@
         const value = byId("sensitive-value");
         const status = byId("sensitive-status");
         const revealed = value.classList.toggle("is-revealed");
+        status.classList.toggle("is-revealed", revealed);
         byId("reveal-sensitive").setAttribute(
           "aria-expanded",
           String(revealed),
@@ -2368,6 +2382,7 @@
             target.value = selectedKeys.has(key) ? assistedFixture[key] : "";
           }
         });
+        setAssistedFormDisabled(false);
         sessionState = {
           ...sessionState,
           assisted: {
