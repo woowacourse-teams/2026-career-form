@@ -53,4 +53,57 @@ public final class LlmContractSchemas {
             }
             """.formatted(keyEnum);
     }
+
+    public static String actionOutput() {
+        return """
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["schemaVersion", "snapshotId", "results"],
+              "properties": {
+                "schemaVersion": {"type": "integer", "enum": [2]},
+                "snapshotId": {"type": "string"},
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["candidateId", "actionType", "command", "expectedEffect", "targetSectionId"],
+                        "properties": {
+                          "candidateId": {"type": "string"},
+                          "actionType": {"type": "string", "enum": ["ACTION"]},
+                          "command": {"type": "string", "enum": ["REVEAL_SECTION"]},
+                          "expectedEffect": {"type": "string", "enum": ["TARGET_VISIBLE"]},
+                          "targetSectionId": {"type": "string"}
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["candidateId", "actionType", "command", "expectedEffect"],
+                        "properties": {
+                          "candidateId": {"type": "string"},
+                          "actionType": {"type": "string", "enum": ["ACTION"]},
+                          "command": {"type": "string", "enum": ["ADD_REPEATABLE_GROUP"]},
+                          "expectedEffect": {"type": "string", "enum": ["GROUP_COUNT_INCREMENT"]}
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["candidateId", "actionType"],
+                        "properties": {
+                          "candidateId": {"type": "string"},
+                          "actionType": {"type": "string", "enum": ["NO_ACTION"]}
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+            """;
+    }
 }
