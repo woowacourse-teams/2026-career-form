@@ -60,8 +60,8 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 | --- | --- | --- |
 | `surface-canvas` | `#1A1A1A` | 모든 슬라이드 배경 |
 | `text-primary` | `#FFF9F9` | 제목, 본문과 핵심 도형 선 |
-| `text-muted` | `#8A8787` | 읽어야 하는 보조 설명과 라벨 |
-| `decoration-muted` | `#4C4C4C` | 비활성 원, 구분선과 장식 |
+| `text-secondary` | `#8A8787` | 읽어야 하는 보조 설명과 라벨 |
+| `text-muted` | `#4C4C4C` | 비활성 보조 텍스트, 원, 구분선과 장식 |
 | `watermark` | `#232323` | 큰 배경 단어와 저대비 장식 |
 | `accent-ai` | `#FF5C00` | AI 개념, 핵심 어절과 활성 원 |
 | `accent-cs` | `#00FF8C` | CS 개념, 시스템 원인과 활성 원 |
@@ -71,8 +71,8 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 강조색을 같은 위계로 함께 쓰지 않는다. 둘의 관계를 설명해야 하면 각각 한 개의
 명시된 요소에만 적용하고 흰색을 중립 연결색으로 쓴다.
 
-`decoration-muted`는 작은 본문에 사용하지 않는다. 읽어야 하는 보조 문구는 최소
-`text-muted`를 사용한다. 워터마크는 배경과 낮은 대비를 유지하고 본문보다 앞으로
+`text-muted`는 작은 본문에 사용하지 않는다. 읽어야 하는 보조 문구는 최소
+`text-secondary`를 사용한다. 워터마크는 배경과 낮은 대비를 유지하고 본문보다 앞으로
 나오지 않게 한다.
 
 ### 서체
@@ -136,7 +136,7 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 
 ### 선과 도형
 
-- 기본 선은 2 px `decoration-muted`다.
+- 기본 선은 2 px `text-muted`다.
 - 강조 원과 강조 구분선은 8 px이며 주 강조색을 사용한다.
 - 패널 테두리는 2 px `text-muted`이며 채우기는 투명이다.
 - 모서리는 기본적으로 각지게 둔다. 코드 패널만 12 px 반경을 허용한다.
@@ -151,7 +151,7 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 이미지 비율을 변형하지 않는다. 자른 뒤 핵심 피사체와 읽어야 하는 UI가 안전 영역
 밖으로 나가면 안 된다.
 
-스크린샷은 어두운 패널 위에 두고 2 px `decoration-muted` 테두리를 적용한다. 캡션은
+스크린샷은 어두운 패널 위에 두고 2 px `text-muted` 테두리를 적용한다. 캡션은
 이미지 아래 24 px 간격에 `caption`으로 둔다. 출처가 필요하면 캡션 마지막에 짧게
 표시한다.
 
@@ -212,12 +212,12 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 | --- | --- | --- |
 | 중심 원 | `x=711, y=293, w=498, h=498` | 8 px 주 강조색 선, 투명 채우기 |
 | 중심 라벨 | 중심 원 내부 | `heading`, 주 강조색, 중앙 정렬 |
-| 주변 원 | 지름 208 또는 244 | 2 px `decoration-muted`, 투명 채우기 |
+| 주변 원 | 지름 208 또는 244 | 2 px `text-muted`, 투명 채우기 |
 | 주변 라벨 | 각 원 안쪽 24 px | `caption`, 중앙 정렬 |
 
 주변 원은 3개부터 8개까지 사용하며 중심 원과 24 px 이상 겹치게 하거나 48 px 이상
 떨어뜨린다. 어중간하게 닿게 두지 않는다. 활성 관계만 주 강조색으로 바꾸고 나머지는
-`decoration-muted`로 남긴다. 선으로 모든 원을 연결하지 않는다. 점진적으로 원을
+`text-muted`로 남긴다. 선으로 모든 원을 연결하지 않는다. 점진적으로 원을
 추가하는 복제 슬라이드는 만들지 않는다.
 
 ### L04 워터마크 질문 또는 선언
@@ -259,7 +259,7 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 
 개념의 상태 변화를 보여줄 때는 측면 단어 변형을 사용할 수 있다. 측면 단어는
 `x=-24, y=170, w=320, h=760`에서 90도 회전한 `display-max`와
-`decoration-muted`로 표시한다. 핵심 단어는 `x=300, y=300, w=800, h=180`, 설명은
+`text-muted`로 표시한다. 핵심 단어는 `x=300, y=300, w=800, h=180`, 설명은
 `x=1120, y=390, w=660, h=260`에 둔다. 측면 단어는 한 단어, 설명은 네 줄 이하다.
 이 변형의 완성 전 상태를 별도 슬라이드로 만들지 않는다.
 
@@ -270,7 +270,7 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 | 요소 | 위치와 크기 | 스타일 |
 | --- | --- | --- |
 | 왼쪽 영역 | `x=216, y=250, w=650, h=600` | 왼쪽 대상 |
-| 구분선 | `x=960, y=245, w=2, h=610` | 2 px `decoration-muted` |
+| 구분선 | `x=960, y=245, w=2, h=610` | 2 px `text-muted` |
 | 오른쪽 영역 | `x=1054, y=250, w=650, h=600` | 오른쪽 대상 |
 | 영역 제목 | 각 영역 상단 72 px | `heading`, 중앙 정렬 |
 
@@ -313,6 +313,7 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 | 바깥 상자 | `x=216, y=170, w=1488, h=720` | 2 px `text-muted`, 투명 채우기 |
 | 중간 상자 | 바깥 상자 안쪽 64 px | 2 px `text-muted`, 투명 채우기 |
 | 안쪽 상자 | 중간 상자 안쪽 64 px | 2 px `text-muted`, 투명 채우기 |
+| 가장 안쪽 상자 | 안쪽 상자 안쪽 64 px | 2 px `text-muted`, 투명 채우기 |
 | 계층 라벨 | 각 상자 좌상단에서 24 px | `heading` 또는 `body-large` |
 | 제한 설명 | 라벨 아래 16 px | `caption`, 주 강조색 |
 
@@ -326,7 +327,7 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 | 요소 | 위치와 크기 | 스타일 |
 | --- | --- | --- |
 | 상단 안내 | `x=216, y=150, w=1488, h=70` | `body`, 왼쪽 정렬 |
-| 열 제목 | `y=290`, 세 열 | `heading`, 중앙 정렬 |
+| 열 제목 | `x=216, 732, 1248, y=290`, 각 `w=420` | `heading`, 중앙 정렬 |
 | 행 본문 | `y=390..860`, 최대 7행 | `caption`, 중앙 정렬 |
 | 연결선 | 열 사이 | 2 px `text-muted`, 수평 |
 
@@ -352,7 +353,7 @@ document.documentElement.style.setProperty("--slide-scale", String(scale));
 - 한 슬라이드에서 주황과 초록을 장식 목적으로 동시에 반복 사용
 - Noto Sans KR와 Pretendard 혼용
 - 글자 크기를 토큰보다 줄여 콘텐츠를 억지로 맞추기
-- 본문을 `decoration-muted`로 표시해 대비를 낮추기
+- 본문을 `text-muted`로 표시해 대비를 낮추기
 - 그림자, 그라데이션, 입체 도형과 장식 아이콘 추가
 - 이미지를 비율과 다르게 늘리기
 - 읽을 수 없는 전체 화면 스크린샷이나 13줄을 넘는 코드
