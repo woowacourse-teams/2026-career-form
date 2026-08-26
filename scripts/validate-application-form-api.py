@@ -23,10 +23,7 @@ _partial_response_errors = _relationships._partial_response_errors
 _openapi_structure_errors = _schema._openapi_structure_errors
 _current_contract_errors = _schema._current_contract_errors
 _validate_schema = _schema._validate_schema
-_resolve = _schema._resolve
-_has_type = _schema._has_type
 _forbidden_property_errors = _schema._forbidden_property_errors
-FORBIDDEN_PROPERTIES = _schema.FORBIDDEN_PROPERTIES
 EXAMPLE_PATTERN = re.compile(
     r"<!-- (?:api-example: (preparation-request|preparation-response|fields-request|fields-response)|llm-example: (mapping-input|mapping-output|action-input|action-output)) -->\s*```json\s*(.*?)```",
     re.DOTALL,
