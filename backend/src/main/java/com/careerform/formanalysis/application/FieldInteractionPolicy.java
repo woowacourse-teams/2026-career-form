@@ -2,78 +2,78 @@ package com.careerform.formanalysis.application;
 
 import java.util.List;
 
-import com.careerform.formanalysis.domain.FieldMappingResolution;
-import com.careerform.formanalysis.domain.FieldsAnalysis;
-import com.careerform.formanalysis.domain.FieldsSnapshot;
-import com.careerform.formanalysis.domain.FormControl;
-import com.careerform.formanalysis.domain.FormElement;
-import com.careerform.formanalysis.domain.Visibility;
+import org.springframework.stereotype.Component;
 
+import com.careerform.formanalysis.application.port.FieldMappingResolver;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility;
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse.InteractionStatus;
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse.ReasonCode;
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse.WriteCommand;
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse.WritePlan;
+
+@Component
 public final class FieldInteractionPolicy {
 
     public Decision evaluate(
-        FieldsSnapshot.FieldCandidate candidate,
-        FieldMappingResolution.Result mapping
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping
     ) {
-        if (mapping instanceof FieldMappingResolution.NoMatch) {
+        if (mapping instanceof FieldMappingResolver.NoMatch) {
             return new Decision(
-                FieldsAnalysis.InteractionStatus.BLOCKED,
-                List.of(FieldsAnalysis.ReasonCode.NO_MATCH),
+                InteractionStatus.BLOCKED,
+                List.of(ReasonCode.NO_MATCH),
                 null
             );
         }
         if (Boolean.TRUE.equals(candidate.disabled())
             || Boolean.TRUE.equals(candidate.readonly())
             || Boolean.TRUE.equals(candidate.inert())) {
-            return withoutWrite(FieldsAnalysis.InteractionStatus.BLOCKED);
+            return withoutWrite(InteractionStatus.BLOCKED);
         }
         if (candidate.visibility() == Visibility.HIDDEN) {
-            return withoutWrite(
-                FieldsAnalysis.InteractionStatus.MANUAL_REVEAL_REQUIRED
-            );
+            return withoutWrite(InteractionStatus.MANUAL_REVEAL_REQUIRED);
         }
-        FieldsAnalysis.WriteCommand command = writeCommand(candidate);
+        WriteCommand command = writeCommand(candidate);
         if (command == null) {
-            return withoutWrite(FieldsAnalysis.InteractionStatus.UNVERIFIED);
+            return withoutWrite(InteractionStatus.UNVERIFIED);
         }
         return new Decision(
-            FieldsAnalysis.InteractionStatus.READY,
+            InteractionStatus.READY,
             List.of(),
-            new FieldsAnalysis.WritePlan(command)
+            new WritePlan(command)
         );
     }
 
-    private static Decision withoutWrite(
-        FieldsAnalysis.InteractionStatus status
-    ) {
+    private static Decision withoutWrite(InteractionStatus status) {
         return new Decision(status, List.of(), null);
     }
 
-    private static FieldsAnalysis.WriteCommand writeCommand(
-        FieldsSnapshot.FieldCandidate candidate
-    ) {
+    private static WriteCommand writeCommand(FieldCandidate candidate) {
         FormElement element = candidate.element();
         FormControl control = candidate.control();
         if (element == FormElement.INPUT && control == FormControl.TEXT
             || element == FormElement.TEXTAREA && control == FormControl.TEXTAREA) {
-            return FieldsAnalysis.WriteCommand.SET_TEXT;
+            return WriteCommand.SET_TEXT;
         }
         if (element == FormElement.SELECT && control == FormControl.SELECT) {
-            return FieldsAnalysis.WriteCommand.SELECT_OPTION;
+            return WriteCommand.SELECT_OPTION;
         }
         if (element == FormElement.INPUT && control == FormControl.RADIO) {
-            return FieldsAnalysis.WriteCommand.CHECK_RADIO;
+            return WriteCommand.CHECK_RADIO;
         }
         if (element == FormElement.INPUT && control == FormControl.CHECKBOX) {
-            return FieldsAnalysis.WriteCommand.CHECK_CHECKBOX;
+            return WriteCommand.CHECK_CHECKBOX;
         }
         return null;
     }
 
     public record Decision(
-        FieldsAnalysis.InteractionStatus interactionStatus,
-        List<FieldsAnalysis.ReasonCode> reasonCodes,
-        FieldsAnalysis.WritePlan writePlan
+        InteractionStatus interactionStatus,
+        List<ReasonCode> reasonCodes,
+        WritePlan writePlan
     ) {
     }
 }

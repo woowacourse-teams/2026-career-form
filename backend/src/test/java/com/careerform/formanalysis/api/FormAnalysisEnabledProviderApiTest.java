@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -38,13 +39,13 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(properties = {
     "spring.mongodb.uri=mongodb://localhost/career-form-test",
     "career-form.llm.enabled=true",
-    "career-form.llm.provider=openai",
-    "career-form.llm.model=gpt-5.6-luna",
-    "career-form.llm.max-output-tokens=2048",
-    "spring.ai.openai.api-key=synthetic-test-key"
+    "spring.ai.openai.api-key=synthetic-test-key",
+    "spring.ai.openai.chat.model=gpt-5.6-luna",
+    "spring.ai.openai.chat.max-completion-tokens=2048"
 })
 @AutoConfigureMockMvc
 @Import(FormAnalysisEnabledProviderApiTest.FakeProviderConfiguration.class)
+@DisplayName("OpenAI 활성화 API")
 class FormAnalysisEnabledProviderApiTest {
 
     private static final String PRIVATE_MARKER = "private-provider-response-marker";
@@ -59,19 +60,19 @@ class FormAnalysisEnabledProviderApiTest {
     private OpenAiCommonProperties openAiCommonProperties;
 
     @BeforeEach
+    @DisplayName("가짜 ChatModel 응답을 초기화한다")
     void resetModel() {
         model.respondWith("{}");
     }
 
     @Test
+    @DisplayName("단순한 목록 묶음 응답으로 두 OpenAI 해석기를 연결한다")
     void mapsBothEndpointsThroughTheConfiguredProvider() throws Exception {
         model.respondWith("""
-            {"schemaVersion":2,"snapshotId":"snapshot-preparation-1","results":[
-              {"candidateId":"action-direct","actionType":"ACTION",
-               "command":"ADD_REPEATABLE_GROUP",
-               "expectedEffect":"GROUP_COUNT_INCREMENT"},
-              {"candidateId":"action-item","actionType":"NO_ACTION"}
-            ]}
+            {"schemaVersion":2,"snapshotId":"snapshot-preparation-1",
+             "revealSections":[],
+             "addRepeatableGroups":[{"candidateId":"action-direct"}],
+             "noActions":[{"candidateId":"action-item"}]}
             """);
 
         mockMvc.perform(post("/api/v1/preparation/analyze")
@@ -83,11 +84,10 @@ class FormAnalysisEnabledProviderApiTest {
                 .value("ADD_REPEATABLE_GROUP"));
 
         model.respondWith("""
-            {"schemaVersion":2,"snapshotId":"snapshot-fields-1","results":[
-              {"candidateId":"field-direct","matchType":"MATCH",
-               "profileFieldKey":"contact.contact.email"},
-              {"candidateId":"field-item","matchType":"NO_MATCH"}
-            ]}
+            {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
+             "matches":[{"candidateId":"field-direct",
+                         "profileFieldKey":"contact.contact.email"}],
+             "noMatches":[{"candidateId":"field-item"}]}
             """);
 
         mockMvc.perform(post("/api/v1/fields/analyze")
@@ -99,6 +99,7 @@ class FormAnalysisEnabledProviderApiTest {
     }
 
     @Test
+    @DisplayName("OpenAI timeout과 retry 제한을 Spring 표준 속성에 고정한다")
     void pinsProviderTimeoutAndRetryLimits() {
         assertThat(openAiCommonProperties.getTimeout())
             .isEqualTo(Duration.ofSeconds(10));
@@ -106,37 +107,35 @@ class FormAnalysisEnabledProviderApiTest {
     }
 
     @Test
+    @DisplayName("잘못된 action provider 응답을 동일한 PARTIAL 형태로 변환한다")
     void convertsEveryInvalidActionProviderResponseToTheSamePartialShape()
         throws Exception {
         List<String> invalidResponses = List.of(
             "",
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1","results":[
-                  {"candidateId":"action-direct","actionType":"NO_ACTION",
-                   "executionCount":"private-provider-response-marker"},
-                  {"candidateId":"action-item","actionType":"NO_ACTION"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1",
+                 "revealSections":[],"addRepeatableGroups":[],
+                 "noActions":[
+                   {"candidateId":"action-direct",
+                    "executionCount":"private-provider-response-marker"},
+                   {"candidateId":"action-item"}]}
                 """,
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1","results":[
-                  {"candidateId":"action-direct","actionType":"ACTION",
-                   "command":"REVEAL_SECTION",
-                   "expectedEffect":"GROUP_COUNT_INCREMENT",
-                   "targetSectionId":"section-target"},
-                  {"candidateId":"action-item","actionType":"NO_ACTION"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1",
+                 "revealSections":[],
+                 "noActions":[{"candidateId":"action-direct"},
+                              {"candidateId":"action-item"}]}
                 """,
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1","results":[
-                  {"candidateId":"unknown-action","actionType":"NO_ACTION"},
-                  {"candidateId":"action-item","actionType":"NO_ACTION"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1",
+                 "revealSections":[],"addRepeatableGroups":[],
+                 "noActions":[{"candidateId":"unknown-action"},
+                              {"candidateId":"action-item"}]}
                 """,
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1","results":[
-                  null,
-                  {"candidateId":"action-item","actionType":"NO_ACTION"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-preparation-1",
+                 "revealSections":[],"addRepeatableGroups":[],
+                 "noActions":[null,{"candidateId":"action-item"}]}
                 """
         );
 
@@ -150,34 +149,32 @@ class FormAnalysisEnabledProviderApiTest {
     }
 
     @Test
+    @DisplayName("잘못된 field provider 응답을 동일한 PARTIAL 형태로 변환한다")
     void convertsEveryInvalidFieldProviderResponseToTheSamePartialShape()
         throws Exception {
         List<String> invalidResponses = List.of(
             "",
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-fields-1","results":[
-                  {"candidateId":"field-direct","matchType":"NO_MATCH",
-                   "profileFieldKey":"private-provider-response-marker"},
-                  {"candidateId":"field-item","matchType":"NO_MATCH"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
+                 "matches":[],"noMatches":[
+                   {"candidateId":"field-direct",
+                    "profileFieldKey":"private-provider-response-marker"},
+                   {"candidateId":"field-item"}]}
                 """,
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-fields-1","results":[
-                  {"candidateId":"field-direct","matchType":"UNKNOWN"},
-                  {"candidateId":"field-item","matchType":"NO_MATCH"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
+                 "matches":[{"candidateId":"field-direct"}],
+                 "noMatches":[{"candidateId":"field-item"}]}
                 """,
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-fields-1","results":[
-                  {"candidateId":"unknown-field","matchType":"NO_MATCH"},
-                  {"candidateId":"field-item","matchType":"NO_MATCH"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
+                 "matches":[],"noMatches":[
+                   {"candidateId":"unknown-field"},
+                   {"candidateId":"field-item"}]}
                 """,
             """
-                {"schemaVersion":2,"snapshotId":"snapshot-fields-1","results":[
-                  null,
-                  {"candidateId":"field-item","matchType":"NO_MATCH"}
-                ]}
+                {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
+                 "matches":[],"noMatches":[null,{"candidateId":"field-item"}]}
                 """
         );
 

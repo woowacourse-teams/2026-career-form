@@ -5,22 +5,24 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.careerform.formanalysis.application.FieldsAnalysisService;
-import com.careerform.formanalysis.domain.FieldsAnalysis;
-import com.careerform.formanalysis.domain.FieldsSnapshot;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse;
 
 import jakarta.validation.Valid;
 
 @RestController
-final class FieldsAnalysisController {
+public final class FieldsAnalysisController {
 
     private final FieldsAnalysisService service;
 
-    FieldsAnalysisController(FieldsAnalysisService service) {
+    public FieldsAnalysisController(FieldsAnalysisService service) {
         this.service = service;
     }
 
     @PostMapping("/api/v1/fields/analyze")
-    FieldsAnalysis analyze(@Valid @RequestBody FieldsSnapshot snapshot) {
-        return service.analyze(snapshot);
+    public FieldsAnalysisResponse analyze(
+        @Valid @RequestBody FieldsAnalysisRequest request
+    ) {
+        return service.analyze(request);
     }
 }

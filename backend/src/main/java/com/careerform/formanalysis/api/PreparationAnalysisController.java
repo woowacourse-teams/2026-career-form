@@ -5,22 +5,24 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.careerform.formanalysis.application.PreparationAnalysisService;
-import com.careerform.formanalysis.domain.PreparationAnalysis;
-import com.careerform.formanalysis.domain.PreparationSnapshot;
+import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
 
 import jakarta.validation.Valid;
 
 @RestController
-final class PreparationAnalysisController {
+public final class PreparationAnalysisController {
 
     private final PreparationAnalysisService service;
 
-    PreparationAnalysisController(PreparationAnalysisService service) {
+    public PreparationAnalysisController(PreparationAnalysisService service) {
         this.service = service;
     }
 
     @PostMapping("/api/v1/preparation/analyze")
-    PreparationAnalysis analyze(@Valid @RequestBody PreparationSnapshot snapshot) {
-        return service.analyze(snapshot);
+    public PreparationAnalysisResponse analyze(
+        @Valid @RequestBody PreparationAnalysisRequest request
+    ) {
+        return service.analyze(request);
     }
 }

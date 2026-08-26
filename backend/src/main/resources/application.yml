@@ -26,13 +26,8 @@ spring:
       enabled: true
 
 career-form:
-  form-analysis:
-    max-request-bytes: 65536
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:false}
-    provider: ${CAREER_FORM_LLM_PROVIDER:}
-    model: ${CAREER_FORM_LLM_MODEL:}
-    max-output-tokens: ${CAREER_FORM_LLM_MAX_OUTPUT_TOKENS:2048}
 
 management:
   endpoints:
