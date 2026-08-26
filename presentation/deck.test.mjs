@@ -25,11 +25,10 @@ test("네 발표자 구간이 정해진 순서로 이어진다", () => {
 
 test("전체 발표는 20분 안이며 각 발표자는 약 5분을 담당한다", () => {
   const { slides } = loadDeck();
-  const grouped = slides.reduce((sections, slide) => {
-    sections[slide.section] ??= [];
-    sections[slide.section].push(slide);
-    return sections;
-  }, {});
+  const grouped = slides.reduce((sections, slide) => ({
+    ...sections,
+    [slide.section]: [...(sections[slide.section] ?? []), slide],
+  }), {});
   const secondsBySection = Object.fromEntries(
     Object.entries(grouped).map(([section, items]) => [
       section,
