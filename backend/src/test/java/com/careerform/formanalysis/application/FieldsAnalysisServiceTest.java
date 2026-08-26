@@ -6,8 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.domain.AnalysisMode;
@@ -117,13 +120,12 @@ class FieldsAnalysisServiceTest {
         assertUnavailable(analysis);
     }
 
-    @Test
-    void discardsValidSubsetWhenResolverOutputIsIncomplete() {
-        FieldMappingResolver resolver = ignored -> new FieldMappingResolution(
-            2,
-            "snapshot-1",
-            List.of(new FieldMappingResolution.NoMatch("field-direct"))
-        );
+    @ParameterizedTest
+    @MethodSource("invalidResolverOutputs")
+    void discardsEveryResultWhenResolverOutputViolatesTheContract(
+        FieldMappingResolution invalidOutput
+    ) {
+        FieldMappingResolver resolver = ignored -> invalidOutput;
 
         FieldsAnalysis analysis = service(Optional.of(resolver)).analyze(snapshot());
 
@@ -172,6 +174,39 @@ class FieldsAnalysisServiceTest {
             new SnapshotValidator(),
             new FieldMappingResolutionValidator(),
             new FieldInteractionPolicy()
+        );
+    }
+
+    private static Stream<FieldMappingResolution> invalidResolverOutputs() {
+        List<FieldMappingResolution.Result> valid = List.of(
+            new FieldMappingResolution.NoMatch("field-direct"),
+            new FieldMappingResolution.NoMatch("field-item")
+        );
+        return Stream.of(
+            new FieldMappingResolution(1, "snapshot-1", valid),
+            new FieldMappingResolution(2, "another-snapshot", valid),
+            new FieldMappingResolution(2, "snapshot-1", List.of(
+                new FieldMappingResolution.NoMatch("field-direct")
+            )),
+            new FieldMappingResolution(2, "snapshot-1", List.of(
+                new FieldMappingResolution.NoMatch("field-direct"),
+                new FieldMappingResolution.NoMatch("field-direct")
+            )),
+            new FieldMappingResolution(2, "snapshot-1", List.of(
+                new FieldMappingResolution.NoMatch("field-direct"),
+                new FieldMappingResolution.NoMatch("unknown-field")
+            )),
+            new FieldMappingResolution(2, "snapshot-1", List.of(
+                new FieldMappingResolution.Match("field-direct", "contact.email"),
+                new FieldMappingResolution.NoMatch("field-item")
+            )),
+            new FieldMappingResolution(2, "snapshot-1", List.of(
+                new FieldMappingResolution.Match(
+                    "field-direct",
+                    "languages.languageTest.evidenceDocumentPath"
+                ),
+                new FieldMappingResolution.NoMatch("field-item")
+            ))
         );
     }
 
