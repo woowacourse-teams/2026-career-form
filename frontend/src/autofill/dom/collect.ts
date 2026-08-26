@@ -22,6 +22,11 @@ export interface CollectedSnapshot<TRequest> {
   registry: CandidateRegistry;
 }
 
+export interface PreparationCollectedSnapshot extends CollectedSnapshot<PreparationAnalyzeRequest> {
+  isSectionVisible(sectionId: string): boolean;
+  countRepeatableGroups(actionCandidateId: string): number | undefined;
+}
+
 function createOpaqueId(prefix: string, index: number): string {
   return `${prefix}-${index + 1}`;
 }
@@ -321,56 +326,78 @@ function collectActionElements(document: Document) {
   });
 }
 
+function repeatableItemElements(container: Element | null): Element[] {
+  if (!container) return [];
+  return Array.from(
+    container.querySelectorAll(
+      ":scope > [data-repeatable-group], :scope > [data-repeater-item], :scope > fieldset, :scope > [role='group']",
+    ),
+  ).filter((element) => !element.closest("template"));
+}
+
 export function collectPreparationSnapshot(
   document: Document,
-): CollectedSnapshot<PreparationAnalyzeRequest> {
+): PreparationCollectedSnapshot {
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: PreparationSection[] = [];
-  const groups = groupBySection(collectActionElements(document));
-
-  Array.from(groups.entries()).forEach(
-    ([container, elements], sectionIndex) => {
-      const sectionId = container
-        ? createOpaqueId("section", sectionIndex)
-        : "section-root";
-      const actionCandidates: ActionCandidate[] = elements.map((element) => {
-        const candidateId = createOpaqueId("action", candidateIndex++);
-        const candidate: ActionCandidate = {
-          candidateId,
-          element: element instanceof HTMLButtonElement ? "button" : "input",
-          control: "button",
-          visibility: visibility(element),
-          ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
-          ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
-          ...(metadata(element.name)
-            ? { domName: metadata(element.name) }
-            : {}),
-          ...(element.disabled ? { disabled: true } : {}),
-          ...(isInert(element) ? { inert: true } : {}),
-        };
-        registry.registerAction(
-          {
-            kind: "action",
-            candidateId,
-            candidate,
-            element,
-            sectionId,
-            signature: createStructuralSignature([element]),
-          },
-          blockReason(element),
-        );
-        return candidate;
-      });
-      sections.push({
-        sectionId,
-        ...(sectionName(container)
-          ? { displayName: sectionName(container) }
-          : {}),
-        actionCandidates,
-      });
-    },
+  const actions = collectActionElements(document);
+  const actionsBySection = groupBySection(actions);
+  const containers: Array<Element | null> = Array.from(
+    document.querySelectorAll(SECTION_SELECTOR),
   );
+  if (actionsBySection.has(null) || containers.length === 0) {
+    containers.push(null);
+  }
+  const sectionRoots = new Map<string, Element | null>();
+  const actionSectionIds = new Map<string, string>();
+
+  containers.forEach((container, sectionIndex) => {
+    const elements = actionsBySection.get(container) ?? [];
+    const sectionId = container
+      ? createOpaqueId("section", sectionIndex)
+      : "section-root";
+    const actionCandidates: ActionCandidate[] = elements.map((element) => {
+      const candidateId = createOpaqueId("action", candidateIndex++);
+      const candidate: ActionCandidate = {
+        candidateId,
+        element: element instanceof HTMLButtonElement ? "button" : "input",
+        control: "button",
+        visibility: visibility(element),
+        ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
+        ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
+        ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
+        ...(element.disabled ? { disabled: true } : {}),
+        ...(isInert(element) ? { inert: true } : {}),
+      };
+      registry.registerAction(
+        {
+          kind: "action",
+          candidateId,
+          candidate,
+          element,
+          sectionId,
+          signature: createStructuralSignature([element]),
+        },
+        blockReason(element),
+      );
+      actionSectionIds.set(candidateId, sectionId);
+      return candidate;
+    });
+    const items = repeatableItemElements(container).map((_, itemIndex) => ({
+      itemId: createOpaqueId(`${sectionId}-item`, itemIndex),
+      actionCandidates: [],
+    }));
+    sections.push({
+      sectionId,
+      ...(sectionName(container)
+        ? { displayName: sectionName(container) }
+        : {}),
+      actionCandidates,
+      ...(items.length > 0 ? { items } : {}),
+    });
+    sectionRoots.set(sectionId, container);
+  });
 
   return {
     request: {
@@ -380,5 +407,19 @@ export function collectPreparationSnapshot(
       sections,
     },
     registry,
+    isSectionVisible(sectionId) {
+      const root = sectionRoots.get(sectionId);
+      return (
+        root !== undefined &&
+        (!root || (root.isConnected && !isHidden(root as HTMLElement)))
+      );
+    },
+    countRepeatableGroups(actionCandidateId) {
+      const sectionId = actionSectionIds.get(actionCandidateId);
+      if (!sectionId) return undefined;
+      const root = sectionRoots.get(sectionId);
+      if (root === undefined || (root && !root.isConnected)) return undefined;
+      return repeatableItemElements(root).length;
+    },
   };
 }

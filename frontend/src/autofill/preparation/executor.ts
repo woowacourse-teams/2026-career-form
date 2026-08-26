@@ -4,6 +4,9 @@ import type { CandidateRegistry } from "../dom/candidate-registry";
 export interface PreparationSnapshot {
   registry: CandidateRegistry;
   isTargetSectionVisible(targetSectionId: string): boolean;
+  countRepeatableGroups?(
+    plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
+  ): number | undefined;
 }
 
 export interface ApprovedPreparationPlan {
@@ -21,6 +24,7 @@ export interface PreparationExecutionOptions {
   initialSnapshot: PreparationSnapshot;
   refreshSnapshot: () => Promise<PreparationSnapshot>;
   countRepeatableGroups: (
+    snapshot: PreparationSnapshot,
     plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
   ) => number;
 }
@@ -73,10 +77,11 @@ function actionIsReady(snapshot: PreparationSnapshot, candidateId: string) {
 
 function inspectGroupCount(
   countRepeatableGroups: PreparationExecutionOptions["countRepeatableGroups"],
+  snapshot: PreparationSnapshot,
   plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
 ): number | undefined {
   try {
-    const count = countRepeatableGroups(plan);
+    const count = countRepeatableGroups(snapshot, plan);
     return isNonNegativeInteger(count) ? count : undefined;
   } catch {
     return undefined;
@@ -138,7 +143,11 @@ export async function executeApprovedPreparationPlans({
       return failure("invalid-local-item-count", executedPlanCount);
     }
 
-    const currentGroupCount = inspectGroupCount(countRepeatableGroups, plan);
+    const currentGroupCount = inspectGroupCount(
+      countRepeatableGroups,
+      snapshot,
+      plan,
+    );
     if (currentGroupCount === undefined) {
       return failure("invalid-group-count", executedPlanCount);
     }
@@ -149,7 +158,11 @@ export async function executeApprovedPreparationPlans({
       if (!currentAction) {
         return failure("action-not-executable", executedPlanCount);
       }
-      const countBefore = inspectGroupCount(countRepeatableGroups, plan);
+      const countBefore = inspectGroupCount(
+        countRepeatableGroups,
+        snapshot,
+        plan,
+      );
       if (countBefore === undefined) {
         return failure("invalid-group-count", executedPlanCount);
       }
@@ -160,7 +173,11 @@ export async function executeApprovedPreparationPlans({
       if (!refreshed) {
         return failure("refresh-failed", executedPlanCount);
       }
-      const countAfter = inspectGroupCount(countRepeatableGroups, plan);
+      const countAfter = inspectGroupCount(
+        countRepeatableGroups,
+        refreshed,
+        plan,
+      );
       if (countAfter !== countBefore + 1) {
         return failure("group-count-not-incremented", executedPlanCount);
       }

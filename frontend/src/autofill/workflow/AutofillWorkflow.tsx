@@ -34,6 +34,8 @@ interface PreparationItem {
   plan: PreparationPlan;
   approved: boolean;
   localItemCount?: number;
+  currentGroupCount?: number;
+  requiredAdditions?: number;
 }
 
 interface WorkflowProps {
@@ -79,22 +81,27 @@ function localItemCount(
     : 0;
 }
 
-function visibleTarget(
-  snapshot: CollectedSnapshot<
-    ReturnType<typeof collectPreparationSnapshot>["request"]
-  >,
-  targetSectionId: string,
-): boolean {
-  const section = snapshot.request.sections.find(
-    (candidate) => candidate.sectionId === targetSectionId,
+function preparationItem(
+  plan: PreparationPlan,
+  snapshot: ReturnType<typeof collectPreparationSnapshot>,
+  profile: Profile,
+): PreparationItem {
+  const localCount = localItemCount(plan, snapshot, profile);
+  if (plan.command !== "ADD_REPEATABLE_GROUP") {
+    return { plan, approved: false, localItemCount: localCount };
+  }
+  const currentGroupCount = snapshot.countRepeatableGroups(
+    plan.actionCandidateId,
   );
-  return Boolean(
-    section &&
-    section.actionCandidates.length > 0 &&
-    section.actionCandidates.every(
-      (candidate) => candidate.visibility === "visible",
-    ),
-  );
+  return {
+    plan,
+    approved: false,
+    localItemCount: localCount,
+    currentGroupCount,
+    ...(localCount !== undefined && currentGroupCount !== undefined
+      ? { requiredAdditions: Math.max(0, localCount - currentGroupCount) }
+      : {}),
+  };
 }
 
 function statusLabel(item: ReviewPlanItem): string {
@@ -156,11 +163,7 @@ export function AutofillWorkflow({
   const [stage, setStage] = useState<Stage>("analyzing");
   const [profile, setProfile] = useState<Profile>();
   const [preparationSnapshot, setPreparationSnapshot] =
-    useState<
-      CollectedSnapshot<
-        ReturnType<typeof collectPreparationSnapshot>["request"]
-      >
-    >();
+    useState<ReturnType<typeof collectPreparationSnapshot>>();
   const [preparationItems, setPreparationItems] = useState<PreparationItem[]>(
     [],
   );
@@ -221,11 +224,9 @@ export function AutofillWorkflow({
         }
         setPreparationSnapshot(snapshot);
         setPreparationItems(
-          analysis.preparationPlans.map((plan) => ({
-            plan,
-            approved: false,
-            localItemCount: localItemCount(plan, snapshot, loadedProfile),
-          })),
+          analysis.preparationPlans.map((plan) =>
+            preparationItem(plan, snapshot, loadedProfile),
+          ),
         );
         setWarnings(analysis.warningCodes ?? []);
         setStage("preparation-review");
@@ -248,18 +249,22 @@ export function AutofillWorkflow({
       initialSnapshot: {
         registry: preparationSnapshot.registry,
         isTargetSectionVisible: (targetSectionId) =>
-          visibleTarget(preparationSnapshot, targetSectionId),
+          preparationSnapshot.isSectionVisible(targetSectionId),
+        countRepeatableGroups: (plan) =>
+          preparationSnapshot.countRepeatableGroups(plan.actionCandidateId),
       },
       refreshSnapshot: async () => {
         const refreshed = collectPreparationSnapshot(pageDocument);
         return {
           registry: refreshed.registry,
           isTargetSectionVisible: (targetSectionId) =>
-            visibleTarget(refreshed, targetSectionId),
+            refreshed.isSectionVisible(targetSectionId),
+          countRepeatableGroups: (plan) =>
+            refreshed.countRepeatableGroups(plan.actionCandidateId),
         };
       },
-      countRepeatableGroups: (plan) =>
-        localItemCount(plan, preparationSnapshot, profile) ?? 0,
+      countRepeatableGroups: (snapshot, plan) =>
+        snapshot.countRepeatableGroups?.(plan) ?? -1,
     });
     if (result.status !== "completed") {
       setExceptionTitle("준비 동작을 안전하게 완료하지 못했습니다");
@@ -362,9 +367,9 @@ export function AutofillWorkflow({
                   : "반복 입력 영역 추가"}
               </strong>
               <small>지원서 저장·이동·제출은 실행하지 않습니다.</small>
-              {item.localItemCount !== undefined && (
+              {item.requiredAdditions !== undefined && (
                 <small>
-                  로컬 프로필 기준 실행 필요 수: {item.localItemCount}회
+                  현재 화면 기준 추가 필요 수: {item.requiredAdditions}회
                 </small>
               )}
             </span>
