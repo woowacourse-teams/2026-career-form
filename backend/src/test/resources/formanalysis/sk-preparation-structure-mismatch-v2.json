@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-snapshot-a-mismatch-synthetic",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Recruit/Apply/{postingId}"
+  },
+  "sections": [
+    {
+      "sectionId": "section-profile",
+      "displayName": "합성 기본 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-reveal-detail",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "합성 상세 영역 열기",
+          "domName": "detail-toggle"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-detail",
+      "parentSectionId": "section-profile",
+      "displayName": "합성 상세 영역",
+      "actionCandidates": []
+    },
+    {
+      "sectionId": "section-credentials",
+      "displayName": "합성 반복 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-credential",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "합성 반복 항목 추가",
+          "domName": "unknown-add"
+        }
+      ]
+    }
+  ]
+}

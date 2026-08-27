@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-snapshot-b-synthetic",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Recruit/Apply/{postingId}"
+  },
+  "sections": [
+    {
+      "sectionId": "section-profile",
+      "displayName": "합성 기본 영역",
+      "fields": [
+        {
+          "candidateId": "field-family-name",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 이름 구성 A",
+          "domName": "applicant-family-name"
+        },
+        {
+          "candidateId": "field-given-name",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 이름 구성 B",
+          "domName": "applicant-given-name"
+        },
+        {
+          "candidateId": "field-email",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 연락 수단 A",
+          "domName": "applicant-email"
+        },
+        {
+          "candidateId": "field-phone",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 연락 수단 B",
+          "domName": "applicant-phone"
+        },
+        {
+          "candidateId": "field-ambiguous",
+          "element": "custom",
+          "control": "custom",
+          "visibility": "visible",
+          "displayName": "합성 미지원 항목",
+          "domName": "unverified-custom"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-education",
+      "displayName": "합성 반복 학력 영역",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "education-item-1",
+          "fields": [
+            {
+              "candidateId": "field-school-name",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "합성 교육 기관",
+              "domName": "education-school-name"
+            },
+            {
+              "candidateId": "field-completion-status",
+              "element": "select",
+              "control": "select",
+              "visibility": "visible",
+              "displayName": "합성 교육 상태",
+              "domName": "education-completion-status",
+              "options": [
+                {
+                  "optionId": "completion-option-a",
+                  "displayName": "합성 상태 A"
+                },
+                {
+                  "optionId": "completion-option-b",
+                  "displayName": "합성 상태 B"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

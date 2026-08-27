@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-snapshot-b-mismatch-synthetic",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Recruit/Apply/{postingId}"
+  },
+  "sections": [
+    {
+      "sectionId": "section-profile",
+      "displayName": "합성 기본 영역",
+      "fields": [
+        {
+          "candidateId": "field-family-name",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 이름 구성 A",
+          "domName": "applicant-family-name"
+        },
+        {
+          "candidateId": "field-given-name",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 이름 구성 B",
+          "domName": "applicant-given-name"
+        },
+        {
+          "candidateId": "field-email",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 연락 수단 A",
+          "domName": "unknown-email"
+        },
+        {
+          "candidateId": "field-phone",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "합성 연락 수단 B",
+          "domName": "applicant-phone"
+        }
+      ]
+    }
+  ]
+}
