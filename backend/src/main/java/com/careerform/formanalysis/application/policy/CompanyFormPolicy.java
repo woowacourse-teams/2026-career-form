@@ -1,0 +1,240 @@
+package com.careerform.formanalysis.application.policy;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
+
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
+import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
+
+public final class CompanyFormPolicy {
+
+    private final String companyKey;
+    private final long version;
+    private final PreparationFingerprint preparationFingerprint;
+    private final FieldsFingerprint fieldsFingerprint;
+    private final List<ActionRule> actionRules;
+    private final List<FieldRule> fieldRules;
+
+    private CompanyFormPolicy(
+        String companyKey,
+        long version,
+        PreparationFingerprint preparationFingerprint,
+        FieldsFingerprint fieldsFingerprint,
+        List<ActionRule> actionRules,
+        List<FieldRule> fieldRules
+    ) {
+        this.companyKey = companyKey;
+        this.version = version;
+        this.preparationFingerprint = preparationFingerprint;
+        this.fieldsFingerprint = fieldsFingerprint;
+        this.actionRules = List.copyOf(actionRules);
+        this.fieldRules = List.copyOf(fieldRules);
+    }
+
+    public static CompanyFormPolicy create(
+        String companyKey,
+        long version,
+        PreparationFingerprint preparationFingerprint,
+        FieldsFingerprint fieldsFingerprint,
+        List<ActionRule> actionRules,
+        List<FieldRule> fieldRules,
+        Predicate<String> isSupportedProfileKey
+    ) {
+        requireText(companyKey);
+        if (version < 1
+            || preparationFingerprint == null
+            || fieldsFingerprint == null
+            || actionRules == null
+            || fieldRules == null
+            || isSupportedProfileKey == null) {
+            invalidPolicy();
+        }
+        requireUniqueActionRules(actionRules);
+        requireUniqueFieldRules(fieldRules);
+        for (ActionRule rule : actionRules) {
+            validateActionRule(rule, preparationFingerprint.requiredSectionIds());
+        }
+        for (FieldRule rule : fieldRules) {
+            if (rule == null || !isSupportedProfileKey.test(rule.profileFieldKey())) {
+                invalidPolicy();
+            }
+        }
+        return new CompanyFormPolicy(
+            companyKey,
+            version,
+            preparationFingerprint,
+            fieldsFingerprint,
+            actionRules,
+            fieldRules
+        );
+    }
+
+    public String companyKey() {
+        return companyKey;
+    }
+
+    public long version() {
+        return version;
+    }
+
+    public PreparationFingerprint preparationFingerprint() {
+        return preparationFingerprint;
+    }
+
+    public FieldsFingerprint fieldsFingerprint() {
+        return fieldsFingerprint;
+    }
+
+    public List<ActionRule> actionRules() {
+        return actionRules;
+    }
+
+    public List<FieldRule> fieldRules() {
+        return fieldRules;
+    }
+
+    private static void requireUniqueActionRules(List<ActionRule> rules) {
+        Set<String> structuralNames = new HashSet<>();
+        for (ActionRule rule : rules) {
+            if (rule == null || !structuralNames.add(rule.structuralName())) {
+                invalidPolicy();
+            }
+        }
+    }
+
+    private static void requireUniqueFieldRules(List<FieldRule> rules) {
+        Set<String> structuralNames = new HashSet<>();
+        for (FieldRule rule : rules) {
+            if (rule == null || !structuralNames.add(rule.structuralName())) {
+                invalidPolicy();
+            }
+        }
+    }
+
+    private static void validateActionRule(
+        ActionRule rule,
+        Set<String> requiredSectionIds
+    ) {
+        if (rule.kind() == ActionKind.REVEAL
+            && (isBlank(rule.targetSectionId())
+                || !requiredSectionIds.contains(rule.targetSectionId()))) {
+            invalidPolicy();
+        }
+        if (rule.kind() == ActionKind.ADD && rule.targetSectionId() != null) {
+            invalidPolicy();
+        }
+    }
+
+    private static void requireText(String value) {
+        if (isBlank(value)) {
+            invalidPolicy();
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static void invalidPolicy() {
+        throw new IllegalArgumentException("회사 지원서 정책 계약이 올바르지 않습니다");
+    }
+
+    public record PreparationFingerprint(
+        Set<String> requiredSectionIds,
+        List<ActionStructure> requiredActions
+    ) {
+
+        public PreparationFingerprint {
+            if (requiredSectionIds == null
+                || requiredSectionIds.isEmpty()
+                || requiredActions == null
+                || requiredActions.isEmpty()
+                || requiredSectionIds.stream().anyMatch(CompanyFormPolicy::isBlank)
+                || requiredActions.stream().anyMatch(Objects::isNull)) {
+                invalidPolicy();
+            }
+            requiredSectionIds = Set.copyOf(requiredSectionIds);
+            requiredActions = List.copyOf(requiredActions);
+        }
+    }
+
+    public record FieldsFingerprint(
+        Set<String> requiredSectionIds,
+        List<FieldStructure> requiredFields
+    ) {
+
+        public FieldsFingerprint {
+            if (requiredSectionIds == null
+                || requiredSectionIds.isEmpty()
+                || requiredFields == null
+                || requiredFields.isEmpty()
+                || requiredSectionIds.stream().anyMatch(CompanyFormPolicy::isBlank)
+                || requiredFields.stream().anyMatch(Objects::isNull)) {
+                invalidPolicy();
+            }
+            requiredSectionIds = Set.copyOf(requiredSectionIds);
+            requiredFields = List.copyOf(requiredFields);
+        }
+    }
+
+    public record ActionStructure(
+        String structuralName,
+        PreparationAnalysisRequest.FormElement element,
+        PreparationAnalysisRequest.FormControl control
+    ) {
+
+        public ActionStructure {
+            requireText(structuralName);
+            Objects.requireNonNull(element);
+            Objects.requireNonNull(control);
+        }
+    }
+
+    public record FieldStructure(
+        String structuralName,
+        FieldsAnalysisRequest.FormElement element,
+        FieldsAnalysisRequest.FormControl control
+    ) {
+
+        public FieldStructure {
+            requireText(structuralName);
+            Objects.requireNonNull(element);
+            Objects.requireNonNull(control);
+        }
+    }
+
+    public record ActionRule(
+        String structuralName,
+        ActionKind kind,
+        String targetSectionId
+    ) {
+
+        public ActionRule {
+            requireText(structuralName);
+            Objects.requireNonNull(kind);
+        }
+    }
+
+    public record FieldRule(
+        String structuralName,
+        FieldsAnalysisRequest.FormElement element,
+        FieldsAnalysisRequest.FormControl control,
+        String profileFieldKey
+    ) {
+
+        public FieldRule {
+            requireText(structuralName);
+            Objects.requireNonNull(element);
+            Objects.requireNonNull(control);
+            requireText(profileFieldKey);
+        }
+    }
+
+    public enum ActionKind {
+        REVEAL,
+        ADD
+    }
+}
