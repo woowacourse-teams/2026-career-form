@@ -114,6 +114,18 @@ CAREER_FORM_LLM_MODEL=gpt-5.6-luna
 OPENAI_API_KEY=<실행 환경에서만 설정>
 ```
 
+### Chat Completion 저장
+
+공통 `application.yml`은 `spring.ai.openai.chat.store=true`를 설정한다. 따라서
+`local`, `development`, `staging`, `production` 프로필은 모두 같은 저장 기본값을
+상속한다. `OpenAiClient`도 요청별 옵션에 `store=true`를 명시한다. Spring AI에서는
+요청별 옵션이 공통 설정을 덮어쓸 수 있으므로 두 위치의 값이 함께 켜져 있어야 한다.
+
+저장되는 completion에는 시스템 지시문, 비식별 candidate 구조와 구조화된 모델 출력이
+포함될 수 있다. 실제 프로필 값, HTML, URL 상세, 계정·세션·인증 정보와 실행 정보는
+계속 공급자 payload에서 제외한다. 저장된 completion의 OpenAI Platform 확인은 사람이
+비식별 합성 snapshot으로 수행하며, 자동 테스트는 실제 OpenAI 호출을 하지 않는다.
+
 자동 테스트는 fake Resolver 또는 fake `ChatModel`만 사용하며 실제 OpenAI 호출을 하지
 않는다. 실제 API key를 넣은 연결 smoke test는 사람이 비식별 합성 snapshot으로 두
 endpoint를 각각 한 번 호출해 수행한다. 성공 여부와 비식별 검증 결과만 기록하고 요청

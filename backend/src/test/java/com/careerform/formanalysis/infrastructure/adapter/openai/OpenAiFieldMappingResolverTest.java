@@ -135,7 +135,7 @@ class OpenAiFieldMappingResolverTest {
                 "contact.contact.email"
             );
         OpenAiChatOptions options = (OpenAiChatOptions) prompt.getOptions();
-        assertThat(options.getStore()).isFalse();
+        assertThat(options.getStore()).isTrue();
         assertThat(options.getResponseFormat()).isNotNull();
         String schema = options.getResponseFormat().getJsonSchema();
         assertThat(schema).contains(

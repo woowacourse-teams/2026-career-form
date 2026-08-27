@@ -63,7 +63,7 @@ public final class OpenAiClient {
             O output = chatClient.prompt()
                 .system(systemPrompt)
                 .user(sanitizedJson)
-                .options(OpenAiChatOptions.builder().store(false))
+                .options(OpenAiChatOptions.builder().store(true))
                 .call()
                 .entity(converter, spec -> spec.useProviderStructuredOutput());
             if (output == null) {

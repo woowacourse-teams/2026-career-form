@@ -26,7 +26,7 @@ spring:
         model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
         reasoning-effort: none
         max-completion-tokens: ${CAREER_FORM_LLM_MAX_OUTPUT_TOKENS:2048}
-        store: false
+        store: true
   threads:
     virtual:
       enabled: true

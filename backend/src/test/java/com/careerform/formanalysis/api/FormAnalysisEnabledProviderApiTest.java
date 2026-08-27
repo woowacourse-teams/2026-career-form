@@ -23,6 +23,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.openai.autoconfigure.OpenAiChatProperties;
 import org.springframework.ai.model.openai.autoconfigure.OpenAiCommonProperties;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +59,9 @@ class FormAnalysisEnabledProviderApiTest {
 
     @Autowired
     private OpenAiCommonProperties openAiCommonProperties;
+
+    @Autowired
+    private OpenAiChatProperties openAiChatProperties;
 
     @BeforeEach
     @DisplayName("가짜 ChatModel 응답을 초기화한다")
@@ -104,6 +108,12 @@ class FormAnalysisEnabledProviderApiTest {
         assertThat(openAiCommonProperties.getTimeout())
             .isEqualTo(Duration.ofSeconds(10));
         assertThat(openAiCommonProperties.getMaxRetries()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("공통 설정으로 Chat Completion 저장을 활성화한다")
+    void enablesChatCompletionStorageFromCommonConfiguration() {
+        assertThat(openAiChatProperties.getStore()).isTrue();
     }
 
     @Test
