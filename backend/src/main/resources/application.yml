@@ -3,9 +3,37 @@ spring:
     name: career-form-backend
   mongodb:
     uri: ${SPRING_MONGODB_URI}
+  jackson:
+    datatype:
+      enum:
+        fail-on-numbers-for-enums: true
+    deserialization:
+      accept-float-as-int: false
+      fail-on-unknown-properties: true
+    mapper:
+      allow-coercion-of-scalars: false
+  ai:
+    chat:
+      observations:
+        log-prompt: false
+        log-completion: false
+        include-error-logging: false
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      timeout: ${CAREER_FORM_LLM_TIMEOUT:10s}
+      max-retries: ${CAREER_FORM_LLM_MAX_RETRIES:1}
+      chat:
+        model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
+        reasoning-effort: none
+        max-completion-tokens: ${CAREER_FORM_LLM_MAX_OUTPUT_TOKENS:2048}
+        store: false
   threads:
     virtual:
       enabled: true
+
+career-form:
+  llm:
+    enabled: ${CAREER_FORM_LLM_ENABLED:false}
 
 management:
   endpoints:
