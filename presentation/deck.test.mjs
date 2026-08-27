@@ -143,6 +143,58 @@ test("책임 범위와 협업 방식은 문구와 분리된 주제로 추적된�
   }
 });
 
+test("각 파트가 밍글링에 필요한 네 종류의 근거와 질문을 제공한다", () => {
+  const { slides } = loadDeck();
+  const expectedEvidence = new Set([
+    "decision",
+    "artifact",
+    "current-state",
+    "open-question",
+  ]);
+
+  for (const section of ["product", "backend", "client", "team"]) {
+    const sectionSlides = slides.filter((slide) => slide.section === section);
+    const evidence = new Set(
+      sectionSlides.map((slide) => slide.evidenceType),
+    );
+    assert.deepEqual(evidence, expectedEvidence);
+    assert.ok(
+      sectionSlides.some((slide) => slide.discussionPrompt?.length > 0),
+      `${section} 파트에 대화 질문이 필요하다`,
+    );
+  }
+
+  assert.ok(
+    slides.every((slide) => slide.implementationState?.length > 0),
+    "모든 슬라이드는 구현 상태를 구분해야 한다",
+  );
+});
+
+test("덱에서 사용하는 실제 자료 캡처는 유효한 PNG다", () => {
+  const { slides } = loadDeck();
+  const assetNames = slides.flatMap((slide) =>
+    [...slide.body.matchAll(/\.\/assets\/([^"']+\.png)/g)].map(
+      (match) => match[1],
+    ),
+  );
+
+  assert.deepEqual(new Set(assetNames), new Set([
+    "experiment-screen.png",
+    "project-board.png",
+    "extension-screen.png",
+  ]));
+  for (const assetName of assetNames) {
+    const assetPath = fileURLToPath(
+      new URL(`./assets/${assetName}`, import.meta.url),
+    );
+    const signature = readFileSync(assetPath).subarray(0, 8);
+    assert.deepEqual(
+      signature,
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    );
+  }
+});
+
 test("슬라이드 이동은 덱 범위를 벗어나지 않는다", () => {
   const { clampSlideIndex } = loadDeck();
 

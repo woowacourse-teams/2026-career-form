@@ -110,6 +110,10 @@ function summarizeExperiment(rows) {
 
 const experimentSummary = summarizeExperiment(sessions);
 
+if (typeof globalThis !== "undefined") {
+  globalThis.experimentSummary = experimentSummary;
+}
+
 if (typeof module !== "undefined") {
   module.exports = { experimentSummary, sessions, summarizeExperiment };
 }
