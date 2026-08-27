@@ -33,6 +33,8 @@ Dockerfile 안의 Gradle 컴파일은 이 에뮬레이션에서 느려지는 반
 - `development`, `staging`, `production` GitHub Environment는 각자의 `BACKEND_PORT`와
   `SPRING_MONGODB_URI`를 유지한다. 각 ARM64 self-hosted runner의 registration token은
   일회성 값이므로 저장소, 문서와 로그에 저장하지 않는다.
+- `OPENAI_API_KEY`는 세 환경의 deploy job에서만 backend 컨테이너에 전달한다. 실제 값은
+  이미지, 저장소, Issue·PR, 문서와 workflow 출력에 저장하지 않는다.
 - 실제 image push, 환경 배포와 배포 결과 확인은 workflow와 사람이 담당한다.
 
 ## 검증 근거
