@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,6 +29,7 @@ import com.careerform.formanalysis.infrastructure.adapter.openai.OpenAiClient;
     "spring.ai.openai.api-key="
 })
 @AutoConfigureMockMvc
+@Import(NotRegisteredPolicyConfiguration.class)
 @DisplayName("LLM 비활성화 애플리케이션 컨텍스트")
 class FormAnalysisDisabledContextTest {
 

@@ -263,7 +263,9 @@ class PreparationAnalysisServiceTest {
     private static PreparationAnalysisService service(Optional<ActionResolver> resolver) {
         return new PreparationAnalysisService(
             resolver,
-            new FormAnalysisRouter(List.of())
+            new FormAnalysisRouter((host, path) ->
+                new com.careerform.formanalysis.application.port
+                    .CompanyFormPolicyProvider.NotRegistered())
         );
     }
 

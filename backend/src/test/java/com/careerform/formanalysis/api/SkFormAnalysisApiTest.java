@@ -17,11 +17,15 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.careerform.formanalysis.application.port.ActionResolver;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicyFixture;
+import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider;
+import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Available;
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 
 @SpringBootTest(properties = {
@@ -136,6 +140,12 @@ class SkFormAnalysisApiTest {
             return request -> {
                 throw new AssertionError("SK route에서 generic field 호출 금지");
             };
+        }
+
+        @Bean
+        @Primary
+        CompanyFormPolicyProvider skPolicyProvider() {
+            return (host, path) -> new Available(CompanyFormPolicyFixture.sk());
         }
     }
 }

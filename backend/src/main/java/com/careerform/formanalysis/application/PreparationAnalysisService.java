@@ -55,6 +55,11 @@ public final class PreparationAnalysisService {
                 request.snapshotId()
             );
         }
+        if (route.kind() == RouteKind.POLICY_UNAVAILABLE) {
+            return PreparationAnalysisResponse.adapterPolicyUnavailable(
+                request.snapshotId()
+            );
+        }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER
             : Mode.GENERIC;

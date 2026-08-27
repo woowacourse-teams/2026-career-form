@@ -14,12 +14,12 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy.Preparat
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
-final class CompanyFormPolicyFixture {
+public final class CompanyFormPolicyFixture {
 
     private CompanyFormPolicyFixture() {
     }
 
-    static CompanyFormPolicy sk() {
+    public static CompanyFormPolicy sk() {
         SupportedProfileFields supported = new SupportedProfileFields();
         return CompanyFormPolicy.create(
             "sk",

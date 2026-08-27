@@ -63,6 +63,17 @@ public record FieldsAnalysisResponse(
         );
     }
 
+    public static FieldsAnalysisResponse adapterPolicyUnavailable(String snapshotId) {
+        return new FieldsAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.ADAPTER_POLICY_UNAVAILABLE
+        );
+    }
+
     public sealed interface FieldAnalysis permits MatchedFieldAnalysis,
         NoMatchFieldAnalysis {
         String candidateId();
@@ -148,6 +159,7 @@ public record FieldsAnalysisResponse(
     }
 
     public enum BlockCode {
-        ADAPTER_STRUCTURE_MISMATCH
+        ADAPTER_STRUCTURE_MISMATCH,
+        ADAPTER_POLICY_UNAVAILABLE
     }
 }

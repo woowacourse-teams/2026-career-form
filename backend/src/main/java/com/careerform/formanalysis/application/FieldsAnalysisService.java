@@ -58,6 +58,9 @@ public final class FieldsAnalysisService {
         if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
             return FieldsAnalysisResponse.adapterStructureMismatch(request.snapshotId());
         }
+        if (route.kind() == RouteKind.POLICY_UNAVAILABLE) {
+            return FieldsAnalysisResponse.adapterPolicyUnavailable(request.snapshotId());
+        }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER
             : Mode.GENERIC;

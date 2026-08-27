@@ -318,7 +318,9 @@ class FieldsAnalysisServiceTest {
     ) {
         return new FieldsAnalysisService(
             resolver,
-            new FormAnalysisRouter(List.of()),
+            new FormAnalysisRouter((host, path) ->
+                new com.careerform.formanalysis.application.port
+                    .CompanyFormPolicyProvider.NotRegistered()),
             new FieldInteractionPolicy(),
             new SupportedProfileFields()
         );

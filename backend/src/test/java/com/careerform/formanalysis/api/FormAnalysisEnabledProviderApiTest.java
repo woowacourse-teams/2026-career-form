@@ -44,7 +44,10 @@ import org.springframework.test.web.servlet.MockMvc;
     "spring.ai.openai.chat.max-completion-tokens=2048"
 })
 @AutoConfigureMockMvc
-@Import(FormAnalysisEnabledProviderApiTest.FakeProviderConfiguration.class)
+@Import({
+    FormAnalysisEnabledProviderApiTest.FakeProviderConfiguration.class,
+    NotRegisteredPolicyConfiguration.class
+})
 @DisplayName("OpenAI 활성화 API")
 class FormAnalysisEnabledProviderApiTest {
 
