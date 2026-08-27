@@ -51,7 +51,9 @@
 - 신규 raw는 `llm-wiki/raw/issues/CF-<번호>/`에 추가하고 병합된 raw는 수정, 삭제,
   rename하지 않는다.
 - 대화 전문, 실제 지원 정보, 계정, 세션 정보와 시크릿은 `llm-wiki/`에 기록하지 않는다.
-- 수집, 질의, 점검에는 `cf-karpathy-llm-wiki`를 사용하고, 구조 검증은 `harness/scripts/validate-llm-wiki.py`로 실행한다.
+- 저장된 지식을 근거로 답할 때는 `cf-llm-wiki-query`를 사용한다. 수집, 갱신과 점검에는
+  `cf-karpathy-llm-wiki`를 사용하고, 구조 검증은
+  `harness/scripts/validate-llm-wiki.py`로 실행한다.
 
 ## 회사 어댑터
 
