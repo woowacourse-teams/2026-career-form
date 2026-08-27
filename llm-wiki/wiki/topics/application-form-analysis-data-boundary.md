@@ -2,8 +2,8 @@
 
 > Topic: application-form-analysis-data-boundary
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-40/documents/adr/40-generic-form-analysis-resolver-boundary.md)
-> History: [근거 1](../../raw/issues/CF-44/documents/adr/44-application-form-analysis-data-boundary.md), [근거 2](../../raw/issues/CF-40/documents/adr/40-generic-form-analysis-resolver-boundary.md)
+> Current: [현재 근거](../../raw/issues/CF-57/documents/adr/57-openai-chat-completion-storage.md)
+> History: [근거 1](../../raw/issues/CF-44/documents/adr/44-application-form-analysis-data-boundary.md), [근거 2](../../raw/issues/CF-40/documents/adr/40-generic-form-analysis-resolver-boundary.md), [근거 3](../../raw/issues/CF-57/documents/adr/57-openai-chat-completion-storage.md)
 > Updated: 2026-08-27
 
 ## 현재 상태
@@ -14,6 +14,8 @@ Spring Boot의 Jakarta Validation은 필수 여부, 길이, enum과 형식 같�
 
 Action OpenAI input에는 candidate 의미, section/item 문맥, visibility, `domId/domName`과 true-only 상태만 보내고, field input에는 더 작은 candidate/section/item/option 표시 문맥만 보낸다. 실제 값·HTML·URL 상세·계정/세션·selector·실행 정보는 금지한다. 공급자 output은 action의 세 bucket과 field의 두 bucket만 표현하고, command·effect·policy·status·write plan은 application이 생성한다. 실제 action 실행·반복 횟수·효과 확인·DOM 재수집과 field 값 연결·입력은 browser 책임이다. 모든 output candidate는 input과 exact 1:1이며 위반 시 전체 폐기한다.
 
+OpenAI Chat Completions 호출은 공통 Spring 설정과 요청별 옵션에 모두 `store=true`를 둔다. 공통 `application.yml`을 모든 runtime profile이 상속하고 profile overlay는 이 값을 덮어쓰지 않는다. 요청별 옵션이 공통 설정을 덮어쓸 수 있으므로 두 지점을 함께 켜서 비식별 candidate 구조와 구조화된 output의 저장·조회 가능성을 일관되게 유지한다. 이 저장 경계에도 실제 프로필 값, HTML, URL 상세, 계정·세션·인증 정보와 실행 정보 금지는 그대로 적용된다.
+
 ## 변경 이유
 
-외부 endpoint, 성공 JSON, canonical 77-key와 개인정보 경계를 유지하면서 사람이 패키지 방향과 파일 역할을 한 번에 읽을 수 있도록 구조를 줄였다. 검증을 없애는 대신 HTTP 형식, application 안전성, provider JSON과 Frontend snapshot 관계의 소유권에 맞게 배치했다. 후속 회사별 정적 구현은 같은 port를 구현하며, 검증된 회사 fingerprint가 불일치하면 `ADAPTER_STRUCTURE_MISMATCH`로 차단하고 LLM fallback하지 않는 안전 경계는 유지한다.
+외부 endpoint, 성공 JSON, canonical 77-key와 개인정보 경계를 유지하면서 사람이 패키지 방향과 파일 역할을 한 번에 읽을 수 있도록 구조를 줄였다. 검증을 없애는 대신 HTTP 형식, application 안전성, provider JSON과 Frontend snapshot 관계의 소유권에 맞게 배치했다. 저장된 completion을 OpenAI Platform에서 추적할 수 있도록 같은 경계를 유지한 채 보관을 명시적으로 켰다. 후속 회사별 정적 구현은 같은 port를 구현하며, 검증된 회사 fingerprint가 불일치하면 `ADAPTER_STRUCTURE_MISMATCH`로 차단하고 LLM fallback하지 않는 안전 경계는 유지한다.
