@@ -25,7 +25,7 @@ interface AnalysisHandlerOptions {
 export function createAnalysisMessageHandler({
   baseUrl,
   fetcher = fetch,
-  timeoutMs = 15_000,
+  timeoutMs = 60_000,
 }: AnalysisHandlerOptions) {
   const normalizedBaseUrl = baseUrl?.trim().replace(/\/$/, "") ?? "";
 

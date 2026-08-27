@@ -72,6 +72,105 @@ describe("application form DOM collection", () => {
     expect(collected.registry.lookupField(candidateId).status).toBe("stale");
   });
 
+  it("counts nested repeatable items in a form body without counting inner form items", () => {
+    document.body.innerHTML = `
+      <div class="apply-form-box cert-root">
+        <div class="form-title"><h3>자격/면허</h3></div>
+        <div class="form-body">
+          <div class="form-item-group">
+            <div class="form-item"><button type="button">자격/면허 추가</button></div>
+          </div>
+          <div class="form-item-group cert-Item">
+            <div class="form-item"><input name="cerCertName" /></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const collected = collectPreparationSnapshot(document);
+    const action = collected.request.sections
+      .flatMap(({ actionCandidates }) => actionCandidates)
+      .find(({ displayName }) => displayName === "자격/면허 추가");
+
+    expect(action).toBeDefined();
+    expect(collected.countRepeatableGroups(action!.candidateId)).toBe(1);
+    expect(collected.request.sections[0]?.items).toBeUndefined();
+  });
+
+  it("does not treat upload or delete controls as preparation actions", () => {
+    document.body.innerHTML = `
+      <section>
+        <button type="button">파일 업로드</button>
+        <button type="button">삭제</button>
+        <button type="button">학점 변환 계산기</button>
+        <button type="button">자격/면허 추가</button>
+      </section>
+    `;
+
+    const collected = collectPreparationSnapshot(document);
+
+    expect(
+      collected.request.sections[0]?.actionCandidates.map(
+        ({ displayName }) => displayName,
+      ),
+    ).toEqual(["자격/면허 추가"]);
+  });
+
+  it("caps long field metadata at the analysis API limit", () => {
+    document.body.innerHTML = `
+      <label for="long-select">${"가".repeat(200)}</label>
+      <select id="long-select">
+        <option>선택</option>
+      </select>
+    `;
+
+    const collected = collectFieldsSnapshot(document);
+    const field = collected.request.sections[0]!.fields[0]!;
+
+    expect(field.displayName).toHaveLength(120);
+  });
+
+  it("counts different repeatable groups independently within one section", () => {
+    document.body.innerHTML = `
+      <div class="apply-form-box education-root">
+        <div class="form-item-group educationhigh-item"></div>
+        <div class="form-item-group educationUniv-item"></div>
+        <div class="form-item-group educationGrad-item"></div>
+        <button class="btnAddEducationHigh" type="button">고등학교 학력 정보 추가</button>
+        <button class="btnAddEducationUniv" type="button">대학 학력 정보 추가</button>
+        <button class="btnAddEducationGrad" type="button">대학원 학력 정보 추가</button>
+      </div>
+    `;
+
+    const collected = collectPreparationSnapshot(document);
+    const actions = collected.request.sections[0]!.actionCandidates;
+
+    expect(
+      actions.map((action) =>
+        collected.countRepeatableGroups(action.candidateId),
+      ),
+    ).toEqual([1, 1, 1]);
+  });
+
+  it("does not count a sibling education row for an empty education group", () => {
+    document.body.innerHTML = `
+      <div class="apply-form-box education-root">
+        <div class="form-item-group educationhigh-item"></div>
+        <button class="btnAddEducationHigh" type="button">고등학교 학력 정보 추가</button>
+        <button class="btnAddEducationUniv" type="button">대학 학력 정보 추가</button>
+      </div>
+    `;
+
+    const collected = collectPreparationSnapshot(document);
+    const actions = collected.request.sections[0]!.actionCandidates;
+
+    expect(
+      actions.map((action) =>
+        collected.countRepeatableGroups(action.candidateId),
+      ),
+    ).toEqual([1, 0]);
+  });
+
   it("keeps disabled, readonly, hidden, password and file controls non-executable", () => {
     document.body.innerHTML = `
       <input aria-label="disabled" disabled />

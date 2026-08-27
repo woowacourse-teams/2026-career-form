@@ -70,9 +70,56 @@ async function refresh(
   }
 }
 
-function actionIsReady(snapshot: PreparationSnapshot, candidateId: string) {
+interface ActionIdentity {
+  sectionId: string;
+  displayName?: string;
+  domId?: string;
+  domName?: string;
+}
+
+function actionIdentity(
+  snapshot: PreparationSnapshot,
+  candidateId: string,
+): ActionIdentity | undefined {
   const lookup = snapshot.registry.lookupAction(candidateId);
-  return lookup.status === "ready" ? lookup.handle : undefined;
+  if (!("handle" in lookup)) return undefined;
+  const { handle } = lookup;
+  return {
+    sectionId: handle.sectionId,
+    ...(handle.candidate.displayName
+      ? { displayName: handle.candidate.displayName }
+      : {}),
+    ...(handle.candidate.domId ? { domId: handle.candidate.domId } : {}),
+    ...(handle.candidate.domName ? { domName: handle.candidate.domName } : {}),
+  };
+}
+
+function actionMatchesIdentity(
+  handle: { sectionId: string; candidate: { displayName?: string } },
+  identity: ActionIdentity,
+): boolean {
+  return (
+    handle.sectionId === identity.sectionId &&
+    (identity.displayName === undefined ||
+      handle.candidate.displayName === identity.displayName)
+  );
+}
+
+function actionIsReadyWithIdentity(
+  snapshot: PreparationSnapshot,
+  candidateId: string,
+  identity: ActionIdentity | undefined,
+) {
+  const direct = snapshot.registry.lookupAction(candidateId);
+  if (
+    direct.status === "ready" &&
+    (!identity || actionMatchesIdentity(direct.handle, identity))
+  ) {
+    return direct.handle;
+  }
+  if (!identity) return undefined;
+  const fallback = snapshot.registry.lookupActionByIdentity(identity);
+  return fallback.status === "ready" ? fallback.handle : undefined;
 }
 
 function inspectGroupCount(
@@ -86,6 +133,13 @@ function inspectGroupCount(
   } catch {
     return undefined;
   }
+}
+
+function planWithActionCandidateId(
+  plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
+  actionCandidateId: string,
+): Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }> {
+  return { ...plan, actionCandidateId };
 }
 
 function failure(
@@ -106,7 +160,8 @@ export async function executeApprovedPreparationPlans({
   refreshSnapshot,
   countRepeatableGroups,
 }: PreparationExecutionOptions): Promise<PreparationExecutionResult> {
-  if (approvedPlans.some(({ approved }) => !approved)) {
+  const selectedPlans = approvedPlans.filter(({ approved }) => approved);
+  if (selectedPlans.length === 0) {
     return {
       status: "approval-required",
       mayCollectFieldsSnapshot: false,
@@ -117,11 +172,16 @@ export async function executeApprovedPreparationPlans({
   let snapshot = initialSnapshot;
   let executedPlanCount = 0;
 
-  for (const approvedPlan of approvedPlans) {
+  for (const approvedPlan of selectedPlans) {
     const { plan } = approvedPlan;
 
     if (plan.command === "REVEAL_SECTION") {
-      const action = actionIsReady(snapshot, plan.actionCandidateId);
+      const identity = actionIdentity(initialSnapshot, plan.actionCandidateId);
+      const action = actionIsReadyWithIdentity(
+        snapshot,
+        plan.actionCandidateId,
+        identity,
+      );
       if (!action) {
         return failure("action-not-executable", executedPlanCount);
       }
@@ -143,25 +203,40 @@ export async function executeApprovedPreparationPlans({
       return failure("invalid-local-item-count", executedPlanCount);
     }
 
+    const identity = actionIdentity(initialSnapshot, plan.actionCandidateId);
+    const initialAction = actionIsReadyWithIdentity(
+      snapshot,
+      plan.actionCandidateId,
+      identity,
+    );
     const currentGroupCount = inspectGroupCount(
       countRepeatableGroups,
       snapshot,
-      plan,
+      initialAction
+        ? planWithActionCandidateId(plan, initialAction.candidate.candidateId)
+        : plan,
     );
     if (currentGroupCount === undefined) {
       return failure("invalid-group-count", executedPlanCount);
     }
     const requiredAdditions = Math.max(0, localItemCount - currentGroupCount);
+    if (requiredAdditions > 0 && !initialAction) {
+      return failure("action-not-executable", executedPlanCount);
+    }
 
     for (let addition = 0; addition < requiredAdditions; addition += 1) {
-      const currentAction = actionIsReady(snapshot, plan.actionCandidateId);
+      const currentAction = actionIsReadyWithIdentity(
+        snapshot,
+        plan.actionCandidateId,
+        identity,
+      );
       if (!currentAction) {
         return failure("action-not-executable", executedPlanCount);
       }
       const countBefore = inspectGroupCount(
         countRepeatableGroups,
         snapshot,
-        plan,
+        planWithActionCandidateId(plan, currentAction.candidate.candidateId),
       );
       if (countBefore === undefined) {
         return failure("invalid-group-count", executedPlanCount);
@@ -173,16 +248,21 @@ export async function executeApprovedPreparationPlans({
       if (!refreshed) {
         return failure("refresh-failed", executedPlanCount);
       }
+      const refreshedAction = actionIsReadyWithIdentity(
+        refreshed,
+        plan.actionCandidateId,
+        identity,
+      );
+      if (!refreshedAction) {
+        return failure("action-not-reidentified", executedPlanCount);
+      }
       const countAfter = inspectGroupCount(
         countRepeatableGroups,
         refreshed,
-        plan,
+        planWithActionCandidateId(plan, refreshedAction.candidate.candidateId),
       );
       if (countAfter !== countBefore + 1) {
         return failure("group-count-not-incremented", executedPlanCount);
-      }
-      if (!actionIsReady(refreshed, plan.actionCandidateId)) {
-        return failure("action-not-reidentified", executedPlanCount);
       }
       snapshot = refreshed;
     }

@@ -82,6 +82,29 @@ export class CandidateRegistry {
     return this.lookup(this.actions.get(candidateId));
   }
 
+  lookupActionByIdentity(identity: {
+    sectionId: string;
+    displayName?: string;
+    domId?: string;
+    domName?: string;
+  }): CandidateLookup<ActionCandidateHandle> {
+    const key = identity.displayName
+      ? "displayName"
+      : identity.domName
+        ? "domName"
+        : identity.domId
+          ? "domId"
+          : undefined;
+    if (!key) return { status: "unknown" };
+    const matches = [...this.actions.values()].filter(
+      ({ handle }) =>
+        handle.sectionId === identity.sectionId &&
+        handle.candidate[key] === identity[key],
+    );
+    if (matches.length !== 1) return { status: "unknown" };
+    return this.lookup(matches[0]);
+  }
+
   lookupField(candidateId: string): CandidateLookup<FieldCandidateHandle> {
     return this.lookup(this.fields.get(candidateId));
   }

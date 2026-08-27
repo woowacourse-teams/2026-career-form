@@ -6,10 +6,12 @@ import {
   createStructuralSignature,
 } from "../dom/candidate-registry";
 import { createEmptyProfile, type Profile } from "../../profile/model";
+import type { ReviewPlanItem } from "./review-plan";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
   revealSensitiveReviewItem,
+  reviewItemsForDisplay,
 } from "./review-plan";
 
 function response(
@@ -133,6 +135,40 @@ describe("profile value resolution", () => {
 });
 
 describe("review plan", () => {
+  it("puts available items first and hides unavailable items for display", () => {
+    const item = (
+      candidateId: string,
+      status: ReviewPlanItem["status"],
+    ): ReviewPlanItem => ({
+      candidateId,
+      fieldLabel: candidateId,
+      currentValue: "",
+      previewValue: "value",
+      status,
+      selected: status === "available",
+      disabled: status === "unavailable",
+      revealed: true,
+      reason: "reason",
+    });
+
+    expect(
+      reviewItemsForDisplay([
+        item("unavailable", "unavailable"),
+        item("needs-review", "needs-review"),
+        item("available-1", "available"),
+        item("sensitive", "sensitive"),
+        item("available-2", "available"),
+        item("conflict", "conflict"),
+      ]).map(({ candidateId }) => candidateId),
+    ).toEqual([
+      "available-1",
+      "available-2",
+      "needs-review",
+      "sensitive",
+      "conflict",
+    ]);
+  });
+
   it("selects a ready allowed value when the page field is empty", () => {
     const profile = createEmptyProfile();
     profile.contact.email = "me@example.test";

@@ -54,6 +54,41 @@ function createApiClient(): AnalysisApiClient {
 }
 
 describe("AutofillOverlay", () => {
+  it("shows the preparation action label from the DOM candidate", async () => {
+    const pageDocument =
+      document.implementation.createHTMLDocument("application");
+    pageDocument.body.innerHTML = `
+      <section><button type="button">Add certification</button></section>
+    `;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [
+          {
+            actionCandidateId:
+              request.sections[0]?.actionCandidates[0]!.candidateId,
+            command: "ADD_REPEATABLE_GROUP" as const,
+            expectedEffect: "GROUP_COUNT_INCREMENT" as const,
+          },
+        ],
+      })),
+      analyzeFields: vi.fn(),
+    };
+
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(await screen.findByText("Add certification")).toBeInTheDocument();
+  });
+
   it("does not execute a preparation action until the user explicitly approves it", async () => {
     const pageDocument = document.implementation.createHTMLDocument("지원서");
     pageDocument.body.innerHTML = `
@@ -66,7 +101,7 @@ describe("AutofillOverlay", () => {
       targetSection.hidden = false;
     });
     const apiClient: AnalysisApiClient = {
-      analyzePreparation: vi.fn(async (request) => ({
+      analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => ({
         snapshotId: request.snapshotId,
         mode: "GENERIC" as const,
         analysisStatus: "COMPLETE" as const,
@@ -125,6 +160,69 @@ describe("AutofillOverlay", () => {
       await screen.findByRole("heading", { name: "입력 예정 항목 검토" }),
     ).toBeInTheDocument();
     expect(pageDocument.querySelector("input")?.value).toBe("");
+  });
+
+  it("enables preparation execution after one approval and skips unchecked actions", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `
+      <section>
+        <button type="button">첫 번째 영역 열기</button>
+        <div hidden>첫 번째 영역</div>
+      </section>
+      <section>
+        <button type="button">두 번째 영역 열기</button>
+        <div hidden>두 번째 영역</div>
+      </section>
+    `;
+    const sections = [...pageDocument.querySelectorAll("section")];
+    const buttons = [...pageDocument.querySelectorAll("button")];
+    buttons.forEach((button, index) => {
+      button.addEventListener("click", () => {
+        sections[index]!.querySelector("div")!.hidden = false;
+      });
+    });
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: request.sections.map((section) => ({
+          actionCandidateId: section.actionCandidates[0]!.candidateId,
+          command: "REVEAL_SECTION" as const,
+          expectedEffect: "TARGET_VISIBLE" as const,
+          targetSectionId: section.sectionId,
+        })),
+      })),
+      analyzeFields: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        fields: [],
+      })),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    const checkboxes = await screen.findAllByRole("checkbox");
+    expect(checkboxes).toHaveLength(2);
+    fireEvent.click(checkboxes[0]!);
+    const executeButton = screen.getByRole("button", {
+      name: "승인한 준비 동작 실행",
+    });
+    expect(executeButton).toBeEnabled();
+    fireEvent.click(executeButton);
+
+    expect(sections[0]!.querySelector("div")!.hidden).toBe(false);
+    expect(sections[1]!.querySelector("div")!.hidden).toBe(true);
+    expect(
+      await screen.findByRole("heading", { name: "입력 예정 항목 검토" }),
+    ).toBeInTheDocument();
   });
 
   it("keeps the page unchanged until final approval, then writes the selected fixture result", async () => {
@@ -220,11 +318,11 @@ describe("AutofillOverlay", () => {
     expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();
   });
 
-  it("displays a field warning with its mapping and interaction status", async () => {
+  it("displays a review field with its mapping and interaction status", async () => {
     const pageDocument = document.implementation.createHTMLDocument("지원서");
     pageDocument.body.innerHTML = `<label>이메일 <input type="email" /></label>`;
     const apiClient: AnalysisApiClient = {
-      analyzePreparation: vi.fn(async (request) => ({
+      analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => ({
         snapshotId: request.snapshotId,
         mode: "GENERIC" as const,
         analysisStatus: "COMPLETE" as const,
@@ -242,7 +340,8 @@ describe("AutofillOverlay", () => {
             profileFieldKey: "contact.contact.email",
             autofillPolicy: "CONDITIONAL" as const,
             mappingStatus: "LLM_SUGGESTED" as const,
-            interactionStatus: "UNVERIFIED" as const,
+            interactionStatus: "READY" as const,
+            writePlan: { command: "SET_TEXT" as const },
           },
         ],
       })),
@@ -260,7 +359,108 @@ describe("AutofillOverlay", () => {
       await screen.findByText("분석 경고: LLM 분석 일부 미완료"),
     ).toBeInTheDocument();
     expect(screen.getByText("매핑 근거: LLM 제안")).toBeInTheDocument();
-    expect(screen.getByText("입력 상태: 검증되지 않음")).toBeInTheDocument();
+    expect(screen.getByText("입력 상태: 입력 준비됨")).toBeInTheDocument();
+  });
+
+  it("shows available fields first and omits unavailable fields", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `
+      <label>사용 가능 필드 <input type="email" /></label>
+      <label>확인 필요 필드 <input type="email" /></label>
+      <label>입력 불가 필드 <input type="email" /></label>
+      <label>충돌 필드 <input type="email" value="기존 값" /></label>
+    `;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [],
+      })),
+      analyzeFields: vi.fn(async (request: FieldsAnalyzeRequest) => {
+        const candidates = request.sections.flatMap(
+          (section) => section.fields,
+        );
+        return {
+          snapshotId: request.snapshotId,
+          mode: "GENERIC" as const,
+          analysisStatus: "COMPLETE" as const,
+          fields: [
+            {
+              candidateId: candidates[0]!.candidateId,
+              matchType: "MATCH" as const,
+              profileFieldKey: "contact.contact.email",
+              autofillPolicy: "ALLOWED" as const,
+              mappingStatus: "LLM_SUGGESTED" as const,
+              interactionStatus: "READY" as const,
+              writePlan: { command: "SET_TEXT" as const },
+            },
+            {
+              candidateId: candidates[1]!.candidateId,
+              matchType: "MATCH" as const,
+              profileFieldKey: "contact.contact.email",
+              autofillPolicy: "CONDITIONAL" as const,
+              mappingStatus: "LLM_SUGGESTED" as const,
+              interactionStatus: "READY" as const,
+              writePlan: { command: "SET_TEXT" as const },
+            },
+            {
+              candidateId: candidates[2]!.candidateId,
+              matchType: "NO_MATCH" as const,
+              mappingStatus: "LLM_SUGGESTED" as const,
+              interactionStatus: "BLOCKED" as const,
+              reasonCodes: ["NO_MATCH"] as ["NO_MATCH"],
+            },
+            {
+              candidateId: candidates[3]!.candidateId,
+              matchType: "MATCH" as const,
+              profileFieldKey: "contact.contact.email",
+              autofillPolicy: "ALLOWED" as const,
+              mappingStatus: "LLM_SUGGESTED" as const,
+              interactionStatus: "READY" as const,
+              writePlan: { command: "SET_TEXT" as const },
+            },
+          ],
+        };
+      }),
+    };
+
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    const availableGroup = await screen.findByRole("region", {
+      name: /^입력 가능/,
+    });
+    const reviewGroup = screen.getByRole("region", {
+      name: /^확인 필요/,
+    });
+    expect(
+      within(availableGroup).getByRole("heading", { name: "입력 가능 1개" }),
+    ).toBeInTheDocument();
+    expect(
+      within(reviewGroup).getByRole("heading", { name: "확인 필요 2개" }),
+    ).toBeInTheDocument();
+    expect(
+      within(availableGroup)
+        .getByRole("checkbox")
+        .closest("label")
+        ?.querySelector("strong")?.textContent,
+    ).toBe("사용 가능 필드");
+    expect(
+      within(reviewGroup)
+        .getAllByRole("checkbox")
+        .map(
+          (checkbox) =>
+            checkbox.closest("label")?.querySelector("strong")?.textContent,
+        ),
+    ).toEqual(["확인 필요 필드", "충돌 필드"]);
+    expect(screen.queryByText("입력 불가 필드")).not.toBeInTheDocument();
   });
 
   it("keeps both sensitive current and planned values masked until the user reveals them", async () => {
@@ -275,7 +475,7 @@ describe("AutofillOverlay", () => {
       saveLayout: vi.fn(async () => undefined),
     };
     const apiClient: AnalysisApiClient = {
-      analyzePreparation: vi.fn(async (request) => ({
+      analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => ({
         snapshotId: request.snapshotId,
         mode: "GENERIC" as const,
         analysisStatus: "COMPLETE" as const,
@@ -338,11 +538,12 @@ describe("AutofillOverlay", () => {
     fireEvent.click(screen.getByRole("button", { name: "기입하기" }));
 
     expect(
-      await screen.findByText("이메일: 승인하지 않아 건너뜀"),
-    ).toBeInTheDocument();
+      screen.queryByText("이메일: 승인하지 않아 건너뜀"),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByText("사용자가 승인한 입력 항목이 아닙니다."),
-    ).toBeInTheDocument();
+      screen.queryByText("사용자가 승인한 입력 항목이 아닙니다."),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("0")).toHaveLength(2);
     expect(pageDocument.querySelector("input")?.value).toBe("");
   });
 
@@ -454,6 +655,162 @@ describe("AutofillOverlay", () => {
     expect(
       pageDocument.querySelectorAll("[data-repeatable-group]"),
     ).toHaveLength(3);
+  });
+
+  it("counts education profile entries by high school, university, and graduate section", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `
+      <div class="apply-form-box education-root">
+        <h3>학력</h3>
+        <button id="btnAddEducationHigh" class="btnAddEducationHigh" type="button">추가</button>
+        <button id="btnAddEducationUniv" class="btnAddEducationUniv" type="button">추가</button>
+        <button id="btnAddEducationGrad" class="btnAddEducationGrad" type="button">추가</button>
+      </div>
+    `;
+    const profile = createEmptyProfile();
+    profile.education = [
+      { id: "high-school-1", sectionId: "highSchool", values: {} },
+      { id: "university-1", sectionId: "university", values: {} },
+    ];
+    const repository: ProfileRepository = {
+      load: vi.fn(async () => profile),
+      save: vi.fn(async () => undefined),
+      loadLayout: vi.fn(async () => "a" as const),
+      saveLayout: vi.fn(async () => undefined),
+    };
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: request.sections[0]!.actionCandidates.map(
+          ({ candidateId }) => ({
+            actionCandidateId: candidateId,
+            command: "ADD_REPEATABLE_GROUP" as const,
+            expectedEffect: "GROUP_COUNT_INCREMENT" as const,
+          }),
+        ),
+      })),
+      analyzeFields: vi.fn(),
+    };
+
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={repository}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getAllByText("현재 화면 기준 추가 필요 수: 1회"),
+    ).toHaveLength(2);
+    expect(
+      within(dialog).getByText("현재 화면 기준 추가 필요 수: 0회"),
+    ).toBeInTheDocument();
+  });
+
+  it("matches certification categories by core words in section labels", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML =
+      '<section><h2>자격/면허</h2><div data-repeatable-group></div><button type="button">추가</button></section>';
+    const profile = createEmptyProfile();
+    profile.certifications = [
+      { id: "certificate-1", sectionId: "certificate", values: {} },
+      { id: "certificate-2", sectionId: "certificate", values: {} },
+      { id: "certificate-3", sectionId: "certificate", values: {} },
+    ];
+    const repository: ProfileRepository = {
+      load: vi.fn(async () => profile),
+      save: vi.fn(async () => undefined),
+      loadLayout: vi.fn(async () => "a" as const),
+      saveLayout: vi.fn(async () => undefined),
+    };
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [
+          {
+            actionCandidateId:
+              request.sections[0]?.actionCandidates[0]!.candidateId,
+            command: "ADD_REPEATABLE_GROUP" as const,
+            expectedEffect: "GROUP_COUNT_INCREMENT" as const,
+          },
+        ],
+      })),
+      analyzeFields: vi.fn(),
+    };
+
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={repository}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByText("현재 화면 기준 추가 필요 수: 2회"),
+    ).toBeInTheDocument();
+  });
+
+  it("matches a certification category from an ungrouped action label", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `
+      <div class="apply-form-box cert-root">
+        <h3>자격/면허</h3>
+        <div class="form-item-group"></div>
+        <div class="form-item-group cert-Item"></div>
+        <button type="button">자격/면허 추가</button>
+      </div>
+    `;
+    const profile = createEmptyProfile();
+    profile.certifications = [
+      { id: "certificate-1", sectionId: "certificate", values: {} },
+      { id: "certificate-2", sectionId: "certificate", values: {} },
+      { id: "certificate-3", sectionId: "certificate", values: {} },
+    ];
+    const repository: ProfileRepository = {
+      load: vi.fn(async () => profile),
+      save: vi.fn(async () => undefined),
+      loadLayout: vi.fn(async () => "a" as const),
+      saveLayout: vi.fn(async () => undefined),
+    };
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "GENERIC" as const,
+        analysisStatus: "COMPLETE" as const,
+        preparationPlans: [
+          {
+            actionCandidateId:
+              request.sections.at(-1)?.actionCandidates[0]!.candidateId ??
+              request.sections[0]?.actionCandidates[0]!.candidateId,
+            command: "ADD_REPEATABLE_GROUP" as const,
+            expectedEffect: "GROUP_COUNT_INCREMENT" as const,
+          },
+        ],
+      })),
+      analyzeFields: vi.fn(),
+    };
+
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={repository}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByText("현재 화면 기준 추가 필요 수: 2회"),
+    ).toBeInTheDocument();
   });
 
   it("accepts a revealed target section that contains fields but no action candidate", async () => {

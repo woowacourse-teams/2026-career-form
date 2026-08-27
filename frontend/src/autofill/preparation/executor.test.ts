@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PreparationPlan } from "../api/types";
+import { collectPreparationSnapshot } from "../dom/collect";
 import {
   CandidateRegistry,
   createStructuralSignature,
@@ -75,6 +76,46 @@ describe("approved preparation plan executor", () => {
     expect(result).toMatchObject({
       status: "approval-required",
       mayCollectFieldsSnapshot: false,
+    });
+  });
+
+  it("executes only approved plans when some preparation plans are skipped", async () => {
+    document.body.innerHTML = `
+      <button id="action-reveal" type="button">추가 정보 열기</button>
+      <button id="action-add" type="button">자격 항목 추가</button>
+      <section id="optional" hidden>추가 정보</section>
+    `;
+    const revealAction =
+      document.querySelector<HTMLButtonElement>("#action-reveal")!;
+    const addAction = document.querySelector<HTMLButtonElement>("#action-add")!;
+    const target = document.querySelector("section")!;
+    let revealClicks = 0;
+    let addClicks = 0;
+    revealAction.addEventListener("click", () => {
+      revealClicks += 1;
+      target.hidden = false;
+    });
+    addAction.addEventListener("click", () => {
+      addClicks += 1;
+    });
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [
+        { plan: revealPlan, approved: true },
+        { plan: addPlan, approved: false, localItemCount: 1 },
+      ],
+      initialSnapshot: snapshotFor(revealAction),
+      refreshSnapshot: async () =>
+        snapshotFor(revealAction, { targetVisible: !target.hidden }),
+      countRepeatableGroups: () => 0,
+    });
+
+    expect(revealClicks).toBe(1);
+    expect(addClicks).toBe(0);
+    expect(result).toMatchObject({
+      status: "completed",
+      executedPlanCount: 1,
+      mayCollectFieldsSnapshot: true,
     });
   });
 
@@ -175,6 +216,172 @@ describe("approved preparation plan executor", () => {
     expect(result).toMatchObject({
       status: "completed",
       mayCollectFieldsSnapshot: true,
+    });
+  });
+
+  it("re-identifies the visible add action when a site hides the old button after each click", async () => {
+    document.body.innerHTML = `
+      <div class="apply-form-box cert-root">
+        <div class="form-body">
+          <div class="form-item-group">
+            <button type="button" class="btnAddCert">자격/면허 추가</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const formBody = document.querySelector(".form-body")!;
+    const firstAction = document.querySelector<HTMLButtonElement>("button")!;
+    let clicks = 0;
+    const addRow = (action: HTMLButtonElement) => {
+      action.style.display = "none";
+      const row = document.createElement("div");
+      row.className = "form-item-group cert-Item";
+      formBody.append(row);
+      const helperAction = document.createElement("button");
+      helperAction.type = "button";
+      helperAction.textContent = "보조 동작";
+      formBody.append(helperAction);
+      const nextAction = action.cloneNode(true) as HTMLButtonElement;
+      nextAction.removeAttribute("id");
+      nextAction.style.display = "";
+      nextAction.addEventListener("click", () => {
+        clicks += 1;
+        addRow(nextAction);
+      });
+      formBody.append(nextAction);
+    };
+    firstAction.addEventListener("click", () => {
+      clicks += 1;
+      addRow(firstAction);
+    });
+
+    const initialCollected = collectPreparationSnapshot(document);
+    const actionCandidateId =
+      initialCollected.request.sections
+        .flatMap(({ actionCandidates }) => actionCandidates)
+        .find(({ displayName }) => displayName === "자격/면허 추가")
+        ?.candidateId ?? "action-1";
+    const toExecutionSnapshot = () => {
+      const collected = collectPreparationSnapshot(document);
+      return {
+        registry: collected.registry,
+        isTargetSectionVisible: () => true,
+        countRepeatableGroups: (
+          plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
+        ) => collected.countRepeatableGroups(plan.actionCandidateId),
+      };
+    };
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [
+        {
+          plan: {
+            actionCandidateId,
+            command: "ADD_REPEATABLE_GROUP",
+            expectedEffect: "GROUP_COUNT_INCREMENT",
+          },
+          approved: true,
+          localItemCount: 2,
+        },
+      ],
+      initialSnapshot: toExecutionSnapshot(),
+      refreshSnapshot: async () => toExecutionSnapshot(),
+      countRepeatableGroups: (snapshot, plan) =>
+        snapshot.countRepeatableGroups?.(plan) ?? -1,
+    });
+
+    expect(clicks).toBe(2);
+    expect(document.querySelectorAll(".cert-Item")).toHaveLength(2);
+    expect(result).toMatchObject({
+      status: "completed",
+      executedPlanCount: 2,
+    });
+  });
+
+  it("counts and executes sibling add actions by their refreshed identities", async () => {
+    document.body.innerHTML = `
+      <div class="apply-form-box education-root">
+        <div class="form-body">
+          <button id="btnAddEducationHigh" type="button">고등학교 학력 정보 추가</button>
+          <button id="btnAddEducationUniv" type="button">대학 학력 정보 추가</button>
+        </div>
+      </div>
+    `;
+    const formBody = document.querySelector<HTMLDivElement>(".form-body")!;
+    const highAction = document.querySelector<HTMLButtonElement>(
+      "#btnAddEducationHigh",
+    )!;
+    const universityAction = document.querySelector<HTMLButtonElement>(
+      "#btnAddEducationUniv",
+    )!;
+    const clicks: string[] = [];
+    highAction.addEventListener("click", () => {
+      clicks.push("highSchool");
+      const row = document.createElement("div");
+      row.className = "form-item-group educationhigh-item";
+      formBody.insertBefore(row, highAction);
+    });
+    universityAction.addEventListener("click", () => {
+      clicks.push("university");
+      const row = document.createElement("div");
+      row.className = "form-item-group educationUniv-item";
+      formBody.insertBefore(row, universityAction);
+    });
+
+    const initialCollected = collectPreparationSnapshot(document);
+    const actionCandidates = initialCollected.request.sections.flatMap(
+      ({ actionCandidates }) => actionCandidates,
+    );
+    const highCandidateId = actionCandidates.find(
+      ({ domId }) => domId === "btnAddEducationHigh",
+    )!.candidateId;
+    const universityCandidateId = actionCandidates.find(
+      ({ domId }) => domId === "btnAddEducationUniv",
+    )!.candidateId;
+    const toExecutionSnapshot = () => {
+      const collected = collectPreparationSnapshot(document);
+      return {
+        registry: collected.registry,
+        isTargetSectionVisible: () => true,
+        countRepeatableGroups: (
+          plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
+        ) => collected.countRepeatableGroups(plan.actionCandidateId),
+      };
+    };
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [
+        {
+          plan: {
+            actionCandidateId: highCandidateId,
+            command: "ADD_REPEATABLE_GROUP",
+            expectedEffect: "GROUP_COUNT_INCREMENT",
+          },
+          approved: true,
+          localItemCount: 1,
+        },
+        {
+          plan: {
+            actionCandidateId: universityCandidateId,
+            command: "ADD_REPEATABLE_GROUP",
+            expectedEffect: "GROUP_COUNT_INCREMENT",
+          },
+          approved: true,
+          localItemCount: 1,
+        },
+      ],
+      initialSnapshot: toExecutionSnapshot(),
+      refreshSnapshot: async () => toExecutionSnapshot(),
+      countRepeatableGroups: (snapshot, plan) =>
+        snapshot.countRepeatableGroups?.(plan) ?? -1,
+    });
+
+    expect(clicks).toEqual(["highSchool", "university"]);
+    expect(document.querySelectorAll(".educationhigh-item")).toHaveLength(1);
+    expect(document.querySelectorAll(".educationUniv-item")).toHaveLength(1);
+    expect(result).toMatchObject({
+      status: "completed",
+      executedPlanCount: 2,
     });
   });
 

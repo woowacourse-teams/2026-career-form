@@ -42,6 +42,20 @@ export interface ReviewPlan {
   items: ReviewPlanItem[];
 }
 
+export function reviewItemsForDisplay(
+  items: readonly ReviewPlanItem[],
+): ReviewPlanItem[] {
+  return items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.status !== "unavailable")
+    .sort((left, right) => {
+      const leftOrder = left.item.status === "available" ? 0 : 1;
+      const rightOrder = right.item.status === "available" ? 0 : 1;
+      return leftOrder - rightOrder || left.index - right.index;
+    })
+    .map(({ item }) => item);
+}
+
 interface ProfileFieldParts {
   categoryId: ProfileCategoryId;
   sectionId: string;

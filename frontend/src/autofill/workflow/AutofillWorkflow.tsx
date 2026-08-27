@@ -11,6 +11,7 @@ import { executeApprovedPreparationPlans } from "../preparation/executor";
 import {
   buildReviewPlan,
   revealSensitiveReviewItem,
+  reviewItemsForDisplay,
   type ReviewPlanItem,
 } from "../review/review-plan";
 import {
@@ -32,11 +33,36 @@ type Stage =
 
 interface PreparationItem {
   plan: PreparationPlan;
+  actionLabel: string;
   approved: boolean;
   localItemCount?: number;
   currentGroupCount?: number;
   requiredAdditions?: number;
 }
+
+type ReviewItemGroupId = "available" | "needs-review";
+
+interface ReviewItemGroup {
+  id: ReviewItemGroupId;
+  label: string;
+  description: string;
+  items: ReviewPlanItem[];
+}
+
+const REVIEW_ITEM_GROUPS: readonly Omit<ReviewItemGroup, "items">[] = [
+  {
+    id: "available",
+    label: "입력 가능",
+    description: "연결이 명확해 바로 선택할 수 있습니다.",
+  },
+  {
+    id: "needs-review",
+    label: "확인 필요",
+    description: "조건부 입력, 기존 값과 민감정보를 직접 확인해 주세요.",
+  },
+];
+
+const SKIPPED_BY_APPROVAL_REASON = "사용자가 승인한 입력 항목이 아닙니다.";
 
 interface WorkflowProps {
   apiClient: AnalysisApiClient;
@@ -58,6 +84,57 @@ function normalized(value: string | undefined): string {
   return value?.replace(/\s+/g, " ").trim() ?? "";
 }
 
+const PROFILE_CATEGORY_KEYWORDS: Record<
+  RepeatedProfileCategoryId,
+  readonly string[]
+> = {
+  education: ["학력"],
+  languages: ["어학", "외국어"],
+  certifications: ["자격", "면허"],
+  projects: ["프로젝트"],
+  health: ["건강"],
+};
+
+function matchesProfileCategory(
+  category: (typeof PROFILE_CATEGORIES)[number],
+  sectionDisplayName: string | undefined,
+): boolean {
+  if (!category.repeatable) return false;
+  const sectionLabel = normalized(sectionDisplayName);
+  const keywords = PROFILE_CATEGORY_KEYWORDS[
+    category.id as RepeatedProfileCategoryId
+  ] ?? [normalized(category.label)];
+  return keywords.some((keyword) => sectionLabel.includes(keyword));
+}
+
+function educationProfileSectionId(
+  matchLabel: string,
+): "highSchool" | "university" | "graduateSchool" | undefined {
+  const normalizedLabel = matchLabel.toLowerCase();
+  if (
+    matchLabel.includes("대학원") ||
+    normalizedLabel.includes("graduateschool") ||
+    normalizedLabel.includes("educationgrad")
+  ) {
+    return "graduateSchool";
+  }
+  if (
+    matchLabel.includes("고등학교") ||
+    normalizedLabel.includes("highschool") ||
+    normalizedLabel.includes("educationhigh")
+  ) {
+    return "highSchool";
+  }
+  if (
+    matchLabel.includes("대학") ||
+    normalizedLabel.includes("university") ||
+    normalizedLabel.includes("educationuniv")
+  ) {
+    return "university";
+  }
+  return undefined;
+}
+
 function localItemCount(
   plan: PreparationPlan,
   snapshot: CollectedSnapshot<
@@ -71,14 +148,70 @@ function localItemCount(
       (action) => action.candidateId === plan.actionCandidateId,
     ),
   );
-  const category = PROFILE_CATEGORIES.find(
-    (candidate) =>
-      candidate.repeatable &&
-      normalized(candidate.label) === normalized(section?.displayName),
+  const action = section?.actionCandidates.find(
+    (candidate) => candidate.candidateId === plan.actionCandidateId,
   );
-  return category
-    ? profile[category.id as RepeatedProfileCategoryId].length
+  const matchLabel = [
+    section?.displayName,
+    action?.displayName,
+    action?.domName,
+    action?.domId,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const category = PROFILE_CATEGORIES.find((candidate) =>
+    matchesProfileCategory(candidate, matchLabel),
+  );
+  const profileItemCount = category
+    ? category.id === "education"
+      ? (() => {
+          const sectionId = educationProfileSectionId(matchLabel);
+          return sectionId
+            ? profile.education.filter((entry) => entry.sectionId === sectionId)
+                .length
+            : profile.education.length;
+        })()
+      : profile[category.id as RepeatedProfileCategoryId].length
     : 0;
+  console.info("[CareerForm] preparation count", {
+    actionCandidateId: plan.actionCandidateId,
+    sectionDisplayName: section?.displayName ?? null,
+    actionDisplayName: action?.displayName ?? null,
+    actionDomName: action?.domName ?? null,
+    actionDomId: action?.domId ?? null,
+    matchLabel,
+    matchedCategory: category?.id ?? null,
+    profileItemCount,
+  });
+  return profileItemCount;
+}
+
+function actionLabel(
+  plan: PreparationPlan,
+  snapshot: ReturnType<typeof collectPreparationSnapshot>,
+): string {
+  const candidates = snapshot.request.sections.flatMap((section) => [
+    ...section.actionCandidates,
+    ...(section.items ?? []).flatMap((item) => item.actionCandidates),
+  ]);
+  const candidate = candidates.find(
+    ({ candidateId }) => candidateId === plan.actionCandidateId,
+  );
+  return candidate?.displayName ?? candidate?.domName ?? plan.actionCandidateId;
+}
+
+function reviewGroupsForDisplay(
+  items: readonly ReviewPlanItem[],
+): ReviewItemGroup[] {
+  const displayItems = reviewItemsForDisplay(items);
+  return REVIEW_ITEM_GROUPS.map((group) => ({
+    ...group,
+    items: displayItems.filter((item) =>
+      group.id === "available"
+        ? item.status === "available"
+        : item.status !== "available",
+    ),
+  })).filter((group) => group.items.length > 0);
 }
 
 function preparationItem(
@@ -88,19 +221,33 @@ function preparationItem(
 ): PreparationItem {
   const localCount = localItemCount(plan, snapshot, profile);
   if (plan.command !== "ADD_REPEATABLE_GROUP") {
-    return { plan, approved: false, localItemCount: localCount };
+    return {
+      plan,
+      actionLabel: actionLabel(plan, snapshot),
+      approved: false,
+      localItemCount: localCount,
+    };
   }
   const currentGroupCount = snapshot.countRepeatableGroups(
     plan.actionCandidateId,
   );
+  const requiredAdditions =
+    localCount !== undefined && currentGroupCount !== undefined
+      ? Math.max(0, localCount - currentGroupCount)
+      : undefined;
+  console.info("[CareerForm] preparation item", {
+    actionCandidateId: plan.actionCandidateId,
+    localItemCount: localCount ?? null,
+    currentGroupCount: currentGroupCount ?? null,
+    requiredAdditions: requiredAdditions ?? null,
+  });
   return {
     plan,
+    actionLabel: actionLabel(plan, snapshot),
     approved: false,
     localItemCount: localCount,
     currentGroupCount,
-    ...(localCount !== undefined && currentGroupCount !== undefined
-      ? { requiredAdditions: Math.max(0, localCount - currentGroupCount) }
-      : {}),
+    ...(requiredAdditions !== undefined ? { requiredAdditions } : {}),
   };
 }
 
@@ -149,9 +296,15 @@ function currentPreview(item: ReviewPlanItem): string {
 
 function resultStatusLabel(result: ApprovedWriteResult): string {
   if (result.status === "written") return "기입 성공";
-  return result.reason === "사용자가 승인한 입력 항목이 아닙니다."
+  return result.reason === SKIPPED_BY_APPROVAL_REASON
     ? "승인하지 않아 건너뜀"
     : "직접 입력 필요";
+}
+
+function isSkippedByApproval(result: ApprovedWriteResult): boolean {
+  return (
+    result.status === "skipped" && result.reason === SKIPPED_BY_APPROVAL_REASON
+  );
 }
 
 export function AutofillWorkflow({
@@ -180,7 +333,39 @@ export function AutofillWorkflow({
 
   const analyzeFields = async (loadedProfile: Profile) => {
     const snapshot = collectFieldsSnapshot(pageDocument);
-    const analysis = await apiClient.analyzeFields(snapshot.request);
+    console.info("[CareerForm] fields snapshot", {
+      snapshotId: snapshot.request.snapshotId,
+      site: snapshot.request.site,
+      sections: snapshot.request.sections.map((section) => ({
+        sectionId: section.sectionId,
+        displayName: section.displayName ?? null,
+        fieldCount: section.fields.length,
+        hiddenFieldCount: section.fields.filter(
+          (field) => field.visibility === "hidden",
+        ).length,
+        itemCount: section.items?.length ?? 0,
+      })),
+      fieldCount: snapshot.request.sections.reduce(
+        (count, section) => count + section.fields.length,
+        0,
+      ),
+    });
+    let analysis: Awaited<ReturnType<typeof apiClient.analyzeFields>>;
+    try {
+      analysis = await apiClient.analyzeFields(snapshot.request);
+    } catch (error) {
+      console.error("[CareerForm] fields analysis error", {
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : "분석 요청 실패",
+      });
+      throw error;
+    }
+    console.info("[CareerForm] fields analysis", {
+      snapshotId: analysis.snapshotId,
+      analysisStatus: analysis.analysisStatus,
+      fieldResultCount: analysis.fields.length,
+      warningCodes: analysis.warningCodes ?? [],
+    });
     if (analysis.analysisStatus === "BLOCKED") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
@@ -211,7 +396,36 @@ export function AutofillWorkflow({
         if (!active) return;
         setProfile(loadedProfile);
         const snapshot = collectPreparationSnapshot(pageDocument);
+        console.info("[CareerForm] preparation snapshot", {
+          site: snapshot.request.site,
+          sections: snapshot.request.sections.map((section) => ({
+            sectionId: section.sectionId,
+            displayName: section.displayName ?? null,
+            actionCandidates: section.actionCandidates.map((action) => ({
+              candidateId: action.candidateId,
+              displayName: action.displayName ?? null,
+              domName: action.domName ?? null,
+            })),
+            repeatableGroupCount: section.actionCandidates[0]
+              ? snapshot.countRepeatableGroups(
+                  section.actionCandidates[0].candidateId,
+                )
+              : null,
+          })),
+        });
         const analysis = await apiClient.analyzePreparation(snapshot.request);
+        console.info("[CareerForm] preparation analysis", {
+          snapshotId: analysis.snapshotId,
+          analysisStatus: analysis.analysisStatus,
+          preparationPlans: analysis.preparationPlans.map((plan) => ({
+            actionCandidateId: plan.actionCandidateId,
+            command: plan.command,
+            targetSectionId:
+              plan.command === "REVEAL_SECTION"
+                ? plan.targetSectionId
+                : undefined,
+          })),
+        });
         if (!active) return;
         if (analysis.analysisStatus === "BLOCKED") {
           setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
@@ -244,8 +458,19 @@ export function AutofillWorkflow({
 
   const executePreparation = async () => {
     if (!profile || !preparationSnapshot) return;
+    const approvedPlans = preparationItems.filter((item) => item.approved);
+    if (approvedPlans.length === 0) return;
+    console.info(
+      `[CareerForm] preparation execution ${JSON.stringify({
+        approvedPlanCount: approvedPlans.length,
+        skippedPlanCount: preparationItems.length - approvedPlans.length,
+        approvedActionCandidateIds: approvedPlans.map(
+          (item) => item.plan.actionCandidateId,
+        ),
+      })}`,
+    );
     const result = await executeApprovedPreparationPlans({
-      approvedPlans: preparationItems,
+      approvedPlans,
       initialSnapshot: {
         registry: preparationSnapshot.registry,
         isTargetSectionVisible: (targetSectionId) =>
@@ -266,6 +491,13 @@ export function AutofillWorkflow({
       countRepeatableGroups: (snapshot, plan) =>
         snapshot.countRepeatableGroups?.(plan) ?? -1,
     });
+    console.info(
+      `[CareerForm] preparation execution result ${JSON.stringify({
+        status: result.status,
+        executedPlanCount: result.executedPlanCount,
+        reason: result.status === "failed" ? result.reason : undefined,
+      })}`,
+    );
     if (result.status !== "completed") {
       setExceptionTitle("준비 동작을 안전하게 완료하지 못했습니다");
       setStage("exception");
@@ -361,11 +593,12 @@ export function AutofillWorkflow({
               }
             />
             <span className={styles.reviewCopy}>
-              <strong>
+              <strong>{item.actionLabel}</strong>
+              <small>
                 {item.plan.command === "REVEAL_SECTION"
                   ? "숨은 영역 펼치기"
                   : "반복 입력 영역 추가"}
-              </strong>
+              </small>
               <small>지원서 저장·이동·제출은 실행하지 않습니다.</small>
               {item.requiredAdditions !== undefined && (
                 <small>
@@ -386,7 +619,7 @@ export function AutofillWorkflow({
         <button
           className={styles.primary}
           type="button"
-          disabled={preparationItems.some((item) => !item.approved)}
+          disabled={!preparationItems.some((item) => item.approved)}
           onClick={() => void executePreparation()}
         >
           승인한 준비 동작 실행
@@ -413,48 +646,67 @@ export function AutofillWorkflow({
               : "LLM 분석 일부 미완료"}
           </aside>
         ))}
-        <div className={styles.reviewList}>
-          {reviewItems.map((item) => (
-            <label
-              className={styles.reviewItem}
-              data-status={item.status}
-              key={item.candidateId}
-            >
-              <input
-                type="checkbox"
-                checked={item.selected}
-                disabled={item.disabled}
-                aria-label={
-                  item.status === "conflict"
-                    ? `${item.fieldLabel} 기존 값 덮어쓰기 승인`
-                    : `${item.fieldLabel} 입력 승인`
-                }
-                onChange={() => toggleReviewItem(item.candidateId)}
-              />
-              <span className={styles.reviewCopy}>
-                <strong>{item.fieldLabel}</strong>
-                <span>현재 입력값: {currentPreview(item)}</span>
-                <span>입력 예정값: {item.previewValue}</span>
-                <small>{item.reason}</small>
-                {mappingLabel(item) && (
-                  <small>매핑 근거: {mappingLabel(item)}</small>
-                )}
-                {interactionLabel(item) && (
-                  <small>입력 상태: {interactionLabel(item)}</small>
-                )}
-              </span>
-              <em>{statusLabel(item)}</em>
-              {item.status === "sensitive" && !item.revealed && (
-                <button
-                  type="button"
-                  aria-label={`${item.fieldLabel} 값 보기`}
-                  onClick={() => revealSensitiveItem(item.candidateId)}
-                >
-                  값 보기
-                </button>
-              )}
-            </label>
-          ))}
+        <div className={styles.reviewGroups}>
+          {reviewGroupsForDisplay(reviewItems).map((group) => {
+            const headingId = `review-group-${group.id}`;
+            return (
+              <section
+                className={styles.reviewGroup}
+                aria-labelledby={headingId}
+                key={group.id}
+              >
+                <div className={styles.reviewGroupHeader}>
+                  <h3 id={headingId}>
+                    {group.label} <span>{group.items.length}개</span>
+                  </h3>
+                  <p>{group.description}</p>
+                </div>
+                <div className={styles.reviewList}>
+                  {group.items.map((item) => (
+                    <label
+                      className={styles.reviewItem}
+                      data-status={item.status}
+                      key={item.candidateId}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.selected}
+                        disabled={item.disabled}
+                        aria-label={
+                          item.status === "conflict"
+                            ? `${item.fieldLabel} 기존 값 덮어쓰기 승인`
+                            : `${item.fieldLabel} 입력 승인`
+                        }
+                        onChange={() => toggleReviewItem(item.candidateId)}
+                      />
+                      <span className={styles.reviewCopy}>
+                        <strong>{item.fieldLabel}</strong>
+                        <span>현재 입력값: {currentPreview(item)}</span>
+                        <span>입력 예정값: {item.previewValue}</span>
+                        <small>{item.reason}</small>
+                        {mappingLabel(item) && (
+                          <small>매핑 근거: {mappingLabel(item)}</small>
+                        )}
+                        {interactionLabel(item) && (
+                          <small>입력 상태: {interactionLabel(item)}</small>
+                        )}
+                      </span>
+                      <em>{statusLabel(item)}</em>
+                      {item.status === "sensitive" && !item.revealed && (
+                        <button
+                          type="button"
+                          aria-label={`${item.fieldLabel} 값 보기`}
+                          onClick={() => revealSensitiveItem(item.candidateId)}
+                        >
+                          값 보기
+                        </button>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
         <button
           className={styles.primary}
@@ -500,7 +752,10 @@ export function AutofillWorkflow({
   }
 
   if (stage === "result") {
-    const successful = results.filter(
+    const visibleResults = results.filter(
+      (result) => !isSkippedByApproval(result),
+    );
+    const successful = visibleResults.filter(
       (result) => result.status === "written",
     ).length;
     return (
@@ -512,13 +767,13 @@ export function AutofillWorkflow({
             <span>기입 성공</span>
           </div>
           <div>
-            <strong>{results.length - successful}</strong>
+            <strong>{visibleResults.length - successful}</strong>
             <span>직접 확인 필요</span>
           </div>
         </div>
         <p className={styles.safety}>지원서의 실제 값을 직접 확인해 주세요.</p>
         <ul className={styles.boundaries}>
-          {results.map((result) => {
+          {visibleResults.map((result) => {
             const item = reviewItems.find(
               (candidate) => candidate.candidateId === result.candidateId,
             );

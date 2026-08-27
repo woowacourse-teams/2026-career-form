@@ -71,6 +71,36 @@ describe("analysis background handler", () => {
     );
   });
 
+  it("waits up to 60 seconds before timing out by default", async () => {
+    vi.useFakeTimers();
+    try {
+      let aborted = false;
+      const fetcher = vi.fn<typeof fetch>(
+        async (_input, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              aborted = true;
+              reject(new DOMException("The request was aborted", "AbortError"));
+            });
+          }),
+      );
+      const handleMessage = createAnalysisMessageHandler({
+        baseUrl: "https://api.example.test",
+        fetcher,
+      });
+
+      const result = handleMessage(message);
+      await vi.advanceTimersByTimeAsync(59_999);
+      expect(aborted).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(result).resolves.toEqual({ ok: false, code: "TIMEOUT" });
+      expect(aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each([
     [400, "BAD_REQUEST"],
     [413, "PAYLOAD_TOO_LARGE"],

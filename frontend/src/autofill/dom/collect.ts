@@ -12,10 +12,11 @@ import {
 } from "./candidate-registry";
 import type { CandidateBlockReason } from "./types";
 
-const SECTION_SELECTOR = "fieldset, section, [role='group']";
+const SECTION_SELECTOR = "fieldset, section, [role='group'], .apply-form-box";
 const FORBIDDEN_ACTION =
-  /저장|제출|지원|완료|다음|이전|이동|미리보기|submit|save|next|previous|preview/i;
-const MAX_METADATA_LENGTH = 200;
+  /저장|제출|지원|완료|다음|이전|이동|미리보기|삭제|업로드|계산기|submit|save|next|previous|preview|delete|upload|remove|calculator/i;
+// The analysis API rejects candidate labels longer than 120 characters.
+const MAX_METADATA_LENGTH = 120;
 
 export interface CollectedSnapshot<TRequest> {
   request: TRequest;
@@ -322,17 +323,129 @@ function collectActionElements(document: Document) {
     ),
   ).filter((element) => {
     const label = labelOf(element);
-    return Boolean(label && !FORBIDDEN_ACTION.test(label));
+    return Boolean(
+      label && !FORBIDDEN_ACTION.test(label) && !isHidden(element),
+    );
   });
 }
 
 function repeatableItemElements(container: Element | null): Element[] {
   if (!container) return [];
-  return Array.from(
+
+  const isDirectRepeatableItem = (element: Element): boolean => {
+    if (element.closest("template")) return false;
+    if (
+      element.matches(
+        "[data-repeatable-group], [data-repeater-item], fieldset, [role='group']",
+      )
+    ) {
+      return true;
+    }
+    return (
+      Array.from(element.classList).some((className) =>
+        /(?:^|[-_])item$/i.test(className),
+      ) || /(?:^|[-_])item$/i.test(element.id)
+    );
+  };
+
+  const directItems = Array.from(container.children).filter(
+    isDirectRepeatableItem,
+  );
+  if (directItems.length > 0) return directItems;
+
+  // Some forms (including SK Careers) nest repeated rows inside a form-body
+  // wrapper instead of making them direct children of the section root.
+  // Search those descendants, but keep only the outermost markers so inner
+  // controls such as `.form-item` are not mistaken for repeated rows.
+  const nestedCandidates = Array.from(
     container.querySelectorAll(
-      ":scope > [data-repeatable-group], :scope > [data-repeater-item], :scope > fieldset, :scope > [role='group']",
+      "[data-repeatable-group], [data-repeater-item], fieldset, [role='group'], [class], [id]",
     ),
-  ).filter((element) => !element.closest("template"));
+  ).filter((element) => {
+    if (element.closest("template")) return false;
+    if (
+      element.matches(
+        "[data-repeatable-group], [data-repeater-item], fieldset, [role='group']",
+      )
+    ) {
+      return true;
+    }
+    return (
+      Array.from(element.classList).some(
+        (className) =>
+          /(?:^|[-_])item$/i.test(className) && !/^form-item$/i.test(className),
+      ) ||
+      (/(?:^|[-_])item$/i.test(element.id) && !/^form-item$/i.test(element.id))
+    );
+  });
+
+  return nestedCandidates.filter(
+    (candidate) =>
+      !nestedCandidates.some(
+        (ancestor) => ancestor !== candidate && ancestor.contains(candidate),
+      ),
+  );
+}
+
+function actionGroupKey(action: Element | undefined): string | undefined {
+  if (!action) return undefined;
+  const identifiers = [
+    action.id,
+    ...(typeof action.className === "string"
+      ? action.className.split(/\s+/)
+      : []),
+  ];
+  return identifiers
+    .filter((identifier) => /add/i.test(identifier))
+    .map((identifier) =>
+      identifier
+        .replace(/^btnAdd/i, "")
+        .replace(/^add/i, "")
+        .replace(/[^a-z0-9가-힣]/gi, "")
+        .toLowerCase(),
+    )
+    .filter((identifier) => identifier.length >= 3)
+    .sort((left, right) => right.length - left.length)[0];
+}
+
+function repeatableItemElementsForAction(
+  container: Element | null,
+  action: Element | undefined,
+): Element[] {
+  const allItems = repeatableItemElements(container);
+  const groupKey = actionGroupKey(action);
+  if (!groupKey) return allItems;
+  const matchingItems = allItems.filter((item) => {
+    const identifiers = [
+      item.id,
+      ...(typeof item.className === "string"
+        ? item.className.split(/\s+/)
+        : []),
+    ]
+      .join(" ")
+      .replace(/[^a-z0-9가-힣]/gi, "")
+      .toLowerCase();
+    return identifiers.includes(groupKey);
+  });
+  if (matchingItems.length > 0) return matchingItems;
+
+  // If the section contains typed repeatable rows for another action, an
+  // empty match means this action currently has zero rows. Falling back to
+  // all rows here would make a high-school row satisfy the university plan.
+  const hasTypedItems = allItems.some((item) => {
+    const identifiers = [
+      item.id,
+      ...(typeof item.className === "string"
+        ? item.className.split(/\s+/)
+        : []),
+    ];
+    return identifiers.some(
+      (identifier) =>
+        /(?:^|[-_])[a-z0-9가-힣]+(?:[-_]?item)$/i.test(identifier) &&
+        !/^form-item(?:-group)?$/i.test(identifier),
+    );
+  });
+  return hasTypedItems ? [] : allItems;
 }
 
 export function collectPreparationSnapshot(
@@ -351,6 +464,7 @@ export function collectPreparationSnapshot(
   }
   const sectionRoots = new Map<string, Element | null>();
   const actionSectionIds = new Map<string, string>();
+  const actionElements = new Map<string, Element>();
 
   containers.forEach((container, sectionIndex) => {
     const elements = actionsBySection.get(container) ?? [];
@@ -382,12 +496,18 @@ export function collectPreparationSnapshot(
         blockReason(element),
       );
       actionSectionIds.set(candidateId, sectionId);
+      actionElements.set(candidateId, element);
       return candidate;
     });
-    const items = repeatableItemElements(container).map((_, itemIndex) => ({
-      itemId: createOpaqueId(`${sectionId}-item`, itemIndex),
-      actionCandidates: [],
-    }));
+    // The API only accepts nested items when they contain at least one
+    // action candidate. Repeated rows are used locally for count verification
+    // today, so do not serialize empty item shells into the request.
+    const items = repeatableItemElements(container)
+      .map((_, itemIndex) => ({
+        itemId: createOpaqueId(`${sectionId}-item`, itemIndex),
+        actionCandidates: [],
+      }))
+      .filter(({ actionCandidates }) => actionCandidates.length > 0);
     sections.push({
       sectionId,
       ...(sectionName(container)
@@ -419,7 +539,10 @@ export function collectPreparationSnapshot(
       if (!sectionId) return undefined;
       const root = sectionRoots.get(sectionId);
       if (root === undefined || (root && !root.isConnected)) return undefined;
-      return repeatableItemElements(root).length;
+      return repeatableItemElementsForAction(
+        root,
+        actionElements.get(actionCandidateId),
+      ).length;
     },
   };
 }

@@ -1,4 +1,9 @@
 import { defineConfig } from "wxt";
+import { loadEnv } from "vite";
+
+const fileEnv = loadEnv("production", ".", "");
+const configuredApiBaseUrl =
+  import.meta.env.VITE_API_BASE_URL ?? fileEnv.VITE_API_BASE_URL;
 
 function apiHostPermissions(apiBaseUrl: string | undefined): string[] {
   const value = apiBaseUrl?.trim();
@@ -24,7 +29,7 @@ export default defineConfig({
   manifest: {
     description: "채용 지원 정보를 안전하게 재사용하는 Chrome 확장 프로그램",
     name: "Career Form",
-    host_permissions: apiHostPermissions(import.meta.env.VITE_API_BASE_URL),
+    host_permissions: apiHostPermissions(configuredApiBaseUrl),
     permissions: ["storage", "sidePanel"],
     side_panel: {
       default_path: "sidepanel.html",
