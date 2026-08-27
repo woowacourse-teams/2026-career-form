@@ -62,6 +62,23 @@ class SkillInventoryTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_accepts_repository_owned_llm_wiki_query_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "cf-llm-wiki-query"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: cf-llm-wiki-query\n"
+                "description: 프로젝트 결정을 LLM Wiki 근거로 답한다.\n"
+                "---\n",
+                encoding="utf-8",
+            )
+
+            result = validate_skill_inventory(root)
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_rejects_skill_with_invalid_frontmatter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

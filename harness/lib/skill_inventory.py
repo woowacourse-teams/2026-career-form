@@ -12,6 +12,7 @@ PROJECT_SKILLS = (
     "cf-github-project-onboarding",
     "cf-issue-lifecycle",
     "cf-issue-workflow",
+    "cf-llm-wiki-query",
     "cf-post-merge-cleanup",
     "cf-project-issue-planning",
 )
