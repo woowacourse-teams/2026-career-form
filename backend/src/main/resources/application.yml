@@ -20,7 +20,7 @@ spring:
         include-error-logging: false
     openai:
       api-key: ${OPENAI_API_KEY:}
-      timeout: ${CAREER_FORM_LLM_TIMEOUT:10s}
+      timeout: ${CAREER_FORM_LLM_TIMEOUT:60s}
       max-retries: ${CAREER_FORM_LLM_MAX_RETRIES:1}
       chat:
         model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
