@@ -3,6 +3,9 @@ package com.careerform.formanalysis.api;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import java.nio.charset.StandardCharsets;
 
@@ -44,7 +47,19 @@ class SkFormAnalysisApiTest {
                 .content(fixture("sk-preparation-snapshot-a-v2.json")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mode").value("ADAPTER"))
-            .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"));
+            .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
+            .andExpect(jsonPath("$.preparationPlans.length()").value(2))
+            .andExpect(jsonPath("$.preparationPlans[0].command")
+                .value("REVEAL_SECTION"))
+            .andExpect(jsonPath("$.preparationPlans[0].expectedEffect")
+                .value("TARGET_VISIBLE"))
+            .andExpect(jsonPath("$.preparationPlans[0].targetSectionId")
+                .value("section-detail"))
+            .andExpect(jsonPath("$.preparationPlans[1].command")
+                .value("ADD_REPEATABLE_GROUP"))
+            .andExpect(jsonPath("$.preparationPlans[1].expectedEffect")
+                .value("GROUP_COUNT_INCREMENT"))
+            .andExpect(content().string(not(containsString("executionCount"))));
 
         mockMvc.perform(post("/api/v1/fields/analyze")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -52,7 +67,29 @@ class SkFormAnalysisApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mode").value("ADAPTER"))
             .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
-            .andExpect(jsonPath("$.fields.length()").value(7));
+            .andExpect(jsonPath("$.fields.length()").value(7))
+            .andExpect(jsonPath("$.fields[0].profileFieldKey")
+                .value("personal.personal.koreanFamilyName"))
+            .andExpect(jsonPath("$.fields[0].autofillPolicy").value("ALLOWED"))
+            .andExpect(jsonPath("$.fields[0].mappingStatus")
+                .value("ADAPTER_VERIFIED"))
+            .andExpect(jsonPath("$.fields[0].writePlan.command")
+                .value("SET_TEXT"))
+            .andExpect(jsonPath("$.fields[4].matchType").value("NO_MATCH"))
+            .andExpect(jsonPath("$.fields[4].mappingStatus")
+                .value("ADAPTER_VERIFIED"))
+            .andExpect(jsonPath("$.fields[4].interactionStatus")
+                .value("BLOCKED"))
+            .andExpect(jsonPath("$.fields[4].reasonCodes[0]").value("NO_MATCH"))
+            .andExpect(jsonPath("$.fields[5].profileFieldKey")
+                .value("education.university.schoolName"))
+            .andExpect(jsonPath("$.fields[5].autofillPolicy")
+                .value("CONDITIONAL"))
+            .andExpect(jsonPath("$.fields[6].profileFieldKey")
+                .value("education.university.completionStatus"))
+            .andExpect(jsonPath("$.fields[6].writePlan.command")
+                .value("SELECT_OPTION"))
+            .andExpect(content().string(not(containsString("selector"))));
     }
 
     @Test
