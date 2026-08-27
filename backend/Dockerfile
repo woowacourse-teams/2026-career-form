@@ -1,17 +1,7 @@
-FROM eclipse-temurin:21-jdk-noble AS build
-WORKDIR /workspace
-
-COPY gradlew settings.gradle.kts build.gradle.kts ./
-COPY gradle ./gradle
-COPY src ./src
-
-RUN --mount=type=cache,target=/root/.gradle \
-    ./gradlew bootJar --no-daemon
-
 FROM eclipse-temurin:21-jre-noble AS extract
 WORKDIR /builder
 
-COPY --from=build /workspace/build/libs/*.jar application.jar
+COPY build/libs/*.jar application.jar
 
 RUN java -Djarmode=tools -jar application.jar \
     extract --layers --destination extracted
