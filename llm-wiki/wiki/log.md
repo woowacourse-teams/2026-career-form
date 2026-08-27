@@ -80,3 +80,11 @@
 - Source-Tree: 548461d59e367e3324bc8a52be86a6a60a7c0b18
 - Raw: llm-wiki/raw/issues/CF-40/manifest.md
 - Topics: 2
+
+## [2026-08-27] revise | CF-40 공용 OpenAI Secret 기반 원격 LLM 실행
+
+- Disposition: Supersedes CF-41 CI/CD setup topic
+- Approval-Digest: 8e30d82663277bab17b279009eb5e8431b8fb9802c7359532eed08acef6bd9e3
+- Source-Tree: 5f06a881a2e64c97dd4390a5da62a8eed7ee51c5
+- Raw: llm-wiki/raw/issues/CF-40/manifest.md
+- Topics: 3
