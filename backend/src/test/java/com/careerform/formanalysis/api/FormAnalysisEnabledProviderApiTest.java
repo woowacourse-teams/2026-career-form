@@ -23,15 +23,18 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.openai.autoconfigure.OpenAiChatProperties;
 import org.springframework.ai.model.openai.autoconfigure.OpenAiCommonProperties;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -58,6 +61,9 @@ class FormAnalysisEnabledProviderApiTest {
 
     @Autowired
     private OpenAiCommonProperties openAiCommonProperties;
+
+    @Autowired
+    private OpenAiChatProperties openAiChatProperties;
 
     @BeforeEach
     @DisplayName("가짜 ChatModel 응답을 초기화한다")
@@ -104,6 +110,33 @@ class FormAnalysisEnabledProviderApiTest {
         assertThat(openAiCommonProperties.getTimeout())
             .isEqualTo(Duration.ofSeconds(10));
         assertThat(openAiCommonProperties.getMaxRetries()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("공통 설정으로 Chat Completion 저장을 활성화한다")
+    void enablesChatCompletionStorageFromCommonConfiguration() {
+        assertThat(openAiChatProperties.getStore()).isTrue();
+    }
+
+    @Test
+    @DisplayName("공통 저장 설정을 모든 실행 profile이 상속한다")
+    void sharesChatCompletionStorageAcrossRuntimeProfiles() throws Exception {
+        assertThat(yaml("application.yml").getProperty(
+            "spring.ai.openai.chat.store"
+        )).isEqualTo(true);
+
+        for (String profile : List.of("local", "dev", "staging", "prod")) {
+            assertThat(yaml("application-" + profile + ".yml").containsProperty(
+                "spring.ai.openai.chat.store"
+            )).isFalse();
+        }
+    }
+
+    private static PropertySource<?> yaml(String path) throws Exception {
+        return new YamlPropertySourceLoader().load(
+            path,
+            new ClassPathResource(path)
+        ).getFirst();
     }
 
     @Test
