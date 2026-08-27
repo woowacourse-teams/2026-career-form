@@ -23,9 +23,17 @@ public record PreparationAnalysisResponse(
         String snapshotId,
         List<PreparationPlan> plans
     ) {
+        return complete(snapshotId, Mode.GENERIC, plans);
+    }
+
+    public static PreparationAnalysisResponse complete(
+        String snapshotId,
+        Mode mode,
+        List<PreparationPlan> plans
+    ) {
         return new PreparationAnalysisResponse(
             snapshotId,
-            Mode.GENERIC,
+            mode,
             AnalysisStatus.COMPLETE,
             plans,
             null,
@@ -41,6 +49,19 @@ public record PreparationAnalysisResponse(
             List.of(),
             List.of(WarningCode.LLM_UNAVAILABLE),
             null
+        );
+    }
+
+    public static PreparationAnalysisResponse adapterStructureMismatch(
+        String snapshotId
+    ) {
+        return new PreparationAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.ADAPTER_STRUCTURE_MISMATCH
         );
     }
 

@@ -318,6 +318,7 @@ class FieldsAnalysisServiceTest {
     ) {
         return new FieldsAnalysisService(
             resolver,
+            new FormAnalysisRouter(List.of()),
             new FieldInteractionPolicy(),
             new SupportedProfileFields()
         );

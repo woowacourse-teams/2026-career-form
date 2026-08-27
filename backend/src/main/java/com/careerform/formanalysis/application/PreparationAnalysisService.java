@@ -10,6 +10,8 @@ import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
+import com.careerform.formanalysis.application.FormAnalysisRouter.ActionRoute;
+import com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind;
 import com.careerform.formanalysis.application.port.ActionResolver;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest.ActionCandidate;
@@ -19,6 +21,7 @@ import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.AddRepeatableGroupPlan;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.Command;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.ExpectedEffect;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse.Mode;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.PreparationPlan;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.RevealSectionPlan;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
@@ -34,29 +37,56 @@ public final class PreparationAnalysisService {
         "Resolver 출력 계약을 확인할 수 없습니다";
 
     private final Optional<ActionResolver> resolver;
+    private final FormAnalysisRouter router;
 
-    public PreparationAnalysisService(Optional<ActionResolver> resolver) {
+    public PreparationAnalysisService(
+        Optional<ActionResolver> resolver,
+        FormAnalysisRouter router
+    ) {
         this.resolver = resolver;
+        this.router = router;
     }
 
     public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request) {
         validateSnapshot(request);
-        if (resolver.isEmpty()) {
+        ActionRoute route = router.route(request);
+        if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
+            return PreparationAnalysisResponse.adapterStructureMismatch(
+                request.snapshotId()
+            );
+        }
+        Mode mode = route.kind() == RouteKind.ADAPTER
+            ? Mode.ADAPTER
+            : Mode.GENERIC;
+        Optional<ActionResolver> selectedResolver = route.kind() == RouteKind.ADAPTER
+            ? Optional.of(route.resolver())
+            : resolver;
+        if (selectedResolver.isEmpty()) {
             return PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
         }
         if (request.actionCandidatesInTraversalOrder().isEmpty()) {
-            return PreparationAnalysisResponse.complete(request.snapshotId(), List.of());
+            return PreparationAnalysisResponse.complete(
+                request.snapshotId(),
+                mode,
+                List.of()
+            );
         }
         try {
-            ActionResolver.Resolution resolution = resolver.orElseThrow().resolve(request);
+            ActionResolver.Resolution resolution = selectedResolver.orElseThrow()
+                .resolve(request);
             validateResolution(request, resolution);
             return PreparationAnalysisResponse.complete(
                 request.snapshotId(),
+                mode,
                 mapPlansInRequestOrder(request, resolution)
             );
         }
         catch (ResolverException exception) {
-            return PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
+            return mode == Mode.ADAPTER
+                ? PreparationAnalysisResponse.adapterStructureMismatch(
+                    request.snapshotId()
+                )
+                : PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
         }
     }
 

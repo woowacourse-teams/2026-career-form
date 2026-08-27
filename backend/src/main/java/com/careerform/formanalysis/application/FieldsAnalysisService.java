@@ -10,6 +10,8 @@ import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
+import com.careerform.formanalysis.application.FormAnalysisRouter.FieldRoute;
+import com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind;
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
@@ -19,6 +21,7 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.FieldAnalysis;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MappingStatus;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchType;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalysis;
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse.Mode;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.NoMatchFieldAnalysis;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
 import com.careerform.formanalysis.exception.ResolverException;
@@ -33,38 +36,58 @@ public final class FieldsAnalysisService {
         "Resolver 출력 계약을 확인할 수 없습니다";
 
     private final Optional<FieldMappingResolver> resolver;
+    private final FormAnalysisRouter router;
     private final FieldInteractionPolicy interactionPolicy;
     private final SupportedProfileFields supportedProfileFields;
 
     public FieldsAnalysisService(
         Optional<FieldMappingResolver> resolver,
+        FormAnalysisRouter router,
         FieldInteractionPolicy interactionPolicy,
         SupportedProfileFields supportedProfileFields
     ) {
         this.resolver = resolver;
+        this.router = router;
         this.interactionPolicy = interactionPolicy;
         this.supportedProfileFields = supportedProfileFields;
     }
 
     public FieldsAnalysisResponse analyze(FieldsAnalysisRequest request) {
         validateSnapshot(request);
-        if (resolver.isEmpty()) {
+        FieldRoute route = router.route(request);
+        if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
+            return FieldsAnalysisResponse.adapterStructureMismatch(request.snapshotId());
+        }
+        Mode mode = route.kind() == RouteKind.ADAPTER
+            ? Mode.ADAPTER
+            : Mode.GENERIC;
+        MappingStatus mappingStatus = route.kind() == RouteKind.ADAPTER
+            ? MappingStatus.ADAPTER_VERIFIED
+            : MappingStatus.LLM_SUGGESTED;
+        Optional<FieldMappingResolver> selectedResolver =
+            route.kind() == RouteKind.ADAPTER
+                ? Optional.of(route.resolver())
+                : resolver;
+        if (selectedResolver.isEmpty()) {
             return FieldsAnalysisResponse.llmUnavailable(request.snapshotId());
         }
         if (request.fieldCandidatesInTraversalOrder().isEmpty()) {
-            return FieldsAnalysisResponse.complete(request.snapshotId(), List.of());
+            return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of());
         }
         try {
             FieldMappingResolver.Resolution resolution =
-                resolver.orElseThrow().resolve(request);
+                selectedResolver.orElseThrow().resolve(request);
             validateResolution(request, resolution);
             return FieldsAnalysisResponse.complete(
                 request.snapshotId(),
-                mapFieldsInRequestOrder(request, resolution)
+                mode,
+                mapFieldsInRequestOrder(request, resolution, mappingStatus)
             );
         }
         catch (ResolverException exception) {
-            return FieldsAnalysisResponse.llmUnavailable(request.snapshotId());
+            return mode == Mode.ADAPTER
+                ? FieldsAnalysisResponse.adapterStructureMismatch(request.snapshotId())
+                : FieldsAnalysisResponse.llmUnavailable(request.snapshotId());
         }
     }
 
@@ -129,20 +152,26 @@ public final class FieldsAnalysisService {
 
     private List<FieldAnalysis> mapFieldsInRequestOrder(
         FieldsAnalysisRequest request,
-        FieldMappingResolver.Resolution resolution
+        FieldMappingResolver.Resolution resolution,
+        MappingStatus mappingStatus
     ) {
         Map<String, FieldMappingResolver.Result> mappings = new HashMap<>();
         for (FieldMappingResolver.Result result : resolution.results()) {
             mappings.put(result.candidateId(), result);
         }
         return request.fieldCandidatesInTraversalOrder().stream()
-            .map(candidate -> toAnalysis(candidate, mappings.get(candidate.candidateId())))
+            .map(candidate -> toAnalysis(
+                candidate,
+                mappings.get(candidate.candidateId()),
+                mappingStatus
+            ))
             .toList();
     }
 
     private FieldAnalysis toAnalysis(
         FieldCandidate candidate,
-        FieldMappingResolver.Result mapping
+        FieldMappingResolver.Result mapping,
+        MappingStatus mappingStatus
     ) {
         FieldInteractionPolicy.Decision decision =
             interactionPolicy.evaluate(candidate, mapping);
@@ -150,7 +179,7 @@ public final class FieldsAnalysisService {
             return new NoMatchFieldAnalysis(
                 candidate.candidateId(),
                 MatchType.NO_MATCH,
-                MappingStatus.LLM_SUGGESTED,
+                mappingStatus,
                 decision.interactionStatus(),
                 decision.reasonCodes()
             );
@@ -161,7 +190,7 @@ public final class FieldsAnalysisService {
             MatchType.MATCH,
             match.profileFieldKey(),
             supportedProfileFields.policyOf(match.profileFieldKey()).orElseThrow(),
-            MappingStatus.LLM_SUGGESTED,
+            mappingStatus,
             decision.interactionStatus(),
             decision.writePlan()
         );

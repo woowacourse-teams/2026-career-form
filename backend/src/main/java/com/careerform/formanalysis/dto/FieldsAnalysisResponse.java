@@ -23,9 +23,17 @@ public record FieldsAnalysisResponse(
         String snapshotId,
         List<FieldAnalysis> fields
     ) {
+        return complete(snapshotId, Mode.GENERIC, fields);
+    }
+
+    public static FieldsAnalysisResponse complete(
+        String snapshotId,
+        Mode mode,
+        List<FieldAnalysis> fields
+    ) {
         return new FieldsAnalysisResponse(
             snapshotId,
-            Mode.GENERIC,
+            mode,
             AnalysisStatus.COMPLETE,
             fields,
             null,
@@ -41,6 +49,17 @@ public record FieldsAnalysisResponse(
             List.of(),
             List.of(WarningCode.LLM_UNAVAILABLE),
             null
+        );
+    }
+
+    public static FieldsAnalysisResponse adapterStructureMismatch(String snapshotId) {
+        return new FieldsAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.ADAPTER_STRUCTURE_MISMATCH
         );
     }
 
