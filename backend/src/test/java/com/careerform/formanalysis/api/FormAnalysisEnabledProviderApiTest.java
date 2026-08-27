@@ -90,8 +90,7 @@ class FormAnalysisEnabledProviderApiTest {
         model.respondWith("""
             {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
              "matches":[{"candidateId":"field-direct",
-                         "profileFieldKey":"contact.contact.email"}],
-             "noMatches":[{"candidateId":"field-item"}]}
+                         "profileFieldKey":"contact.contact.email"}]}
             """);
 
         mockMvc.perform(post("/api/v1/fields/analyze")
@@ -99,7 +98,15 @@ class FormAnalysisEnabledProviderApiTest {
                 .content(fixture("fields-request-v2.json")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
-            .andExpect(jsonPath("$.fields.length()").value(2));
+            .andExpect(jsonPath("$.fields.length()").value(2))
+            .andExpect(jsonPath("$.fields[0].candidateId").value("field-direct"))
+            .andExpect(jsonPath("$.fields[0].matchType").value("MATCH"))
+            .andExpect(jsonPath("$.fields[1].candidateId").value("field-item"))
+            .andExpect(jsonPath("$.fields[1].matchType").value("NO_MATCH"))
+            .andExpect(jsonPath("$.fields[1].mappingStatus")
+                .value("LLM_SUGGESTED"))
+            .andExpect(jsonPath("$.fields[1].interactionStatus").value("BLOCKED"))
+            .andExpect(jsonPath("$.fields[1].reasonCodes[0]").value("NO_MATCH"));
     }
 
     @Test
@@ -166,25 +173,44 @@ class FormAnalysisEnabledProviderApiTest {
             "",
             """
                 {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
-                 "matches":[],"noMatches":[
+                 "matches":[
                    {"candidateId":"field-direct",
-                    "profileFieldKey":"private-provider-response-marker"},
-                   {"candidateId":"field-item"}]}
+                    "profileFieldKey":"contact.contact.email",
+                    "private":"private-provider-response-marker"}]}
                 """,
             """
                 {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
-                 "matches":[{"candidateId":"field-direct"}],
-                 "noMatches":[{"candidateId":"field-item"}]}
+                 "matches":[{"candidateId":"field-direct"}]}
                 """,
             """
                 {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
-                 "matches":[],"noMatches":[
-                   {"candidateId":"unknown-field"},
-                   {"candidateId":"field-item"}]}
+                 "matches":[{"candidateId":"unknown-field",
+                             "profileFieldKey":"contact.contact.email"}]}
                 """,
             """
                 {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
-                 "matches":[],"noMatches":[null,{"candidateId":"field-item"}]}
+                 "matches":[null]}
+                """,
+            """
+                {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
+                 "matches":[
+                   {"candidateId":"field-direct",
+                    "profileFieldKey":"contact.contact.email"},
+                   {"candidateId":"field-direct",
+                    "profileFieldKey":"contact.contact.email"}]}
+                """,
+            """
+                {"schemaVersion":1,"snapshotId":"snapshot-fields-1",
+                 "matches":[]}
+                """,
+            """
+                {"schemaVersion":2,"snapshotId":"another-snapshot",
+                 "matches":[]}
+                """,
+            """
+                {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
+                 "matches":[{"candidateId":"field-direct",
+                             "profileFieldKey":"contact.email"}]}
                 """
         );
 

@@ -84,12 +84,13 @@ class OpenAiClientTest {
         );
         assertInvalidResponse(
             "{\"schemaVersion\":2,\"snapshotId\":42,"
-                + "\"matches\":[],\"noMatches\":[]}",
+                + "\"matches\":[]}",
             FieldOutput.class
         );
         assertInvalidResponse(
-            "{\"schemaVersion\":2,\"snapshotId\":\"snapshot-1\",\"matches\":[],"
-                + "\"noMatches\":[{\"candidateId\":42}]}",
+            "{\"schemaVersion\":2,\"snapshotId\":\"snapshot-1\","
+                + "\"matches\":[{\"candidateId\":42,"
+                + "\"profileFieldKey\":\"contact.contact.email\"}]}",
             FieldOutput.class
         );
     }
