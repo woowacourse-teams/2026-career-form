@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const deckPath = fileURLToPath(new URL("./deck.js", import.meta.url));
+const reportPath = fileURLToPath(
+  new URL("./experiment-report.js", import.meta.url),
+);
 const indexPath = fileURLToPath(new URL("./index.html", import.meta.url));
 const stylesPath = fileURLToPath(new URL("./styles.css", import.meta.url));
 
@@ -13,6 +16,64 @@ function loadDeck() {
   assert.ok(existsSync(deckPath), "발표 자료 모듈이 존재해야 한다");
   return require(deckPath);
 }
+
+function loadExperimentReport() {
+  assert.ok(existsSync(reportPath), "비식별 실험 집계 모듈이 존재해야 한다");
+  return require(reportPath);
+}
+
+test("비식별 실험 원자료에서 발표 수치를 재현한다", () => {
+  const { experimentSummary, sessions } = loadExperimentReport();
+
+  assert.equal(experimentSummary.sessionCount, 10);
+  assert.equal(experimentSummary.fieldCount, 108);
+  assert.deepEqual(experimentSummary.averageSeconds, {
+    A: 135.2,
+    B: 47.4,
+    C: 70.2,
+    D: 20.1,
+  });
+  assert.equal(experimentSummary.reductionFromA.D, 85.1);
+  assert.equal(experimentSummary.averageProfileTabSeconds, 18.8);
+  assert.deepEqual(experimentSummary.accurateFields, {
+    B: 101,
+    C: 100,
+    D: 106,
+  });
+
+  const ids = sessions.map((session) => session.id);
+  assert.equal(new Set(ids).size, 10);
+  assert.ok(ids.every((id) => /^S\d{2}$/.test(id)));
+});
+
+test("실험 집계는 잘못된 세션 원자료를 거부한다", () => {
+  const { summarizeExperiment } = loadExperimentReport();
+  const valid = {
+    id: "S01",
+    fieldCount: 1,
+    A: { seconds: 10, omissions: 0, mismatches: 0 },
+    B: { seconds: 5, omissions: 0, mismatches: 0 },
+    C: { seconds: 6, profileTabSeconds: 1, omissions: 0, mismatches: 0 },
+    D: { seconds: 2, omissions: 0, mismatches: 0 },
+  };
+
+  assert.throws(() => summarizeExperiment([]), /세션이 필요합니다/);
+  assert.throws(
+    () => summarizeExperiment([valid, { ...valid }]),
+    /세션 ID가 중복됐습니다/,
+  );
+  assert.throws(
+    () => summarizeExperiment([{ ...valid, fieldCount: 0 }]),
+    /필드 수는 양수여야 합니다/,
+  );
+  assert.throws(
+    () =>
+      summarizeExperiment([
+        { ...valid, D: { ...valid.D, omissions: -1 } },
+      ]),
+    /측정값은 음수일 수 없습니다/,
+  );
+});
 
 test("네 발표자 구간이 정해진 순서로 이어진다", () => {
   const { slides } = loadDeck();
