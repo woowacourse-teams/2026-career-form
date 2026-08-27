@@ -1,42 +1,64 @@
 {
   "schemaVersion": 2,
-  "snapshotId": "sk-snapshot-a-mismatch-synthetic",
+  "snapshotId": "sk-careers-structure-a-mismatch-redacted",
   "site": {
     "host": "www.skcareers.com",
-    "pathPattern": "/Recruit/Apply/{postingId}"
+    "pathPattern": "/Application/Index/{postingId}"
   },
   "sections": [
     {
-      "sectionId": "section-profile",
-      "displayName": "합성 기본 영역",
+      "sectionId": "applyContentAcademic",
+      "displayName": "학력 영역",
       "actionCandidates": [
         {
-          "candidateId": "action-reveal-detail",
+          "candidateId": "action-add-university",
           "element": "button",
           "control": "button",
           "visibility": "visible",
-          "displayName": "합성 상세 영역 열기",
-          "domName": "detail-toggle"
+          "displayName": "학력 항목 추가",
+          "domName": "btnAddEducationUniv"
         }
       ]
     },
     {
-      "sectionId": "section-detail",
-      "parentSectionId": "section-profile",
-      "displayName": "합성 상세 영역",
-      "actionCandidates": []
-    },
-    {
-      "sectionId": "section-credentials",
-      "displayName": "합성 반복 영역",
+      "sectionId": "applyContentCareer",
+      "displayName": "경력 영역",
       "actionCandidates": [
         {
-          "candidateId": "action-add-credential",
+          "candidateId": "action-add-career",
           "element": "button",
           "control": "button",
           "visibility": "visible",
-          "displayName": "합성 반복 항목 추가",
-          "domName": "unknown-add"
+          "displayName": "경력 항목 추가",
+          "domName": "btnAddCareer"
+        }
+      ]
+    },
+    {
+      "sectionId": "applyContentLicense",
+      "displayName": "자격 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-certificate",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "자격 항목 추가",
+          "domName": "unknown-add-certificate"
+        }
+      ]
+    },
+    {
+      "sectionId": "applyContentLinguistics",
+      "displayName": "어학 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-language-test",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "어학 항목 추가",
+          "domName": "btnAddLangExam"
         }
       ]
     }

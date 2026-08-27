@@ -40,7 +40,7 @@ class SkFixtureContractTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    @DisplayName("Snapshot A fixture는 schema v2 action 후보 exact-set을 보존한다")
+    @DisplayName("실제 구조 Snapshot A fixture는 검증한 추가 action exact-set을 보존한다")
     void preservesTheExactActionCandidateSet() throws Exception {
         PreparationAnalysisRequest request = objectMapper.readValue(
             fixture(PREPARATION_FIXTURES.getFirst()),
@@ -48,14 +48,18 @@ class SkFixtureContractTest {
         );
 
         assertThat(request.schemaVersion()).isEqualTo(2);
+        assertThat(request.site().pathPattern())
+            .isEqualTo("/Application/Index/{postingId}");
         assertThat(request.actionCandidateIdsInTraversalOrder()).containsExactly(
-            "action-reveal-detail",
-            "action-add-credential"
+            "action-add-university",
+            "action-add-career",
+            "action-add-certificate",
+            "action-add-language-test"
         );
     }
 
     @Test
-    @DisplayName("Snapshot B fixture는 schema v2 field 후보 exact-set을 보존한다")
+    @DisplayName("실제 구조 Snapshot B fixture는 안전하게 검증한 field exact-set을 보존한다")
     void preservesTheExactFieldCandidateSet() throws Exception {
         FieldsAnalysisRequest request = objectMapper.readValue(
             fixture(FIELDS_FIXTURES.getFirst()),
@@ -64,13 +68,18 @@ class SkFixtureContractTest {
 
         assertThat(request.schemaVersion()).isEqualTo(2);
         assertThat(request.fieldCandidateIdsInTraversalOrder()).containsExactly(
-            "field-family-name",
-            "field-given-name",
+            "field-korean-full-name",
+            "field-english-given-name",
+            "field-english-family-name",
             "field-email",
             "field-phone",
-            "field-ambiguous",
-            "field-school-name",
-            "field-completion-status"
+            "field-nationality",
+            "field-postal-code",
+            "field-address-line-1",
+            "field-address-line-2",
+            "field-high-school-name",
+            "field-university-name",
+            "field-university-status"
         );
     }
 

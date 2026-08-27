@@ -1,88 +1,127 @@
 {
   "schemaVersion": 2,
-  "snapshotId": "sk-snapshot-b-synthetic",
+  "snapshotId": "sk-careers-structure-b-redacted",
   "site": {
     "host": "www.skcareers.com",
-    "pathPattern": "/Recruit/Apply/{postingId}"
+    "pathPattern": "/Application/Index/{postingId}"
   },
   "sections": [
     {
-      "sectionId": "section-profile",
-      "displayName": "합성 기본 영역",
+      "sectionId": "applyContentUserInfo",
+      "displayName": "인적 영역",
       "fields": [
         {
-          "candidateId": "field-family-name",
+          "candidateId": "field-korean-full-name",
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 이름 구성 A",
-          "domName": "applicant-family-name"
+          "displayName": "한글 성명",
+          "domName": "prsApplicantName"
         },
         {
-          "candidateId": "field-given-name",
+          "candidateId": "field-english-given-name",
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 이름 구성 B",
-          "domName": "applicant-given-name"
+          "displayName": "영문 이름",
+          "domName": "prsEngFirstName"
+        },
+        {
+          "candidateId": "field-english-family-name",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "영문 성",
+          "domName": "prsEngLastName"
         },
         {
           "candidateId": "field-email",
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 연락 수단 A",
-          "domName": "applicant-email"
+          "displayName": "이메일",
+          "domName": "prsEmail"
         },
         {
           "candidateId": "field-phone",
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 연락 수단 B",
-          "domName": "applicant-phone"
+          "displayName": "전화번호",
+          "domName": "prsPhone"
         },
         {
-          "candidateId": "field-ambiguous",
-          "element": "custom",
-          "control": "custom",
+          "candidateId": "field-nationality",
+          "element": "select",
+          "control": "select",
           "visibility": "visible",
-          "displayName": "합성 미지원 항목",
-          "domName": "unverified-custom"
+          "displayName": "국적",
+          "domName": "prsNationality",
+          "options": [
+            { "optionId": "nationality-option-redacted", "displayName": "비식별 선택지" }
+          ]
+        },
+        {
+          "candidateId": "field-postal-code",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "우편번호",
+          "domName": "prsZipCode"
+        },
+        {
+          "candidateId": "field-address-line-1",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "기본주소",
+          "domName": "prsAddress"
+        },
+        {
+          "candidateId": "field-address-line-2",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "displayName": "상세주소",
+          "domName": "prsAddressDtl"
         }
       ]
     },
     {
-      "sectionId": "section-education",
-      "displayName": "합성 반복 학력 영역",
+      "sectionId": "applyContentAcademic",
+      "displayName": "학력 영역",
       "fields": [],
       "items": [
         {
-          "itemId": "education-item-1",
+          "itemId": "education-item-redacted",
           "fields": [
             {
-              "candidateId": "field-school-name",
+              "candidateId": "field-high-school-name",
               "element": "input",
               "control": "text",
               "visibility": "visible",
-              "displayName": "합성 교육 기관",
-              "domName": "education-school-name"
+              "displayName": "고등학교명",
+              "domName": "eduhgEducationName"
             },
             {
-              "candidateId": "field-completion-status",
+              "candidateId": "field-university-name",
+              "element": "input",
+              "control": "text",
+              "visibility": "visible",
+              "displayName": "대학교명",
+              "domName": "eduEducationName"
+            },
+            {
+              "candidateId": "field-university-status",
               "element": "select",
               "control": "select",
               "visibility": "visible",
-              "displayName": "합성 교육 상태",
-              "domName": "education-completion-status",
+              "displayName": "대학교 상태",
+              "domName": "eduEducationStatus",
               "options": [
                 {
-                  "optionId": "completion-option-a",
-                  "displayName": "합성 상태 A"
-                },
-                {
-                  "optionId": "completion-option-b",
-                  "displayName": "합성 상태 B"
+                  "optionId": "status-option-redacted",
+                  "displayName": "비식별 선택지"
                 }
               ]
             }

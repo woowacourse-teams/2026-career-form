@@ -1,37 +1,37 @@
 {
   "schemaVersion": 2,
-  "snapshotId": "sk-snapshot-b-mismatch-synthetic",
+  "snapshotId": "sk-careers-structure-b-mismatch-redacted",
   "site": {
     "host": "www.skcareers.com",
-    "pathPattern": "/Recruit/Apply/{postingId}"
+    "pathPattern": "/Application/Index/{postingId}"
   },
   "sections": [
     {
-      "sectionId": "section-profile",
-      "displayName": "합성 기본 영역",
+      "sectionId": "applyContentUserInfo",
+      "displayName": "인적 영역",
       "fields": [
         {
-          "candidateId": "field-family-name",
+          "candidateId": "field-korean-full-name",
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 이름 구성 A",
-          "domName": "applicant-family-name"
+          "displayName": "한글 성명",
+          "domName": "prsApplicantName"
         },
         {
-          "candidateId": "field-given-name",
+          "candidateId": "field-english-given-name",
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 이름 구성 B",
-          "domName": "applicant-given-name"
+          "displayName": "영문 이름",
+          "domName": "prsEngFirstName"
         },
         {
           "candidateId": "field-email",
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 연락 수단 A",
+          "displayName": "이메일",
           "domName": "unknown-email"
         },
         {
@@ -39,8 +39,8 @@
           "element": "input",
           "control": "text",
           "visibility": "visible",
-          "displayName": "합성 연락 수단 B",
-          "domName": "applicant-phone"
+          "displayName": "전화번호",
+          "domName": "prsPhone"
         }
       ]
     }

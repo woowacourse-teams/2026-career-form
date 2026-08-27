@@ -43,7 +43,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             COMPANY_KEY,
             COMPANY_KEY,
             "www.skcareers.com",
-            List.of("/Recruit/Apply/"),
+            List.of("/Application/Index/"),
             VERSION
         ));
     }
@@ -54,45 +54,63 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             COMPANY_KEY,
             VERSION,
             new PreparationFingerprint(
-                Set.of("section-profile", "section-detail", "section-credentials"),
+                Set.of(
+                    "applyContentAcademic",
+                    "applyContentCareer",
+                    "applyContentLicense",
+                    "applyContentLinguistics"
+                ),
                 List.of(
-                    actionStructure("detail-toggle"),
-                    actionStructure("credential-add")
+                    actionStructure("btnAddEducationUniv"),
+                    actionStructure("btnAddCareer"),
+                    actionStructure("btnAddCert"),
+                    actionStructure("btnAddLangExam")
                 )
             ),
             new FieldsFingerprint(
-                Set.of("section-profile", "section-education"),
+                Set.of("applyContentUserInfo", "applyContentAcademic"),
                 List.of(
-                    textStructure("applicant-family-name"),
-                    textStructure("applicant-given-name"),
-                    textStructure("applicant-email"),
-                    textStructure("applicant-phone"),
-                    textStructure("education-school-name"),
-                    new FieldStructure(
-                        "education-completion-status",
-                        FieldsAnalysisRequest.FormElement.SELECT,
-                        FieldsAnalysisRequest.FormControl.SELECT
-                    )
+                    textStructure("prsApplicantName"),
+                    textStructure("prsEngFirstName"),
+                    textStructure("prsEngLastName"),
+                    textStructure("prsEmail"),
+                    textStructure("prsPhone"),
+                    selectStructure("prsNationality"),
+                    textStructure("prsZipCode"),
+                    textStructure("prsAddress"),
+                    textStructure("prsAddressDtl"),
+                    textStructure("eduhgEducationName"),
+                    textStructure("eduEducationName"),
+                    selectStructure("eduEducationStatus")
                 )
             ),
             List.of(
-                new ActionRule("detail-toggle", ActionKind.REVEAL, "section-detail"),
-                new ActionRule("credential-add", ActionKind.ADD, null)
+                addRule("btnAddEducationUniv"),
+                addRule("btnAddCareer"),
+                addRule("btnAddCert"),
+                addRule("btnAddLangExam")
             ),
             List.of(
-                textRule("applicant-family-name", "personal.personal.koreanFamilyName"),
-                textRule("applicant-given-name", "personal.personal.koreanGivenName"),
-                textRule("applicant-email", "contact.contact.email"),
-                textRule("applicant-phone", "contact.contact.phoneNumber"),
-                textRule("education-school-name", "education.university.schoolName"),
-                new FieldRule(
-                    "education-completion-status",
-                    FieldsAnalysisRequest.FormElement.SELECT,
-                    FieldsAnalysisRequest.FormControl.SELECT,
+                textRule("prsEngFirstName", "personal.personal.englishGivenName"),
+                textRule("prsEngLastName", "personal.personal.englishFamilyName"),
+                textRule("prsEmail", "contact.contact.email"),
+                textRule("prsPhone", "contact.contact.phoneNumber"),
+                selectRule("prsNationality", "personal.personal.nationality"),
+                textRule("prsZipCode", "contact.contact.postalCode"),
+                textRule("prsAddress", "contact.contact.addressLine1"),
+                textRule("prsAddressDtl", "contact.contact.addressLine2"),
+                textRule("eduhgEducationName", "education.highSchool.schoolName"),
+                textRule("eduEducationName", "education.university.schoolName"),
+                selectRule(
+                    "eduEducationStatus",
                     "education.university.completionStatus"
                 )
             )
         );
+    }
+
+    private static ActionRule addRule(String name) {
+        return new ActionRule(name, ActionKind.ADD, null);
     }
 
     private static ActionStructure actionStructure(String name) {
@@ -111,11 +129,28 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
         );
     }
 
+    private static FieldStructure selectStructure(String name) {
+        return new FieldStructure(
+            name,
+            FieldsAnalysisRequest.FormElement.SELECT,
+            FieldsAnalysisRequest.FormControl.SELECT
+        );
+    }
+
     private static FieldRule textRule(String name, String profileFieldKey) {
         return new FieldRule(
             name,
             FieldsAnalysisRequest.FormElement.INPUT,
             FieldsAnalysisRequest.FormControl.TEXT,
+            profileFieldKey
+        );
+    }
+
+    private static FieldRule selectRule(String name, String profileFieldKey) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.SELECT,
+            FieldsAnalysisRequest.FormControl.SELECT,
             profileFieldKey
         );
     }

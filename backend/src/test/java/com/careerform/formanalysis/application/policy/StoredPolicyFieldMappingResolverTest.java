@@ -38,14 +38,19 @@ class StoredPolicyFieldMappingResolverTest {
                 .resolve(request);
 
         assertThat(resolution.results()).containsExactly(
-            match("field-family-name", "personal.personal.koreanFamilyName"),
-            match("field-given-name", "personal.personal.koreanGivenName"),
+            new FieldMappingResolver.NoMatch("field-korean-full-name"),
+            match("field-english-given-name", "personal.personal.englishGivenName"),
+            match("field-english-family-name", "personal.personal.englishFamilyName"),
             match("field-email", "contact.contact.email"),
             match("field-phone", "contact.contact.phoneNumber"),
-            new FieldMappingResolver.NoMatch("field-ambiguous"),
-            match("field-school-name", "education.university.schoolName"),
+            match("field-nationality", "personal.personal.nationality"),
+            match("field-postal-code", "contact.contact.postalCode"),
+            match("field-address-line-1", "contact.contact.addressLine1"),
+            match("field-address-line-2", "contact.contact.addressLine2"),
+            match("field-high-school-name", "education.highSchool.schoolName"),
+            match("field-university-name", "education.university.schoolName"),
             match(
-                "field-completion-status",
+                "field-university-status",
                 "education.university.completionStatus"
             )
         );
@@ -57,13 +62,13 @@ class StoredPolicyFieldMappingResolverTest {
         FieldsAnalysisRequest request = new FieldsAnalysisRequest(
             2,
             "stored-policy-unverified-fields",
-            new Site("www.skcareers.com", "/Recruit/Apply/{postingId}"),
+            new Site("www.skcareers.com", "/Application/Index/{postingId}"),
             List.of(new Section(
                 "section-profile",
                 null,
                 null,
                 List.of(
-                    field("field-wrong-control", "applicant-email", FormElement.CUSTOM),
+                    field("field-wrong-control", "prsEmail", FormElement.CUSTOM),
                     field("field-unnamed", null, FormElement.INPUT)
                 ),
                 null

@@ -26,7 +26,7 @@ class StoredPolicyActionResolverTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    @DisplayName("저장된 reveal과 add rule을 요청 후보 순서대로 반환한다")
+    @DisplayName("저장된 실제 폼 add rule을 요청 후보 순서대로 반환한다")
     void resolvesStoredRulesInCandidateOrder() throws Exception {
         PreparationAnalysisRequest request = objectMapper.readValue(
             fixture("sk-preparation-snapshot-a-v2.json"),
@@ -39,13 +39,12 @@ class StoredPolicyActionResolverTest {
 
         assertThat(resolution).isEqualTo(new ActionResolver.Resolution(
             2,
-            "sk-snapshot-a-synthetic",
+            "sk-careers-structure-a-redacted",
             List.of(
-                new ActionResolver.RevealAction(
-                    "action-reveal-detail",
-                    "section-detail"
-                ),
-                new ActionResolver.AddAction("action-add-credential")
+                new ActionResolver.AddAction("action-add-university"),
+                new ActionResolver.AddAction("action-add-career"),
+                new ActionResolver.AddAction("action-add-certificate"),
+                new ActionResolver.AddAction("action-add-language-test")
             )
         ));
     }
@@ -56,7 +55,7 @@ class StoredPolicyActionResolverTest {
         PreparationAnalysisRequest request = new PreparationAnalysisRequest(
             2,
             "stored-policy-ineligible-actions",
-            new Site("www.skcareers.com", "/Recruit/Apply/{postingId}"),
+            new Site("www.skcareers.com", "/Application/Index/{postingId}"),
             List.of(new Section(
                 "section-profile",
                 null,
@@ -64,13 +63,13 @@ class StoredPolicyActionResolverTest {
                 List.of(
                     action(
                         "action-hidden",
-                        "credential-add",
+                        "btnAddCert",
                         Visibility.HIDDEN,
                         null
                     ),
                     action(
                         "action-disabled",
-                        "detail-toggle",
+                        "btnAddCareer",
                         Visibility.VISIBLE,
                         true
                     ),

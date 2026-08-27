@@ -13,7 +13,7 @@ import org.mockito.InOrder;
 class LocalCompanyFormPolicySeederTest {
 
     @Test
-    @DisplayName("SK 정책 v1을 먼저 저장하고 회사의 활성 버전을 v1로 덮어쓴다")
+    @DisplayName("실제 SK Careers 구조로 교체한 정책 v1과 활성 버전 v1을 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
             FormAnalysisCompanyMongoRepository.class
@@ -40,13 +40,51 @@ class LocalCompanyFormPolicySeederTest {
         assertThat(policy.getValue().id()).isEqualTo("sk-policy-v1");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
         assertThat(policy.getValue().version()).isEqualTo(1);
-        assertThat(policy.getValue().actionRules()).hasSize(2);
-        assertThat(policy.getValue().fieldRules()).hasSize(6);
+        assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
+            .containsExactlyInAnyOrder(
+                "applyContentAcademic",
+                "applyContentCareer",
+                "applyContentLicense",
+                "applyContentLinguistics"
+            );
+        assertThat(policy.getValue().actionRules())
+            .extracting("structuralName")
+            .containsExactly(
+                "btnAddEducationUniv",
+                "btnAddCareer",
+                "btnAddCert",
+                "btnAddLangExam"
+            );
+        assertThat(policy.getValue().fieldsFingerprint().requiredSectionIds())
+            .containsExactlyInAnyOrder(
+                "applyContentUserInfo",
+                "applyContentAcademic"
+            );
+        assertThat(policy.getValue().fieldRules())
+            .extracting("structuralName", "profileFieldKey")
+            .contains(
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsEmail",
+                    "contact.contact.email"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsPhone",
+                    "contact.contact.phoneNumber"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "eduEducationName",
+                    "education.university.schoolName"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "eduEducationStatus",
+                    "education.university.completionStatus"
+                )
+            );
         assertThat(company.getValue()).isEqualTo(new FormAnalysisCompanyDocument(
             "sk",
             "sk",
             "www.skcareers.com",
-            java.util.List.of("/Recruit/Apply/"),
+            java.util.List.of("/Application/Index/"),
             1
         ));
     }
