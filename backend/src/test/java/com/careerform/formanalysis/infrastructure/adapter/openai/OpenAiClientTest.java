@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -16,6 +17,8 @@ import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -29,6 +32,7 @@ import com.careerform.formanalysis.infrastructure.adapter.openai.OpenAiFieldMapp
 import tools.jackson.databind.ObjectMapper;
 
 @DisplayName("OpenAI 클라이언트")
+@ExtendWith(OutputCaptureExtension.class)
 class OpenAiClientTest {
 
     private static final String SAFE_FAILURE_MESSAGE =
@@ -91,8 +95,28 @@ class OpenAiClientTest {
     }
 
     @Test
+    @DisplayName("성공한 LLM 호출의 시작과 완료를 원문 없이 기록한다")
+    void logsSuccessfulCallWithoutPromptOrResponse(CapturedOutput output) {
+        OpenAiClient client = client(prompt -> response(
+            "{\"schemaVersion\":2,\"snapshotId\":\"private-output-marker\",\"results\":[]}"
+        ));
+
+        client.generate(
+            "private-system-prompt-marker",
+            new Input("private-input-marker"),
+            StrictOutput.class
+        );
+
+        assertThat(output).contains("LLM 호출 시작")
+            .contains("LLM 호출 성공")
+            .doesNotContain("private-system-prompt-marker")
+            .doesNotContain("private-input-marker")
+            .doesNotContain("private-output-marker");
+    }
+
+    @Test
     @DisplayName("공급자 실패 상세를 외부로 노출하지 않는다")
-    void hidesProviderFailureDetails() {
+    void hidesProviderFailureDetails(CapturedOutput output) {
         String privateMarker = "private-provider-failure-marker";
         OpenAiClient client = client(prompt -> {
             throw new IllegalStateException(privateMarker);
@@ -105,6 +129,9 @@ class OpenAiClientTest {
         )).isInstanceOf(ResolverException.class)
             .hasMessage(SAFE_FAILURE_MESSAGE)
             .hasMessageNotContaining(privateMarker);
+        assertThat(output).contains("LLM 호출 시작")
+            .contains("LLM 호출 실패")
+            .doesNotContain(privateMarker);
     }
 
     @Test
