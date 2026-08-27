@@ -15,8 +15,9 @@ const slides = [
     section: "product", kind: "cover", meta: "MINGLING DAY",
     evidenceType: "decision", implementationState: "오늘의 대화 지도",
     topics: ["product-problem"],
-    body: `<div class="cover-copy"><p class="kicker">완성품 발표 대신, 판단과 막힌 지점 공유</p><h1>지원서 입력을 줄이는<br><em>네 번의 판단</em></h1></div><div class="agenda-strip"><span>01 제품 실험</span><span>02 LLM 경계</span><span>03 확장 프로그램</span><span>04 팀과 AX</span></div>`,
-    notes: note("제품 발표자", 30, "오늘은 완성된 결과를 자랑하기보다 실제 문서, 실험 화면과 현재 구현을 놓고 이야기하겠습니다. 제품 실험, 백엔드 LLM 선택, 확장 프로그램 UI, 팀의 AX 순서로 각 판단의 근거와 아직 답하지 못한 질문을 공유합니다.", ["GitHub Issue #64", "프로젝트 밍글링 데이 안내"]),
+    productFlow: ["profile-register", "sidepanel-review", "approved-fill"],
+    body: `<div class="cover-copy"><p class="kicker">완성품 발표 대신, 판단과 막힌 지점 공유</p><h1>지원서 입력을 줄이는<br><em>네 번의 판단</em></h1></div><div class="product-flow"><span>프로필 등록</span><i></i><span>지원서 옆에서 검토</span><i></i><span>선택한 항목 기입</span><b>제출은 사용자 수행</b></div><div class="agenda-strip"><span>01 제품 실험</span><span>02 LLM 경계</span><span>03 확장 프로그램</span><span>04 팀과 AX</span></div>`,
+    notes: note("제품 발표자", 30, "Career Form은 사용자가 프로필을 한 번 등록하고 지원서 옆에서 예정 값을 검토한 뒤 선택한 항목만 기입하도록 돕는 Chrome 확장 프로그램입니다. 제출은 사용자가 수행합니다. 오늘은 완성품 발표보다 실제 문서, 실험 화면과 현재 구현을 놓고 네 번의 판단을 공유합니다.", ["GitHub Issue #64", "프로젝트 밍글링 데이 안내"]),
   },
   {
     section: "product", kind: "evidence", meta: "01 PRODUCT EXPERIMENT",
@@ -44,7 +45,8 @@ const slides = [
     title: "이 수치로 제품 방향을 결정해도 될까?",
     evidenceType: "open-question", implementationState: "가설 지지, 일반화는 미완료",
     discussionPrompt: "다음 실험에서 학습 효과와 실패 비용을 어떻게 분리하면 좋을까요?",
-    body: `<div class="limits"><article><b>고정 순서</b><p>A에서 D 순서라 뒤 과업에 학습 효과가 포함될 수 있음</p></article><article><b>작은 표본</b><p>10회 세션으로 사용자군과 지원서 다양성을 대표하기 어려움</p></article><article><b>통제된 화면</b><p>실제 사이트의 동적 DOM과 예외 상황은 미포함</p></article></div>${question("다음 실험의 우선순위", "무작위 과업 순서, 실제 사이트 과업, 오류 복구 측정 중 무엇부터 검증할지 피드백이 필요합니다.")}`,
+    limitations: ["fixed-order", "small-sample", "field-count-variation", "controlled-screen"],
+    body: `<div class="limits"><article><b>고정 순서</b><p>A에서 D 순서라 뒤 과업에 학습 효과가 포함될 수 있음</p></article><article><b>작은 표본과 필드 차이</b><p>10회 세션이며 세션별 비교 필드가 7개에서 16개로 다름</p></article><article><b>통제된 화면</b><p>실제 사이트의 동적 DOM과 예외 상황은 미포함</p></article></div>${question("다음 실험의 우선순위", "무작위 과업 순서, 실제 사이트 과업, 오류 복구 측정 중 무엇부터 검증할지 피드백이 필요합니다.")}`,
     notes: note("제품 발표자", 60, "모든 세션이 고정 순서라 학습 효과가 포함될 수 있습니다. 표본도 작고 통제된 연구 화면을 사용했습니다. 다음 실험에서 무엇을 먼저 검증해야 제품 판단에 도움이 될지 의견을 듣고 싶습니다.", ["presentation/experiment-report.js", "GitHub Issue #64"]),
   },
   {

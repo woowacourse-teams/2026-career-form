@@ -33,6 +33,10 @@ code { padding: 9px 14px; border: 1px solid #3a3a3a; border-radius: 8px; backgro
 .cover .kicker { margin: 0 0 36px; color: var(--secondary); font-size: 28px; }
 .cover h1 { margin: 0; font-size: 102px; line-height: 1.05; letter-spacing: -.055em; }
 .cover h1 em { color: var(--accent); font-style: normal; }
+.product-flow { position: absolute; left: 160px; bottom: 185px; display: flex; align-items: center; gap: 22px; font-size: 22px; }
+.product-flow span { font-weight: 700; }
+.product-flow i { width: 45px; height: 2px; background: var(--orange); }
+.product-flow b { margin-left: 20px; padding: 8px 14px; border: 1px solid var(--muted); border-radius: 999px; color: var(--secondary); font-size: 16px; }
 .agenda-strip { position: absolute; left: 160px; right: 160px; bottom: 105px; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 2px solid var(--muted); }
 .agenda-strip span { padding-top: 24px; color: var(--secondary); font-size: 24px; }
 

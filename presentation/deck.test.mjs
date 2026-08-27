@@ -143,6 +143,26 @@ test("책임 범위와 협업 방식은 문구와 분리된 주제로 추적된�
   }
 });
 
+test("발표 초반 사용자 흐름과 실험 한계가 구조로 추적된다", () => {
+  const { slides } = loadDeck();
+  const opening = slides[0];
+  const experimentQuestion = slides.find(
+    (slide) => slide.section === "product" && slide.evidenceType === "open-question",
+  );
+
+  assert.deepEqual(opening.productFlow, [
+    "profile-register",
+    "sidepanel-review",
+    "approved-fill",
+  ]);
+  assert.deepEqual(new Set(experimentQuestion.limitations), new Set([
+    "fixed-order",
+    "small-sample",
+    "field-count-variation",
+    "controlled-screen",
+  ]));
+});
+
 test("각 파트가 밍글링에 필요한 네 종류의 근거와 질문을 제공한다", () => {
   const { slides } = loadDeck();
   const expectedEvidence = new Set([
