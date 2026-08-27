@@ -28,6 +28,11 @@ Dockerfile 안의 Gradle 컴파일은 이 에뮬레이션에서 느려지는 반
 - 최종 이미지는 `linux/arm64`이며 기존 image digest 출력과 deploy job 입력을 유지한다.
 - Spring Boot의 dependencies, spring-boot-loader, snapshot-dependencies, application layer
   분리와 `careerform` non-root runtime user를 유지한다.
+- Repository Variable `DOCKERHUB_IMAGE`과 Repository Secret `DOCKERHUB_USERNAME`,
+  `DOCKERHUB_TOKEN`은 GitHub-hosted build job의 registry login과 image push에 계속 사용한다.
+- `development`, `staging`, `production` GitHub Environment는 각자의 `BACKEND_PORT`와
+  `SPRING_MONGODB_URI`를 유지한다. 각 ARM64 self-hosted runner의 registration token은
+  일회성 값이므로 저장소, 문서와 로그에 저장하지 않는다.
 - 실제 image push, 환경 배포와 배포 결과 확인은 workflow와 사람이 담당한다.
 
 ## 검증 근거
