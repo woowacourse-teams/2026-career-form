@@ -11,6 +11,7 @@ ROOT_DIR="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 : "${BACKEND_PORT:?BACKEND_PORT is required}"
 : "${SPRING_PROFILES_ACTIVE:?SPRING_PROFILES_ACTIVE is required}"
 : "${SPRING_MONGODB_URI:?SPRING_MONGODB_URI is required}"
+: "${OPENAI_API_KEY:?OPENAI_API_KEY is required}"
 
 DEPLOY_STATE_DIR="${DEPLOY_STATE_DIR:-/var/lib/career-form/deploy}"
 READINESS_ATTEMPTS="${READINESS_ATTEMPTS:-24}"

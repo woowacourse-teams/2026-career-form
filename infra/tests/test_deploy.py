@@ -73,6 +73,13 @@ printf '{"status":"UP"}'
         self.assertIn("profile", completed.stderr)
         self.assertFalse(self.docker_log.exists())
 
+    def test_rejects_missing_openai_key_before_docker_is_called(self) -> None:
+        completed = self._run(OPENAI_API_KEY="")
+
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn("OPENAI_API_KEY", completed.stderr)
+        self.assertFalse(self.docker_log.exists())
+
     def test_successful_deploy_records_digest_without_leaking_secret(self) -> None:
         completed = self._run()
 
@@ -88,6 +95,7 @@ printf '{"status":"UP"}'
             ).strip(),
         )
         self.assertNotIn("redacted-password", completed.stdout + completed.stderr)
+        self.assertNotIn("synthetic-openai-key", completed.stdout + completed.stderr)
         self.assertEqual(
             0o770,
             stat.S_IMODE((self.state / "staging").stat().st_mode),
@@ -250,6 +258,7 @@ printf '{"status":"UP"}'
             "BACKEND_PORT": "18081",
             "SPRING_PROFILES_ACTIVE": "staging",
             "SPRING_MONGODB_URI": "mongodb://user:redacted-password@db.invalid/app",
+            "OPENAI_API_KEY": "synthetic-openai-key",
             "DEPLOY_STATE_DIR": str(self.state),
             "READINESS_ATTEMPTS": "1",
             "READINESS_INTERVAL_SECONDS": "0",

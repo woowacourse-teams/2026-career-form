@@ -18,6 +18,7 @@ class DeployComposeContractTest(unittest.TestCase):
             "BACKEND_PORT": "18081",
             "SPRING_PROFILES_ACTIVE": "staging",
             "SPRING_MONGODB_URI": "mongodb://redacted.invalid/career-form",
+            "OPENAI_API_KEY": "synthetic-openai-key",
         }
 
         completed = subprocess.run(
@@ -53,6 +54,12 @@ class DeployComposeContractTest(unittest.TestCase):
         self.assertEqual(
             "mongodb://redacted.invalid/career-form",
             backend["environment"]["SPRING_MONGODB_URI"],
+        )
+        self.assertEqual(
+            "true", backend["environment"]["CAREER_FORM_LLM_ENABLED"]
+        )
+        self.assertEqual(
+            "synthetic-openai-key", backend["environment"]["OPENAI_API_KEY"]
         )
         self.assertEqual(
             {

@@ -97,7 +97,7 @@ LLM Resolver를 활성화할 때는 다음 값을 프로세스 실행 환경에 
 | 환경 변수 | 기본값 | 설명 |
 |---|---:|---|
 | `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때 범용 LLM Resolver 두 개를 활성화한다. |
-| `CAREER_FORM_LLM_MODEL` | 빈 값 | Spring AI OpenAI chat model 이름이다. |
+| `CAREER_FORM_LLM_MODEL` | `gpt-5.6-luna` | Spring AI OpenAI chat model 이름이다. |
 | `OPENAI_API_KEY` | 빈 값 | 활성화 시 공백이 아닌 실행 환경 시크릿이어야 한다. |
 | `CAREER_FORM_LLM_TIMEOUT` | `10s` | OpenAI 요청 timeout이다. |
 | `CAREER_FORM_LLM_MAX_RETRIES` | `1` | OpenAI client 최대 retry 횟수다. |
@@ -119,6 +119,12 @@ OPENAI_API_KEY=<실행 환경에서만 설정>
 endpoint를 각각 한 번 호출해 수행한다. 성공 여부와 비식별 검증 결과만 기록하고 요청
 본문, 공급자 원문 응답과 key는 로그·Issue·PR에 남기지 않는다. 실제 지원서 클릭과 입력도
 smoke test 범위에 포함하지 않는다.
+
+원격 `development`, `staging`, `production` 배포는 `.env.local`을 사용하지 않는다.
+세 deploy job만 공용 GitHub Repository Secret `OPENAI_API_KEY`를 프로세스 환경에
+주입하고, `infra/compose.deploy.yaml`이 이를 backend 컨테이너에 전달한다. 원격 Compose는
+LLM을 항상 활성화하며, 별도 모델 환경 변수가 없으면 위 기본 모델을 사용한다. key의 실제
+값은 이미지, 저장소, 문서, Issue·PR, workflow 출력이나 Compose 설정 출력에 기록하지 않는다.
 
 현재 모델 선택은 세로 단면 데모를 위한 잠정값이다. 후속 평가는 동일한 비식별 사례에서
 Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, 오매핑,
@@ -249,7 +255,7 @@ py scripts/local.py up
 
 `local.py down`은 Compose의 일반 `down`만 실행하므로 `mongodb-data` named volume을 삭제하지 않고 다음 실행에서도 데이터를 보존한다. volume 삭제는 로컬 데이터를 제거하는 파괴적 작업이므로 초기화가 필요할 때 사용자가 별도로 판단한다.
 
-`compose.yaml`은 공통 내부 포트와 Actuator healthcheck를 책임진다. `compose.local.yaml`만 MongoDB 컨테이너, 내부 연결 URI, healthcheck 의존성과 named volume을 책임진다. `dev`, `staging`, `prod`는 `infra/compose.deploy.yaml`을 조합해 외부 MongoDB URI, 환경별 loopback port와 registry digest를 주입하며 DB 컨테이너를 추가하지 않는다.
+`compose.yaml`은 공통 내부 포트와 Actuator healthcheck를 책임진다. `compose.local.yaml`만 MongoDB 컨테이너, 내부 연결 URI, healthcheck 의존성과 named volume을 책임진다. `dev`, `staging`, `prod`는 `infra/compose.deploy.yaml`을 조합해 외부 MongoDB URI, 공용 OpenAI key, 환경별 loopback port와 registry digest를 주입하며 DB 컨테이너를 추가하지 않는다.
 
 공개 Temurin 이미지 pull이 레이어 출력 전에 멈추고 `error getting credentials`를 반환하면 Dockerfile 문제가 아니라 Docker Desktop credential store 문제일 수 있다. Docker Desktop과 credential helper 상태를 복구한 뒤 다시 실행하며, 인증값이나 임시 우회 설정을 저장소에 기록하지 않는다.
 
