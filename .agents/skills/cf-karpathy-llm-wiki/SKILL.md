@@ -1,12 +1,13 @@
 ---
 name: cf-karpathy-llm-wiki
-description: 사용자가 LLM Wiki에 정본 문서를 수집, 질의, 점검해 달라고 요청할 때 비식별 raw 스냅샷과 근거 링크를 관리한다.
+description: 사용자가 LLM Wiki에 정본 문서를 수집, 갱신하거나 구조를 점검해 달라고 요청할 때 비식별 raw 스냅샷과 근거 링크를 관리한다. 저장된 Wiki를 근거로 질문에 답하는 요청에는 사용하지 않는다.
 ---
 
 # LLM Wiki
 
 이 스킬은 Issue별 불변 raw bundle과 여러 Issue의 같은 주제를 연결하는 topic Wiki를
-수집, 질의, 점검한다.
+수집, 갱신, 점검한다. 저장된 지식에 대한 읽기 전용 답변은
+`cf-llm-wiki-query`가 담당한다.
 
 ## 우선순위와 수집
 
