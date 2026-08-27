@@ -75,13 +75,13 @@ test("실험 집계는 잘못된 세션 원자료를 거부한다", () => {
   );
 });
 
-test("네 발표자 구간이 정해진 순서로 이어진다", () => {
+test("네 발표자 구간이 제품, 클라이언트, 백엔드, 팀 순서로 이어진다", () => {
   const { slides } = loadDeck();
   const sections = slides
     .map((slide) => slide.section)
     .filter((section, index, values) => section !== values[index - 1]);
 
-  assert.deepEqual(sections, ["product", "backend", "client", "team"]);
+  assert.deepEqual(sections, ["product", "client", "backend", "team"]);
 });
 
 test("전체 발표는 20분 안이며 각 발표자는 약 5분을 담당한다", () => {
@@ -103,8 +103,8 @@ test("전체 발표는 20분 안이며 각 발표자는 약 5분을 담당한다
 
   assert.deepEqual(Object.keys(secondsBySection), [
     "product",
-    "backend",
     "client",
+    "backend",
     "team",
   ]);
   assert.ok(
@@ -118,7 +118,7 @@ test("전체 발표는 20분 안이며 각 발표자는 약 5분을 담당한다
 test("모든 슬라이드는 발표자 노트와 하나 이상의 근거를 제공한다", () => {
   const { slides } = loadDeck();
 
-  assert.equal(slides.length, 17);
+  assert.equal(slides.length, 20);
   for (const slide of slides) {
     assert.match(slide.notes.speaker, /발표자$/);
     assert.ok(slide.notes.seconds > 0);
@@ -143,19 +143,23 @@ test("책임 범위와 협업 방식은 문구와 분리된 주제로 추적된�
   }
 });
 
-test("발표 초반 사용자 흐름과 실험 한계가 구조로 추적된다", () => {
+test("제목 다음 서비스 소개에서 사용자 흐름을 설명하고 실험 한계를 추적한다", () => {
   const { slides } = loadDeck();
   const opening = slides[0];
-  const experimentQuestion = slides.find(
-    (slide) => slide.section === "product" && slide.evidenceType === "open-question",
+  const introduction = slides[1];
+  const productRoadmap = slides.find(
+    (slide) => slide.storyRole === "product-roadmap",
   );
 
-  assert.deepEqual(opening.productFlow, [
+  assert.equal(opening.storyRole, "project-title");
+  assert.equal(opening.productFlow, undefined);
+  assert.equal(introduction.storyRole, "service-introduction");
+  assert.deepEqual(introduction.productFlow, [
     "profile-register",
     "sidepanel-review",
     "approved-fill",
   ]);
-  assert.deepEqual(new Set(experimentQuestion.limitations), new Set([
+  assert.deepEqual(new Set(productRoadmap.limitations), new Set([
     "fixed-order",
     "small-sample",
     "field-count-variation",
@@ -163,31 +167,110 @@ test("발표 초반 사용자 흐름과 실험 한계가 구조로 추적된다"
   ]));
 });
 
-test("각 파트가 밍글링에 필요한 네 종류의 근거와 질문을 제공한다", () => {
+test("질문 전용 화면 대신 현재 상태에서 이어지는 로드맵을 제공한다", () => {
   const { slides } = loadDeck();
-  const expectedEvidence = new Set([
-    "decision",
-    "artifact",
-    "current-state",
-    "open-question",
-  ]);
 
-  for (const section of ["product", "backend", "client", "team"]) {
-    const sectionSlides = slides.filter((slide) => slide.section === section);
-    const evidence = new Set(
-      sectionSlides.map((slide) => slide.evidenceType),
+  assert.equal(
+    slides.some((slide) => slide.evidenceType === "open-question"),
+    false,
+  );
+  for (const section of ["product", "client", "backend"]) {
+    const roadmap = slides.find(
+      (slide) => slide.section === section && slide.evidenceType === "roadmap",
     );
-    assert.deepEqual(evidence, expectedEvidence);
-    assert.ok(
-      sectionSlides.some((slide) => slide.discussionPrompt?.length > 0),
-      `${section} 파트에 대화 질문이 필요하다`,
-    );
+    assert.ok(roadmap, `${section} 파트에 개선 로드맵이 필요하다`);
+    assert.ok(roadmap.roadmapSteps.length >= 3);
   }
 
   assert.ok(
-    slides.every((slide) => slide.implementationState?.length > 0),
-    "모든 슬라이드는 구현 상태를 구분해야 한다",
+    slides
+      .filter((slide) => slide.storyRole !== "project-title")
+      .every((slide) => slide.implementationState?.length > 0),
+    "제목을 제외한 슬라이드는 구현 상태를 구분해야 한다",
   );
+});
+
+test("20장 서사가 서비스 소개부터 자동 기입과 이해 정렬까지 이어진다", () => {
+  const { slides } = loadDeck();
+
+  assert.deepEqual(slides.map((slide) => slide.storyRole), [
+    "project-title",
+    "service-introduction",
+    "experiment-artifact",
+    "experiment-speed",
+    "experiment-accuracy",
+    "product-roadmap",
+    "client-decision",
+    "client-current-ui",
+    "responsibility-boundary",
+    "autofill-flow",
+    "client-roadmap",
+    "backend-decision",
+    "backend-artifact",
+    "backend-current-state",
+    "backend-roadmap",
+    "team-decision",
+    "team-artifact",
+    "team-current-state",
+    "knowledge-alignment",
+    "closing",
+  ]);
+});
+
+test("실험 방식, 실행 책임과 사용자 통제가 구조로 구분된다", () => {
+  const { slides } = loadDeck();
+  const experiment = slides.find(
+    (slide) => slide.storyRole === "experiment-speed",
+  );
+  const boundary = slides.find(
+    (slide) => slide.storyRole === "responsibility-boundary",
+  );
+  const autofill = slides.find(
+    (slide) => slide.storyRole === "autofill-flow",
+  );
+  const backendContract = slides.find(
+    (slide) => slide.storyRole === "backend-current-state",
+  );
+
+  assert.deepEqual(experiment.comparisonMethods.map(({ id }) => id), [
+    "A", "B", "C", "D",
+  ]);
+  assert.ok(experiment.comparisonMethods.every(({ label }) => label.length > 6));
+  assert.deepEqual(Object.keys(boundary.responsibilityBoundary), [
+    "browser",
+    "backend",
+  ]);
+  assert.deepEqual(autofill.autofillFlow, [
+    "collect-minimum-context",
+    "analyze-field-meaning",
+    "connect-local-values",
+    "review-and-approve",
+    "fill-and-verify",
+  ]);
+  assert.deepEqual(autofill.userActions, [
+    "review",
+    "select",
+    "approve",
+    "verify-result",
+  ]);
+  assert.equal(backendContract.providerContract, "omission-to-no-match");
+});
+
+test("LLM Wiki가 결정 근거를 전달해 팀의 이해를 맞추는 흐름을 제공한다", () => {
+  const { slides } = loadDeck();
+  const alignment = slides.find(
+    (slide) => slide.storyRole === "knowledge-alignment",
+  );
+  const closing = slides.at(-1);
+
+  assert.deepEqual(alignment.knowledgeFlow, [
+    "human-decision",
+    "approved-knowledge",
+    "agent-context",
+    "team-alignment",
+  ]);
+  assert.equal(closing.storyRole, "closing");
+  assert.ok(closing.closingMessage.length > 0);
 });
 
 test("덱에서 사용하는 실제 자료 캡처는 유효한 PNG다", () => {
@@ -218,10 +301,10 @@ test("덱에서 사용하는 실제 자료 캡처는 유효한 PNG다", () => {
 test("슬라이드 이동은 덱 범위를 벗어나지 않는다", () => {
   const { clampSlideIndex } = loadDeck();
 
-  assert.equal(clampSlideIndex(-1, 17), 0);
-  assert.equal(clampSlideIndex(0, 17), 0);
-  assert.equal(clampSlideIndex(8, 17), 8);
-  assert.equal(clampSlideIndex(17, 17), 16);
+  assert.equal(clampSlideIndex(-1, 20), 0);
+  assert.equal(clampSlideIndex(0, 20), 0);
+  assert.equal(clampSlideIndex(10, 20), 10);
+  assert.equal(clampSlideIndex(20, 20), 19);
 });
 
 test("발표 캔버스와 제어 요소가 브라우저 계약에 포함된다", () => {
