@@ -53,11 +53,7 @@ class OpenAiFieldMappingResolverTest {
               "matches": [{
                 "candidateId": "field-direct",
                 "profileFieldKey": "contact.contact.email"
-              }],
-              "noMatches": [
-                {"candidateId": "field-item-1"},
-                {"candidateId": "field-item-2"}
-              ]
+              }]
             }
             """);
 
@@ -108,18 +104,13 @@ class OpenAiFieldMappingResolverTest {
     }
 
     @Test
-    @DisplayName("필드 매핑 결과는 허용 키와 두 가지 목록으로만 받는다")
-    void requestsCanonicalMappingBuckets() {
+    @DisplayName("확실한 필드 매치와 canonical key enum만 요청한다")
+    void requestsOnlyConfidentMatchesWithCanonicalKeyEnum() {
         CapturingChatModel model = new CapturingChatModel("""
             {
               "schemaVersion": 2,
               "snapshotId": "snapshot-1",
-              "matches": [],
-              "noMatches": [
-                {"candidateId": "field-direct"},
-                {"candidateId": "field-item-1"},
-                {"candidateId": "field-item-2"}
-              ]
+              "matches": []
             }
             """);
 
@@ -129,19 +120,15 @@ class OpenAiFieldMappingResolverTest {
         assertThat(prompt.getSystemMessage().getText())
             .contains(
                 "schemaVersion 2",
-                "every candidate exactly once",
                 "matches",
-                "noMatches",
+                "Omit candidates",
                 "contact.contact.email"
-            );
+            )
+            .doesNotContain("noMatches");
         OpenAiChatOptions options = (OpenAiChatOptions) prompt.getOptions();
-        assertThat(options.getStore()).isFalse();
+        assertThat(options.getStore()).isTrue();
         assertThat(options.getResponseFormat()).isNotNull();
         String schema = options.getResponseFormat().getJsonSchema();
-        assertThat(schema).contains(
-            "matches",
-            "noMatches"
-        );
         JsonNode root = objectMapper.readTree(schema);
         assertThat(root.get("additionalProperties").asBoolean()).isFalse();
         assertThat(root.get("required").values().stream()
@@ -149,9 +136,15 @@ class OpenAiFieldMappingResolverTest {
             .containsExactlyInAnyOrder(
                 "schemaVersion",
                 "snapshotId",
-                "matches",
-                "noMatches"
+                "matches"
             );
+        assertThat(root.get("properties").has("noMatches")).isFalse();
+        JsonNode profileFieldKeyEnum = root.at(
+            "/properties/matches/items/properties/profileFieldKey/enum"
+        );
+        assertThat(profileFieldKeyEnum.isArray()).isTrue();
+        assertThat(profileFieldKeyEnum.values().stream().map(JsonNode::asString))
+            .containsExactlyElementsOf(new SupportedProfileFields().keys());
     }
 
     private OpenAiFieldMappingResolver resolver(ChatModel model) {

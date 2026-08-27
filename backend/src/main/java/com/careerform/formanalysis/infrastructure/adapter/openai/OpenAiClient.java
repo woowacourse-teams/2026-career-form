@@ -1,11 +1,13 @@
 package com.careerform.formanalysis.infrastructure.adapter.openai;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.UnaryOperator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.ai.converter.StructuredOutputConverter;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.util.JacksonUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -52,18 +54,36 @@ public final class OpenAiClient {
         Object input,
         Class<O> outputType
     ) {
+        return generate(
+            systemPrompt,
+            input,
+            outputType,
+            UnaryOperator.identity()
+        );
+    }
+
+    public <O> O generate(
+        String systemPrompt,
+        Object input,
+        Class<O> outputType,
+        UnaryOperator<String> jsonSchemaCustomizer
+    ) {
         String sanitizedJson = objectMapper.writeValueAsString(input);
         long startedAt = System.nanoTime();
         log.info("LLM 호출 시작 outputType={}", outputType.getSimpleName());
         try {
-            BeanOutputConverter<O> converter = new BeanOutputConverter<>(
+            BeanOutputConverter<O> delegate = new BeanOutputConverter<>(
                 outputType,
                 strictMapper()
+            );
+            StructuredOutputConverter<O> converter = new SchemaOutputConverter<>(
+                delegate,
+                jsonSchemaCustomizer.apply(delegate.getJsonSchema())
             );
             O output = chatClient.prompt()
                 .system(systemPrompt)
                 .user(sanitizedJson)
-                .options(OpenAiChatOptions.builder().store(false))
+                .options(OpenAiChatOptions.builder().store(true))
                 .call()
                 .entity(converter, spec -> spec.useProviderStructuredOutput());
             if (output == null) {
@@ -129,5 +149,26 @@ public final class OpenAiClient {
 
     private static ResolverException unavailable() {
         return new ResolverException(INVALID_RESPONSE_MESSAGE);
+    }
+
+    private record SchemaOutputConverter<O>(
+        BeanOutputConverter<O> delegate,
+        String jsonSchema
+    ) implements StructuredOutputConverter<O> {
+
+        @Override
+        public O convert(String source) {
+            return delegate.convert(source);
+        }
+
+        @Override
+        public String getFormat() {
+            return delegate.getFormat().replace(delegate.getJsonSchema(), jsonSchema);
+        }
+
+        @Override
+        public String getJsonSchema() {
+            return jsonSchema;
+        }
     }
 }

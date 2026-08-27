@@ -88,3 +88,19 @@
 - Source-Tree: 5f06a881a2e64c97dd4390a5da62a8eed7ee51c5
 - Raw: llm-wiki/raw/issues/CF-40/manifest.md
 - Topics: 3
+
+## [2026-08-27] ingest | CF-57 OpenAI Chat Completion 응답 저장
+
+- Disposition: Supersedes CF-40 application-form-analysis-data-boundary topic
+- Approval-Digest: c841fa98e025acbc49245c311d7ca73666747720ba719b71e806272c8e95e59f
+- Source-Tree: 551c3b27a53256d0e5526fda27789ee40ba05fbb
+- Raw: llm-wiki/raw/issues/CF-57/manifest.md
+- Topics: 1
+
+## [2026-08-27] ingest | CF-61 필드 매핑 provider output 계약 안전화
+
+- Disposition: Supersedes CF-40 API and CF-57 data-boundary topics
+- Approval-Digest: 24484961339269c5afdfc9d853b0c918696b0ada4511eb23ce978e580b8fdb76
+- Source-Tree: 20b74dd793ac0fc26ede51a99939b83e61963079
+- Raw: llm-wiki/raw/issues/CF-61/manifest.md
+- Topics: 2

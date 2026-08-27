@@ -1,5 +1,7 @@
 .gradle/
-build/
+build/*
+!build/libs/
+!build/libs/*.jar
 .idea/
 *.iml
 .DS_Store

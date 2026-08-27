@@ -1,8 +1,11 @@
 package com.careerform.formanalysis.infrastructure.adapter.openai;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.springframework.ai.util.JacksonUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +20,9 @@ import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Option;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Section;
 import com.careerform.formanalysis.exception.ResolverException;
 
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
+
 @Component
 @ConditionalOnProperty(
     prefix = "career-form.llm",
@@ -29,11 +35,11 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
         "LLM 분석 응답 계약을 확인할 수 없습니다";
     private static final String SYSTEM_PROMPT = """
         Map de-identified application-form field metadata using schemaVersion 2.
-        Return every candidate exactly once across the required matches and noMatches
-        arrays. matches entries contain only candidateId and profileFieldKey; noMatches
-        entries contain only candidateId. Use a profileFieldKey from the allowed list only
-        when the display metadata is sufficient. Otherwise use noMatches. Do not infer or
-        return field values, confidence, autofill policy, interaction state, or write plans.
+        Return only confident canonical mappings in the required matches array.
+        Each match contains only candidateId and profileFieldKey. Omit candidates when
+        the display metadata is insufficient; the Backend will treat omissions as no match.
+        Use only a profileFieldKey allowed by the response schema. Do not infer or return
+        field values, confidence, autofill policy, interaction state, or write plans.
         Allowed canonical profile keys:
         %s
         """;
@@ -54,17 +60,24 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
         FieldOutput output = client.generate(
             SYSTEM_PROMPT.formatted(String.join("\n", supportedProfileFields.keys())),
             FieldInput.from(request),
-            FieldOutput.class
+            FieldOutput.class,
+            this::withSupportedProfileFieldKeyEnum
         );
         try {
             List<Result> results = new ArrayList<>();
-            output.matches().forEach(match -> results.add(new Match(
-                match.candidateId(),
-                match.profileFieldKey()
-            )));
-            output.noMatches().forEach(noMatch -> results.add(
-                new NoMatch(noMatch.candidateId())
-            ));
+            Set<String> matchedCandidateIds = new HashSet<>();
+            output.matches().forEach(match -> {
+                results.add(new Match(
+                    match.candidateId(),
+                    match.profileFieldKey()
+                ));
+                matchedCandidateIds.add(match.candidateId());
+            });
+            request.fieldCandidatesInTraversalOrder().stream()
+                .map(FieldCandidate::candidateId)
+                .filter(candidateId -> !matchedCandidateIds.contains(candidateId))
+                .map(NoMatch::new)
+                .forEach(results::add);
             return new Resolution(
                 output.schemaVersion(),
                 output.snapshotId(),
@@ -74,6 +87,17 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
         catch (RuntimeException exception) {
             throw new ResolverException(INVALID_RESPONSE_MESSAGE);
         }
+    }
+
+    private String withSupportedProfileFieldKeyEnum(String schema) {
+        ObjectNode root = (ObjectNode) JacksonUtils.getDefaultJsonMapper()
+            .readTree(schema);
+        ObjectNode profileFieldKey = (ObjectNode) root.at(
+            "/properties/matches/items/properties/profileFieldKey"
+        );
+        ArrayNode enumValues = profileFieldKey.putArray("enum");
+        supportedProfileFields.keys().forEach(enumValues::add);
+        return root.toString();
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -157,14 +181,10 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
     record FieldOutput(
         int schemaVersion,
         String snapshotId,
-        List<MatchOutput> matches,
-        List<NoMatchOutput> noMatches
+        List<MatchOutput> matches
     ) {
     }
 
     record MatchOutput(String candidateId, String profileFieldKey) {
-    }
-
-    record NoMatchOutput(String candidateId) {
     }
 }
