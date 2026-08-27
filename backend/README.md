@@ -1,6 +1,8 @@
 # Career Form Backend
 
-Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 현재 범위는 이후 API 구현을 위한 실행 기반과 MongoDB 연결 기반이다. 비즈니스 API, GPT 연동, MongoDB Repository, 컬렉션 모델과 실제 프로필, 지원서 정보 저장은 포함하지 않는다.
+Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 비식별 필드 메타데이터를
+매핑하는 선택적 LLM API와 MongoDB 연결 기반을 제공한다. MongoDB Repository, 컬렉션
+모델과 실제 프로필, 지원서 정보 저장은 포함하지 않는다.
 
 ## 기술 기준
 
@@ -9,7 +11,7 @@ Career Form의 독립 실행형 Spring MVC 백엔드 프로젝트다. 현재 범
 - Gradle Wrapper 9.6.1
 - Spring MVC와 내장 Tomcat 11
 - Spring Data MongoDB
-- Spring AI 2.0.0의 공급자 중립 chat client
+- Spring AI 2.0.0의 공급자 중립 chat client와 OpenAI provider
 - springdoc-openapi 3.1.0
 - OpenAPI 3.0.1 문서 규격
 - JaCoCo 0.8.15
@@ -25,15 +27,120 @@ macOS에서 현재 셸이 JDK 21을 사용하도록 설정하는 예시는 다�
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ```
 
-## LLM 연동 기반
+## 지원서 분석 API
 
-현재 백엔드는 Spring AI 2.0.0 BOM과 공급자 중립 `spring-ai-client-chat`만 포함한다.
-OpenAI, Gemini, Ollama용 starter와 API 키, 모델, base URL 같은 런타임 설정은 아직
-추가하지 않았으므로 실제 LLM bean이나 외부 호출은 생성되지 않는다.
+schema v2 지원서 분석은 항상 노출되는 두 전용 endpoint로 나뉜다.
 
-공급자 선택과 런타임 설정, 구조화 출력 및 설정 검증은 비식별 데이터 기반 매핑을
-구현하는 후속 Issue에서 함께 추가한다. 로컬 LLM을 채택하면 JVM에 모델을 내장하지 않고
-Ollama 같은 별도 추론 서비스의 API로 연결한다.
+- `POST /api/v1/preparation/analyze`: 모든 action candidate를 `ACTION | NO_ACTION`으로
+  분석하고 검증된 준비 plan만 반환한다. Backend는 클릭하지 않으며 실행 횟수 산정,
+  사용자 승인, 실행, 기대 효과 확인과 새 DOM 수집은 browser가 담당한다.
+- `POST /api/v1/fields/analyze`: 준비가 끝난 모든 field candidate를 canonical 77개
+  프로필 필드 키의 `MATCH | NO_MATCH`로 분석한다. 상호작용 상태와 제한된 write command는
+  Backend의 결정론적 정책이 만들고 실제 값 연결과 입력은 browser가 담당한다.
+
+두 API와 Resolver 확장 경계는 다음 18개 production class가 소유한다. 현재 구현은 범용
+LLM Resolver 두 개뿐이며 회사별 정적 Resolver, DB mapping과 Resolver router는 후속
+범위다. 요청·응답의 하위 record와 enum은 해당 DTO 안에 함께 둔다.
+
+```text
+com.careerform.formanalysis
+├── api/
+│   ├── PreparationAnalysisController
+│   └── FieldsAnalysisController
+├── dto/
+│   ├── PreparationAnalysisRequest
+│   ├── PreparationAnalysisResponse
+│   ├── FieldsAnalysisRequest
+│   └── FieldsAnalysisResponse
+├── application/
+│   ├── PreparationAnalysisService
+│   ├── FieldsAnalysisService
+│   ├── FieldInteractionPolicy
+│   ├── SupportedProfileFields
+│   └── port/
+│       ├── ActionResolver
+│       └── FieldMappingResolver
+├── exception/
+│   ├── FormAnalysisExceptionHandler
+│   ├── InvalidSnapshotException
+│   └── ResolverException
+└── infrastructure/adapter/openai/
+    ├── OpenAiClient
+    ├── OpenAiActionResolver
+    └── OpenAiFieldMappingResolver
+```
+
+LLM은 외부 snapshot 전체를 그대로 받지 않는다. field 분석에는 section/item 관계,
+candidate ID, 표시명, element/control과 option 표시명만 전달한다. action 분석에는 같은
+구조와 candidate 표시명, element/control/visibility, domId/domName 및 true 상태 flag를
+전달한다. 두 경로 모두 실제 프로필/control 값, HTML, 전체 URL·query·fragment,
+cookie/session/account/authorization, selector·실행 코드와 DOM handle을 보내지 않는다.
+Spring AI prompt/completion/error logging과 provider-side 저장도 비활성화한다.
+
+LLM Resolver는 기본 비활성화되지만 두 HTTP endpoint는 숨지 않는다. 비활성 상태,
+공급자 실행 장애 또는 출력 전체 계약 위반이면 `200 + GENERIC + PARTIAL +
+[LLM_UNAVAILABLE]`와 빈 결과를 반환한다. 유효한 all-`NO_ACTION`과 all-`NO_MATCH`는
+`COMPLETE`다. 잘못된 필수 요청은 400, 예상하지 않은 로컬 오류는 500이며 413과 502를
+애플리케이션 계약으로 사용하지 않는다.
+
+선택 속성의 명시적 `null`은 생략과 같게 취급하지만 필수 속성의 `null`과 빈 문자열은
+허용하지 않는다. ID는 최대 128자, displayName/domId/domName/placeholder는 최대 120자,
+site host는 253자, path pattern은 512자다. Backend는 candidate ID와 preparation
+section ID의 중복, action target처럼 분석에 꼭 필요한 무결성만 검사한다. section parent
+graph와 item/option ID의 정합성은 snapshot을 만드는 Frontend가 책임진다. Resolver 결과는
+candidate exact set, snapshot/schema header와 field key를 검증한 뒤 원자적으로 채택하고,
+실행 command와 상호작용 상태는 Backend의 결정론적 정책이 만든다.
+
+LLM Resolver를 활성화할 때는 다음 값을 프로세스 실행 환경에 주입한다. 실제 값이 담긴
+`.env`와 `.env.local`은 Git에 추가하지 않는다.
+
+| 환경 변수 | 기본값 | 설명 |
+|---|---:|---|
+| `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때 범용 LLM Resolver 두 개를 활성화한다. |
+| `CAREER_FORM_LLM_MODEL` | `gpt-5.6-luna` | Spring AI OpenAI chat model 이름이다. |
+| `OPENAI_API_KEY` | 빈 값 | 활성화 시 공백이 아닌 실행 환경 시크릿이어야 한다. |
+| `CAREER_FORM_LLM_TIMEOUT` | `10s` | OpenAI 요청 timeout이다. |
+| `CAREER_FORM_LLM_MAX_RETRIES` | `1` | OpenAI client 최대 retry 횟수다. |
+| `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | `2048` | completion token 상한이다. |
+
+모델 호출은 Spring AI의 OpenAI structured output을 사용한다. 데모 설정은
+`gpt-5.6-luna`, reasoning effort `none`, completion 상한 2,048 tokens를 사용한다.
+로컬 Compose에서는 [`.env.example`](../.env.example)을 `.env.local`의 출발점으로
+사용할 수 있다.
+
+```dotenv
+CAREER_FORM_LLM_ENABLED=true
+CAREER_FORM_LLM_MODEL=gpt-5.6-luna
+OPENAI_API_KEY=<실행 환경에서만 설정>
+```
+
+### Chat Completion 저장
+
+공통 `application.yml`은 `spring.ai.openai.chat.store=true`를 설정한다. 따라서
+`local`, `development`, `staging`, `production` 프로필은 모두 같은 저장 기본값을
+상속한다. `OpenAiClient`도 요청별 옵션에 `store=true`를 명시한다. Spring AI에서는
+요청별 옵션이 공통 설정을 덮어쓸 수 있으므로 두 위치의 값이 함께 켜져 있어야 한다.
+
+저장되는 completion에는 시스템 지시문, 비식별 candidate 구조와 구조화된 모델 출력이
+포함될 수 있다. 실제 프로필 값, HTML, URL 상세, 계정·세션·인증 정보와 실행 정보는
+계속 공급자 payload에서 제외한다. 저장된 completion의 OpenAI Platform 확인은 사람이
+비식별 합성 snapshot으로 수행하며, 자동 테스트는 실제 OpenAI 호출을 하지 않는다.
+
+자동 테스트는 fake Resolver 또는 fake `ChatModel`만 사용하며 실제 OpenAI 호출을 하지
+않는다. 실제 API key를 넣은 연결 smoke test는 사람이 비식별 합성 snapshot으로 두
+endpoint를 각각 한 번 호출해 수행한다. 성공 여부와 비식별 검증 결과만 기록하고 요청
+본문, 공급자 원문 응답과 key는 로그·Issue·PR에 남기지 않는다. 실제 지원서 클릭과 입력도
+smoke test 범위에 포함하지 않는다.
+
+원격 `development`, `staging`, `production` 배포는 `.env.local`을 사용하지 않는다.
+세 deploy job만 공용 GitHub Repository Secret `OPENAI_API_KEY`를 프로세스 환경에
+주입하고, `infra/compose.deploy.yaml`이 이를 backend 컨테이너에 전달한다. 원격 Compose는
+LLM을 항상 활성화하며, 별도 모델 환경 변수가 없으면 위 기본 모델을 사용한다. key의 실제
+값은 이미지, 저장소, 문서, Issue·PR, workflow 출력이나 Compose 설정 출력에 기록하지 않는다.
+
+현재 모델 선택은 세로 단면 데모를 위한 잠정값이다. 후속 평가는 동일한 비식별 사례에서
+Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, 오매핑,
+매핑 범위와 응답 속도를 비교하고 모델 선택 ADR을 작성한다.
 
 ## 빌드와 검증
 
@@ -160,7 +267,7 @@ py scripts/local.py up
 
 `local.py down`은 Compose의 일반 `down`만 실행하므로 `mongodb-data` named volume을 삭제하지 않고 다음 실행에서도 데이터를 보존한다. volume 삭제는 로컬 데이터를 제거하는 파괴적 작업이므로 초기화가 필요할 때 사용자가 별도로 판단한다.
 
-`compose.yaml`은 공통 내부 포트와 Actuator healthcheck를 책임진다. `compose.local.yaml`만 MongoDB 컨테이너, 내부 연결 URI, healthcheck 의존성과 named volume을 책임진다. `dev`, `staging`, `prod`는 `infra/compose.deploy.yaml`을 조합해 외부 MongoDB URI, 환경별 loopback port와 registry digest를 주입하며 DB 컨테이너를 추가하지 않는다.
+`compose.yaml`은 공통 내부 포트와 Actuator healthcheck를 책임진다. `compose.local.yaml`만 MongoDB 컨테이너, 내부 연결 URI, healthcheck 의존성과 named volume을 책임진다. `dev`, `staging`, `prod`는 `infra/compose.deploy.yaml`을 조합해 외부 MongoDB URI, 공용 OpenAI key, 환경별 loopback port와 registry digest를 주입하며 DB 컨테이너를 추가하지 않는다.
 
 공개 Temurin 이미지 pull이 레이어 출력 전에 멈추고 `error getting credentials`를 반환하면 Dockerfile 문제가 아니라 Docker Desktop credential store 문제일 수 있다. Docker Desktop과 credential helper 상태를 복구한 뒤 다시 실행하며, 인증값이나 임시 우회 설정을 저장소에 기록하지 않는다.
 

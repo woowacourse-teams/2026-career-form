@@ -63,3 +63,50 @@
 - Approval-Digest: 47c048bdc2eb40e20be1e1bf88721b0aae256ccbf973be817703029e945f200a
 - Raw: llm-wiki/raw/issues/CF-47/manifest.md
 - Topics: 1
+## [2026-08-26] ingest | CF-48 발표 디자인 시스템
+
+- Disposition: New
+- Approval-Digest: 0893d3bc4b52808ffabfc6df1791b6d49f382238d00a86e418d1eb59653a8aa5
+- Source-Tree: e60aef0cd60a5fbe5f62dc1a4018108cdebe4ae7
+- Raw: llm-wiki/raw/issues/CF-48/manifest.md
+- Topics: 1
+
+## [2026-08-26] ingest | CF-40 범용 LLM 지원서 분석 계약
+
+- Disposition: Supersedes CF-44 application form analysis topics
+- Approval-Digest: e8635edc3fa60442af7b6f28723a2bfd12379ce5798e83acd282ded5acb8958c
+- Source-Tree: 5fc6b76a1037746c7dacb58950586d77e63e82e2
+- Raw: llm-wiki/raw/issues/CF-40/manifest.md
+- Topics: 2
+
+## [2026-08-27] revise | CF-40 지원서 분석 구조와 검증 소유권 단순화
+
+- Disposition: Revised before merge
+- Approval-Digest: d101af26fc0cd558a4b4ed3f7e9e64c7bd8b5364d0570f0a5b0ba0ae46e15a04
+- Source-Tree: 548461d59e367e3324bc8a52be86a6a60a7c0b18
+- Raw: llm-wiki/raw/issues/CF-40/manifest.md
+- Topics: 2
+
+## [2026-08-27] revise | CF-40 공용 OpenAI Secret 기반 원격 LLM 실행
+
+- Disposition: Supersedes CF-41 CI/CD setup topic
+- Approval-Digest: 8e30d82663277bab17b279009eb5e8431b8fb9802c7359532eed08acef6bd9e3
+- Source-Tree: 5f06a881a2e64c97dd4390a5da62a8eed7ee51c5
+- Raw: llm-wiki/raw/issues/CF-40/manifest.md
+- Topics: 3
+
+## [2026-08-27] ingest | CF-57 OpenAI Chat Completion 응답 저장
+
+- Disposition: Supersedes CF-40 application-form-analysis-data-boundary topic
+- Approval-Digest: c841fa98e025acbc49245c311d7ca73666747720ba719b71e806272c8e95e59f
+- Source-Tree: 551c3b27a53256d0e5526fda27789ee40ba05fbb
+- Raw: llm-wiki/raw/issues/CF-57/manifest.md
+- Topics: 1
+
+## [2026-08-27] ingest | CF-61 필드 매핑 provider output 계약 안전화
+
+- Disposition: Supersedes CF-40 API and CF-57 data-boundary topics
+- Approval-Digest: 24484961339269c5afdfc9d853b0c918696b0ada4511eb23ce978e580b8fdb76
+- Source-Tree: 20b74dd793ac0fc26ede51a99939b83e61963079
+- Raw: llm-wiki/raw/issues/CF-61/manifest.md
+- Topics: 2

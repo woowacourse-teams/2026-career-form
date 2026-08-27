@@ -55,6 +55,7 @@ jobs:
       BACKEND_PORT: ${{ vars.BACKEND_PORT }}
       SPRING_PROFILES_ACTIVE: staging
       SPRING_MONGODB_URI: ${{ secrets.SPRING_MONGODB_URI }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

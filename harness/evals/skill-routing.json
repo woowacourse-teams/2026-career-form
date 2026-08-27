@@ -15,6 +15,20 @@
       "reason": "저장이나 Wiki 수집 없이 일회성 요약만 요청했다."
     },
     {
+      "id": "llm-wiki-query-positive",
+      "prompt": "우리 프로젝트에서 지원서 기존 값을 보호하기로 한 현재 기준과 이전 결정에서 바뀐 이유를 Wiki 근거로 알려줘.",
+      "expected_skill": "cf-llm-wiki-query",
+      "should_trigger": true,
+      "reason": "프로젝트 고유의 현재 제품 기준과 과거 변경 이유에 따라 답이 달라지는 질문이다."
+    },
+    {
+      "id": "llm-wiki-query-negative",
+      "prompt": "일반적인 Kotlin data class 사용법을 설명해줘.",
+      "expected_skill": "cf-llm-wiki-query",
+      "should_trigger": false,
+      "reason": "프로젝트 Wiki의 결정이나 정책과 무관한 일반 기술 질문이다."
+    },
+    {
       "id": "planning-positive",
       "prompt": "Project의 결제 정책 draft를 Issue로 승격하고 요구사항과 계획을 잡아줘.",
       "expected_skill": "cf-project-issue-planning",

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "snapshot-preparation-1",
+  "site": {
+    "host": "example.test",
+    "pathPattern": "/application/*"
+  },
+  "sections": [
+    {
+      "sectionId": "section-actions",
+      "displayName": "학력 입력",
+      "actionCandidates": [
+        {
+          "candidateId": "action-direct",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "학력 추가"
+        }
+      ],
+      "items": [
+        {
+          "itemId": "item-1",
+          "actionCandidates": [
+            {
+              "candidateId": "action-item",
+              "element": "input",
+              "control": "button",
+              "visibility": "visible",
+              "domId": "synthetic-action"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "section-target",
+      "parentSectionId": "section-actions",
+      "actionCandidates": []
+    }
+  ]
+}

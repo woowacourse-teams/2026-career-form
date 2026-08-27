@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Career Form 프로젝트 발표</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="stage" aria-live="polite"></main>
+    <nav class="controls" aria-label="발표 제어">
+      <button data-action="prev" aria-label="이전 슬라이드">←</button>
+      <span><b data-current>1</b> / <span data-total></span></span>
+      <button data-action="next" aria-label="다음 슬라이드">→</button>
+      <button data-action="notes">N 노트</button>
+      <button data-action="fullscreen">F 전체화면</button>
+    </nav>
+    <aside class="speaker-notes" hidden></aside>
+    <script src="./deck.js"></script>
+  </body>
+</html>

@@ -25,3 +25,6 @@ out/
 hs_err_pid*
 replay_pid*
 *.hprof
+
+# Presentation reference material
+llm-wiki/raw/issues/CF-48/*.pdf

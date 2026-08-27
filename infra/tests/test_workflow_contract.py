@@ -72,6 +72,24 @@ class WorkflowContractTest(unittest.TestCase):
                 self.assertEqual(expected_sha, checkout["with"]["ref"])
                 self.assertIn("infra/scripts/deploy.sh", deploy["steps"][-1]["run"])
 
+    def test_deploy_jobs_inject_the_repository_openai_secret_only_at_runtime(self) -> None:
+        for filename in (
+            "deploy-development.yml",
+            "deploy-staging.yml",
+            "deploy-production.yml",
+        ):
+            with self.subTest(filename=filename):
+                workflow = self._workflow(filename)
+                deploy = workflow["jobs"]["deploy"]
+
+                self.assertEqual(
+                    "${{ secrets.OPENAI_API_KEY }}",
+                    deploy["env"]["OPENAI_API_KEY"],
+                )
+                for job_name, job in workflow["jobs"].items():
+                    if job_name != "deploy":
+                        self.assertNotIn("OPENAI_API_KEY", str(job))
+
     def test_start_release_creates_one_release_branch_and_draft_pr(self) -> None:
         workflow = self._workflow("start-release.yml")
 
