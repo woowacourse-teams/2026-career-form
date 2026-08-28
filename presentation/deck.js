@@ -170,6 +170,34 @@ const comparisonMethods = Object.freeze([
   { id: "C", label: "정보를 모아둔 별도 탭 제공" },
   { id: "D", label: "자동 기입 기능 제공" },
 ]);
+const experimentMethods = Object.freeze([
+  Object.freeze({
+    id: "A",
+    label: "직접 입력",
+    detail: "지원 정보를 보지 않고 현재 지원서의 필드에 직접 입력",
+    asset: "experiment-a-direct-input.png",
+  }),
+  Object.freeze({
+    id: "B",
+    label: "같은 화면에서 복사",
+    detail: "오른쪽 사이드 패널의 값을 복사해 옆 필드에 붙여넣기",
+    asset: "experiment-b-side-panel.png",
+  }),
+  Object.freeze({
+    id: "C",
+    label: "별도 탭에서 복사",
+    detail: "프로필 탭을 열어 값을 확인하고 지원서로 돌아와 붙여넣기",
+    asset: "experiment-c-profile-tab.png",
+  }),
+  Object.freeze({
+    id: "D",
+    label: "검토 후 자동 기입",
+    detail: "사이드 패널에서 적용 항목을 확인한 뒤 선택한 값만 반영",
+    asset: "experiment-d-autofill-review.png",
+  }),
+]);
+const renderExperimentMethods = (methods) =>
+  `<div class="method-evidence">${methods.map(({ id, label, detail, asset }) => `<article class="method-${id.toLowerCase()}"><figure><img src="./assets/${asset}" alt="${id} ${label} 실험 화면"></figure><div class="method-caption"><b>${id}</b><div><h3>${label}</h3><p>${detail}</p></div></div></article>`).join("")}</div>`;
 
 const slides = [
   {
@@ -198,7 +226,31 @@ const slides = [
     storyRole: "experiment-artifact",
     statePlacement: "subtitle",
     body: `<div class="section-label">가설 검증 및 사용자 실험</div><div class="evidence-layout experiment"><figure class="evidence-frame"><img src="./assets/experiment-screen.png" alt="비식별 가설 검증 인터뷰 화면"></figure><div class="evidence-copy"><span class="eyebrow">실제 실험 화면</span><h3>같은 지원 정보로<br>입력 방식만 변경</h3><p>과업별 시간, 누락과 불일치를 기록하고 세션은 S01부터 S10까지 비식별 처리</p></div></div>`,
-    notes: note("제품 발표자", 55, "실제 인터뷰에 사용한 HTML입니다. 같은 지원 정보 필드를 네 방식으로 수행하고 시간, 누락과 불일치를 기록했습니다. 원자료는 비식별 세션 코드로만 보존했습니다.", ["frontend/src/research/hypothesis-validation-interview.html", "presentation/experiment-report.js"]),
+    notes: note("제품 발표자", 35, "실제 인터뷰에 사용한 HTML입니다. 같은 지원 정보 필드를 네 방식으로 수행하고 시간, 누락과 불일치를 기록했습니다. 원자료는 비식별 세션 코드로만 보존했습니다.", ["frontend/src/research/hypothesis-validation-interview.html", "presentation/experiment-report.js"]),
+  },
+  {
+    section: "product",
+    kind: "experiment-methods",
+    meta: "01 PRODUCT",
+    storyRole: "experiment-methods-ab",
+    title: "직접 입력과 같은 화면 복사는 정보 위치가 달랐다",
+    evidenceType: "artifact",
+    implementationState: "실제 인터뷰 화면, 비식별 샘플",
+    experimentMethods: Object.freeze(experimentMethods.slice(0, 2)),
+    body: renderExperimentMethods(experimentMethods.slice(0, 2)),
+    notes: note("제품 발표자", 20, "A는 별도 도움 없이 지원서에 직접 입력했습니다. B는 지원서 오른쪽의 사이드 패널에서 같은 값을 복사해 옆 필드에 붙여넣었습니다.", ["hypothesis-validation-interview.html", "GitHub Issue #69"]),
+  },
+  {
+    section: "product",
+    kind: "experiment-methods",
+    meta: "01 PRODUCT",
+    storyRole: "experiment-methods-cd",
+    title: "별도 탭 왕복과 검토형 자동 기입도 함께 비교했다",
+    evidenceType: "artifact",
+    implementationState: "실제 인터뷰 화면, 비식별 샘플",
+    experimentMethods: Object.freeze(experimentMethods.slice(2)),
+    body: renderExperimentMethods(experimentMethods.slice(2)),
+    notes: note("제품 발표자", 20, "C는 프로필 탭을 따로 열어 값을 확인하고 지원서로 돌아와 붙여넣었습니다. D는 사이드 패널에서 적용 항목을 확인한 뒤 선택한 값만 자동으로 반영했습니다.", ["hypothesis-validation-interview.html", "GitHub Issue #69"]),
   },
   {
     ...experimentSpeed,
