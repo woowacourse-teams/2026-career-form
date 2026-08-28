@@ -146,6 +146,15 @@ code { padding: 9px 14px; border: 1px solid #3a3a3a; border-radius: 8px; backgro
 .service-boundary { position: absolute; left: 785px; right: 160px; bottom: 165px; padding: 24px; border: 2px solid var(--muted); color: var(--accent); text-align: center; font-size: 24px; }
 
 .evidence-layout.experiment { top: 330px; height: 575px; grid-template-columns: 1050px 1fr; }
+.method-evidence { position: absolute; left: 160px; top: 280px; width: 1600px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; }
+.method-evidence article { min-width: 0; }
+.method-evidence figure { width: 100%; height: 470px; margin: 0; overflow: hidden; border: 2px solid #3e3e3e; border-radius: 12px; background: #0b0b0b; }
+.method-evidence img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.method-evidence .method-d img { object-position: center 78%; }
+.method-caption { display: grid; grid-template-columns: 74px 1fr; gap: 24px; align-items: start; padding-top: 26px; }
+.method-caption > b { display: grid; place-items: center; width: 70px; height: 70px; border: 4px solid var(--accent); border-radius: 50%; color: var(--accent); font-size: 30px; }
+.method-caption h3 { margin: 0 0 10px; font-size: 32px; }
+.method-caption p { margin: 0; color: var(--secondary); font-size: 21px; line-height: 1.45; }
 .metric-bars.verbose { left: 610px; top: 295px; width: 1110px; gap: 34px; }
 .metric-bars.verbose article { grid-template-columns: 450px 1fr 110px; gap: 22px; }
 .metric-bars.verbose b { display: flex; align-items: center; gap: 16px; font-size: 21px; line-height: 1.25; }
