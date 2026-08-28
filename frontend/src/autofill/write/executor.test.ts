@@ -110,6 +110,48 @@ describe("approved native-control writes", () => {
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
   });
 
+  it("writes the exact values retained by review for repeated profile entries", () => {
+    const first = document.createElement("input");
+    const second = document.createElement("input");
+    document.body.append(first, second);
+    const registry = new CandidateRegistry();
+    for (const [index, element] of [first, second].entries()) {
+      const candidateId = `field-${index + 1}`;
+      registry.registerField({
+        kind: "field",
+        candidateId,
+        candidate: {
+          candidateId,
+          element: "input",
+          control: "text",
+          visibility: "visible",
+        },
+        elements: [element],
+        optionElements: new Map(),
+        sectionId: "section-certificate",
+        itemId: `certificate-item-${index + 1}`,
+        itemIndex: index,
+        signature: createStructuralSignature([element]),
+      });
+    }
+
+    executeApprovedWrites({
+      items: [
+        reviewItem({ ...textAnalysis, candidateId: "field-1" }, "자격증 A", {
+          profileEntryId: "certificate-1",
+        }),
+        reviewItem({ ...textAnalysis, candidateId: "field-2" }, "자격증 B", {
+          profileEntryId: "certificate-2",
+        }),
+      ],
+      approvedCandidateIds: new Set(["field-1", "field-2"]),
+      registry,
+    });
+
+    expect(first.value).toBe("자격증 A");
+    expect(second.value).toBe("자격증 B");
+  });
+
   it("selects an option only when the local profile value exactly matches its normalized display name", () => {
     const select = document.createElement("select");
     const placeholder = new Option("선택", "");

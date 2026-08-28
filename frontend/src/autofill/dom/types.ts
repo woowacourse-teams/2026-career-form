@@ -7,6 +7,8 @@ interface CandidateHandleBase {
   candidateId: string;
   sectionId: string;
   itemId?: string;
+  itemIndex?: number;
+  itemGroupId?: string;
   signature: string;
 }
 

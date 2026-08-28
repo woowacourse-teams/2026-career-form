@@ -554,7 +554,11 @@ export function AutofillWorkflow({
       <div className={styles.screen}>
         <Header step="1 / 4" title="지원서 분석 중" />
         <div className={styles.analysisGraphic} aria-hidden="true">
-          <span />
+          <div className={styles.analysisSpinner}>
+            {Array.from({ length: 12 }, (_, index) => (
+              <span data-spinner-bar key={index} />
+            ))}
+          </div>
         </div>
         <p className={styles.lead}>
           지원서 구조를 비식별 정보만으로 확인합니다.

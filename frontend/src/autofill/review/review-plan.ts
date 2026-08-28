@@ -14,7 +14,12 @@ import type {
 } from "../../profile/model";
 
 export type ProfileValueResolution =
-  | { status: "resolved"; value: string; sensitive: boolean }
+  | {
+      status: "resolved";
+      value: string;
+      sensitive: boolean;
+      profileEntryId?: string;
+    }
   | { status: "missing"; sensitive: boolean }
   | { status: "ambiguous"; sensitive: boolean }
   | { status: "unknown"; sensitive: false };
@@ -26,6 +31,8 @@ export interface ReviewPlanItem {
   candidateId: string;
   fieldLabel: string;
   profileFieldKey?: string;
+  profileEntryId?: string;
+  itemIndex?: number;
   currentValue: string;
   profileValue?: string;
   previewValue: string;
@@ -97,6 +104,7 @@ function valueAt(values: FieldValues, fieldId: string): string | undefined {
 export function resolveProfileFieldValue(
   profile: Profile,
   profileFieldKey: string,
+  itemIndex?: number,
 ): ProfileValueResolution {
   const parts = profileFieldParts(profileFieldKey);
   if (!parts) return { status: "unknown", sensitive: false };
@@ -118,12 +126,19 @@ export function resolveProfileFieldValue(
   if (matchingEntries.length === 0) {
     return { status: "missing", sensitive: parts.sensitive };
   }
-  if (matchingEntries.length > 1) {
+  if (itemIndex === undefined && matchingEntries.length > 1) {
     return { status: "ambiguous", sensitive: parts.sensitive };
   }
-  const value = valueAt(matchingEntries[0]!.values, parts.fieldId);
+  const entry = matchingEntries[itemIndex ?? 0];
+  if (!entry) return { status: "missing", sensitive: parts.sensitive };
+  const value = valueAt(entry.values, parts.fieldId);
   return value
-    ? { status: "resolved", value, sensitive: parts.sensitive }
+    ? {
+        status: "resolved",
+        value,
+        sensitive: parts.sensitive,
+        ...(itemIndex !== undefined ? { profileEntryId: entry.id } : {}),
+      }
     : { status: "missing", sensitive: parts.sensitive };
 }
 
@@ -203,9 +218,31 @@ function itemForAnalysis(
     );
   }
 
+  const parts = profileFieldParts(analysis.profileFieldKey);
+  const itemIndex = lookup.handle.itemIndex;
+  if (parts?.repeatable) {
+    const profileEntries = profile[
+      parts.categoryId as RepeatedProfileCategoryId
+    ].filter((entry) => entry.sectionId === parts.sectionId);
+    const formItemCount = registry.fieldItemCount(analysis.candidateId);
+    if (
+      itemIndex === undefined ||
+      formItemCount === undefined ||
+      formItemCount !== profileEntries.length
+    ) {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "반복 입력 행과 저장된 프로필 항목의 개수가 달라 안전하게 연결할 수 없습니다.",
+        analysis,
+      );
+    }
+  }
+
   const profileValue = resolveProfileFieldValue(
     profile,
     analysis.profileFieldKey,
+    itemIndex,
   );
   if (profileValue.status !== "resolved") {
     const reason =
@@ -227,6 +264,10 @@ function itemForAnalysis(
       candidateId: analysis.candidateId,
       fieldLabel,
       profileFieldKey: analysis.profileFieldKey,
+      ...(profileValue.profileEntryId
+        ? { profileEntryId: profileValue.profileEntryId }
+        : {}),
+      ...(itemIndex !== undefined ? { itemIndex } : {}),
       currentValue: pageValue,
       profileValue: profileValue.value,
       previewValue: "••••••••",
@@ -243,6 +284,10 @@ function itemForAnalysis(
       candidateId: analysis.candidateId,
       fieldLabel,
       profileFieldKey: analysis.profileFieldKey,
+      ...(profileValue.profileEntryId
+        ? { profileEntryId: profileValue.profileEntryId }
+        : {}),
+      ...(itemIndex !== undefined ? { itemIndex } : {}),
       currentValue: pageValue,
       profileValue: profileValue.value,
       previewValue: profileValue.value,
@@ -274,6 +319,10 @@ function itemForAnalysis(
     candidateId: analysis.candidateId,
     fieldLabel,
     profileFieldKey: analysis.profileFieldKey,
+    ...(profileValue.profileEntryId
+      ? { profileEntryId: profileValue.profileEntryId }
+      : {}),
+    ...(itemIndex !== undefined ? { itemIndex } : {}),
     currentValue: pageValue,
     profileValue: profileValue.value,
     previewValue: profileValue.value,

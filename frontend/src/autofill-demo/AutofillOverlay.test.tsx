@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   AnalysisApiClient,
   FieldsAnalyzeRequest,
+  PreparationAnalyzeResponse,
   PreparationAnalyzeRequest,
 } from "../autofill/api/types";
 import { AnalysisServiceError } from "../autofill/api/runtime-client";
@@ -54,6 +55,30 @@ function createApiClient(): AnalysisApiClient {
 }
 
 describe("AutofillOverlay", () => {
+  it("shows the twelve-step spinner while analysis is in progress", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(
+        () => new Promise<PreparationAnalyzeResponse>(() => undefined),
+      ),
+      analyzeFields: vi.fn(),
+    };
+
+    const { container } = render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "지원서 분석 중" }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-spinner-bar]")).toHaveLength(12);
+  });
+
   it("shows the preparation action label from the DOM candidate", async () => {
     const pageDocument =
       document.implementation.createHTMLDocument("application");

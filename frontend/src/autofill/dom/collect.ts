@@ -2,6 +2,7 @@ import type {
   ActionCandidate,
   FieldCandidate,
   FieldsAnalyzeRequest,
+  FieldsItem,
   FieldsSection,
   PreparationAnalyzeRequest,
   PreparationSection,
@@ -81,12 +82,55 @@ function sectionName(container: Element | null): string | undefined {
   );
 }
 
-function isHidden(element: HTMLElement): boolean {
+function isTemplateLike(element: Element): boolean {
   return Boolean(
+    element.closest(
+      "template, [data-template], [id*='template' i], [id*='templete' i], [class*='template' i], [class*='templete' i]",
+    ),
+  );
+}
+
+function repeatableItemGroupId(element: Element): string | undefined {
+  const identifiers = [
+    element.id,
+    ...(typeof element.className === "string"
+      ? element.className.split(/\s+/)
+      : []),
+  ].filter(
+    (identifier) =>
+      identifier &&
+      /(?:^|[-_])item$/i.test(identifier) &&
+      !/^form-item(?:-group)?$/i.test(identifier),
+  );
+  const identifier = identifiers.sort(
+    (left, right) => right.length - left.length,
+  )[0];
+  return identifier
+    ?.replace(/[-_]?item$/i, "")
+    .replace(/[^a-z0-9가-힣]/gi, "")
+    .toLowerCase();
+}
+
+function isHidden(element: HTMLElement): boolean {
+  if (
     element.hidden ||
     element.closest("[hidden], [aria-hidden='true']") ||
-    element.closest("[style*='display: none'], [style*='display:none']"),
-  );
+    element.closest("[style*='display: none'], [style*='display:none']")
+  ) {
+    return true;
+  }
+
+  const view = element.ownerDocument.defaultView;
+  if (!view) return false;
+  let current: Element | null = element;
+  while (current) {
+    const style = view.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden") {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
 }
 
 function isInert(element: HTMLElement): boolean {
@@ -176,6 +220,7 @@ function collectFieldElements(document: Document) {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >("input, select, textarea"),
   ).filter((element) => {
+    if (isTemplateLike(element)) return false;
     if (!(element instanceof HTMLInputElement)) return true;
     return ![
       "hidden",
@@ -203,6 +248,22 @@ export function collectFieldsSnapshot(
         ? createOpaqueId("section", sectionIndex)
         : "section-root";
       const fields: FieldCandidate[] = [];
+      const itemGroupIndexes = new Map<string, number>();
+      const repeatableItems = repeatableItemElements(container).map(
+        (element, itemPosition) => {
+          const itemGroupId = repeatableItemGroupId(element);
+          const itemGroupKey = itemGroupId ?? "";
+          const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
+          itemGroupIndexes.set(itemGroupKey, itemIndex + 1);
+          return {
+            element,
+            itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
+            itemIndex,
+            itemGroupId,
+            fields: [] as FieldCandidate[],
+          };
+        },
+      );
       const consumed = new Set<Element>();
 
       for (const element of elements) {
@@ -223,6 +284,10 @@ export function collectFieldsSnapshot(
 
         const candidateId = createOpaqueId("field", candidateIndex++);
         const first = grouped[0]!;
+        const matchingItems = repeatableItems.filter(({ element: item }) =>
+          grouped.every((field) => item.contains(field)),
+        );
+        const item = matchingItems.length === 1 ? matchingItems[0] : undefined;
         let candidate: FieldCandidate;
         const optionElements = new Map<
           string,
@@ -278,7 +343,8 @@ export function collectFieldsSnapshot(
           };
         }
 
-        fields.push(candidate);
+        if (item) item.fields.push(candidate);
+        else fields.push(candidate);
         const elementsForHandle = grouped as Array<
           HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
         >;
@@ -290,17 +356,47 @@ export function collectFieldsSnapshot(
             elements: elementsForHandle,
             optionElements,
             sectionId,
+            ...(item
+              ? {
+                  itemId: item.itemId,
+                  itemIndex: item.itemIndex,
+                  ...(item.itemGroupId
+                    ? { itemGroupId: item.itemGroupId }
+                    : {}),
+                }
+              : {}),
             signature: createStructuralSignature(elementsForHandle),
           },
           blockReason(first),
         );
       }
+      const itemGroups = new Set(
+        repeatableItems.map(({ itemGroupId }) => itemGroupId),
+      );
+      for (const itemGroupId of itemGroups) {
+        const groupItems = repeatableItems.filter(
+          (item) => item.itemGroupId === itemGroupId,
+        );
+        registry.setFieldItemCount(sectionId, groupItems.length, itemGroupId);
+        registry.setFieldItemElements(
+          sectionId,
+          groupItems.map(({ element }) => element),
+          itemGroupId,
+        );
+      }
+      const itemFields: FieldsItem[] = repeatableItems
+        .filter(({ fields: itemFields }) => itemFields.length > 0)
+        .map(({ itemId, fields: itemFields }) => ({
+          itemId,
+          fields: itemFields,
+        }));
       sections.push({
         sectionId,
         ...(sectionName(container)
           ? { displayName: sectionName(container) }
           : {}),
         fields,
+        ...(itemFields.length > 0 ? { items: itemFields } : {}),
       });
     },
   );
@@ -333,7 +429,7 @@ function repeatableItemElements(container: Element | null): Element[] {
   if (!container) return [];
 
   const isDirectRepeatableItem = (element: Element): boolean => {
-    if (element.closest("template")) return false;
+    if (isTemplateLike(element)) return false;
     if (
       element.matches(
         "[data-repeatable-group], [data-repeater-item], fieldset, [role='group']",
@@ -362,7 +458,7 @@ function repeatableItemElements(container: Element | null): Element[] {
       "[data-repeatable-group], [data-repeater-item], fieldset, [role='group'], [class], [id]",
     ),
   ).filter((element) => {
-    if (element.closest("template")) return false;
+    if (isTemplateLike(element)) return false;
     if (
       element.matches(
         "[data-repeatable-group], [data-repeater-item], fieldset, [role='group']",

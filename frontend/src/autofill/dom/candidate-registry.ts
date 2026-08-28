@@ -63,6 +63,51 @@ export class CandidateRegistry {
     Registered<ActionCandidateHandle>
   >();
   private readonly fields = new Map<string, Registered<FieldCandidateHandle>>();
+  private readonly fieldItemCounts = new Map<string, number>();
+  private readonly fieldItemElements = new Map<string, Element[]>();
+
+  private fieldItemKey(sectionId: string, itemGroupId?: string): string {
+    return `${sectionId}::${itemGroupId ?? ""}`;
+  }
+
+  setFieldItemCount(
+    sectionId: string,
+    count: number,
+    itemGroupId?: string,
+  ): void {
+    this.fieldItemCounts.set(this.fieldItemKey(sectionId, itemGroupId), count);
+  }
+
+  setFieldItemElements(
+    sectionId: string,
+    elements: Element[],
+    itemGroupId?: string,
+  ): void {
+    this.fieldItemElements.set(
+      this.fieldItemKey(sectionId, itemGroupId),
+      elements,
+    );
+  }
+
+  fieldItemCount(candidateId: string): number | undefined {
+    const registered = this.fields.get(candidateId);
+    if (!registered) return undefined;
+    const itemGroupId = registered.handle.itemGroupId;
+    const declaredCount = this.fieldItemCounts.get(
+      this.fieldItemKey(registered.handle.sectionId, itemGroupId),
+    );
+    if (declaredCount !== undefined) return declaredCount;
+    return new Set(
+      [...this.fields.values()]
+        .filter(
+          ({ handle }) =>
+            handle.sectionId === registered.handle.sectionId &&
+            handle.itemGroupId === itemGroupId &&
+            handle.itemId !== undefined,
+        )
+        .map(({ handle }) => handle.itemId),
+    ).size;
+  }
 
   registerAction(
     handle: ActionCandidateHandle,
@@ -122,6 +167,19 @@ export class CandidateRegistry {
     if (
       elements.some((element) => !element.isConnected) ||
       createStructuralSignature(elements) !== registered.handle.signature
+    ) {
+      return { status: "stale" };
+    }
+    if (
+      registered.handle.kind === "field" &&
+      this.fieldItemElements
+        .get(
+          this.fieldItemKey(
+            registered.handle.sectionId,
+            registered.handle.itemGroupId,
+          ),
+        )
+        ?.some((element) => !element.isConnected)
     ) {
       return { status: "stale" };
     }

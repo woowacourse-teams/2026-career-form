@@ -96,6 +96,33 @@ describe("profile value resolution", () => {
     ).toEqual({ status: "ambiguous", sensitive: false });
   });
 
+  it("resolves a repeated profile value by the locally supplied row index", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      certifications: [
+        {
+          id: "certificate-1",
+          sectionId: "certificate",
+          values: { name: "자격증 A" },
+        },
+        {
+          id: "certificate-2",
+          sectionId: "certificate",
+          values: { name: "자격증 B" },
+        },
+      ],
+    };
+
+    expect(
+      resolveProfileFieldValue(profile, "certifications.certificate.name", 1),
+    ).toEqual({
+      status: "resolved",
+      value: "자격증 B",
+      sensitive: false,
+      profileEntryId: "certificate-2",
+    });
+  });
+
   it("keeps a repeated field unavailable when its only matching entry has no value", () => {
     const profile: Profile = {
       ...createEmptyProfile(),
@@ -193,6 +220,171 @@ describe("review plan", () => {
         },
       ],
     });
+  });
+
+  it("maps repeated form rows to the matching local profile entry", () => {
+    const first = document.createElement("input");
+    const second = document.createElement("input");
+    document.body.append(first, second);
+    const registry = new CandidateRegistry();
+    for (const [index, element] of [first, second].entries()) {
+      const candidateId = `field-${index + 1}`;
+      registry.registerField({
+        kind: "field",
+        candidateId,
+        candidate: {
+          candidateId,
+          element: "input",
+          control: "text",
+          visibility: "visible",
+          displayName: "자격증명",
+        },
+        elements: [element],
+        optionElements: new Map(),
+        sectionId: "section-certificate",
+        itemId: `certificate-item-${index + 1}`,
+        itemIndex: index,
+        signature: createStructuralSignature([element]),
+      });
+    }
+
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      certifications: [
+        {
+          id: "certificate-1",
+          sectionId: "certificate",
+          values: { name: "자격증 A" },
+        },
+        {
+          id: "certificate-2",
+          sectionId: "certificate",
+          values: { name: "자격증 B" },
+        },
+      ],
+    };
+    const fields = [0, 1].map((index) => ({
+      ...allowedEmail,
+      candidateId: `field-${index + 1}`,
+      profileFieldKey: "certifications.certificate.name",
+    }));
+
+    expect(
+      buildReviewPlan({ analysis: response(fields), profile, registry }).items,
+    ).toMatchObject([
+      {
+        profileValue: "자격증 A",
+        profileEntryId: "certificate-1",
+        itemIndex: 0,
+      },
+      {
+        profileValue: "자격증 B",
+        profileEntryId: "certificate-2",
+        itemIndex: 1,
+      },
+    ]);
+  });
+
+  it("blocks repeated autofill when form and profile row counts differ", () => {
+    const registry = registryWithTextField();
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      certifications: [
+        {
+          id: "certificate-1",
+          sectionId: "certificate",
+          values: { name: "A" },
+        },
+        {
+          id: "certificate-2",
+          sectionId: "certificate",
+          values: { name: "B" },
+        },
+      ],
+    };
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        { ...allowedEmail, profileFieldKey: "certifications.certificate.name" },
+      ]),
+      profile,
+      registry,
+    }).items;
+
+    expect(item).toMatchObject({
+      status: "unavailable",
+      selected: false,
+      disabled: true,
+    });
+  });
+
+  it("counts different repeated education groups independently", () => {
+    const highSchool = document.createElement("input");
+    const university = document.createElement("input");
+    document.body.append(highSchool, university);
+    const registry = new CandidateRegistry();
+    for (const [candidateId, element, itemGroupId] of [
+      ["field-high", highSchool, "educationhigh"],
+      ["field-university", university, "educationuniv"],
+    ] as const) {
+      registry.registerField({
+        kind: "field",
+        candidateId,
+        candidate: {
+          candidateId,
+          element: "input",
+          control: "text",
+          visibility: "visible",
+          displayName: "학교명",
+        },
+        elements: [element],
+        optionElements: new Map(),
+        sectionId: "section-education",
+        itemId: `${itemGroupId}-item-1`,
+        itemIndex: 0,
+        itemGroupId,
+        signature: createStructuralSignature([element]),
+      });
+      registry.setFieldItemCount("section-education", 1, itemGroupId);
+    }
+
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      education: [
+        {
+          id: "high-school-1",
+          sectionId: "highSchool",
+          values: { schoolName: "고등학교" },
+        },
+        {
+          id: "university-1",
+          sectionId: "university",
+          values: { schoolName: "대학교" },
+        },
+      ],
+    };
+
+    const items = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          candidateId: "field-high",
+          profileFieldKey: "education.highSchool.schoolName",
+        },
+        {
+          ...allowedEmail,
+          candidateId: "field-university",
+          profileFieldKey: "education.university.schoolName",
+        },
+      ]),
+      profile,
+      registry,
+    }).items;
+
+    expect(items).toMatchObject([
+      { status: "available", profileValue: "고등학교" },
+      { status: "available", profileValue: "대학교" },
+    ]);
   });
 
   it.each([
