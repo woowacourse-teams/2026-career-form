@@ -16,17 +16,21 @@ Career Form이 내린 판단, 실제 적용 결과와 막힌 지점을 실제 �
 
 | 구간 | 슬라이드 | 대본 시간 |
 | --- | ---: | ---: |
-| 제품 | 1-6 | 5분 |
-| 클라이언트 | 7-11 | 5분 10초 |
-| 백엔드와 LLM | 12-15 | 4분 40초 |
-| 팀과 AX 및 마무리 | 16-20 | 4분 35초 |
-| 합계 | 20장 | 19분 25초 |
+| 제품 | 1-8 | 5분 20초 |
+| 클라이언트 | 9-13 | 5분 10초 |
+| 백엔드와 LLM | 14-17 | 4분 40초 |
+| 팀과 AX 및 마무리 | 18-22 | 4분 35초 |
+| 합계 | 22장 | 19분 45초 |
 
-남은 35초는 발표자 전환과 화면 조작에 사용한다.
+남은 15초는 발표자 전환과 화면 조작에 사용한다.
 
 ## 실제 자료와 실험 집계
 
 - `assets/experiment-screen.png`: 실제 가설 검증 인터뷰 HTML 화면
+- `assets/experiment-a-direct-input.png`: A 직접 입력 화면
+- `assets/experiment-b-side-panel.png`: B 같은 화면 사이드 패널 복사 화면
+- `assets/experiment-c-profile-tab.png`: C 별도 프로필 탭 화면
+- `assets/experiment-d-autofill-review.png`: D 검토형 자동 기입 화면
 - `assets/extension-screen.png`: 빌드된 사이드 패널과 비식별 샘플 데이터
 - `assets/project-board.png`: 담당자 정보를 가린 GitHub Project 칸반
 - `experiment-report.js`: 10회 비식별 세션의 시간과 정확도 재현 집계
@@ -50,7 +54,7 @@ git diff --check
 
 ## 사람 검증
 
-- 16:9 전체화면에서 20장을 한 장씩 확인
+- 16:9 전체화면에서 22장을 한 장씩 확인
 - 의도하지 않은 겹침, 잘림, 넘침과 비정상 줄바꿈 확인
 - 이전, 다음, 발표자 노트와 전체화면 제어 확인
 - 네 발표자의 20분 리허설
