@@ -1,11 +1,23 @@
-import { AutofillDemo } from "./AutofillDemo";
+import { RuntimeAnalysisApiClient } from "../autofill/api/runtime-client";
+import type { AnalysisApiClient } from "../autofill/api/types";
+import { AutofillWorkflow } from "../autofill/workflow/AutofillWorkflow";
+import type { ProfileRepository } from "../profile/profile-repository";
+import { ChromeProfileStorage } from "../storage/chrome-profile-storage";
 import styles from "./AutofillOverlay.module.css";
 
 interface AutofillOverlayProps {
   onClose(): void;
+  apiClient?: AnalysisApiClient;
+  repository?: Pick<ProfileRepository, "load">;
+  pageDocument?: Document;
 }
 
-export function AutofillOverlay({ onClose }: AutofillOverlayProps) {
+export function AutofillOverlay({
+  onClose,
+  apiClient = new RuntimeAnalysisApiClient(),
+  repository = new ChromeProfileStorage(),
+  pageDocument = document,
+}: AutofillOverlayProps) {
   return (
     <div
       className={styles.backdrop}
@@ -31,7 +43,12 @@ export function AutofillOverlay({ onClose }: AutofillOverlayProps) {
           </button>
         </div>
         <div className={styles.body}>
-          <AutofillDemo onExit={onClose} />
+          <AutofillWorkflow
+            apiClient={apiClient}
+            repository={repository}
+            pageDocument={pageDocument}
+            onExit={onClose}
+          />
         </div>
       </section>
     </div>
