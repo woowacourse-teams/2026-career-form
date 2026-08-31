@@ -118,7 +118,7 @@ test("전체 발표는 20분 안이며 각 발표자는 약 5분을 담당한다
 test("모든 슬라이드는 발표자 노트와 하나 이상의 근거를 제공한다", () => {
   const { slides } = loadDeck();
 
-  assert.equal(slides.length, 20);
+  assert.equal(slides.length, 22);
   for (const slide of slides) {
     assert.match(slide.notes.speaker, /발표자$/);
     assert.ok(slide.notes.seconds > 0);
@@ -190,13 +190,15 @@ test("질문 전용 화면 대신 현재 상태에서 이어지는 로드맵을 
   );
 });
 
-test("20장 서사가 서비스 소개부터 자동 기입과 이해 정렬까지 이어진다", () => {
+test("22장 서사가 실험 방식 설명부터 자동 기입과 이해 정렬까지 이어진다", () => {
   const { slides } = loadDeck();
 
   assert.deepEqual(slides.map((slide) => slide.storyRole), [
     "project-title",
     "service-introduction",
     "experiment-artifact",
+    "experiment-methods-ab",
+    "experiment-methods-cd",
     "experiment-speed",
     "experiment-accuracy",
     "product-roadmap",
@@ -219,6 +221,7 @@ test("20장 서사가 서비스 소개부터 자동 기입과 이해 정렬까�
 
 test("실험 방식, 실행 책임과 사용자 통제가 구조로 구분된다", () => {
   const { slides } = loadDeck();
+  const methodSlides = slides.slice(3, 5);
   const experiment = slides.find(
     (slide) => slide.storyRole === "experiment-speed",
   );
@@ -232,6 +235,26 @@ test("실험 방식, 실행 책임과 사용자 통제가 구조로 구분된다
     (slide) => slide.storyRole === "backend-current-state",
   );
 
+  assert.deepEqual(
+    slides.slice(2, 6).map(({ storyRole }) => storyRole),
+    [
+      "experiment-artifact",
+      "experiment-methods-ab",
+      "experiment-methods-cd",
+      "experiment-speed",
+    ],
+  );
+  assert.deepEqual(
+    methodSlides.flatMap(({ experimentMethods }) =>
+      experimentMethods.map(({ id }) => id),
+    ),
+    ["A", "B", "C", "D"],
+  );
+  assert.ok(
+    methodSlides
+      .flatMap(({ experimentMethods }) => experimentMethods)
+      .every(({ label, detail, asset }) => label && detail && asset),
+  );
   assert.deepEqual(experiment.comparisonMethods.map(({ id }) => id), [
     "A", "B", "C", "D",
   ]);
@@ -283,6 +306,10 @@ test("덱에서 사용하는 실제 자료 캡처는 유효한 PNG다", () => {
 
   assert.deepEqual(new Set(assetNames), new Set([
     "experiment-screen.png",
+    "experiment-a-direct-input.png",
+    "experiment-b-side-panel.png",
+    "experiment-c-profile-tab.png",
+    "experiment-d-autofill-review.png",
     "project-board.png",
     "extension-screen.png",
   ]));
@@ -301,10 +328,10 @@ test("덱에서 사용하는 실제 자료 캡처는 유효한 PNG다", () => {
 test("슬라이드 이동은 덱 범위를 벗어나지 않는다", () => {
   const { clampSlideIndex } = loadDeck();
 
-  assert.equal(clampSlideIndex(-1, 20), 0);
-  assert.equal(clampSlideIndex(0, 20), 0);
-  assert.equal(clampSlideIndex(10, 20), 10);
-  assert.equal(clampSlideIndex(20, 20), 19);
+  assert.equal(clampSlideIndex(-1, 22), 0);
+  assert.equal(clampSlideIndex(0, 22), 0);
+  assert.equal(clampSlideIndex(11, 22), 11);
+  assert.equal(clampSlideIndex(22, 22), 21);
 });
 
 test("발표 캔버스와 제어 요소가 브라우저 계약에 포함된다", () => {
