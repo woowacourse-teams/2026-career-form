@@ -30,9 +30,9 @@ class StoredPolicyRoutingTest {
             (host, path) -> new NotRegistered()
         );
 
-        assertThat(router.route(preparation("sk-preparation-snapshot-a-v2.json")).kind())
+        assertThat(router.route(preparation("sk-preparation-current-v2.json")).kind())
             .isEqualTo(RouteKind.GENERIC);
-        assertThat(router.route(fields("sk-fields-snapshot-b-v2.json")).kind())
+        assertThat(router.route(fields("sk-fields-current-v2.json")).kind())
             .isEqualTo(RouteKind.GENERIC);
     }
 
@@ -43,9 +43,9 @@ class StoredPolicyRoutingTest {
             (host, path) -> new Available(CompanyFormPolicyFixture.sk())
         );
 
-        assertThat(router.route(preparation("sk-preparation-snapshot-a-v2.json")).kind())
+        assertThat(router.route(preparation("sk-preparation-current-v2.json")).kind())
             .isEqualTo(RouteKind.ADAPTER);
-        assertThat(router.route(fields("sk-fields-snapshot-b-v2.json")).kind())
+        assertThat(router.route(fields("sk-fields-current-v2.json")).kind())
             .isEqualTo(RouteKind.ADAPTER);
     }
 
@@ -66,10 +66,10 @@ class StoredPolicyRoutingTest {
             "sk-fields-structure-mismatch-v2.json"
         )).kind()).isEqualTo(RouteKind.STRUCTURE_MISMATCH);
         assertThat(unavailable.route(preparation(
-            "sk-preparation-snapshot-a-v2.json"
+            "sk-preparation-current-v2.json"
         )).kind()).isEqualTo(RouteKind.POLICY_UNAVAILABLE);
         assertThat(unavailable.route(fields(
-            "sk-fields-snapshot-b-v2.json"
+            "sk-fields-current-v2.json"
         )).kind()).isEqualTo(RouteKind.POLICY_UNAVAILABLE);
     }
 

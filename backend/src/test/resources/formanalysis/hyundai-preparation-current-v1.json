@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "hyundai-current-preparation-redacted",
+  "site": { "host": "talent.hyundai.com", "pathPattern": "/apply/applyWrite.hc" },
+  "sections": [
+    { "sectionId": "section-personal", "actionCandidates": [
+      { "candidateId": "action-military-status", "element": "input", "control": "custom", "visibility": "visible", "domId": "milCd", "displayName": "병역" }
+    ] }
+  ]
+}

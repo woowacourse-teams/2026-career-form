@@ -29,8 +29,11 @@ public final class FieldInteractionPolicy {
             );
         }
         if (Boolean.TRUE.equals(candidate.disabled())
-            || Boolean.TRUE.equals(candidate.readonly())
             || Boolean.TRUE.equals(candidate.inert())) {
+            return withoutWrite(InteractionStatus.BLOCKED);
+        }
+        if (Boolean.TRUE.equals(candidate.readonly())
+            && !allowsReadonlyText(candidate, mapping)) {
             return withoutWrite(InteractionStatus.BLOCKED);
         }
         if (candidate.visibility() == Visibility.HIDDEN) {
@@ -49,6 +52,16 @@ public final class FieldInteractionPolicy {
 
     private static Decision withoutWrite(InteractionStatus status) {
         return new Decision(status, List.of(), null);
+    }
+
+    private static boolean allowsReadonlyText(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping
+    ) {
+        return mapping instanceof FieldMappingResolver.Match match
+            && match.allowsReadonlyWrite()
+            && candidate.element() == FormElement.INPUT
+            && candidate.control() == FormControl.TEXT;
     }
 
     private static WriteCommand writeCommand(FieldCandidate candidate) {

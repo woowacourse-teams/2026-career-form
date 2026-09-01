@@ -6,6 +6,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
@@ -55,10 +58,10 @@ public final class CompanyFormPolicy {
         requireUniqueActionRules(actionRules);
         requireUniqueFieldRules(fieldRules);
         for (ActionRule rule : actionRules) {
-            validateActionRule(rule, preparationFingerprint.requiredSectionIds());
+            validateActionRule(rule, preparationFingerprint.requiredSectionIds(), isSupportedProfileKey);
         }
         for (FieldRule rule : fieldRules) {
-            if (rule == null || !isSupportedProfileKey.test(rule.profileFieldKey())) {
+            if (rule == null || !isSupportedBinding(rule.valueBinding(), isSupportedProfileKey)) {
                 invalidPolicy();
             }
         }
@@ -116,7 +119,8 @@ public final class CompanyFormPolicy {
 
     private static void validateActionRule(
         ActionRule rule,
-        Set<String> requiredSectionIds
+        Set<String> requiredSectionIds,
+        Predicate<String> isSupportedProfileKey
     ) {
         if (rule.kind() == ActionKind.REVEAL
             && (isBlank(rule.targetSectionId())
@@ -124,6 +128,12 @@ public final class CompanyFormPolicy {
             invalidPolicy();
         }
         if (rule.kind() == ActionKind.ADD && rule.targetSectionId() != null) {
+            invalidPolicy();
+        }
+        if (rule.kind() == ActionKind.SELECT_OPTION
+            && (isBlank(rule.profileFieldKey()) || !isSupportedProfileKey.test(rule.profileFieldKey())
+                || isBlank(rule.targetSectionId())
+                || !requiredSectionIds.contains(rule.targetSectionId()))) {
             invalidPolicy();
         }
     }
@@ -136,6 +146,16 @@ public final class CompanyFormPolicy {
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private static boolean isSupportedBinding(
+        ValueBinding binding,
+        Predicate<String> isSupportedProfileKey
+    ) {
+        if (binding instanceof DirectBinding direct) {
+            return isSupportedProfileKey.test(direct.profileFieldKey());
+        }
+        return binding instanceof DerivedBinding;
     }
 
     private static void invalidPolicy() {
@@ -209,12 +229,17 @@ public final class CompanyFormPolicy {
     public record ActionRule(
         String structuralName,
         ActionKind kind,
-        String targetSectionId
+        String targetSectionId,
+        String profileFieldKey
     ) {
 
         public ActionRule {
             requireText(structuralName);
             Objects.requireNonNull(kind);
+        }
+
+        public ActionRule(String structuralName, ActionKind kind, String targetSectionId) {
+            this(structuralName, kind, targetSectionId, null);
         }
     }
 
@@ -222,19 +247,60 @@ public final class CompanyFormPolicy {
         String structuralName,
         FieldsAnalysisRequest.FormElement element,
         FieldsAnalysisRequest.FormControl control,
-        String profileFieldKey
+        ValueBinding valueBinding,
+        boolean allowReadonlyWrite
     ) {
+
+        public FieldRule(
+            String structuralName,
+            FieldsAnalysisRequest.FormElement element,
+            FieldsAnalysisRequest.FormControl control,
+            String profileFieldKey
+        ) {
+            this(structuralName, element, control, new DirectBinding(profileFieldKey), false);
+        }
+
+        public FieldRule(
+            String structuralName,
+            FieldsAnalysisRequest.FormElement element,
+            FieldsAnalysisRequest.FormControl control,
+            String profileFieldKey,
+            boolean allowReadonlyWrite
+        ) {
+            this(structuralName, element, control, new DirectBinding(profileFieldKey), allowReadonlyWrite);
+        }
+
+        public FieldRule(
+            String structuralName,
+            FieldsAnalysisRequest.FormElement element,
+            FieldsAnalysisRequest.FormControl control,
+            ValueBinding valueBinding
+        ) {
+            this(structuralName, element, control, valueBinding, false);
+        }
+
+        public String profileFieldKey() {
+            return valueBinding instanceof DirectBinding direct
+                ? direct.profileFieldKey()
+                : null;
+        }
 
         public FieldRule {
             requireText(structuralName);
             Objects.requireNonNull(element);
             Objects.requireNonNull(control);
-            requireText(profileFieldKey);
+            Objects.requireNonNull(valueBinding);
+            if (allowReadonlyWrite
+                && (element != FieldsAnalysisRequest.FormElement.INPUT
+                    || control != FieldsAnalysisRequest.FormControl.TEXT)) {
+                invalidPolicy();
+            }
         }
     }
 
     public enum ActionKind {
         REVEAL,
-        ADD
+        ADD,
+        SELECT_OPTION
     }
 }

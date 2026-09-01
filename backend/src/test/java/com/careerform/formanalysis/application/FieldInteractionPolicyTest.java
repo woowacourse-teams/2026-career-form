@@ -82,6 +82,29 @@ class FieldInteractionPolicyTest {
             .isNotEqualTo(InteractionStatus.SYSTEM_CONTROL);
     }
 
+    @Test
+    @DisplayName("어댑터가 명시적으로 허용한 readonly 텍스트 필드는 입력 계획을 생성한다")
+    void allowsExplicitlyAuthorizedReadonlyText() {
+        FieldInteractionPolicy.Decision decision = policy.evaluate(
+            candidate(
+                FormElement.INPUT,
+                FormControl.TEXT,
+                Visibility.VISIBLE,
+                null,
+                true,
+                null
+            ),
+            new FieldMappingResolver.Match(
+                "field-1",
+                "contact.contact.postalCode",
+                true
+            )
+        );
+
+        assertThat(decision.interactionStatus()).isEqualTo(InteractionStatus.READY);
+        assertThat(decision.writePlan()).isEqualTo(new WritePlan(WriteCommand.SET_TEXT));
+    }
+
     private static Stream<Arguments> stateDecisions() {
         return Stream.of(
             Arguments.of(

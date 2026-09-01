@@ -48,7 +48,12 @@ public final class StoredPolicyFingerprint {
         ActionStructure required,
         ActionCandidate candidate
     ) {
-        return required.structuralName().equals(candidate.domName())
+        return PolicyStructuralMetadata.matches(
+                required.structuralName(),
+                candidate.domId(),
+                candidate.domName(),
+                candidate.displayName()
+            )
             && required.element() == candidate.element()
             && required.control() == candidate.control();
     }

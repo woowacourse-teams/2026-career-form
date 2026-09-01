@@ -52,7 +52,10 @@ class OpenAiFieldMappingResolverTest {
               "snapshotId": "snapshot-1",
               "matches": [{
                 "candidateId": "field-direct",
-                "profileFieldKey": "contact.contact.email"
+                "valueBinding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "contact.contact.email"
+                }
               }]
             }
             """);
@@ -104,6 +107,35 @@ class OpenAiFieldMappingResolverTest {
     }
 
     @Test
+    @DisplayName("LLM은 성명 필드에 승인된 조합 recipe를 반환할 수 있다")
+    void acceptsDerivedBindingOutput() {
+        CapturingChatModel model = new CapturingChatModel("""
+            {
+              "schemaVersion": 2,
+              "snapshotId": "snapshot-1",
+              "matches": [{
+                "candidateId": "field-direct",
+                "valueBinding": {
+                  "type": "DERIVED",
+                  "recipe": "KOREAN_FULL_NAME"
+                }
+              }]
+            }
+            """);
+
+        FieldMappingResolver.Resolution resolution = resolver(model).resolve(request());
+
+        assertThat(resolution.results().getFirst()).isEqualTo(
+            new FieldMappingResolver.Match(
+                "field-direct",
+                new FieldMappingResolver.DerivedBinding(
+                    FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME
+                )
+            )
+        );
+    }
+
+    @Test
     @DisplayName("확실한 필드 매치와 canonical key enum만 요청한다")
     void requestsOnlyConfidentMatchesWithCanonicalKeyEnum() {
         CapturingChatModel model = new CapturingChatModel("""
@@ -140,7 +172,7 @@ class OpenAiFieldMappingResolverTest {
             );
         assertThat(root.get("properties").has("noMatches")).isFalse();
         JsonNode profileFieldKeyEnum = root.at(
-            "/properties/matches/items/properties/profileFieldKey/enum"
+            "/properties/matches/items/properties/valueBinding/anyOf/0/properties/profileFieldKey/enum"
         );
         assertThat(profileFieldKeyEnum.isArray()).isTrue();
         assertThat(profileFieldKeyEnum.values().stream().map(JsonNode::asString))

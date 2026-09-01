@@ -15,6 +15,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl;
@@ -112,6 +115,54 @@ class FieldsAnalysisServiceTest {
     }
 
     @Test
+    @DisplayName("조합 binding은 실제 값을 보내지 않고 성명 recipe를 반환한다")
+    void returnsDerivedBindingForFullNameField() {
+        FieldMappingResolver resolver = resolver(
+            ignored -> new FieldMappingResolver.Resolution(
+                2,
+                "snapshot-1",
+                List.of(
+                    new FieldMappingResolver.Match(
+                        "field-direct",
+                        new FieldMappingResolver.DirectBinding("contact.contact.email")
+                    ),
+                    new FieldMappingResolver.Match(
+                        "field-item",
+                        new FieldMappingResolver.DerivedBinding(
+                            FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME
+                        )
+                    )
+                )
+            )
+        );
+
+        FieldsAnalysisResponse response = service(Optional.of(resolver)).analyze(request());
+
+        assertThat(response.fields().getFirst()).isEqualTo(
+            new MatchedFieldAnalysis(
+                "field-direct",
+                MatchType.MATCH,
+                new DirectBinding("contact.contact.email"),
+                AutofillPolicy.ALLOWED,
+                MappingStatus.LLM_SUGGESTED,
+                InteractionStatus.READY,
+                new WritePlan(WriteCommand.SET_TEXT)
+            )
+        );
+        assertThat(response.fields().get(1)).isEqualTo(
+            new MatchedFieldAnalysis(
+                "field-item",
+                MatchType.MATCH,
+                new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME),
+                AutofillPolicy.ALLOWED,
+                MappingStatus.LLM_SUGGESTED,
+                InteractionStatus.READY,
+                new WritePlan(WriteCommand.SET_TEXT)
+            )
+        );
+    }
+
+    @Test
     @DisplayName("모든 판단이 NO_MATCH여도 필드별 COMPLETE 결과를 반환한다")
     void treatsAllNoMatchAsCompleteExplicitFieldResults() {
         FieldMappingResolver resolver = resolver(ignored -> validNoMatchResolution());
@@ -190,7 +241,8 @@ class FieldsAnalysisServiceTest {
             "{\"snapshotId\":\"snapshot-1\",\"mode\":\"GENERIC\","
                 + "\"analysisStatus\":\"COMPLETE\",\"fields\":[{"
                 + "\"candidateId\":\"field-1\",\"matchType\":\"MATCH\","
-                + "\"profileFieldKey\":\"contact.contact.email\","
+                + "\"valueBinding\":{\"type\":\"DIRECT\","
+                + "\"profileFieldKey\":\"contact.contact.email\"},"
                 + "\"autofillPolicy\":\"ALLOWED\","
                 + "\"mappingStatus\":\"LLM_SUGGESTED\","
                 + "\"interactionStatus\":\"READY\","

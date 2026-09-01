@@ -43,11 +43,18 @@ public final class StoredPolicyActionResolver implements ActionResolver {
     }
 
     private Result resolve(ActionCandidate candidate) {
-        if (candidate.domName() == null) {
-            return new NoAction(candidate.candidateId());
-        }
-        ActionRule rule = rules.get(candidate.domName());
-        ActionStructure structure = structures.get(candidate.domName());
+        ActionRule rule = PolicyStructuralMetadata.find(
+            rules,
+            candidate.domId(),
+            candidate.domName(),
+            candidate.displayName()
+        );
+        ActionStructure structure = PolicyStructuralMetadata.find(
+            structures,
+            candidate.domId(),
+            candidate.domName(),
+            candidate.displayName()
+        );
         if (!isEligible(candidate)
             || rule == null
             || structure == null
@@ -55,14 +62,19 @@ public final class StoredPolicyActionResolver implements ActionResolver {
             || structure.control() != candidate.control()) {
             return new NoAction(candidate.candidateId());
         }
-        return rule.kind() == ActionKind.REVEAL
-            ? new RevealAction(candidate.candidateId(), rule.targetSectionId())
-            : new AddAction(candidate.candidateId());
+        return switch (rule.kind()) {
+            case REVEAL -> new RevealAction(candidate.candidateId(), rule.targetSectionId());
+            case ADD -> new AddAction(candidate.candidateId());
+            case SELECT_OPTION -> new SelectOptionAction(
+                candidate.candidateId(), rule.profileFieldKey(), rule.targetSectionId());
+        };
     }
 
     private static boolean isEligible(ActionCandidate candidate) {
-        return candidate.element() == FormElement.BUTTON
-            && candidate.control() == FormControl.BUTTON
+        return (candidate.element() == FormElement.BUTTON
+                && candidate.control() == FormControl.BUTTON
+            || candidate.element() == FormElement.SELECT
+                && candidate.control() == FormControl.SELECT)
             && candidate.visibility() == Visibility.VISIBLE
             && !Boolean.TRUE.equals(candidate.disabled())
             && !Boolean.TRUE.equals(candidate.readonly())

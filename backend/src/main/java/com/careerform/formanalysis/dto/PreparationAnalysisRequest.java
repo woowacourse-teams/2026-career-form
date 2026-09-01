@@ -99,9 +99,23 @@ public record PreparationAnalysisRequest(
         @Size(min = 1, max = 120) String domName,
         @AssertTrue Boolean disabled,
         @AssertTrue Boolean readonly,
-        @AssertTrue Boolean inert
+        @AssertTrue Boolean inert,
+        @Size(max = 128) List<@NotNull @Valid Option> options
     ) {
+        public ActionCandidate(
+            String candidateId, FormElement element, FormControl control,
+            Visibility visibility, String displayName, String domId,
+            String domName, Boolean disabled, Boolean readonly, Boolean inert
+        ) {
+            this(candidateId, element, control, visibility, displayName, domId,
+                domName, disabled, readonly, inert, null);
+        }
     }
+
+    public record Option(
+        @NotBlank @Size(max = 128) String optionId,
+        @NotBlank @Size(max = 120) String displayName
+    ) {}
 
     public enum FormElement {
         @JsonProperty("button")
@@ -109,14 +123,18 @@ public record PreparationAnalysisRequest(
         @JsonProperty("input")
         INPUT,
         @JsonProperty("custom")
-        CUSTOM
+        CUSTOM,
+        @JsonProperty("select")
+        SELECT
     }
 
     public enum FormControl {
         @JsonProperty("button")
         BUTTON,
         @JsonProperty("custom")
-        CUSTOM
+        CUSTOM,
+        @JsonProperty("select")
+        SELECT
     }
 
     public enum Visibility {

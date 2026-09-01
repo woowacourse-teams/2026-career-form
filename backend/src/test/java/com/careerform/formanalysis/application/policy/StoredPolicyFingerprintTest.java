@@ -25,11 +25,11 @@ class StoredPolicyFingerprintTest {
     void matchesVerifiedPreparationAndFieldsSnapshots() throws Exception {
         assertThat(fingerprint.matches(
             policy,
-            preparation("sk-preparation-snapshot-a-v2.json")
+            preparation("sk-preparation-current-v2.json")
         )).isTrue();
         assertThat(fingerprint.matches(
             policy,
-            fields("sk-fields-snapshot-b-v2.json")
+            fields("sk-fields-current-v2.json")
         )).isTrue();
     }
 

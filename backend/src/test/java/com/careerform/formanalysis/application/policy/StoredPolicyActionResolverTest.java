@@ -29,7 +29,7 @@ class StoredPolicyActionResolverTest {
     @DisplayName("저장된 실제 폼 add rule을 요청 후보 순서대로 반환한다")
     void resolvesStoredRulesInCandidateOrder() throws Exception {
         PreparationAnalysisRequest request = objectMapper.readValue(
-            fixture("sk-preparation-snapshot-a-v2.json"),
+            fixture("sk-preparation-current-v2.json"),
             PreparationAnalysisRequest.class
         );
 
@@ -39,12 +39,11 @@ class StoredPolicyActionResolverTest {
 
         assertThat(resolution).isEqualTo(new ActionResolver.Resolution(
             2,
-            "sk-careers-structure-a-redacted",
+            "sk-current-preparation-redacted",
             List.of(
                 new ActionResolver.AddAction("action-add-university"),
                 new ActionResolver.AddAction("action-add-career"),
-                new ActionResolver.AddAction("action-add-certificate"),
-                new ActionResolver.AddAction("action-add-language-test")
+                new ActionResolver.AddAction("action-add-certificate")
             )
         ));
     }

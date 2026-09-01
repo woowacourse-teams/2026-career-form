@@ -2,6 +2,8 @@ package com.careerform.formanalysis.dto;
 
 import java.util.List;
 
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -83,12 +85,25 @@ public record FieldsAnalysisResponse(
     public record MatchedFieldAnalysis(
         String candidateId,
         MatchType matchType,
-        String profileFieldKey,
+        ValueBinding valueBinding,
         AutofillPolicy autofillPolicy,
         MappingStatus mappingStatus,
         InteractionStatus interactionStatus,
         WritePlan writePlan
     ) implements FieldAnalysis {
+
+        public MatchedFieldAnalysis(
+            String candidateId,
+            MatchType matchType,
+            String profileFieldKey,
+            AutofillPolicy autofillPolicy,
+            MappingStatus mappingStatus,
+            InteractionStatus interactionStatus,
+            WritePlan writePlan
+        ) {
+            this(candidateId, matchType, new DirectBinding(profileFieldKey), autofillPolicy,
+                mappingStatus, interactionStatus, writePlan);
+        }
     }
 
     public record NoMatchFieldAnalysis(
