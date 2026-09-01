@@ -151,7 +151,13 @@ export function validatePreparationResponse(
       hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect"]) &&
       plan.command === "ADD_REPEATABLE_GROUP" &&
       plan.expectedEffect === "GROUP_COUNT_INCREMENT";
-    if (!validReveal && !validAddition) {
+    const validSelection =
+      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "profileFieldKey", "targetSectionId"]) &&
+      plan.command === "SELECT_OPTION_TO_REVEAL" &&
+      plan.expectedEffect === "TARGET_FIELDS_VISIBLE" &&
+      isNonEmptyString(plan.profileFieldKey) &&
+      isNonEmptyString(plan.targetSectionId) && sectionIds.has(plan.targetSectionId);
+    if (!validReveal && !validAddition && !validSelection) {
       throw new AnalysisContractError();
     }
   }
@@ -208,17 +214,13 @@ function validateFieldAnalysis(
     !hasOnlyKeys(value, [
       "candidateId",
       "matchType",
+      "valueBinding",
       "profileFieldKey",
       "autofillPolicy",
       "mappingStatus",
       "interactionStatus",
       "writePlan",
     ]) ||
-    !isNonEmptyString(value.profileFieldKey) ||
-    !/^[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*){2}$/.test(
-      value.profileFieldKey,
-    ) ||
-    !isAutofillProfileFieldKey(value.profileFieldKey) ||
     !isOneOf(value.autofillPolicy, [
       "ALLOWED",
       "CONDITIONAL",
@@ -234,6 +236,40 @@ function validateFieldAnalysis(
     ])
   ) {
     throw new AnalysisContractError();
+  }
+
+  const hasLegacyKey = value.profileFieldKey !== undefined;
+  const hasBinding = value.valueBinding !== undefined;
+  if (hasLegacyKey === hasBinding) {
+    throw new AnalysisContractError();
+  }
+  if (hasLegacyKey && (
+    !isNonEmptyString(value.profileFieldKey) ||
+    !/^[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*){2}$/.test(value.profileFieldKey) ||
+    !isAutofillProfileFieldKey(value.profileFieldKey)
+  )) {
+    throw new AnalysisContractError();
+  }
+  if (hasBinding) {
+    if (
+      !isRecord(value.valueBinding) ||
+      !isOneOf(value.valueBinding.type, ["DIRECT", "DERIVED"]) ||
+      (value.valueBinding.type === "DIRECT" && (
+        !hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey"]) ||
+        !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+        !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey)
+      )) ||
+      (value.valueBinding.type === "DERIVED" && (
+        !hasOnlyKeys(value.valueBinding, ["type", "recipe"]) ||
+        !isOneOf(value.valueBinding.recipe, [
+          "KOREAN_FULL_NAME",
+          "ENGLISH_FULL_NAME_GIVEN_FIRST",
+          "ENGLISH_FULL_NAME_FAMILY_FIRST",
+        ])
+      ))
+    ) {
+      throw new AnalysisContractError();
+    }
   }
 
   if (value.writePlan !== undefined) {

@@ -12,6 +12,8 @@ import type {
   ProfileCategoryId,
   RepeatedProfileCategoryId,
 } from "../../profile/model";
+import type { ValueBinding } from "../api/types";
+import { resolveValueBinding } from "../profile/value-binding";
 
 export type ProfileValueResolution =
   | {
@@ -218,7 +220,22 @@ function itemForAnalysis(
     );
   }
 
-  const parts = profileFieldParts(analysis.profileFieldKey);
+  const binding: ValueBinding | undefined = analysis.valueBinding ?? (
+    analysis.profileFieldKey
+      ? { type: "DIRECT", profileFieldKey: analysis.profileFieldKey }
+      : undefined
+  );
+  if (!binding) {
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      "프로필 값 연결 방식이 없습니다.",
+      analysis,
+    );
+  }
+  const parts = binding.type === "DIRECT"
+    ? profileFieldParts(binding.profileFieldKey)
+    : undefined;
   const itemIndex = lookup.handle.itemIndex;
   if (parts?.repeatable) {
     const profileEntries = profile[
@@ -239,11 +256,7 @@ function itemForAnalysis(
     }
   }
 
-  const profileValue = resolveProfileFieldValue(
-    profile,
-    analysis.profileFieldKey,
-    itemIndex,
-  );
+  const profileValue = resolveValueBinding(profile, binding, itemIndex);
   if (profileValue.status !== "resolved") {
     const reason =
       profileValue.status === "ambiguous"
@@ -263,7 +276,7 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      profileFieldKey: analysis.profileFieldKey,
+      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
       ...(profileValue.profileEntryId
         ? { profileEntryId: profileValue.profileEntryId }
         : {}),
@@ -283,7 +296,7 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      profileFieldKey: analysis.profileFieldKey,
+      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
       ...(profileValue.profileEntryId
         ? { profileEntryId: profileValue.profileEntryId }
         : {}),
@@ -303,7 +316,7 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      profileFieldKey: analysis.profileFieldKey,
+      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
       currentValue: pageValue,
       profileValue: profileValue.value,
       previewValue: profileValue.value,
@@ -318,7 +331,7 @@ function itemForAnalysis(
   return {
     candidateId: analysis.candidateId,
     fieldLabel,
-    profileFieldKey: analysis.profileFieldKey,
+    ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
     ...(profileValue.profileEntryId
       ? { profileEntryId: profileValue.profileEntryId }
       : {}),

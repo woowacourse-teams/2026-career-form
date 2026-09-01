@@ -74,6 +74,24 @@ function isSelectableApproved(item: ReviewPlanItem): boolean {
   return item.status !== "sensitive" || item.revealed;
 }
 
+function writableHandle(
+  item: ReviewPlanItem,
+  lookup: ReturnType<CandidateRegistry["lookupField"]>,
+): FieldCandidateHandle | undefined {
+  if (lookup.status === "ready") return lookup.handle;
+  if (
+    lookup.status === "blocked" &&
+    lookup.reason === "readonly" &&
+    item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
+    item.analysis.writePlan?.command === "SET_TEXT" &&
+    lookup.handle.candidate.element === "input" &&
+    lookup.handle.candidate.control === "text"
+  ) {
+    return lookup.handle;
+  }
+  return undefined;
+}
+
 function executeWrite(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
@@ -154,14 +172,15 @@ export function executeApprovedWrites({
     processed.add(item.candidateId);
 
     const lookup = registry.lookupField(item.candidateId);
-    if (lookup.status !== "ready") {
+    const handle = writableHandle(item, lookup);
+    if (!handle) {
       return {
         candidateId: item.candidateId,
         status: "skipped",
         reason: "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
       };
     }
-    if (!executeWrite(item, lookup.handle)) {
+    if (!executeWrite(item, handle)) {
       return {
         candidateId: item.candidateId,
         status: "skipped",

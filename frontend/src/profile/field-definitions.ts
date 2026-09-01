@@ -203,7 +203,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "military",
     label: "병역",
     repeatable: false,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "military",
@@ -225,7 +225,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "veteran",
     label: "보훈",
     repeatable: false,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "veteran",
@@ -243,7 +243,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "disability",
     label: "장애",
     repeatable: false,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "disability",
@@ -261,7 +261,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "health",
     label: "건강",
     repeatable: true,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "health",

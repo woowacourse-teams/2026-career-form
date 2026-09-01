@@ -414,11 +414,14 @@ export function collectFieldsSnapshot(
 
 function collectActionElements(document: Document) {
   return Array.from(
-    document.querySelectorAll<HTMLButtonElement | HTMLInputElement>(
-      "button, input[type='button']",
+    document.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>(
+      "button, input[type='button'], select",
     ),
   ).filter((element) => {
     const label = labelOf(element);
+    if (element instanceof HTMLSelectElement) {
+      return !isHidden(element) && Boolean(element.id || element.name);
+    }
     return Boolean(
       label && !FORBIDDEN_ACTION.test(label) && !isHidden(element),
     );
@@ -571,14 +574,22 @@ export function collectPreparationSnapshot(
       const candidateId = createOpaqueId("action", candidateIndex++);
       const candidate: ActionCandidate = {
         candidateId,
-        element: element instanceof HTMLButtonElement ? "button" : "input",
-        control: "button",
+        element: element instanceof HTMLButtonElement
+          ? "button"
+          : element instanceof HTMLSelectElement ? "select" : "input",
+        control: element instanceof HTMLSelectElement ? "select" : "button",
         visibility: visibility(element),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
         ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
         ...(element.disabled ? { disabled: true } : {}),
         ...(isInert(element) ? { inert: true } : {}),
+        ...(element instanceof HTMLSelectElement
+          ? { options: Array.from(element.options).map((option, index) => ({
+              optionId: createOpaqueId(`${candidateId}-option`, index),
+              displayName: option.textContent?.trim() ?? "",
+            })).filter((option) => option.displayName.length > 0) }
+          : {}),
       };
       registry.registerAction(
         {

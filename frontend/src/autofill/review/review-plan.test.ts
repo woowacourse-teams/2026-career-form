@@ -13,6 +13,7 @@ import {
   revealSensitiveReviewItem,
   reviewItemsForDisplay,
 } from "./review-plan";
+import { resolveValueBinding } from "../profile/value-binding";
 
 function response(
   fields: FieldsAnalyzeResponse["fields"],
@@ -63,6 +64,23 @@ const allowedEmail = {
 };
 
 describe("profile value resolution", () => {
+  it("composes a Korean full name from local family and given names", () => {
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "김";
+    profile.personal.koreanGivenName = "민수";
+
+    expect(
+      resolveValueBinding(profile, {
+        type: "DERIVED",
+        recipe: "KOREAN_FULL_NAME",
+      }),
+    ).toEqual({
+      status: "resolved",
+      value: "김민수",
+      sensitive: false,
+    });
+  });
+
   it("resolves a declared single-value profile field", () => {
     const profile = createEmptyProfile();
     profile.contact.email = "me@example.test";
@@ -162,6 +180,35 @@ describe("profile value resolution", () => {
 });
 
 describe("review plan", () => {
+  it("previews a derived full name from the local profile", () => {
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "김";
+    profile.personal.koreanGivenName = "민수";
+    const registry = registryWithTextField();
+
+    const plan = buildReviewPlan({
+      analysis: response([
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ]),
+      profile,
+      registry,
+    });
+
+    expect(plan.items[0]).toMatchObject({
+      profileValue: "김민수",
+      previewValue: "김민수",
+      status: "available",
+    });
+  });
+
   it("puts available items first and hides unavailable items for display", () => {
     const item = (
       candidateId: string,

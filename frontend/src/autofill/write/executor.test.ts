@@ -86,6 +86,37 @@ function register(
 }
 
 describe("approved native-control writes", () => {
+  it("writes a locally resolved derived binding value", () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-derived",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis: MatchedFieldAnalysis = {
+      candidateId: "field-derived",
+      matchType: "MATCH",
+      valueBinding: {
+        type: "DERIVED",
+        recipe: "KOREAN_FULL_NAME",
+      },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "LLM_SUGGESTED",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "김민수")],
+      approvedCandidateIds: new Set(["field-derived"]),
+      registry,
+    });
+
+    expect(input.value).toBe("김민수");
+    expect(result).toEqual([{ candidateId: "field-derived", status: "written" }]);
+  });
+
   it("writes selected and explicitly approved text through native events", () => {
     const input = document.createElement("input");
     input.type = "email";
@@ -107,6 +138,31 @@ describe("approved native-control writes", () => {
 
     expect(input.value).toBe("me@example.test");
     expect(events).toEqual(["input", "change"]);
+    expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+  });
+
+  it("writes a readonly text field only for an adapter-verified write plan", () => {
+    const input = document.createElement("input");
+    input.readOnly = true;
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+      readonly: true,
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      mappingStatus: "ADAPTER_VERIFIED",
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "비식별 주소")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.value).toBe("비식별 주소");
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
   });
 
