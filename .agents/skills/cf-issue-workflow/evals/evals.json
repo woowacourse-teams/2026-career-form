@@ -11,6 +11,8 @@
         "Issue 계약을 검증한 뒤 status:in-progress와 Project In Progress를 적용한다",
         "CF-123 브랜치에서 작업한다",
         "Issue와 같은 제목의 Draft PR 하나가 Closes #123 하나만 포함한다",
+        "Issue의 변경 분류 라벨만 Draft PR 생성 인자로 전달하고 status 라벨은 제외한다",
+        "생성된 원격 PR의 라벨을 검증한 뒤에만 Draft PR 완료 근거를 기록한다",
         "Draft PR 뒤 status:in-progress와 Project In Progress를 유지한다",
         "사용자가 GitHub에서 PR을 수정하고 재개할 때까지 멈춘다",
         "Ready for review 전환은 재개 검증 뒤 사람에게 넘긴다",

@@ -44,7 +44,7 @@ AI가 Issue 계약 초안을 GitHub에 게시하면 사람이 원격 제목과 �
 
 전체 흐름은 `cf-issue-lifecycle`이 기획, 구현, Issue와 Draft PR의 수동 편집 대기, 사람 머지 대기와 `cf-post-merge-cleanup`을 연결한다. 재개할 때는 GitHub Issue와 PR 상태, worktree 체크포인트를 실제 Git 상태와 대조하고 첫 미완료 단계부터 진행한다. 공용 흐름은 Orca와 개인 플러그인에 의존하지 않는다.
 
-Issue와 PR 본문은 각각 선택한 `.github/ISSUE_TEMPLATE/*.yml`과 `.github/pull_request_template.md`를 원본으로 `render-template-body.py`가 OS 임시 UTF-8 Markdown 파일에 만든다. PR 템플릿의 HTML 주석 안내와 접힌 검증 기록은 유지하고 답변 표식만 실제 내용으로 바꾼다. GitHub CLI에는 `--body-file`로 전달하고 원격 본문을 다시 읽어 독립 계약 검증기로 확인한다.
+Issue와 PR 본문은 각각 선택한 `.github/ISSUE_TEMPLATE/*.yml`과 `.github/pull_request_template.md`를 원본으로 `render-template-body.py`가 OS 임시 UTF-8 Markdown 파일에 만든다. PR 템플릿의 HTML 주석 안내와 접힌 검증 기록은 유지하고 답변 표식만 실제 내용으로 바꾼다. GitHub CLI에는 `--body-file`로 전달하고 원격 본문을 다시 읽어 독립 계약 검증기로 확인한다. Draft PR 생성 시 연결 Issue의 `type:*`, `frontend-change`, `backend-change`, `infra-change`, `harness-change`만 PR에 적용하고 `status:*`는 제외한다. 생성된 원격 PR에서 기대 라벨을 다시 검증한 뒤에만 Draft PR 완료 근거를 기록한다.
 
 ## worktree 워크플로우 체크포인트
 

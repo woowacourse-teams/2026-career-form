@@ -113,9 +113,11 @@ PR에 포함한다. 기획 중 새로 발견된 구현 범위는 현재 Issue에
 5. `.github/pull_request_template.md`의 여섯 리뷰 섹션과 접힌 자동 및 수동 검증 응답을 JSON으로 준비한다. 같은 정보는 한 섹션에만 쓰고, 문장을 제거해도 리뷰 판단이 달라지지 않으면 제거한다. Issue와 ADR의 배경 및 결정 전문을 반복하지 않는다.
 6. 선택한 Python으로 `harness/scripts/render-template-body.py pr`을 실행해 OS 임시 UTF-8 Markdown 파일을 만든다.
 7. delivery action이 `create_draft_pr`인지 확인하고 `resume draft_pr`로 시작 HEAD를 저장한다. 지식 판정 완료와 현재 HEAD의 verification 완료 근거가 없으면 PreToolUse 훅이 생성을 차단한다.
-8. `gh pr create --draft --body-file <임시 파일>`로 `Closes #<Issue 번호>`가 하나인 PR을 만든다. 인라인 `--body`를 사용하지 않는다.
-9. `gh pr view`로 Draft PR 번호, URL과 head OID를 다시 읽고 `complete draft_pr --evidence pr_number=<번호> --evidence pr_url=<URL>`로 완료 근거를 저장한다. 생성 뒤 중단돼 완료 기록이 없어도 재개 시 실제 PR이 보이면 `record_draft_pr`로 기록만 보완하고 새 PR을 만들지 않는다.
-10. Issue는 `status:in-progress`, Project는 `In Progress`로 유지하고 사람이 GitHub에서 PR 제목과 본문을 수정한 뒤 재개를 요청할 때까지 중단한다.
+8. 현재 Issue의 `labels`를 OS 임시 JSON snapshot으로 저장하고 선택한 Python으로 `harness/scripts/plan-pr-labels.py <Issue JSON>`을 실행한다. 출력 JSON의 각 라벨을 `eval`하지 않고 별도로 인용된 `--label <이름>` 인자로 준비한다. `type:*`, `frontend-change`, `backend-change`, `infra-change`, `harness-change`만 전달하고 `status:*`는 전달하지 않는다.
+9. `gh pr create --draft --body-file <임시 파일> <라벨 인자...>`로 `Closes #<Issue 번호>`가 하나인 PR을 만든다. 인라인 `--body`를 사용하지 않으며 `gh pr create`를 다른 스크립트 안에 숨기지 않는다.
+10. `gh pr view`로 Draft PR 번호, URL, head OID와 `labels`를 OS 임시 JSON snapshot으로 다시 읽고 선택한 Python으로 `harness/scripts/validate-pr-labels.py <Issue JSON> <PR JSON>`을 실행한다. 기대 라벨이 누락됐거나 `status:*`가 PR에 있으면 완료 근거를 기록하지 않는다.
+11. 원격 라벨 검증을 통과한 경우에만 `complete draft_pr --evidence pr_number=<번호> --evidence pr_url=<URL>`로 완료 근거를 저장한다. 생성 뒤 중단돼 완료 기록이 없어도 재개 시 실제 PR이 보이면 원격 라벨을 먼저 검증하고 `record_draft_pr`로 기록만 보완하며 새 PR을 만들지 않는다.
+12. Issue는 `status:in-progress`, Project는 `In Progress`로 유지하고 사람이 GitHub에서 PR 제목과 본문을 수정한 뒤 재개를 요청할 때까지 중단한다.
 
 사용자가 수정 완료나 재개를 알리면 다음 순서로 기존 PR을 검토한다.
 
