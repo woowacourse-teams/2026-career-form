@@ -66,7 +66,8 @@ class LocalCompanyFormPolicySeederTest {
                 "prsMilitarySvcStatus",
                 "대학 학력 정보 추가",
                 "btnAddCareer",
-                "btnAddCert"
+                "btnAddCert",
+                "btnAddLangExam"
             );
         assertThat(policy.getValue().fieldsFingerprint().requiredSectionIds())
             .containsExactlyInAnyOrder(

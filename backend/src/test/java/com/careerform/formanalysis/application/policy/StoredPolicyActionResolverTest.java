@@ -41,9 +41,15 @@ class StoredPolicyActionResolverTest {
             2,
             "sk-current-preparation-redacted",
             List.of(
+                new ActionResolver.SelectOptionAction(
+                    "action-select-military-status",
+                    "military.military.militaryStatus",
+                    "section-1"
+                ),
                 new ActionResolver.AddAction("action-add-university"),
                 new ActionResolver.AddAction("action-add-career"),
-                new ActionResolver.AddAction("action-add-certificate")
+                new ActionResolver.AddAction("action-add-certificate"),
+                new ActionResolver.AddAction("action-add-language-test")
             )
         ));
     }

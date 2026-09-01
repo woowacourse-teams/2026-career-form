@@ -8,7 +8,22 @@
   "sections": [
     {
       "sectionId": "section-1",
-      "actionCandidates": []
+      "actionCandidates": [
+        {
+          "candidateId": "action-select-military-status",
+          "element": "select",
+          "control": "select",
+          "visibility": "visible",
+          "displayName": "병역 상태",
+          "domName": "prsMilitarySvcStatus",
+          "options": [
+            {
+              "optionId": "military-status-option",
+              "displayName": "비식별 선택지"
+            }
+          ]
+        }
+      ]
     },
     {
       "sectionId": "section-2",
@@ -51,6 +66,20 @@
           "control": "button",
           "visibility": "visible",
           "domId": "btnAddCert"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-7",
+      "displayName": "어학",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-language-test",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "어학 항목 추가",
+          "domId": "btnAddLangExam"
         }
       ]
     }

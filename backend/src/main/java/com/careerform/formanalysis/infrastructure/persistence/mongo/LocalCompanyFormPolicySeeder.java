@@ -111,7 +111,8 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     ),
                     actionStructure("대학 학력 정보 추가"),
                     actionStructure("btnAddCareer"),
-                    actionStructure("btnAddCert")
+                    actionStructure("btnAddCert"),
+                    actionStructure("btnAddLangExam")
                 )
             ),
             new FieldsFingerprint(
@@ -134,7 +135,8 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 ),
                 addRule("대학 학력 정보 추가"),
                 addRule("btnAddCareer"),
-                addRule("btnAddCert")
+                addRule("btnAddCert"),
+                addRule("btnAddLangExam")
             ),
             List.of(
                 derivedTextRule(
