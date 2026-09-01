@@ -143,6 +143,49 @@
   font-size: 12px;
 }
 
+.preparationCard {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 15px;
+  background: var(--color-surface);
+}
+
+.preparationCard > strong {
+  color: var(--color-action-strong);
+  font-size: 16px;
+}
+
+.preparationCard > span,
+.preparationCard small {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.preparationCard ul {
+  display: grid;
+  gap: 7px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preparationCard li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: var(--color-accent-soft);
+  font-size: 12px;
+}
+
+.preparationCard li[data-runnable="false"] {
+  opacity: 0.65;
+}
+
 .primary,
 .actions button,
 .linkButton {
@@ -214,7 +257,7 @@
 
 .reviewItem {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 10px;
   border: 1px solid var(--color-border);
@@ -222,6 +265,14 @@
   border-radius: var(--radius-control);
   padding: 12px;
   background: var(--color-surface);
+}
+
+.reviewItem[data-included="true"] {
+  background: color-mix(
+    in srgb,
+    var(--color-surface) 92%,
+    var(--color-success)
+  );
 }
 
 .reviewItem[data-status="available"] {
@@ -255,6 +306,23 @@
   font-size: 10px;
   font-style: normal;
   font-weight: 900;
+}
+
+.reviewAction {
+  grid-column: 1 / -1;
+  justify-self: start;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.reviewAction:hover {
+  border-color: var(--color-action);
+  color: var(--color-action-strong);
 }
 
 .countCard {
