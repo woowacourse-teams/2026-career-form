@@ -180,6 +180,11 @@ public final class PreparationAnalysisService {
                 || !sectionIds.contains(reveal.targetSectionId()))) {
             invalidResolution();
         }
+        if (result instanceof ActionResolver.SelectOptionAction select
+            && (isBlank(select.profileFieldKey()) || isBlank(select.targetSectionId())
+                || !sectionIds.contains(select.targetSectionId()))) {
+            invalidResolution();
+        }
     }
 
     private static List<PreparationPlan> mapPlansInRequestOrder(
@@ -205,6 +210,12 @@ public final class PreparationAnalysisService {
                 ExpectedEffect.TARGET_VISIBLE,
                 reveal.targetSectionId()
             );
+        }
+        if (result instanceof ActionResolver.SelectOptionAction select) {
+            return new PreparationAnalysisResponse.SelectOptionToRevealPlan(
+                select.candidateId(), Command.SELECT_OPTION_TO_REVEAL,
+                ExpectedEffect.TARGET_FIELDS_VISIBLE, select.profileFieldKey(),
+                select.targetSectionId());
         }
         ActionResolver.AddAction add = (ActionResolver.AddAction) result;
         return new AddRepeatableGroupPlan(

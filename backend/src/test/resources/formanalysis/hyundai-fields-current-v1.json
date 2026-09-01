@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "hyundai-current-fields-redacted",
+  "site": { "host": "talent.hyundai.com", "pathPattern": "/apply/applyWrite.hc" },
+  "sections": [
+    {
+      "sectionId": "section-personal",
+      "displayName": "개인정보",
+      "fields": [
+        { "candidateId": "field-eng-given", "element": "input", "control": "text", "visibility": "visible", "domName": "engNm" },
+        { "candidateId": "field-eng-family", "element": "input", "control": "text", "visibility": "visible", "domName": "engFamilyNm" },
+        { "candidateId": "field-address-detail", "element": "input", "control": "text", "visibility": "visible", "domName": "addrDtl" },
+        { "candidateId": "field-emergency-phone", "element": "input", "control": "text", "visibility": "visible", "domName": "emeTel" }
+      ]
+    },
+    {
+      "sectionId": "section-academic",
+      "displayName": "학력정보",
+      "fields": [
+        { "candidateId": "field-school-name-1", "element": "input", "control": "text", "visibility": "visible", "domName": "schNm_1" },
+        { "candidateId": "field-school-start-1", "element": "input", "control": "text", "visibility": "visible", "domName": "whiStDt_1" },
+        { "candidateId": "field-school-end-1", "element": "input", "control": "text", "visibility": "visible", "domName": "whiEndDt_1" }
+      ]
+    },
+    {
+      "sectionId": "section-military",
+      "displayName": "기타",
+      "fields": [
+        { "candidateId": "field-military-start", "element": "input", "control": "text", "visibility": "visible", "domName": "milStartDt" },
+        { "candidateId": "field-military-end", "element": "input", "control": "text", "visibility": "visible", "domName": "milEndDt" }
+      ]
+    }
+  ]
+}

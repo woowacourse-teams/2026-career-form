@@ -93,7 +93,7 @@ class FormAnalysisEnabledProviderApiTest {
         model.respondWith("""
             {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
              "matches":[{"candidateId":"field-direct",
-                         "profileFieldKey":"contact.contact.email"}]}
+                         "valueBinding":{"type":"DIRECT","profileFieldKey":"contact.contact.email"}}]}
             """);
 
         mockMvc.perform(post("/api/v1/fields/analyze")
@@ -198,9 +198,9 @@ class FormAnalysisEnabledProviderApiTest {
                 {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
                  "matches":[
                    {"candidateId":"field-direct",
-                    "profileFieldKey":"contact.contact.email"},
+                    "valueBinding":{"type":"DIRECT","profileFieldKey":"contact.contact.email"}},
                    {"candidateId":"field-direct",
-                    "profileFieldKey":"contact.contact.email"}]}
+                    "valueBinding":{"type":"DIRECT","profileFieldKey":"contact.contact.email"}}]}
                 """,
             """
                 {"schemaVersion":1,"snapshotId":"snapshot-fields-1",
@@ -213,7 +213,7 @@ class FormAnalysisEnabledProviderApiTest {
             """
                 {"schemaVersion":2,"snapshotId":"snapshot-fields-1",
                  "matches":[{"candidateId":"field-direct",
-                             "profileFieldKey":"contact.email"}]}
+                             "valueBinding":{"type":"DIRECT","profileFieldKey":"contact.email"}}]}
                 """
         );
 

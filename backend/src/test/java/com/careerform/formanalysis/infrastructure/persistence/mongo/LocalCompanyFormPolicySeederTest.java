@@ -13,6 +13,19 @@ import org.mockito.InOrder;
 class LocalCompanyFormPolicySeederTest {
 
     @Test
+    @DisplayName("정적 회사 정책 카탈로그의 SK와 Hyundai 등록을 모두 저장한다")
+    void savesStaticCompanyCatalog() {
+        FormAnalysisCompanyMongoRepository companies = mock(FormAnalysisCompanyMongoRepository.class);
+        FormAnalysisPolicyMongoRepository policies = mock(FormAnalysisPolicyMongoRepository.class);
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+
+        org.mockito.Mockito.verify(companies, org.mockito.Mockito.times(2))
+            .save(org.mockito.Mockito.any(FormAnalysisCompanyDocument.class));
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2))
+            .save(org.mockito.Mockito.any(FormAnalysisPolicyDocument.class));
+    }
+
+    @Test
     @DisplayName("실제 SK Careers 구조로 교체한 정책 v1과 활성 버전 v1을 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
@@ -37,28 +50,28 @@ class LocalCompanyFormPolicySeederTest {
         InOrder order = inOrder(policies, companies);
         order.verify(policies).save(policy.capture());
         order.verify(companies).save(company.capture());
-        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v1");
+        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v2");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
-        assertThat(policy.getValue().version()).isEqualTo(1);
+        assertThat(policy.getValue().version()).isEqualTo(3);
         assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
             .containsExactlyInAnyOrder(
-                "applyContentAcademic",
-                "applyContentCareer",
-                "applyContentLicense",
-                "applyContentLinguistics"
+                "section-1",
+                "section-3",
+                "section-4",
+                "section-6"
             );
         assertThat(policy.getValue().actionRules())
             .extracting("structuralName")
-            .containsExactly(
-                "btnAddEducationUniv",
+            .contains(
+                "prsMilitarySvcStatus",
+                "대학 학력 정보 추가",
                 "btnAddCareer",
-                "btnAddCert",
-                "btnAddLangExam"
+                "btnAddCert"
             );
         assertThat(policy.getValue().fieldsFingerprint().requiredSectionIds())
             .containsExactlyInAnyOrder(
-                "applyContentUserInfo",
-                "applyContentAcademic"
+                "section-1",
+                "section-3"
             );
         assertThat(policy.getValue().fieldRules())
             .extracting("structuralName", "profileFieldKey")
@@ -70,6 +83,18 @@ class LocalCompanyFormPolicySeederTest {
                 org.assertj.core.groups.Tuple.tuple(
                     "prsPhone",
                     "contact.contact.phoneNumber"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsMilitarySvcStatus",
+                    "military.military.militaryStatus"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "cerCertName",
+                    "certifications.certificate.name"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "cerCertSource",
+                    "certifications.certificate.issuer"
                 ),
                 org.assertj.core.groups.Tuple.tuple(
                     "eduEducationName",
@@ -85,7 +110,7 @@ class LocalCompanyFormPolicySeederTest {
             "sk",
             "www.skcareers.com",
             java.util.List.of("/Application/Index/"),
-            1
+            3
         ));
     }
 }

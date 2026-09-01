@@ -41,6 +41,10 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
             || rule.control() != candidate.control()) {
             return new NoMatch(candidate.candidateId());
         }
-        return new Match(candidate.candidateId(), rule.profileFieldKey());
+        return new Match(
+            candidate.candidateId(),
+            rule.valueBinding(),
+            rule.allowReadonlyWrite()
+        );
     }
 }

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-current-preparation-redacted",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Application/Index/*"
+  },
+  "sections": [
+    {
+      "sectionId": "section-1",
+      "actionCandidates": []
+    },
+    {
+      "sectionId": "section-2",
+      "actionCandidates": []
+    },
+    {
+      "sectionId": "section-3",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-university",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "대학 학력 정보 추가"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-4",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-career",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "domId": "btnAddCareer"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-5",
+      "actionCandidates": []
+    },
+    {
+      "sectionId": "section-6",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-certificate",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "domId": "btnAddCert"
+        }
+      ]
+    }
+  ]
+}

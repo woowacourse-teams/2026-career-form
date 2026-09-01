@@ -29,7 +29,7 @@ class StoredPolicyFieldMappingResolverTest {
     @DisplayName("모든 후보를 저장 rule의 canonical key 또는 NO_MATCH로 분류한다")
     void mapsEveryCandidateExactlyOnce() throws Exception {
         FieldsAnalysisRequest request = objectMapper.readValue(
-            fixture("sk-fields-snapshot-b-v2.json"),
+            fixture("sk-fields-current-v2.json"),
             FieldsAnalysisRequest.class
         );
 
@@ -38,20 +38,64 @@ class StoredPolicyFieldMappingResolverTest {
                 .resolve(request);
 
         assertThat(resolution.results()).containsExactly(
-            new FieldMappingResolver.NoMatch("field-korean-full-name"),
-            match("field-english-given-name", "personal.personal.englishGivenName"),
-            match("field-english-family-name", "personal.personal.englishFamilyName"),
+            new FieldMappingResolver.Match(
+                "field-korean-name",
+                new FieldMappingResolver.DerivedBinding(
+                    FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME
+                )
+            ),
             match("field-email", "contact.contact.email"),
             match("field-phone", "contact.contact.phoneNumber"),
-            match("field-nationality", "personal.personal.nationality"),
-            match("field-postal-code", "contact.contact.postalCode"),
-            match("field-address-line-1", "contact.contact.addressLine1"),
+            match(
+                "field-postal-code",
+                "contact.contact.postalCode",
+                true
+            ),
+            match(
+                "field-address-line-1",
+                "contact.contact.addressLine1",
+                true
+            ),
             match("field-address-line-2", "contact.contact.addressLine2"),
-            match("field-high-school-name", "education.highSchool.schoolName"),
-            match("field-university-name", "education.university.schoolName"),
+            match(
+                "field-military-status",
+                "military.military.militaryStatus"
+            ),
+            match(
+                "field-military-branch",
+                "military.military.militaryBranch"
+            ),
+            match(
+                "field-military-rank",
+                "military.military.militaryRank"
+            ),
+            match(
+                "field-military-start",
+                "military.military.serviceStartDate"
+            ),
+            match(
+                "field-military-end",
+                "military.military.serviceEndDate"
+            ),
+            match(
+                "field-military-exemption-reason",
+                "military.military.exemptionReason"
+            ),
+            new FieldMappingResolver.NoMatch("field-latest-education"),
             match(
                 "field-university-status",
                 "education.university.completionStatus"
+            ),
+            match("field-university-name", "education.university.schoolName"),
+            match("field-certificate-name", "certifications.certificate.name"),
+            match("field-certificate-issuer", "certifications.certificate.issuer"),
+            match(
+                "field-certificate-date",
+                "certifications.certificate.acquisitionDate"
+            ),
+            match(
+                "field-certificate-number",
+                "certifications.certificate.registrationNo"
             )
         );
     }
@@ -108,6 +152,18 @@ class StoredPolicyFieldMappingResolverTest {
 
     private static FieldMappingResolver.Match match(String candidateId, String key) {
         return new FieldMappingResolver.Match(candidateId, key);
+    }
+
+    private static FieldMappingResolver.Match match(
+        String candidateId,
+        String key,
+        boolean allowsReadonlyWrite
+    ) {
+        return new FieldMappingResolver.Match(
+            candidateId,
+            key,
+            allowsReadonlyWrite
+        );
     }
 
     private static String fixture(String name) throws Exception {

@@ -18,6 +18,8 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldRul
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldStructure;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFingerprint;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 
 @DisplayName("회사별 지원서 정책")
 class CompanyFormPolicyTest {
@@ -88,6 +90,26 @@ class CompanyFormPolicyTest {
             ),
             ignored -> true
         )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("필드 정책은 직접값 대신 승인된 조합 recipe를 지정할 수 있다")
+    void acceptsDerivedValueBinding() {
+        FieldRule rule = new FieldRule(
+            "applicant-full-name",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+            new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME)
+        );
+
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "sk", 1, preparationFingerprint(), fieldsFingerprint(), actionRules(),
+            List.of(rule), ignored -> true
+        );
+
+        assertThat(policy.fieldRules().getFirst().valueBinding()).isEqualTo(
+            new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME)
+        );
     }
 
     @Test

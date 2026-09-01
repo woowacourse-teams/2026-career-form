@@ -79,7 +79,7 @@ public record PreparationAnalysisResponse(
     }
 
     public sealed interface PreparationPlan permits RevealSectionPlan,
-        AddRepeatableGroupPlan {
+        AddRepeatableGroupPlan, SelectOptionToRevealPlan {
         String actionCandidateId();
     }
 
@@ -95,6 +95,15 @@ public record PreparationAnalysisResponse(
         String actionCandidateId,
         Command command,
         ExpectedEffect expectedEffect
+    ) implements PreparationPlan {
+    }
+
+    public record SelectOptionToRevealPlan(
+        String actionCandidateId,
+        Command command,
+        ExpectedEffect expectedEffect,
+        String profileFieldKey,
+        String targetSectionId
     ) implements PreparationPlan {
     }
 
@@ -116,12 +125,14 @@ public record PreparationAnalysisResponse(
 
     public enum Command {
         REVEAL_SECTION,
-        ADD_REPEATABLE_GROUP
+        ADD_REPEATABLE_GROUP,
+        SELECT_OPTION_TO_REVEAL
     }
 
     public enum ExpectedEffect {
         TARGET_VISIBLE,
-        GROUP_COUNT_INCREMENT
+        GROUP_COUNT_INCREMENT,
+        TARGET_FIELDS_VISIBLE
     }
 
     public enum BlockCode {

@@ -13,11 +13,14 @@ import org.springframework.stereotype.Service;
 import com.careerform.formanalysis.application.FormAnalysisRouter.FieldRoute;
 import com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind;
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Section;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.FieldAnalysis;
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse.AutofillPolicy;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MappingStatus;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchType;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalysis;
@@ -143,9 +146,12 @@ public final class FieldsAnalysisService {
                 || !candidates.containsKey(result.candidateId())) {
                 invalidResolution();
             }
-            if (result instanceof FieldMappingResolver.Match match
-                && !supportedProfileFields.contains(match.profileFieldKey())) {
-                invalidResolution();
+            if (result instanceof FieldMappingResolver.Match match) {
+                ValueBinding binding = match.valueBinding();
+                if (binding instanceof DirectBinding direct
+                    && !supportedProfileFields.contains(direct.profileFieldKey())) {
+                    invalidResolution();
+                }
             }
         }
         if (!resultIds.equals(candidates.keySet())) {
@@ -188,11 +194,17 @@ public final class FieldsAnalysisService {
             );
         }
         FieldMappingResolver.Match match = (FieldMappingResolver.Match) mapping;
+        String directKey = match.valueBinding() instanceof DirectBinding direct
+            ? direct.profileFieldKey()
+            : null;
+        AutofillPolicy autofillPolicy = directKey == null
+            ? AutofillPolicy.ALLOWED
+            : supportedProfileFields.policyOf(directKey).orElseThrow();
         return new MatchedFieldAnalysis(
             candidate.candidateId(),
             MatchType.MATCH,
-            match.profileFieldKey(),
-            supportedProfileFields.policyOf(match.profileFieldKey()).orElseThrow(),
+            match.valueBinding(),
+            autofillPolicy,
             mappingStatus,
             decision.interactionStatus(),
             decision.writePlan()

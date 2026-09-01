@@ -33,12 +33,12 @@ class SupportedProfileFieldsTest {
     }
 
     @Test
-    @DisplayName("승인된 autofill policy 분포를 유지한다")
-    void preservesTheApprovedAutofillPolicyDistribution() {
+    @DisplayName("병역·보훈·장애·건강을 일반 자동 기입 정책으로 제공한다")
+    void providesAllProfileFieldsWithoutSensitiveConfirmation() {
         assertThat(supportedFields.keys())
             .map(key -> supportedFields.policyOf(key).orElseThrow())
             .filteredOn(policy -> policy == AutofillPolicy.ALLOWED)
-            .hasSize(29);
+            .hasSize(49);
         assertThat(supportedFields.keys())
             .map(key -> supportedFields.policyOf(key).orElseThrow())
             .filteredOn(policy -> policy == AutofillPolicy.CONDITIONAL)
@@ -46,7 +46,7 @@ class SupportedProfileFieldsTest {
         assertThat(supportedFields.keys())
             .map(key -> supportedFields.policyOf(key).orElseThrow())
             .filteredOn(policy -> policy == AutofillPolicy.SENSITIVE_CONFIRMATION)
-            .hasSize(20);
+            .isEmpty();
     }
 
     @Test
