@@ -967,6 +967,43 @@ describe("AutofillOverlay", () => {
     expect(pageDocument.querySelector("input")?.value).toBe("");
   });
 
+  it("sends a fields snapshot when preparation analysis is blocked", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `<label>이메일 <input type="email" /></label>`;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "ADAPTER" as const,
+        analysisStatus: "BLOCKED" as const,
+        preparationPlans: [],
+        blockCode: "ADAPTER_STRUCTURE_MISMATCH" as const,
+      })),
+      analyzeFields: vi.fn(async (request) => ({
+        snapshotId: request.snapshotId,
+        mode: "ADAPTER" as const,
+        analysisStatus: "BLOCKED" as const,
+        fields: [],
+        blockCode: "ADAPTER_STRUCTURE_MISMATCH" as const,
+      })),
+    };
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={apiClient}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "이 페이지에서는 자동 기입을 진행할 수 없습니다",
+      }),
+    ).toBeInTheDocument();
+    expect(apiClient.analyzeFields).toHaveBeenCalledTimes(1);
+    expect(pageDocument.querySelector("input")?.value).toBe("");
+  });
+
   it("stops before field analysis when an approved reveal action has no verified effect", async () => {
     const pageDocument = document.implementation.createHTMLDocument("지원서");
     pageDocument.body.innerHTML = `

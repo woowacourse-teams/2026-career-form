@@ -1,11 +1,14 @@
 .backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
   display: grid;
-  width: 100%;
-  height: 100%;
+  width: 100vw !important;
+  height: 100vh !important;
   place-items: center;
   padding: 20px;
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-action-strong) 28%, transparent);
+  background: rgb(13 71 161 / 82%);
   font-family:
     "Pretendard Variable",
     Pretendard,
@@ -18,7 +21,8 @@
 .modal {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  width: min(720px, calc(100vw - 40px));
+  width: min(720px, calc(100vw - 40px)) !important;
+  max-width: calc(100vw - 40px) !important;
   max-height: calc(100vh - 40px);
   overflow: hidden;
   border: 1px solid var(--color-accent);

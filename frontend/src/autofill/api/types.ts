@@ -24,8 +24,9 @@ interface CandidateBase {
 }
 
 export interface ActionCandidate extends CandidateBase {
-  element: "button" | "input" | "custom";
-  control: "button" | "custom";
+  element: "button" | "input" | "select" | "custom";
+  control: "button" | "select" | "custom";
+  options?: OptionCandidate[];
 }
 
 export interface FieldCandidate extends CandidateBase {
@@ -84,6 +85,13 @@ export type PreparationPlan =
     }
   | {
       actionCandidateId: string;
+      command: "SELECT_OPTION_TO_REVEAL";
+      expectedEffect: "TARGET_FIELDS_VISIBLE";
+      profileFieldKey: string;
+      targetSectionId: string;
+    }
+  | {
+      actionCandidateId: string;
       command: "ADD_REPEATABLE_GROUP";
       expectedEffect: "GROUP_COUNT_INCREMENT";
     };
@@ -100,10 +108,21 @@ export interface PreparationAnalyzeResponse {
 export type WriteCommand =
   "SET_TEXT" | "SELECT_OPTION" | "CHECK_RADIO" | "CHECK_CHECKBOX";
 
+export type DerivedRecipe =
+  | "KOREAN_FULL_NAME"
+  | "ENGLISH_FULL_NAME_GIVEN_FIRST"
+  | "ENGLISH_FULL_NAME_FAMILY_FIRST";
+
+export type ValueBinding =
+  | { type: "DIRECT"; profileFieldKey: string }
+  | { type: "DERIVED"; recipe: DerivedRecipe };
+
 export interface MatchedFieldAnalysis {
   candidateId: string;
   matchType: "MATCH";
-  profileFieldKey: string;
+  valueBinding?: ValueBinding;
+  /** @deprecated Responses should use valueBinding. */
+  profileFieldKey?: string;
   autofillPolicy: "ALLOWED" | "CONDITIONAL" | "SENSITIVE_CONFIRMATION";
   mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED";
   interactionStatus:

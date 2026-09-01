@@ -143,6 +143,30 @@ describe("analysis API response validation", () => {
     });
   });
 
+  it("accepts a derived binding without receiving a profile value", () => {
+    const result = validateFieldsResponse(fieldsRequest, {
+      snapshotId: "snapshot-b",
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: [
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ],
+    });
+
+    expect(result.fields[0]).toMatchObject({
+      candidateId: "field-1",
+      valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+    });
+  });
+
   it("rejects a COMPLETE response that omits a collected field", () => {
     expect(() =>
       validateFieldsResponse(twoFieldsRequest, {

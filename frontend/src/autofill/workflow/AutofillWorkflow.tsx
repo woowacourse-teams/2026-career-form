@@ -11,6 +11,7 @@ import { executeApprovedPreparationPlans } from "../preparation/executor";
 import {
   buildReviewPlan,
   revealSensitiveReviewItem,
+  resolveProfileFieldValue,
   reviewItemsForDisplay,
   type ReviewPlanItem,
 } from "../review/review-plan";
@@ -428,8 +429,7 @@ export function AutofillWorkflow({
         });
         if (!active) return;
         if (analysis.analysisStatus === "BLOCKED") {
-          setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
-          setStage("exception");
+          await analyzeFields(loadedProfile);
           return;
         }
         if (analysis.preparationPlans.length === 0) {
@@ -490,6 +490,21 @@ export function AutofillWorkflow({
       },
       countRepeatableGroups: (snapshot, plan) =>
         snapshot.countRepeatableGroups?.(plan) ?? -1,
+      selectProfileOption: (plan, snapshot) => {
+        const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
+        if (lookup.status !== "ready" || !(lookup.handle.element instanceof HTMLSelectElement)) {
+          return false;
+        }
+        const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
+        if (value.status !== "resolved") return false;
+        const option = Array.from(lookup.handle.element.options).find(
+          (candidate) => candidate.textContent?.trim() === value.value,
+        );
+        if (!option) return false;
+        lookup.handle.element.value = option.value;
+        lookup.handle.element.dispatchEvent(new Event("change", { bubbles: true }));
+        return true;
+      },
     });
     console.info(
       `[CareerForm] preparation execution result ${JSON.stringify({

@@ -25,7 +25,7 @@ interface AppProps {
 
 type LoadStatus = "loading" | "ready" | "error";
 type PanelGroupId =
-  "personal" | "contact" | "education" | "credentials" | "sensitive";
+  "personal" | "contact" | "education" | "credentials" | "additional";
 
 interface PanelGroup {
   id: PanelGroupId;
@@ -62,10 +62,9 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
     showRecordCount: true,
   },
   {
-    id: "sensitive",
-    label: "민감정보",
+    id: "additional",
+    label: "병역, 보훈, 장애와 건강",
     categoryIds: ["military", "veteran", "disability", "health"],
-    description: "병역, 보훈, 장애와 건강",
   },
 ];
 
@@ -268,14 +267,6 @@ export function App({
                       {actionLabel}
                     </small>
                   </button>
-                  {group.description && (
-                    <p className={styles.groupDescription}>
-                      {group.description}
-                    </p>
-                  )}
-                  {group.id === "sensitive" && !isOpen && (
-                    <p className={styles.sensitivePreview}>••••••••, 값 가림</p>
-                  )}
                   {isOpen && (
                     <div className={styles.groupValues} id={regionId}>
                       {groupItems.length === 0 && (

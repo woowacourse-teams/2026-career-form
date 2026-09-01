@@ -27,6 +27,10 @@ export interface PreparationExecutionOptions {
     snapshot: PreparationSnapshot,
     plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
   ) => number;
+  selectProfileOption?: (
+    plan: Extract<PreparationPlan, { command: "SELECT_OPTION_TO_REVEAL" }>,
+    snapshot: PreparationSnapshot,
+  ) => boolean;
 }
 
 export type PreparationFailureReason =
@@ -159,6 +163,7 @@ export async function executeApprovedPreparationPlans({
   initialSnapshot,
   refreshSnapshot,
   countRepeatableGroups,
+  selectProfileOption,
 }: PreparationExecutionOptions): Promise<PreparationExecutionResult> {
   const selectedPlans = approvedPlans.filter(({ approved }) => approved);
   if (selectedPlans.length === 0) {
@@ -191,6 +196,19 @@ export async function executeApprovedPreparationPlans({
       if (!refreshed) {
         return failure("refresh-failed", executedPlanCount);
       }
+      if (!refreshed.isTargetSectionVisible(plan.targetSectionId)) {
+        return failure("target-not-visible", executedPlanCount);
+      }
+      snapshot = refreshed;
+      continue;
+    }
+
+    if (plan.command === "SELECT_OPTION_TO_REVEAL") {
+      const selected = selectProfileOption?.(plan, snapshot) ?? false;
+      if (!selected) return failure("action-not-executable", executedPlanCount);
+      executedPlanCount += 1;
+      const refreshed = await refresh(refreshSnapshot);
+      if (!refreshed) return failure("refresh-failed", executedPlanCount);
       if (!refreshed.isTargetSectionVisible(plan.targetSectionId)) {
         return failure("target-not-visible", executedPlanCount);
       }
