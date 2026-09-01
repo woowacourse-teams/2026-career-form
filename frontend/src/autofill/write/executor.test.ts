@@ -245,6 +245,44 @@ describe("approved native-control writes", () => {
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
   });
 
+  it("selects the university bachelor option when only its parentheses differ", () => {
+    const select = document.createElement("select");
+    const professionalCollege = new Option("전문대학(학사)", "college");
+    const university = new Option("대학교(학사)", "university");
+    select.append(professionalCollege, university);
+    const registry = register(
+      select,
+      {
+        candidateId: "education-type",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: [
+          { optionId: "college", displayName: "전문대학(학사)" },
+          { optionId: "university", displayName: "대학교(학사)" },
+        ],
+      },
+      new Map([
+        ["college", professionalCollege],
+        ["university", university],
+      ]),
+    );
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "education-type",
+      writePlan: { command: "SELECT_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대학교 학사")],
+      approvedCandidateIds: new Set(["education-type"]),
+      registry,
+    });
+
+    expect(select.value).toBe("university");
+    expect(result).toEqual([{ candidateId: "education-type", status: "written" }]);
+  });
+
   it("checks a radio by the locally resolved option display name", () => {
     const first = document.createElement("input");
     first.type = "radio";

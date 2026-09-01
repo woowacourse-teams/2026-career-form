@@ -7,7 +7,11 @@ export type ApprovedWriteResult =
   | { candidateId: string; status: "skipped"; reason: string };
 
 function normalizeDisplayName(value: string): string {
-  return value.normalize("NFKC").replace(/\s+/g, " ").trim();
+  return value
+    .normalize("NFKC")
+    .replace(/[()[\]{}]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function dispatchValueEvents(element: Element): void {
