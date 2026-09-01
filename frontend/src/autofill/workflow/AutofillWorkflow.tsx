@@ -25,17 +25,13 @@ import type { ProfileRepository } from "../../profile/profile-repository";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 
 type Stage =
-  | "analyzing"
-  | "preparation-review"
-  | "review"
-  | "confirmation"
-  | "result"
-  | "exception";
+  "analyzing" | "preparation-review" | "review" | "result" | "exception";
 
 interface PreparationItem {
   plan: PreparationPlan;
   actionLabel: string;
-  approved: boolean;
+  runnable: boolean;
+  unavailableReason?: string;
   localItemCount?: number;
   currentGroupCount?: number;
   requiredAdditions?: number;
@@ -222,10 +218,21 @@ function preparationItem(
 ): PreparationItem {
   const localCount = localItemCount(plan, snapshot, profile);
   if (plan.command !== "ADD_REPEATABLE_GROUP") {
+    const value =
+      plan.command === "SELECT_OPTION_TO_REVEAL"
+        ? resolveProfileFieldValue(profile, plan.profileFieldKey)
+        : undefined;
+    const runnable = value?.status === undefined || value.status === "resolved";
     return {
       plan,
       actionLabel: actionLabel(plan, snapshot),
-      approved: false,
+      runnable,
+      ...(runnable
+        ? {}
+        : {
+            unavailableReason:
+              "저장된 프로필 값이 없어 직접 선택이 필요합니다.",
+          }),
       localItemCount: localCount,
     };
   }
@@ -245,7 +252,7 @@ function preparationItem(
   return {
     plan,
     actionLabel: actionLabel(plan, snapshot),
-    approved: false,
+    runnable: true,
     localItemCount: localCount,
     currentGroupCount,
     ...(requiredAdditions !== undefined ? { requiredAdditions } : {}),
@@ -458,19 +465,24 @@ export function AutofillWorkflow({
 
   const executePreparation = async () => {
     if (!profile || !preparationSnapshot) return;
-    const approvedPlans = preparationItems.filter((item) => item.approved);
-    if (approvedPlans.length === 0) return;
+    const runnablePlans = preparationItems
+      .filter((item) => item.runnable)
+      .map((item) => ({ ...item, approved: true }));
     console.info(
       `[CareerForm] preparation execution ${JSON.stringify({
-        approvedPlanCount: approvedPlans.length,
-        skippedPlanCount: preparationItems.length - approvedPlans.length,
-        approvedActionCandidateIds: approvedPlans.map(
+        approvedPlanCount: runnablePlans.length,
+        skippedPlanCount: preparationItems.length - runnablePlans.length,
+        approvedActionCandidateIds: runnablePlans.map(
           (item) => item.plan.actionCandidateId,
         ),
       })}`,
     );
+    if (runnablePlans.length === 0) {
+      await analyzeFields(profile);
+      return;
+    }
     const result = await executeApprovedPreparationPlans({
-      approvedPlans,
+      approvedPlans: runnablePlans,
       initialSnapshot: {
         registry: preparationSnapshot.registry,
         isTargetSectionVisible: (targetSectionId) =>
@@ -492,7 +504,10 @@ export function AutofillWorkflow({
         snapshot.countRepeatableGroups?.(plan) ?? -1,
       selectProfileOption: (plan, snapshot) => {
         const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
-        if (lookup.status !== "ready" || !(lookup.handle.element instanceof HTMLSelectElement)) {
+        if (
+          lookup.status !== "ready" ||
+          !(lookup.handle.element instanceof HTMLSelectElement)
+        ) {
           return false;
         }
         const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
@@ -502,7 +517,9 @@ export function AutofillWorkflow({
         );
         if (!option) return false;
         lookup.handle.element.value = option.value;
-        lookup.handle.element.dispatchEvent(new Event("change", { bubbles: true }));
+        lookup.handle.element.dispatchEvent(
+          new Event("change", { bubbles: true }),
+        );
         return true;
       },
     });
@@ -586,47 +603,43 @@ export function AutofillWorkflow({
   }
 
   if (stage === "preparation-review") {
+    const runnableItems = preparationItems.filter((item) => item.runnable);
+    const additions = preparationItems.reduce(
+      (count, item) => count + (item.requiredAdditions ?? 0),
+      0,
+    );
     return (
       <div className={styles.screen}>
-        <Header step="2 / 4" title="지원서 준비 동작 검토" />
+        <Header step="1 / 3" title="입력 항목 준비" />
         <p className={styles.lead}>
-          아래 동작은 필드 분석을 위해서만 실행되며, 승인 전에는 실행하지
-          않습니다.
+          필요한 입력 행을 준비한 뒤, 입력할 값만 간단히 확인합니다.
         </p>
-        {preparationItems.map((item, index) => (
-          <label
-            className={styles.reviewItem}
-            key={item.plan.actionCandidateId}
-          >
-            <input
-              type="checkbox"
-              checked={item.approved}
-              onChange={() =>
-                setPreparationItems((items) =>
-                  items.map((candidate, candidateIndex) =>
-                    candidateIndex === index
-                      ? { ...candidate, approved: !candidate.approved }
-                      : candidate,
-                  ),
-                )
-              }
-            />
-            <span className={styles.reviewCopy}>
-              <strong>{item.actionLabel}</strong>
-              <small>
-                {item.plan.command === "REVEAL_SECTION"
-                  ? "숨은 영역 펼치기"
-                  : "반복 입력 영역 추가"}
-              </small>
-              <small>지원서 저장·이동·제출은 실행하지 않습니다.</small>
-              {item.requiredAdditions !== undefined && (
+        <section className={styles.preparationCard}>
+          <strong>{runnableItems.length}개 준비 동작</strong>
+          <span>
+            {additions > 0
+              ? `입력 행 ${additions}개를 추가합니다.`
+              : "현재 화면의 입력 행을 그대로 사용합니다."}
+          </span>
+          <small>현재 화면 기준 추가 필요 수: {additions}회</small>
+          <ul>
+            {preparationItems.map((item) => (
+              <li
+                data-runnable={item.runnable}
+                key={item.plan.actionCandidateId}
+              >
+                <span>{item.actionLabel}</span>
                 <small>
-                  현재 화면 기준 추가 필요 수: {item.requiredAdditions}회
+                  {item.runnable
+                    ? item.requiredAdditions && item.requiredAdditions > 0
+                      ? `${item.requiredAdditions}행 추가`
+                      : "준비됨"
+                    : item.unavailableReason}
                 </small>
-              )}
-            </span>
-          </label>
-        ))}
+              </li>
+            ))}
+          </ul>
+        </section>
         {warnings.map((warning) => (
           <aside className={styles.safety} key={warning}>
             분석 경고:{" "}
@@ -638,20 +651,24 @@ export function AutofillWorkflow({
         <button
           className={styles.primary}
           type="button"
-          disabled={!preparationItems.some((item) => item.approved)}
           onClick={() => void executePreparation()}
         >
-          승인한 준비 동작 실행
+          준비하고 계속
         </button>
       </div>
     );
   }
 
   if (stage === "review") {
+    const selectedCount = reviewItems.filter(
+      (item) => item.selected && !item.disabled,
+    ).length;
     return (
       <div className={styles.screen}>
-        <Header step="2 / 4" title="입력 예정 항목 검토" />
-        <p className={styles.lead}>선택한 항목만 최종 승인 뒤에 입력합니다.</p>
+        <Header step="2 / 3" title="입력 예정 항목 검토" />
+        <p className={styles.lead}>
+          일반 항목은 포함되어 있습니다. 예외 항목만 직접 결정해 주세요.
+        </p>
         {partial && (
           <aside className={styles.safety}>
             일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
@@ -682,22 +699,12 @@ export function AutofillWorkflow({
                 </div>
                 <div className={styles.reviewList}>
                   {group.items.map((item) => (
-                    <label
+                    <article
                       className={styles.reviewItem}
+                      data-included={item.selected}
                       data-status={item.status}
                       key={item.candidateId}
                     >
-                      <input
-                        type="checkbox"
-                        checked={item.selected}
-                        disabled={item.disabled}
-                        aria-label={
-                          item.status === "conflict"
-                            ? `${item.fieldLabel} 기존 값 덮어쓰기 승인`
-                            : `${item.fieldLabel} 입력 승인`
-                        }
-                        onChange={() => toggleReviewItem(item.candidateId)}
-                      />
                       <span className={styles.reviewCopy}>
                         <strong>{item.fieldLabel}</strong>
                         <span>현재 입력값: {currentPreview(item)}</span>
@@ -713,6 +720,7 @@ export function AutofillWorkflow({
                       <em>{statusLabel(item)}</em>
                       {item.status === "sensitive" && !item.revealed && (
                         <button
+                          className={styles.reviewAction}
                           type="button"
                           aria-label={`${item.fieldLabel} 값 보기`}
                           onClick={() => revealSensitiveItem(item.candidateId)}
@@ -720,7 +728,19 @@ export function AutofillWorkflow({
                           값 보기
                         </button>
                       )}
-                    </label>
+                      {item.status !== "available" &&
+                        !item.disabled &&
+                        (item.status !== "sensitive" || item.revealed) && (
+                          <button
+                            className={styles.reviewAction}
+                            type="button"
+                            aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
+                            onClick={() => toggleReviewItem(item.candidateId)}
+                          >
+                            {item.selected ? "제외하기" : "포함하기"}
+                          </button>
+                        )}
+                    </article>
                   ))}
                 </div>
               </section>
@@ -730,42 +750,11 @@ export function AutofillWorkflow({
         <button
           className={styles.primary}
           type="button"
-          onClick={() => setStage("confirmation")}
+          disabled={selectedCount === 0}
+          onClick={executeWrites}
         >
-          선택한 항목 확인
+          {selectedCount}개 항목 기입하기
         </button>
-      </div>
-    );
-  }
-
-  if (stage === "confirmation") {
-    const selectedCount = reviewItems.filter(
-      (item) => item.selected && !item.disabled,
-    ).length;
-    return (
-      <div className={styles.screen}>
-        <Header step="3 / 4" title="최종 승인" />
-        <div className={styles.countCard}>
-          <strong>{selectedCount}개 항목</strong>
-          <span>선택한 항목만 지원서에 반영합니다.</span>
-        </div>
-        <ul className={styles.boundaries}>
-          <li>지원서 저장을 실행하지 않음</li>
-          <li>다음 단계와 미리보기로 이동하지 않음</li>
-          <li>최종 제출을 실행하지 않음</li>
-        </ul>
-        <div className={styles.actions}>
-          <button type="button" onClick={() => setStage("review")}>
-            검토로 돌아가기
-          </button>
-          <button
-            className={styles.primary}
-            type="button"
-            onClick={executeWrites}
-          >
-            기입하기
-          </button>
-        </div>
       </div>
     );
   }
