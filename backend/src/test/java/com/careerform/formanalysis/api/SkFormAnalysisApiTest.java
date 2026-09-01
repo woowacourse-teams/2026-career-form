@@ -52,15 +52,19 @@ class SkFormAnalysisApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mode").value("ADAPTER"))
             .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
-            .andExpect(jsonPath("$.preparationPlans.length()").value(3))
+            .andExpect(jsonPath("$.preparationPlans.length()").value(5))
             .andExpect(jsonPath("$.preparationPlans[0].command")
-                .value("ADD_REPEATABLE_GROUP"))
+                .value("SELECT_OPTION_TO_REVEAL"))
             .andExpect(jsonPath("$.preparationPlans[0].expectedEffect")
-                .value("GROUP_COUNT_INCREMENT"))
+                .value("TARGET_FIELDS_VISIBLE"))
             .andExpect(jsonPath("$.preparationPlans[1].command")
                 .value("ADD_REPEATABLE_GROUP"))
             .andExpect(jsonPath("$.preparationPlans[1].expectedEffect")
                 .value("GROUP_COUNT_INCREMENT"))
+            .andExpect(jsonPath("$.preparationPlans[4].actionCandidateId")
+                .value("action-add-language-test"))
+            .andExpect(jsonPath("$.preparationPlans[4].command")
+                .value("ADD_REPEATABLE_GROUP"))
             .andExpect(content().string(not(containsString("executionCount"))));
 
         mockMvc.perform(post("/api/v1/fields/analyze")
@@ -119,13 +123,17 @@ class SkFormAnalysisApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mode").value("ADAPTER"))
             .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
-            .andExpect(jsonPath("$.preparationPlans.length()").value(3))
+            .andExpect(jsonPath("$.preparationPlans.length()").value(5))
             .andExpect(jsonPath("$.preparationPlans[0].actionCandidateId")
-                .value("action-add-university"))
+                .value("action-select-military-status"))
             .andExpect(jsonPath("$.preparationPlans[1].actionCandidateId")
-                .value("action-add-career"))
+                .value("action-add-university"))
             .andExpect(jsonPath("$.preparationPlans[2].actionCandidateId")
-                .value("action-add-certificate"));
+                .value("action-add-career"))
+            .andExpect(jsonPath("$.preparationPlans[3].actionCandidateId")
+                .value("action-add-certificate"))
+            .andExpect(jsonPath("$.preparationPlans[4].actionCandidateId")
+                .value("action-add-language-test"));
     }
 
     @Test

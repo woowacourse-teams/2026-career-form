@@ -28,14 +28,21 @@ public final class CompanyFormPolicyFixture {
             3,
             new PreparationFingerprint(
                 Set.of(
+                    "section-1",
                     "section-3",
                     "section-4",
                     "section-6"
                 ),
                 List.of(
+                    new ActionStructure(
+                        "prsMilitarySvcStatus",
+                        PreparationAnalysisRequest.FormElement.SELECT,
+                        PreparationAnalysisRequest.FormControl.SELECT
+                    ),
                     actionStructure("대학 학력 정보 추가"),
                     actionStructure("btnAddCareer"),
-                    actionStructure("btnAddCert")
+                    actionStructure("btnAddCert"),
+                    actionStructure("btnAddLangExam")
                 )
             ),
             new FieldsFingerprint(
@@ -52,9 +59,16 @@ public final class CompanyFormPolicyFixture {
                 )
             ),
             List.of(
+                new ActionRule(
+                    "prsMilitarySvcStatus",
+                    ActionKind.SELECT_OPTION,
+                    "section-1",
+                    "military.military.militaryStatus"
+                ),
                 addRule("대학 학력 정보 추가"),
                 addRule("btnAddCareer"),
-                addRule("btnAddCert")
+                addRule("btnAddCert"),
+                addRule("btnAddLangExam")
             ),
             List.of(
                 derivedTextRule("prsApplicantName", DerivedRecipe.KOREAN_FULL_NAME),
