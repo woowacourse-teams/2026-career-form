@@ -201,7 +201,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "certifications.certificate.registrationNo"
                 ),
                 textRule("eduEducationName", "education.university.schoolName"),
-                selectRule("eduEducationType", "education.university.degreeLevel"),
+                derivedSelectRule("eduEducationType", DerivedRecipe.EDUCATION_TYPE_AND_DEGREE),
                 selectRule(
                     "eduEducationStatus",
                     "education.university.completionStatus"
@@ -316,6 +316,15 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             FieldsAnalysisRequest.FormElement.SELECT,
             FieldsAnalysisRequest.FormControl.SELECT,
             profileFieldKey
+        );
+    }
+
+    private static FieldRule derivedSelectRule(String name, DerivedRecipe recipe) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.SELECT,
+            FieldsAnalysisRequest.FormControl.SELECT,
+            new DerivedBinding(recipe)
         );
     }
 

@@ -270,6 +270,30 @@ function statusLabel(item: ReviewPlanItem): string {
   return labels[item.status];
 }
 
+function profileFieldLabel(profileFieldKey?: string): string {
+  if (!profileFieldKey) return "프로필 정보";
+  const [categoryId, sectionId, fieldId] = profileFieldKey.split(".");
+  const category = PROFILE_CATEGORIES.find(
+    (candidate) => candidate.id === categoryId,
+  );
+  const section = category?.sections.find(
+    (candidate) => candidate.id === sectionId,
+  );
+  const field = section?.fields.find((candidate) => candidate.id === fieldId);
+  return field && section ? `${section.label} · ${field.label}` : "프로필 정보";
+}
+
+function userFacingReason(reason?: string): string | undefined {
+  if (!reason) return undefined;
+  if (reason.includes("네이티브") || reason.includes("안전하게 입력")) {
+    return "이 입력란은 자동으로 입력할 수 없어 직접 확인이 필요합니다.";
+  }
+  if (reason.includes("지원서에 기존 값")) {
+    return "지원서에 기존 값이 있어 자동으로 덮어쓰지 않았습니다.";
+  }
+  return reason;
+}
+
 function safeErrorTitle(error: unknown): string {
   return error instanceof AnalysisServiceError
     ? error.message
@@ -338,6 +362,8 @@ export function AutofillWorkflow({
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
+  const [autoWritePending, setAutoWritePending] = useState(false);
+  const [autoPreparationPending, setAutoPreparationPending] = useState(false);
 
   const analyzeFields = async (loadedProfile: Profile) => {
     const snapshot = collectFieldsSnapshot(pageDocument);
@@ -393,6 +419,7 @@ export function AutofillWorkflow({
     setReviewItems(plan.items);
     setPartial(plan.status === "partial");
     setWarnings(analysis.warningCodes ?? []);
+    setAutoWritePending(true);
     setStage("review");
   };
 
@@ -450,7 +477,8 @@ export function AutofillWorkflow({
           ),
         );
         setWarnings(analysis.warningCodes ?? []);
-        setStage("preparation-review");
+        setStage("analyzing");
+        setAutoPreparationPending(true);
       } catch (error) {
         if (!active) return;
         setExceptionTitle(safeErrorTitle(error));
@@ -544,6 +572,12 @@ export function AutofillWorkflow({
     }
   };
 
+  useEffect(() => {
+    if (!autoPreparationPending || !profile || !preparationSnapshot) return;
+    setAutoPreparationPending(false);
+    void executePreparation();
+  }, [autoPreparationPending, preparationSnapshot, profile]);
+
   const toggleReviewItem = (candidateId: string) => {
     setReviewItems((items) =>
       items.map((item) =>
@@ -581,6 +615,26 @@ export function AutofillWorkflow({
     setStage("result");
   };
 
+  useEffect(() => {
+    if (!autoWritePending || stage !== "review" || !fieldsSnapshot) return;
+    setAutoWritePending(false);
+    const autoItems = reviewItems.map((item) =>
+      item.disabled ? item : { ...item, selected: true },
+    );
+    setResults(
+      executeApprovedWrites({
+        items: autoItems,
+        approvedCandidateIds: new Set(
+          autoItems
+            .filter((item) => !item.disabled)
+            .map((item) => item.candidateId),
+        ),
+        registry: fieldsSnapshot.registry,
+      }),
+    );
+    setStage("result");
+  }, [autoWritePending, fieldsSnapshot, reviewItems, stage]);
+
   if (stage === "analyzing") {
     return (
       <div className={styles.screen}>
@@ -608,38 +662,27 @@ export function AutofillWorkflow({
       (count, item) => count + (item.requiredAdditions ?? 0),
       0,
     );
+    const unavailableCount = preparationItems.length - runnableItems.length;
     return (
       <div className={styles.screen}>
         <Header step="1 / 3" title="입력 항목 준비" />
         <p className={styles.lead}>
-          필요한 입력 행을 준비한 뒤, 입력할 값만 간단히 확인합니다.
+          필요한 입력칸을 준비한 뒤 자동 기입할 항목만 확인합니다.
         </p>
-        <section className={styles.preparationCard}>
-          <strong>{runnableItems.length}개 준비 동작</strong>
+        <div className={styles.countCard}>
+          <strong>{runnableItems.length}개 준비</strong>
           <span>
             {additions > 0
               ? `입력 행 ${additions}개를 추가합니다.`
               : "현재 화면의 입력 행을 그대로 사용합니다."}
           </span>
-          <small>현재 화면 기준 추가 필요 수: {additions}회</small>
-          <ul>
-            {preparationItems.map((item) => (
-              <li
-                data-runnable={item.runnable}
-                key={item.plan.actionCandidateId}
-              >
-                <span>{item.actionLabel}</span>
-                <small>
-                  {item.runnable
-                    ? item.requiredAdditions && item.requiredAdditions > 0
-                      ? `${item.requiredAdditions}행 추가`
-                      : "준비됨"
-                    : item.unavailableReason}
-                </small>
-              </li>
-            ))}
-          </ul>
-        </section>
+          {unavailableCount > 0 && (
+            <small>
+              {unavailableCount}개 항목은 저장된 값이 없어 직접 선택이
+              필요합니다.
+            </small>
+          )}
+        </div>
         {warnings.map((warning) => (
           <aside className={styles.safety} key={warning}>
             분석 경고:{" "}
@@ -663,12 +706,17 @@ export function AutofillWorkflow({
     const selectedCount = reviewItems.filter(
       (item) => item.selected && !item.disabled,
     ).length;
+    const exceptionalItems = reviewItemsForDisplay(reviewItems).filter(
+      (item) => item.status !== "available",
+    );
     return (
       <div className={styles.screen}>
-        <Header step="2 / 3" title="입력 예정 항목 검토" />
-        <p className={styles.lead}>
-          일반 항목은 포함되어 있습니다. 예외 항목만 직접 결정해 주세요.
-        </p>
+        <Header step="2 / 3" title="자동 기입 확인" />
+        <p className={styles.lead}>일반 항목은 자동으로 포함되었습니다.</p>
+        <div className={styles.countCard}>
+          <strong>{selectedCount}개 항목</strong>
+          <span>이 버튼을 누르면 선택된 항목만 현재 지원서에 기입합니다.</span>
+        </div>
         {partial && (
           <aside className={styles.safety}>
             일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
@@ -682,71 +730,61 @@ export function AutofillWorkflow({
               : "LLM 분석 일부 미완료"}
           </aside>
         ))}
-        <div className={styles.reviewGroups}>
-          {reviewGroupsForDisplay(reviewItems).map((group) => {
-            const headingId = `review-group-${group.id}`;
-            return (
-              <section
-                className={styles.reviewGroup}
-                aria-labelledby={headingId}
-                key={group.id}
+        {exceptionalItems.length > 0 && (
+          <section
+            className={styles.exceptionList}
+            aria-label="확인 필요한 항목"
+          >
+            <h3>확인 필요한 항목 {exceptionalItems.length}개</h3>
+            {exceptionalItems.map((item) => (
+              <article
+                className={styles.reviewItem}
+                data-included={item.selected}
+                data-status={item.status}
+                key={item.candidateId}
               >
-                <div className={styles.reviewGroupHeader}>
-                  <h3 id={headingId}>
-                    {group.label} <span>{group.items.length}개</span>
-                  </h3>
-                  <p>{group.description}</p>
-                </div>
-                <div className={styles.reviewList}>
-                  {group.items.map((item) => (
-                    <article
-                      className={styles.reviewItem}
-                      data-included={item.selected}
-                      data-status={item.status}
-                      key={item.candidateId}
+                <span className={styles.reviewCopy}>
+                  <strong>{item.fieldLabel}</strong>
+                  <span>현재 입력값: {currentPreview(item)}</span>
+                  <span>입력 예정값: {item.previewValue}</span>
+                  <small>{item.reason}</small>
+                  {mappingLabel(item) && (
+                    <small>매핑 근거: {mappingLabel(item)}</small>
+                  )}
+                  {interactionLabel(item) && (
+                    <small>입력 상태: {interactionLabel(item)}</small>
+                  )}
+                </span>
+                <em>{statusLabel(item)}</em>
+                {item.status === "sensitive" && !item.revealed && (
+                  <button
+                    className={styles.reviewAction}
+                    type="button"
+                    aria-label={`${item.fieldLabel} 값 보기`}
+                    onClick={() => revealSensitiveItem(item.candidateId)}
+                  >
+                    값 보기
+                  </button>
+                )}
+                {item.status !== "available" &&
+                  !item.disabled &&
+                  (item.status !== "sensitive" || item.revealed) && (
+                    <button
+                      className={styles.reviewAction}
+                      type="button"
+                      aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
+                      onClick={() => toggleReviewItem(item.candidateId)}
                     >
-                      <span className={styles.reviewCopy}>
-                        <strong>{item.fieldLabel}</strong>
-                        <span>현재 입력값: {currentPreview(item)}</span>
-                        <span>입력 예정값: {item.previewValue}</span>
-                        <small>{item.reason}</small>
-                        {mappingLabel(item) && (
-                          <small>매핑 근거: {mappingLabel(item)}</small>
-                        )}
-                        {interactionLabel(item) && (
-                          <small>입력 상태: {interactionLabel(item)}</small>
-                        )}
-                      </span>
-                      <em>{statusLabel(item)}</em>
-                      {item.status === "sensitive" && !item.revealed && (
-                        <button
-                          className={styles.reviewAction}
-                          type="button"
-                          aria-label={`${item.fieldLabel} 값 보기`}
-                          onClick={() => revealSensitiveItem(item.candidateId)}
-                        >
-                          값 보기
-                        </button>
-                      )}
-                      {item.status !== "available" &&
-                        !item.disabled &&
-                        (item.status !== "sensitive" || item.revealed) && (
-                          <button
-                            className={styles.reviewAction}
-                            type="button"
-                            aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
-                            onClick={() => toggleReviewItem(item.candidateId)}
-                          >
-                            {item.selected ? "제외하기" : "포함하기"}
-                          </button>
-                        )}
-                    </article>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+                      {item.selected ? "제외하기" : "포함하기"}
+                    </button>
+                  )}
+              </article>
+            ))}
+          </section>
+        )}
+        <p className={styles.safety}>
+          지원서 저장·이동·제출은 실행하지 않습니다.
+        </p>
         <button
           className={styles.primary}
           type="button"
@@ -766,6 +804,9 @@ export function AutofillWorkflow({
     const successful = visibleResults.filter(
       (result) => result.status === "written",
     ).length;
+    const manualResults = visibleResults.filter(
+      (result) => result.status !== "written",
+    );
     return (
       <div className={styles.screen}>
         <Header step="완료" title="기입 결과" />
@@ -779,25 +820,33 @@ export function AutofillWorkflow({
             <span>직접 확인 필요</span>
           </div>
         </div>
-        <p className={styles.safety}>지원서의 실제 값을 직접 확인해 주세요.</p>
-        <ul className={styles.boundaries}>
-          {visibleResults.map((result) => {
-            const item = reviewItems.find(
-              (candidate) => candidate.candidateId === result.candidateId,
-            );
-            const reason =
-              result.status === "written" ? item?.reason : result.reason;
-            return (
-              <li key={result.candidateId}>
-                <strong>
-                  {item?.fieldLabel ?? "지원서 필드"}:{" "}
-                  {resultStatusLabel(result)}
-                </strong>
-                {reason && <span>{reason}</span>}
-              </li>
-            );
-          })}
-        </ul>
+        <p className={styles.safety}>
+          성공한 항목은 지원서에서 한 번만 확인해 주세요. 저장과 제출은 직접
+          진행합니다.
+        </p>
+        {manualResults.length > 0 && <h3>확인 필요</h3>}
+        {manualResults.length > 0 && (
+          <ul className={`${styles.boundaries} ${styles.resultList}`}>
+            {manualResults.map((result) => {
+              const item = reviewItems.find(
+                (candidate) => candidate.candidateId === result.candidateId,
+              );
+              const reason = userFacingReason(result.reason);
+              return (
+                <li className={styles.resultItem} key={result.candidateId}>
+                  <div className={styles.resultItemHeader}>
+                    <strong>{profileFieldLabel(item?.profileFieldKey)}</strong>
+                    <strong>{resultStatusLabel(result)}</strong>
+                  </div>
+                  <p className={styles.resultValue}>
+                    {item?.previewValue ?? "입력값 확인 필요"}
+                  </p>
+                  {reason && <p>{reason}</p>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
         <button className={styles.primary} type="button" onClick={onExit}>
           수동 복사로 돌아가기
         </button>

@@ -117,7 +117,7 @@ describe("AutofillOverlay", () => {
       />,
     );
 
-    expect(await screen.findByText("Add certification")).toBeInTheDocument();
+    expect(await screen.findByText("1개 준비")).toBeInTheDocument();
   });
 
   it("summarizes preparation actions behind one continue button", async () => {
@@ -152,7 +152,7 @@ describe("AutofillOverlay", () => {
       />,
     );
 
-    expect(await screen.findByText("2개 준비 동작")).toBeInTheDocument();
+    expect(await screen.findByText("2개 준비")).toBeInTheDocument();
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
     expect(
       screen.getByRole("button", { name: "준비하고 계속" }),
@@ -222,9 +222,9 @@ describe("AutofillOverlay", () => {
 
     await waitFor(() => expect(targetSection.hidden).toBe(false));
     expect(
-      await screen.findByRole("heading", { name: "입력 예정 항목 검토" }),
+      await screen.findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
-    expect(pageDocument.querySelector("input")?.value).toBe("");
+    expect(pageDocument.querySelector("input")?.value).toBe("me@example.test");
   });
 
   it("executes all safe preparation actions with one continue action", async () => {
@@ -283,7 +283,7 @@ describe("AutofillOverlay", () => {
       expect(sections[1]!.querySelector("div")!.hidden).toBe(false);
     });
     expect(
-      await screen.findByRole("heading", { name: "입력 예정 항목 검토" }),
+      await screen.findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
   });
 
@@ -304,20 +304,38 @@ describe("AutofillOverlay", () => {
       name: "지원서 자동 기입",
     });
     expect(
-      await within(dialog).findByRole("heading", {
-        name: "입력 예정 항목 검토",
-      }),
+      await within(dialog).findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
-    expect(pageInput.value).toBe("");
-
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "1개 항목 기입하기" }),
-    );
-
     expect(pageInput.value).toBe("me@example.test");
     expect(
       await within(dialog).findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
+  });
+
+  it("fills every available field before showing the grouped result", async () => {
+    const pageDocument = document.implementation.createHTMLDocument("지원서");
+    pageDocument.body.innerHTML = `
+      <section data-section="contact"><h2>연락처</h2><label>이메일 <input type="email" /></label></section>
+    `;
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={createApiClient()}
+        repository={createRepository()}
+        pageDocument={pageDocument}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument();
+    expect(pageDocument.querySelector("input")?.value).toBe("me@example.test");
+    expect(
+      screen.getByText(
+        "성공한 항목은 지원서에서 한 번만 확인해 주세요. 저장과 제출은 직접 진행합니다.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("직접 확인 필요")).not.toBeInTheDocument();
   });
 
   it("shows the target, existing local value, planned value, and result reason for a conflict", async () => {
@@ -340,10 +358,12 @@ describe("AutofillOverlay", () => {
       screen.getByText("입력 예정값: me@example.test"),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "이메일 포함하기" }));
+    await screen.findByRole("button", { name: "이메일 제외하기" });
     fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
 
     expect(pageInput.value).toBe("me@example.test");
-    expect(await screen.findByText("이메일: 기입 성공")).toBeInTheDocument();
+    expect(await screen.findByText("기입 성공")).toBeInTheDocument();
+    expect(screen.getByText("연락처와 주소 · 이메일주소")).toBeInTheDocument();
     expect(
       screen.getByText("지원서에 기존 값이 있습니다."),
     ).toBeInTheDocument();
@@ -413,10 +433,8 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByText("분석 경고: LLM 분석 일부 미완료"),
+      await screen.findByRole("heading", { name: "자동 기입 확인" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("매핑 근거: LLM 제안")).toBeInTheDocument();
-    expect(screen.getByText("입력 상태: 입력 준비됨")).toBeInTheDocument();
   });
 
   it("shows available fields first and omits unavailable fields", async () => {
@@ -491,22 +509,14 @@ describe("AutofillOverlay", () => {
       />,
     );
 
-    const availableGroup = await screen.findByRole("region", {
-      name: /^입력 가능/,
-    });
-    const reviewGroup = screen.getByRole("region", {
-      name: /^확인 필요/,
+    const reviewGroup = await screen.findByRole("region", {
+      name: "확인 필요한 항목",
     });
     expect(
-      within(availableGroup).getByRole("heading", { name: "입력 가능 1개" }),
+      within(reviewGroup).getByRole("heading", {
+        name: "확인 필요한 항목 2개",
+      }),
     ).toBeInTheDocument();
-    expect(
-      within(reviewGroup).getByRole("heading", { name: "확인 필요 2개" }),
-    ).toBeInTheDocument();
-    expect(
-      within(availableGroup).getByRole("article").querySelector("strong")
-        ?.textContent,
-    ).toBe("사용 가능 필드");
     expect(
       within(reviewGroup)
         .getAllByRole("article")
@@ -582,9 +592,7 @@ describe("AutofillOverlay", () => {
       />,
     );
 
-    await screen.findByRole("button", { name: "1개 항목 기입하기" });
-    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
+    await screen.findByRole("heading", { name: "기입 결과" });
 
     expect(
       screen.queryByText("이메일: 승인하지 않아 건너뜀"),
@@ -624,7 +632,7 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByText("현재 화면 기준 추가 필요 수: 0회"),
+      await screen.findByText("현재 화면의 입력 행을 그대로 사용합니다."),
     ).toBeInTheDocument();
   });
 
@@ -689,12 +697,12 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByText("현재 화면 기준 추가 필요 수: 2회"),
+      await screen.findByText("입력 행 2개를 추가합니다."),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "준비하고 계속" }));
 
     expect(
-      await screen.findByRole("heading", { name: "입력 예정 항목 검토" }),
+      await screen.findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
     expect(clicks).toBe(2);
     expect(
@@ -749,8 +757,9 @@ describe("AutofillOverlay", () => {
     );
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getAllByText("1행 추가")).toHaveLength(2);
-    expect(within(dialog).getByText("준비됨")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("입력 행 2개를 추가합니다."),
+    ).toBeInTheDocument();
   });
 
   it("matches certification categories by core words in section labels", async () => {
@@ -796,7 +805,7 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByText("현재 화면 기준 추가 필요 수: 2회"),
+      await screen.findByText("입력 행 2개를 추가합니다."),
     ).toBeInTheDocument();
   });
 
@@ -850,7 +859,7 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByText("현재 화면 기준 추가 필요 수: 2회"),
+      await screen.findByText("입력 행 2개를 추가합니다."),
     ).toBeInTheDocument();
   });
 
@@ -914,7 +923,7 @@ describe("AutofillOverlay", () => {
 
     await waitFor(() => expect(targetSection.hidden).toBe(false));
     expect(
-      await screen.findByRole("heading", { name: "입력 예정 항목 검토" }),
+      await screen.findByRole("heading", { name: "자동 기입 확인" }),
     ).toBeInTheDocument();
   });
 

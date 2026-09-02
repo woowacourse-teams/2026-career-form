@@ -111,7 +111,8 @@ export type WriteCommand =
 export type DerivedRecipe =
   | "KOREAN_FULL_NAME"
   | "ENGLISH_FULL_NAME_GIVEN_FIRST"
-  | "ENGLISH_FULL_NAME_FAMILY_FIRST";
+  | "ENGLISH_FULL_NAME_FAMILY_FIRST"
+  | "EDUCATION_TYPE_AND_DEGREE";
 
 export type ValueBinding =
   | { type: "DIRECT"; profileFieldKey: string }

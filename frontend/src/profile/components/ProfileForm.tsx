@@ -51,6 +51,19 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                 onChange={(event) => onChange(field.id, event.target.value)}
                 rows={4}
               />
+            ) : field.inputType === "select" ? (
+              <select
+                id={id}
+                value={values[field.id] ?? ""}
+                onChange={(event) => onChange(field.id, event.target.value)}
+              >
+                <option value="">선택하세요</option>
+                {field.options?.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             ) : (
               <input
                 id={id}
