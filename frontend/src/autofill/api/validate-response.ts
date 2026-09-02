@@ -265,6 +265,7 @@ function validateFieldAnalysis(
           "KOREAN_FULL_NAME",
           "ENGLISH_FULL_NAME_GIVEN_FIRST",
           "ENGLISH_FULL_NAME_FAMILY_FIRST",
+          "EDUCATION_TYPE_AND_DEGREE",
         ])
       ))
     ) {

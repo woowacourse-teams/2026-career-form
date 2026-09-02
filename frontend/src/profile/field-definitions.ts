@@ -1,11 +1,13 @@
 import type { ProfileCategoryId } from "./model";
 
-export type ProfileInputType = "date" | "email" | "tel" | "text" | "textarea";
+export type ProfileInputType =
+  "date" | "email" | "tel" | "text" | "textarea" | "select";
 
 export interface ProfileFieldDefinition {
   id: string;
   label: string;
   inputType: ProfileInputType;
+  options?: readonly string[];
 }
 
 export interface ProfileSectionDefinition {
@@ -95,6 +97,12 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         id: "university",
         label: "대학교",
         fields: [
+          {
+            id: "schoolType",
+            label: "학교 유형",
+            inputType: "select",
+            options: ["전문대학", "대학교"],
+          },
           text("degreeLevel", "학위구분"),
           text("schoolName", "학교명"),
           date("startDate", "입학일"),

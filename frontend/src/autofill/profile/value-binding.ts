@@ -78,6 +78,17 @@ function derivedValue(
   profile: Profile,
   recipe: NonNullable<Extract<ValueBinding, { type: "DERIVED" }>["recipe"]>,
 ): ValueBindingResolution {
+  if (recipe === "EDUCATION_TYPE_AND_DEGREE") {
+    const entry = profile.education.find((candidate) => candidate.sectionId === "university");
+    const schoolType = entry?.values.schoolType;
+    const degree = entry?.values.degreeLevel;
+    if (!schoolType || !degree) return { status: "missing", sensitive: false };
+    return {
+      status: "resolved",
+      value: `${schoolType === "대학교" ? "대학" : schoolType}(${degree})`,
+      sensitive: false,
+    };
+  }
   const family = profile.personal.koreanFamilyName?.trim();
   const given = profile.personal.koreanGivenName?.trim();
   const englishFamily = profile.personal.englishFamilyName?.trim();
