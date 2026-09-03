@@ -26,7 +26,7 @@ class LocalCompanyFormPolicySeederTest {
     }
 
     @Test
-    @DisplayName("실제 SK Careers 구조로 교체한 정책 v1과 활성 버전 v1을 저장한다")
+    @DisplayName("SK 공통 구조 v12와 직무별 optional action 구조를 결정적으로 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
             FormAnalysisCompanyMongoRepository.class
@@ -50,15 +50,23 @@ class LocalCompanyFormPolicySeederTest {
         InOrder order = inOrder(policies, companies);
         order.verify(policies).save(policy.capture());
         order.verify(companies).save(company.capture());
-        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v2");
+        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v3");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
-        assertThat(policy.getValue().version()).isEqualTo(3);
+        assertThat(policy.getValue().version()).isEqualTo(12);
         assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
-            .containsExactlyInAnyOrder(
-                "section-1",
-                "section-3",
-                "section-4",
-                "section-6"
+            .containsExactly("section-1");
+        assertThat(policy.getValue().preparationFingerprint().requiredActions())
+            .extracting("structuralName")
+            .containsExactly("btnSearchAddress");
+        assertThat(policy.getValue().preparationFingerprint().optionalActions())
+            .extracting("structuralName")
+            .contains(
+                "prsMilitarySvcStatus",
+                "btnAddCareer",
+                "btnAddCert",
+                "btnAddLangExam",
+                "eduMajorDoubleYN",
+                "eduMajorSubYN"
             );
         assertThat(policy.getValue().actionRules())
             .extracting("structuralName")
@@ -69,11 +77,27 @@ class LocalCompanyFormPolicySeederTest {
                 "btnAddCert",
                 "btnAddLangExam"
             );
-        assertThat(policy.getValue().fieldsFingerprint().requiredSectionIds())
-            .containsExactlyInAnyOrder(
-                "section-1",
-                "section-3"
+        assertThat(policy.getValue().preparationFingerprint().optionalActions().stream()
+            .filter(action -> action.structuralName().equals("btnAddCert"))
+            .findFirst().orElseThrow().structuralNames())
+            .containsExactly("btnAddCert", "자격/면허 추가");
+        assertThat(policy.getValue().actionRules())
+            .extracting("structuralName", "expectedFieldNames")
+            .contains(
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsVeteranBenefitYN",
+                    java.util.List.of("prsVeteranBenefitNumber", "prsVeteranBenefitRelation")
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsDisabledYN",
+                    java.util.List.of("prsDisabledTypeDtl")
+                )
             );
+        assertThat(policy.getValue().fieldsFingerprint().requiredSectionIds())
+            .containsExactly("section-1");
+        assertThat(policy.getValue().fieldsFingerprint().requiredFields())
+            .extracting("structuralName")
+            .containsExactlyInAnyOrder("prsApplicantName", "prsEmail", "prsPhone");
         assertThat(policy.getValue().fieldRules())
             .extracting("structuralName", "profileFieldKey")
             .contains(
@@ -111,7 +135,7 @@ class LocalCompanyFormPolicySeederTest {
             "sk",
             "www.skcareers.com",
             java.util.List.of("/Application/Index/"),
-            3
+            12
         ));
     }
 }

@@ -76,8 +76,9 @@ function directValue(
 
 function derivedValue(
   profile: Profile,
-  recipe: NonNullable<Extract<ValueBinding, { type: "DERIVED" }>["recipe"]>,
+  binding: Extract<ValueBinding, { type: "DERIVED" }>,
 ): ValueBindingResolution {
+  const recipe = binding.recipe;
   if (recipe === "EDUCATION_TYPE_AND_DEGREE") {
     const entry = profile.education.find((candidate) => candidate.sectionId === "university");
     const schoolType = entry?.values.schoolType;
@@ -88,6 +89,20 @@ function derivedValue(
       value: `${schoolType === "대학교" ? "대학" : schoolType}(${degree})`,
       sensitive: false,
     };
+  }
+  if (recipe === "BOOLEAN_YN") {
+    if (!binding.profileFieldKey) return { status: "unknown", sensitive: false };
+    const source = directValue(profile, binding.profileFieldKey);
+    if (source.status !== "resolved") return source;
+    const normalized = source.value.normalize("NFKC").trim().toLowerCase();
+    const value = ["예", "대상", "해당", "있음", "y", "yes", "true"].includes(normalized)
+      ? binding.trueLabel ?? "Y"
+      : ["아니오", "비대상", "비해당", "없음", "n", "no", "false"].includes(normalized)
+        ? binding.falseLabel ?? "N"
+        : undefined;
+    return value
+      ? { status: "resolved", value, sensitive: source.sensitive }
+      : { status: "missing", sensitive: source.sensitive };
   }
   const family = profile.personal.koreanFamilyName?.trim();
   const given = profile.personal.koreanGivenName?.trim();
@@ -117,5 +132,5 @@ export function resolveValueBinding(
 ): ValueBindingResolution {
   return binding.type === "DIRECT"
     ? directValue(profile, binding.profileFieldKey, itemIndex)
-    : derivedValue(profile, binding.recipe);
+    : derivedValue(profile, binding);
 }

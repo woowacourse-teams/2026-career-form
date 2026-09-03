@@ -39,7 +39,7 @@ interface FieldsProps {
 function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
   return (
     <div className={styles.fieldGrid}>
-      {section.fields.map((field) => {
+      {section.fields.filter((field) => !field.visibleWhen || field.visibleWhen(values)).map((field) => {
         const id = `${idPrefix}-${field.id}`;
         return (
           <label className={styles.field} htmlFor={id} key={field.id}>
@@ -114,8 +114,17 @@ export function ProfileForm({
 
   const categoryId = category.id as RepeatedProfileCategoryId;
   const entries = profile[categoryId];
+  const topLevelEntry = entries.find((entry) => entry.sectionId === "university");
   return (
     <div className={styles.repeatedSection}>
+      {category.topLevelFields && topLevelEntry && (
+        <Fields
+          section={{ id: "top-level", label: category.label, fields: category.topLevelFields }}
+          values={topLevelEntry.values}
+          idPrefix={`${category.id}-top-level`}
+          onChange={(fieldId, value) => onUpdateEntry(categoryId, topLevelEntry.id, fieldId, value)}
+        />
+      )}
       <div className={styles.addActions}>
         {category.sections.map((section) => (
           <button

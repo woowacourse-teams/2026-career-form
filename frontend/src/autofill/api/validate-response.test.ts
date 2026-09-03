@@ -86,6 +86,18 @@ describe("analysis API response validation", () => {
     expect(result.preparationPlans).toHaveLength(1);
   });
 
+  it("accepts a registered-company policy-unavailable preparation block", () => {
+    const result = validatePreparationResponse(preparationRequest, {
+      snapshotId: "snapshot-a",
+      mode: "ADAPTER",
+      analysisStatus: "BLOCKED",
+      preparationPlans: [],
+      blockCode: "ADAPTER_POLICY_UNAVAILABLE",
+    });
+
+    expect(result.blockCode).toBe("ADAPTER_POLICY_UNAVAILABLE");
+  });
+
   it.each([
     ["a stale snapshot", { snapshotId: "stale-snapshot" }],
     [
@@ -205,6 +217,18 @@ describe("analysis API response validation", () => {
     ).toHaveLength(1);
   });
 
+  it("accepts a registered-company policy-unavailable field block", () => {
+    const result = validateFieldsResponse(fieldsRequest, {
+      snapshotId: "snapshot-b",
+      mode: "ADAPTER",
+      analysisStatus: "BLOCKED",
+      fields: [],
+      blockCode: "ADAPTER_POLICY_UNAVAILABLE",
+    });
+
+    expect(result.blockCode).toBe("ADAPTER_POLICY_UNAVAILABLE");
+  });
+
   it.each([
     [
       "an unknown field candidate",
@@ -321,6 +345,6 @@ describe("analysis API response validation", () => {
           override,
         ),
       ),
-    ).toThrow(new AnalysisContractError());
+    ).toThrow(AnalysisContractError);
   });
 });

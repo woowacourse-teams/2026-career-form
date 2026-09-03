@@ -92,6 +92,32 @@ describe("profile value resolution", () => {
     });
   });
 
+  it("resolves the education top-level latest education value from its university entry", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      education: [
+        {
+          id: "university-1",
+          sectionId: "university",
+          values: { latestEducationType: "대학(학사)" },
+        },
+      ],
+    };
+
+    expect(
+      resolveProfileFieldValue(
+        profile,
+        "education.university.latestEducationType",
+        0,
+      ),
+    ).toEqual({
+      status: "resolved",
+      value: "대학(학사)",
+      sensitive: false,
+      profileEntryId: "university-1",
+    });
+  });
+
   it("does not choose between repeated profile entries", () => {
     const profile: Profile = {
       ...createEmptyProfile(),

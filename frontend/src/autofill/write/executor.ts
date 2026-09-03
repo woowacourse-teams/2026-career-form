@@ -53,7 +53,8 @@ function matchingLocalOption(
   if (!desired || !handle.candidate.options) return undefined;
 
   const matches = handle.candidate.options.flatMap((option) => {
-    if (normalizeDisplayName(option.displayName) !== desired) return [];
+    const exact = normalizeDisplayName(option.displayName) === desired;
+    if (!exact) return [];
     const element = handle.optionElements.get(option.optionId);
     if (!element) return [];
     const displayName =

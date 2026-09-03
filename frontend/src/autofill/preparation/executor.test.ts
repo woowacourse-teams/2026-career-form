@@ -51,6 +51,149 @@ function snapshotFor(
 }
 
 describe("approved preparation plan executor", () => {
+  it("re-identifies a radio by its name when multiple options share the same label", async () => {
+    const veteran = document.createElement("input");
+    veteran.type = "radio";
+    veteran.name = "prsVeteranBenefitYN";
+    const disabled = document.createElement("input");
+    disabled.type = "radio";
+    disabled.name = "prsDisabledYN";
+    document.body.append(veteran, disabled);
+
+    const snapshotWith = (
+      candidateIds: readonly [string, string],
+      sectionId: string,
+    ) => {
+      const registry = new CandidateRegistry();
+      [veteran, disabled].forEach((element, index) => {
+        registry.registerAction({
+          kind: "action",
+          candidateId: candidateIds[index],
+          candidate: {
+            candidateId: candidateIds[index],
+            element: "input",
+            control: "radio",
+            visibility: "visible",
+            displayName: "대상",
+            domName: element.name,
+          },
+          element,
+          sectionId,
+          signature: createStructuralSignature([element]),
+        });
+      });
+      return { registry, isTargetSectionVisible: () => true };
+    };
+    const veteranPlan: PreparationPlan = {
+      actionCandidateId: "veteran-before-rerender",
+      command: "SELECT_OPTION_TO_REVEAL",
+      expectedEffect: "TARGET_FIELDS_VISIBLE",
+      profileFieldKey: "veteran.veteran.veteranStatus",
+      optionDisplayName: "대상",
+      targetSectionId: "section-1",
+    };
+    const disabledPlan: PreparationPlan = {
+      actionCandidateId: "disabled-before-rerender",
+      command: "SELECT_OPTION_TO_REVEAL",
+      expectedEffect: "TARGET_FIELDS_VISIBLE",
+      profileFieldKey: "disability.disability.disabilityStatus",
+      optionDisplayName: "대상",
+      targetSectionId: "section-1",
+    };
+    const selectedCandidateIds: string[] = [];
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [
+        { plan: veteranPlan, approved: true },
+        { plan: disabledPlan, approved: true },
+      ],
+      initialSnapshot: snapshotWith(
+        ["veteran-before-rerender", "disabled-before-rerender"],
+        "section-before-conditionals",
+      ),
+      refreshSnapshot: async () =>
+        snapshotWith(
+          ["veteran-after-rerender", "disabled-after-rerender"],
+          "section-after-conditionals",
+        ),
+      countRepeatableGroups: () => 0,
+      selectProfileOption: (selectedPlan) => {
+        selectedCandidateIds.push(selectedPlan.actionCandidateId);
+        return "selected";
+      },
+    });
+
+    expect(selectedCandidateIds).toEqual([
+      "veteran-before-rerender",
+      "disabled-after-rerender",
+    ]);
+    expect(result).toMatchObject({ status: "completed" });
+  });
+
+  it("waits for every policy field after selecting an option", async () => {
+    const action = document.createElement("button");
+    action.id = "action-radio";
+    document.body.append(action);
+    let waitedFor: string[] | undefined;
+    const plan: PreparationPlan = {
+      actionCandidateId: "action-radio",
+      command: "SELECT_OPTION_TO_REVEAL",
+      expectedEffect: "TARGET_FIELDS_VISIBLE",
+      profileFieldKey: "veteran.veteran.veteranStatus",
+      optionDisplayName: "대상",
+      expectedFieldNames: ["dependent-one", "dependent-two"],
+      targetSectionId: "section-repeatable",
+    };
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [{ plan, approved: true }],
+      initialSnapshot: snapshotFor(action),
+      refreshSnapshot: async () => snapshotFor(action),
+      countRepeatableGroups: () => 0,
+      selectProfileOption: () => "selected",
+      waitForExpectedFields: async (selectedPlan) => {
+        waitedFor =
+          "expectedFieldNames" in selectedPlan
+            ? selectedPlan.expectedFieldNames
+            : undefined;
+        return true;
+      },
+    });
+
+    expect(waitedFor).toEqual(["dependent-one", "dependent-two"]);
+    expect(result).toMatchObject({ status: "completed" });
+  });
+
+  it("continues after a verified selection lacks an optional expected field", async () => {
+    const action = document.createElement("button");
+    action.id = "action-radio";
+    document.body.append(action);
+    const plan: PreparationPlan = {
+      actionCandidateId: "action-radio",
+      command: "SELECT_OPTION_TO_REVEAL",
+      expectedEffect: "TARGET_FIELDS_VISIBLE",
+      profileFieldKey: "veteran.veteran.veteranStatus",
+      optionDisplayName: "대상",
+      expectedFieldNames: ["role-specific-field"],
+      targetSectionId: "section-repeatable",
+    };
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [{ plan, approved: true }],
+      initialSnapshot: snapshotFor(action),
+      refreshSnapshot: async () => snapshotFor(action),
+      countRepeatableGroups: () => 0,
+      selectProfileOption: () => "selected",
+      waitForExpectedFields: async () => false,
+    });
+
+    expect(result).toMatchObject({
+      status: "completed",
+      mayCollectFieldsSnapshot: true,
+      unavailableActionCandidateIds: ["action-radio"],
+    });
+  });
+
   it("leaves the DOM unchanged before the user approves a preparation plan", async () => {
     document.body.innerHTML = `
       <button id="action-reveal" type="button">추가 정보 열기</button>
@@ -514,6 +657,7 @@ describe("approved preparation plan executor", () => {
     expect(result).toMatchObject({
       status: "failed",
       reason: "action-not-reidentified",
+      failedActionCandidateId: "action-add",
       mayCollectFieldsSnapshot: false,
     });
   });

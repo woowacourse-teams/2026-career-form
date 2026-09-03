@@ -134,7 +134,9 @@ public record PreparationAnalysisRequest(
         @JsonProperty("custom")
         CUSTOM,
         @JsonProperty("select")
-        SELECT
+        SELECT,
+        @JsonProperty("radio")
+        RADIO
     }
 
     public enum Visibility {

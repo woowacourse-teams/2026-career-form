@@ -27,18 +27,15 @@ public final class CompanyFormPolicyFixture {
             "sk",
             3,
             new PreparationFingerprint(
-                Set.of(
-                    "section-1",
-                    "section-3",
-                    "section-4",
-                    "section-6"
-                ),
+                Set.of("section-1"),
                 List.of(
                     new ActionStructure(
                         "prsMilitarySvcStatus",
                         PreparationAnalysisRequest.FormElement.SELECT,
                         PreparationAnalysisRequest.FormControl.SELECT
-                    ),
+                    )
+                ),
+                List.of(
                     actionStructure("대학 학력 정보 추가"),
                     actionStructure("btnAddCareer"),
                     actionStructure("btnAddCert"),
@@ -46,16 +43,11 @@ public final class CompanyFormPolicyFixture {
                 )
             ),
             new FieldsFingerprint(
-                Set.of("section-1", "section-3"),
+                Set.of("section-1"),
                 List.of(
                     textStructure("prsApplicantName"),
                     textStructure("prsEmail"),
-                    textStructure("prsPhone"),
-                    textStructure("prsZipCode"),
-                    textStructure("prsAddress"),
-                    textStructure("prsAddressDtl"),
-                    textStructure("eduEducationName"),
-                    selectStructure("eduEducationStatus")
+                    textStructure("prsPhone")
                 )
             ),
             List.of(

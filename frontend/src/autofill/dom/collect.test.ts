@@ -250,6 +250,24 @@ describe("application form DOM collection", () => {
     expect(field.displayName).toHaveLength(120);
   });
 
+  it("caps preparation select options to the analysis API contract", () => {
+    document.body.innerHTML = `
+      <label for="job-role">직무 선택</label>
+      <select id="job-role" name="jobRole">
+        ${Array.from(
+          { length: 129 },
+          (_, index) => `<option>${`${index}-`.repeat(61)}</option>`,
+        ).join("")}
+      </select>
+    `;
+
+    const collected = collectPreparationSnapshot(document);
+    const action = collected.request.sections[0]!.actionCandidates[0]!;
+
+    expect(action.options).toHaveLength(128);
+    expect(action.options?.[0]?.displayName).toHaveLength(120);
+  });
+
   it("counts different repeatable groups independently within one section", () => {
     document.body.innerHTML = `
       <div class="apply-form-box education-root">

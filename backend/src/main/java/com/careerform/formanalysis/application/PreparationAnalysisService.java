@@ -215,13 +215,15 @@ public final class PreparationAnalysisService {
             return new PreparationAnalysisResponse.SelectOptionToRevealPlan(
                 select.candidateId(), Command.SELECT_OPTION_TO_REVEAL,
                 ExpectedEffect.TARGET_FIELDS_VISIBLE, select.profileFieldKey(),
-                select.targetSectionId());
+                select.optionDisplayName(),
+                select.targetSectionId(), select.expectedFieldNames());
         }
         ActionResolver.AddAction add = (ActionResolver.AddAction) result;
         return new AddRepeatableGroupPlan(
             add.candidateId(),
             Command.ADD_REPEATABLE_GROUP,
-            ExpectedEffect.GROUP_COUNT_INCREMENT
+            ExpectedEffect.GROUP_COUNT_INCREMENT,
+            add.expectedFieldNames()
         );
     }
 

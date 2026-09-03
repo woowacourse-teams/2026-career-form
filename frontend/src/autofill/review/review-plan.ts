@@ -84,7 +84,9 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
   const section = category?.sections.find(
     (candidate) => candidate.id === sectionId,
   );
-  const field = section?.fields.find((candidate) => candidate.id === fieldId);
+  const field =
+    section?.fields.find((candidate) => candidate.id === fieldId) ??
+    category?.topLevelFields?.find((candidate) => candidate.id === fieldId);
   if (!category || !section || !field || field.id === "evidenceDocumentPath") {
     return undefined;
   }
@@ -236,12 +238,15 @@ function itemForAnalysis(
   const parts = binding.type === "DIRECT"
     ? profileFieldParts(binding.profileFieldKey)
     : undefined;
-  const itemIndex = lookup.handle.itemIndex;
+  let itemIndex = lookup.handle.itemIndex;
   if (parts?.repeatable) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
+    if (itemIndex === undefined && parts.fieldId === "latestEducationType" && profileEntries.length === 1) {
+      itemIndex = 0;
+    }
     if (
       itemIndex === undefined ||
       formItemCount === undefined ||

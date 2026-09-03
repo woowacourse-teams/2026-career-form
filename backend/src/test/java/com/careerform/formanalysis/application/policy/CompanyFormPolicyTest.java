@@ -25,6 +25,38 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver.Derived
 class CompanyFormPolicyTest {
 
     @Test
+    @DisplayName("action 구조는 DOM 식별자와 표시명 alias를 함께 보존한다")
+    void preservesActionStructureAliases() {
+        ActionStructure structure = new ActionStructure(
+            List.of("btnAddCert", "자격/면허 추가"),
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.BUTTON,
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON
+        );
+
+        assertThat(structure.structuralNames())
+            .containsExactly("btnAddCert", "자격/면허 추가");
+    }
+
+    @Test
+    @DisplayName("optional action 구조는 resolver 검증용으로 보존하지만 fingerprint 필수 조건은 아니다")
+    void preservesOptionalActionStructuresSeparatelyFromRequiredFingerprint() {
+        ActionStructure required = actionStructure("core-action");
+        ActionStructure optional = actionStructure("job-variant-action");
+
+        PreparationFingerprint fingerprint = new PreparationFingerprint(
+            Set.of("section-profile"),
+            List.of(required),
+            List.of(optional)
+        );
+
+        assertThat(fingerprint.requiredActions()).containsExactly(required);
+        assertThat(fingerprint.actionStructures()).containsExactlyInAnyOrder(
+            required,
+            optional
+        );
+    }
+
+    @Test
     @DisplayName("정상 정책은 입력 collection 변경과 무관한 불변 snapshot을 유지한다")
     void keepsAnImmutablePolicySnapshot() {
         Set<String> actionSections = new HashSet<>(Set.of(

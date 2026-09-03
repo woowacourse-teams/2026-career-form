@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-common-only-variant-redacted",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Application/Index/*"
+  },
+  "sections": [
+    {
+      "sectionId": "section-1",
+      "fields": [
+        {
+          "candidateId": "field-korean-name",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "domName": "prsApplicantName",
+          "readonly": true
+        },
+        {
+          "candidateId": "field-email",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "domName": "prsEmail"
+        },
+        {
+          "candidateId": "field-phone",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "domName": "prsPhone"
+        },
+        {
+          "candidateId": "field-job-specific-unknown",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "domName": "jobSpecificUnknown"
+        }
+      ]
+    }
+  ]
+}

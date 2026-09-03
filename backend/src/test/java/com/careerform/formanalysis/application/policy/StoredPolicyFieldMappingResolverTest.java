@@ -129,6 +129,25 @@ class StoredPolicyFieldMappingResolverTest {
         );
     }
 
+    @Test
+    @DisplayName("반복 학력 필드의 UUID 접미사를 제거해 저장 rule과 매칭한다")
+    void mapsRepeatedFieldWithUuidSuffix() {
+        FieldsAnalysisRequest request = new FieldsAnalysisRequest(
+            2,
+            "stored-policy-repeated-field",
+            new Site("www.skcareers.com", "/Application/Index/{postingId}"),
+            List.of(new Section(
+                "section-3", null, null,
+                List.of(field("field-university-name", "eduEducationName_123e4567-e89b-12d3-a456-426614174000", FormElement.INPUT)),
+                null
+            ))
+        );
+
+        assertThat(new StoredPolicyFieldMappingResolver(CompanyFormPolicyFixture.sk())
+            .resolve(request).results())
+            .containsExactly(match("field-university-name", "education.university.schoolName"));
+    }
+
     private static FieldCandidate field(
         String candidateId,
         String domName,

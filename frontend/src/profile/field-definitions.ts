@@ -8,6 +8,7 @@ export interface ProfileFieldDefinition {
   label: string;
   inputType: ProfileInputType;
   options?: readonly string[];
+  visibleWhen?: (values: Record<string, string>) => boolean;
 }
 
 export interface ProfileSectionDefinition {
@@ -22,6 +23,7 @@ export interface ProfileCategoryDefinition {
   repeatable: boolean;
   sensitive: boolean;
   sections: readonly ProfileSectionDefinition[];
+  topLevelFields?: readonly ProfileFieldDefinition[];
 }
 
 const text = (id: string, label: string): ProfileFieldDefinition => ({
@@ -33,6 +35,16 @@ const date = (id: string, label: string): ProfileFieldDefinition => ({
   id,
   label,
   inputType: "date",
+});
+const select = (
+  id: string,
+  label: string,
+  options: readonly string[],
+): ProfileFieldDefinition => ({
+  id,
+  label,
+  inputType: "select",
+  options,
 });
 
 export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
@@ -109,8 +121,19 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           date("endDate", "졸업일"),
           text("completionStatus", "졸업구분"),
           text("gpaScore", "평점"),
+          select("gpaScale", "기준평점", ["4.00", "4.30", "4.50", "100.00"]),
           text("majorName", "주전공명"),
-          text("additionalMajorName", "추가 전공명"),
+          select("transferStatus", "편입유무", ["비해당", "해당"]),
+          select("doubleMajorStatus", "복수전공유무", ["없음", "있음"]),
+          select("minorStatus", "부전공유무", ["없음", "있음"]),
+          {
+            ...text("additionalMajorName", "복수전공명"),
+            visibleWhen: (values) => values.doubleMajorStatus === "있음",
+          },
+          {
+            ...text("minorName", "부전공명"),
+            visibleWhen: (values) => values.minorStatus === "있음",
+          },
         ],
       },
       {
@@ -134,6 +157,16 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("additionalMajorName", "추가 전공명"),
         ],
       },
+    ],
+    topLevelFields: [
+      select("latestEducationType", "최종학력", [
+        "고등학교",
+        "전문대학(전문학사)",
+        "대학(학사)",
+        "대학원(석사)",
+        "대학원(박사)",
+        "대학원(석박사통합)",
+      ]),
     ],
   },
   {
@@ -218,6 +251,13 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         label: "병역",
         fields: [
           text("militaryStatus", "병역 상태"),
+          select("militaryType", "병역구분", [
+            "현역병",
+            "상근예비역",
+            "공익근무요원",
+            "전문연구요원",
+            "산업기능요원",
+          ]),
           text("militaryBranch", "군별"),
           text("militarySpecialty", "병과"),
           text("militaryRank", "계급"),

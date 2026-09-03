@@ -39,7 +39,7 @@ const EXCEPTIONS: Record<ExceptionId, { title: string; description: string }> =
     "analysis-failed": {
       title: "분석 실패",
       description:
-        "지원서 값은 변경되지 않았습니다. 다시 시도하거나 수동 복사로 전환하세요.",
+        "자동 기입은 완료하지 않았습니다. 조건부 선택 상태를 확인한 뒤 다시 시도하거나 수동 복사로 전환하세요.",
     },
     "no-results": {
       title: "검색 결과 없음",

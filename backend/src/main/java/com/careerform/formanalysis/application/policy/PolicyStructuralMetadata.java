@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.application.policy;
 
 import java.util.Map;
+import java.util.Objects;
 
 final class PolicyStructuralMetadata {
 
@@ -25,14 +26,17 @@ final class PolicyStructuralMetadata {
         String displayName
     ) {
         String matchedKey = null;
+        T matchedValue = null;
         for (String candidateKey : new String[] { domName, domId, displayName }) {
             if (candidateKey == null || !values.containsKey(candidateKey)) {
                 continue;
             }
-            if (matchedKey != null && !matchedKey.equals(candidateKey)) {
+            T candidateValue = values.get(candidateKey);
+            if (matchedKey != null && !Objects.equals(matchedValue, candidateValue)) {
                 return null;
             }
             matchedKey = candidateKey;
+            matchedValue = candidateValue;
         }
         return matchedKey == null ? null : values.get(matchedKey);
     }

@@ -9,8 +9,12 @@ import type {
 import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
 
 export class AnalysisContractError extends Error {
-  constructor() {
-    super("지원서 분석 응답 형식이 올바르지 않습니다.");
+  constructor(detail?: string) {
+    super(
+      detail
+        ? `지원서 분석 응답 형식이 올바르지 않습니다. (${detail})`
+        : "지원서 분석 응답 형식이 올바르지 않습니다.",
+    );
     this.name = "AnalysisContractError";
   }
 }
@@ -112,6 +116,7 @@ export function validatePreparationResponse(
     (isBlocked &&
       (!isOneOf(value.blockCode, [
         "ADAPTER_STRUCTURE_MISMATCH",
+        "ADAPTER_POLICY_UNAVAILABLE",
         "UNSUPPORTED_SNAPSHOT",
       ]) ||
         value.preparationPlans.length > 0)) ||
@@ -148,14 +153,25 @@ export function validatePreparationResponse(
       isNonEmptyString(plan.targetSectionId) &&
       sectionIds.has(plan.targetSectionId);
     const validAddition =
-      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect"]) &&
+      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "expectedFieldNames"]) &&
       plan.command === "ADD_REPEATABLE_GROUP" &&
-      plan.expectedEffect === "GROUP_COUNT_INCREMENT";
+      plan.expectedEffect === "GROUP_COUNT_INCREMENT" &&
+      (plan.expectedFieldNames === undefined ||
+        (Array.isArray(plan.expectedFieldNames) &&
+          plan.expectedFieldNames.length > 0 &&
+          plan.expectedFieldNames.every(isNonEmptyString) &&
+          new Set(plan.expectedFieldNames).size === plan.expectedFieldNames.length));
     const validSelection =
-      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "profileFieldKey", "targetSectionId"]) &&
+      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "profileFieldKey", "optionDisplayName", "expectedFieldNames", "targetSectionId"]) &&
       plan.command === "SELECT_OPTION_TO_REVEAL" &&
       plan.expectedEffect === "TARGET_FIELDS_VISIBLE" &&
       isNonEmptyString(plan.profileFieldKey) &&
+      (plan.optionDisplayName === undefined || isNonEmptyString(plan.optionDisplayName)) &&
+      (plan.expectedFieldNames === undefined ||
+        (Array.isArray(plan.expectedFieldNames) &&
+          plan.expectedFieldNames.length > 0 &&
+          plan.expectedFieldNames.every(isNonEmptyString) &&
+          new Set(plan.expectedFieldNames).size === plan.expectedFieldNames.length)) &&
       isNonEmptyString(plan.targetSectionId) && sectionIds.has(plan.targetSectionId);
     if (!validReveal && !validAddition && !validSelection) {
       throw new AnalysisContractError();
@@ -260,13 +276,20 @@ function validateFieldAnalysis(
         !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey)
       )) ||
       (value.valueBinding.type === "DERIVED" && (
-        !hasOnlyKeys(value.valueBinding, ["type", "recipe"]) ||
+        !hasOnlyKeys(value.valueBinding, ["type", "recipe", "profileFieldKey", "trueLabel", "falseLabel"]) ||
         !isOneOf(value.valueBinding.recipe, [
           "KOREAN_FULL_NAME",
           "ENGLISH_FULL_NAME_GIVEN_FIRST",
           "ENGLISH_FULL_NAME_FAMILY_FIRST",
           "EDUCATION_TYPE_AND_DEGREE",
-        ])
+          "BOOLEAN_YN",
+        ]) ||
+        (value.valueBinding.profileFieldKey !== undefined &&
+          (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
+            !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey))) ||
+        (value.valueBinding.trueLabel !== undefined && !isNonEmptyString(value.valueBinding.trueLabel)) ||
+        (value.valueBinding.falseLabel !== undefined && !isNonEmptyString(value.valueBinding.falseLabel)) ||
+        ((value.valueBinding.trueLabel === undefined) !== (value.valueBinding.falseLabel === undefined))
       ))
     ) {
       throw new AnalysisContractError();
@@ -322,7 +345,10 @@ export function validateFieldsResponse(
   const isBlocked = value.analysisStatus === "BLOCKED";
   if (
     (isBlocked &&
-      (value.blockCode !== "ADAPTER_STRUCTURE_MISMATCH" ||
+      (!isOneOf(value.blockCode, [
+        "ADAPTER_STRUCTURE_MISMATCH",
+        "ADAPTER_POLICY_UNAVAILABLE",
+      ]) ||
         value.fields.length > 0)) ||
     (!isBlocked && value.blockCode !== undefined)
   ) {
@@ -332,7 +358,19 @@ export function validateFieldsResponse(
   const candidates = collectFieldCandidates(request);
   const seen = new Set<string>();
   for (const field of value.fields) {
-    const candidateId = validateFieldAnalysis(field, candidates);
+    let candidateId: string;
+    try {
+      candidateId = validateFieldAnalysis(field, candidates);
+    } catch (error) {
+      if (error instanceof AnalysisContractError) {
+        const candidateLabel =
+          isRecord(field) && isNonEmptyString(field.candidateId)
+            ? field.candidateId
+            : "식별할 수 없는 후보";
+        throw new AnalysisContractError(`필드 ${candidateLabel}`);
+      }
+      throw error;
+    }
     if (seen.has(candidateId)) {
       throw new AnalysisContractError();
     }

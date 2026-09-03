@@ -9,13 +9,17 @@ export function isAutofillProfileFieldKey(value: string): boolean {
   return PROFILE_CATEGORIES.some(
     (category) =>
       category.id === categoryId &&
-      category.sections.some(
+      (category.sections.some(
         (section) =>
           section.id === sectionId &&
           section.fields.some(
             (field) =>
               field.id === fieldId && !EXCLUDED_FIELD_IDS.has(field.id),
           ),
-      ),
+      ) ||
+        category.topLevelFields?.some(
+          (field) =>
+            field.id === fieldId && !EXCLUDED_FIELD_IDS.has(field.id),
+        ) === true),
   );
 }

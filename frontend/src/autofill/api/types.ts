@@ -25,7 +25,7 @@ interface CandidateBase {
 
 export interface ActionCandidate extends CandidateBase {
   element: "button" | "input" | "select" | "custom";
-  control: "button" | "select" | "custom";
+  control: "button" | "select" | "radio" | "custom";
   options?: OptionCandidate[];
 }
 
@@ -88,12 +88,15 @@ export type PreparationPlan =
       command: "SELECT_OPTION_TO_REVEAL";
       expectedEffect: "TARGET_FIELDS_VISIBLE";
       profileFieldKey: string;
+      optionDisplayName?: string;
+      expectedFieldNames?: string[];
       targetSectionId: string;
     }
   | {
       actionCandidateId: string;
       command: "ADD_REPEATABLE_GROUP";
       expectedEffect: "GROUP_COUNT_INCREMENT";
+      expectedFieldNames?: string[];
     };
 
 export interface PreparationAnalyzeResponse {
@@ -102,7 +105,10 @@ export interface PreparationAnalyzeResponse {
   analysisStatus: AnalysisStatus;
   preparationPlans: PreparationPlan[];
   warningCodes?: "MANUAL_REVEAL_REQUIRED"[];
-  blockCode?: "ADAPTER_STRUCTURE_MISMATCH" | "UNSUPPORTED_SNAPSHOT";
+  blockCode?:
+    | "ADAPTER_STRUCTURE_MISMATCH"
+    | "ADAPTER_POLICY_UNAVAILABLE"
+    | "UNSUPPORTED_SNAPSHOT";
 }
 
 export type WriteCommand =
@@ -112,11 +118,18 @@ export type DerivedRecipe =
   | "KOREAN_FULL_NAME"
   | "ENGLISH_FULL_NAME_GIVEN_FIRST"
   | "ENGLISH_FULL_NAME_FAMILY_FIRST"
-  | "EDUCATION_TYPE_AND_DEGREE";
+  | "EDUCATION_TYPE_AND_DEGREE"
+  | "BOOLEAN_YN";
 
 export type ValueBinding =
   | { type: "DIRECT"; profileFieldKey: string }
-  | { type: "DERIVED"; recipe: DerivedRecipe };
+  | {
+      type: "DERIVED";
+      recipe: DerivedRecipe;
+      profileFieldKey?: string;
+      trueLabel?: string;
+      falseLabel?: string;
+    };
 
 export interface MatchedFieldAnalysis {
   candidateId: string;
@@ -151,7 +164,7 @@ export interface FieldsAnalyzeResponse {
   analysisStatus: AnalysisStatus;
   fields: FieldAnalysis[];
   warningCodes?: ("UNRESOLVED_FIELD" | "LLM_UNAVAILABLE")[];
-  blockCode?: "ADAPTER_STRUCTURE_MISMATCH";
+  blockCode?: "ADAPTER_STRUCTURE_MISMATCH" | "ADAPTER_POLICY_UNAVAILABLE";
 }
 
 export interface AnalysisApiClient {

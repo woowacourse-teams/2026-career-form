@@ -25,7 +25,7 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     private static final String COMPANY_KEY = "sk";
-    private static final long VERSION = 3;
+    private static final long VERSION = 12;
 
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
@@ -93,15 +93,13 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     private static FormAnalysisPolicyDocument policy() {
         return new FormAnalysisPolicyDocument(
-            "sk-policy-v2",
+            "sk-policy-v3",
             COMPANY_KEY,
             VERSION,
             new PreparationFingerprint(
-                Set.of(
-                    "section-1",
-                    "section-3",
-                    "section-4",
-                    "section-6"
+                Set.of("section-1"),
+                List.of(
+                    actionStructure("btnSearchAddress")
                 ),
                 List.of(
                     new ActionStructure(
@@ -109,23 +107,24 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                         PreparationAnalysisRequest.FormElement.SELECT,
                         PreparationAnalysisRequest.FormControl.SELECT
                     ),
+                    new ActionStructure("prsVeteranBenefitYN", PreparationAnalysisRequest.FormElement.INPUT, PreparationAnalysisRequest.FormControl.RADIO),
+                    new ActionStructure("prsDisabledYN", PreparationAnalysisRequest.FormElement.INPUT, PreparationAnalysisRequest.FormControl.RADIO),
                     actionStructure("대학 학력 정보 추가"),
-                    actionStructure("btnAddCareer"),
-                    actionStructure("btnAddCert"),
-                    actionStructure("btnAddLangExam")
+                    actionStructure(List.of("btnAddEducationHigh", "고등학교 학력 정보 추가")),
+                    actionStructure(List.of("btnAddEducationGrad", "대학원 학력 정보 추가")),
+                    actionStructure(List.of("btnAddCareer", "경력 사항 추가")),
+                    actionStructure(List.of("btnAddCert", "자격/면허 추가")),
+                    actionStructure(List.of("btnAddLangExam", "공인 외국어 시험 추가", "어학 항목 추가")),
+                    radioStructure("eduMajorDoubleYN"),
+                    radioStructure("eduMajorSubYN")
                 )
             ),
             new FieldsFingerprint(
-                Set.of("section-1", "section-3"),
+                Set.of("section-1"),
                 List.of(
                     textStructure("prsApplicantName"),
                     textStructure("prsEmail"),
-                    textStructure("prsPhone"),
-                    textStructure("prsZipCode"),
-                    textStructure("prsAddress"),
-                    textStructure("prsAddressDtl"),
-                    textStructure("eduEducationName"),
-                    selectStructure("eduEducationStatus")
+                    textStructure("prsPhone")
                 )
             ),
             List.of(
@@ -133,10 +132,25 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "prsMilitarySvcStatus", ActionKind.SELECT_OPTION,
                     "section-1", "military.military.militaryStatus"
                 ),
-                addRule("대학 학력 정보 추가"),
-                addRule("btnAddCareer"),
-                addRule("btnAddCert"),
-                addRule("btnAddLangExam")
+                new ActionRule("prsVeteranBenefitYN", ActionKind.CHOOSE_RADIO, "section-1", "veteran.veteran.veteranStatus", "대상", List.of("prsVeteranBenefitNumber", "prsVeteranBenefitRelation")),
+                new ActionRule("prsDisabledYN", ActionKind.CHOOSE_RADIO, "section-1", "disability.disability.disabilityStatus", "대상", List.of("prsDisabledTypeDtl")),
+                addRule("대학 학력 정보 추가", "eduEducationName"),
+                addRule(List.of("btnAddEducationHigh", "고등학교 학력 정보 추가"), "eduhgEducationName"),
+                addRule(List.of("btnAddEducationGrad", "대학원 학력 정보 추가"), "edugdEducationName"),
+                addRule(List.of("btnAddCareer", "경력 사항 추가")),
+                addRule(List.of("btnAddCert", "자격/면허 추가"), "cerCertName"),
+                addRule(
+                    List.of("btnAddLangExam", "공인 외국어 시험 추가", "어학 항목 추가"),
+                    "lngLanguageType",
+                    "lngExamName",
+                    "lngExamScore",
+                    "lngScoreDate",
+                    "lngCertNumber"
+                ),
+                new ActionRule("eduMajorDoubleYN", ActionKind.CHOOSE_RADIO,
+                    "section-3", "education.university.doubleMajorStatus", "있음", List.of("eduMajorDouble")),
+                new ActionRule("eduMajorSubYN", ActionKind.CHOOSE_RADIO,
+                    "section-3", "education.university.minorStatus", "있음", List.of("eduMajorSub"))
             ),
             List.of(
                 derivedTextRule(
@@ -149,9 +163,9 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 readonlyTextRule("prsZipCode", "contact.contact.postalCode"),
                 readonlyTextRule("prsAddress", "contact.contact.addressLine1"),
                 textRule("prsAddressDtl", "contact.contact.addressLine2"),
-                radioRule(
-                    "prsVeteranBenefitYN",
-                    "veteran.veteran.veteranStatus"
+                derivedRadioRule(
+                    "prsVeteranBenefitYN", DerivedRecipe.BOOLEAN_YN,
+                    "veteran.veteran.veteranStatus", "대상", "비대상"
                 ),
                 textRule(
                     "prsVeteranBenefitNumber",
@@ -161,7 +175,10 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "prsVeteranBenefitRelation",
                     "veteran.veteran.veteranRelation"
                 ),
-                radioRule("prsDisabledYN", "disability.disability.disabilityStatus"),
+                derivedRadioRule(
+                    "prsDisabledYN", DerivedRecipe.BOOLEAN_YN,
+                    "disability.disability.disabilityStatus", "대상", "비대상"
+                ),
                 selectRule(
                     "prsDisabledTypeDtl",
                     "disability.disability.disabilityType"
@@ -169,6 +186,10 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 selectRule(
                     "prsMilitarySvcStatus",
                     "military.military.militaryStatus"
+                ),
+                selectRule(
+                    "prsMilitarySvcType",
+                    "military.military.militaryType"
                 ),
                 selectRule(
                     "prsMilitarySvcCategory",
@@ -201,6 +222,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "certifications.certificate.registrationNo"
                 ),
                 textRule("eduEducationName", "education.university.schoolName"),
+                selectRule("eduLastestEducationType", "education.university.latestEducationType"),
                 derivedSelectRule("eduEducationType", DerivedRecipe.EDUCATION_TYPE_AND_DEGREE),
                 selectRule(
                     "eduEducationStatus",
@@ -208,6 +230,12 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 ),
                 textRule("eduMajor", "education.university.majorName"),
                 textRule("eduCredit", "education.university.gpaScore"),
+                selectRule("eduCreditBase", "education.university.gpaScale"),
+                radioRule("eduMajorTransferYN", "education.university.transferStatus"),
+                radioRule("eduMajorDoubleYN", "education.university.doubleMajorStatus"),
+                radioRule("eduMajorSubYN", "education.university.minorStatus"),
+                textRule("eduMajorDouble", "education.university.additionalMajorName"),
+                textRule("eduMajorSub", "education.university.minorName"),
                 textRule("eduFromDate", "education.university.startDate"),
                 textRule("eduToDate", "education.university.endDate"),
                 selectRule(
@@ -251,6 +279,22 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
         );
     }
 
+    private static ActionRule addRule(String name, String... expectedFieldNames) {
+        return expectedFieldNames.length == 0
+            ? new ActionRule(name, ActionKind.ADD, null)
+            : new ActionRule(name, ActionKind.ADD, null, null, null, List.of(expectedFieldNames));
+    }
+
+    private static ActionStructure actionStructure(List<String> names) {
+        return new ActionStructure(names, PreparationAnalysisRequest.FormElement.BUTTON, PreparationAnalysisRequest.FormControl.BUTTON);
+    }
+
+    private static ActionRule addRule(List<String> names, String... expectedFieldNames) {
+        return expectedFieldNames.length == 0
+            ? new ActionRule(names, ActionKind.ADD, null)
+            : new ActionRule(names, ActionKind.ADD, null, null, null, List.of(expectedFieldNames));
+    }
+
     private static ActionRule addRule(String name) {
         return new ActionRule(name, ActionKind.ADD, null);
     }
@@ -260,6 +304,14 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             name,
             PreparationAnalysisRequest.FormElement.BUTTON,
             PreparationAnalysisRequest.FormControl.BUTTON
+        );
+    }
+
+    private static ActionStructure radioStructure(String name) {
+        return new ActionStructure(
+            name,
+            PreparationAnalysisRequest.FormElement.INPUT,
+            PreparationAnalysisRequest.FormControl.RADIO
         );
     }
 
@@ -334,6 +386,18 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             FieldsAnalysisRequest.FormElement.INPUT,
             FieldsAnalysisRequest.FormControl.RADIO,
             profileFieldKey
+        );
+    }
+
+    private static FieldRule derivedRadioRule(
+        String name, DerivedRecipe recipe, String profileFieldKey,
+        String trueLabel, String falseLabel
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.RADIO,
+            new DerivedBinding(recipe, profileFieldKey, trueLabel, falseLabel)
         );
     }
 }

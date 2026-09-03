@@ -25,12 +25,22 @@ public interface ActionResolver {
     ) implements Result {
     }
 
-    record AddAction(String candidateId) implements Result {
+    record AddAction(String candidateId, List<String> expectedFieldNames) implements Result {
+        public AddAction(String candidateId) {
+            this(candidateId, null);
+        }
     }
 
     record SelectOptionAction(
-        String candidateId, String profileFieldKey, String targetSectionId
+        String candidateId, String profileFieldKey, String optionDisplayName, String targetSectionId,
+        List<String> expectedFieldNames
     ) implements Result {
+
+        public SelectOptionAction(
+            String candidateId, String profileFieldKey, String optionDisplayName, String targetSectionId
+        ) {
+            this(candidateId, profileFieldKey, optionDisplayName, targetSectionId, null);
+        }
     }
 
     record NoAction(String candidateId) implements Result {

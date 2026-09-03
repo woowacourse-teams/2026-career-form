@@ -133,18 +133,26 @@ export class CandidateRegistry {
     domId?: string;
     domName?: string;
   }): CandidateLookup<ActionCandidateHandle> {
-    const key = identity.displayName
-      ? "displayName"
-      : identity.domName
-        ? "domName"
-        : identity.domId
-          ? "domId"
-          : undefined;
-    if (!key) return { status: "unknown" };
+    if (
+      !identity.displayName &&
+      !identity.domName &&
+      !identity.domId
+    ) {
+      return { status: "unknown" };
+    }
+    const hasStableStructuralName =
+      identity.domName !== undefined || identity.domId !== undefined;
     const matches = [...this.actions.values()].filter(
       ({ handle }) =>
-        handle.sectionId === identity.sectionId &&
-        handle.candidate[key] === identity[key],
+        (hasStableStructuralName || handle.sectionId === identity.sectionId) &&
+        (identity.displayName === undefined ||
+          handle.candidate.displayName === identity.displayName) &&
+        (identity.domName === undefined ||
+          handle.candidate.domName === identity.domName) &&
+        (identity.domId === undefined ||
+          handle.candidate.domId === identity.domId ||
+          (handle.candidate.domId === undefined &&
+            identity.displayName !== undefined)),
     );
     if (matches.length !== 1) return { status: "unknown" };
     return this.lookup(matches[0]);

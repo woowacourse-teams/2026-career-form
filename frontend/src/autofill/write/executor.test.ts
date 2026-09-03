@@ -114,7 +114,9 @@ describe("approved native-control writes", () => {
     });
 
     expect(input.value).toBe("김민수");
-    expect(result).toEqual([{ candidateId: "field-derived", status: "written" }]);
+    expect(result).toEqual([
+      { candidateId: "field-derived", status: "written" },
+    ]);
   });
 
   it("writes selected and explicitly approved text through native events", () => {
@@ -280,7 +282,9 @@ describe("approved native-control writes", () => {
     });
 
     expect(select.value).toBe("university");
-    expect(result).toEqual([{ candidateId: "education-type", status: "written" }]);
+    expect(result).toEqual([
+      { candidateId: "education-type", status: "written" },
+    ]);
   });
 
   it("checks a radio by the locally resolved option display name", () => {
@@ -329,6 +333,63 @@ describe("approved native-control writes", () => {
     expect(first.checked).toBe(false);
     expect(target.checked).toBe(true);
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+  });
+
+  it("does not guess different radio labels without a backend-derived value", () => {
+    const no = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "N",
+    });
+    const yes = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "Y",
+    });
+    document.body.append(no, yes);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "disability-status",
+      candidate: {
+        candidateId: "disability-status",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [
+          { optionId: "no", displayName: "비대상" },
+          { optionId: "yes", displayName: "대상" },
+        ],
+      },
+      elements: [no, yes],
+      optionElements: new Map([
+        ["no", no],
+        ["yes", yes],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([no, yes]),
+    });
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          {
+            ...textAnalysis,
+            candidateId: "disability-status",
+            writePlan: { command: "CHECK_RADIO" },
+          },
+          "예",
+        ),
+      ],
+      approvedCandidateIds: new Set(["disability-status"]),
+      registry,
+    });
+
+    expect(yes.checked).toBe(false);
+    expect(result).toEqual([
+      {
+        candidateId: "disability-status",
+        status: "skipped",
+        reason: "네이티브 컨트롤에 안전하게 입력할 수 없습니다.",
+      },
+    ]);
   });
 
   it("checks the matching checkbox without clearing another local choice", () => {

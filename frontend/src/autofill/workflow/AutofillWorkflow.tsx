@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { AnalysisServiceError } from "../api/runtime-client";
+import { AnalysisContractError } from "../api/validate-response";
 import type { AnalysisApiClient, PreparationPlan } from "../api/types";
 import {
   collectFieldsSnapshot,
@@ -8,6 +9,8 @@ import {
   type CollectedSnapshot,
 } from "../dom/collect";
 import { executeApprovedPreparationPlans } from "../preparation/executor";
+import { preparationFailureMessage } from "../preparation/failure-message";
+import { waitForExpectedFields } from "../preparation/wait-for-fields";
 import {
   buildReviewPlan,
   revealSensitiveReviewItem,
@@ -295,7 +298,7 @@ function userFacingReason(reason?: string): string | undefined {
 }
 
 function safeErrorTitle(error: unknown): string {
-  return error instanceof AnalysisServiceError
+  return error instanceof AnalysisServiceError || error instanceof AnalysisContractError
     ? error.message
     : "분석을 완료하지 못했습니다";
 }
@@ -352,6 +355,8 @@ export function AutofillWorkflow({
   const [preparationItems, setPreparationItems] = useState<PreparationItem[]>(
     [],
   );
+  const [preparationExecutionPending, setPreparationExecutionPending] =
+    useState(false);
   const [reviewItems, setReviewItems] = useState<ReviewPlanItem[]>([]);
   const [fieldsSnapshot, setFieldsSnapshot] =
     useState<
@@ -362,8 +367,6 @@ export function AutofillWorkflow({
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
-  const [autoWritePending, setAutoWritePending] = useState(false);
-  const [autoPreparationPending, setAutoPreparationPending] = useState(false);
 
   const analyzeFields = async (loadedProfile: Profile) => {
     const snapshot = collectFieldsSnapshot(pageDocument);
@@ -415,12 +418,36 @@ export function AutofillWorkflow({
       setStage("exception");
       return;
     }
+    if (plan.items.length === 0) {
+      setResults([]);
+      setStage("result");
+      return;
+    }
+    const automaticItems = plan.items.map((item) =>
+      item.status === "needs-review" && !item.disabled
+        ? { ...item, selected: true }
+        : item,
+    );
     setFieldsSnapshot(snapshot);
-    setReviewItems(plan.items);
+    setReviewItems(automaticItems);
     setPartial(plan.status === "partial");
     setWarnings(analysis.warningCodes ?? []);
-    setAutoWritePending(true);
-    setStage("review");
+    setResults(
+      executeApprovedWrites({
+        items: automaticItems,
+        approvedCandidateIds: new Set(
+          automaticItems
+            .filter(
+              (item) =>
+                !item.disabled &&
+                (item.selected || item.status === "needs-review"),
+            )
+            .map((item) => item.candidateId),
+        ),
+        registry: snapshot.registry,
+      }),
+    );
+    setStage("result");
   };
 
   useEffect(() => {
@@ -477,8 +504,7 @@ export function AutofillWorkflow({
           ),
         );
         setWarnings(analysis.warningCodes ?? []);
-        setStage("analyzing");
-        setAutoPreparationPending(true);
+        setPreparationExecutionPending(true);
       } catch (error) {
         if (!active) return;
         setExceptionTitle(safeErrorTitle(error));
@@ -530,25 +556,35 @@ export function AutofillWorkflow({
       },
       countRepeatableGroups: (snapshot, plan) =>
         snapshot.countRepeatableGroups?.(plan) ?? -1,
+      waitForExpectedFields: async (plan) =>
+        waitForExpectedFields(
+          pageDocument,
+          ("expectedFieldNames" in plan ? plan.expectedFieldNames : []) ?? [],
+          0,
+        ),
       selectProfileOption: (plan, snapshot) => {
         const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
-        if (
-          lookup.status !== "ready" ||
-          !(lookup.handle.element instanceof HTMLSelectElement)
-        ) {
-          return false;
+        if (lookup.status !== "ready") {
+          return "action-not-ready";
         }
         const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
-        if (value.status !== "resolved") return false;
+        if (value.status !== "resolved") return "profile-value-unavailable";
+        if (lookup.handle.element instanceof HTMLInputElement && lookup.handle.element.type === "radio") {
+          const label = plan.optionDisplayName ?? value.value;
+          if (lookup.handle.candidate.displayName !== label) return "option-label-mismatch";
+          lookup.handle.element.click();
+          return lookup.handle.element.checked ? "selected" : "action-not-ready";
+        }
+        if (!(lookup.handle.element instanceof HTMLSelectElement)) return "unsupported-option-action";
         const option = Array.from(lookup.handle.element.options).find(
           (candidate) => candidate.textContent?.trim() === value.value,
         );
-        if (!option) return false;
+        if (!option) return "option-label-mismatch";
         lookup.handle.element.value = option.value;
         lookup.handle.element.dispatchEvent(
           new Event("change", { bubbles: true }),
         );
-        return true;
+        return "selected";
       },
     });
     console.info(
@@ -559,7 +595,22 @@ export function AutofillWorkflow({
       })}`,
     );
     if (result.status !== "completed") {
-      setExceptionTitle("준비 동작을 안전하게 완료하지 못했습니다");
+      const failedPlan =
+        result.status === "failed" && result.failedActionCandidateId
+          ? runnablePlans.find(
+              ({ plan }) =>
+                plan.actionCandidateId === result.failedActionCandidateId,
+            )?.plan
+          : undefined;
+      setExceptionTitle(
+        result.status === "failed"
+          ? `${preparationFailureMessage(result.reason)}${
+              failedPlan
+                ? ` (${actionLabel(failedPlan, preparationSnapshot)})`
+                : ""
+            }`
+          : "준비 동작을 안전하게 완료하지 못했습니다",
+      );
       setStage("exception");
       return;
     }
@@ -571,12 +622,6 @@ export function AutofillWorkflow({
       setStage("exception");
     }
   };
-
-  useEffect(() => {
-    if (!autoPreparationPending || !profile || !preparationSnapshot) return;
-    setAutoPreparationPending(false);
-    void executePreparation();
-  }, [autoPreparationPending, preparationSnapshot, profile]);
 
   const toggleReviewItem = (candidateId: string) => {
     setReviewItems((items) =>
@@ -616,44 +661,13 @@ export function AutofillWorkflow({
   };
 
   useEffect(() => {
-    if (!autoWritePending || stage !== "review" || !fieldsSnapshot) return;
-    setAutoWritePending(false);
-    const autoItems = reviewItems.map((item) =>
-      item.disabled ? item : { ...item, selected: true },
-    );
-    setResults(
-      executeApprovedWrites({
-        items: autoItems,
-        approvedCandidateIds: new Set(
-          autoItems
-            .filter((item) => !item.disabled)
-            .map((item) => item.candidateId),
-        ),
-        registry: fieldsSnapshot.registry,
-      }),
-    );
-    setStage("result");
-  }, [autoWritePending, fieldsSnapshot, reviewItems, stage]);
+    if (!preparationExecutionPending) return;
+    setPreparationExecutionPending(false);
+    void executePreparation();
+  }, [preparationExecutionPending]);
 
   if (stage === "analyzing") {
-    return (
-      <div className={styles.screen}>
-        <Header step="1 / 4" title="지원서 분석 중" />
-        <div className={styles.analysisGraphic} aria-hidden="true">
-          <div className={styles.analysisSpinner}>
-            {Array.from({ length: 12 }, (_, index) => (
-              <span data-spinner-bar key={index} />
-            ))}
-          </div>
-        </div>
-        <p className={styles.lead}>
-          지원서 구조를 비식별 정보만으로 확인합니다.
-        </p>
-        <aside className={styles.safety}>
-          이 단계에서는 지원서 값을 변경하지 않습니다.
-        </aside>
-      </div>
-    );
+    return null;
   }
 
   if (stage === "preparation-review") {
@@ -859,7 +873,7 @@ export function AutofillWorkflow({
       <Header step="예외" title={exceptionTitle} />
       <div className={styles.exceptionCard}>
         <p>
-          지원서 값은 변경되지 않았습니다. 수동 복사는 계속 사용할 수 있습니다.
+          자동 기입은 완료하지 않았습니다. 조건부 선택 상태는 변경되었을 수 있으며, 수동 복사는 계속 사용할 수 있습니다.
         </p>
       </div>
       <button className={styles.primary} type="button" onClick={onExit}>

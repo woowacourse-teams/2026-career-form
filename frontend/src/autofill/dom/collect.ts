@@ -415,7 +415,7 @@ export function collectFieldsSnapshot(
 function collectActionElements(document: Document) {
   return Array.from(
     document.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>(
-      "button, input[type='button'], select",
+      "button, input[type='button'], input[type='radio'], select",
     ),
   ).filter((element) => {
     const label = labelOf(element);
@@ -577,7 +577,7 @@ export function collectPreparationSnapshot(
         element: element instanceof HTMLButtonElement
           ? "button"
           : element instanceof HTMLSelectElement ? "select" : "input",
-        control: element instanceof HTMLSelectElement ? "select" : "button",
+        control: element instanceof HTMLSelectElement ? "select" : element instanceof HTMLInputElement && element.type === "radio" ? "radio" : "button",
         visibility: visibility(element),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
         ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
@@ -585,10 +585,13 @@ export function collectPreparationSnapshot(
         ...(element.disabled ? { disabled: true } : {}),
         ...(isInert(element) ? { inert: true } : {}),
         ...(element instanceof HTMLSelectElement
-          ? { options: Array.from(element.options).map((option, index) => ({
-              optionId: createOpaqueId(`${candidateId}-option`, index),
-              displayName: option.textContent?.trim() ?? "",
-            })).filter((option) => option.displayName.length > 0) }
+          ? { options: Array.from(element.options)
+              .map((option, index) => ({
+                optionId: createOpaqueId(`${candidateId}-option`, index),
+                displayName: metadata(option.textContent?.trim() ?? "") ?? "",
+              }))
+              .filter((option) => option.displayName.length > 0)
+              .slice(0, 128) }
           : {}),
       };
       registry.registerAction(

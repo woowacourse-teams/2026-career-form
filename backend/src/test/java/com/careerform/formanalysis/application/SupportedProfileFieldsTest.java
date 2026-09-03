@@ -13,14 +13,18 @@ class SupportedProfileFieldsTest {
     private final SupportedProfileFields supportedFields = new SupportedProfileFields();
 
     @Test
-    @DisplayName("canonical profile key 77개만 제공한다")
-    void exposesExactlyTheCanonicalSeventySevenKeys() {
+    @DisplayName("canonical profile key 84개만 제공한다")
+    void exposesExactlyTheCanonicalEightyTwoKeys() {
         assertThat(supportedFields.keys())
-            .hasSize(77)
+            .hasSize(84)
             .contains(
                 "personal.personal.koreanFamilyName",
                 "contact.contact.phoneNumber",
                 "education.graduateSchool.additionalMajorName",
+                "education.university.transferStatus",
+                "education.university.gpaScale",
+                "education.university.minorName",
+                "military.military.militaryType",
                 "health.health.healthDetails"
             )
             .doesNotContain(
@@ -38,11 +42,11 @@ class SupportedProfileFieldsTest {
         assertThat(supportedFields.keys())
             .map(key -> supportedFields.policyOf(key).orElseThrow())
             .filteredOn(policy -> policy == AutofillPolicy.ALLOWED)
-            .hasSize(49);
+            .hasSize(50);
         assertThat(supportedFields.keys())
             .map(key -> supportedFields.policyOf(key).orElseThrow())
             .filteredOn(policy -> policy == AutofillPolicy.CONDITIONAL)
-            .hasSize(28);
+            .hasSize(34);
         assertThat(supportedFields.keys())
             .map(key -> supportedFields.policyOf(key).orElseThrow())
             .filteredOn(policy -> policy == AutofillPolicy.SENSITIVE_CONFIRMATION)
