@@ -7,7 +7,7 @@
 5. AI가 Issue를 다시 읽고 위험 작업과 누락 정보를 검사한다.
 6. 일반, 릴리스 수정은 `CF-<Issue 번호>`, 운영 hotfix는 `hotfix/CF-<Issue 번호>` 워크트리에서 논리적 커밋 단위로 작업한다.
 7. 실패하는 테스트, 최소 구현, 리팩터링 순서로 진행한다.
-8. 전체 검증과 코드 리뷰를 통과하면 Issue 하나만 종료하는 Draft PR 하나를 만든다. Issue `status:in-progress`와 Project `In Progress`를 유지하고 사람이 GitHub에서 수정한 뒤 재개를 요청할 때까지 멈춘다.
+8. 전체 검증과 코드 리뷰를 통과하면 Issue 하나만 종료하는 Draft PR 하나를 만든다. 연결 Issue의 `type:*`, `frontend-change`, `backend-change`, `infra-change`, `harness-change`를 PR에 적용하고 `status:*`는 제외한 뒤 원격 PR 라벨을 검증한다. Issue `status:in-progress`와 Project `In Progress`를 유지하고 사람이 GitHub에서 수정한 뒤 재개를 요청할 때까지 멈춘다.
 9. 재개하면 AI가 기존 Draft PR을 다시 읽어 검증한다. 실패하면 in-progress 상태를 유지하고, 통과하면 Issue `status:review`와 Project `On Review`로 전환한다.
 10. 사람이 Draft PR을 Ready for review로 전환한다.
 11. 사람이 최종 승인하고 Squash Commit 제목을 확인한 뒤 머지한다.
@@ -28,3 +28,5 @@
 | `status:review` | `On Review` |
 
 draft 승격 직후 Project Status는 `In Progress`로 바꾼다. planning과 ready 라벨을 적용해도 `In Progress`를 유지한다. 구현 시작부터 Draft PR 수동 편집이 끝날 때까지 Issue label과 Project Status는 `status:in-progress`와 `In Progress`다. 재개 후 PR 검증을 통과한 경우에만 `status:review`와 `On Review`로 함께 전환한다.
+
+Draft PR에는 연결 Issue의 변경 분류 라벨만 복사한다. Issue 생명주기를 나타내는 `status:*`는 PR에 복사하지 않는다. 공유 보호 영역 변경은 기존 계약대로 연결 Issue와 PR 양쪽의 `harness-change`를 요구하며, PR 생성 뒤 원격 라벨 검증을 통과해야 Draft PR 완료로 기록한다.

@@ -51,6 +51,75 @@ class HarnessScriptsTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_pr_label_plan_script_prints_selected_labels(self) -> None:
+        result = self._run_with_json(
+            "plan-pr-labels",
+            {
+                "labels": [
+                    {"name": "status:in-progress"},
+                    {"name": "type:technical"},
+                    {"name": "harness-change"},
+                ]
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            {"labels": ["type:technical", "harness-change"]},
+            json.loads(result.stdout),
+        )
+
+    def test_pr_label_validation_script_accepts_matching_remote_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            issue = Path(directory) / "issue.json"
+            pull_request = Path(directory) / "pull-request.json"
+            issue.write_text(
+                json.dumps({"labels": [{"name": "harness-change"}]}),
+                encoding="utf-8",
+            )
+            pull_request.write_text(
+                json.dumps(
+                    {"pull_request": {"labels": [{"name": "harness-change"}]}}
+                ),
+                encoding="utf-8",
+            )
+
+            result = self._run(
+                "validate-pr-labels",
+                str(issue),
+                str(pull_request),
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_label_validation_script_reports_missing_remote_label(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            issue = Path(directory) / "issue.json"
+            pull_request = Path(directory) / "pull-request.json"
+            issue.write_text(
+                json.dumps({"labels": [{"name": "backend-change"}]}),
+                encoding="utf-8",
+            )
+            pull_request.write_text(json.dumps({"labels": []}), encoding="utf-8")
+
+            result = self._run(
+                "validate-pr-labels",
+                str(issue),
+                str(pull_request),
+            )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("변경 분류 라벨이 없습니다: backend-change", result.stderr)
+
+    def test_pr_label_plan_script_rejects_malformed_labels(self) -> None:
+        result = self._run_with_json(
+            "plan-pr-labels",
+            {"labels": "harness-change"},
+        )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("PR 라벨 입력을 읽을 수 없습니다", result.stderr)
+
     def test_pr_script_accepts_plan_title(self) -> None:
         event = {
             "pull_request": {
