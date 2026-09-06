@@ -75,10 +75,10 @@ public final class StoredPolicyActionResolver implements ActionResolver {
             case ADD -> new AddAction(candidate.candidateId(), rule.expectedFieldNames());
             case SELECT_OPTION -> new SelectOptionAction(
                 candidate.candidateId(), rule.profileFieldKey(), rule.optionDisplayName(), rule.targetSectionId(),
-                rule.expectedFieldNames());
+                rule.expectedFieldNames(), rule.selectableProfileValues(), rule.revealedFieldBindings());
             case CHOOSE_RADIO -> new SelectOptionAction(
                 candidate.candidateId(), rule.profileFieldKey(), rule.optionDisplayName(), rule.targetSectionId(),
-                rule.expectedFieldNames());
+                rule.expectedFieldNames(), rule.selectableProfileValues(), rule.revealedFieldBindings());
         };
     }
 
@@ -99,7 +99,8 @@ public final class StoredPolicyActionResolver implements ActionResolver {
         int separator = value.lastIndexOf('_');
         if (separator < 0 || separator == value.length() - 1) return value;
         String suffix = value.substring(separator + 1);
-        return suffix.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+        return (suffix.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+                || suffix.matches("[1-9][0-9]*"))
             ? value.substring(0, separator)
             : value;
     }

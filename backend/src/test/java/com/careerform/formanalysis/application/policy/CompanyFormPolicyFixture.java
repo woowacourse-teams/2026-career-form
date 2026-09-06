@@ -129,6 +129,7 @@ public final class CompanyFormPolicyFixture {
                     "education.university.completionStatus"
                 ),
                 textRule("eduMajor", "education.university.majorName"),
+                textRule("eduMajorSub", "education.university.minorName"),
                 textRule("eduCredit", "education.university.gpaScore"),
                 textRule("eduFromDate", "education.university.startDate"),
                 textRule("eduToDate", "education.university.endDate"),

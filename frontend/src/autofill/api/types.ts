@@ -31,7 +31,7 @@ export interface ActionCandidate extends CandidateBase {
 
 export interface FieldCandidate extends CandidateBase {
   element: "input" | "select" | "textarea" | "custom";
-  control: "text" | "select" | "radio" | "checkbox" | "textarea" | "custom";
+  control: "text" | "select" | "radio" | "checkbox" | "textarea" | "button" | "custom";
   placeholder?: string;
   options?: OptionCandidate[];
 }
@@ -90,6 +90,8 @@ export type PreparationPlan =
       profileFieldKey: string;
       optionDisplayName?: string;
       expectedFieldNames?: string[];
+      selectableProfileValues?: string[];
+      revealedFieldBindings?: Record<string, string>;
       targetSectionId: string;
     }
   | {
@@ -112,14 +114,18 @@ export interface PreparationAnalyzeResponse {
 }
 
 export type WriteCommand =
-  "SET_TEXT" | "SELECT_OPTION" | "CHECK_RADIO" | "CHECK_CHECKBOX";
+  | "SET_TEXT"
+  | "SELECT_OPTION"
+  | "SELECT_BUTTON_OPTION"
+  | "CHECK_RADIO"
+  | "CHECK_CHECKBOX";
 
 export type DerivedRecipe =
   | "KOREAN_FULL_NAME"
   | "ENGLISH_FULL_NAME_GIVEN_FIRST"
   | "ENGLISH_FULL_NAME_FAMILY_FIRST"
-  | "EDUCATION_TYPE_AND_DEGREE"
-  | "BOOLEAN_YN";
+  | "BOOLEAN_YN"
+  | "YEAR_MONTH";
 
 export type ValueBinding =
   | { type: "DIRECT"; profileFieldKey: string }
@@ -129,6 +135,17 @@ export type ValueBinding =
       profileFieldKey?: string;
       trueLabel?: string;
       falseLabel?: string;
+    }
+  | {
+      type: "LOOKUP";
+      profileFieldKey: string;
+      optionMap: Record<string, string>;
+    }
+  | {
+      type: "BUTTON_OPTION";
+      profileFieldKey: string;
+      optionMap: Record<string, string>;
+      optionCodeMap: Record<string, string>;
     };
 
 export interface MatchedFieldAnalysis {

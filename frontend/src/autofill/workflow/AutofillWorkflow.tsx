@@ -2,13 +2,21 @@ import { useEffect, useState } from "react";
 
 import { AnalysisServiceError } from "../api/runtime-client";
 import { AnalysisContractError } from "../api/validate-response";
-import type { AnalysisApiClient, PreparationPlan } from "../api/types";
+import type {
+  AnalysisApiClient,
+  MatchedFieldAnalysis,
+  PreparationPlan,
+} from "../api/types";
 import {
   collectFieldsSnapshot,
   collectPreparationSnapshot,
+  isSkCareersHost,
   type CollectedSnapshot,
 } from "../dom/collect";
-import { executeApprovedPreparationPlans } from "../preparation/executor";
+import {
+  executeApprovedPreparationPlans,
+  type PreparationExecutionOptions,
+} from "../preparation/executor";
 import { preparationFailureMessage } from "../preparation/failure-message";
 import { waitForExpectedFields } from "../preparation/wait-for-fields";
 import {
@@ -20,6 +28,7 @@ import {
 } from "../review/review-plan";
 import {
   executeApprovedWrites,
+  executeApprovedWritesAfterPageSettles,
   type ApprovedWriteResult,
 } from "../write/executor";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
@@ -38,6 +47,119 @@ interface PreparationItem {
   localItemCount?: number;
   currentGroupCount?: number;
   requiredAdditions?: number;
+}
+
+export function hasFreshUniversityRows(
+  items: readonly Pick<
+    PreparationItem,
+    "plan" | "currentGroupCount" | "requiredAdditions"
+  >[],
+): boolean {
+  return items.some(
+    (item) =>
+      item.plan.command === "ADD_REPEATABLE_GROUP" &&
+      item.plan.expectedFieldNames?.includes("eduEducationName") === true &&
+      item.currentGroupCount === 0 &&
+      (item.requiredAdditions ?? 0) > 0,
+  );
+}
+
+export function shouldRunRevealPlan(
+  profileValue: string,
+  optionDisplayName?: string,
+  selectableProfileValues?: readonly string[],
+): boolean {
+  return selectableProfileValues
+    ? selectableProfileValues.includes(profileValue)
+    : optionDisplayName === undefined || profileValue === optionDisplayName;
+}
+
+export function isLanguageTypeStateDriver(
+  item: ReviewPlanItem,
+  domName: string | undefined,
+  host: string,
+): boolean {
+  return isSkCareersHost(host)
+    && item.analysis?.writePlan?.command === "SELECT_OPTION"
+    && domName === "lngLanguageType";
+}
+
+const SK_UNIVERSITY_MAJOR_REVEALS = [
+  {
+    domName: "eduMajorDoubleYN",
+    profileFieldKey: "education.university.doubleMajorStatus",
+    label: "복수전공",
+  },
+  {
+    domName: "eduMajorSubYN",
+    profileFieldKey: "education.university.minorStatus",
+    label: "부전공",
+  },
+] as const;
+
+function hasUuidSuffix(value: string, baseName: string): boolean {
+  return new RegExp(
+    `^${baseName}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`,
+    "i",
+  ).test(value);
+}
+
+function selectSkUniversityMajorReveals(
+  document: Document,
+  profile: Profile,
+): string[] {
+  return SK_UNIVERSITY_MAJOR_REVEALS.map((reveal) => {
+    const value = resolveProfileFieldValue(profile, reveal.profileFieldKey, 0);
+    if (value.status !== "resolved") {
+      return `${reveal.label}: 프로필 값 없음`;
+    }
+    if (value.value.normalize("NFKC").trim() !== "있음") {
+      return `${reveal.label}: 프로필 값이 '있음'이 아니어서 건너뜀`;
+    }
+    const target = Array.from(
+      document.querySelectorAll<HTMLInputElement>("input[type='radio']"),
+    ).find((input) => {
+      if (input.name !== reveal.domName && !hasUuidSuffix(input.name, reveal.domName)) {
+        return false;
+      }
+      return input.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() === "있음";
+    });
+    if (!target) {
+      return `${reveal.label}: '있음' 라디오를 DOM에서 찾지 못함`;
+    }
+    if (!target.checked) target.click();
+    return target.checked
+      ? `${reveal.label}: '있음' 선행 선택 완료`
+      : `${reveal.label}: '있음' 선행 선택 실패`;
+  });
+}
+
+function syncHyundaiFloatingLabels(
+  host: string,
+  items: readonly ReviewPlanItem[],
+  writeResults: readonly ApprovedWriteResult[],
+  registry: ReturnType<typeof collectFieldsSnapshot>["registry"],
+): void {
+  if (host.toLowerCase() !== "talent.hyundai.com") return;
+
+  items.forEach((item, index) => {
+    if (
+      writeResults[index]?.status !== "written" ||
+      item.analysis?.writePlan?.command !== "SET_TEXT"
+    ) {
+      return;
+    }
+    const lookup = registry.lookupField(item.candidateId);
+    if (lookup.status !== "ready") return;
+    const element = lookup.handle.elements[0];
+    if (
+      !(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) ||
+      !element.value.trim()
+    ) {
+      return;
+    }
+    element.closest(".field")?.classList.add("exist");
+  });
 }
 
 type ReviewItemGroupId = "available" | "needs-review";
@@ -88,10 +210,12 @@ const PROFILE_CATEGORY_KEYWORDS: Record<
   RepeatedProfileCategoryId,
   readonly string[]
 > = {
-  education: ["학력"],
-  languages: ["어학", "외국어"],
-  certifications: ["자격", "면허"],
-  projects: ["프로젝트"],
+  education: ["학력", "academic"],
+  languages: ["어학", "외국어", "foreign"],
+  certifications: ["자격", "면허", "licence"],
+  careers: ["경력", "직장", "career"],
+  projects: ["프로젝트", "project"],
+  publications: ["논문", "특허", "publication"],
   health: ["건강"],
 };
 
@@ -225,7 +349,14 @@ function preparationItem(
       plan.command === "SELECT_OPTION_TO_REVEAL"
         ? resolveProfileFieldValue(profile, plan.profileFieldKey)
         : undefined;
-    const runnable = value?.status === undefined || value.status === "resolved";
+    const runnable =
+      plan.command !== "SELECT_OPTION_TO_REVEAL" ||
+      (value?.status === "resolved" &&
+        shouldRunRevealPlan(
+          value.value,
+          plan.optionDisplayName,
+          plan.selectableProfileValues,
+        ));
     return {
       plan,
       actionLabel: actionLabel(plan, snapshot),
@@ -367,8 +498,13 @@ export function AutofillWorkflow({
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
+  const [skMajorDiagnostics, setSkMajorDiagnostics] = useState<string[]>([]);
 
-  const analyzeFields = async (loadedProfile: Profile) => {
+  const analyzeFields = async (
+    loadedProfile: Profile,
+    ignoreFreshUniversityDefaults = false,
+    languageSelectionPrepared = false,
+  ) => {
     const snapshot = collectFieldsSnapshot(pageDocument);
     console.info("[CareerForm] fields snapshot", {
       snapshotId: snapshot.request.snapshotId,
@@ -408,10 +544,47 @@ export function AutofillWorkflow({
       setStage("exception");
       return;
     }
+    console.info(
+      "[CareerForm] university dependent fields",
+      analysis.fields.flatMap((field) => {
+        const lookup = snapshot.registry.lookupField(field.candidateId);
+        if (
+          (lookup.status !== "ready" && lookup.status !== "blocked") ||
+          !["eduMajorDouble", "eduMajorSub"].includes(
+            lookup.handle.candidate.domName ?? "",
+          )
+        ) {
+          return [];
+        }
+        return [{
+          candidateId: field.candidateId,
+          domName: lookup.handle.candidate.domName,
+          matchType: field.matchType,
+          ...(field.matchType === "MATCH"
+            ? {
+                profileFieldKey: field.valueBinding?.profileFieldKey,
+                command: field.writePlan?.command,
+              }
+            : {}),
+        }];
+      }),
+    );
+    const ignoreCurrentValueCandidateIds = new Set(
+      ignoreFreshUniversityDefaults
+        ? analysis.fields.flatMap((field) => {
+            const lookup = snapshot.registry.lookupField(field.candidateId);
+            return (lookup.status === "ready" || lookup.status === "blocked") &&
+              lookup.handle.candidate.domName === "eduEducationType"
+              ? [field.candidateId]
+              : [];
+          })
+        : [],
+    );
     const plan = buildReviewPlan({
       analysis,
       profile: loadedProfile,
       registry: snapshot.registry,
+      ignoreCurrentValueCandidateIds,
     });
     if (plan.status === "blocked") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
@@ -432,21 +605,79 @@ export function AutofillWorkflow({
     setReviewItems(automaticItems);
     setPartial(plan.status === "partial");
     setWarnings(analysis.warningCodes ?? []);
-    setResults(
-      executeApprovedWrites({
-        items: automaticItems,
+    const approvedCandidateIds = new Set(
+      automaticItems
+        .filter(
+          (item) => !item.disabled && (item.selected || item.status === "needs-review"),
+        )
+        .map((item) => item.candidateId),
+    );
+    const languageStateDriverItems = languageSelectionPrepared
+      ? []
+      : automaticItems.filter((item) => {
+          const lookup = snapshot.registry.lookupField(item.candidateId);
+          return (lookup.status === "ready" || lookup.status === "blocked")
+            && isLanguageTypeStateDriver(
+              item,
+              lookup.handle.candidate.domName,
+              snapshot.request.site.host,
+            );
+        });
+    if (languageStateDriverItems.length > 0) {
+      const languageSelectionResults = executeApprovedWrites({
+        items: languageStateDriverItems,
         approvedCandidateIds: new Set(
-          automaticItems
-            .filter(
-              (item) =>
-                !item.disabled &&
-                (item.selected || item.status === "needs-review"),
-            )
-            .map((item) => item.candidateId),
+          languageStateDriverItems.map((item) => item.candidateId),
         ),
         registry: snapshot.registry,
+      });
+      if (languageSelectionResults.every((result) => result.status === "written")) {
+        console.info("[CareerForm] language selection applied; recollecting fields", {
+          candidateIds: languageStateDriverItems.map((item) => item.candidateId),
+        });
+        await analyzeFields(
+          loadedProfile,
+          ignoreFreshUniversityDefaults,
+          true,
+        );
+        return;
+      }
+    }
+    const writeResults = await executeApprovedWritesAfterPageSettles({
+      items: automaticItems,
+      approvedCandidateIds,
+      registry: snapshot.registry,
+    });
+    syncHyundaiFloatingLabels(
+      snapshot.request.site.host,
+      automaticItems,
+      writeResults,
+      snapshot.registry,
+    );
+    console.info(
+      "[CareerForm] delayed dependent writes",
+      automaticItems.flatMap((item, index) => {
+        const lookup = snapshot.registry.lookupField(item.candidateId);
+        if (
+          (lookup.status !== "ready" && lookup.status !== "blocked") ||
+          !["eduMajorDouble", "eduMajorSub", "lngExamName"].includes(
+            lookup.handle.candidate.domName ?? "",
+          )
+        ) {
+          return [];
+        }
+        return [{
+          candidateId: item.candidateId,
+          profileValue: item.profileValue,
+          status: writeResults[index]?.status,
+          reason:
+            writeResults[index]?.status === "skipped"
+              ? writeResults[index].reason
+              : undefined,
+        }];
       }),
     );
+    setResults(writeResults);
     setStage("result");
   };
 
@@ -532,17 +763,19 @@ export function AutofillWorkflow({
       })}`,
     );
     if (runnablePlans.length === 0) {
-      await analyzeFields(profile);
+      const addedUniversityRowsToEmptyForm = hasFreshUniversityRows(runnablePlans);
+      await analyzeFields(profile, addedUniversityRowsToEmptyForm);
       return;
     }
-    const result = await executeApprovedPreparationPlans({
-      approvedPlans: runnablePlans,
+    const preparationOptions = (
+      snapshot: ReturnType<typeof collectPreparationSnapshot>,
+    ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
       initialSnapshot: {
-        registry: preparationSnapshot.registry,
+        registry: snapshot.registry,
         isTargetSectionVisible: (targetSectionId) =>
-          preparationSnapshot.isSectionVisible(targetSectionId),
+          snapshot.isSectionVisible(targetSectionId),
         countRepeatableGroups: (plan) =>
-          preparationSnapshot.countRepeatableGroups(plan.actionCandidateId),
+          snapshot.countRepeatableGroups(plan.actionCandidateId),
       },
       refreshSnapshot: async () => {
         const refreshed = collectPreparationSnapshot(pageDocument);
@@ -560,7 +793,6 @@ export function AutofillWorkflow({
         waitForExpectedFields(
           pageDocument,
           ("expectedFieldNames" in plan ? plan.expectedFieldNames : []) ?? [],
-          0,
         ),
       selectProfileOption: (plan, snapshot) => {
         const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
@@ -586,6 +818,10 @@ export function AutofillWorkflow({
         );
         return "selected";
       },
+    });
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: runnablePlans,
+      ...preparationOptions(preparationSnapshot),
     });
     console.info(
       `[CareerForm] preparation execution result ${JSON.stringify({
@@ -616,11 +852,164 @@ export function AutofillWorkflow({
     }
     try {
       setStage("analyzing");
-      await analyzeFields(profile);
+      const addedUniversityRowsToEmptyForm = hasFreshUniversityRows(runnablePlans);
+      // Adding a repeatable row can expose a second layer of conditional
+      // controls (for example, the university's double/minor-major radios).
+      // SK Careers keeps those radios out of the preparation-action snapshot,
+      // so select their explicit, profile-backed "있음" option before the
+      // field snapshot is collected. This makes the two name controls exist
+      // for the normal analysis/write flow below.
+      if (isSkCareersHost(pageDocument.location.host)) {
+        setSkMajorDiagnostics(selectSkUniversityMajorReveals(pageDocument, profile));
+      }
+      // Analyze that newly collected DOM once, but only execute selections:
+      // repeating add plans here could create duplicate rows.
+      const followUpSnapshot = collectPreparationSnapshot(pageDocument);
+      const followUpAnalysis = await apiClient.analyzePreparation(
+        followUpSnapshot.request,
+      );
+      console.info("[CareerForm] university dependent preparation", {
+        status: followUpAnalysis.analysisStatus,
+        plans: followUpAnalysis.preparationPlans.filter(
+          (plan) => plan.command === "SELECT_OPTION_TO_REVEAL",
+        ),
+      });
+      if (isSkCareersHost(pageDocument.location.host)) {
+        const revealedPlans = followUpAnalysis.preparationPlans.filter(
+          (plan) => plan.command === "SELECT_OPTION_TO_REVEAL",
+        );
+        setSkMajorDiagnostics((previous) => [...previous,
+          `후속 조건부 선택 계획: ${revealedPlans.length}개`,
+          ...revealedPlans.map((plan) =>
+            `선택 ${plan.profileFieldKey} → 후속 바인딩 ${Object.keys(plan.revealedFieldBindings ?? {}).join(", ") || "없음"}`,
+          ),
+        ]);
+      }
+      if (followUpAnalysis.analysisStatus !== "BLOCKED") {
+        const followUpPlans = followUpAnalysis.preparationPlans
+          .filter(
+            (plan): plan is Extract<PreparationPlan, { command: "SELECT_OPTION_TO_REVEAL" }> =>
+              plan.command === "SELECT_OPTION_TO_REVEAL",
+          )
+          .map((plan) => ({
+            ...preparationItem(plan, followUpSnapshot, profile),
+            approved: true,
+          }))
+          .filter((item) => item.runnable);
+        if (followUpPlans.length > 0) {
+          const followUpResult = await executeApprovedPreparationPlans({
+            approvedPlans: followUpPlans,
+            ...preparationOptions(followUpSnapshot),
+          });
+          console.info("[CareerForm] university dependent result", {
+            status: followUpResult.status,
+            executedPlanCount: followUpResult.executedPlanCount,
+            unavailableActionCandidateIds:
+              followUpResult.status === "completed"
+                ? followUpResult.unavailableActionCandidateIds
+                : [],
+          });
+          if (followUpResult.status !== "completed") {
+            setExceptionTitle(
+              followUpResult.status === "failed"
+                ? preparationFailureMessage(followUpResult.reason)
+                : "준비 동작을 안전하게 완료하지 못했습니다",
+            );
+            setStage("exception");
+            return;
+          }
+          await writeSkRevealedMajorNames(profile, followUpPlans);
+        }
+      }
+      await analyzeFields(profile, addedUniversityRowsToEmptyForm);
     } catch (error) {
       setExceptionTitle(safeErrorTitle(error));
       setStage("exception");
     }
+  };
+
+  const writeSkRevealedMajorNames = async (
+    loadedProfile: Profile,
+    plans: readonly PreparationItem[],
+  ) => {
+    if (!isSkCareersHost(pageDocument.location.host)) return;
+    const revealedFieldBindings = new Map(
+      plans.flatMap((item) =>
+        (item.plan.command === "SELECT_OPTION_TO_REVEAL"
+          ? Object.entries(item.plan.revealedFieldBindings ?? {})
+          : []
+        ),
+      ),
+    );
+    if (revealedFieldBindings.size === 0) return;
+
+    const diagnostics = [
+      `정책 후속 바인딩: ${[...revealedFieldBindings.keys()].join(", ")}`,
+    ];
+
+    const snapshot = collectFieldsSnapshot(pageDocument);
+    const analysis = await apiClient.analyzeFields(snapshot.request);
+    if (analysis.analysisStatus === "BLOCKED") {
+      setSkMajorDiagnostics([...diagnostics, "필드 재분석이 차단되었습니다."]);
+      return;
+    }
+
+    const items = analysis.fields.flatMap((field) => {
+      if (field.matchType !== "MATCH") return [];
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      if (lookup.status !== "ready") return [];
+      const domName = lookup.handle.candidate.domName;
+      const profileFieldKey = domName ? revealedFieldBindings.get(domName) : undefined;
+      if (
+        !domName ||
+        !profileFieldKey ||
+        field.valueBinding?.profileFieldKey !== profileFieldKey ||
+        field.writePlan?.command !== "SET_TEXT"
+      ) {
+        return [];
+      }
+      // A hidden SK template can precede the real row in DOM order. Resolve
+      // the sole saved university entry without trusting that template-based
+      // row index; multiple profile entries remain safely ambiguous.
+      const resolved = resolveProfileFieldValue(
+        loadedProfile,
+        profileFieldKey,
+      );
+      if (resolved.status !== "resolved") return [];
+      return [{
+        candidateId: field.candidateId,
+        fieldLabel: lookup.handle.candidate.displayName ?? domName,
+        profileFieldKey,
+        ...(resolved.profileEntryId ? { profileEntryId: resolved.profileEntryId } : {}),
+        ...(lookup.handle.itemIndex !== undefined
+          ? { itemIndex: lookup.handle.itemIndex }
+          : {}),
+        currentValue: lookup.handle.elements[0]?.value ?? "",
+        profileValue: resolved.value,
+        previewValue: resolved.value,
+        status: "available" as const,
+        selected: true,
+        disabled: false,
+        revealed: true,
+        reason: "SK 조건부 전공명 필드",
+        analysis: field as MatchedFieldAnalysis,
+      } satisfies ReviewPlanItem];
+    });
+    diagnostics.push(`정책·가시성·프로필 값을 모두 통과한 입력 후보: ${items.length}개`);
+    const results = executeApprovedWrites({
+      items,
+      approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
+      registry: snapshot.registry,
+    });
+    diagnostics.push(
+      ...results.map((result) =>
+        result.status === "written"
+          ? `${result.candidateId}: 입력 성공`
+          : `${result.candidateId}: 건너뜀 (${result.reason})`,
+      ),
+    );
+    setSkMajorDiagnostics((previous) => [...previous, ...diagnostics]);
+    console.info("[CareerForm] SK revealed major-name writes", results);
   };
 
   const toggleReviewItem = (candidateId: string) => {
@@ -643,7 +1032,7 @@ export function AutofillWorkflow({
     );
   };
 
-  const executeWrites = () => {
+  const executeWrites = async () => {
     if (!fieldsSnapshot) return;
     const approvedCandidateIds = new Set(
       reviewItems
@@ -651,7 +1040,7 @@ export function AutofillWorkflow({
         .map((item) => item.candidateId),
     );
     setResults(
-      executeApprovedWrites({
+      await executeApprovedWritesAfterPageSettles({
         items: reviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
@@ -803,7 +1192,7 @@ export function AutofillWorkflow({
           className={styles.primary}
           type="button"
           disabled={selectedCount === 0}
-          onClick={executeWrites}
+          onClick={() => void executeWrites()}
         >
           {selectedCount}개 항목 기입하기
         </button>
@@ -860,6 +1249,19 @@ export function AutofillWorkflow({
               );
             })}
           </ul>
+        )}
+        {isSkCareersHost(pageDocument.location.host) && (
+          <details className={styles.safety}>
+            <summary>SK 복수·부전공명 진단</summary>
+            <ul className={styles.boundaries}>
+              {(skMajorDiagnostics.length > 0
+                ? skMajorDiagnostics
+                : ["후속 조건부 입력 진단이 생성되지 않았습니다. 자동기입 실행 흐름을 확인해야 합니다."]
+              ).map((diagnostic) => (
+                <li key={diagnostic}>{diagnostic}</li>
+              ))}
+            </ul>
+          </details>
         )}
         <button className={styles.primary} type="button" onClick={onExit}>
           수동 복사로 돌아가기

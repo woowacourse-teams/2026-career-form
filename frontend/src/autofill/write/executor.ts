@@ -66,6 +66,37 @@ function matchingLocalOption(
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+function selectVerifiedButtonOption(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  displayName: string,
+): boolean {
+  const binding = item.analysis?.valueBinding;
+  if (
+    handle.candidate.control !== "button" ||
+    !(binding?.type === "BUTTON_OPTION")
+  ) {
+    return false;
+  }
+  const code = binding.optionCodeMap[displayName];
+  const trigger = handle.elements[0];
+  if (!code || !(trigger instanceof HTMLInputElement) || trigger.type !== "button") {
+    return false;
+  }
+
+  trigger.click();
+  const choices = Array.from(
+    trigger.ownerDocument.querySelectorAll<HTMLButtonElement>("button[data-code]"),
+  ).filter((choice) =>
+    choice.offsetParent !== null &&
+    choice.dataset.code === code &&
+    normalizeDisplayName(choice.textContent ?? "") === normalizeDisplayName(displayName),
+  );
+  if (choices.length !== 1) return false;
+  choices[0].click();
+  return true;
+}
+
 function isSelectableApproved(item: ReviewPlanItem): boolean {
   if (
     !item.selected ||
@@ -119,6 +150,10 @@ function executeWrite(
     return true;
   }
 
+  if (command === "SELECT_BUTTON_OPTION") {
+    return selectVerifiedButtonOption(handle, item, value);
+  }
+
   const option = matchingLocalOption(handle, value);
   if (!option) return false;
 
@@ -162,7 +197,7 @@ export function executeApprovedWrites({
   registry: CandidateRegistry;
 }): ApprovedWriteResult[] {
   const processed = new Set<string>();
-  return items.map((item) => {
+  const results: ApprovedWriteResult[] = items.map((item) => {
     if (
       processed.has(item.candidateId) ||
       !approvedCandidateIds.has(item.candidateId) ||
@@ -194,4 +229,61 @@ export function executeApprovedWrites({
     }
     return { candidateId: item.candidateId, status: "written" };
   });
+
+  return results.map((result, index) => {
+    const item = items[index];
+    if (
+      !item ||
+      result.status !== "written" ||
+      item.analysis?.writePlan?.command !== "SELECT_OPTION"
+    ) {
+      return result;
+    }
+    const lookup = registry.lookupField(item.candidateId);
+    const handle = writableHandle(item, lookup);
+    if (!handle || !executeWrite(item, handle)) {
+      return {
+        candidateId: item.candidateId,
+        status: "skipped",
+        reason: "다른 입력 변경 후 선택값을 유지하지 못했습니다.",
+      };
+    }
+    return result;
+  });
+}
+
+export async function executeApprovedWritesAfterPageSettles({
+  items,
+  approvedCandidateIds,
+  registry,
+}: {
+  items: readonly ReviewPlanItem[];
+  approvedCandidateIds: ReadonlySet<string>;
+  registry: CandidateRegistry;
+}): Promise<ApprovedWriteResult[]> {
+  const initialResults = executeApprovedWrites({
+    items,
+    approvedCandidateIds,
+    registry,
+  });
+  const completedItems = items.filter(
+    (_item, index) => initialResults[index]?.status === "written",
+  );
+  if (completedItems.length === 0) return initialResults;
+
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  const retryResults = executeApprovedWrites({
+    items: completedItems,
+    approvedCandidateIds: new Set(
+      completedItems.map((item) => item.candidateId),
+    ),
+    registry,
+  });
+  const retryByCandidateId = new Map(
+    retryResults.map((result) => [result.candidateId, result]),
+  );
+  return initialResults.map(
+    (result) => retryByCandidateId.get(result.candidateId) ?? result,
+  );
 }

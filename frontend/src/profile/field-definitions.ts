@@ -47,6 +47,10 @@ const select = (
   options,
 });
 
+const EDUCATION_STATUS_OPTIONS = [
+  "재학중", "졸업예정", "졸업", "중퇴", "휴학", "수료",
+];
+
 export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
   {
     id: "personal",
@@ -82,7 +86,10 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         label: "연락처와 주소",
         fields: [
           { id: "email", label: "이메일주소", inputType: "email" },
+          { id: "secondaryEmail", label: "보조 이메일", inputType: "email" },
           { id: "phoneNumber", label: "연락처", inputType: "tel" },
+          { id: "emergencyPhoneNumber", label: "비상연락처", inputType: "tel" },
+          text("residenceCountry", "거주 국가"),
           text("postalCode", "우편번호"),
           text("addressLine1", "기본주소"),
           text("addressLine2", "상세주소"),
@@ -100,7 +107,14 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         id: "highSchool",
         label: "고등학교",
         fields: [
+          select("academicProcess", "학업과정", ["고등학교", "대입 검정고시"]),
+          {
+            ...date("qualificationPassDate", "합격일자"),
+            visibleWhen: (values) => values.academicProcess === "대입 검정고시",
+          },
           text("schoolName", "학교명"),
+          select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
+          text("schoolRegion", "학교 소재지"),
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
         ],
@@ -115,13 +129,15 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
             inputType: "select",
             options: ["전문대학", "대학교"],
           },
-          text("degreeLevel", "학위구분"),
+          select("degreeLevel", "학위구분", ["전문학사", "학사"]),
           text("schoolName", "학교명"),
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
-          text("completionStatus", "졸업구분"),
+          select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
+          text("schoolRegion", "학교 소재지"),
           text("gpaScore", "평점"),
           select("gpaScale", "기준평점", ["4.00", "4.30", "4.50", "100.00"]),
+          text("totalCredits", "총 이수학점"),
           text("majorName", "주전공명"),
           select("transferStatus", "편입유무", ["비해당", "해당"]),
           select("doubleMajorStatus", "복수전공유무", ["없음", "있음"]),
@@ -155,6 +171,10 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("additionalMajorClassification", "추가 전공 구분"),
           text("additionalMajorField", "추가 전공 계열"),
           text("additionalMajorName", "추가 전공명"),
+          text("labName", "LAB실명"),
+          text("labProfessorName", "LAB 담당교수 성명"),
+          text("thesisTitle", "논문명"),
+          { id: "thesisSummary", label: "논문요약", inputType: "textarea" },
         ],
       },
     ],
@@ -218,6 +238,25 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     ],
   },
   {
+    id: "careers",
+    label: "직장경력",
+    repeatable: true,
+    sensitive: false,
+    sections: [{
+      id: "career",
+      label: "직장경력",
+      fields: [
+        text("companyName", "직장명"),
+        select("employmentType", "고용형태", ["정규", "계약", "인턴", "파견", "프리랜서", "아르바이트", "개인사업", "병역특례", "기타"]),
+        date("startDate", "입사일"), date("endDate", "퇴사일"),
+        select("employmentStatus", "재직 여부", ["재직중", "퇴사"]),
+        text("department", "근무부서"), text("position", "최종직위"),
+        { id: "responsibilities", label: "담당업무", inputType: "textarea" },
+        text("terminationReason", "종료사유"),
+      ],
+    }],
+  },
+  {
     id: "projects",
     label: "프로젝트",
     repeatable: true,
@@ -236,6 +275,40 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
             label: "활동 상세내역",
             inputType: "textarea",
           },
+        ],
+      },
+    ],
+  },
+  {
+    id: "publications",
+    label: "논문·특허",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "publicationPatent",
+        label: "논문·특허",
+        fields: [
+          select("type", "구분", ["논문", "특허"]),
+          text("title", "제목"),
+          { id: "details", label: "상세설명", inputType: "textarea" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "compensation",
+    label: "처우",
+    repeatable: false,
+    sensitive: true,
+    sections: [
+      {
+        id: "compensation",
+        label: "처우",
+        fields: [
+          text("desiredPosition", "희망직위"),
+          text("desiredSalary", "희망연봉(만원)"),
+          text("previousSalary", "직전연봉(만원)"),
         ],
       },
     ],
@@ -300,6 +373,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("disabilityStatus", "장애 여부"),
           text("disabilityType", "장애 유형"),
           text("disabilityGrade", "장애 정도·등급"),
+          text("disabilityRegistrationNumber", "장애등록번호"),
           date("disabilityRegistrationDate", "장애 등록일"),
         ],
       },

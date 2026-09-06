@@ -216,7 +216,8 @@ public final class PreparationAnalysisService {
                 select.candidateId(), Command.SELECT_OPTION_TO_REVEAL,
                 ExpectedEffect.TARGET_FIELDS_VISIBLE, select.profileFieldKey(),
                 select.optionDisplayName(),
-                select.targetSectionId(), select.expectedFieldNames());
+                select.targetSectionId(), select.expectedFieldNames(),
+                select.selectableProfileValues(), select.revealedFieldBindings());
         }
         ActionResolver.AddAction add = (ActionResolver.AddAction) result;
         return new AddRepeatableGroupPlan(

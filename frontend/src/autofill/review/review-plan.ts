@@ -71,6 +71,7 @@ interface ProfileFieldParts {
   fieldId: string;
   sensitive: boolean;
   repeatable: boolean;
+  topLevel: boolean;
 }
 
 function profileFieldParts(value: string): ProfileFieldParts | undefined {
@@ -97,6 +98,7 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
     fieldId: field.id,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
+    topLevel: category.topLevelFields?.some((candidate) => candidate.id === field.id) === true,
   };
 }
 
@@ -194,6 +196,7 @@ function itemForAnalysis(
   analysis: FieldAnalysis,
   profile: Profile,
   registry: CandidateRegistry,
+  ignoreCurrentValueCandidateIds: ReadonlySet<string>,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
@@ -235,22 +238,27 @@ function itemForAnalysis(
       analysis,
     );
   }
-  const parts = binding.type === "DIRECT"
-    ? profileFieldParts(binding.profileFieldKey)
-    : undefined;
+  const parts = binding.type === "DERIVED"
+    ? undefined
+    : profileFieldParts(binding.profileFieldKey);
   let itemIndex = lookup.handle.itemIndex;
-  if (parts?.repeatable) {
+  if (parts?.repeatable && !parts.topLevel) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
-    if (itemIndex === undefined && parts.fieldId === "latestEducationType" && profileEntries.length === 1) {
+    if (profileEntries.length === 1) {
       itemIndex = 0;
     }
+    const soleUngroupedProfileEntry =
+      itemIndex === 0 &&
+      (formItemCount === undefined || formItemCount === 0) &&
+      profileEntries.length === 1;
     if (
       itemIndex === undefined ||
-      formItemCount === undefined ||
-      formItemCount !== profileEntries.length
+      (!soleUngroupedProfileEntry &&
+        (formItemCount === undefined ||
+          formItemCount !== profileEntries.length))
     ) {
       return unavailableItem(
         analysis.candidateId,
@@ -272,6 +280,7 @@ function itemForAnalysis(
 
   const pageValue = currentValue(lookup.handle);
   const hasConflict =
+    !ignoreCurrentValueCandidateIds.has(analysis.candidateId) &&
     pageValue.trim().length > 0 &&
     pageValue.trim() !== profileValue.value.trim();
   if (
@@ -357,10 +366,12 @@ export function buildReviewPlan({
   analysis,
   profile,
   registry,
+  ignoreCurrentValueCandidateIds = new Set<string>(),
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
   registry: CandidateRegistry;
+  ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
@@ -368,7 +379,7 @@ export function buildReviewPlan({
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
     items: analysis.fields.map((field) =>
-      itemForAnalysis(field, profile, registry),
+      itemForAnalysis(field, profile, registry, ignoreCurrentValueCandidateIds),
     ),
   };
 }

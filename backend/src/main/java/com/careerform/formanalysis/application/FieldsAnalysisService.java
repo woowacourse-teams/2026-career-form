@@ -14,6 +14,8 @@ import com.careerform.formanalysis.application.FormAnalysisRouter.FieldRoute;
 import com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind;
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
@@ -148,8 +150,15 @@ public final class FieldsAnalysisService {
             }
             if (result instanceof FieldMappingResolver.Match match) {
                 ValueBinding binding = match.valueBinding();
-                if (binding instanceof DirectBinding direct
-                    && !supportedProfileFields.contains(direct.profileFieldKey())) {
+                String profileFieldKey = binding instanceof DirectBinding direct
+                    ? direct.profileFieldKey()
+                    : binding instanceof LookupBinding lookup
+                        ? lookup.profileFieldKey()
+                        : binding instanceof ButtonOptionBinding buttonOption
+                            ? buttonOption.profileFieldKey()
+                        : null;
+                if (profileFieldKey != null
+                    && !supportedProfileFields.contains(profileFieldKey)) {
                     invalidResolution();
                 }
             }
@@ -194,12 +203,16 @@ public final class FieldsAnalysisService {
             );
         }
         FieldMappingResolver.Match match = (FieldMappingResolver.Match) mapping;
-        String directKey = match.valueBinding() instanceof DirectBinding direct
+        String profileFieldKey = match.valueBinding() instanceof DirectBinding direct
             ? direct.profileFieldKey()
-            : null;
-        AutofillPolicy autofillPolicy = directKey == null
+            : match.valueBinding() instanceof LookupBinding lookup
+                ? lookup.profileFieldKey()
+                : match.valueBinding() instanceof ButtonOptionBinding buttonOption
+                    ? buttonOption.profileFieldKey()
+                : null;
+        AutofillPolicy autofillPolicy = profileFieldKey == null
             ? AutofillPolicy.ALLOWED
-            : supportedProfileFields.policyOf(directKey).orElseThrow();
+            : supportedProfileFields.policyOf(profileFieldKey).orElseThrow();
         return new MatchedFieldAnalysis(
             candidate.candidateId(),
             MatchType.MATCH,

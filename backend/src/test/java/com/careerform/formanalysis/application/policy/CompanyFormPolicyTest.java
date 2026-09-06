@@ -20,6 +20,7 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFi
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
 
 @DisplayName("회사별 지원서 정책")
 class CompanyFormPolicyTest {
@@ -141,6 +142,38 @@ class CompanyFormPolicyTest {
 
         assertThat(policy.fieldRules().getFirst().valueBinding()).isEqualTo(
             new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME)
+        );
+    }
+
+    @Test
+    @DisplayName("필드 정책은 canonical profile key의 option lookup을 지정할 수 있다")
+    void acceptsLookupValueBinding() {
+        FieldRule rule = new FieldRule(
+            "education-type",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+            new LookupBinding(
+                "education.university.degreeLevel",
+                java.util.Map.of(
+                    "전문학사", "전문대학(전문학사)",
+                    "학사", "대학(학사)"
+                )
+            )
+        );
+
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "sk", 1, preparationFingerprint(), fieldsFingerprint(), actionRules(),
+            List.of(rule), key -> key.equals("education.university.degreeLevel")
+        );
+
+        assertThat(policy.fieldRules().getFirst().valueBinding()).isEqualTo(
+            new LookupBinding(
+                "education.university.degreeLevel",
+                java.util.Map.of(
+                    "전문학사", "전문대학(전문학사)",
+                    "학사", "대학(학사)"
+                )
+            )
         );
     }
 

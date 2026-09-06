@@ -114,7 +114,7 @@ export function ProfileForm({
 
   const categoryId = category.id as RepeatedProfileCategoryId;
   const entries = profile[categoryId];
-  const topLevelEntry = entries.find((entry) => entry.sectionId === "university");
+  const topLevelEntry = entries.find((entry) => entry.sectionId === "university") ?? entries[0];
   return (
     <div className={styles.repeatedSection}>
       {category.topLevelFields && topLevelEntry && (

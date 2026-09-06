@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { collectFieldsSnapshot, collectPreparationSnapshot } from "./collect";
+import {
+  collectFieldsSnapshot,
+  collectPreparationSnapshot,
+  hasVisibleFormControl,
+  isHyundaiTalentHost,
+  isSkCareersHost,
+} from "./collect";
 
 describe("application form DOM collection", () => {
   beforeEach(() => {
@@ -37,6 +43,11 @@ describe("application form DOM collection", () => {
       preparation.request.sections[0]?.actionCandidates[0]?.displayName,
     ).toBe("항목 추가");
     expect(JSON.stringify(preparation.request)).not.toContain("email");
+  });
+
+  it("recognizes Hyundai's custom field-button host only", () => {
+    expect(isHyundaiTalentHost("talent.hyundai.com")).toBe(true);
+    expect(isHyundaiTalentHost("www.skcareers.com")).toBe(false);
   });
 
   it("collects a same-name radio group as one candidate with display-only options", () => {
@@ -288,6 +299,40 @@ describe("application form DOM collection", () => {
         collected.countRepeatableGroups(action.candidateId),
       ),
     ).toEqual([1, 1, 1]);
+  });
+
+  it("keeps hidden repeatable rows in generic-form counts", () => {
+    document.body.innerHTML = `
+      <div class="apply-form-box education-root">
+        <div class="educationUniv-item"><input name="eduMajorSub" /></div>
+        <div class="educationUniv-item" hidden><input name="eduMajorSub" /></div>
+      </div>
+    `;
+
+    const collected = collectFieldsSnapshot(document);
+    const visibleCandidate = collected.request.sections[0]!.items![0]!.fields[0]!;
+
+    expect(visibleCandidate.domName).toBe("eduMajorSub");
+    expect(collected.registry.fieldItemCount(visibleCandidate.candidateId)).toBe(2);
+  });
+
+  it("limits the hidden-template exception to SK Careers", () => {
+    expect(isSkCareersHost("www.skcareers.com")).toBe(true);
+    expect(isSkCareersHost("careers.example.test")).toBe(false);
+  });
+
+  it("recognizes an SK template whose row shell remains visible but controls are hidden", () => {
+    document.body.innerHTML = `
+      <div id="template-row"><input name="eduMajorSub" hidden /></div>
+      <div id="entry-row"><input name="eduMajorSub" /></div>
+    `;
+
+    expect(
+      hasVisibleFormControl(document.querySelector("#template-row")!),
+    ).toBe(false);
+    expect(
+      hasVisibleFormControl(document.querySelector("#entry-row")!),
+    ).toBe(true);
   });
 
   it("does not count a sibling education row for an empty education group", () => {

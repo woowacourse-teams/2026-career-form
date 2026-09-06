@@ -28,7 +28,9 @@ function partsOf(key: string) {
   const section = category?.sections.find(
     (candidate) => candidate.id === sectionId,
   );
-  const field = section?.fields.find((candidate) => candidate.id === fieldId);
+  const field =
+    section?.fields.find((candidate) => candidate.id === fieldId) ??
+    category?.topLevelFields?.find((candidate) => candidate.id === fieldId);
   if (!category || !section || !field || field.id === "evidenceDocumentPath")
     return undefined;
   return {
@@ -37,6 +39,7 @@ function partsOf(key: string) {
     fieldId: field.id,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
+    topLevel: category.topLevelFields?.some((candidate) => candidate.id === field.id) === true,
   };
 }
 
@@ -58,6 +61,14 @@ function directValue(
   const entries = (
     profile[parts.categoryId as RepeatedProfileCategoryId] as ProfileEntry[]
   ).filter((entry) => entry.sectionId === parts.sectionId);
+  if (parts.topLevel) {
+    const educationEntries = profile.education;
+    const entry = educationEntries.find((candidate) => candidate.sectionId === "university") ?? educationEntries[0];
+    const value = entry?.values[parts.fieldId]?.trim();
+    return value
+      ? { status: "resolved", value, sensitive: parts.sensitive, profileEntryId: entry.id }
+      : { status: "missing", sensitive: parts.sensitive };
+  }
   if (!entries.length) return { status: "missing", sensitive: parts.sensitive };
   if (itemIndex === undefined && entries.length > 1) {
     return { status: "ambiguous", sensitive: parts.sensitive };
@@ -77,19 +88,9 @@ function directValue(
 function derivedValue(
   profile: Profile,
   binding: Extract<ValueBinding, { type: "DERIVED" }>,
+  itemIndex?: number,
 ): ValueBindingResolution {
   const recipe = binding.recipe;
-  if (recipe === "EDUCATION_TYPE_AND_DEGREE") {
-    const entry = profile.education.find((candidate) => candidate.sectionId === "university");
-    const schoolType = entry?.values.schoolType;
-    const degree = entry?.values.degreeLevel;
-    if (!schoolType || !degree) return { status: "missing", sensitive: false };
-    return {
-      status: "resolved",
-      value: `${schoolType === "대학교" ? "대학" : schoolType}(${degree})`,
-      sensitive: false,
-    };
-  }
   if (recipe === "BOOLEAN_YN") {
     if (!binding.profileFieldKey) return { status: "unknown", sensitive: false };
     const source = directValue(profile, binding.profileFieldKey);
@@ -102,6 +103,15 @@ function derivedValue(
         : undefined;
     return value
       ? { status: "resolved", value, sensitive: source.sensitive }
+      : { status: "missing", sensitive: source.sensitive };
+  }
+  if (recipe === "YEAR_MONTH") {
+    if (!binding.profileFieldKey) return { status: "unknown", sensitive: false };
+    const source = directValue(profile, binding.profileFieldKey, itemIndex);
+    if (source.status !== "resolved") return source;
+    const match = source.value.trim().match(/^(\d{4}-\d{2})/);
+    return match
+      ? { status: "resolved", value: match[1], sensitive: source.sensitive }
       : { status: "missing", sensitive: source.sensitive };
   }
   const family = profile.personal.koreanFamilyName?.trim();
@@ -125,12 +135,34 @@ function derivedValue(
     : { status: "missing", sensitive: false };
 }
 
+function lookupValue(
+  profile: Profile,
+  binding: Extract<ValueBinding, { type: "LOOKUP" | "BUTTON_OPTION" }>,
+  itemIndex?: number,
+): ValueBindingResolution {
+  const source = directValue(profile, binding.profileFieldKey, itemIndex);
+  if (source.status !== "resolved") return source;
+  const value = binding.optionMap[source.value];
+  return value
+    ? {
+        status: "resolved",
+        value,
+        sensitive: source.sensitive,
+        ...(source.profileEntryId ? { profileEntryId: source.profileEntryId } : {}),
+      }
+    : { status: "missing", sensitive: source.sensitive };
+}
+
 export function resolveValueBinding(
   profile: Profile,
   binding: ValueBinding,
   itemIndex?: number,
 ): ValueBindingResolution {
-  return binding.type === "DIRECT"
-    ? directValue(profile, binding.profileFieldKey, itemIndex)
-    : derivedValue(profile, binding);
+  if (binding.type === "DIRECT") {
+    return directValue(profile, binding.profileFieldKey, itemIndex);
+  }
+  if (binding.type === "LOOKUP" || binding.type === "BUTTON_OPTION") {
+    return lookupValue(profile, binding, itemIndex);
+  }
+  return derivedValue(profile, binding, itemIndex);
 }

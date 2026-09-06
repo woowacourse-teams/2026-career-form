@@ -117,6 +117,8 @@ public record FieldsAnalysisRequest(
         SELECT,
         @JsonProperty("textarea")
         TEXTAREA,
+        @JsonProperty("button")
+        BUTTON,
         @JsonProperty("custom")
         CUSTOM
     }
@@ -132,6 +134,8 @@ public record FieldsAnalysisRequest(
         CHECKBOX,
         @JsonProperty("textarea")
         TEXTAREA,
+        @JsonProperty("button")
+        BUTTON,
         @JsonProperty("custom")
         CUSTOM
     }

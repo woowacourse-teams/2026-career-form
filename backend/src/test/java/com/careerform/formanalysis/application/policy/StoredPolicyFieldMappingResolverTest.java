@@ -148,6 +148,29 @@ class StoredPolicyFieldMappingResolverTest {
             .containsExactly(match("field-university-name", "education.university.schoolName"));
     }
 
+    @Test
+    @DisplayName("현대처럼 id에 숫자 반복 suffix를 쓰는 button field도 rule과 매칭한다")
+    void mapsRepeatedFieldWithNumericIdSuffix() {
+        FieldsAnalysisRequest request = new FieldsAnalysisRequest(
+            2,
+            "stored-policy-hyundai-repeated-field",
+            new Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new Section(
+                "section-root", null, null,
+                List.of(new FieldCandidate(
+                    "field-certificate-name", FormElement.INPUT, FormControl.TEXT,
+                    Visibility.VISIBLE, null, "cerCertName_2", null,
+                    null, null, null, null, null
+                )),
+                null
+            ))
+        );
+
+        assertThat(new StoredPolicyFieldMappingResolver(CompanyFormPolicyFixture.sk())
+            .resolve(request).results())
+            .containsExactly(match("field-certificate-name", "certifications.certificate.name"));
+    }
+
     private static FieldCandidate field(
         String candidateId,
         String domName,

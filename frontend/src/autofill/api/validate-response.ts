@@ -25,6 +25,21 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
+function hasValidButtonOptionMap(
+  optionMap: unknown,
+  optionCodeMap: unknown,
+): boolean {
+  if (!isRecord(optionMap) || !isRecord(optionCodeMap) || Object.keys(optionMap).length === 0) {
+    return false;
+  }
+  return Object.entries(optionMap).every(
+    ([source, target]) =>
+      isNonEmptyString(source) &&
+      isNonEmptyString(target) &&
+      isNonEmptyString(optionCodeMap[target]),
+  );
+}
+
 const isOneOf = <T extends string>(
   value: unknown,
   allowed: readonly T[],
@@ -162,7 +177,7 @@ export function validatePreparationResponse(
           plan.expectedFieldNames.every(isNonEmptyString) &&
           new Set(plan.expectedFieldNames).size === plan.expectedFieldNames.length));
     const validSelection =
-      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "profileFieldKey", "optionDisplayName", "expectedFieldNames", "targetSectionId"]) &&
+      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "profileFieldKey", "optionDisplayName", "expectedFieldNames", "selectableProfileValues", "revealedFieldBindings", "targetSectionId"]) &&
       plan.command === "SELECT_OPTION_TO_REVEAL" &&
       plan.expectedEffect === "TARGET_FIELDS_VISIBLE" &&
       isNonEmptyString(plan.profileFieldKey) &&
@@ -172,6 +187,18 @@ export function validatePreparationResponse(
           plan.expectedFieldNames.length > 0 &&
           plan.expectedFieldNames.every(isNonEmptyString) &&
           new Set(plan.expectedFieldNames).size === plan.expectedFieldNames.length)) &&
+      (plan.selectableProfileValues === undefined ||
+        (Array.isArray(plan.selectableProfileValues) &&
+          plan.selectableProfileValues.length > 0 &&
+          plan.selectableProfileValues.every(isNonEmptyString) &&
+          new Set(plan.selectableProfileValues).size === plan.selectableProfileValues.length)) &&
+      (plan.revealedFieldBindings === undefined ||
+        (plan.revealedFieldBindings !== null && typeof plan.revealedFieldBindings === "object" &&
+          !Array.isArray(plan.revealedFieldBindings) &&
+          Object.keys(plan.revealedFieldBindings).length > 0 &&
+          Object.entries(plan.revealedFieldBindings).every(
+            ([name, key]) => isNonEmptyString(name) && isNonEmptyString(key),
+          ))) &&
       isNonEmptyString(plan.targetSectionId) && sectionIds.has(plan.targetSectionId);
     if (!validReveal && !validAddition && !validSelection) {
       throw new AnalysisContractError();
@@ -188,6 +215,7 @@ const writeCommandForControl: Record<
   text: "SET_TEXT",
   textarea: "SET_TEXT",
   select: "SELECT_OPTION",
+  button: "SELECT_BUTTON_OPTION",
   radio: "CHECK_RADIO",
   checkbox: "CHECK_CHECKBOX",
   custom: undefined,
@@ -269,7 +297,7 @@ function validateFieldAnalysis(
   if (hasBinding) {
     if (
       !isRecord(value.valueBinding) ||
-      !isOneOf(value.valueBinding.type, ["DIRECT", "DERIVED"]) ||
+      !isOneOf(value.valueBinding.type, ["DIRECT", "DERIVED", "LOOKUP", "BUTTON_OPTION"]) ||
       (value.valueBinding.type === "DIRECT" && (
         !hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey"]) ||
         !isNonEmptyString(value.valueBinding.profileFieldKey) ||
@@ -281,8 +309,8 @@ function validateFieldAnalysis(
           "KOREAN_FULL_NAME",
           "ENGLISH_FULL_NAME_GIVEN_FIRST",
           "ENGLISH_FULL_NAME_FAMILY_FIRST",
-          "EDUCATION_TYPE_AND_DEGREE",
           "BOOLEAN_YN",
+          "YEAR_MONTH",
         ]) ||
         (value.valueBinding.profileFieldKey !== undefined &&
           (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
@@ -290,6 +318,25 @@ function validateFieldAnalysis(
         (value.valueBinding.trueLabel !== undefined && !isNonEmptyString(value.valueBinding.trueLabel)) ||
         (value.valueBinding.falseLabel !== undefined && !isNonEmptyString(value.valueBinding.falseLabel)) ||
         ((value.valueBinding.trueLabel === undefined) !== (value.valueBinding.falseLabel === undefined))
+      )) ||
+      (value.valueBinding.type === "LOOKUP" && (
+        !hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey", "optionMap"]) ||
+        !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+        !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
+        !isRecord(value.valueBinding.optionMap) ||
+        Object.keys(value.valueBinding.optionMap).length === 0 ||
+        Object.entries(value.valueBinding.optionMap).some(
+          ([source, target]) => !isNonEmptyString(source) || !isNonEmptyString(target),
+        )
+      ))
+      || (value.valueBinding.type === "BUTTON_OPTION" && (
+        !hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey", "optionMap", "optionCodeMap"]) ||
+        !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+        !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
+        !hasValidButtonOptionMap(
+          value.valueBinding.optionMap,
+          value.valueBinding.optionCodeMap,
+        )
       ))
     ) {
       throw new AnalysisContractError();
@@ -303,6 +350,7 @@ function validateFieldAnalysis(
       !isOneOf(value.writePlan.command, [
         "SET_TEXT",
         "SELECT_OPTION",
+        "SELECT_BUTTON_OPTION",
         "CHECK_RADIO",
         "CHECK_CHECKBOX",
       ]) ||

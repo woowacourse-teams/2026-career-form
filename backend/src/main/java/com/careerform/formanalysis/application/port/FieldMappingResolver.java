@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.application.port;
 
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -14,9 +15,11 @@ public interface FieldMappingResolver {
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
     @JsonSubTypes({
         @JsonSubTypes.Type(value = DirectBinding.class, name = "DIRECT"),
-        @JsonSubTypes.Type(value = DerivedBinding.class, name = "DERIVED")
+        @JsonSubTypes.Type(value = DerivedBinding.class, name = "DERIVED"),
+        @JsonSubTypes.Type(value = LookupBinding.class, name = "LOOKUP"),
+        @JsonSubTypes.Type(value = ButtonOptionBinding.class, name = "BUTTON_OPTION")
     })
-    sealed interface ValueBinding permits DirectBinding, DerivedBinding {
+    sealed interface ValueBinding permits DirectBinding, DerivedBinding, LookupBinding, ButtonOptionBinding {
     }
 
     record DirectBinding(String profileFieldKey) implements ValueBinding {
@@ -56,12 +59,54 @@ public interface FieldMappingResolver {
         }
     }
 
+    record LookupBinding(
+        String profileFieldKey,
+        Map<String, String> optionMap
+    ) implements ValueBinding {
+        public LookupBinding {
+            if (profileFieldKey == null || profileFieldKey.isBlank()
+                || optionMap == null || optionMap.isEmpty()
+                || optionMap.entrySet().stream().anyMatch(entry -> entry.getKey() == null
+                    || entry.getKey().isBlank() || entry.getValue() == null
+                    || entry.getValue().isBlank())) {
+                throw new IllegalArgumentException("option lookup 계약이 올바르지 않습니다");
+            }
+            optionMap = Map.copyOf(optionMap);
+        }
+    }
+
+    /** A labelled custom-menu option whose submitted code is verified by the site policy. */
+    record ButtonOptionBinding(
+        String profileFieldKey,
+        Map<String, String> optionMap,
+        Map<String, String> optionCodeMap
+    ) implements ValueBinding {
+        public ButtonOptionBinding {
+            if (profileFieldKey == null || profileFieldKey.isBlank()
+                || optionMap == null || optionMap.isEmpty()
+                || optionCodeMap == null || optionCodeMap.isEmpty()) {
+                throw new IllegalArgumentException("button option 계약이 올바르지 않습니다");
+            }
+            Map<String, String> mappings = Map.copyOf(optionMap);
+            Map<String, String> codes = Map.copyOf(optionCodeMap);
+            if (mappings.entrySet().stream().anyMatch(entry -> entry.getKey() == null
+                    || entry.getKey().isBlank() || entry.getValue() == null || entry.getValue().isBlank())
+                || mappings.values().stream().anyMatch(value -> !codes.containsKey(value))
+                || codes.entrySet().stream().anyMatch(entry -> entry.getKey() == null
+                    || entry.getKey().isBlank() || entry.getValue() == null || entry.getValue().isBlank())) {
+                throw new IllegalArgumentException("button option 계약이 올바르지 않습니다");
+            }
+            optionMap = mappings;
+            optionCodeMap = codes;
+        }
+    }
+
     enum DerivedRecipe {
         KOREAN_FULL_NAME,
         ENGLISH_FULL_NAME_GIVEN_FIRST,
         ENGLISH_FULL_NAME_FAMILY_FIRST,
-        EDUCATION_TYPE_AND_DEGREE,
-        BOOLEAN_YN
+        BOOLEAN_YN,
+        YEAR_MONTH
     }
 
     Resolution resolve(FieldsAnalysisRequest request);

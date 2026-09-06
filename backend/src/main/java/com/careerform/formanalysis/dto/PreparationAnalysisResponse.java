@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.dto;
 
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -113,7 +114,9 @@ public record PreparationAnalysisResponse(
         String profileFieldKey,
         String optionDisplayName,
         String targetSectionId,
-        List<String> expectedFieldNames
+        List<String> expectedFieldNames,
+        List<String> selectableProfileValues,
+        Map<String, String> revealedFieldBindings
     ) implements PreparationPlan {
     }
 

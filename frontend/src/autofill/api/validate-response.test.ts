@@ -179,6 +179,40 @@ describe("analysis API response validation", () => {
     });
   });
 
+  it("accepts a policy-defined option lookup without receiving a profile value", () => {
+    const result = validateFieldsResponse(fieldsRequest, {
+      snapshotId: "snapshot-b",
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: [
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "LOOKUP",
+            profileFieldKey: "education.university.degreeLevel",
+            optionMap: {
+              "전문학사": "전문대학(전문학사)",
+              "학사": "대학(학사)",
+            },
+          },
+          autofillPolicy: "CONDITIONAL",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ],
+    });
+
+    expect(result.fields[0]).toMatchObject({
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "education.university.degreeLevel",
+        optionMap: { "학사": "대학(학사)" },
+      },
+    });
+  });
+
   it("rejects a COMPLETE response that omits a collected field", () => {
     expect(() =>
       validateFieldsResponse(twoFieldsRequest, {

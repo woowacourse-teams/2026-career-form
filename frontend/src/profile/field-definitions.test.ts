@@ -11,4 +11,72 @@ describe("university profile fields", () => {
       .toContain("latestEducationType");
     expect(university?.fields.find((field) => field.id === "transferStatus")?.inputType).toBe("select");
   });
+
+  it("collects academic process, enrolment status, school region, and total credits", () => {
+    const education = PROFILE_CATEGORIES.find((category) => category.id === "education");
+    const highSchool = education?.sections.find((section) => section.id === "highSchool");
+    const university = education?.sections.find((section) => section.id === "university");
+
+    expect(highSchool?.fields.map((field) => field.id)).toEqual(expect.arrayContaining([
+      "academicProcess", "completionStatus", "schoolRegion",
+    ]));
+    expect(highSchool?.fields.find((field) => field.id === "academicProcess")?.options)
+      .toEqual(["고등학교", "대입 검정고시"]);
+    const qualificationPassDate = highSchool?.fields.find(
+      (field) => field.id === "qualificationPassDate",
+    );
+    expect(qualificationPassDate).toMatchObject({
+      label: "합격일자",
+      inputType: "date",
+    });
+    expect(qualificationPassDate?.visibleWhen?.({ academicProcess: "대입 검정고시" })).toBe(true);
+    expect(qualificationPassDate?.visibleWhen?.({ academicProcess: "고등학교" })).toBe(false);
+    expect(university?.fields.map((field) => field.id)).toEqual(expect.arrayContaining([
+      "completionStatus", "schoolRegion", "totalCredits",
+    ]));
+    expect(university?.fields.find((field) => field.id === "degreeLevel")).toMatchObject({
+      label: "학위구분",
+      inputType: "select",
+      options: ["전문학사", "학사"],
+    });
+  });
+});
+
+describe("contact and disability profile fields", () => {
+  it("exposes supplementary contact and disability registration fields for profile entry", () => {
+    const contact = PROFILE_CATEGORIES.find((category) => category.id === "contact")?.sections.find(
+      (section) => section.id === "contact",
+    );
+    const disability = PROFILE_CATEGORIES.find((category) => category.id === "disability")?.sections.find(
+      (section) => section.id === "disability",
+    );
+
+    expect(contact?.fields).toEqual(expect.arrayContaining([
+      { id: "secondaryEmail", label: "보조 이메일", inputType: "email" },
+      { id: "residenceCountry", label: "거주 국가", inputType: "text" },
+      { id: "emergencyPhoneNumber", label: "비상연락처", inputType: "tel" },
+    ]));
+    expect(disability?.fields).toEqual(expect.arrayContaining([
+      { id: "disabilityRegistrationNumber", label: "장애등록번호", inputType: "text" },
+    ]));
+  });
+});
+
+describe("Hyundai profile additions", () => {
+  it("exposes graduate research, compensation, and publication fields", () => {
+    const education = PROFILE_CATEGORIES.find((category) => category.id === "education");
+    const graduate = education?.sections.find((section) => section.id === "graduateSchool");
+    const compensation = PROFILE_CATEGORIES.find((category) => category.id === "compensation");
+    const publications = PROFILE_CATEGORIES.find((category) => category.id === "publications");
+
+    expect(graduate?.fields.map((field) => field.id)).toEqual(expect.arrayContaining([
+      "labName", "labProfessorName", "thesisTitle", "thesisSummary",
+    ]));
+    expect(compensation?.sections[0]?.fields.map((field) => field.id)).toEqual([
+      "desiredPosition", "desiredSalary", "previousSalary",
+    ]);
+    expect(publications?.sections[0]?.fields.map((field) => field.id)).toEqual([
+      "type", "title", "details",
+    ]);
+  });
 });

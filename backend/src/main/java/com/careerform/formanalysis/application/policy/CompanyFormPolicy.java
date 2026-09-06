@@ -2,6 +2,7 @@ package com.careerform.formanalysis.application.policy;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -9,6 +10,8 @@ import java.util.stream.Stream;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
@@ -159,6 +162,12 @@ public final class CompanyFormPolicy {
             return derived.profileFieldKey() == null
                 || isSupportedProfileKey.test(derived.profileFieldKey());
         }
+        if (binding instanceof LookupBinding lookup) {
+            return isSupportedProfileKey.test(lookup.profileFieldKey());
+        }
+        if (binding instanceof ButtonOptionBinding buttonOption) {
+            return isSupportedProfileKey.test(buttonOption.profileFieldKey());
+        }
         return false;
     }
 
@@ -275,7 +284,9 @@ public final class CompanyFormPolicy {
         String targetSectionId,
         String profileFieldKey,
         String optionDisplayName,
-        List<String> expectedFieldNames
+        List<String> expectedFieldNames,
+        List<String> selectableProfileValues,
+        Map<String, String> revealedFieldBindings
     ) {
 
         public ActionRule {
@@ -291,17 +302,47 @@ public final class CompanyFormPolicy {
                 || expectedFieldNames.stream().distinct().count() != expectedFieldNames.size())) {
                 invalidPolicy();
             }
+            if (selectableProfileValues != null && (selectableProfileValues.isEmpty()
+                || selectableProfileValues.stream().anyMatch(CompanyFormPolicy::isBlank)
+                || selectableProfileValues.stream().distinct().count() != selectableProfileValues.size())) {
+                invalidPolicy();
+            }
+            revealedFieldBindings = revealedFieldBindings == null ? null : Map.copyOf(revealedFieldBindings);
         }
 
         public ActionRule(
             String structuralName, ActionKind kind, String targetSectionId,
             String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames
         ) {
-            this(List.of(structuralName), kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames);
+            this(List.of(structuralName), kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, null, null);
+        }
+
+        public ActionRule(
+            String structuralName, ActionKind kind, String targetSectionId,
+            String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames,
+            List<String> selectableProfileValues
+        ) {
+            this(List.of(structuralName), kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, selectableProfileValues, null);
+        }
+
+        public ActionRule(
+            String structuralName, ActionKind kind, String targetSectionId,
+            String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames,
+            List<String> selectableProfileValues, Map<String, String> revealedFieldBindings
+        ) {
+            this(List.of(structuralName), kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, selectableProfileValues, revealedFieldBindings);
+        }
+
+        public ActionRule(
+            List<String> structuralNames, ActionKind kind, String targetSectionId,
+            String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames,
+            List<String> selectableProfileValues
+        ) {
+            this(structuralNames, kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, selectableProfileValues, null);
         }
 
         public ActionRule(List<String> structuralNames, ActionKind kind, String targetSectionId) {
-            this(structuralNames, kind, targetSectionId, null, null, null);
+            this(structuralNames, kind, targetSectionId, null, null, null, null, null);
         }
 
         public String structuralName() {
