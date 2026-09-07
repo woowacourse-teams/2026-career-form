@@ -1,8 +1,28 @@
 import { describe, expect, it } from "vitest";
 
 import profileExportExample from "../../fixtures/profile-export.example.json";
+import { PROFILE_CATEGORIES } from "./field-definitions";
 import { createEmptyProfile, PROFILE_SCHEMA_VERSION } from "./model";
 import { parseProfileImport, serializeProfileExport } from "./profile-transfer";
+
+function expectFieldsToBeFilled(
+  values: Record<string, string>,
+  categoryId: string,
+  sectionId: string,
+) {
+  const section = PROFILE_CATEGORIES.find(
+    (category) => category.id === categoryId,
+  )?.sections.find((candidate) => candidate.id === sectionId);
+  expect(section).toBeDefined();
+  expect(Object.keys(values)).toEqual(
+    expect.arrayContaining(
+      section!.fields
+        .filter((field) => !field.visibleWhen || field.visibleWhen(values))
+        .map((field) => field.id),
+    ),
+  );
+  expect(Object.values(values).every((value) => value.length > 0)).toBe(true);
+}
 
 describe("profile JSON transfer", () => {
   it("serializes a sanitized versioned profile envelope", () => {
@@ -84,5 +104,39 @@ describe("profile JSON transfer", () => {
       disability: {},
       health: [],
     });
+  });
+
+  it("fills every non-sensitive field rendered by its demo entries", () => {
+    const profile = parseProfileImport(JSON.stringify(profileExportExample));
+
+    expect(profile.careers).toHaveLength(1);
+    expect(profile.projects).toHaveLength(1);
+    expect(profile.publications).toHaveLength(1);
+    expectFieldsToBeFilled(profile.personal, "personal", "personal");
+    expectFieldsToBeFilled(profile.contact, "contact", "contact");
+    profile.education.forEach((entry) =>
+      expectFieldsToBeFilled(entry.values, "education", entry.sectionId),
+    );
+    expectFieldsToBeFilled(
+      profile.education[1].values,
+      "education",
+      "university",
+    );
+    expect(profile.education[1].values.latestEducationType).toBe("대학(학사)");
+    profile.languages.forEach((entry) =>
+      expectFieldsToBeFilled(entry.values, "languages", entry.sectionId),
+    );
+    profile.certifications.forEach((entry) =>
+      expectFieldsToBeFilled(entry.values, "certifications", entry.sectionId),
+    );
+    profile.careers.forEach((entry) =>
+      expectFieldsToBeFilled(entry.values, "careers", entry.sectionId),
+    );
+    profile.projects.forEach((entry) =>
+      expectFieldsToBeFilled(entry.values, "projects", entry.sectionId),
+    );
+    profile.publications.forEach((entry) =>
+      expectFieldsToBeFilled(entry.values, "publications", entry.sectionId),
+    );
   });
 });

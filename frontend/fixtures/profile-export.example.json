@@ -4,11 +4,23 @@
     "personal": {
       "koreanFamilyName": "예시",
       "koreanGivenName": "사용자",
+      "hanjaFamilyName": "例示",
+      "hanjaGivenName": "使用者",
+      "englishFamilyName": "Example",
+      "englishGivenName": "User",
+      "gender": "미지정",
+      "birthDate": "2000-01-01",
       "nationality": "대한민국"
     },
     "contact": {
       "email": "example@example.test",
-      "phoneNumber": "010-0000-0000"
+      "secondaryEmail": "backup@example.test",
+      "phoneNumber": "010-0000-0000",
+      "emergencyPhoneNumber": "010-1111-1111",
+      "residenceCountry": "대한민국",
+      "postalCode": "00000",
+      "addressLine1": "서울특별시 예시구 샘플로 1",
+      "addressLine2": "데모동 101호"
     },
     "education": [
       {
@@ -18,7 +30,9 @@
           "academicProcess": "고등학교",
           "schoolName": "예시고등학교",
           "completionStatus": "졸업",
-          "schoolRegion": "서울"
+          "schoolRegion": "서울",
+          "startDate": "2016-03-01",
+          "endDate": "2019-02-28"
         }
       },
       {
@@ -28,8 +42,20 @@
           "schoolType": "대학교",
           "degreeLevel": "학사",
           "schoolName": "예시대학교",
+          "startDate": "2019-03-01",
+          "endDate": "2023-02-28",
           "completionStatus": "졸업",
-          "majorName": "컴퓨터공학"
+          "schoolRegion": "서울",
+          "gpaScore": "4.20",
+          "gpaScale": "4.50",
+          "totalCredits": "130",
+          "majorName": "컴퓨터공학",
+          "transferStatus": "비해당",
+          "doubleMajorStatus": "있음",
+          "minorStatus": "있음",
+          "additionalMajorName": "디자인",
+          "minorName": "경영학",
+          "latestEducationType": "대학(학사)"
         }
       }
     ],
@@ -40,7 +66,10 @@
         "values": {
           "language": "영어",
           "testName": "샘플 영어 시험",
-          "grade": "900"
+          "registrationNo": "DEMO-EN-001",
+          "acquisitionDate": "2024-01-15",
+          "grade": "900",
+          "evidenceDocumentPath": "demo-language-certificate.pdf"
         }
       },
       {
@@ -58,7 +87,11 @@
         "sectionId": "certificate",
         "values": {
           "name": "샘플 자격증 A",
-          "issuer": "예시 기관"
+          "grade": "A등급",
+          "registrationNo": "DEMO-CERT-001",
+          "issuer": "예시 기관",
+          "acquisitionDate": "2023-03-01",
+          "evidenceDocumentPath": "demo-certificate-a.pdf"
         }
       },
       {
@@ -66,7 +99,11 @@
         "sectionId": "certificate",
         "values": {
           "name": "샘플 자격증 B",
-          "issuer": "예시 기관"
+          "grade": "B등급",
+          "registrationNo": "DEMO-CERT-002",
+          "issuer": "예시 기관",
+          "acquisitionDate": "2023-06-01",
+          "evidenceDocumentPath": "demo-certificate-b.pdf"
         }
       },
       {
@@ -74,22 +111,55 @@
         "sectionId": "certificate",
         "values": {
           "name": "샘플 자격증 C",
-          "issuer": "예시 기관"
+          "grade": "C등급",
+          "registrationNo": "DEMO-CERT-003",
+          "issuer": "예시 기관",
+          "acquisitionDate": "2023-09-01",
+          "evidenceDocumentPath": "demo-certificate-c.pdf"
         }
       }
     ],
-    "careers": [],
+    "careers": [
+      {
+        "id": "career-example-1",
+        "sectionId": "career",
+        "values": {
+          "companyName": "예시 주식회사",
+          "employmentType": "정규",
+          "startDate": "2023-03-01",
+          "endDate": "2025-02-28",
+          "employmentStatus": "퇴사",
+          "department": "제품개발팀",
+          "position": "소프트웨어 엔지니어",
+          "responsibilities": "웹 서비스 기능을 개발하고 품질을 개선했습니다.",
+          "terminationReason": "계약 종료"
+        }
+      }
+    ],
     "projects": [
       {
         "id": "project-example-1",
         "sectionId": "project",
         "values": {
+          "startDate": "2024-01-01",
+          "endDate": "2024-06-30",
           "projectName": "샘플 프로젝트",
-          "role": "개발"
+          "role": "프런트엔드 개발",
+          "activityDetails": "사용자 프로필 입력 화면과 검증 흐름을 구현했습니다."
         }
       }
     ],
-    "publications": [],
+    "publications": [
+      {
+        "id": "publication-example-1",
+        "sectionId": "publicationPatent",
+        "values": {
+          "type": "논문",
+          "title": "샘플 연구 제목",
+          "details": "비식별 예시 데이터로 작성한 연구 요약입니다."
+        }
+      }
+    ],
     "compensation": {},
     "military": {},
     "veteran": {},
