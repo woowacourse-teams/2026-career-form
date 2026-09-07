@@ -118,3 +118,11 @@
 - Source-Tree: 20b74dd793ac0fc26ede51a99939b83e61963079
 - Raw: llm-wiki/raw/issues/CF-61/manifest.md
 - Topics: 2
+
+## [2026-09-07] ingest | CF-46 프론트 회사 어댑터 경계
+
+- Disposition: Supersedes CF-41 adapter-development and adapter-field-inventory; adds Hyundai and SK topics
+- Approval-Digest: df027b5910423b1ffad4ad267c719385039d40aeb09259bbacb19780ac393101
+- Source-Revision: dd9f867ad020a72dec51b27ab54073d59eef48ac
+- Raw: llm-wiki/raw/issues/CF-46/manifest.md
+- Topics: 4

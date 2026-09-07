@@ -2,14 +2,14 @@
 
 > Topic: adapter-development
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md)
-> Updated: 2026-08-22
+> Current: [현재 근거](../../raw/issues/CF-46/documents/adapter-development.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md)
+> Updated: 2026-09-07
 
 ## 현재 상태
 
-어댑터 기준이 없거나 페이지 구조를 검증할 수 없으면 추정하지 않고 계약 공백이나 입력 불가를 보고한다.
+백엔드는 의미 매핑과 허용 명령을, 프론트 회사 어댑터는 DOM 수집·조건부 처리·특수 입력을 소유한다. 공통 프론트의 승인·로컬 값 결합·실행 검사는 유지한다. 구조를 검증할 수 없으면 추정하지 않는다.
 
 ## 변경 이유
 
-위치 의존 AGENTS 정책에서 재사용할 어댑터 경계를 raw 근거로 분리했다.
+현대·SK 프론트 분리 결과와 LG 검색의 후속 설계 경계를 승인된 CF-46 근거로 기록했다.
