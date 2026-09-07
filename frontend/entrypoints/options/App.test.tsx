@@ -189,7 +189,9 @@ describe("options App", () => {
     expect(confirmImport).toHaveBeenCalledWith(
       "현재 프로필 전체를 덮어씁니다. 계속할까요?",
     );
-    expect(await screen.findByText("프로필을 가져왔습니다.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("프로필을 가져왔습니다."),
+    ).toBeInTheDocument();
   });
 
   it("keeps the current profile when an import file is invalid", async () => {

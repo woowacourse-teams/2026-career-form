@@ -1,16 +1,8 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
-import {
-  createEmptyProfile,
-  PROFILE_SCHEMA_VERSION,
-} from "./model";
-import {
-  parseProfileImport,
-  serializeProfileExport,
-} from "./profile-transfer";
+import profileExportExample from "../../fixtures/profile-export.example.json";
+import { createEmptyProfile, PROFILE_SCHEMA_VERSION } from "./model";
+import { parseProfileImport, serializeProfileExport } from "./profile-transfer";
 
 describe("profile JSON transfer", () => {
   it("serializes a sanitized versioned profile envelope", () => {
@@ -30,10 +22,14 @@ describe("profile JSON transfer", () => {
     const profile = createEmptyProfile();
     profile.contact.email = "example@example.test";
 
-    expect(parseProfileImport(JSON.stringify({
-      schemaVersion: PROFILE_SCHEMA_VERSION,
-      profile,
-    }))).toEqual(profile);
+    expect(
+      parseProfileImport(
+        JSON.stringify({
+          schemaVersion: PROFILE_SCHEMA_VERSION,
+          profile,
+        }),
+      ),
+    ).toEqual(profile);
   });
 
   it("rejects malformed JSON", () => {
@@ -43,26 +39,29 @@ describe("profile JSON transfer", () => {
   });
 
   it("rejects an unsupported schema version", () => {
-    expect(() => parseProfileImport(JSON.stringify({
-      schemaVersion: 999,
-      profile: createEmptyProfile(),
-    }))).toThrow("지원하지 않는 프로필 버전입니다.");
+    expect(() =>
+      parseProfileImport(
+        JSON.stringify({
+          schemaVersion: 999,
+          profile: createEmptyProfile(),
+        }),
+      ),
+    ).toThrow("지원하지 않는 프로필 버전입니다.");
   });
 
   it("rejects a malformed profile without coercing values", () => {
-    expect(() => parseProfileImport(JSON.stringify({
-      schemaVersion: PROFILE_SCHEMA_VERSION,
-      profile: { personal: { koreanGivenName: 123 } },
-    }))).toThrow("저장된 프로필 형식을 읽을 수 없습니다.");
+    expect(() =>
+      parseProfileImport(
+        JSON.stringify({
+          schemaVersion: PROFILE_SCHEMA_VERSION,
+          profile: { personal: { koreanGivenName: 123 } },
+        }),
+      ),
+    ).toThrow("저장된 프로필 형식을 읽을 수 없습니다.");
   });
 
   it("parses the non-identifying export example", () => {
-    const contents = readFileSync(
-      resolve(process.cwd(), "fixtures/profile-export.example.json"),
-      "utf8",
-    );
-
-    expect(parseProfileImport(contents)).toMatchObject({
+    expect(parseProfileImport(JSON.stringify(profileExportExample))).toMatchObject({
       contact: { email: "example@example.test" },
       education: [expect.objectContaining({ sectionId: "university" })],
       projects: [expect.objectContaining({ sectionId: "project" })],
