@@ -60,7 +60,295 @@ function createApiClient(): AnalysisApiClient {
   };
 }
 
+function createSkFixtureDocument(): Document {
+  const fixtureDocument =
+    document.implementation.createHTMLDocument("application");
+  return new Proxy(fixtureDocument, {
+    get(target, key) {
+      if (key === "location")
+        return { host: "www.skcareers.com", pathname: "/apply" };
+      const value = Reflect.get(target, key, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
 describe("AutofillOverlay", () => {
+  it.each([true, false])(
+    "recollects dependent exam options only after a successful language selection (%s)",
+    async (selectionAvailable) => {
+      const pageDocument = createSkFixtureDocument();
+      pageDocument.body.innerHTML = `<section><select name="lngLanguageType"><option value="">선택</option><option>${selectionAvailable ? "영어" : "프랑스어"}</option></select><select name="lngExamName"><option value="">선택</option></select></section>`;
+      const language = pageDocument.querySelector<HTMLSelectElement>(
+        "[name=lngLanguageType]",
+      )!;
+      const exam =
+        pageDocument.querySelector<HTMLSelectElement>("[name=lngExamName]")!;
+      language.addEventListener("change", () => {
+        exam.innerHTML =
+          '<option value="">선택</option><option>시험 A</option>';
+      });
+      const profile = createEmptyProfile();
+      profile.languages = [
+        {
+          id: "language-1",
+          sectionId: "languageTest",
+          values: { language: "영어", testName: "시험 A" },
+        },
+      ];
+      const observedLanguageValues: string[] = [];
+      const apiClient: AnalysisApiClient = {
+        analyzePreparation: createApiClient().analyzePreparation,
+        analyzeFields: async (request) => {
+          observedLanguageValues.push(language.value);
+          return {
+            snapshotId: request.snapshotId,
+            mode: "ADAPTER",
+            analysisStatus: "COMPLETE",
+            fields: request.sections
+              .flatMap((section) => section.fields)
+              .flatMap((field) => {
+                if (
+                  field.domName !== "lngLanguageType" &&
+                  !field.options?.some(
+                    (option) => option.displayName === "시험 A",
+                  )
+                )
+                  return [];
+                return [
+                  {
+                    candidateId: field.candidateId,
+                    matchType: "MATCH" as const,
+                    valueBinding: {
+                      type: "DIRECT" as const,
+                      profileFieldKey:
+                        field.domName === "lngLanguageType"
+                          ? "languages.languageTest.language"
+                          : "languages.languageTest.testName",
+                    },
+                    autofillPolicy: "ALLOWED" as const,
+                    mappingStatus: "ADAPTER_VERIFIED" as const,
+                    interactionStatus: "READY" as const,
+                    writePlan: { command: "SELECT_OPTION" as const },
+                  },
+                ];
+              }),
+          };
+        },
+      };
+      render(
+        <AutofillOverlay
+          onClose={vi.fn()}
+          apiClient={apiClient}
+          repository={{ ...createRepository(), load: async () => profile }}
+          pageDocument={pageDocument}
+        />,
+      );
+      await screen.findByRole("heading", { name: "기입 결과" });
+      expect(observedLanguageValues).toEqual(
+        selectionAvailable ? ["", "영어"] : [""],
+      );
+      expect(exam.value).toBe(selectionAvailable ? "시험 A" : "");
+    },
+  );
+
+  it.each([
+    ["READY", 1, false, false],
+    ["BLOCKED", 1, false, false],
+    ["MANUAL_REVEAL_REQUIRED", 1, false, false],
+    ["SYSTEM_CONTROL", 1, false, false],
+    ["UNVERIFIED", 1, false, false],
+    ["READY", 2, false, false],
+    ["READY", 1, true, false],
+    ["READY", 1, false, true],
+  ] as const)(
+    "writes revealed bindings with %s authority and %i profile entries (blocked analysis: %s, mismatched binding: %s)",
+    async (
+      interactionStatus,
+      profileEntryCount,
+      blockedAnalysis,
+      mismatchedBinding,
+    ) => {
+      const pageDocument = createSkFixtureDocument();
+      pageDocument.body.innerHTML = `<section><h2>학력</h2><button id="reveal" type="button">펼치기</button><input name="eduMajorDouble" aria-label="복수전공명" /></section>`;
+      const profile = createEmptyProfile();
+      profile.education = [
+        {
+          id: "university-1",
+          sectionId: "university",
+          values: {
+            doubleMajorStatus: "있음",
+            additionalMajorName: "시험 전공",
+          },
+        },
+      ];
+      profile.contact.email = "있음";
+      if (profileEntryCount === 2)
+        profile.education.push({
+          ...profile.education[0]!,
+          id: "university-2",
+        });
+      let preparationPass = 0;
+      let fieldsPass = 0;
+      const apiClient: AnalysisApiClient = {
+        analyzePreparation: async (request) => {
+          preparationPass += 1;
+          const section = request.sections.find((section) =>
+            section.actionCandidates.some(
+              (action) => action.domId === "reveal",
+            ),
+          )!;
+          const action = section.actionCandidates.find(
+            (action) => action.domId === "reveal",
+          )!;
+          return {
+            snapshotId: request.snapshotId,
+            mode: "ADAPTER",
+            analysisStatus: "COMPLETE",
+            preparationPlans: [
+              preparationPass === 1
+                ? {
+                    actionCandidateId: action.candidateId,
+                    command: "REVEAL_SECTION",
+                    expectedEffect: "TARGET_VISIBLE",
+                    targetSectionId: section.sectionId,
+                  }
+                : {
+                    actionCandidateId: action.candidateId,
+                    command: "SELECT_OPTION_TO_REVEAL",
+                    expectedEffect: "TARGET_FIELDS_VISIBLE",
+                    targetSectionId: section.sectionId,
+                    profileFieldKey: "contact.contact.email",
+                    expectedFieldNames: ["eduMajorDouble"],
+                    revealedFieldBindings: {
+                      eduMajorDouble:
+                        "education.university.additionalMajorName",
+                    },
+                  },
+            ],
+          };
+        },
+        analyzeFields: async (request) => {
+          fieldsPass += 1;
+          const field = request.sections
+            .flatMap((section) => section.fields)
+            .find((field) => field.domName === "eduMajorDouble")!;
+          return {
+            snapshotId: request.snapshotId,
+            mode: "ADAPTER",
+            analysisStatus:
+              fieldsPass === 1 && blockedAnalysis ? "BLOCKED" : "COMPLETE",
+            fields:
+              fieldsPass === 1
+                ? [
+                    {
+                      candidateId: field.candidateId,
+                      matchType: "MATCH",
+                      valueBinding: {
+                        type: "DIRECT",
+                        profileFieldKey: mismatchedBinding
+                          ? "education.university.minorName"
+                          : "education.university.additionalMajorName",
+                      },
+                      autofillPolicy: "ALLOWED",
+                      mappingStatus: "ADAPTER_VERIFIED",
+                      interactionStatus,
+                      writePlan: { command: "SET_TEXT" },
+                    },
+                  ]
+                : [],
+          };
+        },
+      };
+      // The verified follow-up selection remains a native select action.
+      const selection = pageDocument.createElement("select");
+      selection.id = "reveal";
+      selection.innerHTML = "<option>없음</option><option>있음</option>";
+      pageDocument
+        .querySelector("button")!
+        .addEventListener("click", (event) => {
+          (event.currentTarget as Element).replaceWith(selection);
+        });
+      render(
+        <AutofillOverlay
+          onClose={vi.fn()}
+          apiClient={apiClient}
+          repository={{ ...createRepository(), load: async () => profile }}
+          pageDocument={pageDocument}
+        />,
+      );
+      await screen.findByRole("heading", { name: "기입 결과" });
+      expect(fieldsPass).toBe(2);
+      expect(
+        pageDocument.querySelector<HTMLInputElement>("[name=eduMajorDouble]")!
+          .value,
+      ).toBe(
+        interactionStatus === "READY" &&
+          profileEntryCount === 1 &&
+          !blockedAnalysis &&
+          !mismatchedBinding
+          ? "시험 전공"
+          : "",
+      );
+    },
+  );
+
+  it("does not log locally resolved values for dependent fields", async () => {
+    const pageDocument =
+      document.implementation.createHTMLDocument("application");
+    pageDocument.body.innerHTML =
+      '<section><input name="eduMajorDouble" aria-label="복수전공명" /></section>';
+    const profile = createEmptyProfile();
+    profile.education = [
+      {
+        id: "university-1",
+        sectionId: "university",
+        values: { additionalMajorName: "PRIVATE_PROFILE_SENTINEL" },
+      },
+    ];
+    const apiClient = createApiClient();
+    apiClient.analyzeFields = async (request) => ({
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: [
+        {
+          candidateId: request.sections[0]!.fields[0]!.candidateId,
+          matchType: "MATCH",
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey: "education.university.additionalMajorName",
+          },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ],
+    });
+    const logged: unknown[][] = [];
+    const info = vi.spyOn(console, "info").mockImplementation((...args) => {
+      logged.push(args);
+    });
+    try {
+      render(
+        <AutofillOverlay
+          onClose={vi.fn()}
+          apiClient={apiClient}
+          repository={{ ...createRepository(), load: async () => profile }}
+          pageDocument={pageDocument}
+        />,
+      );
+      await screen.findByRole("heading", { name: "기입 결과" });
+      expect(pageDocument.querySelector("input")?.value).toBe(
+        "PRIVATE_PROFILE_SENTINEL",
+      );
+      expect(JSON.stringify(logged)).not.toContain("PRIVATE_PROFILE_SENTINEL");
+    } finally {
+      info.mockRestore();
+    }
+  });
+
   it("shows only the final result after automatic analysis and writing", async () => {
     const pageDocument =
       document.implementation.createHTMLDocument("application");

@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  hasFreshUniversityRows,
-  isLanguageTypeStateDriver,
-  shouldRunRevealPlan,
-} from "./AutofillWorkflow";
+import { shouldRunRevealPlan } from "./AutofillWorkflow";
+import { getWorkflowAdapter } from "../adapters/workflow";
+const hasFreshUniversityRows =
+  getWorkflowAdapter("www.skcareers.com").hasFreshRows;
+const isLanguageTypeStateDriver = (
+  item: ReviewPlanItem,
+  domName: string,
+  host: string,
+) => getWorkflowAdapter(host).isStateDriver(item, domName);
+
 import type { ReviewPlanItem } from "../review/review-plan";
 
 describe("hasFreshUniversityRows", () => {
@@ -53,8 +58,12 @@ describe("shouldRunRevealPlan", () => {
   });
 
   it("uses only policy-provided profile values for a company-specific radio label", () => {
-    expect(shouldRunRevealPlan("장애", "대상", ["장애", "예", "대상"])).toBe(true);
-    expect(shouldRunRevealPlan("아니오", "대상", ["장애", "예", "대상"])).toBe(false);
+    expect(shouldRunRevealPlan("장애", "대상", ["장애", "예", "대상"])).toBe(
+      true,
+    );
+    expect(shouldRunRevealPlan("아니오", "대상", ["장애", "예", "대상"])).toBe(
+      false,
+    );
   });
 });
 
@@ -93,7 +102,11 @@ describe("isLanguageTypeStateDriver", () => {
 
   it("does not change another company's select handling", () => {
     expect(
-      isLanguageTypeStateDriver(item, "lngLanguageType", "careers.example.test"),
+      isLanguageTypeStateDriver(
+        item,
+        "lngLanguageType",
+        "careers.example.test",
+      ),
     ).toBe(false);
   });
 });
