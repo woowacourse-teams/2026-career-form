@@ -77,14 +77,17 @@ describe("AutofillOverlay", () => {
       />,
     );
 
-    expect(await screen.findByRole("heading", { name: "기입 결과" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("1 / 3")).not.toBeInTheDocument();
     expect(screen.queryByText("2 / 3")).not.toBeInTheDocument();
     expect(pageDocument.querySelector("input")?.value).toBe("me@example.test");
   });
 
   it("writes a verified conditional field in the result-only flow", async () => {
-    const pageDocument = document.implementation.createHTMLDocument("application");
+    const pageDocument =
+      document.implementation.createHTMLDocument("application");
     pageDocument.body.innerHTML = `
       <div class="apply-form-box">
         <div class="form-item-group cert-Item">
@@ -94,27 +97,40 @@ describe("AutofillOverlay", () => {
     `;
     const apiClient: AnalysisApiClient = {
       analyzePreparation: createApiClient().analyzePreparation,
-      analyzeFields: vi.fn(async (request: FieldsAnalyzeRequest) => ({
-        snapshotId: request.snapshotId,
-        mode: "ADAPTER" as const,
-        analysisStatus: "COMPLETE" as const,
-        fields: [{
-          candidateId: request.sections[0]?.items?.[0]?.fields[0]?.candidateId ?? "",
-          matchType: "MATCH" as const,
-          profileFieldKey: "certifications.certificate.name",
-          autofillPolicy: "CONDITIONAL" as const,
-          mappingStatus: "ADAPTER_VERIFIED" as const,
-          interactionStatus: "READY" as const,
-          writePlan: { command: "SET_TEXT" as const },
-        }],
-      })),
+      analyzeFields: vi.fn(async (request: FieldsAnalyzeRequest) => {
+        const candidate = request.sections
+          .flatMap((section) => [
+            ...section.fields,
+            ...(section.items?.flatMap((item) => item.fields) ?? []),
+          ])
+          .at(0);
+        if (!candidate) throw new Error("fixture page is missing its field");
+        return {
+          snapshotId: request.snapshotId,
+          mode: "ADAPTER" as const,
+          analysisStatus: "COMPLETE" as const,
+          fields: [
+            {
+              candidateId: candidate.candidateId,
+              matchType: "MATCH" as const,
+              profileFieldKey: "certifications.certificate.name",
+              autofillPolicy: "CONDITIONAL" as const,
+              mappingStatus: "ADAPTER_VERIFIED" as const,
+              interactionStatus: "READY" as const,
+              writePlan: { command: "SET_TEXT" as const },
+            },
+          ],
+        };
+      }),
     };
     const profile = createEmptyProfile();
-    profile.certifications = [{
-      id: "certificate-1",
-      sectionId: "certificate",
-      values: { name: "자격증 A" },
-    }];
+    profile.certifications = [
+      {
+        id: "certificate-1",
+        sectionId: "certificate",
+        values: { name: "자격증 A" },
+      },
+    ];
     const profileRepository: ProfileRepository = {
       ...createRepository(),
       load: vi.fn(async () => profile),
@@ -129,12 +145,15 @@ describe("AutofillOverlay", () => {
       />,
     );
 
-    expect(await screen.findByRole("heading", { name: "기입 결과" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument();
     expect(pageDocument.querySelector("input")?.value).toBe("자격증 A");
   });
 
   it("reanalyzes newly added education rows before filling conditional majors", async () => {
-    const pageDocument = document.implementation.createHTMLDocument("application");
+    const pageDocument =
+      document.implementation.createHTMLDocument("application");
     pageDocument.body.innerHTML = `
       <section>
         <h2>학력</h2>
@@ -157,22 +176,34 @@ describe("AutofillOverlay", () => {
       row.querySelectorAll("input[type=radio]").forEach((radio) => {
         radio.addEventListener("click", () => {
           const name = radio.getAttribute("name");
-          if (name === "eduMajorDoubleYN" && radio.parentElement?.textContent?.includes("있음")) {
-            (row.querySelector("[name=eduMajorDouble]") as HTMLInputElement).hidden = false;
+          if (
+            name === "eduMajorDoubleYN" &&
+            radio.parentElement?.textContent?.includes("있음")
+          ) {
+            (
+              row.querySelector("[name=eduMajorDouble]") as HTMLInputElement
+            ).hidden = false;
           }
-          if (name === "eduMajorSubYN" && radio.parentElement?.textContent?.includes("있음")) {
-            (row.querySelector("[name=eduMajorSub]") as HTMLInputElement).hidden = false;
+          if (
+            name === "eduMajorSubYN" &&
+            radio.parentElement?.textContent?.includes("있음")
+          ) {
+            (
+              row.querySelector("[name=eduMajorSub]") as HTMLInputElement
+            ).hidden = false;
           }
         });
       });
       section.insertBefore(row, addButton);
     });
     const profile = createEmptyProfile();
-    profile.education = [{
-      id: "university-1",
-      sectionId: "university",
-      values: { doubleMajorStatus: "있음", minorStatus: "있음" },
-    }];
+    profile.education = [
+      {
+        id: "university-1",
+        sectionId: "university",
+        values: { doubleMajorStatus: "있음", minorStatus: "있음" },
+      },
+    ];
     const repository: ProfileRepository = {
       ...createRepository(),
       load: vi.fn(async () => profile),
@@ -181,50 +212,68 @@ describe("AutofillOverlay", () => {
     const apiClient: AnalysisApiClient = {
       analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => {
         preparationCallCount += 1;
-        const actions = request.sections.flatMap((candidate) => candidate.actionCandidates);
-        const add = actions.find((candidate) => candidate.domId === "btnAddEducationUniv");
+        const actions = request.sections.flatMap(
+          (candidate) => candidate.actionCandidates,
+        );
+        const add = actions.find(
+          (candidate) => candidate.domId === "btnAddEducationUniv",
+        );
         if (preparationCallCount === 1 && add) {
           return {
             snapshotId: request.snapshotId,
             mode: "ADAPTER" as const,
             analysisStatus: "COMPLETE" as const,
-            preparationPlans: [{
-              actionCandidateId: add.candidateId,
-              command: "ADD_REPEATABLE_GROUP" as const,
-              expectedEffect: "GROUP_COUNT_INCREMENT" as const,
-              expectedFieldNames: ["eduMajorDouble"],
-            }],
+            preparationPlans: [
+              {
+                actionCandidateId: add.candidateId,
+                command: "ADD_REPEATABLE_GROUP" as const,
+                expectedEffect: "GROUP_COUNT_INCREMENT" as const,
+                expectedFieldNames: ["eduMajorDouble"],
+              },
+            ],
           };
         }
         const doubleMajor = actions.find(
-          (candidate) => candidate.domName === "eduMajorDoubleYN" && candidate.displayName === "있음",
+          (candidate) =>
+            candidate.domName === "eduMajorDoubleYN" &&
+            candidate.displayName === "있음",
         );
         const minor = actions.find(
-          (candidate) => candidate.domName === "eduMajorSubYN" && candidate.displayName === "있음",
+          (candidate) =>
+            candidate.domName === "eduMajorSubYN" &&
+            candidate.displayName === "있음",
         );
         return {
           snapshotId: request.snapshotId,
           mode: "ADAPTER" as const,
           analysisStatus: "COMPLETE" as const,
           preparationPlans: [
-            ...(doubleMajor ? [{
-              actionCandidateId: doubleMajor.candidateId,
-              command: "SELECT_OPTION_TO_REVEAL" as const,
-              expectedEffect: "TARGET_FIELDS_VISIBLE" as const,
-              profileFieldKey: "education.university.doubleMajorStatus",
-              optionDisplayName: "있음",
-              expectedFieldNames: ["eduMajorDouble"],
-              targetSectionId: request.sections[0]!.sectionId,
-            }] : []),
-            ...(minor ? [{
-              actionCandidateId: minor.candidateId,
-              command: "SELECT_OPTION_TO_REVEAL" as const,
-              expectedEffect: "TARGET_FIELDS_VISIBLE" as const,
-              profileFieldKey: "education.university.minorStatus",
-              optionDisplayName: "있음",
-              expectedFieldNames: ["eduMajorSub"],
-              targetSectionId: request.sections[0]!.sectionId,
-            }] : []),
+            ...(doubleMajor
+              ? [
+                  {
+                    actionCandidateId: doubleMajor.candidateId,
+                    command: "SELECT_OPTION_TO_REVEAL" as const,
+                    expectedEffect: "TARGET_FIELDS_VISIBLE" as const,
+                    profileFieldKey: "education.university.doubleMajorStatus",
+                    optionDisplayName: "있음",
+                    expectedFieldNames: ["eduMajorDouble"],
+                    targetSectionId: request.sections[0]!.sectionId,
+                  },
+                ]
+              : []),
+            ...(minor
+              ? [
+                  {
+                    actionCandidateId: minor.candidateId,
+                    command: "SELECT_OPTION_TO_REVEAL" as const,
+                    expectedEffect: "TARGET_FIELDS_VISIBLE" as const,
+                    profileFieldKey: "education.university.minorStatus",
+                    optionDisplayName: "있음",
+                    expectedFieldNames: ["eduMajorSub"],
+                    targetSectionId: request.sections[0]!.sectionId,
+                  },
+                ]
+              : []),
           ],
         };
       }),
@@ -245,10 +294,24 @@ describe("AutofillOverlay", () => {
       />,
     );
 
-    expect(await screen.findByRole("heading", { name: "기입 결과" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument();
     expect(apiClient.analyzePreparation).toHaveBeenCalledTimes(2);
-    expect((pageDocument.querySelectorAll("[name=eduMajorDoubleYN]")[1] as HTMLInputElement).checked).toBe(true);
-    expect((pageDocument.querySelectorAll("[name=eduMajorSubYN]")[1] as HTMLInputElement).checked).toBe(true);
+    expect(
+      (
+        pageDocument.querySelectorAll(
+          "[name=eduMajorDoubleYN]",
+        )[1] as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(
+      (
+        pageDocument.querySelectorAll(
+          "[name=eduMajorSubYN]",
+        )[1] as HTMLInputElement
+      ).checked,
+    ).toBe(true);
   });
 
   it.skip("shows the twelve-step spinner while analysis is in progress", async () => {
@@ -1280,7 +1343,9 @@ describe("AutofillOverlay", () => {
     ).toBeInTheDocument();
     expect(email!.value).toBe("");
     fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
-    expect(await screen.findByRole("heading", { name: "기입 결과" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument();
     expect(email!.value).toBe("me@example.test");
     expect(jobSpecific!.value).toBe("");
   });

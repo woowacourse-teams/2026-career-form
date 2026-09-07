@@ -13,7 +13,8 @@ import {
 } from "./candidate-registry";
 import type { CandidateBlockReason } from "./types";
 
-const SECTION_SELECTOR = "fieldset, section, article.field-form-apply, [role='group'], .apply-form-box";
+const SECTION_SELECTOR =
+  "fieldset, section, article.field-form-apply, [role='group'], .apply-form-box";
 const FORBIDDEN_ACTION =
   /저장|제출|지원|완료|다음|이전|이동|미리보기|삭제|업로드|계산기|submit|save|next|previous|preview|delete|upload|remove|calculator/i;
 // The analysis API rejects candidate labels longer than 120 characters.
@@ -49,9 +50,9 @@ export function isHyundaiTalentHost(host: string): boolean {
 
 export function hasVisibleFormControl(item: Element): boolean {
   return Array.from(
-    item.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
-      "input, select, textarea",
-    ),
+    item.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input, select, textarea"),
   ).some((control) => !isHidden(control));
 }
 
@@ -197,6 +198,10 @@ function siteOf(document: Document): { host: string; pathPattern: string } {
   };
 }
 
+function documentHost(document: Document): string {
+  return document.location?.host ?? "";
+}
+
 function groupBySection<T extends Element>(
   elements: T[],
 ): Map<Element | null, T[]> {
@@ -215,11 +220,14 @@ function groupBySection<T extends Element>(
  * as metadata only for the local policy resolver.  It is not sent as a CSS
  * selector and is never executed from a server response.
  */
-function actionDomId(element: HTMLElement, document: Document): string | undefined {
+function actionDomId(
+  element: HTMLElement,
+  document: Document,
+): string | undefined {
   const nativeId = metadata(element.id);
   if (nativeId) return nativeId;
   if (
-    isHyundaiTalentHost(document.location.host) &&
+    isHyundaiTalentHost(documentHost(document)) &&
     element instanceof HTMLButtonElement &&
     element.classList.contains("btn-group-add")
   ) {
@@ -259,16 +267,11 @@ function collectFieldElements(document: Document) {
     if (isTemplateLike(element)) return false;
     if (!(element instanceof HTMLInputElement)) return true;
     if (element.type === "button") {
-      return isHyundaiTalentHost(document.location.host);
+      return isHyundaiTalentHost(documentHost(document));
     }
-    return ![
-      "hidden",
-      "password",
-      "file",
-      "submit",
-      "reset",
-      "image",
-    ].includes(element.type);
+    return !["hidden", "password", "file", "submit", "reset", "image"].includes(
+      element.type,
+    );
   });
 }
 
@@ -295,11 +298,10 @@ export function collectFieldsSnapshot(
       const repeatableItems = repeatableItemElements(container)
         .filter(
           (element) =>
-            !isSkCareersHost(document.location.host) ||
+            !isSkCareersHost(documentHost(document)) ||
             hasVisibleFormControl(element),
         )
-        .map(
-        (element, itemPosition) => {
+        .map((element, itemPosition) => {
           const itemGroupId = repeatableItemGroupId(element);
           const itemGroupKey = itemGroupId ?? "";
           const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
@@ -311,8 +313,7 @@ export function collectFieldsSnapshot(
             itemGroupId,
             fields: [] as FieldCandidate[],
           };
-        },
-      );
+        });
       const consumed = new Set<Element>();
 
       for (const element of elements) {
@@ -390,11 +391,12 @@ export function collectFieldsSnapshot(
             ...baseCandidate(first, candidateId),
             element:
               first instanceof HTMLTextAreaElement ? "textarea" : "input",
-            control: first instanceof HTMLTextAreaElement
-              ? "textarea"
-              : isButton
-                ? "button"
-                : "text",
+            control:
+              first instanceof HTMLTextAreaElement
+                ? "textarea"
+                : isButton
+                  ? "button"
+                  : "text",
           };
         }
 
@@ -469,9 +471,9 @@ export function collectFieldsSnapshot(
 
 function collectActionElements(document: Document) {
   return Array.from(
-    document.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>(
-      "button, input[type='button'], input[type='radio'], select",
-    ),
+    document.querySelectorAll<
+      HTMLButtonElement | HTMLInputElement | HTMLSelectElement
+    >("button, input[type='button'], input[type='radio'], select"),
   ).filter((element) => {
     const label = labelOf(element);
     if (element instanceof HTMLSelectElement) {
@@ -641,10 +643,18 @@ export function collectPreparationSnapshot(
       const candidateId = createOpaqueId("action", candidateIndex++);
       const candidate: ActionCandidate = {
         candidateId,
-        element: element instanceof HTMLButtonElement
-          ? "button"
-          : element instanceof HTMLSelectElement ? "select" : "input",
-        control: element instanceof HTMLSelectElement ? "select" : element instanceof HTMLInputElement && element.type === "radio" ? "radio" : "button",
+        element:
+          element instanceof HTMLButtonElement
+            ? "button"
+            : element instanceof HTMLSelectElement
+              ? "select"
+              : "input",
+        control:
+          element instanceof HTMLSelectElement
+            ? "select"
+            : element instanceof HTMLInputElement && element.type === "radio"
+              ? "radio"
+              : "button",
         visibility: visibility(element),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
         ...(actionDomId(element, document)
@@ -654,13 +664,15 @@ export function collectPreparationSnapshot(
         ...(element.disabled ? { disabled: true } : {}),
         ...(isInert(element) ? { inert: true } : {}),
         ...(element instanceof HTMLSelectElement
-          ? { options: Array.from(element.options)
-              .map((option, index) => ({
-                optionId: createOpaqueId(`${candidateId}-option`, index),
-                displayName: metadata(option.textContent?.trim() ?? "") ?? "",
-              }))
-              .filter((option) => option.displayName.length > 0)
-              .slice(0, 128) }
+          ? {
+              options: Array.from(element.options)
+                .map((option, index) => ({
+                  optionId: createOpaqueId(`${candidateId}-option`, index),
+                  displayName: metadata(option.textContent?.trim() ?? "") ?? "",
+                }))
+                .filter((option) => option.displayName.length > 0)
+                .slice(0, 128),
+            }
           : {}),
       };
       registry.registerAction(

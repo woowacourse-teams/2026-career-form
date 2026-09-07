@@ -79,9 +79,11 @@ export function isLanguageTypeStateDriver(
   domName: string | undefined,
   host: string,
 ): boolean {
-  return isSkCareersHost(host)
-    && item.analysis?.writePlan?.command === "SELECT_OPTION"
-    && domName === "lngLanguageType";
+  return (
+    isSkCareersHost(host) &&
+    item.analysis?.writePlan?.command === "SELECT_OPTION" &&
+    domName === "lngLanguageType"
+  );
 }
 
 const SK_UNIVERSITY_MAJOR_REVEALS = [
@@ -119,10 +121,15 @@ function selectSkUniversityMajorReveals(
     const target = Array.from(
       document.querySelectorAll<HTMLInputElement>("input[type='radio']"),
     ).find((input) => {
-      if (input.name !== reveal.domName && !hasUuidSuffix(input.name, reveal.domName)) {
+      if (
+        input.name !== reveal.domName &&
+        !hasUuidSuffix(input.name, reveal.domName)
+      ) {
         return false;
       }
-      return input.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() === "있음";
+      return (
+        input.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() === "있음"
+      );
     });
     if (!target) {
       return `${reveal.label}: '있음' 라디오를 DOM에서 찾지 못함`;
@@ -153,7 +160,10 @@ function syncHyundaiFloatingLabels(
     if (lookup.status !== "ready") return;
     const element = lookup.handle.elements[0];
     if (
-      !(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) ||
+      !(
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement
+      ) ||
       !element.value.trim()
     ) {
       return;
@@ -191,6 +201,10 @@ interface WorkflowProps {
   repository: Pick<ProfileRepository, "load">;
   pageDocument: Document;
   onExit(): void;
+}
+
+function pageHost(pageDocument: Document): string {
+  return pageDocument.location?.host ?? "";
 }
 
 function Header({ step, title }: { step: string; title: string }) {
@@ -429,7 +443,8 @@ function userFacingReason(reason?: string): string | undefined {
 }
 
 function safeErrorTitle(error: unknown): string {
-  return error instanceof AnalysisServiceError || error instanceof AnalysisContractError
+  return error instanceof AnalysisServiceError ||
+    error instanceof AnalysisContractError
     ? error.message
     : "분석을 완료하지 못했습니다";
 }
@@ -556,17 +571,19 @@ export function AutofillWorkflow({
         ) {
           return [];
         }
-        return [{
-          candidateId: field.candidateId,
-          domName: lookup.handle.candidate.domName,
-          matchType: field.matchType,
-          ...(field.matchType === "MATCH"
-            ? {
-                profileFieldKey: field.valueBinding?.profileFieldKey,
-                command: field.writePlan?.command,
-              }
-            : {}),
-        }];
+        return [
+          {
+            candidateId: field.candidateId,
+            domName: lookup.handle.candidate.domName,
+            matchType: field.matchType,
+            ...(field.matchType === "MATCH"
+              ? {
+                  profileFieldKey: field.valueBinding?.profileFieldKey,
+                  command: field.writePlan?.command,
+                }
+              : {}),
+          },
+        ];
       }),
     );
     const ignoreCurrentValueCandidateIds = new Set(
@@ -608,7 +625,8 @@ export function AutofillWorkflow({
     const approvedCandidateIds = new Set(
       automaticItems
         .filter(
-          (item) => !item.disabled && (item.selected || item.status === "needs-review"),
+          (item) =>
+            !item.disabled && (item.selected || item.status === "needs-review"),
         )
         .map((item) => item.candidateId),
     );
@@ -616,12 +634,14 @@ export function AutofillWorkflow({
       ? []
       : automaticItems.filter((item) => {
           const lookup = snapshot.registry.lookupField(item.candidateId);
-          return (lookup.status === "ready" || lookup.status === "blocked")
-            && isLanguageTypeStateDriver(
+          return (
+            (lookup.status === "ready" || lookup.status === "blocked") &&
+            isLanguageTypeStateDriver(
               item,
               lookup.handle.candidate.domName,
               snapshot.request.site.host,
-            );
+            )
+          );
         });
     if (languageStateDriverItems.length > 0) {
       const languageSelectionResults = executeApprovedWrites({
@@ -631,15 +651,18 @@ export function AutofillWorkflow({
         ),
         registry: snapshot.registry,
       });
-      if (languageSelectionResults.every((result) => result.status === "written")) {
-        console.info("[CareerForm] language selection applied; recollecting fields", {
-          candidateIds: languageStateDriverItems.map((item) => item.candidateId),
-        });
-        await analyzeFields(
-          loadedProfile,
-          ignoreFreshUniversityDefaults,
-          true,
+      if (
+        languageSelectionResults.every((result) => result.status === "written")
+      ) {
+        console.info(
+          "[CareerForm] language selection applied; recollecting fields",
+          {
+            candidateIds: languageStateDriverItems.map(
+              (item) => item.candidateId,
+            ),
+          },
         );
+        await analyzeFields(loadedProfile, ignoreFreshUniversityDefaults, true);
         return;
       }
     }
@@ -666,15 +689,17 @@ export function AutofillWorkflow({
         ) {
           return [];
         }
-        return [{
-          candidateId: item.candidateId,
-          profileValue: item.profileValue,
-          status: writeResults[index]?.status,
-          reason:
-            writeResults[index]?.status === "skipped"
-              ? writeResults[index].reason
-              : undefined,
-        }];
+        return [
+          {
+            candidateId: item.candidateId,
+            profileValue: item.profileValue,
+            status: writeResults[index]?.status,
+            reason:
+              writeResults[index]?.status === "skipped"
+                ? writeResults[index].reason
+                : undefined,
+          },
+        ];
       }),
     );
     setResults(writeResults);
@@ -763,7 +788,8 @@ export function AutofillWorkflow({
       })}`,
     );
     if (runnablePlans.length === 0) {
-      const addedUniversityRowsToEmptyForm = hasFreshUniversityRows(runnablePlans);
+      const addedUniversityRowsToEmptyForm =
+        hasFreshUniversityRows(runnablePlans);
       await analyzeFields(profile, addedUniversityRowsToEmptyForm);
       return;
     }
@@ -801,13 +827,20 @@ export function AutofillWorkflow({
         }
         const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
         if (value.status !== "resolved") return "profile-value-unavailable";
-        if (lookup.handle.element instanceof HTMLInputElement && lookup.handle.element.type === "radio") {
+        if (
+          lookup.handle.element instanceof HTMLInputElement &&
+          lookup.handle.element.type === "radio"
+        ) {
           const label = plan.optionDisplayName ?? value.value;
-          if (lookup.handle.candidate.displayName !== label) return "option-label-mismatch";
+          if (lookup.handle.candidate.displayName !== label)
+            return "option-label-mismatch";
           lookup.handle.element.click();
-          return lookup.handle.element.checked ? "selected" : "action-not-ready";
+          return lookup.handle.element.checked
+            ? "selected"
+            : "action-not-ready";
         }
-        if (!(lookup.handle.element instanceof HTMLSelectElement)) return "unsupported-option-action";
+        if (!(lookup.handle.element instanceof HTMLSelectElement))
+          return "unsupported-option-action";
         const option = Array.from(lookup.handle.element.options).find(
           (candidate) => candidate.textContent?.trim() === value.value,
         );
@@ -852,15 +885,18 @@ export function AutofillWorkflow({
     }
     try {
       setStage("analyzing");
-      const addedUniversityRowsToEmptyForm = hasFreshUniversityRows(runnablePlans);
+      const addedUniversityRowsToEmptyForm =
+        hasFreshUniversityRows(runnablePlans);
       // Adding a repeatable row can expose a second layer of conditional
       // controls (for example, the university's double/minor-major radios).
       // SK Careers keeps those radios out of the preparation-action snapshot,
       // so select their explicit, profile-backed "있음" option before the
       // field snapshot is collected. This makes the two name controls exist
       // for the normal analysis/write flow below.
-      if (isSkCareersHost(pageDocument.location.host)) {
-        setSkMajorDiagnostics(selectSkUniversityMajorReveals(pageDocument, profile));
+      if (isSkCareersHost(pageHost(pageDocument))) {
+        setSkMajorDiagnostics(
+          selectSkUniversityMajorReveals(pageDocument, profile),
+        );
       }
       // Analyze that newly collected DOM once, but only execute selections:
       // repeating add plans here could create duplicate rows.
@@ -874,22 +910,28 @@ export function AutofillWorkflow({
           (plan) => plan.command === "SELECT_OPTION_TO_REVEAL",
         ),
       });
-      if (isSkCareersHost(pageDocument.location.host)) {
+      if (isSkCareersHost(pageHost(pageDocument))) {
         const revealedPlans = followUpAnalysis.preparationPlans.filter(
           (plan) => plan.command === "SELECT_OPTION_TO_REVEAL",
         );
-        setSkMajorDiagnostics((previous) => [...previous,
+        setSkMajorDiagnostics((previous) => [
+          ...previous,
           `후속 조건부 선택 계획: ${revealedPlans.length}개`,
-          ...revealedPlans.map((plan) =>
-            `선택 ${plan.profileFieldKey} → 후속 바인딩 ${Object.keys(plan.revealedFieldBindings ?? {}).join(", ") || "없음"}`,
+          ...revealedPlans.map(
+            (plan) =>
+              `선택 ${plan.profileFieldKey} → 후속 바인딩 ${Object.keys(plan.revealedFieldBindings ?? {}).join(", ") || "없음"}`,
           ),
         ]);
       }
       if (followUpAnalysis.analysisStatus !== "BLOCKED") {
         const followUpPlans = followUpAnalysis.preparationPlans
           .filter(
-            (plan): plan is Extract<PreparationPlan, { command: "SELECT_OPTION_TO_REVEAL" }> =>
-              plan.command === "SELECT_OPTION_TO_REVEAL",
+            (
+              plan,
+            ): plan is Extract<
+              PreparationPlan,
+              { command: "SELECT_OPTION_TO_REVEAL" }
+            > => plan.command === "SELECT_OPTION_TO_REVEAL",
           )
           .map((plan) => ({
             ...preparationItem(plan, followUpSnapshot, profile),
@@ -932,13 +974,12 @@ export function AutofillWorkflow({
     loadedProfile: Profile,
     plans: readonly PreparationItem[],
   ) => {
-    if (!isSkCareersHost(pageDocument.location.host)) return;
+    if (!isSkCareersHost(pageHost(pageDocument))) return;
     const revealedFieldBindings = new Map(
       plans.flatMap((item) =>
-        (item.plan.command === "SELECT_OPTION_TO_REVEAL"
+        item.plan.command === "SELECT_OPTION_TO_REVEAL"
           ? Object.entries(item.plan.revealedFieldBindings ?? {})
-          : []
-        ),
+          : [],
       ),
     );
     if (revealedFieldBindings.size === 0) return;
@@ -959,7 +1000,9 @@ export function AutofillWorkflow({
       const lookup = snapshot.registry.lookupField(field.candidateId);
       if (lookup.status !== "ready") return [];
       const domName = lookup.handle.candidate.domName;
-      const profileFieldKey = domName ? revealedFieldBindings.get(domName) : undefined;
+      const profileFieldKey = domName
+        ? revealedFieldBindings.get(domName)
+        : undefined;
       if (
         !domName ||
         !profileFieldKey ||
@@ -971,31 +1014,34 @@ export function AutofillWorkflow({
       // A hidden SK template can precede the real row in DOM order. Resolve
       // the sole saved university entry without trusting that template-based
       // row index; multiple profile entries remain safely ambiguous.
-      const resolved = resolveProfileFieldValue(
-        loadedProfile,
-        profileFieldKey,
-      );
+      const resolved = resolveProfileFieldValue(loadedProfile, profileFieldKey);
       if (resolved.status !== "resolved") return [];
-      return [{
-        candidateId: field.candidateId,
-        fieldLabel: lookup.handle.candidate.displayName ?? domName,
-        profileFieldKey,
-        ...(resolved.profileEntryId ? { profileEntryId: resolved.profileEntryId } : {}),
-        ...(lookup.handle.itemIndex !== undefined
-          ? { itemIndex: lookup.handle.itemIndex }
-          : {}),
-        currentValue: lookup.handle.elements[0]?.value ?? "",
-        profileValue: resolved.value,
-        previewValue: resolved.value,
-        status: "available" as const,
-        selected: true,
-        disabled: false,
-        revealed: true,
-        reason: "SK 조건부 전공명 필드",
-        analysis: field as MatchedFieldAnalysis,
-      } satisfies ReviewPlanItem];
+      return [
+        {
+          candidateId: field.candidateId,
+          fieldLabel: lookup.handle.candidate.displayName ?? domName,
+          profileFieldKey,
+          ...(resolved.profileEntryId
+            ? { profileEntryId: resolved.profileEntryId }
+            : {}),
+          ...(lookup.handle.itemIndex !== undefined
+            ? { itemIndex: lookup.handle.itemIndex }
+            : {}),
+          currentValue: lookup.handle.elements[0]?.value ?? "",
+          profileValue: resolved.value,
+          previewValue: resolved.value,
+          status: "available" as const,
+          selected: true,
+          disabled: false,
+          revealed: true,
+          reason: "SK 조건부 전공명 필드",
+          analysis: field as MatchedFieldAnalysis,
+        } satisfies ReviewPlanItem,
+      ];
     });
-    diagnostics.push(`정책·가시성·프로필 값을 모두 통과한 입력 후보: ${items.length}개`);
+    diagnostics.push(
+      `정책·가시성·프로필 값을 모두 통과한 입력 후보: ${items.length}개`,
+    );
     const results = executeApprovedWrites({
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
@@ -1250,13 +1296,15 @@ export function AutofillWorkflow({
             })}
           </ul>
         )}
-        {isSkCareersHost(pageDocument.location.host) && (
+        {isSkCareersHost(pageHost(pageDocument)) && (
           <details className={styles.safety}>
             <summary>SK 복수·부전공명 진단</summary>
             <ul className={styles.boundaries}>
               {(skMajorDiagnostics.length > 0
                 ? skMajorDiagnostics
-                : ["후속 조건부 입력 진단이 생성되지 않았습니다. 자동기입 실행 흐름을 확인해야 합니다."]
+                : [
+                    "후속 조건부 입력 진단이 생성되지 않았습니다. 자동기입 실행 흐름을 확인해야 합니다.",
+                  ]
               ).map((diagnostic) => (
                 <li key={diagnostic}>{diagnostic}</li>
               ))}
@@ -1275,7 +1323,8 @@ export function AutofillWorkflow({
       <Header step="예외" title={exceptionTitle} />
       <div className={styles.exceptionCard}>
         <p>
-          자동 기입은 완료하지 않았습니다. 조건부 선택 상태는 변경되었을 수 있으며, 수동 복사는 계속 사용할 수 있습니다.
+          자동 기입은 완료하지 않았습니다. 조건부 선택 상태는 변경되었을 수
+          있으며, 수동 복사는 계속 사용할 수 있습니다.
         </p>
       </div>
       <button className={styles.primary} type="button" onClick={onExit}>
