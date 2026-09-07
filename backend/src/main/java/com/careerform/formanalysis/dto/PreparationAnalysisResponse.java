@@ -120,15 +120,6 @@ public record PreparationAnalysisResponse(
     ) implements PreparationPlan {
     }
 
-    public record SelectOptionToRevealPlan(
-        String actionCandidateId,
-        Command command,
-        ExpectedEffect expectedEffect,
-        String profileFieldKey,
-        String targetSectionId
-    ) implements PreparationPlan {
-    }
-
     public enum Mode {
         ADAPTER,
         GENERIC

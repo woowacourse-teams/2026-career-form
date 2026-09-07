@@ -52,11 +52,6 @@ public interface ActionResolver {
         }
     }
 
-    record SelectOptionAction(
-        String candidateId, String profileFieldKey, String targetSectionId
-    ) implements Result {
-    }
-
     record NoAction(String candidateId) implements Result {
     }
 }
