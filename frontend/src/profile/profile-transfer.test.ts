@@ -61,9 +61,23 @@ describe("profile JSON transfer", () => {
   });
 
   it("parses the non-identifying export example", () => {
-    expect(parseProfileImport(JSON.stringify(profileExportExample))).toMatchObject({
+    expect(
+      parseProfileImport(JSON.stringify(profileExportExample)),
+    ).toMatchObject({
       contact: { email: "example@example.test" },
-      education: [expect.objectContaining({ sectionId: "university" })],
+      education: [
+        expect.objectContaining({ sectionId: "highSchool" }),
+        expect.objectContaining({ sectionId: "university" }),
+      ],
+      languages: [
+        expect.objectContaining({ sectionId: "languageTest" }),
+        expect.objectContaining({ sectionId: "languageSkill" }),
+      ],
+      certifications: [
+        expect.objectContaining({ sectionId: "certificate" }),
+        expect.objectContaining({ sectionId: "certificate" }),
+        expect.objectContaining({ sectionId: "certificate" }),
+      ],
       projects: [expect.objectContaining({ sectionId: "project" })],
       military: {},
       veteran: {},
