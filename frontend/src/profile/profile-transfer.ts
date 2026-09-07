@@ -10,7 +10,6 @@ import { sanitizeProfile } from "./profile-repository";
 const SINGLE_CATEGORY_IDS = [
   "personal",
   "contact",
-  "compensation",
   "military",
   "veteran",
   "disability",
@@ -20,9 +19,7 @@ const REPEATED_CATEGORY_IDS = [
   "education",
   "languages",
   "certifications",
-  "careers",
   "projects",
-  "publications",
   "health",
 ] as const;
 
