@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-09-07] ingest | CF-76 로컬 프로필 JSON 전송 계약
+
+- Disposition: New
+- Approval-Digest: faa201aaabf6f8c182db50ceb22f33f3cba9285ea098761ec0ce1d8a8b185d1b
+- Source-Tree: cb98cbd3372e4ad77bb5c235753b10ec771afe65
+- Raw: llm-wiki/raw/issues/CF-76/manifest.md
+- Topics: 1
+
 ## [2026-08-18] ingest | 제품, 하네스, 개발 컨벤션 초기 정본
 - Disposition: New
 - Raw: llm-wiki/raw/business/product-principles.md
