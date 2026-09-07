@@ -13,6 +13,16 @@
     "education": [
       {
         "id": "education-example-1",
+        "sectionId": "highSchool",
+        "values": {
+          "academicProcess": "고등학교",
+          "schoolName": "예시고등학교",
+          "completionStatus": "졸업",
+          "schoolRegion": "서울"
+        }
+      },
+      {
+        "id": "education-example-2",
         "sectionId": "university",
         "values": {
           "schoolType": "대학교",
@@ -23,8 +33,51 @@
         }
       }
     ],
-    "languages": [],
-    "certifications": [],
+    "languages": [
+      {
+        "id": "language-example-1",
+        "sectionId": "languageTest",
+        "values": {
+          "language": "영어",
+          "testName": "샘플 영어 시험",
+          "grade": "900"
+        }
+      },
+      {
+        "id": "language-example-2",
+        "sectionId": "languageSkill",
+        "values": {
+          "language": "일본어",
+          "conversationalLevel": "일상 대화"
+        }
+      }
+    ],
+    "certifications": [
+      {
+        "id": "certificate-example-1",
+        "sectionId": "certificate",
+        "values": {
+          "name": "샘플 자격증 A",
+          "issuer": "예시 기관"
+        }
+      },
+      {
+        "id": "certificate-example-2",
+        "sectionId": "certificate",
+        "values": {
+          "name": "샘플 자격증 B",
+          "issuer": "예시 기관"
+        }
+      },
+      {
+        "id": "certificate-example-3",
+        "sectionId": "certificate",
+        "values": {
+          "name": "샘플 자격증 C",
+          "issuer": "예시 기관"
+        }
+      }
+    ],
     "careers": [],
     "projects": [
       {
