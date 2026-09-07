@@ -45,6 +45,60 @@
   gap: 10px;
 }
 
+.transferActions {
+  display: flex;
+  gap: 8px;
+}
+
+.transferActions button {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+  color: var(--color-action-strong);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.transferActions button:hover,
+.transferActions button:focus-visible {
+  border-color: var(--color-action);
+  background: var(--color-accent-soft);
+}
+
+.importInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.transferStatus,
+.transferError {
+  max-width: 1280px;
+  margin: -6px auto 18px;
+  border-radius: var(--radius-control);
+  padding: 11px 15px;
+  font-size: 12px;
+}
+
+.transferStatus {
+  border: 1px solid var(--color-accent);
+  color: var(--color-action-strong);
+  background: var(--color-accent-soft);
+}
+
+.transferError {
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
+  background: var(--color-surface);
+}
+
 .layoutSwitch {
   display: flex;
   padding: 4px;

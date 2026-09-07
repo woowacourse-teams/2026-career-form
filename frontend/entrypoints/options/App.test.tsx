@@ -14,6 +14,14 @@ function createRepository(): ProfileRepository {
   };
 }
 
+function createJsonFile(contents: string): File {
+  const file = new File([], "profile.json", { type: "application/json" });
+  Object.defineProperty(file, "text", {
+    value: vi.fn(async () => contents),
+  });
+  return file;
+}
+
 describe("options App", () => {
   it("shows all ten categories in layout A and keeps data when switching to B", async () => {
     const repository = createRepository();
@@ -129,5 +137,113 @@ describe("options App", () => {
       target: { value: "비식별 성" },
     });
     expect(personalSection).toHaveAttribute("open");
+  });
+
+  it("exports the current profile as a versioned JSON file", async () => {
+    const repository = createRepository();
+    repository.load = vi.fn(async () => ({
+      ...createEmptyProfile(),
+      personal: { koreanGivenName: "예시" },
+    }));
+    const downloadProfile = vi.fn();
+    render(<App repository={repository} downloadProfile={downloadProfile} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+
+    fireEvent.click(screen.getByRole("button", { name: "내보내기" }));
+
+    expect(downloadProfile).toHaveBeenCalledWith(
+      "career-form-profile-v1.json",
+      expect.stringContaining('"schemaVersion": 1'),
+    );
+    expect(JSON.parse(vi.mocked(downloadProfile).mock.calls[0][1])).toEqual({
+      schemaVersion: 1,
+      profile: expect.objectContaining({
+        personal: { koreanGivenName: "예시" },
+      }),
+    });
+  });
+
+  it("confirms and replaces the complete profile from an imported JSON file", async () => {
+    const repository = createRepository();
+    const importedProfile = {
+      ...createEmptyProfile(),
+      contact: { email: "example@example.test" },
+    };
+    const confirmImport = vi.fn(() => true);
+    render(<App repository={repository} confirmImport={confirmImport} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+
+    fireEvent.change(screen.getByLabelText("프로필 JSON 파일"), {
+      target: {
+        files: [
+          createJsonFile(
+            JSON.stringify({ schemaVersion: 1, profile: importedProfile }),
+          ),
+        ],
+      },
+    });
+
+    await waitFor(() =>
+      expect(repository.save).toHaveBeenLastCalledWith(importedProfile),
+    );
+    expect(confirmImport).toHaveBeenCalledWith(
+      "현재 프로필 전체를 덮어씁니다. 계속할까요?",
+    );
+    expect(
+      await screen.findByText("프로필을 가져왔습니다."),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the current profile when an import file is invalid", async () => {
+    const repository = createRepository();
+    repository.load = vi.fn(async () => ({
+      ...createEmptyProfile(),
+      personal: { koreanFamilyName: "기존 값" },
+    }));
+    const confirmImport = vi.fn(() => true);
+    render(<App repository={repository} confirmImport={confirmImport} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+
+    fireEvent.change(screen.getByLabelText("프로필 JSON 파일"), {
+      target: { files: [createJsonFile("{")] },
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "가져오기 파일을 읽을 수 없습니다.",
+    );
+    expect(confirmImport).not.toHaveBeenCalled();
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("국문 성")).toHaveValue("기존 값");
+  });
+
+  it("keeps the current profile when the user cancels an import", async () => {
+    const repository = createRepository();
+    repository.load = vi.fn(async () => ({
+      ...createEmptyProfile(),
+      personal: { koreanFamilyName: "기존 값" },
+    }));
+    const confirmImport = vi.fn(() => false);
+    render(<App repository={repository} confirmImport={confirmImport} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+
+    fireEvent.change(screen.getByLabelText("프로필 JSON 파일"), {
+      target: {
+        files: [
+          createJsonFile(
+            JSON.stringify({
+              schemaVersion: 1,
+              profile: {
+                ...createEmptyProfile(),
+                personal: { koreanFamilyName: "가져온 값" },
+              },
+            }),
+          ),
+        ],
+      },
+    });
+
+    await waitFor(() => expect(confirmImport).toHaveBeenCalled());
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("국문 성")).toHaveValue("기존 값");
   });
 });
