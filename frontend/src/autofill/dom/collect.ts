@@ -8,13 +8,19 @@ import type {
   PreparationSection,
 } from "../api/types";
 import {
+  collectionAdapterForHost,
+  type CollectionAdapter,
+  type CollectionPhase,
+  type CollectionSource,
+} from "../adapters/collection";
+export { isHyundaiTalentHost, isSkCareersHost } from "../adapters/company";
+import {
   CandidateRegistry,
   createStructuralSignature,
 } from "./candidate-registry";
 import type { CandidateBlockReason } from "./types";
 
-const SECTION_SELECTOR =
-  "fieldset, section, article.field-form-apply, [role='group'], .apply-form-box";
+const SECTION_SELECTOR = "fieldset, section, [role='group'], .apply-form-box";
 const FORBIDDEN_ACTION =
   /저장|제출|지원|완료|다음|이전|이동|미리보기|삭제|업로드|계산기|submit|save|next|previous|preview|delete|upload|remove|calculator/i;
 // The analysis API rejects candidate labels longer than 120 characters.
@@ -38,14 +44,6 @@ function createSnapshotId(prefix: "preparation" | "fields"): string {
   const random =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${prefix}-${random}`;
-}
-
-export function isSkCareersHost(host: string): boolean {
-  return host.toLowerCase() === "www.skcareers.com";
-}
-
-export function isHyundaiTalentHost(host: string): boolean {
-  return host.toLowerCase() === "talent.hyundai.com";
 }
 
 export function hasVisibleFormControl(item: Element): boolean {
@@ -204,37 +202,28 @@ function documentHost(document: Document): string {
 
 function groupBySection<T extends Element>(
   elements: T[],
+  selector: string,
 ): Map<Element | null, T[]> {
   const groups = new Map<Element | null, T[]>();
   for (const element of elements) {
-    const section = element.closest(SECTION_SELECTOR);
+    const section = element.closest(selector);
     groups.set(section, [...(groups.get(section) ?? []), element]);
   }
   if (groups.size === 0) groups.set(null, []);
   return groups;
 }
 
-/**
- * Hyundai uses the same visible label (\"추가\") for every repeater.  Its
- * surrounding article id is the stable, site-owned discriminator; expose it
- * as metadata only for the local policy resolver.  It is not sent as a CSS
- * selector and is never executed from a server response.
- */
+function sectionSelector(adapter: CollectionAdapter): string {
+  return [SECTION_SELECTOR, ...adapter.sectionSelectors].join(", ");
+}
+
 function actionDomId(
   element: HTMLElement,
-  document: Document,
+  adapter: CollectionAdapter,
 ): string | undefined {
   const nativeId = metadata(element.id);
   if (nativeId) return nativeId;
-  if (
-    isHyundaiTalentHost(documentHost(document)) &&
-    element instanceof HTMLButtonElement &&
-    element.classList.contains("btn-group-add")
-  ) {
-    const scope = element.closest<HTMLElement>("article.field-form-apply");
-    if (scope?.id) return `hyundai:add:${scope.id}`;
-  }
-  return undefined;
+  return adapter.actionDomId(element);
 }
 
 function baseCandidate(
@@ -258,7 +247,7 @@ function baseCandidate(
   };
 }
 
-function collectFieldElements(document: Document) {
+function collectFieldElements(document: Document, adapter: CollectionAdapter) {
   return Array.from(
     document.querySelectorAll<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -267,7 +256,7 @@ function collectFieldElements(document: Document) {
     if (isTemplateLike(element)) return false;
     if (!(element instanceof HTMLInputElement)) return true;
     if (element.type === "button") {
-      return isHyundaiTalentHost(documentHost(document));
+      return adapter.collectsInputButtonFields;
     }
     return !["hidden", "password", "file", "submit", "reset", "image"].includes(
       element.type,
@@ -278,10 +267,14 @@ function collectFieldElements(document: Document) {
 export function collectFieldsSnapshot(
   document: Document,
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
+  const adapter = collectionAdapterForHost(documentHost(document));
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: FieldsSection[] = [];
-  const groups = groupBySection(collectFieldElements(document));
+  const groups = groupBySection(
+    collectFieldElements(document, adapter),
+    sectionSelector(adapter),
+  );
 
   Array.from(groups.entries()).forEach(
     ([container, elements], sectionIndex) => {
@@ -290,30 +283,23 @@ export function collectFieldsSnapshot(
         : "section-root";
       const fields: FieldCandidate[] = [];
       const itemGroupIndexes = new Map<string, number>();
-      // SK Careers keeps a hidden repeatable-row template beside the visible
-      // row. The template is not an application entry: counting it makes one
-      // stored profile entry look mismatched with two form rows and causes
-      // otherwise writable fields such as minor name and test name to be
-      // skipped as unavailable. Other hosts retain their existing semantics.
-      const repeatableItems = repeatableItemElements(container)
-        .filter(
-          (element) =>
-            !isSkCareersHost(documentHost(document)) ||
-            hasVisibleFormControl(element),
-        )
-        .map((element, itemPosition) => {
-          const itemGroupId = repeatableItemGroupId(element);
-          const itemGroupKey = itemGroupId ?? "";
-          const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
-          itemGroupIndexes.set(itemGroupKey, itemIndex + 1);
-          return {
-            element,
-            itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
-            itemIndex,
-            itemGroupId,
-            fields: [] as FieldCandidate[],
-          };
-        });
+      const repeatableItems = repeatableItemElements(
+        container,
+        adapter,
+        "fields",
+      ).map((element, itemPosition) => {
+        const itemGroupId = repeatableItemGroupId(element);
+        const itemGroupKey = itemGroupId ?? "";
+        const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
+        itemGroupIndexes.set(itemGroupKey, itemIndex + 1);
+        return {
+          element,
+          itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
+          itemIndex,
+          itemGroupId,
+          fields: [] as FieldCandidate[],
+        };
+      });
       const consumed = new Set<Element>();
 
       for (const element of elements) {
@@ -485,19 +471,27 @@ function collectActionElements(document: Document) {
   });
 }
 
-function repeatableItemElements(container: Element | null): Element[] {
+function repeatableItemElements(
+  container: Element | null,
+  adapter: CollectionAdapter,
+  phase: CollectionPhase,
+): Element[] {
   if (!container) return [];
 
-  // Hyundai renders every repeated entry as a direct .field-content child of
-  // its article.  The generated numeric suffix belongs to that entry, not to
-  // a degree/career type, so preserving these row boundaries is essential.
-  if (container.matches("article.field-form-apply")) {
-    return Array.from(container.children).filter(
-      (child) =>
-        child.classList.contains("field-content") &&
-        !isTemplateLike(child) &&
-        hasVisibleFormControl(child),
+  const filterForAdapter = (
+    items: Element[],
+    source: CollectionSource,
+  ): Element[] =>
+    items.filter(
+      (item) =>
+        !isTemplateLike(item) &&
+        (!adapter.requiresVisibleControl(phase, source) ||
+          hasVisibleFormControl(item)),
     );
+
+  const adapterItems = adapter.repeatableItemCandidates(container);
+  if (adapterItems) {
+    return filterForAdapter(adapterItems, "adapter");
   }
 
   const isDirectRepeatableItem = (element: Element): boolean => {
@@ -519,10 +513,12 @@ function repeatableItemElements(container: Element | null): Element[] {
   const directItems = Array.from(container.children).filter(
     isDirectRepeatableItem,
   );
-  if (directItems.length > 0) return directItems;
+  if (directItems.length > 0) {
+    return filterForAdapter(directItems, "generic");
+  }
 
-  // Some forms (including SK Careers) nest repeated rows inside a form-body
-  // wrapper instead of making them direct children of the section root.
+  // Some forms nest repeated rows inside a form-body wrapper instead of
+  // making them direct children of the section root.
   // Search those descendants, but keep only the outermost markers so inner
   // controls such as `.form-item` are not mistaken for repeated rows.
   const nestedCandidates = Array.from(
@@ -547,11 +543,14 @@ function repeatableItemElements(container: Element | null): Element[] {
     );
   });
 
-  return nestedCandidates.filter(
-    (candidate) =>
-      !nestedCandidates.some(
-        (ancestor) => ancestor !== candidate && ancestor.contains(candidate),
-      ),
+  return filterForAdapter(
+    nestedCandidates.filter(
+      (candidate) =>
+        !nestedCandidates.some(
+          (ancestor) => ancestor !== candidate && ancestor.contains(candidate),
+        ),
+    ),
+    "generic",
   );
 }
 
@@ -579,8 +578,9 @@ function actionGroupKey(action: Element | undefined): string | undefined {
 function repeatableItemElementsForAction(
   container: Element | null,
   action: Element | undefined,
+  adapter: CollectionAdapter,
 ): Element[] {
-  const allItems = repeatableItemElements(container);
+  const allItems = repeatableItemElements(container, adapter, "preparation");
   const groupKey = actionGroupKey(action);
   if (!groupKey) return allItems;
   const matchingItems = allItems.filter((item) => {
@@ -619,13 +619,15 @@ function repeatableItemElementsForAction(
 export function collectPreparationSnapshot(
   document: Document,
 ): PreparationCollectedSnapshot {
+  const adapter = collectionAdapterForHost(documentHost(document));
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: PreparationSection[] = [];
   const actions = collectActionElements(document);
-  const actionsBySection = groupBySection(actions);
+  const selector = sectionSelector(adapter);
+  const actionsBySection = groupBySection(actions, selector);
   const containers: Array<Element | null> = Array.from(
-    document.querySelectorAll(SECTION_SELECTOR),
+    document.querySelectorAll(selector),
   );
   if (actionsBySection.has(null) || containers.length === 0) {
     containers.push(null);
@@ -657,8 +659,8 @@ export function collectPreparationSnapshot(
               : "button",
         visibility: visibility(element),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
-        ...(actionDomId(element, document)
-          ? { domId: actionDomId(element, document) }
+        ...(actionDomId(element, adapter)
+          ? { domId: actionDomId(element, adapter) }
           : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
         ...(element.disabled ? { disabled: true } : {}),
@@ -693,7 +695,7 @@ export function collectPreparationSnapshot(
     // The API only accepts nested items when they contain at least one
     // action candidate. Repeated rows are used locally for count verification
     // today, so do not serialize empty item shells into the request.
-    const items = repeatableItemElements(container)
+    const items = repeatableItemElements(container, adapter, "preparation")
       .map((_, itemIndex) => ({
         itemId: createOpaqueId(`${sectionId}-item`, itemIndex),
         actionCandidates: [],
@@ -733,6 +735,7 @@ export function collectPreparationSnapshot(
       return repeatableItemElementsForAction(
         root,
         actionElements.get(actionCandidateId),
+        adapter,
       ).length;
     },
   };

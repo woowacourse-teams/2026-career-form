@@ -10,10 +10,18 @@ import {
 
 describe("application form DOM collection", () => {
   beforeEach(() => {
+    setPageUrl("http://localhost:3000/apply/123?token=private#contact");
     document.title = "지원서";
-    history.replaceState({}, "", "/apply/123?token=private#contact");
     document.body.innerHTML = "";
   });
+
+  function setPageUrl(url: string): void {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(options: { url: string }): void };
+      }
+    ).jsdom.reconfigure({ url });
+  }
 
   it("separates action and field snapshots without serializing private values", () => {
     document.body.innerHTML = `
@@ -48,6 +56,108 @@ describe("application form DOM collection", () => {
   it("recognizes Hyundai's custom field-button host only", () => {
     expect(isHyundaiTalentHost("talent.hyundai.com")).toBe(true);
     expect(isHyundaiTalentHost("www.skcareers.com")).toBe(false);
+  });
+
+  it("does not apply Hyundai repeated-row boundaries on a generic host", () => {
+    setPageUrl("https://careers.example.test/apply");
+    document.body.innerHTML = `
+      <article class="field-form-apply">
+        <div class="field-content"><input id="first" /></div>
+        <div class="field-content"><input id="second" /></div>
+      </article>
+    `;
+
+    const section = collectFieldsSnapshot(document).request.sections[0]!;
+
+    expect(section.fields.map(({ domId }) => domId)).toEqual([
+      "first",
+      "second",
+    ]);
+    expect(section.items).toBeUndefined();
+  });
+
+  it("keeps Hyundai repeated rows and add-action identities separate", () => {
+    setPageUrl("https://talent.hyundai.com/apply");
+    document.body.innerHTML = `
+      <article id="education" class="field-form-apply">
+        <div class="field-content"><input id="school" /></div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+      <article id="career" class="field-form-apply">
+        <div class="field-content"><input id="company" /></div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+    `;
+
+    const fields = collectFieldsSnapshot(document).request.sections;
+    const actions = collectPreparationSnapshot(document).request.sections;
+
+    expect(fields.map((section) => section.items?.length)).toEqual([1, 1]);
+    expect(
+      actions.flatMap(({ actionCandidates }) =>
+        actionCandidates.map(({ domId }) => domId),
+      ),
+    ).toEqual(["hyundai:add:education", "hyundai:add:career"]);
+  });
+
+  it.each([
+    ["https://talent.hyundai.com/apply", ["position"]],
+    ["https://careers.example.test/apply", []],
+  ] as const)(
+    "collects input-button fields only for the owning company: %s",
+    (url, expectedDomIds) => {
+      setPageUrl(url);
+      document.body.innerHTML = `<input id="position" type="button" value="비공개 값" />`;
+
+      const fields = collectFieldsSnapshot(document).request.sections.flatMap(
+        (section) => section.fields,
+      );
+
+      expect(fields.map(({ domId }) => domId)).toEqual(expectedDomIds);
+      expect(JSON.stringify(fields)).not.toContain("비공개 값");
+    },
+  );
+
+  it.each([
+    ["https://www.skcareers.com/apply", 1],
+    ["https://careers.example.test/apply", 2],
+  ] as const)(
+    "uses the selected company's hidden repeatable-row policy: %s",
+    (url, expectedCount) => {
+      setPageUrl(url);
+      document.body.innerHTML = `
+        <div class="apply-form-box">
+          <div class="educationUniv-item"><input name="eduMajorSub" /></div>
+          <div class="educationUniv-item" hidden><input name="eduMajorSub" /></div>
+        </div>
+      `;
+
+      const collected = collectFieldsSnapshot(document);
+      const visibleCandidate =
+        collected.request.sections[0]!.items![0]!.fields[0]!;
+
+      expect(
+        collected.registry.fieldItemCount(visibleCandidate.candidateId),
+      ).toBe(expectedCount);
+    },
+  );
+
+  it("preserves generic repeated-row visibility semantics on Hyundai's generic fallback", () => {
+    setPageUrl("https://talent.hyundai.com/apply");
+    document.body.innerHTML = `
+      <div class="apply-form-box">
+        <div class="educationUniv-item"><input name="eduMajorSub" /></div>
+        <div class="educationUniv-item" hidden><input name="eduMajorSub" /></div>
+      </div>
+    `;
+
+    const collected = collectFieldsSnapshot(document);
+    const visibleCandidate =
+      collected.request.sections[0]!.items![0]!.fields[0]!;
+
+    expect(
+      collected.registry.fieldItemCount(visibleCandidate.candidateId),
+    ).toBe(2);
   });
 
   it("collects a same-name radio group as one candidate with display-only options", () => {
@@ -310,10 +420,13 @@ describe("application form DOM collection", () => {
     `;
 
     const collected = collectFieldsSnapshot(document);
-    const visibleCandidate = collected.request.sections[0]!.items![0]!.fields[0]!;
+    const visibleCandidate =
+      collected.request.sections[0]!.items![0]!.fields[0]!;
 
     expect(visibleCandidate.domName).toBe("eduMajorSub");
-    expect(collected.registry.fieldItemCount(visibleCandidate.candidateId)).toBe(2);
+    expect(
+      collected.registry.fieldItemCount(visibleCandidate.candidateId),
+    ).toBe(2);
   });
 
   it("limits the hidden-template exception to SK Careers", () => {
@@ -330,9 +443,9 @@ describe("application form DOM collection", () => {
     expect(
       hasVisibleFormControl(document.querySelector("#template-row")!),
     ).toBe(false);
-    expect(
-      hasVisibleFormControl(document.querySelector("#entry-row")!),
-    ).toBe(true);
+    expect(hasVisibleFormControl(document.querySelector("#entry-row")!)).toBe(
+      true,
+    );
   });
 
   it("does not count a sibling education row for an empty education group", () => {
