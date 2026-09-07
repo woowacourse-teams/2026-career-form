@@ -15,7 +15,16 @@ import {
 
 afterEach(() => {
   document.body.replaceChildren();
+  setPageUrl("http://localhost:3000");
 });
+
+function setPageUrl(url: string): void {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({ url });
+}
 
 const textAnalysis: MatchedFieldAnalysis = {
   candidateId: "field-1",
@@ -305,7 +314,7 @@ describe("approved native-control writes", () => {
       valueBinding: {
         type: "LOOKUP",
         profileFieldKey: "education.university.degreeLevel",
-        optionMap: { "학사": "대학(학사)" },
+        optionMap: { 학사: "대학(학사)" },
       },
       autofillPolicy: "CONDITIONAL",
       mappingStatus: "ADAPTER_VERIFIED",
@@ -702,6 +711,7 @@ describe("approved native-control writes", () => {
   });
 
   it("selects a Hyundai-style button menu only when the verified code and label match", () => {
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
     const trigger = document.createElement("input");
     trigger.type = "button";
     const option = document.createElement("button");
@@ -709,7 +719,9 @@ describe("approved native-control writes", () => {
     option.textContent = "대리";
     Object.defineProperty(option, "offsetParent", { value: document.body });
     trigger.addEventListener("click", () => document.body.append(option));
-    option.addEventListener("click", () => { trigger.value = "대리"; });
+    option.addEventListener("click", () => {
+      trigger.value = "대리";
+    });
     const registry = register(trigger, {
       candidateId: "career-position",
       element: "input",
@@ -722,8 +734,8 @@ describe("approved native-control writes", () => {
       valueBinding: {
         type: "BUTTON_OPTION",
         profileFieldKey: "careers.career.position",
-        optionMap: { "대리": "대리" },
-        optionCodeMap: { "대리": "003" },
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
       },
       writePlan: { command: "SELECT_BUTTON_OPTION" },
     };
@@ -735,6 +747,156 @@ describe("approved native-control writes", () => {
     });
 
     expect(trigger.value).toBe("대리");
-    expect(result).toEqual([{ candidateId: "career-position", status: "written" }]);
+    expect(result).toEqual([
+      { candidateId: "career-position", status: "written" },
+    ]);
   });
+
+  it("does not open a company button menu on an unsupported host", () => {
+    const trigger = document.createElement("input");
+    trigger.type = "button";
+    let opened = false;
+    trigger.addEventListener("click", () => {
+      opened = true;
+    });
+    const registry = register(trigger, {
+      candidateId: "field-1",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "careers.career.position",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+    expect(opened).toBe(false);
+    expect(trigger.value).toBe("");
+    expect(result[0]?.status).toBe("skipped");
+  });
+
+  it.each([0, 2])(
+    "does not select or fall back when a company menu has %i matching choices",
+    (count) => {
+      setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+      const trigger = document.createElement("input");
+      trigger.type = "button";
+      trigger.value = "기존 표시";
+      let selected = 0;
+      trigger.addEventListener("click", () => {
+        for (let index = 0; index < count; index += 1) {
+          const option = document.createElement("button");
+          option.dataset.code = "003";
+          option.textContent = "대리";
+          Object.defineProperty(option, "offsetParent", {
+            value: document.body,
+          });
+          option.addEventListener("click", () => {
+            selected += 1;
+          });
+          document.body.append(option);
+        }
+      });
+      const registry = register(trigger, {
+        candidateId: "field-1",
+        element: "input",
+        control: "button",
+        visibility: "visible",
+      });
+      const analysis: MatchedFieldAnalysis = {
+        ...textAnalysis,
+        valueBinding: {
+          type: "BUTTON_OPTION",
+          profileFieldKey: "careers.career.position",
+          optionMap: { 대리: "대리" },
+          optionCodeMap: { 대리: "003" },
+        },
+        writePlan: { command: "SELECT_BUTTON_OPTION" },
+      };
+      const result = executeApprovedWrites({
+        items: [reviewItem(analysis, "대리")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+      expect(result[0]?.status).toBe("skipped");
+      expect(selected).toBe(0);
+      expect(trigger.value).toBe("기존 표시");
+    },
+  );
+
+  it.each(["unapproved", "stale"])(
+    "does not open a company menu for a %s candidate",
+    (state) => {
+      setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+      const trigger = document.createElement("input");
+      trigger.type = "button";
+      let opened = false;
+      trigger.addEventListener("click", () => {
+        opened = true;
+      });
+      const registry = register(trigger, {
+        candidateId: "field-1",
+        element: "input",
+        control: "button",
+        visibility: "visible",
+      });
+      if (state === "stale") trigger.remove();
+      const analysis: MatchedFieldAnalysis = {
+        ...textAnalysis,
+        valueBinding: {
+          type: "BUTTON_OPTION",
+          profileFieldKey: "careers.career.position",
+          optionMap: { 대리: "대리" },
+          optionCodeMap: { 대리: "003" },
+        },
+        writePlan: { command: "SELECT_BUTTON_OPTION" },
+      };
+      const result = executeApprovedWrites({
+        items: [reviewItem(analysis, "대리")],
+        approvedCandidateIds: new Set(state === "stale" ? ["field-1"] : []),
+        registry,
+      });
+      expect(result[0]?.status).toBe("skipped");
+      expect(opened).toBe(false);
+    },
+  );
+
+  it.each([
+    ["https://talent.hyundai.com/apply/applyWrite.hc", true],
+    ["https://example.test/apply", false],
+  ])(
+    "synchronizes successful text labels only for the owning company: %s",
+    (url, expected) => {
+      setPageUrl(url);
+      const input = document.createElement("input");
+      const registry = register(input, {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      });
+      const field = document.createElement("div");
+      field.className = "field";
+      document.body.append(field);
+      field.append(input);
+      const result = executeApprovedWrites({
+        items: [reviewItem(textAnalysis, "fixture")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+      expect(result[0]?.status).toBe("written");
+      expect(input.value).toBe("fixture");
+      expect(field.classList.contains("exist")).toBe(expected);
+    },
+  );
 });
