@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -51,5 +54,22 @@ describe("profile JSON transfer", () => {
       schemaVersion: PROFILE_SCHEMA_VERSION,
       profile: { personal: { koreanGivenName: 123 } },
     }))).toThrow("저장된 프로필 형식을 읽을 수 없습니다.");
+  });
+
+  it("parses the non-identifying export example", () => {
+    const contents = readFileSync(
+      resolve(process.cwd(), "fixtures/profile-export.example.json"),
+      "utf8",
+    );
+
+    expect(parseProfileImport(contents)).toMatchObject({
+      contact: { email: "example@example.test" },
+      education: [expect.objectContaining({ sectionId: "university" })],
+      projects: [expect.objectContaining({ sectionId: "project" })],
+      military: {},
+      veteran: {},
+      disability: {},
+      health: [],
+    });
   });
 });
