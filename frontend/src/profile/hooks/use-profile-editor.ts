@@ -58,8 +58,10 @@ export function useProfileEditor(
       try {
         await operation;
         if (requestId === saveRequestId.current) setSaveStatus("saved");
+        return true;
       } catch {
         if (requestId === saveRequestId.current) setSaveStatus("error");
+        return false;
       }
     },
     [repository],
@@ -145,7 +147,7 @@ export function useProfileEditor(
       latestProfile.current = replacement;
       setProfile(replacement);
       setSaveStatus("saving");
-      await persist(replacement);
+      return persist(replacement);
     },
     [persist],
   );

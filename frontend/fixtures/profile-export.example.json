@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "personal": {
+      "koreanFamilyName": "예시",
+      "koreanGivenName": "사용자",
+      "nationality": "대한민국"
+    },
+    "contact": {
+      "email": "example@example.test",
+      "phoneNumber": "010-0000-0000"
+    },
+    "education": [
+      {
+        "id": "education-example-1",
+        "sectionId": "university",
+        "values": {
+          "schoolType": "대학교",
+          "degreeLevel": "학사",
+          "schoolName": "예시대학교",
+          "completionStatus": "졸업",
+          "majorName": "컴퓨터공학"
+        }
+      }
+    ],
+    "languages": [],
+    "certifications": [],
+    "careers": [],
+    "projects": [
+      {
+        "id": "project-example-1",
+        "sectionId": "project",
+        "values": {
+          "projectName": "샘플 프로젝트",
+          "role": "개발"
+        }
+      }
+    ],
+    "publications": [],
+    "compensation": {},
+    "military": {},
+    "veteran": {},
+    "disability": {},
+    "health": []
+  }
+}
