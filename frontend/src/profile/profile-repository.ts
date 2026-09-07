@@ -19,7 +19,9 @@ export const REPEATED_CATEGORY_IDS: readonly RepeatedProfileCategoryId[] = [
   "education",
   "languages",
   "certifications",
+  "careers",
   "projects",
+  "publications",
   "health",
 ];
 
@@ -45,7 +47,10 @@ export function sanitizeProfile(profile: Profile): Profile {
     education: sanitizeEntries(profile.education),
     languages: sanitizeEntries(profile.languages),
     certifications: sanitizeEntries(profile.certifications),
+    careers: sanitizeEntries(profile.careers),
     projects: sanitizeEntries(profile.projects),
+    publications: sanitizeEntries(profile.publications),
+    compensation: sanitizeValues(profile.compensation),
     military: sanitizeValues(profile.military),
     veteran: sanitizeValues(profile.veteran),
     disability: sanitizeValues(profile.disability),

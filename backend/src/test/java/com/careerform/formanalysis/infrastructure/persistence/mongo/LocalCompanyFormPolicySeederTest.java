@@ -26,7 +26,7 @@ class LocalCompanyFormPolicySeederTest {
     }
 
     @Test
-    @DisplayName("실제 SK Careers 구조로 교체한 정책 v1과 활성 버전 v1을 저장한다")
+    @DisplayName("SK 공통 구조 v17와 직무별 option lookup을 결정적으로 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
             FormAnalysisCompanyMongoRepository.class
@@ -50,15 +50,23 @@ class LocalCompanyFormPolicySeederTest {
         InOrder order = inOrder(policies, companies);
         order.verify(policies).save(policy.capture());
         order.verify(companies).save(company.capture());
-        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v2");
+        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v8");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
-        assertThat(policy.getValue().version()).isEqualTo(3);
+        assertThat(policy.getValue().version()).isEqualTo(17);
         assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
-            .containsExactlyInAnyOrder(
-                "section-1",
-                "section-3",
-                "section-4",
-                "section-6"
+            .containsExactly("section-1");
+        assertThat(policy.getValue().preparationFingerprint().requiredActions())
+            .extracting("structuralName")
+            .containsExactly("btnSearchAddress");
+        assertThat(policy.getValue().preparationFingerprint().optionalActions())
+            .extracting("structuralName")
+            .contains(
+                "prsMilitarySvcStatus",
+                "btnAddCareer",
+                "btnAddCert",
+                "btnAddLangExam",
+                "eduMajorDoubleYN",
+                "eduMajorSubYN"
             );
         assertThat(policy.getValue().actionRules())
             .extracting("structuralName")
@@ -69,17 +77,59 @@ class LocalCompanyFormPolicySeederTest {
                 "btnAddCert",
                 "btnAddLangExam"
             );
-        assertThat(policy.getValue().fieldsFingerprint().requiredSectionIds())
-            .containsExactlyInAnyOrder(
-                "section-1",
-                "section-3"
+        assertThat(policy.getValue().preparationFingerprint().optionalActions().stream()
+            .filter(action -> action.structuralName().equals("btnAddCert"))
+            .findFirst().orElseThrow().structuralNames())
+            .containsExactly("btnAddCert", "자격/면허 추가");
+        assertThat(policy.getValue().actionRules())
+            .extracting("structuralName", "expectedFieldNames", "selectableProfileValues")
+            .contains(
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsVeteranBenefitYN",
+                    java.util.List.of("prsVeteranBenefitNumber", "prsVeteranBenefitRelation"),
+                    null
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsDisabledYN",
+                    java.util.List.of("prsDisabledType", "prsDisabledTypeDtl"),
+                    java.util.List.of("장애", "예", "대상", "해당", "있음")
+                )
             );
+        assertThat(policy.getValue().fieldsFingerprint().requiredSectionIds())
+            .containsExactly("section-1");
+        assertThat(policy.getValue().fieldsFingerprint().requiredFields())
+            .extracting("structuralName")
+            .containsExactlyInAnyOrder("prsApplicantName", "prsEmail", "prsPhone");
         assertThat(policy.getValue().fieldRules())
             .extracting("structuralName", "profileFieldKey")
             .contains(
                 org.assertj.core.groups.Tuple.tuple(
                     "prsEmail",
                     "contact.contact.email"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsEmailSub",
+                    "contact.contact.secondaryEmail"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsResidenceNation",
+                    "contact.contact.residenceCountry"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsPhoneEmergency",
+                    "contact.contact.emergencyPhoneNumber"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsDisabledNumber",
+                    "disability.disability.disabilityRegistrationNumber"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsDisabledType",
+                    "disability.disability.disabilityGrade"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "prsDisabledTypeDtl",
+                    "disability.disability.disabilityType"
                 ),
                 org.assertj.core.groups.Tuple.tuple(
                     "prsPhone",
@@ -104,14 +154,40 @@ class LocalCompanyFormPolicySeederTest {
                 org.assertj.core.groups.Tuple.tuple(
                     "eduEducationStatus",
                     "education.university.completionStatus"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "eduhgEducationStatus",
+                    "education.highSchool.completionStatus"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "eduhgEducationRegion",
+                    "education.highSchool.schoolRegion"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "eduEducationRegion",
+                    "education.university.schoolRegion"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "eduCreditTotal",
+                    "education.university.totalCredits"
                 )
             );
+        assertThat(policy.getValue().fieldRules().stream()
+            .filter(rule -> rule.structuralName().equals("eduEducationType"))
+            .findFirst().orElseThrow().valueBinding())
+            .isEqualTo(new com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding(
+                "education.university.degreeLevel",
+                java.util.Map.of(
+                    "전문학사", "전문대학(전문학사)",
+                    "학사", "대학(학사)"
+                )
+            ));
         assertThat(company.getValue()).isEqualTo(new FormAnalysisCompanyDocument(
             "sk",
             "sk",
             "www.skcareers.com",
             java.util.List.of("/Application/Index/"),
-            3
+            17
         ));
     }
 }

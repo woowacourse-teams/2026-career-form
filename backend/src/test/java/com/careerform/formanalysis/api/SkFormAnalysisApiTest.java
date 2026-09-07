@@ -162,6 +162,22 @@ class SkFormAnalysisApiTest {
     }
 
     @Test
+    @DisplayName("직무별 선택 영역이 없는 검증된 SK 변형은 공통 field만 안전하게 분석한다")
+    void analyzesCommonFieldsForAVerifiedSkVariant() throws Exception {
+        mockMvc.perform(post("/api/v1/fields/analyze")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(fixture("sk-fields-common-only-variant-v2.json")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.mode").value("ADAPTER"))
+            .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
+            .andExpect(jsonPath("$.fields.length()").value(4))
+            .andExpect(jsonPath("$.fields[1].matchType").value("MATCH"))
+            .andExpect(jsonPath("$.fields[1].interactionStatus").value("READY"))
+            .andExpect(jsonPath("$.fields[3].matchType").value("NO_MATCH"))
+            .andExpect(jsonPath("$.fields[3].interactionStatus").value("BLOCKED"));
+    }
+
+    @Test
     @DisplayName("SK 후보의 두 fingerprint mismatch는 generic Resolver 없이 차단한다")
     void blocksBothMismatchedSnapshotsWithoutGenericFallback() throws Exception {
         mockMvc.perform(post("/api/v1/preparation/analyze")

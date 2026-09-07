@@ -140,8 +140,6 @@ public final class OpenAiClient {
             .enable(
                 DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
                 DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES,
-                DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES,
-                DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES,
                 DeserializationFeature.FAIL_ON_TRAILING_TOKENS
             )
             .build();

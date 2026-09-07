@@ -8,7 +8,10 @@ import {
 import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateBlockReason } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { executeApprovedWrites } from "./executor";
+import {
+  executeApprovedWrites,
+  executeApprovedWritesAfterPageSettles,
+} from "./executor";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -114,7 +117,9 @@ describe("approved native-control writes", () => {
     });
 
     expect(input.value).toBe("김민수");
-    expect(result).toEqual([{ candidateId: "field-derived", status: "written" }]);
+    expect(result).toEqual([
+      { candidateId: "field-derived", status: "written" },
+    ]);
   });
 
   it("writes selected and explicitly approved text through native events", () => {
@@ -245,6 +250,86 @@ describe("approved native-control writes", () => {
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
   });
 
+  it("reapplies an approved select after a queued page reset", async () => {
+    const select = document.createElement("select");
+    const professionalCollege = new Option("전문대학(전문학사)", "associate");
+    const university = new Option("대학(학사)", "bachelor");
+    select.append(professionalCollege, university);
+    const schoolName = document.createElement("input");
+    schoolName.addEventListener("change", () => {
+      window.setTimeout(() => {
+        select.value = professionalCollege.value;
+        schoolName.value = "";
+      }, 0);
+    });
+    document.body.append(select, schoolName);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "education-type",
+      candidate: {
+        candidateId: "education-type",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: [
+          { optionId: "associate", displayName: "전문대학(전문학사)" },
+          { optionId: "bachelor", displayName: "대학(학사)" },
+        ],
+      },
+      elements: [select],
+      optionElements: new Map([
+        ["associate", professionalCollege],
+        ["bachelor", university],
+      ]),
+      sectionId: "section-education",
+      signature: createStructuralSignature([select]),
+    });
+    registry.registerField({
+      kind: "field",
+      candidateId: "school-name",
+      candidate: {
+        candidateId: "school-name",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      },
+      elements: [schoolName],
+      optionElements: new Map(),
+      sectionId: "section-education",
+      signature: createStructuralSignature([schoolName]),
+    });
+    const selectAnalysis: MatchedFieldAnalysis = {
+      candidateId: "education-type",
+      matchType: "MATCH",
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "education.university.degreeLevel",
+        optionMap: { "학사": "대학(학사)" },
+      },
+      autofillPolicy: "CONDITIONAL",
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_OPTION" },
+    };
+
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [
+        reviewItem(selectAnalysis, "대학(학사)"),
+        reviewItem({ ...textAnalysis, candidateId: "school-name" }, "대학교"),
+      ],
+      approvedCandidateIds: new Set(["education-type", "school-name"]),
+      registry,
+    });
+
+    expect(select.value).toBe("bachelor");
+    expect(schoolName.value).toBe("대학교");
+    expect(result).toEqual([
+      { candidateId: "education-type", status: "written" },
+      { candidateId: "school-name", status: "written" },
+    ]);
+  });
+
   it("selects the university bachelor option when only its parentheses differ", () => {
     const select = document.createElement("select");
     const professionalCollege = new Option("전문대학(학사)", "college");
@@ -280,7 +365,9 @@ describe("approved native-control writes", () => {
     });
 
     expect(select.value).toBe("university");
-    expect(result).toEqual([{ candidateId: "education-type", status: "written" }]);
+    expect(result).toEqual([
+      { candidateId: "education-type", status: "written" },
+    ]);
   });
 
   it("checks a radio by the locally resolved option display name", () => {
@@ -329,6 +416,63 @@ describe("approved native-control writes", () => {
     expect(first.checked).toBe(false);
     expect(target.checked).toBe(true);
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+  });
+
+  it("does not guess different radio labels without a backend-derived value", () => {
+    const no = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "N",
+    });
+    const yes = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "Y",
+    });
+    document.body.append(no, yes);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "disability-status",
+      candidate: {
+        candidateId: "disability-status",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [
+          { optionId: "no", displayName: "비대상" },
+          { optionId: "yes", displayName: "대상" },
+        ],
+      },
+      elements: [no, yes],
+      optionElements: new Map([
+        ["no", no],
+        ["yes", yes],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([no, yes]),
+    });
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          {
+            ...textAnalysis,
+            candidateId: "disability-status",
+            writePlan: { command: "CHECK_RADIO" },
+          },
+          "예",
+        ),
+      ],
+      approvedCandidateIds: new Set(["disability-status"]),
+      registry,
+    });
+
+    expect(yes.checked).toBe(false);
+    expect(result).toEqual([
+      {
+        candidateId: "disability-status",
+        status: "skipped",
+        reason: "네이티브 컨트롤에 안전하게 입력할 수 없습니다.",
+      },
+    ]);
   });
 
   it("checks the matching checkbox without clearing another local choice", () => {
@@ -555,5 +699,42 @@ describe("approved native-control writes", () => {
 
     expect(input.files).toHaveLength(0);
     expect(result[0]?.status).toBe("skipped");
+  });
+
+  it("selects a Hyundai-style button menu only when the verified code and label match", () => {
+    const trigger = document.createElement("input");
+    trigger.type = "button";
+    const option = document.createElement("button");
+    option.dataset.code = "003";
+    option.textContent = "대리";
+    Object.defineProperty(option, "offsetParent", { value: document.body });
+    trigger.addEventListener("click", () => document.body.append(option));
+    option.addEventListener("click", () => { trigger.value = "대리"; });
+    const registry = register(trigger, {
+      candidateId: "career-position",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "career-position",
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "careers.career.position",
+        optionMap: { "대리": "대리" },
+        optionCodeMap: { "대리": "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["career-position"]),
+      registry,
+    });
+
+    expect(trigger.value).toBe("대리");
+    expect(result).toEqual([{ candidateId: "career-position", status: "written" }]);
   });
 });

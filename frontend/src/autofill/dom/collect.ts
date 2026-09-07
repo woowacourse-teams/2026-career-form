@@ -13,7 +13,7 @@ import {
 } from "./candidate-registry";
 import type { CandidateBlockReason } from "./types";
 
-const SECTION_SELECTOR = "fieldset, section, [role='group'], .apply-form-box";
+const SECTION_SELECTOR = "fieldset, section, article.field-form-apply, [role='group'], .apply-form-box";
 const FORBIDDEN_ACTION =
   /저장|제출|지원|완료|다음|이전|이동|미리보기|삭제|업로드|계산기|submit|save|next|previous|preview|delete|upload|remove|calculator/i;
 // The analysis API rejects candidate labels longer than 120 characters.
@@ -37,6 +37,22 @@ function createSnapshotId(prefix: "preparation" | "fields"): string {
   const random =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${prefix}-${random}`;
+}
+
+export function isSkCareersHost(host: string): boolean {
+  return host.toLowerCase() === "www.skcareers.com";
+}
+
+export function isHyundaiTalentHost(host: string): boolean {
+  return host.toLowerCase() === "talent.hyundai.com";
+}
+
+export function hasVisibleFormControl(item: Element): boolean {
+  return Array.from(
+    item.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      "input, select, textarea",
+    ),
+  ).some((control) => !isHidden(control));
 }
 
 function metadata(value: string | null | undefined): string | undefined {
@@ -193,6 +209,26 @@ function groupBySection<T extends Element>(
   return groups;
 }
 
+/**
+ * Hyundai uses the same visible label (\"추가\") for every repeater.  Its
+ * surrounding article id is the stable, site-owned discriminator; expose it
+ * as metadata only for the local policy resolver.  It is not sent as a CSS
+ * selector and is never executed from a server response.
+ */
+function actionDomId(element: HTMLElement, document: Document): string | undefined {
+  const nativeId = metadata(element.id);
+  if (nativeId) return nativeId;
+  if (
+    isHyundaiTalentHost(document.location.host) &&
+    element instanceof HTMLButtonElement &&
+    element.classList.contains("btn-group-add")
+  ) {
+    const scope = element.closest<HTMLElement>("article.field-form-apply");
+    if (scope?.id) return `hyundai:add:${scope.id}`;
+  }
+  return undefined;
+}
+
 function baseCandidate(
   element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   candidateId: string,
@@ -222,12 +258,14 @@ function collectFieldElements(document: Document) {
   ).filter((element) => {
     if (isTemplateLike(element)) return false;
     if (!(element instanceof HTMLInputElement)) return true;
+    if (element.type === "button") {
+      return isHyundaiTalentHost(document.location.host);
+    }
     return ![
       "hidden",
       "password",
       "file",
       "submit",
-      "button",
       "reset",
       "image",
     ].includes(element.type);
@@ -249,7 +287,18 @@ export function collectFieldsSnapshot(
         : "section-root";
       const fields: FieldCandidate[] = [];
       const itemGroupIndexes = new Map<string, number>();
-      const repeatableItems = repeatableItemElements(container).map(
+      // SK Careers keeps a hidden repeatable-row template beside the visible
+      // row. The template is not an application entry: counting it makes one
+      // stored profile entry look mismatched with two form rows and causes
+      // otherwise writable fields such as minor name and test name to be
+      // skipped as unavailable. Other hosts retain their existing semantics.
+      const repeatableItems = repeatableItemElements(container)
+        .filter(
+          (element) =>
+            !isSkCareersHost(document.location.host) ||
+            hasVisibleFormControl(element),
+        )
+        .map(
         (element, itemPosition) => {
           const itemGroupId = repeatableItemGroupId(element);
           const itemGroupKey = itemGroupId ?? "";
@@ -335,11 +384,17 @@ export function collectFieldsSnapshot(
             ...(options.length > 0 ? { options } : {}),
           };
         } else {
+          const isButton =
+            first instanceof HTMLInputElement && first.type === "button";
           candidate = {
             ...baseCandidate(first, candidateId),
             element:
               first instanceof HTMLTextAreaElement ? "textarea" : "input",
-            control: first instanceof HTMLTextAreaElement ? "textarea" : "text",
+            control: first instanceof HTMLTextAreaElement
+              ? "textarea"
+              : isButton
+                ? "button"
+                : "text",
           };
         }
 
@@ -415,7 +470,7 @@ export function collectFieldsSnapshot(
 function collectActionElements(document: Document) {
   return Array.from(
     document.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>(
-      "button, input[type='button'], select",
+      "button, input[type='button'], input[type='radio'], select",
     ),
   ).filter((element) => {
     const label = labelOf(element);
@@ -430,6 +485,18 @@ function collectActionElements(document: Document) {
 
 function repeatableItemElements(container: Element | null): Element[] {
   if (!container) return [];
+
+  // Hyundai renders every repeated entry as a direct .field-content child of
+  // its article.  The generated numeric suffix belongs to that entry, not to
+  // a degree/career type, so preserving these row boundaries is essential.
+  if (container.matches("article.field-form-apply")) {
+    return Array.from(container.children).filter(
+      (child) =>
+        child.classList.contains("field-content") &&
+        !isTemplateLike(child) &&
+        hasVisibleFormControl(child),
+    );
+  }
 
   const isDirectRepeatableItem = (element: Element): boolean => {
     if (isTemplateLike(element)) return false;
@@ -577,18 +644,23 @@ export function collectPreparationSnapshot(
         element: element instanceof HTMLButtonElement
           ? "button"
           : element instanceof HTMLSelectElement ? "select" : "input",
-        control: element instanceof HTMLSelectElement ? "select" : "button",
+        control: element instanceof HTMLSelectElement ? "select" : element instanceof HTMLInputElement && element.type === "radio" ? "radio" : "button",
         visibility: visibility(element),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
-        ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
+        ...(actionDomId(element, document)
+          ? { domId: actionDomId(element, document) }
+          : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
         ...(element.disabled ? { disabled: true } : {}),
         ...(isInert(element) ? { inert: true } : {}),
         ...(element instanceof HTMLSelectElement
-          ? { options: Array.from(element.options).map((option, index) => ({
-              optionId: createOpaqueId(`${candidateId}-option`, index),
-              displayName: option.textContent?.trim() ?? "",
-            })).filter((option) => option.displayName.length > 0) }
+          ? { options: Array.from(element.options)
+              .map((option, index) => ({
+                optionId: createOpaqueId(`${candidateId}-option`, index),
+                displayName: metadata(option.textContent?.trim() ?? "") ?? "",
+              }))
+              .filter((option) => option.displayName.length > 0)
+              .slice(0, 128) }
           : {}),
       };
       registry.registerAction(

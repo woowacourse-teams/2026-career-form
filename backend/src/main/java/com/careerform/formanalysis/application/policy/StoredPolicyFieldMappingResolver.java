@@ -32,10 +32,17 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
     }
 
     private Result resolve(FieldCandidate candidate) {
-        if (candidate.domName() == null) {
-            return new NoMatch(candidate.candidateId());
+        FieldRule rule = PolicyStructuralMetadata.find(
+            rules, candidate.domId(), candidate.domName(), null
+        );
+        if (rule == null) {
+            String structuralName = candidate.domName() != null
+                ? candidate.domName()
+                : candidate.domId();
+            if (structuralName != null) {
+                rule = rules.get(baseStructuralName(structuralName));
+            }
         }
-        FieldRule rule = rules.get(candidate.domName());
         if (rule == null
             || rule.element() != candidate.element()
             || rule.control() != candidate.control()) {
@@ -46,5 +53,15 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
             rule.valueBinding(),
             rule.allowReadonlyWrite()
         );
+    }
+
+    private static String baseStructuralName(String value) {
+        int separator = value.lastIndexOf('_');
+        if (separator < 0 || separator == value.length() - 1) return value;
+        String suffix = value.substring(separator + 1);
+        return (suffix.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+                || suffix.matches("[1-9][0-9]*"))
+            ? value.substring(0, separator)
+            : value;
     }
 }

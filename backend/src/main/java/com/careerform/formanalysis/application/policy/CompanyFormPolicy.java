@@ -2,12 +2,16 @@ package com.careerform.formanalysis.application.policy;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
@@ -130,10 +134,9 @@ public final class CompanyFormPolicy {
         if (rule.kind() == ActionKind.ADD && rule.targetSectionId() != null) {
             invalidPolicy();
         }
-        if (rule.kind() == ActionKind.SELECT_OPTION
+        if ((rule.kind() == ActionKind.SELECT_OPTION || rule.kind() == ActionKind.CHOOSE_RADIO)
             && (isBlank(rule.profileFieldKey()) || !isSupportedProfileKey.test(rule.profileFieldKey())
-                || isBlank(rule.targetSectionId())
-                || !requiredSectionIds.contains(rule.targetSectionId()))) {
+                || isBlank(rule.targetSectionId()))) {
             invalidPolicy();
         }
     }
@@ -155,7 +158,17 @@ public final class CompanyFormPolicy {
         if (binding instanceof DirectBinding direct) {
             return isSupportedProfileKey.test(direct.profileFieldKey());
         }
-        return binding instanceof DerivedBinding;
+        if (binding instanceof DerivedBinding derived) {
+            return derived.profileFieldKey() == null
+                || isSupportedProfileKey.test(derived.profileFieldKey());
+        }
+        if (binding instanceof LookupBinding lookup) {
+            return isSupportedProfileKey.test(lookup.profileFieldKey());
+        }
+        if (binding instanceof ButtonOptionBinding buttonOption) {
+            return isSupportedProfileKey.test(buttonOption.profileFieldKey());
+        }
+        return false;
     }
 
     private static void invalidPolicy() {
@@ -164,7 +177,8 @@ public final class CompanyFormPolicy {
 
     public record PreparationFingerprint(
         Set<String> requiredSectionIds,
-        List<ActionStructure> requiredActions
+        List<ActionStructure> requiredActions,
+        List<ActionStructure> optionalActions
     ) {
 
         public PreparationFingerprint {
@@ -172,12 +186,33 @@ public final class CompanyFormPolicy {
                 || requiredSectionIds.isEmpty()
                 || requiredActions == null
                 || requiredActions.isEmpty()
+                || optionalActions == null
                 || requiredSectionIds.stream().anyMatch(CompanyFormPolicy::isBlank)
-                || requiredActions.stream().anyMatch(Objects::isNull)) {
+                || requiredActions.stream().anyMatch(Objects::isNull)
+                || optionalActions.stream().anyMatch(Objects::isNull)) {
                 invalidPolicy();
             }
             requiredSectionIds = Set.copyOf(requiredSectionIds);
             requiredActions = List.copyOf(requiredActions);
+            optionalActions = List.copyOf(optionalActions);
+            Set<String> structuralNames = new HashSet<>();
+            if (Stream.concat(requiredActions.stream(), optionalActions.stream())
+                .flatMap(structure -> structure.structuralNames().stream())
+                .anyMatch(name -> !structuralNames.add(name))) {
+                invalidPolicy();
+            }
+        }
+
+        public PreparationFingerprint(
+            Set<String> requiredSectionIds,
+            List<ActionStructure> requiredActions
+        ) {
+            this(requiredSectionIds, requiredActions, List.of());
+        }
+
+        public List<ActionStructure> actionStructures() {
+            return Stream.concat(requiredActions.stream(), optionalActions.stream())
+                .toList();
         }
     }
 
@@ -201,15 +236,32 @@ public final class CompanyFormPolicy {
     }
 
     public record ActionStructure(
-        String structuralName,
+        List<String> structuralNames,
         PreparationAnalysisRequest.FormElement element,
         PreparationAnalysisRequest.FormControl control
     ) {
 
         public ActionStructure {
-            requireText(structuralName);
+            if (structuralNames == null || structuralNames.isEmpty()
+                || structuralNames.stream().anyMatch(CompanyFormPolicy::isBlank)
+                || structuralNames.stream().distinct().count() != structuralNames.size()) {
+                invalidPolicy();
+            }
+            structuralNames = List.copyOf(structuralNames);
             Objects.requireNonNull(element);
             Objects.requireNonNull(control);
+        }
+
+        public ActionStructure(
+            String structuralName,
+            PreparationAnalysisRequest.FormElement element,
+            PreparationAnalysisRequest.FormControl control
+        ) {
+            this(List.of(structuralName), element, control);
+        }
+
+        public String structuralName() {
+            return structuralNames.getFirst();
         }
     }
 
@@ -227,19 +279,89 @@ public final class CompanyFormPolicy {
     }
 
     public record ActionRule(
-        String structuralName,
+        List<String> structuralNames,
         ActionKind kind,
         String targetSectionId,
-        String profileFieldKey
+        String profileFieldKey,
+        String optionDisplayName,
+        List<String> expectedFieldNames,
+        List<String> selectableProfileValues,
+        Map<String, String> revealedFieldBindings
     ) {
 
         public ActionRule {
-            requireText(structuralName);
+            if (structuralNames == null || structuralNames.isEmpty()
+                || structuralNames.stream().anyMatch(CompanyFormPolicy::isBlank)
+                || structuralNames.stream().distinct().count() != structuralNames.size()) {
+                invalidPolicy();
+            }
+            structuralNames = List.copyOf(structuralNames);
             Objects.requireNonNull(kind);
+            if (expectedFieldNames != null && (expectedFieldNames.isEmpty()
+                || expectedFieldNames.stream().anyMatch(CompanyFormPolicy::isBlank)
+                || expectedFieldNames.stream().distinct().count() != expectedFieldNames.size())) {
+                invalidPolicy();
+            }
+            if (selectableProfileValues != null && (selectableProfileValues.isEmpty()
+                || selectableProfileValues.stream().anyMatch(CompanyFormPolicy::isBlank)
+                || selectableProfileValues.stream().distinct().count() != selectableProfileValues.size())) {
+                invalidPolicy();
+            }
+            revealedFieldBindings = revealedFieldBindings == null ? null : Map.copyOf(revealedFieldBindings);
+        }
+
+        public ActionRule(
+            String structuralName, ActionKind kind, String targetSectionId,
+            String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames
+        ) {
+            this(List.of(structuralName), kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, null, null);
+        }
+
+        public ActionRule(
+            String structuralName, ActionKind kind, String targetSectionId,
+            String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames,
+            List<String> selectableProfileValues
+        ) {
+            this(List.of(structuralName), kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, selectableProfileValues, null);
+        }
+
+        public ActionRule(
+            String structuralName, ActionKind kind, String targetSectionId,
+            String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames,
+            List<String> selectableProfileValues, Map<String, String> revealedFieldBindings
+        ) {
+            this(List.of(structuralName), kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, selectableProfileValues, revealedFieldBindings);
+        }
+
+        public ActionRule(
+            List<String> structuralNames, ActionKind kind, String targetSectionId,
+            String profileFieldKey, String optionDisplayName, List<String> expectedFieldNames,
+            List<String> selectableProfileValues
+        ) {
+            this(structuralNames, kind, targetSectionId, profileFieldKey, optionDisplayName, expectedFieldNames, selectableProfileValues, null);
+        }
+
+        public ActionRule(List<String> structuralNames, ActionKind kind, String targetSectionId) {
+            this(structuralNames, kind, targetSectionId, null, null, null, null, null);
+        }
+
+        public String structuralName() {
+            return structuralNames.getFirst();
         }
 
         public ActionRule(String structuralName, ActionKind kind, String targetSectionId) {
-            this(structuralName, kind, targetSectionId, null);
+            this(structuralName, kind, targetSectionId, null, null, null);
+        }
+
+        public ActionRule(String structuralName, ActionKind kind, String targetSectionId, String profileFieldKey) {
+            this(structuralName, kind, targetSectionId, profileFieldKey, null, null);
+        }
+
+        public ActionRule(
+            String structuralName, ActionKind kind, String targetSectionId, String profileFieldKey,
+            String optionDisplayName
+        ) {
+            this(structuralName, kind, targetSectionId, profileFieldKey, optionDisplayName, null);
         }
     }
 
@@ -301,6 +423,7 @@ public final class CompanyFormPolicy {
     public enum ActionKind {
         REVEAL,
         ADD,
-        SELECT_OPTION
+        SELECT_OPTION,
+        CHOOSE_RADIO
     }
 }

@@ -86,6 +86,18 @@ describe("analysis API response validation", () => {
     expect(result.preparationPlans).toHaveLength(1);
   });
 
+  it("accepts a registered-company policy-unavailable preparation block", () => {
+    const result = validatePreparationResponse(preparationRequest, {
+      snapshotId: "snapshot-a",
+      mode: "ADAPTER",
+      analysisStatus: "BLOCKED",
+      preparationPlans: [],
+      blockCode: "ADAPTER_POLICY_UNAVAILABLE",
+    });
+
+    expect(result.blockCode).toBe("ADAPTER_POLICY_UNAVAILABLE");
+  });
+
   it.each([
     ["a stale snapshot", { snapshotId: "stale-snapshot" }],
     [
@@ -167,6 +179,40 @@ describe("analysis API response validation", () => {
     });
   });
 
+  it("accepts a policy-defined option lookup without receiving a profile value", () => {
+    const result = validateFieldsResponse(fieldsRequest, {
+      snapshotId: "snapshot-b",
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: [
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "LOOKUP",
+            profileFieldKey: "education.university.degreeLevel",
+            optionMap: {
+              "전문학사": "전문대학(전문학사)",
+              "학사": "대학(학사)",
+            },
+          },
+          autofillPolicy: "CONDITIONAL",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ],
+    });
+
+    expect(result.fields[0]).toMatchObject({
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "education.university.degreeLevel",
+        optionMap: { "학사": "대학(학사)" },
+      },
+    });
+  });
+
   it("rejects a COMPLETE response that omits a collected field", () => {
     expect(() =>
       validateFieldsResponse(twoFieldsRequest, {
@@ -203,6 +249,18 @@ describe("analysis API response validation", () => {
         ],
       }).fields,
     ).toHaveLength(1);
+  });
+
+  it("accepts a registered-company policy-unavailable field block", () => {
+    const result = validateFieldsResponse(fieldsRequest, {
+      snapshotId: "snapshot-b",
+      mode: "ADAPTER",
+      analysisStatus: "BLOCKED",
+      fields: [],
+      blockCode: "ADAPTER_POLICY_UNAVAILABLE",
+    });
+
+    expect(result.blockCode).toBe("ADAPTER_POLICY_UNAVAILABLE");
   });
 
   it.each([
@@ -321,6 +379,6 @@ describe("analysis API response validation", () => {
           override,
         ),
       ),
-    ).toThrow(new AnalysisContractError());
+    ).toThrow(AnalysisContractError);
   });
 });

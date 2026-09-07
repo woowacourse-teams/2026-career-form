@@ -191,6 +191,11 @@ class FieldInteractionPolicyTest {
             ),
             Arguments.of(
                 FormElement.INPUT,
+                FormControl.BUTTON,
+                WriteCommand.SELECT_BUTTON_OPTION
+            ),
+            Arguments.of(
+                FormElement.INPUT,
                 FormControl.RADIO,
                 WriteCommand.CHECK_RADIO
             ),

@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.dto;
 
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -91,10 +92,31 @@ public record PreparationAnalysisResponse(
     ) implements PreparationPlan {
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record AddRepeatableGroupPlan(
         String actionCandidateId,
         Command command,
-        ExpectedEffect expectedEffect
+        ExpectedEffect expectedEffect,
+        List<String> expectedFieldNames
+    ) implements PreparationPlan {
+        public AddRepeatableGroupPlan(
+            String actionCandidateId, Command command, ExpectedEffect expectedEffect
+        ) {
+            this(actionCandidateId, command, expectedEffect, null);
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record SelectOptionToRevealPlan(
+        String actionCandidateId,
+        Command command,
+        ExpectedEffect expectedEffect,
+        String profileFieldKey,
+        String optionDisplayName,
+        String targetSectionId,
+        List<String> expectedFieldNames,
+        List<String> selectableProfileValues,
+        Map<String, String> revealedFieldBindings
     ) implements PreparationPlan {
     }
 

@@ -74,6 +74,9 @@ public final class FieldInteractionPolicy {
         if (element == FormElement.SELECT && control == FormControl.SELECT) {
             return WriteCommand.SELECT_OPTION;
         }
+        if (element == FormElement.INPUT && control == FormControl.BUTTON) {
+            return WriteCommand.SELECT_BUTTON_OPTION;
+        }
         if (element == FormElement.INPUT && control == FormControl.RADIO) {
             return WriteCommand.CHECK_RADIO;
         }

@@ -20,9 +20,42 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFi
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
 
 @DisplayName("회사별 지원서 정책")
 class CompanyFormPolicyTest {
+
+    @Test
+    @DisplayName("action 구조는 DOM 식별자와 표시명 alias를 함께 보존한다")
+    void preservesActionStructureAliases() {
+        ActionStructure structure = new ActionStructure(
+            List.of("btnAddCert", "자격/면허 추가"),
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.BUTTON,
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON
+        );
+
+        assertThat(structure.structuralNames())
+            .containsExactly("btnAddCert", "자격/면허 추가");
+    }
+
+    @Test
+    @DisplayName("optional action 구조는 resolver 검증용으로 보존하지만 fingerprint 필수 조건은 아니다")
+    void preservesOptionalActionStructuresSeparatelyFromRequiredFingerprint() {
+        ActionStructure required = actionStructure("core-action");
+        ActionStructure optional = actionStructure("job-variant-action");
+
+        PreparationFingerprint fingerprint = new PreparationFingerprint(
+            Set.of("section-profile"),
+            List.of(required),
+            List.of(optional)
+        );
+
+        assertThat(fingerprint.requiredActions()).containsExactly(required);
+        assertThat(fingerprint.actionStructures()).containsExactlyInAnyOrder(
+            required,
+            optional
+        );
+    }
 
     @Test
     @DisplayName("정상 정책은 입력 collection 변경과 무관한 불변 snapshot을 유지한다")
@@ -109,6 +142,38 @@ class CompanyFormPolicyTest {
 
         assertThat(policy.fieldRules().getFirst().valueBinding()).isEqualTo(
             new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME)
+        );
+    }
+
+    @Test
+    @DisplayName("필드 정책은 canonical profile key의 option lookup을 지정할 수 있다")
+    void acceptsLookupValueBinding() {
+        FieldRule rule = new FieldRule(
+            "education-type",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+            new LookupBinding(
+                "education.university.degreeLevel",
+                java.util.Map.of(
+                    "전문학사", "전문대학(전문학사)",
+                    "학사", "대학(학사)"
+                )
+            )
+        );
+
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "sk", 1, preparationFingerprint(), fieldsFingerprint(), actionRules(),
+            List.of(rule), key -> key.equals("education.university.degreeLevel")
+        );
+
+        assertThat(policy.fieldRules().getFirst().valueBinding()).isEqualTo(
+            new LookupBinding(
+                "education.university.degreeLevel",
+                java.util.Map.of(
+                    "전문학사", "전문대학(전문학사)",
+                    "학사", "대학(학사)"
+                )
+            )
         );
     }
 

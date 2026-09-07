@@ -44,7 +44,9 @@ class StoredPolicyActionResolverTest {
                 new ActionResolver.SelectOptionAction(
                     "action-select-military-status",
                     "military.military.militaryStatus",
-                    "section-1"
+                    null,
+                    "section-1",
+                    null
                 ),
                 new ActionResolver.AddAction("action-add-university"),
                 new ActionResolver.AddAction("action-add-career"),

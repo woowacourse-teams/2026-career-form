@@ -34,6 +34,8 @@ python3 harness/scripts/ensure-environment.py
 
 이 명령은 하네스 테스트, 하네스 코드 커버리지 80%, Git 공백 오류를 검사한다. 애플리케이션 스택이 확정되면 포맷, 린트, 애플리케이션 테스트, 빌드 명령을 이 진입점에 추가한다.
 
+프론트·백엔드·Mongo 정책의 교차 계층 변경 규칙은 [로컬 컨텍스트 정합성 하네스](local-context-harness.md)를 따른다.
+
 ## Project Issue 기획
 
 `cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[AI]`는 제품의 LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용하고 `[Harness]`는 개발 하네스와 워크플로우 변경에 사용한다. `[Plan]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.
