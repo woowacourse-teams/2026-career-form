@@ -75,7 +75,13 @@ function directValue(
     return { status: "ambiguous", sensitive: parts.sensitive };
   }
   const entry = entries[itemIndex ?? 0];
-  if (entry && parts.visibleWhen && !parts.visibleWhen(entry.values)) {
+  if (
+    entry &&
+    parts.categoryId === "education" &&
+    parts.sectionId === "university" &&
+    parts.visibleWhen &&
+    !parts.visibleWhen(entry.values)
+  ) {
     return { status: "missing", sensitive: parts.sensitive };
   }
   const value = entry?.values[parts.fieldId]?.trim();

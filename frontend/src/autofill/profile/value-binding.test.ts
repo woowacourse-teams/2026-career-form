@@ -3,6 +3,25 @@ import { createEmptyProfile } from "../../profile/model";
 import { resolveValueBinding } from "./value-binding";
 
 describe("resolveValueBinding", () => {
+  it("preserves the existing behavior of unrelated high-school bindings", () => {
+    const profile = createEmptyProfile();
+    profile.education.push({
+      id: "high-school",
+      sectionId: "highSchool",
+      values: { qualificationPassDate: "2020-04-01" },
+    });
+    expect(
+      resolveValueBinding(
+        profile,
+        {
+          type: "DIRECT",
+          profileFieldKey: "education.highSchool.qualificationPassDate",
+        },
+        0,
+      ),
+    ).toMatchObject({ status: "resolved", value: "2020-04-01" });
+  });
+
   it.each([
     ["additionalMajorName", "doubleMajorStatus"],
     ["minorName", "minorStatus"],
