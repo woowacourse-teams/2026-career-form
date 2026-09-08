@@ -89,7 +89,7 @@ class LocalCompanyFormPolicySeederTest {
     }
 
     @Test
-    @DisplayName("SK 공통 구조 v22과 직무별 option lookup을 결정적으로 저장한다")
+    @DisplayName("SK 공통 구조 v23과 직무별 option lookup을 결정적으로 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
             FormAnalysisCompanyMongoRepository.class
@@ -115,7 +115,7 @@ class LocalCompanyFormPolicySeederTest {
         order.verify(companies).save(company.capture());
         assertThat(policy.getValue().id()).isEqualTo("sk-policy-v8");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
-        assertThat(policy.getValue().version()).isEqualTo(22);
+        assertThat(policy.getValue().version()).isEqualTo(23);
         assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
             .containsExactly("section-1");
         assertThat(policy.getValue().preparationFingerprint().requiredActions())
@@ -259,7 +259,7 @@ class LocalCompanyFormPolicySeederTest {
             "sk",
             "www.skcareers.com",
             java.util.List.of("/Application/Index/"),
-            22
+            23
         ));
     }
 
@@ -291,8 +291,8 @@ class LocalCompanyFormPolicySeederTest {
             .orElseThrow();
 
         assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v4");
-        assertThat(hyundaiPolicy.version()).isEqualTo(4);
-        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(4);
+        assertThat(hyundaiPolicy.version()).isEqualTo(5);
+        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(5);
         assertThat(hyundaiPolicy.fieldRules().stream()
             .filter(rule -> java.util.Set.of(
                 "acqDtForeLang", "acqDt", "nationLicNm"
