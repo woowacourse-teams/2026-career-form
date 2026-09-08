@@ -37,6 +37,35 @@ function buttonOptionItem(profileFieldKey: string): ReviewPlanItem {
   };
 }
 
+function searchItem(
+  candidateId: string,
+  profileFieldKey: string,
+): ReviewPlanItem {
+  return {
+    candidateId,
+    fieldLabel: "전공",
+    currentValue: "",
+    profileValue: "fixture",
+    previewValue: "fixture",
+    profileEntryId: "university-1",
+    itemIndex: 0,
+    status: "needs-review",
+    selected: true,
+    disabled: false,
+    revealed: true,
+    reason: "fixture",
+    analysis: {
+      candidateId,
+      matchType: "MATCH",
+      valueBinding: { type: "DIRECT", profileFieldKey },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    },
+  };
+}
+
 describe("Hyundai language state drivers", () => {
   it("waits for the same-row exam menu after selecting a language", async () => {
     document.body.innerHTML = `
@@ -271,4 +300,67 @@ describe("Hyundai language state drivers", () => {
     expect(clicks).toBe(0);
     vi.useRealTimers();
   });
+});
+
+describe("Hyundai university search failure groups", () => {
+  it.each([
+    ["dblMajorNm", "dblMajor", "education.university.additionalMajorName"],
+    ["minorNm", "minor", "education.university.minorName"],
+  ])("isolates only the %s search field", (domName, hiddenName, fieldKey) => {
+    document.body.innerHTML = `<div class="field search"><input type="hidden" name="${hiddenName}"><input type="text" id="${domName}_1" name="${domName}" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><ul class="search-result-list"></ul></div>`;
+    const field = document.querySelector<HTMLElement>(".field.search")!;
+    const display = field.querySelector<HTMLInputElement>(`#${domName}_1`)!;
+    const candidateId = `field-${domName}`;
+    const handle = {
+      candidateId,
+      elements: [display],
+      candidate: {
+        candidateId,
+        domId: `${domName}_1`,
+        domName,
+        element: "input",
+        control: "text",
+      },
+      itemGroupId: "educationuniversity",
+    } as never;
+
+    expect(
+      hyundaiWorkflowAdapter.stateDriverFailureGroup?.(
+        searchItem(candidateId, fieldKey),
+        handle,
+      ),
+    ).toBe(field);
+  });
+
+  it.each([
+    ["schNm", "schCd", "education.university.schoolName"],
+    ["majorNm", "major", "education.university.majorName"],
+  ])(
+    "does not broaden failure isolation to %s",
+    (domName, hiddenName, fieldKey) => {
+      document.body.innerHTML = `<div class="field search"><input type="hidden" name="${hiddenName}"><input type="text" id="${domName}_1" name="${domName}" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><ul class="search-result-list"></ul></div>`;
+      const display = document.querySelector<HTMLInputElement>(
+        `#${domName}_1`,
+      )!;
+      const candidateId = `field-${domName}`;
+
+      expect(
+        hyundaiWorkflowAdapter.stateDriverFailureGroup?.(
+          searchItem(candidateId, fieldKey),
+          {
+            candidateId,
+            elements: [display],
+            candidate: {
+              candidateId,
+              domId: `${domName}_1`,
+              domName,
+              element: "input",
+              control: "text",
+            },
+            itemGroupId: "educationuniversity",
+          } as never,
+        ),
+      ).toBeUndefined();
+    },
+  );
 });

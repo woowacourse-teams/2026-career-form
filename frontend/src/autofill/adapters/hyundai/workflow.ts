@@ -13,6 +13,22 @@ const EDUCATION_SEARCH_STAGE_OFFSETS = new Map([
   ["dblMajorNm", 2],
   ["minorNm", 3],
 ]);
+const DEFERRED_ADDITIONAL_MAJOR_SEARCHES = new Map([
+  [
+    "dblMajorNm",
+    {
+      hiddenName: "dblMajor",
+      profileFieldKey: "education.university.additionalMajorName",
+    },
+  ],
+  [
+    "minorNm",
+    {
+      hiddenName: "minor",
+      profileFieldKey: "education.university.minorName",
+    },
+  ],
+]);
 
 function isEducationSearch(handle: FieldCandidateHandle): boolean {
   return EDUCATION_SEARCH_STAGE_OFFSETS.has(structuralBase(handle) ?? "");
@@ -36,6 +52,71 @@ function fieldGroup(handle: FieldCandidateHandle): HTMLElement | undefined {
 function structuralBase(handle: FieldCandidateHandle): string | undefined {
   const value = handle.candidate.domName ?? handle.candidate.domId;
   return value?.replace(/_[1-9][0-9]*$/, "");
+}
+
+function uniqueOwnedElement<T extends Element>(
+  field: HTMLElement,
+  selector: string,
+): T | undefined {
+  const matches = Array.from(field.querySelectorAll<T>(selector)).filter(
+    (element) => element.closest(".field.search") === field,
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function additionalMajorFailureGroup(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): HTMLElement | undefined {
+  const domName = structuralBase(handle);
+  const spec = domName
+    ? DEFERRED_ADDITIONAL_MAJOR_SEARCHES.get(domName)
+    : undefined;
+  const display = handle.elements[0];
+  const domId = handle.candidate.domId;
+  if (
+    !spec ||
+    handle.itemGroupId !== "educationuniversity" ||
+    handle.elements.length !== 1 ||
+    handle.candidate.domName !== domName ||
+    !domId ||
+    !new RegExp(`^${domName}_[1-9][0-9]*$`).test(domId) ||
+    handle.candidate.element !== "input" ||
+    handle.candidate.control !== "text" ||
+    !(display instanceof HTMLInputElement) ||
+    !display.isConnected ||
+    display.id !== domId ||
+    display.name !== domName ||
+    display.type !== "text" ||
+    display.dataset.autoType !== "basic" ||
+    display.dataset.autoApi !== "0200" ||
+    display.dataset.autoParams !== "0015" ||
+    item.candidateId !== handle.candidateId ||
+    item.analysis?.candidateId !== item.candidateId ||
+    item.analysis.mappingStatus !== "ADAPTER_VERIFIED" ||
+    item.analysis.interactionStatus !== "READY" ||
+    item.analysis.writePlan?.command !== "SET_TEXT" ||
+    profileFieldKey(item) !== spec.profileFieldKey
+  ) {
+    return undefined;
+  }
+  const field = display.closest<HTMLElement>(".field.search");
+  if (
+    !field ||
+    field.matches("[hidden], [aria-hidden='true'], [inert]") ||
+    uniqueOwnedElement<HTMLInputElement>(
+      field,
+      `input#${domId}[name='${domName}'][type='text']`,
+    ) !== display ||
+    !uniqueOwnedElement<HTMLInputElement>(
+      field,
+      `input[type='hidden'][name='${spec.hiddenName}']`,
+    ) ||
+    !uniqueOwnedElement<HTMLElement>(field, ".search-result-list")
+  ) {
+    return undefined;
+  }
+  return field;
 }
 
 function waitFor(
@@ -240,6 +321,7 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     }
     return Promise.resolve(true);
   },
+  stateDriverFailureGroup: additionalMajorFailureGroup,
   revealSelections: [],
   selectReveal: () => ({ code: "TARGET_MISSING", count: 0 }),
   revealedBindings: () => new Map(),
