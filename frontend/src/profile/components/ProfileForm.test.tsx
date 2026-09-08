@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PROFILE_CATEGORIES } from "../field-definitions";
 import { createEmptyProfile } from "../model";
@@ -28,5 +28,42 @@ describe("ProfileForm conditional fields", () => {
 
     expect(screen.getByLabelText("복수전공명")).toBeInTheDocument();
     expect(screen.queryByLabelText("부전공명")).not.toBeInTheDocument();
+  });
+
+  it("suggests standard language tests while forwarding custom text unchanged", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const profile = createEmptyProfile();
+    const onUpdateEntry = vi.fn();
+    profile.languages = [{
+      id: "language-test-1",
+      sectionId: "languageTest",
+      values: {},
+    }];
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={onUpdateEntry}
+        onUpdateSingle={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+
+    const testName = screen.getByLabelText("시험명");
+    expect(testName).toHaveAttribute("list", "languages-language-test-1-testName-suggestions");
+    expect(document.getElementById(testName.getAttribute("list")!)?.querySelector('option[value="OPIc"]'))
+      .toBeInTheDocument();
+
+    fireEvent.change(testName, { target: { value: "사내 영어 인증" } });
+
+    expect(onUpdateEntry).toHaveBeenCalledWith(
+      "languages",
+      "language-test-1",
+      "testName",
+      "사내 영어 인증",
+    );
   });
 });
