@@ -161,8 +161,22 @@
       }
     ],
     "compensation": {},
-    "military": {},
-    "veteran": {},
+    "military": {
+      "militaryStatus": "군필",
+      "militaryType": "현역병",
+      "militaryBranch": "육군",
+      "militarySpecialty": "보병",
+      "militaryRank": "병장",
+      "serviceStartDate": "2020-03-01",
+      "serviceEndDate": "2021-09-30",
+      "dischargeType": "만기전역"
+    },
+    "veteran": {
+      "veteranStatus": "대상",
+      "veteranType": "독립유공자",
+      "veteranRelation": "본인",
+      "veteranNumber": "VET-DEMO-001"
+    },
     "disability": {},
     "health": []
   }

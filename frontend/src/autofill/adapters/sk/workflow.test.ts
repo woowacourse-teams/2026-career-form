@@ -7,6 +7,12 @@ import { getWorkflowAdapter } from "../workflow";
 
 const adapter = getWorkflowAdapter("www.skcareers.com");
 const majorSelection = adapter.revealSelections[0]!;
+const militarySelection = adapter.revealSelections.find(
+  ({ domName }) => domName === "prsMilitarySvcYN",
+)!;
+const veteranSelection = adapter.revealSelections.find(
+  ({ domName }) => domName === "prsVeteranBenefitYN",
+)!;
 
 function radioDocument(name: string, label = "있음"): Document {
   const page = document.implementation.createHTMLDocument("fixture");
@@ -73,6 +79,157 @@ describe("SK conditional selections", () => {
     );
     expect(page.querySelector("input")!.checked).toBe(false);
   });
+});
+
+describe("SK military and veteran conditional selections", () => {
+  it.each(["군필", "미필", "면제", "복무중"])(
+    "selects the exact military target radio for %s",
+    (profileValue) => {
+      const page = document.implementation.createHTMLDocument("fixture");
+      page.body.innerHTML = `
+        <label><input type="radio" name="prsMilitarySvcYN" /> 비대상</label>
+        <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
+      `;
+
+      expect(
+        adapter.selectReveal(page, militarySelection, profileValue),
+      ).toEqual({
+        code: "SELECTED",
+        count: 1,
+      });
+      expect(page.querySelectorAll<HTMLInputElement>("input")[1]!.checked).toBe(
+        true,
+      );
+    },
+  );
+
+  it("does not select military target for a non-target status", () => {
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `
+      <label><input type="radio" name="prsMilitarySvcYN" /> 비대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
+    `;
+
+    expect(adapter.selectReveal(page, militarySelection, "비대상")).toEqual({
+      code: "PROFILE_NOT_SELECTED",
+      count: 1,
+    });
+    expect(
+      Array.from(page.querySelectorAll<HTMLInputElement>("input")).some(
+        ({ checked }) => checked,
+      ),
+    ).toBe(false);
+  });
+
+  it("preserves an existing non-target military radio selection", () => {
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `
+      <label><input type="radio" name="prsMilitarySvcYN" checked /> 비대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
+    `;
+    const [existing, target] = page.querySelectorAll<HTMLInputElement>("input");
+    let targetClicks = 0;
+    target!.addEventListener("click", () => {
+      targetClicks += 1;
+    });
+
+    expect(adapter.selectReveal(page, militarySelection, "군필")).toEqual({
+      code: "SKIPPED",
+      count: 1,
+    });
+    expect(existing!.checked).toBe(true);
+    expect(target!.checked).toBe(false);
+    expect(targetClicks).toBe(0);
+  });
+
+  it("keeps an already selected veteran target without a duplicate click", () => {
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `
+      <label><input type="radio" name="prsVeteranBenefitYN" /> 비대상</label>
+      <label><input type="radio" name="prsVeteranBenefitYN" checked /> 대상</label>
+    `;
+    const target = page.querySelectorAll<HTMLInputElement>("input")[1]!;
+    let targetClicks = 0;
+    target.addEventListener("click", () => {
+      targetClicks += 1;
+    });
+
+    expect(adapter.selectReveal(page, veteranSelection, "대상")).toEqual({
+      code: "SELECTED",
+      count: 1,
+    });
+    expect(target.checked).toBe(true);
+    expect(targetClicks).toBe(0);
+  });
+
+  it.each([
+    [
+      "multiple exact targets",
+      `<label><input type="radio" name="prsMilitarySvcYN" /> 대상</label><label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>`,
+    ],
+    [
+      "a disabled target",
+      `<label><input type="radio" name="prsMilitarySvcYN" disabled /> 대상</label>`,
+    ],
+    [
+      "an inert target",
+      `<div inert><label><input type="radio" name="prsMilitarySvcYN" /> 대상</label></div>`,
+    ],
+    [
+      "a hidden target",
+      `<label hidden><input type="radio" name="prsMilitarySvcYN" /> 대상</label>`,
+    ],
+  ] as const)("refuses %s", (_description, markup) => {
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = markup;
+
+    expect(adapter.selectReveal(page, militarySelection, "군필")).toEqual({
+      code: "TARGET_MISSING",
+      count: 1,
+    });
+    expect(
+      Array.from(page.querySelectorAll<HTMLInputElement>("input")).some(
+        ({ checked }) => checked,
+      ),
+    ).toBe(false);
+  });
+
+  it("selects only the exact veteran target radio", () => {
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `
+      <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
+      <label><input type="radio" name="prsVeteranBenefitYN" /> 비대상</label>
+      <label><input type="radio" name="prsVeteranBenefitYN" /> 대상</label>
+    `;
+
+    expect(adapter.selectReveal(page, veteranSelection, "대상")).toEqual({
+      code: "SELECTED",
+      count: 1,
+    });
+    const [military, veteranNonTarget, veteranTarget] =
+      page.querySelectorAll<HTMLInputElement>("input");
+    expect(military!.checked).toBe(false);
+    expect(veteranNonTarget!.checked).toBe(false);
+    expect(veteranTarget!.checked).toBe(true);
+  });
+
+  it.each([
+    ["prsMilitarySvcYN_wrong", militarySelection],
+    ["prsVeteranBenefitYN_wrong", veteranSelection],
+  ] as const)(
+    "does not infer a similar conditional radio name %s",
+    (name, selection) => {
+      const page = radioDocument(name, "대상");
+      const profileValue =
+        selection.domName === "prsMilitarySvcYN" ? "군필" : "대상";
+
+      expect(adapter.selectReveal(page, selection, profileValue)).toEqual({
+        code: "TARGET_MISSING",
+        count: 1,
+      });
+      expect(page.querySelector("input")!.checked).toBe(false);
+    },
+  );
 });
 
 const bindingPlan: PreparationPlan = {
