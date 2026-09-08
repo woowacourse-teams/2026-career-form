@@ -2,9 +2,9 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-46/documents/adapter-hyundai.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md)
-> Updated: 2026-09-08
+> Current: [현재 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md)
+> Updated: 2026-09-09
 
 ## 현재 상태
 
@@ -27,3 +27,13 @@ ID 없는 현대 프로젝트·논문 구조 식별로 준비 단계 차단을 �
 국내 주소는 `postCd` readonly의 유일한 정확 결과만 선택하고, 실패·중복·취소에서는 이번 실행이 연 modal만 닫는다. 국적1은 대한민국 표시명과 hidden `KR`를 확정하며 국적2는 보존한다. 학력은 고교·대학·대학원 순서, 종류 메뉴, 그룹별 `itemGroupId/index/count`를 검증하고 학교 `data-auto-type=school`·전공 `data-auto-type=basic`과 유효 코드를 확인한 뒤 재분석한다.
 
 실제 설치 smoke는 고교·학사 2행을 확인했다. 주소 3값·readonly, 국적1 코드 확정·국적2 불변, 학교 2행의 이름·코드·marker·기간 4필드, 대학 전공 코드·GPA·졸업 코드를 독립 대조했다. API 7회는 HTTP 200/ADAPTER/COMPLETE였고 UI 38/0은 전체 성공이 아니다. 실제 대학원·전문학사·박사와 저장·제출 호환성은 미검증이며 toolbar icon 클릭도 검증하지 않았다.
+
+## CF-83 자동 기입 보완 (2026-09-09)
+
+이 절은 앞선 CF-46 검증 기록 이후의 변경이다. 앞 절의 설치 smoke 결과는 CF-83 수정본의 실제 재기입 결과가 아니다.
+
+현대 대학 만점기준은 4.00→4.0/4, 4.30→4.3/4.3, 4.50→4.5/4.5, 100.00→100/100의 표시명/코드만 연결하고 정확한 hidden rcdPerf를 사용한다. directRcdperf 및 기타 직접입력은 제외한다. MongoDB 8의 정책 저장 시 소수점 Map 키를 보존하도록 변환기를 구성하고 SK·현대 정책의 BSON 왕복과 새 가상 DB의 실제 API 조회를 검증했다.
+
+현대 대학 복수·부전공은 유무가 있음이고 이름이 있을 때만 같은 행의 basic/0200/0015 검색에서 유일한 정확 결과와 hidden 코드·marker를 확정한다. 성공 및 이미 확정된 학교·전공에는 exist 클래스를 반영하고 실패·취소 시 실행이 소유한 값과 라벨 상태만 복원한다. 프로필 조건 검증은 대학 범위로 한정한다.
+
+로컬 정책 버전은 SK v23·현대 v5이며 프로필 스키마와 API DTO는 변경하지 않았다. 자동 테스트, 읽기 전용 실제 DOM 확인, 별도 가상 DB의 API 검증을 실제 설치 확장의 재기입 검증과 구분해 문서화한다. CF-83 설치 확장 재기입과 저장·제출 호환성 및 운영 정책 배포는 검증 완료로 표시하지 않는다.

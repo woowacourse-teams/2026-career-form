@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-46/documents/adapter-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md)
-> Updated: 2026-09-08
+> Current: [현재 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md)
+> Updated: 2026-09-09
 
 ## 현재 상태
 
@@ -36,3 +36,26 @@ ID 없는 현대 프로젝트·논문 구조 식별로 준비 단계 차단을 �
 | 국적1/2 | 국적1 대한민국 표시명·`KR` 확정, 국적2 불변 | 대한민국 범위만 지원 |
 | 학력 | 종류 3/4/5/6/7, 그룹별 `itemGroupId/index/count`, 학교 `school`·전공 `basic` 검색과 유효 코드 검증 | 실제 설치는 고교·학사 2행; 대학원·전문학사·박사 미검증 |
 | 실제 설치 smoke | 주소 3값·readonly, 학교 2행 이름·코드·marker·기간 4필드, 대학 전공 코드·GPA·졸업 코드 독립 대조; API 7회 200/ADAPTER/COMPLETE | UI 38/0은 전체 성공이 아니며 toolbar icon 클릭 미검증 |
+
+## CF-83 자동 기입 보완 (2026-09-09)
+
+이 절은 앞선 CF-46 검증 기록 이후의 변경이다. 앞 절의 설치 smoke 결과는 CF-83 수정본의 실제 재기입 결과가 아니다.
+
+SK 고교·대학 추가 버튼은 ID가 없는 후속 행에서도 회사 루트, 학력 종류, 행·버튼 조상 구조와 학교 입력칸을 검증해 안정적인 ID로 수집한다. 공통 반복 실행기의 재식별 및 정확히 1개 증가 조건은 유지한다.
+
+SK 병역은 대상 라디오→군필/미필/면제/복무중 분류→노출된 상세 필드 순서로 처리하고, 보훈은 대상 여부·번호·관계를 연결한다. 기존 반대 선택과 다른 병역 분류는 보존하며, 이미 같은 선택에는 변경 이벤트를 다시 보내지 않는다. 보호 여부는 준비 계획과 실행 직전에 확인한다.
+
+공개 fixture의 병역·보훈 정의 필드는 가상 값으로 채우고, 모순되는 상태는 별도 테스트로 분리한다. 현재 확인한 SK 화면에 없는 군별·계급·복무일자와 미검증 특기·전역구분·보훈구분은 실제 입력 지원으로 표시하지 않는다. 기존 다른 화면용 정책과 신규 미지원 필드를 구분한다.
+
+현대 대학 만점기준은 4.00→4.0/4, 4.30→4.3/4.3, 4.50→4.5/4.5, 100.00→100/100의 표시명/코드만 연결하고 정확한 hidden rcdPerf를 사용한다. directRcdperf 및 기타 직접입력은 제외한다. MongoDB 8의 정책 저장 시 소수점 Map 키를 보존하도록 변환기를 구성하고 SK·현대 정책의 BSON 왕복과 새 가상 DB의 실제 API 조회를 검증했다.
+
+현대 대학 복수·부전공은 유무가 있음이고 이름이 있을 때만 같은 행의 basic/0200/0015 검색에서 유일한 정확 결과와 hidden 코드·marker를 확정한다. 성공 및 이미 확정된 학교·전공에는 exist 클래스를 반영하고 실패·취소 시 실행이 소유한 값과 라벨 상태만 복원한다. 프로필 조건 검증은 대학 범위로 한정한다.
+
+로컬 정책 버전은 SK v23·현대 v5이며 프로필 스키마와 API DTO는 변경하지 않았다. 자동 테스트, 읽기 전용 실제 DOM 확인, 별도 가상 DB의 API 검증을 실제 설치 확장의 재기입 검증과 구분해 문서화한다. CF-83 설치 확장 재기입과 저장·제출 호환성 및 운영 정책 배포는 검증 완료로 표시하지 않는다.
+
+| 대상 | CF-83 자동 검증 | 실제 설치 검증 상태 |
+| --- | --- | --- |
+| SK 고교·대학 | 0→1·1→2, 한 번 실행 후 입력, 중복/모호성/비정상 증가 방지 | 수정본 재기입 미실행 |
+| SK 병역·보훈 | 상태별 연결, 기존 값 보존, 동일 선택 이벤트 재발행 방지 | 현재 DOM 구조만 읽기 전용 확인 |
+| 현대 만점기준 | 4개 표시명/코드, rcdPerf 식별, BSON 왕복 및 실제 API | 수정본 재기입 미실행 |
+| 현대 학교·전공 | 같은 행의 검색 확정, 유무 조건, 성공 라벨과 실패 원복 | 수정본 라벨 배치 재기입 미실행 |
