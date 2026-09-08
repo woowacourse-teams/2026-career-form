@@ -321,7 +321,7 @@ describe("review plan", () => {
         {
           id: "university-1",
           sectionId: "university",
-          values: { minorName: "경영학과" },
+          values: { minorStatus: "있음", minorName: "경영학과" },
         },
       ],
     };

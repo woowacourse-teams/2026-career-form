@@ -37,6 +37,7 @@ function partsOf(key: string) {
     categoryId: category.id,
     sectionId: section.id,
     fieldId: field.id,
+    visibleWhen: field.visibleWhen,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
     topLevel: category.topLevelFields?.some((candidate) => candidate.id === field.id) === true,
@@ -74,6 +75,9 @@ function directValue(
     return { status: "ambiguous", sensitive: parts.sensitive };
   }
   const entry = entries[itemIndex ?? 0];
+  if (entry && parts.visibleWhen && !parts.visibleWhen(entry.values)) {
+    return { status: "missing", sensitive: parts.sensitive };
+  }
   const value = entry?.values[parts.fieldId]?.trim();
   return value
     ? {

@@ -3,6 +3,55 @@ import { createEmptyProfile } from "../../profile/model";
 import { resolveValueBinding } from "./value-binding";
 
 describe("resolveValueBinding", () => {
+  it.each([
+    ["additionalMajorName", "doubleMajorStatus"],
+    ["minorName", "minorStatus"],
+  ])(
+    "only resolves %s when its own university row enables it",
+    (field, flag) => {
+      const profile = createEmptyProfile();
+      profile.education.push(
+        {
+          id: "enabled",
+          sectionId: "university",
+          values: { [flag]: "있음", [field]: "가상전공" },
+        },
+        {
+          id: "disabled",
+          sectionId: "university",
+          values: { [flag]: "없음", [field]: "남아있는전공" },
+        },
+        {
+          id: "missing-flag",
+          sectionId: "university",
+          values: { [field]: "남아있는전공" },
+        },
+        {
+          id: "blank",
+          sectionId: "university",
+          values: { [flag]: "있음", [field]: "  " },
+        },
+      );
+      const binding = {
+        type: "DIRECT" as const,
+        profileFieldKey: `education.university.${field}`,
+      };
+      expect(resolveValueBinding(profile, binding, 0)).toMatchObject({
+        status: "resolved",
+        value: "가상전공",
+        profileEntryId: "enabled",
+      });
+      for (const index of [1, 2, 3]) {
+        expect(resolveValueBinding(profile, binding, index)).toMatchObject({
+          status: "missing",
+        });
+      }
+      expect(resolveValueBinding(profile, binding)).toMatchObject({
+        status: "ambiguous",
+      });
+    },
+  );
+
   it("converts a backend-selected boolean profile field to Y", () => {
     const profile = createEmptyProfile();
     profile.disability.disabilityStatus = "대상";
@@ -45,14 +94,18 @@ describe("resolveValueBinding", () => {
     );
 
     expect(
-      resolveValueBinding(profile, {
-        type: "LOOKUP",
-        profileFieldKey: "education.university.degreeLevel",
-        optionMap: {
-          "전문학사": "전문대학(전문학사)",
-          "학사": "대학(학사)",
+      resolveValueBinding(
+        profile,
+        {
+          type: "LOOKUP",
+          profileFieldKey: "education.university.degreeLevel",
+          optionMap: {
+            전문학사: "전문대학(전문학사)",
+            학사: "대학(학사)",
+          },
         },
-      }, 1),
+        1,
+      ),
     ).toMatchObject({ status: "resolved", value: "대학(학사)" });
   });
 
