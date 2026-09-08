@@ -485,7 +485,7 @@ export function AutofillWorkflow({
     }
 
     if (run.button && adapter.runAddress) {
-      const addressNames = ["prsZipCode", "prsAddress", "prsAddressDtl"];
+      const addressNames = adapter.addressFieldNames ?? [];
       const keys = [
         "contact.contact.postalCode",
         "contact.contact.addressLine1",
@@ -497,6 +497,7 @@ export function AutofillWorkflow({
       ]);
       const permitted =
         analysis.mode === "ADAPTER" &&
+        addressNames.length === 3 &&
         addressNames.every((name, index) => {
           const candidates = fields.filter(
             (field) => field.domId === name || field.domName === name,
@@ -622,13 +623,41 @@ export function AutofillWorkflow({
         setStage("exception");
         return;
       }
-      const stateSelectionResults = executeApprovedWrites({
-        items: currentStateDriverItems.map(({ item }) => item),
-        approvedCandidateIds: new Set(
-          currentStateDriverItems.map(({ item }) => item.candidateId),
-        ),
-        registry: snapshot.registry,
-      });
+      const stateSelectionResults = [];
+      for (const { item } of currentStateDriverItems) {
+        const lookup = snapshot.registry.lookupField(item.candidateId);
+        const eligible =
+          lookup.status === "ready" &&
+          item.selected &&
+          !item.disabled &&
+          item.status !== "unavailable" &&
+          (item.status !== "sensitive" || item.revealed) &&
+          item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
+          item.analysis.interactionStatus === "READY";
+        if (run.controller.signal.aborted) return;
+        const special = eligible
+          ? await adapter.executeStateDriver?.(
+              pageDocument,
+              lookup.handle,
+              item,
+              run.controller.signal,
+            )
+          : undefined;
+        stateSelectionResults.push(
+          ...(special === undefined
+            ? executeApprovedWrites({
+                items: [item],
+                approvedCandidateIds: new Set([item.candidateId]),
+                registry: snapshot.registry,
+              })
+            : [
+                {
+                  candidateId: item.candidateId,
+                  status: special ? "written" : "skipped",
+                },
+              ]),
+        );
+      }
       if (
         stateSelectionResults.every((result) => result.status === "written")
       ) {
@@ -737,10 +766,50 @@ export function AutofillWorkflow({
           const action = snapshot.registry.lookupAction(
             searchPlans[0].actionCandidateId,
           );
-          if (action.status === "ready") run.button = action.handle.element;
+          if (
+            action.status === "ready" ||
+            (action.status === "blocked" && action.reason === "readonly")
+          )
+            run.button = action.handle.element;
         }
+        const educationPlans = adapter.educationPreparationActionId
+          ? analysis.preparationPlans.filter((plan) => {
+              if (plan.command !== "ADD_REPEATABLE_GROUP") return false;
+              const action = snapshot.registry.lookupAction(
+                plan.actionCandidateId,
+              );
+              return (
+                action.status === "ready" &&
+                action.handle.candidate.domId ===
+                  adapter.educationPreparationActionId
+              );
+            })
+          : [];
+        if (
+          educationPlans.length > 0 &&
+          adapter.prepareEducation &&
+          analysis.mode === "ADAPTER"
+        ) {
+          if (
+            educationPlans.length !== 1 ||
+            !(await adapter.prepareEducation(
+              pageDocument,
+              loadedProfile,
+              run.controller.signal,
+            ))
+          ) {
+            if (!active) return;
+            setExceptionTitle(
+              "학력 종류와 입력 행을 안전하게 준비하지 못했습니다",
+            );
+            setStage("exception");
+            return;
+          }
+        }
+        if (!active) return;
         const preparationPlans = analysis.preparationPlans.filter(
-          (plan) => plan.command !== "SEARCH_ADDRESS",
+          (plan) =>
+            plan.command !== "SEARCH_ADDRESS" && !educationPlans.includes(plan),
         );
         if (preparationPlans.length === 0) {
           await analyzeFields(loadedProfile);

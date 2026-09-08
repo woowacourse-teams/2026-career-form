@@ -218,6 +218,75 @@ class StoredPolicyFieldMappingResolverTest {
             );
     }
 
+    @Test
+    @DisplayName("같은 현대 학력 DOM 이름을 검증된 학력 item group별 프로필 항목에 연결한다")
+    void mapsSharedHyundaiEducationNamesByVerifiedItemGroup() {
+        FieldsAnalysisRequest request = new FieldsAnalysisRequest(
+            2,
+            "stored-policy-hyundai-education-groups",
+            new Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new Section(
+                "section-root", null, null, List.of(),
+                List.of(
+                    new FieldsAnalysisRequest.Item(
+                        "education-high-school",
+                        List.of(field("high-school-name", "schNm_1", "schNm", FormControl.TEXT)),
+                        "educationhighschool"
+                    ),
+                    new FieldsAnalysisRequest.Item(
+                        "education-university",
+                        List.of(field("university-name", "schNm_2", "schNm", FormControl.TEXT)),
+                        "educationuniversity"
+                    ),
+                    new FieldsAnalysisRequest.Item(
+                        "education-graduate-school",
+                        List.of(field("graduate-school-name", "schNm_3", "schNm", FormControl.TEXT)),
+                        "educationgraduateschool"
+                    )
+                )
+            ))
+        );
+
+        assertThat(new StoredPolicyFieldMappingResolver(contextualEducationPolicy())
+            .resolve(request).results())
+            .containsExactly(
+                match("high-school-name", "education.highSchool.schoolName"),
+                match("university-name", "education.university.schoolName"),
+                match("graduate-school-name", "education.graduateSchool.schoolName")
+            );
+    }
+
+    @Test
+    @DisplayName("학력 item group이 없거나 검증값과 다르면 공통 DOM 이름을 임의 매핑하지 않는다")
+    void rejectsSharedHyundaiEducationNamesWithoutVerifiedItemGroup() {
+        FieldCandidate field = field(
+            "unknown-education-name", "schNm_1", "schNm", FormControl.TEXT
+        );
+        FieldsAnalysisRequest request = new FieldsAnalysisRequest(
+            2,
+            "stored-policy-hyundai-education-unknown-group",
+            new Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new Section(
+                "section-root", null, null,
+                List.of(field),
+                List.of(new FieldsAnalysisRequest.Item(
+                    "education-unknown",
+                    List.of(field(
+                        "wrong-group-name", "schNm_2", "schNm", FormControl.TEXT
+                    )),
+                    "educationunknown"
+                ))
+            ))
+        );
+
+        assertThat(new StoredPolicyFieldMappingResolver(contextualEducationPolicy())
+            .resolve(request).results())
+            .containsExactly(
+                new FieldMappingResolver.NoMatch("unknown-education-name"),
+                new FieldMappingResolver.NoMatch("wrong-group-name")
+            );
+    }
+
     private static FieldCandidate field(
         String candidateId,
         String domName,
@@ -319,6 +388,45 @@ class StoredPolicyFieldMappingResolverTest {
         );
     }
 
+    private static CompanyFormPolicy contextualEducationPolicy() {
+        return CompanyFormPolicy.create(
+            "hyundai",
+            4,
+            new PreparationFingerprint(
+                java.util.Set.of("section-root"),
+                List.of(new ActionStructure(
+                    "synthetic-action",
+                    com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.BUTTON,
+                    com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON
+                ))
+            ),
+            new FieldsFingerprint(
+                java.util.Set.of("section-root"),
+                List.of(new FieldStructure(
+                    "synthetic-field",
+                    FormElement.INPUT,
+                    FormControl.TEXT
+                ))
+            ),
+            List.of(new ActionRule("synthetic-action", ActionKind.ADD, null)),
+            List.of(
+                contextualTextRule(
+                    "schNm", "schNm", "educationhighschool",
+                    "education.highSchool.schoolName"
+                ),
+                contextualTextRule(
+                    "schNm", "schNm", "educationuniversity",
+                    "education.university.schoolName"
+                ),
+                contextualTextRule(
+                    "schNm", "schNm", "educationgraduateschool",
+                    "education.graduateSchool.schoolName"
+                )
+            ),
+            ignored -> true
+        );
+    }
+
     private static FieldRule constrainedTextRule(
         String structuralName,
         String requiredDomName,
@@ -331,6 +439,23 @@ class StoredPolicyFieldMappingResolverTest {
             new FieldMappingResolver.DirectBinding(profileFieldKey),
             false,
             requiredDomName
+        );
+    }
+
+    private static FieldRule contextualTextRule(
+        String structuralName,
+        String requiredDomName,
+        String requiredItemGroupId,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            structuralName,
+            FormElement.INPUT,
+            FormControl.TEXT,
+            new FieldMappingResolver.DirectBinding(profileFieldKey),
+            false,
+            requiredDomName,
+            requiredItemGroupId
         );
     }
 

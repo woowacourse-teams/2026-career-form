@@ -8,6 +8,8 @@ export type CollectionSource = "adapter" | "generic";
 export interface CollectionAdapter {
   readonly sectionSelectors: readonly string[];
   readonly collectsInputButtonFields: boolean;
+  additionalActionElements?(document: Document): HTMLInputElement[];
+  itemGroupId?(element: Element): string | undefined;
   actionDomId(element: HTMLElement): string | undefined;
   repeatableItemCandidates(container: Element): Element[] | undefined;
   requiresVisibleControl(

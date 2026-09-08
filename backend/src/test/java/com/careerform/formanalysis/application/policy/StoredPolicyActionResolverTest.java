@@ -10,6 +10,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
 import com.careerform.formanalysis.application.port.ActionResolver;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionRule;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionStructure;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldRule;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldStructure;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFingerprint;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest.ActionCandidate;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl;
@@ -102,6 +110,53 @@ class StoredPolicyActionResolverTest {
         );
     }
 
+    @Test
+    @DisplayName("현대 주소 검색은 정책의 가상 ID와 실제 DOM name이 모두 맞을 때만 허용한다")
+    void resolvesHyundaiAddressSearchWithExactPolicyIdentity() {
+        PreparationAnalysisRequest request = new PreparationAnalysisRequest(
+            2,
+            "hyundai-address-actions",
+            new Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new Section(
+                "section-root", null, null,
+                List.of(
+                    new ActionCandidate(
+                        "address-exact",
+                        FormElement.INPUT,
+                        FormControl.BUTTON,
+                        Visibility.VISIBLE,
+                        "우편번호",
+                        "hyundai:search:address",
+                        "postCd",
+                        null,
+                        null,
+                        null
+                    ),
+                    new ActionCandidate(
+                        "address-wrong-name",
+                        FormElement.INPUT,
+                        FormControl.BUTTON,
+                        Visibility.VISIBLE,
+                        "우편번호",
+                        "hyundai:search:address",
+                        "addr",
+                        null,
+                        null,
+                        null
+                    )
+                ),
+                null
+            ))
+        );
+
+        assertThat(new StoredPolicyActionResolver(hyundaiAddressPolicy())
+            .resolve(request).results())
+            .containsExactly(
+                new ActionResolver.SearchAddressAction("address-exact"),
+                new ActionResolver.NoAction("address-wrong-name")
+            );
+    }
+
     private static ActionCandidate action(
         String candidateId,
         String domName,
@@ -119,6 +174,43 @@ class StoredPolicyActionResolverTest {
             disabled,
             null,
             null
+        );
+    }
+
+    private static CompanyFormPolicy hyundaiAddressPolicy() {
+        ActionStructure address = new ActionStructure(
+            List.of("hyundai:search:address"),
+            FormElement.INPUT,
+            FormControl.BUTTON,
+            "postCd"
+        );
+        return CompanyFormPolicy.create(
+            "hyundai",
+            4,
+            new PreparationFingerprint(
+                java.util.Set.of("section-root"),
+                List.of(address)
+            ),
+            new FieldsFingerprint(
+                java.util.Set.of("section-root"),
+                List.of(new FieldStructure(
+                    "synthetic-field",
+                    FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.TEXT
+                ))
+            ),
+            List.of(new ActionRule(
+                "hyundai:search:address",
+                ActionKind.SEARCH_ADDRESS,
+                null
+            )),
+            List.of(new FieldRule(
+                "synthetic-field",
+                FieldsAnalysisRequest.FormElement.INPUT,
+                FieldsAnalysisRequest.FormControl.TEXT,
+                "contact.contact.email"
+            )),
+            ignored -> true
         );
     }
 

@@ -35,6 +35,20 @@ export interface WorkflowDiagnostic {
 }
 
 export interface WorkflowAdapter {
+  addressFieldNames?: readonly string[];
+  prepareEducation?(
+    document: Document,
+    profile: import("../../profile/model").Profile,
+    signal: AbortSignal,
+  ): Promise<boolean>;
+  educationPreparationActionId?: string;
+  executeStateDriver?(
+    document: Document,
+    handle: FieldCandidateHandle,
+    item: ReviewPlanItem,
+    signal: AbortSignal,
+  ): Promise<boolean | undefined>;
+
   runAddress?(
     options: import("../address/types").AddressExecutionOptions,
   ): Promise<import("../address/types").AddressResult>;

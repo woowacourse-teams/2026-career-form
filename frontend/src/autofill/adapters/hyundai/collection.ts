@@ -1,3 +1,4 @@
+import { hyundaiAddressTrigger } from "./address";
 import type { CollectionAdapter } from "../collection";
 
 function directFieldContents(scope: HTMLElement): HTMLElement[] {
@@ -86,7 +87,46 @@ function hasVerifiedRow(
 export const hyundaiCollectionAdapter: CollectionAdapter = {
   sectionSelectors: ["article.field-form-apply"],
   collectsInputButtonFields: true,
+  additionalActionElements(document) {
+    const trigger = hyundaiAddressTrigger(document);
+    return trigger ? [trigger] : [];
+  },
+  itemGroupId(element) {
+    if (!element.matches("#academic > .field-content")) return undefined;
+    const hidden = element.querySelector<HTMLInputElement>(
+      "input[type=hidden][name=schGb]",
+    );
+    const button = element.querySelector<HTMLInputElement>(
+      "input[type=button][id^=schGb_]",
+    );
+    const kinds: Record<string, [string, string]> = {
+      "3": ["고등학교", "educationhighschool"],
+      "4": ["전문대학", "educationuniversity"],
+      "5": ["학사", "educationuniversity"],
+      "6": ["석사", "educationgraduateschool"],
+      "7": ["박사", "educationgraduateschool"],
+    };
+    const kind = hidden ? kinds[hidden.value] : undefined;
+    if (
+      !kind ||
+      !button ||
+      button.value !== kind[0] ||
+      !/^schGb_[1-9][0-9]*$/.test(button.id)
+    )
+      return undefined;
+    const wrap = button.closest(".select-wrap");
+    const options = wrap?.querySelectorAll<HTMLButtonElement>(
+      `button[data-code="${hidden!.value}"]`,
+    );
+    return wrap?.contains(hidden!) &&
+      options?.length === 1 &&
+      options[0].textContent?.trim() === kind[0]
+      ? kind[1]
+      : undefined;
+  },
   actionDomId(element) {
+    if (element === hyundaiAddressTrigger(element.ownerDocument))
+      return "hyundai:search:address";
     if (
       !(element instanceof HTMLButtonElement) ||
       !element.classList.contains("btn-group-add")

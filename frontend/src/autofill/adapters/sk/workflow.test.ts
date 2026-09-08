@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../../api/types";
+import { createStructuralSignature } from "../../dom/candidate-registry";
+import type { FieldCandidateHandle } from "../../dom/types";
+import type { ReviewPlanItem } from "../../review/review-plan";
 import { getWorkflowAdapter } from "../workflow";
 
 const adapter = getWorkflowAdapter("www.skcareers.com");
@@ -167,4 +170,122 @@ describe("SK education action section hints", () => {
       expect(adapter.educationSectionHint?.(label)).toBe(expected);
     },
   );
+});
+
+function stateDriver(
+  domName: string,
+  profileFieldKey: string,
+): { item: ReviewPlanItem; handle: FieldCandidateHandle } {
+  const input = document.createElement("input");
+  input.name = domName;
+  const analysis: MatchedFieldAnalysis = {
+    candidateId: `field-${domName}`,
+    matchType: "MATCH",
+    valueBinding: { type: "DIRECT", profileFieldKey },
+    autofillPolicy: "CONDITIONAL",
+    mappingStatus: "ADAPTER_VERIFIED",
+    interactionStatus: "READY",
+    writePlan: { command: "SET_TEXT" },
+  };
+  return {
+    item: {
+      candidateId: analysis.candidateId,
+      fieldLabel: domName,
+      profileFieldKey,
+      currentValue: "",
+      profileValue: "공개 테스트 값",
+      previewValue: "공개 테스트 값",
+      status: "available",
+      selected: true,
+      disabled: false,
+      revealed: true,
+      reason: "fixture",
+      analysis,
+    },
+    handle: {
+      kind: "field",
+      candidateId: analysis.candidateId,
+      candidate: {
+        candidateId: analysis.candidateId,
+        element: "input",
+        control: "text",
+        visibility: "visible",
+        domName,
+      },
+      elements: [input],
+      optionElements: new Map(),
+      sectionId: "section",
+      itemId: "item",
+      itemIndex: 0,
+      signature: createStructuralSignature([input]),
+    },
+  };
+}
+
+describe("SK autocomplete state drivers", () => {
+  it.each([
+    ["eduEducationName", "education.university.schoolName", 2],
+    ["cerCertName", "certifications.certificate.name", 3],
+    ["lngExamName", "languages.languageTest.testName", 4],
+  ])(
+    "runs the exact verified %s binding in its serial stage",
+    (domName, fieldKey, stage) => {
+      const { item, handle } = stateDriver(domName, fieldKey);
+      expect(adapter.stateDriverStage?.(item, handle)).toBe(stage);
+    },
+  );
+
+  it("gives the second exam row its own later write-and-settle stage", () => {
+    const { item, handle } = stateDriver(
+      "lngExamName",
+      "languages.languageTest.testName",
+    );
+    expect(adapter.stateDriverStage?.(item, { ...handle, itemIndex: 1 })).toBe(
+      7,
+    );
+  });
+
+  it("does not treat a similar or differently bound text field as a search driver", () => {
+    const { item, handle } = stateDriver(
+      "lngExamNameSuffix",
+      "languages.languageTest.testName",
+    );
+    expect(adapter.stateDriverStage?.(item, handle)).toBeUndefined();
+    const exactHandle = stateDriver(
+      "lngExamName",
+      "languages.languageTest.grade",
+    );
+    expect(
+      adapter.stateDriverStage?.(exactHandle.item, exactHandle.handle),
+    ).toBeUndefined();
+  });
+
+  it("requires the approved direct READY text contract for a search driver", () => {
+    const { item, handle } = stateDriver(
+      "cerCertName",
+      "certifications.certificate.name",
+    );
+    expect(
+      adapter.stateDriverStage?.(
+        {
+          ...item,
+          analysis: { ...item.analysis!, mappingStatus: "LLM_SUGGESTED" },
+        },
+        handle,
+      ),
+    ).toBeUndefined();
+    expect(
+      adapter.stateDriverStage?.(
+        {
+          ...item,
+          analysis: {
+            ...item.analysis!,
+            interactionStatus: "BLOCKED",
+            writePlan: undefined,
+          },
+        },
+        handle,
+      ),
+    ).toBeUndefined();
+  });
 });

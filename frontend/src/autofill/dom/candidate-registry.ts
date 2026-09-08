@@ -162,6 +162,12 @@ export class CandidateRegistry {
     if (!registered) {
       return { status: "unknown" };
     }
+    if (
+      registered.handle.kind === "field" &&
+      registered.handle.isCurrentContext?.() === false
+    ) {
+      return { status: "stale" };
+    }
     const elements =
       registered.handle.kind === "action"
         ? [registered.handle.element]

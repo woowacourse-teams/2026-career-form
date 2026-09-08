@@ -29,7 +29,7 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     private static final String COMPANY_KEY = "sk";
-    private static final long VERSION = 20;
+    private static final long VERSION = 22;
 
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
@@ -58,24 +58,33 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             "hyundai",
             "talent.hyundai.com",
             List.of("/apply/applyWrite.hc"),
-            3
+            4
         ));
     }
 
     private static FormAnalysisPolicyDocument hyundaiPolicy() {
         return new FormAnalysisPolicyDocument(
-            "hyundai-policy-v3",
+            "hyundai-policy-v4",
             "hyundai",
-            3,
+            4,
             new PreparationFingerprint(
                 Set.of("section-root"),
                 List.of(
+                    new ActionStructure(
+                        "hyundai:search:address",
+                        PreparationAnalysisRequest.FormElement.INPUT,
+                        PreparationAnalysisRequest.FormControl.BUTTON,
+                        "postCd"
+                    ),
                     actionStructure("hyundai:add:career"),
                     actionStructure("hyundai:add:project"),
                     actionStructure("hyundai:add:foreign"),
                     actionStructure("hyundai:add:foreignAbility"),
                     actionStructure("hyundai:add:licence"),
                     actionStructure("hyundai:add:publication")
+                ),
+                List.of(
+                    actionStructure("hyundai:add:academic")
                 )
             ),
             new FieldsFingerprint(
@@ -88,28 +97,95 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 )
             ),
             List.of(
+                new ActionRule(
+                    "hyundai:search:address",
+                    ActionKind.SEARCH_ADDRESS,
+                    null
+                ),
                 addRule("hyundai:add:career", "jobNm"),
                 addRule("hyundai:add:project", "prjNm"),
                 addRule("hyundai:add:foreign", "foreLang"),
                 addRule("hyundai:add:foreignAbility", "foreLangAbility"),
                 addRule("hyundai:add:licence", "nationLicNm"),
-                addRule("hyundai:add:publication", "typeGb")
+                addRule("hyundai:add:publication", "typeGb"),
+                addRule("hyundai:add:academic", "schGb")
             ),
             List.of(
                 textRule("engNm", "personal.personal.englishGivenName"),
                 textRule("engFamilyNm", "personal.personal.englishFamilyName"),
+                constrainedLookupTextRule(
+                    "nationCd1Nm",
+                    "nationCd1Nm",
+                    "personal.personal.nationality",
+                    Map.of("대한민국", "대한민국")
+                ),
+                readonlyTextRule("postCd", "contact.contact.postalCode"),
+                readonlyTextRule("addr", "contact.contact.addressLine1"),
                 textRule("addrDtl", "contact.contact.addressLine2"),
                 textRule("emeTel", "contact.contact.emergencyPhoneNumber"),
-                derivedTextRule(
-                    "whiStDt", DerivedRecipe.YEAR_MONTH,
-                    "education.university.startDate"
+                contextualTextRule(
+                    "schNm", "schNm", "educationhighschool",
+                    "education.highSchool.schoolName"
                 ),
-                derivedTextRule(
-                    "whiEndDt", DerivedRecipe.YEAR_MONTH,
+                contextualDerivedTextRule(
+                    "whiStDt", "whiStDt", "educationhighschool",
+                    DerivedRecipe.YEAR_MONTH, "education.highSchool.startDate"
+                ),
+                contextualDerivedTextRule(
+                    "whiEndDt", "whiEndDt", "educationhighschool",
+                    DerivedRecipe.YEAR_MONTH, "education.highSchool.endDate"
+                ),
+                contextualTextRule(
+                    "schNm", "schNm", "educationuniversity",
+                    "education.university.schoolName"
+                ),
+                contextualTextRule(
+                    "majorNm", "majorNm", "educationuniversity",
+                    "education.university.majorName"
+                ),
+                contextualDerivedTextRule(
+                    "whiStDt", "whiStDt", "educationuniversity",
+                    DerivedRecipe.YEAR_MONTH, "education.university.startDate"
+                ),
+                contextualDerivedTextRule(
+                    "whiEndDt", "whiEndDt", "educationuniversity",
+                    DerivedRecipe.YEAR_MONTH,
                     "education.university.endDate"
                 ),
-                textRule("rcd", "education.university.gpaScore"),
-                textRule("rcdM", "education.graduateSchool.gpaScore"),
+                contextualTextRule(
+                    "rcd", "rcd", "educationuniversity",
+                    "education.university.gpaScore"
+                ),
+                contextualCompletionStatusRule(
+                    "educationuniversity",
+                    "education.university.completionStatus"
+                ),
+                contextualTextRule(
+                    "schNm", "schNm", "educationgraduateschool",
+                    "education.graduateSchool.schoolName"
+                ),
+                contextualTextRule(
+                    "majorNm", "majorNm", "educationgraduateschool",
+                    "education.graduateSchool.majorName"
+                ),
+                contextualDerivedTextRule(
+                    "whiStDt", "whiStDt", "educationgraduateschool",
+                    DerivedRecipe.YEAR_MONTH,
+                    "education.graduateSchool.startDate"
+                ),
+                contextualDerivedTextRule(
+                    "whiEndDt", "whiEndDt", "educationgraduateschool",
+                    DerivedRecipe.YEAR_MONTH,
+                    "education.graduateSchool.endDate"
+                ),
+                contextualTextRule(
+                    "rcd", "rcd", "educationgraduateschool",
+                    "education.graduateSchool.gpaScore"
+                ),
+                contextualCompletionStatusRule(
+                    "educationgraduateschool",
+                    "education.graduateSchool.completionStatus"
+                ),
                 textRule("collDepartNm", "education.graduateSchool.labName"),
                 textRule("labProfNm", "education.graduateSchool.labProfessorName"),
                 textRule("thesisTitle", "education.graduateSchool.thesisTitle"),
@@ -470,7 +546,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "prsMilitarySvcTypeReason",
                     "military.military.exemptionReason"
                 ),
-                textRule("cerCertName", "certifications.certificate.name"),
+                constrainedTextRule("cerCertName", "cerCertName", "certifications.certificate.name"),
                 textRule("cerCertSource", "certifications.certificate.issuer"),
                 textRule(
                     "cerCertDate",
@@ -480,7 +556,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "cerCertNumber",
                     "certifications.certificate.registrationNo"
                 ),
-                textRule("eduEducationName", "education.university.schoolName"),
+                constrainedTextRule("eduEducationName", "eduEducationName", "education.university.schoolName"),
                 selectRule("eduLastestEducationType", "education.university.latestEducationType"),
                 lookupSelectRule(
                     "eduEducationType",
@@ -507,8 +583,14 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 radioRule("eduMajorSubYN", "education.university.minorStatus"),
                 textRule("eduMajorDouble", "education.university.additionalMajorName"),
                 textRule("eduMajorSub", "education.university.minorName"),
-                textRule("eduFromDate", "education.university.startDate"),
-                textRule("eduToDate", "education.university.endDate"),
+                constrainedDerivedTextRule(
+                    "eduFromDate", "eduFromDate", DerivedRecipe.YEAR_MONTH,
+                    "education.university.startDate"
+                ),
+                constrainedDerivedTextRule(
+                    "eduToDate", "eduToDate", DerivedRecipe.YEAR_MONTH,
+                    "education.university.endDate"
+                ),
                 selectRule(
                     "edugdEducationType",
                     "education.graduateSchool.degreeLevel"
@@ -544,8 +626,9 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 textRule("eduhgFromDate", "education.highSchool.startDate"),
                 textRule("eduhgToDate", "education.highSchool.endDate"),
                 selectRule("lngLanguageType", "languages.languageTest.language"),
-                textRule("lngExamName", "languages.languageTest.testName"),
-                textRule("lngExamScore", "languages.languageTest.grade"),
+                constrainedTextRule("lngExamName", "lngExamName", "languages.languageTest.testName"),
+                constrainedTextRule("lngExamScore", "lngExamScore", "languages.languageTest.grade"),
+                selectRule("lngExamScoreSel", "languages.languageTest.grade"),
                 textRule(
                     "lngScoreDate",
                     "languages.languageTest.acquisitionDate"
@@ -742,6 +825,89 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             new LookupBinding(profileFieldKey, optionMap),
             false,
             requiredDomName
+        );
+    }
+
+    private static FieldRule constrainedLookupTextRule(
+        String name,
+        String requiredDomName,
+        String profileFieldKey,
+        Map<String, String> optionMap
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.TEXT,
+            new LookupBinding(profileFieldKey, optionMap),
+            false,
+            requiredDomName
+        );
+    }
+
+    private static FieldRule contextualTextRule(
+        String name,
+        String requiredDomName,
+        String requiredItemGroupId,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.TEXT,
+            new DirectBinding(profileFieldKey),
+            false,
+            requiredDomName,
+            requiredItemGroupId
+        );
+    }
+
+    private static FieldRule contextualDerivedTextRule(
+        String name,
+        String requiredDomName,
+        String requiredItemGroupId,
+        DerivedRecipe recipe,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.TEXT,
+            new DerivedBinding(recipe, profileFieldKey),
+            false,
+            requiredDomName,
+            requiredItemGroupId
+        );
+    }
+
+    private static FieldRule contextualCompletionStatusRule(
+        String requiredItemGroupId,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            "graGb",
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.BUTTON,
+            new ButtonOptionBinding(
+                profileFieldKey,
+                Map.ofEntries(
+                    Map.entry("졸업", "졸업"),
+                    Map.entry("졸업예정", "졸업예정"),
+                    Map.entry("재학", "재학중"),
+                    Map.entry("재학중", "재학중"),
+                    Map.entry("중퇴", "중퇴"),
+                    Map.entry("수료", "수료")
+                ),
+                Map.of(
+                    "졸업", "01",
+                    "졸업예정", "02",
+                    "재학중", "03",
+                    "중퇴", "05",
+                    "수료", "10"
+                )
+            ),
+            false,
+            null,
+            requiredItemGroupId
         );
     }
 

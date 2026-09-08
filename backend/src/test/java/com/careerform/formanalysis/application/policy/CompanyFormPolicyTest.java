@@ -39,6 +39,19 @@ class CompanyFormPolicyTest {
     }
 
     @Test
+    @DisplayName("action 구조는 정책이 요구하는 DOM name을 별도 조건으로 보존한다")
+    void preservesRequiredActionDomName() {
+        ActionStructure structure = new ActionStructure(
+            List.of("hyundai:search:address"),
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON,
+            "postCd"
+        );
+
+        assertThat(structure.requiredDomName()).isEqualTo("postCd");
+    }
+
+    @Test
     @DisplayName("optional action 구조는 resolver 검증용으로 보존하지만 fingerprint 필수 조건은 아니다")
     void preservesOptionalActionStructuresSeparatelyFromRequiredFingerprint() {
         ActionStructure required = actionStructure("core-action");
@@ -145,6 +158,42 @@ class CompanyFormPolicyTest {
             FieldRule::requiredDomName
         ).containsExactly(
             org.assertj.core.groups.Tuple.tuple("shared-date", "language-date")
+        );
+    }
+
+    @Test
+    @DisplayName("같은 DOM 구조도 서로 다른 반복 항목 그룹이면 별도 field rule로 보존한다")
+    void preservesContextualFieldRulesForDifferentItemGroups() {
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "hyundai",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            actionRules(),
+            List.of(
+                contextualTextRule(
+                    "schNm", "schNm", "educationhighschool",
+                    "education.highSchool.schoolName"
+                ),
+                contextualTextRule(
+                    "schNm", "schNm", "educationuniversity",
+                    "education.university.schoolName"
+                )
+            ),
+            ignored -> true
+        );
+
+        assertThat(policy.fieldRules()).extracting(
+            FieldRule::structuralName,
+            FieldRule::requiredDomName,
+            FieldRule::requiredItemGroupId
+        ).containsExactly(
+            org.assertj.core.groups.Tuple.tuple(
+                "schNm", "schNm", "educationhighschool"
+            ),
+            org.assertj.core.groups.Tuple.tuple(
+                "schNm", "schNm", "educationuniversity"
+            )
         );
     }
 
@@ -307,6 +356,23 @@ class CompanyFormPolicyTest {
             new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(profileFieldKey),
             false,
             requiredDomName
+        );
+    }
+
+    private static FieldRule contextualTextRule(
+        String structuralName,
+        String requiredDomName,
+        String requiredItemGroupId,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            structuralName,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(profileFieldKey),
+            false,
+            requiredDomName,
+            requiredItemGroupId
         );
     }
 

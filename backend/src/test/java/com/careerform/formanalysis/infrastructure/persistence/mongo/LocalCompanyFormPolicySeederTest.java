@@ -13,6 +13,69 @@ import org.mockito.InOrder;
 class LocalCompanyFormPolicySeederTest {
 
     @Test
+    @DisplayName("SK 검색 입력은 ID와 이름을 검증하고 ID 없는 시험 점수 선택을 지원한다")
+    void seedsExactAutocompleteInputsAndExamGradeSelect() {
+        var companies = mock(FormAnalysisCompanyMongoRepository.class);
+        var policies = mock(FormAnalysisPolicyMongoRepository.class);
+        var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        var sk = captured.getAllValues().stream()
+            .filter(policy -> policy.companyKey().equals("sk")).findFirst().orElseThrow();
+        for (var entry : java.util.Map.of(
+            "eduEducationName", "education.university.schoolName",
+            "cerCertName", "certifications.certificate.name",
+            "lngExamName", "languages.languageTest.testName",
+            "lngExamScore", "languages.languageTest.grade",
+            "lngExamScoreSel", "languages.languageTest.grade"
+        ).entrySet()) {
+            var matches = sk.fieldRules().stream()
+                .filter(rule -> rule.structuralName().equals(entry.getKey())).toList();
+            assertThat(matches).hasSize(1);
+            var rule = matches.getFirst();
+            if (entry.getKey().equals("lngExamScoreSel")) {
+                assertThat(rule.requiredDomName()).isNull();
+                assertThat(rule.element()).isEqualTo(
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT
+                );
+                assertThat(rule.control()).isEqualTo(
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT
+                );
+            } else {
+                assertThat(rule.requiredDomName()).isEqualTo(entry.getKey());
+            }
+            assertThat(rule.profileFieldKey()).isEqualTo(entry.getValue());
+        }
+    }
+
+    @Test
+    @DisplayName("SK 대학 날짜는 일자를 포함하지 않는 년월 바인딩으로 저장한다")
+    void seedsUniversityDatesAsYearMonth() {
+        var companies = mock(FormAnalysisCompanyMongoRepository.class);
+        var policies = mock(FormAnalysisPolicyMongoRepository.class);
+        var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        var sk = captured.getAllValues().stream()
+            .filter(policy -> policy.companyKey().equals("sk")).findFirst().orElseThrow();
+        for (var entry : java.util.Map.of(
+            "eduFromDate", "education.university.startDate",
+            "eduToDate", "education.university.endDate"
+        ).entrySet()) {
+            var rule = sk.fieldRules().stream()
+                .filter(candidate -> candidate.structuralName().equals(entry.getKey()))
+                .findFirst().orElseThrow();
+            assertThat(rule.valueBinding()).isEqualTo(
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding(
+                    com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe.YEAR_MONTH,
+                    entry.getValue(), null, null
+                )
+            );
+            assertThat(rule.requiredDomName()).isEqualTo(entry.getKey());
+        }
+    }
+
+    @Test
     @DisplayName("정적 회사 정책 카탈로그의 SK와 Hyundai 등록을 모두 저장한다")
     void savesStaticCompanyCatalog() {
         FormAnalysisCompanyMongoRepository companies = mock(FormAnalysisCompanyMongoRepository.class);
@@ -26,7 +89,7 @@ class LocalCompanyFormPolicySeederTest {
     }
 
     @Test
-    @DisplayName("SK 공통 구조 v20과 직무별 option lookup을 결정적으로 저장한다")
+    @DisplayName("SK 공통 구조 v22과 직무별 option lookup을 결정적으로 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
             FormAnalysisCompanyMongoRepository.class
@@ -52,7 +115,7 @@ class LocalCompanyFormPolicySeederTest {
         order.verify(companies).save(company.capture());
         assertThat(policy.getValue().id()).isEqualTo("sk-policy-v8");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
-        assertThat(policy.getValue().version()).isEqualTo(20);
+        assertThat(policy.getValue().version()).isEqualTo(22);
         assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
             .containsExactly("section-1");
         assertThat(policy.getValue().preparationFingerprint().requiredActions())
@@ -196,7 +259,7 @@ class LocalCompanyFormPolicySeederTest {
             "sk",
             "www.skcareers.com",
             java.util.List.of("/Application/Index/"),
-            20
+            22
         ));
     }
 
@@ -227,11 +290,13 @@ class LocalCompanyFormPolicySeederTest {
             .findFirst()
             .orElseThrow();
 
-        assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v3");
-        assertThat(hyundaiPolicy.version()).isEqualTo(3);
-        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(3);
+        assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v4");
+        assertThat(hyundaiPolicy.version()).isEqualTo(4);
+        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(4);
         assertThat(hyundaiPolicy.fieldRules().stream()
-            .filter(rule -> rule.requiredDomName() != null))
+            .filter(rule -> java.util.Set.of(
+                "acqDtForeLang", "acqDt", "nationLicNm"
+            ).contains(rule.structuralName())))
             .extracting("structuralName", "requiredDomName", "profileFieldKey")
             .containsExactlyInAnyOrder(
                 org.assertj.core.groups.Tuple.tuple(
@@ -248,6 +313,158 @@ class LocalCompanyFormPolicySeederTest {
                     "nationLicNm",
                     "nationLicNm",
                     "certifications.certificate.name"
+                )
+            );
+    }
+
+    @Test
+    @DisplayName("현대 v4 정책은 주소 검색과 국적1 및 학력 준비를 exact 구조로 제한한다")
+    void seedsHyundaiAddressNationalityAndEducationPreparation() {
+        FormAnalysisCompanyMongoRepository companies = mock(FormAnalysisCompanyMongoRepository.class);
+        FormAnalysisPolicyMongoRepository policies = mock(FormAnalysisPolicyMongoRepository.class);
+        ArgumentCaptor<FormAnalysisPolicyDocument> savedPolicies = ArgumentCaptor.forClass(
+            FormAnalysisPolicyDocument.class
+        );
+
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2))
+            .save(savedPolicies.capture());
+        FormAnalysisPolicyDocument hyundaiPolicy = savedPolicies.getAllValues().stream()
+            .filter(policy -> policy.companyKey().equals("hyundai"))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(hyundaiPolicy.preparationFingerprint().requiredActions().stream()
+            .filter(action -> action.structuralName().equals("hyundai:search:address"))
+            .findFirst().orElseThrow())
+            .extracting("element", "control", "requiredDomName")
+            .containsExactly(
+                com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.INPUT,
+                com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON,
+                "postCd"
+            );
+        assertThat(hyundaiPolicy.preparationFingerprint().optionalActions())
+            .extracting("structuralName", "element", "control")
+            .contains(
+                org.assertj.core.groups.Tuple.tuple(
+                    "hyundai:add:academic",
+                    com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.BUTTON,
+                    com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON
+                )
+            );
+        assertThat(hyundaiPolicy.actionRules())
+            .extracting("structuralName", "kind", "expectedFieldNames")
+            .contains(
+                org.assertj.core.groups.Tuple.tuple(
+                    "hyundai:search:address",
+                    com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind.SEARCH_ADDRESS,
+                    null
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "hyundai:add:academic",
+                    com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind.ADD,
+                    java.util.List.of("schGb")
+                )
+            );
+
+        var nationality = hyundaiPolicy.fieldRules().stream()
+            .filter(rule -> rule.structuralName().equals("nationCd1Nm"))
+            .findFirst().orElseThrow();
+        assertThat(nationality.requiredDomName()).isEqualTo("nationCd1Nm");
+        assertThat(nationality.valueBinding()).isEqualTo(
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding(
+                "personal.personal.nationality",
+                java.util.Map.of("대한민국", "대한민국")
+            )
+        );
+
+        assertThat(hyundaiPolicy.fieldRules().stream()
+            .filter(rule -> rule.structuralName().equals("postCd")
+                || rule.structuralName().equals("addr"))
+            .toList())
+            .extracting("structuralName", "profileFieldKey", "allowReadonlyWrite")
+            .containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple(
+                    "postCd", "contact.contact.postalCode", true
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "addr", "contact.contact.addressLine1", true
+                )
+            );
+    }
+
+    @Test
+    @DisplayName("현대 v4 정책은 공통 학력 DOM을 검증된 학력 종류별 item group에만 연결한다")
+    void seedsContextualHyundaiEducationFields() {
+        FormAnalysisCompanyMongoRepository companies = mock(FormAnalysisCompanyMongoRepository.class);
+        FormAnalysisPolicyMongoRepository policies = mock(FormAnalysisPolicyMongoRepository.class);
+        ArgumentCaptor<FormAnalysisPolicyDocument> savedPolicies = ArgumentCaptor.forClass(
+            FormAnalysisPolicyDocument.class
+        );
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2))
+            .save(savedPolicies.capture());
+        FormAnalysisPolicyDocument hyundaiPolicy = savedPolicies.getAllValues().stream()
+            .filter(policy -> policy.companyKey().equals("hyundai"))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(hyundaiPolicy.fieldRules().stream()
+            .filter(rule -> rule.requiredItemGroupId() != null)
+            .toList())
+            .extracting("structuralName", "requiredDomName", "requiredItemGroupId", "profileFieldKey")
+            .contains(
+                org.assertj.core.groups.Tuple.tuple(
+                    "schNm", "schNm", "educationhighschool",
+                    "education.highSchool.schoolName"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "whiStDt", "whiStDt", "educationhighschool", null
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "whiEndDt", "whiEndDt", "educationhighschool", null
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "schNm", "schNm", "educationuniversity",
+                    "education.university.schoolName"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "majorNm", "majorNm", "educationuniversity",
+                    "education.university.majorName"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "rcd", "rcd", "educationuniversity",
+                    "education.university.gpaScore"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "schNm", "schNm", "educationgraduateschool",
+                    "education.graduateSchool.schoolName"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "majorNm", "majorNm", "educationgraduateschool",
+                    "education.graduateSchool.majorName"
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "rcd", "rcd", "educationgraduateschool",
+                    "education.graduateSchool.gpaScore"
+                )
+            );
+        assertThat(hyundaiPolicy.fieldRules())
+            .noneMatch(rule -> rule.structuralName().equals("rcdM"));
+
+        assertThat(hyundaiPolicy.fieldRules().stream()
+            .filter(rule -> rule.structuralName().equals("graGb"))
+            .toList())
+            .extracting("requiredItemGroupId", "valueBinding")
+            .containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple(
+                    "educationuniversity",
+                    completionStatusBinding("education.university.completionStatus")
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    "educationgraduateschool",
+                    completionStatusBinding("education.graduateSchool.completionStatus")
                 )
             );
     }
@@ -388,6 +605,28 @@ class LocalCompanyFormPolicySeederTest {
                 .findFirst()
                 .orElseThrow()
                 .valueBinding();
+    }
+
+    private static com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding
+        completionStatusBinding(String profileFieldKey) {
+        return new com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding(
+            profileFieldKey,
+            java.util.Map.ofEntries(
+                java.util.Map.entry("졸업", "졸업"),
+                java.util.Map.entry("졸업예정", "졸업예정"),
+                java.util.Map.entry("재학", "재학중"),
+                java.util.Map.entry("재학중", "재학중"),
+                java.util.Map.entry("중퇴", "중퇴"),
+                java.util.Map.entry("수료", "수료")
+            ),
+            java.util.Map.of(
+                "졸업", "01",
+                "졸업예정", "02",
+                "재학중", "03",
+                "중퇴", "05",
+                "수료", "10"
+            )
+        );
     }
 
     private static java.util.Map<String, String> languageOptionMap(boolean skill) {

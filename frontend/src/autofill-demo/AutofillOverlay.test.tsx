@@ -144,7 +144,11 @@ describe("AutofillOverlay", () => {
           pageDocument={pageDocument}
         />,
       );
-      await screen.findByRole("heading", { name: "기입 결과" });
+      await screen.findByRole("heading", {
+        name: selectionAvailable
+          ? "기입 결과"
+          : "조건부 선택을 안전하게 적용하지 못했습니다",
+      });
       expect(observedLanguageValues).toEqual(
         selectionAvailable ? ["", "영어"] : [""],
       );

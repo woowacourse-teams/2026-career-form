@@ -1,5 +1,6 @@
 package com.careerform.formanalysis.application.policy;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -17,10 +18,12 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
 
     public StoredPolicyFieldMappingResolver(CompanyFormPolicy policy) {
         constrainedRules = policy.fieldRules().stream()
-            .filter(rule -> rule.requiredDomName() != null)
+            .filter(rule -> rule.requiredDomName() != null
+                || rule.requiredItemGroupId() != null)
             .toList();
         unconstrainedRules = policy.fieldRules().stream()
-            .filter(rule -> rule.requiredDomName() == null)
+            .filter(rule -> rule.requiredDomName() == null
+                && rule.requiredItemGroupId() == null)
             .collect(Collectors.toUnmodifiableMap(
                 FieldRule::structuralName,
                 Function.identity()
@@ -29,17 +32,25 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
 
     @Override
     public Resolution resolve(FieldsAnalysisRequest request) {
+        List<Result> results = new ArrayList<>();
+        for (FieldsAnalysisRequest.Section section : request.sections()) {
+            section.fields().forEach(candidate ->
+                results.add(resolve(candidate, null)));
+            if (section.items() == null) continue;
+            for (FieldsAnalysisRequest.Item item : section.items()) {
+                item.fields().forEach(candidate ->
+                    results.add(resolve(candidate, item.itemGroupId())));
+            }
+        }
         return new Resolution(
             request.schemaVersion(),
             request.snapshotId(),
-            request.fieldCandidatesInTraversalOrder().stream()
-                .map(this::resolve)
-                .toList()
+            List.copyOf(results)
         );
     }
 
-    private Result resolve(FieldCandidate candidate) {
-        FieldRule rule = constrainedRule(candidate);
+    private Result resolve(FieldCandidate candidate, String itemGroupId) {
+        FieldRule rule = constrainedRule(candidate, itemGroupId);
         if (rule == null && matchesAnyConstrainedStructuralName(candidate)) {
             return new NoMatch(candidate.candidateId());
         }
@@ -68,13 +79,18 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
         );
     }
 
-    private FieldRule constrainedRule(FieldCandidate candidate) {
+    private FieldRule constrainedRule(
+        FieldCandidate candidate,
+        String itemGroupId
+    ) {
         String baseDomId = baseStructuralName(candidate.domId());
         String domName = candidate.domName();
-        if (baseDomId == null || domName == null) return null;
         List<FieldRule> matches = constrainedRules.stream()
-            .filter(rule -> baseDomId.equals(rule.structuralName()))
-            .filter(rule -> domName.equals(rule.requiredDomName()))
+            .filter(rule -> rule.structuralName().equals(baseDomId))
+            .filter(rule -> rule.requiredDomName() == null
+                || rule.requiredDomName().equals(domName))
+            .filter(rule -> rule.requiredItemGroupId() == null
+                || rule.requiredItemGroupId().equals(itemGroupId))
             .toList();
         return matches.size() == 1 ? matches.getFirst() : null;
     }
@@ -84,7 +100,8 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
         String domName = candidate.domName();
         return constrainedRules.stream().anyMatch(rule ->
             rule.structuralName().equals(baseDomId)
-                || rule.requiredDomName().equals(domName)
+                || rule.requiredDomName() != null
+                    && rule.requiredDomName().equals(domName)
         );
     }
 

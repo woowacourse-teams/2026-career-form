@@ -44,10 +44,10 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [기존 구현 계획](topics/implementation-plans.md) | 계획 이력과 신규 저장 경계 | 2026-08-22 |
 | [페이지 분석 조사](topics/page-analysis-research.md) | 회사 페이지와 DOM 분석 근거 | 2026-08-22 |
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
-| [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-09-07 |
-| [현대 어댑터](topics/adapter-hyundai.md) | 현대 프론트 수집·입력과 검증 제한 | 2026-09-07 |
-| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-07 |
-| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동·수동 검증 상태 | 2026-09-07 |
+| [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-09-08 |
+| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소·국적·학력 수집·입력과 검증 제한 | 2026-09-08 |
+| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-08 |
+| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동·수동 검증 상태 | 2026-09-08 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2 Action/Field LLM 계약과 항상 존재하는 두 endpoint | 2026-08-26 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | Resolver port, 비식별 LLM 투영과 browser 실행 경계 | 2026-08-26 |

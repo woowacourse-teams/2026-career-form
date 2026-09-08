@@ -51,6 +51,7 @@ export interface PreparationSection {
 }
 
 export interface FieldsItem {
+  itemGroupId?: string;
   itemId: string;
   fields: FieldCandidate[];
 }

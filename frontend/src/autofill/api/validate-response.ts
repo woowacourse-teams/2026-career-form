@@ -1,3 +1,4 @@
+import { isAddressSearchAction } from "../adapters/address-contract";
 import type {
   FieldCandidate,
   FieldsAnalyzeRequest,
@@ -230,29 +231,15 @@ export function validatePreparationResponse(
         ...section.actionCandidates,
         ...(section.items ?? []).flatMap((item) => item.actionCandidates),
       ])
-      .filter(
-        (action) =>
-          action.domId === "btnSearchAddress" ||
-          action.domName === "btnSearchAddress",
-      );
+      .filter((action) => isAddressSearchAction(request.site, action));
     const search = searchActions[0];
     const validAddress =
       hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect"]) &&
       plan.command === "SEARCH_ADDRESS" &&
       plan.expectedEffect === "ADDRESS_SELECTED" &&
       value.mode === "ADAPTER" &&
-      request.site.host === "www.skcareers.com" &&
-      request.site.pathPattern.startsWith("/Application/Index/") &&
       searchActions.length === 1 &&
-      search?.candidateId === plan.actionCandidateId &&
-      search.domId === "btnSearchAddress" &&
-      (!search.domName || search.domName === "btnSearchAddress") &&
-      search.element === "button" &&
-      search.control === "button" &&
-      search.visibility === "visible" &&
-      !search.disabled &&
-      !search.readonly &&
-      !search.inert;
+      search?.candidateId === plan.actionCandidateId;
     if (!validReveal && !validAddition && !validSelection && !validAddress) {
       throw new AnalysisContractError();
     }

@@ -84,8 +84,13 @@ public record FieldsAnalysisRequest(
 
     public record Item(
         @NotBlank @Size(max = 128) String itemId,
-        @NotNull @Size(min = 1) List<@NotNull @Valid FieldCandidate> fields
+        @NotNull @Size(min = 1) List<@NotNull @Valid FieldCandidate> fields,
+        @Size(min = 1, max = 128) String itemGroupId
     ) {
+
+        public Item(String itemId, List<FieldCandidate> fields) {
+            this(itemId, fields, null);
+        }
     }
 
     public record FieldCandidate(

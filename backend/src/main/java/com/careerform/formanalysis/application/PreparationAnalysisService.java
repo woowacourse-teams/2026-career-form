@@ -87,8 +87,11 @@ public final class PreparationAnalysisService {
             return PreparationAnalysisResponse.complete(
                 request.snapshotId(),
                 mode,
-                mapPlansInRequestOrder(request, resolution, addressSearch && mode == Mode.ADAPTER
-                    && "www.skcareers.com".equalsIgnoreCase(request.site().host()))
+                mapPlansInRequestOrder(
+                    request,
+                    resolution,
+                    addressSearch && mode == Mode.ADAPTER
+                )
             );
         }
         catch (ResolverException exception) {

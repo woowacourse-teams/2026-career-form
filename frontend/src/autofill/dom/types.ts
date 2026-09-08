@@ -20,6 +20,7 @@ export interface ActionCandidateHandle extends CandidateHandleBase {
 
 export interface FieldCandidateHandle extends CandidateHandleBase {
   kind: "field";
+  isCurrentContext?: () => boolean;
   candidate: FieldCandidate;
   elements: Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
   optionElements: Map<string, HTMLOptionElement | HTMLInputElement>;

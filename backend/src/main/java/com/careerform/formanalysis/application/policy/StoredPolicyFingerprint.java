@@ -51,7 +51,9 @@ public final class StoredPolicyFingerprint {
         return required.structuralNames().stream().anyMatch(name -> PolicyStructuralMetadata.matches(
                 name, candidate.domId(), candidate.domName(), candidate.displayName()))
             && required.element() == candidate.element()
-            && required.control() == candidate.control();
+            && required.control() == candidate.control()
+            && (required.requiredDomName() == null
+                || required.requiredDomName().equals(candidate.domName()));
     }
 
     private static boolean matches(

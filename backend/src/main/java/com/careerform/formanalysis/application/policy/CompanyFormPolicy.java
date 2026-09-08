@@ -114,12 +114,23 @@ public final class CompanyFormPolicy {
     }
 
     private static void requireUniqueFieldRules(List<FieldRule> rules) {
-        Set<String> structuralNames = new HashSet<>();
+        Set<FieldRuleIdentity> identities = new HashSet<>();
         for (FieldRule rule : rules) {
-            if (rule == null || !structuralNames.add(rule.structuralName())) {
+            if (rule == null || !identities.add(new FieldRuleIdentity(
+                rule.structuralName(),
+                rule.requiredDomName(),
+                rule.requiredItemGroupId()
+            ))) {
                 invalidPolicy();
             }
         }
+    }
+
+    private record FieldRuleIdentity(
+        String structuralName,
+        String requiredDomName,
+        String requiredItemGroupId
+    ) {
     }
 
     private static void validateActionRule(
@@ -239,7 +250,8 @@ public final class CompanyFormPolicy {
     public record ActionStructure(
         List<String> structuralNames,
         PreparationAnalysisRequest.FormElement element,
-        PreparationAnalysisRequest.FormControl control
+        PreparationAnalysisRequest.FormControl control,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String requiredDomName
     ) {
 
         public ActionStructure {
@@ -251,6 +263,17 @@ public final class CompanyFormPolicy {
             structuralNames = List.copyOf(structuralNames);
             Objects.requireNonNull(element);
             Objects.requireNonNull(control);
+            if (requiredDomName != null) {
+                requireText(requiredDomName);
+            }
+        }
+
+        public ActionStructure(
+            List<String> structuralNames,
+            PreparationAnalysisRequest.FormElement element,
+            PreparationAnalysisRequest.FormControl control
+        ) {
+            this(structuralNames, element, control, null);
         }
 
         public ActionStructure(
@@ -258,7 +281,16 @@ public final class CompanyFormPolicy {
             PreparationAnalysisRequest.FormElement element,
             PreparationAnalysisRequest.FormControl control
         ) {
-            this(List.of(structuralName), element, control);
+            this(List.of(structuralName), element, control, null);
+        }
+
+        public ActionStructure(
+            String structuralName,
+            PreparationAnalysisRequest.FormElement element,
+            PreparationAnalysisRequest.FormControl control,
+            String requiredDomName
+        ) {
+            this(List.of(structuralName), element, control, requiredDomName);
         }
 
         public String structuralName() {
@@ -372,8 +404,23 @@ public final class CompanyFormPolicy {
         FieldsAnalysisRequest.FormControl control,
         ValueBinding valueBinding,
         boolean allowReadonlyWrite,
-        @JsonInclude(JsonInclude.Include.NON_NULL) String requiredDomName
+        @JsonInclude(JsonInclude.Include.NON_NULL) String requiredDomName,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String requiredItemGroupId
     ) {
+
+        public FieldRule(
+            String structuralName,
+            FieldsAnalysisRequest.FormElement element,
+            FieldsAnalysisRequest.FormControl control,
+            ValueBinding valueBinding,
+            boolean allowReadonlyWrite,
+            String requiredDomName
+        ) {
+            this(
+                structuralName, element, control, valueBinding,
+                allowReadonlyWrite, requiredDomName, null
+            );
+        }
 
         public FieldRule(
             String structuralName,
@@ -382,7 +429,7 @@ public final class CompanyFormPolicy {
             ValueBinding valueBinding,
             boolean allowReadonlyWrite
         ) {
-            this(structuralName, element, control, valueBinding, allowReadonlyWrite, null);
+            this(structuralName, element, control, valueBinding, allowReadonlyWrite, null, null);
         }
 
         public FieldRule(
@@ -407,6 +454,7 @@ public final class CompanyFormPolicy {
                 control,
                 new DirectBinding(profileFieldKey),
                 allowReadonlyWrite,
+                null,
                 null
             );
         }
@@ -417,7 +465,7 @@ public final class CompanyFormPolicy {
             FieldsAnalysisRequest.FormControl control,
             ValueBinding valueBinding
         ) {
-            this(structuralName, element, control, valueBinding, false, null);
+            this(structuralName, element, control, valueBinding, false, null, null);
         }
 
         public String profileFieldKey() {
@@ -433,6 +481,9 @@ public final class CompanyFormPolicy {
             Objects.requireNonNull(valueBinding);
             if (requiredDomName != null) {
                 requireText(requiredDomName);
+            }
+            if (requiredItemGroupId != null) {
+                requireText(requiredItemGroupId);
             }
             if (allowReadonlyWrite
                 && (element != FieldsAnalysisRequest.FormElement.INPUT

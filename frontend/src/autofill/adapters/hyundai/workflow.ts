@@ -1,3 +1,7 @@
+import { runHyundaiEducationSearch } from "./school-search";
+import { runHyundaiAddress, hyundaiAddressNames } from "./address";
+import { runHyundaiNationality } from "./nationality";
+import { prepareHyundaiEducation } from "./education";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { WorkflowAdapter } from "../workflow";
@@ -152,6 +156,17 @@ async function settleExamDriver(
 }
 
 export const hyundaiWorkflowAdapter: WorkflowAdapter = {
+  runAddress: runHyundaiAddress,
+  addressFieldNames: hyundaiAddressNames,
+  prepareEducation: prepareHyundaiEducation,
+  educationPreparationActionId: "hyundai:add:academic",
+  executeStateDriver: async (document, handle, item, signal) => {
+    if (structuralBase(handle) === "nationCd1Nm")
+      return runHyundaiNationality(document, handle, item, signal);
+    if (["schNm", "majorNm"].includes(structuralBase(handle) ?? ""))
+      return runHyundaiEducationSearch(document, handle, item, signal);
+    return undefined;
+  },
   repeatedProfileSectionHint: (actionDomId) => {
     switch (actionDomId) {
       case "hyundai:add:foreign":
@@ -168,6 +183,27 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
   stateDriverStage: (item, handle) => {
     const fieldKey = profileFieldKey(item);
     if (
+      ["schNm", "majorNm"].includes(structuralBase(handle) ?? "") &&
+      item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
+      item.analysis.interactionStatus === "READY" &&
+      item.analysis.writePlan?.command === "SET_TEXT" &&
+      fieldKey?.startsWith("education.") &&
+      handle.itemGroupId?.startsWith("education")
+    ) {
+      return (
+        3 +
+        (handle.itemIndex ?? 0) * 2 +
+        (structuralBase(handle) === "majorNm" ? 1 : 0)
+      );
+    }
+    if (
+      structuralBase(handle) === "nationCd1Nm" &&
+      fieldKey === "personal.personal.nationality" &&
+      item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
+      item.analysis.interactionStatus === "READY"
+    )
+      return 1;
+    if (
       structuralBase(handle) === "foreLang" &&
       fieldKey === "languages.languageTest.language"
     ) {
@@ -182,7 +218,9 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     return undefined;
   },
   waitForStateDriverReady: (document, handle) =>
-    waitFor(document, () => hasOwnOptions(handle)),
+    ["nationCd1Nm", "schNm", "majorNm"].includes(structuralBase(handle) ?? "")
+      ? Promise.resolve(true)
+      : waitFor(document, () => hasOwnOptions(handle)),
   settleStateDriver: (document, handle) => {
     if (structuralBase(handle) === "foreLang") {
       return settleLanguageDriver(document, handle);

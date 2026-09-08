@@ -221,6 +221,8 @@ function actionDomId(
   element: HTMLElement,
   adapter: CollectionAdapter,
 ): string | undefined {
+  const adapterId = adapter.actionDomId(element);
+  if (adapterId) return adapterId;
   const nativeId = metadata(element.id);
   if (nativeId) return nativeId;
   return adapter.actionDomId(element);
@@ -288,7 +290,8 @@ export function collectFieldsSnapshot(
         adapter,
         "fields",
       ).map((element, itemPosition) => {
-        const itemGroupId = repeatableItemGroupId(element);
+        const itemGroupId =
+          adapter.itemGroupId?.(element) ?? repeatableItemGroupId(element);
         const itemGroupKey = itemGroupId ?? "";
         const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
         itemGroupIndexes.set(itemGroupKey, itemIndex + 1);
@@ -402,6 +405,13 @@ export function collectFieldsSnapshot(
             ...(item
               ? {
                   itemId: item.itemId,
+                  ...(adapter.itemGroupId?.(item.element) !== undefined
+                    ? {
+                        isCurrentContext: () =>
+                          adapter.itemGroupId!(item.element) ===
+                          item.itemGroupId,
+                      }
+                    : {}),
                   itemIndex: item.itemIndex,
                   ...(item.itemGroupId
                     ? { itemGroupId: item.itemGroupId }
@@ -429,8 +439,9 @@ export function collectFieldsSnapshot(
       }
       const itemFields: FieldsItem[] = repeatableItems
         .filter(({ fields: itemFields }) => itemFields.length > 0)
-        .map(({ itemId, fields: itemFields }) => ({
+        .map(({ itemId, itemGroupId, fields: itemFields }) => ({
           itemId,
+          ...(itemGroupId ? { itemGroupId } : {}),
           fields: itemFields,
         }));
       sections.push({
@@ -623,7 +634,10 @@ export function collectPreparationSnapshot(
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: PreparationSection[] = [];
-  const actions = collectActionElements(document);
+  const actions = [
+    ...collectActionElements(document),
+    ...(adapter.additionalActionElements?.(document) ?? []),
+  ];
   const selector = sectionSelector(adapter);
   const actionsBySection = groupBySection(actions, selector);
   const containers: Array<Element | null> = Array.from(

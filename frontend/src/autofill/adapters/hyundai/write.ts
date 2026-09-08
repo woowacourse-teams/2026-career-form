@@ -52,6 +52,13 @@ function selectButtonOption(
 
 export const hyundaiWriteAdapter: CompanyWriteAdapter = {
   tryWrite(handle, item) {
+    if (
+      handle.candidate.domName === "nationCd1Nm" ||
+      handle.candidate.domName === "schNm" ||
+      handle.candidate.domName === "majorNm"
+    ) {
+      return { handled: true, written: false };
+    }
     if (item.analysis?.writePlan?.command !== "SELECT_BUTTON_OPTION")
       return { handled: false };
     return { handled: true, written: selectButtonOption(handle, item) };
