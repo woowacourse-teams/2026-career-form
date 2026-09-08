@@ -661,4 +661,43 @@ describe("approved preparation plan executor", () => {
       mayCollectFieldsSnapshot: false,
     });
   });
+
+  it("does not treat pre-existing expected fields as a successful final addition", async () => {
+    document.body.innerHTML = `
+      <section>
+        <div data-repeatable-group><input name="nationLicNm" /></div>
+        <button id="action-add" type="button">자격 항목 추가</button>
+      </section>
+    `;
+    const action = document.querySelector<HTMLButtonElement>("button")!;
+    const section = document.querySelector("section")!;
+    action.addEventListener("click", () => {
+      const group = document.createElement("div");
+      group.dataset.repeatableGroup = "";
+      section.insertBefore(group, action);
+      action.remove();
+    });
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [
+        {
+          plan: { ...addPlan, expectedFieldNames: ["nationLicNm"] },
+          approved: true,
+          localItemCount: 2,
+        },
+      ],
+      initialSnapshot: snapshotFor(action),
+      refreshSnapshot: async () =>
+        snapshotFor(action, { registerAction: false }),
+      countRepeatableGroups: () =>
+        document.querySelectorAll("[data-repeatable-group]").length,
+      waitForExpectedFields: async () => true,
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "action-not-reidentified",
+      mayCollectFieldsSnapshot: false,
+    });
+  });
 });

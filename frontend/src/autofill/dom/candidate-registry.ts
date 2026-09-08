@@ -133,11 +133,7 @@ export class CandidateRegistry {
     domId?: string;
     domName?: string;
   }): CandidateLookup<ActionCandidateHandle> {
-    if (
-      !identity.displayName &&
-      !identity.domName &&
-      !identity.domId
-    ) {
+    if (!identity.displayName && !identity.domName && !identity.domId) {
       return { status: "unknown" };
     }
     const hasStableStructuralName =
@@ -150,9 +146,7 @@ export class CandidateRegistry {
         (identity.domName === undefined ||
           handle.candidate.domName === identity.domName) &&
         (identity.domId === undefined ||
-          handle.candidate.domId === identity.domId ||
-          (handle.candidate.domId === undefined &&
-            identity.displayName !== undefined)),
+          handle.candidate.domId === identity.domId),
     );
     if (matches.length !== 1) return { status: "unknown" };
     return this.lookup(matches[0]);

@@ -16,7 +16,7 @@ public interface ActionResolver {
     ) {
     }
 
-    sealed interface Result permits RevealAction, AddAction, SelectOptionAction, NoAction {
+    sealed interface Result permits RevealAction, AddAction, SelectOptionAction, SearchAddressAction, NoAction {
         String candidateId();
     }
 
@@ -50,6 +50,9 @@ public interface ActionResolver {
         ) {
             this(candidateId, profileFieldKey, optionDisplayName, targetSectionId, expectedFieldNames, null, null);
         }
+    }
+
+    record SearchAddressAction(String candidateId) implements Result {
     }
 
     record NoAction(String candidateId) implements Result {

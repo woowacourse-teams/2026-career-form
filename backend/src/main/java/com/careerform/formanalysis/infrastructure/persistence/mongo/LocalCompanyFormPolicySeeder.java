@@ -16,6 +16,7 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldRul
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldStructure;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFingerprint;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
@@ -28,7 +29,7 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     private static final String COMPANY_KEY = "sk";
-    private static final long VERSION = 17;
+    private static final long VERSION = 20;
 
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
@@ -57,15 +58,15 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             "hyundai",
             "talent.hyundai.com",
             List.of("/apply/applyWrite.hc"),
-            2
+            3
         ));
     }
 
     private static FormAnalysisPolicyDocument hyundaiPolicy() {
         return new FormAnalysisPolicyDocument(
-            "hyundai-policy-v2",
+            "hyundai-policy-v3",
             "hyundai",
-            2,
+            3,
             new PreparationFingerprint(
                 Set.of("section-root"),
                 List.of(
@@ -165,10 +166,103 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 ),
                 textareaRule("ownWork", "careers.career.responsibilities"),
                 textRule("retResEtcCont", "careers.career.terminationReason"),
-                textRule("acqDtForeLang", "languages.languageTest.acquisitionDate"),
+                verifiedButtonOptionRule(
+                    "foreLang",
+                    "languages.languageTest.language",
+                    Map.ofEntries(
+                        Map.entry("한국어", "01"), Map.entry("영어", "02"),
+                        Map.entry("중국어", "03"), Map.entry("아랍어", "04"),
+                        Map.entry("스페인어", "07"), Map.entry("포르투갈어", "08"),
+                        Map.entry("프랑스어", "09"), Map.entry("독일어", "10"),
+                        Map.entry("러시아어", "11"), Map.entry("일본어", "12"),
+                        Map.entry("베트남어", "16"), Map.entry("인도네시아어", "18"),
+                        Map.entry("이탈리아어", "21")
+                    ),
+                    Map.of()
+                ),
+                verifiedButtonOptionRule(
+                    "foreExamCd",
+                    "languages.languageTest.testName",
+                    Map.ofEntries(
+                        Map.entry("WPT", "60"), Map.entry("IELTS", "64"),
+                        Map.entry("TOEIC", "01"), Map.entry("TEPS", "03"),
+                        Map.entry("New TEPS", "47"), Map.entry("TOEFL(IBT)", "10"),
+                        Map.entry("SPA", "12"), Map.entry("TOEIC SPEAKING", "15"),
+                        Map.entry("OPIC", "16"), Map.entry("TEPS SPEAKING", "42"),
+                        Map.entry("TOEIC Writing", "57")
+                    ),
+                    Map.ofEntries(
+                        Map.entry("OPIc", "OPIC"),
+                        Map.entry("오픽", "OPIC"),
+                        Map.entry("토익", "TOEIC"),
+                        Map.entry("TOEIC Speaking", "TOEIC SPEAKING"),
+                        Map.entry("토익스피킹", "TOEIC SPEAKING")
+                    )
+                ),
+                verifiedButtonOptionRule(
+                    "gradeForeLang",
+                    "languages.languageTest.grade",
+                    Map.ofEntries(
+                        Map.entry("IM", "35"), Map.entry("Superior", "42"),
+                        Map.entry("AH", "41"), Map.entry("AM", "40"),
+                        Map.entry("AL", "33"), Map.entry("IH", "34"),
+                        Map.entry("IM3", "147"), Map.entry("IM2", "146"),
+                        Map.entry("IM1", "145"), Map.entry("IL", "36"),
+                        Map.entry("NH", "37"), Map.entry("NM", "38"),
+                        Map.entry("NL", "39")
+                    ),
+                    Map.of()
+                ),
+                constrainedTextRule(
+                    "acqDtForeLang",
+                    "acqDt",
+                    "languages.languageTest.acquisitionDate"
+                ),
                 textRule("point", "languages.languageTest.grade"),
                 textRule("acqNm", "languages.languageTest.registrationNo"),
-                textRule("acqDt", "certifications.certificate.acquisitionDate"),
+                verifiedButtonOptionRule(
+                    "foreLangAbility",
+                    "languages.languageSkill.language",
+                    Map.ofEntries(
+                        Map.entry("한국어", "01"), Map.entry("영어", "02"),
+                        Map.entry("중국어", "03"), Map.entry("아랍어", "04"),
+                        Map.entry("스페인어", "07"), Map.entry("포르투갈어", "08"),
+                        Map.entry("프랑스어", "09"), Map.entry("독일어", "10"),
+                        Map.entry("러시아어", "11"), Map.entry("일본어", "12"),
+                        Map.entry("이탈리아어", "21")
+                    ),
+                    Map.of()
+                ),
+                verifiedButtonOptionRule(
+                    "speak",
+                    "languages.languageSkill.conversationalLevel",
+                    Map.of(
+                        "Native (원어민 수준)", "01",
+                        "Advanced (비즈니스 가능)", "02",
+                        "Intermediate (일상생활 가능)", "03",
+                        "Elementary (초급 수준)", "04"
+                    ),
+                    Map.ofEntries(
+                        Map.entry("Native", "Native (원어민 수준)"),
+                        Map.entry("원어민 수준", "Native (원어민 수준)"),
+                        Map.entry("Advanced", "Advanced (비즈니스 가능)"),
+                        Map.entry("비즈니스 가능", "Advanced (비즈니스 가능)"),
+                        Map.entry("Intermediate", "Intermediate (일상생활 가능)"),
+                        Map.entry("일상생활 가능", "Intermediate (일상생활 가능)"),
+                        Map.entry("Elementary", "Elementary (초급 수준)"),
+                        Map.entry("초급 수준", "Elementary (초급 수준)")
+                    )
+                ),
+                constrainedTextRule(
+                    "nationLicNm",
+                    "nationLicNm",
+                    "certifications.certificate.name"
+                ),
+                constrainedTextRule(
+                    "acqDt",
+                    "acqDt",
+                    "certifications.certificate.acquisitionDate"
+                ),
                 textRule("regNo", "certifications.certificate.registrationNo"),
                 textRule("issueOrg", "certifications.certificate.issuer"),
                 textRule("hopePos", "compensation.compensation.desiredPosition"),
@@ -225,6 +319,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 )
             ),
             List.of(
+                new ActionRule("btnSearchAddress", ActionKind.SEARCH_ADDRESS, null),
                 new ActionRule(
                     "prsMilitarySvcStatus", ActionKind.SELECT_OPTION,
                     "section-1", "military.military.militaryStatus"
@@ -266,11 +361,59 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "prsResidenceNation",
                     "contact.contact.residenceCountry"
                 ),
+                constrainedLookupSelectRule(
+                    "prsNationality",
+                    "prsNationality",
+                    "personal.personal.nationality",
+                    Map.of("대한민국", "대한민국")
+                ),
                 textRule("prsEngFirstName", "personal.personal.englishGivenName"),
                 textRule("prsEngLastName", "personal.personal.englishFamilyName"),
                 readonlyTextRule("prsZipCode", "contact.contact.postalCode"),
                 readonlyTextRule("prsAddress", "contact.contact.addressLine1"),
                 textRule("prsAddressDtl", "contact.contact.addressLine2"),
+                constrainedTextRule(
+                    "carCorpName",
+                    "carCorpName",
+                    "careers.career.companyName"
+                ),
+                constrainedTextRule(
+                    "carDeptName",
+                    "carDeptName",
+                    "careers.career.department"
+                ),
+                constrainedTextRule(
+                    "carPosition",
+                    "carPosition",
+                    "careers.career.position"
+                ),
+                constrainedTextareaRule(
+                    "carDescription",
+                    "carDescription",
+                    "careers.career.responsibilities"
+                ),
+                constrainedDerivedTextRule(
+                    "carFromDate",
+                    "carFromDate",
+                    DerivedRecipe.YEAR_MONTH,
+                    "careers.career.startDate"
+                ),
+                constrainedDerivedTextRule(
+                    "carToDate",
+                    "carToDate",
+                    DerivedRecipe.YEAR_MONTH,
+                    "careers.career.endDate"
+                ),
+                lookupSelectRule(
+                    "carWorkingYN",
+                    "careers.career.employmentStatus",
+                    Map.of("재직중", "재직 중", "퇴사", "퇴사")
+                ),
+                constrainedTextareaRule(
+                    "carRetireDesc",
+                    "carRetireDesc",
+                    "careers.career.terminationReason"
+                ),
                 derivedRadioRule(
                     "prsVeteranBenefitYN", DerivedRecipe.BOOLEAN_YN,
                     "veteran.veteran.veteranStatus", "대상", "비대상"
@@ -476,6 +619,52 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
         );
     }
 
+    private static FieldRule constrainedTextRule(
+        String name,
+        String requiredDomName,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.TEXT,
+            new DirectBinding(profileFieldKey),
+            false,
+            requiredDomName
+        );
+    }
+
+    private static FieldRule constrainedTextareaRule(
+        String name,
+        String requiredDomName,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.TEXTAREA,
+            FieldsAnalysisRequest.FormControl.TEXTAREA,
+            new DirectBinding(profileFieldKey),
+            false,
+            requiredDomName
+        );
+    }
+
+    private static FieldRule constrainedDerivedTextRule(
+        String name,
+        String requiredDomName,
+        DerivedRecipe recipe,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.TEXT,
+            new DerivedBinding(recipe, profileFieldKey),
+            false,
+            requiredDomName
+        );
+    }
+
     private static FieldRule textareaRule(String name, String profileFieldKey) {
         return new FieldRule(
             name,
@@ -540,6 +729,22 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
         );
     }
 
+    private static FieldRule constrainedLookupSelectRule(
+        String name,
+        String requiredDomName,
+        String profileFieldKey,
+        Map<String, String> optionMap
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.SELECT,
+            FieldsAnalysisRequest.FormControl.SELECT,
+            new LookupBinding(profileFieldKey, optionMap),
+            false,
+            requiredDomName
+        );
+    }
+
     private static FieldRule buttonOptionRule(
         String name,
         String profileFieldKey,
@@ -551,6 +756,23 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             FieldsAnalysisRequest.FormElement.INPUT,
             FieldsAnalysisRequest.FormControl.BUTTON,
             new ButtonOptionBinding(profileFieldKey, optionMap, optionCodeMap)
+        );
+    }
+
+    private static FieldRule verifiedButtonOptionRule(
+        String name,
+        String profileFieldKey,
+        Map<String, String> optionCodeMap,
+        Map<String, String> aliases
+    ) {
+        Map<String, String> optionMap = new java.util.LinkedHashMap<>();
+        optionCodeMap.keySet().forEach(option -> optionMap.put(option, option));
+        optionMap.putAll(aliases);
+        return buttonOptionRule(
+            name,
+            profileFieldKey,
+            Map.copyOf(optionMap),
+            optionCodeMap
         );
     }
 

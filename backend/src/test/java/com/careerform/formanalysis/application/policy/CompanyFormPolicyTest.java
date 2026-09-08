@@ -126,6 +126,29 @@ class CompanyFormPolicyTest {
     }
 
     @Test
+    @DisplayName("field rule은 선택적인 DOM name 제약을 보존한다")
+    void preservesOptionalRequiredDomName() {
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "hyundai",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            actionRules(),
+            List.of(
+                constrainedTextRule("shared-date", "language-date", "contact.contact.email")
+            ),
+            ignored -> true
+        );
+
+        assertThat(policy.fieldRules()).extracting(
+            FieldRule::structuralName,
+            FieldRule::requiredDomName
+        ).containsExactly(
+            org.assertj.core.groups.Tuple.tuple("shared-date", "language-date")
+        );
+    }
+
+    @Test
     @DisplayName("필드 정책은 직접값 대신 승인된 조합 recipe를 지정할 수 있다")
     void acceptsDerivedValueBinding() {
         FieldRule rule = new FieldRule(
@@ -269,6 +292,21 @@ class CompanyFormPolicyTest {
             com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
             com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
             profileFieldKey
+        );
+    }
+
+    private static FieldRule constrainedTextRule(
+        String structuralName,
+        String requiredDomName,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            structuralName,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(profileFieldKey),
+            false,
+            requiredDomName
         );
     }
 

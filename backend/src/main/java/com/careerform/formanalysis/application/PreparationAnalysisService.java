@@ -48,6 +48,10 @@ public final class PreparationAnalysisService {
     }
 
     public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request) {
+        return analyze(request, false);
+    }
+
+    public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request, boolean addressSearch) {
         validateSnapshot(request);
         ActionRoute route = router.route(request);
         if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
@@ -83,7 +87,8 @@ public final class PreparationAnalysisService {
             return PreparationAnalysisResponse.complete(
                 request.snapshotId(),
                 mode,
-                mapPlansInRequestOrder(request, resolution)
+                mapPlansInRequestOrder(request, resolution, addressSearch && mode == Mode.ADAPTER
+                    && "www.skcareers.com".equalsIgnoreCase(request.site().host()))
             );
         }
         catch (ResolverException exception) {
@@ -189,7 +194,8 @@ public final class PreparationAnalysisService {
 
     private static List<PreparationPlan> mapPlansInRequestOrder(
         PreparationAnalysisRequest request,
-        ActionResolver.Resolution resolution
+        ActionResolver.Resolution resolution,
+        boolean addressSearch
     ) {
         Map<String, ActionResolver.Result> byCandidate = new HashMap<>();
         for (ActionResolver.Result result : resolution.results()) {
@@ -198,6 +204,7 @@ public final class PreparationAnalysisService {
         return request.actionCandidateIdsInTraversalOrder().stream()
             .map(byCandidate::get)
             .filter(result -> !(result instanceof ActionResolver.NoAction))
+            .filter(result -> addressSearch || !(result instanceof ActionResolver.SearchAddressAction))
             .map(PreparationAnalysisService::toPlan)
             .toList();
     }
@@ -218,6 +225,10 @@ public final class PreparationAnalysisService {
                 select.optionDisplayName(),
                 select.targetSectionId(), select.expectedFieldNames(),
                 select.selectableProfileValues(), select.revealedFieldBindings());
+        }
+        if (result instanceof ActionResolver.SearchAddressAction search) {
+            return new PreparationAnalysisResponse.SearchAddressPlan(search.candidateId(),
+                Command.SEARCH_ADDRESS, ExpectedEffect.ADDRESS_SELECTED);
         }
         ActionResolver.AddAction add = (ActionResolver.AddAction) result;
         return new AddRepeatableGroupPlan(

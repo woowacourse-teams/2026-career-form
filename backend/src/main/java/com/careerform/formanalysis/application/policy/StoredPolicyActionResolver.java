@@ -16,10 +16,12 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest.Visibility;
 
 public final class StoredPolicyActionResolver implements ActionResolver {
 
+    private final boolean skPolicy;
     private final Map<String, ActionRule> rules;
     private final Map<String, ActionStructure> structures;
 
     public StoredPolicyActionResolver(CompanyFormPolicy policy) {
+        skPolicy = "sk".equals(policy.companyKey());
         rules = policy.actionRules().stream()
             .flatMap(rule -> rule.structuralNames().stream().map(name -> Map.entry(name, rule)))
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -71,6 +73,11 @@ public final class StoredPolicyActionResolver implements ActionResolver {
             return new NoAction(candidate.candidateId());
         }
         return switch (rule.kind()) {
+            case SEARCH_ADDRESS -> skPolicy
+                && "btnSearchAddress".equals(candidate.domId())
+                && (candidate.domName() == null || "btnSearchAddress".equals(candidate.domName()))
+                && candidate.element() == FormElement.BUTTON && candidate.control() == FormControl.BUTTON
+                ? new SearchAddressAction(candidate.candidateId()) : new NoAction(candidate.candidateId());
             case REVEAL -> new RevealAction(candidate.candidateId(), rule.targetSectionId());
             case ADD -> new AddAction(candidate.candidateId(), rule.expectedFieldNames());
             case SELECT_OPTION -> new SelectOptionAction(

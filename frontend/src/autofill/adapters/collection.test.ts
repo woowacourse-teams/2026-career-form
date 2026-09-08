@@ -43,4 +43,88 @@ describe("collection adapter selection", () => {
     expect(sk.requiresVisibleControl("preparation", "generic")).toBe(false);
     expect(generic.requiresVisibleControl("fields", "generic")).toBe(false);
   });
+
+  it("derives Hyundai project and publication actions from verified row fields", () => {
+    document.body.innerHTML = `
+      <article class="field-form-apply">
+        <div class="field-content">
+          <input id="prjNm_1" name="prjNm" type="text" />
+          <input id="prjStDt_1" name="prjStDt" type="text" />
+          <input id="prjEndDt_1" name="prjEndDt" type="text" />
+          <input id="prjRoleNm_1" name="prjRoleNm" type="text" />
+          <textarea id="prjRoleDtl_1" name="prjRoleDtl"></textarea>
+        </div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+      <article class="field-form-apply">
+        <div class="field-content">
+          <input id="typeGb_1" type="button" />
+          <input id="title_1" name="title" />
+          <textarea id="cont_1" name="cont"></textarea>
+        </div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+      <article class="field-form-apply">
+        <div class="field-content"><input id="adrCd_1" name="adrCd" /></div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+    `;
+    const actions = document.querySelectorAll<HTMLButtonElement>("button");
+    const hyundai = collectionAdapterForHost("talent.hyundai.com");
+
+    expect(hyundai.actionDomId(actions[0]!)).toBe("hyundai:add:project");
+    expect(hyundai.actionDomId(actions[1]!)).toBe("hyundai:add:publication");
+    expect(hyundai.actionDomId(actions[2]!)).toBeUndefined();
+  });
+
+  it("rejects partial, split, ambiguous, and nested Hyundai action structures", () => {
+    document.body.innerHTML = `
+      <article class="field-form-apply">
+        <div class="field-content"><input id="prjNm_1" name="prjNm" type="text" /></div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+      <article class="field-form-apply">
+        <div class="field-content"><input id="typeGb_1" type="button" /></div>
+        <div class="field-content">
+          <input id="title_1" name="title" type="text" />
+          <textarea id="cont_1" name="cont"></textarea>
+        </div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+      <article class="field-form-apply">
+        <div class="field-content">
+          <input id="prjNm_1" name="prjNm" type="text" />
+          <input id="prjStDt_1" name="prjStDt" type="text" />
+          <input id="prjEndDt_1" name="prjEndDt" type="text" />
+          <input id="prjRoleNm_1" name="prjRoleNm" type="text" />
+          <textarea id="prjRoleDtl_1" name="prjRoleDtl"></textarea>
+          <input id="typeGb_1" type="button" />
+          <input id="title_1" name="title" type="text" />
+          <textarea id="cont_1" name="cont"></textarea>
+        </div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+      <article class="field-form-apply">
+        <div class="field-content">
+          <article class="field-form-apply">
+            <div class="field-content">
+              <input id="prjNm_1" name="prjNm" type="text" />
+              <input id="prjStDt_1" name="prjStDt" type="text" />
+              <input id="prjEndDt_1" name="prjEndDt" type="text" />
+              <input id="prjRoleNm_1" name="prjRoleNm" type="text" />
+              <textarea id="prjRoleDtl_1" name="prjRoleDtl"></textarea>
+            </div>
+          </article>
+        </div>
+        <button class="btn-group-add" type="button">추가</button>
+      </article>
+    `;
+    const actions = document.querySelectorAll<HTMLButtonElement>("button");
+    const hyundai = collectionAdapterForHost("talent.hyundai.com");
+
+    expect(hyundai.actionDomId(actions[0]!)).toBeUndefined();
+    expect(hyundai.actionDomId(actions[1]!)).toBeUndefined();
+    expect(hyundai.actionDomId(actions[2]!)).toBeUndefined();
+    expect(hyundai.actionDomId(actions[3]!)).toBeUndefined();
+  });
 });

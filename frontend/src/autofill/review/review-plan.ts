@@ -238,9 +238,9 @@ function itemForAnalysis(
       analysis,
     );
   }
-  const parts = binding.type === "DERIVED"
-    ? undefined
-    : profileFieldParts(binding.profileFieldKey);
+  const parts = binding.profileFieldKey
+    ? profileFieldParts(binding.profileFieldKey)
+    : undefined;
   let itemIndex = lookup.handle.itemIndex;
   if (parts?.repeatable && !parts.topLevel) {
     const profileEntries = profile[

@@ -80,8 +80,11 @@ public record PreparationAnalysisResponse(
     }
 
     public sealed interface PreparationPlan permits RevealSectionPlan,
-        AddRepeatableGroupPlan, SelectOptionToRevealPlan {
+        AddRepeatableGroupPlan, SelectOptionToRevealPlan, SearchAddressPlan {
         String actionCandidateId();
+    }
+
+    public record SearchAddressPlan(String actionCandidateId, Command command, ExpectedEffect expectedEffect) implements PreparationPlan {
     }
 
     public record RevealSectionPlan(
@@ -137,12 +140,14 @@ public record PreparationAnalysisResponse(
     }
 
     public enum Command {
+        SEARCH_ADDRESS,
         REVEAL_SECTION,
         ADD_REPEATABLE_GROUP,
         SELECT_OPTION_TO_REVEAL
     }
 
     public enum ExpectedEffect {
+        ADDRESS_SELECTED,
         TARGET_VISIBLE,
         GROUP_COUNT_INCREMENT,
         TARGET_FIELDS_VISIBLE

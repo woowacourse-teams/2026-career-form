@@ -1,3 +1,4 @@
+import { runSkAddress } from "./address";
 import type { WorkflowAdapter } from "../workflow";
 
 function hasUuidSuffix(value: string, baseName: string): boolean {
@@ -8,7 +9,17 @@ function hasUuidSuffix(value: string, baseName: string): boolean {
 }
 
 export const skWorkflowAdapter: WorkflowAdapter = {
+  runAddress: runSkAddress,
   diagnosticsTitle: "SK 복수·부전공명 진단",
+  repeatedProfileSectionHint: (actionDomId) => {
+    if (actionDomId === "btnAddLangExam") {
+      return { categoryId: "languages", sectionId: "languageTest" };
+    }
+    if (actionDomId === "btnAddLangAbility") {
+      return { categoryId: "languages", sectionId: "languageSkill" };
+    }
+    return undefined;
+  },
   educationSectionHint: (matchLabel) => {
     const label = matchLabel.toLowerCase();
     if (label.includes("educationgrad")) return "graduateSchool";
@@ -25,9 +36,16 @@ export const skWorkflowAdapter: WorkflowAdapter = {
         (item.requiredAdditions ?? 0) > 0,
     ),
   isFreshRowDefault: (domName) => domName === "eduEducationType",
-  isStateDriver: (item, domName) =>
-    item.analysis?.writePlan?.command === "SELECT_OPTION" &&
-    domName === "lngLanguageType",
+  isStateDriver: (item, domName) => {
+    if (item.analysis?.writePlan?.command !== "SELECT_OPTION") return false;
+    if (domName === "lngLanguageType") return true;
+    const binding = item.analysis.valueBinding;
+    return (
+      domName === "carWorkingYN" &&
+      binding?.type === "LOOKUP" &&
+      binding.profileFieldKey === "careers.career.employmentStatus"
+    );
+  },
   revealSelections: [
     {
       domName: "eduMajorDoubleYN",

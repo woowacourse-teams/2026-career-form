@@ -714,13 +714,25 @@ describe("approved native-control writes", () => {
     setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
     const trigger = document.createElement("input");
     trigger.type = "button";
+    const selectWrap = document.createElement("div");
+    selectWrap.className = "select-wrap";
+    const hidden = document.createElement("input");
+    hidden.type = "hidden";
+    hidden.className = "js-field";
+    selectWrap.append(hidden, trigger);
     const option = document.createElement("button");
     option.dataset.code = "003";
     option.textContent = "대리";
     Object.defineProperty(option, "offsetParent", { value: document.body });
-    trigger.addEventListener("click", () => document.body.append(option));
+    trigger.addEventListener("click", () => {
+      const menu = document.createElement("div");
+      menu.className = "select-option";
+      menu.append(option);
+      selectWrap.append(menu);
+    });
     option.addEventListener("click", () => {
       trigger.value = "대리";
+      hidden.value = "003";
     });
     const registry = register(trigger, {
       candidateId: "career-position",
@@ -728,6 +740,8 @@ describe("approved native-control writes", () => {
       control: "button",
       visibility: "visible",
     });
+    document.body.append(selectWrap);
+    selectWrap.prepend(trigger);
     const analysis: MatchedFieldAnalysis = {
       ...textAnalysis,
       candidateId: "career-position",
@@ -750,6 +764,74 @@ describe("approved native-control writes", () => {
     expect(result).toEqual([
       { candidateId: "career-position", status: "written" },
     ]);
+  });
+
+  it("does not select a matching Hyundai menu option from another repeated row", () => {
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+    const targetWrap = document.createElement("div");
+    targetWrap.className = "select-wrap";
+    const target = document.createElement("input");
+    target.type = "button";
+    targetWrap.append(target);
+    const otherWrap = document.createElement("div");
+    otherWrap.className = "select-wrap";
+    const other = document.createElement("input");
+    other.type = "button";
+    otherWrap.append(other);
+    const otherMenu = document.createElement("div");
+    otherMenu.className = "select-option";
+    const otherChoice = document.createElement("button");
+    otherChoice.dataset.code = "003";
+    otherChoice.textContent = "대리";
+    Object.defineProperty(otherChoice, "offsetParent", {
+      value: document.body,
+    });
+    otherMenu.append(otherChoice);
+    otherWrap.append(otherMenu);
+    let otherSelections = 0;
+    otherChoice.addEventListener("click", () => {
+      otherSelections += 1;
+    });
+    target.addEventListener("click", () => {
+      const targetMenu = document.createElement("div");
+      targetMenu.className = "select-option";
+      const wrongChoice = document.createElement("button");
+      wrongChoice.dataset.code = "different";
+      wrongChoice.textContent = "다른 항목";
+      Object.defineProperty(wrongChoice, "offsetParent", {
+        value: document.body,
+      });
+      targetMenu.append(wrongChoice);
+      targetWrap.append(targetMenu);
+    });
+    const registry = register(target, {
+      candidateId: "language-1",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    document.body.append(targetWrap, otherWrap);
+    targetWrap.prepend(target);
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "language-1",
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "languages.languageTest.language",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["language-1"]),
+      registry,
+    });
+
+    expect(otherSelections).toBe(0);
+    expect(result[0]?.status).toBe("skipped");
   });
 
   it("does not open a company button menu on an unsupported host", () => {

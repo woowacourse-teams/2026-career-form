@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
@@ -370,8 +371,19 @@ public final class CompanyFormPolicy {
         FieldsAnalysisRequest.FormElement element,
         FieldsAnalysisRequest.FormControl control,
         ValueBinding valueBinding,
-        boolean allowReadonlyWrite
+        boolean allowReadonlyWrite,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String requiredDomName
     ) {
+
+        public FieldRule(
+            String structuralName,
+            FieldsAnalysisRequest.FormElement element,
+            FieldsAnalysisRequest.FormControl control,
+            ValueBinding valueBinding,
+            boolean allowReadonlyWrite
+        ) {
+            this(structuralName, element, control, valueBinding, allowReadonlyWrite, null);
+        }
 
         public FieldRule(
             String structuralName,
@@ -379,7 +391,7 @@ public final class CompanyFormPolicy {
             FieldsAnalysisRequest.FormControl control,
             String profileFieldKey
         ) {
-            this(structuralName, element, control, new DirectBinding(profileFieldKey), false);
+            this(structuralName, element, control, new DirectBinding(profileFieldKey), false, null);
         }
 
         public FieldRule(
@@ -389,7 +401,14 @@ public final class CompanyFormPolicy {
             String profileFieldKey,
             boolean allowReadonlyWrite
         ) {
-            this(structuralName, element, control, new DirectBinding(profileFieldKey), allowReadonlyWrite);
+            this(
+                structuralName,
+                element,
+                control,
+                new DirectBinding(profileFieldKey),
+                allowReadonlyWrite,
+                null
+            );
         }
 
         public FieldRule(
@@ -398,7 +417,7 @@ public final class CompanyFormPolicy {
             FieldsAnalysisRequest.FormControl control,
             ValueBinding valueBinding
         ) {
-            this(structuralName, element, control, valueBinding, false);
+            this(structuralName, element, control, valueBinding, false, null);
         }
 
         public String profileFieldKey() {
@@ -412,6 +431,9 @@ public final class CompanyFormPolicy {
             Objects.requireNonNull(element);
             Objects.requireNonNull(control);
             Objects.requireNonNull(valueBinding);
+            if (requiredDomName != null) {
+                requireText(requiredDomName);
+            }
             if (allowReadonlyWrite
                 && (element != FieldsAnalysisRequest.FormElement.INPUT
                     || control != FieldsAnalysisRequest.FormControl.TEXT)) {
@@ -421,6 +443,7 @@ public final class CompanyFormPolicy {
     }
 
     public enum ActionKind {
+        SEARCH_ADDRESS,
         REVEAL,
         ADD,
         SELECT_OPTION,

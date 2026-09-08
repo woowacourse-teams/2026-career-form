@@ -31,7 +31,8 @@ export interface ActionCandidate extends CandidateBase {
 
 export interface FieldCandidate extends CandidateBase {
   element: "input" | "select" | "textarea" | "custom";
-  control: "text" | "select" | "radio" | "checkbox" | "textarea" | "button" | "custom";
+  control:
+    "text" | "select" | "radio" | "checkbox" | "textarea" | "button" | "custom";
   placeholder?: string;
   options?: OptionCandidate[];
 }
@@ -77,6 +78,11 @@ export interface FieldsAnalyzeRequest {
 }
 
 export type PreparationPlan =
+  | {
+      actionCandidateId: string;
+      command: "SEARCH_ADDRESS";
+      expectedEffect: "ADDRESS_SELECTED";
+    }
   | {
       actionCandidateId: string;
       command: "REVEAL_SECTION";

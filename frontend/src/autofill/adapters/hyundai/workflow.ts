@@ -1,0 +1,199 @@
+import type { FieldCandidateHandle } from "../../dom/types";
+import type { ReviewPlanItem } from "../../review/review-plan";
+import type { WorkflowAdapter } from "../workflow";
+
+const STATE_SETTLE_TIMEOUT_MILLISECONDS = 3_000;
+
+function profileFieldKey(item: ReviewPlanItem): string | undefined {
+  const binding = item.analysis?.valueBinding;
+  return binding?.type === "DIRECT" ||
+    binding?.type === "LOOKUP" ||
+    binding?.type === "BUTTON_OPTION"
+    ? binding.profileFieldKey
+    : item.profileFieldKey;
+}
+
+function fieldGroup(handle: FieldCandidateHandle): HTMLElement | undefined {
+  const element = handle.elements[0];
+  const group = element?.closest<HTMLElement>(".field-group");
+  return group ?? undefined;
+}
+
+function structuralBase(handle: FieldCandidateHandle): string | undefined {
+  const value = handle.candidate.domName ?? handle.candidate.domId;
+  return value?.replace(/_[1-9][0-9]*$/, "");
+}
+
+function waitFor(
+  document: Document,
+  condition: () => boolean,
+): Promise<boolean> {
+  if (condition()) return Promise.resolve(true);
+  const view = document.defaultView;
+  if (!view) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const observer = new view.MutationObserver(() => {
+      if (!condition()) return;
+      observer.disconnect();
+      view.clearTimeout(timeout);
+      resolve(true);
+    });
+    const timeout = view.setTimeout(() => {
+      observer.disconnect();
+      resolve(condition());
+    }, STATE_SETTLE_TIMEOUT_MILLISECONDS);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["disabled", "hidden", "class", "style"],
+    });
+  });
+}
+
+function hasExamOptions(group: HTMLElement): boolean {
+  const examValue = group.querySelector<HTMLInputElement>(
+    "input[name='foreExamCd']",
+  );
+  const examButton = group.querySelector<HTMLInputElement>(
+    "input[type='button'][id^='foreExamCd_']",
+  );
+  const selectWrap = examButton?.closest(".select-wrap");
+  return Boolean(
+    examValue &&
+    examButton &&
+    !examButton.disabled &&
+    selectWrap?.querySelector(
+      ".select-option button[data-code]:not([data-code=''])",
+    ),
+  );
+}
+
+function hasOwnOptions(handle: FieldCandidateHandle): boolean {
+  return Boolean(
+    handle.elements[0]
+      ?.closest(".select-wrap")
+      ?.querySelector(".select-option button[data-code]:not([data-code=''])"),
+  );
+}
+
+function languageDetailsAreEnabled(group: HTMLElement): boolean {
+  const textFields = ["acqNm", "acqDt"].map((name) =>
+    group.querySelector<HTMLInputElement>(`input[name='${name}']`),
+  );
+  const point = group.querySelector<HTMLInputElement>("input[name='point']");
+  const grade = group.querySelector<HTMLInputElement>("input[name='grade']");
+  const gradeButton =
+    grade?.parentElement?.querySelector<HTMLElement>(".btn-select");
+  const gradeOptions = gradeButton
+    ?.closest(".select-wrap")
+    ?.querySelector(".select-option button[data-code]:not([data-code=''])");
+  return (
+    textFields.every((field) => field && !field.disabled) &&
+    Boolean(
+      (point && !point.disabled) ||
+      (gradeButton && !gradeButton.matches(":disabled") && gradeOptions),
+    )
+  );
+}
+
+function isReadyManualAction(button: HTMLButtonElement): boolean {
+  if (
+    !button.isConnected ||
+    button.disabled ||
+    button.matches(":disabled") ||
+    button.closest(
+      "fieldset[disabled], [hidden], [aria-hidden='true'], [inert]",
+    )
+  ) {
+    return false;
+  }
+  const view = button.ownerDocument.defaultView;
+  if (!view) return false;
+  for (
+    let current: HTMLElement | null = button;
+    current;
+    current = current.parentElement
+  ) {
+    const style = view.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+  }
+  return true;
+}
+
+async function settleLanguageDriver(
+  document: Document,
+  handle: FieldCandidateHandle,
+): Promise<boolean> {
+  const group = fieldGroup(handle);
+  return group ? waitFor(document, () => hasExamOptions(group)) : false;
+}
+
+async function settleExamDriver(
+  document: Document,
+  handle: FieldCandidateHandle,
+): Promise<boolean> {
+  const group = fieldGroup(handle);
+  if (!group) return false;
+  const directInput = () =>
+    Array.from(
+      group.querySelectorAll<HTMLButtonElement>("button.exam_cancle"),
+    ).filter(isReadyManualAction);
+  if (directInput().length > 1) return false;
+  const ready = await waitFor(
+    document,
+    () => languageDetailsAreEnabled(group) || directInput().length === 1,
+  );
+  if (!ready || languageDetailsAreEnabled(group)) return ready;
+  const manualActions = directInput();
+  if (manualActions.length !== 1) return false;
+  manualActions[0]!.click();
+  return waitFor(document, () => languageDetailsAreEnabled(group));
+}
+
+export const hyundaiWorkflowAdapter: WorkflowAdapter = {
+  repeatedProfileSectionHint: (actionDomId) => {
+    switch (actionDomId) {
+      case "hyundai:add:foreign":
+        return { categoryId: "languages", sectionId: "languageTest" };
+      case "hyundai:add:foreignAbility":
+        return { categoryId: "languages", sectionId: "languageSkill" };
+      default:
+        return undefined;
+    }
+  },
+  hasFreshRows: () => false,
+  isFreshRowDefault: () => false,
+  isStateDriver: () => false,
+  stateDriverStage: (item, handle) => {
+    const fieldKey = profileFieldKey(item);
+    if (
+      structuralBase(handle) === "foreLang" &&
+      fieldKey === "languages.languageTest.language"
+    ) {
+      return 1;
+    }
+    if (
+      structuralBase(handle) === "foreExamCd" &&
+      fieldKey === "languages.languageTest.testName"
+    ) {
+      return 2;
+    }
+    return undefined;
+  },
+  waitForStateDriverReady: (document, handle) =>
+    waitFor(document, () => hasOwnOptions(handle)),
+  settleStateDriver: (document, handle) => {
+    if (structuralBase(handle) === "foreLang") {
+      return settleLanguageDriver(document, handle);
+    }
+    if (structuralBase(handle) === "foreExamCd") {
+      return settleExamDriver(document, handle);
+    }
+    return Promise.resolve(true);
+  },
+  revealSelections: [],
+  selectReveal: () => ({ code: "TARGET_MISSING", count: 0 }),
+  revealedBindings: () => new Map(),
+  revealedProfileFieldKey: () => undefined,
+};

@@ -25,10 +25,12 @@ function selectButtonOption(
   ) {
     return false;
   }
+  const selectWrap = trigger.closest(".select-wrap");
+  if (!selectWrap) return false;
   trigger.click();
   const choices = Array.from(
-    trigger.ownerDocument.querySelectorAll<HTMLButtonElement>(
-      "button[data-code]",
+    selectWrap.querySelectorAll<HTMLButtonElement>(
+      ":scope > .select-option button[data-code]",
     ),
   ).filter(
     (choice) =>
@@ -39,7 +41,13 @@ function selectButtonOption(
   );
   if (choices.length !== 1) return false;
   choices[0].click();
-  return true;
+  const hiddenValue = selectWrap.querySelector<HTMLInputElement>(
+    "input[type='hidden'].js-field",
+  );
+  return (
+    normalizeDisplayName(trigger.value) === normalizeDisplayName(displayName) &&
+    hiddenValue?.value === code
+  );
 }
 
 export const hyundaiWriteAdapter: CompanyWriteAdapter = {

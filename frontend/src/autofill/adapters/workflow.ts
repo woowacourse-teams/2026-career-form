@@ -1,6 +1,9 @@
 import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
+import type { RepeatedProfileCategoryId } from "../../profile/model";
 import { resolveCompany } from "./company";
+import { hyundaiWorkflowAdapter } from "./hyundai/workflow";
 import { skWorkflowAdapter } from "./sk/workflow";
 
 export interface FreshRowPreparation {
@@ -32,13 +35,34 @@ export interface WorkflowDiagnostic {
 }
 
 export interface WorkflowAdapter {
+  runAddress?(
+    options: import("../address/types").AddressExecutionOptions,
+  ): Promise<import("../address/types").AddressResult>;
   diagnosticsTitle?: string;
+  repeatedProfileSectionHint?(actionDomId: string | undefined):
+    | {
+        categoryId: RepeatedProfileCategoryId;
+        sectionId: string;
+      }
+    | undefined;
   educationSectionHint?(
     matchLabel: string,
   ): "highSchool" | "university" | "graduateSchool" | undefined;
   hasFreshRows(items: readonly FreshRowPreparation[]): boolean;
   isFreshRowDefault(domName: string | undefined): boolean;
   isStateDriver(item: ReviewPlanItem, domName: string | undefined): boolean;
+  stateDriverStage?(
+    item: ReviewPlanItem,
+    handle: FieldCandidateHandle,
+  ): number | undefined;
+  waitForStateDriverReady?(
+    document: Document,
+    handle: FieldCandidateHandle,
+  ): Promise<boolean>;
+  settleStateDriver?(
+    document: Document,
+    handle: FieldCandidateHandle,
+  ): Promise<boolean>;
   revealSelections: readonly RevealSelection[];
   selectReveal(
     document: Document,
@@ -66,7 +90,12 @@ const genericWorkflowAdapter: WorkflowAdapter = {
 };
 
 export function getWorkflowAdapter(host: string): WorkflowAdapter {
-  return resolveCompany(host) === "sk"
-    ? skWorkflowAdapter
-    : genericWorkflowAdapter;
+  switch (resolveCompany(host)) {
+    case "hyundai":
+      return hyundaiWorkflowAdapter;
+    case "sk":
+      return skWorkflowAdapter;
+    case "generic":
+      return genericWorkflowAdapter;
+  }
 }

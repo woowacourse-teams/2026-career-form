@@ -46,7 +46,12 @@ export function createAnalysisMessageHandler({
         `${normalizedBaseUrl}${endpointByType[message.type]}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(message.type === "AUTOFILL_ANALYZE_PREPARATION"
+              ? { "X-Career-Form-Capabilities": "address-search-v1" }
+              : {}),
+          },
           body: JSON.stringify(message.payload),
           signal: controller.signal,
         },

@@ -1,4 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { browser } from "wxt/browser";
+import { createAddressSearch } from "../address/runtime";
+import type {
+  AddressSearch,
+  AddressResult,
+  AddressValue,
+} from "../address/types";
 
 import {
   getWorkflowAdapter,
@@ -82,7 +89,17 @@ const REVIEW_ITEM_GROUPS: readonly Omit<ReviewItemGroup, "items">[] = [
 
 const SKIPPED_BY_APPROVAL_REASON = "사용자가 승인한 입력 항목이 아닙니다.";
 
+const runtimeAddressSearch = createAddressSearch(() =>
+  browser.runtime.connect({ name: "cf-address-top" }),
+);
+const addressValue = (profile: Profile): AddressValue => ({
+  address: profile.contact.addressLine1 ?? "",
+  postalCode: profile.contact.postalCode ?? "",
+  detail: profile.contact.addressLine2 ?? "",
+});
+
 interface WorkflowProps {
+  addressSearch?: AddressSearch;
   apiClient: AnalysisApiClient;
   repository: Pick<ProfileRepository, "load">;
   pageDocument: Document;
@@ -160,7 +177,25 @@ function educationProfileSectionId(
   return undefined;
 }
 
-function localItemCount(
+function stateDriverKey(
+  item: ReviewPlanItem,
+  domName: string | undefined,
+  itemIndex: number | undefined,
+): string {
+  const binding = item.analysis?.valueBinding;
+  const profileFieldKey =
+    binding?.type === "DIRECT" ||
+    binding?.type === "LOOKUP" ||
+    binding?.type === "BUTTON_OPTION"
+      ? binding.profileFieldKey
+      : item.profileFieldKey;
+  return [
+    item.profileEntryId ?? `item-${itemIndex ?? "single"}`,
+    profileFieldKey ?? domName ?? item.candidateId,
+  ].join("|");
+}
+
+export function localItemCount(
   plan: PreparationPlan,
   snapshot: CollectedSnapshot<
     ReturnType<typeof collectPreparationSnapshot>["request"]
@@ -184,9 +219,16 @@ function localItemCount(
   ]
     .filter(Boolean)
     .join(" ");
-  const category = PROFILE_CATEGORIES.find((candidate) =>
-    matchesProfileCategory(candidate, matchLabel),
-  );
+  const profileSectionHint = getWorkflowAdapter(
+    snapshot.request.site.host,
+  ).repeatedProfileSectionHint?.(action?.domId);
+  const category = profileSectionHint
+    ? PROFILE_CATEGORIES.find(
+        (candidate) => candidate.id === profileSectionHint.categoryId,
+      )
+    : PROFILE_CATEGORIES.find((candidate) =>
+        matchesProfileCategory(candidate, matchLabel),
+      );
   const profileItemCount = category
     ? category.id === "education"
       ? (() => {
@@ -201,7 +243,11 @@ function localItemCount(
                 .length
             : profile.education.length;
         })()
-      : profile[category.id as RepeatedProfileCategoryId].length
+      : profileSectionHint
+        ? profile[category.id as RepeatedProfileCategoryId].filter(
+            (entry) => entry.sectionId === profileSectionHint.sectionId,
+          ).length
+        : profile[category.id as RepeatedProfileCategoryId].length
     : 0;
 
   return profileItemCount;
@@ -388,8 +434,15 @@ export function AutofillWorkflow({
   repository,
   pageDocument,
   onExit,
+  addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const adapter = getWorkflowAdapter(pageHost(pageDocument));
+  const addressRun = useRef<{
+    controller: AbortController;
+    button?: Element;
+    task?: Promise<AddressResult>;
+  }>({ controller: new AbortController() });
+  const [addressResult, setAddressResult] = useState<AddressResult>();
   const [stage, setStage] = useState<Stage>("analyzing");
   const [profile, setProfile] = useState<Profile>();
   const [preparationSnapshot, setPreparationSnapshot] =
@@ -416,16 +469,88 @@ export function AutofillWorkflow({
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
-    stateSelectionPrepared = false,
+    completedStateDriverKeys: ReadonlySet<string> = new Set(),
   ) => {
+    const run = addressRun.current;
+    if (run.controller.signal.aborted) return;
     const snapshot = collectFieldsSnapshot(pageDocument);
 
-    const analysis = await apiClient.analyzeFields(snapshot.request);
+    let analysis = await apiClient.analyzeFields(snapshot.request);
+    if (run.controller.signal.aborted) return;
 
     if (analysis.analysisStatus === "BLOCKED") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
       return;
+    }
+
+    if (run.button && adapter.runAddress) {
+      const addressNames = ["prsZipCode", "prsAddress", "prsAddressDtl"];
+      const keys = [
+        "contact.contact.postalCode",
+        "contact.contact.addressLine1",
+        "contact.contact.addressLine2",
+      ];
+      const fields = snapshot.request.sections.flatMap((section) => [
+        ...section.fields,
+        ...(section.items ?? []).flatMap((item) => item.fields),
+      ]);
+      const permitted =
+        analysis.mode === "ADAPTER" &&
+        addressNames.every((name, index) => {
+          const candidates = fields.filter(
+            (field) => field.domId === name || field.domName === name,
+          );
+          if (candidates.length !== 1) return false;
+          const candidate = candidates[0];
+          const mapping = analysis.fields.find(
+            (field) => field.candidateId === candidate.candidateId,
+          );
+          return (
+            candidate.domId === name &&
+            candidate.domName === name &&
+            candidate.element === "input" &&
+            candidate.control === "text" &&
+            candidate.visibility === "visible" &&
+            !candidate.disabled &&
+            !candidate.inert &&
+            !!candidate.readonly === index < 2 &&
+            mapping?.matchType === "MATCH" &&
+            mapping.mappingStatus === "ADAPTER_VERIFIED" &&
+            mapping.valueBinding?.type === "DIRECT" &&
+            mapping.valueBinding.profileFieldKey === keys[index]
+          );
+        });
+      run.task ??= permitted
+        ? adapter.runAddress({
+            document: pageDocument,
+            button: run.button,
+            expected: addressValue(loadedProfile),
+            loadCurrent: async () => addressValue(await repository.load()),
+            signal: run.controller.signal,
+            search: addressSearch,
+          })
+        : Promise.resolve({
+            status: "manual",
+            reason:
+              "주소 입력란의 연결을 확인하지 못했습니다. 직접 확인해 주세요.",
+          });
+      const result = await run.task;
+      if (run.controller.signal.aborted) return;
+      setAddressResult(result);
+      const ids = new Set(
+        fields
+          .filter(
+            (field) =>
+              addressNames.includes(field.domId ?? "") ||
+              addressNames.includes(field.domName ?? ""),
+          )
+          .map((field) => field.candidateId),
+      );
+      analysis = {
+        ...analysis,
+        fields: analysis.fields.filter((field) => !ids.has(field.candidateId)),
+      };
     }
 
     const ignoreCurrentValueCandidateIds = new Set(
@@ -464,40 +589,114 @@ export function AutofillWorkflow({
     setReviewItems(automaticItems);
     setPartial(plan.status === "partial");
     setWarnings(analysis.warningCodes ?? []);
-    const approvedCandidateIds = new Set(
-      automaticItems
-        .filter(
-          (item) =>
-            !item.disabled && (item.selected || item.status === "needs-review"),
-        )
-        .map((item) => item.candidateId),
-    );
-    const stateDriverItems = stateSelectionPrepared
-      ? []
-      : automaticItems.filter((item) => {
-          const lookup = snapshot.registry.lookupField(item.candidateId);
-          return (
-            (lookup.status === "ready" || lookup.status === "blocked") &&
-            adapter.isStateDriver(item, lookup.handle.candidate.domName)
-          );
-        });
+    const stateDriverItems = automaticItems.flatMap((item) => {
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
+      const domName = lookup.handle.candidate.domName;
+      const stage =
+        adapter.stateDriverStage?.(item, lookup.handle) ??
+        (adapter.isStateDriver(item, domName) ? 1 : undefined);
+      const key = stateDriverKey(item, domName, lookup.handle.itemIndex);
+      return !item.selected ||
+        item.disabled ||
+        stage === undefined ||
+        completedStateDriverKeys.has(key)
+        ? []
+        : [{ item, handle: lookup.handle, domName, stage, key }];
+    });
     if (stateDriverItems.length > 0) {
+      const nextStage = Math.min(
+        ...stateDriverItems.map((driver) => driver.stage),
+      );
+      const currentStateDriverItems = stateDriverItems.filter(
+        (driver) => driver.stage === nextStage,
+      );
+      const driversReady = await Promise.all(
+        currentStateDriverItems.map(
+          ({ handle }) =>
+            adapter.waitForStateDriverReady?.(pageDocument, handle) ?? true,
+        ),
+      );
+      if (!driversReady.every(Boolean)) {
+        setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
+        setStage("exception");
+        return;
+      }
       const stateSelectionResults = executeApprovedWrites({
-        items: stateDriverItems,
+        items: currentStateDriverItems.map(({ item }) => item),
         approvedCandidateIds: new Set(
-          stateDriverItems.map((item) => item.candidateId),
+          currentStateDriverItems.map(({ item }) => item.candidateId),
         ),
         registry: snapshot.registry,
       });
       if (
         stateSelectionResults.every((result) => result.status === "written")
       ) {
-        await analyzeFields(loadedProfile, ignoreFreshRowDefaults, true);
+        const settled = await Promise.all(
+          currentStateDriverItems.map(
+            ({ handle }) =>
+              adapter.settleStateDriver?.(pageDocument, handle) ?? true,
+          ),
+        );
+        if (!settled.every(Boolean)) {
+          setExceptionTitle(
+            "조건부 선택 뒤 입력란을 안전하게 준비하지 못했습니다",
+          );
+          setStage("exception");
+          return;
+        }
+        const nextCompletedStateDriverKeys = new Set(completedStateDriverKeys);
+        currentStateDriverItems.forEach(({ key }) =>
+          nextCompletedStateDriverKeys.add(key),
+        );
+        await analyzeFields(
+          loadedProfile,
+          ignoreFreshRowDefaults,
+          nextCompletedStateDriverKeys,
+        );
+        return;
+      }
+      if (adapter.stateDriverStage) {
+        setExceptionTitle("조건부 선택을 안전하게 적용하지 못했습니다");
+        setStage("exception");
         return;
       }
     }
+    const approvedCandidateIds = new Set(
+      automaticItems
+        .filter((item) => {
+          const lookup = snapshot.registry.lookupField(item.candidateId);
+          if (lookup.status !== "ready" && lookup.status !== "blocked") {
+            return false;
+          }
+          const key = stateDriverKey(
+            item,
+            lookup.handle.candidate.domName,
+            lookup.handle.itemIndex,
+          );
+          return (
+            !completedStateDriverKeys.has(key) &&
+            !item.disabled &&
+            (item.selected || item.status === "needs-review")
+          );
+        })
+        .map((item) => item.candidateId),
+    );
+    const finalWriteItems = automaticItems.filter((item) => {
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      if (lookup.status !== "ready" && lookup.status !== "blocked") {
+        return true;
+      }
+      return !completedStateDriverKeys.has(
+        stateDriverKey(
+          item,
+          lookup.handle.candidate.domName,
+          lookup.handle.itemIndex,
+        ),
+      );
+    });
     const writeResults = await executeApprovedWritesAfterPageSettles({
-      items: automaticItems,
+      items: finalWriteItems,
       approvedCandidateIds,
       registry: snapshot.registry,
     });
@@ -507,6 +706,12 @@ export function AutofillWorkflow({
 
   useEffect(() => {
     let active = true;
+    const run: {
+      controller: AbortController;
+      button?: Element;
+      task?: Promise<AddressResult>;
+    } = { controller: new AbortController() };
+    addressRun.current = run;
     const start = async () => {
       try {
         const loadedProfile = await repository.load();
@@ -521,13 +726,29 @@ export function AutofillWorkflow({
           await analyzeFields(loadedProfile);
           return;
         }
-        if (analysis.preparationPlans.length === 0) {
+        const searchPlans = analysis.preparationPlans.filter(
+          (plan) => plan.command === "SEARCH_ADDRESS",
+        );
+        if (
+          analysis.mode === "ADAPTER" &&
+          searchPlans.length === 1 &&
+          adapter.runAddress
+        ) {
+          const action = snapshot.registry.lookupAction(
+            searchPlans[0].actionCandidateId,
+          );
+          if (action.status === "ready") run.button = action.handle.element;
+        }
+        const preparationPlans = analysis.preparationPlans.filter(
+          (plan) => plan.command !== "SEARCH_ADDRESS",
+        );
+        if (preparationPlans.length === 0) {
           await analyzeFields(loadedProfile);
           return;
         }
         setPreparationSnapshot(snapshot);
         setPreparationItems(
-          analysis.preparationPlans.map((plan) =>
+          preparationPlans.map((plan) =>
             preparationItem(plan, snapshot, loadedProfile),
           ),
         );
@@ -542,6 +763,7 @@ export function AutofillWorkflow({
     void start();
     return () => {
       active = false;
+      run.controller.abort();
     };
   }, [apiClient, pageDocument, repository]);
 
@@ -997,6 +1219,14 @@ export function AutofillWorkflow({
     return (
       <div className={styles.screen}>
         <Header step="완료" title="기입 결과" />
+        {addressResult && (
+          <p role="status">
+            {addressResult.status === "written"
+              ? "주소 확인 완료: "
+              : "주소 직접 확인 필요: "}
+            {addressResult.reason}
+          </p>
+        )}
         <div className={styles.resultGrid}>
           <div>
             <strong>{successful}</strong>

@@ -10,6 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionRule;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionStructure;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldRule;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldStructure;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFingerprint;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl;
@@ -171,6 +178,46 @@ class StoredPolicyFieldMappingResolverTest {
             .containsExactly(match("field-certificate-name", "certifications.certificate.name"));
     }
 
+    @Test
+    @DisplayName("같은 name을 쓰는 현대 어학·자격 날짜를 base DOM id로 구분한다")
+    void distinguishesSharedNamesWithRequiredBaseDomIds() {
+        FieldsAnalysisRequest request = request(List.of(
+            field("field-language-date", "acqDtForeLang_1", "acqDt", FormControl.TEXT),
+            field("field-certificate-date", "acqDt_1", "acqDt", FormControl.TEXT)
+        ));
+
+        assertThat(new StoredPolicyFieldMappingResolver(sharedDatePolicy())
+            .resolve(request).results())
+            .containsExactly(
+                match("field-language-date", "languages.languageTest.acquisitionDate"),
+                match("field-certificate-date", "certifications.certificate.acquisitionDate")
+            );
+    }
+
+    @Test
+    @DisplayName("제약된 shared name은 다른 id·control·잘못된 suffix로 우회 매칭하지 않는다")
+    void rejectsMismatchedConstrainedFieldIdentity() {
+        FieldsAnalysisRequest request = request(List.of(
+            field("field-wrong-id", "legacyDate_1", "acqDt", FormControl.TEXT),
+            field("field-conflicting-name", "acqDtForeLang_1", "regNo", FormControl.TEXT),
+            field("field-wrong-control", "acqDtForeLang_1", "acqDt", FormControl.BUTTON),
+            field("field-invalid-suffix", "acqDtForeLang_01", "acqDt", FormControl.TEXT),
+            field("field-missing-name", "acqDtForeLang_1", null, FormControl.TEXT),
+            field("field-missing-id", null, "acqDt", FormControl.TEXT)
+        ));
+
+        assertThat(new StoredPolicyFieldMappingResolver(sharedDatePolicy())
+            .resolve(request).results())
+            .containsExactly(
+                new FieldMappingResolver.NoMatch("field-wrong-id"),
+                new FieldMappingResolver.NoMatch("field-conflicting-name"),
+                new FieldMappingResolver.NoMatch("field-wrong-control"),
+                new FieldMappingResolver.NoMatch("field-invalid-suffix"),
+                new FieldMappingResolver.NoMatch("field-missing-name"),
+                new FieldMappingResolver.NoMatch("field-missing-id")
+            );
+    }
+
     private static FieldCandidate field(
         String candidateId,
         String domName,
@@ -189,6 +236,101 @@ class StoredPolicyFieldMappingResolverTest {
             null,
             null,
             null
+        );
+    }
+
+    private static FieldCandidate field(
+        String candidateId,
+        String domId,
+        String domName,
+        FormControl control
+    ) {
+        return new FieldCandidate(
+            candidateId,
+            FormElement.INPUT,
+            control,
+            Visibility.VISIBLE,
+            null,
+            domId,
+            domName,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
+    }
+
+    private static FieldsAnalysisRequest request(List<FieldCandidate> fields) {
+        return new FieldsAnalysisRequest(
+            2,
+            "stored-policy-constrained-fields",
+            new Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new Section("section-root", null, null, fields, null))
+        );
+    }
+
+    private static CompanyFormPolicy sharedDatePolicy() {
+        return CompanyFormPolicy.create(
+            "hyundai",
+            3,
+            new PreparationFingerprint(
+                java.util.Set.of("section-root"),
+                List.of(new ActionStructure(
+                    "synthetic-action",
+                    com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.BUTTON,
+                    com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON
+                ))
+            ),
+            new FieldsFingerprint(
+                java.util.Set.of("section-root"),
+                List.of(new FieldStructure(
+                    "synthetic-field",
+                    FormElement.INPUT,
+                    FormControl.TEXT
+                ))
+            ),
+            List.of(new ActionRule("synthetic-action", ActionKind.ADD, null)),
+            List.of(
+                constrainedTextRule(
+                    "acqDtForeLang",
+                    "acqDt",
+                    "languages.languageTest.acquisitionDate"
+                ),
+                constrainedTextRule(
+                    "acqDt",
+                    "acqDt",
+                    "certifications.certificate.acquisitionDate"
+                ),
+                new FieldRule(
+                    "legacyDate",
+                    FormElement.INPUT,
+                    FormControl.TEXT,
+                    "personal.personal.birthDate"
+                ),
+                new FieldRule(
+                    "regNo",
+                    FormElement.INPUT,
+                    FormControl.TEXT,
+                    "certifications.certificate.registrationNo"
+                )
+            ),
+            ignored -> true
+        );
+    }
+
+    private static FieldRule constrainedTextRule(
+        String structuralName,
+        String requiredDomName,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            structuralName,
+            FormElement.INPUT,
+            FormControl.TEXT,
+            new FieldMappingResolver.DirectBinding(profileFieldKey),
+            false,
+            requiredDomName
         );
     }
 

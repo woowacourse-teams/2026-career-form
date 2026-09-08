@@ -31,9 +31,7 @@ export interface PreparationExecutionOptions {
     plan: Extract<PreparationPlan, { command: "SELECT_OPTION_TO_REVEAL" }>,
     snapshot: PreparationSnapshot,
   ) => OptionSelectionResult;
-  waitForExpectedFields?: (
-    plan: PreparationPlan,
-  ) => Promise<boolean>;
+  waitForExpectedFields?: (plan: PreparationPlan) => Promise<boolean>;
 }
 
 export type PreparationFailureReason =
@@ -130,10 +128,7 @@ function actionMatchesIdentity(
       handle.candidate.displayName === identity.displayName) &&
     (identity.domName === undefined ||
       handle.candidate.domName === identity.domName) &&
-    (identity.domId === undefined ||
-      handle.candidate.domId === identity.domId ||
-      (handle.candidate.domId === undefined &&
-        identity.displayName !== undefined))
+    (identity.domId === undefined || handle.candidate.domId === identity.domId)
   );
 }
 
@@ -211,6 +206,9 @@ export async function executeApprovedPreparationPlans({
 
   for (const approvedPlan of selectedPlans) {
     const { plan } = approvedPlan;
+    if (plan.command === "SEARCH_ADDRESS") {
+      return failure("action-not-executable", executedPlanCount);
+    }
 
     if (plan.command === "REVEAL_SECTION") {
       const identity = actionIdentity(initialSnapshot, plan.actionCandidateId);
@@ -248,7 +246,8 @@ export async function executeApprovedPreparationPlans({
         actionCandidateId: action.candidate.candidateId,
       };
       const selected =
-        selectProfileOption?.(selectedPlan, snapshot) ?? "unsupported-option-action";
+        selectProfileOption?.(selectedPlan, snapshot) ??
+        "unsupported-option-action";
       if (selected !== "selected") return failure(selected, executedPlanCount);
       executedPlanCount += 1;
       if (plan.expectedFieldNames && plan.expectedFieldNames.length > 0) {
@@ -318,7 +317,7 @@ export async function executeApprovedPreparationPlans({
       executedPlanCount += 1;
       const expectedFieldsVisible =
         plan.expectedFieldNames && plan.expectedFieldNames.length > 0
-          ? (await waitForExpectedFields?.(plan)) ?? false
+          ? ((await waitForExpectedFields?.(plan)) ?? false)
           : false;
       if (
         plan.expectedFieldNames &&
@@ -340,17 +339,13 @@ export async function executeApprovedPreparationPlans({
         ? inspectGroupCount(
             countRepeatableGroups,
             refreshed,
-            planWithActionCandidateId(plan, refreshedAction.candidate.candidateId),
+            planWithActionCandidateId(
+              plan,
+              refreshedAction.candidate.candidateId,
+            ),
           )
         : undefined;
       if (countAfter === undefined) {
-        if (
-          expectedFieldsVisible &&
-          addition === requiredAdditions - 1
-        ) {
-          snapshot = refreshed;
-          continue;
-        }
         return failure(
           "action-not-reidentified",
           executedPlanCount,

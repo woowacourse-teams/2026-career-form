@@ -13,6 +13,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
 
+import tools.jackson.databind.ObjectMapper;
+
 import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionRule;
@@ -78,7 +80,29 @@ class MongoCompanyFormPolicyProviderTest {
             assertThat(available.policy().version()).isEqualTo(2);
             assertThat(available.policy().fieldRules().getFirst().profileFieldKey())
                 .isEqualTo("contact.contact.email");
+            assertThat(available.policy().fieldRules().getFirst().requiredDomName())
+                .isNull();
         });
+    }
+
+    @Test
+    @DisplayName("DOM name이 없던 기존 저장 field rule은 null 제약으로 역직렬화한다")
+    void readsLegacyFieldRuleWithoutDomNameDiscriminator() throws Exception {
+        FieldRule rule = new ObjectMapper().readValue("""
+            {
+              "structuralName": "applicant-email",
+              "element": "input",
+              "control": "text",
+              "valueBinding": {
+                "type": "DIRECT",
+                "profileFieldKey": "contact.contact.email"
+              },
+              "allowReadonlyWrite": false
+            }
+            """, FieldRule.class);
+
+        assertThat(rule.requiredDomName()).isNull();
+        assertThat(rule.profileFieldKey()).isEqualTo("contact.contact.email");
     }
 
     @Test

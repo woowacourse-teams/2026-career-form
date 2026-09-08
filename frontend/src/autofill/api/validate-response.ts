@@ -29,7 +29,11 @@ function hasValidButtonOptionMap(
   optionMap: unknown,
   optionCodeMap: unknown,
 ): boolean {
-  if (!isRecord(optionMap) || !isRecord(optionCodeMap) || Object.keys(optionMap).length === 0) {
+  if (
+    !isRecord(optionMap) ||
+    !isRecord(optionCodeMap) ||
+    Object.keys(optionMap).length === 0
+  ) {
     return false;
   }
   return Object.entries(optionMap).every(
@@ -168,39 +172,88 @@ export function validatePreparationResponse(
       isNonEmptyString(plan.targetSectionId) &&
       sectionIds.has(plan.targetSectionId);
     const validAddition =
-      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "expectedFieldNames"]) &&
+      hasOnlyKeys(plan, [
+        "actionCandidateId",
+        "command",
+        "expectedEffect",
+        "expectedFieldNames",
+      ]) &&
       plan.command === "ADD_REPEATABLE_GROUP" &&
       plan.expectedEffect === "GROUP_COUNT_INCREMENT" &&
       (plan.expectedFieldNames === undefined ||
         (Array.isArray(plan.expectedFieldNames) &&
           plan.expectedFieldNames.length > 0 &&
           plan.expectedFieldNames.every(isNonEmptyString) &&
-          new Set(plan.expectedFieldNames).size === plan.expectedFieldNames.length));
+          new Set(plan.expectedFieldNames).size ===
+            plan.expectedFieldNames.length));
     const validSelection =
-      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect", "profileFieldKey", "optionDisplayName", "expectedFieldNames", "selectableProfileValues", "revealedFieldBindings", "targetSectionId"]) &&
+      hasOnlyKeys(plan, [
+        "actionCandidateId",
+        "command",
+        "expectedEffect",
+        "profileFieldKey",
+        "optionDisplayName",
+        "expectedFieldNames",
+        "selectableProfileValues",
+        "revealedFieldBindings",
+        "targetSectionId",
+      ]) &&
       plan.command === "SELECT_OPTION_TO_REVEAL" &&
       plan.expectedEffect === "TARGET_FIELDS_VISIBLE" &&
       isNonEmptyString(plan.profileFieldKey) &&
-      (plan.optionDisplayName === undefined || isNonEmptyString(plan.optionDisplayName)) &&
+      (plan.optionDisplayName === undefined ||
+        isNonEmptyString(plan.optionDisplayName)) &&
       (plan.expectedFieldNames === undefined ||
         (Array.isArray(plan.expectedFieldNames) &&
           plan.expectedFieldNames.length > 0 &&
           plan.expectedFieldNames.every(isNonEmptyString) &&
-          new Set(plan.expectedFieldNames).size === plan.expectedFieldNames.length)) &&
+          new Set(plan.expectedFieldNames).size ===
+            plan.expectedFieldNames.length)) &&
       (plan.selectableProfileValues === undefined ||
         (Array.isArray(plan.selectableProfileValues) &&
           plan.selectableProfileValues.length > 0 &&
           plan.selectableProfileValues.every(isNonEmptyString) &&
-          new Set(plan.selectableProfileValues).size === plan.selectableProfileValues.length)) &&
+          new Set(plan.selectableProfileValues).size ===
+            plan.selectableProfileValues.length)) &&
       (plan.revealedFieldBindings === undefined ||
-        (plan.revealedFieldBindings !== null && typeof plan.revealedFieldBindings === "object" &&
+        (plan.revealedFieldBindings !== null &&
+          typeof plan.revealedFieldBindings === "object" &&
           !Array.isArray(plan.revealedFieldBindings) &&
           Object.keys(plan.revealedFieldBindings).length > 0 &&
           Object.entries(plan.revealedFieldBindings).every(
             ([name, key]) => isNonEmptyString(name) && isNonEmptyString(key),
           ))) &&
-      isNonEmptyString(plan.targetSectionId) && sectionIds.has(plan.targetSectionId);
-    if (!validReveal && !validAddition && !validSelection) {
+      isNonEmptyString(plan.targetSectionId) &&
+      sectionIds.has(plan.targetSectionId);
+    const searchActions = request.sections
+      .flatMap((section) => [
+        ...section.actionCandidates,
+        ...(section.items ?? []).flatMap((item) => item.actionCandidates),
+      ])
+      .filter(
+        (action) =>
+          action.domId === "btnSearchAddress" ||
+          action.domName === "btnSearchAddress",
+      );
+    const search = searchActions[0];
+    const validAddress =
+      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect"]) &&
+      plan.command === "SEARCH_ADDRESS" &&
+      plan.expectedEffect === "ADDRESS_SELECTED" &&
+      value.mode === "ADAPTER" &&
+      request.site.host === "www.skcareers.com" &&
+      request.site.pathPattern.startsWith("/Application/Index/") &&
+      searchActions.length === 1 &&
+      search?.candidateId === plan.actionCandidateId &&
+      search.domId === "btnSearchAddress" &&
+      (!search.domName || search.domName === "btnSearchAddress") &&
+      search.element === "button" &&
+      search.control === "button" &&
+      search.visibility === "visible" &&
+      !search.disabled &&
+      !search.readonly &&
+      !search.inert;
+    if (!validReveal && !validAddition && !validSelection && !validAddress) {
       throw new AnalysisContractError();
     }
   }
@@ -287,57 +340,82 @@ function validateFieldAnalysis(
   if (hasLegacyKey === hasBinding) {
     throw new AnalysisContractError();
   }
-  if (hasLegacyKey && (
-    !isNonEmptyString(value.profileFieldKey) ||
-    !/^[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*){2}$/.test(value.profileFieldKey) ||
-    !isAutofillProfileFieldKey(value.profileFieldKey)
-  )) {
+  if (
+    hasLegacyKey &&
+    (!isNonEmptyString(value.profileFieldKey) ||
+      !/^[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*){2}$/.test(
+        value.profileFieldKey,
+      ) ||
+      !isAutofillProfileFieldKey(value.profileFieldKey))
+  ) {
     throw new AnalysisContractError();
   }
   if (hasBinding) {
     if (
       !isRecord(value.valueBinding) ||
-      !isOneOf(value.valueBinding.type, ["DIRECT", "DERIVED", "LOOKUP", "BUTTON_OPTION"]) ||
-      (value.valueBinding.type === "DIRECT" && (
-        !hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey"]) ||
-        !isNonEmptyString(value.valueBinding.profileFieldKey) ||
-        !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey)
-      )) ||
-      (value.valueBinding.type === "DERIVED" && (
-        !hasOnlyKeys(value.valueBinding, ["type", "recipe", "profileFieldKey", "trueLabel", "falseLabel"]) ||
-        !isOneOf(value.valueBinding.recipe, [
-          "KOREAN_FULL_NAME",
-          "ENGLISH_FULL_NAME_GIVEN_FIRST",
-          "ENGLISH_FULL_NAME_FAMILY_FIRST",
-          "BOOLEAN_YN",
-          "YEAR_MONTH",
+      !isOneOf(value.valueBinding.type, [
+        "DIRECT",
+        "DERIVED",
+        "LOOKUP",
+        "BUTTON_OPTION",
+      ]) ||
+      (value.valueBinding.type === "DIRECT" &&
+        (!hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey"]) ||
+          !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+          !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey))) ||
+      (value.valueBinding.type === "DERIVED" &&
+        (!hasOnlyKeys(value.valueBinding, [
+          "type",
+          "recipe",
+          "profileFieldKey",
+          "trueLabel",
+          "falseLabel",
         ]) ||
-        (value.valueBinding.profileFieldKey !== undefined &&
-          (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
-            !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey))) ||
-        (value.valueBinding.trueLabel !== undefined && !isNonEmptyString(value.valueBinding.trueLabel)) ||
-        (value.valueBinding.falseLabel !== undefined && !isNonEmptyString(value.valueBinding.falseLabel)) ||
-        ((value.valueBinding.trueLabel === undefined) !== (value.valueBinding.falseLabel === undefined))
-      )) ||
-      (value.valueBinding.type === "LOOKUP" && (
-        !hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey", "optionMap"]) ||
-        !isNonEmptyString(value.valueBinding.profileFieldKey) ||
-        !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
-        !isRecord(value.valueBinding.optionMap) ||
-        Object.keys(value.valueBinding.optionMap).length === 0 ||
-        Object.entries(value.valueBinding.optionMap).some(
-          ([source, target]) => !isNonEmptyString(source) || !isNonEmptyString(target),
-        )
-      ))
-      || (value.valueBinding.type === "BUTTON_OPTION" && (
-        !hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey", "optionMap", "optionCodeMap"]) ||
-        !isNonEmptyString(value.valueBinding.profileFieldKey) ||
-        !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
-        !hasValidButtonOptionMap(
-          value.valueBinding.optionMap,
-          value.valueBinding.optionCodeMap,
-        )
-      ))
+          !isOneOf(value.valueBinding.recipe, [
+            "KOREAN_FULL_NAME",
+            "ENGLISH_FULL_NAME_GIVEN_FIRST",
+            "ENGLISH_FULL_NAME_FAMILY_FIRST",
+            "BOOLEAN_YN",
+            "YEAR_MONTH",
+          ]) ||
+          (value.valueBinding.profileFieldKey !== undefined &&
+            (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
+              !isAutofillProfileFieldKey(
+                value.valueBinding.profileFieldKey,
+              ))) ||
+          (value.valueBinding.trueLabel !== undefined &&
+            !isNonEmptyString(value.valueBinding.trueLabel)) ||
+          (value.valueBinding.falseLabel !== undefined &&
+            !isNonEmptyString(value.valueBinding.falseLabel)) ||
+          (value.valueBinding.trueLabel === undefined) !==
+            (value.valueBinding.falseLabel === undefined))) ||
+      (value.valueBinding.type === "LOOKUP" &&
+        (!hasOnlyKeys(value.valueBinding, [
+          "type",
+          "profileFieldKey",
+          "optionMap",
+        ]) ||
+          !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+          !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
+          !isRecord(value.valueBinding.optionMap) ||
+          Object.keys(value.valueBinding.optionMap).length === 0 ||
+          Object.entries(value.valueBinding.optionMap).some(
+            ([source, target]) =>
+              !isNonEmptyString(source) || !isNonEmptyString(target),
+          ))) ||
+      (value.valueBinding.type === "BUTTON_OPTION" &&
+        (!hasOnlyKeys(value.valueBinding, [
+          "type",
+          "profileFieldKey",
+          "optionMap",
+          "optionCodeMap",
+        ]) ||
+          !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+          !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
+          !hasValidButtonOptionMap(
+            value.valueBinding.optionMap,
+            value.valueBinding.optionCodeMap,
+          )))
     ) {
       throw new AnalysisContractError();
     }
