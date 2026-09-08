@@ -30,8 +30,8 @@ const militaryDetails: Record<MilitaryStatus, Record<string, string>> = {
   복무중: {
     militaryType: "현역병",
   },
-  미필: { militaryType: "미필" },
-  면제: { militaryType: "면제", exemptionReason: "질병" },
+  미필: {},
+  면제: { exemptionReason: "가상 면제 사유" },
 };
 const militaryBindings: Record<string, string> = {
   prsMilitarySvcType: "military.military.militaryType",
@@ -116,11 +116,8 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
           candidateId: field.candidateId,
           matchType: "MATCH" as const,
           valueBinding: {
-            type: "LOOKUP" as const,
+            type: "DIRECT" as const,
             profileFieldKey,
-            optionMap: Object.fromEntries(
-              militaryStatuses.map((value) => [value, value]),
-            ),
           },
           autofillPolicy: "ALLOWED" as const,
           mappingStatus: "ADAPTER_VERIFIED" as const,
@@ -132,9 +129,8 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
           candidateId: field.candidateId,
           matchType: "MATCH" as const,
           valueBinding: {
-            type: "LOOKUP" as const,
+            type: "DIRECT" as const,
             profileFieldKey,
-            optionMap: { 현역병: "현역병", 미필: "미필", 면제: "면제" },
           },
           autofillPolicy: "ALLOWED" as const,
           mappingStatus: "ADAPTER_VERIFIED" as const,
@@ -200,10 +196,10 @@ function setup(
             militaryFieldset.insertAdjacentHTML(
               "beforeend",
               `<div class="military-details">
-          <label>복무 구분<select name="prsMilitarySvcType"><option value="">선택</option><option value="현역병">현역병</option><option value="미필">미필</option><option value="면제">면제</option></select></label>
+          ${["군필", "복무중"].includes(select.value) ? '<label>병역 구분<select name="prsMilitarySvcType"><option value="">선택</option><option value="303001">현역병</option><option value="303002">상근예비역</option></select></label>' : ""}
           <input name="prsMilitarySvcEtcReason" aria-label="기타 사유(검증되지 않은 필드)" />
           <input name="prsMilitarySvcUnfinishReason" aria-label="미필 사유(검증되지 않은 필드)" />
-          <input name="prsMilitarySvcTypeReason" aria-label="면제 사유" />
+          ${select.value === "면제" ? '<input name="prsMilitarySvcTypeReason" aria-label="면제 사유" />' : ""}
         </div>`,
             );
         });
@@ -279,7 +275,6 @@ function setup(
             "military.military.militaryStatus",
             {
               selectableProfileValues: [...militaryStatuses],
-              revealedFieldBindings: militaryBindings,
             },
           )
         : undefined;
@@ -317,11 +312,16 @@ it.each(militaryStatuses)(
   async (status) => {
     const run = setup(status, "비대상");
     await waitFor(() => {
-      expect(run.fieldAnalysisCalls()).toBe(2);
+      expect(run.fieldAnalysisCalls()).toBe(1);
       expect(
         document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcType']")
-          ?.value,
-      ).toBe(militaryDetails[status].militaryType ?? "");
+          ?.value ?? "",
+      ).toBe(militaryDetails[status].militaryType ? "303001" : "");
+      expect(
+        document.querySelector<HTMLInputElement>(
+          "[name='prsMilitarySvcTypeReason']",
+        )?.value ?? "",
+      ).toBe(militaryDetails[status].exemptionReason ?? "");
     });
     expect(
       document.querySelector<HTMLInputElement>(

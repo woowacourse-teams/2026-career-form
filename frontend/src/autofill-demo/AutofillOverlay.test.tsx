@@ -307,7 +307,10 @@ describe("AutofillOverlay", () => {
       {
         id: "university-1",
         sectionId: "university",
-        values: { doubleMajorStatus: "있음", additionalMajorName: "PRIVATE_PROFILE_SENTINEL" },
+        values: {
+          doubleMajorStatus: "있음",
+          additionalMajorName: "PRIVATE_PROFILE_SENTINEL",
+        },
       },
     ];
     const apiClient = createApiClient();
