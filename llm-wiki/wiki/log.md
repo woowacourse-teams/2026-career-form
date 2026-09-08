@@ -126,3 +126,29 @@
 - Source-Revision: dd9f867ad020a72dec51b27ab54073d59eef48ac
 - Raw: llm-wiki/raw/issues/CF-46/manifest.md
 - Topics: 4
+
+
+## [2026-09-07] ingest | CF-46 현대 취득일 식별과 미입력 점검
+
+- Disposition: 승인된 미병합 CF-46 bundle의 현대 어댑터와 지원 현황 보완
+- Approval-Digest: c6dd7f157308a54725e298ce056c553ce575d294e74da94d77645377d1ef85be
+- Source-Base-Revision: 325535401b2c5ab8999142fa41f7f3c0f6b157a1
+- Source-State: CF-46 작업 트리의 미커밋 보완 포함
+- Raw: llm-wiki/raw/issues/CF-46/manifest.md
+- Topics: 2
+
+## 2026-09-07 현대 반복 행 준비 보완
+
+- 승인 digest `0b3ad344c8d413acd5d691120d2884b4e1b1d3384fd32ae5daba5bc843f50924`의 전체 후보를 CF-46 미병합 raw와 현대·지원 현황 topic에 반영했다.
+- 실제 구조의 추가 동작 식별 누락, 어학 하위 섹션별 개수, 자격증명 매핑과 반복 추가·입력 회귀를 기록했다. 실제 입력값은 기록하지 않았다.
+
+## 2026-09-07 현대 어학 선택과 첫 실행 회귀
+
+- 승인 digest `2227ce4216e2c2ff5436f16be4451aa39d683491ba015bfed9ab19c0bf021280`의 전체 후보를 CF-46 미병합 근거와 현대·지원 현황 topic에 반영했다.
+- 정확한 추가 동작 재탐색, 검증된 어학 매핑, 단계별 정상 직접입력 준비와 같은 메뉴 선택 검증을 기록했다. 실프로필 값은 기록하지 않았다.
+
+## 2026-09-08 — CF-46 SK 주소 검색 검증 반영
+
+- 승인된 전체 후보18개(digest: 28d877aae8306a494fe2eace6bf4e0baf55bddd0e31b87ffdfacb55c53c74d9f)를 기준으로 [CF-46 bundle](../raw/issues/CF-46/manifest.md)을 갱신했다.
+- SK 후속 반복 버튼/어학 개수 분리, 기존 API capability 협상, 카카오 iframe 검색·정확 선택·최종 반영과 실제 fixture 검증 및 원복을 회사 문서와 지원 현황에 반영했다.
+- 경력·날짜·시험 성적 등 남은 제한과 다른 회사의 미검증 상태를 보존했다.

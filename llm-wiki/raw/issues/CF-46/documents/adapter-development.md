@@ -2,7 +2,7 @@
 
 ## 결정
 
-회사별 프론트 코드는 DOM 수집·조건부 동작·특수 입력을 소유한다. 백엔드는 프로필 매핑과 허용 명령을 결정한다. 공통 프론트는 snapshot과 후보 registry, API 통신, 브라우저 로컬 값 결합, 승인과 실행 검사를 유지한다. 이번 분리에서 schemaVersion 2 요청·응답 계약은 변경하지 않는다.
+회사별 프론트 코드는 DOM 수집·조건부 동작·특수 입력을 소유한다. 백엔드는 프로필 매핑과 허용 명령을 결정한다. 공통 프론트는 snapshot과 후보 registry, API 통신, 브라우저 로컬 값 결합, 승인과 실행 검사를 유지한다. 초기 분리의 schemaVersion 2와 기존 클라이언트 응답은 유지한다. 후속 SK 주소 검색은 기존 preparation API에서 address-search-v1 지원을 명시한 클라이언트에만 새 명령을 반환한다.
 
 `frontend/src/autofill/adapters/company.ts`에서 host를 소문자로 정규화한 뒤 정확히 비교한다. 미등록 회사에는 일반 처리를 적용하고, 등록 회사의 전용 DOM 예외를 다른 사이트에 적용하지 않는다. 서버 회사 정책의 host/path 및 fingerprint 검증은 별도로 유지된다.
 

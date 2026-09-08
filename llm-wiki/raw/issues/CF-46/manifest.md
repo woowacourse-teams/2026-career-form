@@ -1,9 +1,10 @@
 # CF-46 Knowledge Bundle
 
 > Issue: CF-46
-> Collected: 2026-09-07
-> Approval-Digest: df027b5910423b1ffad4ad267c719385039d40aeb09259bbacb19780ac393101
-> Source-Revision: dd9f867ad020a72dec51b27ab54073d59eef48ac
+> Collected: 2026-09-08
+> Approval-Digest: 28d877aae8306a494fe2eace6bf4e0baf55bddd0e31b87ffdfacb55c53c74d9f
+> Source-Base-Revision: 325535401b2c5ab8999142fa41f7f3c0f6b157a1
+> Source-State: CF-46 작업 트리의 미커밋 보완 포함
 
 ## adapter-development
 
