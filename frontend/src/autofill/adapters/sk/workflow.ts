@@ -115,6 +115,28 @@ export const skWorkflowAdapter: WorkflowAdapter = {
     SEARCH_FIELD_BINDINGS.has(handle.candidate.domName)
       ? confirmSkAutocomplete(document, handle)
       : Promise.resolve(true),
+  stateDriverFailureGroup: (item, handle) => {
+    if (!isVerifiedSearchDriver(item, handle) || handle.elements.length !== 1)
+      return undefined;
+    const input = handle.elements[0];
+    const selectors: Record<string, string> = {
+      eduEducationName: ".form-item-group.educationUniv-item",
+      cerCertName: ".form-item-group.cert-Item",
+      lngExamName: ".form-item-group.langExam-Item",
+    };
+    const selector = selectors[handle.candidate.domName ?? ""];
+    if (
+      !selector ||
+      !(input instanceof HTMLInputElement) ||
+      input.name !== handle.candidate.domName ||
+      !input.isConnected
+    )
+      return undefined;
+    const group = input.closest(selector);
+    return group?.isConnected && input.closest(".form-item-group") === group
+      ? group
+      : undefined;
+  },
   revealSelections: [
     {
       domName: "eduMajorDoubleYN",

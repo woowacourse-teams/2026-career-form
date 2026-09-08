@@ -47,12 +47,18 @@ function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
               ? "certifications.certificate.name"
               : field.domName === "lngExamName"
                 ? "languages.languageTest.testName"
-                : field.domName === "lngExamScore" ||
-                    field.domName === "lngExamScoreSel"
-                  ? "languages.languageTest.grade"
-                  : field.domName === "lngAbilityLanguage"
-                    ? "languages.languageSkill.language"
-                    : undefined;
+                : field.domName === "cerCertSource"
+                  ? "certifications.certificate.issuer"
+                  : field.domName === "cerCertDate"
+                    ? "certifications.certificate.acquisitionDate"
+                    : field.domName === "prsEngFirstName"
+                      ? "personal.personal.englishGivenName"
+                      : field.domName === "lngExamScore" ||
+                          field.domName === "lngExamScoreSel"
+                        ? "languages.languageTest.grade"
+                        : field.domName === "lngAbilityLanguage"
+                          ? "languages.languageSkill.language"
+                          : undefined;
       if (!profileFieldKey) {
         return {
           candidateId: field.candidateId,
@@ -353,12 +359,130 @@ it.each([
         onExit: () => undefined,
       }),
     );
-    await waitFor(() =>
-      expect(document.body.textContent).toContain(
-        "조건부 선택 뒤 입력란을 안전하게 준비하지 못했습니다",
-      ),
+    try {
+      await waitFor(() =>
+        expect(document.body.textContent).toContain(
+          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
+        ),
+      );
+      expect(input.value).toBe("");
+    } finally {
+      removeBridge();
+    }
+  },
+);
+
+it.each([false, true])(
+  "defers a rejected row but stops if that row is replaced (%s)",
+  async (replaceFailedRow) => {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(o: { url: string }): void };
+      }
+    ).jsdom.reconfigure({
+      url: "https://www.skcareers.com/Application/Index/fixture",
+    });
+    document.body.innerHTML = `<div class="apply-form-box"><input name="prsEngFirstName"></div>
+    <div class="apply-form-box" id="applyContentCertificate">
+      <div class="form-item-group cert-Item"><input name="cerCertName"><input name="cerCertSource"><input name="cerCertDate"></div>
+      <div class="form-item-group cert-Item"><input name="cerCertName"><input name="cerCertSource"><input name="cerCertDate"></div>
+    </div>`;
+    const rows = Array.from(
+      document.querySelectorAll<HTMLElement>(".cert-Item"),
     );
-    expect(input.value).toBe("");
-    removeBridge();
+    const names = rows.map((r) =>
+      r.querySelector<HTMLInputElement>("[name=cerCertName]")!,
+    );
+    const removeBridge = installWidgets(
+      names.map((input, index) => ({
+        input,
+        menu: Object.assign(document.createElement("ul"), {
+          className: "ui-menu ui-autocomplete",
+        }),
+        item:
+          index === 0
+            ? { id: "0", label: "샘플 자격증 A", value: "" }
+            : { id: "valid", label: "정보처리기사", value: "정보처리기사" },
+        reveal: () => undefined,
+      })),
+    );
+    const profile = createEmptyProfile();
+    profile.personal.englishGivenName = "Example";
+    profile.certifications = [
+      {
+        id: "unmatched",
+        sectionId: "certificate",
+        values: {
+          name: "샘플 자격증 A",
+          issuer: "Unmatched issuer",
+          acquisitionDate: "2025-01",
+        },
+      },
+      {
+        id: "matched",
+        sectionId: "certificate",
+        values: {
+          name: "정보처리기사",
+          issuer: "Public issuer",
+          acquisitionDate: "2025-02",
+        },
+      },
+    ];
+    let analyses = 0;
+    const apiClient: AnalysisApiClient = {
+      analyzePreparation: async (req) => ({
+        snapshotId: req.snapshotId,
+        mode: "ADAPTER",
+        analysisStatus: "COMPLETE",
+        preparationPlans: [],
+      }),
+      analyzeFields: async (req) => {
+        analyses++;
+        if (replaceFailedRow && analyses === 2)
+          rows[0].replaceWith(rows[0].cloneNode(true));
+        return response(req);
+      },
+    };
+    try {
+      render(
+        createElement(AutofillWorkflow, {
+          apiClient,
+          repository: { load: async () => profile },
+          pageDocument: document,
+          onExit: () => undefined,
+        }),
+      );
+      if (replaceFailedRow) {
+        await waitFor(() =>
+          expect(document.body.textContent).toContain(
+            "입력 보류 중 지원서 구조가 변경되었습니다",
+          ),
+        );
+        expect(
+          document.querySelector<HTMLInputElement>("[name=prsEngFirstName]")!
+            .value,
+        ).toBe("");
+        expect(names[1].value).toBe("");
+        return;
+      }
+      await waitFor(() =>
+        expect(document.body.textContent).toContain("기입 결과"),
+      );
+      expect(
+        document.querySelector<HTMLInputElement>("[name=prsEngFirstName]")!
+          .value,
+      ).toBe("Example");
+      expect(
+        Array.from(rows[0].querySelectorAll("input")).map((e) => e.value),
+      ).toEqual(["", "", ""]);
+      expect(
+        Array.from(rows[1].querySelectorAll("input")).map((e) => e.value),
+      ).toEqual(["정보처리기사", "Public issuer", "2025-02"]);
+      expect(document.body.textContent).toContain(
+        "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
+      );
+    } finally {
+      removeBridge();
+    }
   },
 );

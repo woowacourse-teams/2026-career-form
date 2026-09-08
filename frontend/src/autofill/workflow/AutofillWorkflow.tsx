@@ -470,6 +470,7 @@ export function AutofillWorkflow({
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
     completedStateDriverKeys: ReadonlySet<string> = new Set(),
+    failedGroups: ReadonlySet<Element> = new Set(),
   ) => {
     const run = addressRun.current;
     if (run.controller.signal.aborted) return;
@@ -477,6 +478,15 @@ export function AutofillWorkflow({
 
     let analysis = await apiClient.analyzeFields(snapshot.request);
     if (run.controller.signal.aborted) return;
+    if (
+      [...failedGroups].some(
+        (group) => !group.isConnected || group.ownerDocument !== pageDocument,
+      )
+    ) {
+      setExceptionTitle("입력 보류 중 지원서 구조가 변경되었습니다");
+      setStage("exception");
+      return;
+    }
 
     if (analysis.analysisStatus === "BLOCKED") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
@@ -581,6 +591,15 @@ export function AutofillWorkflow({
       setStage("result");
       return;
     }
+    const belongsToFailedGroup = (item: ReviewPlanItem) => {
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      return (
+        (lookup.status === "ready" || lookup.status === "blocked") &&
+        [...failedGroups].some((group) =>
+          lookup.handle.elements.some((element) => group.contains(element)),
+        )
+      );
+    };
     const automaticItems = plan.items.map((item) =>
       item.status === "needs-review" && !item.disabled
         ? { ...item, selected: true }
@@ -598,7 +617,8 @@ export function AutofillWorkflow({
         adapter.stateDriverStage?.(item, lookup.handle) ??
         (adapter.isStateDriver(item, domName) ? 1 : undefined);
       const key = stateDriverKey(item, domName, lookup.handle.itemIndex);
-      return !item.selected ||
+      return belongsToFailedGroup(item) ||
+        !item.selected ||
         item.disabled ||
         stage === undefined ||
         completedStateDriverKeys.has(key)
@@ -612,6 +632,35 @@ export function AutofillWorkflow({
       const currentStateDriverItems = stateDriverItems.filter(
         (driver) => driver.stage === nextStage,
       );
+      const deferFailedGroups = async (successful: readonly boolean[]) => {
+        const nextGroups = new Set(failedGroups);
+        const nextCompleted = new Set(completedStateDriverKeys);
+        for (const [index, driver] of currentStateDriverItems.entries()) {
+          if (successful[index]) {
+            nextCompleted.add(driver.key);
+            continue;
+          }
+          const group = adapter.stateDriverFailureGroup?.(
+            driver.item,
+            driver.handle,
+          );
+          if (
+            !group?.isConnected ||
+            group.ownerDocument !== pageDocument ||
+            !driver.handle.elements.every((element) => group.contains(element))
+          )
+            return false;
+          nextGroups.add(group);
+        }
+        if (run.controller.signal.aborted) return true;
+        await analyzeFields(
+          loadedProfile,
+          ignoreFreshRowDefaults,
+          nextCompleted,
+          nextGroups,
+        );
+        return true;
+      };
       const driversReady = await Promise.all(
         currentStateDriverItems.map(
           ({ handle }) =>
@@ -623,7 +672,10 @@ export function AutofillWorkflow({
         setStage("exception");
         return;
       }
-      const stateSelectionResults = [];
+      const stateSelectionResults: Pick<
+        ApprovedWriteResult,
+        "candidateId" | "status"
+      >[] = [];
       for (const { item } of currentStateDriverItems) {
         const lookup = snapshot.registry.lookupField(item.candidateId);
         const eligible =
@@ -653,7 +705,7 @@ export function AutofillWorkflow({
             : [
                 {
                   candidateId: item.candidateId,
-                  status: special ? "written" : "skipped",
+                  status: special ? ("written" as const) : ("skipped" as const),
                 },
               ]),
         );
@@ -668,6 +720,7 @@ export function AutofillWorkflow({
           ),
         );
         if (!settled.every(Boolean)) {
+          if (await deferFailedGroups(settled)) return;
           setExceptionTitle(
             "조건부 선택 뒤 입력란을 안전하게 준비하지 못했습니다",
           );
@@ -682,10 +735,21 @@ export function AutofillWorkflow({
           loadedProfile,
           ignoreFreshRowDefaults,
           nextCompletedStateDriverKeys,
+          failedGroups,
         );
         return;
       }
       if (adapter.stateDriverStage) {
+        // A successful write still needs its normal settle check before continuing.
+        const successful = await Promise.all(
+          currentStateDriverItems.map(
+            async ({ handle }, index) =>
+              stateSelectionResults[index]?.status === "written" &&
+              ((await adapter.settleStateDriver?.(pageDocument, handle)) ??
+                true),
+          ),
+        );
+        if (await deferFailedGroups(successful)) return;
         setExceptionTitle("조건부 선택을 안전하게 적용하지 못했습니다");
         setStage("exception");
         return;
@@ -711,7 +775,9 @@ export function AutofillWorkflow({
         })
         .map((item) => item.candidateId),
     );
+    const deferredItems = automaticItems.filter(belongsToFailedGroup);
     const finalWriteItems = automaticItems.filter((item) => {
+      if (belongsToFailedGroup(item)) return false;
       const lookup = snapshot.registry.lookupField(item.candidateId);
       if (lookup.status !== "ready" && lookup.status !== "blocked") {
         return true;
@@ -729,7 +795,16 @@ export function AutofillWorkflow({
       approvedCandidateIds,
       registry: snapshot.registry,
     });
-    setResults(writeResults);
+    if (run.controller.signal.aborted) return;
+    setResults([
+      ...writeResults,
+      ...deferredItems.map((item): ApprovedWriteResult => ({
+        candidateId: item.candidateId,
+        status: "skipped",
+        reason:
+          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
+      })),
+    ]);
     setStage("result");
   };
 

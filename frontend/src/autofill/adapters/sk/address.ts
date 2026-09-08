@@ -3,6 +3,7 @@ import type {
   AddressResult,
 } from "../../address/types";
 import { normalizeAddress } from "../../address/match";
+import { splitRoadReference } from "../../address/road-reference";
 const names = ["prsZipCode", "prsAddress", "prsAddressDtl"] as const;
 function visible(element: Element): boolean {
   for (let p: Element | null = element; p; p = p.parentElement) {
@@ -71,11 +72,19 @@ export async function runSkAddress({
     !normalizeAddress(expected.address)
   )
     return manual("프로필의 기본주소와 우편번호를 먼저 확인해 주세요.");
+  const reference = splitRoadReference(expected.address);
+  const matchesBase = () =>
+    normalizeAddress(address.value) === normalizeAddress(expected.address) ||
+    (reference !== undefined &&
+      normalizeAddress(address.value) === reference.road);
   const values = [expected.postalCode, expected.address, expected.detail];
   const originals = [zip.value, address.value, detail.value];
   if (
     originals.some(
-      (v, i) => v !== "" && normalizeAddress(v) !== normalizeAddress(values[i]),
+      (v, i) =>
+        v !== "" &&
+        normalizeAddress(v) !== normalizeAddress(values[i]) &&
+        !(i === 1 && matchesBase()),
     )
   )
     return manual("지원서에 다른 주소가 입력되어 있어 덮어쓰지 않았습니다.");
@@ -104,9 +113,14 @@ export async function runSkAddress({
   const unchanged = () =>
     targets() &&
     fields.every((f, i) => (f as HTMLInputElement).value === originals[i]);
+  let opened = false;
+  const closeControls =
+    layer.querySelectorAll<HTMLImageElement>("img#btnCloseLayer");
+  const close = closeControls.length === 1 ? closeControls[0] : undefined;
   try {
     if (!unchanged() || !(await sameProfile()) || !unchanged()) return manual();
     button.click();
+    opened = true;
     const maySelect = async () => {
       const same = await sameProfile();
       return (
@@ -123,14 +137,13 @@ export async function runSkAddress({
       signal,
     );
     if (!selected) return manual();
+    // A true search result proves the exact road/postcode and any legal-dong
+    // reference in the Kakao row. Only then accept the site's bare-road callback.
     const deadline = Date.now() + 2000;
     while (
       !signal.aborted &&
       Date.now() < deadline &&
-      (zip.value !== expected.postalCode ||
-        normalizeAddress(address.value) !==
-          normalizeAddress(expected.address) ||
-        visible(layer))
+      (zip.value !== expected.postalCode || !matchesBase() || visible(layer))
     ) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -138,7 +151,7 @@ export async function runSkAddress({
       !(await sameProfile()) ||
       !targets() ||
       zip.value !== expected.postalCode ||
-      normalizeAddress(address.value) !== normalizeAddress(expected.address) ||
+      !matchesBase() ||
       visible(layer) ||
       detail.value !== originals[2]
     )
@@ -159,5 +172,25 @@ export async function runSkAddress({
       : manual();
   } catch {
     return manual();
+  } finally {
+    // Never close a pre-existing layer or one the user has changed.
+    if (
+      opened &&
+      close &&
+      layer.isConnected &&
+      document.querySelector("#layer") === layer &&
+      close.isConnected &&
+      layer.querySelectorAll("#btnCloseLayer").length === 1 &&
+      layer.querySelector("#btnCloseLayer") === close &&
+      visible(layer) &&
+      unchanged()
+    ) {
+      try {
+        if ((await sameProfile()) && unchanged() && visible(layer))
+          close.click();
+      } catch {
+        /* Leave a changed or disconnected search to the user. */
+      }
+    }
   }
 }

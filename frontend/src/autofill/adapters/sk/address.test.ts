@@ -107,3 +107,112 @@ describe("SK address selection", () => {
     }
   });
 });
+
+it("accepts the provider-verified road callback without its legal-dong reference", async () => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(o: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://www.skcareers.com/Application/Index/synthetic",
+  });
+  const button = setup();
+  const profile = { ...expected, address: expected.address + " (영평동)" };
+  const result = await runSkAddress({
+    document,
+    button,
+    expected: profile,
+    loadCurrent: async () => profile,
+    signal: new AbortController().signal,
+    search: async (_expected, maySelect) => {
+      expect(await maySelect()).toBe(true);
+      document.querySelector<HTMLInputElement>("#prsZipCode")!.value =
+        expected.postalCode;
+      document.querySelector<HTMLInputElement>("#prsAddress")!.value =
+        expected.address;
+      document.querySelector<HTMLElement>("#layer")!.style.display = "none";
+      return true;
+    },
+  });
+  expect(result.status).toBe("written");
+  expect(
+    document.querySelector<HTMLInputElement>("#prsAddressDtl")!.value,
+  ).toBe(profile.detail);
+  expect(
+    document.querySelector<HTMLInputElement>("#prsAddress")!.readOnly,
+  ).toBe(true);
+});
+
+it("closes only its unchanged failed search through the owned normal close control", async () => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(o: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://www.skcareers.com/Application/Index/synthetic",
+  });
+  const button = setup();
+  const layer = document.querySelector<HTMLElement>("#layer")!;
+  const close = document.createElement("img");
+  close.id = "btnCloseLayer";
+  close.alt = "닫기 버튼";
+  close.addEventListener("click", () => {
+    layer.style.display = "none";
+  });
+  layer.append(close);
+  const result = await runSkAddress({
+    document,
+    button,
+    expected,
+    loadCurrent: async () => expected,
+    signal: new AbortController().signal,
+    search: async () => false,
+  });
+  expect(result.status).toBe("manual");
+  expect(layer.style.display).toBe("none");
+  expect(
+    document.querySelector<HTMLInputElement>("#prsAddressDtl")!.value,
+  ).toBe("");
+});
+
+it.each(["value", "profile", "close", "layer"])(
+  "leaves a failed layer alone when its %s changes",
+  async (change) => {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(o: { url: string }): void };
+      }
+    ).jsdom.reconfigure({
+      url: "https://www.skcareers.com/Application/Index/synthetic",
+    });
+    const button = setup();
+    const layer = document.querySelector<HTMLElement>("#layer")!;
+    const close = document.createElement("img");
+    close.id = "btnCloseLayer";
+    close.addEventListener("click", () => {
+      layer.style.display = "none";
+    });
+    layer.append(close);
+    let current = expected;
+    await runSkAddress({
+      document,
+      button,
+      expected,
+      loadCurrent: async () => current,
+      signal: new AbortController().signal,
+      search: async () => {
+        if (change === "value")
+          document.querySelector<HTMLInputElement>("#prsAddressDtl")!.value =
+            "사용자 변경";
+        if (change === "profile")
+          current = { ...expected, detail: "프로필 변경" };
+        if (change === "close") close.replaceWith(close.cloneNode(true));
+        if (change === "layer") layer.replaceWith(layer.cloneNode(true));
+        return false;
+      },
+    });
+    expect(document.querySelector<HTMLElement>("#layer")!.style.display).toBe(
+      "block",
+    );
+  },
+);

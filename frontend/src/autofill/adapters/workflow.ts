@@ -77,6 +77,11 @@ export interface WorkflowAdapter {
     document: Document,
     handle: FieldCandidateHandle,
   ): Promise<boolean>;
+  // Opt-in only: a failed search may defer its whole independently bound row.
+  stateDriverFailureGroup?(
+    item: ReviewPlanItem,
+    handle: FieldCandidateHandle,
+  ): Element | undefined;
   revealSelections: readonly RevealSelection[];
   selectReveal(
     document: Document,

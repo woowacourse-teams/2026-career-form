@@ -38,3 +38,43 @@ describe("Kakao postcode result DOM", () => {
     expect(findKakaoResult(document, expected)).toBeUndefined();
   });
 });
+
+describe("Kakao verified legal-dong reference", () => {
+  const withReference = {
+    ...expected,
+    address: expected.address + " (영평동)",
+  };
+  beforeEach(() => {
+    document.body.innerHTML = `<ul>${row()}</ul><div class="paging_post">현재페이지1 / 1</div>`;
+    document.querySelector<HTMLElement>("li")!.dataset.bname = "영평동";
+  });
+  it("selects the unique road result when its legal-dong metadata proves the reference", () => {
+    expect(findKakaoResult(document, withReference)).toBe(
+      document.querySelector("button.link_post"),
+    );
+  });
+  it.each(["다른동", "", "영평동, 101호"])(
+    "rejects unverified legal-dong metadata %s",
+    (bname) => {
+      document.querySelector<HTMLElement>("li")!.dataset.bname = bname;
+      expect(findKakaoResult(document, withReference)).toBeUndefined();
+    },
+  );
+  it("does not discard a unit number, building number, or duplicate identity", () => {
+    expect(
+      findKakaoResult(document, {
+        ...expected,
+        address: expected.address + " (101호)",
+      }),
+    ).toBeUndefined();
+    expect(
+      findKakaoResult(document, {
+        ...expected,
+        address: expected.address + "-1 (영평동)",
+      }),
+    ).toBeUndefined();
+    const copy = document.querySelector("li")!.cloneNode(true);
+    document.querySelector("ul")!.append(copy);
+    expect(findKakaoResult(document, withReference)).toBeUndefined();
+  });
+});

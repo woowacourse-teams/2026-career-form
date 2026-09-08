@@ -1,5 +1,7 @@
 import { normalizeAddress, selectAddress, type AddressIdentity } from "./match";
 
+import { matchesRoadReference } from "./road-reference";
+
 export function findKakaoResult(
   document: Document,
   expected: AddressIdentity,
@@ -27,7 +29,16 @@ export function findKakaoResult(
     ).flatMap((button) => {
       const addresses = button.querySelectorAll(".txt_addr");
       if (addresses.length !== 1 || button.disabled) return [];
-      return [{ address: addresses[0].textContent ?? "", postalCode, button }];
+      const displayed = addresses[0].textContent ?? "";
+      // The row metadata must independently prove the optional legal-dong suffix.
+      const address = matchesRoadReference(
+        expected.address,
+        displayed,
+        row.dataset.bname ?? "",
+      )
+        ? expected.address
+        : displayed;
+      return [{ address, postalCode, button }];
     });
   });
   return selectAddress(expected, results)?.button;
