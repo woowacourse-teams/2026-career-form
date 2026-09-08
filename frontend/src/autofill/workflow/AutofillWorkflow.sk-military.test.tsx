@@ -151,7 +151,7 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
 }
 
 function setup(
-  militaryStatus: MilitaryStatus | "비대상",
+  militaryStatus: MilitaryStatus | "만기전역" | "비대상",
   veteranStatus: "대상" | "비대상",
   existing: {
     military?: "대상" | "비대상";
@@ -268,7 +268,12 @@ function setup(
   profile.military =
     militaryStatus === "비대상"
       ? { militaryStatus }
-      : { militaryStatus, ...militaryDetails[militaryStatus] };
+      : {
+          militaryStatus,
+          ...militaryDetails[
+            militaryStatus === "만기전역" ? "군필" : militaryStatus
+          ],
+        };
   profile.veteran =
     veteranStatus === "대상"
       ? {
@@ -394,6 +399,41 @@ it.each(militaryStatuses)(
     ).toBe(true);
   },
 );
+
+it("maps the exact SK military alias through preparation, status selection, and detail binding", async () => {
+  const run = setup("만기전역", "비대상");
+
+  await waitFor(() => {
+    expect(run.fieldAnalysisCalls()).toBe(1);
+    expect(
+      document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
+        ?.value,
+    ).toBe("군필");
+    expect(
+      document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcType']")
+        ?.value,
+    ).toBe("303001");
+  });
+
+  expect(run.preparationCalls()).toBe(2);
+  expect(run.militaryTargetClicks()).toBe(1);
+  expect(run.militaryStatusChanges()).toBe(1);
+});
+
+it("keeps an existing canonical SK military selection without redispatching the alias", async () => {
+  const run = setup("만기전역", "비대상", {
+    military: "대상",
+    militaryStatus: "군필",
+  });
+
+  await waitFor(() => expect(run.fieldAnalysisCalls()).toBe(1));
+  expect(
+    document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
+      ?.value,
+  ).toBe("군필");
+  expect(run.militaryTargetClicks()).toBe(0);
+  expect(run.militaryStatusChanges()).toBe(0);
+});
 
 it("keeps military details closed for a non-target status and leaves unsupported fields empty", async () => {
   const run = setup("비대상", "비대상");

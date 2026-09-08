@@ -35,6 +35,7 @@ export interface WorkflowDiagnostic {
 }
 
 export interface WorkflowAdapter {
+  normalizeProfileValue?(profileFieldKey: string, value: string): string;
   addressFieldNames?: readonly string[];
   prepareEducation?(
     document: Document,

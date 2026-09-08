@@ -98,7 +98,10 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
     fieldId: field.id,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
-    topLevel: category.topLevelFields?.some((candidate) => candidate.id === field.id) === true,
+    topLevel:
+      category.topLevelFields?.some(
+        (candidate) => candidate.id === field.id,
+      ) === true,
   };
 }
 
@@ -197,6 +200,7 @@ function itemForAnalysis(
   profile: Profile,
   registry: CandidateRegistry,
   ignoreCurrentValueCandidateIds: ReadonlySet<string>,
+  normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
@@ -225,11 +229,11 @@ function itemForAnalysis(
     );
   }
 
-  const binding: ValueBinding | undefined = analysis.valueBinding ?? (
-    analysis.profileFieldKey
+  const binding: ValueBinding | undefined =
+    analysis.valueBinding ??
+    (analysis.profileFieldKey
       ? { type: "DIRECT", profileFieldKey: analysis.profileFieldKey }
-      : undefined
-  );
+      : undefined);
   if (!binding) {
     return unavailableItem(
       analysis.candidateId,
@@ -269,14 +273,24 @@ function itemForAnalysis(
     }
   }
 
-  const profileValue = resolveValueBinding(profile, binding, itemIndex);
-  if (profileValue.status !== "resolved") {
+  const resolvedProfileValue = resolveValueBinding(profile, binding, itemIndex);
+  if (resolvedProfileValue.status !== "resolved") {
     const reason =
-      profileValue.status === "ambiguous"
+      resolvedProfileValue.status === "ambiguous"
         ? "반복 프로필 항목을 하나로 안전하게 결정할 수 없습니다."
         : "입력할 프로필 값이 없습니다.";
     return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
   }
+  const profileValue =
+    binding.type === "DIRECT" && normalizeDirectValue
+      ? {
+          ...resolvedProfileValue,
+          value: normalizeDirectValue(
+            binding.profileFieldKey,
+            resolvedProfileValue.value,
+          ),
+        }
+      : resolvedProfileValue;
 
   const pageValue = currentValue(lookup.handle);
   const hasConflict =
@@ -290,7 +304,9 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
       ...(profileValue.profileEntryId
         ? { profileEntryId: profileValue.profileEntryId }
         : {}),
@@ -310,7 +326,9 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
       ...(profileValue.profileEntryId
         ? { profileEntryId: profileValue.profileEntryId }
         : {}),
@@ -330,7 +348,9 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
       currentValue: pageValue,
       profileValue: profileValue.value,
       previewValue: profileValue.value,
@@ -345,7 +365,9 @@ function itemForAnalysis(
   return {
     candidateId: analysis.candidateId,
     fieldLabel,
-    ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+    ...(binding.type === "DIRECT"
+      ? { profileFieldKey: binding.profileFieldKey }
+      : {}),
     ...(profileValue.profileEntryId
       ? { profileEntryId: profileValue.profileEntryId }
       : {}),
@@ -367,11 +389,13 @@ export function buildReviewPlan({
   profile,
   registry,
   ignoreCurrentValueCandidateIds = new Set<string>(),
+  normalizeDirectValue,
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
   registry: CandidateRegistry;
   ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
+  normalizeDirectValue?: (profileFieldKey: string, value: string) => string;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
@@ -379,7 +403,13 @@ export function buildReviewPlan({
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
     items: analysis.fields.map((field) =>
-      itemForAnalysis(field, profile, registry, ignoreCurrentValueCandidateIds),
+      itemForAnalysis(
+        field,
+        profile,
+        registry,
+        ignoreCurrentValueCandidateIds,
+        normalizeDirectValue,
+      ),
     ),
   };
 }

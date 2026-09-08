@@ -82,6 +82,30 @@ describe("SK conditional selections", () => {
 });
 
 describe("SK military and veteran conditional selections", () => {
+  it("normalizes only the exact military status alias at the SK adapter boundary", () => {
+    expect(
+      adapter.normalizeProfileValue?.(
+        "military.military.militaryStatus",
+        "만기전역",
+      ),
+    ).toBe("군필");
+    expect(
+      adapter.normalizeProfileValue?.(
+        "military.military.militaryType",
+        "만기전역",
+      ),
+    ).toBe("만기전역");
+    expect(
+      adapter.normalizeProfileValue?.(
+        "military.military.militaryStatus",
+        "의병전역",
+      ),
+    ).toBe("의병전역");
+    expect(
+      getWorkflowAdapter("example.com").normalizeProfileValue,
+    ).toBeUndefined();
+  });
+
   it.each(["군필", "미필", "면제", "복무중"])(
     "selects the exact military target radio for %s",
     (profileValue) => {

@@ -510,8 +510,8 @@ describe("review plan", () => {
             type: "LOOKUP",
             profileFieldKey: "education.university.degreeLevel",
             optionMap: {
-              "전문학사": "전문대학(전문학사)",
-              "학사": "대학(학사)",
+              전문학사: "전문대학(전문학사)",
+              학사: "대학(학사)",
             },
           },
           autofillPolicy: "CONDITIONAL",
@@ -651,6 +651,82 @@ describe("review plan", () => {
       disabled: true,
       revealed: false,
     });
+  });
+
+  it("normalizes a direct value before conflict detection without mutating the profile", () => {
+    const profile = createEmptyProfile();
+    profile.military.militaryStatus = "만기전역";
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          profileFieldKey: "military.military.militaryStatus",
+        },
+      ]),
+      profile,
+      registry: registryWithTextField("군필"),
+      normalizeDirectValue: (key, value) =>
+        key === "military.military.militaryStatus" && value === "만기전역"
+          ? "군필"
+          : value,
+    }).items;
+
+    expect(item).toMatchObject({
+      status: "available",
+      profileValue: "군필",
+      previewValue: "군필",
+    });
+    expect(profile.military.militaryStatus).toBe("만기전역");
+  });
+
+  it("keeps normalized sensitive values masked and disabled", () => {
+    const profile = createEmptyProfile();
+    profile.military.militaryStatus = "만기전역";
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          profileFieldKey: "military.military.militaryStatus",
+          autofillPolicy: "SENSITIVE_CONFIRMATION",
+        },
+      ]),
+      profile,
+      registry: registryWithTextField(),
+      normalizeDirectValue: (_key, _value) => "군필",
+    }).items;
+
+    expect(item).toMatchObject({
+      status: "sensitive",
+      profileValue: "군필",
+      previewValue: "••••••••",
+      selected: false,
+      disabled: true,
+      revealed: false,
+    });
+  });
+
+  it("does not pass derived values through a direct-value normalizer", () => {
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "김";
+    profile.personal.koreanGivenName = "민수";
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+        },
+      ]),
+      profile,
+      registry: registryWithTextField(),
+      normalizeDirectValue: () => {
+        throw new Error("derived values must bypass direct normalization");
+      },
+    }).items;
+
+    expect(item.profileValue).toBe("김민수");
   });
 
   it("makes unmatched, non-ready, or missing-value fields unavailable", () => {

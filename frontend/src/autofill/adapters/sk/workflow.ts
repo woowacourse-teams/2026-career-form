@@ -136,6 +136,7 @@ const SEARCH_FIELD_OFFSETS = new Map([
   ["cerCertName", 1],
   ["lngExamName", 2],
 ]);
+const MILITARY_STATUS_FIELD_KEY = "military.military.militaryStatus";
 
 function directProfileFieldKey(item: ReviewPlanItem): string | undefined {
   const binding = item.analysis?.valueBinding;
@@ -159,6 +160,11 @@ function isVerifiedSearchDriver(
 }
 
 export const skWorkflowAdapter: WorkflowAdapter = {
+  normalizeProfileValue: (profileFieldKey, value) =>
+    profileFieldKey === MILITARY_STATUS_FIELD_KEY &&
+    value.normalize("NFKC").trim() === "만기전역"
+      ? "군필"
+      : value,
   canSelectProfileOption: (handle, profileValue) => {
     if (
       handle.candidate.domName === "prsMilitarySvcYN" ||
