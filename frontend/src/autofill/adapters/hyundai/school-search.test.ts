@@ -6,9 +6,9 @@ import { runHyundaiEducationSearch } from "./school-search";
 
 interface SearchCase {
   itemGroupId: string;
-  domName: "schNm" | "majorNm";
+  domName: "schNm" | "majorNm" | "dblMajorNm" | "minorNm";
   autoType: "school" | "basic";
-  hiddenName: "schCd" | "major";
+  hiddenName: "schCd" | "major" | "dblMajor" | "minor";
   params: "0045" | "0047" | "0015";
   profileFieldKey: string;
   query: string;
@@ -71,6 +71,28 @@ const SEARCH_CASES: readonly SearchCase[] = [
     query: "컴퓨터공학",
     code: "03677",
     resultText: "컴퓨터공학",
+  },
+  {
+    itemGroupId: "educationuniversity",
+    domName: "dblMajorNm",
+    autoType: "basic",
+    hiddenName: "dblMajor",
+    params: "0015",
+    profileFieldKey: "education.university.additionalMajorName",
+    query: "산업디자인",
+    code: "04123",
+    resultText: "산업디자인",
+  },
+  {
+    itemGroupId: "educationuniversity",
+    domName: "minorNm",
+    autoType: "basic",
+    hiddenName: "minor",
+    params: "0015",
+    profileFieldKey: "education.university.minorName",
+    query: "경영학",
+    code: "00316",
+    resultText: "경영학",
   },
 ];
 
@@ -272,6 +294,7 @@ describe("Hyundai education normal search", () => {
       expect(display.value).toBe(search.query);
       expect(display.dataset.searchResult).toBe(search.query);
       expect(hidden.value).toBe(search.code);
+      expect(display.closest(".field")?.classList.contains("exist")).toBe(true);
       expect(otherDisplay.value).toBe("기존 다른 행 값");
       expect(otherHidden.value).toBe("OTHER");
     },
@@ -296,7 +319,31 @@ describe("Hyundai education normal search", () => {
       ),
     ).resolves.toBe(true);
     expect(keyups).toBe(0);
+    expect(display.closest(".field")?.classList.contains("exist")).toBe(true);
   });
+
+  it.each([SEARCH_CASES[5]!, SEARCH_CASES[6]!])(
+    "does not search $profileFieldKey without a profile value",
+    async (search) => {
+      const { display, hidden } = renderSearch(search);
+      const item = itemFor(search);
+      item.profileValue = "";
+      let keyups = 0;
+      display.addEventListener("keyup", () => {
+        keyups += 1;
+      });
+
+      await expect(
+        runHyundaiEducationSearch(document, handleFor(search, display), item),
+      ).resolves.toBe(false);
+      expect(keyups).toBe(0);
+      expect(display.value).toBe("");
+      expect(hidden.value).toBe("");
+      expect(display.closest(".field")?.classList.contains("exist")).toBe(
+        false,
+      );
+    },
+  );
 
   it("rejects a wrong education group or profile binding before keyup", async () => {
     const search = SEARCH_CASES[1]!;
@@ -471,6 +518,59 @@ describe("Hyundai education normal search", () => {
     expect(hidden.value).toBe("");
   });
 
+  it("rejects a nonmatching additional-major result", async () => {
+    const search = SEARCH_CASES[5]!;
+    const { display, hidden, results } = renderSearch(search);
+    let clicks = 0;
+    display.addEventListener("keyup", () => {
+      queueMicrotask(() => {
+        const button = resultButton(search, { result: "시각디자인" });
+        button.addEventListener("click", () => {
+          clicks += 1;
+        });
+        results.append(button.parentElement!);
+      });
+    });
+
+    await expect(
+      runHyundaiEducationSearch(
+        document,
+        handleFor(search, display),
+        itemFor(search),
+      ),
+    ).resolves.toBe(false);
+    expect(clicks).toBe(0);
+    expect(display.value).toBe("");
+    expect(hidden.value).toBe("");
+  });
+
+  it("stops when the owning education row becomes stale before selection", async () => {
+    const search = SEARCH_CASES[6]!;
+    const { display, hidden, results } = renderSearch(search);
+    const handle = handleFor(search, display);
+    let current = true;
+    handle.isCurrentContext = () => current;
+    let clicks = 0;
+    display.addEventListener("keyup", () => {
+      queueMicrotask(() => {
+        current = false;
+        const button = resultButton(search);
+        installSelection(button, display, hidden);
+        button.addEventListener("click", () => {
+          clicks += 1;
+        });
+        results.append(button.parentElement!);
+      });
+    });
+
+    await expect(
+      runHyundaiEducationSearch(document, handle, itemFor(search)),
+    ).resolves.toBe(false);
+    expect(clicks).toBe(0);
+    expect(display.value).toBe("");
+    expect(hidden.value).toBe("");
+  });
+
   it("preserves a late user edit and respects cancellation", async () => {
     const search = SEARCH_CASES[1]!;
     const first = renderSearch(search);
@@ -576,6 +676,7 @@ describe("Hyundai education normal search", () => {
         installSelection(button, display, hidden);
         button.addEventListener("click", () => {
           display.dataset.autoParams = "changed";
+          display.closest(".field")!.classList.add("exist");
         });
         results.append(button.parentElement!);
       });
@@ -588,5 +689,9 @@ describe("Hyundai education normal search", () => {
         itemFor(search),
       ),
     ).resolves.toBe(false);
+    expect(display.value).toBe("");
+    expect(hidden.value).toBe("");
+    expect(display.hasAttribute("data-search-result")).toBe(false);
+    expect(display.closest(".field")?.classList.contains("exist")).toBe(false);
   });
 });

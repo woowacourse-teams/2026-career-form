@@ -7,6 +7,16 @@ import type { ReviewPlanItem } from "../../review/review-plan";
 import type { WorkflowAdapter } from "../workflow";
 
 const STATE_SETTLE_TIMEOUT_MILLISECONDS = 3_000;
+const EDUCATION_SEARCH_STAGE_OFFSETS = new Map([
+  ["schNm", 0],
+  ["majorNm", 1],
+  ["dblMajorNm", 2],
+  ["minorNm", 3],
+]);
+
+function isEducationSearch(handle: FieldCandidateHandle): boolean {
+  return EDUCATION_SEARCH_STAGE_OFFSETS.has(structuralBase(handle) ?? "");
+}
 
 function profileFieldKey(item: ReviewPlanItem): string | undefined {
   const binding = item.analysis?.valueBinding;
@@ -163,7 +173,7 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
   executeStateDriver: async (document, handle, item, signal) => {
     if (structuralBase(handle) === "nationCd1Nm")
       return runHyundaiNationality(document, handle, item, signal);
-    if (["schNm", "majorNm"].includes(structuralBase(handle) ?? ""))
+    if (isEducationSearch(handle))
       return runHyundaiEducationSearch(document, handle, item, signal);
     return undefined;
   },
@@ -183,7 +193,7 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
   stateDriverStage: (item, handle) => {
     const fieldKey = profileFieldKey(item);
     if (
-      ["schNm", "majorNm"].includes(structuralBase(handle) ?? "") &&
+      isEducationSearch(handle) &&
       item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
       item.analysis.interactionStatus === "READY" &&
       item.analysis.writePlan?.command === "SET_TEXT" &&
@@ -192,8 +202,8 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     ) {
       return (
         3 +
-        (handle.itemIndex ?? 0) * 2 +
-        (structuralBase(handle) === "majorNm" ? 1 : 0)
+        (handle.itemIndex ?? 0) * 4 +
+        EDUCATION_SEARCH_STAGE_OFFSETS.get(structuralBase(handle) ?? "")!
       );
     }
     if (
@@ -218,7 +228,7 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     return undefined;
   },
   waitForStateDriverReady: (document, handle) =>
-    ["nationCd1Nm", "schNm", "majorNm"].includes(structuralBase(handle) ?? "")
+    structuralBase(handle) === "nationCd1Nm" || isEducationSearch(handle)
       ? Promise.resolve(true)
       : waitFor(document, () => hasOwnOptions(handle)),
   settleStateDriver: (document, handle) => {

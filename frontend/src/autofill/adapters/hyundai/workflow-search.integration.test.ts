@@ -118,12 +118,31 @@ it("uses normal nationality search before reanalysis and preserves nationality2"
   expect(analyses).toBe(2);
 });
 
-it("confirms school and major codes before writing the same university row dates", async () => {
-  document.body.innerHTML =
-    '<article id="academic" class="field-form-apply"><div class="field-content"><div class="field-group"><div class="field"><div class="select-wrap"><input type="hidden" name="schGb" class="js-field" value="5"><input type="button" id="schGb_1" value="학사"><div class="select-option education-option"><button type="button" data-code="5" class="selected">학사</button></div></div></div><div class="field search"><input type="hidden" name="schCd"><input type="text" id="schNm_1" name="schNm" data-auto-type="school" data-auto-api="0200" data-auto-params="0047"><div class="field-search-view"><ul class="search-result-list"></ul></div></div><div class="field search"><input type="hidden" name="major"><input type="text" id="majorNm_1" name="majorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div><div class="field"><input type="text" id="whiStDt_1" name="whiStDt" maxlength="7"></div></div></div></article>';
+it("confirms all university search codes before writing the same row dates", async () => {
+  document.body.innerHTML = `
+    <article id="academic" class="field-form-apply">
+      <div class="field-content">
+        <div class="field-group">
+          <div class="field">
+            <div class="select-wrap">
+              <input type="hidden" name="schGb" class="js-field" value="5">
+              <input type="button" id="schGb_1" value="학사">
+              <div class="select-option education-option"><button type="button" data-code="5" class="selected">학사</button></div>
+            </div>
+          </div>
+          <div class="field search"><input type="hidden" name="schCd"><input type="text" id="schNm_1" name="schNm" data-auto-type="school" data-auto-api="0200" data-auto-params="0047"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field search"><input type="hidden" name="major"><input type="text" id="majorNm_1" name="majorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field search"><input type="hidden" name="dblMajor"><input type="text" id="dblMajorNm_1" name="dblMajorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field search"><input type="hidden" name="minor"><input type="text" id="minorNm_1" name="minorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field"><input type="text" id="whiStDt_1" name="whiStDt" maxlength="7"></div>
+        </div>
+      </div>
+    </article>`;
   for (const [name, hiddenName, value, code] of [
     ["schNm", "schCd", "서울대학교", "0000561026"],
     ["majorNm", "major", "컴퓨터공학", "03677"],
+    ["dblMajorNm", "dblMajor", "산업디자인", "04123"],
+    ["minorNm", "minor", "경영학", "00316"],
   ]) {
     const input = document.querySelector<HTMLInputElement>(
       "[name=" + name + "]",
@@ -164,6 +183,10 @@ it("confirms school and major codes before writing the same university row dates
         degreeLevel: "학사",
         schoolName: "서울대학교",
         majorName: "컴퓨터공학",
+        doubleMajorStatus: "있음",
+        additionalMajorName: "산업디자인",
+        minorStatus: "있음",
+        minorName: "경영학",
         startDate: "2020-03",
       },
     },
@@ -171,6 +194,8 @@ it("confirms school and major codes before writing the same university row dates
   const keys: Record<string, string> = {
     schNm: "schoolName",
     majorNm: "majorName",
+    dblMajorNm: "additionalMajorName",
+    minorNm: "minorName",
     whiStDt: "startDate",
   };
   let analyses = 0;
@@ -234,11 +259,31 @@ it("confirms school and major codes before writing the same university row dates
   expect(document.querySelector<HTMLInputElement>("[name=major]")!.value).toBe(
     "03677",
   );
+  expect(
+    document.querySelector<HTMLInputElement>("[name=dblMajor]")!.value,
+  ).toBe("04123");
+  expect(document.querySelector<HTMLInputElement>("[name=minor]")!.value).toBe(
+    "00316",
+  );
   expect(document.querySelector<HTMLInputElement>("#schNm_1")!.value).toBe(
     "서울대학교",
   );
   expect(document.querySelector<HTMLInputElement>("#majorNm_1")!.value).toBe(
     "컴퓨터공학",
   );
-  expect(analyses).toBe(3);
+  expect(document.querySelector<HTMLInputElement>("#dblMajorNm_1")!.value).toBe(
+    "산업디자인",
+  );
+  expect(document.querySelector<HTMLInputElement>("#minorNm_1")!.value).toBe(
+    "경영학",
+  );
+  for (const name of ["schNm", "majorNm", "dblMajorNm", "minorNm"]) {
+    expect(
+      document
+        .querySelector<HTMLInputElement>(`[name='${name}']`)!
+        .closest(".field")
+        ?.classList.contains("exist"),
+    ).toBe(true);
+  }
+  expect(analyses).toBe(5);
 });
