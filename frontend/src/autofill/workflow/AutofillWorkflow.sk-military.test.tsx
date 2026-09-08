@@ -153,6 +153,11 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
 function setup(
   militaryStatus: MilitaryStatus | "비대상",
   veteranStatus: "대상" | "비대상",
+  existing: {
+    military?: "대상" | "비대상";
+    militaryStatus?: MilitaryStatus;
+    veteran?: "대상" | "비대상";
+  } = {},
 ) {
   (
     globalThis as unknown as {
@@ -177,8 +182,13 @@ function setup(
   const militaryTarget = document.querySelector<HTMLInputElement>(
     "input[name='prsMilitarySvcYN'][value='1']",
   )!;
+  const militaryNonTarget = document.querySelector<HTMLInputElement>(
+    "input[name='prsMilitarySvcYN'][value='0']",
+  )!;
   const militaryFieldset = militaryTarget.closest("fieldset")!;
-  militaryTarget.addEventListener("change", () => {
+  let militaryTargetClicks = 0;
+  let militaryStatusChanges = 0;
+  const revealMilitaryStatus = () => {
     if (militaryTarget.checked && !militaryFieldset.querySelector("select")) {
       militaryFieldset.insertAdjacentHTML(
         "beforeend",
@@ -188,6 +198,7 @@ function setup(
       militaryFieldset
         .querySelector<HTMLSelectElement>("#prsMilitarySvcStatus")!
         .addEventListener("change", (event) => {
+          militaryStatusChanges += 1;
           const select = event.currentTarget as HTMLSelectElement;
           if (
             select.value &&
@@ -204,12 +215,20 @@ function setup(
             );
         });
     }
+  };
+  militaryTarget.addEventListener("click", () => {
+    militaryTargetClicks += 1;
   });
+  militaryTarget.addEventListener("change", revealMilitaryStatus);
   const veteranTarget = document.querySelector<HTMLInputElement>(
     "input[name='prsVeteranBenefitYN'][value='1']",
   )!;
+  const veteranNonTarget = document.querySelector<HTMLInputElement>(
+    "input[name='prsVeteranBenefitYN'][value='0']",
+  )!;
   const veteranFieldset = veteranTarget.closest("fieldset")!;
-  veteranTarget.addEventListener("change", () => {
+  let veteranTargetClicks = 0;
+  const revealVeteranDetails = () => {
     if (
       veteranTarget.checked &&
       !veteranFieldset.querySelector("[name='prsVeteranBenefitNumber']")
@@ -218,7 +237,33 @@ function setup(
         "beforeend",
         `<input name="prsVeteranBenefitNumber" aria-label="보훈 번호" /><input name="prsVeteranBenefitRelation" aria-label="보훈 대상과의 관계" />`,
       );
+  };
+  veteranTarget.addEventListener("click", () => {
+    veteranTargetClicks += 1;
   });
+  veteranTarget.addEventListener("change", revealVeteranDetails);
+  if (existing.military === "대상") {
+    militaryTarget.checked = true;
+    revealMilitaryStatus();
+    if (existing.militaryStatus) {
+      const status = militaryFieldset.querySelector<HTMLSelectElement>(
+        "#prsMilitarySvcStatus",
+      )!;
+      status.value = existing.militaryStatus;
+      status.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  } else if (existing.military === "비대상") {
+    militaryNonTarget.checked = true;
+  }
+  if (existing.veteran === "대상") {
+    veteranTarget.checked = true;
+    revealVeteranDetails();
+  } else if (existing.veteran === "비대상") {
+    veteranNonTarget.checked = true;
+  }
+  militaryTargetClicks = 0;
+  militaryStatusChanges = 0;
+  veteranTargetClicks = 0;
   const profile = createEmptyProfile();
   profile.military =
     militaryStatus === "비대상"
@@ -304,6 +349,9 @@ function setup(
     preparationCalls: () => preparationCalls,
     fieldAnalysisCalls: () => fieldAnalysisCalls,
     preparationRequests,
+    militaryTargetClicks: () => militaryTargetClicks,
+    militaryStatusChanges: () => militaryStatusChanges,
+    veteranTargetClicks: () => veteranTargetClicks,
   };
 }
 
@@ -368,7 +416,7 @@ it("keeps military details closed for a non-target status and leaves unsupported
 it("connects veteran target to number and relation while preserving unsupported military fields", async () => {
   const run = setup("비대상", "대상");
   await waitFor(() => {
-    expect(run.fieldAnalysisCalls()).toBe(1);
+    expect(document.body.textContent).toContain("기입 결과");
     expect(
       document.querySelector<HTMLInputElement>(
         "[name='prsVeteranBenefitNumber']",
@@ -390,4 +438,83 @@ it("connects veteran target to number and relation while preserving unsupported 
     document.querySelector<HTMLInputElement>("[name='prsMilitarySvcEtcReason']")
       ?.value,
   ).toBe("");
+});
+
+it("preserves an existing non-target military selection while continuing veteran preparation", async () => {
+  const run = setup("군필", "대상", { military: "비대상" });
+
+  await waitFor(() => {
+    expect(document.body.textContent).toContain("기입 결과");
+    expect(
+      document.querySelector<HTMLInputElement>(
+        "[name='prsVeteranBenefitNumber']",
+      )?.value,
+    ).toBe("VET-DEMO-001");
+  });
+  expect(run.fieldAnalysisCalls()).toBe(1);
+  expect(
+    document.querySelector<HTMLInputElement>(
+      "[name='prsMilitarySvcYN'][value='0']",
+    )?.checked,
+  ).toBe(true);
+  expect(
+    document.querySelector<HTMLInputElement>(
+      "[name='prsMilitarySvcYN'][value='1']",
+    )?.checked,
+  ).toBe(false);
+  expect(document.querySelector("[name='prsMilitarySvcStatus']")).toBeNull();
+  expect(run.militaryTargetClicks()).toBe(0);
+});
+
+it("preserves a different existing military status", async () => {
+  const run = setup("군필", "비대상", {
+    military: "대상",
+    militaryStatus: "미필",
+  });
+
+  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
+  expect(run.fieldAnalysisCalls()).toBe(1);
+  expect(
+    document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
+      ?.value,
+  ).toBe("미필");
+  expect(run.militaryStatusChanges()).toBe(0);
+});
+
+it("preserves an existing non-target veteran selection while continuing military preparation", async () => {
+  const run = setup("군필", "대상", { veteran: "비대상" });
+
+  await waitFor(() => {
+    expect(document.body.textContent).toContain("기입 결과");
+    expect(
+      document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
+        ?.value,
+    ).toBe("군필");
+  });
+  expect(
+    document.querySelector<HTMLInputElement>(
+      "[name='prsVeteranBenefitYN'][value='0']",
+    )?.checked,
+  ).toBe(true);
+  expect(
+    document.querySelector<HTMLInputElement>(
+      "[name='prsVeteranBenefitYN'][value='1']",
+    )?.checked,
+  ).toBe(false);
+  expect(document.querySelector("[name='prsVeteranBenefitNumber']")).toBeNull();
+  expect(run.veteranTargetClicks()).toBe(0);
+});
+
+it("does not re-dispatch already matching military and veteran selections", async () => {
+  const run = setup("군필", "대상", {
+    military: "대상",
+    militaryStatus: "군필",
+    veteran: "대상",
+  });
+
+  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
+  expect(run.fieldAnalysisCalls()).toBe(1);
+  expect(run.militaryTargetClicks()).toBe(0);
+  expect(run.militaryStatusChanges()).toBe(0);
+  expect(run.veteranTargetClicks()).toBe(0);
 });

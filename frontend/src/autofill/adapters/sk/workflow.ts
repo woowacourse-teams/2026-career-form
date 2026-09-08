@@ -4,7 +4,10 @@ import {
   isSkAutocompleteBridgeReady,
 } from "./autocomplete-bridge";
 import type { WorkflowAdapter } from "../workflow";
-import type { FieldCandidateHandle } from "../../dom/types";
+import type {
+  ActionCandidateHandle,
+  FieldCandidateHandle,
+} from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 
 function hasUuidSuffix(value: string, baseName: string): boolean {
@@ -53,6 +56,76 @@ function isVisibleInteractiveRadio(input: HTMLInputElement): boolean {
   );
 }
 
+function canSelectProtectedRadio(
+  handle: ActionCandidateHandle,
+  profileValue: string,
+): boolean {
+  const input = handle.element;
+  const domName = handle.candidate.domName;
+  const target = domName
+    ? selectionTarget({ domName }, profileValue.normalize("NFKC").trim())
+    : undefined;
+  if (
+    !(input instanceof HTMLInputElement) ||
+    input.type !== "radio" ||
+    !domName ||
+    input.name !== domName ||
+    !target ||
+    handle.candidate.displayName !== target.label ||
+    !isVisibleInteractiveRadio(input)
+  ) {
+    return false;
+  }
+  const radios = Array.from(
+    input.ownerDocument.querySelectorAll<HTMLInputElement>(
+      `input[type='radio'][name='${domName}']`,
+    ),
+  );
+  const targets = radios.filter(
+    (radio) =>
+      radio.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() ===
+        target.label && isVisibleInteractiveRadio(radio),
+  );
+  return (
+    targets.length === 1 &&
+    targets[0] === input &&
+    !radios.some((radio) => radio !== input && radio.checked)
+  );
+}
+
+function canSelectMilitaryStatus(
+  handle: ActionCandidateHandle,
+  profileValue: string,
+): boolean {
+  const select = handle.element;
+  if (
+    !(select instanceof HTMLSelectElement) ||
+    handle.candidate.domName !== "prsMilitarySvcStatus" ||
+    select.name !== "prsMilitarySvcStatus" ||
+    !select.isConnected ||
+    select.disabled ||
+    select.closest("[hidden], [inert], [aria-hidden='true']") ||
+    !["군필", "미필", "면제", "복무중"].includes(profileValue)
+  ) {
+    return false;
+  }
+  const targetRadios = Array.from(
+    select.ownerDocument.querySelectorAll<HTMLInputElement>(
+      "input[type='radio'][name='prsMilitarySvcYN']",
+    ),
+  ).filter(
+    (radio) =>
+      radio.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() === "대상" &&
+      isVisibleInteractiveRadio(radio),
+  );
+  if (targetRadios.length !== 1 || !targetRadios[0]!.checked) return false;
+  if (select.value.trim() === "") return true;
+  return (
+    select.selectedOptions[0]?.textContent?.replace(/\s+/g, " ").trim() ===
+    profileValue
+  );
+}
+
 const SEARCH_FIELD_BINDINGS = new Map([
   ["eduEducationName", "education.university.schoolName"],
   ["cerCertName", "certifications.certificate.name"],
@@ -86,6 +159,35 @@ function isVerifiedSearchDriver(
 }
 
 export const skWorkflowAdapter: WorkflowAdapter = {
+  canSelectProfileOption: (handle, profileValue) => {
+    if (
+      handle.candidate.domName === "prsMilitarySvcYN" ||
+      handle.candidate.domName === "prsVeteranBenefitYN"
+    ) {
+      return canSelectProtectedRadio(handle, profileValue);
+    }
+    if (handle.candidate.domName === "prsMilitarySvcStatus") {
+      return canSelectMilitaryStatus(handle, profileValue);
+    }
+    return undefined;
+  },
+  canWriteProfileOption: (handle, item) => {
+    const select = handle.elements[0];
+    if (
+      handle.candidate.domName !== "prsMilitarySvcStatus" ||
+      handle.elements.length !== 1 ||
+      !(select instanceof HTMLSelectElement) ||
+      select.name !== "prsMilitarySvcStatus" ||
+      item.analysis?.valueBinding?.type !== "DIRECT" ||
+      item.analysis.valueBinding.profileFieldKey !==
+        "military.military.militaryStatus"
+    ) {
+      return undefined;
+    }
+    return select.selectedOptions[0]?.textContent?.trim() === item.profileValue
+      ? false
+      : undefined;
+  },
   runAddress: runSkAddress,
   addressFieldNames: ["prsZipCode", "prsAddress", "prsAddressDtl"],
   diagnosticsTitle: "SK 복수·부전공명 진단",

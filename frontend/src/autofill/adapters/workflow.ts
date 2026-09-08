@@ -1,5 +1,5 @@
 import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
-import type { FieldCandidateHandle } from "../dom/types";
+import type { ActionCandidateHandle, FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { RepeatedProfileCategoryId } from "../../profile/model";
 import { resolveCompany } from "./company";
@@ -48,6 +48,14 @@ export interface WorkflowAdapter {
     item: ReviewPlanItem,
     signal: AbortSignal,
   ): Promise<boolean | undefined>;
+  canSelectProfileOption?(
+    handle: ActionCandidateHandle,
+    profileValue: string,
+  ): boolean | undefined;
+  canWriteProfileOption?(
+    handle: FieldCandidateHandle,
+    item: ReviewPlanItem,
+  ): boolean | undefined;
 
   runAddress?(
     options: import("../address/types").AddressExecutionOptions,
