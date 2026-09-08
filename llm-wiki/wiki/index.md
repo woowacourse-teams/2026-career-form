@@ -33,6 +33,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [기존 docs baseline](topics/docs-baseline.md) | 기존 docs 65개와 자산의 CF-41 현재본 | 2026-08-22 |
 | [제품 기준](topics/product-concept.md) | 사용자 통제, 제출 금지와 로컬 우선 | 2026-08-22 |
 | [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약 | 2026-08-22 |
+| [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업·전체 복원 계약 | 2026-09-07 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
@@ -43,8 +44,10 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [기존 구현 계획](topics/implementation-plans.md) | 계획 이력과 신규 저장 경계 | 2026-08-22 |
 | [페이지 분석 조사](topics/page-analysis-research.md) | 회사 페이지와 DOM 분석 근거 | 2026-08-22 |
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
-| [회사 어댑터 개발](topics/adapter-development.md) | 안전한 어댑터 개발 경계 | 2026-08-22 |
-| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 필드 지원 상태 확인 경계 | 2026-08-22 |
+| [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-09-08 |
+| [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소·국적·학력 수집·입력과 검증 제한 | 2026-09-08 |
+| [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-08 |
+| [어댑터 필드 현황](topics/adapter-field-inventory.md) | 회사별 구현과 자동·수동 검증 상태 | 2026-09-08 |
 | [LLM Wiki 지식 모델](topics/llm-wiki-knowledge-model.md) | Issue raw, topic Wiki와 승인 digest | 2026-08-22 |
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2 Action/Field LLM 계약과 항상 존재하는 두 endpoint | 2026-08-26 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | Resolver port, 비식별 LLM 투영과 browser 실행 경계 | 2026-08-26 |

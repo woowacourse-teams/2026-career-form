@@ -6,7 +6,7 @@ import {
   type RepeatedProfileCategoryId,
   type SingleProfileCategoryId,
 } from "../model";
-import type { ProfileRepository } from "../profile-repository";
+import { cloneProfile, type ProfileRepository } from "../profile-repository";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 export type LoadStatus = "loading" | "ready" | "error";
@@ -58,8 +58,10 @@ export function useProfileEditor(
       try {
         await operation;
         if (requestId === saveRequestId.current) setSaveStatus("saved");
+        return true;
       } catch {
         if (requestId === saveRequestId.current) setSaveStatus("error");
+        return false;
       }
     },
     [repository],
@@ -138,6 +140,18 @@ export function useProfileEditor(
     await persist(latestProfile.current);
   }, [persist]);
 
+  const replaceProfile = useCallback(
+    async (nextProfile: Profile) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      const replacement = cloneProfile(nextProfile);
+      latestProfile.current = replacement;
+      setProfile(replacement);
+      setSaveStatus("saving");
+      return persist(replacement);
+    },
+    [persist],
+  );
+
   return {
     profile,
     loadStatus,
@@ -147,5 +161,6 @@ export function useProfileEditor(
     updateEntry,
     removeEntry,
     retrySave,
+    replaceProfile,
   };
 }

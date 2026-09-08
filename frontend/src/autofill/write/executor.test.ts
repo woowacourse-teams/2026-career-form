@@ -8,11 +8,23 @@ import {
 import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateBlockReason } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { executeApprovedWrites } from "./executor";
+import {
+  executeApprovedWrites,
+  executeApprovedWritesAfterPageSettles,
+} from "./executor";
 
 afterEach(() => {
   document.body.replaceChildren();
+  setPageUrl("http://localhost:3000");
 });
+
+function setPageUrl(url: string): void {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({ url });
+}
 
 const textAnalysis: MatchedFieldAnalysis = {
   candidateId: "field-1",
@@ -86,6 +98,39 @@ function register(
 }
 
 describe("approved native-control writes", () => {
+  it("writes a locally resolved derived binding value", () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-derived",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis: MatchedFieldAnalysis = {
+      candidateId: "field-derived",
+      matchType: "MATCH",
+      valueBinding: {
+        type: "DERIVED",
+        recipe: "KOREAN_FULL_NAME",
+      },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "LLM_SUGGESTED",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "김민수")],
+      approvedCandidateIds: new Set(["field-derived"]),
+      registry,
+    });
+
+    expect(input.value).toBe("김민수");
+    expect(result).toEqual([
+      { candidateId: "field-derived", status: "written" },
+    ]);
+  });
+
   it("writes selected and explicitly approved text through native events", () => {
     const input = document.createElement("input");
     input.type = "email";
@@ -107,6 +152,31 @@ describe("approved native-control writes", () => {
 
     expect(input.value).toBe("me@example.test");
     expect(events).toEqual(["input", "change"]);
+    expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+  });
+
+  it("writes a readonly text field only for an adapter-verified write plan", () => {
+    const input = document.createElement("input");
+    input.readOnly = true;
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+      readonly: true,
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      mappingStatus: "ADAPTER_VERIFIED",
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "비식별 주소")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.value).toBe("비식별 주소");
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
   });
 
@@ -189,6 +259,126 @@ describe("approved native-control writes", () => {
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
   });
 
+  it("reapplies an approved select after a queued page reset", async () => {
+    const select = document.createElement("select");
+    const professionalCollege = new Option("전문대학(전문학사)", "associate");
+    const university = new Option("대학(학사)", "bachelor");
+    select.append(professionalCollege, university);
+    const schoolName = document.createElement("input");
+    schoolName.addEventListener("change", () => {
+      window.setTimeout(() => {
+        select.value = professionalCollege.value;
+        schoolName.value = "";
+      }, 0);
+    });
+    document.body.append(select, schoolName);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "education-type",
+      candidate: {
+        candidateId: "education-type",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: [
+          { optionId: "associate", displayName: "전문대학(전문학사)" },
+          { optionId: "bachelor", displayName: "대학(학사)" },
+        ],
+      },
+      elements: [select],
+      optionElements: new Map([
+        ["associate", professionalCollege],
+        ["bachelor", university],
+      ]),
+      sectionId: "section-education",
+      signature: createStructuralSignature([select]),
+    });
+    registry.registerField({
+      kind: "field",
+      candidateId: "school-name",
+      candidate: {
+        candidateId: "school-name",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      },
+      elements: [schoolName],
+      optionElements: new Map(),
+      sectionId: "section-education",
+      signature: createStructuralSignature([schoolName]),
+    });
+    const selectAnalysis: MatchedFieldAnalysis = {
+      candidateId: "education-type",
+      matchType: "MATCH",
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "education.university.degreeLevel",
+        optionMap: { 학사: "대학(학사)" },
+      },
+      autofillPolicy: "CONDITIONAL",
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_OPTION" },
+    };
+
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [
+        reviewItem(selectAnalysis, "대학(학사)"),
+        reviewItem({ ...textAnalysis, candidateId: "school-name" }, "대학교"),
+      ],
+      approvedCandidateIds: new Set(["education-type", "school-name"]),
+      registry,
+    });
+
+    expect(select.value).toBe("bachelor");
+    expect(schoolName.value).toBe("대학교");
+    expect(result).toEqual([
+      { candidateId: "education-type", status: "written" },
+      { candidateId: "school-name", status: "written" },
+    ]);
+  });
+
+  it("selects the university bachelor option when only its parentheses differ", () => {
+    const select = document.createElement("select");
+    const professionalCollege = new Option("전문대학(학사)", "college");
+    const university = new Option("대학교(학사)", "university");
+    select.append(professionalCollege, university);
+    const registry = register(
+      select,
+      {
+        candidateId: "education-type",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: [
+          { optionId: "college", displayName: "전문대학(학사)" },
+          { optionId: "university", displayName: "대학교(학사)" },
+        ],
+      },
+      new Map([
+        ["college", professionalCollege],
+        ["university", university],
+      ]),
+    );
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "education-type",
+      writePlan: { command: "SELECT_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대학교 학사")],
+      approvedCandidateIds: new Set(["education-type"]),
+      registry,
+    });
+
+    expect(select.value).toBe("university");
+    expect(result).toEqual([
+      { candidateId: "education-type", status: "written" },
+    ]);
+  });
+
   it("checks a radio by the locally resolved option display name", () => {
     const first = document.createElement("input");
     first.type = "radio";
@@ -235,6 +425,63 @@ describe("approved native-control writes", () => {
     expect(first.checked).toBe(false);
     expect(target.checked).toBe(true);
     expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+  });
+
+  it("does not guess different radio labels without a backend-derived value", () => {
+    const no = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "N",
+    });
+    const yes = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "Y",
+    });
+    document.body.append(no, yes);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "disability-status",
+      candidate: {
+        candidateId: "disability-status",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [
+          { optionId: "no", displayName: "비대상" },
+          { optionId: "yes", displayName: "대상" },
+        ],
+      },
+      elements: [no, yes],
+      optionElements: new Map([
+        ["no", no],
+        ["yes", yes],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([no, yes]),
+    });
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          {
+            ...textAnalysis,
+            candidateId: "disability-status",
+            writePlan: { command: "CHECK_RADIO" },
+          },
+          "예",
+        ),
+      ],
+      approvedCandidateIds: new Set(["disability-status"]),
+      registry,
+    });
+
+    expect(yes.checked).toBe(false);
+    expect(result).toEqual([
+      {
+        candidateId: "disability-status",
+        status: "skipped",
+        reason: "네이티브 컨트롤에 안전하게 입력할 수 없습니다.",
+      },
+    ]);
   });
 
   it("checks the matching checkbox without clearing another local choice", () => {
@@ -462,4 +709,276 @@ describe("approved native-control writes", () => {
     expect(input.files).toHaveLength(0);
     expect(result[0]?.status).toBe("skipped");
   });
+
+  it("selects a Hyundai-style button menu only when the verified code and label match", () => {
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+    const trigger = document.createElement("input");
+    trigger.type = "button";
+    const selectWrap = document.createElement("div");
+    selectWrap.className = "select-wrap";
+    const hidden = document.createElement("input");
+    hidden.type = "hidden";
+    hidden.className = "js-field";
+    selectWrap.append(hidden, trigger);
+    const option = document.createElement("button");
+    option.dataset.code = "003";
+    option.textContent = "대리";
+    Object.defineProperty(option, "offsetParent", { value: document.body });
+    trigger.addEventListener("click", () => {
+      const menu = document.createElement("div");
+      menu.className = "select-option";
+      menu.append(option);
+      selectWrap.append(menu);
+    });
+    option.addEventListener("click", () => {
+      trigger.value = "대리";
+      hidden.value = "003";
+    });
+    const registry = register(trigger, {
+      candidateId: "career-position",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    document.body.append(selectWrap);
+    selectWrap.prepend(trigger);
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "career-position",
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "careers.career.position",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["career-position"]),
+      registry,
+    });
+
+    expect(trigger.value).toBe("대리");
+    expect(result).toEqual([
+      { candidateId: "career-position", status: "written" },
+    ]);
+  });
+
+  it("does not select a matching Hyundai menu option from another repeated row", () => {
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+    const targetWrap = document.createElement("div");
+    targetWrap.className = "select-wrap";
+    const target = document.createElement("input");
+    target.type = "button";
+    targetWrap.append(target);
+    const otherWrap = document.createElement("div");
+    otherWrap.className = "select-wrap";
+    const other = document.createElement("input");
+    other.type = "button";
+    otherWrap.append(other);
+    const otherMenu = document.createElement("div");
+    otherMenu.className = "select-option";
+    const otherChoice = document.createElement("button");
+    otherChoice.dataset.code = "003";
+    otherChoice.textContent = "대리";
+    Object.defineProperty(otherChoice, "offsetParent", {
+      value: document.body,
+    });
+    otherMenu.append(otherChoice);
+    otherWrap.append(otherMenu);
+    let otherSelections = 0;
+    otherChoice.addEventListener("click", () => {
+      otherSelections += 1;
+    });
+    target.addEventListener("click", () => {
+      const targetMenu = document.createElement("div");
+      targetMenu.className = "select-option";
+      const wrongChoice = document.createElement("button");
+      wrongChoice.dataset.code = "different";
+      wrongChoice.textContent = "다른 항목";
+      Object.defineProperty(wrongChoice, "offsetParent", {
+        value: document.body,
+      });
+      targetMenu.append(wrongChoice);
+      targetWrap.append(targetMenu);
+    });
+    const registry = register(target, {
+      candidateId: "language-1",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    document.body.append(targetWrap, otherWrap);
+    targetWrap.prepend(target);
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "language-1",
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "languages.languageTest.language",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["language-1"]),
+      registry,
+    });
+
+    expect(otherSelections).toBe(0);
+    expect(result[0]?.status).toBe("skipped");
+  });
+
+  it("does not open a company button menu on an unsupported host", () => {
+    const trigger = document.createElement("input");
+    trigger.type = "button";
+    let opened = false;
+    trigger.addEventListener("click", () => {
+      opened = true;
+    });
+    const registry = register(trigger, {
+      candidateId: "field-1",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "careers.career.position",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+    expect(opened).toBe(false);
+    expect(trigger.value).toBe("");
+    expect(result[0]?.status).toBe("skipped");
+  });
+
+  it.each([0, 2])(
+    "does not select or fall back when a company menu has %i matching choices",
+    (count) => {
+      setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+      const trigger = document.createElement("input");
+      trigger.type = "button";
+      trigger.value = "기존 표시";
+      let selected = 0;
+      trigger.addEventListener("click", () => {
+        for (let index = 0; index < count; index += 1) {
+          const option = document.createElement("button");
+          option.dataset.code = "003";
+          option.textContent = "대리";
+          Object.defineProperty(option, "offsetParent", {
+            value: document.body,
+          });
+          option.addEventListener("click", () => {
+            selected += 1;
+          });
+          document.body.append(option);
+        }
+      });
+      const registry = register(trigger, {
+        candidateId: "field-1",
+        element: "input",
+        control: "button",
+        visibility: "visible",
+      });
+      const analysis: MatchedFieldAnalysis = {
+        ...textAnalysis,
+        valueBinding: {
+          type: "BUTTON_OPTION",
+          profileFieldKey: "careers.career.position",
+          optionMap: { 대리: "대리" },
+          optionCodeMap: { 대리: "003" },
+        },
+        writePlan: { command: "SELECT_BUTTON_OPTION" },
+      };
+      const result = executeApprovedWrites({
+        items: [reviewItem(analysis, "대리")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+      expect(result[0]?.status).toBe("skipped");
+      expect(selected).toBe(0);
+      expect(trigger.value).toBe("기존 표시");
+    },
+  );
+
+  it.each(["unapproved", "stale"])(
+    "does not open a company menu for a %s candidate",
+    (state) => {
+      setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+      const trigger = document.createElement("input");
+      trigger.type = "button";
+      let opened = false;
+      trigger.addEventListener("click", () => {
+        opened = true;
+      });
+      const registry = register(trigger, {
+        candidateId: "field-1",
+        element: "input",
+        control: "button",
+        visibility: "visible",
+      });
+      if (state === "stale") trigger.remove();
+      const analysis: MatchedFieldAnalysis = {
+        ...textAnalysis,
+        valueBinding: {
+          type: "BUTTON_OPTION",
+          profileFieldKey: "careers.career.position",
+          optionMap: { 대리: "대리" },
+          optionCodeMap: { 대리: "003" },
+        },
+        writePlan: { command: "SELECT_BUTTON_OPTION" },
+      };
+      const result = executeApprovedWrites({
+        items: [reviewItem(analysis, "대리")],
+        approvedCandidateIds: new Set(state === "stale" ? ["field-1"] : []),
+        registry,
+      });
+      expect(result[0]?.status).toBe("skipped");
+      expect(opened).toBe(false);
+    },
+  );
+
+  it.each([
+    ["https://talent.hyundai.com/apply/applyWrite.hc", true],
+    ["https://example.test/apply", false],
+  ])(
+    "synchronizes successful text labels only for the owning company: %s",
+    (url, expected) => {
+      setPageUrl(url);
+      const input = document.createElement("input");
+      const registry = register(input, {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      });
+      const field = document.createElement("div");
+      field.className = "field";
+      document.body.append(field);
+      field.append(input);
+      const result = executeApprovedWrites({
+        items: [reviewItem(textAnalysis, "fixture")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+      expect(result[0]?.status).toBe("written");
+      expect(input.value).toBe("fixture");
+      expect(field.classList.contains("exist")).toBe(expected);
+    },
+  );
 });

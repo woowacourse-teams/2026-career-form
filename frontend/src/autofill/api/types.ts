@@ -24,13 +24,15 @@ interface CandidateBase {
 }
 
 export interface ActionCandidate extends CandidateBase {
-  element: "button" | "input" | "custom";
-  control: "button" | "custom";
+  element: "button" | "input" | "select" | "custom";
+  control: "button" | "select" | "radio" | "custom";
+  options?: OptionCandidate[];
 }
 
 export interface FieldCandidate extends CandidateBase {
   element: "input" | "select" | "textarea" | "custom";
-  control: "text" | "select" | "radio" | "checkbox" | "textarea" | "custom";
+  control:
+    "text" | "select" | "radio" | "checkbox" | "textarea" | "button" | "custom";
   placeholder?: string;
   options?: OptionCandidate[];
 }
@@ -49,6 +51,7 @@ export interface PreparationSection {
 }
 
 export interface FieldsItem {
+  itemGroupId?: string;
   itemId: string;
   fields: FieldCandidate[];
 }
@@ -78,14 +81,31 @@ export interface FieldsAnalyzeRequest {
 export type PreparationPlan =
   | {
       actionCandidateId: string;
+      command: "SEARCH_ADDRESS";
+      expectedEffect: "ADDRESS_SELECTED";
+    }
+  | {
+      actionCandidateId: string;
       command: "REVEAL_SECTION";
       expectedEffect: "TARGET_VISIBLE";
       targetSectionId: string;
     }
   | {
       actionCandidateId: string;
+      command: "SELECT_OPTION_TO_REVEAL";
+      expectedEffect: "TARGET_FIELDS_VISIBLE";
+      profileFieldKey: string;
+      optionDisplayName?: string;
+      expectedFieldNames?: string[];
+      selectableProfileValues?: string[];
+      revealedFieldBindings?: Record<string, string>;
+      targetSectionId: string;
+    }
+  | {
+      actionCandidateId: string;
       command: "ADD_REPEATABLE_GROUP";
       expectedEffect: "GROUP_COUNT_INCREMENT";
+      expectedFieldNames?: string[];
     };
 
 export interface PreparationAnalyzeResponse {
@@ -94,16 +114,53 @@ export interface PreparationAnalyzeResponse {
   analysisStatus: AnalysisStatus;
   preparationPlans: PreparationPlan[];
   warningCodes?: "MANUAL_REVEAL_REQUIRED"[];
-  blockCode?: "ADAPTER_STRUCTURE_MISMATCH" | "UNSUPPORTED_SNAPSHOT";
+  blockCode?:
+    | "ADAPTER_STRUCTURE_MISMATCH"
+    | "ADAPTER_POLICY_UNAVAILABLE"
+    | "UNSUPPORTED_SNAPSHOT";
 }
 
 export type WriteCommand =
-  "SET_TEXT" | "SELECT_OPTION" | "CHECK_RADIO" | "CHECK_CHECKBOX";
+  | "SET_TEXT"
+  | "SELECT_OPTION"
+  | "SELECT_BUTTON_OPTION"
+  | "CHECK_RADIO"
+  | "CHECK_CHECKBOX";
+
+export type DerivedRecipe =
+  | "KOREAN_FULL_NAME"
+  | "ENGLISH_FULL_NAME_GIVEN_FIRST"
+  | "ENGLISH_FULL_NAME_FAMILY_FIRST"
+  | "BOOLEAN_YN"
+  | "YEAR_MONTH";
+
+export type ValueBinding =
+  | { type: "DIRECT"; profileFieldKey: string }
+  | {
+      type: "DERIVED";
+      recipe: DerivedRecipe;
+      profileFieldKey?: string;
+      trueLabel?: string;
+      falseLabel?: string;
+    }
+  | {
+      type: "LOOKUP";
+      profileFieldKey: string;
+      optionMap: Record<string, string>;
+    }
+  | {
+      type: "BUTTON_OPTION";
+      profileFieldKey: string;
+      optionMap: Record<string, string>;
+      optionCodeMap: Record<string, string>;
+    };
 
 export interface MatchedFieldAnalysis {
   candidateId: string;
   matchType: "MATCH";
-  profileFieldKey: string;
+  valueBinding?: ValueBinding;
+  /** @deprecated Responses should use valueBinding. */
+  profileFieldKey?: string;
   autofillPolicy: "ALLOWED" | "CONDITIONAL" | "SENSITIVE_CONFIRMATION";
   mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED";
   interactionStatus:
@@ -131,7 +188,7 @@ export interface FieldsAnalyzeResponse {
   analysisStatus: AnalysisStatus;
   fields: FieldAnalysis[];
   warningCodes?: ("UNRESOLVED_FIELD" | "LLM_UNAVAILABLE")[];
-  blockCode?: "ADAPTER_STRUCTURE_MISMATCH";
+  blockCode?: "ADAPTER_STRUCTURE_MISMATCH" | "ADAPTER_POLICY_UNAVAILABLE";
 }
 
 export interface AnalysisApiClient {

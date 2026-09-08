@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-current-preparation-redacted",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Application/Index/*"
+  },
+  "sections": [
+    {
+      "sectionId": "section-1",
+      "actionCandidates": [
+        {
+          "candidateId": "action-select-military-status",
+          "element": "select",
+          "control": "select",
+          "visibility": "visible",
+          "displayName": "병역 상태",
+          "domName": "prsMilitarySvcStatus",
+          "options": [
+            {
+              "optionId": "military-status-option",
+              "displayName": "비식별 선택지"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "section-2",
+      "actionCandidates": []
+    },
+    {
+      "sectionId": "section-3",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-university",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "대학 학력 정보 추가"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-4",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-career",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "domId": "btnAddCareer"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-5",
+      "actionCandidates": []
+    },
+    {
+      "sectionId": "section-6",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-certificate",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "domId": "btnAddCert"
+        }
+      ]
+    },
+    {
+      "sectionId": "section-7",
+      "displayName": "어학",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-language-test",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "어학 항목 추가",
+          "domId": "btnAddLangExam"
+        }
+      ]
+    }
+  ]
+}

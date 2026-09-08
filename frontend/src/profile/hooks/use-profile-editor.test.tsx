@@ -115,4 +115,27 @@ describe("useProfileEditor", () => {
     expect(result.current.saveStatus).toBe("saved");
     vi.useRealTimers();
   });
+
+  it("replaces a pending edit with an imported profile without saving the old value", async () => {
+    vi.useFakeTimers();
+    const repository = createRepository();
+    const { result } = renderHook(() => useProfileEditor(repository, 100));
+    await act(async () => Promise.resolve());
+
+    act(() =>
+      result.current.updateSingle("personal", "koreanFamilyName", "기존 값"),
+    );
+    const importedProfile = {
+      ...createEmptyProfile(),
+      contact: { email: "example@example.test" },
+    };
+
+    await act(async () => result.current.replaceProfile(importedProfile));
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+
+    expect(repository.save).toHaveBeenCalledTimes(1);
+    expect(repository.save).toHaveBeenLastCalledWith(importedProfile);
+    expect(result.current.profile).toEqual(importedProfile);
+    vi.useRealTimers();
+  });
 });

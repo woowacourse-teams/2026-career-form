@@ -2,6 +2,8 @@ package com.careerform.formanalysis.dto;
 
 import java.util.List;
 
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -23,9 +25,17 @@ public record FieldsAnalysisResponse(
         String snapshotId,
         List<FieldAnalysis> fields
     ) {
+        return complete(snapshotId, Mode.GENERIC, fields);
+    }
+
+    public static FieldsAnalysisResponse complete(
+        String snapshotId,
+        Mode mode,
+        List<FieldAnalysis> fields
+    ) {
         return new FieldsAnalysisResponse(
             snapshotId,
-            Mode.GENERIC,
+            mode,
             AnalysisStatus.COMPLETE,
             fields,
             null,
@@ -44,6 +54,28 @@ public record FieldsAnalysisResponse(
         );
     }
 
+    public static FieldsAnalysisResponse adapterStructureMismatch(String snapshotId) {
+        return new FieldsAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.ADAPTER_STRUCTURE_MISMATCH
+        );
+    }
+
+    public static FieldsAnalysisResponse adapterPolicyUnavailable(String snapshotId) {
+        return new FieldsAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.ADAPTER_POLICY_UNAVAILABLE
+        );
+    }
+
     public sealed interface FieldAnalysis permits MatchedFieldAnalysis,
         NoMatchFieldAnalysis {
         String candidateId();
@@ -53,12 +85,25 @@ public record FieldsAnalysisResponse(
     public record MatchedFieldAnalysis(
         String candidateId,
         MatchType matchType,
-        String profileFieldKey,
+        ValueBinding valueBinding,
         AutofillPolicy autofillPolicy,
         MappingStatus mappingStatus,
         InteractionStatus interactionStatus,
         WritePlan writePlan
     ) implements FieldAnalysis {
+
+        public MatchedFieldAnalysis(
+            String candidateId,
+            MatchType matchType,
+            String profileFieldKey,
+            AutofillPolicy autofillPolicy,
+            MappingStatus mappingStatus,
+            InteractionStatus interactionStatus,
+            WritePlan writePlan
+        ) {
+            this(candidateId, matchType, new DirectBinding(profileFieldKey), autofillPolicy,
+                mappingStatus, interactionStatus, writePlan);
+        }
     }
 
     public record NoMatchFieldAnalysis(
@@ -121,6 +166,7 @@ public record FieldsAnalysisResponse(
     public enum WriteCommand {
         SET_TEXT,
         SELECT_OPTION,
+        SELECT_BUTTON_OPTION,
         CHECK_RADIO,
         CHECK_CHECKBOX
     }
@@ -129,6 +175,7 @@ public record FieldsAnalysisResponse(
     }
 
     public enum BlockCode {
-        ADAPTER_STRUCTURE_MISMATCH
+        ADAPTER_STRUCTURE_MISMATCH,
+        ADAPTER_POLICY_UNAVAILABLE
     }
 }

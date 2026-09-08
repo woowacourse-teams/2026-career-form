@@ -2,6 +2,7 @@ package com.careerform.formanalysis.api;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.careerform.formanalysis.application.PreparationAnalysisService;
@@ -21,8 +22,12 @@ public final class PreparationAnalysisController {
 
     @PostMapping("/api/v1/preparation/analyze")
     public PreparationAnalysisResponse analyze(
-        @Valid @RequestBody PreparationAnalysisRequest request
+        @Valid @RequestBody PreparationAnalysisRequest request,
+        @RequestHeader(value = "X-Career-Form-Capabilities", required = false) String capabilities
     ) {
+        if ("address-search-v1".equals(capabilities)) {
+            return service.analyze(request, true);
+        }
         return service.analyze(request);
     }
 }

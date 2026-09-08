@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-expanded-fields-redacted",
+  "site": { "host": "www.skcareers.com", "pathPattern": "/Application/Index/*" },
+  "sections": [
+    {
+      "sectionId": "section-1",
+      "fields": [
+        { "candidateId": "korean-name", "element": "input", "control": "text", "visibility": "visible", "domName": "prsApplicantName", "readonly": true },
+        { "candidateId": "email", "element": "input", "control": "text", "visibility": "visible", "domName": "prsEmail" },
+        { "candidateId": "phone", "element": "input", "control": "text", "visibility": "visible", "domName": "prsPhone" },
+        { "candidateId": "postal-code", "element": "input", "control": "text", "visibility": "visible", "domName": "prsZipCode", "readonly": true },
+        { "candidateId": "address", "element": "input", "control": "text", "visibility": "visible", "domName": "prsAddress", "readonly": true },
+        { "candidateId": "address-detail", "element": "input", "control": "text", "visibility": "visible", "domName": "prsAddressDtl" },
+        { "candidateId": "veteran-status", "element": "input", "control": "radio", "visibility": "visible", "domName": "prsVeteranBenefitYN" },
+        { "candidateId": "veteran-number", "element": "input", "control": "text", "visibility": "visible", "domName": "prsVeteranBenefitNumber" },
+        { "candidateId": "high-school-name", "element": "input", "control": "text", "visibility": "visible", "domName": "eduhgEducationName" },
+        { "candidateId": "high-school-start", "element": "input", "control": "text", "visibility": "visible", "domName": "eduhgFromDate" },
+        { "candidateId": "high-school-end", "element": "input", "control": "text", "visibility": "visible", "domName": "eduhgToDate" }
+      ]
+    },
+    {
+      "sectionId": "section-3",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "university-redacted",
+          "fields": [
+            { "candidateId": "university-degree", "element": "select", "control": "select", "visibility": "visible", "domName": "eduEducationType", "options": [{ "optionId": "university-degree-option", "displayName": "비식별 선택지" }] },
+            { "candidateId": "university-status", "element": "select", "control": "select", "visibility": "visible", "domName": "eduEducationStatus", "options": [{ "optionId": "university-status-option", "displayName": "비식별 선택지" }] },
+            { "candidateId": "university-name", "element": "input", "control": "text", "visibility": "visible", "domName": "eduEducationName" },
+            { "candidateId": "university-major", "element": "input", "control": "text", "visibility": "visible", "domName": "eduMajor" },
+            { "candidateId": "university-gpa", "element": "input", "control": "text", "visibility": "visible", "domName": "eduCredit" }
+          ]
+        },
+        {
+          "itemId": "graduate-school-redacted",
+          "fields": [
+            { "candidateId": "graduate-degree", "element": "select", "control": "select", "visibility": "visible", "domName": "edugdEducationType", "options": [{ "optionId": "graduate-degree-option", "displayName": "비식별 선택지" }] },
+            { "candidateId": "graduate-status", "element": "select", "control": "select", "visibility": "visible", "domName": "edugdEducationStatus", "options": [{ "optionId": "graduate-status-option", "displayName": "비식별 선택지" }] },
+            { "candidateId": "graduate-name", "element": "input", "control": "text", "visibility": "visible", "domName": "edugdEducationName" },
+            { "candidateId": "graduate-major", "element": "input", "control": "text", "visibility": "visible", "domName": "edugdMajor" },
+            { "candidateId": "graduate-gpa", "element": "input", "control": "text", "visibility": "visible", "domName": "edugdCredit" },
+            { "candidateId": "graduate-start", "element": "input", "control": "text", "visibility": "visible", "domName": "edugdFromDate" }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "section-7",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "language-test-redacted",
+          "fields": [
+            { "candidateId": "language", "element": "select", "control": "select", "visibility": "visible", "domName": "lngLanguageType", "options": [{ "optionId": "language-option", "displayName": "비식별 선택지" }] },
+            { "candidateId": "language-test-name", "element": "input", "control": "text", "visibility": "visible", "domName": "lngExamName" },
+            { "candidateId": "language-grade", "element": "input", "control": "text", "visibility": "visible", "domName": "lngExamScore" },
+            { "candidateId": "language-date", "element": "input", "control": "text", "visibility": "visible", "domName": "lngScoreDate" },
+            { "candidateId": "language-number", "element": "input", "control": "text", "visibility": "visible", "domName": "lngCertNumber" }
+          ]
+        }
+      ]
+    }
+  ]
+}

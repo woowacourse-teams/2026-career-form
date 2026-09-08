@@ -1,0 +1,386 @@
+package com.careerform.formanalysis.application.policy;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionRule;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionStructure;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldRule;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldStructure;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFingerprint;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
+
+@DisplayName("회사별 지원서 정책")
+class CompanyFormPolicyTest {
+
+    @Test
+    @DisplayName("action 구조는 DOM 식별자와 표시명 alias를 함께 보존한다")
+    void preservesActionStructureAliases() {
+        ActionStructure structure = new ActionStructure(
+            List.of("btnAddCert", "자격/면허 추가"),
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.BUTTON,
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON
+        );
+
+        assertThat(structure.structuralNames())
+            .containsExactly("btnAddCert", "자격/면허 추가");
+    }
+
+    @Test
+    @DisplayName("action 구조는 정책이 요구하는 DOM name을 별도 조건으로 보존한다")
+    void preservesRequiredActionDomName() {
+        ActionStructure structure = new ActionStructure(
+            List.of("hyundai:search:address"),
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON,
+            "postCd"
+        );
+
+        assertThat(structure.requiredDomName()).isEqualTo("postCd");
+    }
+
+    @Test
+    @DisplayName("optional action 구조는 resolver 검증용으로 보존하지만 fingerprint 필수 조건은 아니다")
+    void preservesOptionalActionStructuresSeparatelyFromRequiredFingerprint() {
+        ActionStructure required = actionStructure("core-action");
+        ActionStructure optional = actionStructure("job-variant-action");
+
+        PreparationFingerprint fingerprint = new PreparationFingerprint(
+            Set.of("section-profile"),
+            List.of(required),
+            List.of(optional)
+        );
+
+        assertThat(fingerprint.requiredActions()).containsExactly(required);
+        assertThat(fingerprint.actionStructures()).containsExactlyInAnyOrder(
+            required,
+            optional
+        );
+    }
+
+    @Test
+    @DisplayName("정상 정책은 입력 collection 변경과 무관한 불변 snapshot을 유지한다")
+    void keepsAnImmutablePolicySnapshot() {
+        Set<String> actionSections = new HashSet<>(Set.of(
+            "section-profile",
+            "section-detail"
+        ));
+        List<ActionStructure> actionStructures = new ArrayList<>(List.of(
+            actionStructure("detail-toggle")
+        ));
+        List<ActionRule> actionRules = new ArrayList<>(List.of(
+            new ActionRule("detail-toggle", ActionKind.REVEAL, "section-detail")
+        ));
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "sk",
+            1,
+            new PreparationFingerprint(actionSections, actionStructures),
+            fieldsFingerprint(),
+            actionRules,
+            fieldRules(),
+            ignored -> true
+        );
+
+        actionSections.add("section-mutated");
+        actionStructures.clear();
+        actionRules.clear();
+
+        assertThat(policy.companyKey()).isEqualTo("sk");
+        assertThat(policy.version()).isEqualTo(1);
+        assertThat(policy.preparationFingerprint().requiredSectionIds())
+            .containsExactlyInAnyOrder("section-profile", "section-detail");
+        assertThat(policy.preparationFingerprint().requiredActions())
+            .containsExactly(actionStructure("detail-toggle"));
+        assertThat(policy.actionRules()).containsExactly(
+            new ActionRule("detail-toggle", ActionKind.REVEAL, "section-detail")
+        );
+    }
+
+    @Test
+    @DisplayName("같은 구조 이름의 action 또는 field rule 중복을 거부한다")
+    void rejectsDuplicateRuleStructuralNames() {
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            List.of(
+                new ActionRule("detail-toggle", ActionKind.REVEAL, "section-detail"),
+                new ActionRule("detail-toggle", ActionKind.ADD, null)
+            ),
+            fieldRules(),
+            ignored -> true
+        )).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            actionRules(),
+            List.of(
+                textRule("applicant-email", "contact.contact.email"),
+                textRule("applicant-email", "contact.contact.phoneNumber")
+            ),
+            ignored -> true
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("field rule은 선택적인 DOM name 제약을 보존한다")
+    void preservesOptionalRequiredDomName() {
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "hyundai",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            actionRules(),
+            List.of(
+                constrainedTextRule("shared-date", "language-date", "contact.contact.email")
+            ),
+            ignored -> true
+        );
+
+        assertThat(policy.fieldRules()).extracting(
+            FieldRule::structuralName,
+            FieldRule::requiredDomName
+        ).containsExactly(
+            org.assertj.core.groups.Tuple.tuple("shared-date", "language-date")
+        );
+    }
+
+    @Test
+    @DisplayName("같은 DOM 구조도 서로 다른 반복 항목 그룹이면 별도 field rule로 보존한다")
+    void preservesContextualFieldRulesForDifferentItemGroups() {
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "hyundai",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            actionRules(),
+            List.of(
+                contextualTextRule(
+                    "schNm", "schNm", "educationhighschool",
+                    "education.highSchool.schoolName"
+                ),
+                contextualTextRule(
+                    "schNm", "schNm", "educationuniversity",
+                    "education.university.schoolName"
+                )
+            ),
+            ignored -> true
+        );
+
+        assertThat(policy.fieldRules()).extracting(
+            FieldRule::structuralName,
+            FieldRule::requiredDomName,
+            FieldRule::requiredItemGroupId
+        ).containsExactly(
+            org.assertj.core.groups.Tuple.tuple(
+                "schNm", "schNm", "educationhighschool"
+            ),
+            org.assertj.core.groups.Tuple.tuple(
+                "schNm", "schNm", "educationuniversity"
+            )
+        );
+    }
+
+    @Test
+    @DisplayName("필드 정책은 직접값 대신 승인된 조합 recipe를 지정할 수 있다")
+    void acceptsDerivedValueBinding() {
+        FieldRule rule = new FieldRule(
+            "applicant-full-name",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+            new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME)
+        );
+
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "sk", 1, preparationFingerprint(), fieldsFingerprint(), actionRules(),
+            List.of(rule), ignored -> true
+        );
+
+        assertThat(policy.fieldRules().getFirst().valueBinding()).isEqualTo(
+            new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME)
+        );
+    }
+
+    @Test
+    @DisplayName("필드 정책은 canonical profile key의 option lookup을 지정할 수 있다")
+    void acceptsLookupValueBinding() {
+        FieldRule rule = new FieldRule(
+            "education-type",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+            new LookupBinding(
+                "education.university.degreeLevel",
+                java.util.Map.of(
+                    "전문학사", "전문대학(전문학사)",
+                    "학사", "대학(학사)"
+                )
+            )
+        );
+
+        CompanyFormPolicy policy = CompanyFormPolicy.create(
+            "sk", 1, preparationFingerprint(), fieldsFingerprint(), actionRules(),
+            List.of(rule), key -> key.equals("education.university.degreeLevel")
+        );
+
+        assertThat(policy.fieldRules().getFirst().valueBinding()).isEqualTo(
+            new LookupBinding(
+                "education.university.degreeLevel",
+                java.util.Map.of(
+                    "전문학사", "전문대학(전문학사)",
+                    "학사", "대학(학사)"
+                )
+            )
+        );
+    }
+
+    @Test
+    @DisplayName("필수 section 또는 structure가 없는 fingerprint를 거부한다")
+    void rejectsAnEmptyFingerprint() {
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk",
+            1,
+            new PreparationFingerprint(Set.of(), List.of()),
+            fieldsFingerprint(),
+            actionRules(),
+            fieldRules(),
+            ignored -> true
+        )).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk",
+            1,
+            preparationFingerprint(),
+            new FieldsFingerprint(Set.of(), List.of()),
+            actionRules(),
+            fieldRules(),
+            ignored -> true
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("reveal rule은 존재하는 target section을 명시해야 한다")
+    void rejectsARevealRuleWithoutAKnownTargetSection() {
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            List.of(new ActionRule(
+                "detail-toggle",
+                ActionKind.REVEAL,
+                "section-unknown"
+            )),
+            fieldRules(),
+            ignored -> true
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("canonical allowlist가 거부한 profile field를 정책에 넣지 않는다")
+    void rejectsAProfileFieldOutsideTheCanonicalAllowlist() {
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk",
+            1,
+            preparationFingerprint(),
+            fieldsFingerprint(),
+            actionRules(),
+            fieldRules(),
+            ignored -> false
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static PreparationFingerprint preparationFingerprint() {
+        return new PreparationFingerprint(
+            Set.of("section-profile", "section-detail"),
+            List.of(actionStructure("detail-toggle"))
+        );
+    }
+
+    private static FieldsFingerprint fieldsFingerprint() {
+        return new FieldsFingerprint(
+            Set.of("section-profile"),
+            List.of(new FieldStructure(
+                "applicant-email",
+                com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT
+            ))
+        );
+    }
+
+    private static List<FieldRule> fieldRules() {
+        return List.of(textRule("applicant-email", "contact.contact.email"));
+    }
+
+    private static List<ActionRule> actionRules() {
+        return List.of(new ActionRule(
+            "detail-toggle",
+            ActionKind.REVEAL,
+            "section-detail"
+        ));
+    }
+
+    private static FieldRule textRule(String structuralName, String profileFieldKey) {
+        return new FieldRule(
+            structuralName,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+            profileFieldKey
+        );
+    }
+
+    private static FieldRule constrainedTextRule(
+        String structuralName,
+        String requiredDomName,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            structuralName,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(profileFieldKey),
+            false,
+            requiredDomName
+        );
+    }
+
+    private static FieldRule contextualTextRule(
+        String structuralName,
+        String requiredDomName,
+        String requiredItemGroupId,
+        String profileFieldKey
+    ) {
+        return new FieldRule(
+            structuralName,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(profileFieldKey),
+            false,
+            requiredDomName,
+            requiredItemGroupId
+        );
+    }
+
+    private static ActionStructure actionStructure(String structuralName) {
+        return new ActionStructure(
+            structuralName,
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement.BUTTON,
+            com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl.BUTTON
+        );
+    }
+}

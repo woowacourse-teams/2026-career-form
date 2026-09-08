@@ -89,7 +89,15 @@ export class ChromeProfileStorage implements ProfileRepository {
   async load(): Promise<Profile> {
     const stored = await this.storage.get(PROFILE_STORAGE_KEY);
     const envelope = parseEnvelope(stored[PROFILE_STORAGE_KEY]);
-    return envelope ? structuredClone(envelope.profile) : createEmptyProfile();
+    return envelope
+      ? {
+          ...createEmptyProfile(),
+          ...structuredClone(envelope.profile),
+          careers: envelope.profile.careers ?? [],
+          publications: envelope.profile.publications ?? [],
+          compensation: envelope.profile.compensation ?? {},
+        }
+      : createEmptyProfile();
   }
 
   async save(profile: Profile): Promise<void> {

@@ -15,11 +15,12 @@ interface CandidateHandleBase {
 export interface ActionCandidateHandle extends CandidateHandleBase {
   kind: "action";
   candidate: ActionCandidate;
-  element: HTMLButtonElement | HTMLInputElement;
+  element: HTMLButtonElement | HTMLInputElement | HTMLSelectElement;
 }
 
 export interface FieldCandidateHandle extends CandidateHandleBase {
   kind: "field";
+  isCurrentContext?: () => boolean;
   candidate: FieldCandidate;
   elements: Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
   optionElements: Map<string, HTMLOptionElement | HTMLInputElement>;

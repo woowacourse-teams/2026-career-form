@@ -33,7 +33,10 @@ import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
     "career-form.llm.enabled=false"
 })
 @AutoConfigureMockMvc
-@Import(FieldsAnalysisApiTest.FakeResolverConfiguration.class)
+@Import({
+    FieldsAnalysisApiTest.FakeResolverConfiguration.class,
+    NotRegisteredPolicyConfiguration.class
+})
 @DisplayName("필드 분석 API")
 class FieldsAnalysisApiTest {
 

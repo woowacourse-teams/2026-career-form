@@ -105,9 +105,8 @@ describe("side panel App", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "민감정보 펼치기" }),
+      screen.getByRole("button", { name: "병역, 보훈, 장애와 건강 펼치기" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("••••••••, 값 가림")).toBeInTheDocument();
 
     expect(screen.getByText("김")).toBeInTheDocument();
     expect(screen.getByText("copy@example.com")).toBeInTheDocument();
@@ -138,7 +137,9 @@ describe("side panel App", () => {
     expect(screen.queryByText("copy@example.com")).not.toBeInTheDocument();
     expect(screen.getByText("병역 상태")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "민감정보 검색 결과" }),
+      screen.getByRole("button", {
+        name: "병역, 보훈, 장애와 건강 검색 결과",
+      }),
     ).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "기본 인적사항 접기" }),
@@ -155,20 +156,15 @@ describe("side panel App", () => {
     expect(copyText).toHaveBeenCalledWith("copy@example.com");
   });
 
-  it("masks a sensitive value until its individual reveal action", async () => {
+  it("shows and copies a military value as a general profile value", async () => {
     const copyText = vi.fn(async () => undefined);
     render(<App repository={createRepository()} copyText={copyText} />);
     await screen.findByText("copy@example.com");
 
-    fireEvent.click(screen.getByRole("button", { name: "민감정보 펼치기" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "병역, 보훈, 장애와 건강 펼치기" }),
+    );
     expect(screen.getByText("병역 상태")).toBeInTheDocument();
-
-    expect(screen.queryByText("비식별 병역 상태")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "병역 상태 복사" }),
-    ).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "병역 상태 펼치기" }));
     expect(screen.getByText("비식별 병역 상태")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "병역 상태 복사" }));
     expect(copyText).toHaveBeenCalledWith("비식별 병역 상태");

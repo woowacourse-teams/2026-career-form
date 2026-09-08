@@ -36,7 +36,10 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
     "career-form.llm.enabled=false"
 })
 @AutoConfigureMockMvc
-@Import(PreparationAnalysisApiTest.FakeResolverConfiguration.class)
+@Import({
+    PreparationAnalysisApiTest.FakeResolverConfiguration.class,
+    NotRegisteredPolicyConfiguration.class
+})
 @DisplayName("준비 분석 API")
 class PreparationAnalysisApiTest {
 

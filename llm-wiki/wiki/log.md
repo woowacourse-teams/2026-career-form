@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-09-07] ingest | CF-76 로컬 프로필 JSON 전송 계약
+
+- Disposition: New
+- Approval-Digest: faa201aaabf6f8c182db50ceb22f33f3cba9285ea098761ec0ce1d8a8b185d1b
+- Source-Tree: cb98cbd3372e4ad77bb5c235753b10ec771afe65
+- Raw: llm-wiki/raw/issues/CF-76/manifest.md
+- Topics: 1
+
 ## [2026-08-18] ingest | 제품, 하네스, 개발 컨벤션 초기 정본
 - Disposition: New
 - Raw: llm-wiki/raw/business/product-principles.md
@@ -110,3 +118,50 @@
 - Source-Tree: 20b74dd793ac0fc26ede51a99939b83e61963079
 - Raw: llm-wiki/raw/issues/CF-61/manifest.md
 - Topics: 2
+
+## [2026-09-07] ingest | CF-46 프론트 회사 어댑터 경계
+
+- Disposition: Supersedes CF-41 adapter-development and adapter-field-inventory; adds Hyundai and SK topics
+- Approval-Digest: df027b5910423b1ffad4ad267c719385039d40aeb09259bbacb19780ac393101
+- Source-Revision: dd9f867ad020a72dec51b27ab54073d59eef48ac
+- Raw: llm-wiki/raw/issues/CF-46/manifest.md
+- Topics: 4
+
+
+## [2026-09-07] ingest | CF-46 현대 취득일 식별과 미입력 점검
+
+- Disposition: 승인된 미병합 CF-46 bundle의 현대 어댑터와 지원 현황 보완
+- Approval-Digest: c6dd7f157308a54725e298ce056c553ce575d294e74da94d77645377d1ef85be
+- Source-Base-Revision: 325535401b2c5ab8999142fa41f7f3c0f6b157a1
+- Source-State: CF-46 작업 트리의 미커밋 보완 포함
+- Raw: llm-wiki/raw/issues/CF-46/manifest.md
+- Topics: 2
+
+## 2026-09-07 현대 반복 행 준비 보완
+
+- 승인 digest `0b3ad344c8d413acd5d691120d2884b4e1b1d3384fd32ae5daba5bc843f50924`의 전체 후보를 CF-46 미병합 raw와 현대·지원 현황 topic에 반영했다.
+- 실제 구조의 추가 동작 식별 누락, 어학 하위 섹션별 개수, 자격증명 매핑과 반복 추가·입력 회귀를 기록했다. 실제 입력값은 기록하지 않았다.
+
+## 2026-09-07 현대 어학 선택과 첫 실행 회귀
+
+- 승인 digest `2227ce4216e2c2ff5436f16be4451aa39d683491ba015bfed9ab19c0bf021280`의 전체 후보를 CF-46 미병합 근거와 현대·지원 현황 topic에 반영했다.
+- 정확한 추가 동작 재탐색, 검증된 어학 매핑, 단계별 정상 직접입력 준비와 같은 메뉴 선택 검증을 기록했다. 실프로필 값은 기록하지 않았다.
+
+## 2026-09-08 — CF-46 SK 주소 검색 검증 반영
+
+- 승인된 전체 후보18개(digest: 28d877aae8306a494fe2eace6bf4e0baf55bddd0e31b87ffdfacb55c53c74d9f)를 기준으로 [CF-46 bundle](../raw/issues/CF-46/manifest.md)을 갱신했다.
+- SK 후속 반복 버튼/어학 개수 분리, 기존 API capability 협상, 카카오 iframe 검색·정확 선택·최종 반영과 실제 fixture 검증 및 원복을 회사 문서와 지원 현황에 반영했다.
+- 경력·날짜·시험 성적 등 남은 제한과 다른 회사의 미검증 상태를 보존했다.
+
+## 2026-09-08 — CF-46 전체 패널 검증과 SK 검색 후속 근거 반영
+
+- 승인된 신규 후보 9개(digest: `964819f79cb6d5cba4ffbffad54f89d49a66e114cfa9f714d8d4e720796362f3`)를 기존 승인18개(digest: `28d877aae8306a494fe2eace6bf4e0baf55bddd0e31b87ffdfacb55c53c74d9f`) 위에 누적해 CF-46 미병합 bundle을 갱신했다.
+- SK 경력 exact DOM·재직상태 후속 분석, `YEAR_MONTH` 날짜·대한민국 국적 lookup, widget 검색의 유일 확정·직렬 처리와 전체 공개 fixture의 실제 popup→사이드 패널→자동 기입 검증을 기록했다.
+- UI writer 집계의 범위, 204개 제어 원복, WXT watcher의 reload 경계와 저장·제출 미검증을 함께 기록했으며 P1/P3/P4 전체 완료로 확대하지 않았다.
+
+## 2026-09-08 — CF-46 현대 주소·국적·학력 검증 반영
+
+- 승인 digest `c0e3c1533f98c631846cdd6e7e769b749c3bb7d07a70986e5d1be3f034416df6`의 현대 후보 7개를 기존 CF-46 지식 위에 누적했다.
+- 국내 주소 유일 결과 선택과 실행 소유 modal cleanup, 국적1 대한민국/KR·국적2 불변, 학력 정책 v4의 그룹별 행·필드와 실제 `school`/`basic` auto-type을 기록했다.
+- 설치 production smoke는 고교·학사 2행을 확인하고 주소 3값·readonly, 학교·전공 코드와 기간·GPA·졸업 코드를 독립 대조했다. API 7회는 HTTP 200/ADAPTER/COMPLETE였고 UI 38/0은 전체 성공이 아니다.
+- 실제 대학원·전문학사·박사, 저장·제출, toolbar icon 클릭은 검증하지 않았으며 지원서 1149개 제어와 원래 프로필 키 부재 상태를 복원했다. 개인 입력값·원본 DOM·세션은 기록하지 않았다.

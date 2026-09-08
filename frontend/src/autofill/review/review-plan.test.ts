@@ -13,6 +13,7 @@ import {
   revealSensitiveReviewItem,
   reviewItemsForDisplay,
 } from "./review-plan";
+import { resolveValueBinding } from "../profile/value-binding";
 
 function response(
   fields: FieldsAnalyzeResponse["fields"],
@@ -63,6 +64,23 @@ const allowedEmail = {
 };
 
 describe("profile value resolution", () => {
+  it("composes a Korean full name from local family and given names", () => {
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "김";
+    profile.personal.koreanGivenName = "민수";
+
+    expect(
+      resolveValueBinding(profile, {
+        type: "DERIVED",
+        recipe: "KOREAN_FULL_NAME",
+      }),
+    ).toEqual({
+      status: "resolved",
+      value: "김민수",
+      sensitive: false,
+    });
+  });
+
   it("resolves a declared single-value profile field", () => {
     const profile = createEmptyProfile();
     profile.contact.email = "me@example.test";
@@ -71,6 +89,32 @@ describe("profile value resolution", () => {
       status: "resolved",
       value: "me@example.test",
       sensitive: false,
+    });
+  });
+
+  it("resolves the education top-level latest education value from its university entry", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      education: [
+        {
+          id: "university-1",
+          sectionId: "university",
+          values: { latestEducationType: "대학(학사)" },
+        },
+      ],
+    };
+
+    expect(
+      resolveProfileFieldValue(
+        profile,
+        "education.university.latestEducationType",
+        0,
+      ),
+    ).toEqual({
+      status: "resolved",
+      value: "대학(학사)",
+      sensitive: false,
+      profileEntryId: "university-1",
     });
   });
 
@@ -162,6 +206,35 @@ describe("profile value resolution", () => {
 });
 
 describe("review plan", () => {
+  it("previews a derived full name from the local profile", () => {
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "김";
+    profile.personal.koreanGivenName = "민수";
+    const registry = registryWithTextField();
+
+    const plan = buildReviewPlan({
+      analysis: response([
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ]),
+      profile,
+      registry,
+    });
+
+    expect(plan.items[0]).toMatchObject({
+      profileValue: "김민수",
+      previewValue: "김민수",
+      status: "available",
+    });
+  });
+
   it("puts available items first and hides unavailable items for display", () => {
     const item = (
       candidateId: string,
@@ -219,6 +292,67 @@ describe("review plan", () => {
           disabled: false,
         },
       ],
+    });
+  });
+
+  it("treats an auto-created field's site default as blank", () => {
+    const profile = createEmptyProfile();
+    profile.contact.email = "me@example.test";
+
+    const plan = buildReviewPlan({
+      analysis: response([allowedEmail]),
+      profile,
+      registry: registryWithTextField("site-default@example.test"),
+      ignoreCurrentValueCandidateIds: new Set(["field-1"]),
+    });
+
+    expect(plan.items[0]).toMatchObject({
+      currentValue: "site-default@example.test",
+      profileValue: "me@example.test",
+      status: "available",
+      selected: true,
+    });
+  });
+
+  it("maps an ungrouped university conditional field to its sole university entry", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      education: [
+        {
+          id: "university-1",
+          sectionId: "university",
+          values: { minorName: "경영학과" },
+        },
+      ],
+    };
+    const registry = registryWithTextField();
+    const lookup = registry.lookupField("field-1");
+    if (lookup.status === "ready") {
+      registry.registerField({
+        ...lookup.handle,
+        itemId: "dynamic-major-item",
+        itemIndex: 1,
+        itemGroupId: "dynamic-major",
+      });
+      registry.setFieldItemCount("section-1", 1, "dynamic-major");
+    }
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          profileFieldKey: "education.university.minorName",
+          autofillPolicy: "CONDITIONAL" as const,
+        },
+      ]),
+      profile,
+      registry,
+    }).items;
+
+    expect(item).toMatchObject({
+      profileValue: "경영학과",
+      status: "needs-review",
+      selected: false,
     });
   });
 
@@ -306,6 +440,85 @@ describe("review plan", () => {
     const [item] = buildReviewPlan({
       analysis: response([
         { ...allowedEmail, profileFieldKey: "certifications.certificate.name" },
+      ]),
+      profile,
+      registry,
+    }).items;
+
+    expect(item).toMatchObject({
+      status: "unavailable",
+      selected: false,
+      disabled: true,
+    });
+  });
+
+  it("blocks a lookup binding when university form and profile row counts differ", () => {
+    const select = document.createElement("select");
+    const professionalCollege = new Option("전문대학(전문학사)", "associate");
+    const university = new Option("대학(학사)", "bachelor");
+    select.append(professionalCollege, university);
+    document.body.append(select);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "education-type",
+      candidate: {
+        candidateId: "education-type",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        displayName: "학업과정",
+        options: [
+          { optionId: "associate", displayName: "전문대학(전문학사)" },
+          { optionId: "bachelor", displayName: "대학(학사)" },
+        ],
+      },
+      elements: [select],
+      optionElements: new Map([
+        ["associate", professionalCollege],
+        ["bachelor", university],
+      ]),
+      sectionId: "section-education",
+      itemId: "university-item-1",
+      itemIndex: 0,
+      itemGroupId: "university",
+      signature: createStructuralSignature([select]),
+    });
+    registry.setFieldItemCount("section-education", 1, "university");
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      education: [
+        {
+          id: "university-1",
+          sectionId: "university",
+          values: { degreeLevel: "전문학사" },
+        },
+        {
+          id: "university-2",
+          sectionId: "university",
+          values: { degreeLevel: "학사" },
+        },
+      ],
+    };
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          candidateId: "education-type",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "LOOKUP",
+            profileFieldKey: "education.university.degreeLevel",
+            optionMap: {
+              "전문학사": "전문대학(전문학사)",
+              "학사": "대학(학사)",
+            },
+          },
+          autofillPolicy: "CONDITIONAL",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SELECT_OPTION" },
+        },
       ]),
       profile,
       registry,

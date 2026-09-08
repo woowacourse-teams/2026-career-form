@@ -27,6 +27,11 @@ export interface PreparationExecutionOptions {
     snapshot: PreparationSnapshot,
     plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
   ) => number;
+  selectProfileOption?: (
+    plan: Extract<PreparationPlan, { command: "SELECT_OPTION_TO_REVEAL" }>,
+    snapshot: PreparationSnapshot,
+  ) => OptionSelectionResult;
+  waitForExpectedFields?: (plan: PreparationPlan) => Promise<boolean>;
 }
 
 export type PreparationFailureReason =
@@ -36,13 +41,26 @@ export type PreparationFailureReason =
   | "invalid-group-count"
   | "group-count-not-incremented"
   | "refresh-failed"
+  | "expected-fields-not-visible"
+  | "action-not-ready"
+  | "profile-value-unavailable"
+  | "option-label-mismatch"
+  | "unsupported-option-action"
   | "target-not-visible";
+
+export type OptionSelectionResult =
+  | "selected"
+  | "action-not-ready"
+  | "profile-value-unavailable"
+  | "option-label-mismatch"
+  | "unsupported-option-action";
 
 export type PreparationExecutionResult =
   | {
       status: "completed";
       mayCollectFieldsSnapshot: true;
       executedPlanCount: number;
+      unavailableActionCandidateIds: string[];
     }
   | {
       status: "approval-required";
@@ -54,6 +72,7 @@ export type PreparationExecutionResult =
       reason: PreparationFailureReason;
       mayCollectFieldsSnapshot: false;
       executedPlanCount: number;
+      failedActionCandidateId?: string;
     };
 
 function isNonNegativeInteger(value: number): boolean {
@@ -95,13 +114,21 @@ function actionIdentity(
 }
 
 function actionMatchesIdentity(
-  handle: { sectionId: string; candidate: { displayName?: string } },
+  handle: {
+    sectionId: string;
+    candidate: { displayName?: string; domId?: string; domName?: string };
+  },
   identity: ActionIdentity,
 ): boolean {
+  const hasStableStructuralName =
+    identity.domName !== undefined || identity.domId !== undefined;
   return (
-    handle.sectionId === identity.sectionId &&
+    (hasStableStructuralName || handle.sectionId === identity.sectionId) &&
     (identity.displayName === undefined ||
-      handle.candidate.displayName === identity.displayName)
+      handle.candidate.displayName === identity.displayName) &&
+    (identity.domName === undefined ||
+      handle.candidate.domName === identity.domName) &&
+    (identity.domId === undefined || handle.candidate.domId === identity.domId)
   );
 }
 
@@ -145,12 +172,14 @@ function planWithActionCandidateId(
 function failure(
   reason: PreparationFailureReason,
   executedPlanCount: number,
+  failedActionCandidateId?: string,
 ): PreparationExecutionResult {
   return {
     status: "failed",
     reason,
     mayCollectFieldsSnapshot: false,
     executedPlanCount,
+    ...(failedActionCandidateId ? { failedActionCandidateId } : {}),
   };
 }
 
@@ -159,6 +188,8 @@ export async function executeApprovedPreparationPlans({
   initialSnapshot,
   refreshSnapshot,
   countRepeatableGroups,
+  selectProfileOption,
+  waitForExpectedFields,
 }: PreparationExecutionOptions): Promise<PreparationExecutionResult> {
   const selectedPlans = approvedPlans.filter(({ approved }) => approved);
   if (selectedPlans.length === 0) {
@@ -171,9 +202,13 @@ export async function executeApprovedPreparationPlans({
 
   let snapshot = initialSnapshot;
   let executedPlanCount = 0;
+  const unavailableActionCandidateIds = new Set<string>();
 
   for (const approvedPlan of selectedPlans) {
     const { plan } = approvedPlan;
+    if (plan.command === "SEARCH_ADDRESS") {
+      return failure("action-not-executable", executedPlanCount);
+    }
 
     if (plan.command === "REVEAL_SECTION") {
       const identity = actionIdentity(initialSnapshot, plan.actionCandidateId);
@@ -192,6 +227,42 @@ export async function executeApprovedPreparationPlans({
         return failure("refresh-failed", executedPlanCount);
       }
       if (!refreshed.isTargetSectionVisible(plan.targetSectionId)) {
+        return failure("target-not-visible", executedPlanCount);
+      }
+      snapshot = refreshed;
+      continue;
+    }
+
+    if (plan.command === "SELECT_OPTION_TO_REVEAL") {
+      const identity = actionIdentity(initialSnapshot, plan.actionCandidateId);
+      const action = actionIsReadyWithIdentity(
+        snapshot,
+        plan.actionCandidateId,
+        identity,
+      );
+      if (!action) return failure("action-not-ready", executedPlanCount);
+      const selectedPlan = {
+        ...plan,
+        actionCandidateId: action.candidate.candidateId,
+      };
+      const selected =
+        selectProfileOption?.(selectedPlan, snapshot) ??
+        "unsupported-option-action";
+      if (selected !== "selected") return failure(selected, executedPlanCount);
+      executedPlanCount += 1;
+      if (plan.expectedFieldNames && plan.expectedFieldNames.length > 0) {
+        const expectedFieldsVisible =
+          (await waitForExpectedFields?.(plan)) ?? false;
+        if (!expectedFieldsVisible) {
+          unavailableActionCandidateIds.add(plan.actionCandidateId);
+        }
+      }
+      const refreshed = await refresh(refreshSnapshot);
+      if (!refreshed) return failure("refresh-failed", executedPlanCount);
+      if (
+        (!plan.expectedFieldNames || plan.expectedFieldNames.length === 0) &&
+        !refreshed.isTargetSectionVisible(plan.targetSectionId)
+      ) {
         return failure("target-not-visible", executedPlanCount);
       }
       snapshot = refreshed;
@@ -244,6 +315,17 @@ export async function executeApprovedPreparationPlans({
 
       currentAction.element.click();
       executedPlanCount += 1;
+      const expectedFieldsVisible =
+        plan.expectedFieldNames && plan.expectedFieldNames.length > 0
+          ? ((await waitForExpectedFields?.(plan)) ?? false)
+          : false;
+      if (
+        plan.expectedFieldNames &&
+        plan.expectedFieldNames.length > 0 &&
+        !expectedFieldsVisible
+      ) {
+        unavailableActionCandidateIds.add(plan.actionCandidateId);
+      }
       const refreshed = await refresh(refreshSnapshot);
       if (!refreshed) {
         return failure("refresh-failed", executedPlanCount);
@@ -253,14 +335,23 @@ export async function executeApprovedPreparationPlans({
         plan.actionCandidateId,
         identity,
       );
-      if (!refreshedAction) {
-        return failure("action-not-reidentified", executedPlanCount);
+      const countAfter = refreshedAction
+        ? inspectGroupCount(
+            countRepeatableGroups,
+            refreshed,
+            planWithActionCandidateId(
+              plan,
+              refreshedAction.candidate.candidateId,
+            ),
+          )
+        : undefined;
+      if (countAfter === undefined) {
+        return failure(
+          "action-not-reidentified",
+          executedPlanCount,
+          plan.actionCandidateId,
+        );
       }
-      const countAfter = inspectGroupCount(
-        countRepeatableGroups,
-        refreshed,
-        planWithActionCandidateId(plan, refreshedAction.candidate.candidateId),
-      );
       if (countAfter !== countBefore + 1) {
         return failure("group-count-not-incremented", executedPlanCount);
       }
@@ -272,5 +363,6 @@ export async function executeApprovedPreparationPlans({
     status: "completed",
     mayCollectFieldsSnapshot: true,
     executedPlanCount,
+    unavailableActionCandidateIds: [...unavailableActionCandidateIds],
   };
 }

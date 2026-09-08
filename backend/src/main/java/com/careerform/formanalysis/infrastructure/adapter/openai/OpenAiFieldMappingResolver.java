@@ -20,8 +20,8 @@ import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Option;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Section;
 import com.careerform.formanalysis.exception.ResolverException;
 
-import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.ArrayNode;
 
 @Component
 @ConditionalOnProperty(
@@ -36,7 +36,8 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
     private static final String SYSTEM_PROMPT = """
         Map de-identified application-form field metadata using schemaVersion 2.
         Return only confident canonical mappings in the required matches array.
-        Each match contains only candidateId and profileFieldKey. Omit candidates when
+        Each match contains only candidateId and valueBinding. A DIRECT binding contains
+        one profileFieldKey; a DERIVED binding contains one approved recipe. Omit candidates when
         the display metadata is insufficient; the Backend will treat omissions as no match.
         Use only a profileFieldKey allowed by the response schema. Do not infer or return
         field values, confidence, autofill policy, interaction state, or write plans.
@@ -67,10 +68,7 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
             List<Result> results = new ArrayList<>();
             Set<String> matchedCandidateIds = new HashSet<>();
             output.matches().forEach(match -> {
-                results.add(new Match(
-                    match.candidateId(),
-                    match.profileFieldKey()
-                ));
+                results.add(new Match(match.candidateId(), match.valueBinding()));
                 matchedCandidateIds.add(match.candidateId());
             });
             request.fieldCandidatesInTraversalOrder().stream()
@@ -92,10 +90,10 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
     private String withSupportedProfileFieldKeyEnum(String schema) {
         ObjectNode root = (ObjectNode) JacksonUtils.getDefaultJsonMapper()
             .readTree(schema);
-        ObjectNode profileFieldKey = (ObjectNode) root.at(
-            "/properties/matches/items/properties/profileFieldKey"
+        ObjectNode directBinding = (ObjectNode) root.at(
+            "/properties/matches/items/properties/valueBinding/anyOf/0/properties/profileFieldKey"
         );
-        ArrayNode enumValues = profileFieldKey.putArray("enum");
+        ArrayNode enumValues = directBinding.putArray("enum");
         supportedProfileFields.keys().forEach(enumValues::add);
         return root.toString();
     }
@@ -185,6 +183,6 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
     ) {
     }
 
-    record MatchOutput(String candidateId, String profileFieldKey) {
+    record MatchOutput(String candidateId, FieldMappingResolver.ValueBinding valueBinding) {
     }
 }

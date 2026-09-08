@@ -8,6 +8,13 @@ import type {
   PreparationSection,
 } from "../api/types";
 import {
+  collectionAdapterForHost,
+  type CollectionAdapter,
+  type CollectionPhase,
+  type CollectionSource,
+} from "../adapters/collection";
+export { isHyundaiTalentHost, isSkCareersHost } from "../adapters/company";
+import {
   CandidateRegistry,
   createStructuralSignature,
 } from "./candidate-registry";
@@ -37,6 +44,14 @@ function createSnapshotId(prefix: "preparation" | "fields"): string {
   const random =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${prefix}-${random}`;
+}
+
+export function hasVisibleFormControl(item: Element): boolean {
+  return Array.from(
+    item.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input, select, textarea"),
+  ).some((control) => !isHidden(control));
 }
 
 function metadata(value: string | null | undefined): string | undefined {
@@ -181,16 +196,36 @@ function siteOf(document: Document): { host: string; pathPattern: string } {
   };
 }
 
+function documentHost(document: Document): string {
+  return document.location?.host ?? "";
+}
+
 function groupBySection<T extends Element>(
   elements: T[],
+  selector: string,
 ): Map<Element | null, T[]> {
   const groups = new Map<Element | null, T[]>();
   for (const element of elements) {
-    const section = element.closest(SECTION_SELECTOR);
+    const section = element.closest(selector);
     groups.set(section, [...(groups.get(section) ?? []), element]);
   }
   if (groups.size === 0) groups.set(null, []);
   return groups;
+}
+
+function sectionSelector(adapter: CollectionAdapter): string {
+  return [SECTION_SELECTOR, ...adapter.sectionSelectors].join(", ");
+}
+
+function actionDomId(
+  element: HTMLElement,
+  adapter: CollectionAdapter,
+): string | undefined {
+  const adapterId = adapter.actionDomId(element);
+  if (adapterId) return adapterId;
+  const nativeId = metadata(element.id);
+  if (nativeId) return nativeId;
+  return adapter.actionDomId(element);
 }
 
 function baseCandidate(
@@ -214,7 +249,7 @@ function baseCandidate(
   };
 }
 
-function collectFieldElements(document: Document) {
+function collectFieldElements(document: Document, adapter: CollectionAdapter) {
   return Array.from(
     document.querySelectorAll<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -222,25 +257,26 @@ function collectFieldElements(document: Document) {
   ).filter((element) => {
     if (isTemplateLike(element)) return false;
     if (!(element instanceof HTMLInputElement)) return true;
-    return ![
-      "hidden",
-      "password",
-      "file",
-      "submit",
-      "button",
-      "reset",
-      "image",
-    ].includes(element.type);
+    if (element.type === "button") {
+      return adapter.collectsInputButtonFields;
+    }
+    return !["hidden", "password", "file", "submit", "reset", "image"].includes(
+      element.type,
+    );
   });
 }
 
 export function collectFieldsSnapshot(
   document: Document,
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
+  const adapter = collectionAdapterForHost(documentHost(document));
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: FieldsSection[] = [];
-  const groups = groupBySection(collectFieldElements(document));
+  const groups = groupBySection(
+    collectFieldElements(document, adapter),
+    sectionSelector(adapter),
+  );
 
   Array.from(groups.entries()).forEach(
     ([container, elements], sectionIndex) => {
@@ -249,21 +285,24 @@ export function collectFieldsSnapshot(
         : "section-root";
       const fields: FieldCandidate[] = [];
       const itemGroupIndexes = new Map<string, number>();
-      const repeatableItems = repeatableItemElements(container).map(
-        (element, itemPosition) => {
-          const itemGroupId = repeatableItemGroupId(element);
-          const itemGroupKey = itemGroupId ?? "";
-          const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
-          itemGroupIndexes.set(itemGroupKey, itemIndex + 1);
-          return {
-            element,
-            itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
-            itemIndex,
-            itemGroupId,
-            fields: [] as FieldCandidate[],
-          };
-        },
-      );
+      const repeatableItems = repeatableItemElements(
+        container,
+        adapter,
+        "fields",
+      ).map((element, itemPosition) => {
+        const itemGroupId =
+          adapter.itemGroupId?.(element) ?? repeatableItemGroupId(element);
+        const itemGroupKey = itemGroupId ?? "";
+        const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
+        itemGroupIndexes.set(itemGroupKey, itemIndex + 1);
+        return {
+          element,
+          itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
+          itemIndex,
+          itemGroupId,
+          fields: [] as FieldCandidate[],
+        };
+      });
       const consumed = new Set<Element>();
 
       for (const element of elements) {
@@ -335,11 +374,18 @@ export function collectFieldsSnapshot(
             ...(options.length > 0 ? { options } : {}),
           };
         } else {
+          const isButton =
+            first instanceof HTMLInputElement && first.type === "button";
           candidate = {
             ...baseCandidate(first, candidateId),
             element:
               first instanceof HTMLTextAreaElement ? "textarea" : "input",
-            control: first instanceof HTMLTextAreaElement ? "textarea" : "text",
+            control:
+              first instanceof HTMLTextAreaElement
+                ? "textarea"
+                : isButton
+                  ? "button"
+                  : "text",
           };
         }
 
@@ -359,6 +405,13 @@ export function collectFieldsSnapshot(
             ...(item
               ? {
                   itemId: item.itemId,
+                  ...(adapter.itemGroupId?.(item.element) !== undefined
+                    ? {
+                        isCurrentContext: () =>
+                          adapter.itemGroupId!(item.element) ===
+                          item.itemGroupId,
+                      }
+                    : {}),
                   itemIndex: item.itemIndex,
                   ...(item.itemGroupId
                     ? { itemGroupId: item.itemGroupId }
@@ -386,8 +439,9 @@ export function collectFieldsSnapshot(
       }
       const itemFields: FieldsItem[] = repeatableItems
         .filter(({ fields: itemFields }) => itemFields.length > 0)
-        .map(({ itemId, fields: itemFields }) => ({
+        .map(({ itemId, itemGroupId, fields: itemFields }) => ({
           itemId,
+          ...(itemGroupId ? { itemGroupId } : {}),
           fields: itemFields,
         }));
       sections.push({
@@ -414,19 +468,42 @@ export function collectFieldsSnapshot(
 
 function collectActionElements(document: Document) {
   return Array.from(
-    document.querySelectorAll<HTMLButtonElement | HTMLInputElement>(
-      "button, input[type='button']",
-    ),
+    document.querySelectorAll<
+      HTMLButtonElement | HTMLInputElement | HTMLSelectElement
+    >("button, input[type='button'], input[type='radio'], select"),
   ).filter((element) => {
     const label = labelOf(element);
+    if (element instanceof HTMLSelectElement) {
+      return !isHidden(element) && Boolean(element.id || element.name);
+    }
     return Boolean(
       label && !FORBIDDEN_ACTION.test(label) && !isHidden(element),
     );
   });
 }
 
-function repeatableItemElements(container: Element | null): Element[] {
+function repeatableItemElements(
+  container: Element | null,
+  adapter: CollectionAdapter,
+  phase: CollectionPhase,
+): Element[] {
   if (!container) return [];
+
+  const filterForAdapter = (
+    items: Element[],
+    source: CollectionSource,
+  ): Element[] =>
+    items.filter(
+      (item) =>
+        !isTemplateLike(item) &&
+        (!adapter.requiresVisibleControl(phase, source) ||
+          hasVisibleFormControl(item)),
+    );
+
+  const adapterItems = adapter.repeatableItemCandidates(container);
+  if (adapterItems) {
+    return filterForAdapter(adapterItems, "adapter");
+  }
 
   const isDirectRepeatableItem = (element: Element): boolean => {
     if (isTemplateLike(element)) return false;
@@ -447,10 +524,12 @@ function repeatableItemElements(container: Element | null): Element[] {
   const directItems = Array.from(container.children).filter(
     isDirectRepeatableItem,
   );
-  if (directItems.length > 0) return directItems;
+  if (directItems.length > 0) {
+    return filterForAdapter(directItems, "generic");
+  }
 
-  // Some forms (including SK Careers) nest repeated rows inside a form-body
-  // wrapper instead of making them direct children of the section root.
+  // Some forms nest repeated rows inside a form-body wrapper instead of
+  // making them direct children of the section root.
   // Search those descendants, but keep only the outermost markers so inner
   // controls such as `.form-item` are not mistaken for repeated rows.
   const nestedCandidates = Array.from(
@@ -475,11 +554,14 @@ function repeatableItemElements(container: Element | null): Element[] {
     );
   });
 
-  return nestedCandidates.filter(
-    (candidate) =>
-      !nestedCandidates.some(
-        (ancestor) => ancestor !== candidate && ancestor.contains(candidate),
-      ),
+  return filterForAdapter(
+    nestedCandidates.filter(
+      (candidate) =>
+        !nestedCandidates.some(
+          (ancestor) => ancestor !== candidate && ancestor.contains(candidate),
+        ),
+    ),
+    "generic",
   );
 }
 
@@ -507,8 +589,9 @@ function actionGroupKey(action: Element | undefined): string | undefined {
 function repeatableItemElementsForAction(
   container: Element | null,
   action: Element | undefined,
+  adapter: CollectionAdapter,
 ): Element[] {
-  const allItems = repeatableItemElements(container);
+  const allItems = repeatableItemElements(container, adapter, "preparation");
   const groupKey = actionGroupKey(action);
   if (!groupKey) return allItems;
   const matchingItems = allItems.filter((item) => {
@@ -547,13 +630,18 @@ function repeatableItemElementsForAction(
 export function collectPreparationSnapshot(
   document: Document,
 ): PreparationCollectedSnapshot {
+  const adapter = collectionAdapterForHost(documentHost(document));
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: PreparationSection[] = [];
-  const actions = collectActionElements(document);
-  const actionsBySection = groupBySection(actions);
+  const actions = [
+    ...collectActionElements(document),
+    ...(adapter.additionalActionElements?.(document) ?? []),
+  ];
+  const selector = sectionSelector(adapter);
+  const actionsBySection = groupBySection(actions, selector);
   const containers: Array<Element | null> = Array.from(
-    document.querySelectorAll(SECTION_SELECTOR),
+    document.querySelectorAll(selector),
   );
   if (actionsBySection.has(null) || containers.length === 0) {
     containers.push(null);
@@ -571,14 +659,37 @@ export function collectPreparationSnapshot(
       const candidateId = createOpaqueId("action", candidateIndex++);
       const candidate: ActionCandidate = {
         candidateId,
-        element: element instanceof HTMLButtonElement ? "button" : "input",
-        control: "button",
+        element:
+          element instanceof HTMLButtonElement
+            ? "button"
+            : element instanceof HTMLSelectElement
+              ? "select"
+              : "input",
+        control:
+          element instanceof HTMLSelectElement
+            ? "select"
+            : element instanceof HTMLInputElement && element.type === "radio"
+              ? "radio"
+              : "button",
         visibility: visibility(element),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
-        ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
+        ...(actionDomId(element, adapter)
+          ? { domId: actionDomId(element, adapter) }
+          : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
         ...(element.disabled ? { disabled: true } : {}),
         ...(isInert(element) ? { inert: true } : {}),
+        ...(element instanceof HTMLSelectElement
+          ? {
+              options: Array.from(element.options)
+                .map((option, index) => ({
+                  optionId: createOpaqueId(`${candidateId}-option`, index),
+                  displayName: metadata(option.textContent?.trim() ?? "") ?? "",
+                }))
+                .filter((option) => option.displayName.length > 0)
+                .slice(0, 128),
+            }
+          : {}),
       };
       registry.registerAction(
         {
@@ -598,7 +709,7 @@ export function collectPreparationSnapshot(
     // The API only accepts nested items when they contain at least one
     // action candidate. Repeated rows are used locally for count verification
     // today, so do not serialize empty item shells into the request.
-    const items = repeatableItemElements(container)
+    const items = repeatableItemElements(container, adapter, "preparation")
       .map((_, itemIndex) => ({
         itemId: createOpaqueId(`${sectionId}-item`, itemIndex),
         actionCandidates: [],
@@ -638,6 +749,7 @@ export function collectPreparationSnapshot(
       return repeatableItemElementsForAction(
         root,
         actionElements.get(actionCandidateId),
+        adapter,
       ).length;
     },
   };

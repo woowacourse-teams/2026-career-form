@@ -6,17 +6,22 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.model.openai.autoconfigure.OpenAiChatProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(properties = {
-    "spring.mongodb.uri=mongodb://localhost/career-form-test",
-    "career-form.llm.enabled=false",
-    "career-form.llm.provider=",
-    "career-form.llm.model=",
-    "spring.ai.openai.api-key="
-})
+@SpringBootTest(
+    classes = OpenAiChatStorageProfileContextTest.ChatStorageConfiguration.class,
+    webEnvironment = SpringBootTest.WebEnvironment.NONE
+)
 abstract class OpenAiChatStorageProfileContextTest {
+
+    // Load real profile properties without starting unrelated database seeders.
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(OpenAiChatProperties.class)
+    static class ChatStorageConfiguration {
+    }
 
     @Autowired
     private OpenAiChatProperties openAiChatProperties;

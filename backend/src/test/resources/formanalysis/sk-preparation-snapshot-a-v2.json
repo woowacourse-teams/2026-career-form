@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-careers-structure-a-redacted",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Application/Index/{postingId}"
+  },
+  "sections": [
+    {
+      "sectionId": "applyContentAcademic",
+      "displayName": "학력 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-university",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "학력 항목 추가",
+          "domName": "btnAddEducationUniv"
+        }
+      ]
+    },
+    {
+      "sectionId": "applyContentCareer",
+      "displayName": "경력 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-career",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "경력 항목 추가",
+          "domName": "btnAddCareer"
+        }
+      ]
+    },
+    {
+      "sectionId": "applyContentLicense",
+      "displayName": "자격 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-certificate",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "자격 항목 추가",
+          "domName": "btnAddCert"
+        }
+      ]
+    },
+    {
+      "sectionId": "applyContentLinguistics",
+      "displayName": "어학 영역",
+      "actionCandidates": [
+        {
+          "candidateId": "action-add-language-test",
+          "element": "button",
+          "control": "button",
+          "visibility": "visible",
+          "displayName": "어학 항목 추가",
+          "domName": "btnAddLangExam"
+        }
+      ]
+    }
+  ]
+}

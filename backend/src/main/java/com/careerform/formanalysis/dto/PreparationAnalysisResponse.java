@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.dto;
 
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -23,9 +24,17 @@ public record PreparationAnalysisResponse(
         String snapshotId,
         List<PreparationPlan> plans
     ) {
+        return complete(snapshotId, Mode.GENERIC, plans);
+    }
+
+    public static PreparationAnalysisResponse complete(
+        String snapshotId,
+        Mode mode,
+        List<PreparationPlan> plans
+    ) {
         return new PreparationAnalysisResponse(
             snapshotId,
-            Mode.GENERIC,
+            mode,
             AnalysisStatus.COMPLETE,
             plans,
             null,
@@ -44,9 +53,38 @@ public record PreparationAnalysisResponse(
         );
     }
 
+    public static PreparationAnalysisResponse adapterStructureMismatch(
+        String snapshotId
+    ) {
+        return new PreparationAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.ADAPTER_STRUCTURE_MISMATCH
+        );
+    }
+
+    public static PreparationAnalysisResponse adapterPolicyUnavailable(
+        String snapshotId
+    ) {
+        return new PreparationAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.ADAPTER_POLICY_UNAVAILABLE
+        );
+    }
+
     public sealed interface PreparationPlan permits RevealSectionPlan,
-        AddRepeatableGroupPlan {
+        AddRepeatableGroupPlan, SelectOptionToRevealPlan, SearchAddressPlan {
         String actionCandidateId();
+    }
+
+    public record SearchAddressPlan(String actionCandidateId, Command command, ExpectedEffect expectedEffect) implements PreparationPlan {
     }
 
     public record RevealSectionPlan(
@@ -57,10 +95,31 @@ public record PreparationAnalysisResponse(
     ) implements PreparationPlan {
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record AddRepeatableGroupPlan(
         String actionCandidateId,
         Command command,
-        ExpectedEffect expectedEffect
+        ExpectedEffect expectedEffect,
+        List<String> expectedFieldNames
+    ) implements PreparationPlan {
+        public AddRepeatableGroupPlan(
+            String actionCandidateId, Command command, ExpectedEffect expectedEffect
+        ) {
+            this(actionCandidateId, command, expectedEffect, null);
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record SelectOptionToRevealPlan(
+        String actionCandidateId,
+        Command command,
+        ExpectedEffect expectedEffect,
+        String profileFieldKey,
+        String optionDisplayName,
+        String targetSectionId,
+        List<String> expectedFieldNames,
+        List<String> selectableProfileValues,
+        Map<String, String> revealedFieldBindings
     ) implements PreparationPlan {
     }
 
@@ -81,17 +140,22 @@ public record PreparationAnalysisResponse(
     }
 
     public enum Command {
+        SEARCH_ADDRESS,
         REVEAL_SECTION,
-        ADD_REPEATABLE_GROUP
+        ADD_REPEATABLE_GROUP,
+        SELECT_OPTION_TO_REVEAL
     }
 
     public enum ExpectedEffect {
+        ADDRESS_SELECTED,
         TARGET_VISIBLE,
-        GROUP_COUNT_INCREMENT
+        GROUP_COUNT_INCREMENT,
+        TARGET_FIELDS_VISIBLE
     }
 
     public enum BlockCode {
         ADAPTER_STRUCTURE_MISMATCH,
+        ADAPTER_POLICY_UNAVAILABLE,
         UNSUPPORTED_SNAPSHOT
     }
 }

@@ -12,6 +12,8 @@ import type {
   ProfileCategoryId,
   RepeatedProfileCategoryId,
 } from "../../profile/model";
+import type { ValueBinding } from "../api/types";
+import { resolveValueBinding } from "../profile/value-binding";
 
 export type ProfileValueResolution =
   | {
@@ -69,6 +71,7 @@ interface ProfileFieldParts {
   fieldId: string;
   sensitive: boolean;
   repeatable: boolean;
+  topLevel: boolean;
 }
 
 function profileFieldParts(value: string): ProfileFieldParts | undefined {
@@ -82,7 +85,9 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
   const section = category?.sections.find(
     (candidate) => candidate.id === sectionId,
   );
-  const field = section?.fields.find((candidate) => candidate.id === fieldId);
+  const field =
+    section?.fields.find((candidate) => candidate.id === fieldId) ??
+    category?.topLevelFields?.find((candidate) => candidate.id === fieldId);
   if (!category || !section || !field || field.id === "evidenceDocumentPath") {
     return undefined;
   }
@@ -93,6 +98,7 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
     fieldId: field.id,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
+    topLevel: category.topLevelFields?.some((candidate) => candidate.id === field.id) === true,
   };
 }
 
@@ -190,6 +196,7 @@ function itemForAnalysis(
   analysis: FieldAnalysis,
   profile: Profile,
   registry: CandidateRegistry,
+  ignoreCurrentValueCandidateIds: ReadonlySet<string>,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
@@ -218,17 +225,40 @@ function itemForAnalysis(
     );
   }
 
-  const parts = profileFieldParts(analysis.profileFieldKey);
-  const itemIndex = lookup.handle.itemIndex;
-  if (parts?.repeatable) {
+  const binding: ValueBinding | undefined = analysis.valueBinding ?? (
+    analysis.profileFieldKey
+      ? { type: "DIRECT", profileFieldKey: analysis.profileFieldKey }
+      : undefined
+  );
+  if (!binding) {
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      "프로필 값 연결 방식이 없습니다.",
+      analysis,
+    );
+  }
+  const parts = binding.profileFieldKey
+    ? profileFieldParts(binding.profileFieldKey)
+    : undefined;
+  let itemIndex = lookup.handle.itemIndex;
+  if (parts?.repeatable && !parts.topLevel) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
+    if (profileEntries.length === 1) {
+      itemIndex = 0;
+    }
+    const soleUngroupedProfileEntry =
+      itemIndex === 0 &&
+      (formItemCount === undefined || formItemCount === 0) &&
+      profileEntries.length === 1;
     if (
       itemIndex === undefined ||
-      formItemCount === undefined ||
-      formItemCount !== profileEntries.length
+      (!soleUngroupedProfileEntry &&
+        (formItemCount === undefined ||
+          formItemCount !== profileEntries.length))
     ) {
       return unavailableItem(
         analysis.candidateId,
@@ -239,11 +269,7 @@ function itemForAnalysis(
     }
   }
 
-  const profileValue = resolveProfileFieldValue(
-    profile,
-    analysis.profileFieldKey,
-    itemIndex,
-  );
+  const profileValue = resolveValueBinding(profile, binding, itemIndex);
   if (profileValue.status !== "resolved") {
     const reason =
       profileValue.status === "ambiguous"
@@ -254,6 +280,7 @@ function itemForAnalysis(
 
   const pageValue = currentValue(lookup.handle);
   const hasConflict =
+    !ignoreCurrentValueCandidateIds.has(analysis.candidateId) &&
     pageValue.trim().length > 0 &&
     pageValue.trim() !== profileValue.value.trim();
   if (
@@ -263,7 +290,7 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      profileFieldKey: analysis.profileFieldKey,
+      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
       ...(profileValue.profileEntryId
         ? { profileEntryId: profileValue.profileEntryId }
         : {}),
@@ -283,7 +310,7 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      profileFieldKey: analysis.profileFieldKey,
+      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
       ...(profileValue.profileEntryId
         ? { profileEntryId: profileValue.profileEntryId }
         : {}),
@@ -303,7 +330,7 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      profileFieldKey: analysis.profileFieldKey,
+      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
       currentValue: pageValue,
       profileValue: profileValue.value,
       previewValue: profileValue.value,
@@ -318,7 +345,7 @@ function itemForAnalysis(
   return {
     candidateId: analysis.candidateId,
     fieldLabel,
-    profileFieldKey: analysis.profileFieldKey,
+    ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
     ...(profileValue.profileEntryId
       ? { profileEntryId: profileValue.profileEntryId }
       : {}),
@@ -339,10 +366,12 @@ export function buildReviewPlan({
   analysis,
   profile,
   registry,
+  ignoreCurrentValueCandidateIds = new Set<string>(),
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
   registry: CandidateRegistry;
+  ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
@@ -350,7 +379,7 @@ export function buildReviewPlan({
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
     items: analysis.fields.map((field) =>
-      itemForAnalysis(field, profile, registry),
+      itemForAnalysis(field, profile, registry, ignoreCurrentValueCandidateIds),
     ),
   };
 }

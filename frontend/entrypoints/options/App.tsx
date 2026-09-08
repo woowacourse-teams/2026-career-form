@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import type {
@@ -8,12 +8,18 @@ import type {
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { ProfileForm } from "../../src/profile/components/ProfileForm";
 import { useProfileEditor } from "../../src/profile/hooks/use-profile-editor";
+import {
+  parseProfileImport,
+  serializeProfileExport,
+} from "../../src/profile/profile-transfer";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import styles from "./App.module.css";
 
 interface AppProps {
   repository?: ProfileRepository;
   confirmDelete?: (message: string) => boolean;
+  confirmImport?: (message: string) => boolean;
+  downloadProfile?: (fileName: string, contents: string) => void;
 }
 
 const SAVE_STATUS_LABEL = {
@@ -23,9 +29,22 @@ const SAVE_STATUS_LABEL = {
   error: "저장 실패",
 } as const;
 
+function downloadProfile(fileName: string, contents: string) {
+  const url = URL.createObjectURL(
+    new Blob([contents], { type: "application/json" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function App({
   repository: injectedRepository,
   confirmDelete = (message) => globalThis.confirm(message),
+  confirmImport = (message) => globalThis.confirm(message),
+  downloadProfile: injectedDownloadProfile = downloadProfile,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -36,6 +55,11 @@ export function App({
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false);
   const [activeCategory, setActiveCategory] =
     useState<ProfileCategoryId>("personal");
+  const [transferFeedback, setTransferFeedback] = useState<{
+    kind: "status" | "error";
+    message: string;
+  } | null>(null);
+  const importInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     repository
@@ -58,6 +82,37 @@ export function App({
     void repository
       .saveLayout(nextLayout)
       .catch(() => setLayoutSaveFailed(true));
+  };
+  const exportProfile = () => {
+    injectedDownloadProfile(
+      "career-form-profile-v1.json",
+      serializeProfileExport(editor.profile),
+    );
+    setTransferFeedback({ kind: "status", message: "프로필을 내보냈습니다." });
+  };
+  const importProfile = async (file: File) => {
+    try {
+      const importedProfile = parseProfileImport(await file.text());
+      if (!confirmImport("현재 프로필 전체를 덮어씁니다. 계속할까요?")) return;
+
+      const saved = await editor.replaceProfile(importedProfile);
+      setTransferFeedback(
+        saved
+          ? { kind: "status", message: "프로필을 가져왔습니다." }
+          : {
+              kind: "error",
+              message: "프로필을 저장하지 못했습니다. 다시 시도해 주세요.",
+            },
+      );
+    } catch (error) {
+      setTransferFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "가져오기 파일을 읽을 수 없습니다.",
+      });
+    }
   };
   const activeDefinition = PROFILE_CATEGORIES.find(
     (category) => category.id === activeCategory,
@@ -82,6 +137,26 @@ export function App({
           </p>
         </div>
         <div className={styles.toolbar}>
+          <div className={styles.transferActions}>
+            <button type="button" onClick={exportProfile}>
+              내보내기
+            </button>
+            <button type="button" onClick={() => importInput.current?.click()}>
+              가져오기
+            </button>
+            <input
+              ref={importInput}
+              className={styles.importInput}
+              type="file"
+              accept=".json,application/json"
+              aria-label="프로필 JSON 파일"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                if (file) void importProfile(file);
+              }}
+            />
+          </div>
           <div
             className={styles.layoutSwitch}
             aria-label="프로필 레이아웃 선택"
@@ -108,6 +183,19 @@ export function App({
           </div>
         </div>
       </header>
+
+      {transferFeedback && (
+        <p
+          className={
+            transferFeedback.kind === "error"
+              ? styles.transferError
+              : styles.transferStatus
+          }
+          role={transferFeedback.kind === "error" ? "alert" : "status"}
+        >
+          {transferFeedback.message}
+        </p>
+      )}
 
       <aside className={styles.notice}>
         프로필은 암호화 없이 Chrome 로컬 저장소에 보관됩니다. 같은 브라우저

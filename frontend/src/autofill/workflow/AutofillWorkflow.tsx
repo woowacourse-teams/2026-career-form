@@ -1,21 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { browser } from "wxt/browser";
+import { createAddressSearch } from "../address/runtime";
+import type {
+  AddressSearch,
+  AddressResult,
+  AddressValue,
+} from "../address/types";
 
+import {
+  getWorkflowAdapter,
+  type WorkflowDiagnostic,
+} from "../adapters/workflow";
 import { AnalysisServiceError } from "../api/runtime-client";
+import { AnalysisContractError } from "../api/validate-response";
 import type { AnalysisApiClient, PreparationPlan } from "../api/types";
 import {
   collectFieldsSnapshot,
   collectPreparationSnapshot,
   type CollectedSnapshot,
 } from "../dom/collect";
-import { executeApprovedPreparationPlans } from "../preparation/executor";
+import {
+  executeApprovedPreparationPlans,
+  type PreparationExecutionOptions,
+} from "../preparation/executor";
+import { preparationFailureMessage } from "../preparation/failure-message";
+import { waitForExpectedFields } from "../preparation/wait-for-fields";
 import {
   buildReviewPlan,
   revealSensitiveReviewItem,
+  resolveProfileFieldValue,
   reviewItemsForDisplay,
   type ReviewPlanItem,
 } from "../review/review-plan";
 import {
   executeApprovedWrites,
+  executeApprovedWritesAfterPageSettles,
   type ApprovedWriteResult,
 } from "../write/executor";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
@@ -24,20 +43,26 @@ import type { ProfileRepository } from "../../profile/profile-repository";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 
 type Stage =
-  | "analyzing"
-  | "preparation-review"
-  | "review"
-  | "confirmation"
-  | "result"
-  | "exception";
+  "analyzing" | "preparation-review" | "review" | "result" | "exception";
 
 interface PreparationItem {
   plan: PreparationPlan;
   actionLabel: string;
-  approved: boolean;
+  runnable: boolean;
+  unavailableReason?: string;
   localItemCount?: number;
   currentGroupCount?: number;
   requiredAdditions?: number;
+}
+
+export function shouldRunRevealPlan(
+  profileValue: string,
+  optionDisplayName?: string,
+  selectableProfileValues?: readonly string[],
+): boolean {
+  return selectableProfileValues
+    ? selectableProfileValues.includes(profileValue)
+    : optionDisplayName === undefined || profileValue === optionDisplayName;
 }
 
 type ReviewItemGroupId = "available" | "needs-review";
@@ -64,11 +89,25 @@ const REVIEW_ITEM_GROUPS: readonly Omit<ReviewItemGroup, "items">[] = [
 
 const SKIPPED_BY_APPROVAL_REASON = "사용자가 승인한 입력 항목이 아닙니다.";
 
+const runtimeAddressSearch = createAddressSearch(() =>
+  browser.runtime.connect({ name: "cf-address-top" }),
+);
+const addressValue = (profile: Profile): AddressValue => ({
+  address: profile.contact.addressLine1 ?? "",
+  postalCode: profile.contact.postalCode ?? "",
+  detail: profile.contact.addressLine2 ?? "",
+});
+
 interface WorkflowProps {
+  addressSearch?: AddressSearch;
   apiClient: AnalysisApiClient;
   repository: Pick<ProfileRepository, "load">;
   pageDocument: Document;
   onExit(): void;
+}
+
+function pageHost(pageDocument: Document): string {
+  return pageDocument.location?.host ?? "";
 }
 
 function Header({ step, title }: { step: string; title: string }) {
@@ -88,10 +127,12 @@ const PROFILE_CATEGORY_KEYWORDS: Record<
   RepeatedProfileCategoryId,
   readonly string[]
 > = {
-  education: ["학력"],
-  languages: ["어학", "외국어"],
-  certifications: ["자격", "면허"],
-  projects: ["프로젝트"],
+  education: ["학력", "academic"],
+  languages: ["어학", "외국어", "foreign"],
+  certifications: ["자격", "면허", "licence"],
+  careers: ["경력", "직장", "career"],
+  projects: ["프로젝트", "project"],
+  publications: ["논문", "특허", "publication"],
   health: ["건강"],
 };
 
@@ -109,33 +150,52 @@ function matchesProfileCategory(
 
 function educationProfileSectionId(
   matchLabel: string,
+  sectionHint?: "highSchool" | "university" | "graduateSchool",
 ): "highSchool" | "university" | "graduateSchool" | undefined {
   const normalizedLabel = matchLabel.toLowerCase();
   if (
     matchLabel.includes("대학원") ||
     normalizedLabel.includes("graduateschool") ||
-    normalizedLabel.includes("educationgrad")
+    sectionHint === "graduateSchool"
   ) {
     return "graduateSchool";
   }
   if (
     matchLabel.includes("고등학교") ||
     normalizedLabel.includes("highschool") ||
-    normalizedLabel.includes("educationhigh")
+    sectionHint === "highSchool"
   ) {
     return "highSchool";
   }
   if (
     matchLabel.includes("대학") ||
     normalizedLabel.includes("university") ||
-    normalizedLabel.includes("educationuniv")
+    sectionHint === "university"
   ) {
     return "university";
   }
   return undefined;
 }
 
-function localItemCount(
+function stateDriverKey(
+  item: ReviewPlanItem,
+  domName: string | undefined,
+  itemIndex: number | undefined,
+): string {
+  const binding = item.analysis?.valueBinding;
+  const profileFieldKey =
+    binding?.type === "DIRECT" ||
+    binding?.type === "LOOKUP" ||
+    binding?.type === "BUTTON_OPTION"
+      ? binding.profileFieldKey
+      : item.profileFieldKey;
+  return [
+    item.profileEntryId ?? `item-${itemIndex ?? "single"}`,
+    profileFieldKey ?? domName ?? item.candidateId,
+  ].join("|");
+}
+
+export function localItemCount(
   plan: PreparationPlan,
   snapshot: CollectedSnapshot<
     ReturnType<typeof collectPreparationSnapshot>["request"]
@@ -159,30 +219,37 @@ function localItemCount(
   ]
     .filter(Boolean)
     .join(" ");
-  const category = PROFILE_CATEGORIES.find((candidate) =>
-    matchesProfileCategory(candidate, matchLabel),
-  );
+  const profileSectionHint = getWorkflowAdapter(
+    snapshot.request.site.host,
+  ).repeatedProfileSectionHint?.(action?.domId);
+  const category = profileSectionHint
+    ? PROFILE_CATEGORIES.find(
+        (candidate) => candidate.id === profileSectionHint.categoryId,
+      )
+    : PROFILE_CATEGORIES.find((candidate) =>
+        matchesProfileCategory(candidate, matchLabel),
+      );
   const profileItemCount = category
     ? category.id === "education"
       ? (() => {
-          const sectionId = educationProfileSectionId(matchLabel);
+          const sectionId = educationProfileSectionId(
+            matchLabel,
+            getWorkflowAdapter(
+              snapshot.request.site.host,
+            ).educationSectionHint?.(matchLabel),
+          );
           return sectionId
             ? profile.education.filter((entry) => entry.sectionId === sectionId)
                 .length
             : profile.education.length;
         })()
-      : profile[category.id as RepeatedProfileCategoryId].length
+      : profileSectionHint
+        ? profile[category.id as RepeatedProfileCategoryId].filter(
+            (entry) => entry.sectionId === profileSectionHint.sectionId,
+          ).length
+        : profile[category.id as RepeatedProfileCategoryId].length
     : 0;
-  console.info("[CareerForm] preparation count", {
-    actionCandidateId: plan.actionCandidateId,
-    sectionDisplayName: section?.displayName ?? null,
-    actionDisplayName: action?.displayName ?? null,
-    actionDomName: action?.domName ?? null,
-    actionDomId: action?.domId ?? null,
-    matchLabel,
-    matchedCategory: category?.id ?? null,
-    profileItemCount,
-  });
+
   return profileItemCount;
 }
 
@@ -221,10 +288,28 @@ function preparationItem(
 ): PreparationItem {
   const localCount = localItemCount(plan, snapshot, profile);
   if (plan.command !== "ADD_REPEATABLE_GROUP") {
+    const value =
+      plan.command === "SELECT_OPTION_TO_REVEAL"
+        ? resolveProfileFieldValue(profile, plan.profileFieldKey)
+        : undefined;
+    const runnable =
+      plan.command !== "SELECT_OPTION_TO_REVEAL" ||
+      (value?.status === "resolved" &&
+        shouldRunRevealPlan(
+          value.value,
+          plan.optionDisplayName,
+          plan.selectableProfileValues,
+        ));
     return {
       plan,
       actionLabel: actionLabel(plan, snapshot),
-      approved: false,
+      runnable,
+      ...(runnable
+        ? {}
+        : {
+            unavailableReason:
+              "저장된 프로필 값이 없어 직접 선택이 필요합니다.",
+          }),
       localItemCount: localCount,
     };
   }
@@ -235,16 +320,11 @@ function preparationItem(
     localCount !== undefined && currentGroupCount !== undefined
       ? Math.max(0, localCount - currentGroupCount)
       : undefined;
-  console.info("[CareerForm] preparation item", {
-    actionCandidateId: plan.actionCandidateId,
-    localItemCount: localCount ?? null,
-    currentGroupCount: currentGroupCount ?? null,
-    requiredAdditions: requiredAdditions ?? null,
-  });
+
   return {
     plan,
     actionLabel: actionLabel(plan, snapshot),
-    approved: false,
+    runnable: true,
     localItemCount: localCount,
     currentGroupCount,
     ...(requiredAdditions !== undefined ? { requiredAdditions } : {}),
@@ -262,8 +342,33 @@ function statusLabel(item: ReviewPlanItem): string {
   return labels[item.status];
 }
 
+function profileFieldLabel(profileFieldKey?: string): string {
+  if (!profileFieldKey) return "프로필 정보";
+  const [categoryId, sectionId, fieldId] = profileFieldKey.split(".");
+  const category = PROFILE_CATEGORIES.find(
+    (candidate) => candidate.id === categoryId,
+  );
+  const section = category?.sections.find(
+    (candidate) => candidate.id === sectionId,
+  );
+  const field = section?.fields.find((candidate) => candidate.id === fieldId);
+  return field && section ? `${section.label} · ${field.label}` : "프로필 정보";
+}
+
+function userFacingReason(reason?: string): string | undefined {
+  if (!reason) return undefined;
+  if (reason.includes("네이티브") || reason.includes("안전하게 입력")) {
+    return "이 입력란은 자동으로 입력할 수 없어 직접 확인이 필요합니다.";
+  }
+  if (reason.includes("지원서에 기존 값")) {
+    return "지원서에 기존 값이 있어 자동으로 덮어쓰지 않았습니다.";
+  }
+  return reason;
+}
+
 function safeErrorTitle(error: unknown): string {
-  return error instanceof AnalysisServiceError
+  return error instanceof AnalysisServiceError ||
+    error instanceof AnalysisContractError
     ? error.message
     : "분석을 완료하지 못했습니다";
 }
@@ -294,6 +399,23 @@ function currentPreview(item: ReviewPlanItem): string {
     : item.currentValue || "입력된 값 없음";
 }
 
+function diagnosticLabel(code: WorkflowDiagnostic["code"]): string {
+  const labels = {
+    PROFILE_UNAVAILABLE: "프로필 값 없음",
+    PROFILE_NOT_SELECTED: "프로필 선택 조건 불충족",
+    TARGET_MISSING: "선행 선택란 없음",
+    SELECTED: "선행 선택 완료",
+    SELECTION_FAILED: "선행 선택 실패",
+    FOLLOW_UP_PLANS: "후속 조건부 선택 계획",
+    FOLLOW_UP_BINDINGS: "정책 후속 바인딩",
+    ANALYSIS_BLOCKED: "필드 재분석 차단",
+    ELIGIBLE_FIELDS: "입력 후보",
+    WRITTEN: "입력 성공",
+    SKIPPED: "건너뜀",
+  };
+  return labels[code];
+}
+
 function resultStatusLabel(result: ApprovedWriteResult): string {
   if (result.status === "written") return "기입 성공";
   return result.reason === SKIPPED_BY_APPROVAL_REASON
@@ -312,7 +434,15 @@ export function AutofillWorkflow({
   repository,
   pageDocument,
   onExit,
+  addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
+  const adapter = getWorkflowAdapter(pageHost(pageDocument));
+  const addressRun = useRef<{
+    controller: AbortController;
+    button?: Element;
+    task?: Promise<AddressResult>;
+  }>({ controller: new AbortController() });
+  const [addressResult, setAddressResult] = useState<AddressResult>();
   const [stage, setStage] = useState<Stage>("analyzing");
   const [profile, setProfile] = useState<Profile>();
   const [preparationSnapshot, setPreparationSnapshot] =
@@ -320,6 +450,8 @@ export function AutofillWorkflow({
   const [preparationItems, setPreparationItems] = useState<PreparationItem[]>(
     [],
   );
+  const [preparationExecutionPending, setPreparationExecutionPending] =
+    useState(false);
   const [reviewItems, setReviewItems] = useState<ReviewPlanItem[]>([]);
   const [fieldsSnapshot, setFieldsSnapshot] =
     useState<
@@ -330,120 +462,442 @@ export function AutofillWorkflow({
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
+  const [workflowDiagnostics, setWorkflowDiagnostics] = useState<
+    WorkflowDiagnostic[]
+  >([]);
 
-  const analyzeFields = async (loadedProfile: Profile) => {
+  const analyzeFields = async (
+    loadedProfile: Profile,
+    ignoreFreshRowDefaults = false,
+    completedStateDriverKeys: ReadonlySet<string> = new Set(),
+    failedGroups: ReadonlySet<Element> = new Set(),
+  ) => {
+    const run = addressRun.current;
+    if (run.controller.signal.aborted) return;
     const snapshot = collectFieldsSnapshot(pageDocument);
-    console.info("[CareerForm] fields snapshot", {
-      snapshotId: snapshot.request.snapshotId,
-      site: snapshot.request.site,
-      sections: snapshot.request.sections.map((section) => ({
-        sectionId: section.sectionId,
-        displayName: section.displayName ?? null,
-        fieldCount: section.fields.length,
-        hiddenFieldCount: section.fields.filter(
-          (field) => field.visibility === "hidden",
-        ).length,
-        itemCount: section.items?.length ?? 0,
-      })),
-      fieldCount: snapshot.request.sections.reduce(
-        (count, section) => count + section.fields.length,
-        0,
-      ),
-    });
-    let analysis: Awaited<ReturnType<typeof apiClient.analyzeFields>>;
-    try {
-      analysis = await apiClient.analyzeFields(snapshot.request);
-    } catch (error) {
-      console.error("[CareerForm] fields analysis error", {
-        name: error instanceof Error ? error.name : "UnknownError",
-        message: error instanceof Error ? error.message : "분석 요청 실패",
-      });
-      throw error;
+
+    let analysis = await apiClient.analyzeFields(snapshot.request);
+    if (run.controller.signal.aborted) return;
+    if (
+      [...failedGroups].some(
+        (group) => !group.isConnected || group.ownerDocument !== pageDocument,
+      )
+    ) {
+      setExceptionTitle("입력 보류 중 지원서 구조가 변경되었습니다");
+      setStage("exception");
+      return;
     }
-    console.info("[CareerForm] fields analysis", {
-      snapshotId: analysis.snapshotId,
-      analysisStatus: analysis.analysisStatus,
-      fieldResultCount: analysis.fields.length,
-      warningCodes: analysis.warningCodes ?? [],
-    });
+
     if (analysis.analysisStatus === "BLOCKED") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
       return;
     }
+
+    if (run.button && adapter.runAddress) {
+      const addressNames = adapter.addressFieldNames ?? [];
+      const keys = [
+        "contact.contact.postalCode",
+        "contact.contact.addressLine1",
+        "contact.contact.addressLine2",
+      ];
+      const fields = snapshot.request.sections.flatMap((section) => [
+        ...section.fields,
+        ...(section.items ?? []).flatMap((item) => item.fields),
+      ]);
+      const permitted =
+        analysis.mode === "ADAPTER" &&
+        addressNames.length === 3 &&
+        addressNames.every((name, index) => {
+          const candidates = fields.filter(
+            (field) => field.domId === name || field.domName === name,
+          );
+          if (candidates.length !== 1) return false;
+          const candidate = candidates[0];
+          const mapping = analysis.fields.find(
+            (field) => field.candidateId === candidate.candidateId,
+          );
+          return (
+            candidate.domId === name &&
+            candidate.domName === name &&
+            candidate.element === "input" &&
+            candidate.control === "text" &&
+            candidate.visibility === "visible" &&
+            !candidate.disabled &&
+            !candidate.inert &&
+            !!candidate.readonly === index < 2 &&
+            mapping?.matchType === "MATCH" &&
+            mapping.mappingStatus === "ADAPTER_VERIFIED" &&
+            mapping.valueBinding?.type === "DIRECT" &&
+            mapping.valueBinding.profileFieldKey === keys[index]
+          );
+        });
+      run.task ??= permitted
+        ? adapter.runAddress({
+            document: pageDocument,
+            button: run.button,
+            expected: addressValue(loadedProfile),
+            loadCurrent: async () => addressValue(await repository.load()),
+            signal: run.controller.signal,
+            search: addressSearch,
+          })
+        : Promise.resolve({
+            status: "manual",
+            reason:
+              "주소 입력란의 연결을 확인하지 못했습니다. 직접 확인해 주세요.",
+          });
+      const result = await run.task;
+      if (run.controller.signal.aborted) return;
+      setAddressResult(result);
+      const ids = new Set(
+        fields
+          .filter(
+            (field) =>
+              addressNames.includes(field.domId ?? "") ||
+              addressNames.includes(field.domName ?? ""),
+          )
+          .map((field) => field.candidateId),
+      );
+      analysis = {
+        ...analysis,
+        fields: analysis.fields.filter((field) => !ids.has(field.candidateId)),
+      };
+    }
+
+    const ignoreCurrentValueCandidateIds = new Set(
+      ignoreFreshRowDefaults
+        ? analysis.fields.flatMap((field) => {
+            const lookup = snapshot.registry.lookupField(field.candidateId);
+            return (lookup.status === "ready" || lookup.status === "blocked") &&
+              adapter.isFreshRowDefault(lookup.handle.candidate.domName)
+              ? [field.candidateId]
+              : [];
+          })
+        : [],
+    );
     const plan = buildReviewPlan({
       analysis,
       profile: loadedProfile,
       registry: snapshot.registry,
+      ignoreCurrentValueCandidateIds,
     });
     if (plan.status === "blocked") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
       return;
     }
+    if (plan.items.length === 0) {
+      setResults([]);
+      setStage("result");
+      return;
+    }
+    const belongsToFailedGroup = (item: ReviewPlanItem) => {
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      return (
+        (lookup.status === "ready" || lookup.status === "blocked") &&
+        [...failedGroups].some((group) =>
+          lookup.handle.elements.some((element) => group.contains(element)),
+        )
+      );
+    };
+    const automaticItems = plan.items.map((item) =>
+      item.status === "needs-review" && !item.disabled
+        ? { ...item, selected: true }
+        : item,
+    );
     setFieldsSnapshot(snapshot);
-    setReviewItems(plan.items);
+    setReviewItems(automaticItems);
     setPartial(plan.status === "partial");
     setWarnings(analysis.warningCodes ?? []);
-    setStage("review");
+    const stateDriverItems = automaticItems.flatMap((item) => {
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
+      const domName = lookup.handle.candidate.domName;
+      const stage =
+        adapter.stateDriverStage?.(item, lookup.handle) ??
+        (adapter.isStateDriver(item, domName) ? 1 : undefined);
+      const key = stateDriverKey(item, domName, lookup.handle.itemIndex);
+      return belongsToFailedGroup(item) ||
+        !item.selected ||
+        item.disabled ||
+        stage === undefined ||
+        completedStateDriverKeys.has(key)
+        ? []
+        : [{ item, handle: lookup.handle, domName, stage, key }];
+    });
+    if (stateDriverItems.length > 0) {
+      const nextStage = Math.min(
+        ...stateDriverItems.map((driver) => driver.stage),
+      );
+      const currentStateDriverItems = stateDriverItems.filter(
+        (driver) => driver.stage === nextStage,
+      );
+      const deferFailedGroups = async (successful: readonly boolean[]) => {
+        const nextGroups = new Set(failedGroups);
+        const nextCompleted = new Set(completedStateDriverKeys);
+        for (const [index, driver] of currentStateDriverItems.entries()) {
+          if (successful[index]) {
+            nextCompleted.add(driver.key);
+            continue;
+          }
+          const group = adapter.stateDriverFailureGroup?.(
+            driver.item,
+            driver.handle,
+          );
+          if (
+            !group?.isConnected ||
+            group.ownerDocument !== pageDocument ||
+            !driver.handle.elements.every((element) => group.contains(element))
+          )
+            return false;
+          nextGroups.add(group);
+        }
+        if (run.controller.signal.aborted) return true;
+        await analyzeFields(
+          loadedProfile,
+          ignoreFreshRowDefaults,
+          nextCompleted,
+          nextGroups,
+        );
+        return true;
+      };
+      const driversReady = await Promise.all(
+        currentStateDriverItems.map(
+          ({ handle }) =>
+            adapter.waitForStateDriverReady?.(pageDocument, handle) ?? true,
+        ),
+      );
+      if (!driversReady.every(Boolean)) {
+        setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
+        setStage("exception");
+        return;
+      }
+      const stateSelectionResults: Pick<
+        ApprovedWriteResult,
+        "candidateId" | "status"
+      >[] = [];
+      for (const { item } of currentStateDriverItems) {
+        const lookup = snapshot.registry.lookupField(item.candidateId);
+        const eligible =
+          lookup.status === "ready" &&
+          item.selected &&
+          !item.disabled &&
+          item.status !== "unavailable" &&
+          (item.status !== "sensitive" || item.revealed) &&
+          item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
+          item.analysis.interactionStatus === "READY";
+        if (run.controller.signal.aborted) return;
+        const special = eligible
+          ? await adapter.executeStateDriver?.(
+              pageDocument,
+              lookup.handle,
+              item,
+              run.controller.signal,
+            )
+          : undefined;
+        stateSelectionResults.push(
+          ...(special === undefined
+            ? executeApprovedWrites({
+                items: [item],
+                approvedCandidateIds: new Set([item.candidateId]),
+                registry: snapshot.registry,
+              })
+            : [
+                {
+                  candidateId: item.candidateId,
+                  status: special ? ("written" as const) : ("skipped" as const),
+                },
+              ]),
+        );
+      }
+      if (
+        stateSelectionResults.every((result) => result.status === "written")
+      ) {
+        const settled = await Promise.all(
+          currentStateDriverItems.map(
+            ({ handle }) =>
+              adapter.settleStateDriver?.(pageDocument, handle) ?? true,
+          ),
+        );
+        if (!settled.every(Boolean)) {
+          if (await deferFailedGroups(settled)) return;
+          setExceptionTitle(
+            "조건부 선택 뒤 입력란을 안전하게 준비하지 못했습니다",
+          );
+          setStage("exception");
+          return;
+        }
+        const nextCompletedStateDriverKeys = new Set(completedStateDriverKeys);
+        currentStateDriverItems.forEach(({ key }) =>
+          nextCompletedStateDriverKeys.add(key),
+        );
+        await analyzeFields(
+          loadedProfile,
+          ignoreFreshRowDefaults,
+          nextCompletedStateDriverKeys,
+          failedGroups,
+        );
+        return;
+      }
+      if (adapter.stateDriverStage) {
+        // A successful write still needs its normal settle check before continuing.
+        const successful = await Promise.all(
+          currentStateDriverItems.map(
+            async ({ handle }, index) =>
+              stateSelectionResults[index]?.status === "written" &&
+              ((await adapter.settleStateDriver?.(pageDocument, handle)) ??
+                true),
+          ),
+        );
+        if (await deferFailedGroups(successful)) return;
+        setExceptionTitle("조건부 선택을 안전하게 적용하지 못했습니다");
+        setStage("exception");
+        return;
+      }
+    }
+    const approvedCandidateIds = new Set(
+      automaticItems
+        .filter((item) => {
+          const lookup = snapshot.registry.lookupField(item.candidateId);
+          if (lookup.status !== "ready" && lookup.status !== "blocked") {
+            return false;
+          }
+          const key = stateDriverKey(
+            item,
+            lookup.handle.candidate.domName,
+            lookup.handle.itemIndex,
+          );
+          return (
+            !completedStateDriverKeys.has(key) &&
+            !item.disabled &&
+            (item.selected || item.status === "needs-review")
+          );
+        })
+        .map((item) => item.candidateId),
+    );
+    const deferredItems = automaticItems.filter(belongsToFailedGroup);
+    const finalWriteItems = automaticItems.filter((item) => {
+      if (belongsToFailedGroup(item)) return false;
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      if (lookup.status !== "ready" && lookup.status !== "blocked") {
+        return true;
+      }
+      return !completedStateDriverKeys.has(
+        stateDriverKey(
+          item,
+          lookup.handle.candidate.domName,
+          lookup.handle.itemIndex,
+        ),
+      );
+    });
+    const writeResults = await executeApprovedWritesAfterPageSettles({
+      items: finalWriteItems,
+      approvedCandidateIds,
+      registry: snapshot.registry,
+    });
+    if (run.controller.signal.aborted) return;
+    setResults([
+      ...writeResults,
+      ...deferredItems.map((item): ApprovedWriteResult => ({
+        candidateId: item.candidateId,
+        status: "skipped",
+        reason:
+          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
+      })),
+    ]);
+    setStage("result");
   };
 
   useEffect(() => {
     let active = true;
+    const run: {
+      controller: AbortController;
+      button?: Element;
+      task?: Promise<AddressResult>;
+    } = { controller: new AbortController() };
+    addressRun.current = run;
     const start = async () => {
       try {
         const loadedProfile = await repository.load();
         if (!active) return;
         setProfile(loadedProfile);
         const snapshot = collectPreparationSnapshot(pageDocument);
-        console.info("[CareerForm] preparation snapshot", {
-          site: snapshot.request.site,
-          sections: snapshot.request.sections.map((section) => ({
-            sectionId: section.sectionId,
-            displayName: section.displayName ?? null,
-            actionCandidates: section.actionCandidates.map((action) => ({
-              candidateId: action.candidateId,
-              displayName: action.displayName ?? null,
-              domName: action.domName ?? null,
-            })),
-            repeatableGroupCount: section.actionCandidates[0]
-              ? snapshot.countRepeatableGroups(
-                  section.actionCandidates[0].candidateId,
-                )
-              : null,
-          })),
-        });
+
         const analysis = await apiClient.analyzePreparation(snapshot.request);
-        console.info("[CareerForm] preparation analysis", {
-          snapshotId: analysis.snapshotId,
-          analysisStatus: analysis.analysisStatus,
-          preparationPlans: analysis.preparationPlans.map((plan) => ({
-            actionCandidateId: plan.actionCandidateId,
-            command: plan.command,
-            targetSectionId:
-              plan.command === "REVEAL_SECTION"
-                ? plan.targetSectionId
-                : undefined,
-          })),
-        });
+
         if (!active) return;
         if (analysis.analysisStatus === "BLOCKED") {
-          setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
-          setStage("exception");
+          await analyzeFields(loadedProfile);
           return;
         }
-        if (analysis.preparationPlans.length === 0) {
+        const searchPlans = analysis.preparationPlans.filter(
+          (plan) => plan.command === "SEARCH_ADDRESS",
+        );
+        if (
+          analysis.mode === "ADAPTER" &&
+          searchPlans.length === 1 &&
+          adapter.runAddress
+        ) {
+          const action = snapshot.registry.lookupAction(
+            searchPlans[0].actionCandidateId,
+          );
+          if (
+            action.status === "ready" ||
+            (action.status === "blocked" && action.reason === "readonly")
+          )
+            run.button = action.handle.element;
+        }
+        const educationPlans = adapter.educationPreparationActionId
+          ? analysis.preparationPlans.filter((plan) => {
+              if (plan.command !== "ADD_REPEATABLE_GROUP") return false;
+              const action = snapshot.registry.lookupAction(
+                plan.actionCandidateId,
+              );
+              return (
+                action.status === "ready" &&
+                action.handle.candidate.domId ===
+                  adapter.educationPreparationActionId
+              );
+            })
+          : [];
+        if (
+          educationPlans.length > 0 &&
+          adapter.prepareEducation &&
+          analysis.mode === "ADAPTER"
+        ) {
+          if (
+            educationPlans.length !== 1 ||
+            !(await adapter.prepareEducation(
+              pageDocument,
+              loadedProfile,
+              run.controller.signal,
+            ))
+          ) {
+            if (!active) return;
+            setExceptionTitle(
+              "학력 종류와 입력 행을 안전하게 준비하지 못했습니다",
+            );
+            setStage("exception");
+            return;
+          }
+        }
+        if (!active) return;
+        const preparationPlans = analysis.preparationPlans.filter(
+          (plan) =>
+            plan.command !== "SEARCH_ADDRESS" && !educationPlans.includes(plan),
+        );
+        if (preparationPlans.length === 0) {
           await analyzeFields(loadedProfile);
           return;
         }
         setPreparationSnapshot(snapshot);
         setPreparationItems(
-          analysis.preparationPlans.map((plan) =>
+          preparationPlans.map((plan) =>
             preparationItem(plan, snapshot, loadedProfile),
           ),
         );
         setWarnings(analysis.warningCodes ?? []);
-        setStage("preparation-review");
+        setPreparationExecutionPending(true);
       } catch (error) {
         if (!active) return;
         setExceptionTitle(safeErrorTitle(error));
@@ -453,30 +907,30 @@ export function AutofillWorkflow({
     void start();
     return () => {
       active = false;
+      run.controller.abort();
     };
   }, [apiClient, pageDocument, repository]);
 
   const executePreparation = async () => {
     if (!profile || !preparationSnapshot) return;
-    const approvedPlans = preparationItems.filter((item) => item.approved);
-    if (approvedPlans.length === 0) return;
-    console.info(
-      `[CareerForm] preparation execution ${JSON.stringify({
-        approvedPlanCount: approvedPlans.length,
-        skippedPlanCount: preparationItems.length - approvedPlans.length,
-        approvedActionCandidateIds: approvedPlans.map(
-          (item) => item.plan.actionCandidateId,
-        ),
-      })}`,
-    );
-    const result = await executeApprovedPreparationPlans({
-      approvedPlans,
+    const runnablePlans = preparationItems
+      .filter((item) => item.runnable)
+      .map((item) => ({ ...item, approved: true }));
+
+    if (runnablePlans.length === 0) {
+      const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
+      await analyzeFields(profile, addedRowsToEmptyForm);
+      return;
+    }
+    const preparationOptions = (
+      snapshot: ReturnType<typeof collectPreparationSnapshot>,
+    ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
       initialSnapshot: {
-        registry: preparationSnapshot.registry,
+        registry: snapshot.registry,
         isTargetSectionVisible: (targetSectionId) =>
-          preparationSnapshot.isSectionVisible(targetSectionId),
+          snapshot.isSectionVisible(targetSectionId),
         countRepeatableGroups: (plan) =>
-          preparationSnapshot.countRepeatableGroups(plan.actionCandidateId),
+          snapshot.countRepeatableGroups(plan.actionCandidateId),
       },
       refreshSnapshot: async () => {
         const refreshed = collectPreparationSnapshot(pageDocument);
@@ -490,26 +944,222 @@ export function AutofillWorkflow({
       },
       countRepeatableGroups: (snapshot, plan) =>
         snapshot.countRepeatableGroups?.(plan) ?? -1,
+      waitForExpectedFields: async (plan) =>
+        waitForExpectedFields(
+          pageDocument,
+          ("expectedFieldNames" in plan ? plan.expectedFieldNames : []) ?? [],
+        ),
+      selectProfileOption: (plan, snapshot) => {
+        const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
+        if (lookup.status !== "ready") {
+          return "action-not-ready";
+        }
+        const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
+        if (value.status !== "resolved") return "profile-value-unavailable";
+        if (
+          lookup.handle.element instanceof HTMLInputElement &&
+          lookup.handle.element.type === "radio"
+        ) {
+          const label = plan.optionDisplayName ?? value.value;
+          if (lookup.handle.candidate.displayName !== label)
+            return "option-label-mismatch";
+          lookup.handle.element.click();
+          return lookup.handle.element.checked
+            ? "selected"
+            : "action-not-ready";
+        }
+        if (!(lookup.handle.element instanceof HTMLSelectElement))
+          return "unsupported-option-action";
+        const option = Array.from(lookup.handle.element.options).find(
+          (candidate) => candidate.textContent?.trim() === value.value,
+        );
+        if (!option) return "option-label-mismatch";
+        lookup.handle.element.value = option.value;
+        lookup.handle.element.dispatchEvent(
+          new Event("change", { bubbles: true }),
+        );
+        return "selected";
+      },
     });
-    console.info(
-      `[CareerForm] preparation execution result ${JSON.stringify({
-        status: result.status,
-        executedPlanCount: result.executedPlanCount,
-        reason: result.status === "failed" ? result.reason : undefined,
-      })}`,
-    );
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: runnablePlans,
+      ...preparationOptions(preparationSnapshot),
+    });
+
     if (result.status !== "completed") {
-      setExceptionTitle("준비 동작을 안전하게 완료하지 못했습니다");
+      const failedPlan =
+        result.status === "failed" && result.failedActionCandidateId
+          ? runnablePlans.find(
+              ({ plan }) =>
+                plan.actionCandidateId === result.failedActionCandidateId,
+            )?.plan
+          : undefined;
+      setExceptionTitle(
+        result.status === "failed"
+          ? `${preparationFailureMessage(result.reason)}${
+              failedPlan
+                ? ` (${actionLabel(failedPlan, preparationSnapshot)})`
+                : ""
+            }`
+          : "준비 동작을 안전하게 완료하지 못했습니다",
+      );
       setStage("exception");
       return;
     }
     try {
       setStage("analyzing");
-      await analyzeFields(profile);
+      const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
+      setWorkflowDiagnostics(
+        adapter.revealSelections.map((selection) => {
+          const resolved = resolveProfileFieldValue(
+            profile,
+            selection.profileFieldKey,
+            selection.itemIndex,
+          );
+          return adapter.selectReveal(
+            pageDocument,
+            selection,
+            resolved.status === "resolved" ? resolved.value : undefined,
+          );
+        }),
+      );
+      // Analyze that newly collected DOM once, but only execute selections:
+      // repeating add plans here could create duplicate rows.
+      const followUpSnapshot = collectPreparationSnapshot(pageDocument);
+      const followUpAnalysis = await apiClient.analyzePreparation(
+        followUpSnapshot.request,
+      );
+
+      if (adapter.diagnosticsTitle) {
+        setWorkflowDiagnostics((previous) => [
+          ...previous,
+          {
+            code: "FOLLOW_UP_PLANS",
+            count: followUpAnalysis.preparationPlans.filter(
+              (plan) => plan.command === "SELECT_OPTION_TO_REVEAL",
+            ).length,
+          },
+        ]);
+      }
+      if (followUpAnalysis.analysisStatus !== "BLOCKED") {
+        const followUpPlans = followUpAnalysis.preparationPlans
+          .filter(
+            (
+              plan,
+            ): plan is Extract<
+              PreparationPlan,
+              { command: "SELECT_OPTION_TO_REVEAL" }
+            > => plan.command === "SELECT_OPTION_TO_REVEAL",
+          )
+          .map((plan) => ({
+            ...preparationItem(plan, followUpSnapshot, profile),
+            approved: true,
+          }))
+          .filter((item) => item.runnable);
+        if (followUpPlans.length > 0) {
+          const followUpResult = await executeApprovedPreparationPlans({
+            approvedPlans: followUpPlans,
+            ...preparationOptions(followUpSnapshot),
+          });
+
+          if (followUpResult.status !== "completed") {
+            setExceptionTitle(
+              followUpResult.status === "failed"
+                ? preparationFailureMessage(followUpResult.reason)
+                : "준비 동작을 안전하게 완료하지 못했습니다",
+            );
+            setStage("exception");
+            return;
+          }
+          await writeRevealedFields(profile, followUpPlans);
+        }
+      }
+      await analyzeFields(profile, addedRowsToEmptyForm);
     } catch (error) {
       setExceptionTitle(safeErrorTitle(error));
       setStage("exception");
     }
+  };
+
+  const writeRevealedFields = async (
+    loadedProfile: Profile,
+    plans: readonly PreparationItem[],
+  ) => {
+    const revealedFieldBindings = adapter.revealedBindings(
+      plans.map((item) => item.plan),
+    );
+    if (revealedFieldBindings.size === 0) return;
+    const diagnostics: WorkflowDiagnostic[] = [
+      { code: "FOLLOW_UP_BINDINGS", count: revealedFieldBindings.size },
+    ];
+
+    const snapshot = collectFieldsSnapshot(pageDocument);
+    const analysis = await apiClient.analyzeFields(snapshot.request);
+    if (analysis.analysisStatus === "BLOCKED") {
+      setWorkflowDiagnostics([
+        ...diagnostics,
+        { code: "ANALYSIS_BLOCKED", count: 1 },
+      ]);
+      return;
+    }
+
+    const items = analysis.fields.flatMap((field) => {
+      if (field.matchType !== "MATCH" || field.interactionStatus !== "READY")
+        return [];
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      if (lookup.status !== "ready") return [];
+      const domName = lookup.handle.candidate.domName;
+      const profileFieldKey = adapter.revealedProfileFieldKey(
+        field,
+        domName,
+        revealedFieldBindings,
+      );
+      if (!profileFieldKey) return [];
+      // Resolve a sole saved entry independently of template-based DOM row indices.
+      // Multiple saved entries remain ambiguous in the common profile resolver.
+      const resolved = resolveProfileFieldValue(loadedProfile, profileFieldKey);
+      if (resolved.status !== "resolved") return [];
+      return [
+        {
+          candidateId: field.candidateId,
+          fieldLabel:
+            lookup.handle.candidate.displayName ?? domName ?? "조건부 입력란",
+          profileFieldKey,
+          ...(resolved.profileEntryId
+            ? { profileEntryId: resolved.profileEntryId }
+            : {}),
+          ...(lookup.handle.itemIndex !== undefined
+            ? { itemIndex: lookup.handle.itemIndex }
+            : {}),
+          currentValue: lookup.handle.elements[0]?.value ?? "",
+          profileValue: resolved.value,
+          previewValue: resolved.value,
+          status: "available" as const,
+          selected: true,
+          disabled: false,
+          revealed: true,
+          reason: "정책으로 연결된 조건부 입력란",
+          analysis: field,
+        } satisfies ReviewPlanItem,
+      ];
+    });
+    diagnostics.push({ code: "ELIGIBLE_FIELDS", count: items.length });
+    const results = executeApprovedWrites({
+      items,
+      approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
+      registry: snapshot.registry,
+    });
+    diagnostics.push(
+      {
+        code: "WRITTEN",
+        count: results.filter((result) => result.status === "written").length,
+      },
+      {
+        code: "SKIPPED",
+        count: results.filter((result) => result.status === "skipped").length,
+      },
+    );
+    setWorkflowDiagnostics((previous) => [...previous, ...diagnostics]);
   };
 
   const toggleReviewItem = (candidateId: string) => {
@@ -532,7 +1182,7 @@ export function AutofillWorkflow({
     );
   };
 
-  const executeWrites = () => {
+  const executeWrites = async () => {
     if (!fieldsSnapshot) return;
     const approvedCandidateIds = new Set(
       reviewItems
@@ -540,7 +1190,7 @@ export function AutofillWorkflow({
         .map((item) => item.candidateId),
     );
     setResults(
-      executeApprovedWrites({
+      await executeApprovedWritesAfterPageSettles({
         items: reviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
@@ -549,69 +1199,43 @@ export function AutofillWorkflow({
     setStage("result");
   };
 
+  useEffect(() => {
+    if (!preparationExecutionPending) return;
+    setPreparationExecutionPending(false);
+    void executePreparation();
+  }, [preparationExecutionPending]);
+
   if (stage === "analyzing") {
-    return (
-      <div className={styles.screen}>
-        <Header step="1 / 4" title="지원서 분석 중" />
-        <div className={styles.analysisGraphic} aria-hidden="true">
-          <div className={styles.analysisSpinner}>
-            {Array.from({ length: 12 }, (_, index) => (
-              <span data-spinner-bar key={index} />
-            ))}
-          </div>
-        </div>
-        <p className={styles.lead}>
-          지원서 구조를 비식별 정보만으로 확인합니다.
-        </p>
-        <aside className={styles.safety}>
-          이 단계에서는 지원서 값을 변경하지 않습니다.
-        </aside>
-      </div>
-    );
+    return null;
   }
 
   if (stage === "preparation-review") {
+    const runnableItems = preparationItems.filter((item) => item.runnable);
+    const additions = preparationItems.reduce(
+      (count, item) => count + (item.requiredAdditions ?? 0),
+      0,
+    );
+    const unavailableCount = preparationItems.length - runnableItems.length;
     return (
       <div className={styles.screen}>
-        <Header step="2 / 4" title="지원서 준비 동작 검토" />
+        <Header step="1 / 3" title="입력 항목 준비" />
         <p className={styles.lead}>
-          아래 동작은 필드 분석을 위해서만 실행되며, 승인 전에는 실행하지
-          않습니다.
+          필요한 입력칸을 준비한 뒤 자동 기입할 항목만 확인합니다.
         </p>
-        {preparationItems.map((item, index) => (
-          <label
-            className={styles.reviewItem}
-            key={item.plan.actionCandidateId}
-          >
-            <input
-              type="checkbox"
-              checked={item.approved}
-              onChange={() =>
-                setPreparationItems((items) =>
-                  items.map((candidate, candidateIndex) =>
-                    candidateIndex === index
-                      ? { ...candidate, approved: !candidate.approved }
-                      : candidate,
-                  ),
-                )
-              }
-            />
-            <span className={styles.reviewCopy}>
-              <strong>{item.actionLabel}</strong>
-              <small>
-                {item.plan.command === "REVEAL_SECTION"
-                  ? "숨은 영역 펼치기"
-                  : "반복 입력 영역 추가"}
-              </small>
-              <small>지원서 저장·이동·제출은 실행하지 않습니다.</small>
-              {item.requiredAdditions !== undefined && (
-                <small>
-                  현재 화면 기준 추가 필요 수: {item.requiredAdditions}회
-                </small>
-              )}
-            </span>
-          </label>
-        ))}
+        <div className={styles.countCard}>
+          <strong>{runnableItems.length}개 준비</strong>
+          <span>
+            {additions > 0
+              ? `입력 행 ${additions}개를 추가합니다.`
+              : "현재 화면의 입력 행을 그대로 사용합니다."}
+          </span>
+          {unavailableCount > 0 && (
+            <small>
+              {unavailableCount}개 항목은 저장된 값이 없어 직접 선택이
+              필요합니다.
+            </small>
+          )}
+        </div>
         {warnings.map((warning) => (
           <aside className={styles.safety} key={warning}>
             분석 경고:{" "}
@@ -623,20 +1247,29 @@ export function AutofillWorkflow({
         <button
           className={styles.primary}
           type="button"
-          disabled={!preparationItems.some((item) => item.approved)}
           onClick={() => void executePreparation()}
         >
-          승인한 준비 동작 실행
+          준비하고 계속
         </button>
       </div>
     );
   }
 
   if (stage === "review") {
+    const selectedCount = reviewItems.filter(
+      (item) => item.selected && !item.disabled,
+    ).length;
+    const exceptionalItems = reviewItemsForDisplay(reviewItems).filter(
+      (item) => item.status !== "available",
+    );
     return (
       <div className={styles.screen}>
-        <Header step="2 / 4" title="입력 예정 항목 검토" />
-        <p className={styles.lead}>선택한 항목만 최종 승인 뒤에 입력합니다.</p>
+        <Header step="2 / 3" title="자동 기입 확인" />
+        <p className={styles.lead}>일반 항목은 자동으로 포함되었습니다.</p>
+        <div className={styles.countCard}>
+          <strong>{selectedCount}개 항목</strong>
+          <span>이 버튼을 누르면 선택된 항목만 현재 지원서에 기입합니다.</span>
+        </div>
         {partial && (
           <aside className={styles.safety}>
             일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
@@ -650,107 +1283,69 @@ export function AutofillWorkflow({
               : "LLM 분석 일부 미완료"}
           </aside>
         ))}
-        <div className={styles.reviewGroups}>
-          {reviewGroupsForDisplay(reviewItems).map((group) => {
-            const headingId = `review-group-${group.id}`;
-            return (
-              <section
-                className={styles.reviewGroup}
-                aria-labelledby={headingId}
-                key={group.id}
+        {exceptionalItems.length > 0 && (
+          <section
+            className={styles.exceptionList}
+            aria-label="확인 필요한 항목"
+          >
+            <h3>확인 필요한 항목 {exceptionalItems.length}개</h3>
+            {exceptionalItems.map((item) => (
+              <article
+                className={styles.reviewItem}
+                data-included={item.selected}
+                data-status={item.status}
+                key={item.candidateId}
               >
-                <div className={styles.reviewGroupHeader}>
-                  <h3 id={headingId}>
-                    {group.label} <span>{group.items.length}개</span>
-                  </h3>
-                  <p>{group.description}</p>
-                </div>
-                <div className={styles.reviewList}>
-                  {group.items.map((item) => (
-                    <label
-                      className={styles.reviewItem}
-                      data-status={item.status}
-                      key={item.candidateId}
+                <span className={styles.reviewCopy}>
+                  <strong>{item.fieldLabel}</strong>
+                  <span>현재 입력값: {currentPreview(item)}</span>
+                  <span>입력 예정값: {item.previewValue}</span>
+                  <small>{item.reason}</small>
+                  {mappingLabel(item) && (
+                    <small>매핑 근거: {mappingLabel(item)}</small>
+                  )}
+                  {interactionLabel(item) && (
+                    <small>입력 상태: {interactionLabel(item)}</small>
+                  )}
+                </span>
+                <em>{statusLabel(item)}</em>
+                {item.status === "sensitive" && !item.revealed && (
+                  <button
+                    className={styles.reviewAction}
+                    type="button"
+                    aria-label={`${item.fieldLabel} 값 보기`}
+                    onClick={() => revealSensitiveItem(item.candidateId)}
+                  >
+                    값 보기
+                  </button>
+                )}
+                {item.status !== "available" &&
+                  !item.disabled &&
+                  (item.status !== "sensitive" || item.revealed) && (
+                    <button
+                      className={styles.reviewAction}
+                      type="button"
+                      aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
+                      onClick={() => toggleReviewItem(item.candidateId)}
                     >
-                      <input
-                        type="checkbox"
-                        checked={item.selected}
-                        disabled={item.disabled}
-                        aria-label={
-                          item.status === "conflict"
-                            ? `${item.fieldLabel} 기존 값 덮어쓰기 승인`
-                            : `${item.fieldLabel} 입력 승인`
-                        }
-                        onChange={() => toggleReviewItem(item.candidateId)}
-                      />
-                      <span className={styles.reviewCopy}>
-                        <strong>{item.fieldLabel}</strong>
-                        <span>현재 입력값: {currentPreview(item)}</span>
-                        <span>입력 예정값: {item.previewValue}</span>
-                        <small>{item.reason}</small>
-                        {mappingLabel(item) && (
-                          <small>매핑 근거: {mappingLabel(item)}</small>
-                        )}
-                        {interactionLabel(item) && (
-                          <small>입력 상태: {interactionLabel(item)}</small>
-                        )}
-                      </span>
-                      <em>{statusLabel(item)}</em>
-                      {item.status === "sensitive" && !item.revealed && (
-                        <button
-                          type="button"
-                          aria-label={`${item.fieldLabel} 값 보기`}
-                          onClick={() => revealSensitiveItem(item.candidateId)}
-                        >
-                          값 보기
-                        </button>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+                      {item.selected ? "제외하기" : "포함하기"}
+                    </button>
+                  )}
+              </article>
+            ))}
+          </section>
+        )}
+        <p className={styles.safety}>
+          지원서 저장·이동·제출은 실행하지 않습니다.
+        </p>
         <button
           className={styles.primary}
           type="button"
-          onClick={() => setStage("confirmation")}
+          disabled={selectedCount === 0}
+          onClick={() => void executeWrites()}
         >
-          선택한 항목 확인
+          {selectedCount}개 항목 기입하기
         </button>
-      </div>
-    );
-  }
-
-  if (stage === "confirmation") {
-    const selectedCount = reviewItems.filter(
-      (item) => item.selected && !item.disabled,
-    ).length;
-    return (
-      <div className={styles.screen}>
-        <Header step="3 / 4" title="최종 승인" />
-        <div className={styles.countCard}>
-          <strong>{selectedCount}개 항목</strong>
-          <span>선택한 항목만 지원서에 반영합니다.</span>
-        </div>
-        <ul className={styles.boundaries}>
-          <li>지원서 저장을 실행하지 않음</li>
-          <li>다음 단계와 미리보기로 이동하지 않음</li>
-          <li>최종 제출을 실행하지 않음</li>
-        </ul>
-        <div className={styles.actions}>
-          <button type="button" onClick={() => setStage("review")}>
-            검토로 돌아가기
-          </button>
-          <button
-            className={styles.primary}
-            type="button"
-            onClick={executeWrites}
-          >
-            기입하기
-          </button>
-        </div>
       </div>
     );
   }
@@ -762,9 +1357,20 @@ export function AutofillWorkflow({
     const successful = visibleResults.filter(
       (result) => result.status === "written",
     ).length;
+    const manualResults = visibleResults.filter(
+      (result) => result.status !== "written",
+    );
     return (
       <div className={styles.screen}>
         <Header step="완료" title="기입 결과" />
+        {addressResult && (
+          <p role="status">
+            {addressResult.status === "written"
+              ? "주소 확인 완료: "
+              : "주소 직접 확인 필요: "}
+            {addressResult.reason}
+          </p>
+        )}
         <div className={styles.resultGrid}>
           <div>
             <strong>{successful}</strong>
@@ -775,25 +1381,48 @@ export function AutofillWorkflow({
             <span>직접 확인 필요</span>
           </div>
         </div>
-        <p className={styles.safety}>지원서의 실제 값을 직접 확인해 주세요.</p>
-        <ul className={styles.boundaries}>
-          {visibleResults.map((result) => {
-            const item = reviewItems.find(
-              (candidate) => candidate.candidateId === result.candidateId,
-            );
-            const reason =
-              result.status === "written" ? item?.reason : result.reason;
-            return (
-              <li key={result.candidateId}>
-                <strong>
-                  {item?.fieldLabel ?? "지원서 필드"}:{" "}
-                  {resultStatusLabel(result)}
-                </strong>
-                {reason && <span>{reason}</span>}
-              </li>
-            );
-          })}
-        </ul>
+        <p className={styles.safety}>
+          성공한 항목은 지원서에서 한 번만 확인해 주세요. 저장과 제출은 직접
+          진행합니다.
+        </p>
+        {manualResults.length > 0 && <h3>확인 필요</h3>}
+        {manualResults.length > 0 && (
+          <ul className={`${styles.boundaries} ${styles.resultList}`}>
+            {manualResults.map((result) => {
+              const item = reviewItems.find(
+                (candidate) => candidate.candidateId === result.candidateId,
+              );
+              const reason = userFacingReason(result.reason);
+              return (
+                <li className={styles.resultItem} key={result.candidateId}>
+                  <div className={styles.resultItemHeader}>
+                    <strong>{profileFieldLabel(item?.profileFieldKey)}</strong>
+                    <strong>{resultStatusLabel(result)}</strong>
+                  </div>
+                  <p className={styles.resultValue}>
+                    {item?.previewValue ?? "입력값 확인 필요"}
+                  </p>
+                  {reason && <p>{reason}</p>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {adapter.diagnosticsTitle && (
+          <details className={styles.safety}>
+            <summary>{adapter.diagnosticsTitle}</summary>
+            <ul className={styles.boundaries}>
+              {workflowDiagnostics.length === 0 && (
+                <li>후속 조건부 입력 진단이 생성되지 않았습니다.</li>
+              )}
+              {workflowDiagnostics.map((diagnostic, index) => (
+                <li key={index}>
+                  {diagnosticLabel(diagnostic.code)}: {diagnostic.count}개
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         <button className={styles.primary} type="button" onClick={onExit}>
           수동 복사로 돌아가기
         </button>
@@ -806,7 +1435,8 @@ export function AutofillWorkflow({
       <Header step="예외" title={exceptionTitle} />
       <div className={styles.exceptionCard}>
         <p>
-          지원서 값은 변경되지 않았습니다. 수동 복사는 계속 사용할 수 있습니다.
+          자동 기입은 완료하지 않았습니다. 조건부 선택 상태는 변경되었을 수
+          있으며, 수동 복사는 계속 사용할 수 있습니다.
         </p>
       </div>
       <button className={styles.primary} type="button" onClick={onExit}>

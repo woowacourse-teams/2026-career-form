@@ -29,8 +29,11 @@ public final class FieldInteractionPolicy {
             );
         }
         if (Boolean.TRUE.equals(candidate.disabled())
-            || Boolean.TRUE.equals(candidate.readonly())
             || Boolean.TRUE.equals(candidate.inert())) {
+            return withoutWrite(InteractionStatus.BLOCKED);
+        }
+        if (Boolean.TRUE.equals(candidate.readonly())
+            && !allowsReadonlyText(candidate, mapping)) {
             return withoutWrite(InteractionStatus.BLOCKED);
         }
         if (candidate.visibility() == Visibility.HIDDEN) {
@@ -51,6 +54,16 @@ public final class FieldInteractionPolicy {
         return new Decision(status, List.of(), null);
     }
 
+    private static boolean allowsReadonlyText(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping
+    ) {
+        return mapping instanceof FieldMappingResolver.Match match
+            && match.allowsReadonlyWrite()
+            && candidate.element() == FormElement.INPUT
+            && candidate.control() == FormControl.TEXT;
+    }
+
     private static WriteCommand writeCommand(FieldCandidate candidate) {
         FormElement element = candidate.element();
         FormControl control = candidate.control();
@@ -60,6 +73,9 @@ public final class FieldInteractionPolicy {
         }
         if (element == FormElement.SELECT && control == FormControl.SELECT) {
             return WriteCommand.SELECT_OPTION;
+        }
+        if (element == FormElement.INPUT && control == FormControl.BUTTON) {
+            return WriteCommand.SELECT_BUTTON_OPTION;
         }
         if (element == FormElement.INPUT && control == FormControl.RADIO) {
             return WriteCommand.CHECK_RADIO;

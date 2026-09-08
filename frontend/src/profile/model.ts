@@ -8,14 +8,23 @@ export type ProfileCategoryId =
   | "education"
   | "languages"
   | "certifications"
+  | "careers"
   | "projects"
+  | "publications"
+  | "compensation"
   | "military"
   | "veteran"
   | "disability"
   | "health";
 
 export type RepeatedProfileCategoryId =
-  "education" | "languages" | "certifications" | "projects" | "health";
+  | "education"
+  | "languages"
+  | "certifications"
+  | "careers"
+  | "projects"
+  | "publications"
+  | "health";
 
 export type SingleProfileCategoryId = Exclude<
   ProfileCategoryId,
@@ -36,7 +45,10 @@ export interface Profile {
   education: ProfileEntry[];
   languages: ProfileEntry[];
   certifications: ProfileEntry[];
+  careers: ProfileEntry[];
   projects: ProfileEntry[];
+  publications: ProfileEntry[];
+  compensation: FieldValues;
   military: FieldValues;
   veteran: FieldValues;
   disability: FieldValues;
@@ -55,7 +67,10 @@ export function createEmptyProfile(): Profile {
     education: [],
     languages: [],
     certifications: [],
+    careers: [],
     projects: [],
+    publications: [],
+    compensation: {},
     military: {},
     veteran: {},
     disability: {},
