@@ -6,6 +6,7 @@ import { defineContentScript } from "wxt/utils/define-content-script";
 import { RuntimeAnalysisApiClient } from "../../src/autofill/api/runtime-client";
 import { AutofillOverlay } from "../../src/autofill-demo/AutofillOverlay";
 import { isOpenAutofillOverlayMessage } from "../../src/autofill-demo/messages";
+import { mountFloatingSidePanelLauncher } from "../../src/extension/floating-side-panel-launcher";
 import { shouldShowSidePanelLauncher } from "../../src/extension/side-panel-launcher-visibility";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import { App as ProfilePanel } from "../sidepanel/App";
@@ -78,9 +79,17 @@ export default defineContentScript({
       });
       return profilePanelPromise;
     };
-    if (shouldShowSidePanelLauncher(new URL(document.location.href))) {
+    const openProfilePanel = async () => {
       const panel = await getProfilePanel();
       if (!panel.mounted) panel.mount();
+    };
+    if (shouldShowSidePanelLauncher(new URL(document.location.href))) {
+      const removeLauncher = mountFloatingSidePanelLauncher(
+        document,
+        () => void openProfilePanel(),
+        `chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`,
+      );
+      ctx.onInvalidated(removeLauncher);
     }
     const receiveMessage = (message: unknown) => {
       if (!isOpenAutofillOverlayMessage(message)) return undefined;
