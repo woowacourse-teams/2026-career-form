@@ -30,7 +30,7 @@ describe("ProfileForm conditional fields", () => {
     expect(screen.queryByLabelText("부전공명")).not.toBeInTheDocument();
   });
 
-  it("selects a standard language test from the dropdown", () => {
+  it("stores standard language test and grade IDs selected from dropdowns", () => {
     const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
     const profile = createEmptyProfile();
     const onUpdateEntry = vi.fn();
@@ -56,13 +56,73 @@ describe("ProfileForm conditional fields", () => {
     expect(testName.tagName).toBe("SELECT");
     expect(screen.getByRole("option", { name: "OPIc" })).toBeInTheDocument();
 
-    fireEvent.change(testName, { target: { value: "OPIc" } });
+    fireEvent.change(testName, { target: { value: "opic" } });
 
     expect(onUpdateEntry).toHaveBeenCalledWith(
       "languages",
       "language-test-1",
       "testName",
-      "OPIc",
+      "opic",
     );
+    expect(screen.queryByRole("option", { name: "Advanced Low" })).not.toBeInTheDocument();
+  });
+
+  it("offers OPIc levels after an OPIc profile value is selected", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const profile = createEmptyProfile();
+    const onUpdateEntry = vi.fn();
+    profile.languages = [{
+      id: "language-test-1",
+      sectionId: "languageTest",
+      values: { testName: "opic" },
+    }];
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={onUpdateEntry}
+        onUpdateSingle={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+
+    const grade = screen.getByLabelText("등급·점수");
+    expect(grade.tagName).toBe("SELECT");
+    expect(screen.getByRole("option", { name: "Advanced Low" })).toHaveValue("opic:al");
+
+    fireEvent.change(grade, { target: { value: "opic:al" } });
+    expect(onUpdateEntry).toHaveBeenCalledWith(
+      "languages",
+      "language-test-1",
+      "grade",
+      "opic:al",
+    );
+  });
+
+  it("keeps a legacy select value visible until the user changes it", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const profile = createEmptyProfile();
+    profile.languages = [{
+      id: "language-test-1",
+      sectionId: "languageTest",
+      values: { testName: "OPIc" },
+    }];
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+
+    expect(screen.getByRole("option", { name: "기존 값: OPIc" })).toHaveValue("OPIc");
   });
 });

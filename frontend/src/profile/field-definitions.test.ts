@@ -26,7 +26,10 @@ describe("university profile fields", () => {
     expect(highSchool?.fields.find((field) => field.id === "attendanceType")).toMatchObject({
       label: "주·야간",
       inputType: "select",
-      options: ["주간", "야간"],
+      options: [
+        { value: "attendance:day", label: "주간" },
+        { value: "attendance:night", label: "야간" },
+      ],
     });
     const qualificationPassDate = highSchool?.fields.find(
       (field) => field.id === "qualificationPassDate",
@@ -48,17 +51,26 @@ describe("university profile fields", () => {
     expect(university?.fields.find((field) => field.id === "attendanceType")).toMatchObject({
       label: "주·야간",
       inputType: "select",
-      options: ["주간", "야간"],
+      options: expect.arrayContaining([
+        { value: "attendance:day", label: "주간" },
+        { value: "attendance:night", label: "야간" },
+      ]),
     });
     expect(graduate?.fields.find((field) => field.id === "attendanceType")).toMatchObject({
       label: "주·야간",
       inputType: "select",
-      options: ["주간", "야간"],
+      options: expect.arrayContaining([
+        { value: "attendance:day", label: "주간" },
+        { value: "attendance:night", label: "야간" },
+      ]),
     });
     [highSchool, university, graduate].forEach((section) => {
       expect(section?.fields.find((field) => field.id === "schoolRegion")).toMatchObject({
         inputType: "select",
-        options: expect.arrayContaining(["서울", "해외"]),
+        options: expect.arrayContaining([
+          { value: "region:seoul", label: "서울" },
+          { value: "region:overseas", label: "해외" },
+        ]),
       });
     });
   });
@@ -75,15 +87,25 @@ describe("language profile fields", () => {
 
     expect(languageTest?.fields.find((field) => field.id === "language")).toMatchObject({
       inputType: "select",
-      options: expect.arrayContaining(["영어", "일본어"]),
+      options: expect.arrayContaining([
+        { value: "language:en", label: "영어" },
+        { value: "language:ja", label: "일본어" },
+      ]),
     });
     expect(languageTest?.fields.find((field) => field.id === "testName")).toMatchObject({
       inputType: "select",
-      options: expect.arrayContaining(["OPIc"]),
+      options: expect.arrayContaining([
+        expect.objectContaining({ value: "opic", label: "OPIc" }),
+      ]),
     });
+    expect(languageTest?.fields.find((field) => field.id === "grade")).toMatchObject({
+      inputType: "select",
+    });
+    expect(languageTest?.fields.find((field) => field.id === "grade")?.optionsFor?.({ testName: "opic" }))
+      .toContainEqual({ value: "opic:al", label: "Advanced Low", aliases: ["AL"] });
     expect(languageSkill?.fields.find((field) => field.id === "language")).toMatchObject({
       inputType: "select",
-      options: expect.arrayContaining(["중국어"]),
+      options: expect.arrayContaining([{ value: "language:zh", label: "중국어" }]),
     });
   });
 });

@@ -4,6 +4,8 @@ import {
   LANGUAGE_OPTIONS,
   LANGUAGE_TEST_OPTIONS,
   SCHOOL_REGION_OPTIONS,
+  languageGradeOptions,
+  type StandardValueOption,
 } from "./standard-values";
 
 export type ProfileInputType =
@@ -13,7 +15,8 @@ export interface ProfileFieldDefinition {
   id: string;
   label: string;
   inputType: ProfileInputType;
-  options?: readonly string[];
+  options?: readonly (string | StandardValueOption)[];
+  optionsFor?: (values: Record<string, string>) => readonly StandardValueOption[];
   visibleWhen?: (values: Record<string, string>) => boolean;
 }
 
@@ -45,7 +48,7 @@ const date = (id: string, label: string): ProfileFieldDefinition => ({
 const select = (
   id: string,
   label: string,
-  options: readonly string[],
+  options: readonly (string | StandardValueOption)[],
 ): ProfileFieldDefinition => ({
   id,
   label,
@@ -213,7 +216,12 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           select("testName", "시험명", LANGUAGE_TEST_OPTIONS),
           text("registrationNo", "등록번호"),
           date("acquisitionDate", "취득일"),
-          text("grade", "등급·점수"),
+          {
+            id: "grade",
+            label: "등급·점수",
+            inputType: "select",
+            optionsFor: (values) => languageGradeOptions(values.testName ?? ""),
+          },
           text("evidenceDocumentPath", "증빙 서류 위치"),
         ],
       },

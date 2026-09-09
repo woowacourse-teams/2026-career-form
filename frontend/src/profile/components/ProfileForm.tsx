@@ -6,6 +6,7 @@ import type {
 } from "../model";
 import type {
   ProfileCategoryDefinition,
+  ProfileFieldDefinition,
   ProfileSectionDefinition,
 } from "../field-definitions";
 import styles from "./ProfileForm.module.css";
@@ -36,11 +37,23 @@ interface FieldsProps {
   onChange(fieldId: string, value: string): void;
 }
 
+function optionsForField(
+  field: ProfileFieldDefinition,
+  values: Record<string, string>,
+): Array<{ value: string; label: string }> {
+  return [...(field.optionsFor?.(values) ?? field.options ?? [])].map((option) =>
+    typeof option === "string" ? { value: option, label: option } : option,
+  );
+}
+
 function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
   return (
     <div className={styles.fieldGrid}>
       {section.fields.filter((field) => !field.visibleWhen || field.visibleWhen(values)).map((field) => {
         const id = `${idPrefix}-${field.id}`;
+        const options = optionsForField(field, values);
+        const value = values[field.id] ?? "";
+        const hasLegacyValue = value.length > 0 && !options.some((option) => option.value === value);
         return (
           <label className={styles.field} htmlFor={id} key={field.id}>
             <span>{field.label}</span>
@@ -54,13 +67,16 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
             ) : field.inputType === "select" ? (
               <select
                 id={id}
-                value={values[field.id] ?? ""}
+                value={value}
                 onChange={(event) => onChange(field.id, event.target.value)}
               >
                 <option value="">선택하세요</option>
-                {field.options?.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                {hasLegacyValue && (
+                  <option value={value}>{`기존 값: ${value}`}</option>
+                )}
+                {options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
