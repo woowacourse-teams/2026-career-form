@@ -14,9 +14,10 @@ interface PopupNavigation {
 interface AppProps {
   repository?: ProfileRepository;
   navigation?: PopupNavigation;
+  closePopup?(): void;
 }
 
-export function App({ repository: injectedRepository, navigation }: AppProps) {
+export function App({ repository: injectedRepository, navigation, closePopup }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
@@ -43,6 +44,7 @@ export function App({ repository: injectedRepository, navigation }: AppProps) {
     try {
       setActionError(false);
       await action();
+      (closePopup ?? window.close)();
     } catch {
       setActionError(true);
     }
