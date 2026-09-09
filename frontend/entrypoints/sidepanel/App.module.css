@@ -18,11 +18,7 @@
 .header {
   padding: 20px 20px 16px;
   border-bottom: 1px solid var(--color-info-border);
-  background: linear-gradient(
-    125deg,
-    var(--color-info-soft),
-    var(--color-surface) 90%
-  );
+  background: linear-gradient(125deg, var(--color-info-soft), #f9fdff 90%);
 }
 .brandRow,
 .brandIdentity,
@@ -309,7 +305,7 @@
   border-top: 1px solid var(--color-border);
   padding: 14px 16px 12px;
   background: var(--color-surface);
-  box-shadow: 0 -6px 20px rgb(67 43 29 / 4%);
+  box-shadow: 0 -6px 20px rgb(49 79 93 / 6%);
 }
 .footer button {
   width: 100%;

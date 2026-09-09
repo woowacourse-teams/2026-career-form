@@ -150,7 +150,7 @@
 .layoutSwitch button[aria-pressed="true"] {
   color: var(--color-on-brand);
   background: var(--color-brand);
-  box-shadow: 0 1px 4px rgb(91 62 32 / 9%);
+  box-shadow: 0 1px 4px rgb(49 79 93 / 10%);
 }
 .layoutA {
   display: grid;

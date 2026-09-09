@@ -15,7 +15,7 @@
   color: var(--color-action-strong);
   background: linear-gradient(
     135deg,
-    var(--color-accent-soft),
+    var(--color-info-soft),
     var(--color-surface)
   );
 }
@@ -26,8 +26,8 @@
   height: 44px;
   place-items: center;
   border-radius: 13px;
-  color: var(--color-on-action);
-  background: var(--color-action-strong);
+  color: var(--color-on-brand);
+  background: var(--color-brand);
   font-weight: 900;
 }
 
@@ -113,15 +113,19 @@
 }
 
 .primaryButton {
-  border: 1px solid var(--color-action-strong);
-  color: var(--color-on-action);
-  background: var(--color-action-strong);
+  border: 1px solid var(--color-brand-hover);
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+}
+
+.primaryButton:hover {
+  background: var(--color-brand-hover);
 }
 
 .secondaryButton {
   border: 1px solid var(--color-action);
   color: var(--color-action-strong);
-  background: var(--color-surface);
+  background: var(--color-accent-soft);
 }
 
 .main [role="alert"] {
