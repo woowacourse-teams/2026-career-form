@@ -28,14 +28,19 @@ class LocalScriptTest(unittest.TestCase):
         )
 
         self.docker_log = self.project / "docker-calls.jsonl"
+        self.gradle_log = self.project / "gradle-calls.jsonl"
+        self.event_log = self.project / "events.jsonl"
         self.fake_bin = self.project / "fake-bin"
         self.fake_bin.mkdir()
         self.environment = os.environ.copy()
         self.environment["FAKE_DOCKER_LOG"] = str(self.docker_log)
+        self.environment["FAKE_GRADLE_LOG"] = str(self.gradle_log)
+        self.environment["FAKE_EVENT_LOG"] = str(self.event_log)
         self.environment["PATH"] = os.pathsep.join(
             (str(self.fake_bin), self.environment.get("PATH", ""))
         )
         self._create_fake_docker()
+        self._create_fake_gradle_wrapper()
 
     def test_missing_env_file_stops_before_docker(self) -> None:
         result = self._run_local("up", create_env_file=False)
@@ -48,10 +53,14 @@ class LocalScriptTest(unittest.TestCase):
         for arguments in ((), ("up",)):
             with self.subTest(arguments=arguments):
                 self._reset_docker_log()
+                self.gradle_log.unlink(missing_ok=True)
+                self.event_log.unlink(missing_ok=True)
 
                 result = self._run_local(*arguments)
 
                 self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual([["bootJar"]], self._gradle_calls())
+                self.assertEqual(["docker-config", "gradle", "docker-up"], self._events())
                 self.assertEqual(
                     [
                         [*self._compose_prefix(), "config", "--quiet"],
@@ -76,6 +85,32 @@ class LocalScriptTest(unittest.TestCase):
             [[*self._compose_prefix(), "config", "--quiet"]],
             self._docker_calls(),
         )
+        self.assertFalse(self.gradle_log.exists())
+
+    def test_gradle_failure_stops_before_docker_up(self) -> None:
+        self.environment["FAKE_GRADLE_EXIT"] = "24"
+
+        result = self._run_local("up")
+
+        self.assertEqual(24, result.returncode)
+        self.assertIn("JDK", result.stderr)
+        self.assertEqual([["bootJar"]], self._gradle_calls())
+        self.assertEqual(
+            [[*self._compose_prefix(), "config", "--quiet"]],
+            self._docker_calls(),
+        )
+
+    def test_missing_gradle_wrapper_reports_clear_failure(self) -> None:
+        self._gradle_wrapper().unlink()
+
+        result = self._run_local("up")
+
+        self.assertEqual(127, result.returncode)
+        self.assertIn("Gradle wrapper", result.stderr)
+        self.assertEqual(
+            [[*self._compose_prefix(), "config", "--quiet"]],
+            self._docker_calls(),
+        )
 
     def test_management_actions_use_expected_compose_commands(self) -> None:
         expectations = {
@@ -95,6 +130,7 @@ class LocalScriptTest(unittest.TestCase):
                     [[*self._compose_prefix(), *expected_arguments]],
                     self._docker_calls(),
                 )
+                self.assertFalse(self.gradle_log.exists())
 
     def test_missing_docker_cli_reports_clear_failure(self) -> None:
         self.environment["PATH"] = str(self.project / "empty-bin")
@@ -150,6 +186,22 @@ class LocalScriptTest(unittest.TestCase):
                 with log.open("a", encoding="utf-8") as output:
                     output.write(json.dumps(sys.argv[1:]) + "\\n")
 
+                event_log = Path(os.environ["FAKE_EVENT_LOG"])
+                if "config" in sys.argv[1:]:
+                    event = "docker-config"
+                elif "up" in sys.argv[1:]:
+                    event = "docker-up"
+                else:
+                    event = "docker-management"
+                with event_log.open("a", encoding="utf-8") as output:
+                    output.write(json.dumps(event) + "\\n")
+
+                if event == "docker-up":
+                    artifact = Path.cwd() / "backend" / "build" / "libs" / "fresh.jar"
+                    if not artifact.is_file():
+                        print("fresh backend artifact is missing", file=sys.stderr)
+                        raise SystemExit(98)
+
                 if "config" in sys.argv[1:]:
                     raise SystemExit(int(os.environ.get("FAKE_DOCKER_CONFIG_EXIT", "0")))
                 raise SystemExit(int(os.environ.get("FAKE_DOCKER_EXIT", "0")))
@@ -174,10 +226,72 @@ class LocalScriptTest(unittest.TestCase):
         )
         docker.chmod(docker.stat().st_mode | stat.S_IEXEC)
 
+    def _create_fake_gradle_wrapper(self) -> None:
+        backend = self.project / "backend"
+        backend.mkdir()
+        implementation = backend / "fake_gradle.py"
+        implementation.write_text(
+            textwrap.dedent(
+                """
+                import json
+                import os
+                import sys
+                from pathlib import Path
+
+                log = Path(os.environ["FAKE_GRADLE_LOG"])
+                with log.open("a", encoding="utf-8") as output:
+                    output.write(json.dumps(sys.argv[1:]) + "\\n")
+                with Path(os.environ["FAKE_EVENT_LOG"]).open("a", encoding="utf-8") as output:
+                    output.write(json.dumps("gradle") + "\\n")
+
+                exit_code = int(os.environ.get("FAKE_GRADLE_EXIT", "0"))
+                if exit_code:
+                    print("fake Gradle build failed", file=sys.stderr)
+                    raise SystemExit(exit_code)
+
+                artifact = Path.cwd() / "build" / "libs" / "fresh.jar"
+                artifact.parent.mkdir(parents=True, exist_ok=True)
+                artifact.write_text("fresh", encoding="utf-8")
+                """
+            ).lstrip(),
+            encoding="utf-8",
+        )
+
+        if os.name == "nt":
+            (backend / "gradlew.bat").write_text(
+                f'@"{sys.executable}" "{implementation}" %*\r\n',
+                encoding="utf-8",
+            )
+            return
+
+        wrapper = backend / "gradlew"
+        wrapper.write_text(
+            f"#!{sys.executable}\n"
+            f"exec(compile(open({str(implementation)!r}, encoding='utf-8').read(), "
+            f"{str(implementation)!r}, 'exec'))\n",
+            encoding="utf-8",
+        )
+        wrapper.chmod(wrapper.stat().st_mode | stat.S_IEXEC)
+
+    def _gradle_wrapper(self) -> Path:
+        return self.project / "backend" / ("gradlew.bat" if os.name == "nt" else "gradlew")
+
     def _docker_calls(self) -> list[list[str]]:
         return [
             json.loads(line)
             for line in self.docker_log.read_text(encoding="utf-8").splitlines()
+        ]
+
+    def _gradle_calls(self) -> list[list[str]]:
+        return [
+            json.loads(line)
+            for line in self.gradle_log.read_text(encoding="utf-8").splitlines()
+        ]
+
+    def _events(self) -> list[str]:
+        return [
+            json.loads(line)
+            for line in self.event_log.read_text(encoding="utf-8").splitlines()
         ]
 
     def _reset_docker_log(self) -> None:

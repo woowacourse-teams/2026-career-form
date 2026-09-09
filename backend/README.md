@@ -217,7 +217,7 @@ python3 scripts/local.py
 py scripts/local.py
 ```
 
-스크립트는 `.env.local` 존재 여부와 `docker compose config --quiet`을 먼저 확인하고, 값은 출력하지 않은 채 공통 Compose와 로컬 override를 조합한다. 검증이 성공하면 이미지를 빌드하고 backend와 MongoDB가 healthy가 될 때까지 기다린다.
+스크립트는 `.env.local` 존재 여부와 `docker compose config --quiet`을 먼저 확인하고, 값은 출력하지 않은 채 공통 Compose와 로컬 override를 조합한다. 검증이 성공하면 운영체제에 맞는 Gradle wrapper(`backend/gradlew` 또는 `backend/gradlew.bat`)로 `bootJar`를 실행해 최신 백엔드 JAR를 만든다. 이 단계에는 JDK 21이 필요하다. 이후 이미지를 빌드하고 backend와 MongoDB가 healthy가 될 때까지 기다린다. Gradle 빌드가 실패하면 Docker 이미지를 만들거나 컨테이너를 시작하지 않는다.
 
 상태, 로그, 종료도 같은 진입점을 사용한다.
 
@@ -263,7 +263,7 @@ $env:BACKEND_PORT=18080
 py scripts/local.py up
 ```
 
-변경된 소스는 컨테이너에 마운트하지 않는다. 코드를 변경한 뒤 `local.py up`으로 이미지를 다시 만든다.
+변경된 소스는 컨테이너에 마운트하지 않는다. 코드를 변경한 뒤 `local.py up`을 실행하면 Gradle 증분 빌드로 최신 JAR를 만든 다음 이미지를 다시 만든다.
 
 `local.py down`은 Compose의 일반 `down`만 실행하므로 `mongodb-data` named volume을 삭제하지 않고 다음 실행에서도 데이터를 보존한다. volume 삭제는 로컬 데이터를 제거하는 파괴적 작업이므로 초기화가 필요할 때 사용자가 별도로 판단한다.
 
