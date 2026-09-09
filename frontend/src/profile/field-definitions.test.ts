@@ -112,11 +112,14 @@ describe("contact and disability profile fields", () => {
     expect(contact?.fields).toEqual(expect.arrayContaining([
       { id: "secondaryEmail", label: "보조 이메일", inputType: "email" },
       { id: "residenceCountry", label: "거주 국가", inputType: "text" },
-      { id: "emergencyPhoneNumber", label: "비상연락처", inputType: "tel" },
     ]));
     expect(contact?.fields.find((field) => field.id === "phoneNumber")).toMatchObject({
       inputType: "tel",
-      hint: "숫자만 입력해주세요",
+      placeholder: "숫자만 입력해주세요",
+    });
+    expect(contact?.fields.find((field) => field.id === "emergencyPhoneNumber")).toMatchObject({
+      inputType: "tel",
+      placeholder: "숫자만 입력해주세요",
     });
     expect(disability?.fields).toEqual(expect.arrayContaining([
       { id: "disabilityRegistrationNumber", label: "장애등록번호", inputType: "text" },

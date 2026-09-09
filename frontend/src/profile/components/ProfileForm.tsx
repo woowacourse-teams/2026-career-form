@@ -66,7 +66,6 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
           >
             <span className={styles.fieldLabel}>
               <span>{field.label}</span>
-              {field.hint && <small className={styles.fieldHint}>{field.hint}</small>}
             </span>
             {field.inputType === "textarea" ? (
               <textarea
@@ -98,6 +97,7 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                   aria-label={field.label}
                   type={field.inputType}
                   value={values[field.id] ?? ""}
+                  placeholder={field.placeholder}
                   inputMode={field.inputType === "tel" ? "numeric" : undefined}
                   maxLength={field.inputType === "tel" ? 11 : undefined}
                   onChange={(event) => onChange(field.id, fieldValue(field, event.target.value))}

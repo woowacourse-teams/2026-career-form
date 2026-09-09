@@ -25,9 +25,11 @@ describe("ProfileForm conditional fields", () => {
 
     const phoneNumber = screen.getByLabelText("연락처");
     expect(phoneNumber).toHaveAttribute("inputmode", "numeric");
-    const phoneHint = screen.getByText("숫자만 입력해주세요");
-    expect(phoneHint.previousElementSibling).toHaveTextContent("연락처");
-    expect(screen.queryByText("숫자만 입력해 주세요. 예: 01012345678")).not.toBeInTheDocument();
+    expect(phoneNumber).toHaveAttribute("placeholder", "숫자만 입력해주세요");
+    expect(screen.getByLabelText("비상연락처")).toHaveAttribute(
+      "placeholder",
+      "숫자만 입력해주세요",
+    );
     fireEvent.change(phoneNumber, { target: { value: "010-1234 5678" } });
 
     expect(onUpdateSingle).toHaveBeenCalledWith(
