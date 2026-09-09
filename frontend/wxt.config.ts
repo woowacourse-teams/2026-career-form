@@ -34,6 +34,10 @@ export default defineConfig({
     side_panel: {
       default_path: "sidepanel.html",
     },
+    web_accessible_resources: [{
+      resources: ["side-panel-launcher-logo.png"],
+      matches: ["http://*/*", "https://*/*"],
+    }],
     version: "0.1.0",
   },
   modules: ["@wxt-dev/module-react"],

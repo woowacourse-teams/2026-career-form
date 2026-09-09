@@ -20,7 +20,7 @@ export default defineContentScript({
     if (shouldShowSidePanelLauncher(new URL(document.location.href))) {
       const removeLauncher = mountFloatingSidePanelLauncher(document, () => {
         void browser.runtime.sendMessage(OPEN_SIDE_PANEL_MESSAGE);
-      }, new URL("/side-panel-launcher-logo.png", import.meta.url).href);
+      }, `chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`);
       ctx.onInvalidated(removeLauncher);
     }
     let uiPromise: ReturnType<typeof createShadowRootUi<Root>> | undefined;
