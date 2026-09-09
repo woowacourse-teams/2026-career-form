@@ -3,6 +3,7 @@ const LAUNCHER_ATTRIBUTE = "data-career-form-side-panel-launcher";
 export function mountFloatingSidePanelLauncher(
   document: Document,
   onOpenSidePanel: () => void,
+  logoUrl = "",
 ): () => void {
   const host = document.createElement("div");
   host.setAttribute(LAUNCHER_ATTRIBUTE, "");
@@ -10,23 +11,33 @@ export function mountFloatingSidePanelLauncher(
   const button = document.createElement("button");
   button.type = "button";
   button.setAttribute("aria-label", "프로필 사이드바 열기");
-  button.textContent = "CF";
   button.style.cssText = [
     "position: fixed",
     "right: 20px",
-    "bottom: 20px",
+    "top: 120px",
     "z-index: 2147483647",
     "width: 44px",
     "height: 44px",
     "border: 0",
     "border-radius: 12px",
-    "background: #2563eb",
-    "color: #fff",
-    "font: 700 14px/1 system-ui, sans-serif",
+    "padding: 0",
+    "overflow: hidden",
     "box-shadow: 0 4px 14px rgb(0 0 0 / 25%)",
     "cursor: pointer",
     "touch-action: none",
     "user-select: none",
+  ].join(";");
+  const logo = document.createElement("img");
+  logo.src = logoUrl;
+  logo.alt = "";
+  logo.draggable = false;
+  logo.style.cssText = [
+    "display: block",
+    "width: 100%",
+    "height: 100%",
+    "object-fit: cover",
+    "object-position: 58% 38%",
+    "pointer-events: none",
   ].join(";");
   let offsetX = 0;
   let offsetY = 0;
@@ -61,6 +72,7 @@ export function mountFloatingSidePanelLauncher(
   document.addEventListener("pointermove", move);
   document.addEventListener("pointerup", stop);
   button.addEventListener("click", click);
+  button.append(logo);
   shadow.append(button);
   document.documentElement.append(host);
 

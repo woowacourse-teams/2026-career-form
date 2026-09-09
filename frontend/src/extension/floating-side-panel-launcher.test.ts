@@ -5,13 +5,24 @@ import { mountFloatingSidePanelLauncher } from "./floating-side-panel-launcher";
 describe("floating side panel launcher", () => {
   it("opens the side panel when its page launcher is clicked", () => {
     const openSidePanel = vi.fn();
-    const cleanup = mountFloatingSidePanelLauncher(document, openSidePanel);
+    const cleanup = mountFloatingSidePanelLauncher(
+      document,
+      openSidePanel,
+      "chrome-extension://test/launcher-logo.png",
+    );
 
     const host = document.querySelector<HTMLElement>(
       "[data-career-form-side-panel-launcher]",
     );
     const button = host?.shadowRoot?.querySelector<HTMLButtonElement>("button");
     expect(button).toHaveAccessibleName("프로필 사이드바 열기");
+    expect(button?.style.top).toBe("120px");
+    expect(button?.style.right).toBe("20px");
+    expect(button?.style.bottom).toBe("");
+    expect(button?.querySelector("img")).toHaveAttribute(
+      "src",
+      "chrome-extension://test/launcher-logo.png",
+    );
 
     button?.click();
 
