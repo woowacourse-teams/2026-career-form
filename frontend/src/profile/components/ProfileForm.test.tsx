@@ -94,6 +94,40 @@ describe("ProfileForm conditional fields", () => {
     );
   });
 
+  it("stores a language entered as text", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const profile = createEmptyProfile();
+    const onUpdateEntry = vi.fn();
+    profile.languages = [{
+      id: "language-test-1",
+      sectionId: "languageTest",
+      values: {},
+    }];
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={onUpdateEntry}
+        onUpdateSingle={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+
+    const language = screen.getByLabelText("외국어");
+    expect(language).toHaveAttribute("type", "text");
+
+    fireEvent.change(language, { target: { value: "영어" } });
+    expect(onUpdateEntry).toHaveBeenCalledWith(
+      "languages",
+      "language-test-1",
+      "language",
+      "영어",
+    );
+  });
+
   it("stores a language grade entered as text", () => {
     const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
     const profile = createEmptyProfile();

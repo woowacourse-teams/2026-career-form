@@ -1,7 +1,6 @@
 import type { ProfileCategoryId } from "./model";
 import {
   ATTENDANCE_TYPE_OPTIONS,
-  LANGUAGE_OPTIONS,
   SCHOOL_REGION_OPTIONS,
   type StandardValueOption,
 } from "./standard-values";
@@ -210,7 +209,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         id: "languageTest",
         label: "공인외국어시험",
         fields: [
-          select("language", "외국어", LANGUAGE_OPTIONS),
+          text("language", "외국어"),
           text("testName", "시험명"),
           text("registrationNo", "등록번호"),
           date("acquisitionDate", "취득일"),
@@ -222,7 +221,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         id: "languageSkill",
         label: "외국어활용능력",
         fields: [
-          select("language", "외국어", LANGUAGE_OPTIONS),
+          text("language", "외국어"),
           text("conversationalLevel", "회화수준"),
         ],
       },

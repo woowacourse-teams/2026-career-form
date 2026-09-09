@@ -77,7 +77,7 @@ describe("university profile fields", () => {
 });
 
 describe("language profile fields", () => {
-  it("offers language selection while leaving test results as free text", () => {
+  it("leaves language test details as free text", () => {
     const languageTest = PROFILE_CATEGORIES.find((category) => category.id === "languages")?.sections.find(
       (section) => section.id === "languageTest",
     );
@@ -86,11 +86,7 @@ describe("language profile fields", () => {
     );
 
     expect(languageTest?.fields.find((field) => field.id === "language")).toMatchObject({
-      inputType: "select",
-      options: expect.arrayContaining([
-        { value: "language:en", label: "영어" },
-        { value: "language:ja", label: "일본어" },
-      ]),
+      inputType: "text",
     });
     expect(languageTest?.fields.find((field) => field.id === "testName")).toMatchObject({
       inputType: "text",
@@ -99,8 +95,7 @@ describe("language profile fields", () => {
       inputType: "text",
     });
     expect(languageSkill?.fields.find((field) => field.id === "language")).toMatchObject({
-      inputType: "select",
-      options: expect.arrayContaining([{ value: "language:zh", label: "중국어" }]),
+      inputType: "text",
     });
   });
 });
