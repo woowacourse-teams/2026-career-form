@@ -32,6 +32,7 @@ describe("side panel App", () => {
     render(
       <App
         inPage
+        logoUrl="chrome-extension://test-extension/side-panel-launcher-logo.png"
         repository={createRepository()}
         openOptions={vi.fn()}
         openAutofill={vi.fn()}
@@ -41,6 +42,10 @@ describe("side panel App", () => {
     expect(await screen.findByLabelText("지원 정보 목록")).toHaveAttribute(
       "data-panel-mode",
       "in-page",
+    );
+    expect(screen.getByRole("img", { name: "커리어폼" })).toHaveAttribute(
+      "src",
+      "chrome-extension://test-extension/side-panel-launcher-logo.png",
     );
   });
 
@@ -105,7 +110,7 @@ describe("side panel App", () => {
     expect(
       await screen.findByRole("heading", { name: "내 지원 정보" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("4 / 10 범주 등록")).toBeInTheDocument();
+    expect(screen.getByText("4개 범주 등록")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "기본 인적사항 접기" }),
     ).toBeInTheDocument();

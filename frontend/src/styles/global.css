@@ -1,40 +1,58 @@
 @import "pretendard/dist/web/variable/pretendardvariable.css";
 
 :root {
-  --palette-blue-050: #e3f2fd;
-  --palette-blue-200: #90caf9;
-  --palette-blue-500: #2196f3;
-  --palette-blue-900: #0d47a1;
-  --color-page: #f6f9fc;
+  --font-ui:
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  /* The existing mascot supplies sky blue, caramel and cocoa; state colors stay distinct. */
+  --palette-sky-050: #f1f9fc;
+  --palette-sky-100: #e0f3fa;
+  --palette-sky-200: #b3e4f5;
+  --palette-caramel-050: #fff5e8;
+  --palette-caramel-100: #ffebd1;
+  --palette-caramel-300: #edc392;
+  --palette-caramel-500: #e9a050;
+  --palette-caramel-700: #a85420;
+  --palette-cocoa-900: #432b1d;
+  --color-page: var(--palette-sky-050);
   --color-surface: #ffffff;
-  --color-surface-muted: #f4f7fa;
-  --color-accent-soft: var(--palette-blue-050);
-  --color-accent: var(--palette-blue-200);
-  --color-action: var(--palette-blue-500);
-  --color-action-strong: var(--palette-blue-900);
+  --color-surface-muted: #fbf8f3;
+  --color-accent-soft: var(--palette-caramel-050);
+  --color-accent-hover: var(--palette-caramel-100);
+  --color-accent: var(--palette-caramel-300);
+  --color-action: var(--palette-caramel-700);
+  --color-action-strong: #88421d;
   --color-on-action: #ffffff;
-  --color-text: #263442;
-  --color-text-strong: #172534;
-  --color-text-muted: #526272;
-  --color-border: #d6e0e8;
-  --color-border-strong: #8c9baa;
-  --color-focus: rgb(33 150 243 / 24%);
-  --color-success: #18794e;
+  --color-brand: var(--palette-caramel-500);
+  --color-brand-hover: #de8d39;
+  --color-on-brand: #442712;
+  --color-text: #594333;
+  --color-text-strong: var(--palette-cocoa-900);
+  --color-text-muted: #786553;
+  --color-text-subtle: #82705e;
+  --color-border: #e5ded3;
+  --color-border-strong: #b7a28a;
+  --color-field-border: #d8cbbc;
+  --color-focus: rgb(168 84 32 / 24%);
+  --color-info: #386575;
+  --color-info-soft: var(--palette-sky-100);
+  --color-info-border: var(--palette-sky-200);
+  --color-success: #24724f;
+  --color-success-soft: #edf7f0;
+  --color-warning: #895511;
+  --color-warning-soft: #fff1d8;
   --color-danger: #c62828;
   --color-danger-border: #ef9a9a;
   --color-danger-text: #9f1d1d;
+  --color-danger-soft: #fff3f1;
+  --color-backdrop: rgb(51 38 27 / 44%);
   --radius-control: 9px;
   --radius-card: 14px;
-  --shadow-card: 0 10px 28px rgb(13 71 161 / 8%);
+  --shadow-card: 0 4px 22px rgb(91 62 32 / 5%);
+  --shadow-panel: 0 16px 48px rgb(51 38 27 / 20%);
   color: var(--color-text);
   background: var(--color-page);
-  font-family:
-    "Pretendard Variable",
-    Pretendard,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-ui);
   font-synthesis: none;
 }
 
@@ -55,6 +73,6 @@ select {
 
 button:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--color-focus);
+  outline: 2px solid var(--color-action);
   outline-offset: 2px;
 }

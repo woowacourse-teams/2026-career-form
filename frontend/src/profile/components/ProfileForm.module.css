@@ -12,7 +12,7 @@
   width: 100%;
   margin: 0 0 14px;
   padding: 0;
-  color: #49607a;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 650;
 }
@@ -27,7 +27,7 @@
   align-content: start;
   min-width: 0;
   gap: 7px;
-  color: #52647a;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 500;
 }
@@ -44,11 +44,11 @@
   width: 100%;
   min-width: 0;
   min-height: 44px;
-  border: 1px solid #dfe5ed;
+  border: 1px solid var(--color-field-border);
   border-radius: 8px;
   padding: 10px 12px;
-  color: #293e58;
-  background: #fff;
+  color: var(--color-text-strong);
+  background: var(--color-surface);
   font: inherit;
   font-size: 14px;
   font-weight: 450;
@@ -59,11 +59,11 @@
 .field input:hover,
 .field textarea:hover,
 .field select:hover {
-  border-color: #b0c2d8;
+  border-color: var(--color-accent);
 }
 .field input::placeholder,
 .field textarea::placeholder {
-  color: #7a879a;
+  color: var(--color-text-muted);
   opacity: 1;
   font-weight: 400;
 }
@@ -75,16 +75,16 @@
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
-  border-color: #6b9ade;
+  border-color: var(--color-action);
   outline: none;
-  box-shadow: 0 0 0 3px rgb(50 115 219 / 10%);
+  box-shadow: 0 0 0 3px var(--color-focus);
 }
 .field select {
   appearance: none;
   cursor: pointer;
   background-image:
-    linear-gradient(45deg, transparent 50%, #7990ad 50%),
-    linear-gradient(135deg, #7990ad 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
   background-position:
     calc(100% - 17px) 50%,
     calc(100% - 12px) 50%;
@@ -104,19 +104,19 @@
   gap: 8px;
 }
 .secondaryButton {
-  border: 1px solid #d9e5f5;
+  border: 1px solid var(--color-accent);
   border-radius: 8px;
   padding: 9px 12px;
-  color: #366295;
-  background: #f1f6fd;
+  color: var(--color-action-strong);
+  background: var(--color-accent-soft);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   min-height: 40px;
 }
 .secondaryButton:hover {
-  background: #e6effb;
-  border-color: #a8c1e3;
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent);
 }
 .secondaryButton > span {
   font-size: 16px;
@@ -127,23 +127,23 @@
   border: 0;
   border-radius: 6px;
   padding: 8px;
-  color: #8b7275;
+  color: var(--color-danger-text);
   background: transparent;
   font-size: 11px;
   cursor: pointer;
 }
 .deleteButton:hover {
-  background: #fff0f0;
-  color: #ad4141;
+  background: var(--color-danger-soft);
+  color: var(--color-danger-text);
 }
 .empty {
   display: grid;
   justify-items: center;
   gap: 12px;
   padding: 50px 20px;
-  border: 1px dashed #dce4ee;
+  border: 1px dashed var(--color-border);
   border-radius: 12px;
-  background: #fafbfd;
+  background: var(--color-surface-muted);
   text-align: center;
 }
 .emptyIcon {
@@ -151,26 +151,26 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid #e2e9f2;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  color: #88a0bf;
-  background: white;
+  color: var(--color-info);
+  background: var(--color-info-soft);
   font-size: 22px;
 }
 .empty strong {
-  color: #4f6580;
+  color: var(--color-text);
   font-size: 14px;
   font-weight: 600;
 }
 .empty p {
   margin: 0;
-  color: #8c98a8;
+  color: var(--color-text-subtle);
   font-size: 12px;
   line-height: 1.8;
 }
 .card {
   min-width: 0;
-  border: 1px solid #e1e7ef;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -180,7 +180,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  background: #f8fafd;
+  background: var(--color-accent-soft);
 }
 .cardToggle {
   display: flex;
@@ -193,14 +193,14 @@
   text-align: left;
   cursor: pointer;
   background: transparent;
-  color: #475f7e;
+  color: var(--color-text);
 }
 .cardChevron {
   width: 22px;
   flex-shrink: 0;
   font-size: 19px;
   text-align: center;
-  color: #7e94b1;
+  color: var(--color-text-muted);
 }
 .cardIdentity {
   display: grid;
@@ -213,12 +213,12 @@
 }
 .cardSummary {
   overflow-wrap: anywhere;
-  color: #8795a7;
+  color: var(--color-text-subtle);
   font-size: 11px;
   font-weight: 400;
 }
 .cardBody {
-  border-top: 1px solid #e8edf4;
+  border-top: 1px solid var(--color-border);
   padding: 22px;
 }
 @media (max-width: 900px) {

@@ -25,7 +25,8 @@ export default defineContentScript({
 
   async main(ctx) {
     let uiPromise: ReturnType<typeof createShadowRootUi<Root>> | undefined;
-    let profilePanelPromise: ReturnType<typeof createShadowRootUi<Root>> | undefined;
+    let profilePanelPromise:
+      ReturnType<typeof createShadowRootUi<Root>> | undefined;
 
     const closeOverlay = () => {
       void uiPromise?.then((ui) => ctx.setTimeout(() => ui.remove(), 0));
@@ -59,7 +60,9 @@ export default defineContentScript({
       if (!ui.mounted) ui.mount();
     };
     const closeProfilePanel = () => {
-      void profilePanelPromise?.then((ui) => ctx.setTimeout(() => ui.remove(), 0));
+      void profilePanelPromise?.then((ui) =>
+        ctx.setTimeout(() => ui.remove(), 0),
+      );
       setFloatingSidePanelLauncherVisibility(document, true);
     };
     const getProfilePanel = () => {
@@ -74,6 +77,7 @@ export default defineContentScript({
             <div className="career-form-in-page-panel">
               <ProfilePanel
                 inPage
+                logoUrl={`chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`}
                 closePanel={closeProfilePanel}
                 openAutofill={openOverlay}
                 openOptions={openOptionsPageFromContent}
