@@ -59,7 +59,7 @@ describe("ProfileForm conditional fields", () => {
     expect(screen.queryByLabelText("부전공명")).not.toBeInTheDocument();
   });
 
-  it("stores standard language test and grade IDs selected from dropdowns", () => {
+  it("stores a language test name entered as text", () => {
     const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
     const profile = createEmptyProfile();
     const onUpdateEntry = vi.fn();
@@ -82,28 +82,26 @@ describe("ProfileForm conditional fields", () => {
     );
 
     const testName = screen.getByLabelText("시험명");
-    expect(testName.tagName).toBe("SELECT");
-    expect(screen.getByRole("option", { name: "OPIc" })).toBeInTheDocument();
+    expect(testName).toHaveAttribute("type", "text");
 
-    fireEvent.change(testName, { target: { value: "opic" } });
+    fireEvent.change(testName, { target: { value: "TOEIC" } });
 
     expect(onUpdateEntry).toHaveBeenCalledWith(
       "languages",
       "language-test-1",
       "testName",
-      "opic",
+      "TOEIC",
     );
-    expect(screen.queryByRole("option", { name: "Advanced Low" })).not.toBeInTheDocument();
   });
 
-  it("offers OPIc levels after an OPIc profile value is selected", () => {
+  it("stores a language grade entered as text", () => {
     const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
     const profile = createEmptyProfile();
     const onUpdateEntry = vi.fn();
     profile.languages = [{
       id: "language-test-1",
       sectionId: "languageTest",
-      values: { testName: "opic" },
+      values: { testName: "OPIc" },
     }];
 
     render(
@@ -119,19 +117,18 @@ describe("ProfileForm conditional fields", () => {
     );
 
     const grade = screen.getByLabelText("등급·점수");
-    expect(grade.tagName).toBe("SELECT");
-    expect(screen.getByRole("option", { name: "Advanced Low" })).toHaveValue("opic:al");
+    expect(grade).toHaveAttribute("type", "text");
 
-    fireEvent.change(grade, { target: { value: "opic:al" } });
+    fireEvent.change(grade, { target: { value: "AL" } });
     expect(onUpdateEntry).toHaveBeenCalledWith(
       "languages",
       "language-test-1",
       "grade",
-      "opic:al",
+      "AL",
     );
   });
 
-  it("keeps a legacy select value visible until the user changes it", () => {
+  it("shows an existing language test name in a text input", () => {
     const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
     const profile = createEmptyProfile();
     profile.languages = [{
@@ -152,6 +149,6 @@ describe("ProfileForm conditional fields", () => {
       />,
     );
 
-    expect(screen.getByRole("option", { name: "기존 값: OPIc" })).toHaveValue("OPIc");
+    expect(screen.getByLabelText("시험명")).toHaveValue("OPIc");
   });
 });

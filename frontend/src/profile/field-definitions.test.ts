@@ -77,7 +77,7 @@ describe("university profile fields", () => {
 });
 
 describe("language profile fields", () => {
-  it("offers standard language and test names as dropdown options", () => {
+  it("offers language selection while leaving test results as free text", () => {
     const languageTest = PROFILE_CATEGORIES.find((category) => category.id === "languages")?.sections.find(
       (section) => section.id === "languageTest",
     );
@@ -93,16 +93,11 @@ describe("language profile fields", () => {
       ]),
     });
     expect(languageTest?.fields.find((field) => field.id === "testName")).toMatchObject({
-      inputType: "select",
-      options: expect.arrayContaining([
-        expect.objectContaining({ value: "opic", label: "OPIc" }),
-      ]),
+      inputType: "text",
     });
     expect(languageTest?.fields.find((field) => field.id === "grade")).toMatchObject({
-      inputType: "select",
+      inputType: "text",
     });
-    expect(languageTest?.fields.find((field) => field.id === "grade")?.optionsFor?.({ testName: "opic" }))
-      .toContainEqual({ value: "opic:al", label: "Advanced Low", aliases: ["AL"] });
     expect(languageSkill?.fields.find((field) => field.id === "language")).toMatchObject({
       inputType: "select",
       options: expect.arrayContaining([{ value: "language:zh", label: "중국어" }]),

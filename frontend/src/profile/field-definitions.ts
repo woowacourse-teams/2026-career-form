@@ -2,9 +2,7 @@ import type { ProfileCategoryId } from "./model";
 import {
   ATTENDANCE_TYPE_OPTIONS,
   LANGUAGE_OPTIONS,
-  LANGUAGE_TEST_OPTIONS,
   SCHOOL_REGION_OPTIONS,
-  languageGradeOptions,
   type StandardValueOption,
 } from "./standard-values";
 
@@ -213,15 +211,10 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         label: "공인외국어시험",
         fields: [
           select("language", "외국어", LANGUAGE_OPTIONS),
-          select("testName", "시험명", LANGUAGE_TEST_OPTIONS),
+          text("testName", "시험명"),
           text("registrationNo", "등록번호"),
           date("acquisitionDate", "취득일"),
-          {
-            id: "grade",
-            label: "등급·점수",
-            inputType: "select",
-            optionsFor: (values) => languageGradeOptions(values.testName ?? ""),
-          },
+          text("grade", "등급·점수"),
           text("evidenceDocumentPath", "증빙 서류 위치"),
         ],
       },
