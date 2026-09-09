@@ -22,7 +22,7 @@ describe("popup App", () => {
     render(
       <App
         repository={createRepository()}
-        navigation={{ openOptions: vi.fn(), openSidePanel: vi.fn() }}
+        navigation={{ openOptions: vi.fn(), openInPageProfilePanel: vi.fn() }}
       />,
     );
 
@@ -35,18 +35,18 @@ describe("popup App", () => {
     expect(screen.queryByText("hidden@example.com")).not.toBeInTheDocument();
   });
 
-  it("opens profile management and the side panel from explicit buttons", async () => {
+  it("opens profile management and the in-page panel from explicit buttons", async () => {
     const navigation = {
       openOptions: vi.fn(async () => undefined),
-      openSidePanel: vi.fn(async () => undefined),
+      openInPageProfilePanel: vi.fn(async () => undefined),
     };
     render(<App repository={createRepository()} navigation={navigation} />);
     await screen.findByText("10개 범주 중 2개 준비됨");
 
-    fireEvent.click(screen.getByRole("button", { name: "사이드 패널 열기" }));
+    fireEvent.click(screen.getByRole("button", { name: "지원서 패널 열기" }));
     fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
 
-    expect(navigation.openSidePanel).toHaveBeenCalledOnce();
+    expect(navigation.openInPageProfilePanel).toHaveBeenCalledOnce();
     expect(navigation.openOptions).toHaveBeenCalledOnce();
   });
 
@@ -58,7 +58,7 @@ describe("popup App", () => {
     render(
       <App
         repository={repository}
-        navigation={{ openOptions: vi.fn(), openSidePanel: vi.fn() }}
+        navigation={{ openOptions: vi.fn(), openInPageProfilePanel: vi.fn() }}
       />,
     );
 

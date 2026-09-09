@@ -5,7 +5,10 @@ import { defineContentScript } from "wxt/utils/define-content-script";
 
 import { RuntimeAnalysisApiClient } from "../../src/autofill/api/runtime-client";
 import { AutofillOverlay } from "../../src/autofill-demo/AutofillOverlay";
-import { isOpenAutofillOverlayMessage } from "../../src/autofill-demo/messages";
+import {
+  isOpenAutofillOverlayMessage,
+  isOpenInPageProfilePanelMessage,
+} from "../../src/autofill-demo/messages";
 import {
   mountFloatingSidePanelLauncher,
   setFloatingSidePanelLauncherVisibility,
@@ -97,8 +100,9 @@ export default defineContentScript({
       ctx.onInvalidated(removeLauncher);
     }
     const receiveMessage = (message: unknown) => {
-      if (!isOpenAutofillOverlayMessage(message)) return undefined;
-      return openOverlay();
+      if (isOpenAutofillOverlayMessage(message)) return openOverlay();
+      if (isOpenInPageProfilePanelMessage(message)) return openProfilePanel();
+      return undefined;
     };
 
     browser.runtime.onMessage.addListener(receiveMessage);

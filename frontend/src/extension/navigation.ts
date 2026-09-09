@@ -1,6 +1,9 @@
 import { browser } from "wxt/browser";
 
-import { OPEN_AUTOFILL_OVERLAY_MESSAGE } from "../autofill-demo/messages";
+import {
+  OPEN_AUTOFILL_OVERLAY_MESSAGE,
+  OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
+} from "../autofill-demo/messages";
 
 interface RuntimeApi {
   openOptionsPage(): Promise<void>;
@@ -49,4 +52,17 @@ export async function openAutofillOverlay(
     throw new Error("현재 페이지를 확인할 수 없습니다.");
   }
   await tabs.sendMessage(activeTab.id, OPEN_AUTOFILL_OVERLAY_MESSAGE);
+}
+
+export async function openInPageProfilePanel(
+  tabs: ActiveTabMessenger = {
+    query: (options) => browser.tabs.query(options),
+    sendMessage: (tabId, message) => browser.tabs.sendMessage(tabId, message),
+  },
+): Promise<void> {
+  const [activeTab] = await tabs.query({ active: true, currentWindow: true });
+  if (activeTab?.id === undefined) {
+    throw new Error("현재 페이지를 확인할 수 없습니다.");
+  }
+  await tabs.sendMessage(activeTab.id, OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
 }

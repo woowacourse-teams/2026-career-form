@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   openAutofillOverlay,
+  openInPageProfilePanel,
   openOptionsPage,
   openSidePanel,
 } from "./navigation";
@@ -48,6 +49,19 @@ describe("extension navigation", () => {
     });
     expect(tabs.sendMessage).toHaveBeenCalledWith(27, {
       type: "career-form:open-autofill-overlay",
+    });
+  });
+
+  it("asks the active tab to open the in-page profile panel", async () => {
+    const tabs = {
+      query: vi.fn(async () => [{ id: 27 }]),
+      sendMessage: vi.fn(async () => undefined),
+    };
+
+    await openInPageProfilePanel(tabs);
+
+    expect(tabs.sendMessage).toHaveBeenCalledWith(27, {
+      type: "career-form:open-in-page-profile-panel",
     });
   });
 
