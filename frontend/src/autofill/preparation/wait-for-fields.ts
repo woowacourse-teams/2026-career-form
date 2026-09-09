@@ -1,7 +1,9 @@
 function isVisible(element: Element, view: Window): boolean {
-  const HTMLElementConstructor = (view as unknown as {
-    HTMLElement: typeof HTMLElement;
-  }).HTMLElement;
+  const HTMLElementConstructor = (
+    view as unknown as {
+      HTMLElement: typeof HTMLElement;
+    }
+  ).HTMLElement;
   if (!(element instanceof HTMLElementConstructor)) return false;
   let current: HTMLElement | null = element;
   while (current) {
@@ -19,7 +21,10 @@ function isVisible(element: Element, view: Window): boolean {
 
 function hasStructuralName(field: Element, expected: string): boolean {
   const name = field.getAttribute("name") ?? "";
-  return name === expected || new RegExp(`^${expected}_[0-9a-f-]{36}$`, "i").test(name);
+  return (
+    name === expected ||
+    new RegExp(`^${expected}_[0-9a-f-]{36}$`, "i").test(name)
+  );
 }
 
 export function waitForExpectedFields(
@@ -32,8 +37,8 @@ export function waitForExpectedFields(
 
   const allVisible = () =>
     expectedFieldNames.every((name) =>
-      Array.from(pageDocument.querySelectorAll("[name]")).some((field) =>
-        hasStructuralName(field, name) && isVisible(field, view),
+      Array.from(pageDocument.querySelectorAll("[name]")).some(
+        (field) => hasStructuralName(field, name) && isVisible(field, view),
       ),
     );
 

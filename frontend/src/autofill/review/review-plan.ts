@@ -99,7 +99,10 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
     fieldId: field.id,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
-    topLevel: category.topLevelFields?.some((candidate) => candidate.id === field.id) === true,
+    topLevel:
+      category.topLevelFields?.some(
+        (candidate) => candidate.id === field.id,
+      ) === true,
   };
 }
 
@@ -231,11 +234,11 @@ function itemForAnalysis(
     );
   }
 
-  const binding: ValueBinding | undefined = analysis.valueBinding ?? (
-    analysis.profileFieldKey
+  const binding: ValueBinding | undefined =
+    analysis.valueBinding ??
+    (analysis.profileFieldKey
       ? { type: "DIRECT", profileFieldKey: analysis.profileFieldKey }
-      : undefined
-  );
+      : undefined);
   if (!binding) {
     return unavailableItem(
       analysis.candidateId,
@@ -321,7 +324,9 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
       ...(resolvedProfileValue.profileEntryId
         ? { profileEntryId: resolvedProfileValue.profileEntryId }
         : {}),
@@ -341,7 +346,9 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
       ...(resolvedProfileValue.profileEntryId
         ? { profileEntryId: resolvedProfileValue.profileEntryId }
         : {}),
@@ -361,7 +368,9 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+      ...(binding.type === "DIRECT"
+        ? { profileFieldKey: binding.profileFieldKey }
+        : {}),
       currentValue: pageValue,
       profileValue: resolvedProfileValue.value,
       previewValue: resolvedProfileValue.value,
@@ -376,7 +385,9 @@ function itemForAnalysis(
   return {
     candidateId: analysis.candidateId,
     fieldLabel,
-    ...(binding.type === "DIRECT" ? { profileFieldKey: binding.profileFieldKey } : {}),
+    ...(binding.type === "DIRECT"
+      ? { profileFieldKey: binding.profileFieldKey }
+      : {}),
     ...(resolvedProfileValue.profileEntryId
       ? { profileEntryId: resolvedProfileValue.profileEntryId }
       : {}),

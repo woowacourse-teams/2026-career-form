@@ -45,14 +45,18 @@ describe("resolveValueBinding", () => {
     );
 
     expect(
-      resolveValueBinding(profile, {
-        type: "LOOKUP",
-        profileFieldKey: "education.university.degreeLevel",
-        optionMap: {
-          "전문학사": "전문대학(전문학사)",
-          "학사": "대학(학사)",
+      resolveValueBinding(
+        profile,
+        {
+          type: "LOOKUP",
+          profileFieldKey: "education.university.degreeLevel",
+          optionMap: {
+            전문학사: "전문대학(전문학사)",
+            학사: "대학(학사)",
+          },
         },
-      }, 1),
+        1,
+      ),
     ).toMatchObject({ status: "resolved", value: "대학(학사)" });
   });
 

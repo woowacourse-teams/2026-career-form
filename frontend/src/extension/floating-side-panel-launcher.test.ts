@@ -38,7 +38,9 @@ describe("floating side panel launcher", () => {
 
     cleanup();
 
-    expect(document.querySelector("[data-career-form-side-panel-launcher]")).toBeNull();
+    expect(
+      document.querySelector("[data-career-form-side-panel-launcher]"),
+    ).toBeNull();
   });
 
   it("hides the launcher while an in-page panel is open", () => {
@@ -61,9 +63,30 @@ describe("floating side panel launcher", () => {
       .querySelector<HTMLElement>("[data-career-form-side-panel-launcher]")
       ?.shadowRoot?.querySelector<HTMLButtonElement>("button")!;
 
-    button.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true, clientX: 10, clientY: 10 }));
-    button.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, composed: true, clientX: 38, clientY: 46 }));
-    button.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, composed: true, clientX: 38, clientY: 46 }));
+    button.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        composed: true,
+        clientX: 10,
+        clientY: 10,
+      }),
+    );
+    button.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        composed: true,
+        clientX: 38,
+        clientY: 46,
+      }),
+    );
+    button.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        composed: true,
+        clientX: 38,
+        clientY: 46,
+      }),
+    );
 
     expect(button.style.transform).toBe("translate(28px, 36px)");
     cleanup();

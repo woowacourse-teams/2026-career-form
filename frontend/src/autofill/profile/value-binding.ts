@@ -44,7 +44,10 @@ function partsOf(key: string) {
     fieldId: field.id,
     sensitive: category.sensitive,
     repeatable: category.repeatable,
-    topLevel: category.topLevelFields?.some((candidate) => candidate.id === field.id) === true,
+    topLevel:
+      category.topLevelFields?.some(
+        (candidate) => candidate.id === field.id,
+      ) === true,
   };
 }
 
@@ -56,7 +59,7 @@ function directValue(
   const parts = partsOf(key);
   if (!parts) return { status: "unknown", sensitive: false };
   if (!parts.repeatable) {
-  const value = (profile[parts.categoryId] as FieldValues)[
+    const value = (profile[parts.categoryId] as FieldValues)[
       parts.fieldId
     ]?.trim();
     return value
@@ -73,7 +76,10 @@ function directValue(
   ).filter((entry) => entry.sectionId === parts.sectionId);
   if (parts.topLevel) {
     const educationEntries = profile.education;
-    const entry = educationEntries.find((candidate) => candidate.sectionId === "university") ?? educationEntries[0];
+    const entry =
+      educationEntries.find(
+        (candidate) => candidate.sectionId === "university",
+      ) ?? educationEntries[0];
     const value = entry?.values[parts.fieldId]?.trim();
     return value
       ? {
@@ -109,21 +115,27 @@ function derivedValue(
 ): ValueBindingResolution {
   const recipe = binding.recipe;
   if (recipe === "BOOLEAN_YN") {
-    if (!binding.profileFieldKey) return { status: "unknown", sensitive: false };
+    if (!binding.profileFieldKey)
+      return { status: "unknown", sensitive: false };
     const source = directValue(profile, binding.profileFieldKey);
     if (source.status !== "resolved") return source;
     const normalized = source.value.normalize("NFKC").trim().toLowerCase();
-    const value = ["예", "대상", "해당", "있음", "y", "yes", "true"].includes(normalized)
-      ? binding.trueLabel ?? "Y"
-      : ["아니오", "비대상", "비해당", "없음", "n", "no", "false"].includes(normalized)
-        ? binding.falseLabel ?? "N"
+    const value = ["예", "대상", "해당", "있음", "y", "yes", "true"].includes(
+      normalized,
+    )
+      ? (binding.trueLabel ?? "Y")
+      : ["아니오", "비대상", "비해당", "없음", "n", "no", "false"].includes(
+            normalized,
+          )
+        ? (binding.falseLabel ?? "N")
         : undefined;
     return value
       ? { status: "resolved", value, sensitive: source.sensitive }
       : { status: "missing", sensitive: source.sensitive };
   }
   if (recipe === "YEAR_MONTH") {
-    if (!binding.profileFieldKey) return { status: "unknown", sensitive: false };
+    if (!binding.profileFieldKey)
+      return { status: "unknown", sensitive: false };
     const source = directValue(profile, binding.profileFieldKey, itemIndex);
     if (source.status !== "resolved") return source;
     const match = source.value.trim().match(/^(\d{4}-\d{2})/);
@@ -167,7 +179,9 @@ function lookupValue(
         status: "resolved",
         value,
         sensitive: source.sensitive,
-        ...(source.profileEntryId ? { profileEntryId: source.profileEntryId } : {}),
+        ...(source.profileEntryId
+          ? { profileEntryId: source.profileEntryId }
+          : {}),
         ...(source.standardValueId
           ? { standardValueId: source.standardValueId }
           : {}),

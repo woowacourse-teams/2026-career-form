@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { openInPageProfilePanel, openOptionsPage } from "../../src/extension/navigation";
+import {
+  openInPageProfilePanel,
+  openOptionsPage,
+} from "../../src/extension/navigation";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { countCompletedCategories } from "../../src/profile/profile-repository";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
@@ -17,7 +20,11 @@ interface AppProps {
   closePopup?(): void;
 }
 
-export function App({ repository: injectedRepository, navigation, closePopup }: AppProps) {
+export function App({
+  repository: injectedRepository,
+  navigation,
+  closePopup,
+}: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],

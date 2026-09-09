@@ -608,8 +608,8 @@ describe("review plan", () => {
             type: "LOOKUP",
             profileFieldKey: "education.university.degreeLevel",
             optionMap: {
-              "전문학사": "전문대학(전문학사)",
-              "학사": "대학(학사)",
+              전문학사: "전문대학(전문학사)",
+              학사: "대학(학사)",
             },
           },
           autofillPolicy: "CONDITIONAL",

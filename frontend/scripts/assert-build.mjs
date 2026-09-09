@@ -45,7 +45,9 @@ if (
   !permissions.has("sidePanel") ||
   !permissions.has("scripting")
 ) {
-  throw new Error("현재 탭, 프로필 저장, side panel, 지원서 패널 주입 권한이 필요합니다.");
+  throw new Error(
+    "현재 탭, 프로필 저장, side panel, 지원서 패널 주입 권한이 필요합니다.",
+  );
 }
 
 const hostPermissions = manifest.host_permissions ?? [];

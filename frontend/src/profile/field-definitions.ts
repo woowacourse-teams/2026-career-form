@@ -14,7 +14,9 @@ export interface ProfileFieldDefinition {
   placeholder?: string;
   inputType: ProfileInputType;
   options?: readonly (string | StandardValueOption)[];
-  optionsFor?: (values: Record<string, string>) => readonly StandardValueOption[];
+  optionsFor?: (
+    values: Record<string, string>,
+  ) => readonly StandardValueOption[];
   visibleWhen?: (values: Record<string, string>) => boolean;
 }
 
@@ -55,7 +57,12 @@ const select = (
 });
 
 const EDUCATION_STATUS_OPTIONS = [
-  "재학중", "졸업예정", "졸업", "중퇴", "휴학", "수료",
+  "재학중",
+  "졸업예정",
+  "졸업",
+  "중퇴",
+  "휴학",
+  "수료",
 ];
 
 export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
@@ -263,19 +270,33 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     label: "직장경력",
     repeatable: true,
     sensitive: false,
-    sections: [{
-      id: "career",
-      label: "직장경력",
-      fields: [
-        text("companyName", "직장명"),
-        select("employmentType", "고용형태", ["정규", "계약", "인턴", "파견", "프리랜서", "아르바이트", "개인사업", "병역특례", "기타"]),
-        date("startDate", "입사일"), date("endDate", "퇴사일"),
-        select("employmentStatus", "재직 여부", ["재직중", "퇴사"]),
-        text("department", "근무부서"), text("position", "최종직위"),
-        { id: "responsibilities", label: "담당업무", inputType: "textarea" },
-        text("terminationReason", "종료사유"),
-      ],
-    }],
+    sections: [
+      {
+        id: "career",
+        label: "직장경력",
+        fields: [
+          text("companyName", "직장명"),
+          select("employmentType", "고용형태", [
+            "정규",
+            "계약",
+            "인턴",
+            "파견",
+            "프리랜서",
+            "아르바이트",
+            "개인사업",
+            "병역특례",
+            "기타",
+          ]),
+          date("startDate", "입사일"),
+          date("endDate", "퇴사일"),
+          select("employmentStatus", "재직 여부", ["재직중", "퇴사"]),
+          text("department", "근무부서"),
+          text("position", "최종직위"),
+          { id: "responsibilities", label: "담당업무", inputType: "textarea" },
+          text("terminationReason", "종료사유"),
+        ],
+      },
+    ],
   },
   {
     id: "projects",

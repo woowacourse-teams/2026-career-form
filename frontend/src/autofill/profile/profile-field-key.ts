@@ -18,8 +18,7 @@ export function isAutofillProfileFieldKey(value: string): boolean {
           ),
       ) ||
         category.topLevelFields?.some(
-          (field) =>
-            field.id === fieldId && !EXCLUDED_FIELD_IDS.has(field.id),
+          (field) => field.id === fieldId && !EXCLUDED_FIELD_IDS.has(field.id),
         ) === true),
   );
 }

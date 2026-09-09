@@ -38,10 +38,7 @@ function selectButtonOption(
     return false;
   }
   const trigger = handle.elements[0];
-  if (
-    !(trigger instanceof HTMLInputElement) ||
-    trigger.type !== "button"
-  ) {
+  if (!(trigger instanceof HTMLInputElement) || trigger.type !== "button") {
     return false;
   }
   const selectWrap = trigger.closest(".select-wrap");
@@ -51,9 +48,7 @@ function selectButtonOption(
     selectWrap.querySelectorAll<HTMLButtonElement>(
       ":scope > .select-option button[data-code]",
     ),
-  ).filter(
-    (choice) => choice.offsetParent !== null,
-  );
+  ).filter((choice) => choice.offsetParent !== null);
   const choice = matchingLiveButtonOption(displayName, choices);
   if (!choice || !choice.dataset.code) return false;
   choice.click();

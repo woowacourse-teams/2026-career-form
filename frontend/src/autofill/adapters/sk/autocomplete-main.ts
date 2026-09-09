@@ -170,12 +170,8 @@ function exactMenuItem(
         : id === undefined || (id.length > 0 && id !== "0");
     const exact = label === query && value === query;
     const canonicalExam =
-      fieldName === "lngExamName" &&
-      matchesSkExamStandardValue(query, item);
-    return item &&
-      visible(element) &&
-      (exact || canonicalExam) &&
-      validId
+      fieldName === "lngExamName" && matchesSkExamStandardValue(query, item);
+    return item && visible(element) && (exact || canonicalExam) && validId
       ? [{ element, item }]
       : [];
   });

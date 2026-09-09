@@ -54,18 +54,24 @@ describe("profile JSON transfer", () => {
 
   it("preserves added education fields and nonstandard language tests through transfer", () => {
     const profile = createEmptyProfile();
-    profile.education = [{
-      id: "university-1",
-      sectionId: "university",
-      values: { attendanceType: "야간", schoolRegion: "해외" },
-    }];
-    profile.languages = [{
-      id: "language-test-1",
-      sectionId: "languageTest",
-      values: { language: "영어", testName: "사내 영어 인증" },
-    }];
+    profile.education = [
+      {
+        id: "university-1",
+        sectionId: "university",
+        values: { attendanceType: "야간", schoolRegion: "해외" },
+      },
+    ];
+    profile.languages = [
+      {
+        id: "language-test-1",
+        sectionId: "languageTest",
+        values: { language: "영어", testName: "사내 영어 인증" },
+      },
+    ];
 
-    expect(parseProfileImport(serializeProfileExport(profile))).toEqual(profile);
+    expect(parseProfileImport(serializeProfileExport(profile))).toEqual(
+      profile,
+    );
   });
 
   it("rejects malformed JSON", () => {
