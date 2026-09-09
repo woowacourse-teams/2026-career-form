@@ -7,7 +7,9 @@ import styles from "./ProfileForm.module.css";
 
 describe("ProfileForm conditional fields", () => {
   it("stores phone numbers as digits only", () => {
-    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "contact")!;
+    const category = PROFILE_CATEGORIES.find(
+      (candidate) => candidate.id === "contact",
+    )!;
     const profile = createEmptyProfile();
     const onUpdateSingle = vi.fn();
 
@@ -37,16 +39,31 @@ describe("ProfileForm conditional fields", () => {
       "phoneNumber",
       "01012345678",
     );
+
+    // Native maxlength would truncate a pasted formatted number before normalization.
+    expect(phoneNumber).not.toHaveAttribute("maxlength");
+    fireEvent.change(screen.getByLabelText("비상연락처"), {
+      target: { value: "010-1234-567890" },
+    });
+    expect(onUpdateSingle).toHaveBeenCalledWith(
+      "contact",
+      "emergencyPhoneNumber",
+      "01012345678",
+    );
   });
 
   it("uses the full row for long-form thesis details", () => {
-    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "publications")!;
+    const category = PROFILE_CATEGORIES.find(
+      (candidate) => candidate.id === "publications",
+    )!;
     const profile = createEmptyProfile();
-    profile.publications = [{
-      id: "publication-1",
-      sectionId: "publicationPatent",
-      values: {},
-    }];
+    profile.publications = [
+      {
+        id: "publication-1",
+        sectionId: "publicationPatent",
+        values: {},
+      },
+    ];
 
     render(
       <ProfileForm
@@ -60,17 +77,23 @@ describe("ProfileForm conditional fields", () => {
       />,
     );
 
-    expect(screen.getByLabelText("상세설명").closest("label")).toHaveClass(styles.fullWidth);
+    expect(screen.getByLabelText("상세설명").closest("label")).toHaveClass(
+      styles.fullWidth,
+    );
   });
 
   it("shows major-name fields only when the corresponding major exists", () => {
-    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "education")!;
+    const category = PROFILE_CATEGORIES.find(
+      (candidate) => candidate.id === "education",
+    )!;
     const profile = createEmptyProfile();
-    profile.education = [{
-      id: "university-1",
-      sectionId: "university",
-      values: { doubleMajorStatus: "있음", minorStatus: "없음" },
-    }];
+    profile.education = [
+      {
+        id: "university-1",
+        sectionId: "university",
+        values: { doubleMajorStatus: "있음", minorStatus: "없음" },
+      },
+    ];
 
     render(
       <ProfileForm
@@ -89,14 +112,18 @@ describe("ProfileForm conditional fields", () => {
   });
 
   it("stores a language test name entered as text", () => {
-    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const category = PROFILE_CATEGORIES.find(
+      (candidate) => candidate.id === "languages",
+    )!;
     const profile = createEmptyProfile();
     const onUpdateEntry = vi.fn();
-    profile.languages = [{
-      id: "language-test-1",
-      sectionId: "languageTest",
-      values: {},
-    }];
+    profile.languages = [
+      {
+        id: "language-test-1",
+        sectionId: "languageTest",
+        values: {},
+      },
+    ];
 
     render(
       <ProfileForm
@@ -124,14 +151,18 @@ describe("ProfileForm conditional fields", () => {
   });
 
   it("stores a language entered as text", () => {
-    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const category = PROFILE_CATEGORIES.find(
+      (candidate) => candidate.id === "languages",
+    )!;
     const profile = createEmptyProfile();
     const onUpdateEntry = vi.fn();
-    profile.languages = [{
-      id: "language-test-1",
-      sectionId: "languageTest",
-      values: {},
-    }];
+    profile.languages = [
+      {
+        id: "language-test-1",
+        sectionId: "languageTest",
+        values: {},
+      },
+    ];
 
     render(
       <ProfileForm
@@ -158,14 +189,18 @@ describe("ProfileForm conditional fields", () => {
   });
 
   it("stores a language grade entered as text", () => {
-    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const category = PROFILE_CATEGORIES.find(
+      (candidate) => candidate.id === "languages",
+    )!;
     const profile = createEmptyProfile();
     const onUpdateEntry = vi.fn();
-    profile.languages = [{
-      id: "language-test-1",
-      sectionId: "languageTest",
-      values: { testName: "OPIc" },
-    }];
+    profile.languages = [
+      {
+        id: "language-test-1",
+        sectionId: "languageTest",
+        values: { testName: "OPIc" },
+      },
+    ];
 
     render(
       <ProfileForm
@@ -192,13 +227,17 @@ describe("ProfileForm conditional fields", () => {
   });
 
   it("shows an existing language test name in a text input", () => {
-    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const category = PROFILE_CATEGORIES.find(
+      (candidate) => candidate.id === "languages",
+    )!;
     const profile = createEmptyProfile();
-    profile.languages = [{
-      id: "language-test-1",
-      sectionId: "languageTest",
-      values: { testName: "OPIc" },
-    }];
+    profile.languages = [
+      {
+        id: "language-test-1",
+        sectionId: "languageTest",
+        values: { testName: "OPIc" },
+      },
+    ];
 
     render(
       <ProfileForm

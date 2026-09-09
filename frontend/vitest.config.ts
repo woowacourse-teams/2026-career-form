@@ -5,7 +5,7 @@ export default defineConfig({
     coverage: {
       exclude: ["**/*.test.{ts,tsx}", "**/main.tsx"],
       include: [
-        "entrypoints/{options,popup,sidepanel}/App.tsx",
+        "entrypoints/{options,popup,sidepanel}/**/*.tsx",
         "src/**/*.{ts,tsx}",
       ],
       provider: "v8",
