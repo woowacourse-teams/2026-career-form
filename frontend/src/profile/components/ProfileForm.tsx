@@ -85,14 +85,22 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                 ))}
               </select>
             ) : (
-              <input
-                id={id}
-                type={field.inputType}
-                value={values[field.id] ?? ""}
-                inputMode={field.inputType === "tel" ? "numeric" : undefined}
-                maxLength={field.inputType === "tel" ? 11 : undefined}
-                onChange={(event) => onChange(field.id, fieldValue(field, event.target.value))}
-              />
+              <>
+                <input
+                  id={id}
+                  aria-label={field.label}
+                  type={field.inputType}
+                  value={values[field.id] ?? ""}
+                  inputMode={field.inputType === "tel" ? "numeric" : undefined}
+                  maxLength={field.inputType === "tel" ? 11 : undefined}
+                  onChange={(event) => onChange(field.id, fieldValue(field, event.target.value))}
+                />
+                {field.inputType === "tel" && (
+                  <small className={styles.fieldHint}>
+                    숫자만 입력해 주세요. 예: 01012345678
+                  </small>
+                )}
+              </>
             )}
           </label>
         );

@@ -24,6 +24,7 @@ describe("ProfileForm conditional fields", () => {
 
     const phoneNumber = screen.getByLabelText("연락처");
     expect(phoneNumber).toHaveAttribute("inputmode", "numeric");
+    expect(screen.getAllByText("숫자만 입력해 주세요. 예: 01012345678")).toHaveLength(2);
     fireEvent.change(phoneNumber, { target: { value: "010-1234 5678" } });
 
     expect(onUpdateSingle).toHaveBeenCalledWith(

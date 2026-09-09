@@ -47,6 +47,12 @@
   outline: 3px solid var(--color-focus);
 }
 
+.fieldHint {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .repeatedSection {
   display: grid;
   gap: 16px;
