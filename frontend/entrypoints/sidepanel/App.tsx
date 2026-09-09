@@ -21,6 +21,7 @@ interface AppProps {
   closePanel?: () => void;
   openOptions?: () => Promise<void> | void;
   openAutofill?: () => Promise<void>;
+  inPage?: boolean;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -99,6 +100,7 @@ export function App({
   closePanel = () => window.close(),
   openOptions = openOptionsPage,
   openAutofill = openAutofillOverlay,
+  inPage = false,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -176,7 +178,7 @@ export function App({
   };
 
   return (
-    <div className={styles.panel}>
+    <div className={`${styles.panel} ${inPage ? styles.inPagePanel : ""}`}>
       <header className={styles.header}>
         <div>
           <p>S-01, 브라우저 사이드 패널</p>
@@ -195,7 +197,11 @@ export function App({
           </button>
         </div>
       </header>
-      <main className={styles.main} aria-label="지원 정보 목록">
+      <main
+        className={styles.main}
+        aria-label="지원 정보 목록"
+        data-panel-mode={inPage ? "in-page" : "side-panel"}
+      >
         {navigationFailed && (
           <p className={styles.navigationError} role="alert">
             프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.

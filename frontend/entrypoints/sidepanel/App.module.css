@@ -9,6 +9,11 @@
   background: var(--color-page);
 }
 
+.inPagePanel {
+  min-width: 0;
+  height: 100%;
+}
+
 .header {
   display: flex;
   align-items: end;
@@ -64,6 +69,10 @@
   min-height: 0;
   overflow-y: auto;
   padding: 8px 20px 24px;
+}
+
+.main[data-panel-mode="in-page"] {
+  scrollbar-width: thin;
 }
 
 .navigationError {

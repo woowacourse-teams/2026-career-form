@@ -28,6 +28,22 @@ function createRepository(): ProfileRepository {
 }
 
 describe("side panel App", () => {
+  it("renders in-page mode without viewport-height panel sizing", async () => {
+    render(
+      <App
+        inPage
+        repository={createRepository()}
+        openOptions={vi.fn()}
+        openAutofill={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByLabelText("지원 정보 목록")).toHaveAttribute(
+      "data-panel-mode",
+      "in-page",
+    );
+  });
+
   afterEach(() => vi.unstubAllEnvs());
 
   it("closes the side panel from the header action", async () => {
