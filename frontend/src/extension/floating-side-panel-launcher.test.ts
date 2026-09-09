@@ -20,7 +20,7 @@ describe("floating side panel launcher", () => {
     const button = host?.shadowRoot?.querySelector<HTMLButtonElement>("button");
     expect(button).toHaveAccessibleName("프로필 사이드바 열기");
     expect(button?.style.top).toBe("120px");
-    expect(button?.style.right).toBe("36px");
+    expect(button?.style.right).toBe("72px");
     expect(button?.style.bottom).toBe("");
     expect(button?.querySelector("img")).toHaveAttribute(
       "src",
