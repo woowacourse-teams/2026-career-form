@@ -23,7 +23,7 @@ export function mountFloatingSidePanelLauncher(
   button.setAttribute("aria-label", "프로필 사이드바 열기");
   button.style.cssText = [
     "position: fixed",
-    "right: 20px",
+    "right: 36px",
     "top: 120px",
     "z-index: 2147483647",
     "width: 44px",
