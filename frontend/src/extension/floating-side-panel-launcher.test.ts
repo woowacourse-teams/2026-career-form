@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { mountFloatingSidePanelLauncher } from "./floating-side-panel-launcher";
+import {
+  mountFloatingSidePanelLauncher,
+  setFloatingSidePanelLauncherVisibility,
+} from "./floating-side-panel-launcher";
 
 describe("floating side panel launcher", () => {
   it("opens the side panel when its page launcher is clicked", () => {
@@ -36,6 +39,20 @@ describe("floating side panel launcher", () => {
     cleanup();
 
     expect(document.querySelector("[data-career-form-side-panel-launcher]")).toBeNull();
+  });
+
+  it("hides the launcher while an in-page panel is open", () => {
+    const cleanup = mountFloatingSidePanelLauncher(document, vi.fn());
+    const host = document.querySelector<HTMLElement>(
+      "[data-career-form-side-panel-launcher]",
+    );
+
+    setFloatingSidePanelLauncherVisibility(document, false);
+    expect(host).toHaveStyle({ display: "none" });
+
+    setFloatingSidePanelLauncherVisibility(document, true);
+    expect(host).not.toHaveStyle({ display: "none" });
+    cleanup();
   });
 
   it("moves the launcher when the user drags it", () => {

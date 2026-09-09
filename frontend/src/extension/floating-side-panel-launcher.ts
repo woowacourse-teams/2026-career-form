@@ -1,5 +1,15 @@
 const LAUNCHER_ATTRIBUTE = "data-career-form-side-panel-launcher";
 
+export function setFloatingSidePanelLauncherVisibility(
+  document: Document,
+  visible: boolean,
+): void {
+  const launcher = document.querySelector<HTMLElement>(
+    `[${LAUNCHER_ATTRIBUTE}]`,
+  );
+  if (launcher) launcher.style.display = visible ? "" : "none";
+}
+
 export function mountFloatingSidePanelLauncher(
   document: Document,
   onOpenSidePanel: () => void,
