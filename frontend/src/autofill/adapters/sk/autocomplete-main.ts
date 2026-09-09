@@ -4,6 +4,10 @@ import {
   SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
   type SkAutocompleteFieldName,
 } from "./autocomplete-bridge";
+import {
+  isStandardValueId,
+  standardValueAliases,
+} from "../../../profile/standard-values";
 
 export interface SkAutocompleteItem {
   id?: unknown;
@@ -46,6 +50,22 @@ function normalize(value: unknown): string {
   return typeof value === "string"
     ? value.normalize("NFKC").replace(/\s+/g, " ").trim()
     : "";
+}
+
+function matchesSkExamStandardValue(
+  profileValue: string,
+  item: SkAutocompleteItem | undefined,
+): boolean {
+  if (!item || !isStandardValueId(profileValue)) return false;
+  const aliases = new Set(standardValueAliases(profileValue).map(normalize));
+  const values = [item.label, item.value].flatMap((value) => {
+    const normalized = normalize(value);
+    const withoutLanguage = normalize(
+      typeof value === "string" ? value.replace(/\([^)]*\)/g, " ") : value,
+    );
+    return [normalized, withoutLanguage];
+  });
+  return values.some((value) => aliases.has(value));
 }
 
 function visible(element: HTMLElement): boolean {
@@ -148,10 +168,13 @@ function exactMenuItem(
       fieldName === "lngExamName"
         ? Boolean(id && id !== "0")
         : id === undefined || (id.length > 0 && id !== "0");
+    const exact = label === query && value === query;
+    const canonicalExam =
+      fieldName === "lngExamName" &&
+      matchesSkExamStandardValue(query, item);
     return item &&
       visible(element) &&
-      label === query &&
-      value === query &&
+      (exact || canonicalExam) &&
       validId
       ? [{ element, item }]
       : [];
@@ -274,16 +297,16 @@ async function confirmSelection(
   document: Document,
   jquery: SkJQuery,
   request: RequestMessage,
-): Promise<boolean> {
+): Promise<{ selectedValue: string } | undefined> {
   const input = markedInput(document, request);
-  if (!input || !visible(input)) return false;
+  if (!input || !visible(input)) return undefined;
   const query = input.value;
   const instance = autocompleteInstance(jquery, input);
-  if (!instance) return false;
+  if (!instance) return undefined;
   try {
     jquery(input).autocomplete("search", query);
   } catch {
-    return false;
+    return undefined;
   }
   const match = await waitForExactMenuItem(
     document,
@@ -299,7 +322,7 @@ async function confirmSelection(
       request.requestId ||
     input.value !== query
   ) {
-    return false;
+    return undefined;
   }
   const action =
     match.element.querySelector<HTMLElement>(".ui-menu-item-wrapper") ??
@@ -310,21 +333,21 @@ async function confirmSelection(
   const scoreReady =
     request.fieldName !== "lngExamName" || (await waitForExamScore(input));
   const selected = autocompleteInstance(jquery, input)?.selectedItem;
-  return Boolean(
-    scoreReady &&
+  return scoreReady &&
     input.isConnected &&
     input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) ===
       request.requestId &&
-    input.value === query &&
     jquery(input).data("confirmed") === true &&
-    sameItem(selected, match.item, request.fieldName === "lngExamName"),
-  );
+    sameItem(selected, match.item, request.fieldName === "lngExamName")
+    ? { selectedValue: input.value }
+    : undefined;
 }
 
 function respond(
   document: Document,
   request: RequestMessage,
   status: "ready" | "confirmed" | "rejected",
+  selectedValue?: string,
 ): void {
   const EventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
   document.dispatchEvent(
@@ -334,6 +357,7 @@ function respond(
         command: request.command,
         fieldName: request.fieldName,
         status,
+        ...(selectedValue !== undefined ? { selectedValue } : {}),
       }),
     }),
   );
@@ -385,7 +409,12 @@ export function installSkAutocompleteMainBridge(
         input.value = previousValue;
         input.blur();
       }
-      respond(document, request, confirmed ? "confirmed" : "rejected");
+      respond(
+        document,
+        request,
+        confirmed ? "confirmed" : "rejected",
+        confirmed?.selectedValue,
+      );
     });
   };
   document.addEventListener(SK_AUTOCOMPLETE_REQUEST_EVENT, listener);
