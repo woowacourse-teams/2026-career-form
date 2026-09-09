@@ -39,8 +39,8 @@ if (
 }
 
 const permissions = new Set(manifest.permissions);
-if (!permissions.has("storage") || !permissions.has("sidePanel")) {
-  throw new Error("프로필 저장과 side panel 권한이 필요합니다.");
+if (!permissions.has("storage") || !permissions.has("sidePanel") || !permissions.has("scripting")) {
+  throw new Error("프로필 저장, side panel, 지원서 패널 주입 권한이 필요합니다.");
 }
 
 const hostPermissions = manifest.host_permissions ?? [];
