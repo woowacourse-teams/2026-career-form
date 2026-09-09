@@ -2,8 +2,9 @@
 
 > Issue: CF-83
 > Collected: 2026-09-09
-> Approval-Digest: dce8d6f067af9892c4c2a3da6d1957ef6498091e2b1ea16d72b5a3530c01b5e4
-> Source-Base-Revision: 6d044f5d84f55b5b065f1b85ff3a7a3d73f43808
+> Approval-Digest: d5c753ace169a09c46452b34a1bcab9c0ae730090eba0b57ccaf9de826476020
+> Source-Base-Revision: 56add115e2979638a24658f104039ec0a122e844
+> Approval scope: Existing candidates 1-8 plus approved Hyundai candidates 9-14; latest verification status is recorded in PR #84.
 
 ## adapter-sk
 
