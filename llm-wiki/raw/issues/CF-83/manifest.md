@@ -2,8 +2,8 @@
 
 > Issue: CF-83
 > Collected: 2026-09-09
-> Approval-Digest: 8ee710bc2303688173a36b717de467a7f31b20054ecacfb9ade8d74c931bd4dd
-> Source-Base-Revision: ad68be24f4d4f1a9c62898a827a5c7a991cd0c27
+> Approval-Digest: dce8d6f067af9892c4c2a3da6d1957ef6498091e2b1ea16d72b5a3530c01b5e4
+> Source-Base-Revision: 6d044f5d84f55b5b065f1b85ff3a7a3d73f43808
 
 ## adapter-sk
 
