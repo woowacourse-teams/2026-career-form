@@ -7,6 +7,10 @@ import type {
   RepeatedProfileCategoryId,
 } from "../../profile/model";
 import type { ValueBinding } from "../api/types";
+import {
+  isStandardValueId,
+  standardValueLabel,
+} from "../../profile/standard-values";
 
 export type ValueBindingResolution =
   | {
@@ -14,6 +18,7 @@ export type ValueBindingResolution =
       value: string;
       sensitive: boolean;
       profileEntryId?: string;
+      standardValueId?: string;
     }
   | { status: "missing"; sensitive: boolean }
   | { status: "ambiguous"; sensitive: boolean }
@@ -51,11 +56,16 @@ function directValue(
   const parts = partsOf(key);
   if (!parts) return { status: "unknown", sensitive: false };
   if (!parts.repeatable) {
-    const value = (profile[parts.categoryId] as FieldValues)[
+  const value = (profile[parts.categoryId] as FieldValues)[
       parts.fieldId
     ]?.trim();
     return value
-      ? { status: "resolved", value, sensitive: parts.sensitive }
+      ? {
+          status: "resolved",
+          value,
+          sensitive: parts.sensitive,
+          ...(isStandardValueId(value) ? { standardValueId: value } : {}),
+        }
       : { status: "missing", sensitive: parts.sensitive };
   }
   const entries = (
@@ -66,7 +76,13 @@ function directValue(
     const entry = educationEntries.find((candidate) => candidate.sectionId === "university") ?? educationEntries[0];
     const value = entry?.values[parts.fieldId]?.trim();
     return value
-      ? { status: "resolved", value, sensitive: parts.sensitive, profileEntryId: entry.id }
+      ? {
+          status: "resolved",
+          value,
+          sensitive: parts.sensitive,
+          profileEntryId: entry.id,
+          ...(isStandardValueId(value) ? { standardValueId: value } : {}),
+        }
       : { status: "missing", sensitive: parts.sensitive };
   }
   if (!entries.length) return { status: "missing", sensitive: parts.sensitive };
@@ -81,6 +97,7 @@ function directValue(
         value,
         sensitive: parts.sensitive,
         ...(itemIndex !== undefined ? { profileEntryId: entry.id } : {}),
+        ...(isStandardValueId(value) ? { standardValueId: value } : {}),
       }
     : { status: "missing", sensitive: parts.sensitive };
 }
@@ -142,13 +159,18 @@ function lookupValue(
 ): ValueBindingResolution {
   const source = directValue(profile, binding.profileFieldKey, itemIndex);
   if (source.status !== "resolved") return source;
-  const value = binding.optionMap[source.value];
+  const value =
+    binding.optionMap[source.value] ??
+    binding.optionMap[standardValueLabel(source.value) ?? ""];
   return value
     ? {
         status: "resolved",
         value,
         sensitive: source.sensitive,
         ...(source.profileEntryId ? { profileEntryId: source.profileEntryId } : {}),
+        ...(source.standardValueId
+          ? { standardValueId: source.standardValueId }
+          : {}),
       }
     : { status: "missing", sensitive: source.sensitive };
 }
