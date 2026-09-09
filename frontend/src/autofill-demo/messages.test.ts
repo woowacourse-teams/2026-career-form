@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isOpenAutofillOverlayMessage,
+  isOpenOptionsPageMessage,
   isOpenSidePanelMessage,
 } from "./messages";
 
@@ -17,6 +18,11 @@ describe("autofill overlay messages", () => {
     ).toBe(false);
     expect(isOpenAutofillOverlayMessage(null)).toBe(false);
   });
+});
+
+it("accepts only the message that asks the background to open profile management", () => {
+  expect(isOpenOptionsPageMessage({ type: "career-form:open-options-page" })).toBe(true);
+  expect(isOpenOptionsPageMessage({ type: "career-form:open-side-panel" })).toBe(false);
 });
 
 it("accepts only the message that opens the side panel", () => {

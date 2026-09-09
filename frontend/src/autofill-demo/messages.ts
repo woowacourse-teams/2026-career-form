@@ -6,6 +6,10 @@ export const OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE = {
   type: "career-form:open-in-page-profile-panel",
 } as const;
 
+export const OPEN_OPTIONS_PAGE_MESSAGE = {
+  type: "career-form:open-options-page",
+} as const;
+
 export const OPEN_SIDE_PANEL_MESSAGE = {
   type: "career-form:open-side-panel",
 } as const;
@@ -27,6 +31,17 @@ export function isOpenInPageProfilePanelMessage(
     message !== null &&
     "type" in message &&
     message.type === OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE.type
+  );
+}
+
+export function isOpenOptionsPageMessage(
+  message: unknown,
+): message is typeof OPEN_OPTIONS_PAGE_MESSAGE {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === OPEN_OPTIONS_PAGE_MESSAGE.type
   );
 }
 

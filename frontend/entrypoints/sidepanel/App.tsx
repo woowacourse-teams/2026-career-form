@@ -181,7 +181,7 @@ export function App({
     <div className={`${styles.panel} ${inPage ? styles.inPagePanel : ""}`}>
       <header className={styles.header}>
         <div>
-          <p>S-01, 브라우저 사이드 패널</p>
+          <p>{inPage ? "S-01, 지원서 패널" : "S-01, 브라우저 사이드 패널"}</p>
           <h1>내 지원 정보</h1>
         </div>
         <div className={styles.headerActions}>

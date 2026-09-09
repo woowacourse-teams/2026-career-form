@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   openAutofillOverlay,
   openInPageProfilePanel,
+  openOptionsPageFromContent,
   openOptionsPage,
   openSidePanel,
 } from "./navigation";
@@ -14,6 +15,16 @@ describe("extension navigation", () => {
     await openOptionsPage(runtime);
 
     expect(runtime.openOptionsPage).toHaveBeenCalledOnce();
+  });
+
+  it("asks the background to open options from a content script", async () => {
+    const runtime = { sendMessage: vi.fn(async () => undefined) };
+
+    await openOptionsPageFromContent(runtime);
+
+    expect(runtime.sendMessage).toHaveBeenCalledWith({
+      type: "career-form:open-options-page",
+    });
   });
 
   it("opens the side panel in the current Chrome window", async () => {

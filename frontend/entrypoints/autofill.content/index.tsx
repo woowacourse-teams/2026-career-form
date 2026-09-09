@@ -15,6 +15,7 @@ import {
 } from "../../src/extension/floating-side-panel-launcher";
 import { shouldShowSidePanelLauncher } from "../../src/extension/side-panel-launcher-visibility";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
+import { openOptionsPageFromContent } from "../../src/extension/navigation";
 import { App as ProfilePanel } from "../sidepanel/App";
 import "./style.css";
 
@@ -75,6 +76,7 @@ export default defineContentScript({
                 inPage
                 closePanel={closeProfilePanel}
                 openAutofill={openOverlay}
+                openOptions={openOptionsPageFromContent}
               />
             </div>,
           );

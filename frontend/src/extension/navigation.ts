@@ -3,10 +3,15 @@ import { browser } from "wxt/browser";
 import {
   OPEN_AUTOFILL_OVERLAY_MESSAGE,
   OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
+  OPEN_OPTIONS_PAGE_MESSAGE,
 } from "../autofill-demo/messages";
 
 interface RuntimeApi {
   openOptionsPage(): Promise<void>;
+}
+
+interface ContentRuntimeApi {
+  sendMessage(message: unknown): Promise<unknown>;
 }
 
 interface SidePanelDependencies {
@@ -26,6 +31,12 @@ export async function openOptionsPage(
   runtime: RuntimeApi = browser.runtime,
 ): Promise<void> {
   await runtime.openOptionsPage();
+}
+
+export async function openOptionsPageFromContent(
+  runtime: ContentRuntimeApi = browser.runtime,
+): Promise<void> {
+  await runtime.sendMessage(OPEN_OPTIONS_PAGE_MESSAGE);
 }
 
 export async function openSidePanel(
