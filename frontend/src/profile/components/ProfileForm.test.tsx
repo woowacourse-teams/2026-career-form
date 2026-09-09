@@ -30,7 +30,7 @@ describe("ProfileForm conditional fields", () => {
     expect(screen.queryByLabelText("부전공명")).not.toBeInTheDocument();
   });
 
-  it("suggests standard language tests while forwarding custom text unchanged", () => {
+  it("selects a standard language test from the dropdown", () => {
     const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
     const profile = createEmptyProfile();
     const onUpdateEntry = vi.fn();
@@ -53,17 +53,16 @@ describe("ProfileForm conditional fields", () => {
     );
 
     const testName = screen.getByLabelText("시험명");
-    expect(testName).toHaveAttribute("list", "languages-language-test-1-testName-suggestions");
-    expect(document.getElementById(testName.getAttribute("list")!)?.querySelector('option[value="OPIc"]'))
-      .toBeInTheDocument();
+    expect(testName.tagName).toBe("SELECT");
+    expect(screen.getByRole("option", { name: "OPIc" })).toBeInTheDocument();
 
-    fireEvent.change(testName, { target: { value: "사내 영어 인증" } });
+    fireEvent.change(testName, { target: { value: "OPIc" } });
 
     expect(onUpdateEntry).toHaveBeenCalledWith(
       "languages",
       "language-test-1",
       "testName",
-      "사내 영어 인증",
+      "OPIc",
     );
   });
 });

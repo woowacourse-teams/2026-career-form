@@ -41,7 +41,6 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
     <div className={styles.fieldGrid}>
       {section.fields.filter((field) => !field.visibleWhen || field.visibleWhen(values)).map((field) => {
         const id = `${idPrefix}-${field.id}`;
-        const suggestionListId = `${id}-suggestions`;
         return (
           <label className={styles.field} htmlFor={id} key={field.id}>
             <span>{field.label}</span>
@@ -66,22 +65,12 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                 ))}
               </select>
             ) : (
-              <>
-                <input
-                  id={id}
-                  type={field.inputType}
-                  list={field.suggestions ? suggestionListId : undefined}
-                  value={values[field.id] ?? ""}
-                  onChange={(event) => onChange(field.id, event.target.value)}
-                />
-                {field.suggestions && (
-                  <datalist id={suggestionListId}>
-                    {field.suggestions.map((suggestion) => (
-                      <option key={suggestion} value={suggestion} />
-                    ))}
-                  </datalist>
-                )}
-              </>
+              <input
+                id={id}
+                type={field.inputType}
+                value={values[field.id] ?? ""}
+                onChange={(event) => onChange(field.id, event.target.value)}
+              />
             )}
           </label>
         );

@@ -50,17 +50,17 @@ describe("university profile fields", () => {
       inputType: "select",
       options: ["주간", "야간"],
     });
-    expect(highSchool?.fields.find((field) => field.id === "schoolRegion")?.suggestions)
-      .toEqual(expect.arrayContaining(["서울", "해외"]));
-    expect(university?.fields.find((field) => field.id === "schoolRegion")?.suggestions)
-      .toEqual(expect.arrayContaining(["서울", "해외"]));
-    expect(graduate?.fields.find((field) => field.id === "schoolRegion")?.suggestions)
-      .toEqual(expect.arrayContaining(["서울", "해외"]));
+    [highSchool, university, graduate].forEach((section) => {
+      expect(section?.fields.find((field) => field.id === "schoolRegion")).toMatchObject({
+        inputType: "select",
+        options: expect.arrayContaining(["서울", "해외"]),
+      });
+    });
   });
 });
 
 describe("language profile fields", () => {
-  it("recommends standard language and test names while retaining text inputs", () => {
+  it("offers standard language and test names as dropdown options", () => {
     const languageTest = PROFILE_CATEGORIES.find((category) => category.id === "languages")?.sections.find(
       (section) => section.id === "languageTest",
     );
@@ -69,15 +69,17 @@ describe("language profile fields", () => {
     );
 
     expect(languageTest?.fields.find((field) => field.id === "language")).toMatchObject({
-      inputType: "text",
-      suggestions: expect.arrayContaining(["영어", "일본어"]),
+      inputType: "select",
+      options: expect.arrayContaining(["영어", "일본어"]),
     });
     expect(languageTest?.fields.find((field) => field.id === "testName")).toMatchObject({
-      inputType: "text",
-      suggestions: expect.arrayContaining(["OPIc"]),
+      inputType: "select",
+      options: expect.arrayContaining(["OPIc"]),
     });
-    expect(languageSkill?.fields.find((field) => field.id === "language")?.suggestions)
-      .toEqual(expect.arrayContaining(["중국어"]));
+    expect(languageSkill?.fields.find((field) => field.id === "language")).toMatchObject({
+      inputType: "select",
+      options: expect.arrayContaining(["중국어"]),
+    });
   });
 });
 

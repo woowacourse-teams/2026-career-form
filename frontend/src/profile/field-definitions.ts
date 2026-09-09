@@ -14,7 +14,6 @@ export interface ProfileFieldDefinition {
   label: string;
   inputType: ProfileInputType;
   options?: readonly string[];
-  suggestions?: readonly string[];
   visibleWhen?: (values: Record<string, string>) => boolean;
 }
 
@@ -37,16 +36,6 @@ const text = (id: string, label: string): ProfileFieldDefinition => ({
   id,
   label,
   inputType: "text",
-});
-const suggestedText = (
-  id: string,
-  label: string,
-  suggestions: readonly string[],
-): ProfileFieldDefinition => ({
-  id,
-  label,
-  inputType: "text",
-  suggestions,
 });
 const date = (id: string, label: string): ProfileFieldDefinition => ({
   id,
@@ -131,7 +120,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           },
           text("schoolName", "학교명"),
           select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
-          suggestedText("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
         ],
@@ -152,7 +141,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
           select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
-          suggestedText("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
           text("gpaScore", "평점"),
           select("gpaScale", "기준평점", ["4.00", "4.30", "4.50", "100.00"]),
           text("totalCredits", "총 이수학점"),
@@ -178,7 +167,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("country", "국가"),
           text("schoolName", "학교명"),
           select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
-          suggestedText("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
           text("admissionType", "입학구분"),
@@ -219,8 +208,8 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         id: "languageTest",
         label: "공인외국어시험",
         fields: [
-          suggestedText("language", "외국어", LANGUAGE_OPTIONS),
-          suggestedText("testName", "시험명", LANGUAGE_TEST_OPTIONS),
+          select("language", "외국어", LANGUAGE_OPTIONS),
+          select("testName", "시험명", LANGUAGE_TEST_OPTIONS),
           text("registrationNo", "등록번호"),
           date("acquisitionDate", "취득일"),
           text("grade", "등급·점수"),
@@ -231,7 +220,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         id: "languageSkill",
         label: "외국어활용능력",
         fields: [
-          suggestedText("language", "외국어", LANGUAGE_OPTIONS),
+          select("language", "외국어", LANGUAGE_OPTIONS),
           text("conversationalLevel", "회화수준"),
         ],
       },
