@@ -15,8 +15,8 @@
 .fieldLabel {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 0;
 }
 
 .fullWidth {
