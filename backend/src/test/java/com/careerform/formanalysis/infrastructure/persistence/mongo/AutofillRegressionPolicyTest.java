@@ -27,6 +27,71 @@ import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility;
 class AutofillRegressionPolicyTest {
 
     @Test
+    void mapsExactHyundaiMilitaryAndVeteranButtonsToVerifiedDisplayAndCodes() {
+        var request = new FieldsAnalysisRequest(2, "hyundai-military-buttons",
+            new FieldsAnalysisRequest.Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new FieldsAnalysisRequest.Section("section-root", null, null, List.of(
+                field("military-status", "milCd", null, FormControl.BUTTON),
+                field("exemption-reason", "milExcptCd", null, FormControl.BUTTON),
+                field("rank", "milRank", null, FormControl.BUTTON),
+                field("branch", "milDitinc", null, FormControl.BUTTON),
+                field("veteran-status", "branchYn", null, FormControl.BUTTON),
+                field("veteran-relation", "branchRel", null, FormControl.BUTTON)
+            ), null)));
+
+        assertThat(new StoredPolicyFieldMappingResolver(policy("hyundai")).resolve(request).results())
+            .containsExactly(
+                buttonMatch("military-status", "military.military.militaryStatus",
+                    Map.of("군필", "필", "만기전역", "필", "미필", "미필", "면제", "면제", "비대상", "비대상(여성/해외국적)"),
+                    Map.of("필", "1", "미필", "2", "면제", "5", "비대상(여성/해외국적)", "7")),
+                buttonMatch("exemption-reason", "military.military.exemptionReason",
+                    Map.of("신체문제", "신체문제", "생계곤란", "생계곤란", "기타사유", "기타사유", "전시근로역", "전시근로역"),
+                    Map.of("신체문제", "01", "생계곤란", "02", "기타사유", "03", "전시근로역", "04")),
+                buttonMatch("rank", "military.military.militaryRank",
+                    Map.of("병장", "병장", "상병", "상병", "일병", "일병", "이병", "이병"),
+                    Map.of("병장", "41", "상병", "42", "일병", "43", "이병", "44")),
+                buttonMatch("branch", "military.military.militaryBranch",
+                    Map.of("육군", "육군", "해군", "해군", "공군", "공군", "해병대", "해병대"),
+                    Map.of("육군", "1", "해군", "2", "공군", "3", "해병대", "4")),
+                buttonMatch("veteran-status", "veteran.veteran.veteranStatus",
+                    Map.of("대상", "예", "비대상", "아니오"), Map.of("예", "Y", "아니오", "N")),
+                buttonMatch("veteran-relation", "veteran.veteran.veteranRelation",
+                    Map.of("본인", "대상(본인)", "가족", "대상(가족)", "유족", "대상(유족)"),
+                    Map.of("대상(본인)", "1", "대상(가족)", "2", "대상(유족)", "3"))
+            );
+    }
+
+    @Test
+    void mapsHyundaiMilitaryDatesAndVeteranNumberOnlyWithTheirExactDomIds() {
+        var request = new FieldsAnalysisRequest(2, "hyundai-military-details",
+            new FieldsAnalysisRequest.Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new FieldsAnalysisRequest.Section("section-root", null, null, List.of(
+                field("start", "milStartDt", "milStartDt", FormControl.TEXT),
+                field("end", "milEndDt", "milEndDt", FormControl.TEXT),
+                field("number", "branchNo", "branchNo", FormControl.TEXT),
+                field("wrong-start-id", "otherStart", "milStartDt", FormControl.TEXT),
+                field("wrong-number-id", "otherNumber", "branchNo", FormControl.TEXT)
+            ), null)));
+
+        assertThat(new StoredPolicyFieldMappingResolver(policy("hyundai")).resolve(request).results())
+            .containsExactly(
+                new FieldMappingResolver.Match("start", new FieldMappingResolver.DerivedBinding(
+                    FieldMappingResolver.DerivedRecipe.YEAR_MONTH,
+                    "military.military.serviceStartDate", null, null
+                )),
+                new FieldMappingResolver.Match("end", new FieldMappingResolver.DerivedBinding(
+                    FieldMappingResolver.DerivedRecipe.YEAR_MONTH,
+                    "military.military.serviceEndDate", null, null
+                )),
+                new FieldMappingResolver.Match(
+                    "number", "veteran.veteran.veteranNumber"
+                ),
+                new FieldMappingResolver.NoMatch("wrong-start-id"),
+                new FieldMappingResolver.NoMatch("wrong-number-id")
+            );
+    }
+
+    @Test
     void preparesOnlyTheExactMilitaryTargetRadioThenTheStatusSelect() {
         var request = new PreparationAnalysisRequest(2, "military-chain",
             new PreparationAnalysisRequest.Site("www.skcareers.com", "/Application/Index/{postingId}"),
@@ -79,6 +144,16 @@ class AutofillRegressionPolicyTest {
         return new PreparationAnalysisRequest.ActionCandidate(id,
             PreparationAnalysisRequest.FormElement.INPUT, PreparationAnalysisRequest.FormControl.RADIO,
             PreparationAnalysisRequest.Visibility.VISIBLE, label, null, name, null, null, null, null);
+    }
+
+    private FieldMappingResolver.Match buttonMatch(
+        String candidateId,
+        String profileFieldKey,
+        Map<String, String> optionMap,
+        Map<String, String> optionCodeMap
+    ) {
+        return new FieldMappingResolver.Match(candidateId,
+            new FieldMappingResolver.ButtonOptionBinding(profileFieldKey, optionMap, optionCodeMap));
     }
 
     @Test

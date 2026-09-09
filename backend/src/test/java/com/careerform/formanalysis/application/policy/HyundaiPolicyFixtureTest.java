@@ -15,7 +15,11 @@ class HyundaiPolicyFixtureTest {
         String fields = read("formanalysis/hyundai-fields-current-v1.json");
         String preparation = read("formanalysis/hyundai-preparation-current-v1.json");
 
-        assertThat(fields).contains("talent.hyundai.com", "engNm", "schNm_1");
+        assertThat(fields).contains(
+            "talent.hyundai.com", "engNm", "schNm_1",
+            "milCd", "milExcptCd", "milRank", "milDitinc",
+            "milStartDt", "milEndDt", "branchYn", "branchRel", "branchNo"
+        );
         assertThat(preparation).contains("talent.hyundai.com", "applyWrite.hc");
         assertThat(fields + preparation)
             .contains("milCd")

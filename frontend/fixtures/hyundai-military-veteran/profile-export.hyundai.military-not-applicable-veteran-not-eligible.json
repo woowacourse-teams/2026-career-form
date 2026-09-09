@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "personal": {
+      "koreanFamilyName": "예시",
+      "koreanGivenName": "사용자",
+      "hanjaFamilyName": "例示",
+      "hanjaGivenName": "使用者",
+      "englishFamilyName": "Example",
+      "englishGivenName": "User",
+      "gender": "미지정",
+      "birthDate": "2000-01-01",
+      "nationality": "대한민국"
+    },
+    "contact": {
+      "email": "example@example.test",
+      "secondaryEmail": "backup@example.test",
+      "phoneNumber": "010-0000-0000",
+      "emergencyPhoneNumber": "010-1111-1111",
+      "residenceCountry": "대한민국",
+      "postalCode": "63309",
+      "addressLine1": "제주특별자치도 제주시 첨단로 242 (영평동)",
+      "addressLine2": "공개 주소 검증"
+    },
+    "education": [
+      {
+        "id": "education-example-1",
+        "sectionId": "highSchool",
+        "values": {
+          "academicProcess": "고등학교",
+          "schoolName": "서울고",
+          "completionStatus": "졸업",
+          "schoolRegion": "서울",
+          "startDate": "2016-03-01",
+          "endDate": "2019-02-28"
+        }
+      },
+      {
+        "id": "education-example-2",
+        "sectionId": "university",
+        "values": {
+          "schoolType": "대학교",
+          "degreeLevel": "학사",
+          "schoolName": "서울대학교",
+          "startDate": "2019-03-01",
+          "endDate": "2023-02-28",
+          "completionStatus": "졸업",
+          "schoolRegion": "서울",
+          "gpaScore": "4.20",
+          "gpaScale": "4.50",
+          "totalCredits": "130",
+          "majorName": "컴퓨터공학",
+          "transferStatus": "비해당",
+          "doubleMajorStatus": "있음",
+          "minorStatus": "있음",
+          "additionalMajorName": "디자인학",
+          "minorName": "경영학",
+          "latestEducationType": "대학(학사)"
+        }
+      }
+    ],
+    "languages": [
+      {
+        "id": "language-example-1",
+        "sectionId": "languageTest",
+        "values": {
+          "language": "영어",
+          "testName": "TOEIC",
+          "registrationNo": "DEMO-EN-001",
+          "acquisitionDate": "2024-01-15",
+          "grade": "900",
+          "evidenceDocumentPath": "demo-language-certificate.pdf"
+        }
+      },
+      {
+        "id": "language-example-2",
+        "sectionId": "languageSkill",
+        "values": {
+          "language": "일본어",
+          "conversationalLevel": "일상 대화"
+        }
+      }
+    ],
+    "certifications": [
+      {
+        "id": "certificate-example-1",
+        "sectionId": "certificate",
+        "values": {
+          "name": "SQLD(SQL개발자)",
+          "grade": "개발자",
+          "registrationNo": "DEMO-CERT-001",
+          "issuer": "한국데이터산업진흥원",
+          "acquisitionDate": "2023-03-01",
+          "evidenceDocumentPath": "demo-certificate-a.pdf"
+        }
+      },
+      {
+        "id": "certificate-example-2",
+        "sectionId": "certificate",
+        "values": {
+          "name": "정보처리기사",
+          "grade": "기사",
+          "registrationNo": "DEMO-CERT-002",
+          "issuer": "한국산업인력공단",
+          "acquisitionDate": "2023-06-01",
+          "evidenceDocumentPath": "demo-certificate-b.pdf"
+        }
+      },
+      {
+        "id": "certificate-example-3",
+        "sectionId": "certificate",
+        "values": {
+          "name": "정보처리산업기사",
+          "grade": "산업기사",
+          "registrationNo": "DEMO-CERT-003",
+          "issuer": "한국산업인력공단",
+          "acquisitionDate": "2023-09-01",
+          "evidenceDocumentPath": "demo-certificate-c.pdf"
+        }
+      }
+    ],
+    "careers": [
+      {
+        "id": "career-example-1",
+        "sectionId": "career",
+        "values": {
+          "companyName": "예시 주식회사",
+          "employmentType": "정규",
+          "startDate": "2023-03-01",
+          "endDate": "2025-02-28",
+          "employmentStatus": "퇴사",
+          "department": "제품개발팀",
+          "position": "소프트웨어 엔지니어",
+          "responsibilities": "웹 서비스 기능을 개발하고 품질을 개선했습니다.",
+          "terminationReason": "계약 종료"
+        }
+      }
+    ],
+    "projects": [
+      {
+        "id": "project-example-1",
+        "sectionId": "project",
+        "values": {
+          "startDate": "2024-01-01",
+          "endDate": "2024-06-30",
+          "projectName": "샘플 프로젝트",
+          "role": "프런트엔드 개발",
+          "activityDetails": "사용자 프로필 입력 화면과 검증 흐름을 구현했습니다."
+        }
+      }
+    ],
+    "publications": [
+      {
+        "id": "publication-example-1",
+        "sectionId": "publicationPatent",
+        "values": {
+          "type": "논문",
+          "title": "샘플 연구 제목",
+          "details": "비식별 예시 데이터로 작성한 연구 요약입니다."
+        }
+      }
+    ],
+    "compensation": {},
+    "military": {
+      "militaryStatus": "비대상"
+    },
+    "veteran": {
+      "veteranStatus": "비대상"
+    },
+    "disability": {},
+    "health": []
+  }
+}

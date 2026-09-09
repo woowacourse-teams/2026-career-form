@@ -30,7 +30,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     private static final String COMPANY_KEY = "sk";
     private static final long VERSION = 23;
-    private static final long HYUNDAI_VERSION = 5;
+    private static final long HYUNDAI_VERSION = 6;
 
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
@@ -366,14 +366,72 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 textRule("lastSal", "compensation.compensation.previousSalary"),
                 textRule("title", "publications.publicationPatent.title"),
                 textareaRule("cont", "publications.publicationPatent.details"),
-                derivedTextRule(
-                    "milStartDt", DerivedRecipe.YEAR_MONTH,
+                buttonOptionRule(
+                    "milCd",
+                    "military.military.militaryStatus",
+                    Map.of(
+                        "군필", "필",
+                        "만기전역", "필",
+                        "미필", "미필",
+                        "면제", "면제",
+                        "비대상", "비대상(여성/해외국적)"
+                    ),
+                    Map.of(
+                        "필", "1",
+                        "미필", "2",
+                        "면제", "5",
+                        "비대상(여성/해외국적)", "7"
+                    )
+                ),
+                buttonOptionRule(
+                    "milExcptCd",
+                    "military.military.exemptionReason",
+                    Map.of(
+                        "신체문제", "신체문제",
+                        "생계곤란", "생계곤란",
+                        "기타사유", "기타사유",
+                        "전시근로역", "전시근로역"
+                    ),
+                    Map.of(
+                        "신체문제", "01",
+                        "생계곤란", "02",
+                        "기타사유", "03",
+                        "전시근로역", "04"
+                    )
+                ),
+                buttonOptionRule(
+                    "milRank",
+                    "military.military.militaryRank",
+                    Map.of("병장", "병장", "상병", "상병", "일병", "일병", "이병", "이병"),
+                    Map.of("병장", "41", "상병", "42", "일병", "43", "이병", "44")
+                ),
+                buttonOptionRule(
+                    "milDitinc",
+                    "military.military.militaryBranch",
+                    Map.of("육군", "육군", "해군", "해군", "공군", "공군", "해병대", "해병대"),
+                    Map.of("육군", "1", "해군", "2", "공군", "3", "해병대", "4")
+                ),
+                constrainedDerivedTextRule(
+                    "milStartDt", "milStartDt", DerivedRecipe.YEAR_MONTH,
                     "military.military.serviceStartDate"
                 ),
-                derivedTextRule(
-                    "milEndDt", DerivedRecipe.YEAR_MONTH,
+                constrainedDerivedTextRule(
+                    "milEndDt", "milEndDt", DerivedRecipe.YEAR_MONTH,
                     "military.military.serviceEndDate"
-                )
+                ),
+                buttonOptionRule(
+                    "branchYn",
+                    "veteran.veteran.veteranStatus",
+                    Map.of("대상", "예", "비대상", "아니오"),
+                    Map.of("예", "Y", "아니오", "N")
+                ),
+                buttonOptionRule(
+                    "branchRel",
+                    "veteran.veteran.veteranRelation",
+                    Map.of("본인", "대상(본인)", "가족", "대상(가족)", "유족", "대상(유족)"),
+                    Map.of("대상(본인)", "1", "대상(가족)", "2", "대상(유족)", "3")
+                ),
+                constrainedTextRule("branchNo", "branchNo", "veteran.veteran.veteranNumber")
             )
         );
     }

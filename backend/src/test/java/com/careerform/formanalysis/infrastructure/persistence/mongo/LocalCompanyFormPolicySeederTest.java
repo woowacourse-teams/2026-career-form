@@ -291,8 +291,8 @@ class LocalCompanyFormPolicySeederTest {
             .orElseThrow();
 
         assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v4");
-        assertThat(hyundaiPolicy.version()).isEqualTo(5);
-        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(5);
+        assertThat(hyundaiPolicy.version()).isEqualTo(6);
+        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(6);
         assertThat(hyundaiPolicy.fieldRules().stream()
             .filter(rule -> java.util.Set.of(
                 "acqDtForeLang", "acqDt", "nationLicNm"

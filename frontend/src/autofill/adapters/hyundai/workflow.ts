@@ -2,6 +2,10 @@ import { runHyundaiEducationSearch } from "./school-search";
 import { runHyundaiAddress, hyundaiAddressNames } from "./address";
 import { runHyundaiNationality } from "./nationality";
 import { prepareHyundaiEducation } from "./education";
+import {
+  conditionalDriverSettled,
+  exactConditionalDriver,
+} from "./military-veteran";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { WorkflowAdapter } from "../workflow";
@@ -141,7 +145,7 @@ function waitFor(
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["disabled", "hidden", "class", "style"],
+      attributeFilter: ["disabled", "required", "hidden", "class", "style"],
     });
   });
 }
@@ -272,6 +276,13 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
   isFreshRowDefault: () => false,
   isStateDriver: () => false,
   stateDriverStage: (item, handle) => {
+    if (
+      item.selected &&
+      !item.disabled &&
+      exactConditionalDriver(handle, item)
+    ) {
+      return 1;
+    }
     const fieldKey = profileFieldKey(item);
     if (
       isEducationSearch(handle) &&
@@ -313,6 +324,11 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
       ? Promise.resolve(true)
       : waitFor(document, () => hasOwnOptions(handle)),
   settleStateDriver: (document, handle) => {
+    if (exactConditionalDriver(handle)) {
+      return waitFor(document, () =>
+        conditionalDriverSettled(document, handle),
+      );
+    }
     if (structuralBase(handle) === "foreLang") {
       return settleLanguageDriver(document, handle);
     }
@@ -321,7 +337,13 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     }
     return Promise.resolve(true);
   },
-  stateDriverFailureGroup: additionalMajorFailureGroup,
+  stateDriverFailureGroup: (item, handle) => {
+    if (exactConditionalDriver(handle, item)) {
+      const field = handle.elements[0]?.closest<HTMLElement>(".field");
+      return field?.isConnected ? field : undefined;
+    }
+    return additionalMajorFailureGroup(item, handle);
+  },
   revealSelections: [],
   selectReveal: () => ({ code: "TARGET_MISSING", count: 0 }),
   revealedBindings: () => new Map(),
