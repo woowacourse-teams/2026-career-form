@@ -5,7 +5,6 @@ import {
   LANGUAGE_TEST_OPTIONS,
   SCHOOL_REGION_OPTIONS,
   languageGradeOptions,
-  languageTestOptions,
   standardValueAliases,
   standardValueLabel,
 } from "./standard-values";
@@ -39,17 +38,4 @@ it("provides stable OPIc level IDs with aliases for site options", () => {
     expect.arrayContaining(["Advanced Low", "AL"]),
   );
   expect(standardValueLabel("language:en")).toBe("영어");
-});
-
-it("filters language tests and grades through the selected language", () => {
-  expect(languageTestOptions("language:ja")).toEqual([
-    { value: "jlpt", label: "JLPT" },
-  ]);
-  expect(languageTestOptions("language:ja")).not.toContainEqual(
-    expect.objectContaining({ value: "opic" }),
-  );
-  expect(languageGradeOptions("jlpt")).toContainEqual({
-    value: "jlpt:n1",
-    label: "N1",
-  });
 });

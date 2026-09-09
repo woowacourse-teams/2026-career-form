@@ -2,9 +2,9 @@ import type { ProfileCategoryId } from "./model";
 import {
   ATTENDANCE_TYPE_OPTIONS,
   LANGUAGE_OPTIONS,
+  LANGUAGE_TEST_OPTIONS,
   SCHOOL_REGION_OPTIONS,
   languageGradeOptions,
-  languageTestOptions,
   type StandardValueOption,
 } from "./standard-values";
 
@@ -17,7 +17,6 @@ export interface ProfileFieldDefinition {
   inputType: ProfileInputType;
   options?: readonly (string | StandardValueOption)[];
   optionsFor?: (values: Record<string, string>) => readonly StandardValueOption[];
-  inputTypeFor?: (values: Record<string, string>) => ProfileInputType;
   visibleWhen?: (values: Record<string, string>) => boolean;
 }
 
@@ -214,23 +213,14 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         label: "공인외국어시험",
         fields: [
           select("language", "외국어", LANGUAGE_OPTIONS),
-          {
-            id: "testName",
-            label: "시험명",
-            inputType: "select",
-            optionsFor: (values) => languageTestOptions(values.language ?? ""),
-          },
+          select("testName", "시험명", LANGUAGE_TEST_OPTIONS),
           text("registrationNo", "등록번호"),
           date("acquisitionDate", "취득일"),
           {
             id: "grade",
             label: "등급·점수",
-            inputType: "text",
+            inputType: "select",
             optionsFor: (values) => languageGradeOptions(values.testName ?? ""),
-            inputTypeFor: (values) =>
-              languageGradeOptions(values.testName ?? "").length > 0
-                ? "select"
-                : "text",
           },
           text("evidenceDocumentPath", "증빙 서류 위치"),
         ],

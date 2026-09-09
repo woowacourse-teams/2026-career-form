@@ -25,12 +25,6 @@ export const LANGUAGE_TEST_OPTIONS: readonly StandardValueOption[] = [
   { value: "hsk", label: "HSK" },
 ];
 
-const LANGUAGE_TEST_IDS: Readonly<Record<string, readonly string[]>> = {
-  "language:en": ["toeic", "toefl", "teps", "opic", "ielts"],
-  "language:ja": ["jlpt"],
-  "language:zh": ["hsk"],
-};
-
 export const SCHOOL_REGION_OPTIONS: readonly StandardValueOption[] = [
   { value: "region:seoul", label: "서울" },
   { value: "region:busan", label: "부산" },
@@ -69,50 +63,18 @@ const OPIC_GRADE_OPTIONS: readonly StandardValueOption[] = [
   { value: "opic:ah", label: "Advanced High", aliases: ["AH"] },
 ];
 
-const JLPT_GRADE_OPTIONS: readonly StandardValueOption[] = [
-  { value: "jlpt:n1", label: "N1" },
-  { value: "jlpt:n2", label: "N2" },
-  { value: "jlpt:n3", label: "N3" },
-  { value: "jlpt:n4", label: "N4" },
-  { value: "jlpt:n5", label: "N5" },
-];
-
-const HSK_GRADE_OPTIONS: readonly StandardValueOption[] = [
-  { value: "hsk:1", label: "1급" },
-  { value: "hsk:2", label: "2급" },
-  { value: "hsk:3", label: "3급" },
-  { value: "hsk:4", label: "4급" },
-  { value: "hsk:5", label: "5급" },
-  { value: "hsk:6", label: "6급" },
-  { value: "hsk:7", label: "7급" },
-  { value: "hsk:8", label: "8급" },
-  { value: "hsk:9", label: "9급" },
-];
-
 const STANDARD_VALUES: readonly StandardValueOption[] = [
   ...LANGUAGE_OPTIONS,
   ...LANGUAGE_TEST_OPTIONS,
   ...SCHOOL_REGION_OPTIONS,
   ...ATTENDANCE_TYPE_OPTIONS,
   ...OPIC_GRADE_OPTIONS,
-  ...JLPT_GRADE_OPTIONS,
-  ...HSK_GRADE_OPTIONS,
 ];
-
-export function languageTestOptions(
-  languageId: string,
-): readonly StandardValueOption[] {
-  const testIds = LANGUAGE_TEST_IDS[languageId] ?? [];
-  return LANGUAGE_TEST_OPTIONS.filter((option) => testIds.includes(option.value));
-}
 
 export function languageGradeOptions(
   testId: string,
 ): readonly StandardValueOption[] {
-  if (testId === "opic") return OPIC_GRADE_OPTIONS;
-  if (testId === "jlpt") return JLPT_GRADE_OPTIONS;
-  if (testId === "hsk") return HSK_GRADE_OPTIONS;
-  return [];
+  return testId === "opic" ? OPIC_GRADE_OPTIONS : [];
 }
 
 export function standardValueLabel(value: string): string | undefined {
