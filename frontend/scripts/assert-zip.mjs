@@ -20,7 +20,6 @@ const entryNames = new Set(
 
 for (const requiredEntry of [
   "manifest.json",
-  "popup.html",
   "options.html",
   "sidepanel.html",
   "content-scripts/autofill.js",
@@ -37,6 +36,9 @@ if (![...entryNames].some((entryName) => entryName.endsWith(".woff2"))) {
 
 const zip = new AdmZip(resolve(outputDirectory, archive));
 const manifest = JSON.parse(zip.readAsText("manifest.json"));
+if (manifest.action?.default_popup) {
+  throw new Error("ZIP의 확장 프로그램 아이콘은 기본 팝업 없이 지원서 패널을 열어야 합니다.");
+}
 if (
   manifest.options_ui?.page !== "options.html" ||
   manifest.side_panel?.default_path !== "sidepanel.html"
@@ -70,6 +72,10 @@ if (manifest.background?.service_worker !== "background.js") {
   throw new Error(
     "ZIP에는 자동 기입 API 중계를 위한 background service worker가 필요합니다.",
   );
+}
+
+if (!zip.readAsText("background.js").includes("career-form:open-in-page-profile-panel")) {
+  throw new Error("ZIP의 아이콘 클릭은 지원서 패널 열기 메시지를 보내야 합니다.");
 }
 
 if (

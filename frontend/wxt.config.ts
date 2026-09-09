@@ -5,6 +5,15 @@ const fileEnv = loadEnv("production", ".", "");
 const configuredApiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ?? fileEnv.VITE_API_BASE_URL;
 
+const extensionEntrypoints = [
+  "autofill",
+  "background",
+  "kakao-postcode",
+  "options",
+  "sidepanel",
+  "sk-autocomplete-main",
+];
+
 function apiHostPermissions(apiBaseUrl: string | undefined): string[] {
   const value = apiBaseUrl?.trim();
   if (!value) return [];
@@ -26,6 +35,9 @@ function apiHostPermissions(apiBaseUrl: string | undefined): string[] {
 }
 
 export default defineConfig({
+  // The browser action opens the in-page application panel directly, so the
+  // legacy popup entrypoint must not become the action's default popup.
+  filterEntrypoints: extensionEntrypoints,
   manifest: {
     description: "채용 지원 정보를 안전하게 재사용하는 Chrome 확장 프로그램",
     name: "Career Form",
