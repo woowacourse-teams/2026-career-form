@@ -18,6 +18,7 @@ interface BridgeMessage {
   command?: BridgeCommand;
   fieldName?: SkAutocompleteFieldName;
   status?: BridgeStatus;
+  selectedValue?: string;
 }
 
 const RESPONSE_TIMEOUT_MILLISECONDS = 4_000;
@@ -125,7 +126,9 @@ function request(
           response.fieldName === input.name &&
           input.isConnected &&
           input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) === requestId &&
-          (command === "probe" || input.value === initialValue),
+          (command === "probe" ||
+            (typeof response.selectedValue === "string" &&
+              input.value === response.selectedValue)),
       );
     };
     document.addEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, onResponse);

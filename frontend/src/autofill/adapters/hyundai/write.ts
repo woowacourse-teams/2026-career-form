@@ -1,6 +1,7 @@
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { normalizeDisplayName } from "../../write/display-name";
+import { matchStandardOption } from "../../profile/standard-option-match";
 import type { CompanyWriteAdapter } from "../write";
 import {
   dependentDriverSettled,
@@ -219,6 +220,26 @@ function exactGpaHidden(
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+function matchingLiveButtonOption(
+  value: string,
+  choices: readonly HTMLButtonElement[],
+): HTMLButtonElement | undefined {
+  const options = choices.map((choice, index) => ({
+    optionId: String(index),
+    displayName: choice.textContent ?? "",
+  }));
+  const standardMatch = matchStandardOption(value, options);
+  if (standardMatch.status === "unique") {
+    return choices[Number(standardMatch.option.optionId)];
+  }
+  if (standardMatch.status !== "not-standard") return undefined;
+  const desired = normalizeDisplayName(value);
+  const exact = choices.filter(
+    (choice) => normalizeDisplayName(choice.textContent ?? "") === desired,
+  );
+  return exact.length === 1 ? exact[0] : undefined;
+}
+
 function selectButtonOption(
   handle: FieldCandidateHandle,
   item: ReviewPlanItem,
@@ -234,17 +255,14 @@ function selectButtonOption(
   }
   const code = binding.optionCodeMap[displayName];
   const trigger = handle.elements[0];
-  if (
-    !code ||
-    !(trigger instanceof HTMLInputElement) ||
-    trigger.type !== "button"
-  ) {
+  if (!(trigger instanceof HTMLInputElement) || trigger.type !== "button") {
     return false;
   }
   const exactSpec = handle.candidate.domId
     ? EXACT_BUTTONS.get(handle.candidate.domId)
     : undefined;
   if (exactSpec) {
+    if (!code) return false;
     const id = handle.candidate.domId!;
     const article = exactHyundaiEtcArticle(trigger);
     const exactTriggers = article?.querySelectorAll<HTMLInputElement>(
@@ -319,6 +337,7 @@ function selectButtonOption(
     binding.profileFieldKey === "education.university.gpaScale";
   let hiddenValue: HTMLInputElement | undefined;
   if (isGpaScale) {
+    if (!code) return false;
     hiddenValue = exactGpaHidden(handle, item, trigger, displayName, code);
     if (!hiddenValue) return false;
     const currentValue = normalizeDisplayName(item.currentValue);
@@ -342,22 +361,29 @@ function selectButtonOption(
     selectWrap.querySelectorAll<HTMLButtonElement>(
       ":scope > .select-option button[data-code]",
     ),
-  ).filter(
+  ).filter((choice) => choice.offsetParent !== null);
+  const exactChoices = choices.filter(
     (choice) =>
-      choice.offsetParent !== null &&
       choice.dataset.code === code &&
       normalizeDisplayName(choice.textContent ?? "") ===
         normalizeDisplayName(displayName),
   );
-  if (choices.length !== 1) return false;
-  choices[0].click();
+  const choice =
+    exactSpec || isGpaScale
+      ? exactChoices.length === 1
+        ? exactChoices[0]
+        : undefined
+      : matchingLiveButtonOption(displayName, choices);
+  if (!choice || !choice.dataset.code) return false;
+  choice.click();
   hiddenValue ??=
     selectWrap.querySelector<HTMLInputElement>(
       "input[type='hidden'].js-field",
     ) ?? undefined;
   return (
-    normalizeDisplayName(trigger.value) === normalizeDisplayName(displayName) &&
-    hiddenValue?.value === code
+    normalizeDisplayName(trigger.value) ===
+      normalizeDisplayName(choice.textContent ?? "") &&
+    hiddenValue?.value === choice.dataset.code
   );
 }
 

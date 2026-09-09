@@ -8,6 +8,7 @@
   height: 100vh !important;
   z-index: 2147483647 !important;
   isolation: isolate;
+  pointer-events: none;
   color: var(--color-text);
   font-family:
     "Pretendard Variable",
@@ -17,6 +18,19 @@
     "Segoe UI",
     sans-serif;
   font-synthesis: none;
+}
+
+.career-form-in-page-panel {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: min(380px, calc(100vw - 40px));
+  height: calc(100dvh - 100px);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  pointer-events: auto;
 }
 
 * {

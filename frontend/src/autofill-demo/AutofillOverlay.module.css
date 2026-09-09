@@ -8,14 +8,8 @@
   place-items: center;
   padding: 20px;
   color: var(--color-text);
-  background: rgb(13 71 161 / 82%);
-  font-family:
-    "Pretendard Variable",
-    Pretendard,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  background: var(--color-backdrop);
+  font-family: var(--font-ui);
 }
 
 .modal {
@@ -28,7 +22,7 @@
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-card);
   background: var(--color-surface);
-  box-shadow: 0 24px 70px rgb(13 71 161 / 22%);
+  box-shadow: var(--shadow-panel);
 }
 
 .header {
@@ -38,8 +32,8 @@
   gap: 12px;
   border-bottom: 1px solid var(--color-border);
   padding: 13px 16px;
-  color: var(--color-action-strong);
-  background: var(--color-accent-soft);
+  color: var(--color-text-strong);
+  background: var(--color-info-soft);
 }
 
 .header strong {

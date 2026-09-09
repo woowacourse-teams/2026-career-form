@@ -53,6 +53,70 @@ function registryWithTextField(currentValue = "") {
   return registry;
 }
 
+function registryWithLanguageGradeOptions(options: readonly string[]) {
+  const select = document.createElement("select");
+  const optionElements = new Map<string, HTMLOptionElement>();
+  const placeholder = new Option("등급 선택", "");
+  select.append(placeholder);
+  const candidates = options.map((displayName, index) => {
+    const optionId = `grade-${index + 1}`;
+    const option = new Option(displayName, optionId);
+    select.append(option);
+    optionElements.set(optionId, option);
+    return { optionId, displayName };
+  });
+  document.body.append(select);
+
+  const registry = new CandidateRegistry();
+  registry.registerField({
+    kind: "field",
+    candidateId: "language-grade",
+    candidate: {
+      candidateId: "language-grade",
+      element: "select",
+      control: "select",
+      visibility: "visible",
+      displayName: "어학 등급",
+      options: candidates,
+    },
+    elements: [select],
+    optionElements,
+    sectionId: "section-language",
+    itemId: "language-item-1",
+    itemIndex: 0,
+    itemGroupId: "language",
+    signature: createStructuralSignature([select]),
+  });
+  registry.setFieldItemCount("section-language", 1, "language");
+  return registry;
+}
+
+function profileWithOpicGrade(grade = "opic:al"): Profile {
+  return {
+    ...createEmptyProfile(),
+    languages: [
+      {
+        id: "language-1",
+        sectionId: "languageTest",
+        values: { grade },
+      },
+    ],
+  };
+}
+
+const allowedLanguageGrade = {
+  candidateId: "language-grade",
+  matchType: "MATCH" as const,
+  valueBinding: {
+    type: "DIRECT" as const,
+    profileFieldKey: "languages.languageTest.grade",
+  },
+  autofillPolicy: "ALLOWED" as const,
+  mappingStatus: "ADAPTER_VERIFIED" as const,
+  interactionStatus: "READY" as const,
+  writePlan: { command: "SELECT_OPTION" as const },
+};
+
 const allowedEmail = {
   candidateId: "field-1",
   matchType: "MATCH" as const,
@@ -206,6 +270,40 @@ describe("profile value resolution", () => {
 });
 
 describe("review plan", () => {
+  it("uses one live native option matched by a standard profile ID", () => {
+    const [item] = buildReviewPlan({
+      analysis: response([allowedLanguageGrade]),
+      profile: profileWithOpicGrade(),
+      registry: registryWithLanguageGradeOptions(["Advanced Low"]),
+    }).items;
+
+    expect(item).toMatchObject({
+      profileValue: "Advanced Low",
+      previewValue: "Advanced Low",
+      status: "available",
+    });
+  });
+
+  it("does not review a standard profile ID when the live option is absent", () => {
+    const [item] = buildReviewPlan({
+      analysis: response([allowedLanguageGrade]),
+      profile: profileWithOpicGrade(),
+      registry: registryWithLanguageGradeOptions(["Intermediate High"]),
+    }).items;
+
+    expect(item).toMatchObject({ status: "unavailable", selected: false });
+  });
+
+  it("does not review a standard profile ID when live aliases are ambiguous", () => {
+    const [item] = buildReviewPlan({
+      analysis: response([allowedLanguageGrade]),
+      profile: profileWithOpicGrade(),
+      registry: registryWithLanguageGradeOptions(["AL", "Advanced Low"]),
+    }).items;
+
+    expect(item).toMatchObject({ status: "unavailable", selected: false });
+  });
+
   it("previews a derived full name from the local profile", () => {
     const profile = createEmptyProfile();
     profile.personal.koreanFamilyName = "김";

@@ -1,9 +1,16 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { App } from "./App";
+import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 
 function createRepository(): ProfileRepository {
   return {
@@ -23,17 +30,20 @@ function createJsonFile(contents: string): File {
 }
 
 describe("options App", () => {
-  it("shows all ten categories in layout A and keeps data when switching to B", async () => {
+  it("shows every category and keeps data when switching views", async () => {
     const repository = createRepository();
     render(<App repository={repository} />);
 
     await screen.findByRole("heading", { name: "프로필 관리" });
-    expect(
-      screen.getAllByRole("button", {
-        name: /기본 인적사항|연락처와 주소|학력|어학|자격증·면허증|프로젝트|병역|보훈|장애|건강/,
-      }),
-    ).toHaveLength(10);
-    expect(screen.getByRole("button", { name: "A형" })).toHaveAttribute(
+    const navigation = within(
+      screen.getByRole("navigation", { name: "프로필 범주" }),
+    );
+    for (const category of PROFILE_CATEGORIES) {
+      expect(
+        navigation.getByRole("button", { name: category.label }),
+      ).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: "항목별 보기" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -41,7 +51,7 @@ describe("options App", () => {
     fireEvent.change(screen.getByLabelText("국문 성"), {
       target: { value: "비식별 성" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "B형" }));
+    fireEvent.click(screen.getByRole("button", { name: "전체 보기" }));
 
     expect(repository.saveLayout).toHaveBeenCalledWith("b");
     expect(screen.getByLabelText("국문 성")).toHaveValue("비식별 성");
@@ -110,12 +120,12 @@ describe("options App", () => {
     render(<App repository={repository} />);
     await screen.findByRole("heading", { name: "프로필 관리" });
 
-    fireEvent.click(screen.getByRole("button", { name: "B형" }));
+    fireEvent.click(screen.getByRole("button", { name: "전체 보기" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "레이아웃 선택을 저장하지 못했습니다",
     );
-    expect(screen.getByRole("button", { name: "B형" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "전체 보기" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -130,13 +140,52 @@ describe("options App", () => {
     const personalSection = screen.getByRole("group", {
       name: "기본 인적사항",
     });
-    expect(personalSection).not.toHaveAttribute("open");
+    expect(personalSection).toHaveAttribute("open");
     personalSection.setAttribute("open", "");
 
     fireEvent.change(screen.getByLabelText("국문 성"), {
       target: { value: "비식별 성" },
     });
     expect(personalSection).toHaveAttribute("open");
+  });
+
+  it("finds a category by its field label and preserves input across navigation", async () => {
+    render(<App repository={createRepository()} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+    fireEvent.change(screen.getByLabelText("국문 성"), {
+      target: { value: "예시" },
+    });
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "입력 항목 찾기" }),
+      {
+        target: { value: "비상연락처" },
+      },
+    );
+    const nav = within(screen.getByRole("navigation", { name: "프로필 범주" }));
+    expect(nav.queryByRole("button", { name: "학력" })).not.toBeInTheDocument();
+    fireEvent.click(nav.getByRole("button", { name: "연락처와 주소" }));
+    expect(screen.getByLabelText("비상연락처")).toBeInTheDocument();
+    fireEvent.click(nav.getByRole("button", { name: "기본 인적사항" }));
+    expect(screen.getByLabelText("국문 성")).toHaveValue("예시");
+  });
+
+  it("focuses a new record and preserves its values after collapsing and reopening", async () => {
+    render(<App repository={createRepository()} />);
+    await screen.findByRole("heading", { name: "프로필 관리" });
+    fireEvent.click(screen.getByRole("button", { name: "프로젝트" }));
+    fireEvent.click(screen.getByRole("button", { name: "프로젝트 추가" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("활동 시작일")).toHaveFocus(),
+    );
+    fireEvent.change(screen.getByLabelText("프로젝트 이름"), {
+      target: { value: "예시 프로젝트" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "프로젝트 1 접기" }));
+    expect(
+      screen.queryByRole("textbox", { name: "프로젝트 이름" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "프로젝트 1 펼치기" }));
+    expect(screen.getByLabelText("프로젝트 이름")).toHaveValue("예시 프로젝트");
   });
 
   it("exports the current profile as a versioned JSON file", async () => {

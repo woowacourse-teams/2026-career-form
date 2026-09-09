@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { openOptionsPage, openSidePanel } from "../../src/extension/navigation";
+import {
+  openInPageProfilePanel,
+  openOptionsPage,
+} from "../../src/extension/navigation";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { countCompletedCategories } from "../../src/profile/profile-repository";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
@@ -8,22 +11,27 @@ import styles from "./App.module.css";
 
 interface PopupNavigation {
   openOptions(): Promise<void> | void;
-  openSidePanel(): Promise<void> | void;
+  openInPageProfilePanel(): Promise<void> | void;
 }
 
 interface AppProps {
   repository?: ProfileRepository;
   navigation?: PopupNavigation;
+  closePopup?(): void;
 }
 
-export function App({ repository: injectedRepository, navigation }: AppProps) {
+export function App({
+  repository: injectedRepository,
+  navigation,
+  closePopup,
+}: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
   );
   const actions = navigation ?? {
     openOptions: openOptionsPage,
-    openSidePanel,
+    openInPageProfilePanel,
   };
   const [completedCategories, setCompletedCategories] = useState<
     number | null
@@ -43,6 +51,7 @@ export function App({ repository: injectedRepository, navigation }: AppProps) {
     try {
       setActionError(false);
       await action();
+      (closePopup ?? window.close)();
     } catch {
       setActionError(true);
     }
@@ -79,15 +88,15 @@ export function App({ repository: injectedRepository, navigation }: AppProps) {
           </div>
         </section>
         <p className={styles.guide}>
-          저장된 실제 값은 팝업에 표시하지 않습니다. 지원서 옆 사이드 패널에서
+          저장된 실제 값은 팝업에 표시하지 않습니다. 지원서 페이지의 패널에서
           필요한 값만 확인하세요.
         </p>
         <button
           className={styles.primaryButton}
           type="button"
-          onClick={() => void runAction(actions.openSidePanel)}
+          onClick={() => void runAction(actions.openInPageProfilePanel)}
         >
-          사이드 패널 열기
+          지원서 패널 열기
         </button>
         <button
           className={styles.secondaryButton}

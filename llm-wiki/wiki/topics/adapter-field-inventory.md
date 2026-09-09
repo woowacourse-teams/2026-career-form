@@ -12,6 +12,8 @@
 
 SK 검색은 입력별 widget의 새 검색 완료와 유일한 label/value를 확인하며 시험은 nonzero id만 자동 선택한다. 행·검색 종류별 쓰기와 확정은 직렬 처리하고, 시험 언어 선택 뒤 text 또는 select 성적란이 하나만 나타날 때 후속 분석한다. 전체 fixture를 실제 popup→사이드 패널→자동 기입 경로로 실행한 결과 준비 2회와 필드 분석 8회가 모두 HTTP 200/ADAPTER/COMPLETE였으며, UI 집계 23개 기입 성공·0개 직접 확인은 선행 선택·미지원·미선택 항목 전체 성공을 의미하지 않는다. 테스트 후 프로필 키 미존재와 지원서 204개 제어 상태를 복원했다.
 
+CF-82는 표준 ID 어학 값을 현재 페이지의 정확히 하나인 메뉴 후보에만 연결한다. 현대는 visible `data-code` 버튼과 선택 뒤 hidden code를, SK는 visible nonzero autocomplete ID와 명시적 별칭을 사용한다. 0개·복수 후보와 자유 텍스트는 자동 선택하지 않는다. 상세 근거는 [CF-82 보완](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)을 따른다.
+
 ## 변경 이유
 
 CF-46의 회사별 분리와 현대 취득일 보완을 자동 검증, 현재 화면 읽기 전용 점검, 수정 후 재기입 미검증으로 구분해 기록했다.

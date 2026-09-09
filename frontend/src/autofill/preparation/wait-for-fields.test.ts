@@ -24,7 +24,9 @@ describe("waitForExpectedFields", () => {
     wrapper.append(field);
     document.body.append(wrapper);
 
-    const pending = waitForExpectedFields(document, ["dependent-conditional-field"]);
+    const pending = waitForExpectedFields(document, [
+      "dependent-conditional-field",
+    ]);
     let settled = false;
     void pending.then(() => {
       settled = true;
@@ -47,5 +49,4 @@ describe("waitForExpectedFields", () => {
 
     expect(settled).toBe(true);
   });
-
 });

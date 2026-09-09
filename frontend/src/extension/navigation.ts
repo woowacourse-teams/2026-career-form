@@ -1,9 +1,21 @@
 import { browser } from "wxt/browser";
 
-import { OPEN_AUTOFILL_OVERLAY_MESSAGE } from "../autofill-demo/messages";
+import {
+  OPEN_AUTOFILL_OVERLAY_MESSAGE,
+  OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE,
+  OPEN_OPTIONS_PAGE_MESSAGE,
+} from "../autofill-demo/messages";
 
 interface RuntimeApi {
   openOptionsPage(): Promise<void>;
+}
+
+interface RuntimeMessageApi {
+  sendMessage(message: unknown): Promise<unknown>;
+}
+
+interface ContentRuntimeApi {
+  sendMessage(message: unknown): Promise<unknown>;
 }
 
 interface SidePanelDependencies {
@@ -23,6 +35,12 @@ export async function openOptionsPage(
   runtime: RuntimeApi = browser.runtime,
 ): Promise<void> {
   await runtime.openOptionsPage();
+}
+
+export async function openOptionsPageFromContent(
+  runtime: ContentRuntimeApi = browser.runtime,
+): Promise<void> {
+  await runtime.sendMessage(OPEN_OPTIONS_PAGE_MESSAGE);
 }
 
 export async function openSidePanel(
@@ -49,4 +67,10 @@ export async function openAutofillOverlay(
     throw new Error("현재 페이지를 확인할 수 없습니다.");
   }
   await tabs.sendMessage(activeTab.id, OPEN_AUTOFILL_OVERLAY_MESSAGE);
+}
+
+export async function openInPageProfilePanel(
+  runtime: RuntimeMessageApi = browser.runtime,
+): Promise<void> {
+  await runtime.sendMessage(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
 }

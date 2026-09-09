@@ -14,6 +14,7 @@ import type {
 } from "../../profile/model";
 import type { ValueBinding } from "../api/types";
 import { resolveValueBinding } from "../profile/value-binding";
+import { matchStandardOption } from "../profile/standard-option-match";
 
 export type ProfileValueResolution =
   | {
@@ -164,6 +165,11 @@ function currentValue(handle: FieldCandidateHandle): string {
       .map((element) => element.value)
       .join(", ");
   }
+  const select = handle.elements[0];
+  if (select instanceof HTMLSelectElement) {
+    const selected = select.selectedOptions[0];
+    return selected?.value ? (selected.textContent ?? "") : "";
+  }
   return handle.elements[0]?.value ?? "";
 }
 
@@ -273,10 +279,10 @@ function itemForAnalysis(
     }
   }
 
-  const resolvedProfileValue = resolveValueBinding(profile, binding, itemIndex);
-  if (resolvedProfileValue.status !== "resolved") {
+  const boundProfileValue = resolveValueBinding(profile, binding, itemIndex);
+  if (boundProfileValue.status !== "resolved") {
     const reason =
-      resolvedProfileValue.status === "ambiguous"
+      boundProfileValue.status === "ambiguous"
         ? "반복 프로필 항목을 하나로 안전하게 결정할 수 없습니다."
         : "입력할 프로필 값이 없습니다.";
     return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
@@ -284,21 +290,46 @@ function itemForAnalysis(
   const profileValue =
     binding.type === "DIRECT" && normalizeDirectValue
       ? {
-          ...resolvedProfileValue,
+          ...boundProfileValue,
           value: normalizeDirectValue(
             binding.profileFieldKey,
-            resolvedProfileValue.value,
+            boundProfileValue.value,
           ),
         }
-      : resolvedProfileValue;
+      : boundProfileValue;
+
+  const liveOptionMatch =
+    analysis.writePlan.command === "SELECT_OPTION" &&
+    profileValue.standardValueId
+      ? matchStandardOption(
+          profileValue.standardValueId,
+          lookup.handle.candidate.options ?? [],
+        )
+      : undefined;
+  if (
+    liveOptionMatch &&
+    (liveOptionMatch.status === "none" ||
+      liveOptionMatch.status === "ambiguous")
+  ) {
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      "지원서 선택값을 하나로 확인할 수 없어 자동 기입하지 않았습니다.",
+      analysis,
+    );
+  }
+  const resolvedProfileValue =
+    liveOptionMatch?.status === "unique"
+      ? { ...profileValue, value: liveOptionMatch.option.displayName }
+      : profileValue;
 
   const pageValue = currentValue(lookup.handle);
   const hasConflict =
     !ignoreCurrentValueCandidateIds.has(analysis.candidateId) &&
     pageValue.trim().length > 0 &&
-    pageValue.trim() !== profileValue.value.trim();
+    pageValue.trim() !== resolvedProfileValue.value.trim();
   if (
-    profileValue.sensitive ||
+    resolvedProfileValue.sensitive ||
     analysis.autofillPolicy === "SENSITIVE_CONFIRMATION"
   ) {
     return {
@@ -307,12 +338,12 @@ function itemForAnalysis(
       ...(binding.type === "DIRECT"
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
-      ...(profileValue.profileEntryId
-        ? { profileEntryId: profileValue.profileEntryId }
+      ...(resolvedProfileValue.profileEntryId
+        ? { profileEntryId: resolvedProfileValue.profileEntryId }
         : {}),
       ...(itemIndex !== undefined ? { itemIndex } : {}),
       currentValue: pageValue,
-      profileValue: profileValue.value,
+      profileValue: resolvedProfileValue.value,
       previewValue: "••••••••",
       status: "sensitive",
       selected: false,
@@ -329,13 +360,13 @@ function itemForAnalysis(
       ...(binding.type === "DIRECT"
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
-      ...(profileValue.profileEntryId
-        ? { profileEntryId: profileValue.profileEntryId }
+      ...(resolvedProfileValue.profileEntryId
+        ? { profileEntryId: resolvedProfileValue.profileEntryId }
         : {}),
       ...(itemIndex !== undefined ? { itemIndex } : {}),
       currentValue: pageValue,
-      profileValue: profileValue.value,
-      previewValue: profileValue.value,
+      profileValue: resolvedProfileValue.value,
+      previewValue: resolvedProfileValue.value,
       status: "conflict",
       selected: false,
       disabled: false,
@@ -352,8 +383,8 @@ function itemForAnalysis(
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
       currentValue: pageValue,
-      profileValue: profileValue.value,
-      previewValue: profileValue.value,
+      profileValue: resolvedProfileValue.value,
+      previewValue: resolvedProfileValue.value,
       status: "needs-review",
       selected: false,
       disabled: false,
@@ -368,13 +399,13 @@ function itemForAnalysis(
     ...(binding.type === "DIRECT"
       ? { profileFieldKey: binding.profileFieldKey }
       : {}),
-    ...(profileValue.profileEntryId
-      ? { profileEntryId: profileValue.profileEntryId }
+    ...(resolvedProfileValue.profileEntryId
+      ? { profileEntryId: resolvedProfileValue.profileEntryId }
       : {}),
     ...(itemIndex !== undefined ? { itemIndex } : {}),
     currentValue: pageValue,
-    profileValue: profileValue.value,
-    previewValue: profileValue.value,
+    profileValue: resolvedProfileValue.value,
+    previewValue: resolvedProfileValue.value,
     status: "available",
     selected: true,
     disabled: false,
