@@ -10,8 +10,8 @@ if (manifest.manifest_version !== 3) {
   throw new Error("Chrome Manifest V3 산출물이 필요합니다.");
 }
 
-if (manifest.action?.default_popup) {
-  throw new Error("확장 프로그램 아이콘은 기본 팝업 없이 지원서 패널을 열어야 합니다.");
+if (manifest.action?.default_popup !== "popup.html") {
+  throw new Error("action.default_popup이 popup.html이어야 합니다.");
 }
 
 if (
@@ -63,6 +63,7 @@ if (manifest.background?.service_worker !== "background.js") {
 await Promise.all(
   [
     "background.js",
+    "popup.html",
     "options.html",
     "sidepanel.html",
     "content-scripts/autofill.js",
@@ -74,13 +75,6 @@ const autofillArtifact = await readFile(
   resolve(outputDirectory, "content-scripts", "autofill.js"),
   "utf8",
 );
-const backgroundArtifact = await readFile(
-  resolve(outputDirectory, "background.js"),
-  "utf8",
-);
-if (!backgroundArtifact.includes("career-form:open-in-page-profile-panel")) {
-  throw new Error("확장 프로그램 아이콘이 지원서 패널을 여는 메시지를 보내야 합니다.");
-}
 if (
   autofillArtifact.includes(
     "필드 탐지와 프로필 연결을 비식별 목업으로 확인합니다.",

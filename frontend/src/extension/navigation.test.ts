@@ -63,15 +63,12 @@ describe("extension navigation", () => {
     });
   });
 
-  it("asks the active tab to open the in-page profile panel", async () => {
-    const tabs = {
-      query: vi.fn(async () => [{ id: 27 }]),
-      sendMessage: vi.fn(async () => undefined),
-    };
+  it("asks the background to open the in-page application panel", async () => {
+    const runtime = { sendMessage: vi.fn(async () => undefined) };
 
-    await openInPageProfilePanel(tabs);
+    await openInPageProfilePanel(runtime);
 
-    expect(tabs.sendMessage).toHaveBeenCalledWith(27, {
+    expect(runtime.sendMessage).toHaveBeenCalledWith({
       type: "career-form:open-in-page-profile-panel",
     });
   });

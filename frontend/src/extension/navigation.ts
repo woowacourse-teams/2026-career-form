@@ -10,6 +10,10 @@ interface RuntimeApi {
   openOptionsPage(): Promise<void>;
 }
 
+interface RuntimeMessageApi {
+  sendMessage(message: unknown): Promise<unknown>;
+}
+
 interface ContentRuntimeApi {
   sendMessage(message: unknown): Promise<unknown>;
 }
@@ -66,14 +70,7 @@ export async function openAutofillOverlay(
 }
 
 export async function openInPageProfilePanel(
-  tabs: ActiveTabMessenger = {
-    query: (options) => browser.tabs.query(options),
-    sendMessage: (tabId, message) => browser.tabs.sendMessage(tabId, message),
-  },
+  runtime: RuntimeMessageApi = browser.runtime,
 ): Promise<void> {
-  const [activeTab] = await tabs.query({ active: true, currentWindow: true });
-  if (activeTab?.id === undefined) {
-    throw new Error("현재 페이지를 확인할 수 없습니다.");
-  }
-  await tabs.sendMessage(activeTab.id, OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
+  await runtime.sendMessage(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
 }
