@@ -5,6 +5,34 @@ import { createEmptyProfile } from "../model";
 import { ProfileForm } from "./ProfileForm";
 
 describe("ProfileForm conditional fields", () => {
+  it("stores phone numbers as digits only", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "contact")!;
+    const profile = createEmptyProfile();
+    const onUpdateSingle = vi.fn();
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={onUpdateSingle}
+        confirmDelete={() => true}
+      />,
+    );
+
+    const phoneNumber = screen.getByLabelText("연락처");
+    expect(phoneNumber).toHaveAttribute("inputmode", "numeric");
+    fireEvent.change(phoneNumber, { target: { value: "010-1234 5678" } });
+
+    expect(onUpdateSingle).toHaveBeenCalledWith(
+      "contact",
+      "phoneNumber",
+      "01012345678",
+    );
+  });
+
   it("shows major-name fields only when the corresponding major exists", () => {
     const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "education")!;
     const profile = createEmptyProfile();

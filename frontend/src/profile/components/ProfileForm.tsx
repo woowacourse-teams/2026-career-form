@@ -46,6 +46,10 @@ function optionsForField(
   );
 }
 
+function fieldValue(field: ProfileFieldDefinition, value: string): string {
+  return field.inputType === "tel" ? value.replace(/\D/g, "").slice(0, 11) : value;
+}
+
 function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
   return (
     <div className={styles.fieldGrid}>
@@ -85,7 +89,9 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                 id={id}
                 type={field.inputType}
                 value={values[field.id] ?? ""}
-                onChange={(event) => onChange(field.id, event.target.value)}
+                inputMode={field.inputType === "tel" ? "numeric" : undefined}
+                maxLength={field.inputType === "tel" ? 11 : undefined}
+                onChange={(event) => onChange(field.id, fieldValue(field, event.target.value))}
               />
             )}
           </label>
