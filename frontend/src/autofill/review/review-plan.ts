@@ -164,7 +164,8 @@ function currentValue(handle: FieldCandidateHandle): string {
   }
   const select = handle.elements[0];
   if (select instanceof HTMLSelectElement) {
-    return select.selectedOptions[0]?.textContent ?? "";
+    const selected = select.selectedOptions[0];
+    return selected?.value ? (selected.textContent ?? "") : "";
   }
   return handle.elements[0]?.value ?? "";
 }

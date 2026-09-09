@@ -56,6 +56,8 @@ function registryWithTextField(currentValue = "") {
 function registryWithLanguageGradeOptions(options: readonly string[]) {
   const select = document.createElement("select");
   const optionElements = new Map<string, HTMLOptionElement>();
+  const placeholder = new Option("등급 선택", "");
+  select.append(placeholder);
   const candidates = options.map((displayName, index) => {
     const optionId = `grade-${index + 1}`;
     const option = new Option(displayName, optionId);
