@@ -12,6 +12,17 @@
   font-weight: 700;
 }
 
+.fieldLabel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
 .field input,
 .field textarea,
 .field select {
@@ -51,6 +62,7 @@
   color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .repeatedSection {

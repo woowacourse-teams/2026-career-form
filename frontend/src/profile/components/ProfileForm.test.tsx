@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PROFILE_CATEGORIES } from "../field-definitions";
 import { createEmptyProfile } from "../model";
 import { ProfileForm } from "./ProfileForm";
+import styles from "./ProfileForm.module.css";
 
 describe("ProfileForm conditional fields", () => {
   it("stores phone numbers as digits only", () => {
@@ -24,7 +25,9 @@ describe("ProfileForm conditional fields", () => {
 
     const phoneNumber = screen.getByLabelText("연락처");
     expect(phoneNumber).toHaveAttribute("inputmode", "numeric");
-    expect(screen.getAllByText("숫자만 입력해 주세요. 예: 01012345678")).toHaveLength(2);
+    const phoneHint = screen.getByText("숫자만 입력해주세요");
+    expect(phoneHint.previousElementSibling).toHaveTextContent("연락처");
+    expect(screen.queryByText("숫자만 입력해 주세요. 예: 01012345678")).not.toBeInTheDocument();
     fireEvent.change(phoneNumber, { target: { value: "010-1234 5678" } });
 
     expect(onUpdateSingle).toHaveBeenCalledWith(
@@ -32,6 +35,30 @@ describe("ProfileForm conditional fields", () => {
       "phoneNumber",
       "01012345678",
     );
+  });
+
+  it("uses the full row for long-form thesis details", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "publications")!;
+    const profile = createEmptyProfile();
+    profile.publications = [{
+      id: "publication-1",
+      sectionId: "publicationPatent",
+      values: {},
+    }];
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+
+    expect(screen.getByLabelText("상세설명").closest("label")).toHaveClass(styles.fullWidth);
   });
 
   it("shows major-name fields only when the corresponding major exists", () => {

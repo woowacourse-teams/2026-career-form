@@ -59,8 +59,15 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
         const value = values[field.id] ?? "";
         const hasLegacyValue = value.length > 0 && !options.some((option) => option.value === value);
         return (
-          <label className={styles.field} htmlFor={id} key={field.id}>
-            <span>{field.label}</span>
+          <label
+            className={`${styles.field} ${field.inputType === "textarea" ? styles.fullWidth : ""}`}
+            htmlFor={id}
+            key={field.id}
+          >
+            <span className={styles.fieldLabel}>
+              <span>{field.label}</span>
+              {field.hint && <small className={styles.fieldHint}>{field.hint}</small>}
+            </span>
             {field.inputType === "textarea" ? (
               <textarea
                 id={id}
@@ -95,11 +102,6 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                   maxLength={field.inputType === "tel" ? 11 : undefined}
                   onChange={(event) => onChange(field.id, fieldValue(field, event.target.value))}
                 />
-                {field.inputType === "tel" && (
-                  <small className={styles.fieldHint}>
-                    숫자만 입력해 주세요. 예: 01012345678
-                  </small>
-                )}
               </>
             )}
           </label>

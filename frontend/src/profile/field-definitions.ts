@@ -11,6 +11,7 @@ export type ProfileInputType =
 export interface ProfileFieldDefinition {
   id: string;
   label: string;
+  hint?: string;
   inputType: ProfileInputType;
   options?: readonly (string | StandardValueOption)[];
   optionsFor?: (values: Record<string, string>) => readonly StandardValueOption[];
@@ -93,7 +94,12 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         fields: [
           { id: "email", label: "이메일주소", inputType: "email" },
           { id: "secondaryEmail", label: "보조 이메일", inputType: "email" },
-          { id: "phoneNumber", label: "연락처", inputType: "tel" },
+          {
+            id: "phoneNumber",
+            label: "연락처",
+            hint: "숫자만 입력해주세요",
+            inputType: "tel",
+          },
           { id: "emergencyPhoneNumber", label: "비상연락처", inputType: "tel" },
           text("residenceCountry", "거주 국가"),
           text("postalCode", "우편번호"),
