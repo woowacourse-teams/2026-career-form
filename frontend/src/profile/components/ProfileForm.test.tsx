@@ -66,7 +66,7 @@ describe("ProfileForm conditional fields", () => {
     profile.languages = [{
       id: "language-test-1",
       sectionId: "languageTest",
-      values: {},
+      values: { language: "language:en" },
     }];
 
     render(
@@ -129,6 +129,57 @@ describe("ProfileForm conditional fields", () => {
       "grade",
       "opic:al",
     );
+  });
+
+  it("offers only JLPT and its grades after Japanese is selected", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const profile = createEmptyProfile();
+    profile.languages = [{
+      id: "language-test-1",
+      sectionId: "languageTest",
+      values: { language: "language:ja", testName: "jlpt" },
+    }];
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+
+    expect(screen.getByRole("option", { name: "JLPT" })).toHaveValue("jlpt");
+    expect(screen.queryByRole("option", { name: "OPIc" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "N1" })).toHaveValue("jlpt:n1");
+    expect(screen.queryByRole("option", { name: "Advanced Low" })).not.toBeInTheDocument();
+  });
+
+  it("uses a free score input for score-based English tests", () => {
+    const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === "languages")!;
+    const profile = createEmptyProfile();
+    profile.languages = [{
+      id: "language-test-1",
+      sectionId: "languageTest",
+      values: { language: "language:en", testName: "toeic" },
+    }];
+
+    render(
+      <ProfileForm
+        category={category}
+        profile={profile}
+        onAddEntry={vi.fn()}
+        onRemoveEntry={vi.fn()}
+        onUpdateEntry={vi.fn()}
+        onUpdateSingle={vi.fn()}
+        confirmDelete={() => true}
+      />,
+    );
+
+    expect(screen.getByLabelText("등급·점수")).toHaveAttribute("type", "text");
   });
 
   it("keeps a legacy select value visible until the user changes it", () => {

@@ -50,25 +50,33 @@ function fieldValue(field: ProfileFieldDefinition, value: string): string {
   return field.inputType === "tel" ? value.replace(/\D/g, "").slice(0, 11) : value;
 }
 
+function inputTypeForField(
+  field: ProfileFieldDefinition,
+  values: Record<string, string>,
+): ProfileFieldDefinition["inputType"] {
+  return field.inputTypeFor?.(values) ?? field.inputType;
+}
+
 function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
   return (
     <div className={styles.fieldGrid}>
       {section.fields.filter((field) => !field.visibleWhen || field.visibleWhen(values)).map((field) => {
         const id = `${idPrefix}-${field.id}`;
         const options = optionsForField(field, values);
+        const inputType = inputTypeForField(field, values);
         const value = values[field.id] ?? "";
         const hasLegacyValue = value.length > 0 && !options.some((option) => option.value === value);
         return (
           <label className={styles.field} htmlFor={id} key={field.id}>
             <span>{field.label}</span>
-            {field.inputType === "textarea" ? (
+            {inputType === "textarea" ? (
               <textarea
                 id={id}
                 value={values[field.id] ?? ""}
                 onChange={(event) => onChange(field.id, event.target.value)}
                 rows={4}
               />
-            ) : field.inputType === "select" ? (
+            ) : inputType === "select" ? (
               <select
                 id={id}
                 value={value}
@@ -89,7 +97,7 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                 <input
                   id={id}
                   aria-label={field.label}
-                  type={field.inputType}
+                  type={inputType}
                   value={values[field.id] ?? ""}
                   inputMode={field.inputType === "tel" ? "numeric" : undefined}
                   maxLength={field.inputType === "tel" ? 11 : undefined}

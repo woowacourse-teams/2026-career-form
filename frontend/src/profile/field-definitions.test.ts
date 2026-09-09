@@ -94,13 +94,16 @@ describe("language profile fields", () => {
     });
     expect(languageTest?.fields.find((field) => field.id === "testName")).toMatchObject({
       inputType: "select",
-      options: expect.arrayContaining([
+    });
+    expect(languageTest?.fields.find((field) => field.id === "testName")?.optionsFor?.({ language: "language:en" }))
+      .toEqual(expect.arrayContaining([
         expect.objectContaining({ value: "opic", label: "OPIc" }),
-      ]),
-    });
+      ]));
     expect(languageTest?.fields.find((field) => field.id === "grade")).toMatchObject({
-      inputType: "select",
+      inputType: "text",
     });
+    expect(languageTest?.fields.find((field) => field.id === "grade")?.inputTypeFor?.({ testName: "opic" }))
+      .toBe("select");
     expect(languageTest?.fields.find((field) => field.id === "grade")?.optionsFor?.({ testName: "opic" }))
       .toContainEqual({ value: "opic:al", label: "Advanced Low", aliases: ["AL"] });
     expect(languageSkill?.fields.find((field) => field.id === "language")).toMatchObject({
