@@ -67,7 +67,7 @@
   height: 16px;
   box-sizing: content-box;
   border-radius: 4px / 8px;
-  background: #2196f3;
+  background: var(--color-action);
   animation: analysis-spinner linear 1s infinite;
   transform-origin: 3.5px 32px;
 }
@@ -197,9 +197,13 @@
 }
 
 .primary {
-  border: 1px solid var(--color-action-strong);
-  color: var(--color-on-action);
-  background: var(--color-action-strong);
+  border: 1px solid var(--color-brand-hover);
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-brand-hover);
 }
 
 .linkButton,
@@ -279,7 +283,7 @@
   border-left-color: var(--color-success);
 }
 .reviewItem[data-status="needs-review"] {
-  border-left-color: var(--color-action);
+  border-left-color: var(--color-warning);
 }
 .reviewItem[data-status="conflict"],
 .reviewItem[data-status="sensitive"] {

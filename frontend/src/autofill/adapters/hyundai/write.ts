@@ -1,7 +1,28 @@
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { normalizeDisplayName } from "../../write/display-name";
+import { matchStandardOption } from "../../profile/standard-option-match";
 import type { CompanyWriteAdapter } from "../write";
+
+function matchingLiveButtonOption(
+  value: string,
+  choices: readonly HTMLButtonElement[],
+): HTMLButtonElement | undefined {
+  const options = choices.map((choice, index) => ({
+    optionId: String(index),
+    displayName: choice.textContent ?? "",
+  }));
+  const standardMatch = matchStandardOption(value, options);
+  if (standardMatch.status === "unique") {
+    return choices[Number(standardMatch.option.optionId)];
+  }
+  if (standardMatch.status !== "not-standard") return undefined;
+  const desired = normalizeDisplayName(value);
+  const exact = choices.filter(
+    (choice) => normalizeDisplayName(choice.textContent ?? "") === desired,
+  );
+  return exact.length === 1 ? exact[0] : undefined;
+}
 
 function selectButtonOption(
   handle: FieldCandidateHandle,
@@ -16,13 +37,8 @@ function selectButtonOption(
   ) {
     return false;
   }
-  const code = binding.optionCodeMap[displayName];
   const trigger = handle.elements[0];
-  if (
-    !code ||
-    !(trigger instanceof HTMLInputElement) ||
-    trigger.type !== "button"
-  ) {
+  if (!(trigger instanceof HTMLInputElement) || trigger.type !== "button") {
     return false;
   }
   const selectWrap = trigger.closest(".select-wrap");
@@ -32,21 +48,17 @@ function selectButtonOption(
     selectWrap.querySelectorAll<HTMLButtonElement>(
       ":scope > .select-option button[data-code]",
     ),
-  ).filter(
-    (choice) =>
-      choice.offsetParent !== null &&
-      choice.dataset.code === code &&
-      normalizeDisplayName(choice.textContent ?? "") ===
-        normalizeDisplayName(displayName),
-  );
-  if (choices.length !== 1) return false;
-  choices[0].click();
+  ).filter((choice) => choice.offsetParent !== null);
+  const choice = matchingLiveButtonOption(displayName, choices);
+  if (!choice || !choice.dataset.code) return false;
+  choice.click();
   const hiddenValue = selectWrap.querySelector<HTMLInputElement>(
     "input[type='hidden'].js-field",
   );
   return (
-    normalizeDisplayName(trigger.value) === normalizeDisplayName(displayName) &&
-    hiddenValue?.value === code
+    normalizeDisplayName(trigger.value) ===
+      normalizeDisplayName(choice.textContent ?? "") &&
+    hiddenValue?.value === choice.dataset.code
   );
 }
 

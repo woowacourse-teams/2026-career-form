@@ -32,66 +32,66 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
     const buttonBinding:
       | { profileFieldKey: string; optionCodeMap: Record<string, string> }
       | undefined =
-        field.domId === "foreLang_1"
-          ? {
+      field.domId === "foreLang_1"
+        ? {
             profileFieldKey: "languages.languageTest.language",
             optionCodeMap: { English: "02" },
-            }
-          : field.domId === "foreExamCd_1"
-            ? {
+          }
+        : field.domId === "foreExamCd_1"
+          ? {
               profileFieldKey: "languages.languageTest.testName",
               optionCodeMap: { OPIC: "16" },
+            }
+          : field.domId === "gradeForeLang_1"
+            ? {
+                profileFieldKey: "languages.languageTest.grade",
+                optionCodeMap: { IH: "34" },
               }
-            : field.domId === "gradeForeLang_1"
-              ? {
-                  profileFieldKey: "languages.languageTest.grade",
-                  optionCodeMap: { IH: "34" },
-                }
-              : undefined;
-      if (buttonBinding) {
-        return [
+            : undefined;
+    if (buttonBinding) {
+      return [
+        {
+          candidateId: field.candidateId,
+          matchType: "MATCH" as const,
+          valueBinding: {
+            type: "BUTTON_OPTION" as const,
+            profileFieldKey: buttonBinding.profileFieldKey,
+            optionMap: Object.fromEntries(
+              Object.keys(buttonBinding.optionCodeMap).map((value) => [
+                value,
+                value,
+              ]),
+            ),
+            optionCodeMap: buttonBinding.optionCodeMap,
+          },
+          autofillPolicy: "CONDITIONAL" as const,
+          mappingStatus: "ADAPTER_VERIFIED" as const,
+          interactionStatus: "READY" as const,
+          writePlan: { command: "SELECT_BUTTON_OPTION" as const },
+        },
+      ];
+    }
+    const profileFieldKey =
+      field.domName === "acqNm"
+        ? "languages.languageTest.registrationNo"
+        : field.domName === "acqDt"
+          ? "languages.languageTest.acquisitionDate"
+          : field.domName === "point"
+            ? "languages.languageTest.grade"
+            : undefined;
+    return profileFieldKey
+      ? [
           {
             candidateId: field.candidateId,
             matchType: "MATCH" as const,
-            valueBinding: {
-              type: "BUTTON_OPTION" as const,
-              profileFieldKey: buttonBinding.profileFieldKey,
-              optionMap: Object.fromEntries(
-                Object.keys(buttonBinding.optionCodeMap).map((value) => [
-                  value,
-                  value,
-                ]),
-              ),
-              optionCodeMap: buttonBinding.optionCodeMap,
-            },
-            autofillPolicy: "CONDITIONAL" as const,
+            valueBinding: { type: "DIRECT" as const, profileFieldKey },
+            autofillPolicy: "ALLOWED" as const,
             mappingStatus: "ADAPTER_VERIFIED" as const,
             interactionStatus: "READY" as const,
-            writePlan: { command: "SELECT_BUTTON_OPTION" as const },
+            writePlan: { command: "SET_TEXT" as const },
           },
-        ];
-      }
-      const profileFieldKey =
-        field.domName === "acqNm"
-          ? "languages.languageTest.registrationNo"
-          : field.domName === "acqDt"
-            ? "languages.languageTest.acquisitionDate"
-            : field.domName === "point"
-              ? "languages.languageTest.grade"
-              : undefined;
-      return profileFieldKey
-        ? [
-            {
-              candidateId: field.candidateId,
-              matchType: "MATCH" as const,
-              valueBinding: { type: "DIRECT" as const, profileFieldKey },
-              autofillPolicy: "ALLOWED" as const,
-              mappingStatus: "ADAPTER_VERIFIED" as const,
-              interactionStatus: "READY" as const,
-              writePlan: { command: "SET_TEXT" as const },
-            },
-          ]
-        : [];
+        ]
+      : [];
   });
   return {
     snapshotId: request.snapshotId,

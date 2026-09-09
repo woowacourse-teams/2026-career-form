@@ -1,4 +1,9 @@
 import type { ProfileCategoryId } from "./model";
+import {
+  ATTENDANCE_TYPE_OPTIONS,
+  SCHOOL_REGION_OPTIONS,
+  type StandardValueOption,
+} from "./standard-values";
 
 export type ProfileInputType =
   "date" | "email" | "tel" | "text" | "textarea" | "select";
@@ -6,8 +11,12 @@ export type ProfileInputType =
 export interface ProfileFieldDefinition {
   id: string;
   label: string;
+  placeholder?: string;
   inputType: ProfileInputType;
-  options?: readonly string[];
+  options?: readonly (string | StandardValueOption)[];
+  optionsFor?: (
+    values: Record<string, string>,
+  ) => readonly StandardValueOption[];
   visibleWhen?: (values: Record<string, string>) => boolean;
 }
 
@@ -39,7 +48,7 @@ const date = (id: string, label: string): ProfileFieldDefinition => ({
 const select = (
   id: string,
   label: string,
-  options: readonly string[],
+  options: readonly (string | StandardValueOption)[],
 ): ProfileFieldDefinition => ({
   id,
   label,
@@ -48,7 +57,12 @@ const select = (
 });
 
 const EDUCATION_STATUS_OPTIONS = [
-  "재학중", "졸업예정", "졸업", "중퇴", "휴학", "수료",
+  "재학중",
+  "졸업예정",
+  "졸업",
+  "중퇴",
+  "휴학",
+  "수료",
 ];
 
 export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
@@ -87,8 +101,18 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         fields: [
           { id: "email", label: "이메일주소", inputType: "email" },
           { id: "secondaryEmail", label: "보조 이메일", inputType: "email" },
-          { id: "phoneNumber", label: "연락처", inputType: "tel" },
-          { id: "emergencyPhoneNumber", label: "비상연락처", inputType: "tel" },
+          {
+            id: "phoneNumber",
+            label: "연락처",
+            placeholder: "숫자만 입력해주세요",
+            inputType: "tel",
+          },
+          {
+            id: "emergencyPhoneNumber",
+            label: "비상연락처",
+            placeholder: "숫자만 입력해주세요",
+            inputType: "tel",
+          },
           text("residenceCountry", "거주 국가"),
           text("postalCode", "우편번호"),
           text("addressLine1", "기본주소"),
@@ -113,8 +137,9 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
             visibleWhen: (values) => values.academicProcess === "대입 검정고시",
           },
           text("schoolName", "학교명"),
+          select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
           select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
-          text("schoolRegion", "학교 소재지"),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
         ],
@@ -131,10 +156,11 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           },
           select("degreeLevel", "학위구분", ["전문학사", "학사"]),
           text("schoolName", "학교명"),
+          select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
           select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
-          text("schoolRegion", "학교 소재지"),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
           text("gpaScore", "평점"),
           select("gpaScale", "기준평점", ["4.00", "4.30", "4.50", "100.00"]),
           text("totalCredits", "총 이수학점"),
@@ -159,6 +185,8 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("degreeLevel", "학위구분"),
           text("country", "국가"),
           text("schoolName", "학교명"),
+          select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
           date("startDate", "입학일"),
           date("endDate", "졸업일"),
           text("admissionType", "입학구분"),
@@ -242,19 +270,33 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     label: "직장경력",
     repeatable: true,
     sensitive: false,
-    sections: [{
-      id: "career",
-      label: "직장경력",
-      fields: [
-        text("companyName", "직장명"),
-        select("employmentType", "고용형태", ["정규", "계약", "인턴", "파견", "프리랜서", "아르바이트", "개인사업", "병역특례", "기타"]),
-        date("startDate", "입사일"), date("endDate", "퇴사일"),
-        select("employmentStatus", "재직 여부", ["재직중", "퇴사"]),
-        text("department", "근무부서"), text("position", "최종직위"),
-        { id: "responsibilities", label: "담당업무", inputType: "textarea" },
-        text("terminationReason", "종료사유"),
-      ],
-    }],
+    sections: [
+      {
+        id: "career",
+        label: "직장경력",
+        fields: [
+          text("companyName", "직장명"),
+          select("employmentType", "고용형태", [
+            "정규",
+            "계약",
+            "인턴",
+            "파견",
+            "프리랜서",
+            "아르바이트",
+            "개인사업",
+            "병역특례",
+            "기타",
+          ]),
+          date("startDate", "입사일"),
+          date("endDate", "퇴사일"),
+          select("employmentStatus", "재직 여부", ["재직중", "퇴사"]),
+          text("department", "근무부서"),
+          text("position", "최종직위"),
+          { id: "responsibilities", label: "담당업무", inputType: "textarea" },
+          text("terminationReason", "종료사유"),
+        ],
+      },
+    ],
   },
   {
     id: "projects",

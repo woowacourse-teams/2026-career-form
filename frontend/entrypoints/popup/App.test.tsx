@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
@@ -22,7 +22,7 @@ describe("popup App", () => {
     render(
       <App
         repository={createRepository()}
-        navigation={{ openOptions: vi.fn(), openSidePanel: vi.fn() }}
+        navigation={{ openOptions: vi.fn(), openInPageProfilePanel: vi.fn() }}
       />,
     );
 
@@ -35,19 +35,27 @@ describe("popup App", () => {
     expect(screen.queryByText("hidden@example.com")).not.toBeInTheDocument();
   });
 
-  it("opens profile management and the side panel from explicit buttons", async () => {
+  it("opens profile management and the in-page panel from explicit buttons", async () => {
     const navigation = {
       openOptions: vi.fn(async () => undefined),
-      openSidePanel: vi.fn(async () => undefined),
+      openInPageProfilePanel: vi.fn(async () => undefined),
     };
-    render(<App repository={createRepository()} navigation={navigation} />);
+    const closePopup = vi.fn();
+    render(
+      <App
+        repository={createRepository()}
+        navigation={navigation}
+        closePopup={closePopup}
+      />,
+    );
     await screen.findByText("10개 범주 중 2개 준비됨");
 
-    fireEvent.click(screen.getByRole("button", { name: "사이드 패널 열기" }));
+    fireEvent.click(screen.getByRole("button", { name: "지원서 패널 열기" }));
     fireEvent.click(screen.getByRole("button", { name: "프로필 관리" }));
 
-    expect(navigation.openSidePanel).toHaveBeenCalledOnce();
+    expect(navigation.openInPageProfilePanel).toHaveBeenCalledOnce();
     expect(navigation.openOptions).toHaveBeenCalledOnce();
+    await waitFor(() => expect(closePopup).toHaveBeenCalledTimes(2));
   });
 
   it("does not present a load failure as an empty profile", async () => {
@@ -58,7 +66,7 @@ describe("popup App", () => {
     render(
       <App
         repository={repository}
-        navigation={{ openOptions: vi.fn(), openSidePanel: vi.fn() }}
+        navigation={{ openOptions: vi.fn(), openInPageProfilePanel: vi.fn() }}
       />,
     );
 

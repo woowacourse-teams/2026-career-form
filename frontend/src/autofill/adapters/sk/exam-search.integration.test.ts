@@ -102,6 +102,7 @@ interface Widget {
   input: HTMLInputElement;
   menu: HTMLElement;
   item?: SkAutocompleteItem;
+  items?: readonly SkAutocompleteItem[];
   reveal: () => void;
 }
 
@@ -132,25 +133,27 @@ function installWidgets(widgets: readonly Widget[]): () => void {
       instance.term = widget.input.value;
       instance.pending = 1;
       setTimeout(() => {
-        if (!widget.item) {
+        const widgetItems = widget.items ?? (widget.item ? [widget.item] : []);
+        if (widgetItems.length === 0) {
           instance.pending = 0;
           return;
         }
-        const item = widget.item;
-        const result = document.createElement("li");
-        result.className = "ui-menu-item";
-        const action = document.createElement("div");
-        action.className = "ui-menu-item-wrapper";
-        action.textContent = String(item.label);
-        action.addEventListener("click", () => {
-          widget.input.value = String(item.value);
-          inputData.set("confirmed", true);
-          instance.selectedItem = item;
-          widget.reveal();
+        widgetItems.forEach((item) => {
+          const result = document.createElement("li");
+          result.className = "ui-menu-item";
+          const action = document.createElement("div");
+          action.className = "ui-menu-item-wrapper";
+          action.textContent = String(item.label);
+          action.addEventListener("click", () => {
+            widget.input.value = String(item.value);
+            inputData.set("confirmed", true);
+            instance.selectedItem = item;
+            widget.reveal();
+          });
+          result.append(action);
+          items.set(result, item);
+          widget.menu.append(result);
         });
-        result.append(action);
-        items.set(result, item);
-        widget.menu.append(result);
         instance.pending = 0;
       }, 0);
     });
@@ -285,6 +288,130 @@ it("maps two delayed widget-local exam results and retains both names through th
   ).toBe("Spanish");
   expect(analysisCount).toBe(4);
   removeBridge();
+});
+
+it("confirms one SK live OPIc result for the canonical opic profile value", async () => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://www.skcareers.com/Application/Index/fixture",
+  });
+  const row = examRow("opic-exam", "input");
+  const root = document.createElement("div");
+  root.className = "apply-form-box";
+  root.append(row);
+  document.body.append(root);
+  const exam = row.querySelector<HTMLInputElement>("[name=lngExamName]")!;
+  const score = row.querySelector<HTMLInputElement>("[name=lngExamScore]")!;
+  const removeBridge = installWidgets([
+    {
+      input: exam,
+      item: { id: "60", label: "OPIc(영어)", value: "OPIc(영어)" },
+      menu: Object.assign(document.createElement("ul"), {
+        className: "ui-menu ui-autocomplete",
+      }),
+      reveal: () => {
+        score.hidden = false;
+      },
+    },
+  ]);
+  const profile = createEmptyProfile();
+  profile.languages = [
+    {
+      id: "opic-1",
+      sectionId: "languageTest",
+      values: { language: "English", testName: "opic", grade: "830" },
+    },
+  ];
+  const apiClient: AnalysisApiClient = {
+    analyzePreparation: async (request) => ({
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      preparationPlans: [],
+    }),
+    analyzeFields: async (request) => response(request),
+  };
+  try {
+    render(
+      createElement(AutofillWorkflow, {
+        apiClient,
+        repository: { load: async () => profile },
+        pageDocument: document,
+        onExit: () => undefined,
+      }),
+    );
+    await waitFor(() => expect(score.value).toBe("830"));
+    expect(exam.value).toBe("OPIc(영어)");
+  } finally {
+    removeBridge();
+  }
+});
+
+it("does not confirm SK exam when two live results match the same canonical value", async () => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://www.skcareers.com/Application/Index/fixture",
+  });
+  const row = examRow("ambiguous-opic", "input");
+  const root = document.createElement("div");
+  root.className = "apply-form-box";
+  root.append(row);
+  document.body.append(root);
+  const exam = row.querySelector<HTMLInputElement>("[name=lngExamName]")!;
+  const removeBridge = installWidgets([
+    {
+      input: exam,
+      items: [
+        { id: "60", label: "OPIc(영어)", value: "OPIc(영어)" },
+        { id: "61", label: "OPIC", value: "OPIC" },
+      ],
+      menu: Object.assign(document.createElement("ul"), {
+        className: "ui-menu ui-autocomplete",
+      }),
+      reveal: () => undefined,
+    },
+  ]);
+  const profile = createEmptyProfile();
+  profile.languages = [
+    {
+      id: "opic-1",
+      sectionId: "languageTest",
+      values: { language: "English", testName: "opic", grade: "830" },
+    },
+  ];
+  const apiClient: AnalysisApiClient = {
+    analyzePreparation: async (request) => ({
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      preparationPlans: [],
+    }),
+    analyzeFields: async (request) => response(request),
+  };
+  try {
+    render(
+      createElement(AutofillWorkflow, {
+        apiClient,
+        repository: { load: async () => profile },
+        pageDocument: document,
+        onExit: () => undefined,
+      }),
+    );
+    await waitFor(() =>
+      expect(document.body.textContent).toContain(
+        "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
+      ),
+    );
+    expect(exam.value).toBe("");
+  } finally {
+    removeBridge();
+  }
 });
 
 it.each([

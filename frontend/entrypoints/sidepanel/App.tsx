@@ -21,6 +21,8 @@ interface AppProps {
   closePanel?: () => void;
   openOptions?: () => Promise<void> | void;
   openAutofill?: () => Promise<void>;
+  inPage?: boolean;
+  logoUrl?: string;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -99,6 +101,8 @@ export function App({
   closePanel = () => window.close(),
   openOptions = openOptionsPage,
   openAutofill = openAutofillOverlay,
+  inPage = false,
+  logoUrl = "/side-panel-launcher-logo.png",
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -176,26 +180,41 @@ export function App({
   };
 
   return (
-    <div className={styles.panel}>
+    <div className={`${styles.panel} ${inPage ? styles.inPagePanel : ""}`}>
       <header className={styles.header}>
-        <div>
-          <p>S-01, 브라우저 사이드 패널</p>
-          <h1>내 지원 정보</h1>
+        <div className={styles.brandRow}>
+          <div className={styles.brandIdentity}>
+            <img className={styles.brandMark} src={logoUrl} alt="커리어폼" />
+            <div>
+              <p>CAREER FORM</p>
+              <span>지원서 패널</span>
+            </div>
+          </div>
+          <button
+            className={styles.closeButton}
+            type="button"
+            aria-label="닫기"
+            onClick={closePanel}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
-        <div className={styles.headerActions}>
+        <div className={styles.titleRow}>
+          <h1>내 지원 정보</h1>
           <button
             className={styles.profileButton}
             type="button"
             onClick={() => void openProfileManagement()}
           >
-            프로필 관리
-          </button>
-          <button type="button" onClick={closePanel}>
-            닫기
+            프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
       </header>
-      <main className={styles.main} aria-label="지원 정보 목록">
+      <main
+        className={styles.main}
+        aria-label="지원 정보 목록"
+        data-panel-mode={inPage ? "in-page" : "side-panel"}
+      >
         {navigationFailed && (
           <p className={styles.navigationError} role="alert">
             프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
@@ -203,18 +222,28 @@ export function App({
         )}
         <label className={styles.search}>
           <span className={styles.visuallyHidden}>프로필 검색</span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            aria-hidden="true"
+          >
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m16 16 4.5 4.5" />
+          </svg>
           <input
             type="search"
             value={query}
-            placeholder="정보 검색, 예: 이메일, 자격증, 학교"
+            placeholder="이메일, 자격증, 학교 검색"
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
 
         {loadStatus === "ready" && (
           <p className={styles.readiness}>
-            <span>{registeredCategoryCount} / 10 범주 등록</span>
-            직접 복사하거나 자동 기입을 시작하세요
+            <span>{registeredCategoryCount}개 범주 등록</span>
+            <span>직접 복사하거나 자동 기입을 시작하세요</span>
           </p>
         )}
 
@@ -295,6 +324,7 @@ export function App({
                             {isRevealed ? (
                               <button
                                 type="button"
+                                data-copied={copiedId === item.id}
                                 aria-label={`${item.fieldLabel} 복사`}
                                 onClick={() => void copy(item.id, item.value)}
                               >
@@ -330,7 +360,7 @@ export function App({
       </main>
       <footer className={styles.footer}>
         <button type="button" onClick={() => void startAutofill()}>
-          자동 기입
+          자동 기입 <span aria-hidden="true">→</span>
         </button>
         <p>선택 후 분석과 검토를 시작합니다</p>
         {autofillFailed && (

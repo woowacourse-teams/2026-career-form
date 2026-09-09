@@ -5,9 +5,7 @@ import { isAutofillProfileFieldKey } from "./profile-field-key";
 describe("isAutofillProfileFieldKey", () => {
   it("accepts an education top-level field used by the SK adapter", () => {
     expect(
-      isAutofillProfileFieldKey(
-        "education.university.latestEducationType",
-      ),
+      isAutofillProfileFieldKey("education.university.latestEducationType"),
     ).toBe(true);
   });
 

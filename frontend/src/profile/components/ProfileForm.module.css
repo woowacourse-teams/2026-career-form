@@ -1,110 +1,254 @@
+.fieldGroups {
+  display: grid;
+  gap: 28px;
+}
+.fieldGroup {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.fieldGroup legend {
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 0;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 650;
+}
 .fieldGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  align-items: start;
 }
-
 .field {
   display: grid;
-  gap: 8px;
-  color: var(--color-text-strong);
-  font-size: 14px;
-  font-weight: 700;
+  align-content: start;
+  min-width: 0;
+  gap: 7px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 500;
 }
-
+.fieldLabel {
+  display: block;
+  line-height: 1.5;
+}
+.fullWidth {
+  grid-column: 1 / -1;
+}
 .field input,
 .field textarea,
 .field select {
   width: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  padding: 11px 12px;
-  color: var(--color-text);
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--color-field-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--color-text-strong);
   background: var(--color-surface);
   font: inherit;
+  font-size: 14px;
+  font-weight: 450;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.field input:hover,
+.field textarea:hover,
+.field select:hover {
+  border-color: var(--color-accent);
+}
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
   font-weight: 400;
 }
-
-.field select {
-  appearance: none;
-  cursor: pointer;
-  background-color: var(--color-surface);
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--color-action-strong) 50%),
-    linear-gradient(135deg, var(--color-action-strong) 50%, transparent 50%);
-  background-position:
-    calc(100% - 17px) 50%,
-    calc(100% - 12px) 50%;
-  background-repeat: no-repeat;
-  background-size: 5px 5px, 5px 5px;
-  padding-right: 34px;
+.field textarea {
+  resize: vertical;
+  line-height: 1.8;
+  min-height: 136px;
 }
-
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
   border-color: var(--color-action);
-  outline: 3px solid var(--color-focus);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus);
 }
-
+.field select {
+  appearance: none;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) 50%,
+    calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size:
+    5px 5px,
+    5px 5px;
+  padding-right: 34px;
+}
 .repeatedSection {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
-
 .addActions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-
-.secondaryButton,
-.deleteButton {
-  border-radius: var(--radius-control);
-  padding: 9px 13px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 .secondaryButton {
-  border: 1px solid var(--color-action);
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  padding: 9px 12px;
   color: var(--color-action-strong);
   background: var(--color-accent-soft);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 40px;
 }
-
+.secondaryButton:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent);
+}
+.secondaryButton > span {
+  font-size: 16px;
+  font-weight: 400;
+}
 .deleteButton {
-  border: 1px solid var(--color-danger-border);
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px;
   color: var(--color-danger-text);
-  background: var(--color-surface);
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
 }
-
+.deleteButton:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-text);
+}
 .empty {
-  margin: 0;
-  border-radius: var(--radius-card);
-  padding: 22px;
-  color: var(--color-text-muted);
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 50px 20px;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
   background: var(--color-surface-muted);
   text-align: center;
 }
-
-.card {
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  padding: 18px;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  border-radius: 12px;
+  color: var(--color-info);
+  background: var(--color-info-soft);
+  font-size: 22px;
 }
-
+.empty strong {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.empty p {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.card {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-accent-soft);
 }
-
-.cardHeader h3 {
-  margin: 0;
-  color: var(--color-action-strong);
-  font-size: 17px;
+.cardToggle {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-text);
+}
+.cardChevron {
+  width: 22px;
+  flex-shrink: 0;
+  font-size: 19px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+.cardIdentity {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.cardTitle {
+  font-size: 12px;
+  font-weight: 650;
+}
+.cardSummary {
+  overflow-wrap: anywhere;
+  color: var(--color-text-subtle);
+  font-size: 11px;
+  font-weight: 400;
+}
+.cardBody {
+  border-top: 1px solid var(--color-border);
+  padding: 22px;
+}
+@media (max-width: 900px) {
+  .fieldGrid {
+    gap: 16px 14px;
+  }
+  .cardBody {
+    padding: 18px;
+  }
+}
+@media (max-width: 440px) {
+  .fieldGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cardBody {
+    padding: 16px;
+  }
+  .cardHeader {
+    padding: 12px;
+  }
+  .field input,
+  .field textarea,
+  .field select {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .field textarea,
+  .field select {
+    transition: none;
+  }
 }
