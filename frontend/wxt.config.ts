@@ -30,7 +30,7 @@ export default defineConfig({
     description: "채용 지원 정보를 안전하게 재사용하는 Chrome 확장 프로그램",
     name: "Career Form",
     host_permissions: apiHostPermissions(configuredApiBaseUrl),
-    permissions: ["storage", "sidePanel", "scripting"],
+    permissions: ["activeTab", "storage", "sidePanel", "scripting"],
     side_panel: {
       default_path: "sidepanel.html",
     },
