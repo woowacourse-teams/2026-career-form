@@ -6,6 +6,9 @@ import { defineContentScript } from "wxt/utils/define-content-script";
 import { RuntimeAnalysisApiClient } from "../../src/autofill/api/runtime-client";
 import { AutofillOverlay } from "../../src/autofill-demo/AutofillOverlay";
 import { isOpenAutofillOverlayMessage } from "../../src/autofill-demo/messages";
+import { OPEN_SIDE_PANEL_MESSAGE } from "../../src/autofill-demo/messages";
+import { resolveCompany } from "../../src/autofill/adapters/company";
+import { mountFloatingSidePanelLauncher } from "../../src/extension/floating-side-panel-launcher";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import "./style.css";
 
@@ -14,6 +17,12 @@ export default defineContentScript({
   cssInjectionMode: "ui",
 
   async main(ctx) {
+    if (resolveCompany(document.location.host) !== "generic") {
+      const removeLauncher = mountFloatingSidePanelLauncher(document, () => {
+        void browser.runtime.sendMessage(OPEN_SIDE_PANEL_MESSAGE);
+      });
+      ctx.onInvalidated(removeLauncher);
+    }
     let uiPromise: ReturnType<typeof createShadowRootUi<Root>> | undefined;
 
     const closeOverlay = () => {
