@@ -6,7 +6,7 @@
 - Approval-Digest: cabff5388840dd58b1396514f705083113a98ebeeaebc2ed6eee15a2a027990a
 - Source-Revision: f8069272a64bcdd4d9c6ff8268a8573e71c8e83a
 - Raw: llm-wiki/raw/issues/CF-82/manifest.md
-- Topics: 2
+- Topics: 5
 
 ## [2026-09-07] ingest | CF-76 로컬 프로필 JSON 전송 계약
 

@@ -14,3 +14,8 @@
 
 > Payload: [확장 프로그램 프로필·지원서 패널 UI](documents/extension/extension-ui.md)
 > Supersedes: None
+
+## adapter-live-option-selection
+
+> Payload: [SK·현대 실시간 옵션 선택 보완](documents/adapter/live-option-selection.md)
+> Supersedes: None
