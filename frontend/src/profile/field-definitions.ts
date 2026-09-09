@@ -119,6 +119,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
             visibleWhen: (values) => values.academicProcess === "대입 검정고시",
           },
           text("schoolName", "학교명"),
+          select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
           select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
           select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
           date("startDate", "입학일"),

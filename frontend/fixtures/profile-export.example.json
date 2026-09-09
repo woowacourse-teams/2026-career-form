@@ -29,6 +29,7 @@
         "values": {
           "academicProcess": "고등학교",
           "schoolName": "서울고",
+          "attendanceType": "주간",
           "completionStatus": "졸업",
           "schoolRegion": "서울",
           "startDate": "2016-03-01",

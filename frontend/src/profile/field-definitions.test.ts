@@ -23,6 +23,11 @@ describe("university profile fields", () => {
     ]));
     expect(highSchool?.fields.find((field) => field.id === "academicProcess")?.options)
       .toEqual(["고등학교", "대입 검정고시"]);
+    expect(highSchool?.fields.find((field) => field.id === "attendanceType")).toMatchObject({
+      label: "주·야간",
+      inputType: "select",
+      options: ["주간", "야간"],
+    });
     const qualificationPassDate = highSchool?.fields.find(
       (field) => field.id === "qualificationPassDate",
     );
