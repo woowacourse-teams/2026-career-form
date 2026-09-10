@@ -36,7 +36,7 @@ python3 scripts/local.py logs
 python3 scripts/local.py down
 ```
 
-Windows에서는 `python3` 대신 `py`를 사용한다. `down`은 MongoDB named volume을 삭제하지 않는다. 자세한 프로파일, Docker, MongoDB 계약은 [백엔드 안내](backend/README.md)를 참고한다.
+Windows에서는 `python3` 대신 `py`를 사용한다. `up`은 Compose 설정을 검증한 뒤 Gradle wrapper로 최신 백엔드 JAR를 만들고 Docker 이미지를 빌드한다. JDK 21이 필요하다. `down`은 MongoDB named volume을 삭제하지 않는다. 자세한 프로파일, Docker, MongoDB 계약은 [백엔드 안내](backend/README.md)를 참고한다.
 
 ## 작업 흐름
 

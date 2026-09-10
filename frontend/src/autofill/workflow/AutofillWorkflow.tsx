@@ -9,6 +9,7 @@ import type {
 
 import {
   getWorkflowAdapter,
+  type WorkflowAdapter,
   type WorkflowDiagnostic,
 } from "../adapters/workflow";
 import { AnalysisServiceError } from "../api/runtime-client";
@@ -63,6 +64,14 @@ export function shouldRunRevealPlan(
   return selectableProfileValues
     ? selectableProfileValues.includes(profileValue)
     : optionDisplayName === undefined || profileValue === optionDisplayName;
+}
+
+function adapterProfileValue(
+  adapter: WorkflowAdapter,
+  profileFieldKey: string,
+  value: string,
+): string {
+  return adapter.normalizeProfileValue?.(profileFieldKey, value) ?? value;
 }
 
 type ReviewItemGroupId = "available" | "needs-review";
@@ -285,6 +294,7 @@ function preparationItem(
   plan: PreparationPlan,
   snapshot: ReturnType<typeof collectPreparationSnapshot>,
   profile: Profile,
+  adapter: WorkflowAdapter,
 ): PreparationItem {
   const localCount = localItemCount(plan, snapshot, profile);
   if (plan.command !== "ADD_REPEATABLE_GROUP") {
@@ -292,14 +302,26 @@ function preparationItem(
       plan.command === "SELECT_OPTION_TO_REVEAL"
         ? resolveProfileFieldValue(profile, plan.profileFieldKey)
         : undefined;
-    const runnable =
+    const profileAllowsSelection =
       plan.command !== "SELECT_OPTION_TO_REVEAL" ||
       (value?.status === "resolved" &&
         shouldRunRevealPlan(
-          value.value,
+          adapterProfileValue(adapter, plan.profileFieldKey, value.value),
           plan.optionDisplayName,
           plan.selectableProfileValues,
         ));
+    const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
+    const adapterAllowsSelection =
+      profileAllowsSelection &&
+      plan.command === "SELECT_OPTION_TO_REVEAL" &&
+      value?.status === "resolved" &&
+      lookup.status === "ready"
+        ? adapter.canSelectProfileOption?.(
+            lookup.handle,
+            adapterProfileValue(adapter, plan.profileFieldKey, value.value),
+          )
+        : undefined;
+    const runnable = profileAllowsSelection && adapterAllowsSelection !== false;
     return {
       plan,
       actionLabel: actionLabel(plan, snapshot),
@@ -308,7 +330,9 @@ function preparationItem(
         ? {}
         : {
             unavailableReason:
-              "저장된 프로필 값이 없어 직접 선택이 필요합니다.",
+              adapterAllowsSelection === false
+                ? "현재 선택된 값을 보존하기 위해 준비하지 않습니다."
+                : "저장된 프로필 값이 없어 직접 선택이 필요합니다.",
           }),
       localItemCount: localCount,
     };
@@ -580,6 +604,7 @@ export function AutofillWorkflow({
       profile: loadedProfile,
       registry: snapshot.registry,
       ignoreCurrentValueCandidateIds,
+      normalizeDirectValue: adapter.normalizeProfileValue,
     });
     if (plan.status === "blocked") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
@@ -600,11 +625,17 @@ export function AutofillWorkflow({
         )
       );
     };
-    const automaticItems = plan.items.map((item) =>
-      item.status === "needs-review" && !item.disabled
-        ? { ...item, selected: true }
-        : item,
-    );
+    const automaticItems = plan.items.map((item) => {
+      const automatic =
+        item.status === "needs-review" && !item.disabled
+          ? { ...item, selected: true }
+          : item;
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      return lookup.status === "ready" &&
+        adapter.canWriteProfileOption?.(lookup.handle, automatic) === false
+        ? { ...automatic, selected: false }
+        : automatic;
+    });
     setFieldsSnapshot(snapshot);
     setReviewItems(automaticItems);
     setPartial(plan.status === "partial");
@@ -893,7 +924,7 @@ export function AutofillWorkflow({
         setPreparationSnapshot(snapshot);
         setPreparationItems(
           preparationPlans.map((plan) =>
-            preparationItem(plan, snapshot, loadedProfile),
+            preparationItem(plan, snapshot, loadedProfile, adapter),
           ),
         );
         setWarnings(analysis.warningCodes ?? []);
@@ -956,13 +987,25 @@ export function AutofillWorkflow({
         }
         const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
         if (value.status !== "resolved") return "profile-value-unavailable";
+        const normalizedValue = adapterProfileValue(
+          adapter,
+          plan.profileFieldKey,
+          value.value,
+        );
+        const adapterAllowsSelection = adapter.canSelectProfileOption?.(
+          lookup.handle,
+          normalizedValue,
+        );
+        if (adapterAllowsSelection === false) return "action-not-ready";
         if (
           lookup.handle.element instanceof HTMLInputElement &&
           lookup.handle.element.type === "radio"
         ) {
-          const label = plan.optionDisplayName ?? value.value;
+          const label = plan.optionDisplayName ?? normalizedValue;
           if (lookup.handle.candidate.displayName !== label)
             return "option-label-mismatch";
+          if (adapterAllowsSelection === true && lookup.handle.element.checked)
+            return "selected";
           lookup.handle.element.click();
           return lookup.handle.element.checked
             ? "selected"
@@ -971,9 +1014,15 @@ export function AutofillWorkflow({
         if (!(lookup.handle.element instanceof HTMLSelectElement))
           return "unsupported-option-action";
         const option = Array.from(lookup.handle.element.options).find(
-          (candidate) => candidate.textContent?.trim() === value.value,
+          (candidate) => candidate.textContent?.trim() === normalizedValue,
         );
         if (!option) return "option-label-mismatch";
+        if (
+          adapterAllowsSelection === true &&
+          lookup.handle.element.value === option.value
+        ) {
+          return "selected";
+        }
         lookup.handle.element.value = option.value;
         lookup.handle.element.dispatchEvent(
           new Event("change", { bubbles: true }),
@@ -1019,7 +1068,13 @@ export function AutofillWorkflow({
           return adapter.selectReveal(
             pageDocument,
             selection,
-            resolved.status === "resolved" ? resolved.value : undefined,
+            resolved.status === "resolved"
+              ? adapterProfileValue(
+                  adapter,
+                  selection.profileFieldKey,
+                  resolved.value,
+                )
+              : undefined,
           );
         }),
       );
@@ -1052,7 +1107,7 @@ export function AutofillWorkflow({
             > => plan.command === "SELECT_OPTION_TO_REVEAL",
           )
           .map((plan) => ({
-            ...preparationItem(plan, followUpSnapshot, profile),
+            ...preparationItem(plan, followUpSnapshot, profile, adapter),
             approved: true,
           }))
           .filter((item) => item.runnable);
@@ -1119,6 +1174,11 @@ export function AutofillWorkflow({
       // Multiple saved entries remain ambiguous in the common profile resolver.
       const resolved = resolveProfileFieldValue(loadedProfile, profileFieldKey);
       if (resolved.status !== "resolved") return [];
+      const normalizedValue = adapterProfileValue(
+        adapter,
+        profileFieldKey,
+        resolved.value,
+      );
       return [
         {
           candidateId: field.candidateId,
@@ -1132,8 +1192,8 @@ export function AutofillWorkflow({
             ? { itemIndex: lookup.handle.itemIndex }
             : {}),
           currentValue: lookup.handle.elements[0]?.value ?? "",
-          profileValue: resolved.value,
-          previewValue: resolved.value,
+          profileValue: normalizedValue,
+          previewValue: normalizedValue,
           status: "available" as const,
           selected: true,
           disabled: false,

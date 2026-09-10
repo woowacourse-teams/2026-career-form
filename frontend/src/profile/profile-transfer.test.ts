@@ -24,6 +24,71 @@ function expectFieldsToBeFilled(
   expect(Object.values(values).every((value) => value.length > 0)).toBe(true);
 }
 
+const militaryScenarios = [
+  {
+    name: "군필",
+    values: {
+      militaryStatus: "군필",
+      militaryType: "현역병",
+      militaryBranch: "육군",
+      militarySpecialty: "보병",
+      militaryRank: "병장",
+      serviceStartDate: "2020-03-01",
+      serviceEndDate: "2021-09-30",
+      dischargeType: "만기전역",
+    },
+  },
+  {
+    name: "복무중",
+    values: {
+      militaryStatus: "복무중",
+      militaryType: "현역병",
+      militaryBranch: "육군",
+      militarySpecialty: "보병",
+      militaryRank: "일병",
+      serviceStartDate: "2026-03-01",
+      serviceEndDate: "2027-09-30",
+      dischargeType: "전역예정",
+    },
+  },
+  { name: "미필", values: { militaryStatus: "미필" } },
+  {
+    name: "면제",
+    values: {
+      militaryStatus: "면제",
+      exemptionReason: "비식별 예시 면제 사유",
+    },
+  },
+  {
+    name: "비대상",
+    values: {
+      militaryStatus: "비대상",
+      exemptionReason: "비식별 예시 비대상 사유",
+    },
+  },
+] as const;
+
+const veteranScenarios = [
+  {
+    name: "대상",
+    values: {
+      veteranStatus: "대상",
+      veteranType: "독립유공자",
+      veteranRelation: "본인",
+      veteranNumber: "VET-DEMO-001",
+    },
+  },
+  { name: "비대상", values: { veteranStatus: "비대상" } },
+] as const;
+
+function definedFieldIds(categoryId: string, sectionId: string): Set<string> {
+  const section = PROFILE_CATEGORIES.find(
+    (category) => category.id === categoryId,
+  )?.sections.find((candidate) => candidate.id === sectionId);
+  expect(section).toBeDefined();
+  return new Set(section!.fields.map((field) => field.id));
+}
+
 describe("profile JSON transfer", () => {
   it("serializes a sanitized versioned profile envelope", () => {
     const profile = createEmptyProfile();
@@ -121,8 +186,22 @@ describe("profile JSON transfer", () => {
         expect.objectContaining({ sectionId: "certificate" }),
       ],
       projects: [expect.objectContaining({ sectionId: "project" })],
-      military: {},
-      veteran: {},
+      military: {
+        militaryStatus: "군필",
+        militaryType: "현역병",
+        militaryBranch: "육군",
+        militarySpecialty: "보병",
+        militaryRank: "병장",
+        serviceStartDate: "2020-03-01",
+        serviceEndDate: "2021-09-30",
+        dischargeType: "만기전역",
+      },
+      veteran: {
+        veteranStatus: "대상",
+        veteranType: "독립유공자",
+        veteranRelation: "본인",
+        veteranNumber: "VET-DEMO-001",
+      },
       disability: {},
       health: [],
     });
@@ -160,5 +239,52 @@ describe("profile JSON transfer", () => {
     profile.publications.forEach((entry) =>
       expectFieldsToBeFilled(entry.values, "publications", entry.sectionId),
     );
+    expect(profile.military).toEqual({
+      militaryStatus: "군필",
+      militaryType: "현역병",
+      militaryBranch: "육군",
+      militarySpecialty: "보병",
+      militaryRank: "병장",
+      serviceStartDate: "2020-03-01",
+      serviceEndDate: "2021-09-30",
+      dischargeType: "만기전역",
+    });
+    expectFieldsToBeFilled(profile.veteran, "veteran", "veteran");
+  });
+
+  it.each(militaryScenarios)(
+    "preserves a logically consistent $name military scenario",
+    ({ values }) => {
+      const profile = createEmptyProfile();
+      profile.military = { ...values };
+
+      expect(parseProfileImport(serializeProfileExport(profile))).toEqual(
+        profile,
+      );
+    },
+  );
+
+  it.each(veteranScenarios)(
+    "preserves only applicable fields for the $name veteran scenario",
+    ({ values }) => {
+      const profile = createEmptyProfile();
+      profile.veteran = { ...values };
+
+      expect(parseProfileImport(serializeProfileExport(profile))).toEqual(
+        profile,
+      );
+      if (values.veteranStatus === "비대상") {
+        expect(Object.keys(profile.veteran)).toEqual(["veteranStatus"]);
+      }
+    },
+  );
+
+  it("covers every defined military and veteran field across applicable scenarios", () => {
+    expect(
+      new Set(militaryScenarios.flatMap(({ values }) => Object.keys(values))),
+    ).toEqual(definedFieldIds("military", "military"));
+    expect(
+      new Set(veteranScenarios.flatMap(({ values }) => Object.keys(values))),
+    ).toEqual(definedFieldIds("veteran", "veteran"));
   });
 });

@@ -109,6 +109,38 @@ const LANGUAGE_ACTION_FIXTURES: readonly LanguageActionFixture[] = [
   },
 ];
 
+const EDUCATION_ACTION_FIXTURES = [
+  {
+    actionId: "btnAddEducationHigh",
+    actionLabel: "고등학교 학력 정보 추가",
+    rowClass: "educationhigh-item",
+    schoolName: "eduhgEducationName",
+  },
+  {
+    actionId: "btnAddEducationUniv",
+    actionLabel: "대학 학력 정보 추가",
+    rowClass: "educationUniv-item",
+    schoolName: "eduEducationName",
+  },
+] as const;
+
+function renderedEducationRow(
+  fixture: (typeof EDUCATION_ACTION_FIXTURES)[number],
+): string {
+  return `
+    <div class="form-item-group ${fixture.rowClass} no-space">
+      <div class="form-item-asset">
+        <input name="${fixture.schoolName}" type="text" />
+        <div class="form-item-column btn-control">
+          <div class="form-add-control column">
+            <button class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 describe("SK collection adapter", () => {
   beforeEach(() => {
     (
@@ -457,6 +489,123 @@ describe("SK collection adapter", () => {
       ).toBe(1);
     },
   );
+
+  it.each(EDUCATION_ACTION_FIXTURES)(
+    "re-identifies $actionId only in its verified SK education row",
+    (fixture) => {
+      document.body.innerHTML = `
+        <div id="TempleteItems" style="display: none">
+          ${renderedEducationRow(fixture)}
+        </div>
+        <div id="applyContentAcademic" class="apply-form-box education-root">
+          <div class="form-body">
+            <div class="form-add-control">
+              <button id="${fixture.actionId}" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
+            </div>
+          </div>
+        </div>
+      `;
+      const firstAction = document.querySelector<HTMLButtonElement>(
+        `#${fixture.actionId}`,
+      )!;
+      const formBody = document.querySelector(".education-root > .form-body")!;
+      firstAction.addEventListener("click", () => {
+        firstAction.style.display = "none";
+        formBody.insertAdjacentHTML("beforeend", renderedEducationRow(fixture));
+      });
+
+      const initial = collectPreparationSnapshot(document);
+      const initialSection = initial.request.sections.find(
+        ({ actionCandidates }) =>
+          actionCandidates.some(({ domId }) => domId === fixture.actionId),
+      )!;
+      const initialAction = initialSection.actionCandidates.find(
+        ({ domId }) => domId === fixture.actionId,
+      )!;
+
+      firstAction.click();
+      const refreshed = collectPreparationSnapshot(document);
+      const lookup = refreshed.registry.lookupActionByIdentity({
+        sectionId: initialSection.sectionId,
+        displayName: initialAction.displayName,
+        domId: initialAction.domId,
+      });
+
+      expect(lookup).toMatchObject({
+        status: "ready",
+        handle: { candidate: { domId: fixture.actionId } },
+      });
+      expect(
+        lookup.status === "ready"
+          ? refreshed.countRepeatableGroups(lookup.handle.candidateId)
+          : undefined,
+      ).toBe(1);
+    },
+  );
+
+  it("refuses incomplete or incorrectly nested rendered education replacements", () => {
+    const fixture = EDUCATION_ACTION_FIXTURES[0];
+    document.body.innerHTML = `
+      <div id="applyContentAcademic" class="apply-form-box education-root">
+        <div class="form-body">
+          ${renderedEducationRow(fixture)}
+          ${renderedEducationRow(fixture)}
+        </div>
+      </div>
+      <div class="apply-form-box other-root">
+        <div class="form-body">${renderedEducationRow(fixture)}</div>
+      </div>
+    `;
+    const incomplete = document.querySelector(
+      ".education-root .form-item-group .form-add-control",
+    )!;
+    incomplete.innerHTML = `<button class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>`;
+    document.querySelector(".education-root .form-item-group input")!.remove();
+    document
+      .querySelectorAll(".education-root .form-item-group")[1]!
+      .querySelector(".form-item-column")!
+      .classList.remove("btn-control");
+
+    const actions = collectPreparationSnapshot(document)
+      .request.sections.flatMap(({ actionCandidates }) => actionCandidates)
+      .filter(({ displayName }) => displayName === fixture.actionLabel);
+
+    expect(actions.map(({ domId }) => domId)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it("leaves two verified education replacements in one root ambiguous", () => {
+    const fixture = EDUCATION_ACTION_FIXTURES[1];
+    document.body.innerHTML = `
+      <div id="applyContentAcademic" class="apply-form-box education-root">
+        <div class="form-body">
+          <button id="${fixture.actionId}" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
+        </div>
+      </div>
+    `;
+    const initial = collectPreparationSnapshot(document);
+    const initialSection = initial.request.sections[0]!;
+    const initialAction = initialSection.actionCandidates[0]!;
+    document
+      .querySelector(".education-root > .form-body")!
+      .insertAdjacentHTML("beforeend", renderedEducationRow(fixture));
+    document
+      .querySelector(".education-root > .form-body")!
+      .insertAdjacentHTML("beforeend", renderedEducationRow(fixture));
+
+    const refreshed = collectPreparationSnapshot(document);
+
+    expect(
+      refreshed.registry.lookupActionByIdentity({
+        sectionId: initialSection.sectionId,
+        displayName: initialAction.displayName,
+        domId: initialAction.domId,
+      }),
+    ).toEqual({ status: "unknown" });
+  });
 
   it.each(LANGUAGE_ACTION_FIXTURES)(
     "re-identifies a later $actionId action without the first-row layout marker",

@@ -29,7 +29,8 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     private static final String COMPANY_KEY = "sk";
-    private static final long VERSION = 22;
+    private static final long VERSION = 23;
+    private static final long HYUNDAI_VERSION = 6;
 
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
@@ -58,7 +59,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             "hyundai",
             "talent.hyundai.com",
             List.of("/apply/applyWrite.hc"),
-            4
+            HYUNDAI_VERSION
         ));
     }
 
@@ -66,7 +67,7 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
         return new FormAnalysisPolicyDocument(
             "hyundai-policy-v4",
             "hyundai",
-            4,
+            HYUNDAI_VERSION,
             new PreparationFingerprint(
                 Set.of("section-root"),
                 List.of(
@@ -142,6 +143,25 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 contextualTextRule(
                     "majorNm", "majorNm", "educationuniversity",
                     "education.university.majorName"
+                ),
+                contextualTextRule(
+                    "dblMajorNm", "dblMajorNm", "educationuniversity",
+                    "education.university.additionalMajorName"
+                ),
+                contextualTextRule(
+                    "minorNm", "minorNm", "educationuniversity",
+                    "education.university.minorName"
+                ),
+                new FieldRule(
+                    "rcdPerf",
+                    FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.BUTTON,
+                    new ButtonOptionBinding(
+                        "education.university.gpaScale",
+                        Map.of("4.00", "4.0", "4.30", "4.3", "4.50", "4.5", "100.00", "100"),
+                        Map.of("4.0", "4", "4.3", "4.3", "4.5", "4.5", "100", "100")
+                    ),
+                    false, null, "educationuniversity"
                 ),
                 contextualDerivedTextRule(
                     "whiStDt", "whiStDt", "educationuniversity",
@@ -346,14 +366,72 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 textRule("lastSal", "compensation.compensation.previousSalary"),
                 textRule("title", "publications.publicationPatent.title"),
                 textareaRule("cont", "publications.publicationPatent.details"),
-                derivedTextRule(
-                    "milStartDt", DerivedRecipe.YEAR_MONTH,
+                buttonOptionRule(
+                    "milCd",
+                    "military.military.militaryStatus",
+                    Map.of(
+                        "군필", "필",
+                        "만기전역", "필",
+                        "미필", "미필",
+                        "면제", "면제",
+                        "비대상", "비대상(여성/해외국적)"
+                    ),
+                    Map.of(
+                        "필", "1",
+                        "미필", "2",
+                        "면제", "5",
+                        "비대상(여성/해외국적)", "7"
+                    )
+                ),
+                buttonOptionRule(
+                    "milExcptCd",
+                    "military.military.exemptionReason",
+                    Map.of(
+                        "신체문제", "신체문제",
+                        "생계곤란", "생계곤란",
+                        "기타사유", "기타사유",
+                        "전시근로역", "전시근로역"
+                    ),
+                    Map.of(
+                        "신체문제", "01",
+                        "생계곤란", "02",
+                        "기타사유", "03",
+                        "전시근로역", "04"
+                    )
+                ),
+                buttonOptionRule(
+                    "milRank",
+                    "military.military.militaryRank",
+                    Map.of("병장", "병장", "상병", "상병", "일병", "일병", "이병", "이병"),
+                    Map.of("병장", "41", "상병", "42", "일병", "43", "이병", "44")
+                ),
+                buttonOptionRule(
+                    "milDitinc",
+                    "military.military.militaryBranch",
+                    Map.of("육군", "육군", "해군", "해군", "공군", "공군", "해병대", "해병대"),
+                    Map.of("육군", "1", "해군", "2", "공군", "3", "해병대", "4")
+                ),
+                constrainedDerivedTextRule(
+                    "milStartDt", "milStartDt", DerivedRecipe.YEAR_MONTH,
                     "military.military.serviceStartDate"
                 ),
-                derivedTextRule(
-                    "milEndDt", DerivedRecipe.YEAR_MONTH,
+                constrainedDerivedTextRule(
+                    "milEndDt", "milEndDt", DerivedRecipe.YEAR_MONTH,
                     "military.military.serviceEndDate"
-                )
+                ),
+                buttonOptionRule(
+                    "branchYn",
+                    "veteran.veteran.veteranStatus",
+                    Map.of("대상", "예", "비대상", "아니오"),
+                    Map.of("예", "Y", "아니오", "N")
+                ),
+                buttonOptionRule(
+                    "branchRel",
+                    "veteran.veteran.veteranRelation",
+                    Map.of("본인", "대상(본인)", "가족", "대상(가족)", "유족", "대상(유족)"),
+                    Map.of("대상(본인)", "1", "대상(가족)", "2", "대상(유족)", "3")
+                ),
+                constrainedTextRule("branchNo", "branchNo", "veteran.veteran.veteranNumber")
             )
         );
     }
@@ -374,6 +452,8 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                         PreparationAnalysisRequest.FormElement.SELECT,
                         PreparationAnalysisRequest.FormControl.SELECT
                     ),
+                    new ActionStructure("prsMilitarySvcYN", PreparationAnalysisRequest.FormElement.INPUT,
+                        PreparationAnalysisRequest.FormControl.RADIO, "prsMilitarySvcYN"),
                     new ActionStructure("prsVeteranBenefitYN", PreparationAnalysisRequest.FormElement.INPUT, PreparationAnalysisRequest.FormControl.RADIO),
                     new ActionStructure("prsDisabledYN", PreparationAnalysisRequest.FormElement.INPUT, PreparationAnalysisRequest.FormControl.RADIO),
                     actionStructure("대학 학력 정보 추가"),
@@ -397,8 +477,14 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             List.of(
                 new ActionRule("btnSearchAddress", ActionKind.SEARCH_ADDRESS, null),
                 new ActionRule(
+                    "prsMilitarySvcYN", ActionKind.CHOOSE_RADIO,
+                    "section-1", "military.military.militaryStatus", "대상",
+                    List.of("prsMilitarySvcStatus"), List.of("군필", "미필", "면제", "복무중")
+                ),
+                new ActionRule(
                     "prsMilitarySvcStatus", ActionKind.SELECT_OPTION,
-                    "section-1", "military.military.militaryStatus"
+                    "section-1", "military.military.militaryStatus", null, null,
+                    List.of("군필", "미필", "면제", "복무중")
                 ),
                 new ActionRule("prsVeteranBenefitYN", ActionKind.CHOOSE_RADIO, "section-1", "veteran.veteran.veteranStatus", "대상", List.of("prsVeteranBenefitNumber", "prsVeteranBenefitRelation")),
                 new ActionRule("prsDisabledYN", ActionKind.CHOOSE_RADIO, "section-1", "disability.disability.disabilityStatus", "대상", List.of("prsDisabledType", "prsDisabledTypeDtl"), List.of("장애", "예", "대상", "해당", "있음")),
@@ -521,6 +607,13 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 selectRule(
                     "prsMilitarySvcStatus",
                     "military.military.militaryStatus"
+                ),
+                new FieldRule(
+                    "prsMilitarySvcYN", FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.RADIO,
+                    new LookupBinding("military.military.militaryStatus", Map.of(
+                        "군필", "대상", "미필", "대상", "면제", "대상", "복무중", "대상", "비대상", "비대상"
+                    ))
                 ),
                 selectRule(
                     "prsMilitarySvcType",

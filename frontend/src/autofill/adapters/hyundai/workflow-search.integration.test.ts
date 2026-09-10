@@ -7,6 +7,7 @@ import type {
   FieldsAnalyzeRequest,
   FieldsAnalyzeResponse,
 } from "../../api/types";
+import { collectFieldsSnapshot } from "../../dom/collect";
 import { AutofillWorkflow } from "../../workflow/AutofillWorkflow";
 beforeEach(() => {
   (
@@ -118,12 +119,31 @@ it("uses normal nationality search before reanalysis and preserves nationality2"
   expect(analyses).toBe(2);
 });
 
-it("confirms school and major codes before writing the same university row dates", async () => {
-  document.body.innerHTML =
-    '<article id="academic" class="field-form-apply"><div class="field-content"><div class="field-group"><div class="field"><div class="select-wrap"><input type="hidden" name="schGb" class="js-field" value="5"><input type="button" id="schGb_1" value="학사"><div class="select-option education-option"><button type="button" data-code="5" class="selected">학사</button></div></div></div><div class="field search"><input type="hidden" name="schCd"><input type="text" id="schNm_1" name="schNm" data-auto-type="school" data-auto-api="0200" data-auto-params="0047"><div class="field-search-view"><ul class="search-result-list"></ul></div></div><div class="field search"><input type="hidden" name="major"><input type="text" id="majorNm_1" name="majorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div><div class="field"><input type="text" id="whiStDt_1" name="whiStDt" maxlength="7"></div></div></div></article>';
+it("confirms all university search codes before writing the same row dates", async () => {
+  document.body.innerHTML = `
+    <article id="academic" class="field-form-apply">
+      <div class="field-content">
+        <div class="field-group">
+          <div class="field">
+            <div class="select-wrap">
+              <input type="hidden" name="schGb" class="js-field" value="5">
+              <input type="button" id="schGb_1" value="학사">
+              <div class="select-option education-option"><button type="button" data-code="5" class="selected">학사</button></div>
+            </div>
+          </div>
+          <div class="field search"><input type="hidden" name="schCd"><input type="text" id="schNm_1" name="schNm" data-auto-type="school" data-auto-api="0200" data-auto-params="0047"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field search"><input type="hidden" name="major"><input type="text" id="majorNm_1" name="majorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field search"><input type="hidden" name="dblMajor"><input type="text" id="dblMajorNm_1" name="dblMajorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field search"><input type="hidden" name="minor"><input type="text" id="minorNm_1" name="minorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field"><input type="text" id="whiStDt_1" name="whiStDt" maxlength="7"></div>
+        </div>
+      </div>
+    </article>`;
   for (const [name, hiddenName, value, code] of [
     ["schNm", "schCd", "서울대학교", "0000561026"],
     ["majorNm", "major", "컴퓨터공학", "03677"],
+    ["dblMajorNm", "dblMajor", "산업디자인", "04123"],
+    ["minorNm", "minor", "경영학", "00316"],
   ]) {
     const input = document.querySelector<HTMLInputElement>(
       "[name=" + name + "]",
@@ -164,6 +184,10 @@ it("confirms school and major codes before writing the same university row dates
         degreeLevel: "학사",
         schoolName: "서울대학교",
         majorName: "컴퓨터공학",
+        doubleMajorStatus: "있음",
+        additionalMajorName: "산업디자인",
+        minorStatus: "있음",
+        minorName: "경영학",
         startDate: "2020-03",
       },
     },
@@ -171,6 +195,8 @@ it("confirms school and major codes before writing the same university row dates
   const keys: Record<string, string> = {
     schNm: "schoolName",
     majorNm: "majorName",
+    dblMajorNm: "additionalMajorName",
+    minorNm: "minorName",
     whiStDt: "startDate",
   };
   let analyses = 0;
@@ -234,11 +260,179 @@ it("confirms school and major codes before writing the same university row dates
   expect(document.querySelector<HTMLInputElement>("[name=major]")!.value).toBe(
     "03677",
   );
+  expect(
+    document.querySelector<HTMLInputElement>("[name=dblMajor]")!.value,
+  ).toBe("04123");
+  expect(document.querySelector<HTMLInputElement>("[name=minor]")!.value).toBe(
+    "00316",
+  );
   expect(document.querySelector<HTMLInputElement>("#schNm_1")!.value).toBe(
     "서울대학교",
   );
   expect(document.querySelector<HTMLInputElement>("#majorNm_1")!.value).toBe(
     "컴퓨터공학",
   );
-  expect(analyses).toBe(3);
+  expect(document.querySelector<HTMLInputElement>("#dblMajorNm_1")!.value).toBe(
+    "산업디자인",
+  );
+  expect(document.querySelector<HTMLInputElement>("#minorNm_1")!.value).toBe(
+    "경영학",
+  );
+  for (const name of ["schNm", "majorNm", "dblMajorNm", "minorNm"]) {
+    expect(
+      document
+        .querySelector<HTMLInputElement>(`[name='${name}']`)!
+        .closest(".field")
+        ?.classList.contains("exist"),
+    ).toBe(true);
+  }
+  expect(analyses).toBe(5);
+});
+
+it("defers an ambiguous additional major and continues the same university row", async () => {
+  document.body.innerHTML = `
+    <article id="academic" class="field-form-apply">
+      <div class="field-content">
+        <div class="field-group">
+          <div class="field">
+            <div class="select-wrap">
+              <input type="hidden" name="schGb" class="js-field" value="5">
+              <input type="button" id="schGb_1" value="학사">
+              <div class="select-option education-option"><button type="button" data-code="5" class="selected">학사</button></div>
+            </div>
+          </div>
+          <div class="field search"><input type="hidden" name="dblMajor"><input type="text" id="dblMajorNm_1" name="dblMajorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field search"><input type="hidden" name="minor"><input type="text" id="minorNm_1" name="minorNm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0015"><div class="field-search-view"><ul class="search-result-list"></ul></div></div>
+          <div class="field"><input type="text" id="rcd_1" name="rcd"></div>
+        </div>
+      </div>
+    </article>`;
+  const additionalMajor =
+    document.querySelector<HTMLInputElement>("#dblMajorNm_1")!;
+  additionalMajor.addEventListener("keyup", () =>
+    setTimeout(() => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "auto_result";
+      button.dataset.code = "04123";
+      button.dataset.search = "디자인학";
+      button.dataset.result = "디자인학";
+      button.textContent = "디자인학";
+      const li = document.createElement("li");
+      li.append(button);
+      additionalMajor
+        .closest(".field")!
+        .querySelector(".search-result-list")!
+        .replaceChildren(li);
+    }, 0),
+  );
+  const minor = document.querySelector<HTMLInputElement>("#minorNm_1")!;
+  minor.addEventListener("keyup", () =>
+    setTimeout(() => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "auto_result";
+      button.dataset.code = "00316";
+      button.dataset.search = "경영학";
+      button.dataset.result = "경영학";
+      button.textContent = "경영학";
+      button.addEventListener("click", () => {
+        minor.value = "경영학";
+        minor.dataset.searchResult = "경영학";
+        document.querySelector<HTMLInputElement>("[name=minor]")!.value =
+          "00316";
+      });
+      const li = document.createElement("li");
+      li.append(button);
+      minor
+        .closest(".field")!
+        .querySelector(".search-result-list")!
+        .replaceChildren(li);
+    }, 0),
+  );
+  const profile = createEmptyProfile();
+  profile.education = [
+    {
+      id: "uni",
+      sectionId: "university",
+      values: {
+        doubleMajorStatus: "있음",
+        additionalMajorName: "디자인",
+        minorStatus: "있음",
+        minorName: "경영학",
+        gpaScore: "4.3",
+      },
+    },
+  ];
+  const keys: Record<string, string> = {
+    dblMajorNm: "additionalMajorName",
+    minorNm: "minorName",
+    rcd: "gpaScore",
+  };
+  expect(
+    collectFieldsSnapshot(document).request.sections.flatMap(
+      (section) => section.items ?? [],
+    ),
+  ).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ itemGroupId: "educationuniversity" }),
+    ]),
+  );
+  const apiClient: AnalysisApiClient = {
+    analyzePreparation: async (request) => ({
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      preparationPlans: [],
+    }),
+    analyzeFields: async (request) => ({
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: request.sections
+        .flatMap((section) => section.items ?? [])
+        .flatMap((item) => item.fields)
+        .flatMap((field) => {
+          const key = keys[field.domName ?? ""];
+          return key
+            ? [
+                {
+                  candidateId: field.candidateId,
+                  matchType: "MATCH" as const,
+                  valueBinding: {
+                    type: "DIRECT" as const,
+                    profileFieldKey: `education.university.${key}`,
+                  },
+                  autofillPolicy: "ALLOWED" as const,
+                  mappingStatus: "ADAPTER_VERIFIED" as const,
+                  interactionStatus: "READY" as const,
+                  writePlan: { command: "SET_TEXT" as const },
+                },
+              ]
+            : [];
+        }),
+    }),
+  };
+  render(
+    createElement(AutofillWorkflow, {
+      apiClient,
+      repository: { load: async () => profile },
+      pageDocument: document,
+      onExit: () => undefined,
+    }),
+  );
+
+  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
+  expect(additionalMajor.value).toBe("");
+  expect(
+    document.querySelector<HTMLInputElement>("[name=dblMajor]")!.value,
+  ).toBe("");
+  expect(additionalMajor.closest(".field")?.classList.contains("exist")).toBe(
+    false,
+  );
+  expect(minor.value).toBe("경영학");
+  expect(document.querySelector<HTMLInputElement>("[name=minor]")!.value).toBe(
+    "00316",
+  );
+  expect(document.querySelector<HTMLInputElement>("#rcd_1")!.value).toBe("4.3");
 });

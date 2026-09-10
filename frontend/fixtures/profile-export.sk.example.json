@@ -29,7 +29,6 @@
         "values": {
           "academicProcess": "고등학교",
           "schoolName": "서울고",
-          "attendanceType": "주간",
           "completionStatus": "졸업",
           "schoolRegion": "서울",
           "startDate": "2016-03-01",
@@ -43,7 +42,6 @@
           "schoolType": "대학교",
           "degreeLevel": "학사",
           "schoolName": "서울대학교",
-          "attendanceType": "주간",
           "startDate": "2019-03-01",
           "endDate": "2023-02-28",
           "completionStatus": "졸업",
@@ -164,7 +162,7 @@
     ],
     "compensation": {},
     "military": {
-      "militaryStatus": "군필",
+      "militaryStatus": "만기전역",
       "militaryType": "현역병",
       "militaryBranch": "육군",
       "militarySpecialty": "보병",

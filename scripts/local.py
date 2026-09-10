@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -55,6 +56,33 @@ def run_compose(command: Sequence[str], root: Path) -> int:
         return 127
 
 
+def run_backend_build(root: Path) -> int:
+    backend = root / "backend"
+    wrapper = backend / ("gradlew.bat" if os.name == "nt" else "gradlew")
+    if not wrapper.is_file():
+        print(
+            f"Gradle wrapper를 찾을 수 없습니다: {wrapper}. 저장소 파일을 확인해 주세요.",
+            file=sys.stderr,
+        )
+        return 127
+
+    try:
+        result = subprocess.run([str(wrapper), "bootJar"], cwd=backend, check=False)
+    except FileNotFoundError:
+        print(
+            "Gradle wrapper를 실행할 수 없습니다. wrapper 파일과 JDK 21 설치 상태를 확인해 주세요.",
+            file=sys.stderr,
+        )
+        return 127
+
+    if result.returncode != 0:
+        print(
+            "백엔드 빌드에 실패했습니다. 위 Gradle 출력과 JDK 21 설치 상태를 확인해 주세요.",
+            file=sys.stderr,
+        )
+    return result.returncode
+
+
 def run_action(action: str, root: Path = ROOT) -> int:
     env_file = root / ".env.local"
     if not env_file.is_file():
@@ -69,6 +97,9 @@ def run_action(action: str, root: Path = ROOT) -> int:
         validation = run_compose([*prefix, "config", "--quiet"], root)
         if validation != 0:
             return validation
+        build = run_backend_build(root)
+        if build != 0:
+            return build
     return run_compose([*prefix, *ACTION_ARGUMENTS[action]], root)
 
 

@@ -4,8 +4,9 @@ import type { ReviewPlanItem } from "../../review/review-plan";
 const SEARCH_TIMEOUT_MILLISECONDS = 3_000;
 
 interface SearchSpec {
-  domName: "schNm" | "majorNm";
-  hiddenName: "schCd" | "major";
+  domName: "schNm" | "majorNm" | "dblMajorNm" | "minorNm";
+  hiddenName: "schCd" | "major" | "dblMajor" | "minor";
+  autoType: "school" | "basic";
   params: "0045" | "0047" | "0015";
   profileFieldKey: string;
 }
@@ -20,6 +21,7 @@ interface FieldState {
   displayValue: string;
   hiddenValue: string;
   searchResult: string | null;
+  hasExistClass: boolean;
 }
 
 const SCHOOL_SPECS = new Map<string, SearchSpec>([
@@ -28,6 +30,7 @@ const SCHOOL_SPECS = new Map<string, SearchSpec>([
     {
       domName: "schNm",
       hiddenName: "schCd",
+      autoType: "school",
       params: "0045",
       profileFieldKey: "education.highSchool.schoolName",
     },
@@ -37,6 +40,7 @@ const SCHOOL_SPECS = new Map<string, SearchSpec>([
     {
       domName: "schNm",
       hiddenName: "schCd",
+      autoType: "school",
       params: "0047",
       profileFieldKey: "education.university.schoolName",
     },
@@ -46,6 +50,7 @@ const SCHOOL_SPECS = new Map<string, SearchSpec>([
     {
       domName: "schNm",
       hiddenName: "schCd",
+      autoType: "school",
       params: "0047",
       profileFieldKey: "education.graduateSchool.schoolName",
     },
@@ -58,6 +63,7 @@ const MAJOR_SPECS = new Map<string, SearchSpec>([
     {
       domName: "majorNm",
       hiddenName: "major",
+      autoType: "basic",
       params: "0015",
       profileFieldKey: "education.university.majorName",
     },
@@ -67,8 +73,32 @@ const MAJOR_SPECS = new Map<string, SearchSpec>([
     {
       domName: "majorNm",
       hiddenName: "major",
+      autoType: "basic",
       params: "0015",
       profileFieldKey: "education.graduateSchool.majorName",
+    },
+  ],
+]);
+
+const ADDITIONAL_MAJOR_SPECS = new Map<string, SearchSpec>([
+  [
+    "dblMajorNm",
+    {
+      domName: "dblMajorNm",
+      hiddenName: "dblMajor",
+      autoType: "basic",
+      params: "0015",
+      profileFieldKey: "education.university.additionalMajorName",
+    },
+  ],
+  [
+    "minorNm",
+    {
+      domName: "minorNm",
+      hiddenName: "minor",
+      autoType: "basic",
+      params: "0015",
+      profileFieldKey: "education.university.minorName",
     },
   ],
 ]);
@@ -83,9 +113,13 @@ function searchSpec(handle: FieldCandidateHandle): SearchSpec | undefined {
       ? SCHOOL_SPECS
       : handle.candidate.domName === "majorNm"
         ? MAJOR_SPECS
-        : undefined;
+        : handle.itemGroupId === "educationuniversity"
+          ? ADDITIONAL_MAJOR_SPECS
+          : undefined;
   return handle.itemGroupId && specs
-    ? specs.get(handle.itemGroupId)
+    ? specs === ADDITIONAL_MAJOR_SPECS
+      ? specs.get(handle.candidate.domName ?? "")
+      : specs.get(handle.itemGroupId)
     : undefined;
 }
 
@@ -129,6 +163,7 @@ function verifiedField(
   if (
     document.location.host !== "talent.hyundai.com" ||
     document.location.pathname !== "/apply/applyWrite.hc" ||
+    handle.isCurrentContext?.() === false ||
     handle.elements.length !== 1 ||
     handle.candidate.domName !== spec.domName ||
     !handle.candidate.domId ||
@@ -143,8 +178,7 @@ function verifiedField(
     display.id !== handle.candidate.domId ||
     display.name !== spec.domName ||
     display.type !== "text" ||
-    display.dataset.autoType !==
-      (spec.domName === "schNm" ? "school" : "basic") ||
+    display.dataset.autoType !== spec.autoType ||
     display.dataset.autoApi !== "0200" ||
     display.dataset.autoParams !== spec.params
   ) {
@@ -193,7 +227,16 @@ function currentState(field: SearchField): FieldState {
     displayValue: field.display.value,
     hiddenValue: field.hidden.value,
     searchResult: field.display.getAttribute("data-search-result"),
+    hasExistClass:
+      field.display.closest(".field.search")?.classList.contains("exist") ??
+      false,
   };
+}
+
+function restoreExistClass(field: SearchField, before: FieldState): void {
+  field.display
+    .closest(".field.search")
+    ?.classList.toggle("exist", before.hasExistClass);
 }
 
 function setNativeValue(input: HTMLInputElement, value: string): boolean {
@@ -226,6 +269,35 @@ function restoreIfUnchanged(
   } else {
     field.display.setAttribute("data-search-result", before.searchResult);
   }
+  restoreExistClass(field, before);
+}
+
+function restoreOwnedSelectionIfUnchanged(
+  field: SearchField,
+  query: string,
+  code: string,
+  before: FieldState,
+): void {
+  if (
+    !field.display.isConnected ||
+    field.display.value !== query ||
+    field.hidden.value !== code ||
+    normalize(field.display.dataset.searchResult) !== query
+  ) {
+    return;
+  }
+  setNativeValue(field.display, before.displayValue);
+  field.hidden.value = before.hiddenValue;
+  if (before.searchResult === null) {
+    field.display.removeAttribute("data-search-result");
+  } else {
+    field.display.setAttribute("data-search-result", before.searchResult);
+  }
+  restoreExistClass(field, before);
+}
+
+function markConfirmed(field: SearchField): void {
+  field.display.closest(".field.search")?.classList.add("exist");
 }
 
 function isVisibleAction(button: HTMLButtonElement): boolean {
@@ -343,7 +415,10 @@ export async function runHyundaiEducationSearch(
   const field = verifiedField(document, handle, spec);
   if (!field) return false;
   const query = normalize(item.profileValue);
-  if (isConfirmed(field, query)) return true;
+  if (isConfirmed(field, query)) {
+    markConfirmed(field);
+    return true;
+  }
   if (
     normalize(item.currentValue) !== normalize(field.display.value) ||
     !isBlank(field)
@@ -356,6 +431,7 @@ export async function runHyundaiEducationSearch(
   if (
     signal?.aborted ||
     !result ||
+    handle.isCurrentContext?.() === false ||
     !field.display.isConnected ||
     !field.hidden.isConnected ||
     !field.results.isConnected ||
@@ -378,8 +454,9 @@ export async function runHyundaiEducationSearch(
     !isConfirmed(field, query) ||
     field.hidden.value !== result.code
   ) {
-    restoreIfUnchanged(field, query, before);
+    restoreOwnedSelectionIfUnchanged(field, query, result.code, before);
     return false;
   }
+  markConfirmed(field);
   return true;
 }

@@ -173,3 +173,15 @@
 - 국내 주소 유일 결과 선택과 실행 소유 modal cleanup, 국적1 대한민국/KR·국적2 불변, 학력 정책 v4의 그룹별 행·필드와 실제 `school`/`basic` auto-type을 기록했다.
 - 설치 production smoke는 고교·학사 2행을 확인하고 주소 3값·readonly, 학교·전공 코드와 기간·GPA·졸업 코드를 독립 대조했다. API 7회는 HTTP 200/ADAPTER/COMPLETE였고 UI 38/0은 전체 성공이 아니다.
 - 실제 대학원·전문학사·박사, 저장·제출, toolbar icon 클릭은 검증하지 않았으며 지원서 1149개 제어와 원래 프로필 키 부재 상태를 복원했다. 개인 입력값·원본 DOM·세션은 기록하지 않았다.
+
+## 2026-09-09 — CF-83 SK·현대 자동 기입 보완
+
+- 승인 digest `8ee710bc2303688173a36b717de467a7f31b20054ecacfb9ade8d74c931bd4dd`의 후보 6개를 [CF-83 bundle](../raw/issues/CF-83/manifest.md)에 기록했다.
+- SK 학력 재식별·병역/보훈 기존 값 보호, 현대 만점기준·추가 전공·라벨 및 소수점 정책 저장 보완을 회사 topic과 현황표에 반영했다.
+- CF-46 근거는 보존하고 CF-83 자동 검증과 실제 설치 재기입 미검증을 구분했다.
+
+## [2026-09-09] revise | CF-83 후속 검증 근거 보완
+
+- 승인 digest `dce8d6f067af9892c4c2a3da6d1957ef6498091e2b1ea16d72b5a3530c01b5e4`의 전체 후보 8개를 CF-83 미병합 bundle에 반영했다.
+- SK `만기전역`→군필 alias의 회사·필드 한정 정규화와 준비·실행·검토 경로, 현대 복수·부전공 검색의 0개 결과 수동 확인·나머지 입력 계속 규칙을 기록했다.
+- Hyundai negative fixture는 40개 입력·2개 수동 확인으로 기록했다. 설치 hash와 구조적 import 일치는 확인했으나 실제 SK alias 재진입, 저장·제출·toolbar icon 및 운영 정책 rollout은 미검증으로 유지했다.

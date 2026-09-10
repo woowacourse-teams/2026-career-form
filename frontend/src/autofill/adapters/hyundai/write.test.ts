@@ -1,78 +1,38 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { hyundaiWriteAdapter } from "./write";
 
-afterEach(() => document.body.replaceChildren());
+const GPA_SCALES = [
+  ["4.0", "4"],
+  ["4.3", "4.3"],
+  ["4.5", "4.5"],
+  ["100", "100"],
+] as const;
 
-function menuHandle(labels: readonly { label: string; code: string }[]) {
-  const wrap = document.createElement("div");
-  wrap.className = "select-wrap";
-  const hidden = document.createElement("input");
-  hidden.type = "hidden";
-  hidden.className = "js-field";
-  const trigger = document.createElement("input");
-  trigger.type = "button";
-  const options = document.createElement("div");
-  options.className = "select-option";
-  labels.forEach(({ label, code }) => {
-    const choice = document.createElement("button");
-    choice.type = "button";
-    choice.dataset.code = code;
-    choice.textContent = label;
-    Object.defineProperty(choice, "offsetParent", { value: wrap });
-    choice.addEventListener("click", () => {
-      trigger.value = label;
-      hidden.value = code;
-    });
-    options.append(choice);
-  });
-  wrap.append(hidden, trigger, options);
-  document.body.append(wrap);
+function gpaItem(display: string, code: string): ReviewPlanItem {
   return {
-    trigger,
-    hidden,
-    handle: {
-      kind: "field",
-      candidateId: "exam",
-      candidate: {
-        candidateId: "exam",
-        element: "input",
-        control: "button",
-        visibility: "visible",
-        domId: "foreExamCd_1",
-      },
-      elements: [trigger],
-      optionElements: new Map(),
-      sectionId: "language",
-      signature: "INPUT|button|foreExamCd_1|",
-    } satisfies FieldCandidateHandle,
-  };
-}
-
-function canonicalOpicItem(): ReviewPlanItem {
-  return {
-    candidateId: "exam",
-    fieldLabel: "시험명",
+    candidateId: "hyundai-gpa-scale-1",
+    fieldLabel: "만점기준",
     currentValue: "",
-    profileValue: "opic",
-    previewValue: "OPIc",
-    status: "available",
+    profileValue: display,
+    previewValue: display,
+    status: "needs-review",
     selected: true,
     disabled: false,
     revealed: true,
     reason: "fixture",
     analysis: {
-      candidateId: "exam",
+      candidateId: "hyundai-gpa-scale-1",
       matchType: "MATCH",
       valueBinding: {
         type: "BUTTON_OPTION",
-        profileFieldKey: "languages.languageTest.testName",
-        optionMap: { OPIc: "OPIC" },
-        optionCodeMap: { OPIC: "stale-code" },
+        profileFieldKey: "education.university.gpaScale",
+        optionMap: { [display]: display },
+        optionCodeMap: { [display]: code },
       },
-      autofillPolicy: "ALLOWED",
+      autofillPolicy: "CONDITIONAL",
       mappingStatus: "ADAPTER_VERIFIED",
       interactionStatus: "READY",
       writePlan: { command: "SELECT_BUTTON_OPTION" },
@@ -80,31 +40,739 @@ function canonicalOpicItem(): ReviewPlanItem {
   };
 }
 
-describe("Hyundai live button option writer", () => {
-  it("uses the single current menu code instead of the policy code map", () => {
-    const { handle, trigger, hidden } = menuHandle([
-      { label: "OPIC", code: "16" },
-    ]);
+function buttonItem(
+  candidateId: string,
+  profileFieldKey: string,
+  display: string,
+  code: string,
+): ReviewPlanItem {
+  return {
+    ...gpaItem(display, code),
+    candidateId,
+    fieldLabel: candidateId,
+    analysis: {
+      ...gpaItem(display, code).analysis!,
+      candidateId,
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey,
+        optionMap: { fixture: display },
+        optionCodeMap: { [display]: code },
+      },
+    },
+  };
+}
 
-    expect(hyundaiWriteAdapter.tryWrite(handle, canonicalOpicItem())).toEqual({
-      handled: true,
-      written: true,
-    });
-    expect(trigger.value).toBe("OPIC");
-    expect(hidden.value).toBe("16");
+function renderExactButton({
+  id,
+  codegb,
+  display,
+  code,
+  enabled,
+  disabled,
+  valid,
+}: {
+  id: string;
+  codegb: string;
+  display: string;
+  code: string;
+  enabled?: string;
+  disabled?: string;
+  valid?: string;
+}) {
+  document.body.innerHTML = `
+    <article id="etc" class="field-form-apply">
+      <div class="select-wrap">
+        <input type="hidden" class="js-field" name="${id}" />
+        <input type="button" class="btn-select" id="${id}" data-codegb="${codegb}" />
+        <div class="select-option">
+          <button type="button" data-code="${code}" data-enabled="${enabled ?? ""}" data-disabled="${disabled ?? ""}" data-valid="${valid ?? ""}">${display}</button>
+        </div>
+      </div>
+    </article>`;
+  const trigger = document.querySelector<HTMLInputElement>(`#${id}`)!;
+  const article = document.querySelector<HTMLElement>("article#etc")!;
+  if (["milDitinc", "milRank"].includes(id)) {
+    article.insertAdjacentHTML(
+      "afterbegin",
+      '<div class="field"><div class="select-wrap"><input type="hidden" class="js-field" name="milCd" value="1"><input type="button" class="btn-select" id="milCd" data-codegb="0004" value="필"></div></div>',
+    );
+    trigger.required = true;
+    if (id !== "milRank")
+      article.insertAdjacentHTML(
+        "beforeend",
+        '<input type="button" id="milRank" required>',
+      );
+    if (id !== "milDitinc")
+      article.insertAdjacentHTML(
+        "beforeend",
+        '<input type="button" id="milDitinc" required>',
+      );
+    article.insertAdjacentHTML(
+      "beforeend",
+      '<input id="milStartDt" required><input id="milEndDt" required><input type="button" id="milExcptCd" disabled>',
+    );
+  }
+  if (id === "milExcptCd") {
+    article.insertAdjacentHTML(
+      "afterbegin",
+      '<div class="field"><div class="select-wrap"><input type="hidden" class="js-field" name="milCd" value="5"><input type="button" class="btn-select" id="milCd" data-codegb="0004" value="면제"></div></div>',
+    );
+    trigger.required = true;
+    article.insertAdjacentHTML(
+      "beforeend",
+      '<input id="milStartDt" disabled><input id="milEndDt" disabled><input type="button" id="milRank" disabled><input type="button" id="milDitinc" disabled>',
+    );
+  }
+  if (id === "branchRel") {
+    article.insertAdjacentHTML(
+      "afterbegin",
+      '<div class="field"><div class="select-wrap"><input type="hidden" class="js-field" name="branchYn" value="Y"><input type="button" class="btn-select" id="branchYn" data-codegb="1502" value="예"></div></div>',
+    );
+    trigger.required = true;
+    article.insertAdjacentHTML(
+      "beforeend",
+      '<input type="checkbox" id="branchSupplyYn"><input type="button" id="branchAddPoint" required><input id="branchNo" required>',
+    );
+  }
+  const hidden = document.querySelector<HTMLInputElement>(
+    `input[type='hidden'][name='${id}']`,
+  )!;
+  const option = trigger
+    .closest(".select-wrap")!
+    .querySelector<HTMLButtonElement>(".select-option button")!;
+  Object.defineProperty(option, "offsetParent", { value: document.body });
+  let triggerClicks = 0;
+  let optionClicks = 0;
+  trigger.addEventListener("click", () => {
+    triggerClicks += 1;
   });
+  option.addEventListener("click", () => {
+    optionClicks += 1;
+    trigger.value = display;
+    hidden.value = code;
+  });
+  const candidateId = `field-${id}`;
+  return {
+    trigger,
+    hidden,
+    option,
+    handle: {
+      kind: "field",
+      candidateId,
+      sectionId: "etc",
+      signature: id,
+      candidate: {
+        candidateId,
+        visibility: "visible",
+        domId: id,
+        element: "input",
+        control: "button",
+      },
+      elements: [trigger],
+      optionElements: new Map(),
+    } as FieldCandidateHandle,
+    triggerClicks: () => triggerClicks,
+    optionClicks: () => optionClicks,
+  };
+}
 
-  it("does not choose when two current menu labels match one standard value", () => {
-    const { handle, trigger, hidden } = menuHandle([
-      { label: "OPIC", code: "16" },
-      { label: "OPIc", code: "99" },
-    ]);
+function renderGpa(
+  display: string,
+  code: string,
+  rowNumber = 1,
+  itemIndex = 0,
+): {
+  trigger: HTMLInputElement;
+  resultHidden: HTMLInputElement;
+  directHidden: HTMLInputElement;
+  otherHidden: HTMLInputElement;
+  handle: FieldCandidateHandle;
+  clicks: () => number;
+} {
+  document.body.innerHTML = `
+    <div class="field-content">
+      <div class="field-group">
+        <div class="field">
+          <div class="select-wrap">
+            <input type="hidden" class="js-field" name="directRcdperf" />
+            <input type="hidden" class="js-field" name="rcdPerf" />
+            <input type="button" id="rcdPerf_${rowNumber}" data-codegb="0017" />
+            <div class="select-option">
+              <button type="button" data-code="${code}">${display}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field-content" id="other-row">
+      <div class="select-wrap">
+        <input type="hidden" class="js-field" name="rcdPerf" value="OTHER" />
+        <input type="button" id="rcdPerf_99" data-codegb="0017" value="기존값" />
+      </div>
+    </div>
+  `;
+  const trigger = document.querySelector<HTMLInputElement>(
+    `#rcdPerf_${rowNumber}`,
+  )!;
+  const resultHidden = document.querySelector<HTMLInputElement>(
+    "input[name='rcdPerf']",
+  )!;
+  const directHidden = document.querySelector<HTMLInputElement>(
+    "input[name='directRcdperf']",
+  )!;
+  const otherHidden = document.querySelector<HTMLInputElement>(
+    "#other-row input[name='rcdPerf']",
+  )!;
+  const option = document.querySelector<HTMLButtonElement>(
+    ".select-option button",
+  )!;
+  Object.defineProperty(option, "offsetParent", { value: document.body });
+  let selectionClicks = 0;
+  option.addEventListener("click", () => {
+    selectionClicks += 1;
+    trigger.value = display;
+    resultHidden.value = code;
+  });
+  return {
+    trigger,
+    resultHidden,
+    directHidden,
+    otherHidden,
+    handle: {
+      kind: "field",
+      candidateId: "hyundai-gpa-scale-1",
+      sectionId: "academic",
+      itemId: "university-1",
+      itemIndex,
+      itemGroupId: "educationuniversity",
+      signature: "gpa-scale-1",
+      candidate: {
+        candidateId: "hyundai-gpa-scale-1",
+        visibility: "visible",
+        displayName: "만점기준",
+        domId: `rcdPerf_${rowNumber}`,
+        element: "input",
+        control: "button",
+      },
+      elements: [trigger],
+      optionElements: new Map(),
+    },
+    clicks: () => selectionClicks,
+  };
+}
 
-    expect(hyundaiWriteAdapter.tryWrite(handle, canonicalOpicItem())).toEqual({
+beforeEach(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://talent.hyundai.com/apply/applyWrite.hc",
+  });
+});
+
+afterEach(() => {
+  document.body.replaceChildren();
+});
+
+describe("Hyundai GPA scale button", () => {
+  it.each(GPA_SCALES)(
+    "writes display %s and exact hidden code %s without touching direct input",
+    (display, code) => {
+      const rendered = renderGpa(display, code);
+      const item = gpaItem(display, code);
+
+      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+        handled: true,
+        written: true,
+      });
+      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+        handled: true,
+        written: true,
+      });
+      expect(rendered.trigger.value).toBe(display);
+      expect(rendered.resultHidden.value).toBe(code);
+      expect(rendered.directHidden.value).toBe("");
+      expect(rendered.otherHidden.value).toBe("OTHER");
+      expect(rendered.clicks()).toBe(1);
+    },
+  );
+
+  it("preserves a different existing GPA scale", () => {
+    const rendered = renderGpa("4.5", "4.5");
+    rendered.trigger.value = "4.3";
+    rendered.resultHidden.value = "4.3";
+    const item = gpaItem("4.5", "4.5");
+    item.currentValue = "4.3";
+
+    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
       handled: true,
       written: false,
     });
-    expect(trigger.value).toBe("");
-    expect(hidden.value).toBe("");
+    expect(rendered.trigger.value).toBe("4.3");
+    expect(rendered.resultHidden.value).toBe("4.3");
+    expect(rendered.clicks()).toBe(0);
+    item.currentValue = "";
+    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+      handled: true,
+      written: false,
+    });
+    expect(rendered.clicks()).toBe(0);
+  });
+
+  it("binds the first university profile entry to its physical education row", () => {
+    const rendered = renderGpa("4.5", "4.5", 2, 0);
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(rendered.handle, gpaItem("4.5", "4.5")),
+    ).toEqual({ handled: true, written: true });
+    expect(rendered.resultHidden.value).toBe("4.5");
+    expect(rendered.directHidden.value).toBe("");
+  });
+
+  it("rejects an unsupported GPA code and a non-university row", () => {
+    const unsupported = renderGpa("5.0", "5");
+    expect(
+      hyundaiWriteAdapter.tryWrite(unsupported.handle, gpaItem("5.0", "5")),
+    ).toEqual({ handled: true, written: false });
+    expect(unsupported.clicks()).toBe(0);
+
+    const wrongGroup = renderGpa("4.5", "4.5");
+    wrongGroup.handle.itemGroupId = "educationgraduateschool";
+    expect(
+      hyundaiWriteAdapter.tryWrite(wrongGroup.handle, gpaItem("4.5", "4.5")),
+    ).toEqual({ handled: true, written: false });
+    expect(wrongGroup.clicks()).toBe(0);
+  });
+
+  it("rejects a mismatched candidate identity", () => {
+    const mismatched = renderGpa("4.5", "4.5");
+    mismatched.handle.candidate.domId = "rcdPerf_2";
+    expect(
+      hyundaiWriteAdapter.tryWrite(mismatched.handle, gpaItem("4.5", "4.5")),
+    ).toEqual({ handled: true, written: false });
+    expect(mismatched.clicks()).toBe(0);
+  });
+
+  it("rejects a mismatched live GPA code group", () => {
+    const wrongCodeGroup = renderGpa("4.5", "4.5");
+    wrongCodeGroup.trigger.dataset.codegb = "9999";
+    expect(
+      hyundaiWriteAdapter.tryWrite(
+        wrongCodeGroup.handle,
+        gpaItem("4.5", "4.5"),
+      ),
+    ).toEqual({ handled: true, written: false });
+    expect(wrongCodeGroup.clicks()).toBe(0);
+  });
+
+  it("rejects duplicate same-row GPA hidden targets", () => {
+    const rendered = renderGpa("4.5", "4.5");
+    const duplicate = document.createElement("input");
+    duplicate.type = "hidden";
+    duplicate.className = "js-field";
+    duplicate.name = "rcdPerf";
+    rendered.trigger.closest(".select-wrap")!.prepend(duplicate);
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(rendered.handle, gpaItem("4.5", "4.5")),
+    ).toEqual({ handled: true, written: false });
+    expect(rendered.clicks()).toBe(0);
+  });
+});
+
+describe("Hyundai military and veteran buttons", () => {
+  it.each([
+    {
+      id: "milCd",
+      codegb: "0004",
+      fieldKey: "military.military.militaryStatus",
+      display: "필",
+      code: "1",
+      enabled: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+      disabled: "milExcptCd",
+      valid: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+    },
+    {
+      id: "milDitinc",
+      codegb: "0005",
+      fieldKey: "military.military.militaryBranch",
+      display: "육군",
+      code: "1",
+    },
+    {
+      id: "milRank",
+      codegb: "0006",
+      fieldKey: "military.military.militaryRank",
+      display: "병장",
+      code: "41",
+    },
+    {
+      id: "milExcptCd",
+      codegb: "0094",
+      fieldKey: "military.military.exemptionReason",
+      display: "신체문제",
+      code: "01",
+    },
+    {
+      id: "branchYn",
+      codegb: "1502",
+      fieldKey: "veteran.veteran.veteranStatus",
+      display: "예",
+      code: "Y",
+      enabled: "branchRel,branchSupplyYn,branchAddPoint,branchNo",
+      disabled: "",
+      valid: "branchRel,branchAddPoint,branchNo",
+    },
+    {
+      id: "branchRel",
+      codegb: "0007",
+      fieldKey: "veteran.veteran.veteranRelation",
+      display: "대상(본인)",
+      code: "1",
+    },
+  ])(
+    "writes the exact $id display and hidden code",
+    ({ fieldKey, ...spec }) => {
+      const rendered = renderExactButton(spec);
+      const item = buttonItem(
+        rendered.handle.candidateId,
+        fieldKey,
+        spec.display,
+        spec.code,
+      );
+
+      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+        handled: true,
+        written: true,
+      });
+      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+        handled: true,
+        written: true,
+      });
+      expect(rendered.trigger.value).toBe(spec.display);
+      expect(rendered.hidden.value).toBe(spec.code);
+      expect(rendered.optionClicks()).toBe(1);
+      expect(rendered.triggerClicks()).toBe(1);
+    },
+  );
+
+  it("does not click an already matching military status", () => {
+    const rendered = renderExactButton({
+      id: "milCd",
+      codegb: "0004",
+      display: "필",
+      code: "1",
+      enabled: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+      disabled: "milExcptCd",
+      valid: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+    });
+    rendered.trigger.value = "필";
+    rendered.hidden.value = "1";
+    const item = buttonItem(
+      rendered.handle.candidateId,
+      "military.military.militaryStatus",
+      "필",
+      "1",
+    );
+    item.currentValue = "필";
+
+    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+      handled: true,
+      written: true,
+    });
+    expect(rendered.triggerClicks()).toBe(0);
+    expect(rendered.optionClicks()).toBe(0);
+  });
+
+  it("does not click an already matching veteran status", () => {
+    const rendered = renderExactButton({
+      id: "branchYn",
+      codegb: "1502",
+      display: "예",
+      code: "Y",
+      enabled: "branchRel,branchSupplyYn,branchAddPoint,branchNo",
+      disabled: "",
+      valid: "branchRel,branchAddPoint,branchNo",
+    });
+    rendered.trigger.value = "예";
+    rendered.hidden.value = "Y";
+    const item = buttonItem(
+      rendered.handle.candidateId,
+      "veteran.veteran.veteranStatus",
+      "예",
+      "Y",
+    );
+    item.currentValue = "예";
+
+    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+      handled: true,
+      written: true,
+    });
+    expect(rendered.triggerClicks()).toBe(0);
+    expect(rendered.optionClicks()).toBe(0);
+  });
+
+  it("rejects duplicate exact options before opening the military menu", () => {
+    const rendered = renderExactButton({
+      id: "milCd",
+      codegb: "0004",
+      display: "필",
+      code: "1",
+      enabled: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+      disabled: "milExcptCd",
+      valid: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+    });
+    const duplicate = rendered.option.cloneNode(true);
+    rendered.option.after(duplicate);
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(
+        rendered.handle,
+        buttonItem(
+          rendered.handle.candidateId,
+          "military.military.militaryStatus",
+          "필",
+          "1",
+        ),
+      ),
+    ).toEqual({ handled: true, written: false });
+    expect(rendered.triggerClicks()).toBe(0);
+    expect(rendered.optionClicks()).toBe(0);
+  });
+
+  it("blocks a military detail when the selected driver did not finish its state transition", () => {
+    const rendered = renderExactButton({
+      id: "milRank",
+      codegb: "0006",
+      display: "병장",
+      code: "41",
+    });
+    document.querySelector<HTMLInputElement>("#milExcptCd")!.disabled = false;
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(
+        rendered.handle,
+        buttonItem(
+          rendered.handle.candidateId,
+          "military.military.militaryRank",
+          "병장",
+          "41",
+        ),
+      ),
+    ).toEqual({ handled: true, written: false });
+    expect(rendered.optionClicks()).toBe(0);
+  });
+
+  it("blocks a military detail when an optional specialty control remains stale", () => {
+    const rendered = renderExactButton({
+      id: "milRank",
+      codegb: "0006",
+      display: "병장",
+      code: "41",
+    });
+    const specialty = document.createElement("input");
+    specialty.id = "milSpeNm";
+    specialty.disabled = true;
+    document.querySelector("article#etc")!.append(specialty);
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(
+        rendered.handle,
+        buttonItem(
+          rendered.handle.candidateId,
+          "military.military.militaryRank",
+          "병장",
+          "41",
+        ),
+      ),
+    ).toEqual({ handled: true, written: false });
+    expect(rendered.optionClicks()).toBe(0);
+  });
+
+  it.each([
+    ["a different existing display", "미필", "2", "미필"],
+    ["a mismatched hidden code", "필", "2", "필"],
+    ["a newly appeared opposite selection", "미필", "2", ""],
+  ])("preserves %s", (_description, display, hiddenCode, currentValue) => {
+    const rendered = renderExactButton({
+      id: "milCd",
+      codegb: "0004",
+      display: "필",
+      code: "1",
+      enabled: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+      disabled: "milExcptCd",
+      valid: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+    });
+    rendered.trigger.value = display;
+    rendered.hidden.value = hiddenCode;
+    const item = buttonItem(
+      rendered.handle.candidateId,
+      "military.military.militaryStatus",
+      "필",
+      "1",
+    );
+    item.currentValue = currentValue;
+
+    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+      handled: true,
+      written: false,
+    });
+    expect(rendered.trigger.value).toBe(display);
+    expect(rendered.hidden.value).toBe(hiddenCode);
+    expect(rendered.triggerClicks()).toBe(0);
+    expect(rendered.optionClicks()).toBe(0);
+  });
+
+  it.each([
+    [
+      "wrong section",
+      (): void => {
+        document.querySelector("article")!.setAttribute("id", "foreign");
+      },
+    ],
+    [
+      "wrong code group",
+      (): void => {
+        document.querySelector<HTMLInputElement>("#milCd")!.dataset.codegb =
+          "9999";
+      },
+    ],
+    [
+      "duplicate hidden",
+      (): void =>
+        document.querySelector(".select-wrap")!.prepend(
+          Object.assign(document.createElement("input"), {
+            type: "hidden",
+            name: "milCd",
+          }),
+        ),
+    ],
+    [
+      "wrong transition contract",
+      (): void => {
+        document.querySelector<HTMLButtonElement>(
+          ".select-option button",
+        )!.dataset.valid = "milStartDt";
+      },
+    ],
+  ] as const)("refuses a military status with %s", (_description, mutate) => {
+    const rendered = renderExactButton({
+      id: "milCd",
+      codegb: "0004",
+      display: "필",
+      code: "1",
+      enabled: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+      disabled: "milExcptCd",
+      valid: "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+    });
+    mutate();
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(
+        rendered.handle,
+        buttonItem(
+          rendered.handle.candidateId,
+          "military.military.militaryStatus",
+          "필",
+          "1",
+        ),
+      ),
+    ).toEqual({ handled: true, written: false });
+    expect(rendered.optionClicks()).toBe(0);
+  });
+});
+
+describe("Hyundai military and veteran text contracts", () => {
+  it.each([
+    ["milStartDt", "military.military.serviceStartDate", "2022-03"],
+    ["milEndDt", "military.military.serviceEndDate", "2023-09"],
+  ] as const)("rejects a malformed %s date widget", (id, fieldKey, value) => {
+    document.body.innerHTML = `<article id="etc" class="field-form-apply"><div class="field calendar col-medium js-date-start js-required"><input class="js-field" type="text" id="${id}" name="${id}" maxlength="7" data-date-format="yyyy-mm" data-min-view="months" data-view="days" /></div></article>`;
+    const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
+    const candidateId = `field-${id}`;
+    const item = {
+      ...gpaItem(value, value),
+      candidateId,
+      profileValue: value,
+      analysis: {
+        ...gpaItem(value, value).analysis!,
+        candidateId,
+        valueBinding: {
+          type: "DERIVED" as const,
+          recipe: "YEAR_MONTH" as const,
+          profileFieldKey: fieldKey,
+        },
+        writePlan: { command: "SET_TEXT" as const },
+      },
+    };
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(
+        {
+          kind: "field",
+          candidateId,
+          sectionId: "etc",
+          signature: id,
+          candidate: {
+            candidateId,
+            visibility: "visible",
+            domId: id,
+            domName: id,
+            element: "input",
+            control: "text",
+          },
+          elements: [input],
+          optionElements: new Map(),
+        },
+        item,
+      ),
+    ).toEqual({ handled: true, written: false });
+  });
+
+  it.each([
+    ["non-digits", "VET-001"],
+    ["more than ten digits", "12345678901"],
+  ])("blocks a veteran number with %s", (_description, value) => {
+    document.body.innerHTML = `<article id="etc" class="field-form-apply"><div class="field col-medium js-required"><input class="js-field" type="text" id="branchNo" name="branchNo" maxlength="10" data-parsley-type="digits" /></div></article>`;
+    const input = document.querySelector<HTMLInputElement>("#branchNo")!;
+    const candidateId = "field-branchNo";
+    const item = {
+      ...gpaItem(value, value),
+      candidateId,
+      profileValue: value,
+      analysis: {
+        ...gpaItem(value, value).analysis!,
+        candidateId,
+        valueBinding: {
+          type: "DIRECT" as const,
+          profileFieldKey: "veteran.veteran.veteranNumber",
+        },
+        writePlan: { command: "SET_TEXT" as const },
+      },
+    };
+
+    expect(
+      hyundaiWriteAdapter.tryWrite(
+        {
+          kind: "field",
+          candidateId,
+          sectionId: "etc",
+          signature: "branchNo",
+          candidate: {
+            candidateId,
+            visibility: "visible",
+            domId: "branchNo",
+            domName: "branchNo",
+            element: "input",
+            control: "text",
+          },
+          elements: [input],
+          optionElements: new Map(),
+        },
+        item,
+      ),
+    ).toEqual({ handled: true, written: false });
   });
 });

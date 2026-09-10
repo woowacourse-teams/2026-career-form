@@ -26,8 +26,15 @@
       "sectionId": "section-military",
       "displayName": "기타",
       "fields": [
-        { "candidateId": "field-military-start", "element": "input", "control": "text", "visibility": "visible", "domName": "milStartDt" },
-        { "candidateId": "field-military-end", "element": "input", "control": "text", "visibility": "visible", "domName": "milEndDt" }
+        { "candidateId": "field-military-status", "element": "input", "control": "button", "visibility": "visible", "domId": "milCd" },
+        { "candidateId": "field-military-exemption", "element": "input", "control": "button", "visibility": "visible", "domId": "milExcptCd" },
+        { "candidateId": "field-military-rank", "element": "input", "control": "button", "visibility": "visible", "domId": "milRank" },
+        { "candidateId": "field-military-branch", "element": "input", "control": "button", "visibility": "visible", "domId": "milDitinc" },
+        { "candidateId": "field-military-start", "element": "input", "control": "text", "visibility": "visible", "domId": "milStartDt", "domName": "milStartDt" },
+        { "candidateId": "field-military-end", "element": "input", "control": "text", "visibility": "visible", "domId": "milEndDt", "domName": "milEndDt" },
+        { "candidateId": "field-veteran-status", "element": "input", "control": "button", "visibility": "visible", "domId": "branchYn" },
+        { "candidateId": "field-veteran-relation", "element": "input", "control": "button", "visibility": "visible", "domId": "branchRel" },
+        { "candidateId": "field-veteran-number", "element": "input", "control": "text", "visibility": "visible", "domId": "branchNo", "domName": "branchNo" }
       ]
     }
   ]

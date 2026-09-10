@@ -206,6 +206,7 @@ function itemForAnalysis(
   profile: Profile,
   registry: CandidateRegistry,
   ignoreCurrentValueCandidateIds: ReadonlySet<string>,
+  normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
@@ -278,14 +279,24 @@ function itemForAnalysis(
     }
   }
 
-  const profileValue = resolveValueBinding(profile, binding, itemIndex);
-  if (profileValue.status !== "resolved") {
+  const boundProfileValue = resolveValueBinding(profile, binding, itemIndex);
+  if (boundProfileValue.status !== "resolved") {
     const reason =
-      profileValue.status === "ambiguous"
+      boundProfileValue.status === "ambiguous"
         ? "반복 프로필 항목을 하나로 안전하게 결정할 수 없습니다."
         : "입력할 프로필 값이 없습니다.";
     return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
   }
+  const profileValue =
+    binding.type === "DIRECT" && normalizeDirectValue
+      ? {
+          ...boundProfileValue,
+          value: normalizeDirectValue(
+            binding.profileFieldKey,
+            boundProfileValue.value,
+          ),
+        }
+      : boundProfileValue;
 
   const liveOptionMatch =
     analysis.writePlan.command === "SELECT_OPTION" &&
@@ -409,11 +420,13 @@ export function buildReviewPlan({
   profile,
   registry,
   ignoreCurrentValueCandidateIds = new Set<string>(),
+  normalizeDirectValue,
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
   registry: CandidateRegistry;
   ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
+  normalizeDirectValue?: (profileFieldKey: string, value: string) => string;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
@@ -421,7 +434,13 @@ export function buildReviewPlan({
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
     items: analysis.fields.map((field) =>
-      itemForAnalysis(field, profile, registry, ignoreCurrentValueCandidateIds),
+      itemForAnalysis(
+        field,
+        profile,
+        registry,
+        ignoreCurrentValueCandidateIds,
+        normalizeDirectValue,
+      ),
     ),
   };
 }

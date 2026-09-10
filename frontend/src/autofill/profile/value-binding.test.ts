@@ -3,6 +3,74 @@ import { createEmptyProfile } from "../../profile/model";
 import { resolveValueBinding } from "./value-binding";
 
 describe("resolveValueBinding", () => {
+  it("preserves the existing behavior of unrelated high-school bindings", () => {
+    const profile = createEmptyProfile();
+    profile.education.push({
+      id: "high-school",
+      sectionId: "highSchool",
+      values: { qualificationPassDate: "2020-04-01" },
+    });
+    expect(
+      resolveValueBinding(
+        profile,
+        {
+          type: "DIRECT",
+          profileFieldKey: "education.highSchool.qualificationPassDate",
+        },
+        0,
+      ),
+    ).toMatchObject({ status: "resolved", value: "2020-04-01" });
+  });
+
+  it.each([
+    ["additionalMajorName", "doubleMajorStatus"],
+    ["minorName", "minorStatus"],
+  ])(
+    "only resolves %s when its own university row enables it",
+    (field, flag) => {
+      const profile = createEmptyProfile();
+      profile.education.push(
+        {
+          id: "enabled",
+          sectionId: "university",
+          values: { [flag]: "있음", [field]: "가상전공" },
+        },
+        {
+          id: "disabled",
+          sectionId: "university",
+          values: { [flag]: "없음", [field]: "남아있는전공" },
+        },
+        {
+          id: "missing-flag",
+          sectionId: "university",
+          values: { [field]: "남아있는전공" },
+        },
+        {
+          id: "blank",
+          sectionId: "university",
+          values: { [flag]: "있음", [field]: "  " },
+        },
+      );
+      const binding = {
+        type: "DIRECT" as const,
+        profileFieldKey: `education.university.${field}`,
+      };
+      expect(resolveValueBinding(profile, binding, 0)).toMatchObject({
+        status: "resolved",
+        value: "가상전공",
+        profileEntryId: "enabled",
+      });
+      for (const index of [1, 2, 3]) {
+        expect(resolveValueBinding(profile, binding, index)).toMatchObject({
+          status: "missing",
+        });
+      }
+      expect(resolveValueBinding(profile, binding)).toMatchObject({
+        status: "ambiguous",
+      });
+    },
+  );
+
   it("converts a backend-selected boolean profile field to Y", () => {
     const profile = createEmptyProfile();
     profile.disability.disabilityStatus = "대상";
