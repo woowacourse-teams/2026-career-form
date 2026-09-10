@@ -89,7 +89,7 @@ class LocalCompanyFormPolicySeederTest {
     }
 
     @Test
-    @DisplayName("SK 공통 구조 v23과 직무별 option lookup을 결정적으로 저장한다")
+    @DisplayName("SK 공통 구조 v24와 직무별 option lookup을 결정적으로 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
             FormAnalysisCompanyMongoRepository.class
@@ -115,7 +115,7 @@ class LocalCompanyFormPolicySeederTest {
         order.verify(companies).save(company.capture());
         assertThat(policy.getValue().id()).isEqualTo("sk-policy-v8");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
-        assertThat(policy.getValue().version()).isEqualTo(23);
+        assertThat(policy.getValue().version()).isEqualTo(24);
         assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
             .containsExactly("section-1");
         assertThat(policy.getValue().preparationFingerprint().requiredActions())
@@ -259,7 +259,7 @@ class LocalCompanyFormPolicySeederTest {
             "sk",
             "www.skcareers.com",
             java.util.List.of("/Application/Index/"),
-            23
+            24
         ));
     }
 
@@ -291,8 +291,8 @@ class LocalCompanyFormPolicySeederTest {
             .orElseThrow();
 
         assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v4");
-        assertThat(hyundaiPolicy.version()).isEqualTo(6);
-        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(6);
+        assertThat(hyundaiPolicy.version()).isEqualTo(7);
+        assertThat(hyundaiCompany.activePolicyVersion()).isEqualTo(7);
         assertThat(hyundaiPolicy.fieldRules().stream()
             .filter(rule -> java.util.Set.of(
                 "acqDtForeLang", "acqDt", "nationLicNm"
@@ -594,6 +594,282 @@ class LocalCompanyFormPolicySeederTest {
                     "Elementary (초급 수준)", "04"
                 )
             )
+        );
+    }
+
+
+    @Test
+    @DisplayName("CF-86 SK 정책은 ID 없는 정확한 학력 select 이름과 주야간 코드 계약을 저장한다")
+    void seedsSkEducationRegionAndAttendanceWithNameOnlySelects() {
+        var companies = mock(FormAnalysisCompanyMongoRepository.class);
+        var policies = mock(FormAnalysisPolicyMongoRepository.class);
+        var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        var sk = captured.getAllValues().stream()
+            .filter(policy -> policy.companyKey().equals("sk")).findFirst().orElseThrow();
+
+        assertThat(sk.fieldRules().stream()
+            .filter(rule -> java.util.Set.of(
+                "eduEducationRegion", "eduhgEducationRegion", "edugdEducationRegion",
+                "eduDaytimeYN", "edugdDaytimeYN"
+            ).contains(rule.structuralName()))
+            .toList())
+            .extracting("structuralName", "requiredDomName", "element", "control", "profileFieldKey")
+            .containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple("eduEducationRegion", null,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+                    "education.university.schoolRegion"),
+                org.assertj.core.groups.Tuple.tuple("eduhgEducationRegion", null,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+                    "education.highSchool.schoolRegion"),
+                org.assertj.core.groups.Tuple.tuple("edugdEducationRegion", null,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+                    "education.graduateSchool.schoolRegion"),
+                org.assertj.core.groups.Tuple.tuple("eduDaytimeYN", null,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+                    null),
+                org.assertj.core.groups.Tuple.tuple("edugdDaytimeYN", null,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+                    null)
+            );
+        assertThat(sk.fieldRules().stream().filter(rule -> java.util.Set.of(
+            "eduDaytimeYN", "edugdDaytimeYN").contains(rule.structuralName())).toList())
+            .extracting("valueBinding")
+            .containsExactlyInAnyOrder(
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding(
+                    "education.university.attendanceType", java.util.Map.of("주간", "주간", "야간", "야간")
+                ),
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding(
+                    "education.graduateSchool.attendanceType", java.util.Map.of("주간", "주간", "야간", "야간")
+                )
+            );
+
+        var policy = com.careerform.formanalysis.application.policy.CompanyFormPolicy.create(
+            sk.companyKey(), sk.version(), sk.preparationFingerprint(), sk.fieldsFingerprint(),
+            sk.actionRules(), sk.fieldRules(), ignored -> true
+        );
+        var request = new com.careerform.formanalysis.dto.FieldsAnalysisRequest(
+            2, "sk-name-only-education-selects",
+            new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Site(
+                "www.skcareers.com", "/Application/Index/"
+            ),
+            java.util.List.of(new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Section(
+                "section-1", null, null,
+                java.util.List.of(
+                    new com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate(
+                        "university-region", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+                        com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+                        com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility.VISIBLE,
+                        null, null, "eduEducationRegion", null, null, null, null, null
+                    ),
+                    new com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate(
+                        "graduate-attendance", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.SELECT,
+                        com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.SELECT,
+                        com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility.VISIBLE,
+                        null, null, "edugdDaytimeYN", null, null, null, null, null
+                    )
+                ), null
+            ))
+        );
+        assertThat(new com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver(policy)
+            .resolve(request).results())
+            .containsExactly(
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.Match(
+                    "university-region",
+                    new com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding(
+                        "education.university.schoolRegion"
+                    )
+                ),
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.Match(
+                    "graduate-attendance",
+                    new com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding(
+                        "education.graduateSchool.attendanceType",
+                        java.util.Map.of("주간", "주간", "야간", "야간")
+                    )
+                )
+            );
+    }
+
+    @Test
+    @DisplayName("CF-86 현대 학력 버튼과 소재지는 대학 및 대학원 group에서만 exact 코드로 연결한다")
+    void seedsContextualHyundaiAttendanceAndEducationLocations() {
+        var companies = mock(FormAnalysisCompanyMongoRepository.class);
+        var policies = mock(FormAnalysisPolicyMongoRepository.class);
+        var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        var hyundai = captured.getAllValues().stream()
+            .filter(policy -> policy.companyKey().equals("hyundai")).findFirst().orElseThrow();
+
+        assertThat(hyundai.fieldRules().stream().filter(rule -> java.util.Set.of(
+            "schClass", "locNation", "locCity").contains(rule.structuralName())).toList())
+            .extracting("structuralName", "requiredDomName", "requiredItemGroupId", "element", "control")
+            .containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple("schClass", null, "educationuniversity",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON),
+                org.assertj.core.groups.Tuple.tuple("schClass", null, "educationgraduateschool",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON),
+                org.assertj.core.groups.Tuple.tuple("locNation", null, "educationuniversity",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT),
+                org.assertj.core.groups.Tuple.tuple("locNation", null, "educationgraduateschool",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT),
+                org.assertj.core.groups.Tuple.tuple("locCity", null, "educationuniversity",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT),
+                org.assertj.core.groups.Tuple.tuple("locCity", null, "educationgraduateschool",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT)
+            );
+        assertThat(buttonBinding(hyundai, "schClass")).isEqualTo(
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding(
+                "education.university.attendanceType",
+                java.util.Map.of("주간", "주간", "야간", "야간"),
+                java.util.Map.of("주간", "D", "야간", "N")
+            )
+        );
+
+        var policy = com.careerform.formanalysis.application.policy.CompanyFormPolicy.create(
+            hyundai.companyKey(), hyundai.version(), hyundai.preparationFingerprint(),
+            hyundai.fieldsFingerprint(), hyundai.actionRules(), hyundai.fieldRules(), ignored -> true
+        );
+        var rawLocations = java.util.List.of(
+            new com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate(
+                "university-nation", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+                com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility.VISIBLE,
+                null, "locNation_1", null, null, null, null, null, null
+            ),
+            new com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate(
+                "graduate-city", com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT,
+                com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility.VISIBLE,
+                null, "locCity_2", null, null, null, null, null, null
+            )
+        );
+        var resolution = new com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver(policy)
+            .resolve(new com.careerform.formanalysis.dto.FieldsAnalysisRequest(
+                2, "hyundai-raw-location-triggers",
+                new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Site(
+                    "talent.hyundai.com", "/apply/applyWrite.hc"
+                ),
+                java.util.List.of(new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Section(
+                    "section-root", null, null, java.util.List.of(),
+                    java.util.List.of(
+                        new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Item(
+                            "university", java.util.List.of(rawLocations.getFirst()), "educationuniversity"
+                        ),
+                        new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Item(
+                            "graduate", java.util.List.of(rawLocations.getLast()), "educationgraduateschool"
+                        )
+                    )
+                ))
+            ));
+        assertThat(resolution.results()).allMatch(
+            result -> result instanceof com.careerform.formanalysis.application.port.FieldMappingResolver.Match
+        );
+        var interaction = new com.careerform.formanalysis.application.FieldInteractionPolicy();
+        assertThat(java.util.stream.IntStream.range(0, rawLocations.size())
+            .mapToObj(index -> interaction.evaluate(rawLocations.get(index), resolution.results().get(index)))
+            .toList())
+            .extracting("interactionStatus", "writePlan")
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple(
+                    com.careerform.formanalysis.dto.FieldsAnalysisResponse.InteractionStatus.READY,
+                    new com.careerform.formanalysis.dto.FieldsAnalysisResponse.WritePlan(
+                        com.careerform.formanalysis.dto.FieldsAnalysisResponse.WriteCommand.SELECT_BUTTON_OPTION
+                    )
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    com.careerform.formanalysis.dto.FieldsAnalysisResponse.InteractionStatus.READY,
+                    new com.careerform.formanalysis.dto.FieldsAnalysisResponse.WritePlan(
+                        com.careerform.formanalysis.dto.FieldsAnalysisResponse.WriteCommand.SELECT_BUTTON_OPTION
+                    )
+                )
+            );
+    }
+
+    @Test
+    @DisplayName("CF-86 현대 학력 주야간 trigger는 이름 없이도 exact id와 group에서만 button option으로 준비한다")
+    void resolvesRawNamelessHyundaiAttendanceTriggerAndRejectsInvalidContext() {
+        var companies = mock(FormAnalysisCompanyMongoRepository.class);
+        var policies = mock(FormAnalysisPolicyMongoRepository.class);
+        var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
+        new LocalCompanyFormPolicySeeder(companies, policies).run(null);
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        var hyundai = captured.getAllValues().stream()
+            .filter(policy -> policy.companyKey().equals("hyundai")).findFirst().orElseThrow();
+        var policy = com.careerform.formanalysis.application.policy.CompanyFormPolicy.create(
+            hyundai.companyKey(), hyundai.version(), hyundai.preparationFingerprint(),
+            hyundai.fieldsFingerprint(), hyundai.actionRules(), hyundai.fieldRules(), ignored -> true
+        );
+        var valid = rawField("attendance-valid", "schClass_1",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON);
+        var wrongGroup = rawField("attendance-wrong-group", "schClass_2",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON);
+        var wrongControl = rawField("attendance-wrong-control", "schClass_3",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT);
+        var wrongId = rawField("attendance-wrong-id", "schoolClass_4",
+            com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.BUTTON);
+        var resolution = new com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver(policy)
+            .resolve(new com.careerform.formanalysis.dto.FieldsAnalysisRequest(
+                2, "hyundai-raw-attendance-trigger",
+                new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Site(
+                    "talent.hyundai.com", "/apply/applyWrite.hc"
+                ),
+                java.util.List.of(new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Section(
+                    "section-root", null, null, java.util.List.of(), java.util.List.of(
+                        new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Item(
+                            "university", java.util.List.of(valid, wrongControl, wrongId), "educationuniversity"
+                        ),
+                        new com.careerform.formanalysis.dto.FieldsAnalysisRequest.Item(
+                            "high-school", java.util.List.of(wrongGroup), "educationhighschool"
+                        )
+                    )
+                ))
+            ));
+        assertThat(resolution.results()).containsExactly(
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.Match(
+                "attendance-valid",
+                new com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding(
+                    "education.university.attendanceType",
+                    java.util.Map.of("주간", "주간", "야간", "야간"),
+                    java.util.Map.of("주간", "D", "야간", "N")
+                )
+            ),
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.NoMatch("attendance-wrong-control"),
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.NoMatch("attendance-wrong-id"),
+            new com.careerform.formanalysis.application.port.FieldMappingResolver.NoMatch("attendance-wrong-group")
+        );
+        assertThat(new com.careerform.formanalysis.application.FieldInteractionPolicy()
+            .evaluate(valid, resolution.results().getFirst()))
+            .extracting("interactionStatus", "writePlan")
+            .containsExactly(
+                com.careerform.formanalysis.dto.FieldsAnalysisResponse.InteractionStatus.READY,
+                new com.careerform.formanalysis.dto.FieldsAnalysisResponse.WritePlan(
+                    com.careerform.formanalysis.dto.FieldsAnalysisResponse.WriteCommand.SELECT_BUTTON_OPTION
+                )
+            );
+    }
+
+    private static com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate rawField(
+        String candidateId,
+        String domId,
+        com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl control
+    ) {
+        return new com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate(
+            candidateId, com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+            control, com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility.VISIBLE,
+            null, domId, null, null, null, null, null, null
         );
     }
 

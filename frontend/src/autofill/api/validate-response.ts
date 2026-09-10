@@ -409,6 +409,13 @@ function validateFieldAnalysis(
   }
 
   if (value.writePlan !== undefined) {
+    const expectedCommand =
+      candidate.element === "input" &&
+      candidate.control === "text" &&
+      isRecord(value.valueBinding) &&
+      value.valueBinding.type === "BUTTON_OPTION"
+        ? "SELECT_BUTTON_OPTION"
+        : writeCommandForControl[candidate.control];
     if (
       !isRecord(value.writePlan) ||
       !hasOnlyKeys(value.writePlan, ["command"]) ||
@@ -419,7 +426,7 @@ function validateFieldAnalysis(
         "CHECK_RADIO",
         "CHECK_CHECKBOX",
       ]) ||
-      writeCommandForControl[candidate.control] !== value.writePlan.command
+      expectedCommand !== value.writePlan.command
     ) {
       throw new AnalysisContractError();
     }

@@ -1,3 +1,7 @@
+import {
+  SCHOOL_REGION_OPTIONS,
+  standardValueAliases,
+} from "../../../profile/standard-values";
 import { runSkAddress } from "./address";
 import {
   confirmSkAutocomplete,
@@ -160,11 +164,30 @@ function isVerifiedSearchDriver(
 }
 
 export const skWorkflowAdapter: WorkflowAdapter = {
-  normalizeProfileValue: (profileFieldKey, value) =>
-    profileFieldKey === MILITARY_STATUS_FIELD_KEY &&
-    value.normalize("NFKC").trim() === "만기전역"
-      ? "군필"
-      : value,
+  normalizeProfileValue: (profileFieldKey, value) => {
+    const normalized = value.normalize("NFKC").trim();
+    if (
+      profileFieldKey === MILITARY_STATUS_FIELD_KEY &&
+      normalized === "만기전역"
+    )
+      return "군필";
+    if (
+      /^education\.(highSchool|university|graduateSchool)\.schoolRegion$/.test(
+        profileFieldKey,
+      )
+    ) {
+      const region = SCHOOL_REGION_OPTIONS.find(
+        (option) => option.label === normalized,
+      );
+      // SK uses the verified full province name; preserve standard IDs and unknown labels.
+      return region
+        ? (standardValueAliases(region.value).find(
+            (alias) => alias !== region.label,
+          ) ?? value)
+        : value;
+    }
+    return value;
+  },
   canSelectProfileOption: (handle, profileValue) => {
     if (
       handle.candidate.domName === "prsMilitarySvcYN" ||

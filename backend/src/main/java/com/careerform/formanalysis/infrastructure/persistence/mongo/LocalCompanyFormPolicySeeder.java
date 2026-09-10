@@ -29,8 +29,8 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     private static final String COMPANY_KEY = "sk";
-    private static final long VERSION = 23;
-    private static final long HYUNDAI_VERSION = 6;
+    private static final long VERSION = 24;
+    private static final long HYUNDAI_VERSION = 7;
 
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
@@ -144,6 +144,18 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "majorNm", "majorNm", "educationuniversity",
                     "education.university.majorName"
                 ),
+                contextualButtonOptionRule(
+                    "schClass", "educationuniversity",
+                    "education.university.attendanceType", attendanceOptions(), attendanceCodes()
+                ),
+                contextualTextButtonOptionRule(
+                    "locNation", "educationuniversity",
+                    "education.university.schoolRegion", domesticNationOptions(), domesticNationCodes()
+                ),
+                contextualTextButtonOptionRule(
+                    "locCity", "educationuniversity",
+                    "education.university.schoolRegion", cityOptions(), cityCodes()
+                ),
                 contextualTextRule(
                     "dblMajorNm", "dblMajorNm", "educationuniversity",
                     "education.university.additionalMajorName"
@@ -187,6 +199,18 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 contextualTextRule(
                     "majorNm", "majorNm", "educationgraduateschool",
                     "education.graduateSchool.majorName"
+                ),
+                contextualButtonOptionRule(
+                    "schClass", "educationgraduateschool",
+                    "education.graduateSchool.attendanceType", attendanceOptions(), attendanceCodes()
+                ),
+                contextualTextButtonOptionRule(
+                    "locNation", "educationgraduateschool",
+                    "education.graduateSchool.schoolRegion", domesticNationOptions(), domesticNationCodes()
+                ),
+                contextualTextButtonOptionRule(
+                    "locCity", "educationgraduateschool",
+                    "education.graduateSchool.schoolRegion", cityOptions(), cityCodes()
                 ),
                 contextualDerivedTextRule(
                     "whiStDt", "whiStDt", "educationgraduateschool",
@@ -667,6 +691,11 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "eduEducationRegion",
                     "education.university.schoolRegion"
                 ),
+                lookupSelectRule(
+                    "eduDaytimeYN",
+                    "education.university.attendanceType",
+                    attendanceOptions()
+                ),
                 textRule("eduMajor", "education.university.majorName"),
                 textRule("eduCredit", "education.university.gpaScore"),
                 selectRule("eduCreditBase", "education.university.gpaScale"),
@@ -691,6 +720,15 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 selectRule(
                     "edugdEducationStatus",
                     "education.graduateSchool.completionStatus"
+                ),
+                selectRule(
+                    "edugdEducationRegion",
+                    "education.graduateSchool.schoolRegion"
+                ),
+                lookupSelectRule(
+                    "edugdDaytimeYN",
+                    "education.graduateSchool.attendanceType",
+                    attendanceOptions()
                 ),
                 textRule(
                     "edugdEducationName",
@@ -934,6 +972,77 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
             new LookupBinding(profileFieldKey, optionMap),
             false,
             requiredDomName
+        );
+    }
+
+
+    private static FieldRule contextualButtonOptionRule(
+        String name,
+        String requiredItemGroupId,
+        String profileFieldKey,
+        Map<String, String> optionMap,
+        Map<String, String> optionCodeMap
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.BUTTON,
+            new ButtonOptionBinding(profileFieldKey, optionMap, optionCodeMap),
+            false,
+            null,
+            requiredItemGroupId
+        );
+    }
+
+    private static Map<String, String> attendanceOptions() {
+        return Map.of("주간", "주간", "야간", "야간");
+    }
+
+    private static Map<String, String> attendanceCodes() {
+        return Map.of("주간", "D", "야간", "N");
+    }
+
+    private static Map<String, String> domesticNationOptions() {
+        return Map.ofEntries(
+            Map.entry("서울", "대한민국"), Map.entry("부산", "대한민국"),
+            Map.entry("대구", "대한민국"), Map.entry("인천", "대한민국"),
+            Map.entry("광주", "대한민국"), Map.entry("대전", "대한민국"),
+            Map.entry("울산", "대한민국"), Map.entry("세종", "대한민국"),
+            Map.entry("경기", "대한민국"), Map.entry("강원", "대한민국"),
+            Map.entry("충북", "대한민국"), Map.entry("충남", "대한민국"),
+            Map.entry("전북", "대한민국"), Map.entry("전남", "대한민국"),
+            Map.entry("경북", "대한민국"), Map.entry("경남", "대한민국"),
+            Map.entry("제주", "대한민국")
+        );
+    }
+
+    private static Map<String, String> domesticNationCodes() {
+        return Map.of("대한민국", "KR");
+    }
+
+    private static Map<String, String> cityOptions() {
+        return Map.of("서울", "서울", "세종", "세종");
+    }
+
+    private static Map<String, String> cityCodes() {
+        return Map.of("서울", "95", "세종", "01356");
+    }
+
+    private static FieldRule contextualTextButtonOptionRule(
+        String name,
+        String requiredItemGroupId,
+        String profileFieldKey,
+        Map<String, String> optionMap,
+        Map<String, String> optionCodeMap
+    ) {
+        return new FieldRule(
+            name,
+            FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.TEXT,
+            new ButtonOptionBinding(profileFieldKey, optionMap, optionCodeMap),
+            false,
+            null,
+            requiredItemGroupId
         );
     }
 

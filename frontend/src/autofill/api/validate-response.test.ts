@@ -769,6 +769,17 @@ describe("analysis API response validation", () => {
       "SET_TEXT",
     ],
     [
+      "a verified text-trigger button-option binding",
+      fieldsRequest,
+      {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "education.university.schoolRegion",
+        optionMap: { 서울: "대한민국" },
+        optionCodeMap: { 대한민국: "KR" },
+      },
+      "SELECT_BUTTON_OPTION",
+    ],
+    [
       "a verified button-option binding",
       buttonFieldsRequest,
       {
@@ -1029,4 +1040,30 @@ describe("analysis API response validation", () => {
       }),
     ).toThrow("필드 식별할 수 없는 후보");
   });
+});
+
+it("rejects SET_TEXT for a text-trigger BUTTON_OPTION binding", () => {
+  expect(() =>
+    validateFieldsResponse(fieldsRequest, {
+      snapshotId: "snapshot-b",
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: [
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "BUTTON_OPTION",
+            profileFieldKey: "education.university.schoolRegion",
+            optionMap: { 서울: "대한민국" },
+            optionCodeMap: { 대한민국: "KR" },
+          },
+          autofillPolicy: "CONDITIONAL",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ],
+    }),
+  ).toThrow(AnalysisContractError);
 });

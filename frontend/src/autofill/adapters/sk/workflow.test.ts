@@ -81,6 +81,26 @@ describe("SK conditional selections", () => {
   });
 });
 
+describe("SK education region compatibility", () => {
+  it.each([
+    ["education.highSchool.schoolRegion", "서울", "서울특별시"],
+    ["education.university.schoolRegion", "경기", "경기도"],
+    ["education.graduateSchool.schoolRegion", "충북", "충청북도"],
+  ])("normalizes legacy region only for %s", (key, value, expected) => {
+    expect(adapter.normalizeProfileValue?.(key, value)).toBe(expected);
+  });
+
+  it.each([
+    ["education.university.schoolName", "서울"],
+    ["education.university.schoolRegion", "region:seoul"],
+    ["education.university.schoolRegion", "서울특별시"],
+    ["education.university.schoolRegion", "서울관악"],
+    ["education.university.schoolRegion", "해외"],
+  ])("preserves unconverted value for %s: %s", (key, value) => {
+    expect(adapter.normalizeProfileValue?.(key, value)).toBe(value);
+  });
+});
+
 describe("SK military and veteran conditional selections", () => {
   it("normalizes only the exact military status alias at the SK adapter boundary", () => {
     expect(

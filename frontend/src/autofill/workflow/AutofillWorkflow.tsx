@@ -200,7 +200,8 @@ function stateDriverKey(
       : item.profileFieldKey;
   return [
     item.profileEntryId ?? `item-${itemIndex ?? "single"}`,
-    profileFieldKey ?? domName ?? item.candidateId,
+    profileFieldKey ?? "unbound",
+    domName ?? item.candidateId,
   ].join("|");
 }
 
@@ -643,7 +644,8 @@ export function AutofillWorkflow({
     const stateDriverItems = automaticItems.flatMap((item) => {
       const lookup = snapshot.registry.lookupField(item.candidateId);
       if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
-      const domName = lookup.handle.candidate.domName;
+      const domName =
+        lookup.handle.candidate.domName ?? lookup.handle.candidate.domId;
       const stage =
         adapter.stateDriverStage?.(item, lookup.handle) ??
         (adapter.isStateDriver(item, domName) ? 1 : undefined);
@@ -699,6 +701,7 @@ export function AutofillWorkflow({
         ),
       );
       if (!driversReady.every(Boolean)) {
+        if (await deferFailedGroups(driversReady)) return;
         setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
         setStage("exception");
         return;
@@ -795,7 +798,7 @@ export function AutofillWorkflow({
           }
           const key = stateDriverKey(
             item,
-            lookup.handle.candidate.domName,
+            lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
             lookup.handle.itemIndex,
           );
           return (
@@ -816,7 +819,7 @@ export function AutofillWorkflow({
       return !completedStateDriverKeys.has(
         stateDriverKey(
           item,
-          lookup.handle.candidate.domName,
+          lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
           lookup.handle.itemIndex,
         ),
       );
@@ -1163,7 +1166,8 @@ export function AutofillWorkflow({
         return [];
       const lookup = snapshot.registry.lookupField(field.candidateId);
       if (lookup.status !== "ready") return [];
-      const domName = lookup.handle.candidate.domName;
+      const domName =
+        lookup.handle.candidate.domName ?? lookup.handle.candidate.domId;
       const profileFieldKey = adapter.revealedProfileFieldKey(
         field,
         domName,

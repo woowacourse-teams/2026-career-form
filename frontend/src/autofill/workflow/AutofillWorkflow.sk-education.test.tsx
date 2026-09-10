@@ -15,14 +15,15 @@ const EDUCATION_ACTIONS = [
     id: "btnAddEducationHigh",
     label: "고등학교 학력 정보 추가",
     rowClass: "educationhigh-item",
-    fields: '<input name="eduhgEducationName" type="text" />',
+    fields:
+      '<input name="eduhgEducationName" type="text" /><select name="eduhgEducationRegion"><option value=""></option><option value="101009">서울특별시</option></select>',
   },
   {
     id: "btnAddEducationUniv",
     label: "대학 학력 정보 추가",
     rowClass: "educationUniv-item",
     fields:
-      '<input name="eduEducationName" type="text" /><input name="eduCredit" type="text" />',
+      '<input name="eduEducationName" type="text" /><input name="eduCredit" type="text" /><select name="eduEducationRegion"><option value=""></option><option value="101009">서울특별시</option></select><select name="eduDaytimeYN"><option value=""></option><option value="1">주간</option><option value="0">야간</option></select>',
   },
 ] as const;
 
@@ -65,12 +66,18 @@ function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
     fields: candidates(request).map((field) => {
+      const educationBindings: Record<string, string> = {
+        eduhgEducationRegion: "education.highSchool.schoolRegion",
+        eduEducationRegion: "education.university.schoolRegion",
+        eduDaytimeYN: "education.university.attendanceType",
+      };
       const profileFieldKey =
-        field.domName === "eduhgEducationName"
+        educationBindings[field.domName ?? ""] ??
+        (field.domName === "eduhgEducationName"
           ? "education.highSchool.schoolName"
           : field.domName === "eduCredit"
             ? "education.university.gpaScore"
-            : undefined;
+            : undefined);
       return profileFieldKey
         ? {
             candidateId: field.candidateId,
@@ -79,7 +86,12 @@ function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
             autofillPolicy: "ALLOWED" as const,
             mappingStatus: "ADAPTER_VERIFIED" as const,
             interactionStatus: "READY" as const,
-            writePlan: { command: "SET_TEXT" as const },
+            writePlan: {
+              command:
+                field.control === "select"
+                  ? ("SELECT_OPTION" as const)
+                  : ("SET_TEXT" as const),
+            },
           }
         : {
             candidateId: field.candidateId,
@@ -92,7 +104,7 @@ function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   };
 }
 
-function setup() {
+function setup(educationValues: Record<string, string> = {}) {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -133,12 +145,12 @@ function setup() {
     {
       id: "high-school-1",
       sectionId: "highSchool",
-      values: { schoolName: "테스트 고등학교" },
+      values: { schoolName: "테스트 고등학교", ...educationValues },
     },
     {
       id: "university-1",
       sectionId: "university",
-      values: { gpaScore: "4.2" },
+      values: { gpaScore: "4.2", ...educationValues },
     },
   ];
   let preparationCalls = 0;
@@ -217,3 +229,27 @@ it("prepares ID-less SK education replacements, recollects, and writes high-scho
   expect(run.formBody.querySelectorAll(".educationhigh-item")).toHaveLength(1);
   expect(run.formBody.querySelectorAll(".educationUniv-item")).toHaveLength(1);
 });
+
+it.each([
+  ["region:seoul", "attendance:day", "1"],
+  ["서울", "야간", "0"],
+])(
+  "writes SK education region %s and attendance %s through the workflow",
+  async (schoolRegion, attendanceType, code) => {
+    const run = setup({ schoolRegion, attendanceType });
+    render(run.workflow());
+    await waitFor(() => {
+      expect(
+        document.querySelector<HTMLSelectElement>("[name=eduhgEducationRegion]")
+          ?.value,
+      ).toBe("101009");
+      expect(
+        document.querySelector<HTMLSelectElement>("[name=eduEducationRegion]")
+          ?.value,
+      ).toBe("101009");
+      expect(
+        document.querySelector<HTMLSelectElement>("[name=eduDaytimeYN]")?.value,
+      ).toBe(code);
+    });
+  },
+);

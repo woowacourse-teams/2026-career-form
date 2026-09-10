@@ -84,6 +84,175 @@ const VETERAN_TRANSITIONS = new Map([
     },
   ],
 ]);
+type AcademicSelectionKind = "attendance" | "nation" | "city";
+
+interface AcademicSelectionSpec {
+  kind: AcademicSelectionKind;
+  idBase: "schClass" | "locNation" | "locCity";
+  hiddenName: "schClass" | "locNation" | "locCity";
+  codegb: string;
+  profileSuffix: "attendanceType" | "schoolRegion";
+  allowedGroups: readonly ("educationuniversity" | "educationgraduateschool")[];
+  options: ReadonlyMap<string, string>;
+}
+
+const ACADEMIC_SELECTION_SPECS: readonly AcademicSelectionSpec[] = [
+  {
+    kind: "attendance",
+    idBase: "schClass",
+    hiddenName: "schClass",
+    codegb: "0155",
+    profileSuffix: "attendanceType",
+    allowedGroups: ["educationuniversity", "educationgraduateschool"],
+    options: new Map([
+      ["주간", "D"],
+      ["야간", "N"],
+    ]),
+  },
+  {
+    kind: "nation",
+    idBase: "locNation",
+    hiddenName: "locNation",
+    codegb: "0003",
+    profileSuffix: "schoolRegion",
+    allowedGroups: ["educationuniversity", "educationgraduateschool"],
+    options: new Map([["대한민국", "KR"]]),
+  },
+  {
+    kind: "city",
+    idBase: "locCity",
+    hiddenName: "locCity",
+    codegb: "0013",
+    profileSuffix: "schoolRegion",
+    allowedGroups: ["educationuniversity", "educationgraduateschool"],
+    options: new Map([
+      ["서울", "95"],
+      ["세종", "01356"],
+    ]),
+  },
+];
+
+function academicSelectionSpec(
+  id: string | undefined,
+): AcademicSelectionSpec | undefined {
+  if (!id) return undefined;
+  return ACADEMIC_SELECTION_SPECS.find((spec) =>
+    new RegExp(`^${spec.idBase}_[1-9][0-9]*$`).test(id),
+  );
+}
+
+function selectAcademicSelection(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  trigger: HTMLInputElement,
+  spec: AcademicSelectionSpec,
+): boolean {
+  const binding = item.analysis?.valueBinding;
+  const id = handle.candidate.domId;
+  const display = item.profileValue;
+  const code = display
+    ? binding?.type === "BUTTON_OPTION"
+      ? binding.optionCodeMap[display]
+      : undefined
+    : undefined;
+  const article = trigger.closest<HTMLElement>(
+    "article#academic.field-form-apply",
+  );
+  const row = trigger.closest<HTMLElement>(".field-content");
+  const wrap = trigger.closest<HTMLElement>(".select-wrap");
+  const expectedKey = `education.${handle.itemGroupId === "educationuniversity" ? "university" : "graduateSchool"}.${spec.profileSuffix}`;
+  const hidden = Array.from(
+    wrap?.querySelectorAll<HTMLInputElement>(
+      `:scope > input[type='hidden'].js-field[name='${spec.hiddenName}']`,
+    ) ?? [],
+  );
+  if (
+    !id ||
+    !display ||
+    !code ||
+    spec.options.get(display) !== code ||
+    handle.elements.length !== 1 ||
+    item.candidateId !== handle.candidateId ||
+    item.analysis?.candidateId !== item.candidateId ||
+    item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" ||
+    item.analysis.interactionStatus !== "READY" ||
+    item.analysis.writePlan?.command !== "SELECT_BUTTON_OPTION" ||
+    binding?.type !== "BUTTON_OPTION" ||
+    binding.profileFieldKey !== expectedKey ||
+    !spec.allowedGroups.includes(
+      handle.itemGroupId as "educationuniversity" | "educationgraduateschool",
+    ) ||
+    handle.candidate.domName !== undefined ||
+    handle.candidate.domId !== id ||
+    handle.candidate.element !== "input" ||
+    handle.candidate.control !==
+      (spec.kind === "attendance" ? "button" : "text") ||
+    !article ||
+    !row ||
+    row.parentElement !== article ||
+    !wrap ||
+    trigger.id !== id ||
+    trigger.type !== (spec.kind === "attendance" ? "button" : "text") ||
+    !trigger.isConnected ||
+    !trigger.classList.contains("btn-select") ||
+    (spec.kind === "city"
+      ? trigger.dataset.targetCodegb
+      : trigger.dataset.codegb) !== spec.codegb ||
+    article.querySelectorAll(`#${id}`).length !== 1 ||
+    hidden.length !== 1
+  )
+    return false;
+  if (
+    spec.kind === "nation" &&
+    (!trigger.classList.contains("js-refer") ||
+      !trigger.classList.contains("btn-new-loc") ||
+      !trigger.classList.contains("locNa"))
+  )
+    return false;
+  if (
+    spec.kind === "city" &&
+    (!trigger.classList.contains("js-target") ||
+      !trigger.classList.contains("btn-new-loc") ||
+      !trigger.classList.contains("locNa") ||
+      trigger.dataset.targetCodegb !== "0013" ||
+      trigger.dataset.refer !== "locNation" ||
+      trigger.dataset.attr1 !== "KR")
+  )
+    return false;
+  if (spec.kind === "city") {
+    const nation = row.querySelectorAll<HTMLInputElement>(
+      "input[type='hidden'].js-field[name='locNation']",
+    );
+    if (nation.length !== 1 || nation[0]!.value !== "KR") return false;
+  }
+  const hiddenValue = hidden[0]!;
+  const current = normalizeDisplayName(item.currentValue);
+  const actual = normalizeDisplayName(trigger.value);
+  if (current || actual || hiddenValue.value.trim()) {
+    return (
+      current === normalizeDisplayName(display) &&
+      actual === normalizeDisplayName(display) &&
+      hiddenValue.value === code
+    );
+  }
+  trigger.click();
+  const choices = Array.from(
+    wrap.querySelectorAll<HTMLButtonElement>(
+      ":scope > .select-option button[data-code]",
+    ),
+  ).filter(
+    (choice) =>
+      choice.offsetParent !== null &&
+      normalizeDisplayName(choice.textContent ?? "") ===
+        normalizeDisplayName(display),
+  );
+  if (choices.length !== 1 || choices[0]!.dataset.code !== code) return false;
+  choices[0]!.click();
+  return (
+    normalizeDisplayName(trigger.value) === normalizeDisplayName(display) &&
+    hiddenValue.value === code
+  );
+}
 const EXACT_BUTTONS = new Map<string, ExactButtonSpec>([
   [
     "milCd",
@@ -246,18 +415,15 @@ function selectButtonOption(
 ): boolean {
   const binding = item.analysis?.valueBinding;
   const displayName = item.profileValue;
-  if (
-    handle.candidate.control !== "button" ||
-    binding?.type !== "BUTTON_OPTION" ||
-    !displayName
-  ) {
-    return false;
-  }
-  const code = binding.optionCodeMap[displayName];
+  if (binding?.type !== "BUTTON_OPTION" || !displayName) return false;
   const trigger = handle.elements[0];
-  if (!(trigger instanceof HTMLInputElement) || trigger.type !== "button") {
+  if (!(trigger instanceof HTMLInputElement)) return false;
+  const academicSpec = academicSelectionSpec(handle.candidate.domId);
+  if (academicSpec)
+    return selectAcademicSelection(handle, item, trigger, academicSpec);
+  if (handle.candidate.control !== "button" || trigger.type !== "button")
     return false;
-  }
+  const code = binding.optionCodeMap[displayName];
   const exactSpec = handle.candidate.domId
     ? EXACT_BUTTONS.get(handle.candidate.domId)
     : undefined;
