@@ -2,9 +2,9 @@
 
 > Topic: adapter-sk
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-83/documents/adapter-sk.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-sk.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-sk.md)
-> Updated: 2026-09-09
+> Current: [현재 근거](../../raw/issues/CF-86/documents/adapter-sk.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-sk.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-sk.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-sk.md)
+> Updated: 2026-09-10
 
 ## 현재 상태
 
@@ -33,3 +33,11 @@ SK 병역은 대상 라디오→군필/미필/면제/복무중 분류→노출�
 로컬 정책 버전은 SK v23·현대 v5이며 프로필 스키마와 API DTO는 변경하지 않았다. 자동 테스트, 읽기 전용 실제 DOM 확인, 별도 가상 DB의 API 검증을 실제 설치 확장의 재기입 검증과 구분해 문서화한다. 실제 툴바 아이콘 진입, 저장·제출 호환성과 운영 정책 배포는 미검증이다. 후속 SK 병역 동의어의 실제 재기입은 별도로 대기 중이다.
 
 `만기전역`은 SK 병역 필드에 한정해 군필로 정규화한다. 별도 fixture의 준비·실행·검토 경로를 확인했지만 실제 설치 alias 재진입은 새로고침 확인 대기로 실행하지 않았다.
+
+## CF-86 학력 소재지·주야간 보완 (2026-09-10)
+
+로컬 SK 정책 v24는 고교 `eduhgEducationRegion`, 대학 `eduEducationRegion`, 대학원 `edugdEducationRegion`을 정확한 native select name과 학력 그룹으로 매핑한다. ID가 없는 제어에 존재하지 않는 ID를 요구하지 않는다. 대학 `eduDaytimeYN`과 대학원 `edugdDaytimeYN`은 주간/야간 표시와 1/0 코드를 사용한다. 확인한 고교 화면에는 주야간 제어가 없어 추가하지 않는다.
+
+표준 `region:*` 값에는 SK 공식 지역명 18개의 명시적 별칭을 추가하고, 기존 표시 문자열도 SK 학력 소재지 필드에 한정해 정규화한다. 후보가 없거나 여러 개면 자동 선택하지 않는다. `attendance:day/night`와 기존 표시 문자열은 모두 유지하며 프로필 UI·저장 형식은 변경하지 않는다. 백엔드는 대학·대학원 `attendanceType` 및 대학원 `schoolRegion`을 지원 키로 인정한다.
+
+비식별 자동 테스트는 표준 ID·기존 문자열, 정확한 제어/그룹, 야간, 중복 선택지 거부를 검증했다. localhost 빌드의 실제 설치 확장에서 고교·대학 소재지와 대학 주간을 개별 표시 및 선택 코드로 확인했다. 대학원·야간의 실제 설치 입력, 저장·제출 호환성 및 운영 정책 배포는 검증하지 않았다.
