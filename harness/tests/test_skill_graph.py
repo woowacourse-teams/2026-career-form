@@ -11,6 +11,7 @@ SKILLS = ROOT / ".agents" / "skills"
 class SkillGraphTest(unittest.TestCase):
     def test_repository_contains_only_expected_cf_skills(self) -> None:
         expected = {
+            "cf-code-understanding",
             "cf-code-review",
             "cf-deep-interview",
             "cf-executing-plans",
@@ -60,6 +61,7 @@ class SkillGraphTest(unittest.TestCase):
             "cf-test-driven-development",
             "cf-verification-before-completion",
             "cf-code-review",
+            "cf-code-understanding",
             "cf-karpathy-llm-wiki",
         )
 

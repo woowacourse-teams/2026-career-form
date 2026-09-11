@@ -31,7 +31,7 @@ repository Issue가 아직 `status:ready`가 아니면 `cf-project-issue-plannin
 
 `status:ready` Issue는 `cf-issue-workflow`에 넘겨 worktree 체크포인트를 초기화한 뒤 계획 단계부터 시작한다. `status:in-progress` Issue를 재개하면 같은 worktree에서 `harness/scripts/plan-issue-delivery.py`를 실행해 체크포인트와 현재 브랜치, HEAD, 계획 파일, worktree 변경, Draft PR을 대조한다. 체크포인트가 없거나 손상됐으면 대화 맥락으로 단계를 추측하지 않고 현재 Git과 원격 상태를 보고한 뒤 중단한다.
 
-환경 구성, 격리, 계획, TDD, 검증과 코드 리뷰 뒤 Draft PR을 만들면 Issue `status:in-progress`에서 멈춘다. 열린 Draft PR이 있고 `pr_edit_confirmed`가 false면 `await_pr_edit`에서 기다린다. 사용자가 GitHub PR을 수정하고 재개하면 `pr_edit_confirmed`를 true로 해 `review_draft_pr` action을 선택하고 기존 PR을 다시 검증한다. 검증 통과 뒤에만 Issue `status:review`와 Project `On Review`로 전환하며, 사람의 Ready for review 전환, PR 승인과 머지는 대신하지 않는다.
+환경 구성, 격리, 계획, TDD, 검증과 코드 리뷰 뒤에는 최종 코드 보고서와 가벼운 이해 확인을 완료한 뒤 Draft PR을 만든다. 코드나 보고서가 바뀌면 verification부터 다시 진행한다. Draft PR을 만들면 Issue `status:in-progress`에서 멈춘다. 열린 Draft PR이 있고 `pr_edit_confirmed`가 false면 `await_pr_edit`에서 기다린다. 사용자가 GitHub PR을 수정하고 재개하면 `pr_edit_confirmed`를 true로 해 `review_draft_pr` action을 선택하고 기존 PR을 다시 검증한다. 검증 통과 뒤에만 Issue `status:review`와 Project `On Review`로 전환하며, 사람의 Ready for review 전환, PR 승인과 머지는 대신하지 않는다.
 
 ## 4. 머지 후 정리
 
