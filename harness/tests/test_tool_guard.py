@@ -236,6 +236,23 @@ class ToolGuardTest(unittest.TestCase):
         self.assertTrue(decision.blocked)
         self.assertIn("지식", decision.reason)
 
+    def test_blocks_v3_draft_pr_without_completed_understanding(self) -> None:
+        decision = evaluate_tool_use(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "gh pr create --draft --body-file /tmp/pr.md"
+                },
+            },
+            branch="CF-34",
+            checkpoint=self._verified_checkpoint(schema_version=3),
+            current_head="verified-head",
+            worktree_clean=True,
+        )
+
+        self.assertTrue(decision.blocked)
+        self.assertIn("이해", decision.reason)
+
     def test_allows_draft_pr_for_verified_current_head(self) -> None:
         decision = evaluate_tool_use(
             {
@@ -246,6 +263,22 @@ class ToolGuardTest(unittest.TestCase):
             },
             branch="CF-34",
             checkpoint=self._verified_checkpoint(),
+            current_head="verified-head",
+            worktree_clean=True,
+        )
+
+        self.assertFalse(decision.blocked)
+
+    def test_allows_v3_draft_pr_after_current_understanding(self) -> None:
+        decision = evaluate_tool_use(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "gh pr create --draft --body-file /tmp/pr.md"
+                },
+            },
+            branch="CF-34",
+            checkpoint=self._understood_checkpoint(),
             current_head="verified-head",
             worktree_clean=True,
         )
@@ -311,9 +344,9 @@ class ToolGuardTest(unittest.TestCase):
         self.assertTrue(decision.blocked)
         self.assertIn("파일 삭제", decision.reason)
 
-    def _verified_checkpoint(self) -> WorkflowCheckpoint:
+    def _verified_checkpoint(self, *, schema_version: int = 2) -> WorkflowCheckpoint:
         checkpoint = WorkflowCheckpoint(
-            schema_version=2,
+            schema_version=schema_version,
             issue_number=34,
             branch="CF-34",
             current_stage="plan",
@@ -363,6 +396,23 @@ class ToolGuardTest(unittest.TestCase):
             evidence={
                 "command": "harness/scripts/verify.py",
                 "result": "passed",
+            },
+        )
+
+    def _understood_checkpoint(self) -> WorkflowCheckpoint:
+        checkpoint = begin_stage(
+            self._verified_checkpoint(schema_version=3),
+            stage="understanding",
+            head="verified-head",
+        )
+        return complete_stage(
+            checkpoint,
+            stage="understanding",
+            head="verified-head",
+            evidence={
+                "outcome": "Skipped",
+                "report_path": ".git/cf-workflow/understanding.md",
+                "report_digest": "a" * 64,
             },
         )
 

@@ -76,7 +76,7 @@ class IssueDeliveryTest(unittest.TestCase):
 
         self.assertEqual("resume_verification", action.code)
 
-    def test_selects_draft_pr_for_verified_current_head(self) -> None:
+    def test_selects_understanding_after_verified_current_head(self) -> None:
         checkpoint = self._completed_verification()
 
         action = next_delivery_action(
@@ -86,6 +86,38 @@ class IssueDeliveryTest(unittest.TestCase):
                 branch="CF-34",
                 head="verified-head",
                 plan_exists=True,
+            ),
+        )
+
+        self.assertEqual("resume_understanding", action.code)
+
+    def test_repeats_understanding_when_report_does_not_match(self) -> None:
+        checkpoint = self._completed_understanding()
+
+        action = next_delivery_action(
+            checkpoint,
+            DeliveryObservation(
+                issue_number=34,
+                branch="CF-34",
+                head="verified-head",
+                plan_exists=True,
+                understanding_report_matches=False,
+            ),
+        )
+
+        self.assertEqual("resume_understanding", action.code)
+
+    def test_selects_draft_pr_after_current_understanding(self) -> None:
+        checkpoint = self._completed_understanding()
+
+        action = next_delivery_action(
+            checkpoint,
+            DeliveryObservation(
+                issue_number=34,
+                branch="CF-34",
+                head="verified-head",
+                plan_exists=True,
+                understanding_report_matches=True,
             ),
         )
 
@@ -108,7 +140,7 @@ class IssueDeliveryTest(unittest.TestCase):
 
     def test_records_existing_pr_instead_of_creating_it_again(self) -> None:
         checkpoint = begin_stage(
-            self._completed_verification(),
+            self._completed_understanding(),
             stage="draft_pr",
             head="verified-head",
         )
@@ -120,6 +152,7 @@ class IssueDeliveryTest(unittest.TestCase):
                 branch="CF-34",
                 head="verified-head",
                 plan_exists=True,
+                understanding_report_matches=True,
                 pull_request_number=36,
                 pull_request_head="verified-head",
             ),
@@ -129,12 +162,13 @@ class IssueDeliveryTest(unittest.TestCase):
 
     def test_records_existing_pr_when_start_record_is_missing(self) -> None:
         action = next_delivery_action(
-            self._completed_verification(),
+            self._completed_understanding(),
             DeliveryObservation(
                 issue_number=34,
                 branch="CF-34",
                 head="verified-head",
                 plan_exists=True,
+                understanding_report_matches=True,
                 pull_request_number=36,
                 pull_request_head="verified-head",
             ),
@@ -156,7 +190,7 @@ class IssueDeliveryTest(unittest.TestCase):
 
     def _initial_checkpoint(self) -> WorkflowCheckpoint:
         return WorkflowCheckpoint(
-            schema_version=2,
+            schema_version=3,
             issue_number=34,
             branch="CF-34",
             current_stage="plan",
@@ -195,6 +229,23 @@ class IssueDeliveryTest(unittest.TestCase):
             evidence={
                 "command": "harness/scripts/verify.py",
                 "result": "passed",
+            },
+        )
+
+    def _completed_understanding(self) -> WorkflowCheckpoint:
+        checkpoint = begin_stage(
+            self._completed_verification(),
+            stage="understanding",
+            head="verified-head",
+        )
+        return complete_stage(
+            checkpoint,
+            stage="understanding",
+            head="verified-head",
+            evidence={
+                "outcome": "Skipped",
+                "report_path": ".git/cf-workflow/understanding.md",
+                "report_digest": "a" * 64,
             },
         )
 

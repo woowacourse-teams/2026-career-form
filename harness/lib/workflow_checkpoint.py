@@ -9,13 +9,21 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 V1_WORKFLOW_STAGES = ("plan", "implementation", "verification", "draft_pr")
+V2_WORKFLOW_STAGES = (
+    "plan",
+    "implementation",
+    "knowledge",
+    "verification",
+    "draft_pr",
+)
 WORKFLOW_STAGES = (
     "plan",
     "implementation",
     "knowledge",
     "verification",
+    "understanding",
     "draft_pr",
 )
 LOCAL_GIT_ENVIRONMENT = (
@@ -177,8 +185,8 @@ def replace_knowledge_candidates(
     checkpoint: WorkflowCheckpoint,
     candidates: tuple[str, ...],
 ) -> WorkflowCheckpoint:
-    if checkpoint.schema_version != SCHEMA_VERSION:
-        raise CheckpointError("지식 후보는 schema v2 체크포인트에만 기록할 수 있습니다")
+    if checkpoint.schema_version < 2:
+        raise CheckpointError("지식 후보는 schema v2 이상 체크포인트에만 기록할 수 있습니다")
     if _knowledge_is_completed(checkpoint):
         raise CheckpointError("완료한 지식 판정의 후보는 바꿀 수 없습니다")
     normalized = _knowledge_candidates_from(candidates)
@@ -204,8 +212,8 @@ def approve_knowledge(
     checkpoint: WorkflowCheckpoint,
     digest: str,
 ) -> WorkflowCheckpoint:
-    if checkpoint.schema_version != SCHEMA_VERSION:
-        raise CheckpointError("지식 승인은 schema v2 체크포인트에만 기록할 수 있습니다")
+    if checkpoint.schema_version < 2:
+        raise CheckpointError("지식 승인은 schema v2 이상 체크포인트에만 기록할 수 있습니다")
     if digest != knowledge_digest(checkpoint):
         raise CheckpointError("현재 지식 후보와 승인 digest가 다릅니다")
     return replace(checkpoint, knowledge_approval_digest=digest)
@@ -270,7 +278,7 @@ def checkpoint_payload(checkpoint: WorkflowCheckpoint) -> dict[str, object]:
             for record in checkpoint.stages
         ],
     }
-    if checkpoint.schema_version == SCHEMA_VERSION:
+    if checkpoint.schema_version >= 2:
         payload = {
             **payload,
             "knowledge_candidates": list(checkpoint.knowledge_candidates),
@@ -298,7 +306,7 @@ def checkpoint_from(payload: object) -> WorkflowCheckpoint:
     if not isinstance(payload, Mapping):
         raise CheckpointError("체크포인트는 JSON 객체여야 합니다")
     version = payload.get("schema_version")
-    if type(version) is not int or version not in (1, SCHEMA_VERSION):
+    if type(version) is not int or version not in (1, 2, SCHEMA_VERSION):
         raise CheckpointError("지원하지 않는 체크포인트 schema입니다")
     issue_number = payload.get("issue_number")
     _positive_issue_number(issue_number)
@@ -333,6 +341,8 @@ def checkpoint_from(payload: object) -> WorkflowCheckpoint:
     )
     if version == 1:
         return _upgrade_v1(checkpoint)
+    if version == 2:
+        return _upgrade_v2(checkpoint)
     if _knowledge_is_completed(checkpoint):
         _validate_knowledge_completion(
             checkpoint,
@@ -412,6 +422,12 @@ def _validate_completion_evidence(
             raise CheckpointError("knowledge 완료 근거에는 승인 digest가 필요합니다")
         if outcome == "Recorded" and "manifest" not in values:
             raise CheckpointError("Recorded 완료 근거에는 manifest가 필요합니다")
+    if stage == "understanding" and (
+        values.get("outcome") not in ("Answered", "Skipped")
+        or "report_path" not in values
+        or not _valid_digest(values.get("report_digest"))
+    ):
+        raise CheckpointError("understanding 완료 근거가 올바르지 않습니다")
     if stage == "draft_pr" and not _valid_pull_request_evidence(values):
         raise CheckpointError("Draft PR 완료 근거에는 유효한 번호와 URL이 필요합니다")
 
@@ -438,6 +454,8 @@ def _positive_issue_number(value: object) -> None:
 def _workflow_stages(version: int) -> tuple[str, ...]:
     if version == 1:
         return V1_WORKFLOW_STAGES
+    if version == 2:
+        return V2_WORKFLOW_STAGES
     if version == SCHEMA_VERSION:
         return WORKFLOW_STAGES
     raise CheckpointError("지원하지 않는 체크포인트 schema입니다")
@@ -464,6 +482,39 @@ def _upgrade_v1(checkpoint: WorkflowCheckpoint) -> WorkflowCheckpoint:
             stages=(*records, StageCheckpoint("knowledge", "running", head)),
         )
     return replace(checkpoint, schema_version=SCHEMA_VERSION, stages=records)
+
+
+def _upgrade_v2(checkpoint: WorkflowCheckpoint) -> WorkflowCheckpoint:
+    if (
+        checkpoint.current_stage == "draft_pr"
+        and stage_checkpoint(checkpoint, "draft_pr").status == "completed"
+    ):
+        return checkpoint
+    if checkpoint.current_stage == "draft_pr":
+        verification = stage_checkpoint(checkpoint, "verification")
+        head = verification.completed_head or verification.started_head
+        return replace(
+            checkpoint,
+            schema_version=SCHEMA_VERSION,
+            current_stage="understanding",
+            stages=(
+                *checkpoint.stages[:-1],
+                StageCheckpoint("understanding", "running", head),
+            ),
+        )
+    if (
+        checkpoint.current_stage == "verification"
+        and stage_checkpoint(checkpoint, "verification").status == "completed"
+    ):
+        verification = stage_checkpoint(checkpoint, "verification")
+        head = verification.completed_head or verification.started_head
+        return replace(
+            checkpoint,
+            schema_version=SCHEMA_VERSION,
+            current_stage="understanding",
+            stages=(*checkpoint.stages, StageCheckpoint("understanding", "running", head)),
+        )
+    return replace(checkpoint, schema_version=SCHEMA_VERSION)
 
 
 def _knowledge_candidates_from(value: object) -> tuple[str, ...]:
