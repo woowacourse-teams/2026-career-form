@@ -14,6 +14,7 @@ metadata:
     - cf-test-driven-development
     - cf-verification-before-completion
     - cf-code-review
+    - cf-code-understanding
     - cf-karpathy-llm-wiki
   portable: true
   external_dependencies: []
@@ -57,6 +58,7 @@ Project 상태 변경이 실패하면 Issue 승격이나 브랜치 생성을 반
 - `resume_implementation`: `manage-workflow-checkpoint.py --cwd . resume implementation`을 실행한 뒤 구현
 - `resume_knowledge`: 후보 전체 또는 `No reusable knowledge`를 사람에게 한 번에 제시하고 승인 뒤 Issue raw와 topic Wiki 확정
 - `resume_verification`: `manage-workflow-checkpoint.py --cwd . resume verification`을 실행한 뒤 검증
+- `resume_understanding`: `cf-code-understanding`으로 최종 코드 보고서와 가벼운 이해 확인을 마친 뒤 outcome, report_path, report_digest를 기록
 - `create_draft_pr`: `manage-workflow-checkpoint.py --cwd . resume draft_pr`을 실행한 뒤 Draft PR 생성
 - `record_draft_pr`: 기존 PR을 다시 읽고 draft_pr 완료 근거만 기록
 - `complete`: Draft PR 생성까지 완료된 상태를 유지하고 사람 편집 대기로 이동
@@ -104,7 +106,15 @@ PR에 포함한다. 기획 중 새로 발견된 구현 범위는 현재 Issue에
 
 검증 뒤 HEAD가 바뀌거나 커밋되지 않은 변경이 생기면 완료 근거를 재사용하지 않고 verification 단계부터 다시 실행한다. 검증 실패를 통과로 표현하지 않는다. 자동 및 수동 검증의 최신 상태는 PR 본문 하단의 접힌 `검증 기록`에 남긴다.
 
-## 6. Git과 Draft PR 편집 체크포인트
+## 6. 코드 이해 확인
+
+1. verification 완료 HEAD가 현재 HEAD와 같고 worktree가 깨끗할 때만 `resume understanding`을 실행한다.
+2. `cf-code-understanding`으로 실제 최종 코드와 테스트를 기준으로 변경 전후, 대표 흐름, 핵심 파일과 기호, 검증, 회귀 확인 지점을 보고서에 기록한다.
+3. 질문은 국소 변경이면 하나, 여러 컴포넌트나 분기, 상태 전환이 있으면 최대 세 개를 한 번에 하나씩 낸다. 각 질문에는 한 개에서 세 개의 참고 파일과 관련 기호를 제공하고 파일, 위치, 흐름, 함께 읽을 부분 순서로 힌트를 준다.
+4. 점수, 통과와 실패, 강제 재시도를 사용하지 않는다. 사람의 답변 또는 skip 뒤 답변 원문 없이 `Answered` 또는 `Skipped` 결과와 보고서 path, digest만 체크포인트에 기록한다.
+5. 코드 HEAD, worktree 상태 또는 보고서 digest가 바뀌면 이해 확인을 재사용하지 않는다. verification부터 다시 실행한 뒤 새 보고서와 확인을 만든다.
+
+## 7. Git과 Draft PR 편집 체크포인트
 
 1. 논리적 변경별로 `<type>: <한글 명사형 설명>` 커밋을 만든다. Conventional Commit type은 유지하고 설명을 `한다`로 끝내지 않는다.
 2. 현재 Issue의 `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>` 브랜치만 push한다. force push하지 않는다.
@@ -112,7 +122,7 @@ PR에 포함한다. 기획 중 새로 발견된 구현 범위는 현재 Issue에
 4. 현재 브랜치에 연결된 열린 PR을 조회한다. 없을 때만 Issue와 같은 `[영역] 작업명` 제목으로 Draft PR을 만든다. 하나가 이미 있으면 생성과 본문 게시를 반복하지 않고 재개 절차로 이동하며, 둘 이상이면 대상을 추측하지 않고 중단한다.
 5. `.github/pull_request_template.md`의 여섯 리뷰 섹션과 접힌 자동 및 수동 검증 응답을 JSON으로 준비한다. 같은 정보는 한 섹션에만 쓰고, 문장을 제거해도 리뷰 판단이 달라지지 않으면 제거한다. Issue와 ADR의 배경 및 결정 전문을 반복하지 않는다.
 6. 선택한 Python으로 `harness/scripts/render-template-body.py pr`을 실행해 OS 임시 UTF-8 Markdown 파일을 만든다.
-7. delivery action이 `create_draft_pr`인지 확인하고 `resume draft_pr`로 시작 HEAD를 저장한다. 지식 판정 완료와 현재 HEAD의 verification 완료 근거가 없으면 PreToolUse 훅이 생성을 차단한다.
+7. delivery action이 `create_draft_pr`인지 확인하고 `resume draft_pr`로 시작 HEAD를 저장한다. 지식 판정, 현재 HEAD의 verification 완료 근거, 코드 이해 확인이 없으면 PreToolUse 훅이 생성을 차단한다.
 8. 현재 Issue의 `labels`를 OS 임시 JSON snapshot으로 저장하고 선택한 Python으로 `harness/scripts/plan-pr-labels.py <Issue JSON>`을 실행한다. 출력 JSON의 각 라벨을 `eval`하지 않고 별도로 인용된 `--label <이름>` 인자로 준비한다. `type:*`, `frontend-change`, `backend-change`, `infra-change`, `harness-change`만 전달하고 `status:*`는 전달하지 않는다.
 9. `gh pr create --draft --body-file <임시 파일> <라벨 인자...>`로 `Closes #<Issue 번호>`가 하나인 PR을 만든다. 인라인 `--body`를 사용하지 않으며 `gh pr create`를 다른 스크립트 안에 숨기지 않는다.
 10. `gh pr view`로 Draft PR 번호, URL, head OID와 `labels`를 OS 임시 JSON snapshot으로 다시 읽고 선택한 Python으로 `harness/scripts/validate-pr-labels.py <Issue JSON> <PR JSON>`을 실행한다. 기대 라벨이 누락됐거나 `status:*`가 PR에 있으면 완료 근거를 기록하지 않는다.
@@ -138,6 +148,7 @@ PR을 Ready for review 상태로 바꾸거나 승인하거나 머지하지 않�
 - 테스트 주도 개발: `cf-test-driven-development`
 - 완료 검증: `cf-verification-before-completion`
 - 코드 리뷰: `cf-code-review`
+- 코드 이해 확인: `cf-code-understanding`
 - 지식 수집과 점검: `cf-karpathy-llm-wiki`
 
 선택 스킬이 설치되지 않았으면 같은 단계의 계약을 직접 수행하고 누락 사실을 PR에 기록한다.

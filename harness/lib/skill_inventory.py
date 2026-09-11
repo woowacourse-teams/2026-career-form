@@ -9,6 +9,7 @@ from harness.lib.result import ValidationResult
 
 
 PROJECT_SKILLS = (
+    "cf-code-understanding",
     "cf-github-project-onboarding",
     "cf-issue-lifecycle",
     "cf-issue-workflow",

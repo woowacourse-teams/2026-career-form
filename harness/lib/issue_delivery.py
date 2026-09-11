@@ -17,6 +17,7 @@ class DeliveryObservation:
     branch: str
     head: str
     plan_exists: bool
+    understanding_report_matches: bool = False
     worktree_clean: bool = True
     pull_request_number: int | None = None
     pull_request_head: str | None = None
@@ -67,6 +68,17 @@ def next_delivery_action(
         return DeliveryAction(
             "resume_verification",
             "현재 Git 상태가 완료된 검증 근거와 다릅니다.",
+        )
+    understanding = records.get("understanding")
+    if checkpoint.schema_version >= 3 and (
+        understanding is None
+        or understanding.status != "completed"
+        or understanding.completed_head != observation.head
+        or not observation.understanding_report_matches
+    ):
+        return DeliveryAction(
+            "resume_understanding",
+            "현재 코드 이해 보고서와 확인 기록을 다시 확인해야 합니다.",
         )
     draft_pr = records.get("draft_pr")
     if observation.pull_request_number is not None:

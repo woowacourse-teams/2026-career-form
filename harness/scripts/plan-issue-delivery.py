@@ -3,6 +3,7 @@ import argparse
 import json
 import sys
 from collections.abc import Mapping
+from hashlib import sha256
 from pathlib import Path
 
 
@@ -75,6 +76,7 @@ def _observation(
         branch=git_value(cwd, "branch", "--show-current"),
         head=git_value(cwd, "rev-parse", "HEAD"),
         plan_exists=_plan_exists(checkpoint, cwd),
+        understanding_report_matches=_understanding_report_matches(checkpoint, cwd),
         worktree_clean=git_is_clean(cwd),
         pull_request_number=pull_request_number,
         pull_request_head=pull_request_head,
@@ -89,19 +91,40 @@ def _plan_exists(checkpoint: WorkflowCheckpoint, cwd: Path) -> bool:
     path_value = dict(plan.evidence).get("plan_path")
     if not path_value:
         return False
-    expected_value = git_value(
-        cwd,
-        "rev-parse",
-        "--git-path",
-        "cf-workflow/plan.md",
-    )
-    expected = Path(expected_value)
-    if not expected.is_absolute():
-        expected = cwd / expected
+    expected = _git_metadata_path(cwd, "cf-workflow/plan.md")
     recorded = Path(path_value)
     if not recorded.is_absolute():
         recorded = cwd / recorded
     return recorded.resolve() == expected.resolve() and expected.is_file()
+
+
+def _understanding_report_matches(
+    checkpoint: WorkflowCheckpoint,
+    cwd: Path,
+) -> bool:
+    try:
+        understanding = stage_checkpoint(checkpoint, "understanding")
+    except CheckpointError:
+        return False
+    values = dict(understanding.evidence)
+    report_path = values.get("report_path")
+    digest = values.get("report_digest")
+    if not report_path or not digest:
+        return False
+    expected = _git_metadata_path(cwd, "cf-workflow/understanding.md")
+    recorded = Path(report_path)
+    if not recorded.is_absolute():
+        recorded = cwd / recorded
+    try:
+        actual_digest = sha256(expected.read_bytes()).hexdigest()
+    except OSError:
+        return False
+    return recorded.resolve() == expected.resolve() and actual_digest == digest
+
+
+def _git_metadata_path(cwd: Path, value: str) -> Path:
+    resolved = Path(git_value(cwd, "rev-parse", "--git-path", value))
+    return resolved if resolved.is_absolute() else cwd / resolved
 
 
 if __name__ == "__main__":

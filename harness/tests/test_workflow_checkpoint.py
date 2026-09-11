@@ -26,6 +26,65 @@ from harness.lib.workflow_checkpoint import (
 
 
 class WorkflowCheckpointTest(unittest.TestCase):
+    def test_upgrades_unfinished_v2_verification_to_understanding(self) -> None:
+        checkpoint = checkpoint_from(self._completed_v2_verification_payload())
+
+        self.assertEqual(3, checkpoint.schema_version)
+        self.assertEqual("understanding", checkpoint.current_stage)
+        understanding = stage_checkpoint(checkpoint, "understanding")
+        self.assertEqual("running", understanding.status)
+        self.assertEqual("verified-head", understanding.started_head)
+
+    def test_preserves_completed_v2_draft_pr_without_understanding_gate(self) -> None:
+        payload = self._completed_v2_verification_payload()
+        payload["current_stage"] = "draft_pr"
+        payload["stages"].append(
+            {
+                "name": "draft_pr",
+                "status": "completed",
+                "started_head": "verified-head",
+                "completed_head": "verified-head",
+                "evidence": {
+                    "pr_number": "36",
+                    "pr_url": "https://github.com/acme/repo/pull/36",
+                },
+            }
+        )
+
+        checkpoint = checkpoint_from(payload)
+
+        self.assertEqual(2, checkpoint.schema_version)
+        self.assertEqual("completed", stage_checkpoint(checkpoint, "draft_pr").status)
+
+    def test_requires_complete_understanding_evidence(self) -> None:
+        checkpoint = checkpoint_from(self._completed_v2_verification_payload())
+
+        with self.assertRaisesRegex(CheckpointError, "understanding 완료 근거"):
+            complete_stage(
+                checkpoint,
+                stage="understanding",
+                head="verified-head",
+                evidence={"outcome": "Skipped"},
+            )
+
+    def test_completes_understanding_with_report_digest(self) -> None:
+        checkpoint = checkpoint_from(self._completed_v2_verification_payload())
+
+        completed = complete_stage(
+            checkpoint,
+            stage="understanding",
+            head="verified-head",
+            evidence={
+                "outcome": "Skipped",
+                "report_path": ".git/cf-workflow/understanding.md",
+                "report_digest": "a" * 64,
+            },
+        )
+
+        understanding = stage_checkpoint(completed, "understanding")
+        self.assertEqual("completed", understanding.status)
+        self.assertEqual("verified-head", understanding.completed_head)
+
     def test_upgrades_unfinished_v1_checkpoint_before_knowledge_stage(self) -> None:
         checkpoint = checkpoint_from(
             {
@@ -58,7 +117,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
             head="implementation-head",
         )
 
-        self.assertEqual(2, advanced.schema_version)
+        self.assertEqual(3, advanced.schema_version)
         self.assertEqual("knowledge", advanced.current_stage)
 
     def test_preserves_completed_v1_draft_pr_without_new_knowledge_gate(self) -> None:
@@ -85,7 +144,7 @@ class WorkflowCheckpointTest(unittest.TestCase):
 
         checkpoint = checkpoint_from(payload)
 
-        self.assertEqual(2, checkpoint.schema_version)
+        self.assertEqual(3, checkpoint.schema_version)
         self.assertEqual("knowledge", checkpoint.current_stage)
         self.assertEqual("running", stage_checkpoint(checkpoint, "knowledge").status)
 
@@ -650,6 +709,53 @@ class WorkflowCheckpointTest(unittest.TestCase):
             "branch": "CF-34",
             "current_stage": "draft_pr",
             "stages": stages,
+        }
+
+    def _completed_v2_verification_payload(self) -> dict[str, object]:
+        approval_digest = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        return {
+            "schema_version": 2,
+            "issue_number": 34,
+            "branch": "CF-34",
+            "current_stage": "verification",
+            "knowledge_candidates": [],
+            "knowledge_approval_digest": approval_digest,
+            "stages": [
+                {
+                    "name": "plan",
+                    "status": "completed",
+                    "started_head": "start-head",
+                    "completed_head": "plan-head",
+                    "evidence": {"plan_path": ".git/cf-workflow/plan.md"},
+                },
+                {
+                    "name": "implementation",
+                    "status": "completed",
+                    "started_head": "plan-head",
+                    "completed_head": "implementation-head",
+                    "evidence": {"commit": "implementation-head"},
+                },
+                {
+                    "name": "knowledge",
+                    "status": "completed",
+                    "started_head": "implementation-head",
+                    "completed_head": "implementation-head",
+                    "evidence": {
+                        "outcome": "No reusable knowledge",
+                        "approval_digest": approval_digest,
+                    },
+                },
+                {
+                    "name": "verification",
+                    "status": "completed",
+                    "started_head": "implementation-head",
+                    "completed_head": "verified-head",
+                    "evidence": {
+                        "command": "harness/scripts/verify.py",
+                        "result": "passed",
+                    },
+                },
+            ],
         }
 
 

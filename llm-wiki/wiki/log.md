@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-09-11] ingest | CF-88 검증 이후 코드 이해 체크포인트
+
+- Disposition: Supersedes CF-41 issue-development-workflow topic
+- Approval-Digest: 8e7f84a750fc8d327f231b987bbc5f04acdd0a618828f07ccc0c9a212ba5dfde
+- Source-Revision: 2cbfb305bff1b96c94f9667ec383d49df34e0186
+- Raw: llm-wiki/raw/issues/CF-88/manifest.md
+- Topics: 1
+
 ## [2026-09-09] ingest | CF-82 프로필 입력과 확장 UI
 
 - Disposition: New

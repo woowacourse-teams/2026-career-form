@@ -495,6 +495,21 @@ exec /bin/bash "$@"
                     "result": "passed",
                 },
             )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="understanding",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="understanding",
+                head=head,
+                evidence={
+                    "outcome": "Skipped",
+                    "report_path": ".git/cf-workflow/understanding.md",
+                    "report_digest": "a" * 64,
+                },
+            )
             save_checkpoint(repository, checkpoint)
             payload = json.dumps(
                 {
@@ -688,6 +703,98 @@ exec /bin/bash "$@"
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
 
+    def test_issue_delivery_script_restarts_understanding_for_changed_report(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = root / "repository"
+            repository.mkdir()
+            self._init_issue_repository(str(repository))
+            environment = self._without_local_git_environment()
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=environment,
+                check=True,
+            )
+            plan = self._git_metadata_path(repository, environment, "cf-workflow/plan.md")
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
+            report = self._git_metadata_path(
+                repository,
+                environment,
+                "cf-workflow/understanding.md",
+            )
+            report.write_text("# Understanding\n", encoding="utf-8")
+            head = self._git_head(repository, environment)
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=123,
+                branch="CF-123",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head=head,
+                evidence={"plan_path": str(plan)},
+            )
+            checkpoint = begin_stage(checkpoint, stage="implementation", head=head)
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+                evidence={"commit": head},
+            )
+            checkpoint = begin_stage(checkpoint, stage="knowledge", head=head)
+            checkpoint = approve_knowledge(checkpoint, knowledge_digest(checkpoint))
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="knowledge",
+                head=head,
+                evidence={
+                    "outcome": "No reusable knowledge",
+                    "approval_digest": knowledge_digest(checkpoint),
+                },
+            )
+            checkpoint = begin_stage(checkpoint, stage="verification", head=head)
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="verification",
+                head=head,
+                evidence={"command": "harness/scripts/verify.py", "result": "passed"},
+            )
+            checkpoint = begin_stage(checkpoint, stage="understanding", head=head)
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="understanding",
+                head=head,
+                evidence={
+                    "outcome": "Skipped",
+                    "report_path": str(report),
+                    "report_digest": "a" * 64,
+                },
+            )
+            save_checkpoint(repository, checkpoint)
+            snapshot = root / "snapshot.json"
+            snapshot.write_text(json.dumps({"issue_number": 123}), encoding="utf-8")
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "plan-issue-delivery.py"),
+                    "--cwd",
+                    str(repository),
+                    str(snapshot),
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("resume_understanding", json.loads(result.stdout)["code"])
+
     def test_issue_delivery_accepts_linked_worktree_git_metadata_plan(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -846,6 +953,34 @@ exec /bin/bash "$@"
             evidence={"commit": head},
         )
         save_checkpoint(repository, checkpoint)
+
+    def _git_metadata_path(
+        self,
+        repository: Path,
+        environment: dict[str, str],
+        value: str,
+    ) -> Path:
+        path = Path(
+            subprocess.run(
+                ("git", "rev-parse", "--git-path", value),
+                cwd=repository,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+        )
+        return path if path.is_absolute() else repository / path
+
+    def _git_head(self, repository: Path, environment: dict[str, str]) -> str:
+        return subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            cwd=repository,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
 
     def _run(
         self, script: str, *arguments: str, input_text: str | None = None

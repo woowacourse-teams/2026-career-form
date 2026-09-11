@@ -57,6 +57,20 @@
       "reason": "읽기와 요약만 요청했으므로 구현 생명주기를 시작하지 않는다."
     },
     {
+      "id": "code-understanding-positive",
+      "prompt": "검증된 현재 변경을 실제 코드와 테스트 기준으로 설명하고 참고 파일을 주면서 가볍게 이해를 확인해줘.",
+      "expected_skill": "cf-code-understanding",
+      "should_trigger": true,
+      "reason": "최종 변경의 설명과 열린 참고 기반 이해 확인을 함께 요청했다."
+    },
+    {
+      "id": "code-understanding-negative",
+      "prompt": "Issue #31의 본문만 요약해줘.",
+      "expected_skill": "cf-code-understanding",
+      "should_trigger": false,
+      "reason": "검증된 코드나 이해 확인 없이 Issue 산문 요약만 요청했다."
+    },
+    {
       "id": "grill-positive",
       "prompt": "인증 저장 정책의 허점을 grill me 방식으로 끝까지 검토해줘.",
       "expected_skill": "cf-grill-me",

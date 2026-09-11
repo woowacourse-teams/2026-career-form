@@ -94,11 +94,12 @@ Issue 제목은 `[영역] 작업명` 형식으로 정리한다. 영역은 `[FE]`
 1. Issue 범위를 한 PR 안의 논리적 커밋 단위로 나눈다.
 2. 기획 중 논리적 커밋 계획은 Issue 본문에 둔다. 구현 세션의 상세 계획은 worktree가 만들어진 뒤 `git rev-parse --git-path cf-workflow/plan.md` 경로에 기록한다.
 3. 각 단위에 예상 파일, 실패 테스트, 구현, 검증 명령, 커밋 제목을 적는다.
-4. 개별 커밋 제목은 Conventional Commit type을 유지하고 설명을 `한다`로 끝내지 않는다.
-5. `publish_planning_contract`에서 `gh issue edit --body-file <임시 파일>`로 초안을 원격 Issue에 게시하고 `gh issue view`로 게시 결과를 확인한다. 인라인 `--body`를 사용하지 않는다.
-6. 게시한 원격 제목과 본문을 UTF-8로 직렬화한 SHA-256 digest를 계산한다. 이 값은 게시 여부를 확인하는 근거이며 사람 승인으로 간주하지 않는다.
-7. Issue는 `status:planning`, Project는 `In Progress`로 유지하고 `await_approval`에서 사람이 GitHub 제목과 본문을 수정한 뒤 재개를 명시할 때까지 중단한다.
-8. 이 체크포인트에서는 `status:ready`를 붙이거나 구현 브랜치를 만들거나 ADR 파일을 만들지 않는다.
+4. 컴포넌트가 세 개 이상이거나 분기 또는 상태 전환이 있으면 Issue 본문에 짧은 Mermaid 흐름을 넣는다. 그 외에는 다이어그램을 추가하지 않는다.
+5. 개별 커밋 제목은 Conventional Commit type을 유지하고 설명을 `한다`로 끝내지 않는다.
+6. `publish_planning_contract`에서 `gh issue edit --body-file <임시 파일>`로 초안을 원격 Issue에 게시하고 `gh issue view`로 게시 결과를 확인한다. 인라인 `--body`를 사용하지 않는다.
+7. 게시한 원격 제목과 본문을 UTF-8로 직렬화한 SHA-256 digest를 계산한다. 이 값은 게시 여부를 확인하는 근거이며 사람 승인으로 간주하지 않는다.
+8. Issue는 `status:planning`, Project는 `In Progress`로 유지하고 `await_approval`에서 사람이 GitHub 제목과 본문을 수정한 뒤 재개를 명시할 때까지 중단한다.
+9. 이 체크포인트에서는 `status:ready`를 붙이거나 구현 브랜치를 만들거나 ADR 파일을 만들지 않는다.
 
 사용자가 최신 원격 계약의 수정 완료나 승인을 알리면 AI가 `gh issue view`로 제목과 본문을 다시 읽고 그 SHA-256 digest를 `approved_contract_digest`로 사용한다. 사용자 변경을 로컬 초안으로 덮어쓰지 않고 `validate_latest_contract`에서 선택한 Python으로 `harness/scripts/validate-issue.py`를 실행한다. 검증에 실패하면 오류를 보고하고 `status:planning`과 Project `In Progress`를 유지한다.
 

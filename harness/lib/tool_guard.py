@@ -183,6 +183,16 @@ def _draft_pr_decision(
             return HookDecision(True, "지식 후보 확정 체크포인트가 없습니다")
         if knowledge.status != "completed":
             return HookDecision(True, "지식 후보 확정이 완료되지 않았습니다")
+    if checkpoint.schema_version >= 3:
+        try:
+            understanding = stage_checkpoint(checkpoint, "understanding")
+        except CheckpointError:
+            return HookDecision(True, "현재 HEAD의 코드 이해 확인이 필요합니다")
+        if (
+            understanding.status != "completed"
+            or understanding.completed_head != current_head
+        ):
+            return HookDecision(True, "현재 HEAD의 코드 이해 확인이 필요합니다")
     try:
         verification = stage_checkpoint(checkpoint, "verification")
     except CheckpointError:

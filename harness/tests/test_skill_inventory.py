@@ -79,6 +79,23 @@ class SkillInventoryTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_accepts_repository_owned_code_understanding_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "cf-code-understanding"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: cf-code-understanding\n"
+                "description: 검증된 변경을 읽고 이해를 확인한다.\n"
+                "---\n",
+                encoding="utf-8",
+            )
+
+            result = validate_skill_inventory(root)
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_rejects_skill_with_invalid_frontmatter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
