@@ -163,6 +163,34 @@ class FieldsAnalysisServiceTest {
     }
 
     @Test
+    @DisplayName("병역·보훈·장애 매핑의 일반 자동 기입 정책을 응답으로 전파한다")
+    void propagatesAllowedPolicyForMilitaryVeteranAndDisabilityBindings() {
+        FieldsAnalysisRequest sensitiveRequest = new FieldsAnalysisRequest(
+            2,
+            "sensitive-snapshot",
+            site(),
+            List.of(new Section("section-1", null, null, List.of(
+                field("military"), field("veteran"), field("disability")
+            ), null))
+        );
+        FieldMappingResolver resolver = resolver(ignored -> new FieldMappingResolver.Resolution(
+            2,
+            "sensitive-snapshot",
+            List.of(
+                new FieldMappingResolver.Match("military", "military.military.militaryStatus"),
+                new FieldMappingResolver.Match("veteran", "veteran.veteran.veteranStatus"),
+                new FieldMappingResolver.Match("disability", "disability.disability.disabilityRegistrationNumber")
+            )
+        ));
+
+        FieldsAnalysisResponse response = service(Optional.of(resolver)).analyze(sensitiveRequest);
+
+        assertThat(response.fields())
+            .allSatisfy(field -> assertThat(((MatchedFieldAnalysis) field).autofillPolicy())
+                .isEqualTo(AutofillPolicy.ALLOWED));
+    }
+
+    @Test
     @DisplayName("모든 판단이 NO_MATCH여도 필드별 COMPLETE 결과를 반환한다")
     void treatsAllNoMatchAsCompleteExplicitFieldResults() {
         FieldMappingResolver resolver = resolver(ignored -> validNoMatchResolution());

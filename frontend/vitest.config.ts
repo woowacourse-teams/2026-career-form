@@ -3,7 +3,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     coverage: {
-      exclude: ["**/*.test.{ts,tsx}", "**/main.tsx"],
+      exclude: [
+        "**/*.test.{ts,tsx}",
+        "**/*.test-fixtures.{ts,tsx}",
+        "src/autofill/workflow/test-utils/**",
+        "**/main.tsx",
+      ],
       include: [
         "entrypoints/{options,popup,sidepanel}/**/*.tsx",
         "src/**/*.{ts,tsx}",

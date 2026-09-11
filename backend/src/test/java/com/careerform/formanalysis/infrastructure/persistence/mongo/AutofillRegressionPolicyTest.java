@@ -92,6 +92,56 @@ class AutofillRegressionPolicyTest {
     }
 
     @Test
+    void mapsOnlyObservedHyundaiDisabilityButtonsWithAllowedBindingsAndCodes() {
+        var request = new FieldsAnalysisRequest(2, "hyundai-disability-buttons",
+            new FieldsAnalysisRequest.Site("talent.hyundai.com", "/apply/applyWrite.hc"),
+            List.of(new FieldsAnalysisRequest.Section("section-root", null, null, List.of(
+                field("status", "injuryYn", null, FormControl.BUTTON),
+                field("grade", "injuryGrade", null, FormControl.BUTTON),
+                field("type", "injuryType", null, FormControl.BUTTON),
+                field("details", "injuryCont", "injuryCont", FormControl.TEXT),
+                field("wrong-control", "injuryYn", null, FormControl.TEXT)
+            ), null)));
+
+        var resolution = new StoredPolicyFieldMappingResolver(policy("hyundai")).resolve(request);
+
+        assertThat(resolution.results()).containsExactly(
+            buttonMatch("status", "disability.disability.disabilityStatus",
+                Map.of("대상", "예", "비대상", "아니오"), Map.of("예", "Y", "아니오", "N")),
+            buttonMatch("grade", "disability.disability.disabilityGrade", Map.ofEntries(
+                Map.entry("중증", "심한 장애인"), Map.entry("심한 장애인", "심한 장애인"),
+                Map.entry("경증", "심하지 않은 장애인"), Map.entry("심하지 않은 장애인", "심하지 않은 장애인")
+            ), Map.of("심한 장애인", "10", "심하지 않은 장애인", "11")),
+            buttonMatch("type", "disability.disability.disabilityType", Map.ofEntries(
+                Map.entry("지체장애", "지체장애"), Map.entry("뇌병변장애", "뇌병변장애"),
+                Map.entry("시각장애", "시각장애"), Map.entry("청각장애", "청각장애"),
+                Map.entry("언어장애", "언어장애"), Map.entry("지적장애", "지적장애"),
+                Map.entry("정신장애", "정신장애"), Map.entry("자폐성장애", "자폐성장애"),
+                Map.entry("신장장애", "신장장애"), Map.entry("심장장애", "심장장애"),
+                Map.entry("호흡기장애", "호흡기장애"), Map.entry("간장애", "간장애"),
+                Map.entry("안면장애", "안면장애"), Map.entry("장루요루장애", "장루요루장애"),
+                Map.entry("뇌전증장애", "뇌전증장애"), Map.entry("췌장장애", "췌장장애"),
+                Map.entry("상이등급(국가유공)", "상이등급(국가유공)")
+            ), Map.ofEntries(
+                Map.entry("지체장애", "10"), Map.entry("뇌병변장애", "20"), Map.entry("시각장애", "30"),
+                Map.entry("청각장애", "40"), Map.entry("언어장애", "50"), Map.entry("지적장애", "60"),
+                Map.entry("정신장애", "70"), Map.entry("자폐성장애", "80"), Map.entry("신장장애", "90"),
+                Map.entry("심장장애", "A0"), Map.entry("호흡기장애", "B0"), Map.entry("간장애", "C0"),
+                Map.entry("안면장애", "D0"), Map.entry("장루요루장애", "E0"), Map.entry("뇌전증장애", "F0"),
+                Map.entry("췌장장애", "H0"), Map.entry("상이등급(국가유공)", "G0")
+            )),
+            new FieldMappingResolver.NoMatch("details"),
+            new FieldMappingResolver.NoMatch("wrong-control")
+        );
+        assertThat(new SupportedProfileFields().policyOf("disability.disability.disabilityStatus"))
+            .contains(com.careerform.formanalysis.dto.FieldsAnalysisResponse.AutofillPolicy.ALLOWED);
+        assertThat(new SupportedProfileFields().policyOf("disability.disability.disabilityGrade"))
+            .contains(com.careerform.formanalysis.dto.FieldsAnalysisResponse.AutofillPolicy.ALLOWED);
+        assertThat(new SupportedProfileFields().policyOf("disability.disability.disabilityType"))
+            .contains(com.careerform.formanalysis.dto.FieldsAnalysisResponse.AutofillPolicy.ALLOWED);
+    }
+
+    @Test
     void preparesOnlyTheExactMilitaryTargetRadioThenTheStatusSelect() {
         var request = new PreparationAnalysisRequest(2, "military-chain",
             new PreparationAnalysisRequest.Site("www.skcareers.com", "/Application/Index/{postingId}"),
@@ -157,6 +207,55 @@ class AutofillRegressionPolicyTest {
     }
 
     @Test
+    void preparesOnlyExactSkVeteranAndDisabilityTargetRadios() {
+        var request = new PreparationAnalysisRequest(2, "sk-sensitive-radios",
+            new PreparationAnalysisRequest.Site("www.skcareers.com", "/Application/Index/{postingId}"),
+            List.of(new PreparationAnalysisRequest.Section("section-1", null, null, List.of(
+                radioAction("veteran", "prsVeteranBenefitYN", "대상"),
+                radioAction("disability", "prsDisabledYN", "대상"),
+                new PreparationAnalysisRequest.ActionCandidate("wrong-disability-name",
+                    PreparationAnalysisRequest.FormElement.INPUT,
+                    PreparationAnalysisRequest.FormControl.RADIO,
+                    PreparationAnalysisRequest.Visibility.VISIBLE, "대상",
+                    "prsDisabledYN", "otherDisabledYN", null, null, null, null)
+            ), null)));
+
+        assertThat(new StoredPolicyActionResolver(policy("sk")).resolve(request).results())
+            .containsExactly(
+                new ActionResolver.SelectOptionAction("veteran", "veteran.veteran.veteranStatus",
+                    "대상", "section-1", List.of("prsVeteranBenefitNumber", "prsVeteranBenefitRelation"), null, null),
+                new ActionResolver.SelectOptionAction("disability", "disability.disability.disabilityStatus",
+                    "대상", "section-1", List.of("prsDisabledType", "prsDisabledTypeDtl"),
+                    List.of("장애", "예", "대상", "해당", "있음"), null),
+                new ActionResolver.NoAction("wrong-disability-name")
+            );
+    }
+
+    @Test
+    void mapsOnlyTheExactSkDisabilityGradeSelectToObservedSeverityLabels() {
+        var request = new FieldsAnalysisRequest(2, "sk-disability-grade",
+            new FieldsAnalysisRequest.Site("www.skcareers.com", "/Application/Index/{postingId}"),
+            List.of(new FieldsAnalysisRequest.Section("section-1", null, null, List.of(
+                selectField("grade", "prsDisabledType", "prsDisabledType"),
+                selectField("wrong-name", "prsDisabledType", "otherDisabledType"),
+                field("wrong-control", "prsDisabledType", "prsDisabledType", FormControl.TEXT)
+            ), null)));
+
+        assertThat(new StoredPolicyFieldMappingResolver(policy("sk")).resolve(request).results())
+            .containsExactly(
+                new FieldMappingResolver.Match("grade", new FieldMappingResolver.LookupBinding(
+                    "disability.disability.disabilityGrade",
+                    Map.of(
+                        "중증", "중증(기존1급~3급)",
+                        "경증", "경증(기존4급~6급)"
+                    )
+                )),
+                new FieldMappingResolver.NoMatch("wrong-name"),
+                new FieldMappingResolver.NoMatch("wrong-control")
+            );
+    }
+
+    @Test
     void mapsUniversityScaleAndAdditionalMajorsThroughTheActualSeed() {
         var resolution = resolve("educationuniversity", List.of(
             field("scale", "rcdPerf_2", null, FormControl.BUTTON),
@@ -211,6 +310,11 @@ class AutofillRegressionPolicyTest {
 
     private FieldCandidate field(String id, String domId, String name, FormControl control) {
         return new FieldCandidate(id, FormElement.INPUT, control, Visibility.VISIBLE,
+            null, domId, name, null, null, null, null, null);
+    }
+
+    private FieldCandidate selectField(String id, String domId, String name) {
+        return new FieldCandidate(id, FormElement.SELECT, FormControl.SELECT, Visibility.VISIBLE,
             null, domId, name, null, null, null, null, null);
     }
 

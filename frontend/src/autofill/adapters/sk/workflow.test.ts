@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../../api/types";
 import { createStructuralSignature } from "../../dom/candidate-registry";
-import type { FieldCandidateHandle } from "../../dom/types";
+import type {
+  ActionCandidateHandle,
+  FieldCandidateHandle,
+} from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { getWorkflowAdapter } from "../workflow";
 
@@ -131,8 +134,8 @@ describe("SK military and veteran conditional selections", () => {
     (profileValue) => {
       const page = document.implementation.createHTMLDocument("fixture");
       page.body.innerHTML = `
-        <label><input type="radio" name="prsMilitarySvcYN" /> 비대상</label>
-        <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
+        <label><input type="radio" name="prsMilitarySvcYN" value="0" /> 비대상</label>
+        <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
       `;
 
       expect(
@@ -150,8 +153,8 @@ describe("SK military and veteran conditional selections", () => {
   it("does not select military target for a non-target status", () => {
     const page = document.implementation.createHTMLDocument("fixture");
     page.body.innerHTML = `
-      <label><input type="radio" name="prsMilitarySvcYN" /> 비대상</label>
-      <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" value="0" /> 비대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
     `;
 
     expect(adapter.selectReveal(page, militarySelection, "비대상")).toEqual({
@@ -168,8 +171,8 @@ describe("SK military and veteran conditional selections", () => {
   it("preserves an existing non-target military radio selection", () => {
     const page = document.implementation.createHTMLDocument("fixture");
     page.body.innerHTML = `
-      <label><input type="radio" name="prsMilitarySvcYN" checked /> 비대상</label>
-      <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" value="0" checked /> 비대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
     `;
     const [existing, target] = page.querySelectorAll<HTMLInputElement>("input");
     let targetClicks = 0;
@@ -189,8 +192,8 @@ describe("SK military and veteran conditional selections", () => {
   it("keeps an already selected veteran target without a duplicate click", () => {
     const page = document.implementation.createHTMLDocument("fixture");
     page.body.innerHTML = `
-      <label><input type="radio" name="prsVeteranBenefitYN" /> 비대상</label>
-      <label><input type="radio" name="prsVeteranBenefitYN" checked /> 대상</label>
+      <label><input type="radio" name="prsVeteranBenefitYN" value="0" /> 비대상</label>
+      <label><input type="radio" name="prsVeteranBenefitYN" value="1" checked /> 대상</label>
     `;
     const target = page.querySelectorAll<HTMLInputElement>("input")[1]!;
     let targetClicks = 0;
@@ -209,7 +212,7 @@ describe("SK military and veteran conditional selections", () => {
   it.each([
     [
       "multiple exact targets",
-      `<label><input type="radio" name="prsMilitarySvcYN" /> 대상</label><label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>`,
+      `<label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label><label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>`,
     ],
     [
       "a disabled target",
@@ -217,11 +220,11 @@ describe("SK military and veteran conditional selections", () => {
     ],
     [
       "an inert target",
-      `<div inert><label><input type="radio" name="prsMilitarySvcYN" /> 대상</label></div>`,
+      `<div inert><label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label></div>`,
     ],
     [
       "a hidden target",
-      `<label hidden><input type="radio" name="prsMilitarySvcYN" /> 대상</label>`,
+      `<label hidden><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>`,
     ],
   ] as const)("refuses %s", (_description, markup) => {
     const page = document.implementation.createHTMLDocument("fixture");
@@ -241,9 +244,9 @@ describe("SK military and veteran conditional selections", () => {
   it("selects only the exact veteran target radio", () => {
     const page = document.implementation.createHTMLDocument("fixture");
     page.body.innerHTML = `
-      <label><input type="radio" name="prsMilitarySvcYN" /> 대상</label>
-      <label><input type="radio" name="prsVeteranBenefitYN" /> 비대상</label>
-      <label><input type="radio" name="prsVeteranBenefitYN" /> 대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
+      <label><input type="radio" name="prsVeteranBenefitYN" value="0" /> 비대상</label>
+      <label><input type="radio" name="prsVeteranBenefitYN" value="1" /> 대상</label>
     `;
 
     expect(adapter.selectReveal(page, veteranSelection, "대상")).toEqual({
@@ -488,5 +491,225 @@ describe("SK autocomplete state drivers", () => {
         handle,
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("SK military branch and disability conditional controls", () => {
+  const disabilitySelection = adapter.revealSelections.find(
+    ({ domName }) => domName === "prsDisabledYN",
+  );
+
+  it("reveals disability only through the exact target radio contract", () => {
+    expect(disabilitySelection).toEqual({
+      domName: "prsDisabledYN",
+      profileFieldKey: "disability.disability.disabilityStatus",
+      itemIndex: 0,
+    });
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `
+      <label><input type="radio" name="prsDisabledYN" value="0" /> 비대상</label>
+      <label><input type="radio" name="prsDisabledYN" value="1" /> 대상</label>
+    `;
+
+    expect(adapter.selectReveal(page, disabilitySelection!, "대상")).toEqual({
+      code: "SELECTED",
+      count: 1,
+    });
+    expect(
+      page.querySelector<HTMLInputElement>(
+        "input[name='prsDisabledYN'][value='1']",
+      )?.checked,
+    ).toBe(true);
+  });
+
+  it.each([
+    ["wrong code", '<input type="radio" name="prsDisabledYN" value="9" />'],
+    [
+      "wrong label",
+      '<label><input type="radio" name="prsDisabledYN" value="1" /> 예</label>',
+    ],
+    [
+      "duplicate target",
+      '<label><input type="radio" name="prsDisabledYN" value="1" /> 대상</label><label><input type="radio" name="prsDisabledYN" value="1" /> 대상</label>',
+    ],
+    [
+      "hidden target",
+      '<label hidden><input type="radio" name="prsDisabledYN" value="1" /> 대상</label>',
+    ],
+  ] as const)("rejects a disability target with %s", (_reason, markup) => {
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = markup;
+    expect(adapter.selectReveal(page, disabilitySelection!, "대상")).toEqual({
+      code: "TARGET_MISSING",
+      count: 1,
+    });
+  });
+
+  it("accepts only verified SK branch option codes after the military target gate", () => {
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `
+      <label><input type="radio" name="prsMilitarySvcYN" value="1" checked /> 대상</label>
+      <select name="prsMilitarySvcCategory">
+        <option value="">군별 *필수항목</option>
+        <option value="304001">육군</option>
+        <option value="304002">해군</option>
+        <option value="304003">공군</option>
+        <option value="304004">해병대</option>
+        <option value="304005">전투경찰</option>
+        <option value="304006">해양경찰</option>
+        <option value="304007">의무경찰</option>
+        <option value="304008">의무소방</option>
+      </select>
+    `;
+    const select = page.querySelector<HTMLSelectElement>(
+      "[name='prsMilitarySvcCategory']",
+    )!;
+    const handle = {
+      element: select,
+      elements: [select],
+      candidate: {
+        candidateId: "branch",
+        domName: "prsMilitarySvcCategory",
+        domId: "prsMilitarySvcCategory",
+        displayName: "군별",
+        tagName: "SELECT",
+      },
+    } as never;
+    const item = {
+      candidateId: "branch",
+      profileValue: "육군",
+      selected: true,
+      disabled: false,
+      analysis: {
+        valueBinding: {
+          type: "DIRECT",
+          profileFieldKey: "military.military.militaryBranch",
+        },
+      },
+    } as never;
+
+    expect(adapter.canWriteProfileOption?.(handle, item)).toBe(true);
+    select.insertAdjacentHTML(
+      "beforeend",
+      `<option value="999999">육군</option>`,
+    );
+    expect(adapter.canWriteProfileOption?.(handle, item)).toBe(false);
+  });
+});
+
+function preparationHandle(
+  element: HTMLInputElement | HTMLSelectElement,
+): ActionCandidateHandle {
+  const select = element instanceof HTMLSelectElement;
+  return {
+    kind: "action",
+    candidateId: "preparation-target",
+    sectionId: "synthetic-sensitive-section",
+    signature: createStructuralSignature([element]),
+    element,
+    candidate: {
+      candidateId: "preparation-target",
+      element: select ? "select" : "input",
+      control: select ? "select" : "radio",
+      visibility: "visible",
+      domName: element.name,
+      displayName: select ? "대상 분류" : "대상",
+    },
+  };
+}
+
+describe("SK protected preparation contract", () => {
+  it.each(["prsMilitarySvcYN", "prsVeteranBenefitYN", "prsDisabledYN"])(
+    "rejects an extra same-code wrong-label peer through the real preparation gate: %s",
+    (name) => {
+      const page = document.implementation.createHTMLDocument("fixture");
+      page.body.innerHTML = `<label><input type="radio" name="${name}" value="0" disabled>비대상</label><label><input type="radio" name="${name}" value="1">대상</label><label><input type="radio" name="${name}" value="1">예</label>`;
+      const target = page.querySelectorAll<HTMLInputElement>("input")[1]!;
+      const value = name === "prsMilitarySvcYN" ? "군필" : "대상";
+      expect(
+        adapter.canSelectProfileOption?.(preparationHandle(target), value),
+      ).toBe(false);
+      expect(target.checked).toBe(false);
+      page.querySelectorAll("label")[2]!.remove();
+      expect(
+        adapter.canSelectProfileOption?.(preparationHandle(target), value),
+      ).toBe(true);
+    },
+  );
+
+  it.each(["duplicate-status", "wrong-target-code", "extra-radio"])(
+    "rejects a malformed military status preparation boundary: %s",
+    (kind) => {
+      const page = document.implementation.createHTMLDocument("fixture");
+      page.body.innerHTML = `<label><input type="radio" name="prsMilitarySvcYN" value="0" disabled>비대상</label><label><input type="radio" name="prsMilitarySvcYN" value="1" checked>대상</label><select name="prsMilitarySvcStatus"><option value="">대상 분류</option><option value="302001">군필</option><option value="302002">미필</option><option value="302003">면제</option><option value="302004">복무중</option></select>`;
+      const select = page.querySelector("select")!;
+      if (kind === "duplicate-status") page.body.append(select.cloneNode(true));
+      if (kind === "wrong-target-code")
+        page.querySelector<HTMLInputElement>("input[value='1']")!.value = "9";
+      if (kind === "extra-radio")
+        page.body.insertAdjacentHTML(
+          "beforeend",
+          '<label><input type="radio" name="prsMilitarySvcYN" value="1">예</label>',
+        );
+      expect(
+        adapter.canSelectProfileOption?.(preparationHandle(select), "군필"),
+      ).toBe(false);
+      expect(select.value).toBe("");
+    },
+  );
+  it("rejects a complete radio group when a peer has an unverified code or label", () => {
+    const selection = adapter.revealSelections.find(
+      ({ domName }) => domName === "prsMilitarySvcYN",
+    )!;
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `<label><input type="radio" name="prsMilitarySvcYN" value="0" disabled /> 비대상</label><label><input type="radio" name="prsMilitarySvcYN" value="9" /> 대상</label>`;
+    expect(adapter.selectReveal(page, selection, "군필")).toEqual({
+      code: "TARGET_MISSING",
+      count: 1,
+    });
+    expect(page.querySelector<HTMLInputElement>("[value='9']")?.checked).toBe(
+      false,
+    );
+
+    page.body.innerHTML = `<label><input type="radio" name="prsMilitarySvcYN" value="0" disabled /> 비대상</label><label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label><label><input type="radio" name="prsMilitarySvcYN" value="1" /> 잘못된 라벨</label>`;
+    expect(adapter.selectReveal(page, selection, "군필")).toEqual({
+      code: "TARGET_MISSING",
+      count: 1,
+    });
+  });
+
+  it("prepares only the unique exact SK military status select code", () => {
+    const selection = {
+      domName: "prsMilitarySvcStatus",
+      profileFieldKey: "military.military.militaryStatus",
+      itemIndex: 0,
+    };
+    const page = document.implementation.createHTMLDocument("fixture");
+    page.body.innerHTML = `<select name="prsMilitarySvcStatus"><option value="">대상 분류</option><option value="302001">군필</option><option value="302002">미필</option><option value="302003">면제</option><option value="302004">복무중</option></select>`;
+    const select = page.querySelector<HTMLSelectElement>("select")!;
+    let events = 0;
+    select.addEventListener("change", () => events++);
+    expect(adapter.selectReveal(page, selection, "군필")).toEqual({
+      code: "SELECTION_FAILED",
+      count: 1,
+    });
+    expect(select.value).toBe("");
+    expect(events).toBe(0);
+    page.body.insertAdjacentHTML(
+      "afterbegin",
+      '<label><input type="radio" name="prsMilitarySvcYN" value="0" disabled>비대상</label><label><input type="radio" name="prsMilitarySvcYN" value="1" checked>대상</label>',
+    );
+    expect(adapter.selectReveal(page, selection, "군필")).toEqual({
+      code: "SELECTED",
+      count: 1,
+    });
+    expect(select.value).toBe("302001");
+    expect(events).toBe(1);
+
+    page.body.innerHTML = `<select name="prsMilitarySvcStatus"><option value="302001">군필</option><option value="302001">군필</option></select>`;
+    expect(adapter.selectReveal(page, selection, "군필")).toEqual({
+      code: "SELECTION_FAILED",
+      count: 1,
+    });
   });
 });

@@ -230,3 +230,54 @@ describe("Hyundai profile additions", () => {
     ]);
   });
 });
+
+describe("military, veteran, and disability profile selects", () => {
+  it("exposes exactly the five approved fields as selects", () => {
+    const expected = [
+      ["military", "militaryStatus"],
+      ["military", "militaryBranch"],
+      ["military", "militaryRank"],
+      ["veteran", "veteranStatus"],
+      ["disability", "disabilityStatus"],
+    ] as const;
+
+    for (const [categoryId, fieldId] of expected) {
+      const category = PROFILE_CATEGORIES.find(
+        (item) => item.id === categoryId,
+      );
+      const field = category?.sections[0]?.fields.find(
+        (item) => item.id === fieldId,
+      );
+      expect(field?.inputType, `${categoryId}.${fieldId}`).toBe("select");
+      expect(
+        field?.options?.length,
+        `${categoryId}.${fieldId}`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps the existing military type select and detailed fields unchanged", () => {
+    const military = PROFILE_CATEGORIES.find((item) => item.id === "military")!
+      .sections[0];
+    expect(
+      military.fields.find((field) => field.id === "militaryType"),
+    ).toMatchObject({
+      inputType: "select",
+      options: [
+        "현역병",
+        "상근예비역",
+        "공익근무요원",
+        "전문연구요원",
+        "산업기능요원",
+      ],
+    });
+    expect(
+      military.fields.find((field) => field.id === "militarySpecialty")
+        ?.inputType,
+    ).toBe("text");
+    expect(
+      military.fields.find((field) => field.id === "exemptionReason")
+        ?.inputType,
+    ).toBe("text");
+  });
+});

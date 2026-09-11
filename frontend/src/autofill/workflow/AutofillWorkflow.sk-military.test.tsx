@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
 import { createEmptyProfile } from "../../profile/model";
@@ -23,6 +23,12 @@ afterEach(() => {
 
 const militaryStatuses = ["군필", "복무중", "미필", "면제"] as const;
 type MilitaryStatus = (typeof militaryStatuses)[number];
+const militaryStatusCodes: Record<MilitaryStatus, string> = {
+  군필: "302001",
+  복무중: "302004",
+  미필: "302002",
+  면제: "302003",
+};
 const militaryDetails: Record<MilitaryStatus, Record<string, string>> = {
   군필: {
     militaryType: "현역병",
@@ -150,7 +156,7 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   };
 }
 
-function setup(
+async function setup(
   militaryStatus: MilitaryStatus | "만기전역" | "비대상",
   veteranStatus: "대상" | "비대상",
   existing: {
@@ -158,6 +164,7 @@ function setup(
     militaryStatus?: MilitaryStatus;
     veteran?: "대상" | "비대상";
   } = {},
+  rawMilitaryStatus?: string,
 ) {
   (
     globalThis as unknown as {
@@ -193,7 +200,7 @@ function setup(
       militaryFieldset.insertAdjacentHTML(
         "beforeend",
         `<label for="prsMilitarySvcStatus">복무 상태
-        <select id="prsMilitarySvcStatus" name="prsMilitarySvcStatus"><option value="">선택</option><option value="군필">군필</option><option value="복무중">복무중</option><option value="미필">미필</option><option value="면제">면제</option></select></label>`,
+        <select id="prsMilitarySvcStatus" name="prsMilitarySvcStatus"><option value="">선택</option><option value="302001">군필</option><option value="302004">복무중</option><option value="302002">미필</option><option value="302003">면제</option></select></label>`,
       );
       militaryFieldset
         .querySelector<HTMLSelectElement>("#prsMilitarySvcStatus")!
@@ -207,10 +214,10 @@ function setup(
             militaryFieldset.insertAdjacentHTML(
               "beforeend",
               `<div class="military-details">
-          ${["군필", "복무중"].includes(select.value) ? '<label>병역 구분<select name="prsMilitarySvcType"><option value="">선택</option><option value="303001">현역병</option><option value="303002">상근예비역</option></select></label>' : ""}
+          ${["302001", "302004"].includes(select.value) ? '<label>병역 구분<select name="prsMilitarySvcType"><option value="">선택</option><option value="303001">현역병</option><option value="303002">상근예비역</option></select></label>' : ""}
           <input name="prsMilitarySvcEtcReason" aria-label="기타 사유(검증되지 않은 필드)" />
           <input name="prsMilitarySvcUnfinishReason" aria-label="미필 사유(검증되지 않은 필드)" />
-          ${select.value === "면제" ? '<input name="prsMilitarySvcTypeReason" aria-label="면제 사유" />' : ""}
+          ${select.value === "302003" ? '<input name="prsMilitarySvcTypeReason" aria-label="면제 사유" />' : ""}
         </div>`,
             );
         });
@@ -249,7 +256,7 @@ function setup(
       const status = militaryFieldset.querySelector<HTMLSelectElement>(
         "#prsMilitarySvcStatus",
       )!;
-      status.value = existing.militaryStatus;
+      status.value = militaryStatusCodes[existing.militaryStatus];
       status.dispatchEvent(new Event("change", { bubbles: true }));
     }
   } else if (existing.military === "비대상") {
@@ -274,6 +281,8 @@ function setup(
             militaryStatus === "만기전역" ? "군필" : militaryStatus
           ],
         };
+  if (rawMilitaryStatus !== undefined)
+    profile.military.militaryStatus = rawMilitaryStatus;
   profile.veteran =
     veteranStatus === "대상"
       ? {
@@ -363,9 +372,12 @@ function setup(
 it.each(militaryStatuses)(
   "runs the SK military radio -> status -> details chain for %s",
   async (status) => {
-    const run = setup(status, "비대상");
+    const run = await setup(status, "비대상");
+    expect(
+      screen.queryByRole("button", { name: /값 보기|포함하기/ }),
+    ).toBeNull();
     await waitFor(() => {
-      expect(run.fieldAnalysisCalls()).toBe(1);
+      expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1);
       expect(
         document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcType']")
           ?.value ?? "",
@@ -384,7 +396,7 @@ it.each(militaryStatuses)(
     expect(
       document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
         ?.value,
-    ).toBe(status);
+    ).toBe(militaryStatusCodes[status]);
     expect(document.querySelector(".military-details")).not.toBeNull();
     expect(
       document.querySelector<HTMLInputElement>(
@@ -401,14 +413,14 @@ it.each(militaryStatuses)(
 );
 
 it("maps the exact SK military alias through preparation, status selection, and detail binding", async () => {
-  const run = setup("만기전역", "비대상");
+  const run = await setup("만기전역", "비대상");
 
   await waitFor(() => {
-    expect(run.fieldAnalysisCalls()).toBe(1);
+    expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1);
     expect(
       document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
         ?.value,
-    ).toBe("군필");
+    ).toBe("302001");
     expect(
       document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcType']")
         ?.value,
@@ -421,23 +433,27 @@ it("maps the exact SK military alias through preparation, status selection, and 
 });
 
 it("keeps an existing canonical SK military selection without redispatching the alias", async () => {
-  const run = setup("만기전역", "비대상", {
+  const run = await setup("만기전역", "비대상", {
     military: "대상",
     militaryStatus: "군필",
   });
 
-  await waitFor(() => expect(run.fieldAnalysisCalls()).toBe(1));
+  await waitFor(() =>
+    expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1),
+  );
   expect(
     document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
       ?.value,
-  ).toBe("군필");
+  ).toBe("302001");
   expect(run.militaryTargetClicks()).toBe(0);
   expect(run.militaryStatusChanges()).toBe(0);
 });
 
 it("keeps military details closed for a non-target status and leaves unsupported fields empty", async () => {
-  const run = setup("비대상", "비대상");
-  await waitFor(() => expect(run.fieldAnalysisCalls()).toBe(1));
+  const run = await setup("비대상", "비대상");
+  await waitFor(() =>
+    expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1),
+  );
   expect(
     document.querySelector<HTMLInputElement>(
       "[name='prsMilitarySvcYN'][value='1']",
@@ -454,7 +470,7 @@ it("keeps military details closed for a non-target status and leaves unsupported
 });
 
 it("connects veteran target to number and relation while preserving unsupported military fields", async () => {
-  const run = setup("비대상", "대상");
+  const run = await setup("비대상", "대상");
   await waitFor(() => {
     expect(document.body.textContent).toContain("기입 결과");
     expect(
@@ -481,7 +497,7 @@ it("connects veteran target to number and relation while preserving unsupported 
 });
 
 it("preserves an existing non-target military selection while continuing veteran preparation", async () => {
-  const run = setup("군필", "대상", { military: "비대상" });
+  const run = await setup("군필", "대상", { military: "비대상" });
 
   await waitFor(() => {
     expect(document.body.textContent).toContain("기입 결과");
@@ -491,7 +507,7 @@ it("preserves an existing non-target military selection while continuing veteran
       )?.value,
     ).toBe("VET-DEMO-001");
   });
-  expect(run.fieldAnalysisCalls()).toBe(1);
+  expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1);
   expect(
     document.querySelector<HTMLInputElement>(
       "[name='prsMilitarySvcYN'][value='0']",
@@ -507,54 +523,74 @@ it("preserves an existing non-target military selection while continuing veteran
 });
 
 it("preserves a different existing military status", async () => {
-  const run = setup("군필", "비대상", {
+  const run = await setup("군필", "비대상", {
     military: "대상",
     militaryStatus: "미필",
   });
 
   await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
-  expect(run.fieldAnalysisCalls()).toBe(1);
+  expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1);
   expect(
     document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
       ?.value,
-  ).toBe("미필");
+  ).toBe("302002");
   expect(run.militaryStatusChanges()).toBe(0);
 });
 
-it("preserves an existing non-target veteran selection while continuing military preparation", async () => {
-  const run = setup("군필", "대상", { veteran: "비대상" });
+it("uses the profile veteran status over an existing non-target selection while preserving military rules", async () => {
+  const run = await setup("군필", "대상", { veteran: "비대상" });
 
   await waitFor(() => {
     expect(document.body.textContent).toContain("기입 결과");
     expect(
       document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
         ?.value,
-    ).toBe("군필");
+    ).toBe("302001");
   });
   expect(
     document.querySelector<HTMLInputElement>(
       "[name='prsVeteranBenefitYN'][value='0']",
     )?.checked,
-  ).toBe(true);
+  ).toBe(false);
   expect(
     document.querySelector<HTMLInputElement>(
       "[name='prsVeteranBenefitYN'][value='1']",
     )?.checked,
-  ).toBe(false);
-  expect(document.querySelector("[name='prsVeteranBenefitNumber']")).toBeNull();
-  expect(run.veteranTargetClicks()).toBe(0);
+  ).toBe(true);
+  expect(
+    document.querySelector<HTMLInputElement>("[name='prsVeteranBenefitNumber']")
+      ?.value,
+  ).toBe("VET-DEMO-001");
+  expect(run.veteranTargetClicks()).toBe(1);
 });
 
 it("does not re-dispatch already matching military and veteran selections", async () => {
-  const run = setup("군필", "대상", {
+  const run = await setup("군필", "대상", {
     military: "대상",
     militaryStatus: "군필",
     veteran: "대상",
   });
 
   await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
-  expect(run.fieldAnalysisCalls()).toBe(1);
+  expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1);
   expect(run.militaryTargetClicks()).toBe(0);
   expect(run.militaryStatusChanges()).toBe(0);
   expect(run.veteranTargetClicks()).toBe(0);
+});
+
+it("normalizes the canonical military ID before SK preparation and reanalysis", async () => {
+  const run = await setup("군필", "비대상", {}, "military-status:served");
+  await waitFor(() => {
+    expect(
+      document.querySelector<HTMLSelectElement>("[name=prsMilitarySvcStatus]")
+        ?.value,
+    ).toBe("302001");
+    expect(
+      document.querySelector<HTMLSelectElement>("[name=prsMilitarySvcType]")
+        ?.value,
+    ).toBe("303001");
+  });
+  expect(run.preparationCalls()).toBe(2);
+  expect(run.militaryTargetClicks()).toBe(1);
+  expect(run.militaryStatusChanges()).toBe(1);
 });

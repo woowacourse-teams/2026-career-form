@@ -16,7 +16,16 @@ export const HYUNDAI_CONDITIONAL_DRIVERS = new Map([
       profileFieldKey: "veteran.veteran.veteranStatus",
     },
   ],
+  [
+    "injuryYn",
+    {
+      codegb: "1503",
+      profileFieldKey: "disability.disability.disabilityStatus",
+    },
+  ],
 ]);
+
+type HyundaiConditionalDriver = "milCd" | "branchYn" | "injuryYn";
 
 export function exactHyundaiEtcArticle(
   element: Element,
@@ -29,7 +38,7 @@ export function exactHyundaiEtcArticle(
 
 function exactDriverTrigger(
   document: Document,
-  id: "milCd" | "branchYn",
+  id: HyundaiConditionalDriver,
 ): HTMLInputElement | undefined {
   const article = document.querySelector<HTMLElement>(
     "article#etc.field-form-apply",
@@ -60,13 +69,13 @@ function exactDriverTrigger(
 export function exactConditionalDriver(
   handle: FieldCandidateHandle,
   item?: ReviewPlanItem,
-): "milCd" | "branchYn" | undefined {
+): HyundaiConditionalDriver | undefined {
   const id = handle.candidate.domId;
   const spec = id ? HYUNDAI_CONDITIONAL_DRIVERS.get(id) : undefined;
   const trigger = handle.elements[0];
   if (
     !spec ||
-    (id !== "milCd" && id !== "branchYn") ||
+    (id !== "milCd" && id !== "branchYn" && id !== "injuryYn") ||
     handle.elements.length !== 1 ||
     !(trigger instanceof HTMLInputElement) ||
     trigger !== exactDriverTrigger(trigger.ownerDocument, id) ||
@@ -94,14 +103,14 @@ export function exactConditionalDriver(
 function exactStateControl(
   document: Document,
   id: string,
-): HTMLInputElement | undefined {
+): HTMLInputElement | HTMLTextAreaElement | undefined {
   const article = document.querySelector<HTMLElement>(
     "article#etc.field-form-apply",
   );
   if (!article) return undefined;
   const matches = Array.from(
-    article.querySelectorAll<HTMLInputElement>(
-      `input#${id}:not([type='hidden'])`,
+    article.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      `:is(input, textarea)#${id}:not([type='hidden'])`,
     ),
   );
   return matches.length === 1 ? matches[0] : undefined;
@@ -152,7 +161,7 @@ function optionalControlMatches(
 
 function driverValue(
   trigger: HTMLInputElement,
-  id: "milCd" | "branchYn",
+  id: HyundaiConditionalDriver,
 ): { display: string; code: string } | undefined {
   const hidden = trigger
     .closest(".select-wrap")!
@@ -166,7 +175,7 @@ function driverValue(
 
 function driverStateSettled(
   document: Document,
-  id: "milCd" | "branchYn",
+  id: HyundaiConditionalDriver,
 ): boolean {
   const trigger = exactDriverTrigger(document, id);
   if (!trigger) return false;
@@ -208,28 +217,44 @@ function driverStateSettled(
     }
     return false;
   }
+  if (id === "branchYn") {
+    if (value.code === "Y" && value.display === "예") {
+      return controlsMatch(
+        document,
+        ["branchRel", "branchAddPoint", "branchNo"],
+        ["branchSupplyYn"],
+        [],
+      );
+    }
+    if (value.code === "N" && value.display === "아니오") {
+      return controlsMatch(
+        document,
+        [],
+        [],
+        ["branchRel", "branchSupplyYn", "branchAddPoint", "branchNo"],
+      );
+    }
+    return false;
+  }
+  const injuryDetails = ["injuryGrade", "injuryType", "injuryCont"];
   if (value.code === "Y" && value.display === "예") {
-    return controlsMatch(
-      document,
-      ["branchRel", "branchAddPoint", "branchNo"],
-      ["branchSupplyYn"],
-      [],
-    );
+    return injuryDetails.every((detail) => {
+      const control = exactStateControl(document, detail);
+      return Boolean(control && !control.disabled);
+    });
   }
   if (value.code === "N" && value.display === "아니오") {
-    return controlsMatch(
-      document,
-      [],
-      [],
-      ["branchRel", "branchSupplyYn", "branchAddPoint", "branchNo"],
-    );
+    return injuryDetails.every((detail) => {
+      const control = exactStateControl(document, detail);
+      return Boolean(control && control.disabled);
+    });
   }
   return false;
 }
 
 function driverMatches(
   document: Document,
-  id: "milCd" | "branchYn",
+  id: HyundaiConditionalDriver,
   display: string,
   code: string,
 ): boolean {
@@ -267,6 +292,9 @@ export function dependentDriverSettled(
   }
   if (fieldId === "branchRel" || fieldId === "branchNo") {
     return driverMatches(document, "branchYn", "예", "Y");
+  }
+  if (fieldId === "injuryGrade" || fieldId === "injuryType") {
+    return driverMatches(document, "injuryYn", "예", "Y");
   }
   return true;
 }

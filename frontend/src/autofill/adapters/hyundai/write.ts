@@ -28,7 +28,7 @@ interface ExactButtonSpec {
   profileFieldKey: string;
   transitionByCode?: ReadonlyMap<
     string,
-    { enabled: string; disabled: string; valid: string }
+    { enabled: string; disabled: string; valid?: string }
   >;
 }
 
@@ -81,6 +81,22 @@ const VETERAN_TRANSITIONS = new Map([
       enabled: "",
       disabled: "branchRel,branchSupplyYn,branchAddPoint,branchNo",
       valid: "",
+    },
+  ],
+]);
+const DISABILITY_TRANSITIONS = new Map([
+  [
+    "Y",
+    {
+      enabled: "injuryGrade,injuryType,injuryTypeNm,injuryCont",
+      disabled: "",
+    },
+  ],
+  [
+    "N",
+    {
+      enabled: "",
+      disabled: "injuryGrade,injuryType,injuryTypeNm,injuryCont",
     },
   ],
 ]);
@@ -295,6 +311,28 @@ const EXACT_BUTTONS = new Map<string, ExactButtonSpec>([
       profileFieldKey: "veteran.veteran.veteranRelation",
     },
   ],
+  [
+    "injuryYn",
+    {
+      codegb: "1503",
+      profileFieldKey: "disability.disability.disabilityStatus",
+      transitionByCode: DISABILITY_TRANSITIONS,
+    },
+  ],
+  [
+    "injuryGrade",
+    {
+      codegb: "0164",
+      profileFieldKey: "disability.disability.disabilityGrade",
+    },
+  ],
+  [
+    "injuryType",
+    {
+      codegb: "0368",
+      profileFieldKey: "disability.disability.disabilityType",
+    },
+  ],
 ]);
 
 function exactTextContract(
@@ -472,7 +510,8 @@ function selectButtonOption(
         (!transition ||
           ((choice.dataset.enabled ?? "") === transition.enabled &&
             (choice.dataset.disabled ?? "") === transition.disabled &&
-            (choice.dataset.valid ?? "") === transition.valid)),
+            (transition.valid === undefined ||
+              (choice.dataset.valid ?? "") === transition.valid))),
     );
     if (
       exactChoices.length !== 1 ||

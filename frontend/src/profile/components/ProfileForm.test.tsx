@@ -254,3 +254,30 @@ describe("ProfileForm conditional fields", () => {
     expect(screen.getByLabelText("시험명")).toHaveValue("OPIc");
   });
 });
+
+it("renders a legacy military status as a preserved select option", () => {
+  const category = PROFILE_CATEGORIES.find(
+    (candidate) => candidate.id === "military",
+  )!;
+  const profile = createEmptyProfile();
+  profile.military = { militaryStatus: "legacy-status" };
+
+  render(
+    <ProfileForm
+      category={category}
+      profile={profile}
+      onAddEntry={vi.fn()}
+      onRemoveEntry={vi.fn()}
+      onUpdateEntry={vi.fn()}
+      onUpdateSingle={vi.fn()}
+      confirmDelete={() => true}
+    />,
+  );
+
+  const status = screen.getByLabelText("병역 상태");
+  expect(status.tagName).toBe("SELECT");
+  expect(status).toHaveValue("legacy-status");
+  expect(
+    screen.getByRole("option", { name: "기존 값: legacy-status" }),
+  ).toBeInTheDocument();
+});

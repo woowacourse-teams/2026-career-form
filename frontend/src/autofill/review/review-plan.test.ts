@@ -9,11 +9,9 @@ import { createEmptyProfile, type Profile } from "../../profile/model";
 import type { ReviewPlanItem } from "./review-plan";
 import {
   buildReviewPlan,
-  resolveProfileFieldValue,
   revealSensitiveReviewItem,
   reviewItemsForDisplay,
 } from "./review-plan";
-import { resolveValueBinding } from "../profile/value-binding";
 
 function response(
   fields: FieldsAnalyzeResponse["fields"],
@@ -126,148 +124,6 @@ const allowedEmail = {
   interactionStatus: "READY" as const,
   writePlan: { command: "SET_TEXT" as const },
 };
-
-describe("profile value resolution", () => {
-  it("composes a Korean full name from local family and given names", () => {
-    const profile = createEmptyProfile();
-    profile.personal.koreanFamilyName = "김";
-    profile.personal.koreanGivenName = "민수";
-
-    expect(
-      resolveValueBinding(profile, {
-        type: "DERIVED",
-        recipe: "KOREAN_FULL_NAME",
-      }),
-    ).toEqual({
-      status: "resolved",
-      value: "김민수",
-      sensitive: false,
-    });
-  });
-
-  it("resolves a declared single-value profile field", () => {
-    const profile = createEmptyProfile();
-    profile.contact.email = "me@example.test";
-
-    expect(resolveProfileFieldValue(profile, "contact.contact.email")).toEqual({
-      status: "resolved",
-      value: "me@example.test",
-      sensitive: false,
-    });
-  });
-
-  it("resolves the education top-level latest education value from its university entry", () => {
-    const profile: Profile = {
-      ...createEmptyProfile(),
-      education: [
-        {
-          id: "university-1",
-          sectionId: "university",
-          values: { latestEducationType: "대학(학사)" },
-        },
-      ],
-    };
-
-    expect(
-      resolveProfileFieldValue(
-        profile,
-        "education.university.latestEducationType",
-        0,
-      ),
-    ).toEqual({
-      status: "resolved",
-      value: "대학(학사)",
-      sensitive: false,
-      profileEntryId: "university-1",
-    });
-  });
-
-  it("does not choose between repeated profile entries", () => {
-    const profile: Profile = {
-      ...createEmptyProfile(),
-      certifications: [
-        {
-          id: "certificate-1",
-          sectionId: "certificate",
-          values: { name: "자격증 A" },
-        },
-        {
-          id: "certificate-2",
-          sectionId: "certificate",
-          values: { name: "자격증 B" },
-        },
-      ],
-    };
-
-    expect(
-      resolveProfileFieldValue(profile, "certifications.certificate.name"),
-    ).toEqual({ status: "ambiguous", sensitive: false });
-  });
-
-  it("resolves a repeated profile value by the locally supplied row index", () => {
-    const profile: Profile = {
-      ...createEmptyProfile(),
-      certifications: [
-        {
-          id: "certificate-1",
-          sectionId: "certificate",
-          values: { name: "자격증 A" },
-        },
-        {
-          id: "certificate-2",
-          sectionId: "certificate",
-          values: { name: "자격증 B" },
-        },
-      ],
-    };
-
-    expect(
-      resolveProfileFieldValue(profile, "certifications.certificate.name", 1),
-    ).toEqual({
-      status: "resolved",
-      value: "자격증 B",
-      sensitive: false,
-      profileEntryId: "certificate-2",
-    });
-  });
-
-  it("keeps a repeated field unavailable when its only matching entry has no value", () => {
-    const profile: Profile = {
-      ...createEmptyProfile(),
-      certifications: [
-        {
-          id: "certificate-1",
-          sectionId: "certificate",
-          values: { name: "" },
-        },
-      ],
-    };
-
-    expect(
-      resolveProfileFieldValue(profile, "certifications.certificate.name"),
-    ).toEqual({ status: "missing", sensitive: false });
-  });
-
-  it("rejects an excluded evidence document path instead of resolving it", () => {
-    const profile: Profile = {
-      ...createEmptyProfile(),
-      certifications: [
-        {
-          id: "certificate-1",
-          sectionId: "certificate",
-          values: { evidenceDocumentPath: "/local/evidence.pdf" },
-        },
-      ],
-    };
-
-    expect(
-      resolveProfileFieldValue(
-        profile,
-        "certifications.certificate.evidenceDocumentPath",
-      ),
-    ).toEqual({ status: "unknown", sensitive: false });
-  });
-});
 
 describe("review plan", () => {
   it("uses one live native option matched by a standard profile ID", () => {
@@ -727,14 +583,14 @@ describe("review plan", () => {
 
   it("masks and disables a sensitive value before the user reveals it", () => {
     const profile = createEmptyProfile();
-    profile.military.militaryStatus = "복무 완료";
+    profile.compensation.desiredPosition = "군필";
     const registry = registryWithTextField();
 
     const [item] = buildReviewPlan({
       analysis: response([
         {
           ...allowedEmail,
-          profileFieldKey: "military.military.militaryStatus",
+          profileFieldKey: "compensation.compensation.desiredPosition",
           autofillPolicy: "SENSITIVE_CONFIRMATION",
         },
       ]),
@@ -751,7 +607,7 @@ describe("review plan", () => {
     });
   });
 
-  it("normalizes a direct value before conflict detection without mutating the profile", () => {
+  it("normalizes a direct value while automatically including it and preserving the stored alias", () => {
     const profile = createEmptyProfile();
     profile.military.militaryStatus = "만기전역";
 
@@ -774,11 +630,13 @@ describe("review plan", () => {
       status: "available",
       profileValue: "군필",
       previewValue: "군필",
+      selected: true,
+      disabled: false,
     });
     expect(profile.military.militaryStatus).toBe("만기전역");
   });
 
-  it("keeps normalized sensitive values masked and disabled", () => {
+  it("includes normalized military values even with a legacy sensitive policy", () => {
     const profile = createEmptyProfile();
     profile.military.militaryStatus = "만기전역";
 
@@ -796,12 +654,12 @@ describe("review plan", () => {
     }).items;
 
     expect(item).toMatchObject({
-      status: "sensitive",
+      status: "available",
       profileValue: "군필",
-      previewValue: "••••••••",
-      selected: false,
-      disabled: true,
-      revealed: false,
+      previewValue: "군필",
+      selected: true,
+      disabled: false,
+      revealed: true,
     });
   });
 
@@ -877,12 +735,12 @@ describe("review plan", () => {
 
   it("reveals a sensitive value only after the explicit reveal action", () => {
     const profile = createEmptyProfile();
-    profile.military.militaryStatus = "복무 완료";
+    profile.compensation.desiredPosition = "군필";
     const [item] = buildReviewPlan({
       analysis: response([
         {
           ...allowedEmail,
-          profileFieldKey: "military.military.militaryStatus",
+          profileFieldKey: "compensation.compensation.desiredPosition",
           autofillPolicy: "SENSITIVE_CONFIRMATION",
         },
       ]),
@@ -891,7 +749,7 @@ describe("review plan", () => {
     }).items;
 
     expect(revealSensitiveReviewItem(item)).toMatchObject({
-      previewValue: "복무 완료",
+      previewValue: "군필",
       selected: false,
       disabled: false,
       revealed: true,

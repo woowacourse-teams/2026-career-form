@@ -131,7 +131,7 @@ public final class SupportedProfileFields {
         entry("disability.disability.disabilityGrade", AutofillPolicy.ALLOWED),
         entry(
             "disability.disability.disabilityRegistrationNumber",
-            AutofillPolicy.CONDITIONAL
+            AutofillPolicy.ALLOWED
         ),
         entry(
             "disability.disability.disabilityRegistrationDate",

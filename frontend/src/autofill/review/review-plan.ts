@@ -15,6 +15,7 @@ import type {
 import type { ValueBinding } from "../api/types";
 import { resolveValueBinding } from "../profile/value-binding";
 import { matchStandardOption } from "../profile/standard-option-match";
+import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 
 export type ProfileValueResolution =
   | {
@@ -329,8 +330,11 @@ function itemForAnalysis(
     pageValue.trim().length > 0 &&
     pageValue.trim() !== resolvedProfileValue.value.trim();
   if (
-    resolvedProfileValue.sensitive ||
-    analysis.autofillPolicy === "SENSITIVE_CONFIRMATION"
+    requiresSensitiveConfirmation(
+      binding.profileFieldKey,
+      resolvedProfileValue.sensitive ||
+        analysis.autofillPolicy === "SENSITIVE_CONFIRMATION",
+    )
   ) {
     return {
       candidateId: analysis.candidateId,
