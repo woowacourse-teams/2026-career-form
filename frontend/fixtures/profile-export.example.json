@@ -177,9 +177,15 @@
       "veteranStatus": "대상",
       "veteranType": "독립유공자",
       "veteranRelation": "본인",
-      "veteranNumber": "VET-DEMO-001"
+      "veteranNumber": "1234567890"
     },
-    "disability": {},
+    "disability": {
+      "disabilityStatus": "대상",
+      "disabilityType": "지체장애",
+      "disabilityGrade": "중증",
+      "disabilityRegistrationNumber": "DIS-DEMO-001",
+      "disabilityRegistrationDate": "2020-01-01"
+    },
     "health": []
   }
 }

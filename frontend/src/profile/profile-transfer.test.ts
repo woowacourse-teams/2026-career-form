@@ -200,9 +200,15 @@ describe("profile JSON transfer", () => {
         veteranStatus: "대상",
         veteranType: "독립유공자",
         veteranRelation: "본인",
-        veteranNumber: "VET-DEMO-001",
+        veteranNumber: "1234567890",
       },
-      disability: {},
+      disability: {
+        disabilityStatus: "대상",
+        disabilityType: "지체장애",
+        disabilityGrade: "중증",
+        disabilityRegistrationNumber: "DIS-DEMO-001",
+        disabilityRegistrationDate: "2020-01-01",
+      },
       health: [],
     });
   });
@@ -287,4 +293,31 @@ describe("profile JSON transfer", () => {
       new Set(veteranScenarios.flatMap(({ values }) => Object.keys(values))),
     ).toEqual(definedFieldIds("veteran", "veteran"));
   });
+});
+
+it("roundtrips canonical, legacy, unknown, and blank values for the five profile selects", () => {
+  const profile = createEmptyProfile();
+  profile.military = {
+    militaryStatus: "military-status:served",
+    militaryBranch: "만기전역",
+    militaryRank: "unknown-rank",
+  };
+  profile.veteran = {
+    veteranStatus: "veteran-status:eligible",
+  };
+  profile.disability = {
+    disabilityStatus: "  ",
+  };
+
+  const roundtripped = parseProfileImport(serializeProfileExport(profile));
+
+  expect(roundtripped.military).toEqual({
+    militaryStatus: "military-status:served",
+    militaryBranch: "만기전역",
+    militaryRank: "unknown-rank",
+  });
+  expect(roundtripped.veteran).toEqual({
+    veteranStatus: "veteran-status:eligible",
+  });
+  expect(roundtripped.disability).toEqual({});
 });
