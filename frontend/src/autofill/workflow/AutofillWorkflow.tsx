@@ -65,6 +65,8 @@ export function AutofillWorkflow({
     task?: Promise<AddressResult>;
   }>({ controller: new AbortController() });
   const [addressResult, setAddressResult] = useState<AddressResult>();
+  const executionPending = useRef(false);
+  const mounted = useRef(true);
   const [stage, setStage] = useState<Stage>("analyzing");
   const [profile, setProfile] = useState<Profile>();
   const [preparationSnapshot, setPreparationSnapshot] =
@@ -124,6 +126,13 @@ export function AutofillWorkflow({
     setWarnings,
     setResults,
   });
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -232,219 +241,237 @@ export function AutofillWorkflow({
   }, [apiClient, pageDocument, repository]);
 
   const executePreparation = async () => {
-    if (!profile || !preparationSnapshot) return;
-    if (stage === "preparation-review") {
-      for (const item of preparationItems) {
-        if (!item.sensitive || item.plan.command !== "SELECT_OPTION_TO_REVEAL")
-          continue;
-        const key = item.plan.profileFieldKey;
-        const value = localProfileValue(profile, key);
-        if (value === undefined) continue;
-        consideredSensitiveValues.current.set(key, value);
-        if (item.runnable && selectedPreparationKeys.has(key))
-          approvedSensitiveValues.current.set(key, value);
-      }
-    }
-    const isApprovedPreparation = (item: PreparationItem) =>
-      item.runnable &&
-      (!item.sensitive ||
-        (item.plan.command === "SELECT_OPTION_TO_REVEAL" &&
-          sensitiveValueApproved(profile, item.plan.profileFieldKey)));
-    const runnablePlans = preparationItems
-      .filter(isApprovedPreparation)
-      .map((item) => ({ ...item, approved: true }));
-
-    setStage("analyzing");
-    if (runnablePlans.length === 0) {
-      const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
-      await analyzeFields(profile, addedRowsToEmptyForm);
-      return;
-    }
-    const preparationOptions = (
-      snapshot: ReturnType<typeof collectPreparationSnapshot>,
-    ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
-      initialSnapshot: {
-        registry: snapshot.registry,
-        isTargetSectionVisible: (targetSectionId) =>
-          snapshot.isSectionVisible(targetSectionId),
-        countRepeatableGroups: (plan) =>
-          snapshot.countRepeatableGroups(plan.actionCandidateId),
-      },
-      refreshSnapshot: async () => {
-        const refreshed = collectPreparationSnapshot(pageDocument);
-        return {
-          registry: refreshed.registry,
-          isTargetSectionVisible: (targetSectionId) =>
-            refreshed.isSectionVisible(targetSectionId),
-          countRepeatableGroups: (plan) =>
-            refreshed.countRepeatableGroups(plan.actionCandidateId),
-        };
-      },
-      countRepeatableGroups: (snapshot, plan) =>
-        snapshot.countRepeatableGroups?.(plan) ?? -1,
-      waitForExpectedFields: async (plan) =>
-        waitForExpectedFields(
-          pageDocument,
-          ("expectedFieldNames" in plan ? plan.expectedFieldNames : []) ?? [],
-        ),
-      selectProfileOption: (plan, snapshot) => {
-        const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
-        if (lookup.status !== "ready") {
-          return "action-not-ready";
-        }
-        const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
-        if (value.status !== "resolved") return "profile-value-unavailable";
-        const normalizedValue = adapterProfileValue(
-          adapter,
-          plan.profileFieldKey,
-          value.value,
-        );
-        const adapterAllowsSelection = adapter.canSelectProfileOption?.(
-          lookup.handle,
-          normalizedValue,
-          plan.profileFieldKey,
-        );
-        if (adapterAllowsSelection === false) return "action-not-ready";
-        if (
-          lookup.handle.element instanceof HTMLInputElement &&
-          lookup.handle.element.type === "radio"
-        ) {
-          const label = plan.optionDisplayName ?? normalizedValue;
-          if (lookup.handle.candidate.displayName !== label)
-            return "option-label-mismatch";
-          if (adapterAllowsSelection === true && lookup.handle.element.checked)
-            return "selected";
-          lookup.handle.element.click();
-          return lookup.handle.element.checked &&
-            adapter.canSelectProfileOption?.(
-              lookup.handle,
-              normalizedValue,
-              plan.profileFieldKey,
-            ) !== false
-            ? "selected"
-            : "action-not-ready";
-        }
-        if (!(lookup.handle.element instanceof HTMLSelectElement))
-          return "unsupported-option-action";
-        return selectNativeProfileOption(
-          lookup.handle.element,
-          normalizedValue,
-          adapterAllowsSelection,
-        );
-      },
-    });
-    const result = await executeApprovedPreparationPlans({
-      approvedPlans: runnablePlans,
-      ...preparationOptions(preparationSnapshot),
-    });
-
-    if (result.status !== "completed") {
-      const failedPlan =
-        result.status === "failed" && result.failedActionCandidateId
-          ? runnablePlans.find(
-              ({ plan }) =>
-                plan.actionCandidateId === result.failedActionCandidateId,
-            )?.plan
-          : undefined;
-      setExceptionTitle(
-        result.status === "failed"
-          ? `${preparationFailureMessage(result.reason)}${
-              failedPlan
-                ? ` (${actionLabel(failedPlan, preparationSnapshot)})`
-                : ""
-            }`
-          : "준비 동작을 안전하게 완료하지 못했습니다",
-      );
-      setStage("exception");
-      return;
-    }
+    if (!profile || !preparationSnapshot || executionPending.current) return;
+    executionPending.current = true;
     try {
-      setStage("analyzing");
-      const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
-      setWorkflowDiagnostics(
-        adapter.revealSelections.map((selection) => {
-          const resolved = resolveProfileFieldValue(
-            profile,
-            selection.profileFieldKey,
-            selection.itemIndex,
-          );
+      if (stage === "preparation-review") {
+        for (const item of preparationItems) {
           if (
-            requiresSensitiveConfirmation(
-              selection.profileFieldKey,
-              resolved.sensitive,
-            ) &&
-            !sensitiveValueApproved(profile, selection.profileFieldKey)
-          ) {
-            return { code: "PROFILE_NOT_SELECTED" as const, count: 0 };
-          }
-          return adapter.selectReveal(
-            pageDocument,
-            selection,
-            resolved.status === "resolved"
-              ? adapterProfileValue(
-                  adapter,
-                  selection.profileFieldKey,
-                  resolved.value,
-                )
-              : undefined,
-          );
-        }),
-      );
-      // Analyze that newly collected DOM once, but only execute selections:
-      // repeating add plans here could create duplicate rows.
-      const followUpSnapshot = collectPreparationSnapshot(pageDocument);
-      const followUpAnalysis = await apiClient.analyzePreparation(
-        followUpSnapshot.request,
-      );
-
-      if (adapter.diagnosticsTitle) {
-        setWorkflowDiagnostics((previous) => [
-          ...previous,
-          {
-            code: "FOLLOW_UP_PLANS",
-            count: followUpAnalysis.preparationPlans.filter(
-              (plan) => plan.command === "SELECT_OPTION_TO_REVEAL",
-            ).length,
-          },
-        ]);
-      }
-      if (followUpAnalysis.analysisStatus !== "BLOCKED") {
-        const followUpPlans = followUpAnalysis.preparationPlans
-          .filter(
-            (
-              plan,
-            ): plan is Extract<
-              PreparationPlan,
-              { command: "SELECT_OPTION_TO_REVEAL" }
-            > => plan.command === "SELECT_OPTION_TO_REVEAL",
+            !item.sensitive ||
+            item.plan.command !== "SELECT_OPTION_TO_REVEAL"
           )
-          .map((plan) => ({
-            ...preparationItem(plan, followUpSnapshot, profile, adapter),
-            approved: true,
-          }))
-          .filter(isApprovedPreparation);
-        if (followUpPlans.length > 0) {
-          const followUpResult = await executeApprovedPreparationPlans({
-            approvedPlans: followUpPlans,
-            ...preparationOptions(followUpSnapshot),
-          });
-
-          if (followUpResult.status !== "completed") {
-            setExceptionTitle(
-              followUpResult.status === "failed"
-                ? preparationFailureMessage(followUpResult.reason)
-                : "준비 동작을 안전하게 완료하지 못했습니다",
-            );
-            setStage("exception");
-            return;
-          }
-          await writeRevealedFields(profile, followUpPlans);
+            continue;
+          const key = item.plan.profileFieldKey;
+          const value = localProfileValue(profile, key);
+          if (value === undefined) continue;
+          consideredSensitiveValues.current.set(key, value);
+          if (item.runnable && selectedPreparationKeys.has(key))
+            approvedSensitiveValues.current.set(key, value);
         }
       }
-      await analyzeFields(profile, addedRowsToEmptyForm);
+      const isApprovedPreparation = (item: PreparationItem) =>
+        item.runnable &&
+        (!item.sensitive ||
+          (item.plan.command === "SELECT_OPTION_TO_REVEAL" &&
+            sensitiveValueApproved(profile, item.plan.profileFieldKey)));
+      const runnablePlans = preparationItems
+        .filter(isApprovedPreparation)
+        .map((item) => ({ ...item, approved: true }));
+
+      setStage("analyzing");
+      if (runnablePlans.length === 0) {
+        const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
+        await analyzeFields(profile, addedRowsToEmptyForm);
+        return;
+      }
+      const preparationOptions = (
+        snapshot: ReturnType<typeof collectPreparationSnapshot>,
+      ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
+        initialSnapshot: {
+          registry: snapshot.registry,
+          isTargetSectionVisible: (targetSectionId) =>
+            snapshot.isSectionVisible(targetSectionId),
+          countRepeatableGroups: (plan) =>
+            snapshot.countRepeatableGroups(plan.actionCandidateId),
+        },
+        refreshSnapshot: async () => {
+          const refreshed = collectPreparationSnapshot(pageDocument);
+          return {
+            registry: refreshed.registry,
+            isTargetSectionVisible: (targetSectionId) =>
+              refreshed.isSectionVisible(targetSectionId),
+            countRepeatableGroups: (plan) =>
+              refreshed.countRepeatableGroups(plan.actionCandidateId),
+          };
+        },
+        countRepeatableGroups: (snapshot, plan) =>
+          snapshot.countRepeatableGroups?.(plan) ?? -1,
+        waitForExpectedFields: async (plan) =>
+          waitForExpectedFields(
+            pageDocument,
+            ("expectedFieldNames" in plan ? plan.expectedFieldNames : []) ?? [],
+          ),
+        selectProfileOption: (plan, snapshot) => {
+          const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
+          if (lookup.status !== "ready") {
+            return "action-not-ready";
+          }
+          const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
+          if (value.status !== "resolved") return "profile-value-unavailable";
+          const normalizedValue = adapterProfileValue(
+            adapter,
+            plan.profileFieldKey,
+            value.value,
+          );
+          const adapterAllowsSelection = adapter.canSelectProfileOption?.(
+            lookup.handle,
+            normalizedValue,
+            plan.profileFieldKey,
+          );
+          if (adapterAllowsSelection === false) return "action-not-ready";
+          if (
+            lookup.handle.element instanceof HTMLInputElement &&
+            lookup.handle.element.type === "radio"
+          ) {
+            const label = plan.optionDisplayName ?? normalizedValue;
+            if (lookup.handle.candidate.displayName !== label)
+              return "option-label-mismatch";
+            if (
+              adapterAllowsSelection === true &&
+              lookup.handle.element.checked
+            )
+              return "selected";
+            lookup.handle.element.click();
+            return lookup.handle.element.checked &&
+              adapter.canSelectProfileOption?.(
+                lookup.handle,
+                normalizedValue,
+                plan.profileFieldKey,
+              ) !== false
+              ? "selected"
+              : "action-not-ready";
+          }
+          if (!(lookup.handle.element instanceof HTMLSelectElement))
+            return "unsupported-option-action";
+          return selectNativeProfileOption(
+            lookup.handle.element,
+            normalizedValue,
+            adapterAllowsSelection,
+          );
+        },
+      });
+      const result = await executeApprovedPreparationPlans({
+        approvedPlans: runnablePlans,
+        ...preparationOptions(preparationSnapshot),
+      });
+
+      if (result.status !== "completed") {
+        const failedPlan =
+          result.status === "failed" && result.failedActionCandidateId
+            ? runnablePlans.find(
+                ({ plan }) =>
+                  plan.actionCandidateId === result.failedActionCandidateId,
+              )?.plan
+            : undefined;
+        setExceptionTitle(
+          result.status === "failed"
+            ? `${preparationFailureMessage(result.reason)}${
+                failedPlan
+                  ? ` (${actionLabel(failedPlan, preparationSnapshot)})`
+                  : ""
+              }`
+            : "준비 동작을 안전하게 완료하지 못했습니다",
+        );
+        setStage("exception");
+        return;
+      }
+      try {
+        setStage("analyzing");
+        const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
+        setWorkflowDiagnostics(
+          adapter.revealSelections.map((selection) => {
+            const resolved = resolveProfileFieldValue(
+              profile,
+              selection.profileFieldKey,
+              selection.itemIndex,
+            );
+            if (
+              requiresSensitiveConfirmation(
+                selection.profileFieldKey,
+                resolved.sensitive,
+              ) &&
+              !sensitiveValueApproved(profile, selection.profileFieldKey)
+            ) {
+              return { code: "PROFILE_NOT_SELECTED" as const, count: 0 };
+            }
+            return adapter.selectReveal(
+              pageDocument,
+              selection,
+              resolved.status === "resolved"
+                ? adapterProfileValue(
+                    adapter,
+                    selection.profileFieldKey,
+                    resolved.value,
+                  )
+                : undefined,
+            );
+          }),
+        );
+        // Analyze that newly collected DOM once, but only execute selections:
+        // repeating add plans here could create duplicate rows.
+        const followUpSnapshot = collectPreparationSnapshot(pageDocument);
+        const followUpAnalysis = await apiClient.analyzePreparation(
+          followUpSnapshot.request,
+        );
+
+        if (adapter.diagnosticsTitle) {
+          setWorkflowDiagnostics((previous) => [
+            ...previous,
+            {
+              code: "FOLLOW_UP_PLANS",
+              count: followUpAnalysis.preparationPlans.filter(
+                (plan) => plan.command === "SELECT_OPTION_TO_REVEAL",
+              ).length,
+            },
+          ]);
+        }
+        if (followUpAnalysis.analysisStatus !== "BLOCKED") {
+          const followUpPlans = followUpAnalysis.preparationPlans
+            .filter(
+              (
+                plan,
+              ): plan is Extract<
+                PreparationPlan,
+                { command: "SELECT_OPTION_TO_REVEAL" }
+              > => plan.command === "SELECT_OPTION_TO_REVEAL",
+            )
+            .map((plan) => ({
+              ...preparationItem(plan, followUpSnapshot, profile, adapter),
+              approved: true,
+            }))
+            .filter(isApprovedPreparation);
+          if (followUpPlans.length > 0) {
+            const followUpResult = await executeApprovedPreparationPlans({
+              approvedPlans: followUpPlans,
+              ...preparationOptions(followUpSnapshot),
+            });
+
+            if (followUpResult.status !== "completed") {
+              setExceptionTitle(
+                followUpResult.status === "failed"
+                  ? preparationFailureMessage(followUpResult.reason)
+                  : "준비 동작을 안전하게 완료하지 못했습니다",
+              );
+              setStage("exception");
+              return;
+            }
+            await writeRevealedFields(profile, followUpPlans);
+          }
+        }
+        await analyzeFields(profile, addedRowsToEmptyForm);
+      } catch (error) {
+        if (mounted.current) {
+          setExceptionTitle(safeErrorTitle(error));
+          setStage("exception");
+        }
+      }
     } catch (error) {
-      setExceptionTitle(safeErrorTitle(error));
-      setStage("exception");
+      if (mounted.current) {
+        setExceptionTitle(safeErrorTitle(error));
+        setStage("exception");
+      }
+    } finally {
+      executionPending.current = false;
     }
   };
 
@@ -459,35 +486,46 @@ export function AutofillWorkflow({
     createReviewActions(setReviewItems);
 
   const executeWrites = async () => {
-    if (!fieldsSnapshot) return;
-    if (profile && reviewItems.some((item) => item.status === "sensitive")) {
-      for (const item of reviewItems) {
-        const key = reviewProfileFieldKey(item);
-        if (item.status !== "sensitive" || !key) continue;
-        const value = localProfileValue(profile, key);
-        if (value === undefined) continue;
-        consideredSensitiveValues.current.set(key, value);
-        if (item.selected && !item.disabled && item.revealed)
-          approvedSensitiveValues.current.set(key, value);
-        else approvedSensitiveValues.current.delete(key);
+    if (!fieldsSnapshot || executionPending.current) return;
+    executionPending.current = true;
+    try {
+      if (profile && reviewItems.some((item) => item.status === "sensitive")) {
+        for (const item of reviewItems) {
+          const key = reviewProfileFieldKey(item);
+          if (item.status !== "sensitive" || !key) continue;
+          const value = localProfileValue(profile, key);
+          if (value === undefined) continue;
+          consideredSensitiveValues.current.set(key, value);
+          if (item.selected && !item.disabled && item.revealed)
+            approvedSensitiveValues.current.set(key, value);
+          else approvedSensitiveValues.current.delete(key);
+        }
+        setStage("analyzing");
+        await analyzeFields(profile);
+        return;
       }
-      setStage("analyzing");
-      await analyzeFields(profile);
-      return;
-    }
-    const approvedCandidateIds = new Set(
-      reviewItems
-        .filter((item) => item.selected && !item.disabled)
-        .map((item) => item.candidateId),
-    );
-    setResults(
-      await executeApprovedWritesAfterPageSettles({
+      const approvedCandidateIds = new Set(
+        reviewItems
+          .filter((item) => item.selected && !item.disabled)
+          .map((item) => item.candidateId),
+      );
+      setStage("writing");
+      const nextResults = await executeApprovedWritesAfterPageSettles({
         items: reviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
-      }),
-    );
-    setStage("result");
+      });
+      if (!mounted.current) return;
+      setResults(nextResults);
+      setStage("result");
+    } catch (error) {
+      if (mounted.current) {
+        setExceptionTitle(safeErrorTitle(error));
+        setStage("exception");
+      }
+    } finally {
+      executionPending.current = false;
+    }
   };
 
   useEffect(() => {

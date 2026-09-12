@@ -7,6 +7,7 @@ import {
 } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
+import { WorkflowLoading } from "./WorkflowLoading";
 import {
   Header,
   diagnosticLabel,
@@ -66,8 +67,8 @@ export function WorkflowScreens({
   exceptionTitle,
   onExit,
 }: WorkflowScreensProps) {
-  if (stage === "analyzing") {
-    return null;
+  if (stage === "analyzing" || stage === "writing") {
+    return <WorkflowLoading writing={stage === "writing"} />;
   }
 
   if (stage === "preparation-review") {

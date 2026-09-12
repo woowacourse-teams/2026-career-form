@@ -31,7 +31,12 @@ import type { ProfileRepository } from "../../profile/profile-repository";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 
 export type Stage =
-  "analyzing" | "preparation-review" | "review" | "result" | "exception";
+  | "analyzing"
+  | "writing"
+  | "preparation-review"
+  | "review"
+  | "result"
+  | "exception";
 
 export interface PreparationItem {
   plan: PreparationPlan;

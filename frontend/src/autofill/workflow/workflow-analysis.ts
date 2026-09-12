@@ -21,6 +21,7 @@ import {
   localProfileValue,
   reviewProfileFieldKey,
   stateDriverKey,
+  type Stage,
 } from "./workflow-model";
 
 type FieldsSnapshot = CollectedSnapshot<
@@ -45,11 +46,7 @@ interface WorkflowAnalysisContext {
   deferredDriverGroups: MutableRefObject<ReadonlySet<Element>>;
   setAddressResult: Dispatch<SetStateAction<AddressResult | undefined>>;
   setExceptionTitle: Dispatch<SetStateAction<string>>;
-  setStage: Dispatch<
-    SetStateAction<
-      "analyzing" | "preparation-review" | "review" | "result" | "exception"
-    >
-  >;
+  setStage: Dispatch<SetStateAction<Stage>>;
   setFieldsSnapshot: Dispatch<SetStateAction<FieldsSnapshot | undefined>>;
   setReviewItems: Dispatch<SetStateAction<ReviewPlanItem[]>>;
   setPartial: Dispatch<SetStateAction<boolean>>;
@@ -454,6 +451,7 @@ export function createAnalyzeFields({
         ),
       );
     });
+    setStage("writing");
     const writeResults = await executeApprovedWritesAfterPageSettles({
       items: finalWriteItems,
       approvedCandidateIds,
