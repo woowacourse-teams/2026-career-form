@@ -199,3 +199,11 @@
 - 승인 digest `dd275895addeb2568dd3e7b517a5dc8867f83e0fdb03afc39d6a2e2aa2d6dbed`의 후보 전체 4개를 [CF-86 bundle](../raw/issues/CF-86/manifest.md)에 기록했다.
 - SK·현대 회사 문서와 지원 현황표를 함께 갱신하고 CF-83 불변 근거는 보존했다.
 - 표준/기존 값 호환, 정확한 메뉴·hidden 코드, 국가→도시 재분석과 실패 격리를 기록했다. 자동 테스트·실제 설치 대상 필드·미검증 범위를 분리하고 개인정보·세션은 포함하지 않았다.
+
+## [2026-09-12] ingest | CF-90 지원서 패널 안 자동 기입 흐름
+
+- Disposition: New
+- Approval-Digest: 6d84c630c0cdc78c6bd9d05ecb5ee9f1845464846eeceed5feb29f3cdbde59b1
+- Source-Revision: 7c03209dbc22f1e216db1f8359c23f5f9d08471a
+- Raw: llm-wiki/raw/issues/CF-90/manifest.md
+- Topics: 1
