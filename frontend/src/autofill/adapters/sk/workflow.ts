@@ -52,6 +52,9 @@ function selectionTarget(
       : undefined;
   }
   if (selection.domName === "prsMilitarySvcYN") {
+    if (profileValue === "비대상") {
+      return { label: "비대상", code: "0", permitsUuidSuffix: false };
+    }
     return ["군필", "미필", "면제", "복무중"].includes(profileValue)
       ? { label: "대상", code: "1", permitsUuidSuffix: false }
       : undefined;
