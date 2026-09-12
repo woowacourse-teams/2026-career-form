@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   openAutofillOverlay,
@@ -23,6 +23,7 @@ interface AppProps {
   openAutofill?: () => Promise<void>;
   inPage?: boolean;
   logoUrl?: string;
+  autofillView?: ReactNode;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -103,6 +104,7 @@ export function App({
   openAutofill = openAutofillOverlay,
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
+  autofillView,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -116,6 +118,17 @@ export function App({
   const [copyFailed, setCopyFailed] = useState(false);
   const [navigationFailed, setNavigationFailed] = useState(false);
   const [autofillFailed, setAutofillFailed] = useState(false);
+  const [autofillPending, setAutofillPending] = useState(false);
+  const startPending = useRef(false);
+  const startButton = useRef<HTMLButtonElement>(null);
+  const autofillActive = Boolean(autofillView);
+  const previouslyActive = useRef(autofillActive);
+
+  useEffect(() => {
+    if (previouslyActive.current && !autofillActive)
+      startButton.current?.focus();
+    previouslyActive.current = autofillActive;
+  }, [autofillActive]);
   const [openGroups, setOpenGroups] = useState<Set<PanelGroupId>>(
     () => new Set(DEFAULT_OPEN_GROUPS),
   );
@@ -171,11 +184,17 @@ export function App({
   };
 
   const startAutofill = async () => {
+    if (startPending.current) return;
+    startPending.current = true;
+    setAutofillPending(true);
     try {
       setAutofillFailed(false);
       await openAutofill();
     } catch {
       setAutofillFailed(true);
+    } finally {
+      startPending.current = false;
+      setAutofillPending(false);
     }
   };
 
@@ -200,9 +219,10 @@ export function App({
           </button>
         </div>
         <div className={styles.titleRow}>
-          <h1>내 지원 정보</h1>
+          <h1>{autofillActive ? "자동 기입" : "내 지원 정보"}</h1>
           <button
             className={styles.profileButton}
+            hidden={autofillActive}
             type="button"
             onClick={() => void openProfileManagement()}
           >
@@ -210,166 +230,189 @@ export function App({
           </button>
         </div>
       </header>
-      <main
-        className={styles.main}
-        aria-label="지원 정보 목록"
-        data-panel-mode={inPage ? "in-page" : "side-panel"}
-      >
-        {navigationFailed && (
-          <p className={styles.navigationError} role="alert">
-            프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
-          </p>
-        )}
-        <label className={styles.search}>
-          <span className={styles.visuallyHidden}>프로필 검색</span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            aria-hidden="true"
+      {autofillActive ? (
+        <main className={styles.workflowMain} aria-label="지원서 작업 화면">
+          {autofillView}
+        </main>
+      ) : (
+        <>
+          <main
+            className={styles.main}
+            aria-label="지원 정보 목록"
+            data-panel-mode={inPage ? "in-page" : "side-panel"}
           >
-            <circle cx="10.5" cy="10.5" r="6.5" />
-            <path d="m16 16 4.5 4.5" />
-          </svg>
-          <input
-            type="search"
-            value={query}
-            placeholder="이메일, 자격증, 학교 검색"
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
+            {navigationFailed && (
+              <p className={styles.navigationError} role="alert">
+                프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
+              </p>
+            )}
+            <label className={styles.search}>
+              <span className={styles.visuallyHidden}>프로필 검색</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+              >
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path d="m16 16 4.5 4.5" />
+              </svg>
+              <input
+                type="search"
+                value={query}
+                placeholder="이메일, 자격증, 학교 검색"
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
 
-        {loadStatus === "ready" && (
-          <p className={styles.readiness}>
-            <span>{registeredCategoryCount}개 범주 등록</span>
-            <span>직접 복사하거나 자동 기입을 시작하세요</span>
-          </p>
-        )}
+            {loadStatus === "ready" && (
+              <p className={styles.readiness}>
+                <span>{registeredCategoryCount}개 범주 등록</span>
+                <span>직접 복사하거나 자동 기입을 시작하세요</span>
+              </p>
+            )}
 
-        <section className={styles.groups} aria-label="프로필 범주">
-          {loadStatus === "loading" && (
-            <p className={styles.empty}>프로필을 불러오는 중입니다.</p>
-          )}
-          {loadStatus === "error" && (
-            <p className={styles.empty} role="alert">
-              프로필을 불러오지 못했습니다. 프로필 관리에서 다시 시도해 주세요.
-            </p>
-          )}
-          {loadStatus === "ready" && hasQuery && results.length === 0 && (
-            <div className={styles.empty}>
-              <strong>검색 결과가 없습니다.</strong>
-              <span>검색어를 지우거나 프로필 관리에서 정보를 추가하세요.</span>
-            </div>
-          )}
-          {loadStatus === "ready" &&
-            visibleGroups.map((group) => {
-              const groupItems = itemsForGroup(results, group);
-              const isOpen = hasQuery || openGroups.has(group.id);
-              const recordCount = profile
-                ? countGroupRecords(profile, group)
-                : 0;
-              const countLabel = group.showRecordCount
-                ? `${recordCount}건 `
-                : "";
-              const actionLabel = hasQuery
-                ? "검색 결과"
-                : isOpen
-                  ? "접기"
-                  : "펼치기";
-              const regionId = `profile-group-${group.id}`;
+            <section className={styles.groups} aria-label="프로필 범주">
+              {loadStatus === "loading" && (
+                <p className={styles.empty}>프로필을 불러오는 중입니다.</p>
+              )}
+              {loadStatus === "error" && (
+                <p className={styles.empty} role="alert">
+                  프로필을 불러오지 못했습니다. 프로필 관리에서 다시 시도해
+                  주세요.
+                </p>
+              )}
+              {loadStatus === "ready" && hasQuery && results.length === 0 && (
+                <div className={styles.empty}>
+                  <strong>검색 결과가 없습니다.</strong>
+                  <span>
+                    검색어를 지우거나 프로필 관리에서 정보를 추가하세요.
+                  </span>
+                </div>
+              )}
+              {loadStatus === "ready" &&
+                visibleGroups.map((group) => {
+                  const groupItems = itemsForGroup(results, group);
+                  const isOpen = hasQuery || openGroups.has(group.id);
+                  const recordCount = profile
+                    ? countGroupRecords(profile, group)
+                    : 0;
+                  const countLabel = group.showRecordCount
+                    ? `${recordCount}건 `
+                    : "";
+                  const actionLabel = hasQuery
+                    ? "검색 결과"
+                    : isOpen
+                      ? "접기"
+                      : "펼치기";
+                  const regionId = `profile-group-${group.id}`;
 
-              return (
-                <section className={styles.group} key={group.id}>
-                  <button
-                    className={styles.groupToggle}
-                    type="button"
-                    aria-expanded={isOpen}
-                    aria-controls={regionId}
-                    aria-label={`${group.label} ${countLabel}${actionLabel}`}
-                    disabled={hasQuery}
-                    onClick={() => toggleGroup(group.id)}
-                  >
-                    <span>{group.label}</span>
-                    <small>
-                      {countLabel}
-                      {actionLabel}
-                    </small>
-                  </button>
-                  {isOpen && (
-                    <div className={styles.groupValues} id={regionId}>
-                      {groupItems.length === 0 && (
-                        <p className={styles.groupEmpty}>
-                          등록된 정보가 없습니다.
-                        </p>
+                  return (
+                    <section className={styles.group} key={group.id}>
+                      <button
+                        className={styles.groupToggle}
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={regionId}
+                        aria-label={`${group.label} ${countLabel}${actionLabel}`}
+                        disabled={hasQuery}
+                        onClick={() => toggleGroup(group.id)}
+                      >
+                        <span>{group.label}</span>
+                        <small>
+                          {countLabel}
+                          {actionLabel}
+                        </small>
+                      </button>
+                      {isOpen && (
+                        <div className={styles.groupValues} id={regionId}>
+                          {groupItems.length === 0 && (
+                            <p className={styles.groupEmpty}>
+                              등록된 정보가 없습니다.
+                            </p>
+                          )}
+                          {groupItems.map((item) => {
+                            const isRevealed =
+                              !item.sensitive || revealed.has(item.id);
+                            return (
+                              <article
+                                className={styles.valueRow}
+                                key={item.id}
+                              >
+                                <div className={styles.valueMeta}>
+                                  {group.categoryIds.length > 1 && (
+                                    <span>{item.categoryLabel}</span>
+                                  )}
+                                  <strong>{item.fieldLabel}</strong>
+                                  <span
+                                    className={
+                                      isRevealed ? styles.value : styles.masked
+                                    }
+                                  >
+                                    {isRevealed
+                                      ? item.value
+                                      : "••••••••, 값 가림"}
+                                  </span>
+                                </div>
+                                {isRevealed ? (
+                                  <button
+                                    type="button"
+                                    data-copied={copiedId === item.id}
+                                    aria-label={`${item.fieldLabel} 복사`}
+                                    onClick={() =>
+                                      void copy(item.id, item.value)
+                                    }
+                                  >
+                                    {copiedId === item.id ? "복사됨" : "복사"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    aria-label={`${item.fieldLabel} 펼치기`}
+                                    onClick={() =>
+                                      setRevealed((current) =>
+                                        new Set(current).add(item.id),
+                                      )
+                                    }
+                                  >
+                                    펼치기
+                                  </button>
+                                )}
+                              </article>
+                            );
+                          })}
+                        </div>
                       )}
-                      {groupItems.map((item) => {
-                        const isRevealed =
-                          !item.sensitive || revealed.has(item.id);
-                        return (
-                          <article className={styles.valueRow} key={item.id}>
-                            <div className={styles.valueMeta}>
-                              {group.categoryIds.length > 1 && (
-                                <span>{item.categoryLabel}</span>
-                              )}
-                              <strong>{item.fieldLabel}</strong>
-                              <span
-                                className={
-                                  isRevealed ? styles.value : styles.masked
-                                }
-                              >
-                                {isRevealed ? item.value : "••••••••, 값 가림"}
-                              </span>
-                            </div>
-                            {isRevealed ? (
-                              <button
-                                type="button"
-                                data-copied={copiedId === item.id}
-                                aria-label={`${item.fieldLabel} 복사`}
-                                onClick={() => void copy(item.id, item.value)}
-                              >
-                                {copiedId === item.id ? "복사됨" : "복사"}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                aria-label={`${item.fieldLabel} 펼치기`}
-                                onClick={() =>
-                                  setRevealed((current) =>
-                                    new Set(current).add(item.id),
-                                  )
-                                }
-                              >
-                                펼치기
-                              </button>
-                            )}
-                          </article>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-          {copyFailed && (
-            <p className={styles.copyError} role="alert">
-              클립보드에 복사하지 못했습니다. 브라우저 권한을 확인해 주세요.
-            </p>
-          )}
-        </section>
-      </main>
-      <footer className={styles.footer}>
-        <button type="button" onClick={() => void startAutofill()}>
-          자동 기입 <span aria-hidden="true">→</span>
-        </button>
-        <p>선택 후 분석과 검토를 시작합니다</p>
-        {autofillFailed && (
-          <p className={styles.autofillError} role="alert">
-            현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서 페이지에서
-            다시 시도해 주세요.
-          </p>
-        )}
-      </footer>
+                    </section>
+                  );
+                })}
+              {copyFailed && (
+                <p className={styles.copyError} role="alert">
+                  클립보드에 복사하지 못했습니다. 브라우저 권한을 확인해 주세요.
+                </p>
+              )}
+            </section>
+          </main>
+          <footer className={styles.footer}>
+            <button
+              ref={startButton}
+              type="button"
+              disabled={autofillPending}
+              onClick={() => void startAutofill()}
+            >
+              자동 기입 <span aria-hidden="true">→</span>
+            </button>
+            <p>선택 후 분석과 검토를 시작합니다</p>
+            {autofillFailed && (
+              <p className={styles.autofillError} role="alert">
+                현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서
+                페이지에서 다시 시도해 주세요.
+              </p>
+            )}
+          </footer>
+        </>
+      )}
     </div>
   );
 }

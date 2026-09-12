@@ -3,8 +3,8 @@ import { browser } from "wxt/browser";
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root";
 import { defineContentScript } from "wxt/utils/define-content-script";
 
-import { RuntimeAnalysisApiClient } from "../../src/autofill/api/runtime-client";
-import { AutofillOverlay } from "../../src/autofill-demo/AutofillOverlay";
+import { InPageProfilePanel } from "../../src/extension/InPageProfilePanel";
+import { createProfilePanelController } from "../../src/extension/profile-panel-controller";
 import {
   isOpenAutofillOverlayMessage,
   isOpenInPageProfilePanelMessage,
@@ -14,9 +14,7 @@ import {
   setFloatingSidePanelLauncherVisibility,
 } from "../../src/extension/floating-side-panel-launcher";
 import { shouldShowSidePanelLauncher } from "../../src/extension/side-panel-launcher-visibility";
-import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import { openOptionsPageFromContent } from "../../src/extension/navigation";
-import { App as ProfilePanel } from "../sidepanel/App";
 import "./style.css";
 
 export default defineContentScript({
@@ -24,46 +22,22 @@ export default defineContentScript({
   cssInjectionMode: "ui",
 
   async main(ctx) {
-    let uiPromise: ReturnType<typeof createShadowRootUi<Root>> | undefined;
     let profilePanelPromise:
       ReturnType<typeof createShadowRootUi<Root>> | undefined;
+    const controller = createProfilePanelController();
+    let openGeneration = 0;
+    let invalidated = false;
 
-    const closeOverlay = () => {
-      void uiPromise?.then((ui) => ctx.setTimeout(() => ui.remove(), 0));
-    };
-    const getUi = () => {
-      uiPromise ??= createShadowRootUi(ctx, {
-        name: "career-form-autofill",
-        position: "modal",
-        zIndex: 2_147_483_647,
-        isolateEvents: true,
-        onMount(container) {
-          const root = createRoot(container);
-          root.render(
-            <AutofillOverlay
-              onClose={closeOverlay}
-              apiClient={new RuntimeAnalysisApiClient()}
-              repository={new ChromeProfileStorage()}
-              pageDocument={document}
-            />,
-          );
-          return root;
-        },
-        onRemove(root) {
-          root?.unmount();
-        },
-      });
-      return uiPromise;
-    };
-    const openOverlay = async () => {
-      const ui = await getUi();
-      if (!ui.mounted) ui.mount();
-    };
     const closeProfilePanel = () => {
+      const closingGeneration = ++openGeneration;
+      controller.showProfile();
       void profilePanelPromise?.then((ui) =>
-        ctx.setTimeout(() => ui.remove(), 0),
+        ctx.setTimeout(() => {
+          if (closingGeneration !== openGeneration) return;
+          ui.remove();
+          setFloatingSidePanelLauncherVisibility(document, true);
+        }, 0),
       );
-      setFloatingSidePanelLauncherVisibility(document, true);
     };
     const getProfilePanel = () => {
       profilePanelPromise ??= createShadowRootUi(ctx, {
@@ -75,11 +49,11 @@ export default defineContentScript({
           const root = createRoot(container);
           root.render(
             <div className="career-form-in-page-panel">
-              <ProfilePanel
-                inPage
+              <InPageProfilePanel
+                controller={controller}
+                pageDocument={document}
                 logoUrl={`chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`}
                 closePanel={closeProfilePanel}
-                openAutofill={openOverlay}
                 openOptions={openOptionsPageFromContent}
               />
             </div>,
@@ -93,9 +67,15 @@ export default defineContentScript({
       return profilePanelPromise;
     };
     const openProfilePanel = async () => {
+      ++openGeneration;
       const panel = await getProfilePanel();
+      if (invalidated) return;
       if (!panel.mounted) panel.mount();
       setFloatingSidePanelLauncherVisibility(document, false);
+    };
+    const openAutofill = async () => {
+      controller.startAutofill();
+      await openProfilePanel();
     };
     if (shouldShowSidePanelLauncher(new URL(document.location.href))) {
       const removeLauncher = mountFloatingSidePanelLauncher(
@@ -106,14 +86,18 @@ export default defineContentScript({
       ctx.onInvalidated(removeLauncher);
     }
     const receiveMessage = (message: unknown) => {
-      if (isOpenAutofillOverlayMessage(message)) return openOverlay();
+      if (isOpenAutofillOverlayMessage(message)) return openAutofill();
       if (isOpenInPageProfilePanelMessage(message)) return openProfilePanel();
       return undefined;
     };
 
     browser.runtime.onMessage.addListener(receiveMessage);
-    ctx.onInvalidated(() =>
-      browser.runtime.onMessage.removeListener(receiveMessage),
-    );
+    ctx.onInvalidated(() => {
+      invalidated = true;
+      ++openGeneration;
+      controller.showProfile();
+      void profilePanelPromise?.then((ui) => ui.remove());
+      browser.runtime.onMessage.removeListener(receiveMessage);
+    });
   },
 });
