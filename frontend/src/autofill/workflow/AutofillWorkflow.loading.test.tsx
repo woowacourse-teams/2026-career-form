@@ -100,7 +100,10 @@ it("shows analysis status while preparation remains unresolved", async () => {
   );
   const status = screen.getByRole("status");
   expect(status.closest('[aria-busy="true"]')).toBeNull();
-  expect(document.querySelector('[aria-busy="true"]')).toBeVisible();
+  const workArea = screen.getByRole("region", { name: "자동 기입 작업 영역" });
+  expect(workArea).toHaveAttribute("aria-busy", "true");
+  expect(workArea).toHaveTextContent("지원서를 분석하고 있어요");
+  expect(workArea).toBeVisible();
 });
 
 it("removes busy status and shows the existing exception screen after preparation fails", async () => {
