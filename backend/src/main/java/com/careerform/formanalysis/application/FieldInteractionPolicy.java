@@ -39,7 +39,7 @@ public final class FieldInteractionPolicy {
         if (candidate.visibility() == Visibility.HIDDEN) {
             return withoutWrite(InteractionStatus.MANUAL_REVEAL_REQUIRED);
         }
-        WriteCommand command = writeCommand(candidate);
+        WriteCommand command = writeCommand(candidate, mapping);
         if (command == null) {
             return withoutWrite(InteractionStatus.UNVERIFIED);
         }
@@ -64,9 +64,17 @@ public final class FieldInteractionPolicy {
             && candidate.control() == FormControl.TEXT;
     }
 
-    private static WriteCommand writeCommand(FieldCandidate candidate) {
+    private static WriteCommand writeCommand(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping
+    ) {
         FormElement element = candidate.element();
         FormControl control = candidate.control();
+        if (element == FormElement.INPUT && control == FormControl.TEXT
+            && mapping instanceof FieldMappingResolver.Match match
+            && match.valueBinding() instanceof FieldMappingResolver.ButtonOptionBinding) {
+            return WriteCommand.SELECT_BUTTON_OPTION;
+        }
         if (element == FormElement.INPUT && control == FormControl.TEXT
             || element == FormElement.TEXTAREA && control == FormControl.TEXTAREA) {
             return WriteCommand.SET_TEXT;

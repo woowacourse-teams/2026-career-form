@@ -503,3 +503,45 @@ describe("Hyundai military and veteran state drivers", () => {
     vi.useRealTimers();
   });
 });
+
+describe("Hyundai academic location state drivers", () => {
+  it("runs country before city so the city menu is reanalyzed", () => {
+    const item = buttonOptionItem("education.university.schoolRegion");
+    const locationHandle = (id: "locNation_1" | "locCity_1") => ({
+      candidateId: item.candidateId,
+      itemGroupId: "educationuniversity",
+      itemIndex: 0,
+      elements: [],
+      candidate: { domId: id, domName: id.replace(/_[0-9]+$/, "") },
+    });
+    expect(
+      hyundaiWorkflowAdapter.stateDriverStage?.(
+        item,
+        locationHandle("locNation_1") as never,
+      ),
+    ).toBe(2);
+    expect(
+      hyundaiWorkflowAdapter.stateDriverStage?.(
+        item,
+        locationHandle("locCity_1") as never,
+      ),
+    ).toBe(3);
+  });
+});
+
+describe("Hyundai location failure isolation", () => {
+  it("defers only an exact location select-wrap when its menu is unavailable", () => {
+    document.body.innerHTML = `<article id="academic" class="field-form-apply"><div class="field-content"><div class="select-wrap"><input class="btn-select js-target btn-new-loc locNa" type="text" id="locCity_1" data-target-codegb="0013" data-refer="locNation" data-attr1="KR"><input class="js-field" type="hidden" name="locCity"></div></div></article>`;
+    const trigger = document.querySelector<HTMLInputElement>("#locCity_1")!;
+    const item = buttonOptionItem("education.university.schoolRegion");
+    const group = hyundaiWorkflowAdapter.stateDriverFailureGroup?.(item, {
+      candidateId: item.candidateId,
+      itemGroupId: "educationuniversity",
+      itemIndex: 0,
+      elements: [trigger],
+      candidate: { domId: "locCity_1", element: "input", control: "text" },
+    } as never);
+    expect(group).toBe(trigger.closest(".select-wrap"));
+    expect(group).not.toBe(trigger.closest(".field-content"));
+  });
+});

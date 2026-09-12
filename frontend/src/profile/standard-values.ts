@@ -51,6 +51,78 @@ export const ATTENDANCE_TYPE_OPTIONS: readonly StandardValueOption[] = [
   { value: "attendance:night", label: "야간" },
 ];
 
+export const MILITARY_STATUS_OPTIONS: readonly StandardValueOption[] = [
+  { value: "military-status:served", label: "군필", aliases: ["만기전역"] },
+  { value: "military-status:serving", label: "복무중" },
+  { value: "military-status:not-served", label: "미필" },
+  { value: "military-status:exempt", label: "면제" },
+  { value: "military-status:not-applicable", label: "비대상" },
+];
+
+export const MILITARY_BRANCH_OPTIONS: readonly StandardValueOption[] = [
+  { value: "military-branch:army", label: "육군" },
+  { value: "military-branch:navy", label: "해군" },
+  { value: "military-branch:air-force", label: "공군" },
+  { value: "military-branch:marine-corps", label: "해병대" },
+  { value: "military-branch:combat-police", label: "전투경찰" },
+  { value: "military-branch:coast-guard", label: "해양경찰" },
+  { value: "military-branch:conscripted-police", label: "의무경찰" },
+  { value: "military-branch:conscripted-firefighter", label: "의무소방" },
+];
+
+export const MILITARY_RANK_OPTIONS: readonly StandardValueOption[] = [
+  { value: "military-rank:byeongjang", label: "병장" },
+  { value: "military-rank:sangbyeong", label: "상병" },
+  { value: "military-rank:ilbyeong", label: "일병" },
+  { value: "military-rank:ibyeong", label: "이병" },
+];
+
+export const VETERAN_STATUS_OPTIONS: readonly StandardValueOption[] = [
+  {
+    value: "veteran-status:eligible",
+    label: "대상",
+    aliases: ["예", "해당", "있음", "Y", "yes", "true"],
+  },
+  {
+    value: "veteran-status:not-eligible",
+    label: "비대상",
+    aliases: ["아니오", "비해당", "없음", "N", "no", "false"],
+  },
+];
+
+export const DISABILITY_STATUS_OPTIONS: readonly StandardValueOption[] = [
+  {
+    value: "disability-status:eligible",
+    label: "대상",
+    aliases: ["예", "해당", "있음", "장애", "Y", "yes", "true"],
+  },
+  {
+    value: "disability-status:not-eligible",
+    label: "비대상",
+    aliases: ["아니오", "비해당", "없음", "비장애", "N", "no", "false"],
+  },
+];
+const SCHOOL_REGION_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  "region:seoul": ["서울특별시"],
+  "region:busan": ["부산광역시"],
+  "region:daegu": ["대구광역시"],
+  "region:incheon": ["인천광역시"],
+  "region:gwangju": ["광주광역시"],
+  "region:daejeon": ["대전광역시"],
+  "region:ulsan": ["울산광역시"],
+  "region:sejong": ["세종특별자치시"],
+  "region:gyeonggi": ["경기도"],
+  "region:gangwon": ["강원도"],
+  "region:chungbuk": ["충청북도"],
+  "region:chungnam": ["충청남도"],
+  "region:jeonbuk": ["전라북도"],
+  "region:jeonnam": ["전라남도"],
+  "region:gyeongbuk": ["경상북도"],
+  "region:gyeongnam": ["경상남도"],
+  "region:jeju": ["제주특별자치도"],
+  "region:overseas": ["해외"],
+};
+
 const OPIC_GRADE_OPTIONS: readonly StandardValueOption[] = [
   { value: "opic:nh", label: "Novice High", aliases: ["NH"] },
   { value: "opic:nm", label: "Novice Mid", aliases: ["NM"] },
@@ -69,6 +141,11 @@ const STANDARD_VALUES: readonly StandardValueOption[] = [
   ...SCHOOL_REGION_OPTIONS,
   ...ATTENDANCE_TYPE_OPTIONS,
   ...OPIC_GRADE_OPTIONS,
+  ...MILITARY_STATUS_OPTIONS,
+  ...MILITARY_BRANCH_OPTIONS,
+  ...MILITARY_RANK_OPTIONS,
+  ...VETERAN_STATUS_OPTIONS,
+  ...DISABILITY_STATUS_OPTIONS,
 ];
 
 export function languageGradeOptions(
@@ -83,7 +160,13 @@ export function standardValueLabel(value: string): string | undefined {
 
 export function standardValueAliases(value: string): readonly string[] {
   const option = STANDARD_VALUES.find((candidate) => candidate.value === value);
-  return option ? [option.label, ...(option.aliases ?? [])] : [];
+  return option
+    ? [
+        option.label,
+        ...(option.aliases ?? []),
+        ...(SCHOOL_REGION_ALIASES[value] ?? []),
+      ]
+    : [];
 }
 
 export function isStandardValueId(value: string): boolean {

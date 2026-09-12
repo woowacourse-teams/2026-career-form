@@ -1,4 +1,20 @@
+import {
+  SCHOOL_REGION_OPTIONS,
+  standardValueAliases,
+} from "../../../profile/standard-values";
 import { runSkAddress } from "./address";
+import {
+  isProfilePriorityStatus,
+  matchesProfilePriorityKey,
+  isVerifiedProfilePriorityStatus,
+  settleProfilePriorityStatus,
+} from "./profile-priority";
+import {
+  SK_DISABILITY_GRADE_CODES,
+  SK_DISABILITY_TYPE_CODES,
+  SK_MILITARY_BRANCH_CODES,
+  SK_MILITARY_STATUS_CODES,
+} from "./contracts";
 import {
   confirmSkAutocomplete,
   isSkAutocompleteBridgeReady,
@@ -9,6 +25,7 @@ import type {
   FieldCandidateHandle,
 } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
+import { selectNativeProfileOption } from "../../preparation/select-profile-option";
 
 function hasUuidSuffix(value: string, baseName: string): boolean {
   return new RegExp(
@@ -17,35 +34,114 @@ function hasUuidSuffix(value: string, baseName: string): boolean {
   ).test(value);
 }
 
+type SelectionTarget = {
+  label: string;
+  code: string;
+  permitsUuidSuffix: boolean;
+};
 function selectionTarget(
   selection: { domName: string },
   profileValue: string,
-): { label: string; permitsUuidSuffix: boolean } | undefined {
+): SelectionTarget | undefined {
   if (
     selection.domName === "eduMajorDoubleYN" ||
     selection.domName === "eduMajorSubYN"
   ) {
     return profileValue === "있음"
-      ? { label: "있음", permitsUuidSuffix: true }
+      ? { label: "있음", code: "1", permitsUuidSuffix: true }
       : undefined;
   }
   if (selection.domName === "prsMilitarySvcYN") {
+    if (profileValue === "비대상") {
+      return { label: "비대상", code: "0", permitsUuidSuffix: false };
+    }
     return ["군필", "미필", "면제", "복무중"].includes(profileValue)
-      ? { label: "대상", permitsUuidSuffix: false }
+      ? { label: "대상", code: "1", permitsUuidSuffix: false }
       : undefined;
   }
-  if (selection.domName === "prsVeteranBenefitYN") {
-    return profileValue === "대상"
-      ? { label: "대상", permitsUuidSuffix: false }
+  if (
+    selection.domName === "prsVeteranBenefitYN" ||
+    selection.domName === "prsDisabledYN"
+  ) {
+    return profileValue === "대상" || profileValue === "비대상"
+      ? {
+          label: profileValue,
+          code: profileValue === "대상" ? "1" : "0",
+          permitsUuidSuffix: false,
+        }
       : undefined;
   }
   return undefined;
 }
 
-function isProtectedConditionalSelection(domName: string): boolean {
-  return domName === "prsMilitarySvcYN" || domName === "prsVeteranBenefitYN";
+function isProtectedConditionalSelection(
+  domName: string,
+): domName is "prsMilitarySvcYN" | "prsVeteranBenefitYN" | "prsDisabledYN" {
+  return (
+    domName === "prsMilitarySvcYN" ||
+    domName === "prsVeteranBenefitYN" ||
+    domName === "prsDisabledYN"
+  );
 }
 
+function exactProtectedGroup(
+  document: Document,
+  name: "prsMilitarySvcYN" | "prsVeteranBenefitYN" | "prsDisabledYN",
+): HTMLInputElement[] | undefined {
+  const group = Array.from(
+    document.querySelectorAll<HTMLInputElement>(`[name="${name}"]`),
+  );
+  if (
+    group.length !== 2 ||
+    group.some(
+      (radio) => !(radio instanceof HTMLInputElement) || radio.type !== "radio",
+    )
+  )
+    return undefined;
+  const negative = group.filter(
+    (radio) =>
+      radio.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() ===
+        "비대상" && radio.value === "0",
+  );
+  const positive = group.filter(
+    (radio) =>
+      radio.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() === "대상" &&
+      radio.value === "1",
+  );
+  return negative.length === 1 && positive.length === 1 ? group : undefined;
+}
+
+function militaryTargetSelected(document: Document): boolean {
+  const target = exactProtectedGroup(document, "prsMilitarySvcYN")?.find(
+    (radio) => radio.value === "1",
+  );
+  return Boolean(target?.checked && isVisibleInteractiveRadio(target));
+}
+
+function selectMilitaryStatusReveal(
+  document: Document,
+  value: string,
+): { code: "SELECTED" | "SELECTION_FAILED"; count: 1 } {
+  const controls = Array.from(
+    document.querySelectorAll("[name='prsMilitarySvcStatus']"),
+  );
+  const select = controls[0];
+  if (
+    controls.length !== 1 ||
+    !(select instanceof HTMLSelectElement) ||
+    !militaryTargetSelected(document) ||
+    !SK_MILITARY_STATUS_CODES.has(value) ||
+    !hasUniqueOptions(select, SK_MILITARY_STATUS_CODES)
+  )
+    return { code: "SELECTION_FAILED", count: 1 };
+  return {
+    code:
+      selectNativeProfileOption(select, value, true) === "selected"
+        ? "SELECTED"
+        : "SELECTION_FAILED",
+    count: 1,
+  };
+}
 function isVisibleInteractiveRadio(input: HTMLInputElement): boolean {
   return Boolean(
     input.isConnected &&
@@ -69,28 +165,38 @@ function canSelectProtectedRadio(
     !(input instanceof HTMLInputElement) ||
     input.type !== "radio" ||
     !domName ||
+    !isProtectedConditionalSelection(domName) ||
     input.name !== domName ||
     !target ||
     handle.candidate.displayName !== target.label ||
+    input.value !== target.code ||
     !isVisibleInteractiveRadio(input)
   ) {
     return false;
   }
-  const radios = Array.from(
-    input.ownerDocument.querySelectorAll<HTMLInputElement>(
-      `input[type='radio'][name='${domName}']`,
-    ),
+  const radios = exactProtectedGroup(input.ownerDocument, domName);
+  return Boolean(
+    radios?.includes(input) &&
+    (isProfilePriorityStatus(domName) ||
+      !radios.some((radio) => radio !== input && radio.checked)),
   );
-  const targets = radios.filter(
-    (radio) =>
-      radio.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() ===
-        target.label && isVisibleInteractiveRadio(radio),
-  );
-  return (
-    targets.length === 1 &&
-    targets[0] === input &&
-    !radios.some((radio) => radio !== input && radio.checked)
-  );
+}
+
+function hasUniqueOptions(
+  select: HTMLSelectElement,
+  options: ReadonlyMap<string, string>,
+): boolean {
+  return [...options].every(([label, code]) => {
+    const labeled = Array.from(select.options).filter(
+      (o) => o.textContent?.trim() === label,
+    );
+    return (
+      labeled.length === 1 &&
+      labeled[0]?.value === code &&
+      Array.from(select.options).filter((option) => option.value === code)
+        .length === 1
+    );
+  });
 }
 
 function canSelectMilitaryStatus(
@@ -102,27 +208,22 @@ function canSelectMilitaryStatus(
     !(select instanceof HTMLSelectElement) ||
     handle.candidate.domName !== "prsMilitarySvcStatus" ||
     select.name !== "prsMilitarySvcStatus" ||
+    select.ownerDocument.querySelectorAll("[name='prsMilitarySvcStatus']")
+      .length !== 1 ||
     !select.isConnected ||
     select.disabled ||
     select.closest("[hidden], [inert], [aria-hidden='true']") ||
-    !["군필", "미필", "면제", "복무중"].includes(profileValue)
+    !SK_MILITARY_STATUS_CODES.has(profileValue) ||
+    !hasUniqueOptions(select, SK_MILITARY_STATUS_CODES)
   ) {
     return false;
   }
-  const targetRadios = Array.from(
-    select.ownerDocument.querySelectorAll<HTMLInputElement>(
-      "input[type='radio'][name='prsMilitarySvcYN']",
-    ),
-  ).filter(
-    (radio) =>
-      radio.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() === "대상" &&
-      isVisibleInteractiveRadio(radio),
-  );
-  if (targetRadios.length !== 1 || !targetRadios[0]!.checked) return false;
+  if (!militaryTargetSelected(select.ownerDocument)) return false;
   if (select.value.trim() === "") return true;
   return (
     select.selectedOptions[0]?.textContent?.replace(/\s+/g, " ").trim() ===
-    profileValue
+      profileValue &&
+    select.value === SK_MILITARY_STATUS_CODES.get(profileValue)
   );
 }
 
@@ -160,15 +261,63 @@ function isVerifiedSearchDriver(
 }
 
 export const skWorkflowAdapter: WorkflowAdapter = {
-  normalizeProfileValue: (profileFieldKey, value) =>
-    profileFieldKey === MILITARY_STATUS_FIELD_KEY &&
-    value.normalize("NFKC").trim() === "만기전역"
-      ? "군필"
-      : value,
-  canSelectProfileOption: (handle, profileValue) => {
+  prefersProfileValue: (handle, analysis) => {
+    const name = handle.candidate.domName;
+    if (
+      !isVerifiedProfilePriorityStatus(name, analysis) ||
+      !name ||
+      !isProtectedConditionalSelection(name) ||
+      handle.candidate.control !== "radio"
+    )
+      return false;
+    const ownerDocument = handle.elements[0]?.ownerDocument;
+    if (!ownerDocument) return false;
+    const group = exactProtectedGroup(ownerDocument, name);
+    return Boolean(
+      group &&
+      handle.elements.length === 2 &&
+      group.every(
+        (radio) =>
+          handle.elements.includes(radio) && isVisibleInteractiveRadio(radio),
+      ),
+    );
+  },
+  normalizeProfileValue: (profileFieldKey, value) => {
+    const normalized = value.normalize("NFKC").trim();
+    if (
+      profileFieldKey === MILITARY_STATUS_FIELD_KEY &&
+      normalized === "만기전역"
+    )
+      return "군필";
+    if (
+      /^education\.(highSchool|university|graduateSchool)\.schoolRegion$/.test(
+        profileFieldKey,
+      )
+    ) {
+      const region = SCHOOL_REGION_OPTIONS.find(
+        (option) =>
+          option.value === normalized || option.label === normalized,
+      );
+      // SK uses the verified full province name; preserve standard IDs and unknown labels.
+      return region
+        ? (standardValueAliases(region.value).find(
+            (alias) => alias !== region.label,
+          ) ?? value)
+        : value;
+    }
+    return value;
+  },
+  canSelectProfileOption: (handle, profileValue, profileFieldKey) => {
+    if (
+      isProfilePriorityStatus(handle.candidate.domName) &&
+      profileFieldKey !== undefined &&
+      !matchesProfilePriorityKey(handle.candidate.domName, profileFieldKey)
+    )
+      return false;
     if (
       handle.candidate.domName === "prsMilitarySvcYN" ||
-      handle.candidate.domName === "prsVeteranBenefitYN"
+      handle.candidate.domName === "prsVeteranBenefitYN" ||
+      handle.candidate.domName === "prsDisabledYN"
     ) {
       return canSelectProtectedRadio(handle, profileValue);
     }
@@ -178,21 +327,64 @@ export const skWorkflowAdapter: WorkflowAdapter = {
     return undefined;
   },
   canWriteProfileOption: (handle, item) => {
+    if (isProfilePriorityStatus(handle.candidate.domName)) {
+      if (
+        !item.analysis ||
+        !skWorkflowAdapter.prefersProfileValue?.(handle, item.analysis) ||
+        !["대상", "비대상"].includes(item.profileValue ?? "")
+      )
+        return false;
+      const code = item.profileValue === "대상" ? "1" : "0";
+      return !handle.elements.some(
+        (element) =>
+          element instanceof HTMLInputElement &&
+          element.value === code &&
+          element.checked,
+      );
+    }
     const select = handle.elements[0];
+    const key = item.analysis?.valueBinding?.profileFieldKey;
     if (
-      handle.candidate.domName !== "prsMilitarySvcStatus" ||
       handle.elements.length !== 1 ||
       !(select instanceof HTMLSelectElement) ||
-      select.name !== "prsMilitarySvcStatus" ||
       item.analysis?.valueBinding?.type !== "DIRECT" ||
-      item.analysis.valueBinding.profileFieldKey !==
-        "military.military.militaryStatus"
-    ) {
+      !item.selected ||
+      item.disabled
+    )
       return undefined;
-    }
-    return select.selectedOptions[0]?.textContent?.trim() === item.profileValue
-      ? false
-      : undefined;
+    const options =
+      handle.candidate.domName === "prsMilitarySvcStatus" &&
+      key === "military.military.militaryStatus"
+        ? SK_MILITARY_STATUS_CODES
+        : handle.candidate.domName === "prsMilitarySvcCategory" &&
+            key === "military.military.militaryBranch"
+          ? SK_MILITARY_BRANCH_CODES
+          : undefined;
+    if (!options) return undefined;
+    if (!hasUniqueOptions(select, options)) return false;
+    const gateName =
+      handle.candidate.domName === "prsDisabledType"
+        ? "prsDisabledYN"
+        : "prsMilitarySvcYN";
+    const gate = Array.from(
+      select.ownerDocument.querySelectorAll<HTMLInputElement>(
+        "input[type='radio'][name='" + gateName + "']",
+      ),
+    ).filter(
+      (radio) =>
+        radio.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() ===
+          "대상" &&
+        (!radio.hasAttribute("value") || radio.value === "1") &&
+        isVisibleInteractiveRadio(radio),
+    );
+    if (gate.length !== 1 || !gate[0].checked) return false;
+    const expected = Array.from(select.options).find(
+      (option) =>
+        option.textContent?.replace(/\s+/g, " ").trim() === item.profileValue &&
+        option.value === options.get(item.profileValue),
+    );
+    if (!expected) return false;
+    return select.value === expected.value ? false : true;
   },
   runAddress: runSkAddress,
   addressFieldNames: ["prsZipCode", "prsAddress", "prsAddressDtl"],
@@ -233,6 +425,12 @@ export const skWorkflowAdapter: WorkflowAdapter = {
     );
   },
   stateDriverStage: (item, handle) => {
+    if (
+      item.selected &&
+      !item.disabled &&
+      isVerifiedProfilePriorityStatus(handle.candidate.domName, item.analysis)
+    )
+      return handle.candidate.domName === "prsVeteranBenefitYN" ? -2 : -1;
     const binding = item.analysis?.valueBinding;
     if (
       item.selected &&
@@ -258,10 +456,12 @@ export const skWorkflowAdapter: WorkflowAdapter = {
       ? isSkAutocompleteBridgeReady(document, handle)
       : Promise.resolve(true),
   settleStateDriver: (document, handle) =>
-    handle.candidate.domName &&
-    SEARCH_FIELD_BINDINGS.has(handle.candidate.domName)
-      ? confirmSkAutocomplete(document, handle)
-      : Promise.resolve(true),
+    isProfilePriorityStatus(handle.candidate.domName)
+      ? settleProfilePriorityStatus(document, handle)
+      : handle.candidate.domName &&
+          SEARCH_FIELD_BINDINGS.has(handle.candidate.domName)
+        ? confirmSkAutocomplete(document, handle)
+        : Promise.resolve(true),
   stateDriverFailureGroup: (item, handle) => {
     if (!isVerifiedSearchDriver(item, handle) || handle.elements.length !== 1)
       return undefined;
@@ -305,8 +505,26 @@ export const skWorkflowAdapter: WorkflowAdapter = {
       profileFieldKey: "veteran.veteran.veteranStatus",
       itemIndex: 0,
     },
+    {
+      domName: "prsDisabledYN",
+      profileFieldKey: "disability.disability.disabilityStatus",
+      itemIndex: 0,
+    },
   ],
   selectReveal: (document, selection, profileValue) => {
+    if (
+      isProfilePriorityStatus(selection.domName) &&
+      !matchesProfilePriorityKey(selection.domName, selection.profileFieldKey)
+    )
+      return { code: "PROFILE_NOT_SELECTED", count: 1 };
+    if (selection.domName === "prsMilitarySvcStatus") {
+      return profileValue === undefined
+        ? { code: "PROFILE_UNAVAILABLE", count: 1 }
+        : selectMilitaryStatusReveal(
+            document,
+            profileValue.normalize("NFKC").trim(),
+          );
+    }
     if (profileValue === undefined)
       return { code: "PROFILE_UNAVAILABLE", count: 1 };
     const target = selectionTarget(
@@ -322,13 +540,22 @@ export const skWorkflowAdapter: WorkflowAdapter = {
       (target.permitsUuidSuffix &&
         hasUuidSuffix(input.name, selection.domName));
     const matchingRadios = radios.filter(matchesName);
-    const targets = matchingRadios.filter(
-      (input) =>
-        input.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() ===
-        target.label,
-    );
     const protectedSelection = isProtectedConditionalSelection(
       selection.domName,
+    );
+    const group = protectedSelection
+      ? exactProtectedGroup(
+          document,
+          selection.domName as
+            "prsMilitarySvcYN" | "prsVeteranBenefitYN" | "prsDisabledYN",
+        )
+      : matchingRadios;
+    if (!group) return { code: "TARGET_MISSING", count: 1 };
+    const targets = group.filter(
+      (input) =>
+        input.labels?.[0]?.textContent?.replace(/\s+/g, " ").trim() ===
+          target.label &&
+        (!protectedSelection || input.value === target.code),
     );
     const radio = protectedSelection
       ? targets.length === 1 && isVisibleInteractiveRadio(targets[0]!)
@@ -338,12 +565,27 @@ export const skWorkflowAdapter: WorkflowAdapter = {
     if (!radio) return { code: "TARGET_MISSING", count: 1 };
     if (
       protectedSelection &&
+      !isProfilePriorityStatus(selection.domName) &&
       !radio.checked &&
-      matchingRadios.some((input) => input !== radio && input.checked)
+      group.some((input) => input !== radio && input.checked)
     ) {
       return { code: "SKIPPED", count: 1 };
     }
     if (!radio.checked) radio.click();
+    if (
+      isProtectedConditionalSelection(selection.domName) &&
+      isProfilePriorityStatus(selection.domName)
+    ) {
+      const after = exactProtectedGroup(document, selection.domName);
+      const valid =
+        after?.length === group.length &&
+        after.every((element) => group.includes(element)) &&
+        after.includes(radio) &&
+        radio.checked &&
+        radio.value === target.code &&
+        isVisibleInteractiveRadio(radio);
+      return { code: valid ? "SELECTED" : "SELECTION_FAILED", count: 1 };
+    }
     return { code: radio.checked ? "SELECTED" : "SELECTION_FAILED", count: 1 };
   },
   revealedBindings: (plans) =>

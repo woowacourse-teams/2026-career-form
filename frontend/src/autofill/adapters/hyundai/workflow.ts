@@ -38,6 +38,27 @@ function isEducationSearch(handle: FieldCandidateHandle): boolean {
   return EDUCATION_SEARCH_STAGE_OFFSETS.has(structuralBase(handle) ?? "");
 }
 
+function educationLocationStage(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): number | undefined {
+  const base = structuralBase(handle);
+  const section =
+    handle.itemGroupId === "educationuniversity"
+      ? "university"
+      : handle.itemGroupId === "educationgraduateschool"
+        ? "graduateSchool"
+        : undefined;
+  if (
+    !section ||
+    item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" ||
+    item.analysis.interactionStatus !== "READY" ||
+    item.analysis.writePlan?.command !== "SELECT_BUTTON_OPTION" ||
+    profileFieldKey(item) !== `education.${section}.schoolRegion`
+  )
+    return undefined;
+  return base === "locNation" ? 2 : base === "locCity" ? 3 : undefined;
+}
 function profileFieldKey(item: ReviewPlanItem): string | undefined {
   const binding = item.analysis?.valueBinding;
   return binding?.type === "DIRECT" ||
@@ -68,6 +89,25 @@ function uniqueOwnedElement<T extends Element>(
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+function educationLocationFailureGroup(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): HTMLElement | undefined {
+  if (
+    educationLocationStage(item, handle) === undefined ||
+    handle.elements.length !== 1 ||
+    !(handle.elements[0] instanceof HTMLInputElement) ||
+    handle.elements[0].type !== "text" ||
+    !handle.elements[0].isConnected
+  )
+    return undefined;
+  const trigger = handle.elements[0];
+  const article = trigger.closest<HTMLElement>(
+    "article#academic.field-form-apply",
+  );
+  const wrap = trigger.closest<HTMLElement>(".select-wrap");
+  return article && wrap && article.contains(wrap) ? wrap : undefined;
+}
 function additionalMajorFailureGroup(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
@@ -283,6 +323,8 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     ) {
       return 1;
     }
+    const locationStage = educationLocationStage(item, handle);
+    if (locationStage !== undefined) return locationStage;
     const fieldKey = profileFieldKey(item);
     if (
       isEducationSearch(handle) &&
@@ -342,7 +384,10 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
       const field = handle.elements[0]?.closest<HTMLElement>(".field");
       return field?.isConnected ? field : undefined;
     }
-    return additionalMajorFailureGroup(item, handle);
+    return (
+      educationLocationFailureGroup(item, handle) ??
+      additionalMajorFailureGroup(item, handle)
+    );
   },
   revealSelections: [],
   selectReveal: () => ({ code: "TARGET_MISSING", count: 0 }),

@@ -1,280 +1,14 @@
-import { render, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
-import { createEmptyProfile, type Profile } from "../../../profile/model";
-import type {
-  AnalysisApiClient,
-  FieldsAnalyzeRequest,
-  FieldsAnalyzeResponse,
-  ValueBinding,
-} from "../../api/types";
-import { AutofillWorkflow } from "../../workflow/AutofillWorkflow";
-
-const bindings: Record<string, ValueBinding> = {
-  milCd: {
-    type: "BUTTON_OPTION",
-    profileFieldKey: "military.military.militaryStatus",
-    optionMap: {
-      군필: "필",
-      만기전역: "필",
-      미필: "미필",
-      면제: "면제",
-      비대상: "비대상(여성/해외국적)",
-    },
-    optionCodeMap: {
-      필: "1",
-      미필: "2",
-      면제: "5",
-      "비대상(여성/해외국적)": "7",
-    },
-  },
-  milExcptCd: {
-    type: "BUTTON_OPTION",
-    profileFieldKey: "military.military.exemptionReason",
-    optionMap: { 신체문제: "신체문제" },
-    optionCodeMap: { 신체문제: "01" },
-  },
-  milRank: {
-    type: "BUTTON_OPTION",
-    profileFieldKey: "military.military.militaryRank",
-    optionMap: { 병장: "병장" },
-    optionCodeMap: { 병장: "41" },
-  },
-  milDitinc: {
-    type: "BUTTON_OPTION",
-    profileFieldKey: "military.military.militaryBranch",
-    optionMap: { 육군: "육군" },
-    optionCodeMap: { 육군: "1" },
-  },
-  branchYn: {
-    type: "BUTTON_OPTION",
-    profileFieldKey: "veteran.veteran.veteranStatus",
-    optionMap: { 대상: "예", 비대상: "아니오" },
-    optionCodeMap: { 예: "Y", 아니오: "N" },
-  },
-  branchRel: {
-    type: "BUTTON_OPTION",
-    profileFieldKey: "veteran.veteran.veteranRelation",
-    optionMap: { 본인: "대상(본인)" },
-    optionCodeMap: { "대상(본인)": "1" },
-  },
-  milStartDt: {
-    type: "DERIVED",
-    recipe: "YEAR_MONTH",
-    profileFieldKey: "military.military.serviceStartDate",
-  },
-  milEndDt: {
-    type: "DERIVED",
-    recipe: "YEAR_MONTH",
-    profileFieldKey: "military.military.serviceEndDate",
-  },
-  branchNo: {
-    type: "DIRECT",
-    profileFieldKey: "veteran.veteran.veteranNumber",
-  },
-  engNm: {
-    type: "DIRECT",
-    profileFieldKey: "personal.personal.englishGivenName",
-  },
-};
-const service = "milStartDt,milEndDt,milRank,milDitinc,milSpeNm";
-const allMilitary = `milExcptCd,${service}`;
-const allVeteran = "branchRel,branchSupplyYn,branchAddPoint,branchNo";
-const transitions: Record<string, Record<string, [string, string, string]>> = {
-  milCd: {
-    "1": [service, "milExcptCd", service],
-    "2": ["", allMilitary, ""],
-    "5": ["milExcptCd", service, "milExcptCd"],
-    "7": ["", allMilitary, ""],
-  },
-  branchYn: {
-    Y: [allVeteran, "", "branchRel,branchAddPoint,branchNo"],
-    N: ["", allVeteran, ""],
-  },
-};
-
-function control(id: string): HTMLInputElement {
-  return document.querySelector<HTMLInputElement>(`input#${id}`)!;
-}
-function hidden(id: string): string {
-  return document.querySelector<HTMLInputElement>(
-    `article#etc input[type=hidden][name=${id}]`,
-  )!.value;
-}
-
-function renderApplication(options: { failMilitaryTransition?: boolean } = {}) {
-  (
-    globalThis as unknown as {
-      jsdom: { reconfigure(options: { url: string }): void };
-    }
-  ).jsdom.reconfigure({
-    url: "https://talent.hyundai.com/apply/applyWrite.hc",
-  });
-  document.body.innerHTML = `<form><article id="personal" class="field-form-apply"><label for="engNm">영문 이름</label><input id="engNm" name="engNm" type="text"></article><article id="etc" class="field-form-apply"><div class="field-content"><div class="field-group"></div></div></article></form>`;
-  const group = document.querySelector<HTMLElement>("#etc .field-group")!;
-  const clicks: Record<string, number> = {};
-  for (const [id, codegb, labels] of [
-    [
-      "milCd",
-      "0004",
-      [
-        ["필", "1"],
-        ["미필", "2"],
-        ["면제", "5"],
-        ["비대상(여성/해외국적)", "7"],
-      ],
-    ],
-    ["milExcptCd", "0094", [["신체문제", "01"]]],
-    ["milRank", "0006", [["병장", "41"]]],
-    ["milDitinc", "0005", [["육군", "1"]]],
-    [
-      "branchYn",
-      "1502",
-      [
-        ["예", "Y"],
-        ["아니오", "N"],
-      ],
-    ],
-    ["branchRel", "0007", [["대상(본인)", "1"]]],
-    [
-      "branchAddPoint",
-      "0136",
-      [
-        ["10", "10"],
-        ["5", "5"],
-        ["0", "0"],
-      ],
-    ],
-  ] as const) {
-    const field = document.createElement("div");
-    field.className = "field col-medium js-required";
-    field.innerHTML = `<div class="select-wrap"><input type="hidden" class="js-field" name="${id}"><input type="button" class="btn-select" id="${id}" data-codegb="${codegb}" required value=""><label class="field-title" for="${id}">${id}</label><div class="select-option" style="display:none"></div></div>`;
-    group.append(field);
-    const trigger = control(id);
-    const menu = field.querySelector<HTMLElement>(".select-option")!;
-    trigger.addEventListener("click", () => {
-      menu.style.display = "block";
-    });
-    for (const [label, code] of labels) {
-      const choice = document.createElement("button");
-      choice.type = "button";
-      choice.textContent = label;
-      choice.dataset.code = code;
-      const transition = transitions[id]?.[code];
-      if (transition)
-        [
-          choice.dataset.enabled,
-          choice.dataset.disabled,
-          choice.dataset.valid,
-        ] = transition;
-      Object.defineProperty(choice, "offsetParent", {
-        get: () => (menu.style.display === "none" ? null : menu),
-      });
-      choice.addEventListener("click", () => {
-        clicks[id] = (clicks[id] ?? 0) + 1;
-        trigger.value = label;
-        field.querySelector<HTMLInputElement>("input[type=hidden]")!.value =
-          code;
-        menu.style.display = "none";
-        if (!transition || (id === "milCd" && options.failMilitaryTransition))
-          return;
-        const [enabled, disabled, required] = transition;
-        for (const targetId of `${enabled},${disabled}`
-          .split(",")
-          .filter(Boolean)) {
-          const target = control(targetId);
-          if (!target) continue;
-          target.disabled = disabled.split(",").includes(targetId);
-          target.required = required.split(",").includes(targetId);
-        }
-      });
-      menu.append(choice);
-    }
-  }
-  for (const id of ["milStartDt", "milEndDt"]) {
-    group.insertAdjacentHTML(
-      "beforeend",
-      `<div class="field calendar col-medium js-date-start js-required"><input class="js-field" type="text" id="${id}" name="${id}" maxlength="7" data-date-format="yyyy-mm" data-min-view="months" data-view="months" required><label for="${id}">${id}</label></div>`,
-    );
-  }
-  group.insertAdjacentHTML(
-    "beforeend",
-    `<div class="field col-medium js-required"><input class="js-field" type="text" id="branchNo" name="branchNo" maxlength="10" data-parsley-type="digits" required><label for="branchNo">보훈번호</label></div><input type="hidden" name="branchSupplyYn" value=""><input type="checkbox" id="branchSupplyYn"><input type="text" id="injuryMemo" value="기존 장애 메모">`,
-  );
-  return clicks;
-}
-
-function fixtureProfile(): Profile {
-  const profile = createEmptyProfile();
-  profile.personal = { englishGivenName: "Fixture" };
-  profile.military = {
-    militaryStatus: "군필",
-    militaryBranch: "육군",
-    militaryRank: "병장",
-    serviceStartDate: "2020-03-01",
-    serviceEndDate: "2021-09-30",
-  };
-  profile.veteran = {
-    veteranStatus: "대상",
-    veteranRelation: "본인",
-    veteranNumber: "1234567890",
-  };
-  return profile;
-}
-
-function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
-  return {
-    snapshotId: request.snapshotId,
-    mode: "ADAPTER",
-    analysisStatus: "COMPLETE",
-    fields: request.sections
-      .flatMap((section) => [
-        ...section.fields,
-        ...(section.items ?? []).flatMap((item) => item.fields),
-      ])
-      .flatMap((field) => {
-        const binding = bindings[field.domId ?? ""];
-        return binding
-          ? [
-              {
-                candidateId: field.candidateId,
-                matchType: "MATCH" as const,
-                valueBinding: binding,
-                autofillPolicy: "ALLOWED" as const,
-                mappingStatus: "ADAPTER_VERIFIED" as const,
-                interactionStatus: "READY" as const,
-                writePlan: {
-                  command:
-                    binding.type === "BUTTON_OPTION"
-                      ? ("SELECT_BUTTON_OPTION" as const)
-                      : ("SET_TEXT" as const),
-                },
-              },
-            ]
-          : [];
-      }),
-  };
-}
-
-function run(profile: Profile) {
-  const apiClient: AnalysisApiClient = {
-    analyzePreparation: async (request) => ({
-      snapshotId: request.snapshotId,
-      mode: "ADAPTER",
-      analysisStatus: "COMPLETE",
-      preparationPlans: [],
-    }),
-    analyzeFields: async (request) => fieldsResponse(request),
-  };
-  return render(
-    <AutofillWorkflow
-      apiClient={apiClient}
-      repository={{ load: async () => profile }}
-      pageDocument={document}
-      onExit={() => undefined}
-    />,
-  );
-}
+import {
+  control,
+  fixtureProfile,
+  hidden,
+  renderApplication,
+  run,
+  service,
+} from "./workflow-military-veteran.integration.test-fixtures";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -287,7 +21,7 @@ afterEach(() => {
 
 it("selects both Hyundai drivers, fills corresponding detail display/code/months, and reruns without selection events", async () => {
   const clicks = renderApplication();
-  const first = run(fixtureProfile());
+  const first = await run(fixtureProfile());
   await waitFor(
     () =>
       expect(
@@ -295,6 +29,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
       ).toBeInTheDocument(),
     { timeout: 5000 },
   );
+  expect(first.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
   expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
   expect([control("milDitinc").value, hidden("milDitinc")]).toEqual([
     "육군",
@@ -323,7 +58,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   );
   const firstClicks = { ...clicks };
   first.unmount();
-  const second = run(fixtureProfile());
+  const second = await run(fixtureProfile());
   await waitFor(
     () =>
       expect(
@@ -335,11 +70,94 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   expect(control("branchNo").value).toBe("1234567890");
 });
 
+it("automatically writes Hyundai drivers and details without sensitive-value confirmation", async () => {
+  renderApplication();
+  const result = run(fixtureProfile());
+
+  await waitFor(() =>
+    expect(
+      result.getByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument(),
+  );
+  expect(result.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
+  expect([
+    hidden("milCd"),
+    hidden("branchYn"),
+    control("milStartDt").value,
+    control("milEndDt").value,
+    hidden("milRank"),
+    hidden("milDitinc"),
+    control("branchNo").value,
+  ]).toEqual(["1", "Y", "2020-03", "2021-09", "41", "1", "1234567890"]);
+});
+
+it("automatically writes Hyundai disability status, grade, and type without sensitive-value confirmation", async () => {
+  const clicks = renderApplication();
+  const profile = fixtureProfile();
+  profile.disability = {
+    disabilityStatus: "대상",
+    disabilityGrade: "중증",
+    disabilityType: "지체장애",
+  };
+  const first = run(profile);
+
+  await waitFor(() =>
+    expect(
+      first.getByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument(),
+  );
+  expect(first.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
+  expect([
+    control("injuryYn").value,
+    hidden("injuryYn"),
+    control("injuryGrade").value,
+    hidden("injuryGrade"),
+    control("injuryType").value,
+    hidden("injuryType"),
+  ]).toEqual(["예", "Y", "심한 장애인", "10", "지체장애", "10"]);
+  const firstClicks = { ...clicks };
+
+  first.unmount();
+  const second = run(profile);
+  await waitFor(() =>
+    expect(
+      second.getByRole("heading", { name: "기입 결과" }),
+    ).toBeInTheDocument(),
+  );
+  expect(clicks).toEqual(firstClicks);
+});
+
+it.each(["", "disability-status:unverified", "veteran-status:eligible"])(
+  "leaves an unsupported disability option unchanged for %s",
+  async (disabilityStatus) => {
+    renderApplication();
+    const profile = fixtureProfile();
+    profile.disability = {
+      disabilityStatus,
+      disabilityGrade: "중증",
+      disabilityType: "지체장애",
+    };
+
+    const result = await run(profile);
+    await waitFor(() =>
+      expect(
+        result.getByRole("heading", { name: "기입 결과" }),
+      ).toBeInTheDocument(),
+    );
+    expect([
+      hidden("injuryYn"),
+      hidden("injuryGrade"),
+      hidden("injuryType"),
+    ]).toEqual(["", "", ""]);
+    expect(control("engNm").value).toBe("Fixture");
+  },
+);
+
 it("treats the legacy 만기전역 profile value as 군필 only during Hyundai autofill", async () => {
   renderApplication();
   const profile = fixtureProfile();
   profile.military.militaryStatus = "만기전역";
-  const result = run(profile);
+  const result = await run(profile);
   await waitFor(() =>
     expect(
       result.getByRole("heading", { name: "기입 결과" }),
@@ -360,6 +178,107 @@ it("treats the legacy 만기전역 profile value as 군필 only during Hyundai a
   );
 });
 
+it.each([
+  {
+    name: "canonical standard IDs",
+    militaryStatus: "military-status:served",
+    militaryBranch: "military-branch:army",
+    militaryRank: "military-rank:byeongjang",
+    veteranStatus: "veteran-status:eligible",
+  },
+  {
+    name: "legacy aliases",
+    militaryStatus: "만기전역",
+    militaryBranch: "육군",
+    militaryRank: "병장",
+    veteranStatus: "yes",
+  },
+])(
+  "writes Hyundai exact military and veteran controls from $name and reruns without new selections",
+  async (scenario) => {
+    const clicks = renderApplication();
+    const profile = fixtureProfile();
+    profile.military.militaryStatus = scenario.militaryStatus;
+    profile.military.militaryBranch = scenario.militaryBranch;
+    profile.military.militaryRank = scenario.militaryRank;
+    profile.veteran.veteranStatus = scenario.veteranStatus;
+
+    const first = await run(profile);
+    await waitFor(() =>
+      expect(
+        first.getByRole("heading", { name: "기입 결과" }),
+      ).toBeInTheDocument(),
+    );
+    expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
+    expect([control("milDitinc").value, hidden("milDitinc")]).toEqual([
+      "육군",
+      "1",
+    ]);
+    expect([control("milRank").value, hidden("milRank")]).toEqual([
+      "병장",
+      "41",
+    ]);
+    expect([control("branchYn").value, hidden("branchYn")]).toEqual([
+      "예",
+      "Y",
+    ]);
+    const firstClicks = { ...clicks };
+
+    first.unmount();
+    const second = await run(profile);
+    await waitFor(() =>
+      expect(
+        second.getByRole("heading", { name: "기입 결과" }),
+      ).toBeInTheDocument(),
+    );
+    expect(clicks).toEqual(firstClicks);
+  },
+);
+
+it.each([
+  ["empty", "", ""],
+  ["unknown", "military-status:unverified", "veteran-status:unverified"],
+  ["cross-field IDs", "veteran-status:eligible", "military-status:served"],
+])(
+  "does not change opposite Hyundai drivers for $0 option values",
+  async (_name, militaryStatus, veteranStatus) => {
+    const clicks = renderApplication();
+    document
+      .querySelector<HTMLButtonElement>(
+        "#milCd ~ .select-option button[data-code='2']",
+      )!
+      .click();
+    document
+      .querySelector<HTMLButtonElement>(
+        "#branchYn ~ .select-option button[data-code='N']",
+      )!
+      .click();
+    const before = { ...clicks };
+    const profile = fixtureProfile();
+    profile.military.militaryStatus = militaryStatus;
+    profile.veteran.veteranStatus = veteranStatus;
+
+    const result = await run(profile);
+    await waitFor(() =>
+      expect(
+        result.getByRole("heading", { name: "기입 결과" }),
+      ).toBeInTheDocument(),
+    );
+    expect([
+      control("milCd").value,
+      hidden("milCd"),
+      control("branchYn").value,
+      hidden("branchYn"),
+    ]).toEqual(["미필", "2", "아니오", "N"]);
+    expect(clicks).toEqual(before);
+    expect([control("milStartDt").value, control("branchNo").value]).toEqual([
+      "",
+      "",
+    ]);
+    expect(control("engNm").value).toBe("Fixture");
+  },
+);
+
 it("preserves opposite existing selections while continuing an unrelated field", async () => {
   const clicks = renderApplication();
   document
@@ -373,7 +292,7 @@ it("preserves opposite existing selections while continuing an unrelated field",
     )!
     .click();
   const before = { ...clicks };
-  const result = run(fixtureProfile());
+  const result = await run(fixtureProfile());
   await waitFor(() =>
     expect(
       result.getByRole("heading", { name: "기입 결과" }),
@@ -418,7 +337,7 @@ it.each([
       )!
       .click();
     const before = clicks[id];
-    const result = run(fixtureProfile());
+    const result = await run(fixtureProfile());
     await waitFor(() =>
       expect(
         result.getByRole("heading", { name: "기입 결과" }),
@@ -433,7 +352,7 @@ it.each([
 );
 it("does not write military details after a partial driver transition and still fills veteran and unrelated fields", async () => {
   renderApplication({ failMilitaryTransition: true });
-  const result = run(fixtureProfile());
+  const result = await run(fixtureProfile());
   await waitFor(
     () =>
       expect(
@@ -449,13 +368,14 @@ it("does not write military details after a partial driver transition and still 
   ]).toEqual(["", "", "", ""]);
   expect(control("branchNo").value).toBe("1234567890");
   expect(control("engNm").value).toBe("Fixture");
-});
+  // The intentional 3-second driver timeout precedes further explicit review rounds.
+}, 10_000);
 
 it("leaves enabled military details blank when the profile has no supported status", async () => {
   renderApplication();
   const profile = fixtureProfile();
   profile.military.militaryStatus = "복무중";
-  const result = run(profile);
+  const result = await run(profile);
   await waitFor(() =>
     expect(
       result.getByRole("heading", { name: "기입 결과" }),
@@ -476,7 +396,7 @@ it("leaves an incompatible veteran number blank while completing other fields", 
   renderApplication();
   const profile = fixtureProfile();
   profile.veteran.veteranNumber = "VET-DEMO-001";
-  const result = run(profile);
+  const result = await run(profile);
   await waitFor(() =>
     expect(
       result.getByRole("heading", { name: "기입 결과" }),
@@ -509,28 +429,28 @@ it("does not resume detail writes after the workflow is closed during a pending 
 
 it.each([
   {
-    status: "미필",
+    status: "military-status:not-served",
     display: "미필",
     code: "2",
-    veteranStatus: "비대상",
+    veteranStatus: "veteran-status:not-eligible",
     veteranDisplay: "아니오",
     veteranCode: "N",
     exemption: "",
   },
   {
-    status: "면제",
+    status: "military-status:exempt",
     display: "면제",
     code: "5",
-    veteranStatus: "대상",
+    veteranStatus: "veteran-status:eligible",
     veteranDisplay: "예",
     veteranCode: "Y",
     exemption: "01",
   },
   {
-    status: "비대상",
+    status: "military-status:not-applicable",
     display: "비대상(여성/해외국적)",
     code: "7",
-    veteranStatus: "비대상",
+    veteranStatus: "veteran-status:not-eligible",
     veteranDisplay: "아니오",
     veteranCode: "N",
     exemption: "",
@@ -542,13 +462,15 @@ it.each([
     const profile = fixtureProfile();
     profile.military = {
       militaryStatus: scenario.status,
-      ...(scenario.status === "면제" ? { exemptionReason: "신체문제" } : {}),
+      ...(scenario.status === "military-status:exempt"
+        ? { exemptionReason: "신체문제" }
+        : {}),
     };
     profile.veteran =
-      scenario.veteranStatus === "대상"
-        ? profile.veteran
-        : { veteranStatus: "비대상" };
-    const result = run(profile);
+      scenario.veteranStatus === "veteran-status:eligible"
+        ? { ...profile.veteran, veteranStatus: scenario.veteranStatus }
+        : { veteranStatus: scenario.veteranStatus };
+    const result = await run(profile);
     await waitFor(() =>
       expect(
         result.getByRole("heading", { name: "기입 결과" }),
@@ -568,7 +490,7 @@ it.each([
       expect(control(id).value).toBe("");
     }
     expect(control("branchNo").value).toBe(
-      scenario.veteranStatus === "대상" ? "1234567890" : "",
+      scenario.veteranStatus === "veteran-status:eligible" ? "1234567890" : "",
     );
     expect(control("engNm").value).toBe("Fixture");
   },

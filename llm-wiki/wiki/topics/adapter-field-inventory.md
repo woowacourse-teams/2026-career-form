@@ -2,13 +2,13 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md)
-> Updated: 2026-09-09
+> Current: [현재 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md)
+> Updated: 2026-09-10
 
 ## 현재 상태
 
-현대·SK 프론트의 구현 기능과 자동 검증 범위를 현황표로 관리한다. 현대 로컬 정책은 v6이며 병역·보훈은 별도 조건부 계약으로 기록한다. 개별 필드 연결은 활성 서버 정책과 DOM 검증을 따르며, 실제 페이지 지원을 추정하지 않는다. 현대 취득일의 ID/이름 구분은 비식별 회귀로 검증했고, 최신 설치 smoke는 주소·국적1과 고교·학사 2행을 독립 대조했다. SK 경력·국적·대학 년월·학교·자격증·시험 검색은 승인된 전체 패널 검증 범위와 함께 기록하되, 저장·제출 호환성 및 P1/P3/P4 전체 기능은 미검증·미구현으로 유지한다. LG 학교 검색은 이번 변경에서 미구현이다.
+현대·SK 프론트의 구현 기능과 자동 검증 범위를 현황표로 관리한다. 현대 로컬 정책은 v7이며 병역·보훈은 별도 조건부 계약으로 기록한다. 개별 필드 연결은 활성 서버 정책과 DOM 검증을 따르며, 실제 페이지 지원을 추정하지 않는다. 현대 취득일의 ID/이름 구분은 비식별 회귀로 검증했고, 최신 설치 smoke는 주소·국적1과 고교·학사 2행을 독립 대조했다. SK 경력·국적·대학 년월·학교·자격증·시험 검색은 승인된 전체 패널 검증 범위와 함께 기록하되, 저장·제출 호환성 및 P1/P3/P4 전체 기능은 미검증·미구현으로 유지한다. LG 학교 검색은 이번 변경에서 미구현이다.
 
 SK 검색은 입력별 widget의 새 검색 완료와 유일한 label/value를 확인하며 시험은 nonzero id만 자동 선택한다. 행·검색 종류별 쓰기와 확정은 직렬 처리하고, 시험 언어 선택 뒤 text 또는 select 성적란이 하나만 나타날 때 후속 분석한다. 전체 fixture를 실제 popup→사이드 패널→자동 기입 경로로 실행한 결과 준비 2회와 필드 분석 8회가 모두 HTTP 200/ADAPTER/COMPLETE였으며, UI 집계 23개 기입 성공·0개 직접 확인은 선행 선택·미지원·미선택 항목 전체 성공을 의미하지 않는다. 테스트 후 프로필 키 미존재와 지원서 204개 제어 상태를 복원했다.
 
@@ -78,3 +78,18 @@ CF-83 후속 negative fixture는 현대 복수전공의 정확 결과 0개를 �
 ## 현대 만기전역 alias 현황 (2026-09-09)
 
 현대 `milCd` BUTTON_OPTION optionMap의 `만기전역`→필/1 매핑을 `militaryStatus` 필드에 한정한다. 별도 전체 fixture alias 파일과 통합 테스트가 경계를 확인하며, SK 정규화 hook·공통 normalizer·다른 회사/필드·알 수 없는 상태로 확대하지 않는다. 실제 검증 상태와 범위는 [PR #84 검증 기록](https://github.com/woowacourse-teams/2026-career-form/pull/84)를 따른다.
+
+## CF-86 학력 소재지·주야간 현황 (2026-09-10)
+
+프로필 UI·저장 형식은 유지한다. 백엔드 지원 키는 대학·대학원 `attendanceType`, 대학원 `schoolRegion`을 추가하며 표준 ID와 기존 표시 문자열을 호환한다. 로컬 정책은 SK v24·현대 v7이다.
+
+| 대상 | 구현 및 자동 검증 | 실제 설치 검증·제한 |
+| --- | --- | --- |
+| SK 고교·대학·대학원 소재지 | 정확한 native select name, 공식 지역명 18개 명시 별칭, 기존 문자열과 중복 선택지 보호 | 고교·대학 개별 표시/코드 확인; 대학원 실제 입력 미검증 |
+| SK 대학·대학원 주야간 | 정확한 select name, 주간/야간 1/0, 표준 ID 및 기존 표시 문자열 | 대학 주간 확인; 대학원·야간 실제 입력 미검증; 고교 제어 없음 |
+| 현대 대학·대학원 주야간 | name 없는 schClass trigger와 hidden schClass, 정확한 그룹·코드·유일 메뉴, D/N | 대학 주간 표시/코드 확인; 대학원·야간 실제 입력 미검증 |
+| 현대 대학·대학원 소재지 | name 없는 text trigger, 국가 대한민국/KR 후 재분석, 정확한 서울/95·세종/01356만 허용 | 대학 국가·도시 표시/코드 확인; 대학원·세종 실제 입력 미검증; 다른 도시·구·해외 국가 추정 금지 |
+| 현대 소재지 실패 격리 | 빈 국가·중복 도시·정확한 도시 없음은 select-wrap만 수동 처리, 다른 필드 입력 유지 | 자동 통합 테스트로 검증; 학교·주전공 실패 규칙은 별도 유지 |
+| API 및 상태 추적 | BUTTON_OPTION text는 SELECT_BUTTON_OPTION만 허용, SET_TEXT 거부; 국가·도시를 DOM 식별자로 구분 | 실제 설치 경로 확인 |
+
+최종 자동 검증은 프론트 79개 파일의 701개 통과·20개 건너뜀, typecheck/lint/format/build, 백엔드 전체 Gradle 테스트, 하네스 검증 통과다. 소재지 실패 격리 회귀는 처리 제거 시 실패하고 원복 후 4개 통과를 확인했다. 빌드는 `VITE_API_BASE_URL=http://localhost:8080`과 manifest/background의 localhost API를 확인했고 로컬 백엔드를 갱신했다. 코드 지원·자동 테스트와 실제 설치 확인 범위를 구분하며, 현대의 별도 검색 재시도·수동 확인을 전체 성공으로 해석하지 않는다. 실제 지원서 저장·제출·페이지 이동·미리보기, 운영 정책 배포는 하지 않았다.

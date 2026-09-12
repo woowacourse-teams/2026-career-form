@@ -7,6 +7,7 @@ import type {
   RepeatedProfileCategoryId,
 } from "../../profile/model";
 import type { ValueBinding } from "../api/types";
+import { normalizeProfileOptionValue } from "./standard-profile-option";
 import {
   isStandardValueId,
   standardValueLabel,
@@ -60,15 +61,18 @@ function directValue(
   const parts = partsOf(key);
   if (!parts) return { status: "unknown", sensitive: false };
   if (!parts.repeatable) {
-    const value = (profile[parts.categoryId] as FieldValues)[
+    const source = (profile[parts.categoryId] as FieldValues)[
       parts.fieldId
     ]?.trim();
+    const value = source ? normalizeProfileOptionValue(key, source) : "";
     return value
       ? {
           status: "resolved",
           value,
           sensitive: parts.sensitive,
-          ...(isStandardValueId(value) ? { standardValueId: value } : {}),
+          ...(source && isStandardValueId(source)
+            ? { standardValueId: source }
+            : {}),
         }
       : { status: "missing", sensitive: parts.sensitive };
   }
@@ -140,7 +144,7 @@ function derivedValue(
         ? (binding.falseLabel ?? "N")
         : undefined;
     return value
-      ? { status: "resolved", value, sensitive: source.sensitive }
+      ? { ...source, value }
       : { status: "missing", sensitive: source.sensitive };
   }
   if (recipe === "YEAR_MONTH") {

@@ -2,6 +2,7 @@ import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { resolveCompany } from "./company";
 import { hyundaiWriteAdapter } from "./hyundai/write";
+import { skWriteAdapter } from "./sk/write";
 
 export type CompanyWriteAttempt =
   { handled: false } | { handled: true; written: boolean };
@@ -19,7 +20,12 @@ const standardWriteAdapter: CompanyWriteAdapter = {
 };
 
 export function getWriteAdapter(host: string): CompanyWriteAdapter {
-  return resolveCompany(host) === "hyundai"
-    ? hyundaiWriteAdapter
-    : standardWriteAdapter;
+  switch (resolveCompany(host)) {
+    case "hyundai":
+      return hyundaiWriteAdapter;
+    case "sk":
+      return skWriteAdapter;
+    default:
+      return standardWriteAdapter;
+  }
 }

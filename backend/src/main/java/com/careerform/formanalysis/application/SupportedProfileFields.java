@@ -43,6 +43,7 @@ public final class SupportedProfileFields {
         entry("education.university.degreeLevel", AutofillPolicy.CONDITIONAL),
         entry("education.university.latestEducationType", AutofillPolicy.CONDITIONAL),
         entry("education.university.schoolName", AutofillPolicy.CONDITIONAL),
+        entry("education.university.attendanceType", AutofillPolicy.CONDITIONAL),
         entry("education.university.schoolRegion", AutofillPolicy.CONDITIONAL),
         entry("education.university.startDate", AutofillPolicy.ALLOWED),
         entry("education.university.endDate", AutofillPolicy.ALLOWED),
@@ -58,7 +59,9 @@ public final class SupportedProfileFields {
         entry("education.university.additionalMajorName", AutofillPolicy.CONDITIONAL),
         entry("education.graduateSchool.degreeLevel", AutofillPolicy.CONDITIONAL),
         entry("education.graduateSchool.country", AutofillPolicy.CONDITIONAL),
+        entry("education.graduateSchool.schoolRegion", AutofillPolicy.CONDITIONAL),
         entry("education.graduateSchool.schoolName", AutofillPolicy.CONDITIONAL),
+        entry("education.graduateSchool.attendanceType", AutofillPolicy.CONDITIONAL),
         entry("education.graduateSchool.startDate", AutofillPolicy.ALLOWED),
         entry("education.graduateSchool.endDate", AutofillPolicy.ALLOWED),
         entry("education.graduateSchool.admissionType", AutofillPolicy.CONDITIONAL),
@@ -128,7 +131,7 @@ public final class SupportedProfileFields {
         entry("disability.disability.disabilityGrade", AutofillPolicy.ALLOWED),
         entry(
             "disability.disability.disabilityRegistrationNumber",
-            AutofillPolicy.CONDITIONAL
+            AutofillPolicy.ALLOWED
         ),
         entry(
             "disability.disability.disabilityRegistrationDate",

@@ -2,13 +2,13 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md)
-> Updated: 2026-09-09
+> Current: [현재 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md)
+> Updated: 2026-09-10
 
 ## 현재 상태
 
-현대 전용 수집·반복 행·버튼 선택·라벨 보정을 프론트 회사 모듈에서 관리한다. 로컬 정책 v3은 어학·자격증 취득일을 정확한 ID/이름과 제어 타입으로 구분한다. 정책 v4는 국내 주소, 국적1 대한민국, 학력 그룹별 행과 필드를 조건부로 매핑하고, 현재 로컬 정책 v6은 현대 병역·보훈의 명시적 선택·날짜·번호 계약을 추가한다.
+현대 전용 수집·반복 행·버튼 선택·라벨 보정을 프론트 회사 모듈에서 관리한다. 로컬 정책 v3은 어학·자격증 취득일을 정확한 ID/이름과 제어 타입으로 구분한다. 정책 v4는 국내 주소, 국적1 대한민국, 학력 그룹별 행과 필드를 조건부로 매핑하고, 이전 로컬 정책 v6은 현대 병역·보훈의 명시적 선택·날짜·번호 계약을 추가한다.
 
 CF-82는 열린 버튼 메뉴의 현재 visible `data-code` 옵션을 수집해 표준 ID 별칭과 정확히 하나로 일치할 때만 클릭하도록 보완한다. 정적 코드 사전과 첫 후보 추측은 사용하지 않고, 클릭 뒤 표시 라벨과 hidden code를 확인한다. 상세 제한은 [CF-82 근거](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)를 따른다.
 
@@ -52,3 +52,13 @@ ID 없는 현대 프로젝트·논문 구조 식별로 준비 단계 차단을 �
 현대 `milCd`의 `BUTTON_OPTION` optionMap은 원본 프로필 `militaryStatus=만기전역`을 표시값 `필`·코드 1로 연결한다. 적용 범위는 현대 `military.military.militaryStatus`와 `milCd`로 한정하며 SK DIRECT 정규화 hook이나 공통/다른 회사·필드로 확대하지 않는다. 저장된 프로필 값은 유지한다.
 
 별도 alias fixture와 통합 테스트는 코드 지원 계약을 확인하며, 실제 최신 검증 상태와 범위는 [PR #84 검증 기록](https://github.com/woowacourse-teams/2026-career-form/pull/84)에 기록한다.
+
+## CF-86 학력 소재지·주야간 보완 (2026-09-10)
+
+로컬 현대 정책 v7은 대학·대학원 학력의 name 없는 visible trigger를 정확한 ID·학력 그룹·제어 종류와 같은 메뉴의 hidden name으로 식별한다. `schClass_<n>` button은 `data-codegb=0155`, hidden `schClass`, 주간/야간 D/N을 검증한다. `locNation_<n>` text는 `data-codegb=0003`과 hidden `locNation`, `locCity_<n>` text는 `data-target-codegb=0013`, `data-refer=locNation`과 hidden `locCity`를 사용한다.
+
+소재지는 대한민국/KR 선택 후 재수집·재분석하여 도시를 선택한다. 프로필 광역지역과 정확히 대응하는 서울/95, 세종/01356만 지원한다. 서울을 서울관악 등 임의 구로 바꾸지 않고 다른 광역지역의 도시나 해외 국가를 추론하지 않는다. 현재 메뉴의 유일한 정확 표시명과 승인된 코드를 선택하고 표시 값·hidden 코드를 다시 확인한다.
+
+`BUTTON_OPTION` text trigger의 백엔드 write plan과 프론트 API 검사는 `SELECT_BUTTON_OPTION`을 사용하며 `SET_TEXT`를 거부한다. 같은 프로필 소재지 키를 공유하는 국가·도시 상태 드라이버는 DOM 식별자를 포함해 따로 완료 추적한다. 빈 메뉴·중복 라벨·정확한 도시 없음은 해당 `.select-wrap`만 수동 확인으로 남기고 관련 없는 입력을 계속한다. 이 예외 격리는 학교·주전공 검색 실패 규칙으로 확대하지 않는다.
+
+실제 수집과 동일한 name 없는 fixture의 정상 흐름 및 빈 국가 메뉴·중복 도시·구 단위 후보만 존재하는 경계를 통합 검증했다. localhost 최신 설치 확장에서 대학의 소재지 국가/도시와 주간 표시·hidden 코드를 개별 확인했다. 별도 학교 검색 중단은 재실행이 필요했고 추가 전공 검색의 수동 확인도 남았으므로 전체 자동 기입 성공으로 표현하지 않는다. 대학원·세종·야간의 실제 설치 입력, 저장·제출 호환성과 운영 배포는 미검증이다. 검증용 임시 프로필 변경은 원복했다.

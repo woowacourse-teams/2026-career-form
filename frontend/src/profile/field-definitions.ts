@@ -1,7 +1,12 @@
 import type { ProfileCategoryId } from "./model";
 import {
   ATTENDANCE_TYPE_OPTIONS,
+  DISABILITY_STATUS_OPTIONS,
+  MILITARY_BRANCH_OPTIONS,
+  MILITARY_RANK_OPTIONS,
+  MILITARY_STATUS_OPTIONS,
   SCHOOL_REGION_OPTIONS,
+  VETERAN_STATUS_OPTIONS,
   type StandardValueOption,
 } from "./standard-values";
 
@@ -359,13 +364,13 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "military",
     label: "병역",
     repeatable: false,
-    sensitive: false,
+    sensitive: true,
     sections: [
       {
         id: "military",
         label: "병역",
         fields: [
-          text("militaryStatus", "병역 상태"),
+          select("militaryStatus", "병역 상태", MILITARY_STATUS_OPTIONS),
           select("militaryType", "병역구분", [
             "현역병",
             "상근예비역",
@@ -373,9 +378,9 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
             "전문연구요원",
             "산업기능요원",
           ]),
-          text("militaryBranch", "군별"),
+          select("militaryBranch", "군별", MILITARY_BRANCH_OPTIONS),
           text("militarySpecialty", "병과"),
-          text("militaryRank", "계급"),
+          select("militaryRank", "계급", MILITARY_RANK_OPTIONS),
           date("serviceStartDate", "복무 시작일"),
           date("serviceEndDate", "복무 종료일"),
           text("dischargeType", "전역구분"),
@@ -388,13 +393,13 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "veteran",
     label: "보훈",
     repeatable: false,
-    sensitive: false,
+    sensitive: true,
     sections: [
       {
         id: "veteran",
         label: "보훈",
         fields: [
-          text("veteranStatus", "보훈 대상 여부"),
+          select("veteranStatus", "보훈 대상 여부", VETERAN_STATUS_OPTIONS),
           text("veteranType", "보훈구분"),
           text("veteranRelation", "보훈 대상자와의 관계"),
           text("veteranNumber", "보훈번호"),
@@ -406,13 +411,13 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "disability",
     label: "장애",
     repeatable: false,
-    sensitive: false,
+    sensitive: true,
     sections: [
       {
         id: "disability",
         label: "장애",
         fields: [
-          text("disabilityStatus", "장애 여부"),
+          select("disabilityStatus", "장애 여부", DISABILITY_STATUS_OPTIONS),
           text("disabilityType", "장애 유형"),
           text("disabilityGrade", "장애 정도·등급"),
           text("disabilityRegistrationNumber", "장애등록번호"),

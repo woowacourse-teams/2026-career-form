@@ -13,10 +13,10 @@ class SupportedProfileFieldsTest {
     private final SupportedProfileFields supportedFields = new SupportedProfileFields();
 
     @Test
-    @DisplayName("canonical profile key 112개를 제공한다")
+    @DisplayName("canonical profile key 115개를 제공한다")
     void exposesExactlyTheCanonicalOneHundredTwelveKeys() {
         assertThat(supportedFields.keys())
-            .hasSize(112)
+            .hasSize(115)
             .contains(
                 "personal.personal.koreanFamilyName",
                 "contact.contact.phoneNumber",
@@ -35,6 +35,9 @@ class SupportedProfileFieldsTest {
                 "education.highSchool.completionStatus",
                 "education.highSchool.schoolRegion",
                 "education.university.schoolRegion",
+                "education.university.attendanceType",
+                "education.graduateSchool.schoolRegion",
+                "education.graduateSchool.attendanceType",
                 "education.university.totalCredits",
                 "military.military.militaryType",
                 "disability.disability.disabilityRegistrationNumber",
@@ -50,20 +53,19 @@ class SupportedProfileFieldsTest {
     }
 
     @Test
-    @DisplayName("병역·보훈·장애·건강을 일반 자동 기입 정책으로 제공한다")
-    void providesAllProfileFieldsWithoutSensitiveConfirmation() {
+    @DisplayName("병역·보훈·장애는 일반 자동 기입 정책으로 제공한다")
+    void allowsEveryMilitaryVeteranAndDisabilityField() {
         assertThat(supportedFields.keys())
-            .map(key -> supportedFields.policyOf(key).orElseThrow())
-            .filteredOn(policy -> policy == AutofillPolicy.ALLOWED)
-            .hasSize(68);
-        assertThat(supportedFields.keys())
-            .map(key -> supportedFields.policyOf(key).orElseThrow())
-            .filteredOn(policy -> policy == AutofillPolicy.CONDITIONAL)
-            .hasSize(44);
-        assertThat(supportedFields.keys())
-            .map(key -> supportedFields.policyOf(key).orElseThrow())
-            .filteredOn(policy -> policy == AutofillPolicy.SENSITIVE_CONFIRMATION)
-            .isEmpty();
+            .filteredOn(key -> key.startsWith("military.")
+                || key.startsWith("veteran.")
+                || key.startsWith("disability."))
+            .isNotEmpty()
+            .allSatisfy(key -> assertThat(supportedFields.policyOf(key))
+                .contains(AutofillPolicy.ALLOWED));
+        assertThat(supportedFields.policyOf("contact.contact.secondaryEmail"))
+            .contains(AutofillPolicy.CONDITIONAL);
+        assertThat(supportedFields.policyOf("health.health.healthDetails"))
+            .contains(AutofillPolicy.ALLOWED);
     }
 
     @Test
@@ -78,15 +80,13 @@ class SupportedProfileFieldsTest {
     }
 
     @Test
-    @DisplayName("보조 연락처와 장애등록번호를 조건부 자동 기입 필드로 제공한다")
-    void providesSupplementaryContactAndDisabilityRegistrationFields() {
+    @DisplayName("보조 연락처는 조건부 자동 기입 필드로 제공한다")
+    void providesSupplementaryContactFields() {
         assertThat(supportedFields.policyOf("contact.contact.secondaryEmail"))
             .contains(AutofillPolicy.CONDITIONAL);
         assertThat(supportedFields.policyOf("contact.contact.residenceCountry"))
             .contains(AutofillPolicy.CONDITIONAL);
         assertThat(supportedFields.policyOf("contact.contact.emergencyPhoneNumber"))
-            .contains(AutofillPolicy.CONDITIONAL);
-        assertThat(supportedFields.policyOf("disability.disability.disabilityRegistrationNumber"))
             .contains(AutofillPolicy.CONDITIONAL);
     }
 
@@ -100,6 +100,12 @@ class SupportedProfileFieldsTest {
         assertThat(supportedFields.policyOf("education.highSchool.schoolRegion"))
             .contains(AutofillPolicy.CONDITIONAL);
         assertThat(supportedFields.policyOf("education.university.schoolRegion"))
+            .contains(AutofillPolicy.CONDITIONAL);
+        assertThat(supportedFields.policyOf("education.university.attendanceType"))
+            .contains(AutofillPolicy.CONDITIONAL);
+        assertThat(supportedFields.policyOf("education.graduateSchool.schoolRegion"))
+            .contains(AutofillPolicy.CONDITIONAL);
+        assertThat(supportedFields.policyOf("education.graduateSchool.attendanceType"))
             .contains(AutofillPolicy.CONDITIONAL);
         assertThat(supportedFields.policyOf("education.university.totalCredits"))
             .contains(AutofillPolicy.ALLOWED);

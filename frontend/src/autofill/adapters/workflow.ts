@@ -35,6 +35,11 @@ export interface WorkflowDiagnostic {
 }
 
 export interface WorkflowAdapter {
+  // Explicit company/field policy only; never a general conflict bypass.
+  prefersProfileValue?(
+    handle: FieldCandidateHandle,
+    analysis: MatchedFieldAnalysis,
+  ): boolean;
   normalizeProfileValue?(profileFieldKey: string, value: string): string;
   addressFieldNames?: readonly string[];
   prepareEducation?(
@@ -52,6 +57,7 @@ export interface WorkflowAdapter {
   canSelectProfileOption?(
     handle: ActionCandidateHandle,
     profileValue: string,
+    profileFieldKey?: string,
   ): boolean | undefined;
   canWriteProfileOption?(
     handle: FieldCandidateHandle,
