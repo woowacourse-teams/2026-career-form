@@ -295,7 +295,8 @@ export const skWorkflowAdapter: WorkflowAdapter = {
       )
     ) {
       const region = SCHOOL_REGION_OPTIONS.find(
-        (option) => option.label === normalized,
+        (option) =>
+          option.value === normalized || option.label === normalized,
       );
       // SK uses the verified full province name; preserve standard IDs and unknown labels.
       return region
