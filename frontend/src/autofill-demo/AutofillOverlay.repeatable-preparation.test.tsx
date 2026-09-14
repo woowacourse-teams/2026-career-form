@@ -170,7 +170,9 @@ describe("AutofillOverlay repeatable preparation", () => {
       />,
     );
 
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("region", {
+      name: "지원서 자동 기입",
+    });
     expect(
       within(dialog).getByText("입력 행 2개를 추가합니다."),
     ).toBeInTheDocument();

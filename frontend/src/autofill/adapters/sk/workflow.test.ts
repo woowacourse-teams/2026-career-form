@@ -88,14 +88,17 @@ describe("SK education region compatibility", () => {
   it.each([
     ["education.highSchool.schoolRegion", "서울", "서울특별시"],
     ["education.university.schoolRegion", "경기", "경기도"],
+    ["education.university.schoolRegion", "region:seoul", "서울특별시"],
     ["education.graduateSchool.schoolRegion", "충북", "충청북도"],
-  ])("normalizes legacy region only for %s", (key, value, expected) => {
-    expect(adapter.normalizeProfileValue?.(key, value)).toBe(expected);
-  });
+  ])(
+    "normalizes standard and legacy regions only for %s",
+    (key, value, expected) => {
+      expect(adapter.normalizeProfileValue?.(key, value)).toBe(expected);
+    },
+  );
 
   it.each([
     ["education.university.schoolName", "서울"],
-    ["education.university.schoolRegion", "region:seoul"],
     ["education.university.schoolRegion", "서울특별시"],
     ["education.university.schoolRegion", "서울관악"],
     ["education.university.schoolRegion", "해외"],
@@ -150,7 +153,7 @@ describe("SK military and veteran conditional selections", () => {
     },
   );
 
-  it("does not select military target for a non-target status", () => {
+  it("selects the non-target military radio without selecting the target", () => {
     const page = document.implementation.createHTMLDocument("fixture");
     page.body.innerHTML = `
       <label><input type="radio" name="prsMilitarySvcYN" value="0" /> 비대상</label>
@@ -158,13 +161,14 @@ describe("SK military and veteran conditional selections", () => {
     `;
 
     expect(adapter.selectReveal(page, militarySelection, "비대상")).toEqual({
-      code: "PROFILE_NOT_SELECTED",
+      code: "SELECTED",
       count: 1,
     });
     expect(
-      Array.from(page.querySelectorAll<HTMLInputElement>("input")).some(
-        ({ checked }) => checked,
-      ),
+      page.querySelector<HTMLInputElement>('input[value="0"]')!.checked,
+    ).toBe(true);
+    expect(
+      page.querySelector<HTMLInputElement>('input[value="1"]')!.checked,
     ).toBe(false);
   });
 
