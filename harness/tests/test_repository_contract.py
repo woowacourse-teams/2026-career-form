@@ -336,6 +336,48 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn('"hotfix/CF-${{ github.event.issue.number }}"', run)
         self.assertIn("gh workflow run", run)
 
+    def test_backend_quality_adapters_reference_one_canonical_topic(self) -> None:
+        paths = (
+            ROOT / "AGENTS.md",
+            ROOT / ".agents" / "skills" / "cf-issue-workflow" / "SKILL.md",
+            ROOT / ".agents" / "skills" / "cf-code-review" / "SKILL.md",
+        )
+
+        for path in paths:
+            with self.subTest(path=path.relative_to(ROOT)):
+                self.assertIn(
+                    "llm-wiki/wiki/topics/backend-code-quality.md",
+                    path.read_text(encoding="utf-8"),
+                )
+
+    def test_backend_quality_workflow_requires_question_before_code(self) -> None:
+        workflow = (
+            ROOT / ".agents" / "skills" / "cf-issue-workflow" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        for behavior in ("오류", "우회", "재시도", "부수 효과"):
+            self.assertIn(behavior, workflow)
+        self.assertIn("구현 전에 질문", workflow)
+
+    def test_backend_quality_review_keeps_standards_and_spec_separate(self) -> None:
+        review = (
+            ROOT / ".agents" / "skills" / "cf-code-review" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("## Standards", review)
+        self.assertIn("## Spec", review)
+        self.assertIn(
+            "규칙 ID / 파일·심벌 / 영향 / 최소 수정안 / 필수·권고 / 불확실성",
+            review,
+        )
+
+    def test_backend_quality_policy_does_not_duplicate_normative_rules(self) -> None:
+        policy = ROOT / "harness" / "policies" / "backend-quality-enforcement.md"
+
+        text = policy.read_text(encoding="utf-8")
+        self.assertIn("llm-wiki/wiki/topics/backend-code-quality.md", text)
+        self.assertNotRegex(text, r"(?m)^## BQ-(?:0[1-9]|1[0-8])\b")
+
     def _yaml(self, path: Path) -> dict[str, object]:
         value = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
         self.assertIsInstance(value, dict, path.name)

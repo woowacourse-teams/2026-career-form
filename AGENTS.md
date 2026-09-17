@@ -21,6 +21,10 @@
 1. `llm-wiki/wiki/topics/product-concept.md`
 2. `llm-wiki/wiki/topics/profile-fields.md`
 
+백엔드 Java/Spring 코드를 기획, 구현하거나 검토할 때는 이어서
+`llm-wiki/wiki/topics/backend-code-quality.md`를 읽는다. 예제는 판단을 돕는
+비정본 자료이며 규칙 본문은 해당 topic에만 둔다.
+
 - 관련 없는 사용자 변경을 보존하고 현재 Issue 범위만 수정한다.
 - 동작을 바꾸기 전에 실패하는 테스트를 만들고, 변경 뒤 관련 테스트와 전체 검증을 실행한다.
 - 완료 전 운영체제에 맞는 가상환경 Python으로 `harness/scripts/verify.py`를 실행하고 최신 결과를 PR에 기록한다.
