@@ -2,6 +2,8 @@ package com.careerform.architecture;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -57,24 +59,35 @@ final class BackendArchitectureRules {
     }
 
     private static ArchRule dtoBoundaries() {
-        ArchRule applicationDoesNotUseApi = noClasses()
+        ArchRule applicationDoesNotUseApi = classes()
                 .that().resideInAnyPackage("..application..")
-                .should().dependOnClassesThat().resideInAnyPackage("..api..", "..dto..")
+                .should(new ArchCondition<>("not depend on API-owned types") {
+                    @Override
+                    public void check(JavaClass origin, ConditionEvents events) {
+                        Set<JavaClass> apiTargets = origin.getDirectDependenciesFromSelf().stream()
+                                .map(dependency -> dependency.getTargetClass())
+                                .filter(API)
+                                .map(BackendArchitectureRules::topLevelOwner)
+                                .collect(Collectors.toSet());
+                        JavaClass originOwner = topLevelOwner(origin);
+                        for (JavaClass target : apiTargets) {
+                            events.add(SimpleConditionEvent.violated(
+                                    origin,
+                                    "Class <" + originOwner.getName()
+                                            + "> depends on API-owned type <"
+                                            + target.getName() + ">"));
+                        }
+                    }
+                })
                 .allowEmptyShould(true);
-        ArchRule requestsAndResponsesBelongToApi = classes()
-                .that().haveSimpleNameEndingWith("Request")
-                .or().haveSimpleNameEndingWith("Response")
-                .should().resideInAnyPackage("..api..")
-                .allowEmptyShould(true);
-        ArchRule inputsAndResultsBelongToApplication = classes()
-                .that().haveSimpleNameEndingWith("Input")
-                .or().haveSimpleNameEndingWith("Result")
-                .should().resideInAnyPackage("..application..")
+        ArchRule dtoPackagesHaveAnOwner = classes()
+                .that().resideInAnyPackage("..dto..")
+                .and(JavaClass.Predicates.TOP_LEVEL_CLASSES)
+                .should().resideInAnyPackage("..api.dto..", "..application.dto..")
                 .allowEmptyShould(true);
 
         return CompositeArchRule.of(applicationDoesNotUseApi)
-                .and(requestsAndResponsesBelongToApi)
-                .and(inputsAndResultsBelongToApplication);
+                .and(dtoPackagesHaveAnOwner);
     }
 
     private static ArchRule controllerAndServiceBoundaries() {
@@ -167,5 +180,13 @@ final class BackendArchitectureRules {
 
     private static boolean isInternalType(JavaClass type) {
         return APPLICATION.test(type) || DOMAIN.test(type) || INFRASTRUCTURE.test(type);
+    }
+
+    private static JavaClass topLevelOwner(JavaClass type) {
+        JavaClass current = type;
+        while (current.getEnclosingClass().isPresent()) {
+            current = current.getEnclosingClass().orElseThrow();
+        }
+        return current;
     }
 }

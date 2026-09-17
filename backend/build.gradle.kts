@@ -39,6 +39,39 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    systemProperty("architecture.projectDir", layout.projectDirectory.asFile.absolutePath)
+}
+
+val allowArchitectureBaselineUpdate =
+    providers.gradleProperty("allowArchitectureBaselineUpdate")
+val architectureBaselineSourceCommit =
+    providers.gradleProperty("architectureBaselineSourceCommit")
+
+tasks.register<Test>("updateArchitectureBaseline") {
+    group = "verification"
+    description = "Rebuilds the reviewed legacy architecture violation baseline."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter {
+        includeTestsMatching("com.careerform.architecture.BackendArchitectureTest")
+    }
+    systemProperty("architecture.baseline.update", "true")
+    systemProperty(
+        "architecture.baseline.sourceCommit",
+        architectureBaselineSourceCommit.orElse("").get(),
+    )
+    doFirst {
+        if (allowArchitectureBaselineUpdate.orNull != "true") {
+            throw GradleException(
+                "Use -PallowArchitectureBaselineUpdate=true to update the architecture baseline",
+            )
+        }
+        if (!architectureBaselineSourceCommit.orNull.orEmpty().matches(Regex("[0-9a-f]{40}"))) {
+            throw GradleException(
+                "Use -ParchitectureBaselineSourceCommit=<full production Git SHA>",
+            )
+        }
+    }
 }
 
 jacoco {
