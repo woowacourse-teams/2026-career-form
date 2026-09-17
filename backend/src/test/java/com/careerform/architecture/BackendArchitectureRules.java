@@ -23,13 +23,26 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 final class BackendArchitectureRules {
 
     private static final DescribedPredicate<JavaClass> API =
-            resideInAnyPackage("..api..", "..dto..");
+            resideInAnyPackage("..api..").or(
+                    resideInAnyPackage("..dto..").and(
+                            DescribedPredicate.not(
+                                    resideInAnyPackage(
+                                            "..application.dto..",
+                                            "..infrastructure.."))));
     private static final DescribedPredicate<JavaClass> APPLICATION =
             resideInAnyPackage("..application..");
     private static final DescribedPredicate<JavaClass> DOMAIN =
             resideInAnyPackage("..domain..");
     private static final DescribedPredicate<JavaClass> INFRASTRUCTURE =
             resideInAnyPackage("..infrastructure..");
+    private static final Set<String> ALLOWED_DOMAIN_MAPPING_TYPES = Set.of(
+            "org.springframework.data.annotation.Id",
+            "org.springframework.data.annotation.PersistenceCreator",
+            "org.springframework.data.annotation.Transient",
+            "org.springframework.data.annotation.TypeAlias",
+            "org.springframework.data.annotation.Version",
+            "org.springframework.data.mongodb.core.mapping.Document",
+            "org.springframework.data.mongodb.core.mapping.Field");
 
     private BackendArchitectureRules() {
     }
@@ -83,7 +96,10 @@ final class BackendArchitectureRules {
         ArchRule dtoPackagesHaveAnOwner = classes()
                 .that().resideInAnyPackage("..dto..")
                 .and(JavaClass.Predicates.TOP_LEVEL_CLASSES)
-                .should().resideInAnyPackage("..api.dto..", "..application.dto..")
+                .should().resideInAnyPackage(
+                        "..api.dto..",
+                        "..application.dto..",
+                        "..infrastructure..")
                 .allowEmptyShould(true);
 
         return CompositeArchRule.of(applicationDoesNotUseApi)
@@ -104,7 +120,9 @@ final class BackendArchitectureRules {
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "..infrastructure..",
                         "org.springframework.web..",
-                        "org.springframework.data..")
+                        "org.springframework.data..",
+                        "org.springframework.ai..",
+                        "com.openai..")
                 .allowEmptyShould(true);
 
         return CompositeArchRule.of(apiDoesNotUseInternalLayers)
@@ -112,15 +130,21 @@ final class BackendArchitectureRules {
     }
 
     private static ArchRule domainBoundary() {
-        return noClasses()
+        return classes()
                 .that().resideInAnyPackage("..domain..")
-                .should().dependOnClassesThat().resideInAnyPackage(
-                        "..api..",
-                        "..dto..",
-                        "..application..",
-                        "..infrastructure..",
-                        "org.springframework.web..",
-                        "org.springframework.data.mongodb..")
+                .should(new ArchCondition<>("depend only on allowed outer types") {
+                    @Override
+                    public void check(JavaClass origin, ConditionEvents events) {
+                        origin.getDirectDependenciesFromSelf().stream()
+                                .map(dependency -> dependency.getTargetClass())
+                                .filter(BackendArchitectureRules::isForbiddenDomainDependency)
+                                .forEach(target -> events.add(SimpleConditionEvent.violated(
+                                        origin,
+                                        "Class <" + origin.getName()
+                                                + "> depends on forbidden outer type <"
+                                                + target.getName() + ">")));
+                    }
+                })
                 .allowEmptyShould(true);
     }
 
@@ -157,7 +181,7 @@ final class BackendArchitectureRules {
 
     private static ArchRule responseFields() {
         return classes()
-                .that().resideInAnyPackage("..api..")
+                .that(API)
                 .and().haveSimpleNameEndingWith("Response")
                 .should(new ArchCondition<>("contain only API-owned field types") {
                     @Override
@@ -180,6 +204,15 @@ final class BackendArchitectureRules {
 
     private static boolean isInternalType(JavaClass type) {
         return APPLICATION.test(type) || DOMAIN.test(type) || INFRASTRUCTURE.test(type);
+    }
+
+    private static boolean isForbiddenDomainDependency(JavaClass type) {
+        boolean outerLayer = API.test(type)
+                || APPLICATION.test(type)
+                || INFRASTRUCTURE.test(type)
+                || type.getPackageName().startsWith("org.springframework.web")
+                || type.getPackageName().startsWith("org.springframework.data");
+        return outerLayer && !ALLOWED_DOMAIN_MAPPING_TYPES.contains(type.getName());
     }
 
     private static JavaClass topLevelOwner(JavaClass type) {

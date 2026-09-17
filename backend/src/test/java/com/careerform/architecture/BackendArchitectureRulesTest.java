@@ -1,15 +1,20 @@
 package com.careerform.architecture;
 
 import com.careerform.architecture.fixture.allowed.config.AllowedConfig;
+import com.careerform.architecture.fixture.allowed.domain.AllowedMongoDomain;
 import com.careerform.architecture.fixture.allowed.infrastructure.AllowedSchemaAdapter;
+import com.careerform.architecture.fixture.allowed.infrastructure.dto.AllowedProviderDto;
 import com.careerform.architecture.fixture.invalid.api.InvalidController;
 import com.careerform.architecture.fixture.invalid.api.InvalidRequest;
 import com.careerform.architecture.fixture.invalid.api.InvalidResponse;
 import com.careerform.architecture.fixture.invalid.application.InvalidApplicationInput;
+import com.careerform.architecture.fixture.invalid.application.InvalidProviderService;
 import com.careerform.architecture.fixture.invalid.application.cyclealpha.AlphaService;
 import com.careerform.architecture.fixture.invalid.application.cyclebeta.BetaService;
 import com.careerform.architecture.fixture.invalid.application.port.InvalidProviderPort;
 import com.careerform.architecture.fixture.invalid.domain.InvalidDomain;
+import com.careerform.architecture.fixture.invalid.domain.InvalidRepositoryDomain;
+import com.careerform.architecture.fixture.invalid.dto.InvalidLegacyResponse;
 import com.careerform.architecture.fixture.invalid.infrastructure.InvalidAdapter;
 import com.careerform.architecture.fixture.invalid.infrastructure.ProviderResponse;
 import com.careerform.architecture.fixture.valid.api.ValidController;
@@ -18,6 +23,8 @@ import com.careerform.architecture.fixture.valid.api.ValidResponse;
 import com.careerform.architecture.fixture.valid.application.ValidInput;
 import com.careerform.architecture.fixture.valid.application.ValidResult;
 import com.careerform.architecture.fixture.valid.application.ValidService;
+import com.careerform.architecture.fixture.valid.application.ValidDtoConsumer;
+import com.careerform.architecture.fixture.valid.application.dto.ValidApplicationDto;
 import com.careerform.architecture.fixture.valid.application.port.ValidPort;
 import com.careerform.architecture.fixture.valid.infrastructure.ValidAdapter;
 import com.careerform.formanalysis.application.SupportedProfileFields;
@@ -55,13 +62,38 @@ class BackendArchitectureRulesTest {
     }
 
     @Test
+    void application_can_use_its_own_dto() {
+        assertNoViolation("A1", ValidDtoConsumer.class, ValidApplicationDto.class);
+    }
+
+    @Test
+    void adapter_can_own_provider_dto() {
+        assertNoViolation("A1", AllowedProviderDto.class);
+    }
+
+    @Test
     void controller_using_concrete_adapter_is_rejected() {
         assertViolation("A2", InvalidController.class, InvalidAdapter.class);
     }
 
     @Test
+    void service_using_provider_sdk_is_rejected() {
+        assertViolation("A2", InvalidProviderService.class);
+    }
+
+    @Test
     void domain_using_application_type_is_rejected() {
         assertViolation("A3", InvalidDomain.class, InvalidApplicationInput.class);
+    }
+
+    @Test
+    void domain_can_use_allowed_mongo_mapping_annotations() {
+        assertNoViolation("A3", AllowedMongoDomain.class);
+    }
+
+    @Test
+    void domain_using_spring_data_repository_is_rejected() {
+        assertViolation("A3", InvalidRepositoryDomain.class);
     }
 
     @Test
@@ -77,6 +109,11 @@ class BackendArchitectureRulesTest {
     @Test
     void response_containing_application_result_is_rejected() {
         assertViolation("A6", InvalidResponse.class, ValidResult.class);
+    }
+
+    @Test
+    void legacy_api_response_containing_application_result_is_rejected() {
+        assertViolation("A6", InvalidLegacyResponse.class, ValidResult.class);
     }
 
     @Test
