@@ -4,13 +4,19 @@ from collections.abc import Sequence
 from harness.lib.result import ValidationResult
 
 
-PROTECTED_FILES = ("AGENTS.md",)
+PROTECTED_FILES = (
+    "AGENTS.md",
+    "llm-wiki/wiki/topics/backend-code-quality.md",
+    "llm-wiki/wiki/topics/backend-code-quality-examples.md",
+)
 PROTECTED_PREFIXES = (
     ".agents/skills/",
     ".codex/",
     ".github/ISSUE_TEMPLATE/",
     ".github/workflows/",
     ".githooks/",
+    "backend/config/quality/",
+    "backend/src/test/java/com/careerform/architecture/",
     "harness/",
 )
 CLOSING_ISSUE_PATTERN = re.compile(
