@@ -26,6 +26,8 @@ import com.careerform.formanalysis.dto.PreparationAnalysisResponse.Mode;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.PreparationPlan;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.RevealSectionPlan;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
+import com.careerform.formanalysis.exception.ClientCapabilityRequiredException;
+import com.careerform.formanalysis.exception.RoutingContextUnavailableException;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
@@ -95,9 +97,15 @@ public final class PreparationAnalysisService {
     ) {
         validateSnapshot(request);
         ActionRoute route = router.route(request);
+        if (route.greeting() && !routingContextCapability) {
+            throw new ClientCapabilityRequiredException();
+        }
         String routingContext = route.greeting() && routingContextCapability
             ? routingContexts.issue(request.site().host(), request.site().pathPattern())
             : null;
+        if (route.greeting() && routingContext == null) {
+            throw new RoutingContextUnavailableException();
+        }
         if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
             return PreparationAnalysisResponse.adapterStructureMismatch(
                 request.snapshotId()
@@ -110,12 +118,6 @@ public final class PreparationAnalysisService {
         }
         if (route.kind() == RouteKind.DNS_UNAVAILABLE) {
             return PreparationAnalysisResponse.greetingDnsUnavailable(request.snapshotId());
-        }
-        if (route.greeting() && !routingContextCapability) {
-            return PreparationAnalysisResponse.adapterPolicyUnavailable(request.snapshotId());
-        }
-        if (route.greeting() && routingContext == null) {
-            return PreparationAnalysisResponse.adapterPolicyUnavailable(request.snapshotId());
         }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER

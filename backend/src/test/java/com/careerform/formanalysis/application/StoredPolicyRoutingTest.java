@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -19,6 +20,7 @@ import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decis
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
+import com.careerform.formanalysis.exception.ClientCapabilityRequiredException;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
 
 import tools.jackson.databind.ObjectMapper;
@@ -169,11 +171,9 @@ class StoredPolicyRoutingTest {
         );
 
         var preparationRequest = preparation("greeting-preparation-current-v2.json");
-        var preparation = new PreparationAnalysisService(Optional.empty(), router, contexts)
-            .analyze(preparationRequest, false, false);
-        assertThat(preparation.analysisStatus())
-            .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
-        assertThat(preparation.routingContext()).isNull();
+        assertThatThrownBy(() -> new PreparationAnalysisService(Optional.empty(), router, contexts)
+            .analyze(preparationRequest, false, false))
+            .isInstanceOf(ClientCapabilityRequiredException.class);
 
         dns.set(Decision.NO_POSITIVE_EVIDENCE);
         var fixtureFields = fields("greeting-fields-current-v2.json");
@@ -209,11 +209,15 @@ class StoredPolicyRoutingTest {
                 "career.new-company.example.org", fixture.site().pathPattern()),
             fixture.sections()
         );
+        assertThat(custom.route(newCustom).greeting()).isTrue();
+        assertThatThrownBy(() -> new PreparationAnalysisService(Optional.empty(), custom, contexts)
+            .analyze(newCustom, false, false))
+            .isInstanceOf(ClientCapabilityRequiredException.class);
         var blocked = new PreparationAnalysisService(Optional.empty(), custom, contexts)
             .analyze(newCustom, false, true);
         assertThat(blocked.analysisStatus())
             .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
-        assertThat(blocked.routingContext()).isNull();
+        assertThat(blocked.routingContext()).isNotBlank();
 
         FormAnalysisRouter stable = new FormAnalysisRouter(
             (host, path) -> new NotRegistered(),
@@ -271,11 +275,8 @@ class StoredPolicyRoutingTest {
         var supported = preparationService.analyze(preparation, false, true);
         assertThat(supported.preparationPlans()).isEmpty();
         assertThat(supported.routingContext()).matches("[A-Za-z0-9_-]{32}");
-        var legacy = preparationService.analyze(preparation, false, false);
-        assertThat(legacy.analysisStatus())
-            .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
-        assertThat(legacy.blockCode())
-            .isEqualTo(PreparationAnalysisResponse.BlockCode.ADAPTER_POLICY_UNAVAILABLE);
+        assertThatThrownBy(() -> preparationService.analyze(preparation, false, false))
+            .isInstanceOf(ClientCapabilityRequiredException.class);
         assertThat(router.route(fields).kind()).isEqualTo(RouteKind.ADAPTER);
         assertThat(router.route(fields).resolver().resolve(fields).results())
             .containsExactly(

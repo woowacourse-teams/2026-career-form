@@ -151,7 +151,7 @@ public final class FormAnalysisRouter {
             case OUT_OF_SCOPE -> new NotRegistered();
             case POSITIVE_STABLE -> greetingPolicyProvider.find();
             case POSITIVE -> routingContexts.rememberPositive(host, pathPattern)
-                ? greetingPolicyProvider.find() : null;
+                ? greetingPolicyProvider.find() : new CompanyFormPolicyProvider.Unavailable();
             case NO_POSITIVE_EVIDENCE -> routingContexts.requiresFailClosedOnMissingEvidence(
                 host, pathPattern)
                 ? null : new NotRegistered();

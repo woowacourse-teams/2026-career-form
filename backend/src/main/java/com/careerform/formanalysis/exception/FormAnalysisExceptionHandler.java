@@ -23,6 +23,22 @@ public final class FormAnalysisExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(ClientCapabilityRequiredException.class)
+    public ResponseEntity<ApiError> clientCapabilityRequired() {
+        return ResponseEntity.status(409).body(new ApiError(
+            "CLIENT_CAPABILITY_REQUIRED",
+            "지원서 분석을 계속하려면 확장 프로그램을 업데이트해 주세요"
+        ));
+    }
+
+    @ExceptionHandler(RoutingContextUnavailableException.class)
+    public ResponseEntity<ApiError> routingContextUnavailable() {
+        return ResponseEntity.status(503).body(new ApiError(
+            "ROUTING_CONTEXT_UNAVAILABLE",
+            "지원서 분석 문맥을 준비할 수 없습니다. 잠시 후 다시 시도해 주세요"
+        ));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> internalError() {
         return ResponseEntity.internalServerError().body(new ApiError(
