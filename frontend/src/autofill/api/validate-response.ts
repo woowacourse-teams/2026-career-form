@@ -122,6 +122,7 @@ export function validatePreparationResponse(
       "mode",
       "analysisStatus",
       "preparationPlans",
+      "routingContext",
       "warningCodes",
       "blockCode",
     ]) ||
@@ -130,7 +131,13 @@ export function validatePreparationResponse(
     !validateStringArray(value.warningCodes, [
       "MANUAL_REVEAL_REQUIRED",
       "LLM_UNAVAILABLE",
-    ])
+    ]) ||
+    (value.routingContext !== undefined &&
+      (value.mode !== "ADAPTER" ||
+        (value.analysisStatus !== "COMPLETE" &&
+          value.analysisStatus !== "BLOCKED") ||
+        typeof value.routingContext !== "string" ||
+        !/^[A-Za-z0-9_-]{32}$/.test(value.routingContext)))
   ) {
     throw new AnalysisContractError();
   }
@@ -141,6 +148,7 @@ export function validatePreparationResponse(
       (!isOneOf(value.blockCode, [
         "ADAPTER_STRUCTURE_MISMATCH",
         "ADAPTER_POLICY_UNAVAILABLE",
+        "GREETING_DNS_UNAVAILABLE",
         "UNSUPPORTED_SNAPSHOT",
       ]) ||
         value.preparationPlans.length > 0)) ||
@@ -529,6 +537,7 @@ export function validateFieldsResponse(
       (!isOneOf(value.blockCode, [
         "ADAPTER_STRUCTURE_MISMATCH",
         "ADAPTER_POLICY_UNAVAILABLE",
+        "GREETING_DNS_UNAVAILABLE",
       ]) ||
         value.fields.length > 0)) ||
     (!isBlocked && value.blockCode !== undefined)

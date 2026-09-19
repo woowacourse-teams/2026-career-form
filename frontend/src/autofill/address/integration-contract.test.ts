@@ -28,7 +28,7 @@ describe("address command routing", () => {
       "http://localhost:8080/api/v1/preparation/analyze",
     );
     expect(captured?.headers.get("X-Career-Form-Capabilities")).toBe(
-      "address-search-v1",
+      "address-search-v1,routing-context-v1",
     );
   });
   it("does not execute address search through the synchronous preparation executor", async () => {

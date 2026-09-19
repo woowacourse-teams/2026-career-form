@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { FieldsAnalyzeRequest } from "./types";
+import type { FieldsAnalyzeRequest, PreparationAnalyzeRequest } from "./types";
 import {
   AnalysisServiceError,
   RuntimeAnalysisApiClient,
@@ -27,6 +27,117 @@ const request: FieldsAnalyzeRequest = {
 };
 
 describe("RuntimeAnalysisApiClient", () => {
+  it("echoes an opaque preparation context during field analysis", async () => {
+    const preparation: PreparationAnalyzeRequest = {
+      schemaVersion: 2,
+      snapshotId: "preparation-1",
+      site: {
+        host: "career.hyundai-autoever.com",
+        pathPattern: "/ko/o/*/apply",
+      },
+      sections: [{ sectionId: "section-root", actionCandidates: [] }],
+    };
+    const fieldRequest: FieldsAnalyzeRequest = {
+      ...request,
+      site: preparation.site,
+    };
+    const context = "a".repeat(32);
+    const sendMessage = vi.fn(async (message: unknown) => {
+      const typed = message as { type: string };
+      return typed.type === "AUTOFILL_ANALYZE_PREPARATION"
+        ? {
+            ok: true as const,
+            data: {
+              snapshotId: "preparation-1",
+              mode: "ADAPTER",
+              analysisStatus: "COMPLETE",
+              preparationPlans: [],
+              routingContext: context,
+            },
+          }
+        : {
+            ok: true as const,
+            data: {
+              snapshotId: "snapshot-b",
+              mode: "ADAPTER",
+              analysisStatus: "COMPLETE",
+              fields: [
+                {
+                  candidateId: "email",
+                  matchType: "NO_MATCH",
+                  mappingStatus: "ADAPTER_VERIFIED",
+                  interactionStatus: "BLOCKED",
+                  reasonCodes: ["NO_MATCH"],
+                },
+              ],
+            },
+          };
+    });
+    const client = new RuntimeAnalysisApiClient(sendMessage);
+
+    await client.analyzePreparation(preparation);
+    await client.analyzeFields(fieldRequest);
+
+    expect(sendMessage).toHaveBeenNthCalledWith(2, {
+      type: "AUTOFILL_ANALYZE_FIELDS",
+      payload: { ...fieldRequest, routingContext: context },
+    });
+  });
+
+  it("clears the prior context before a later generic preparation", async () => {
+    const preparation: PreparationAnalyzeRequest = {
+      schemaVersion: 2,
+      snapshotId: "preparation-1",
+      site: request.site,
+      sections: [{ sectionId: "section-root", actionCandidates: [] }],
+    };
+    let preparationCalls = 0;
+    const sendMessage = vi.fn(async (message: unknown) => {
+      const typed = message as { type: string };
+      if (typed.type === "AUTOFILL_ANALYZE_PREPARATION") {
+        preparationCalls += 1;
+        return {
+          ok: true as const,
+          data: {
+            snapshotId: "preparation-1",
+            mode: preparationCalls === 1 ? "ADAPTER" : "GENERIC",
+            analysisStatus: "COMPLETE",
+            preparationPlans: [],
+            ...(preparationCalls === 1
+              ? { routingContext: "b".repeat(32) }
+              : {}),
+          },
+        };
+      }
+      return {
+        ok: true as const,
+        data: {
+          snapshotId: "snapshot-b",
+          mode: "GENERIC",
+          analysisStatus: "COMPLETE",
+          fields: [
+            {
+              candidateId: "email",
+              matchType: "NO_MATCH",
+              mappingStatus: "LLM_SUGGESTED",
+              interactionStatus: "BLOCKED",
+              reasonCodes: ["NO_MATCH"],
+            },
+          ],
+        },
+      };
+    });
+    const client = new RuntimeAnalysisApiClient(sendMessage);
+
+    await client.analyzePreparation(preparation);
+    await client.analyzePreparation(preparation);
+    await client.analyzeFields(request);
+
+    expect(sendMessage).toHaveBeenNthCalledWith(3, {
+      type: "AUTOFILL_ANALYZE_FIELDS",
+      payload: request,
+    });
+  });
   it("returns a validated response from the extension background boundary", async () => {
     const sendMessage = vi.fn(async () => ({
       ok: true as const,

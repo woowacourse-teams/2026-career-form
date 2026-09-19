@@ -43,6 +43,8 @@ export class AnalysisServiceError extends Error {
 }
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
+  private routingContext: string | undefined;
+
   constructor(
     private readonly sendMessage: SendMessage = (message) =>
       browser.runtime.sendMessage(message),
@@ -61,21 +63,27 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
   async analyzePreparation(
     request: PreparationAnalyzeRequest,
   ): Promise<PreparationAnalyzeResponse> {
+    this.routingContext = undefined;
     const response = await this.request({
       type: "AUTOFILL_ANALYZE_PREPARATION",
       payload: request,
     });
-    return validatePreparationResponse(request, response);
+    const analysis = validatePreparationResponse(request, response);
+    this.routingContext = analysis.routingContext;
+    return analysis;
   }
 
   async analyzeFields(
     request: FieldsAnalyzeRequest,
   ): Promise<FieldsAnalyzeResponse> {
+    const contextualRequest = this.routingContext
+      ? { ...request, routingContext: this.routingContext }
+      : request;
     const response = await this.request({
       type: "AUTOFILL_ANALYZE_FIELDS",
-      payload: request,
+      payload: contextualRequest,
     });
-    return validateFieldsResponse(request, response);
+    return validateFieldsResponse(contextualRequest, response);
   }
 
   private async request(message: unknown): Promise<unknown> {

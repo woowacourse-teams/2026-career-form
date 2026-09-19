@@ -18,6 +18,41 @@ const message = {
 };
 
 describe("analysis background handler", () => {
+  it("negotiates both preparation capabilities as exact tokens", async () => {
+    const fetcher = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ snapshotId: "preparation-1" }), {
+          status: 200,
+        }),
+    );
+    const handleMessage = createAnalysisMessageHandler({
+      baseUrl: "https://api.example.test",
+      fetcher,
+    });
+
+    await handleMessage({
+      type: "AUTOFILL_ANALYZE_PREPARATION",
+      payload: {
+        schemaVersion: 2,
+        snapshotId: "preparation-1",
+        site: {
+          host: "career.hyundai-autoever.com",
+          pathPattern: "/ko/o/*/apply",
+        },
+        sections: [{ sectionId: "section-root", actionCandidates: [] }],
+      },
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.example.test/api/v1/preparation/analyze",
+      expect.objectContaining({
+        headers: {
+          "Content-Type": "application/json",
+          "X-Career-Form-Capabilities": "address-search-v1,routing-context-v1",
+        },
+      }),
+    );
+  });
   it("ignores unrelated extension messages without making a request", async () => {
     const fetcher = vi.fn<typeof fetch>();
     const handleMessage = createAnalysisMessageHandler({

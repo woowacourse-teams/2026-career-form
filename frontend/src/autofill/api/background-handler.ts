@@ -57,7 +57,10 @@ export function createAnalysisMessageHandler({
           headers: {
             "Content-Type": "application/json",
             ...(message.type === "AUTOFILL_ANALYZE_PREPARATION"
-              ? { "X-Career-Form-Capabilities": "address-search-v1" }
+              ? {
+                  "X-Career-Form-Capabilities":
+                    "address-search-v1,routing-context-v1",
+                }
               : {}),
           },
           body: JSON.stringify(message.payload),

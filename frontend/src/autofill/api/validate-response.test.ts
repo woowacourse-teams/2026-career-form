@@ -153,6 +153,62 @@ const nestedFieldsRequest: FieldsAnalyzeRequest = {
 };
 
 describe("analysis API response validation", () => {
+  it("accepts a bounded opaque context on a verified adapter decision", () => {
+    const base = {
+      snapshotId: "snapshot-a",
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      preparationPlans: [],
+    };
+    expect(
+      validatePreparationResponse(preparationRequest, {
+        ...base,
+        routingContext: "a".repeat(32),
+      }).routingContext,
+    ).toBe("a".repeat(32));
+    expect(() =>
+      validatePreparationResponse(preparationRequest, {
+        ...base,
+        routingContext: "short",
+      }),
+    ).toThrow(AnalysisContractError);
+    expect(() =>
+      validatePreparationResponse(preparationRequest, {
+        ...base,
+        mode: "GENERIC",
+        routingContext: "a".repeat(32),
+      }),
+    ).toThrow(AnalysisContractError);
+    expect(
+      validatePreparationResponse(preparationRequest, {
+        ...base,
+        analysisStatus: "BLOCKED",
+        blockCode: "ADAPTER_POLICY_UNAVAILABLE",
+        routingContext: "a".repeat(32),
+      }).routingContext,
+    ).toBe("a".repeat(32));
+  });
+
+  it("accepts retryable Greeting DNS blocks without any write plan", () => {
+    expect(
+      validatePreparationResponse(preparationRequest, {
+        snapshotId: "snapshot-a",
+        mode: "ADAPTER",
+        analysisStatus: "BLOCKED",
+        preparationPlans: [],
+        blockCode: "GREETING_DNS_UNAVAILABLE",
+      }).blockCode,
+    ).toBe("GREETING_DNS_UNAVAILABLE");
+    expect(
+      validateFieldsResponse(fieldsRequest, {
+        snapshotId: "snapshot-b",
+        mode: "ADAPTER",
+        analysisStatus: "BLOCKED",
+        fields: [],
+        blockCode: "GREETING_DNS_UNAVAILABLE",
+      }).blockCode,
+    ).toBe("GREETING_DNS_UNAVAILABLE");
+  });
   it("accepts a preparation plan that targets a candidate from the same snapshot", () => {
     const result = validatePreparationResponse(preparationRequest, {
       snapshotId: "snapshot-a",

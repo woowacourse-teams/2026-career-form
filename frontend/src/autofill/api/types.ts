@@ -133,6 +133,7 @@ export interface FieldsAnalyzeRequest {
   snapshotId: string;
   site: SiteDescriptor;
   sections: FieldsSection[];
+  routingContext?: string;
 }
 
 export type PreparationPlan =
@@ -170,10 +171,12 @@ export interface PreparationAnalyzeResponse {
   mode: AnalysisMode;
   analysisStatus: AnalysisStatus;
   preparationPlans: PreparationPlan[];
+  routingContext?: string;
   warningCodes?: ("MANUAL_REVEAL_REQUIRED" | "LLM_UNAVAILABLE")[];
   blockCode?:
     | "ADAPTER_STRUCTURE_MISMATCH"
     | "ADAPTER_POLICY_UNAVAILABLE"
+    | "GREETING_DNS_UNAVAILABLE"
     | "UNSUPPORTED_SNAPSHOT";
 }
 
@@ -247,7 +250,10 @@ export interface FieldsAnalyzeResponse {
   analysisStatus: AnalysisStatus;
   fields: FieldAnalysis[];
   warningCodes?: ("UNRESOLVED_FIELD" | "LLM_UNAVAILABLE")[];
-  blockCode?: "ADAPTER_STRUCTURE_MISMATCH" | "ADAPTER_POLICY_UNAVAILABLE";
+  blockCode?:
+    | "ADAPTER_STRUCTURE_MISMATCH"
+    | "ADAPTER_POLICY_UNAVAILABLE"
+    | "GREETING_DNS_UNAVAILABLE";
 }
 
 export interface AnalysisApiClient {
