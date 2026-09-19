@@ -200,6 +200,14 @@
 - SK·현대 회사 문서와 지원 현황표를 함께 갱신하고 CF-83 불변 근거는 보존했다.
 - 표준/기존 값 호환, 정확한 메뉴·hidden 코드, 국가→도시 재분석과 실패 격리를 기록했다. 자동 테스트·실제 설치 대상 필드·미검증 범위를 분리하고 개인정보·세션은 포함하지 않았다.
 
+## [2026-09-12] ingest | CF-90 지원서 패널 안 자동 기입 흐름
+
+- Disposition: New
+- Approval-Digest: 6d84c630c0cdc78c6bd9d05ecb5ee9f1845464846eeceed5feb29f3cdbde59b1
+- Source-Revision: 7c03209dbc22f1e216db1f8359c23f5f9d08471a
+- Raw: llm-wiki/raw/issues/CF-90/manifest.md
+- Topics: 1
+
 ## 2026-09-17 CF-91 백엔드 코드 품질 기준 도입
 
 - 승인 digest `3b61f38010c84879ff2034d867f34f0d72311d40d4076fb3903b679d3ff04efa`의 후보 7개를 [CF-91 bundle](../raw/issues/CF-91/manifest.md)에 기록했다.

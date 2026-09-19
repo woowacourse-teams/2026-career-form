@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useRef } from "react";
+
 import { RuntimeAnalysisApiClient } from "../autofill/api/runtime-client";
 import type { AnalysisApiClient } from "../autofill/api/types";
 import { AutofillWorkflow } from "../autofill/workflow/AutofillWorkflow";
@@ -14,43 +16,48 @@ interface AutofillOverlayProps {
 
 export function AutofillOverlay({
   onClose,
-  apiClient = new RuntimeAnalysisApiClient(),
-  repository = new ChromeProfileStorage(),
+  apiClient: injectedApiClient,
+  repository: injectedRepository,
   pageDocument = document,
 }: AutofillOverlayProps) {
+  const apiClient = useMemo(
+    () => injectedApiClient ?? new RuntimeAnalysisApiClient(),
+    [injectedApiClient],
+  );
+  const repository = useMemo(
+    () => injectedRepository ?? new ChromeProfileStorage(),
+    [injectedRepository],
+  );
+  const region = useRef<HTMLElement>(null);
+  useEffect(() => region.current?.focus(), []);
+
   return (
-    <div
-      className={styles.backdrop}
+    <section
+      ref={region}
+      className={styles.panel}
+      role="region"
+      aria-label="지원서 자동 기입"
+      tabIndex={-1}
       onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
       }}
     >
-      <section
-        className={styles.modal}
-        role="dialog"
-        aria-label="지원서 자동 기입"
-        aria-modal="true"
-      >
-        <div className={styles.header}>
-          <strong>지원서 자동 기입</strong>
-          <button
-            type="button"
-            aria-label="자동 기입 모달 닫기"
-            autoFocus
-            onClick={onClose}
-          >
-            닫기
-          </button>
-        </div>
-        <div className={styles.body}>
-          <AutofillWorkflow
-            apiClient={apiClient}
-            repository={repository}
-            pageDocument={pageDocument}
-            onExit={onClose}
-          />
-        </div>
-      </section>
-    </div>
+      <div className={styles.toolbar}>
+        <button type="button" onClick={onClose}>
+          목록으로 돌아가기
+        </button>
+      </div>
+      <div className={styles.body}>
+        <AutofillWorkflow
+          apiClient={apiClient}
+          repository={repository}
+          pageDocument={pageDocument}
+          onExit={onClose}
+        />
+      </div>
+    </section>
   );
 }

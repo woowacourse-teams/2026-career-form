@@ -23,7 +23,7 @@ import {
 } from "./AutofillOverlay.test-fixtures";
 
 describe("AutofillOverlay review", () => {
-  it.skip("shows the twelve-step spinner while analysis is in progress", async () => {
+  it("announces processing while analysis is in progress", async () => {
     const pageDocument = document.implementation.createHTMLDocument("지원서");
     const apiClient: AnalysisApiClient = {
       analyzePreparation: vi.fn(
@@ -32,7 +32,7 @@ describe("AutofillOverlay review", () => {
       analyzeFields: vi.fn(),
     };
 
-    const { container } = render(
+    render(
       <AutofillOverlay
         onClose={vi.fn()}
         apiClient={apiClient}
@@ -41,10 +41,10 @@ describe("AutofillOverlay review", () => {
       />,
     );
 
-    expect(
-      await screen.findByRole("heading", { name: "지원서 분석 중" }),
-    ).toBeInTheDocument();
-    expect(container.querySelectorAll("[data-spinner-bar]")).toHaveLength(12);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "지원서를 분석하고 있어요",
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it.skip("shows the preparation action label from the DOM candidate", async () => {
@@ -264,7 +264,7 @@ describe("AutofillOverlay review", () => {
       />,
     );
 
-    const dialog = await screen.findByRole("dialog", {
+    const dialog = await screen.findByRole("region", {
       name: "지원서 자동 기입",
     });
     expect(pageInput.value).toBe("");

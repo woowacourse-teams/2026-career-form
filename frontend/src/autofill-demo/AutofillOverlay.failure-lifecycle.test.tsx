@@ -217,7 +217,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
     expect(pageDocument.querySelector("input")?.value).toBe("");
   });
 
-  it("closes from its action and the Escape key", () => {
+  it("returns to the list from its action and a locally handled Escape key", () => {
     const closeFromAction = vi.fn();
     const pageDocument = document.implementation.createHTMLDocument("지원서");
     const { unmount } = render(
@@ -229,9 +229,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "자동 기입 모달 닫기" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "목록으로 돌아가기" }));
     expect(closeFromAction).toHaveBeenCalledOnce();
 
     unmount();
@@ -253,7 +251,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
       { container },
     );
     fireEvent.keyDown(
-      overlay.getByRole("button", { name: "자동 기입 모달 닫기" }),
+      overlay.getByRole("button", { name: "목록으로 돌아가기" }),
       { key: "Escape" },
     );
     expect(closeFromEscape).toHaveBeenCalledOnce();

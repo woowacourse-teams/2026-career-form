@@ -4,11 +4,13 @@
 > Status: Current
 > Current: [CF-82 확장 프로그램 프로필·지원서 패널 UI](../../raw/issues/CF-82/documents/extension/extension-ui.md)
 > History: [CF-82 확장 프로그램 프로필·지원서 패널 UI](../../raw/issues/CF-82/documents/extension/extension-ui.md)
-> Updated: 2026-09-09
+> Updated: 2026-09-12
 
 ## 현재 상태
 
 프로필 탐색과 지원서 패널은 하늘색 바탕, 카라멜 동작 강조, 코코아 계열 텍스트 계층을 공유한다. 이 UI 계층은 저장·승인·쓰기 동작과 분리된다.
+
+자동 기입의 단일 패널 실행, 로딩과 종료 흐름은 [지원서 패널 안 자동 기입 흐름](autofill-panel-workflow.md)을 따른다.
 
 ## 변경 이유
 

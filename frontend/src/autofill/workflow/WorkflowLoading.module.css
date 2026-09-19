@@ -1,0 +1,51 @@
+.container {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  min-block-size: 100%;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.status {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.spinner {
+  inline-size: 56px;
+  block-size: 56px;
+  border-radius: 50%;
+  background: conic-gradient(transparent 10%, #474bff);
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 9px),
+    #000 0
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 0);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
