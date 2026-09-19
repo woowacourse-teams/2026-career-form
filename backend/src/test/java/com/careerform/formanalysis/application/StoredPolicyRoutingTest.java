@@ -3,6 +3,7 @@ package com.careerform.formanalysis.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,8 +14,10 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicyFixture;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Available;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.NotRegistered;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Unavailable;
+import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -71,6 +74,55 @@ class StoredPolicyRoutingTest {
         assertThat(unavailable.route(fields(
             "sk-fields-current-v2.json"
         )).kind()).isEqualTo(RouteKind.POLICY_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("기존 회사가 먼저 적용되고, Greeting 연결 증거가 없으면 범용으로 유지한다")
+    void preservesCompanyPriorityAndNoEvidenceGenericFallback() throws Exception {
+        FormAnalysisRouter company = new FormAnalysisRouter(
+            (host, path) -> new Available(CompanyFormPolicyFixture.sk()),
+            (host, path) -> { throw new AssertionError("registered company must win"); },
+            () -> { throw new AssertionError("registered company must win"); }
+        );
+        assertThat(company.route(preparation("sk-preparation-current-v2.json")).kind())
+            .isEqualTo(RouteKind.ADAPTER);
+
+        FormAnalysisRouter noEvidence = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.NO_POSITIVE_EVIDENCE,
+            () -> { throw new AssertionError("no positive evidence"); }
+        );
+        assertThat(noEvidence.route(preparation("sk-preparation-current-v2.json")).kind())
+            .isEqualTo(RouteKind.GENERIC);
+    }
+
+    @Test
+    @DisplayName("Greeting 연결 확인 뒤 정책 부재와 DNS 오류는 범용으로 낮추지 않는다")
+    void blocksConfirmedGreetingWithoutPolicyAndRetryableDnsFailure() throws Exception {
+        FormAnalysisRouter confirmed = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.POSITIVE,
+            Unavailable::new
+        );
+        FormAnalysisRouter dnsFailure = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.RETRYABLE_FAILURE,
+            () -> { throw new AssertionError("DNS failure must not load a policy"); }
+        );
+
+        assertThat(confirmed.route(preparation("sk-preparation-current-v2.json")).kind())
+            .isEqualTo(RouteKind.POLICY_UNAVAILABLE);
+        assertThat(dnsFailure.route(fields("sk-fields-current-v2.json")).kind())
+            .isEqualTo(RouteKind.DNS_UNAVAILABLE);
+
+        PreparationAnalysisResponse response = new PreparationAnalysisService(
+            Optional.empty(), dnsFailure
+        ).analyze(preparation("sk-preparation-current-v2.json"));
+        assertThat(response.mode()).isEqualTo(PreparationAnalysisResponse.Mode.ADAPTER);
+        assertThat(response.analysisStatus())
+            .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
+        assertThat(response.blockCode())
+            .isEqualTo(PreparationAnalysisResponse.BlockCode.GREETING_DNS_UNAVAILABLE);
     }
 
     private PreparationAnalysisRequest preparation(String name) throws Exception {

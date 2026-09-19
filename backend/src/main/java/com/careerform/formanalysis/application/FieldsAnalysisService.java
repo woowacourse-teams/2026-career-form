@@ -83,6 +83,9 @@ public final class FieldsAnalysisService {
         if (route.kind() == RouteKind.POLICY_UNAVAILABLE) {
             return FieldsAnalysisResponse.adapterPolicyUnavailable(request.snapshotId());
         }
+        if (route.kind() == RouteKind.DNS_UNAVAILABLE) {
+            return FieldsAnalysisResponse.greetingDnsUnavailable(request.snapshotId());
+        }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER
             : Mode.GENERIC;

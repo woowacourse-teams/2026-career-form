@@ -77,6 +77,9 @@ public final class PreparationAnalysisService {
                 request.snapshotId()
             );
         }
+        if (route.kind() == RouteKind.DNS_UNAVAILABLE) {
+            return PreparationAnalysisResponse.greetingDnsUnavailable(request.snapshotId());
+        }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER
             : Mode.GENERIC;

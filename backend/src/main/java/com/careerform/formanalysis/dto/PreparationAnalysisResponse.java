@@ -79,6 +79,17 @@ public record PreparationAnalysisResponse(
         );
     }
 
+    public static PreparationAnalysisResponse greetingDnsUnavailable(String snapshotId) {
+        return new PreparationAnalysisResponse(
+            snapshotId,
+            Mode.ADAPTER,
+            AnalysisStatus.BLOCKED,
+            List.of(),
+            null,
+            BlockCode.GREETING_DNS_UNAVAILABLE
+        );
+    }
+
     public sealed interface PreparationPlan permits RevealSectionPlan,
         AddRepeatableGroupPlan, SelectOptionToRevealPlan, SearchAddressPlan {
         String actionCandidateId();
@@ -156,6 +167,7 @@ public record PreparationAnalysisResponse(
     public enum BlockCode {
         ADAPTER_STRUCTURE_MISMATCH,
         ADAPTER_POLICY_UNAVAILABLE,
+        GREETING_DNS_UNAVAILABLE,
         UNSUPPORTED_SNAPSHOT
     }
 }
