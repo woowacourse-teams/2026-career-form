@@ -207,3 +207,9 @@
 - Source-Revision: 7c03209dbc22f1e216db1f8359c23f5f9d08471a
 - Raw: llm-wiki/raw/issues/CF-90/manifest.md
 - Topics: 1
+
+## [2026-09-19] ingest | CF-96 랜딩·온보딩 웹 페이지
+
+- Approval-Digest: 514b194740c528ad3a9354d2de0f96e4e38719507d2990c34dc0143be4794daa
+- Raw: [CF-96 bundle](../raw/issues/CF-96/manifest.md)
+- 승인된 후보 3개를 기록하고 [랜딩·온보딩 topic](topics/landing-onboarding.md)을 색인에 연결했다.
