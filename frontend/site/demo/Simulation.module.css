@@ -1,0 +1,338 @@
+:global(body) {
+  margin: 0;
+  overflow: hidden;
+}
+.simulation {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: white;
+  color: var(--color-text);
+  font-family: var(--font-ui);
+}
+.browserBar {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 18px;
+  background: #eff2f5;
+  border-bottom: 1px solid #d6dce2;
+  font-size: 12px;
+  color: #81909b;
+}
+.browserBar > div {
+  flex: 1;
+  background: white;
+  border-radius: 20px;
+  padding: 5px 20px;
+  color: #697680;
+}
+.browserBar > span:first-child {
+  letter-spacing: 4px;
+  font-size: 10px;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  height: calc(100% - 46px);
+}
+.application {
+  padding: 25px 34px;
+  background: #fff;
+  min-width: 0;
+}
+.company {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e1e6ea;
+}
+.company b {
+  letter-spacing: 2px;
+  color: #2f4758;
+  font-size: 15px;
+}
+.company small {
+  margin-left: auto;
+  font-size: 10px;
+  color: #81909b;
+}
+.application h1 {
+  font-size: 26px;
+  color: #304452;
+  margin: 25px 0 7px;
+}
+.application > p {
+  font-size: 12px;
+  color: #74828b;
+  margin: 0 0 22px;
+}
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+.fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  color: #56616a;
+  min-width: 0;
+}
+.fields input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #dbe1e6;
+  border-radius: 5px;
+  background: #fafbfc;
+  padding: 8px 10px;
+  font: 500 13px var(--font-ui);
+  color: #3d2b20;
+}
+.fields input:not(:placeholder-shown) {
+  background: #fff9ef;
+  border-color: #e9c494;
+}
+.fields .groupStart,
+.fields .groupStart + label {
+  margin-top: 9px;
+}
+.application .formNote {
+  margin-top: 24px;
+  font-size: 11px;
+  color: #89939a;
+}
+.nativePanel {
+  height: 100%;
+  min-height: 0;
+  border-left: 1px solid #d9e1e6;
+}
+.nativePanel header {
+  padding: 12px 16px;
+}
+.nativePanel header h1 {
+  font-size: 21px;
+}
+.nativePanel header > div + div {
+  margin-top: 10px;
+}
+.nativePanel main[aria-label="지원 정보 목록"] {
+  overflow: visible;
+  padding: 10px 12px;
+}
+.nativePanel main > label {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+.nativePanel main > p {
+  margin: 8px 0;
+  font-size: 9px;
+}
+.nativePanel main > section {
+  gap: 7px;
+}
+.nativePanel main section > button {
+  min-height: 30px;
+  padding: 5px 12px;
+}
+.nativePanel article {
+  min-height: 42px;
+  padding: 3px 12px;
+}
+.nativePanel article > div {
+  gap: 1px;
+}
+.nativePanel article > button {
+  min-height: 29px;
+  padding: 4px 8px;
+}
+.nativePanel footer {
+  padding: 10px 12px;
+}
+.nativePanel footer button {
+  min-height: 40px;
+  padding: 9px 12px;
+}
+.nativePanel footer p {
+  margin: 6px 0 0;
+}
+.cursor {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  transition:
+    left 1s ease,
+    top 1s ease,
+    opacity 0.15s;
+  filter: drop-shadow(0 2px 3px #0004);
+}
+.result {
+  position: absolute;
+  z-index: 3;
+  top: 120px;
+  left: 6%;
+  width: min(430px, 55%);
+  max-height: calc(100% - 140px);
+  border: 1px solid #d7dfe4;
+  border-radius: 14px;
+  box-shadow: 0 15px 60px #213d4b30;
+  overflow: hidden;
+  animation: appear 1.8s both;
+}
+.result > section {
+  height: auto;
+}
+.result > section > div:last-child {
+  overflow: visible;
+}
+.result h1,
+.result h2 {
+  font-size: 22px;
+}
+.result [role="status"] {
+  font-size: 14px;
+}
+@keyframes appear {
+  0%,
+  80% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.guide {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-page);
+  pointer-events: none;
+}
+.guide .nativePanel {
+  position: absolute;
+  width: 100%;
+  height: 640px;
+  border: 0;
+}
+.guideProfile .nativePanel {
+  top: 0;
+}
+.guideAutofill .nativePanel {
+  bottom: 0;
+}
+.guideProfile header > div:last-child button,
+.guideAutofill footer button {
+  outline: 2px solid #ad5b2f;
+  outline-offset: 3px;
+}
+.guideAutofill main {
+  visibility: hidden;
+}
+@media (max-width: 650px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: 385px 1fr;
+  }
+  .browserBar {
+    height: 36px;
+    gap: 10px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+  .workspace {
+    height: calc(100% - 36px);
+  }
+  .application {
+    padding: 15px 20px;
+  }
+  .company {
+    padding-bottom: 10px;
+  }
+  .application h1 {
+    font-size: 21px;
+    margin: 12px 0 4px;
+  }
+  .application > p {
+    margin-bottom: 13px;
+    font-size: 11px;
+  }
+  .fields {
+    gap: 8px 12px;
+  }
+  .fields label {
+    gap: 3px;
+    font-size: 10px;
+  }
+  .fields input {
+    height: 29px;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .fields .groupStart,
+  .fields .groupStart + label {
+    margin-top: 3px;
+  }
+  .application .formNote {
+    margin-top: 10px;
+    font-size: 10px;
+  }
+  .nativePanel {
+    border-left: 0;
+    border-top: 1px solid #d9e1e6;
+  }
+  .nativePanel header {
+    padding: 9px 14px;
+  }
+  .nativePanel header > div:first-child img {
+    width: 32px;
+    height: 32px;
+  }
+  .nativePanel header h1 {
+    font-size: 18px;
+  }
+  .nativePanel article {
+    min-height: 39px;
+    padding: 3px 12px;
+  }
+  .nativePanel main > p {
+    margin: 5px 0;
+  }
+  .nativePanel main > section {
+    gap: 5px;
+  }
+  .nativePanel main section > button {
+    min-height: 29px;
+    padding: 5px 12px;
+  }
+  .nativePanel article > div > span {
+    font-size: 12px;
+  }
+  .result {
+    top: 440px;
+    left: 10px;
+    width: calc(100% - 20px);
+    max-height: 480px;
+  }
+  .guide .nativePanel {
+    height: 600px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor {
+    display: none;
+  }
+  .result {
+    animation: none;
+  }
+}
+
+.guideProfile main,
+.guideProfile footer {
+  visibility: hidden;
+}

@@ -2,3 +2,5 @@
 .wxt/
 coverage/
 node_modules/
+
+dist-site/

@@ -5,6 +5,7 @@ export default [
   {
     ignores: [
       ".output/",
+      "dist-site/",
       ".wxt/",
       "coverage/",
       "node_modules/",

@@ -45,3 +45,22 @@ npm run zip
 2. ZIP 내부에 `manifest.json`, `popup.html`, `options.html`, `sidepanel.html`, `content-scripts/autofill.js`와 CSS가 있는지 확인합니다.
 3. 개인정보, 실제 지원서 데이터, 계정 정보 및 비밀값이 포함되지 않았는지 확인합니다.
 4. Web Store 등록, 심사 요청과 배포는 사람이 수행합니다.
+
+## 랜딩·온보딩 웹 사이트
+
+Node.js 22 이상에서 위의 `npm ci` 후 실행합니다. 확장 프로그램과 별도의 Vite 진입점을 사용합니다.
+
+```sh
+npm run dev:site
+# 정적 산출물 확인
+npm run build:site
+npm run preview:site
+```
+
+개발 서버와 빌드 미리보기는 `http://127.0.0.1:4175`에서 실행됩니다. 두 서버를 동시에 실행하지 않습니다. `/`는 서비스 소개, `/onboarding/`은 설치·프로필 등록·첫 실행 안내, `/privacy/`와 `/terms/`는 검토용 정책 초안입니다. 온보딩은 실제 설치 여부를 판별하거나 프로필을 저장하지 않습니다.
+
+`build:site`는 다섯 HTML 진입점, 로컬 자산 참조와 개인 파일 경로의 미포함을 검사합니다. 웹 산출물은 `dist-site/`이며 확장 프로그램의 `.output/` 및 ZIP과 분리됩니다. 각 경로의 `index.html`을 제공하는 정적 서버에서 확인할 수 있습니다. 배포와 정책 시행은 이 작업에 포함하지 않습니다.
+
+`site/demo/`는 실제 사이드패널과 자동 기입 결과 UI를 재사용합니다. 고정된 가상 프로필과 로컬 분석 응답을 주입하며, `wxt/browser`는 웹 빌드에서 접근 시 오류를 내는 경계로 대체합니다. 외부 분석 요청이나 실제 확장 데이터 접근은 없습니다. `/demo/`는 웹 내부 안내용 화면입니다. 랜딩의 시뮬레이션은 화면에 들어올 때 한 번 재생되며 동작 줄이기 설정에서는 커서 이동을 생략합니다.
+
+웹 회귀 테스트는 `npm test -- site`로 실행합니다. 웹 변경 시 `typecheck`, `lint`, `format:check`, `test`, `build:site`와 기존 확장 프로그램의 `build`, `zip`을 함께 확인합니다.
