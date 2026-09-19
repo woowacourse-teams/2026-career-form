@@ -1,27 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AutofillOverlay } from "../../src/autofill-demo/AutofillOverlay";
 import { exampleFields, demoAnalysisClient } from "./fixtures";
 import { PanelPreview, demoRepository } from "./PanelPreview";
 import { scheduleSimulation } from "./simulation-controller";
 import styles from "./Simulation.module.css";
 
-function ExampleForm() {
+function ExampleForm({ started }: { started: boolean }) {
   return (
-    <div className={styles.application}>
+    <div className={`${styles.application} ${started ? styles.filling : ""}`}>
       <div className={styles.company}>
-        <b>EXAMPLE</b>
-        <span>채용 지원서</span>
-        <small>예시 화면</small>
+        <b>NEXT COMPANY</b>
+        <span>CAREERS</span>
       </div>
-      <h1>지원서 작성</h1>
-      <p>신입 · 소프트웨어 개발</p>
+      <p className={styles.breadcrumb}>채용 공고 / 지원서 작성</p>
+      <h1>입사지원서</h1>
+      <div className={styles.progress}>
+        <strong>01 기본 정보</strong>
+        <span>02 경력·경험</span>
+        <span>03 최종 확인</span>
+      </div>
+      <h2 className={styles.sectionTitle}>기본 인적사항</h2>
       <div className={styles.fields}>
         {exampleFields.map(([id, label], index) => (
           <label
             key={id}
-            className={
-              index === 4 || index === 8 ? styles.groupStart : undefined
-            }
+            style={{ "--delay": `${index * 0.12}s` } as CSSProperties}
             htmlFor={id}
           >
             <span>{label}</span>
@@ -35,7 +38,9 @@ function ExampleForm() {
           </label>
         ))}
       </div>
-      <p className={styles.formNote}>제출 전, 입력된 내용을 직접 확인하세요.</p>
+      <p className={styles.formNote}>
+        저장된 정보가 지원서에 자동으로 입력됩니다.
+      </p>
     </div>
   );
 }
@@ -95,12 +100,17 @@ export function Simulation() {
     <div ref={root} className={styles.simulation}>
       <div className={styles.browserBar}>
         <span>● ● ●</span>
-        <div>채용사이트 / 지원서 작성</div>
-        <span>⋮</span>
+        <div>
+          채용사이트 / 입사지원서 <small>예시 화면</small>
+        </div>
+        <b>커리어폼</b>
       </div>
       <div className={styles.workspace}>
-        <ExampleForm />
-        <PanelPreview onAutofill={async () => setStarted(true)} />
+        <ExampleForm started={started} />
+        <aside className={styles.sidebar}>
+          <div className={styles.panelLocation}>확장 프로그램 · 사이드패널</div>
+          <PanelPreview onAutofill={async () => setStarted(true)} />
+        </aside>
       </div>
       {started && (
         <div className={styles.result} inert>

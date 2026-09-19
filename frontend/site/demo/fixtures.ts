@@ -17,8 +17,18 @@ export function createDemoRepository(): ProfileRepository {
   return {
     load: async () => ({
       ...createEmptyProfile(),
-      personal: { koreanFamilyName: "김", koreanGivenName: "커리어" },
-      contact: { email: "career@example.com", phoneNumber: "01000000000" },
+      personal: {
+        koreanFamilyName: "김",
+        koreanGivenName: "커리어",
+        englishFamilyName: "KIM",
+        englishGivenName: "CAREER",
+        nationality: "대한민국",
+      },
+      contact: {
+        email: "career@example.com",
+        phoneNumber: "01000000000",
+        residenceCountry: "대한민국",
+      },
       education: [
         {
           id: "example-university",
