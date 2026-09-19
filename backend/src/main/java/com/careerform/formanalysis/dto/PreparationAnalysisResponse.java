@@ -12,12 +12,32 @@ public record PreparationAnalysisResponse(
     AnalysisStatus analysisStatus,
     List<PreparationPlan> preparationPlans,
     List<WarningCode> warningCodes,
-    BlockCode blockCode
+    BlockCode blockCode,
+    String routingContext
 ) {
 
     public PreparationAnalysisResponse {
         preparationPlans = List.copyOf(preparationPlans);
         warningCodes = warningCodes == null ? null : List.copyOf(warningCodes);
+    }
+
+    public PreparationAnalysisResponse(
+        String snapshotId,
+        Mode mode,
+        AnalysisStatus analysisStatus,
+        List<PreparationPlan> preparationPlans,
+        List<WarningCode> warningCodes,
+        BlockCode blockCode
+    ) {
+        this(snapshotId, mode, analysisStatus, preparationPlans,
+            warningCodes, blockCode, null);
+    }
+
+    public PreparationAnalysisResponse withRoutingContext(String context) {
+        return new PreparationAnalysisResponse(
+            snapshotId, mode, analysisStatus, preparationPlans,
+            warningCodes, blockCode, context
+        );
     }
 
     public static PreparationAnalysisResponse complete(

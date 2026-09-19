@@ -67,6 +67,16 @@ class GreetingDnsEvidenceTest {
     }
 
     @Test
+    void toleratesRepeatedConfiguredHosts() {
+        GreetingDnsEvidence evidence = new GreetingDnsEvidence(
+            "career.hyundai-autoever.com,career.hyundai-autoever.com"
+        );
+
+        assertThat(evidence.classify("career.hyundai-autoever.com", APPLY_PATH))
+            .isEqualTo(Decision.POSITIVE);
+    }
+
+    @Test
     void rejectsIrrelevantPathsAndLocalTargetsBeforeLookup() {
         GreetingDnsEvidence evidence = new GreetingDnsEvidence(
             host -> { throw new AssertionError("irrelevant page must not query DNS"); },

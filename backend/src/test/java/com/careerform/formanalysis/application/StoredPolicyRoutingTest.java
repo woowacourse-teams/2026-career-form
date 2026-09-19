@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -127,19 +128,64 @@ class StoredPolicyRoutingTest {
     }
 
     @Test
+    @DisplayName("확인된 Greeting 정책이 없어도 준비 단계의 차단 근거를 필드 단계까지 유지한다")
+    void preservesConfirmedGreetingWhenPolicyIsUnavailable() throws Exception {
+        AtomicReference<Decision> dns = new AtomicReference<>(Decision.POSITIVE);
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
+        FormAnalysisRouter router = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> dns.get(),
+            Unavailable::new,
+            contexts
+        );
+        var preparation = preparation("greeting-preparation-current-v2.json");
+        var fixtureFields = fields("greeting-fields-current-v2.json");
+
+        var blocked = new PreparationAnalysisService(Optional.empty(), router, contexts)
+            .analyze(preparation, false, true);
+        assertThat(blocked.blockCode())
+            .isEqualTo(PreparationAnalysisResponse.BlockCode.ADAPTER_POLICY_UNAVAILABLE);
+        assertThat(blocked.routingContext()).matches("[A-Za-z0-9_-]{32}");
+
+        dns.set(Decision.NO_POSITIVE_EVIDENCE);
+        var fieldsRequest = new FieldsAnalysisRequest(
+            fixtureFields.schemaVersion(), fixtureFields.snapshotId(),
+            fixtureFields.site(), fixtureFields.sections(), blocked.routingContext()
+        );
+        assertThat(router.route(fieldsRequest).kind())
+            .isEqualTo(RouteKind.POLICY_UNAVAILABLE);
+    }
+
+    @Test
     @DisplayName("두 도메인의 Greeting 정책은 action 없이 준비하고 정확한 필드만 정적으로 분류한다")
     void routesVerifiedGreetingPolicyWithIndependentFieldFingerprint() throws Exception {
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
         FormAnalysisRouter router = new FormAnalysisRouter(
             (host, path) -> new NotRegistered(),
             (host, path) -> Decision.POSITIVE,
-            () -> new Available(CompanyFormPolicyFixture.greeting())
+            () -> new Available(CompanyFormPolicyFixture.greeting()),
+            contexts
         );
 
         var preparation = preparation("greeting-preparation-current-v2.json");
-        var fields = fields("greeting-fields-current-v2.json");
+        var fixtureFields = fields("greeting-fields-current-v2.json");
+        var fields = new FieldsAnalysisRequest(
+            fixtureFields.schemaVersion(), fixtureFields.snapshotId(),
+            fixtureFields.site(), fixtureFields.sections(),
+            contexts.issue(fixtureFields.site().host(), fixtureFields.site().pathPattern())
+        );
         assertThat(router.route(preparation).kind()).isEqualTo(RouteKind.ADAPTER);
-        assertThat(new PreparationAnalysisService(Optional.empty(), router)
-            .analyze(preparation).preparationPlans()).isEmpty();
+        PreparationAnalysisService preparationService = new PreparationAnalysisService(
+            Optional.empty(), router, contexts
+        );
+        var supported = preparationService.analyze(preparation, false, true);
+        assertThat(supported.preparationPlans()).isEmpty();
+        assertThat(supported.routingContext()).matches("[A-Za-z0-9_-]{32}");
+        var legacy = preparationService.analyze(preparation, false, false);
+        assertThat(legacy.analysisStatus())
+            .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
+        assertThat(legacy.blockCode())
+            .isEqualTo(PreparationAnalysisResponse.BlockCode.ADAPTER_POLICY_UNAVAILABLE);
         assertThat(router.route(fields).kind()).isEqualTo(RouteKind.ADAPTER);
         assertThat(router.route(fields).resolver().resolve(fields).results())
             .containsExactly(
@@ -156,7 +202,7 @@ class StoredPolicyRoutingTest {
             java.util.List.of(new FieldsAnalysisRequest.Section(
                 "section-root", null, null,
                 java.util.List.of(fields.sections().getFirst().fields().getFirst()), null
-            ))
+            )), fields.routingContext()
         );
         assertThat(router.route(changed).kind()).isEqualTo(RouteKind.STRUCTURE_MISMATCH);
 
@@ -169,9 +215,39 @@ class StoredPolicyRoutingTest {
                     fields.sections().getFirst().fields().getFirst(),
                     fields.sections().getFirst().fields().get(1)
                 ), null
-            ))
+            )), fields.routingContext()
         );
         assertThat(router.route(duplicate).kind()).isEqualTo(RouteKind.STRUCTURE_MISMATCH);
+    }
+
+    @Test
+    @DisplayName("준비에서 확인한 Greeting은 이후 DNS 근거가 사라져도 범용으로 낮아지지 않는다")
+    void preservesGreetingWithBoundRoutingContext() throws Exception {
+        AtomicReference<Decision> dns = new AtomicReference<>(Decision.POSITIVE);
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
+        FormAnalysisRouter router = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> dns.get(),
+            () -> new Available(CompanyFormPolicyFixture.greeting()),
+            contexts
+        );
+        var preparation = preparation("greeting-preparation-current-v2.json");
+        var fields = fields("greeting-fields-current-v2.json");
+        assertThat(router.route(preparation).kind()).isEqualTo(RouteKind.ADAPTER);
+        String token = contexts.issue(fields.site().host(), fields.site().pathPattern());
+        dns.set(Decision.NO_POSITIVE_EVIDENCE);
+
+        var withContext = new FieldsAnalysisRequest(
+            fields.schemaVersion(), fields.snapshotId(), fields.site(),
+            fields.sections(), token
+        );
+        assertThat(router.route(withContext).kind()).isEqualTo(RouteKind.ADAPTER);
+        assertThat(router.route(new FieldsAnalysisRequest(
+            fields.schemaVersion(), fields.snapshotId(), fields.site(),
+            fields.sections(), "forged"
+        )).kind()).isEqualTo(RouteKind.POLICY_UNAVAILABLE);
+        dns.set(Decision.POSITIVE);
+        assertThat(router.route(fields).kind()).isEqualTo(RouteKind.POLICY_UNAVAILABLE);
     }
 
     private PreparationAnalysisRequest preparation(String name) throws Exception {

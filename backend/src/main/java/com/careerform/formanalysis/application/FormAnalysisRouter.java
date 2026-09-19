@@ -24,24 +24,37 @@ public final class FormAnalysisRouter {
     private final CompanyFormPolicyProvider policyProvider;
     private final GreetingDomainEvidence greetingDomainEvidence;
     private final GreetingPolicyProvider greetingPolicyProvider;
+    private final GreetingRoutingContext routingContexts;
     private final StoredPolicyFingerprint fingerprint = new StoredPolicyFingerprint();
     private final GreetingFormFingerprint greetingFingerprint = new GreetingFormFingerprint();
 
     public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider) {
         this(policyProvider,
             (host, path) -> GreetingDomainEvidence.Decision.NO_POSITIVE_EVIDENCE,
-            CompanyFormPolicyProvider.Unavailable::new);
+            CompanyFormPolicyProvider.Unavailable::new,
+            new GreetingRoutingContext());
+    }
+
+    public FormAnalysisRouter(
+        CompanyFormPolicyProvider policyProvider,
+        GreetingDomainEvidence greetingDomainEvidence,
+        GreetingPolicyProvider greetingPolicyProvider
+    ) {
+        this(policyProvider, greetingDomainEvidence, greetingPolicyProvider,
+            new GreetingRoutingContext());
     }
 
     @Autowired
     public FormAnalysisRouter(
         CompanyFormPolicyProvider policyProvider,
         GreetingDomainEvidence greetingDomainEvidence,
-        GreetingPolicyProvider greetingPolicyProvider
+        GreetingPolicyProvider greetingPolicyProvider,
+        GreetingRoutingContext routingContexts
     ) {
         this.policyProvider = policyProvider;
         this.greetingDomainEvidence = greetingDomainEvidence;
         this.greetingPolicyProvider = greetingPolicyProvider;
+        this.routingContexts = routingContexts;
     }
 
     public ActionRoute route(PreparationAnalysisRequest request) {
@@ -49,6 +62,7 @@ public final class FormAnalysisRouter {
             request.site().host(),
             request.site().pathPattern()
         );
+        boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
             lookup = greetingLookup(request.site().host(), request.site().pathPattern());
             if (lookup instanceof NotRegistered) {
@@ -57,17 +71,19 @@ public final class FormAnalysisRouter {
             if (lookup == null) {
                 return new ActionRoute(RouteKind.DNS_UNAVAILABLE, null);
             }
+            greetingCandidate = true;
         }
         if (!(lookup instanceof Available available)) {
-            return new ActionRoute(RouteKind.POLICY_UNAVAILABLE, null);
+            return new ActionRoute(RouteKind.POLICY_UNAVAILABLE, null, greetingCandidate);
         }
         CompanyFormPolicy policy = available.policy();
         if (!fingerprint.matches(policy, request)) {
-            return new ActionRoute(RouteKind.STRUCTURE_MISMATCH, null);
+            return new ActionRoute(RouteKind.STRUCTURE_MISMATCH, null, greetingCandidate);
         }
         return new ActionRoute(
             RouteKind.ADAPTER,
-            new StoredPolicyActionResolver(policy)
+            new StoredPolicyActionResolver(policy),
+            "greeting".equals(policy.companyKey())
         );
     }
 
@@ -77,7 +93,19 @@ public final class FormAnalysisRouter {
             request.site().pathPattern()
         );
         if (lookup instanceof NotRegistered) {
-            lookup = greetingLookup(request.site().host(), request.site().pathPattern());
+            if (request.routingContext() != null) {
+                lookup = routingContexts.isValid(
+                    request.routingContext(),
+                    request.site().host(),
+                    request.site().pathPattern()
+                ) ? greetingPolicyProvider.find() : new CompanyFormPolicyProvider.Unavailable();
+            }
+            else {
+                lookup = greetingLookup(request.site().host(), request.site().pathPattern());
+                if (lookup instanceof Available) {
+                    return new FieldRoute(RouteKind.POLICY_UNAVAILABLE, null);
+                }
+            }
             if (lookup instanceof NotRegistered) {
                 return new FieldRoute(RouteKind.GENERIC, null);
             }
@@ -140,7 +168,11 @@ public final class FormAnalysisRouter {
         POLICY_UNAVAILABLE
     }
 
-    public record ActionRoute(RouteKind kind, ActionResolver resolver) {
+    public record ActionRoute(RouteKind kind, ActionResolver resolver, boolean greeting) {
+
+        public ActionRoute(RouteKind kind, ActionResolver resolver) {
+            this(kind, resolver, false);
+        }
     }
 
     public record FieldRoute(RouteKind kind, FieldMappingResolver resolver) {

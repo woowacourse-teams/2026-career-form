@@ -41,44 +41,81 @@ public final class PreparationAnalysisService {
     private final Optional<ActionResolver> resolver;
     private final FormAnalysisRouter router;
     private final boolean analysisEnabled;
+    private final GreetingRoutingContext routingContexts;
 
     public PreparationAnalysisService(
         Optional<ActionResolver> resolver,
         FormAnalysisRouter router
     ) {
-        this(resolver, router, new AnalysisProviderSelection(true, "openai"));
+        this(resolver, router, new AnalysisProviderSelection(true, "openai"),
+            new GreetingRoutingContext());
+    }
+
+    public PreparationAnalysisService(
+        Optional<ActionResolver> resolver,
+        FormAnalysisRouter router,
+        AnalysisProviderSelection selection
+    ) {
+        this(resolver, router, selection, new GreetingRoutingContext());
+    }
+
+    public PreparationAnalysisService(
+        Optional<ActionResolver> resolver,
+        FormAnalysisRouter router,
+        GreetingRoutingContext routingContexts
+    ) {
+        this(resolver, router, new AnalysisProviderSelection(true, "openai"), routingContexts);
     }
 
     @Autowired
     public PreparationAnalysisService(
         Optional<ActionResolver> resolver,
         FormAnalysisRouter router,
-        AnalysisProviderSelection selection
+        AnalysisProviderSelection selection,
+        GreetingRoutingContext routingContexts
     ) {
         this.resolver = resolver;
         this.router = router;
         this.analysisEnabled = selection.enabled();
+        this.routingContexts = routingContexts;
     }
 
     public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request) {
-        return analyze(request, false);
+        return analyze(request, false, false);
     }
 
     public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request, boolean addressSearch) {
+        return analyze(request, addressSearch, false);
+    }
+
+    public PreparationAnalysisResponse analyze(
+        PreparationAnalysisRequest request,
+        boolean addressSearch,
+        boolean routingContextCapability
+    ) {
         validateSnapshot(request);
         ActionRoute route = router.route(request);
+        String routingContext = route.greeting() && routingContextCapability
+            ? routingContexts.issue(request.site().host(), request.site().pathPattern())
+            : null;
         if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
             return PreparationAnalysisResponse.adapterStructureMismatch(
                 request.snapshotId()
-            );
+            ).withRoutingContext(routingContext);
         }
         if (route.kind() == RouteKind.POLICY_UNAVAILABLE) {
             return PreparationAnalysisResponse.adapterPolicyUnavailable(
                 request.snapshotId()
-            );
+            ).withRoutingContext(routingContext);
         }
         if (route.kind() == RouteKind.DNS_UNAVAILABLE) {
             return PreparationAnalysisResponse.greetingDnsUnavailable(request.snapshotId());
+        }
+        if (route.greeting() && !routingContextCapability) {
+            return PreparationAnalysisResponse.adapterPolicyUnavailable(request.snapshotId());
+        }
+        if (route.greeting() && routingContext == null) {
+            return PreparationAnalysisResponse.adapterPolicyUnavailable(request.snapshotId());
         }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER
@@ -94,7 +131,7 @@ public final class PreparationAnalysisService {
                 request.snapshotId(),
                 mode,
                 List.of()
-            );
+            ).withRoutingContext(routingContext);
         }
         try {
             ActionResolver.Resolution resolution = selectedResolver.orElseThrow()
@@ -108,7 +145,7 @@ public final class PreparationAnalysisService {
                     resolution,
                     addressSearch && mode == Mode.ADAPTER
                 )
-            );
+            ).withRoutingContext(routingContext);
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER

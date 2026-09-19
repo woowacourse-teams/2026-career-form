@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.infrastructure.dns;
 
 import java.util.Hashtable;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -8,6 +9,7 @@ import java.util.concurrent.Semaphore;
 import java.util.regex.Pattern;
 
 import javax.naming.NamingException;
+import javax.naming.Context;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
@@ -23,6 +25,8 @@ import com.careerform.formanalysis.application.port.GreetingDomainEvidence;
 public final class GreetingDnsEvidence implements GreetingDomainEvidence {
 
     private static final String GREETING_SUFFIX = ".career.greetinghr.com";
+    private static final String DEFAULT_DNS_PROVIDER_URL =
+        "dns://1.1.1.1 dns://8.8.8.8";
     private static final Pattern APPLICATION_PATH = Pattern.compile(
         "^/[a-z]{2}/o/(?:\\*|[0-9]+)(?:/apply)?$"
     );
@@ -41,9 +45,17 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
 
     @Autowired
     public GreetingDnsEvidence(
-        @Value("${careerform.greeting.registered-hosts:}") String registeredHosts
+        @Value("${careerform.greeting.registered-hosts:}") String registeredHosts,
+        @Value("${careerform.greeting.dns-provider-url:dns://1.1.1.1 dns://8.8.8.8}")
+        String dnsProviderUrl
     ) {
-        this(GreetingDnsEvidence::queryCname, Set.of(registeredHosts.split(",")));
+        this(host -> queryCname(host, dnsProviderUrl),
+            Arrays.stream(registeredHosts.split(","))
+                .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    public GreetingDnsEvidence(String registeredHosts) {
+        this(registeredHosts, DEFAULT_DNS_PROVIDER_URL);
     }
 
     GreetingDnsEvidence(CnameLookup lookup, Set<String> registeredHosts) {
@@ -120,11 +132,12 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
         }
     }
 
-    private static LookupResult queryCname(String host) {
+    private static LookupResult queryCname(String host, String dnsProviderUrl) {
         Hashtable<String, String> environment = new Hashtable<>();
         environment.put("java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory");
         environment.put("com.sun.jndi.dns.timeout.initial", "1000");
         environment.put("com.sun.jndi.dns.timeout.retries", "1");
+        environment.put(Context.PROVIDER_URL, dnsProviderUrl);
         DirContext context = null;
         try {
             context = new InitialDirContext(environment);
