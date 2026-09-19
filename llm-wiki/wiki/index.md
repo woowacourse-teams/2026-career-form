@@ -37,7 +37,9 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
 | [확장 프로그램 프로필·지원서 패널 UI](topics/extension-ui.md) | 프로필·패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행·목록 복귀·스피너와 접근성 경계 | 2026-09-12 |
-| [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
+| [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-09-17 |
+| [백엔드 코드 품질 기준](topics/backend-code-quality.md) | Java, Spring 구조, 경계, 오류와 테스트 규칙 | 2026-09-17 |
+| [백엔드 품질 해석 사례](topics/backend-code-quality-examples.md) | 정상 구조와 자동 검사, 리뷰의 오탐 경계 | 2026-09-17 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
 | [ADR 작성 규약](topics/adr-authoring.md) | ADR 판단과 Issue raw 기록 | 2026-08-22 |
 | [기존 아키텍처 결정](topics/architecture-decisions.md) | CF-41 이전 ADR 현재본 | 2026-08-22 |

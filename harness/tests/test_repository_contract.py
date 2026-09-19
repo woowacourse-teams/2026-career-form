@@ -336,6 +336,24 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertIn('"hotfix/CF-${{ github.event.issue.number }}"', run)
         self.assertIn("gh workflow run", run)
 
+    def test_backend_ci_runs_for_every_quality_control_source(self) -> None:
+        workflow = (
+            ROOT / ".github" / "workflows" / "backend-ci.yml"
+        ).read_text(encoding="utf-8")
+        paths = (
+            '"backend/**"',
+            '"AGENTS.md"',
+            '".agents/skills/cf-issue-workflow/SKILL.md"',
+            '".agents/skills/cf-code-review/SKILL.md"',
+            '"llm-wiki/wiki/topics/backend-code-quality.md"',
+            '"llm-wiki/wiki/topics/backend-code-quality-examples.md"',
+            '"harness/policies/backend-quality-enforcement.md"',
+        )
+
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertIn(path, workflow)
+
     def _yaml(self, path: Path) -> dict[str, object]:
         value = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
         self.assertIsInstance(value, dict, path.name)

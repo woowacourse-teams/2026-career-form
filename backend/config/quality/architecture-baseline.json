@@ -1,0 +1,72 @@
+{
+  "schemaVersion" : 1,
+  "sourceCommit" : "8790c7306af7b9b1be46f5457715aba563a27a42",
+  "archUnitVersion" : "1.5.0",
+  "violations" : [ {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.FieldInteractionPolicy> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.FieldInteractionPolicy> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisResponse>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.FieldsAnalysisService> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.FieldsAnalysisService> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisResponse>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.FormAnalysisRouter> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.FormAnalysisRouter> depends on API-owned type <com.careerform.formanalysis.dto.PreparationAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.PreparationAnalysisService> depends on API-owned type <com.careerform.formanalysis.dto.PreparationAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.PreparationAnalysisService> depends on API-owned type <com.careerform.formanalysis.dto.PreparationAnalysisResponse>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.SupportedProfileFields> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisResponse>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.policy.CompanyFormPolicy> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.policy.CompanyFormPolicy> depends on API-owned type <com.careerform.formanalysis.dto.PreparationAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver> depends on API-owned type <com.careerform.formanalysis.dto.PreparationAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.policy.StoredPolicyFingerprint> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.policy.StoredPolicyFingerprint> depends on API-owned type <com.careerform.formanalysis.dto.PreparationAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.port.ActionResolver> depends on API-owned type <com.careerform.formanalysis.dto.PreparationAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.application.port.FieldMappingResolver> depends on API-owned type <com.careerform.formanalysis.dto.FieldsAnalysisRequest>"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.dto.FieldsAnalysisRequest> does not reside in any package ['..api.dto..', '..application.dto..', '..infrastructure..'] in (FieldsAnalysisRequest.java:*)"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.dto.FieldsAnalysisResponse> does not reside in any package ['..api.dto..', '..application.dto..', '..infrastructure..'] in (FieldsAnalysisResponse.java:*)"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.dto.PreparationAnalysisRequest> does not reside in any package ['..api.dto..', '..application.dto..', '..infrastructure..'] in (PreparationAnalysisRequest.java:*)"
+  }, {
+    "ruleId" : "A1",
+    "violation" : "Class <com.careerform.formanalysis.dto.PreparationAnalysisResponse> does not reside in any package ['..api.dto..', '..application.dto..', '..infrastructure..'] in (PreparationAnalysisResponse.java:*)"
+  }, {
+    "ruleId" : "A5",
+    "violation" : "Cycle detected: Slice formanalysis - policy -> \n                Slice formanalysis - port -> \n                Slice formanalysis - policy\n  1. Dependencies of Slice formanalysis - policy\n    - Class <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver> implements interface <com.careerform.formanalysis.application.port.ActionResolver> in (StoredPolicyActionResolver.java:*)\n    - Class <com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver> implements interface <com.careerform.formanalysis.application.port.FieldMappingResolver> in (StoredPolicyFieldMappingResolver.java:*)\n    - Constructor <com.careerform.formanalysis.application.policy.CompanyFormPolicy$FieldRule.<init>(java.lang.String, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormElement, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormControl, com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding)> has parameter of type <com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding> in (CompanyFormPolicy.java:*)\n    - Constructor <com.careerform.formanalysis.application.policy.CompanyFormPolicy$FieldRule.<init>(java.lang.String, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormElement, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormControl, com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding, boolean)> has parameter of type <com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding> in (CompanyFormPolicy.java:*)\n    - Constructor <com.careerform.formanalysis.application.policy.CompanyFormPolicy$FieldRule.<init>(java.lang.String, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormElement, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormControl, com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding, boolean, java.lang.String)> has parameter of type <com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding> in (CompanyFormPolicy.java:*)\n    - Constructor <com.careerform.formanalysis.application.policy.CompanyFormPolicy$FieldRule.<init>(java.lang.String, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormElement, com.careerform.formanalysis.dto.FieldsAnalysisRequest$FormControl, com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding, boolean, java.lang.String, java.lang.String)> has parameter of type <com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding> in (CompanyFormPolicy.java:*)\n    - Field <com.careerform.formanalysis.application.policy.CompanyFormPolicy$FieldRule.valueBinding> has type <com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding> in (CompanyFormPolicy.java:*)\n    - Method <com.careerform.formanalysis.application.policy.CompanyFormPolicy$FieldRule.valueBinding()> has return type <com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding> in (CompanyFormPolicy.java:*)\n    - Method <com.careerform.formanalysis.application.policy.CompanyFormPolicy.isSupportedBinding(com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding, java.util.function.Predicate)> has parameter of type <com.careerform.formanalysis.application.port.FieldMappingResolver$ValueBinding> in (CompanyFormPolicy.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver.resolve(com.careerform.formanalysis.dto.PreparationAnalysisRequest$ActionCandidate)> has return type <com.careerform.formanalysis.application.port.ActionResolver$Result> in (StoredPolicyActionResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver.resolve(com.careerform.formanalysis.dto.PreparationAnalysisRequest)> has return type <com.careerform.formanalysis.application.port.ActionResolver$Resolution> in (StoredPolicyActionResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver.resolve(com.careerform.formanalysis.dto.FieldsAnalysisRequest$FieldCandidate, java.lang.String)> has return type <com.careerform.formanalysis.application.port.FieldMappingResolver$Result> in (StoredPolicyFieldMappingResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver.resolve(com.careerform.formanalysis.dto.FieldsAnalysisRequest)> has return type <com.careerform.formanalysis.application.port.FieldMappingResolver$Resolution> in (StoredPolicyFieldMappingResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver.resolve(com.careerform.formanalysis.dto.PreparationAnalysisRequest)> calls constructor <com.careerform.formanalysis.application.port.ActionResolver$Resolution.<init>(int, java.lang.String, java.util.List)> in (StoredPolicyActionResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver.resolve(com.careerform.formanalysis.dto.FieldsAnalysisRequest)> calls constructor <com.careerform.formanalysis.application.port.FieldMappingResolver$Resolution.<init>(int, java.lang.String, java.util.List)> in (StoredPolicyFieldMappingResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver.resolve(com.careerform.formanalysis.dto.FieldsAnalysisRequest$FieldCandidate, java.lang.String)> calls constructor <com.careerform.formanalysis.application.port.FieldMappingResolver$NoMatch.<init>(java.lang.String)> in (StoredPolicyFieldMappingResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver.resolve(com.careerform.formanalysis.dto.PreparationAnalysisRequest$ActionCandidate)> calls constructor <com.careerform.formanalysis.application.port.ActionResolver$NoAction.<init>(java.lang.String)> in (StoredPolicyActionResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver.resolve(com.careerform.formanalysis.dto.PreparationAnalysisRequest$ActionCandidate)> calls constructor <com.careerform.formanalysis.application.port.ActionResolver$NoAction.<init>(java.lang.String)> in (StoredPolicyActionResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver.resolve(com.careerform.formanalysis.dto.FieldsAnalysisRequest$FieldCandidate, java.lang.String)> calls constructor <com.careerform.formanalysis.application.port.FieldMappingResolver$NoMatch.<init>(java.lang.String)> in (StoredPolicyFieldMappingResolver.java:*)\n    - Method <com.careerform.formanalysis.application.policy.StoredPolicyActionResolver.resolve(com.careerform.formanalysis.dto.PreparationAnalysisRequest$ActionCandidate)> calls constructor <com.careerform.formanalysis.application.port.ActionResolver$SearchAddressAction.<init>(java.lang.String)> in (StoredPolicyActionResolver.java:*)\n    (18 further dependencies have been omitted...)\n  2. Dependencies of Slice formanalysis - port\n    - Constructor <com.careerform.formanalysis.application.port.CompanyFormPolicyProvider$Available.<init>(com.careerform.formanalysis.application.policy.CompanyFormPolicy)> has parameter of type <com.careerform.formanalysis.application.policy.CompanyFormPolicy> in (CompanyFormPolicyProvider.java:*)\n    - Field <com.careerform.formanalysis.application.port.CompanyFormPolicyProvider$Available.policy> has type <com.careerform.formanalysis.application.policy.CompanyFormPolicy> in (CompanyFormPolicyProvider.java:*)\n    - Method <com.careerform.formanalysis.application.port.CompanyFormPolicyProvider$Available.policy()> has return type <com.careerform.formanalysis.application.policy.CompanyFormPolicy> in (CompanyFormPolicyProvider.java:*)"
+  } ]
+}

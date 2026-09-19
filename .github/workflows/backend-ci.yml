@@ -4,6 +4,12 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "AGENTS.md"
+      - ".agents/skills/cf-issue-workflow/SKILL.md"
+      - ".agents/skills/cf-code-review/SKILL.md"
+      - "llm-wiki/wiki/topics/backend-code-quality.md"
+      - "llm-wiki/wiki/topics/backend-code-quality-examples.md"
+      - "harness/policies/backend-quality-enforcement.md"
       - ".github/workflows/backend-ci.yml"
 
 permissions:

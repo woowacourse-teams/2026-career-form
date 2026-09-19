@@ -207,3 +207,10 @@
 - Source-Revision: 7c03209dbc22f1e216db1f8359c23f5f9d08471a
 - Raw: llm-wiki/raw/issues/CF-90/manifest.md
 - Topics: 1
+
+## 2026-09-17 CF-91 백엔드 코드 품질 기준 도입
+
+- 승인 digest `3b61f38010c84879ff2034d867f34f0d72311d40d4076fb3903b679d3ff04efa`의 후보 7개를 [CF-91 bundle](../raw/issues/CF-91/manifest.md)에 기록했다.
+- BQ-01부터 BQ-18, 저장 모델 분리 조건, 선택적 문서화와 AI 구현, 리뷰 계약을 정본과 해석 사례에 반영했다.
+- A1부터 A6까지의 신규 구조 위반 차단, 시작 commit의 기존 위반 22건, 별도 승인 예외와 고정 만료 없음 결정을 기록했다.
+- production 리팩터링, 제품 동작 변경, formatter, AI 행동 eval과 모델 비교는 포함하지 않았다.

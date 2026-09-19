@@ -15,6 +15,9 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 Use parallel sub-agents only when the user explicitly authorizes delegation. Otherwise review both axes sequentially in the current context and keep the findings separate.
 
 Use `llm-wiki/wiki/topics/issue-development-workflow.md` for repository lifecycle context and read the current GitHub Issue body as the implementation contract.
+For Java/Spring backend changes, include `llm-wiki/wiki/topics/backend-code-quality.md`
+as the normative Standards source. Use its BQ rule IDs; examples inform interpretation
+but do not replace the normative topic.
 
 ## Process
 
@@ -82,6 +85,19 @@ If the spec is missing, skip the Spec sub-agent and note this in the final repor
 Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings - the two axes are deliberately separate (see _Why two axes_).
 
 End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes - that's the reranking the separation exists to prevent.
+
+Every backend Standards finding uses this exact field order:
+`규칙 ID / 파일·심벌 / 영향 / 최소 수정안 / 필수·권고 / 불확실성`.
+Do not turn a recommendation into a required finding without a normative rule and concrete
+impact. Keep the final report in this shape:
+
+## Standards
+
+Standards findings only.
+
+## Spec
+
+Issue-contract findings only.
 
 ## Why two axes
 

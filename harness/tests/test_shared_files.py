@@ -44,6 +44,24 @@ class SharedFilesTest(unittest.TestCase):
             result.errors,
         )
 
+    def test_backend_quality_control_files_are_shared(self) -> None:
+        paths = (
+            "llm-wiki/wiki/topics/backend-code-quality.md",
+            "llm-wiki/wiki/topics/backend-code-quality-examples.md",
+            "backend/config/quality/architecture-baseline.json",
+            "backend/config/quality/architecture-exceptions.json",
+            "backend/src/test/java/com/careerform/architecture/ArchitectureGate.java",
+        )
+
+        for path in paths:
+            with self.subTest(path=path):
+                result = validate_shared_file_change(
+                    paths=(path,),
+                    labels=(),
+                    linked_issue_labels=(),
+                )
+                self.assertFalse(result.is_valid)
+
     def test_extracts_closing_issue_numbers(self) -> None:
         numbers = closing_issue_numbers("Closes #12\nFixes #34\n참고 #56")
 
