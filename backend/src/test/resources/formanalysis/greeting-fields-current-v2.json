@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "greeting-fields",
+  "site": {
+    "host": "career.hyundai-autoever.com",
+    "pathPattern": "/ko/o/*/apply"
+  },
+  "sections": [
+    {
+      "sectionId": "section-root",
+      "fields": [
+        {
+          "candidateId": "name",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "domName": "basicInformation.name"
+        },
+        {
+          "candidateId": "phone",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "domName": "basicInformation.phoneNumber.nationalNumber"
+        },
+        {
+          "candidateId": "school-search",
+          "element": "input",
+          "control": "text",
+          "visibility": "visible",
+          "domName": "education.university.schoolSearch"
+        }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy;
 import com.careerform.formanalysis.application.policy.StoredPolicyActionResolver;
 import com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver;
 import com.careerform.formanalysis.application.policy.StoredPolicyFingerprint;
+import com.careerform.formanalysis.application.policy.GreetingFormFingerprint;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Available;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.NotRegistered;
@@ -24,6 +25,7 @@ public final class FormAnalysisRouter {
     private final GreetingDomainEvidence greetingDomainEvidence;
     private final GreetingPolicyProvider greetingPolicyProvider;
     private final StoredPolicyFingerprint fingerprint = new StoredPolicyFingerprint();
+    private final GreetingFormFingerprint greetingFingerprint = new GreetingFormFingerprint();
 
     public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider) {
         this(policyProvider,
@@ -87,12 +89,15 @@ public final class FormAnalysisRouter {
             return new FieldRoute(RouteKind.POLICY_UNAVAILABLE, null);
         }
         CompanyFormPolicy policy = available.policy();
-        if (!fingerprint.matches(policy, request)) {
+        boolean greeting = "greeting".equals(policy.companyKey());
+        if (!(greeting
+            ? greetingFingerprint.matches(request)
+            : fingerprint.matches(policy, request))) {
             return new FieldRoute(RouteKind.STRUCTURE_MISMATCH, null);
         }
         return new FieldRoute(
             RouteKind.ADAPTER,
-            new StoredPolicyFieldMappingResolver(policy)
+            new StoredPolicyFieldMappingResolver(policy, greeting)
         );
     }
 

@@ -15,6 +15,7 @@ import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Av
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.NotRegistered;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Unavailable;
 import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision;
+import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
@@ -123,6 +124,54 @@ class StoredPolicyRoutingTest {
             .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
         assertThat(response.blockCode())
             .isEqualTo(PreparationAnalysisResponse.BlockCode.GREETING_DNS_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("두 도메인의 Greeting 정책은 action 없이 준비하고 정확한 필드만 정적으로 분류한다")
+    void routesVerifiedGreetingPolicyWithIndependentFieldFingerprint() throws Exception {
+        FormAnalysisRouter router = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.POSITIVE,
+            () -> new Available(CompanyFormPolicyFixture.greeting())
+        );
+
+        var preparation = preparation("greeting-preparation-current-v2.json");
+        var fields = fields("greeting-fields-current-v2.json");
+        assertThat(router.route(preparation).kind()).isEqualTo(RouteKind.ADAPTER);
+        assertThat(new PreparationAnalysisService(Optional.empty(), router)
+            .analyze(preparation).preparationPlans()).isEmpty();
+        assertThat(router.route(fields).kind()).isEqualTo(RouteKind.ADAPTER);
+        assertThat(router.route(fields).resolver().resolve(fields).results())
+            .containsExactly(
+                new FieldMappingResolver.Match("name",
+                    new FieldMappingResolver.DerivedBinding(
+                        FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME)),
+                new FieldMappingResolver.Match("phone",
+                    new FieldMappingResolver.DirectBinding("contact.contact.phoneNumber")),
+                new FieldMappingResolver.NoMatch("school-search")
+            );
+
+        var changed = new FieldsAnalysisRequest(
+            fields.schemaVersion(), fields.snapshotId(), fields.site(),
+            java.util.List.of(new FieldsAnalysisRequest.Section(
+                "section-root", null, null,
+                java.util.List.of(fields.sections().getFirst().fields().getFirst()), null
+            ))
+        );
+        assertThat(router.route(changed).kind()).isEqualTo(RouteKind.STRUCTURE_MISMATCH);
+
+        var duplicate = new FieldsAnalysisRequest(
+            fields.schemaVersion(), fields.snapshotId(), fields.site(),
+            java.util.List.of(new FieldsAnalysisRequest.Section(
+                "section-root", null, null,
+                java.util.List.of(
+                    fields.sections().getFirst().fields().getFirst(),
+                    fields.sections().getFirst().fields().getFirst(),
+                    fields.sections().getFirst().fields().get(1)
+                ), null
+            ))
+        );
+        assertThat(router.route(duplicate).kind()).isEqualTo(RouteKind.STRUCTURE_MISMATCH);
     }
 
     private PreparationAnalysisRequest preparation(String name) throws Exception {
