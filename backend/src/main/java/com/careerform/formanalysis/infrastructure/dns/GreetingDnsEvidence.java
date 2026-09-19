@@ -37,11 +37,16 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
     private static final long POSITIVE_TTL_NANOS = 300_000_000_000L;
     private static final long NEGATIVE_TTL_NANOS = 60_000_000_000L;
     private static final long FAILURE_TTL_NANOS = 10_000_000_000L;
+    private static final int MAX_CACHED_HOSTS = 4096;
 
     private final CnameLookup lookup;
     private final Set<String> registeredHosts;
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
     private final Semaphore queries = new Semaphore(16);
+
+    int cachedHostCount() {
+        return cache.size();
+    }
 
     @Autowired
     public GreetingDnsEvidence(
@@ -70,17 +75,17 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
     public Decision classify(String host, String pathPattern) {
         if (host == null || pathPattern == null
             || !APPLICATION_PATH.matcher(pathPattern).matches()) {
-            return Decision.NO_POSITIVE_EVIDENCE;
+            return Decision.OUT_OF_SCOPE;
         }
         String normalized = normalize(host);
         if (!isPublicHost(normalized)) {
-            return Decision.NO_POSITIVE_EVIDENCE;
+            return Decision.OUT_OF_SCOPE;
         }
         if (normalized.endsWith(GREETING_SUFFIX)) {
-            return Decision.POSITIVE;
+            return Decision.POSITIVE_STABLE;
         }
         if (registeredHosts.contains(normalized)) {
-            return Decision.POSITIVE;
+            return Decision.POSITIVE_STABLE;
         }
         CacheEntry cached = cache.get(normalized);
         long now = System.nanoTime();
@@ -89,12 +94,24 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
         }
         Decision decision = queryAliasChain(normalized);
         long ttl = switch (decision) {
+            case OUT_OF_SCOPE -> NEGATIVE_TTL_NANOS;
             case POSITIVE -> POSITIVE_TTL_NANOS;
+            case POSITIVE_STABLE -> POSITIVE_TTL_NANOS;
             case NO_POSITIVE_EVIDENCE -> NEGATIVE_TTL_NANOS;
             case RETRYABLE_FAILURE -> FAILURE_TTL_NANOS;
         };
-        cache.put(normalized, new CacheEntry(decision, now, ttl));
+        cacheDecision(normalized, decision, ttl, System.nanoTime());
         return decision;
+    }
+
+    private void cacheDecision(String host, Decision decision, long ttl, long now) {
+        synchronized (cache) {
+            cache.entrySet().removeIf(entry ->
+                now - entry.getValue().createdAtNanos() >= entry.getValue().ttlNanos());
+            if (cache.size() < MAX_CACHED_HOSTS) {
+                cache.put(host, new CacheEntry(decision, now, ttl));
+            }
+        }
     }
 
     private Decision queryAliasChain(String host) {

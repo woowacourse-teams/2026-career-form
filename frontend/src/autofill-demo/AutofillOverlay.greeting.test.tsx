@@ -57,6 +57,15 @@ function ControlledGreetingForm({ renderCount }: { renderCount: number }) {
   );
 }
 
+function editInput(input: HTMLInputElement, value: string) {
+  Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 describe("Greeting with generic autofill controls", () => {
   it.each([
     "kakaomobility.career.greetinghr.com",
@@ -140,7 +149,7 @@ describe("Greeting with generic autofill controls", () => {
       };
     });
 
-    render(
+    const overlay = render(
       <AutofillOverlay
         onClose={vi.fn()}
         apiClient={new RuntimeAnalysisApiClient(sendMessage)}
@@ -172,5 +181,49 @@ describe("Greeting with generic autofill controls", () => {
     expect(JSON.stringify(seenRequests)).not.toContain(
       "synthetic@example.test",
     );
+
+    editInput(
+      page.querySelector<HTMLInputElement>("[name='basicInformation.name']")!,
+      "직접수정",
+    );
+    editInput(
+      page.querySelector<HTMLInputElement>(
+        "[name='basicInformation.phoneNumber.nationalNumber']",
+      )!,
+      "01099998888",
+    );
+    const conflictingValueWrites = vi.fn();
+    page
+      .querySelector("[name='basicInformation.name']")
+      ?.addEventListener("input", conflictingValueWrites);
+    page
+      .querySelector("[name='basicInformation.phoneNumber.nationalNumber']")
+      ?.addEventListener("input", conflictingValueWrites);
+    overlay.unmount();
+    render(
+      <AutofillOverlay
+        onClose={vi.fn()}
+        apiClient={new RuntimeAnalysisApiClient(sendMessage)}
+        repository={{ ...createRepository(), load: async () => profile }}
+        pageDocument={page}
+      />,
+    );
+    await screen.findByRole("heading", { name: "기입 결과" });
+    expect(
+      page.querySelector<HTMLInputElement>("[name='basicInformation.name']")
+        ?.value,
+    ).toBe("직접수정");
+    expect(
+      page.querySelector<HTMLInputElement>(
+        "[name='basicInformation.phoneNumber.nationalNumber']",
+      )?.value,
+    ).toBe("01099998888");
+    expect(
+      seenRequests.filter(
+        (message) =>
+          (message as { type?: string }).type === "AUTOFILL_ANALYZE_FIELDS",
+      ),
+    ).toHaveLength(2);
+    expect(conflictingValueWrites).not.toHaveBeenCalled();
   });
 });

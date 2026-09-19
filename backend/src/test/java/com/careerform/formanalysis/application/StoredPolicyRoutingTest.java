@@ -157,6 +157,96 @@ class StoredPolicyRoutingTest {
     }
 
     @Test
+    @DisplayName("구버전 클라이언트에서도 이전 Greeting 양성 판정을 범용으로 낮추지 않는다")
+    void blocksLegacyFieldAnalysisAfterPositiveEvidenceDisappears() throws Exception {
+        AtomicReference<Decision> dns = new AtomicReference<>(Decision.POSITIVE);
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
+        FormAnalysisRouter router = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> dns.get(),
+            () -> new Available(CompanyFormPolicyFixture.greeting()),
+            contexts
+        );
+
+        var preparationRequest = preparation("greeting-preparation-current-v2.json");
+        var preparation = new PreparationAnalysisService(Optional.empty(), router, contexts)
+            .analyze(preparationRequest, false, false);
+        assertThat(preparation.analysisStatus())
+            .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
+        assertThat(preparation.routingContext()).isNull();
+
+        dns.set(Decision.NO_POSITIVE_EVIDENCE);
+        var fixtureFields = fields("greeting-fields-current-v2.json");
+        var fieldsRequest = new FieldsAnalysisRequest(
+            fixtureFields.schemaVersion(), fixtureFields.snapshotId(),
+            new FieldsAnalysisRequest.Site(
+                preparationRequest.site().host(), preparationRequest.site().pathPattern()),
+            fixtureFields.sections()
+        );
+        assertThat(router.route(fieldsRequest).kind())
+            .isEqualTo(RouteKind.DNS_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("양성 근거 보관 한도가 차도 새 기본 도메인은 처리하고 자체 도메인은 안전하게 차단한다")
+    void handlesPositiveMemoryOverflowWithoutGenericFallback() throws Exception {
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
+        for (int index = 0; index < 4_096; index++) {
+            assertThat(contexts.rememberPositive(
+                "career" + index + ".example.org", "/ko/o/*/apply"
+            )).isTrue();
+        }
+        FormAnalysisRouter custom = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.POSITIVE,
+            () -> new Available(CompanyFormPolicyFixture.greeting()),
+            contexts
+        );
+        var fixture = preparation("greeting-preparation-current-v2.json");
+        var newCustom = new PreparationAnalysisRequest(
+            fixture.schemaVersion(), fixture.snapshotId(),
+            new PreparationAnalysisRequest.Site(
+                "career.new-company.example.org", fixture.site().pathPattern()),
+            fixture.sections()
+        );
+        var blocked = new PreparationAnalysisService(Optional.empty(), custom, contexts)
+            .analyze(newCustom, false, true);
+        assertThat(blocked.analysisStatus())
+            .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
+        assertThat(blocked.routingContext()).isNull();
+
+        FormAnalysisRouter stable = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.POSITIVE_STABLE,
+            () -> new Available(CompanyFormPolicyFixture.greeting()),
+            contexts
+        );
+        assertThat(stable.route(fixture).kind()).isEqualTo(RouteKind.ADAPTER);
+
+        FormAnalysisRouter unrelatedPage = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.OUT_OF_SCOPE,
+            () -> { throw new AssertionError("out-of-scope page must not load Greeting"); },
+            contexts
+        );
+        assertThat(unrelatedPage.route(fixture).kind()).isEqualTo(RouteKind.GENERIC);
+
+        FormAnalysisRouter unrelatedHost = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.NO_POSITIVE_EVIDENCE,
+            () -> { throw new AssertionError("unrelated host must not load Greeting"); },
+            contexts
+        );
+        var unrelated = new PreparationAnalysisRequest(
+            fixture.schemaVersion(), fixture.snapshotId(),
+            new PreparationAnalysisRequest.Site(
+                "careers.unrelated.org", fixture.site().pathPattern()),
+            fixture.sections()
+        );
+        assertThat(unrelatedHost.route(unrelated).kind()).isEqualTo(RouteKind.GENERIC);
+    }
+
+    @Test
     @DisplayName("두 도메인의 Greeting 정책은 action 없이 준비하고 정확한 필드만 정적으로 분류한다")
     void routesVerifiedGreetingPolicyWithIndependentFieldFingerprint() throws Exception {
         GreetingRoutingContext contexts = new GreetingRoutingContext();

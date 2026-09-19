@@ -1,5 +1,7 @@
 package com.careerform.formanalysis.infrastructure.persistence.mongo;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +16,7 @@ import com.careerform.formanalysis.application.port.GreetingPolicyProvider;
 public final class MongoGreetingPolicyProvider implements GreetingPolicyProvider {
 
     private static final String POLICY_KEY = "greeting";
+    private static final Logger log = LoggerFactory.getLogger(MongoGreetingPolicyProvider.class);
 
     private final FormAnalysisPolicyMongoRepository policies;
     private final SupportedProfileFields supportedProfileFields;
@@ -50,6 +53,8 @@ public final class MongoGreetingPolicyProvider implements GreetingPolicyProvider
                 .orElseGet(Unavailable::new);
         }
         catch (RuntimeException exception) {
+            log.warn("Greeting policy lookup failed failure={}",
+                exception.getClass().getSimpleName());
             return new Unavailable();
         }
     }

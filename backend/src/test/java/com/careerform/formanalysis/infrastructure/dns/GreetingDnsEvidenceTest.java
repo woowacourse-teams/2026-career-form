@@ -22,9 +22,9 @@ class GreetingDnsEvidenceTest {
         }, Set.of());
 
         assertThat(evidence.classify("kakaomobility.career.greetinghr.com", APPLY_PATH))
-            .isEqualTo(Decision.POSITIVE);
+            .isEqualTo(Decision.POSITIVE_STABLE);
         assertThat(evidence.classify("career.greetinghr.com.evil.example", APPLY_PATH))
-            .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+            .isEqualTo(Decision.OUT_OF_SCOPE);
         assertThat(evidence.classify("career.greetinghr.com", APPLY_PATH))
             .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
         assertThat(queries).hasValue(1);
@@ -63,7 +63,7 @@ class GreetingDnsEvidenceTest {
             Set.of("careers.hybecorp.com"));
 
         assertThat(evidence.classify("CAREERS.HYBECORP.COM.", APPLY_PATH))
-            .isEqualTo(Decision.POSITIVE);
+            .isEqualTo(Decision.POSITIVE_STABLE);
     }
 
     @Test
@@ -73,7 +73,7 @@ class GreetingDnsEvidenceTest {
         );
 
         assertThat(evidence.classify("career.hyundai-autoever.com", APPLY_PATH))
-            .isEqualTo(Decision.POSITIVE);
+            .isEqualTo(Decision.POSITIVE_STABLE);
     }
 
     @Test
@@ -83,10 +83,23 @@ class GreetingDnsEvidenceTest {
             Set.of());
 
         assertThat(evidence.classify("careers.example.com", "/features/career-site"))
-            .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+            .isEqualTo(Decision.OUT_OF_SCOPE);
         assertThat(evidence.classify("localhost:3000", APPLY_PATH))
-            .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+            .isEqualTo(Decision.OUT_OF_SCOPE);
         assertThat(evidence.classify("127.0.0.1", APPLY_PATH))
-            .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+            .isEqualTo(Decision.OUT_OF_SCOPE);
+    }
+
+    @Test
+    void boundsCachedDnsHosts() {
+        GreetingDnsEvidence evidence = new GreetingDnsEvidence(
+            host -> new GreetingDnsEvidence.NoAlias(), Set.of());
+
+        for (int index = 0; index < 4_200; index++) {
+            assertThat(evidence.classify("career" + index + ".example.org", APPLY_PATH))
+                .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+        }
+
+        assertThat(evidence.cachedHostCount()).isLessThanOrEqualTo(4_096);
     }
 }

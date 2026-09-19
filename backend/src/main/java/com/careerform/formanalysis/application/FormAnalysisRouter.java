@@ -148,8 +148,13 @@ public final class FormAnalysisRouter {
         String pathPattern
     ) {
         return switch (greetingDomainEvidence.classify(host, pathPattern)) {
-            case POSITIVE -> greetingPolicyProvider.find();
-            case NO_POSITIVE_EVIDENCE -> new NotRegistered();
+            case OUT_OF_SCOPE -> new NotRegistered();
+            case POSITIVE_STABLE -> greetingPolicyProvider.find();
+            case POSITIVE -> routingContexts.rememberPositive(host, pathPattern)
+                ? greetingPolicyProvider.find() : null;
+            case NO_POSITIVE_EVIDENCE -> routingContexts.requiresFailClosedOnMissingEvidence(
+                host, pathPattern)
+                ? null : new NotRegistered();
             case RETRYABLE_FAILURE -> null;
         };
     }
