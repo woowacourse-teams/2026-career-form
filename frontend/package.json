@@ -15,7 +15,10 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "wxt prepare && tsc --noEmit",
-    "zip": "wxt zip && node scripts/assert-zip.mjs"
+    "zip": "wxt zip && node scripts/assert-zip.mjs",
+    "dev:site": "vite --config vite.site.config.ts",
+    "build:site": "vite build --config vite.site.config.ts && node scripts/assert-site-build.mjs",
+    "preview:site": "vite preview --config vite.site.config.ts"
   },
   "dependencies": {
     "pretendard": "1.3.9",
@@ -27,6 +30,7 @@
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.2",
+    "@types/node": "22.20.4",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "4.1.10",
@@ -37,6 +41,7 @@
     "jsdom": "29.0.1",
     "prettier": "3.9.6",
     "typescript": "7.0.2",
+    "vite": "8.2.1",
     "vitest": "4.1.10",
     "wxt": "0.21.4"
   }

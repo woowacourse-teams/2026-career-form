@@ -16,5 +16,12 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["entrypoints", "src", "wxt.config.ts", "vitest.config.ts"]
+  "include": [
+    "entrypoints",
+    "src",
+    "wxt.config.ts",
+    "vitest.config.ts",
+    "site",
+    "vite.site.config.ts"
+  ]
 }

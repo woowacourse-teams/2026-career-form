@@ -28,3 +28,6 @@ replay_pid*
 
 # Presentation reference material
 llm-wiki/raw/issues/CF-48/*.pdf
+
+# Standalone public website build
+frontend/dist-site/

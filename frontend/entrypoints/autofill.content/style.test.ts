@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-// @ts-expect-error Vitest runs this test in Node; the frontend tsconfig omits Node types.
 import { readFileSync } from "node:fs";
-
-declare const process: { cwd(): string };
 
 describe("autofill content-script host styles", () => {
   it("keeps the shadow host as a viewport-level layer on hostile pages", () => {

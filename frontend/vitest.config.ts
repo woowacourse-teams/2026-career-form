@@ -12,6 +12,7 @@ export default defineConfig({
       include: [
         "entrypoints/{options,popup,sidepanel}/**/*.tsx",
         "src/**/*.{ts,tsx}",
+        "site/**/*.{ts,tsx}",
       ],
       provider: "v8",
       thresholds: {
