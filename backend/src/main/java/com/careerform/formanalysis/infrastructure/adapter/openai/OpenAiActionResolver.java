@@ -1,7 +1,9 @@
 package com.careerform.formanalysis.infrastructure.adapter.openai;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -101,7 +103,7 @@ public final class OpenAiActionResolver implements ActionResolver {
             return new ActionSection(
                 section.sectionId(),
                 section.parentSectionId(),
-                section.displayName(),
+                ProviderSemanticSanitizer.sanitize(section.displayName()),
                 section.actionCandidates().stream()
                     .map(ActionCandidateInput::from)
                     .toList(),
@@ -135,30 +137,87 @@ public final class OpenAiActionResolver implements ActionResolver {
         PreparationAnalysisRequest.FormElement element,
         PreparationAnalysisRequest.FormControl control,
         PreparationAnalysisRequest.Visibility visibility,
-        String domId,
-        String domName,
         Boolean disabled,
         Boolean readonly,
-        Boolean inert
+        Boolean inert,
+        ActionSemanticContext semanticContext,
+        List<ActionOption> options
     ) {
 
         static ActionCandidateInput from(ActionCandidate candidate) {
             return new ActionCandidateInput(
                 candidate.candidateId(),
-                candidate.displayName(),
+                ProviderSemanticSanitizer.sanitize(candidate.displayName()),
                 candidate.element(),
                 candidate.control(),
                 candidate.visibility(),
-                candidate.domId(),
-                candidate.domName(),
                 trueOnly(candidate.disabled()),
                 trueOnly(candidate.readonly()),
-                trueOnly(candidate.inert())
+                trueOnly(candidate.inert()),
+                ActionSemanticContext.from(candidate),
+                candidate.options() == null
+                    ? null
+                    : candidate.options().stream()
+                        .map(ActionOption::from)
+                        .filter(option -> option.displayName() != null)
+                        .toList()
             );
         }
 
         private static Boolean trueOnly(Boolean state) {
             return Boolean.TRUE.equals(state) ? Boolean.TRUE : null;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record ActionSemanticContext(
+        List<ProviderSemanticSanitizer.SafeLabel> labels,
+        Boolean required,
+        Boolean multiple
+    ) {
+
+        static ActionSemanticContext from(
+            ActionCandidate candidate
+        ) {
+            Set<ProviderSemanticSanitizer.SafeLabel> labels = new LinkedHashSet<>();
+            String legacy = ProviderSemanticSanitizer.sanitize(
+                candidate.displayName()
+            );
+            if (legacy != null) {
+                labels.add(new ProviderSemanticSanitizer.SafeLabel("label", legacy));
+            }
+            if (candidate.semanticContext() != null) {
+                List<ProviderSemanticSanitizer.SafeLabel> safe =
+                    ProviderSemanticSanitizer.sanitizeActions(
+                        candidate.semanticContext().labels()
+                    );
+                if (safe != null) {
+                    labels.addAll(safe);
+                }
+            }
+            PreparationAnalysisRequest.SemanticContext context =
+                candidate.semanticContext();
+            if (labels.isEmpty() && context == null) {
+                return null;
+            }
+            return new ActionSemanticContext(
+                labels.isEmpty() ? null : List.copyOf(labels),
+                context == null ? null : trueOnly(context.required()),
+                context == null ? null : trueOnly(context.multiple())
+            );
+        }
+
+        private static Boolean trueOnly(Boolean state) {
+            return Boolean.TRUE.equals(state) ? Boolean.TRUE : null;
+        }
+    }
+
+    record ActionOption(String displayName) {
+
+        static ActionOption from(PreparationAnalysisRequest.Option option) {
+            return new ActionOption(
+                ProviderSemanticSanitizer.sanitize(option.displayName())
+            );
         }
     }
 

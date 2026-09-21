@@ -100,7 +100,8 @@ public record PreparationAnalysisRequest(
         @AssertTrue Boolean disabled,
         @AssertTrue Boolean readonly,
         @AssertTrue Boolean inert,
-        @Size(max = 128) List<@NotNull @Valid Option> options
+        @Size(max = 128) List<@NotNull @Valid Option> options,
+        @Valid SemanticContext semanticContext
     ) {
         public ActionCandidate(
             String candidateId, FormElement element, FormControl control,
@@ -108,8 +109,31 @@ public record PreparationAnalysisRequest(
             String domName, Boolean disabled, Boolean readonly, Boolean inert
         ) {
             this(candidateId, element, control, visibility, displayName, domId,
-                domName, disabled, readonly, inert, null);
+                domName, disabled, readonly, inert, null, null);
         }
+
+        public ActionCandidate(
+            String candidateId, FormElement element, FormControl control,
+            Visibility visibility, String displayName, String domId,
+            String domName, Boolean disabled, Boolean readonly, Boolean inert,
+            List<Option> options
+        ) {
+            this(candidateId, element, control, visibility, displayName, domId,
+                domName, disabled, readonly, inert, options, null);
+        }
+    }
+
+    public record SemanticContext(
+        @Size(min = 1, max = 8) List<@NotNull @Valid SemanticLabel> labels,
+        @AssertTrue Boolean required,
+        @AssertTrue Boolean multiple
+    ) {
+    }
+
+    public record SemanticLabel(
+        @NotNull SemanticSource source,
+        @NotBlank @Size(max = 120) String text
+    ) {
     }
 
     public record Option(
@@ -144,5 +168,22 @@ public record PreparationAnalysisRequest(
         VISIBLE,
         @JsonProperty("hidden")
         HIDDEN
+    }
+
+    public enum SemanticSource {
+        @JsonProperty("label")
+        LABEL,
+        @JsonProperty("aria-label")
+        ARIA_LABEL,
+        @JsonProperty("aria-labelledby")
+        ARIA_LABELLEDBY,
+        @JsonProperty("placeholder")
+        PLACEHOLDER,
+        @JsonProperty("legend")
+        LEGEND,
+        @JsonProperty("section-heading")
+        SECTION_HEADING,
+        @JsonProperty("description")
+        DESCRIPTION
     }
 }

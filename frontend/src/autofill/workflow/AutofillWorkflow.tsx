@@ -30,8 +30,14 @@ import {
   executeApprovedWritesAfterPageSettles,
   type ApprovedWriteResult,
 } from "../write/executor";
+import { normalizeDisplayName } from "../write/display-name";
+import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { FieldCandidateHandle } from "../dom/types";
 import { WorkflowScreens } from "./WorkflowScreens";
-import { createAnalyzeFields } from "./workflow-analysis";
+import {
+  createAnalyzeFields,
+  type CompletedGenericStateDriver,
+} from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
 import { createReviewActions } from "./review-actions";
 import {
@@ -50,6 +56,108 @@ import {
 } from "./workflow-model";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
+
+type RetainedDriverCandidate = {
+  item: ReviewPlanItem;
+  handle: FieldCandidateHandle;
+};
+
+function retainedStateDriverValue(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+  value: string,
+): boolean {
+  const command = item.analysis?.writePlan?.command;
+  if (command === "SELECT_OPTION") {
+    const select = handle.elements[0];
+    return (
+      select instanceof HTMLSelectElement &&
+      normalizeDisplayName(select.selectedOptions[0]?.textContent ?? "") ===
+        normalizeDisplayName(value)
+    );
+  }
+  if (command !== "CHECK_RADIO") return false;
+  const options = (handle.candidate.options ?? [])
+    .filter(
+      (option) =>
+        normalizeDisplayName(option.displayName) ===
+        normalizeDisplayName(value),
+    )
+    .map((option) => handle.optionElements.get(option.optionId))
+    .filter(
+      (option): option is HTMLInputElement =>
+        option instanceof HTMLInputElement,
+    );
+  return options.length === 1 && options[0]!.checked;
+}
+
+function retainedDriverCandidates(
+  items: readonly ReviewPlanItem[],
+  registry: CandidateRegistry,
+  completed: ReadonlyMap<string, CompletedGenericStateDriver>,
+): Map<string, RetainedDriverCandidate[]> {
+  const candidates = new Map<string, RetainedDriverCandidate[]>();
+  items.forEach((item) => {
+    const lookup = registry.lookupField(item.candidateId);
+    if (lookup.status !== "ready") return;
+    const key = stateDriverKey(
+      item,
+      lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
+      lookup.handle.itemIndex,
+    );
+    if (!completed.has(key)) return;
+    candidates.set(key, [
+      ...(candidates.get(key) ?? []),
+      { item, handle: lookup.handle },
+    ]);
+  });
+  return candidates;
+}
+
+function retainedDriverReviewResults(
+  candidates: ReadonlyMap<string, RetainedDriverCandidate[]>,
+  completed: ReadonlyMap<string, CompletedGenericStateDriver>,
+): { results: ApprovedWriteResult[]; unmatched: boolean } {
+  let unmatched = false;
+  const results = [...completed].flatMap(
+    ([key, record]): ApprovedWriteResult[] => {
+      const matches = candidates.get(key) ?? [];
+      if (matches.length === 0) {
+        unmatched = true;
+        return [];
+      }
+      if (matches.length > 1) {
+        return matches.map(({ item }) => ({
+          candidateId: item.candidateId,
+          status: "skipped" as const,
+          outcome: "needs-verification" as const,
+          code: "RETAINED_VALUE_UNCONFIRMED" as const,
+          reason: "조건부 선택 항목을 하나로 다시 연결하지 못했습니다.",
+        }));
+      }
+      const { item, handle } = matches[0]!;
+      return retainedStateDriverValue(item, handle, record.profileValue)
+        ? [
+            {
+              candidateId: item.candidateId,
+              status: "written",
+              outcome: "success",
+              code: "WRITTEN",
+            },
+          ]
+        : [
+            {
+              candidateId: item.candidateId,
+              status: "skipped",
+              outcome: "needs-verification",
+              code: "RETAINED_VALUE_UNCONFIRMED",
+              reason: "조건부 선택값이 유지되는지 확인하지 못했습니다.",
+            },
+          ];
+    },
+  );
+  return { results, unmatched };
+}
 
 export function AutofillWorkflow({
   apiClient,
@@ -80,6 +188,9 @@ export function AutofillWorkflow({
   const approvedSensitiveValues = useRef(new Map<string, string>());
   const consideredSensitiveValues = useRef(new Map<string, string>());
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
+  const completedGenericStateDrivers = useRef<
+    ReadonlyMap<string, CompletedGenericStateDriver>
+  >(new Map());
   const deferredDriverGroups = useRef<ReadonlySet<Element>>(new Set());
   const [revealedPreparationKeys, setRevealedPreparationKeys] = useState<
     ReadonlySet<string>
@@ -102,11 +213,18 @@ export function AutofillWorkflow({
   const [exceptionTitle, setExceptionTitle] =
     useState("분석을 완료하지 못했습니다");
   const [results, setResults] = useState<ApprovedWriteResult[]>([]);
+  const [analysisSummary, setAnalysisSummary] = useState<{
+    mode: "ADAPTER" | "GENERIC";
+    durationMs: number;
+    fieldCount: number;
+    matchedCount: number;
+  }>();
   const [workflowDiagnostics, setWorkflowDiagnostics] = useState<
     WorkflowDiagnostic[]
   >([]);
 
   const analyzeFields = createAnalyzeFields({
+    onAnalysis: setAnalysisSummary,
     adapter,
     addressRun,
     addressSearch,
@@ -116,6 +234,7 @@ export function AutofillWorkflow({
     approvedSensitiveValues,
     consideredSensitiveValues,
     completedDriverKeys,
+    completedGenericStateDrivers,
     deferredDriverGroups,
     setAddressResult,
     setExceptionTitle,
@@ -504,19 +623,57 @@ export function AutofillWorkflow({
         await analyzeFields(profile);
         return;
       }
+      const retainedDrivers = retainedDriverReviewResults(
+        retainedDriverCandidates(
+          reviewItems,
+          fieldsSnapshot.registry,
+          completedGenericStateDrivers.current,
+        ),
+        completedGenericStateDrivers.current,
+      );
+      if (
+        retainedDrivers.unmatched ||
+        retainedDrivers.results.some((result) => result.status === "skipped")
+      ) {
+        if (retainedDrivers.unmatched) {
+          setWarnings((current) => [
+            ...current,
+            "자동으로 적용한 조건부 선택을 재분석에서 확인하지 못했습니다. 직접 확인해 주세요.",
+          ]);
+        }
+        setResults(retainedDrivers.results);
+        setStage("result");
+        return;
+      }
+      const retainedCandidateIds = new Set(
+        retainedDrivers.results.map((result) => result.candidateId),
+      );
+      const executableReviewItems = reviewItems.filter(
+        (item) => !retainedCandidateIds.has(item.candidateId),
+      );
       const approvedCandidateIds = new Set(
-        reviewItems
+        executableReviewItems
           .filter((item) => item.selected && !item.disabled)
           .map((item) => item.candidateId),
       );
+      if (
+        profile &&
+        JSON.stringify(await repository.load()) !== JSON.stringify(profile)
+      ) {
+        setExceptionTitle(
+          "확인 후 프로필이 변경되었습니다. 다시 시작해 주세요",
+        );
+        setStage("exception");
+        return;
+      }
       setStage("writing");
       const nextResults = await executeApprovedWritesAfterPageSettles({
-        items: reviewItems,
+        items: executableReviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
       });
       if (!mounted.current) return;
-      setResults(nextResults);
+      setResults([...retainedDrivers.results, ...nextResults]);
       setStage("result");
     } catch (error) {
       if (mounted.current) {
@@ -550,6 +707,7 @@ export function AutofillWorkflow({
       revealSensitiveItem={revealSensitiveItem}
       executeWrites={executeWrites}
       results={results}
+      analysisSummary={analysisSummary}
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}

@@ -126,7 +126,10 @@ export function validatePreparationResponse(
     ]) ||
     value.snapshotId !== request.snapshotId ||
     !Array.isArray(value.preparationPlans) ||
-    !validateStringArray(value.warningCodes, ["MANUAL_REVEAL_REQUIRED"])
+    !validateStringArray(value.warningCodes, [
+      "MANUAL_REVEAL_REQUIRED",
+      "LLM_UNAVAILABLE",
+    ])
   ) {
     throw new AnalysisContractError();
   }

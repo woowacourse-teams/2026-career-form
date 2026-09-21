@@ -386,6 +386,10 @@ function itemForAnalysis(
       ...(binding.type === "DIRECT"
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
+      ...(resolvedProfileValue.profileEntryId
+        ? { profileEntryId: resolvedProfileValue.profileEntryId }
+        : {}),
+      ...(itemIndex !== undefined ? { itemIndex } : {}),
       currentValue: pageValue,
       profileValue: resolvedProfileValue.value,
       previewValue: resolvedProfileValue.value,
@@ -419,6 +423,41 @@ function itemForAnalysis(
   };
 }
 
+function repeatedBindingKey(item: ReviewPlanItem): string | undefined {
+  if (item.analysis?.mappingStatus !== "LLM_SUGGESTED") return undefined;
+  const profileFieldKey =
+    item.analysis?.valueBinding?.profileFieldKey ??
+    item.analysis?.profileFieldKey ??
+    item.profileFieldKey;
+  return item.profileEntryId && profileFieldKey
+    ? `${item.profileEntryId}:${profileFieldKey}`
+    : undefined;
+}
+
+function rejectDuplicateRepeatedBindings(
+  items: ReviewPlanItem[],
+): ReviewPlanItem[] {
+  const counts = new Map<string, number>();
+  items.forEach((item) => {
+    const key = repeatedBindingKey(item);
+    if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+  return items.map((item) => {
+    const key = repeatedBindingKey(item);
+    if (!key || counts.get(key) === 1 || item.status === "unavailable") {
+      return item;
+    }
+    return {
+      ...item,
+      status: "unavailable",
+      selected: false,
+      disabled: true,
+      reason:
+        "같은 반복 프로필 항목이 여러 지원서 행에 연결되어 자동 입력하지 않았습니다.",
+    };
+  });
+}
+
 export function buildReviewPlan({
   analysis,
   profile,
@@ -435,17 +474,18 @@ export function buildReviewPlan({
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
   }
+  const items = analysis.fields.map((field) =>
+    itemForAnalysis(
+      field,
+      profile,
+      registry,
+      ignoreCurrentValueCandidateIds,
+      normalizeDirectValue,
+    ),
+  );
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
-    items: analysis.fields.map((field) =>
-      itemForAnalysis(
-        field,
-        profile,
-        registry,
-        ignoreCurrentValueCandidateIds,
-        normalizeDirectValue,
-      ),
-    ),
+    items: rejectDuplicateRepeatedBindings(items),
   };
 }
 

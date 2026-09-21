@@ -1,5 +1,9 @@
 package com.careerform.formanalysis.infrastructure.adapter.openai;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
@@ -112,11 +116,62 @@ public final class OpenAiClient {
         RuntimeException exception
     ) {
         log.warn(
-            "LLM 호출 실패 outputType={} durationMs={} failure={}",
+            "LLM 호출 실패 outputType={} durationMs={} failure={} diagnostic={}",
             outputType.getSimpleName(),
             elapsedMillis(startedAt),
-            exception.getClass().getSimpleName()
+            exception.getClass().getSimpleName(),
+            classifyFailure(exception)
         );
+    }
+
+    private static FailureDiagnostic classifyFailure(Throwable exception) {
+        Set<Throwable> visited = Collections.newSetFromMap(
+            new IdentityHashMap<>()
+        );
+        boolean badRequestSeen = false;
+        for (
+            Throwable current = exception;
+            current != null && visited.add(current);
+            current = current.getCause()
+        ) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(Locale.ROOT);
+                if (normalized.contains("additionalproperties")
+                    || normalized.contains("additional properties")) {
+                    return FailureDiagnostic.ADDITIONAL_PROPERTIES;
+                }
+                if (normalized.contains("must have a 'type' key")
+                    || normalized.contains("must have a \"type\" key")
+                    || normalized.contains("missing type")) {
+                    return FailureDiagnostic.MISSING_TYPE;
+                }
+                if (normalized.contains("required property")
+                    || normalized.contains("required properties")
+                    || normalized.contains("required field")
+                    || (normalized.contains("'required'")
+                        && normalized.contains("properties"))) {
+                    return FailureDiagnostic.REQUIRED_PROPERTY;
+                }
+                if (normalized.contains("unsupported parameter")
+                    || normalized.contains("unknown parameter")) {
+                    return FailureDiagnostic.UNSUPPORTED_PARAMETER;
+                }
+                if (normalized.contains("invalid schema")
+                    || normalized.contains("invalid json schema")
+                    || normalized.contains("schema for response_format")) {
+                    return FailureDiagnostic.INVALID_SCHEMA;
+                }
+            }
+            if (current.getClass().getName().equals(
+                "com.openai.errors.BadRequestException"
+            )) {
+                badRequestSeen = true;
+            }
+        }
+        return badRequestSeen
+            ? FailureDiagnostic.BAD_REQUEST
+            : FailureDiagnostic.UNCLASSIFIED;
     }
 
     private static long elapsedMillis(long startedAt) {
@@ -147,6 +202,16 @@ public final class OpenAiClient {
 
     private static ResolverException unavailable() {
         return new ResolverException(INVALID_RESPONSE_MESSAGE);
+    }
+
+    private enum FailureDiagnostic {
+        INVALID_SCHEMA,
+        MISSING_TYPE,
+        REQUIRED_PROPERTY,
+        ADDITIONAL_PROPERTIES,
+        UNSUPPORTED_PARAMETER,
+        BAD_REQUEST,
+        UNCLASSIFIED
     }
 
     private record SchemaOutputConverter<O>(

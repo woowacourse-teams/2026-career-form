@@ -12,6 +12,55 @@ export interface OptionCandidate {
   displayName: string;
 }
 
+export interface SemanticContext {
+  labels?: Array<{
+    source:
+      | "label"
+      | "aria-label"
+      | "aria-labelledby"
+      | "placeholder"
+      | "legend"
+      | "section-heading"
+      | "description";
+    text: string;
+  }>;
+  inputType?:
+    "text" | "email" | "tel" | "number" | "date" | "month" | "url" | "search";
+  inputMode?:
+    | "none"
+    | "text"
+    | "decimal"
+    | "numeric"
+    | "tel"
+    | "search"
+    | "email"
+    | "url";
+  autocomplete?:
+    | "name"
+    | "given-name"
+    | "family-name"
+    | "additional-name"
+    | "email"
+    | "tel"
+    | "postal-code"
+    | "street-address"
+    | "address-line1"
+    | "address-line2"
+    | "country"
+    | "country-name"
+    | "bday"
+    | "bday-day"
+    | "bday-month"
+    | "bday-year"
+    | "organization"
+    | "organization-title"
+    | "off";
+  required?: true;
+  multiple?: true;
+  maxLength?: number;
+  repeat?: { groupId: string; rowIndex: number; rowCount: number };
+}
+
 interface CandidateBase {
   candidateId: string;
   visibility: Visibility;
@@ -21,6 +70,7 @@ interface CandidateBase {
   disabled?: true;
   readonly?: true;
   inert?: true;
+  semanticContext?: SemanticContext;
 }
 
 export interface ActionCandidate extends CandidateBase {
@@ -113,7 +163,7 @@ export interface PreparationAnalyzeResponse {
   mode: AnalysisMode;
   analysisStatus: AnalysisStatus;
   preparationPlans: PreparationPlan[];
-  warningCodes?: "MANUAL_REVEAL_REQUIRED"[];
+  warningCodes?: ("MANUAL_REVEAL_REQUIRED" | "LLM_UNAVAILABLE")[];
   blockCode?:
     | "ADAPTER_STRUCTURE_MISMATCH"
     | "ADAPTER_POLICY_UNAVAILABLE"

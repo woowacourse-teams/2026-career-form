@@ -16,6 +16,7 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
@@ -109,6 +110,7 @@ public final class FieldsAnalysisService {
         }
 
         Set<String> candidateIds = new HashSet<>();
+        Map<String, Integer> repeatGroupCounts = new HashMap<>();
         for (Section section : request.sections()) {
             if (section == null
                 || isBlank(section.sectionId())
@@ -121,6 +123,23 @@ public final class FieldsAnalysisService {
                 || isBlank(candidate.candidateId())
                 || !candidateIds.add(candidate.candidateId())) {
                 invalidSnapshot();
+            }
+            FieldsAnalysisRequest.SemanticContext context = candidate.semanticContext();
+            if (context != null && context.repeat() != null) {
+                if (isBlank(context.repeat().groupId())
+                    || context.repeat().rowIndex() == null
+                    || context.repeat().rowCount() == null
+                    || context.repeat().rowIndex() >= context.repeat().rowCount()) {
+                    invalidSnapshot();
+                }
+                Integer knownCount = repeatGroupCounts.putIfAbsent(
+                    context.repeat().groupId(),
+                    context.repeat().rowCount()
+                );
+                if (knownCount != null
+                    && !knownCount.equals(context.repeat().rowCount())) {
+                    invalidSnapshot();
+                }
             }
         }
     }
@@ -156,6 +175,8 @@ public final class FieldsAnalysisService {
                         ? lookup.profileFieldKey()
                         : binding instanceof ButtonOptionBinding buttonOption
                             ? buttonOption.profileFieldKey()
+                            : binding instanceof DerivedBinding derived
+                                ? derived.profileFieldKey()
                         : null;
                 if (profileFieldKey != null
                     && !supportedProfileFields.contains(profileFieldKey)) {
@@ -209,6 +230,8 @@ public final class FieldsAnalysisService {
                 ? lookup.profileFieldKey()
                 : match.valueBinding() instanceof ButtonOptionBinding buttonOption
                     ? buttonOption.profileFieldKey()
+                    : match.valueBinding() instanceof DerivedBinding derived
+                        ? derived.profileFieldKey()
                 : null;
         AutofillPolicy autofillPolicy = profileFieldKey == null
             ? AutofillPolicy.ALLOWED
