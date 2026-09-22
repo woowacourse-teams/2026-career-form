@@ -24,6 +24,7 @@ interface AppProps {
   inPage?: boolean;
   logoUrl?: string;
   autofillView?: ReactNode;
+  actionPosition?: "top" | "bottom";
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -105,6 +106,7 @@ export function App({
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
   autofillView,
+  actionPosition = "top",
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -199,7 +201,9 @@ export function App({
   };
 
   return (
-    <div className={`${styles.panel} ${inPage ? styles.inPagePanel : ""}`}>
+    <div
+      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${actionPosition === "bottom" ? styles.bottomActionPanel : ""}`}
+    >
       <header className={styles.header}>
         <div className={styles.brandRow}>
           <div className={styles.brandIdentity}>
@@ -230,7 +234,7 @@ export function App({
             프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
-        {!autofillActive && (
+        {!autofillActive && actionPosition === "top" && (
           <section className={styles.autofillAction}>
             <button
               data-autofill-start
@@ -416,6 +420,22 @@ export function App({
               )}
             </section>
           </main>
+          {actionPosition === "bottom" && (
+            <footer
+              className={`${styles.autofillAction} ${styles.previewFooter}`}
+            >
+              <button
+                data-autofill-start
+                ref={startButton}
+                type="button"
+                disabled={autofillPending}
+                onClick={() => void startAutofill()}
+              >
+                자동 기입 <span aria-hidden="true">→</span>
+              </button>
+              <p>선택 후 분석과 검토를 시작합니다</p>
+            </footer>
+          )}
         </>
       )}
     </div>

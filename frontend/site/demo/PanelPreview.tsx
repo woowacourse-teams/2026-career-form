@@ -12,6 +12,7 @@ export function PanelPreview({
   return (
     <div className={styles.nativePanel} data-demo-panel>
       <App
+        actionPosition="bottom"
         inPage
         repository={demoRepository}
         logoUrl={logo}

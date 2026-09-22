@@ -5,69 +5,57 @@ import { policies } from "./policies";
 import { Icon } from "./Icons";
 import { ChromeGuide, OpeningGuide, ServiceGuide } from "./Guide";
 import styles from "./Site.module.css";
+import { SiteLink, useSiteUrl } from "./site-navigation";
 
 function InstallLink() {
   return (
-    <a
+    <SiteLink
       className={styles.primary}
       href={STORE_URL}
       target="_blank"
       rel="noopener noreferrer"
     >
       Chrome에 추가 <Icon name="arrow" />
-    </a>
+    </SiteLink>
   );
 }
-interface InstallationActions {
-  openOptions(): Promise<void> | void;
-  close(): void;
-}
-function Header({
-  landing,
-  installation,
-}: {
-  landing: boolean;
-  installation?: InstallationActions;
-}) {
+function Header({ landing }: { landing: boolean }) {
   return (
     <header className={styles.header}>
-      <a className={styles.brand} href={installation ? "#main" : "/"}>
+      <SiteLink className={styles.brand} href="/">
         <img src={logo} alt="" />
         career<span>form</span>
         <b>.</b>
-      </a>
-      {installation ? (
-        <button onClick={installation.close}>나중에 할게요</button>
-      ) : landing ? (
+      </SiteLink>
+      {landing ? (
         <>
           <nav aria-label="주 메뉴">
-            <a href="#features">주요 기능</a>
-            <a href="/onboarding/">사용 방법</a>
-            <a href="#faq">궁금한 점</a>
+            <SiteLink href="#features">주요 기능</SiteLink>
+            <SiteLink href="/onboarding/">사용 방법</SiteLink>
+            <SiteLink href="#faq">궁금한 점</SiteLink>
           </nav>
           <InstallLink />
         </>
       ) : (
-        <a href="/">소개 페이지로 ↗</a>
+        <SiteLink href="/">소개 페이지로 ↗</SiteLink>
       )}
     </header>
   );
 }
-function Footer({ installed = false }: { installed?: boolean }) {
+function Footer() {
   return (
     <footer className={styles.footer}>
       <span>careerform. · 채용 지원서 자동 입력</span>
-      {!installed && (
-        <nav aria-label="정책 안내">
-          <a href="/privacy/">개인정보처리방침</a>
-          <a href="/terms/">이용약관</a>
-        </nav>
-      )}
+      <nav aria-label="정책 안내">
+        <SiteLink href="/privacy/">개인정보처리방침</SiteLink>
+        <SiteLink href="/terms/">이용약관</SiteLink>
+      </nav>
       <small>© 2026 Career Form</small>
     </footer>
   );
 }
 function Landing() {
+  const siteUrl = useSiteUrl();
   return (
     <main id="main">
       <section className={styles.hero}>
@@ -88,14 +76,14 @@ function Landing() {
             </p>
             <div className={styles.actions}>
               <InstallLink />
-              <a href="/onboarding/">설치·사용 안내 ↗</a>
+              <SiteLink href="/onboarding/">설치·사용 안내 ↗</SiteLink>
             </div>
             <small>Chrome 확장 프로그램 · 프로필은 내 브라우저에</small>
           </div>
         </div>
         <figure className={styles.simulation}>
           <iframe
-            src="/demo/?view=simulation"
+            src={siteUrl("/demo/?view=simulation")}
             title="커리어폼 자동 입력 시뮬레이션"
             tabIndex={-1}
             inert
@@ -140,9 +128,9 @@ function Landing() {
           <h2>설치부터 첫 입력까지.</h2>
           <p>확장 프로그램 설치와 프로필 등록 방법을 안내해요.</p>
         </div>
-        <a className={styles.primary} href="/onboarding/">
+        <SiteLink className={styles.primary} href="/onboarding/">
           설치·사용 안내 <Icon name="arrow" />
-        </a>
+        </SiteLink>
       </section>
       <section className={styles.faq} id="faq">
         <div>
@@ -168,9 +156,8 @@ function Landing() {
     </main>
   );
 }
-function Onboarding({ installation }: { installation?: InstallationActions }) {
+function Onboarding() {
   const [step, setStep] = useState(0);
-  const [failed, setFailed] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
   const current = steps[step];
@@ -211,50 +198,21 @@ function Onboarding({ installation }: { installation?: InstallationActions }) {
         {step === 0 && (
           <>
             <div className={styles.notice}>
-              <strong>
-                {installation
-                  ? "커리어폼 설치 완료"
-                  : "Chrome 웹 스토어에서 설치"}
-              </strong>
+              <strong>Chrome 웹 스토어에서 설치</strong>
               <p>
-                {installation
-                  ? "아래 안내에 따라 커리어폼을 열고 프로필을 준비하세요."
-                  : "스토어에서 ‘Chrome에 추가’를 누르세요. 설치를 마치면 이 페이지로 돌아와 아래 설정을 진행하세요."}
+                스토어에서 ‘Chrome에 추가’를 누르세요. 설치를 마치면 이 페이지로
+                돌아와 아래 설정을 진행하세요.
               </p>
-              {!installation && <InstallLink />}
+              <InstallLink />
             </div>
             <ChromeGuide />
           </>
         )}
-        {step === 1 && (
-          <>
-            <ServiceGuide kind="profile" installed={!!installation} />
-            {installation && (
-              <button
-                className={styles.primary}
-                onClick={async () => {
-                  try {
-                    setFailed(false);
-                    await installation.openOptions();
-                  } catch {
-                    setFailed(true);
-                  }
-                }}
-              >
-                프로필 관리 열기
-              </button>
-            )}
-            {failed && (
-              <p role="alert">
-                프로필 관리를 열지 못했어요. 다시 시도해 주세요.
-              </p>
-            )}
-          </>
-        )}
+        {step === 1 && <ServiceGuide kind="profile" />}
         {step === 2 && (
           <>
             <OpeningGuide />
-            <ServiceGuide kind="autofill" installed={!!installation} />
+            <ServiceGuide kind="autofill" />
           </>
         )}
         <ol className={styles.instructions}>
@@ -281,25 +239,17 @@ function Onboarding({ installation }: { installation?: InstallationActions }) {
           {step > 0 ? (
             <button onClick={() => go(step - 1)}>← 이전 안내</button>
           ) : (
-            <small>
-              {installation
-                ? "설치가 끝났어요. 다음 단계로 진행하세요."
-                : "이 페이지에서는 설치 여부를 자동 확인하지 않아요."}
-            </small>
+            <small>이 페이지에서는 설치 여부를 자동 확인하지 않아요.</small>
           )}
           {step < 2 ? (
             <button className={styles.primary} onClick={() => go(step + 1)}>
               {step === 0 ? "프로필 등록 방법" : "첫 실행 방법"}{" "}
               <Icon name="arrow" />
             </button>
-          ) : installation ? (
-            <button className={styles.primary} onClick={installation.close}>
-              안내 마치기 <Icon name="arrow" />
-            </button>
           ) : (
-            <a className={styles.primary} href="/">
+            <SiteLink className={styles.primary} href="/">
               안내 마치기 <Icon name="arrow" />
-            </a>
+            </SiteLink>
           )}
         </div>
         <p className={styles.guideNote}>
@@ -321,9 +271,9 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
       </aside>
       <nav aria-label="문서 목차">
         {policy.sections.map(([title], i) => (
-          <a key={title} href={`#section-${i}`}>
+          <SiteLink key={title} href={`#section-${i}`}>
             {title}
-          </a>
+          </SiteLink>
         ))}
       </nav>
       {policy.sections.map(([title, body], i) => (
@@ -335,39 +285,40 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
       <p>
         운영자: 커리어폼
         <br />
-        문의: <a href="mailto:careerform@gmail.com">careerform@gmail.com</a>
+        문의:{" "}
+        <SiteLink href="mailto:careerform@gmail.com">
+          careerform@gmail.com
+        </SiteLink>
       </p>
     </main>
   );
 }
 export function SiteApp({
   path = window.location.pathname,
-  installation,
 }: {
   path?: string;
-  installation?: InstallationActions;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
   return (
     <div className={styles.site}>
-      <a className={styles.skip} href="#main">
+      <SiteLink className={styles.skip} href="#main">
         본문으로 건너뛰기
-      </a>
-      <Header landing={landing} installation={installation} />
+      </SiteLink>
+      <Header landing={landing} />
       {landing ? (
         <Landing />
       ) : normalized === "/onboarding" ? (
-        <Onboarding installation={installation} />
+        <Onboarding />
       ) : normalized === "/privacy" || normalized === "/terms" ? (
         <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />
       ) : (
         <main id="main" className={styles.policy}>
           <h1>페이지를 찾을 수 없어요.</h1>
-          <a href="/">소개 페이지로</a>
+          <SiteLink href="/">소개 페이지로</SiteLink>
         </main>
       )}
-      <Footer installed={!!installation} />
+      <Footer />
     </div>
   );
 }
