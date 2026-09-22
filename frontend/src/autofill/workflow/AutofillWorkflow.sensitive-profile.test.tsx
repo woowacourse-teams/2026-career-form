@@ -321,8 +321,8 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
           reason: "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
         },
       ]}
-      adapter={getWorkflowAdapter("example.test")}
-      workflowDiagnostics={[]}
+      adapter={getWorkflowAdapter("www.skcareers.com")}
+      workflowDiagnostics={[{ code: "SELECTED", count: 1 }]}
       exceptionTitle=""
       onExit={() => undefined}
     />,
@@ -334,4 +334,6 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
     screen.queryByText("desired-salary-result-secret"),
   ).not.toBeInTheDocument();
   expect(screen.getByText("••••••••")).toBeVisible();
+  expect(screen.queryByText(/복수.*부전공명 진단/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/선행 선택 완료/)).not.toBeInTheDocument();
 });

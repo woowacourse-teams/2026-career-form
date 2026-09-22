@@ -3,6 +3,7 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { matchesResultValue } from "./result-value-match";
+import { resultFieldLabel } from "./result-label";
 
 export interface WriteProgress {
   id: string;
@@ -11,6 +12,7 @@ export interface WriteProgress {
   status: "written" | "skipped";
   candidateId?: string;
   unchanged?: boolean;
+  retryRecovered?: boolean;
 }
 export type WorkflowActivity = "matching" | "preparing" | "address";
 function uniqueDomId(element: Element): string | undefined {
@@ -67,6 +69,48 @@ function stillReflected(
   }
   return matchesResultValue(item, value, item.profileValue ?? "");
 }
+function retryBinding(item: ReviewPlanItem): string | undefined {
+  const analysis = item.analysis;
+  if (
+    analysis?.mappingStatus !== "ADAPTER_VERIFIED" ||
+    analysis.writePlan?.command !== "SET_TEXT" ||
+    analysis.valueBinding?.type !== "DIRECT"
+  )
+    return undefined;
+  return JSON.stringify([
+    analysis.valueBinding.profileFieldKey,
+    item.profileEntryId,
+    item.itemIndex,
+  ]);
+}
+function visibleDisabledTextField(
+  item: ReviewPlanItem,
+  registry: CandidateRegistry,
+): boolean {
+  const lookup = registry.lookupField(item.candidateId);
+  if (lookup.status !== "blocked" || lookup.reason !== "disabled") return false;
+  const element = lookup.handle.elements[0];
+  if (
+    !(
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement
+    ) ||
+    !element.disabled ||
+    lookup.handle.candidate.visibility === "hidden" ||
+    element.closest("[hidden], [inert], [aria-hidden='true']")
+  )
+    return false;
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    const style = node.ownerDocument.defaultView?.getComputedStyle(node);
+    if (
+      style?.display === "none" ||
+      style?.visibility === "hidden" ||
+      style?.visibility === "collapse"
+    )
+      return false;
+  }
+  return true;
+}
 export function createProgressTracker() {
   const entries = new Map<string, WriteProgress>();
   const elements = new WeakMap<Element, string>();
@@ -76,6 +120,15 @@ export function createProgressTracker() {
   >();
   const candidateIds = new WeakMap<CandidateRegistry, Map<string, string>>();
   const verifiers = new Map<string, () => boolean>();
+  const writeEvidence = new Map<
+    string,
+    {
+      registry: CandidateRegistry;
+      candidateId: string;
+      element: Element;
+      binding: string;
+    }
+  >();
   let sequence = 0;
   const progressIdFor = (candidateId: string, registry: CandidateRegistry) => {
     const lookup = registry.lookupField(candidateId);
@@ -141,6 +194,28 @@ export function createProgressTracker() {
       registryIds.set(item.candidateId, id);
       candidateIds.set(registry, registryIds);
       const previous = entries.get(id);
+      const binding = retryBinding(item);
+      const evidence = writeEvidence.get(id);
+      const retryRecovered =
+        result.status === "skipped" &&
+        previous?.status === "written" &&
+        !!binding &&
+        evidence?.binding === binding &&
+        evidence.registry === registry &&
+        evidence.candidateId === item.candidateId &&
+        evidence.element === element &&
+        verifiers.get(id)?.() === true &&
+        visibleDisabledTextField(item, registry) &&
+        stillReflected(item, registry);
+      const status = retryRecovered ? "written" : result.status;
+      if (result.status === "written" && binding && element)
+        writeEvidence.set(id, {
+          registry,
+          candidateId: item.candidateId,
+          element,
+          binding,
+        });
+      else if (!retryRecovered) writeEvidence.delete(id);
       const currentlyEqual = matchesResultValue(
         item,
         item.currentValue,
@@ -153,14 +228,18 @@ export function createProgressTracker() {
       entries.set(id, {
         id,
         candidateId: item.candidateId,
-        label: item.fieldLabel,
+        label: resultFieldLabel(item),
         category: progressCategory(item),
-        status: result.status,
+        status,
         unchanged,
+        ...(retryRecovered ? { retryRecovered: true } : {}),
       });
       verifiers.set(
         id,
-        () => result.status === "written" && stillReflected(item, registry),
+        () =>
+          status === "written" &&
+          stillReflected(item, registry) &&
+          (!retryRecovered || visibleDisabledTextField(item, registry)),
       );
       return [...entries.values()];
     },

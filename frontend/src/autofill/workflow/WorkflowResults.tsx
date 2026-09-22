@@ -1,20 +1,12 @@
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
 import { useRef, useState } from "react";
-import { profileFieldLabel, reviewProfileFieldKey } from "./workflow-model";
 import styles from "./WorkflowResults.module.css";
 import type { Profile } from "../../profile/model";
 import { resultPreview } from "./result-preview";
 import type { WriteProgress } from "./progress-model";
 import { buildResultModel } from "./result-model";
-
-function resultFieldLabel(item: ReviewPlanItem): string {
-  return (
-    item.status === "sensitive" && reviewProfileFieldKey(item)
-      ? profileFieldLabel(reviewProfileFieldKey(item))
-      : item.fieldLabel
-  ).replaceAll("·", "/");
-}
+import { resultFieldLabel } from "./result-label";
 
 function focusInPanel(target: HTMLElement | null) {
   if (!target) return;
@@ -80,6 +72,10 @@ export function WorkflowResults({
       ...(categories.get(entry.category) ?? []),
       entry,
     ]);
+  }
+  const skippedReasons = new Map<string, number>();
+  for (const { reason } of skipped) {
+    skippedReasons.set(reason, (skippedReasons.get(reason) ?? 0) + 1);
   }
   return (
     <section className={styles.results}>
@@ -210,10 +206,10 @@ export function WorkflowResults({
             건너뛴 항목 보기 <span>{skipped.length}개</span>
           </summary>
           <ul>
-            {skipped.map(({ id, item, reason }) => (
-              <li key={id}>
-                <strong>{resultFieldLabel(item)}</strong>
-                <small>{reason.replaceAll("·", "/")}</small>
+            {[...skippedReasons].map(([reason, count]) => (
+              <li key={reason} aria-label={`${reason} ${count}개`}>
+                <span>{reason.replaceAll("·", "/")}</span>
+                <strong>{count}개</strong>
               </li>
             ))}
           </ul>

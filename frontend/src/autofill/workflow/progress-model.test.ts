@@ -26,6 +26,26 @@ function snapshot() {
     fields: collected.request.sections.flatMap((s) => s.fields),
   };
 }
+it("retains a concise field label when completed controls leave the latest snapshot", () => {
+  document.body.innerHTML =
+    "<label>국적 *필수항목<select><option>대한민국</option><option>가나</option><option>가봉</option></select></label>";
+  const tracker = createProgressTracker();
+  const { registry, fields } = snapshot();
+  const country = {
+    ...item(fields[0].candidateId),
+    fieldLabel: fields[0].displayName ?? "",
+    profileFieldKey: "personal.personal.nationality",
+    profileValue: "대한민국",
+  };
+  const entries = tracker.record(
+    country,
+    { candidateId: country.candidateId, status: "written" },
+    registry,
+  );
+  expect(entries[0].label).toBe("국적");
+  expect(JSON.stringify(entries)).not.toContain("가봉");
+});
+
 it("reconciles retries and fresh snapshot IDs for the same control without retaining values", () => {
   document.body.innerHTML = '<label>이름<input id="name"></label>';
   const tracker = createProgressTracker();
@@ -52,7 +72,7 @@ it("reconciles retries and fresh snapshot IDs for the same control without retai
   expect(tracker.wasWritten(b.candidateId, next.registry)).toBe(false);
   expect(entries[0]).toMatchObject({
     category: "기본 인적사항",
-    label: "이름",
+    label: "국문 이름",
     status: "skipped",
   });
   expect(JSON.stringify(entries)).not.toContain("private-value");
@@ -102,11 +122,15 @@ it("does not transfer completion when a fresh snapshot reuses field-1 for an ins
     initial[0].id,
   );
   const entries = tracker.record(
-    { ...item(next.fields[0].candidateId), fieldLabel: "전화" },
+    {
+      ...item(next.fields[0].candidateId),
+      fieldLabel: "전화",
+      profileFieldKey: "contact.contact.phoneNumber",
+    },
     { candidateId: next.fields[0].candidateId, status: "written" },
     next.registry,
   );
-  expect(entries.map((entry) => entry.label)).toEqual(["이름", "전화"]);
+  expect(entries.map((entry) => entry.label)).toEqual(["국문 이름", "연락처"]);
 });
 
 it("uses control identity when a later snapshot reverses previously successful and failed fields", () => {

@@ -13,7 +13,6 @@ import type { WorkflowActivity } from "./progress-model";
 import type { Profile } from "../../profile/model";
 import {
   Header,
-  diagnosticLabel,
   mappingLabel,
   profileFieldLabel,
   reviewProfileFieldKey,
@@ -80,8 +79,6 @@ export function WorkflowScreens({
   executeWrites,
   results,
   addressResult,
-  adapter,
-  workflowDiagnostics,
   exceptionTitle,
   onExit,
   onLocate,
@@ -360,21 +357,6 @@ export function WorkflowScreens({
           reviewItems={reviewItems}
           onLocate={onLocate}
         />
-        {adapter.diagnosticsTitle && (
-          <details className={styles.safety}>
-            <summary>{adapter.diagnosticsTitle.replaceAll("·", "/")}</summary>
-            <ul className={styles.boundaries}>
-              {workflowDiagnostics.length === 0 && (
-                <li>후속 조건부 입력 진단이 생성되지 않았습니다.</li>
-              )}
-              {workflowDiagnostics.map((diagnostic, index) => (
-                <li key={index}>
-                  {diagnosticLabel(diagnostic.code)}: {diagnostic.count}개
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
         <button className={styles.primary} type="button" onClick={onExit}>
           수동 복사로 돌아가기
         </button>

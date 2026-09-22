@@ -16,6 +16,111 @@ const item: ReviewPlanItem = {
   reason: "후보 여러 개",
 };
 
+it("shows a concise bound field name instead of required markers and all select options", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          fieldLabel: "국적 *필수항목 대한민국 가나 가봉 가이아나 감비아",
+          profileFieldKey: "personal.personal.nationality",
+          profileValue: "대한민국",
+        },
+      ]}
+      results={[]}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "국적 필드로 이동" }),
+  ).toBeDisabled();
+  expect(screen.queryByText(/가이아나/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/필수항목/)).not.toBeInTheDocument();
+});
+
+it("keeps repeat rows and school levels identifiable in concise completed labels", () => {
+  const fields = [
+    {
+      ...item,
+      candidateId: "high",
+      profileFieldKey: "education.highSchool.schoolName",
+      itemIndex: 0,
+      fieldLabel: "학교명 1 *필수항목",
+    },
+    {
+      ...item,
+      candidateId: "uni",
+      profileFieldKey: "education.university.schoolName",
+      itemIndex: 1,
+      fieldLabel: "학교명 2 *필수항목",
+    },
+  ];
+  render(
+    <WorkflowResults
+      reviewItems={fields}
+      results={fields.map((field) => ({
+        candidateId: field.candidateId,
+        status: "written",
+      }))}
+    />,
+  );
+  const completed = screen.getByRole("region", { name: "입력 완료 내역" });
+  expect(
+    within(completed).getByText("고등학교 / 학교명 (1)"),
+  ).toBeInTheDocument();
+  expect(
+    within(completed).getByText("대학교 / 학교명 (2)"),
+  ).toBeInTheDocument();
+  expect(within(completed).queryByText(/필수항목/)).not.toBeInTheDocument();
+});
+
+it("summarizes a large skipped inventory by reason instead of listing every page control", () => {
+  render(
+    <WorkflowResults
+      reviewItems={Array.from({ length: 108 }, (_, index) => ({
+        ...item,
+        candidateId: `unmapped-${index}`,
+        fieldLabel: `지원하지 않는 입력 ${index}`,
+        profileValue: undefined,
+        previewValue: "",
+      }))}
+      results={[]}
+    />,
+  );
+  const skipped = screen.getByText(/건너뛴 항목 보기/).closest("details")!;
+  expect(
+    within(skipped).getAllByRole("listitem", { hidden: true }),
+  ).toHaveLength(1);
+  expect(within(skipped).getByText("자동 입력 미지원")).toBeInTheDocument();
+  expect(
+    within(skipped).getByLabelText("자동 입력 미지원 108개"),
+  ).toBeInTheDocument();
+  expect(
+    within(skipped).queryByText(/지원하지 않는 입력/),
+  ).not.toBeInTheDocument();
+});
+
+it("does not present a top-level education choice as belonging to one repeated school", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          fieldLabel:
+            "최종 학력 *필수항목 고등학교 전문대학(전문학사) 대학(학사)",
+          profileFieldKey: "education.university.latestEducationType",
+          itemIndex: 0,
+          profileValue: "대학(학사)",
+        },
+      ]}
+      results={[]}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "최종학력 필드로 이동" }),
+  ).toBeDisabled();
+  expect(screen.queryByText(/대학교 \/ 최종학력/)).not.toBeInTheDocument();
+});
+
 it("announces the completed summary without moving focus or including interactive details", () => {
   const { rerender } = render(
     <div>

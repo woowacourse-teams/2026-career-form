@@ -58,6 +58,9 @@ it("keeps an unchanged value out of new-write totals while counting a verified c
   expect(document.querySelector("select")).toHaveValue("KR");
   const skipped = screen.getByText(/건너뛴 항목 보기/).closest("details")!;
   expect(skipped).not.toHaveAttribute("open");
-  expect(within(skipped).getByText("이름")).toBeInTheDocument();
+  expect(
+    within(skipped).getByLabelText("기존 값 유지 1개"),
+  ).toBeInTheDocument();
+  expect(document.querySelector("input")).toHaveValue("테스트");
   expect(within(skipped).getByText("기존 값 유지")).toBeInTheDocument();
 });

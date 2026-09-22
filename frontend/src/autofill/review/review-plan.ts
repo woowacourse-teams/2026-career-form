@@ -386,6 +386,10 @@ function itemForAnalysis(
       ...(binding.type === "DIRECT"
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
+      ...(resolvedProfileValue.profileEntryId
+        ? { profileEntryId: resolvedProfileValue.profileEntryId }
+        : {}),
+      ...(itemIndex !== undefined ? { itemIndex } : {}),
       currentValue: pageValue,
       profileValue: resolvedProfileValue.value,
       previewValue: resolvedProfileValue.value,

@@ -180,15 +180,14 @@
   list-style: none;
 }
 .skipped li {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 12px;
   overflow-wrap: anywhere;
 }
 .skipped strong {
+  flex: none;
   color: var(--color-text);
   font-weight: 550;
-}
-.skipped small {
-  font-size: 12px;
 }

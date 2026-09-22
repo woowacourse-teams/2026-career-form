@@ -305,73 +305,86 @@ describe("review plan", () => {
 
     expect(item).toMatchObject({
       profileValue: "경영학과",
+      profileEntryId: "university-1",
+      itemIndex: 0,
       status: "needs-review",
       selected: false,
     });
   });
 
-  it("maps repeated form rows to the matching local profile entry", () => {
-    const first = document.createElement("input");
-    const second = document.createElement("input");
-    document.body.append(first, second);
-    const registry = new CandidateRegistry();
-    for (const [index, element] of [first, second].entries()) {
-      const candidateId = `field-${index + 1}`;
-      registry.registerField({
-        kind: "field",
-        candidateId,
-        candidate: {
+  it.each(["ALLOWED", "CONDITIONAL"] as const)(
+    "preserves repeated row identity and selection policy for %s fields",
+    (autofillPolicy) => {
+      const first = document.createElement("input");
+      const second = document.createElement("input");
+      document.body.append(first, second);
+      const registry = new CandidateRegistry();
+      for (const [index, element] of [first, second].entries()) {
+        const candidateId = `field-${index + 1}`;
+        registry.registerField({
+          kind: "field",
           candidateId,
-          element: "input",
-          control: "text",
-          visibility: "visible",
-          displayName: "자격증명",
-        },
-        elements: [element],
-        optionElements: new Map(),
-        sectionId: "section-certificate",
-        itemId: `certificate-item-${index + 1}`,
-        itemIndex: index,
-        signature: createStructuralSignature([element]),
-      });
-    }
+          candidate: {
+            candidateId,
+            element: "input",
+            control: "text",
+            visibility: "visible",
+            displayName: "자격증명",
+          },
+          elements: [element],
+          optionElements: new Map(),
+          sectionId: "section-certificate",
+          itemId: `certificate-item-${index + 1}`,
+          itemIndex: index,
+          signature: createStructuralSignature([element]),
+        });
+      }
 
-    const profile: Profile = {
-      ...createEmptyProfile(),
-      certifications: [
-        {
-          id: "certificate-1",
-          sectionId: "certificate",
-          values: { name: "자격증 A" },
-        },
-        {
-          id: "certificate-2",
-          sectionId: "certificate",
-          values: { name: "자격증 B" },
-        },
-      ],
-    };
-    const fields = [0, 1].map((index) => ({
-      ...allowedEmail,
-      candidateId: `field-${index + 1}`,
-      profileFieldKey: "certifications.certificate.name",
-    }));
+      const profile: Profile = {
+        ...createEmptyProfile(),
+        certifications: [
+          {
+            id: "certificate-1",
+            sectionId: "certificate",
+            values: { name: "자격증 A" },
+          },
+          {
+            id: "certificate-2",
+            sectionId: "certificate",
+            values: { name: "자격증 B" },
+          },
+        ],
+      };
+      const fields = [0, 1].map((index) => ({
+        ...allowedEmail,
+        candidateId: `field-${index + 1}`,
+        profileFieldKey: "certifications.certificate.name",
+        autofillPolicy,
+      }));
 
-    expect(
-      buildReviewPlan({ analysis: response(fields), profile, registry }).items,
-    ).toMatchObject([
-      {
-        profileValue: "자격증 A",
-        profileEntryId: "certificate-1",
-        itemIndex: 0,
-      },
-      {
-        profileValue: "자격증 B",
-        profileEntryId: "certificate-2",
-        itemIndex: 1,
-      },
-    ]);
-  });
+      expect(
+        buildReviewPlan({ analysis: response(fields), profile, registry })
+          .items,
+      ).toMatchObject([
+        {
+          profileValue: "자격증 A",
+          profileEntryId: "certificate-1",
+          itemIndex: 0,
+          status: autofillPolicy === "ALLOWED" ? "available" : "needs-review",
+          selected: autofillPolicy === "ALLOWED",
+          disabled: false,
+        },
+        {
+          profileValue: "자격증 B",
+          profileEntryId: "certificate-2",
+          itemIndex: 1,
+          status: autofillPolicy === "ALLOWED" ? "available" : "needs-review",
+          selected: autofillPolicy === "ALLOWED",
+          disabled: false,
+        },
+      ]);
+    },
+  );
 
   it("blocks repeated autofill when form and profile row counts differ", () => {
     const registry = registryWithTextField();

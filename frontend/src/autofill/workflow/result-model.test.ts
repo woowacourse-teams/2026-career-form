@@ -213,3 +213,59 @@ it("requires review when a written field can no longer be inspected", () => {
   expect(result.completed).toEqual([]);
   expect(result.pending).toMatchObject([{ reason: "입력 결과 확인" }]);
 });
+
+it("counts a disabled-only retry recovery only with current reflection evidence", () => {
+  const result = buildResultModel({
+    reviewItems: [item],
+    results: [
+      {
+        candidateId: "field-1",
+        status: "skipped",
+        reason: "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
+      },
+    ],
+    progress: [{ ...entry, retryRecovered: true }],
+    progressIdFor: () => "stable-1",
+    progressStateFor: () => true,
+    wasWritten: () => true,
+    fieldStateFor: () => ({ visible: true, value: "학사" }),
+  });
+  expect(result.completed.map((entry) => entry.id)).toEqual(["stable-1"]);
+  expect(result.pending).toEqual([]);
+  expect(result.skipped).toEqual([]);
+});
+
+it.each([
+  "no recovery",
+  "no verifier",
+  "no live value",
+  "changed value",
+  "not recorded",
+])(
+  "does not infer a successful retry from matching text with %s",
+  (missing) => {
+    const result = buildResultModel({
+      reviewItems: [item],
+      results: [
+        {
+          candidateId: "field-1",
+          status: "skipped",
+          reason: "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
+        },
+      ],
+      progress: [{ ...entry, retryRecovered: missing !== "no recovery" }],
+      progressIdFor: () => "stable-1",
+      progressStateFor: missing === "no verifier" ? undefined : () => true,
+      wasWritten: () => missing !== "not recorded",
+      fieldStateFor: () =>
+        missing === "no live value"
+          ? undefined
+          : {
+              visible: true,
+              value: missing === "changed value" ? "석사" : "학사",
+            },
+    });
+    expect(result.completed).toEqual([]);
+    expect(result.pending).toMatchObject([{ reason: "입력 못함" }]);
+  },
+);

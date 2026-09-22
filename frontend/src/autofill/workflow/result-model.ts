@@ -5,6 +5,7 @@ import { progressCategory, type WriteProgress } from "./progress-model";
 import { savedResultValues } from "./result-preview";
 import { isSkippedByApproval } from "./workflow-model";
 import { matchesResultValue } from "./result-value-match";
+import { resultFieldLabel } from "./result-label";
 
 export interface ResultModelInput {
   reviewItems: readonly ReviewPlanItem[];
@@ -62,7 +63,7 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       return {
         id: result.candidateId,
         candidateId: result.candidateId,
-        label: item?.fieldLabel ?? "입력 필드",
+        label: item ? resultFieldLabel(item) : "입력 필드",
         category: item ? progressCategory(item) : "기타 항목",
         status: result.status,
       };
@@ -97,6 +98,12 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     const current = live?.value ?? item.currentValue;
     const matches =
       saved.length === 1 && matchesResultValue(item, current, saved[0].value);
+    const recoveredRetry =
+      entry?.retryRecovered &&
+      written &&
+      live?.visible === true &&
+      matches &&
+      progressStateFor?.(stableId) === true;
     const skip = (reason: string) => {
       completed.delete(stableId);
       skipped.push({ id, item, reason });
@@ -117,7 +124,11 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       );
     } else if (entry?.unchanged && matches) {
       skip("기존 값 유지");
-    } else if (result?.status === "skipped" && !isSkippedByApproval(result)) {
+    } else if (
+      result?.status === "skipped" &&
+      !isSkippedByApproval(result) &&
+      !recoveredRetry
+    ) {
       review("입력 못함");
     } else if (written) {
       const uncertain =
