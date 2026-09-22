@@ -11,8 +11,18 @@ import {
 } from "../src/autofill-demo/messages";
 import { openInPagePanel } from "../src/extension/open-in-page-panel";
 import { openInstalledOnboarding } from "../src/extension/install-onboarding";
+import { openToolbarPanel } from "../src/extension/toolbar-panel";
 
 export default defineBackground(() => {
+  browser.action.onClicked.addListener((tab) => {
+    void openToolbarPanel(tab, {
+      openPanel: (tabId) => openInPagePanel(undefined, tabId),
+      openGuide: () =>
+        browser.tabs.create({
+          url: `chrome-extension://${browser.runtime.id}/onboarding.html?panel=unavailable`,
+        }),
+    }).catch(() => undefined);
+  });
   browser.runtime.onInstalled.addListener(({ reason }) => {
     void openInstalledOnboarding(reason, () =>
       browser.tabs.create({

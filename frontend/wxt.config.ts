@@ -26,6 +26,11 @@ function apiHostPermissions(apiBaseUrl: string | undefined): string[] {
 }
 
 export default defineConfig({
+  hooks: {
+    "build:manifestGenerated": (_wxt, manifest) => {
+      if (manifest.action) delete manifest.action.default_popup;
+    },
+  },
   manifest: {
     description: "채용 지원 정보를 안전하게 재사용하는 Chrome 확장 프로그램",
     name: "Career Form",

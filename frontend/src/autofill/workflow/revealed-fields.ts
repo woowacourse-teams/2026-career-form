@@ -6,13 +6,17 @@ import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
 } from "../review/review-plan";
-import { executeApprovedWritesAfterPageSettles } from "../write/executor";
+import {
+  executeApprovedWritesAfterPageSettles,
+  type WriteResultListener,
+} from "../write/executor";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import type { Profile } from "../../profile/model";
 import { adapterProfileValue, type PreparationItem } from "./workflow-model";
 
 interface RevealedFieldsContext {
+  onWriteResult?: WriteResultListener;
   adapter: WorkflowAdapter;
   apiClient: AnalysisApiClient;
   pageDocument: Document;
@@ -31,6 +35,7 @@ export function createWriteRevealedFields({
   setWorkflowDiagnostics,
   presentField,
   signal,
+  onWriteResult,
 }: RevealedFieldsContext) {
   const writeRevealedFields = async (
     loadedProfile: Profile,
@@ -116,6 +121,7 @@ export function createWriteRevealedFields({
     });
     diagnostics.push({ code: "ELIGIBLE_FIELDS", count: items.length });
     const results = await executeApprovedWritesAfterPageSettles({
+      onResult: onWriteResult,
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
       registry: snapshot.registry,

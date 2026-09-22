@@ -6,6 +6,22 @@
   padding: 18px 16px;
   background: var(--color-page);
 }
+.resultScreen {
+  gap: 12px;
+  padding: 16px;
+}
+.resultTitle {
+  margin: 0;
+  font-size: 18px;
+  color: var(--color-text-strong);
+}
+.addressResult {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.addressResult p {
+  margin: 8px 0 0;
+}
 
 .header span {
   color: var(--color-action);

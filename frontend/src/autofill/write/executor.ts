@@ -7,6 +7,10 @@ import { normalizeDisplayName } from "./display-name";
 export type ApprovedWriteResult =
   | { candidateId: string; status: "written" }
   | { candidateId: string; status: "skipped"; reason: string };
+export type WriteResultListener = (
+  item: ReviewPlanItem,
+  result: ApprovedWriteResult,
+) => void;
 
 function dispatchValueEvents(element: Element): void {
   element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -242,12 +246,14 @@ export async function executeApprovedWritesAfterPageSettles({
   registry,
   beforeWrite,
   signal,
+  onResult,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
   registry: CandidateRegistry;
   beforeWrite?: (item: ReviewPlanItem) => Promise<void>;
   signal?: AbortSignal;
+  onResult?: WriteResultListener;
 }): Promise<ApprovedWriteResult[]> {
   const initialResults: ApprovedWriteResult[] = [];
   if (beforeWrite) {
@@ -270,6 +276,8 @@ export async function executeApprovedWritesAfterPageSettles({
           deferFinalization: true,
         }),
       );
+      if (eligible && !signal?.aborted)
+        onResult?.(item, initialResults[initialResults.length - 1]);
       if (eligible)
         await new Promise<void>((resolve) => setTimeout(resolve, 16));
       processed.add(item.candidateId);
@@ -298,7 +306,12 @@ export async function executeApprovedWritesAfterPageSettles({
   const retryByCandidateId = new Map(
     retryResults.map((result) => [result.candidateId, result]),
   );
-  return initialResults.map(
+  const finalResults = initialResults.map(
     (result) => retryByCandidateId.get(result.candidateId) ?? result,
   );
+  finalResults.forEach((result, index) => {
+    if (!signal?.aborted && approvedCandidateIds.has(result.candidateId))
+      onResult?.(items[index], result);
+  });
+  return finalResults;
 }

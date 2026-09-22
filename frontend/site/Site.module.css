@@ -354,6 +354,13 @@
   grid-template-columns: 230px minmax(0, 1fr);
   border-top: 1px solid #dce5e9;
 }
+.panelNotice {
+  max-width: 1160px;
+  margin: 0 auto !important;
+  padding: 16px 24px;
+  background: #ffecd2;
+  color: #754126;
+}
 .onboarding > aside {
   padding: 45px 28px;
   background: #edf7fb;

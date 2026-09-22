@@ -8,12 +8,51 @@ const item: ReviewPlanItem = {
   fieldLabel: "전공",
   currentValue: "",
   previewValue: "컴퓨터공학",
+  profileValue: "컴퓨터공학",
   status: "unavailable",
   selected: false,
   disabled: true,
   revealed: true,
   reason: "후보 여러 개",
 };
+
+it("does not count unmapped, missing-profile, hidden, or already matching fields as needing review", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          candidateId: "unmapped",
+          profileValue: undefined,
+          previewValue: "입력 예정 값 없음",
+        },
+        { ...item, candidateId: "same", currentValue: "컴퓨터공학" },
+        { ...item, candidateId: "hidden" },
+        { ...item, candidateId: "ambiguous" },
+      ]}
+      results={[]}
+      fieldStateFor={(id) => ({
+        visible: id !== "hidden",
+        value: id === "same" ? "컴퓨터공학" : "",
+      })}
+    />,
+  );
+  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  expect(
+    screen.getAllByRole("button", { name: "전공 필드로 이동" }),
+  ).toHaveLength(1);
+});
+
+it("keeps a written but review-required mapping in the review list", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[{ ...item, status: "needs-review" }]}
+      results={[{ candidateId: "major", status: "written" }]}
+    />,
+  );
+  expect(screen.getByLabelText("입력 완료 1개")).toBeInTheDocument();
+  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+});
 
 it("keeps unresolved unapproved items visible and reports unavailable locations", () => {
   render(
@@ -62,6 +101,9 @@ it("separates write failures from unresolved fields and preserves masked preview
   );
   expect(screen.getByLabelText("입력 완료 1개")).toBeInTheDocument();
   expect(screen.getByLabelText("입력 실패 1개")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "입력 실패" }),
+  ).toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
   expect(screen.queryByText("5000")).not.toBeInTheDocument();
 });

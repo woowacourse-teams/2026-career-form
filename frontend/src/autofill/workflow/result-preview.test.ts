@@ -47,3 +47,36 @@ it("masks saved sensitive values even when the field is unavailable", () => {
     ),
   ).toEqual(["••••••••"]);
 });
+
+it("keeps a saved value visible when the site's option mapping cannot resolve it", () => {
+  const profile = createEmptyProfile();
+  profile.contact.email = "example@example.test";
+  expect(
+    resultPreview(
+      {
+        candidateId: "email",
+        fieldLabel: "이메일",
+        currentValue: "",
+        previewValue: "입력 예정 값 없음",
+        status: "unavailable",
+        selected: false,
+        disabled: true,
+        revealed: false,
+        reason: "선택지 없음",
+        analysis: {
+          candidateId: "email",
+          matchType: "MATCH",
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "LLM_SUGGESTED",
+          interactionStatus: "READY",
+          valueBinding: {
+            type: "LOOKUP",
+            profileFieldKey: "contact.contact.email",
+            optionMap: {},
+          },
+        },
+      },
+      profile,
+    ),
+  ).toEqual(["example@example.test"]);
+});

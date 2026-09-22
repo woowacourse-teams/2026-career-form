@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFieldPresentation } from "../write/field-presentation";
+import type { WriteProgress } from "./WorkflowLoading";
+import type { WriteResultListener } from "../write/executor";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { AddressResult } from "../address/types";
 import {
@@ -64,6 +66,17 @@ export function AutofillWorkflow({
     [pageDocument],
   );
   const [currentField, setCurrentField] = useState<string>();
+  const [progress, setProgress] = useState<WriteProgress[]>([]);
+  const onWriteResult: WriteResultListener = (item, result) => {
+    if (!mounted.current || addressRun.current.controller.signal.aborted)
+      return;
+    setProgress((previous) =>
+      [
+        ...previous.filter((entry) => entry.id !== item.candidateId),
+        { id: item.candidateId, label: item.fieldLabel, status: result.status },
+      ].slice(-6),
+    );
+  };
   const presentField = async (
     registry: CandidateRegistry,
     item: ReviewPlanItem,
@@ -121,6 +134,7 @@ export function AutofillWorkflow({
   >([]);
 
   const analyzeFields = createAnalyzeFields({
+    onWriteResult,
     adapter,
     addressRun,
     addressSearch,
@@ -499,6 +513,7 @@ export function AutofillWorkflow({
   };
 
   const writeRevealedFields = createWriteRevealedFields({
+    onWriteResult,
     adapter,
     apiClient,
     pageDocument,
@@ -539,6 +554,7 @@ export function AutofillWorkflow({
       );
       setStage("writing");
       const nextResults = await executeApprovedWritesAfterPageSettles({
+        onResult: onWriteResult,
         items: reviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
@@ -566,6 +582,40 @@ export function AutofillWorkflow({
 
   return (
     <WorkflowScreens
+      progress={progress}
+      fieldStateFor={(id) => {
+        const lookup = fieldsSnapshot?.registry.lookupField(id);
+        if (
+          !lookup ||
+          (lookup.status !== "ready" && lookup.status !== "blocked")
+        )
+          return undefined;
+        const handle = lookup.handle;
+        const element = handle.elements[0];
+        const style =
+          element && pageDocument.defaultView?.getComputedStyle(element);
+        const hidden =
+          handle.candidate.visibility === "hidden" ||
+          (lookup.status === "blocked" && lookup.reason === "hidden") ||
+          style?.display === "none" ||
+          style?.visibility === "hidden";
+        let value =
+          element instanceof HTMLSelectElement
+            ? (element.selectedOptions[0]?.textContent ?? "")
+            : (element?.value ?? "");
+        if (
+          handle.candidate.control === "radio" ||
+          handle.candidate.control === "checkbox"
+        ) {
+          const selected = handle.candidate.options?.filter((option) => {
+            const control = handle.optionElements.get(option.optionId);
+            return control instanceof HTMLInputElement && control.checked;
+          });
+          value =
+            selected?.map((option) => option.displayName).join(", ") ?? "";
+        }
+        return { visible: !hidden, value };
+      }}
       profile={profile}
       optionsFor={(candidateId) => {
         const lookup = fieldsSnapshot?.registry.lookupField(candidateId);

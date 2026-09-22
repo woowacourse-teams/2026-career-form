@@ -199,7 +199,7 @@ function Onboarding({ installed }: { installed: boolean }) {
         </h1>
         <p className={styles.description}>
           {installed && step === 0
-            ? "Chrome 퍼즐 메뉴에서 Career Form을 선택하면 시작할 수 있어요."
+            ? "작성할 지원서 페이지에서 Chrome 퍼즐 메뉴의 Career Form을 선택하세요."
             : current.description}
         </p>
         {step === 0 && !installed && (
@@ -300,9 +300,11 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
 export function SiteApp({
   path = window.location.pathname,
   installed = false,
+  panelUnavailable = false,
 }: {
   path?: string;
   installed?: boolean;
+  panelUnavailable?: boolean;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
@@ -312,6 +314,12 @@ export function SiteApp({
         본문으로 건너뛰기
       </SiteLink>
       <Header landing={landing} />
+      {panelUnavailable && (
+        <p className={styles.panelNotice} role="status">
+          이 페이지에서는 지원서 패널을 열 수 없어요. 작성할 지원서 페이지에서
+          커리어폼 아이콘을 눌러 주세요.
+        </p>
+      )}
       {landing ? (
         <Landing />
       ) : normalized === "/onboarding" ? (

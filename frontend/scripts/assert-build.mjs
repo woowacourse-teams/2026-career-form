@@ -10,8 +10,8 @@ if (manifest.manifest_version !== 3) {
   throw new Error("Chrome Manifest V3 산출물이 필요합니다.");
 }
 
-if (manifest.action?.default_popup !== "popup.html") {
-  throw new Error("action.default_popup이 popup.html이어야 합니다.");
+if (manifest.action?.default_popup) {
+  throw new Error("툴바 아이콘은 팝업 없이 지원서 패널을 직접 열어야 합니다.");
 }
 
 if (

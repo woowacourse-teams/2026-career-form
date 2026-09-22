@@ -97,7 +97,7 @@ export function ServiceGuide({ kind }: { kind: "profile" | "autofill" }) {
         <strong>
           {kind === "profile"
             ? "↑ 패널 상단의 프로필 관리"
-            : "↑ 패널 하단의 자동 기입"}
+            : "↑ 패널 상단의 자동 기입"}
         </strong>
         <span>테두리로 표시한 버튼을 설치된 커리어폼에서 누르세요.</span>
       </figcaption>

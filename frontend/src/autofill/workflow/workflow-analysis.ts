@@ -12,6 +12,7 @@ import {
   executeApprovedWrites,
   executeApprovedWritesAfterPageSettles,
   type ApprovedWriteResult,
+  type WriteResultListener,
 } from "../write/executor";
 import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import type { ProfileRepository } from "../../profile/profile-repository";
@@ -35,6 +36,7 @@ type AddressRun = {
 };
 
 interface WorkflowAnalysisContext {
+  onWriteResult?: WriteResultListener;
   presentField?: (
     registry: CandidateRegistry,
     item: ReviewPlanItem,
@@ -79,6 +81,7 @@ export function createAnalyzeFields({
   setWarnings,
   setResults,
   presentField,
+  onWriteResult,
 }: WorkflowAnalysisContext) {
   const sensitiveValueApproved = (loaded: Profile, key: string): boolean => {
     const value = localProfileValue(loaded, key);
@@ -386,6 +389,12 @@ export function createAnalyzeFields({
           setStage("exception");
           return;
         }
+        currentStateDriverItems.forEach(({ item }) =>
+          onWriteResult?.(item, {
+            candidateId: item.candidateId,
+            status: "written",
+          }),
+        );
         const nextCompletedStateDriverKeys = new Set(completedStateDriverKeys);
         currentStateDriverItems.forEach(({ key }) =>
           nextCompletedStateDriverKeys.add(key),
@@ -464,6 +473,7 @@ export function createAnalyzeFields({
     });
     setStage("writing");
     const writeResults = await executeApprovedWritesAfterPageSettles({
+      onResult: onWriteResult,
       items: finalWriteItems,
       approvedCandidateIds,
       registry: snapshot.registry,

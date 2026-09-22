@@ -7,8 +7,8 @@ import {
 } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
-import { WorkflowResults } from "./WorkflowResults";
-import { WorkflowLoading } from "./WorkflowLoading";
+import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
+import { WorkflowLoading, type WriteProgress } from "./WorkflowLoading";
 import type { Profile } from "../../profile/model";
 import {
   Header,
@@ -24,6 +24,8 @@ import {
 } from "./workflow-model";
 
 interface WorkflowScreensProps {
+  progress?: readonly WriteProgress[];
+  fieldStateFor?: WorkflowResultsProps["fieldStateFor"];
   profile?: Profile;
   optionsFor?(candidateId: string): readonly string[];
   currentField?: string;
@@ -50,6 +52,8 @@ interface WorkflowScreensProps {
 }
 
 export function WorkflowScreens({
+  progress,
+  fieldStateFor,
   profile,
   optionsFor,
   stage,
@@ -77,6 +81,7 @@ export function WorkflowScreens({
   if (stage === "analyzing" || stage === "writing") {
     return (
       <WorkflowLoading
+        progress={progress}
         writing={stage === "writing"}
         currentField={currentField}
       />
@@ -316,17 +321,25 @@ export function WorkflowScreens({
 
   if (stage === "result") {
     return (
-      <div className={styles.screen}>
-        <Header step="완료" title="기입 결과" />
+      <div className={`${styles.screen} ${styles.resultScreen}`}>
+        <h2 className={styles.resultTitle}>기입 결과</h2>
         {addressResult && (
-          <p role="status">
-            {addressResult.status === "written"
-              ? "주소 확인 완료: "
-              : "주소 직접 확인 필요: "}
-            {addressResult.reason}
-          </p>
+          <details className={styles.addressResult}>
+            <summary>
+              {addressResult.status === "written"
+                ? "주소 입력 확인 완료"
+                : "주소 확인 필요"}
+            </summary>
+            <p>
+              {addressResult.status === "written"
+                ? "주소 확인 완료: "
+                : "주소 직접 확인 필요: "}
+              {addressResult.reason}
+            </p>
+          </details>
         )}
         <WorkflowResults
+          fieldStateFor={fieldStateFor}
           profile={profile}
           optionsFor={optionsFor}
           results={results}

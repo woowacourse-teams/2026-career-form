@@ -302,7 +302,7 @@
   font-size: 12px;
 }
 .autofillAction {
-  margin-bottom: 20px;
+  margin: 14px 0 0;
 }
 .bottomActionPanel {
   grid-template-rows: auto minmax(0, 1fr) auto;

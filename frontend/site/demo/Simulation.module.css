@@ -220,10 +220,10 @@
   top: 0;
 }
 .guideAutofill .nativePanel {
-  bottom: 0;
+  top: -85px;
 }
-.guideProfile header > div:last-child button,
-.guideAutofill footer button {
+.guideProfile header > div:nth-child(2) button,
+.guideAutofill [data-autofill-start] {
   outline: 2px solid #ad5b2f;
   outline-offset: 3px;
 }
