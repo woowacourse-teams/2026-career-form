@@ -12,6 +12,10 @@ it("starts installed users with opening guidance and keeps all three steps reach
   expect(screen.queryByRole("button", { name: "나중에 할게요" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /프로필 등록 알아보기/ }));
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("프로필");
+  expect(screen.getByRole("link", { name: /프로필 등록하기/ })).toHaveAttribute(
+    "href",
+    "/options.html",
+  );
   expect(screen.queryByRole("button", { name: "프로필 관리 열기" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /사용 방법 알아보기/ }));
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("지원서");

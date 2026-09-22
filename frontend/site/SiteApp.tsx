@@ -159,7 +159,13 @@ function Landing() {
     </main>
   );
 }
-function Onboarding({ installed }: { installed: boolean }) {
+function Onboarding({
+  installed,
+  profileHref,
+}: {
+  installed: boolean;
+  profileHref?: string;
+}) {
   const [step, setStep] = useState(0);
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
@@ -229,7 +235,21 @@ function Onboarding({ installed }: { installed: boolean }) {
                 <span>{i + 1}</span>
                 <div>
                   <h2>{title}</h2>
-                  <p>{body}</p>
+                  <p>
+                    {step === 1 && i === 0 && profileHref
+                      ? "아래 ‘프로필 등록하기’를 눌러 내 정보를 등록하세요. 지원서 패널의 ‘프로필 관리’에서도 열 수 있어요."
+                      : body}
+                  </p>
+                  {step === 1 && i === 0 && profileHref && (
+                    <a
+                      className={styles.primary}
+                      href={profileHref}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      프로필 등록하기 <Icon name="arrow" />
+                    </a>
+                  )}
                 </div>
               </li>
             ))}
@@ -300,11 +320,11 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
 export function SiteApp({
   path = window.location.pathname,
   installed = false,
-  panelUnavailable = false,
+  profileHref,
 }: {
   path?: string;
   installed?: boolean;
-  panelUnavailable?: boolean;
+  profileHref?: string;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
@@ -314,16 +334,10 @@ export function SiteApp({
         본문으로 건너뛰기
       </SiteLink>
       <Header landing={landing} />
-      {panelUnavailable && (
-        <p className={styles.panelNotice} role="status">
-          이 페이지에서는 지원서 패널을 열 수 없어요. 작성할 지원서 페이지에서
-          커리어폼 아이콘을 눌러 주세요.
-        </p>
-      )}
       {landing ? (
         <Landing />
       ) : normalized === "/onboarding" ? (
-        <Onboarding installed={installed} />
+        <Onboarding installed={installed} profileHref={profileHref} />
       ) : normalized === "/privacy" || normalized === "/terms" ? (
         <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />
       ) : (

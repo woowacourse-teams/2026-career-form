@@ -1,6 +1,6 @@
 interface ToolbarNavigation {
   openPanel(tabId: number): Promise<void>;
-  openGuide(): Promise<unknown>;
+  openProfile(): Promise<unknown>;
 }
 export async function openToolbarPanel(
   tab: { id?: number; url?: string },
@@ -14,5 +14,5 @@ export async function openToolbarPanel(
       /* Restricted web pages cannot accept content scripts. */
     }
   }
-  await navigation.openGuide();
+  await navigation.openProfile();
 }

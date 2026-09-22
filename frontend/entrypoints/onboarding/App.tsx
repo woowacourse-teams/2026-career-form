@@ -14,14 +14,7 @@ export function App() {
     new URLSearchParams(window.location.search).get("page") ?? "/onboarding/";
   return (
     <SiteUrlContext value={extensionSiteUrl}>
-      <SiteApp
-        path={path}
-        installed
-        panelUnavailable={
-          new URLSearchParams(window.location.search).get("panel") ===
-          "unavailable"
-        }
-      />
+      <SiteApp path={path} installed profileHref="/options.html" />
     </SiteUrlContext>
   );
 }

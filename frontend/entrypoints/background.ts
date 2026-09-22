@@ -17,10 +17,7 @@ export default defineBackground(() => {
   browser.action.onClicked.addListener((tab) => {
     void openToolbarPanel(tab, {
       openPanel: (tabId) => openInPagePanel(undefined, tabId),
-      openGuide: () =>
-        browser.tabs.create({
-          url: `chrome-extension://${browser.runtime.id}/onboarding.html?panel=unavailable`,
-        }),
+      openProfile: () => browser.runtime.openOptionsPage(),
     }).catch(() => undefined);
   });
   browser.runtime.onInstalled.addListener(({ reason }) => {

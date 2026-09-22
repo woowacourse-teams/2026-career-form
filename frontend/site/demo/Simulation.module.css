@@ -216,11 +216,9 @@
   height: 640px;
   border: 0;
 }
-.guideProfile .nativePanel {
-  top: 0;
-}
+.guideProfile .nativePanel,
 .guideAutofill .nativePanel {
-  top: -85px;
+  top: 0;
 }
 .guideProfile header > div:nth-child(2) button,
 .guideAutofill [data-autofill-start] {
