@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFieldPresentation } from "../write/field-presentation";
-import type { WriteProgress } from "./WorkflowLoading";
+import {
+  createProgressTracker,
+  progressCategory,
+  type WriteProgress,
+  type WorkflowActivity,
+} from "./progress-model";
 import type { WriteResultListener } from "../write/executor";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { AddressResult } from "../address/types";
@@ -65,25 +70,27 @@ export function AutofillWorkflow({
     () => createFieldPresentation(pageDocument),
     [pageDocument],
   );
-  const [currentField, setCurrentField] = useState<string>();
+  const [currentCategory, setCurrentCategory] = useState<string>();
+  const [activity, setActivity] = useState<WorkflowActivity>("matching");
+  const progressTracker = useMemo(
+    () => createProgressTracker(),
+    [pageDocument],
+  );
   const [progress, setProgress] = useState<WriteProgress[]>([]);
-  const onWriteResult: WriteResultListener = (item, result) => {
+  const onWriteResult: WriteResultListener = (item, result, registry) => {
     if (!mounted.current || addressRun.current.controller.signal.aborted)
       return;
-    setProgress((previous) =>
-      [
-        ...previous.filter((entry) => entry.id !== item.candidateId),
-        { id: item.candidateId, label: item.fieldLabel, status: result.status },
-      ].slice(-6),
-    );
+    setProgress(progressTracker.record(item, result, registry));
   };
   const presentField = async (
     registry: CandidateRegistry,
     item: ReviewPlanItem,
   ) => {
-    if (!mounted.current || !followFields) return;
-    if (presentation.show(registry, item.candidateId))
-      setCurrentField(item.fieldLabel);
+    if (!mounted.current || addressRun.current.controller.signal.aborted)
+      return;
+    setCurrentCategory(progressCategory(item));
+    if (!followFields) return;
+    presentation.show(registry, item.candidateId);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   };
   const addressRun = useRef<{
@@ -134,6 +141,7 @@ export function AutofillWorkflow({
   >([]);
 
   const analyzeFields = createAnalyzeFields({
+    onActivity: setActivity,
     onWriteResult,
     adapter,
     addressRun,
@@ -160,7 +168,7 @@ export function AutofillWorkflow({
   useEffect(() => {
     if (stage !== "writing") {
       presentation.clear();
-      setCurrentField(undefined);
+      setCurrentCategory(undefined);
     }
   }, [stage, presentation]);
 
@@ -228,6 +236,7 @@ export function AutofillWorkflow({
           adapter.prepareEducation &&
           analysis.mode === "ADAPTER"
         ) {
+          setActivity("preparing");
           if (
             educationPlans.length !== 1 ||
             !(await adapter.prepareEducation(
@@ -306,6 +315,7 @@ export function AutofillWorkflow({
         .map((item) => ({ ...item, approved: true }));
 
       setStage("analyzing");
+      setActivity("preparing");
       if (runnablePlans.length === 0) {
         const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
         await analyzeFields(profile, addedRowsToEmptyForm);
@@ -447,6 +457,7 @@ export function AutofillWorkflow({
         // Analyze that newly collected DOM once, but only execute selections:
         // repeating add plans here could create duplicate rows.
         const followUpSnapshot = collectPreparationSnapshot(pageDocument);
+        setActivity("matching");
         const followUpAnalysis = await apiClient.analyzePreparation(
           followUpSnapshot.request,
         );
@@ -478,6 +489,7 @@ export function AutofillWorkflow({
             }))
             .filter(isApprovedPreparation);
           if (followUpPlans.length > 0) {
+            setActivity("preparing");
             const followUpResult = await executeApprovedPreparationPlans({
               approvedPlans: followUpPlans,
               ...preparationOptions(followUpSnapshot),
@@ -513,6 +525,7 @@ export function AutofillWorkflow({
   };
 
   const writeRevealedFields = createWriteRevealedFields({
+    onActivity: setActivity,
     onWriteResult,
     adapter,
     apiClient,
@@ -583,6 +596,11 @@ export function AutofillWorkflow({
   return (
     <WorkflowScreens
       progress={progress}
+      activity={activity}
+      wasWritten={(id) =>
+        !!fieldsSnapshot &&
+        progressTracker.wasWritten(id, fieldsSnapshot.registry)
+      }
       fieldStateFor={(id) => {
         const lookup = fieldsSnapshot?.registry.lookupField(id);
         if (
@@ -644,7 +662,7 @@ export function AutofillWorkflow({
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
       onExit={onExit}
-      currentField={currentField}
+      currentCategory={currentCategory}
       onLocate={(candidateId) =>
         !!fieldsSnapshot &&
         presentation.show(fieldsSnapshot.registry, candidateId)

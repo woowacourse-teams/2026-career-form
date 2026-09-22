@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { WorkflowResults } from "./WorkflowResults";
 
@@ -15,6 +15,104 @@ const item: ReviewPlanItem = {
   revealed: true,
   reason: "후보 여러 개",
 };
+
+it("keeps completed categories from earlier writes and opens their details on request", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[]}
+      results={[{ candidateId: "latest-name", status: "written" }]}
+      progress={[
+        { id: "name", label: "이름", category: "기본 정보", status: "written" },
+        {
+          id: "email",
+          label: "이메일",
+          category: "기본 정보",
+          status: "written",
+        },
+        { id: "school", label: "학교명", category: "학력", status: "written" },
+        { id: "major", label: "전공", category: "학력", status: "skipped" },
+      ]}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "3개 항목을 입력했어요" }),
+  ).toBeInTheDocument();
+  const categories = screen.getByRole("list", { name: "범주별 입력 결과" });
+  expect(within(categories).getByText("기본 정보")).toBeInTheDocument();
+  expect(within(categories).getByText("2개 입력")).toBeInTheDocument();
+  expect(within(categories).getByText("학력")).toBeInTheDocument();
+  expect(within(categories).getByText("1개 입력")).toBeInTheDocument();
+  const summary = screen.getByText("입력 완료 3개");
+  expect(summary.closest("details")).not.toHaveAttribute("open");
+  fireEvent.click(screen.getByRole("button", { name: "입력한 항목 보기" }));
+  expect(summary.closest("details")).toHaveAttribute("open");
+  expect(summary).toHaveFocus();
+  expect(screen.getByText("학교명")).toBeInTheDocument();
+  expect(screen.queryByText("전공")).not.toBeInTheDocument();
+});
+
+it("focuses required review inside the panel without locating an application field", () => {
+  const application = document.createElement("input");
+  document.body.append(application);
+  render(
+    <WorkflowResults
+      reviewItems={[item]}
+      results={[{ candidateId: "name", status: "written" }]}
+      onLocate={() => {
+        application.focus();
+        return true;
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "확인할 항목 보기" }));
+  expect(
+    screen.getByRole("region", { name: "확인 필요한 항목" }),
+  ).toHaveFocus();
+  expect(application).not.toHaveFocus();
+  expect(
+    screen.getByText("입력 완료 1개").closest("details"),
+  ).not.toHaveAttribute("open");
+  application.remove();
+});
+
+it("treats an empty final progress ledger as zero instead of reviving stale writes", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[]}
+      results={[{ candidateId: "stale", status: "written" }]}
+      progress={[]}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "입력한 항목이 없어요" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "입력한 항목 보기" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("확인 필요 0개")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("입력 실패 0개")).not.toBeInTheDocument();
+});
+
+it("scrolls only the enclosing panel viewport when opening required review", () => {
+  render(
+    <div aria-label="테스트 패널" style={{ overflowY: "auto" }}>
+      <WorkflowResults reviewItems={[item]} results={[]} />
+    </div>,
+  );
+  const viewport = screen.getByLabelText("테스트 패널");
+  const review = screen.getByRole("region", { name: "확인 필요한 항목" });
+  vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 100, 400, 300),
+  );
+  vi.spyOn(review, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 300, 400, 600),
+  );
+  viewport.scrollTop = 40;
+  const pageScroll = document.documentElement.scrollTop;
+  fireEvent.click(screen.getByRole("button", { name: "확인할 항목 보기" }));
+  expect(viewport.scrollTop).toBe(240);
+  expect(document.documentElement.scrollTop).toBe(pageScroll);
+});
 
 it("does not count unmapped, missing-profile, hidden, or already matching fields as needing review", () => {
   render(
@@ -52,6 +150,44 @@ it("keeps a written but review-required mapping in the review list", () => {
   );
   expect(screen.getByLabelText("입력 완료 1개")).toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+});
+
+it("keeps a ready but unwritten field in review when its live value is still blank", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[item]}
+      results={[{ candidateId: "major", status: "written" }]}
+      progress={[]}
+      wasWritten={() => false}
+      fieldStateFor={() => ({ visible: true, value: "" })}
+    />,
+  );
+  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "전공 필드로 이동" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("후보 여러 개")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "입력한 항목이 없어요" }),
+  ).toBeInTheDocument();
+});
+
+it("does not ask to review an unwritten field whose current value already matches the profile", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[{ ...item, status: "needs-review" }]}
+      results={[{ candidateId: "major", status: "written" }]}
+      progress={[]}
+      wasWritten={() => false}
+      fieldStateFor={() => ({ visible: true, value: "컴퓨터공학" })}
+    />,
+  );
+  expect(
+    screen.queryByRole("button", { name: "전공 필드로 이동" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "확인할 항목 보기" }),
+  ).not.toBeInTheDocument();
 });
 
 it("keeps unresolved unapproved items visible and reports unavailable locations", () => {

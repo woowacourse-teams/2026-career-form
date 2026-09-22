@@ -3,30 +3,53 @@
   gap: 16px;
   min-width: 0;
 }
-.counts {
+.summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  font-size: 11px;
-}
-.counts > span {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 8px;
-  border-bottom: 2px solid var(--color-border);
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
   background: var(--color-surface);
 }
-.counts > span:first-child {
-  border-color: var(--color-success);
+.results .summary h3 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.45;
+  letter-spacing: -0.035em;
 }
-.counts > span:nth-child(2) {
-  border-color: var(--color-brand);
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 .counts strong {
+  color: var(--color-action-strong);
+}
+.primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  background: var(--color-accent);
   color: var(--color-text-strong);
-  font-size: 24px;
-  line-height: 1.2;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.primary:hover {
+  background: var(--color-accent-hover);
+}
+.review:focus-visible,
+.completed summary:focus-visible,
+.primary:focus-visible {
+  outline: 2px solid var(--color-action-strong);
+  outline-offset: 4px;
 }
 .results h3 {
   margin: 0 0 4px;
@@ -35,7 +58,6 @@
 }
 .empty {
   margin: 0;
-  padding: 16px 0;
   color: var(--color-text-muted);
   font-size: 13px;
 }
@@ -80,4 +102,44 @@
 .results summary {
   cursor: pointer;
   font-size: 13px;
+}
+.completed {
+  display: grid;
+  gap: 12px;
+}
+.categories {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.categories > li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.categories strong {
+  flex: none;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--color-text-muted);
+}
+.check {
+  margin-right: 8px;
+  color: var(--color-success);
+}
+.completedGroup h4 {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.completedGroup ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 18px;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }

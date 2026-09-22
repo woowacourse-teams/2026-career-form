@@ -9,6 +9,7 @@ import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
 import { WorkflowLoading, type WriteProgress } from "./WorkflowLoading";
+import type { WorkflowActivity } from "./progress-model";
 import type { Profile } from "../../profile/model";
 import {
   Header,
@@ -24,11 +25,13 @@ import {
 } from "./workflow-model";
 
 interface WorkflowScreensProps {
+  wasWritten?: WorkflowResultsProps["wasWritten"];
+  activity?: WorkflowActivity;
   progress?: readonly WriteProgress[];
   fieldStateFor?: WorkflowResultsProps["fieldStateFor"];
   profile?: Profile;
   optionsFor?(candidateId: string): readonly string[];
-  currentField?: string;
+  currentCategory?: string;
   stage: Stage;
   preparationItems: readonly PreparationItem[];
   warnings: readonly string[];
@@ -52,7 +55,9 @@ interface WorkflowScreensProps {
 }
 
 export function WorkflowScreens({
+  wasWritten,
   progress,
+  activity,
   fieldStateFor,
   profile,
   optionsFor,
@@ -76,14 +81,15 @@ export function WorkflowScreens({
   exceptionTitle,
   onExit,
   onLocate,
-  currentField,
+  currentCategory,
 }: WorkflowScreensProps) {
   if (stage === "analyzing" || stage === "writing") {
     return (
       <WorkflowLoading
         progress={progress}
         writing={stage === "writing"}
-        currentField={currentField}
+        currentCategory={currentCategory}
+        activity={activity}
       />
     );
   }
@@ -339,6 +345,8 @@ export function WorkflowScreens({
           </details>
         )}
         <WorkflowResults
+          wasWritten={wasWritten}
+          progress={progress}
           fieldStateFor={fieldStateFor}
           profile={profile}
           optionsFor={optionsFor}

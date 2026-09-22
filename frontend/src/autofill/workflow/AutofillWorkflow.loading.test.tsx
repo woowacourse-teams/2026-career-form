@@ -96,13 +96,15 @@ it("shows analysis status while preparation remains unresolved", async () => {
   );
 
   expect(await screen.findByRole("status")).toHaveTextContent(
-    "지원서를 분석하고 있어요",
+    "지원서 항목과 프로필 정보를 맞추고 있어요",
   );
   const status = screen.getByRole("status");
   expect(status.closest('[aria-busy="true"]')).toBeNull();
   const workArea = screen.getByRole("region", { name: "자동 기입 작업 영역" });
   expect(workArea).toHaveAttribute("aria-busy", "true");
-  expect(workArea).toHaveTextContent("지원서를 분석하고 있어요");
+  expect(workArea).toHaveTextContent(
+    "지원서 항목과 프로필 정보를 맞추고 있어요",
+  );
   expect(workArea).toBeVisible();
 });
 
@@ -155,7 +157,7 @@ it("runs the sensitive re-analysis once when the review action is clicked twice"
   fireEvent.click(write);
 
   expect(screen.getByRole("status")).toHaveTextContent(
-    "지원서를 분석하고 있어요",
+    "지원서 항목과 프로필 정보를 맞추고 있어요",
   );
   expect(screen.getByRole("status").closest('[aria-busy="true"]')).toBeNull();
   expect(document.querySelector('[aria-busy="true"]')).toBeVisible();
@@ -276,12 +278,18 @@ it("shows writing status while the automatic workflow writer is pending", async 
   });
 
   expect(screen.getByRole("status")).toHaveTextContent(
-    "지원서에 입력하고 있어요",
+    "기본 인적사항 정보를 입력하고 있어요",
   );
   await act(async () => {
     await vi.runAllTimersAsync();
   });
   expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "1개 항목을 입력했어요" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("list", { name: "범주별 입력 결과" }),
+  ).toHaveTextContent("기본 인적사항1개 입력");
 });
 
 it("does not let a late preparation response replace an unmounted workflow", async () => {

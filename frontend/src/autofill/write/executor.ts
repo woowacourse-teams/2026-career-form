@@ -10,6 +10,7 @@ export type ApprovedWriteResult =
 export type WriteResultListener = (
   item: ReviewPlanItem,
   result: ApprovedWriteResult,
+  registry: CandidateRegistry,
 ) => void;
 
 function dispatchValueEvents(element: Element): void {
@@ -277,7 +278,7 @@ export async function executeApprovedWritesAfterPageSettles({
         }),
       );
       if (eligible && !signal?.aborted)
-        onResult?.(item, initialResults[initialResults.length - 1]);
+        onResult?.(item, initialResults[initialResults.length - 1], registry);
       if (eligible)
         await new Promise<void>((resolve) => setTimeout(resolve, 16));
       processed.add(item.candidateId);
@@ -311,7 +312,7 @@ export async function executeApprovedWritesAfterPageSettles({
   );
   finalResults.forEach((result, index) => {
     if (!signal?.aborted && approvedCandidateIds.has(result.candidateId))
-      onResult?.(items[index], result);
+      onResult?.(items[index], result, registry);
   });
   return finalResults;
 }

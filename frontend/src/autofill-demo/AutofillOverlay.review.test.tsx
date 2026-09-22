@@ -42,7 +42,7 @@ describe("AutofillOverlay review", () => {
     );
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "지원서를 분석하고 있어요",
+      "지원서 항목과 프로필 정보를 맞추고 있어요",
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

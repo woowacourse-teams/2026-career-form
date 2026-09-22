@@ -11,11 +11,13 @@ import {
   type WriteResultListener,
 } from "../write/executor";
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { WorkflowActivity } from "./progress-model";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import type { Profile } from "../../profile/model";
 import { adapterProfileValue, type PreparationItem } from "./workflow-model";
 
 interface RevealedFieldsContext {
+  onActivity?: (activity: WorkflowActivity) => void;
   onWriteResult?: WriteResultListener;
   adapter: WorkflowAdapter;
   apiClient: AnalysisApiClient;
@@ -36,6 +38,7 @@ export function createWriteRevealedFields({
   presentField,
   signal,
   onWriteResult,
+  onActivity,
 }: RevealedFieldsContext) {
   const writeRevealedFields = async (
     loadedProfile: Profile,
@@ -50,6 +53,7 @@ export function createWriteRevealedFields({
     ];
 
     const snapshot = collectFieldsSnapshot(pageDocument);
+    onActivity?.("matching");
     const analysis = await apiClient.analyzeFields(snapshot.request);
     if (signal?.aborted) return;
     if (analysis.analysisStatus === "BLOCKED") {

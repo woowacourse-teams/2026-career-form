@@ -1,5 +1,34 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
 export function createFieldPresentation(document: Document) {
+  const withinVisibleArea = (element: HTMLElement) => {
+    const view = document.defaultView;
+    const rect = element.getBoundingClientRect();
+    if (
+      rect.top < 0 ||
+      rect.left < 0 ||
+      rect.bottom > (view?.innerHeight ?? 0) ||
+      rect.right > (view?.innerWidth ?? 0)
+    )
+      return false;
+    for (
+      let parent = element.parentElement;
+      parent;
+      parent = parent.parentElement
+    ) {
+      const style = view?.getComputedStyle(parent);
+      const bounds = parent.getBoundingClientRect();
+      const clips = (overflow: string | undefined) =>
+        /^(auto|scroll|hidden|clip)$/.test(overflow ?? "");
+      if (
+        (clips(style?.overflowY) &&
+          (rect.top < bounds.top || rect.bottom > bounds.bottom)) ||
+        (clips(style?.overflowX) &&
+          (rect.left < bounds.left || rect.right > bounds.right))
+      )
+        return false;
+    }
+    return true;
+  };
   let restore: (() => void) | undefined;
   let restorePanel: (() => void) | undefined;
   const clear = () => {
@@ -47,15 +76,30 @@ export function createFieldPresentation(document: Document) {
         else element.style.removeProperty(name);
       }
     };
-    element.scrollIntoView?.({
-      block: "center",
-      inline: "center",
-      behavior: "instant",
-    });
+    const panelHost = document.querySelector("career-form-profile-panel");
+    const initialRect = element.getBoundingClientRect();
+    const initialHit = document.elementFromPoint?.(
+      initialRect.left + initialRect.width / 2,
+      initialRect.top + initialRect.height / 2,
+    );
+    // Keep neighboring fields stable; move only clipped or covered controls.
+    // Our own floating panel is moved separately without shifting the page.
+    if (
+      !withinVisibleArea(element) ||
+      (initialHit &&
+        initialHit !== element &&
+        !element.contains(initialHit) &&
+        initialHit !== panelHost)
+    )
+      element.scrollIntoView?.({
+        block: "center",
+        inline: "center",
+        behavior: "instant",
+      });
     // Keep the target left of the floating panel, including in nested scrollers.
-    const panel = document
-      .querySelector("career-form-profile-panel")
-      ?.shadowRoot?.querySelector<HTMLElement>(".career-form-in-page-panel");
+    const panel = panelHost?.shadowRoot?.querySelector<HTMLElement>(
+      ".career-form-in-page-panel",
+    );
     const rect = element.getBoundingClientRect();
     const panelRect = panel?.getBoundingClientRect();
     if (
@@ -99,6 +143,10 @@ export function createFieldPresentation(document: Document) {
     // A fixed header or modal can still cover a centered target. Never report
     // a successful location when the browser's hit test cannot reach it.
     const target = element.getBoundingClientRect();
+    if (!withinVisibleArea(element)) {
+      clear();
+      return false;
+    }
     const hit = document.elementFromPoint?.(
       target.left + target.width / 2,
       target.top + target.height / 2,

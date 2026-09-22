@@ -1,8 +1,7 @@
 .container {
   display: grid;
   align-content: start;
-  gap: 12px;
-  min-block-size: 100%;
+  gap: 16px;
   padding: 24px 16px;
   text-align: left;
 }
@@ -18,55 +17,65 @@
 }
 
 .status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   color: var(--color-text-muted);
   font-size: 13px;
 }
 
-.spinner {
-  inline-size: 22px;
-  block-size: 22px;
+.activityDot {
+  flex: 0 0 6px;
+  height: 6px;
   border-radius: 50%;
-  background: conic-gradient(transparent 10%, var(--color-action));
-  -webkit-mask: radial-gradient(
-    farthest-side,
-    transparent calc(100% - 9px),
-    #000 0
-  );
-  mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 0);
-  animation: spin 1s linear infinite;
+  background: var(--color-action);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.total {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-text-strong);
 }
 .progress {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: 0;
   display: grid;
   gap: 0;
 }
 .progress li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 0;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
   border-bottom: 1px solid var(--color-border);
   font-size: 13px;
   color: var(--color-text-strong);
 }
-.progress li > span {
-  color: var(--color-success);
+.progress strong {
+  font-weight: 600;
 }
-.progress li[data-status="skipped"] > span {
+.progress li > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+}
+.progress small,
+.progress li[data-active="true"] > span {
   color: var(--color-action);
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(1turn);
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
+  .activityDot {
     animation: none;
   }
 }

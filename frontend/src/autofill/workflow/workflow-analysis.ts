@@ -17,6 +17,7 @@ import {
 import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import type { ProfileRepository } from "../../profile/profile-repository";
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { WorkflowActivity } from "./progress-model";
 import {
   adapterProfileValue,
   addressValue,
@@ -36,6 +37,7 @@ type AddressRun = {
 };
 
 interface WorkflowAnalysisContext {
+  onActivity?: (activity: WorkflowActivity) => void;
   onWriteResult?: WriteResultListener;
   presentField?: (
     registry: CandidateRegistry,
@@ -82,6 +84,7 @@ export function createAnalyzeFields({
   setResults,
   presentField,
   onWriteResult,
+  onActivity,
 }: WorkflowAnalysisContext) {
   const sensitiveValueApproved = (loaded: Profile, key: string): boolean => {
     const value = localProfileValue(loaded, key);
@@ -99,6 +102,8 @@ export function createAnalyzeFields({
     deferredDriverGroups.current = failedGroups;
     const run = addressRun.current;
     if (run.controller.signal.aborted) return;
+    setStage("analyzing");
+    onActivity?.("matching");
     const snapshot = collectFieldsSnapshot(pageDocument);
 
     let analysis = await apiClient.analyzeFields(snapshot.request);
@@ -157,6 +162,27 @@ export function createAnalyzeFields({
             mapping.valueBinding.profileFieldKey === keys[index]
           );
         });
+      const addressTargets = permitted
+        ? addressNames.flatMap((name, index) => {
+            const candidate = fields.find((field) => field.domId === name)!;
+            const lookup = snapshot.registry.lookupField(candidate.candidateId);
+            if (lookup.status !== "ready" && lookup.status !== "blocked")
+              return [];
+            const element = lookup.handle.elements[0];
+            return element instanceof HTMLInputElement
+              ? [
+                  {
+                    candidateId: candidate.candidateId,
+                    fieldLabel: ["우편번호", "기본주소", "상세주소"][index],
+                    profileFieldKey: keys[index],
+                    element,
+                    originalValue: element.value,
+                  },
+                ]
+              : [];
+          })
+        : [];
+      if (permitted) onActivity?.("address");
       run.task ??= permitted
         ? adapter.runAddress({
             document: pageDocument,
@@ -174,6 +200,36 @@ export function createAnalyzeFields({
       const result = await run.task;
       if (run.controller.signal.aborted) return;
       setAddressResult(result);
+      if (result.status === "written") {
+        for (const target of addressTargets) {
+          const lookup = snapshot.registry.lookupField(target.candidateId);
+          if (
+            (lookup.status !== "ready" &&
+              !(lookup.status === "blocked" && lookup.reason === "readonly")) ||
+            lookup.handle.elements[0] !== target.element ||
+            !target.element.value.trim() ||
+            target.element.value === target.originalValue
+          )
+            continue;
+          onWriteResult?.(
+            {
+              candidateId: target.candidateId,
+              fieldLabel: target.fieldLabel,
+              profileFieldKey: target.profileFieldKey,
+              currentValue: target.originalValue,
+              previewValue: target.element.value,
+              status: "available",
+              selected: true,
+              disabled: false,
+              revealed: true,
+              reason: result.reason,
+            },
+            { candidateId: target.candidateId, status: "written" },
+            snapshot.registry,
+          );
+        }
+      }
+      onActivity?.("matching");
       const ids = new Set(
         fields
           .filter(
@@ -288,7 +344,10 @@ export function createAnalyzeFields({
       const currentStateDriverItems = stateDriverItems.filter(
         (driver) => driver.stage === nextStage,
       );
-      const deferFailedGroups = async (successful: readonly boolean[]) => {
+      const deferFailedGroups = async (
+        successful: readonly boolean[],
+        writesVerified = false,
+      ) => {
         const nextGroups = new Set(failedGroups);
         const nextCompleted = new Set(completedStateDriverKeys);
         for (const [index, driver] of currentStateDriverItems.entries()) {
@@ -309,6 +368,16 @@ export function createAnalyzeFields({
           nextGroups.add(group);
         }
         if (run.controller.signal.aborted) return true;
+        if (writesVerified) {
+          currentStateDriverItems.forEach(({ item }, index) => {
+            if (successful[index])
+              onWriteResult?.(
+                item,
+                { candidateId: item.candidateId, status: "written" },
+                snapshot.registry,
+              );
+          });
+        }
         await analyzeFields(
           loadedProfile,
           ignoreFreshRowDefaults,
@@ -382,7 +451,7 @@ export function createAnalyzeFields({
           ),
         );
         if (!settled.every(Boolean)) {
-          if (await deferFailedGroups(settled)) return;
+          if (await deferFailedGroups(settled, true)) return;
           setExceptionTitle(
             "조건부 선택 뒤 입력란을 안전하게 준비하지 못했습니다",
           );
@@ -390,10 +459,14 @@ export function createAnalyzeFields({
           return;
         }
         currentStateDriverItems.forEach(({ item }) =>
-          onWriteResult?.(item, {
-            candidateId: item.candidateId,
-            status: "written",
-          }),
+          onWriteResult?.(
+            item,
+            {
+              candidateId: item.candidateId,
+              status: "written",
+            },
+            snapshot.registry,
+          ),
         );
         const nextCompletedStateDriverKeys = new Set(completedStateDriverKeys);
         currentStateDriverItems.forEach(({ key }) =>
@@ -417,7 +490,7 @@ export function createAnalyzeFields({
                 true),
           ),
         );
-        if (await deferFailedGroups(successful)) return;
+        if (await deferFailedGroups(successful, true)) return;
         setExceptionTitle("조건부 선택을 안전하게 적용하지 못했습니다");
         setStage("exception");
         return;

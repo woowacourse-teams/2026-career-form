@@ -53,7 +53,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
     control("injuryMemo").value,
   ]).toEqual([false, "", "기존 장애 메모"]);
   expect(control("engNm").value).toBe("Fixture");
-  expect(first.getByLabelText("입력 실패 0개")).toBeInTheDocument();
+  expect(first.queryByLabelText(/입력 실패 \d+개/)).not.toBeInTheDocument();
   const firstClicks = { ...clicks };
   first.unmount();
   const second = await run(fixtureProfile());
@@ -171,7 +171,7 @@ it("treats the legacy 만기전역 profile value as 군필 only during Hyundai a
     "2020-03",
     "2021-09",
   ]);
-  expect(result.getByLabelText("입력 실패 0개")).toBeInTheDocument();
+  expect(result.queryByLabelText(/입력 실패 \d+개/)).not.toBeInTheDocument();
 });
 
 it.each([

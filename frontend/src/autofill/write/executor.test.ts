@@ -112,7 +112,8 @@ describe("approved native-control writes", () => {
       approvedCandidateIds: new Set(["field-1"]),
       registry,
       beforeWrite: async () => {},
-      onResult: (item, result) => {
+      onResult: (item, result, sourceRegistry) => {
+        expect(sourceRegistry).toBe(registry);
         if (result.status === "written") {
           expect(input.value).toBe("example");
           events.push(item.fieldLabel);
