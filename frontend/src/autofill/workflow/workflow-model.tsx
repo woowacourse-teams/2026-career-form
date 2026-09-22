@@ -119,6 +119,7 @@ export const addressValue = (profile: Profile): AddressValue => ({
 });
 
 export interface WorkflowProps {
+  followFields?: boolean;
   addressSearch?: AddressSearch;
   apiClient: AnalysisApiClient;
   repository: Pick<ProfileRepository, "load">;

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Simulation } from "./Simulation";
 
@@ -6,6 +6,7 @@ vi.mock("wxt/browser", () => import("./browser"));
 let observeVisible: (visible: boolean) => void;
 const disconnect = vi.fn();
 beforeEach(() => {
+  observeVisible = () => {};
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -33,14 +34,23 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 describe("isolated automatic demonstration", () => {
-  it("starts only when visible and fills all ten example inputs through the real workflow", async () => {
-    render(<Simulation />);
+  it("waits for hover even when visible, then fills without scrolling the page", async () => {
+    const scroll = vi.fn();
+    const { container } = render(<Simulation />);
+    container.querySelectorAll("input").forEach((input) => {
+      input.scrollIntoView = scroll;
+    });
     expect(screen.getByLabelText("학교명")).toHaveValue("");
     act(() => observeVisible(false));
     expect(
       screen.queryByRole("region", { name: "지원서 자동 기입" }),
     ).not.toBeInTheDocument();
     act(() => observeVisible(true));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
+    expect(
+      screen.queryByRole("region", { name: "지원서 자동 기입" }),
+    ).not.toBeInTheDocument();
+    fireEvent.pointerEnter(container.firstElementChild!);
     await screen.findByRole(
       "heading",
       { name: "기입 결과" },
@@ -61,13 +71,18 @@ describe("isolated automatic demonstration", () => {
       expect(screen.getByLabelText(label!)).toHaveValue(value);
     }
     expect(fetch).not.toHaveBeenCalled();
+    expect(scroll).not.toHaveBeenCalled();
   });
-  it("disconnects the observer when unmounted before entering view", async () => {
-    const { unmount } = render(<Simulation />);
-    await waitFor(() =>
-      expect(screen.getByText("career@example.com")).toBeInTheDocument(),
-    );
-    unmount();
-    expect(disconnect).toHaveBeenCalled();
-  });
+  it.each(["focusIn", "pointerDown"] as const)(
+    "supports %s without a mouse",
+    async (event) => {
+      const { container } = render(<Simulation />);
+      fireEvent[event](container.firstElementChild!);
+      await screen.findByRole(
+        "heading",
+        { name: "기입 결과" },
+        { timeout: 5000 },
+      );
+    },
+  );
 });

@@ -51,6 +51,7 @@ import {
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
 export function AutofillWorkflow({
+  followFields = true,
   apiClient,
   repository,
   pageDocument,
@@ -67,7 +68,7 @@ export function AutofillWorkflow({
     registry: CandidateRegistry,
     item: ReviewPlanItem,
   ) => {
-    if (!mounted.current) return;
+    if (!mounted.current || !followFields) return;
     if (presentation.show(registry, item.candidateId))
       setCurrentField(item.fieldLabel);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));

@@ -194,6 +194,11 @@
 .simulation {
   margin: 0;
 }
+.simulation:focus-visible {
+  outline: 3px solid #ad5b2f;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
 .simulation iframe {
   display: block;
   width: 100%;

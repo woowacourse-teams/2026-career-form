@@ -83,17 +83,18 @@ function Landing() {
             <small>Chrome 확장 프로그램 · 프로필은 내 브라우저에</small>
           </div>
         </div>
-        <figure className={styles.simulation}>
+        <figure
+          className={styles.simulation}
+          tabIndex={0}
+          aria-label="자동 입력 시뮬레이션 재생"
+        >
           <iframe
             src={siteUrl("/demo/?view=simulation")}
             title="커리어폼 자동 입력 시뮬레이션"
             tabIndex={-1}
             inert
           />
-          <figcaption>
-            자동 입력 시뮬레이션 · 저장된 이름·연락처·학력·자격증 10개 항목을
-            입력하고 기입 결과를 확인하는 예시
-          </figcaption>
+          <figcaption>커서를 올려 자동 입력 과정을 확인해 보세요.</figcaption>
         </figure>
       </section>
       <section className={styles.features} id="features">
@@ -249,7 +250,7 @@ function Onboarding({ installed }: { installed: boolean }) {
           )}
           {step < 2 ? (
             <button className={styles.primary} onClick={() => go(step + 1)}>
-              {step === 0 ? "다음: 프로필 등록" : "다음: 첫 지원서"}{" "}
+              {step === 0 ? "프로필 등록 알아보기" : "사용 방법 알아보기"}{" "}
               <Icon name="arrow" />
             </button>
           ) : (

@@ -8,6 +8,7 @@ import { ChromeProfileStorage } from "../storage/chrome-profile-storage";
 import styles from "./AutofillOverlay.module.css";
 
 interface AutofillOverlayProps {
+  passive?: boolean;
   onClose(): void;
   apiClient?: AnalysisApiClient;
   repository?: Pick<ProfileRepository, "load">;
@@ -15,6 +16,7 @@ interface AutofillOverlayProps {
 }
 
 export function AutofillOverlay({
+  passive = false,
   onClose,
   apiClient: injectedApiClient,
   repository: injectedRepository,
@@ -29,7 +31,9 @@ export function AutofillOverlay({
     [injectedRepository],
   );
   const region = useRef<HTMLElement>(null);
-  useEffect(() => region.current?.focus(), []);
+  useEffect(() => {
+    if (!passive) region.current?.focus();
+  }, [passive]);
 
   return (
     <section
@@ -52,6 +56,7 @@ export function AutofillOverlay({
       </div>
       <div className={styles.body}>
         <AutofillWorkflow
+          followFields={!passive}
           apiClient={apiClient}
           repository={repository}
           pageDocument={pageDocument}

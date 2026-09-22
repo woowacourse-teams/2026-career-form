@@ -79,20 +79,12 @@ export function Simulation() {
         hide: () => setCursor((current) => ({ ...current, visible: false })),
       });
     };
-    // Observe the iframe in its parent viewport; an inner viewport alone is always visible.
-    const target = window.frameElement ?? root.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          start();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 },
-    );
-    if (target) observer.observe(target);
+    // The inert iframe cannot receive pointer events; its figure owns activation.
+    const target = window.frameElement?.parentElement ?? root.current;
+    const events = ["pointerenter", "focusin", "pointerdown"];
+    events.forEach((event) => target?.addEventListener(event, start));
     return () => {
-      observer.disconnect();
+      events.forEach((event) => target?.removeEventListener(event, start));
       dispose();
     };
   }, []);
@@ -115,6 +107,7 @@ export function Simulation() {
       {started && (
         <div className={styles.result} inert>
           <AutofillOverlay
+            passive
             onClose={() => {}}
             apiClient={demoAnalysisClient}
             repository={demoRepository}
