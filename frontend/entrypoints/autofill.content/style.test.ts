@@ -3,6 +3,31 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 describe("autofill content-script host styles", () => {
+  it("leaves clicks outside the panel available despite the important shadow reset", () => {
+    const host = document.createElement("career-form-profile-panel");
+    const panel = document.createElement("div");
+    panel.className = "career-form-in-page-panel";
+    host.append(panel);
+    const sheet = document.createElement("style");
+    const styles = readFileSync(
+      `${process.cwd()}/entrypoints/autofill.content/style.css`,
+      "utf8",
+    );
+    // jsdom does not expand `all: initial`; spell out its pointer-event effect.
+    // Map :host into light DOM because jsdom does not compute shadow CSS.
+    sheet.textContent = `career-form-profile-panel { pointer-events: auto !important; }
+      ${styles.replace(/^@import.*$/gm, "").replaceAll(":host", "career-form-profile-panel")}`;
+    document.head.append(sheet);
+    document.body.append(host);
+    try {
+      expect(getComputedStyle(host).pointerEvents).toBe("none");
+      expect(getComputedStyle(panel).pointerEvents).toBe("auto");
+    } finally {
+      host.remove();
+      sheet.remove();
+    }
+  });
+
   it("keeps the shadow host as a viewport-level layer on hostile pages", () => {
     const styles = readFileSync(
       `${process.cwd()}/entrypoints/autofill.content/style.css`,

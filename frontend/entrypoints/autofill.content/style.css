@@ -8,7 +8,8 @@
   height: 100vh !important;
   z-index: 2147483647 !important;
   isolation: isolate;
-  pointer-events: none;
+  /* WXT resets every host property with all: initial !important. */
+  pointer-events: none !important;
   color: var(--color-text);
   font-family:
     "Pretendard Variable",
