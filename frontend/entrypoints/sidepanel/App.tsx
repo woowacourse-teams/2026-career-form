@@ -222,6 +222,7 @@ export function App({
           <h1>{autofillActive ? "자동 기입" : "내 지원 정보"}</h1>
           <button
             className={styles.profileButton}
+            data-profile-management
             hidden={autofillActive}
             type="button"
             onClick={() => void openProfileManagement()}
@@ -229,6 +230,26 @@ export function App({
             프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
+        {!autofillActive && (
+          <section className={styles.autofillAction}>
+            <button
+              data-autofill-start
+              ref={startButton}
+              type="button"
+              disabled={autofillPending}
+              onClick={() => void startAutofill()}
+            >
+              자동 기입 <span aria-hidden="true">→</span>
+            </button>
+
+            {autofillFailed && (
+              <p className={styles.autofillError} role="alert">
+                현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서
+                페이지에서 다시 시도해 주세요.
+              </p>
+            )}
+          </section>
+        )}
       </header>
       {autofillActive ? (
         <main className={styles.workflowMain} aria-label="지원서 작업 화면">
@@ -246,6 +267,7 @@ export function App({
                 프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
               </p>
             )}
+
             <label className={styles.search}>
               <span className={styles.visuallyHidden}>프로필 검색</span>
               <svg
@@ -394,23 +416,6 @@ export function App({
               )}
             </section>
           </main>
-          <footer className={styles.footer}>
-            <button
-              ref={startButton}
-              type="button"
-              disabled={autofillPending}
-              onClick={() => void startAutofill()}
-            >
-              자동 기입 <span aria-hidden="true">→</span>
-            </button>
-            <p>선택 후 분석과 검토를 시작합니다</p>
-            {autofillFailed && (
-              <p className={styles.autofillError} role="alert">
-                현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서
-                페이지에서 다시 시도해 주세요.
-              </p>
-            )}
-          </footer>
         </>
       )}
     </div>

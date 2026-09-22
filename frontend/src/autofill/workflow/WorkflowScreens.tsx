@@ -7,24 +7,26 @@ import {
 } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
+import { WorkflowResults } from "./WorkflowResults";
 import { WorkflowLoading } from "./WorkflowLoading";
+import type { Profile } from "../../profile/model";
 import {
   Header,
   diagnosticLabel,
-  isSkippedByApproval,
   mappingLabel,
   profileFieldLabel,
   reviewProfileFieldKey,
-  resultStatusLabel,
   statusLabel,
   interactionLabel,
   currentPreview,
-  userFacingReason,
   type PreparationItem,
   type Stage,
 } from "./workflow-model";
 
 interface WorkflowScreensProps {
+  profile?: Profile;
+  optionsFor?(candidateId: string): readonly string[];
+  currentField?: string;
   stage: Stage;
   preparationItems: readonly PreparationItem[];
   warnings: readonly string[];
@@ -43,10 +45,13 @@ interface WorkflowScreensProps {
   adapter: WorkflowAdapter;
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
+  onLocate?(candidateId: string): boolean;
   onExit(): void;
 }
 
 export function WorkflowScreens({
+  profile,
+  optionsFor,
   stage,
   preparationItems,
   warnings,
@@ -66,9 +71,16 @@ export function WorkflowScreens({
   workflowDiagnostics,
   exceptionTitle,
   onExit,
+  onLocate,
+  currentField,
 }: WorkflowScreensProps) {
   if (stage === "analyzing" || stage === "writing") {
-    return <WorkflowLoading writing={stage === "writing"} />;
+    return (
+      <WorkflowLoading
+        writing={stage === "writing"}
+        currentField={currentField}
+      />
+    );
   }
 
   if (stage === "preparation-review") {
@@ -287,7 +299,7 @@ export function WorkflowScreens({
           </section>
         )}
         <p className={styles.safety}>
-          지원서 저장·이동·제출은 실행하지 않습니다.
+          지원서 저장/이동/제출은 실행하지 않습니다.
         </p>
         <button
           className={styles.primary}
@@ -303,15 +315,6 @@ export function WorkflowScreens({
   }
 
   if (stage === "result") {
-    const visibleResults = results.filter(
-      (result) => !isSkippedByApproval(result),
-    );
-    const successful = visibleResults.filter(
-      (result) => result.status === "written",
-    ).length;
-    const manualResults = visibleResults.filter(
-      (result) => result.status !== "written",
-    );
     return (
       <div className={styles.screen}>
         <Header step="완료" title="기입 결과" />
@@ -323,50 +326,16 @@ export function WorkflowScreens({
             {addressResult.reason}
           </p>
         )}
-        <div className={styles.resultGrid}>
-          <div>
-            <strong>{successful}</strong>
-            <span>기입 성공</span>
-          </div>
-          <div>
-            <strong>{visibleResults.length - successful}</strong>
-            <span>직접 확인 필요</span>
-          </div>
-        </div>
-        <p className={styles.safety}>
-          성공한 항목은 지원서에서 한 번만 확인해 주세요. 저장과 제출은 직접
-          진행합니다.
-        </p>
-        {manualResults.length > 0 && <h3>확인 필요</h3>}
-        {manualResults.length > 0 && (
-          <ul className={`${styles.boundaries} ${styles.resultList}`}>
-            {manualResults.map((result) => {
-              const item = reviewItems.find(
-                (candidate) => candidate.candidateId === result.candidateId,
-              );
-              const reason = userFacingReason(result.reason);
-              return (
-                <li className={styles.resultItem} key={result.candidateId}>
-                  <div className={styles.resultItemHeader}>
-                    <strong>
-                      {profileFieldLabel(
-                        item ? reviewProfileFieldKey(item) : undefined,
-                      )}
-                    </strong>
-                    <strong>{resultStatusLabel(result)}</strong>
-                  </div>
-                  <p className={styles.resultValue}>
-                    {item?.previewValue ?? "입력값 확인 필요"}
-                  </p>
-                  {reason && <p>{reason}</p>}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <WorkflowResults
+          profile={profile}
+          optionsFor={optionsFor}
+          results={results}
+          reviewItems={reviewItems}
+          onLocate={onLocate}
+        />
         {adapter.diagnosticsTitle && (
           <details className={styles.safety}>
-            <summary>{adapter.diagnosticsTitle}</summary>
+            <summary>{adapter.diagnosticsTitle.replaceAll("·", "/")}</summary>
             <ul className={styles.boundaries}>
               {workflowDiagnostics.length === 0 && (
                 <li>후속 조건부 입력 진단이 생성되지 않았습니다.</li>

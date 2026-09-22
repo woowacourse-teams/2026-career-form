@@ -98,6 +98,30 @@ function register(
 }
 
 describe("approved native-control writes", () => {
+  it("presents each approved field before writing and stops on abort", async () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const controller = new AbortController();
+    let presented = false;
+    await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example@example.com")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+      signal: controller.signal,
+      beforeWrite: async () => {
+        presented = true;
+        expect(input.value).toBe("");
+        controller.abort();
+      },
+    });
+    expect(presented).toBe(true);
+    expect(input.value).toBe("");
+  });
   it("writes a locally resolved derived binding value", () => {
     const input = document.createElement("input");
     const registry = register(input, {

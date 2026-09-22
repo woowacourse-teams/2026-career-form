@@ -225,8 +225,8 @@ it("identifies same-labelled sensitive candidates without revealing their values
 
   const { rerender } = render(<WorkflowScreens {...screenProps()} />);
 
-  expect(screen.getByText("프로필 항목: 처우 · 희망연봉(만원)")).toBeVisible();
-  expect(screen.getByText("프로필 항목: 처우 · 직전연봉(만원)")).toBeVisible();
+  expect(screen.getByText("프로필 항목: 처우 / 희망연봉(만원)")).toBeVisible();
+  expect(screen.getByText("프로필 항목: 처우 / 직전연봉(만원)")).toBeVisible();
   expect(screen.queryByText("desired-salary-secret")).not.toBeInTheDocument();
   expect(screen.queryByText("previous-salary-secret")).not.toBeInTheDocument();
   expect(screen.getAllByText(/입력 예정값: •+/)).toHaveLength(2);
@@ -328,7 +328,7 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
     />,
   );
 
-  expect(screen.getByText("처우 · 희망연봉(만원)")).toBeVisible();
+  expect(screen.getByText("처우 / 희망연봉(만원)")).toBeVisible();
   expect(screen.getAllByText("프로필 정보")).toHaveLength(1);
   expect(
     screen.queryByText("desired-salary-result-secret"),

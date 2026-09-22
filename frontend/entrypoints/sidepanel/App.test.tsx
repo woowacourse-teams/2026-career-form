@@ -240,7 +240,7 @@ describe("side panel App", () => {
     const autofillButton = screen.getByRole("button", { name: "자동 기입" });
 
     expect(profileList).not.toContainElement(autofillButton);
-    expect(autofillButton.closest("footer")).not.toBeNull();
+    expect(autofillButton.closest("header")).not.toBeNull();
   });
 
   it("reports when the current webpage cannot open the autofill overlay", async () => {

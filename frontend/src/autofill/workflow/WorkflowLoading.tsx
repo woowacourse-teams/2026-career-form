@@ -1,6 +1,12 @@
 import styles from "./WorkflowLoading.module.css";
 
-export function WorkflowLoading({ writing }: { writing: boolean }) {
+export function WorkflowLoading({
+  writing,
+  currentField,
+}: {
+  writing: boolean;
+  currentField?: string;
+}) {
   const message = writing
     ? "지원서에 입력하고 있어요"
     : "지원서를 분석하고 있어요";
@@ -18,6 +24,9 @@ export function WorkflowLoading({ writing }: { writing: boolean }) {
         <p className={styles.status} aria-hidden="true">
           {message}
         </p>
+        {writing && currentField && (
+          <p className={styles.status}>{currentField}</p>
+        )}
       </section>
     </>
   );

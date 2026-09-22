@@ -53,9 +53,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
     control("injuryMemo").value,
   ]).toEqual([false, "", "기존 장애 메모"]);
   expect(control("engNm").value).toBe("Fixture");
-  expect(first.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "0직접 확인 필요",
-  );
+  expect(first.getByLabelText("입력 실패 0개")).toBeInTheDocument();
   const firstClicks = { ...clicks };
   first.unmount();
   const second = await run(fixtureProfile());
@@ -173,9 +171,7 @@ it("treats the legacy 만기전역 profile value as 군필 only during Hyundai a
     "2020-03",
     "2021-09",
   ]);
-  expect(result.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "0직접 확인 필요",
-  );
+  expect(result.getByLabelText("입력 실패 0개")).toBeInTheDocument();
 });
 
 it.each([
@@ -403,9 +399,7 @@ it("leaves an incompatible veteran number blank while completing other fields", 
     ).toBeInTheDocument(),
   );
   expect(control("branchNo").value).toBe("");
-  expect(result.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "1직접 확인 필요",
-  );
+  expect(result.getByLabelText("입력 실패 1개")).toBeInTheDocument();
   expect(hidden("branchRel")).toBe("1");
   expect(control("milStartDt").value).toBe("2020-03");
   expect(control("engNm").value).toBe("Fixture");

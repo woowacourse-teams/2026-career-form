@@ -160,10 +160,12 @@ export function executeApprovedWrites({
   items,
   approvedCandidateIds,
   registry,
+  deferFinalization = false,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
   registry: CandidateRegistry;
+  deferFinalization?: boolean;
 }): ApprovedWriteResult[] {
   const processed = new Set<string>();
   const results: ApprovedWriteResult[] = items.map((item) => {
@@ -199,6 +201,7 @@ export function executeApprovedWrites({
     return { candidateId: item.candidateId, status: "written" };
   });
 
+  if (deferFinalization) return results;
   const verifiedResults: ApprovedWriteResult[] = results.map(
     (result, index) => {
       const item = items[index];
@@ -237,22 +240,53 @@ export async function executeApprovedWritesAfterPageSettles({
   items,
   approvedCandidateIds,
   registry,
+  beforeWrite,
+  signal,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
   registry: CandidateRegistry;
+  beforeWrite?: (item: ReviewPlanItem) => Promise<void>;
+  signal?: AbortSignal;
 }): Promise<ApprovedWriteResult[]> {
-  const initialResults = executeApprovedWrites({
-    items,
-    approvedCandidateIds,
-    registry,
-  });
+  const initialResults: ApprovedWriteResult[] = [];
+  if (beforeWrite) {
+    const processed = new Set<string>();
+    for (const item of items) {
+      if (signal?.aborted) return initialResults;
+      const eligible =
+        !processed.has(item.candidateId) &&
+        approvedCandidateIds.has(item.candidateId) &&
+        isSelectableApproved(item);
+      if (eligible) await beforeWrite(item);
+      if (signal?.aborted) return initialResults;
+      initialResults.push(
+        ...executeApprovedWrites({
+          items: [item],
+          approvedCandidateIds: processed.has(item.candidateId)
+            ? new Set()
+            : approvedCandidateIds,
+          registry,
+          deferFinalization: true,
+        }),
+      );
+      if (eligible)
+        await new Promise<void>((resolve) => setTimeout(resolve, 16));
+      processed.add(item.candidateId);
+    }
+  } else {
+    if (signal?.aborted) return initialResults;
+    initialResults.push(
+      ...executeApprovedWrites({ items, approvedCandidateIds, registry }),
+    );
+  }
   const completedItems = items.filter(
     (_item, index) => initialResults[index]?.status === "written",
   );
   if (completedItems.length === 0) return initialResults;
 
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  if (signal?.aborted) return initialResults;
 
   const retryResults = executeApprovedWrites({
     items: completedItems,

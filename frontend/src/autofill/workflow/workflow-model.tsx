@@ -405,7 +405,7 @@ export function profileFieldLabel(profileFieldKey?: string): string {
     (candidate) => candidate.id === sectionId,
   );
   const field = section?.fields.find((candidate) => candidate.id === fieldId);
-  return field && section ? `${section.label} · ${field.label}` : "프로필 정보";
+  return field && section ? `${section.label} / ${field.label}` : "프로필 정보";
 }
 
 export function userFacingReason(reason?: string): string | undefined {

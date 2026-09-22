@@ -15,6 +15,7 @@ import {
 } from "../write/executor";
 import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import type { ProfileRepository } from "../../profile/profile-repository";
+import type { CandidateRegistry } from "../dom/candidate-registry";
 import {
   adapterProfileValue,
   addressValue,
@@ -34,6 +35,10 @@ type AddressRun = {
 };
 
 interface WorkflowAnalysisContext {
+  presentField?: (
+    registry: CandidateRegistry,
+    item: ReviewPlanItem,
+  ) => Promise<void>;
   adapter: WorkflowAdapter;
   addressRun: MutableRefObject<AddressRun>;
   addressSearch: AddressSearch;
@@ -73,6 +78,7 @@ export function createAnalyzeFields({
   setPartial,
   setWarnings,
   setResults,
+  presentField,
 }: WorkflowAnalysisContext) {
   const sensitiveValueApproved = (loaded: Profile, key: string): boolean => {
     const value = localProfileValue(loaded, key);
@@ -335,6 +341,11 @@ export function createAnalyzeFields({
           item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
           item.analysis.interactionStatus === "READY";
         if (run.controller.signal.aborted) return;
+        if (eligible && presentField) {
+          setStage("writing");
+          await presentField(snapshot.registry, item);
+          if (run.controller.signal.aborted) return;
+        }
         const special = eligible
           ? await adapter.executeStateDriver?.(
               pageDocument,
@@ -456,10 +467,33 @@ export function createAnalyzeFields({
       items: finalWriteItems,
       approvedCandidateIds,
       registry: snapshot.registry,
+      beforeWrite: presentField
+        ? (item) => presentField(snapshot.registry, item)
+        : undefined,
+      signal: run.controller.signal,
     });
     if (run.controller.signal.aborted) return;
     setResults([
       ...writeResults,
+      ...automaticItems
+        .filter((item) => {
+          const lookup = snapshot.registry.lookupField(item.candidateId);
+          return (
+            (lookup.status === "ready" || lookup.status === "blocked") &&
+            completedStateDriverKeys.has(
+              stateDriverKey(
+                item,
+                lookup.handle.candidate.domName ??
+                  lookup.handle.candidate.domId,
+                lookup.handle.itemIndex,
+              ),
+            )
+          );
+        })
+        .map((item): ApprovedWriteResult => ({
+          candidateId: item.candidateId,
+          status: "written",
+        })),
       ...deferredItems.map((item): ApprovedWriteResult => ({
         candidateId: item.candidateId,
         status: "skipped",

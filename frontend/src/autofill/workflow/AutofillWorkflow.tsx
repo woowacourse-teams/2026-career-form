@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFieldPresentation } from "../write/field-presentation";
+import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { AddressResult } from "../address/types";
 import {
   getWorkflowAdapter,
@@ -21,12 +23,10 @@ import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation
 import { waitForExpectedFields } from "../preparation/wait-for-fields";
 import {
   buildReviewPlan,
-  revealSensitiveReviewItem,
   resolveProfileFieldValue,
   type ReviewPlanItem,
 } from "../review/review-plan";
 import {
-  executeApprovedWrites,
   executeApprovedWritesAfterPageSettles,
   type ApprovedWriteResult,
 } from "../write/executor";
@@ -41,7 +41,6 @@ import {
   preparationItem,
   reviewProfileFieldKey,
   safeErrorTitle,
-  stateDriverKey,
   type PreparationItem,
   type Stage,
   pageHost,
@@ -59,6 +58,20 @@ export function AutofillWorkflow({
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const adapter = getWorkflowAdapter(pageHost(pageDocument));
+  const presentation = useMemo(
+    () => createFieldPresentation(pageDocument),
+    [pageDocument],
+  );
+  const [currentField, setCurrentField] = useState<string>();
+  const presentField = async (
+    registry: CandidateRegistry,
+    item: ReviewPlanItem,
+  ) => {
+    if (!mounted.current) return;
+    if (presentation.show(registry, item.candidateId))
+      setCurrentField(item.fieldLabel);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  };
   const addressRun = useRef<{
     controller: AbortController;
     button?: Element;
@@ -125,7 +138,16 @@ export function AutofillWorkflow({
     setPartial,
     setWarnings,
     setResults,
+    presentField,
   });
+
+  useEffect(() => () => presentation.clear(), [presentation]);
+  useEffect(() => {
+    if (stage !== "writing") {
+      presentation.clear();
+      setCurrentField(undefined);
+    }
+  }, [stage, presentation]);
 
   useEffect(() => {
     mounted.current = true;
@@ -480,6 +502,11 @@ export function AutofillWorkflow({
     apiClient,
     pageDocument,
     setWorkflowDiagnostics,
+    presentField: async (registry, item) => {
+      setStage("writing");
+      await presentField(registry, item);
+    },
+    signal: addressRun.current.controller.signal,
   });
 
   const { toggleReviewItem, revealSensitiveItem } =
@@ -514,6 +541,8 @@ export function AutofillWorkflow({
         items: reviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
+        beforeWrite: (item) => presentField(fieldsSnapshot.registry, item),
+        signal: addressRun.current.controller.signal,
       });
       if (!mounted.current) return;
       setResults(nextResults);
@@ -536,6 +565,15 @@ export function AutofillWorkflow({
 
   return (
     <WorkflowScreens
+      profile={profile}
+      optionsFor={(candidateId) => {
+        const lookup = fieldsSnapshot?.registry.lookupField(candidateId);
+        return lookup?.status === "ready" || lookup?.status === "blocked"
+          ? (lookup.handle.candidate.options ?? [])
+              .map((option) => option.displayName)
+              .filter(Boolean)
+          : [];
+      }}
       stage={stage}
       preparationItems={preparationItems}
       warnings={warnings}
@@ -555,6 +593,11 @@ export function AutofillWorkflow({
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
       onExit={onExit}
+      currentField={currentField}
+      onLocate={(candidateId) =>
+        !!fieldsSnapshot &&
+        presentation.show(fieldsSnapshot.registry, candidateId)
+      }
     />
   );
 }

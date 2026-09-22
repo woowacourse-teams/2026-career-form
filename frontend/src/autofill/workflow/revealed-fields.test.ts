@@ -3,6 +3,7 @@ import { createEmptyProfile } from "../../profile/model";
 import { getWorkflowAdapter } from "../adapters/workflow";
 import type { AnalysisApiClient, MatchedFieldAnalysis } from "../api/types";
 import { createWriteRevealedFields } from "./revealed-fields";
+import { createFieldPresentation } from "../write/field-presentation";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -13,6 +14,11 @@ it.each(["", "기존 테스트 병과"])(
       '<section><label for="specialty">병과</label><input id="specialty" name="specialty" type="text"></section>';
     const input = document.querySelector<HTMLInputElement>("#specialty")!;
     input.value = current;
+    const presentation = createFieldPresentation(document);
+    const highlightsDuringInput: string[] = [];
+    input.addEventListener("input", () =>
+      highlightsDuringInput.push(input.style.outline),
+    );
     const profile = createEmptyProfile();
     profile.military.militarySpecialty = "합성 병과";
     let analyses = 0;
@@ -54,6 +60,9 @@ it.each(["", "기존 테스트 병과"])(
       apiClient,
       pageDocument: document,
       setWorkflowDiagnostics: () => {},
+      presentField: async (registry, item) => {
+        presentation.show(registry, item.candidateId);
+      },
     })(profile, [
       {
         plan: {
@@ -73,5 +82,7 @@ it.each(["", "기존 테스트 병과"])(
     ]);
     expect(analyses).toBe(1);
     expect(input.value).toBe(current || "합성 병과");
+    if (!current) expect(highlightsDuringInput.some(Boolean)).toBe(true);
+    presentation.clear();
   },
 );

@@ -59,7 +59,7 @@ export function Simulation() {
           .matches,
         move: () => {
           const button = root.current?.querySelector<HTMLButtonElement>(
-            "[data-demo-panel] footer button",
+            "[data-demo-panel] [data-autofill-start]",
           );
           const bounds = button?.getBoundingClientRect();
           const frame = root.current?.getBoundingClientRect();
@@ -73,7 +73,7 @@ export function Simulation() {
         click: () =>
           root.current
             ?.querySelector<HTMLButtonElement>(
-              "[data-demo-panel] footer button",
+              "[data-demo-panel] [data-autofill-start]",
             )
             ?.click(),
         hide: () => setCursor((current) => ({ ...current, visible: false })),

@@ -1,6 +1,6 @@
 .panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   height: 100vh;
   height: 100dvh;
@@ -301,13 +301,10 @@
   background: var(--color-danger-soft);
   font-size: 12px;
 }
-.footer {
-  border-top: 1px solid var(--color-border);
-  padding: 14px 16px 12px;
-  background: var(--color-surface);
-  box-shadow: 0 -6px 20px rgb(49 79 93 / 6%);
+.autofillAction {
+  margin-bottom: 20px;
 }
-.footer button {
+.autofillAction button {
   width: 100%;
   min-height: 46px;
   border: 1px solid var(--color-brand-hover);
@@ -319,19 +316,19 @@
   font-weight: 750;
   cursor: pointer;
 }
-.footer button > span {
+.autofillAction button > span {
   margin-left: 6px;
 }
-.footer button:hover {
+.autofillAction button:hover {
   background: var(--color-brand-hover);
 }
-.footer p {
+.autofillAction p {
   margin: 8px 0 0;
   color: var(--color-text-muted);
   font-size: 10px;
   text-align: center;
 }
-.footer .autofillError {
+.autofillAction .autofillError {
   color: var(--color-danger-text);
 }
 @media (max-width: 340px) {
@@ -359,7 +356,7 @@
   min-height: 0;
   overflow: hidden;
 }
-.footer button:disabled {
+.autofillAction button:disabled {
   cursor: wait;
   opacity: 0.65;
 }

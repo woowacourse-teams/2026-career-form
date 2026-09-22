@@ -144,14 +144,14 @@
   min-height: 29px;
   padding: 4px 8px;
 }
-.nativePanel footer {
+.nativePanel header > section {
   padding: 10px 12px;
 }
-.nativePanel footer button {
+.nativePanel [data-autofill-start] {
   min-height: 40px;
   padding: 9px 12px;
 }
-.nativePanel footer p {
+.nativePanel header > section p {
   margin: 6px 0 0;
 }
 .cursor {
@@ -220,10 +220,10 @@
   top: 0;
 }
 .guideAutofill .nativePanel {
-  bottom: 0;
+  top: 0;
 }
-.guideProfile header > div:last-child button,
-.guideAutofill footer button {
+.guideProfile [data-profile-management],
+.guideAutofill [data-autofill-start] {
   outline: 2px solid #ad5b2f;
   outline-offset: 3px;
 }
@@ -319,7 +319,7 @@
 }
 
 .guideProfile main,
-.guideProfile footer {
+.guideProfile [data-autofill-start] {
   visibility: hidden;
 }
 

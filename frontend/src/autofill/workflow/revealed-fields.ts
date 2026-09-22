@@ -6,7 +6,8 @@ import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
 } from "../review/review-plan";
-import { executeApprovedWrites } from "../write/executor";
+import { executeApprovedWritesAfterPageSettles } from "../write/executor";
+import type { CandidateRegistry } from "../dom/candidate-registry";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import type { Profile } from "../../profile/model";
 import { adapterProfileValue, type PreparationItem } from "./workflow-model";
@@ -16,6 +17,11 @@ interface RevealedFieldsContext {
   apiClient: AnalysisApiClient;
   pageDocument: Document;
   setWorkflowDiagnostics: Dispatch<SetStateAction<WorkflowDiagnostic[]>>;
+  presentField?(
+    registry: CandidateRegistry,
+    item: ReviewPlanItem,
+  ): Promise<void>;
+  signal?: AbortSignal;
 }
 
 export function createWriteRevealedFields({
@@ -23,6 +29,8 @@ export function createWriteRevealedFields({
   apiClient,
   pageDocument,
   setWorkflowDiagnostics,
+  presentField,
+  signal,
 }: RevealedFieldsContext) {
   const writeRevealedFields = async (
     loadedProfile: Profile,
@@ -38,6 +46,7 @@ export function createWriteRevealedFields({
 
     const snapshot = collectFieldsSnapshot(pageDocument);
     const analysis = await apiClient.analyzeFields(snapshot.request);
+    if (signal?.aborted) return;
     if (analysis.analysisStatus === "BLOCKED") {
       setWorkflowDiagnostics([
         ...diagnostics,
@@ -106,11 +115,16 @@ export function createWriteRevealedFields({
       ];
     });
     diagnostics.push({ code: "ELIGIBLE_FIELDS", count: items.length });
-    const results = executeApprovedWrites({
+    const results = await executeApprovedWritesAfterPageSettles({
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
       registry: snapshot.registry,
+      beforeWrite: presentField
+        ? (item) => presentField(snapshot.registry, item)
+        : undefined,
+      signal,
     });
+    if (signal?.aborted) return;
     diagnostics.push(
       {
         code: "WRITTEN",
