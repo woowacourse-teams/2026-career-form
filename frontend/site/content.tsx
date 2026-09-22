@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export const STORE_URL =
   "https://chromewebstore.google.com/detail/career-form/lneeceajpkjfffibjoajdkfelhoojbam?hl=ko&utm_source=ext_sidebar";
 export const benefits = [
@@ -35,7 +37,12 @@ export const faqs = [
     "기본 정보부터 시작하고, 필요할 때 학력이나 자격증 등을 추가하면 돼요.",
   ],
 ];
-export const steps = [
+export const steps: {
+  title: string;
+  label: string;
+  description: string;
+  instructions: [string, ReactNode][];
+}[] = [
   {
     title: "Chrome에 커리어폼을 추가하세요.",
     label: "확장 프로그램 설치",
@@ -43,7 +50,13 @@ export const steps = [
     instructions: [
       [
         "퍼즐 메뉴에서 커리어폼 열기",
-        "작성할 지원서 페이지에서 Chrome 주소창 오른쪽의 퍼즐 아이콘을 누르고 Career Form을 선택하세요.",
+        <>
+          작성할 지원서 페이지에서{" "}
+          <strong>
+            Chrome 주소창 오른쪽의 퍼즐 아이콘을 누르고 Career Form을
+            선택하세요.
+          </strong>
+        </>,
       ],
       [
         "자주 사용한다면 고정하기 (선택)",
@@ -56,14 +69,25 @@ export const steps = [
     label: "프로필 등록",
     description: "이름과 연락처부터 등록하고, 필요한 정보를 하나씩 추가하세요.",
     instructions: [
-      ["프로필 관리 열기", "커리어폼 패널 상단의 ‘프로필 관리’를 누르세요."],
+      [
+        "프로필 관리 열기",
+        <>
+          커리어폼 패널 상단의 <strong>‘프로필 관리’를 누르세요.</strong>
+        </>,
+      ],
       [
         "자주 쓰는 정보부터 등록하기",
-        "이름, 이메일, 연락처를 입력하세요. 학력, 어학, 자격증은 나중에 추가해도 돼요.",
+        <>
+          <strong>이름, 이메일, 연락처를 입력하세요.</strong> 학력, 어학,
+          자격증은 나중에 추가해도 돼요.
+        </>,
       ],
       [
         "등록한 값 확인하기",
-        "이름 표기와 날짜, 연락처가 올바른지 확인하세요. 이 정보가 지원서 자동 기입에 사용돼요.",
+        <>
+          <strong>이름 표기와 날짜, 연락처가 올바른지 확인하세요.</strong> 이
+          정보가 지원서 자동 기입에 사용돼요.
+        </>,
       ],
     ],
   },
@@ -74,15 +98,26 @@ export const steps = [
     instructions: [
       [
         "작성할 지원서 페이지 열기",
-        "채용사이트에 접속해 정보를 입력할 지원서 화면으로 이동하세요.",
+        <>
+          채용사이트에 접속해{" "}
+          <strong>정보를 입력할 지원서 화면으로 이동하세요.</strong>
+        </>,
       ],
       [
         "오른쪽 패널에서 자동 기입 실행",
-        "채용 지원 페이지의 작은 네모 아이콘을 클릭하거나, Chrome 퍼즐 메뉴에서 Career Form을 선택하세요. 같은 지원서 패널이 열려요. 패널 상단의 ‘자동 기입’을 누르면 저장된 정보가 입력돼요.",
+        <>
+          채용 지원 페이지의 <strong>작은 네모 아이콘을 클릭</strong>하거나,{" "}
+          <strong>Chrome 퍼즐 메뉴에서 Career Form을 선택하세요.</strong> 같은
+          지원서 패널이 열려요. 패널 상단의{" "}
+          <strong>‘자동 기입’을 누르세요.</strong> 저장된 정보가 입력돼요.
+        </>,
       ],
       [
         "결과를 확인하고 직접 제출하기",
-        "기입 결과와 확인 필요 항목을 살펴보세요. 지원서 전체 내용을 확인한 뒤 저장과 최종 제출은 직접 진행하세요.",
+        <>
+          <strong>기입 결과와 확인 필요 항목을 살펴보세요.</strong> 지원서 전체
+          내용을 확인한 뒤 <strong>저장과 최종 제출은 직접 진행하세요.</strong>
+        </>,
       ],
     ],
   },

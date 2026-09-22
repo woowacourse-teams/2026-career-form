@@ -28,6 +28,10 @@
   line-height: 1.7;
   color: #687780;
 }
+.figure figcaption span strong {
+  font-size: inherit;
+  font-weight: 700;
+}
 .chrome {
   margin: 18px;
   background: #f8fafd;

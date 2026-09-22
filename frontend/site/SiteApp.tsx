@@ -213,8 +213,8 @@ function Onboarding({
           <div className={styles.notice}>
             <strong>Chrome 웹 스토어에서 설치</strong>
             <p>
-              스토어에서 ‘Chrome에 추가’를 누르세요. 설치를 마치면 이 페이지로
-              돌아와 아래 설정을 진행하세요.
+              스토어에서 <strong>‘Chrome에 추가’를 누르세요.</strong> 설치를
+              마치면 이 페이지로 돌아와 아래 설정을 진행하세요.
             </p>
             <InstallLink />
           </div>
@@ -237,13 +237,21 @@ function Onboarding({
                 <div>
                   <h2>{title}</h2>
                   <p>
-                    {contentStep === 1 && i === 0 && profileHref
-                      ? "아래 ‘프로필 등록하기’를 눌러 내 정보를 등록하세요. 지원서 패널의 ‘프로필 관리’에서도 열 수 있어요."
-                      : body}
+                    {contentStep === 1 && i === 0 && profileHref ? (
+                      <>
+                        아래{" "}
+                        <strong>
+                          ‘프로필 등록하기’를 눌러 내 정보를 등록하세요.
+                        </strong>{" "}
+                        지원서 패널의 ‘프로필 관리’에서도 열 수 있어요.
+                      </>
+                    ) : (
+                      body
+                    )}
                   </p>
                   {contentStep === 1 && i === 0 && profileHref && (
                     <a
-                      className={styles.primary}
+                      className={`${styles.primary} ${styles.profileAction}`}
                       href={profileHref}
                       target="_blank"
                       rel="noreferrer"
@@ -260,8 +268,9 @@ function Onboarding({
           <div className={styles.notice}>
             <strong>네모 아이콘이 보이지 않나요?</strong>
             <p>
-              Chrome 퍼즐 메뉴에서 Career Form을 선택하세요. 자동 기입이 되지
-              않는 항목은 프로필에 값이 있는지 확인하고 직접 작성해 주세요.
+              <strong>Chrome 퍼즐 메뉴에서 Career Form을 선택하세요.</strong>{" "}
+              자동 기입이 되지 않는 항목은{" "}
+              <strong>프로필에 값이 있는지 확인하고 직접 작성해 주세요.</strong>
             </p>
           </div>
         )}

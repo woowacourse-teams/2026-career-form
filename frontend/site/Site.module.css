@@ -512,6 +512,13 @@
   gap: 20px;
   flex-wrap: wrap;
 }
+.profileAction {
+  margin-top: 16px;
+}
+.instructions p strong {
+  font-weight: 700;
+  color: #443b33;
+}
 .stepActions button:not(.primary) {
   font-size: 14px;
   color: #655d54;
