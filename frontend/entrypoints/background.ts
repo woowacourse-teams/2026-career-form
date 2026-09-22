@@ -10,8 +10,16 @@ import {
   isOpenSidePanelMessage,
 } from "../src/autofill-demo/messages";
 import { openInPagePanel } from "../src/extension/open-in-page-panel";
+import { openInstalledOnboarding } from "../src/extension/install-onboarding";
 
 export default defineBackground(() => {
+  browser.runtime.onInstalled.addListener(({ reason }) => {
+    void openInstalledOnboarding(reason, () =>
+      browser.tabs.create({
+        url: `chrome-extension://${browser.runtime.id}/onboarding.html`,
+      }),
+    ).catch(() => undefined);
+  });
   browser.runtime.onConnect.addListener(createAddressRelay(browser.runtime.id));
   const handleMessage = createAnalysisMessageHandler({
     baseUrl: import.meta.env.VITE_API_BASE_URL,

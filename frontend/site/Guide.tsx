@@ -55,7 +55,7 @@ export function OpeningGuide() {
     <div className={styles.methods}>
       <figure className={styles.figure}>
         <div className={styles.application} aria-hidden="true">
-          <strong>채용사이트 · 지원서 작성</strong>
+          <strong>채용사이트 / 지원서 작성</strong>
           <p>이름</p>
           <div />
           <p>이메일</p>
@@ -63,7 +63,7 @@ export function OpeningGuide() {
           <img src={logo} alt="" />
         </div>
         <figcaption>
-          <strong>방법 1 · 페이지의 네모 아이콘</strong>
+          <strong>방법 1 / 페이지의 네모 아이콘</strong>
           <span>
             채용 지원 페이지에 들어가면 작은 네모 모양의 커리어폼 아이콘이
             표시돼요. 이 아이콘을 클릭하세요.
@@ -73,7 +73,7 @@ export function OpeningGuide() {
       <figure className={styles.figure}>
         <ChromeWindow />
         <figcaption>
-          <strong>방법 2 · Chrome 퍼즐 메뉴</strong>
+          <strong>방법 2 / Chrome 퍼즐 메뉴</strong>
           <span>주소창 오른쪽 퍼즐 → Career Form을 선택하세요.</span>
         </figcaption>
       </figure>
@@ -95,7 +95,7 @@ export function ServiceGuide({ kind }: { kind: "profile" | "autofill" }) {
         <strong>
           {kind === "profile"
             ? "↑ 패널 상단의 프로필 관리"
-            : "↑ 패널 하단의 자동 기입"}
+            : "↑ 패널 상단의 자동 기입"}
         </strong>
         <span>테두리로 표시한 버튼을 설치된 커리어폼에서 누르세요.</span>
       </figcaption>
