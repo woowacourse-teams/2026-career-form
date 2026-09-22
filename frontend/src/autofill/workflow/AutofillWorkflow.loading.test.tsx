@@ -284,9 +284,7 @@ it("shows writing status while the automatic workflow writer is pending", async 
     await vi.runAllTimersAsync();
   });
   expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
-  expect(
-    screen.getByRole("heading", { name: "1개 항목을 입력했어요" }),
-  ).toBeVisible();
+  expect(screen.getByLabelText("입력 완료 1개")).toBeVisible();
   expect(
     screen.getByRole("list", { name: "범주별 입력 결과" }),
   ).toHaveTextContent("기본 인적사항1개 입력");

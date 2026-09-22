@@ -55,3 +55,26 @@ it("names the actual operation and retains previous category counts during addre
     screen.getByRole("list", { name: "범주별 입력 현황" }),
   ).toHaveTextContent("1개 입력");
 });
+it("does not advertise unchanged fields as newly entered while work is running", () => {
+  render(
+    <WorkflowLoading
+      writing={false}
+      progress={[
+        {
+          id: "name",
+          label: "이름",
+          category: "기본 정보",
+          status: "written",
+          unchanged: true,
+        },
+        { id: "email", label: "이메일", category: "연락처", status: "written" },
+      ]}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "1개 항목 입력" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("list", { name: "범주별 입력 현황" }),
+  ).toHaveTextContent("기본 정보기존 값 유지");
+});

@@ -597,6 +597,12 @@ export function AutofillWorkflow({
     <WorkflowScreens
       progress={progress}
       activity={activity}
+      progressStateFor={progressTracker.progressStateFor}
+      progressIdFor={(id) =>
+        fieldsSnapshot
+          ? progressTracker.progressIdFor(id, fieldsSnapshot.registry)
+          : undefined
+      }
       wasWritten={(id) =>
         !!fieldsSnapshot &&
         progressTracker.wasWritten(id, fieldsSnapshot.registry)

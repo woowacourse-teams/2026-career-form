@@ -217,6 +217,7 @@ export function createAnalyzeFields({
               fieldLabel: target.fieldLabel,
               profileFieldKey: target.profileFieldKey,
               currentValue: target.originalValue,
+              profileValue: target.element.value,
               previewValue: target.element.value,
               status: "available",
               selected: true,

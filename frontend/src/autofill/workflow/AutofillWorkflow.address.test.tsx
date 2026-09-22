@@ -122,7 +122,7 @@ it.each([
     await act(async () => continueSearch());
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: `${written}개 항목을 입력했어요` }),
+        screen.getByLabelText(`입력 완료 ${written}개`),
       ).toBeInTheDocument(),
     );
     await waitFor(() =>

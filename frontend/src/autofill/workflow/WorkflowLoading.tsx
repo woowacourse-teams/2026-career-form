@@ -28,7 +28,9 @@ export function WorkflowLoading({
       ...(writing && currentCategory ? [currentCategory] : []),
     ]),
   ];
-  const written = progress.filter((entry) => entry.status === "written").length;
+  const written = progress.filter(
+    (entry) => entry.status === "written" && !entry.unchanged,
+  ).length;
   return (
     <>
       <p className={styles.announcement} role="status" aria-live="polite">
@@ -53,7 +55,7 @@ export function WorkflowLoading({
                 (entry) => entry.category === category,
               );
               const count = entries.filter(
-                (entry) => entry.status === "written",
+                (entry) => entry.status === "written" && !entry.unchanged,
               ).length;
               const active = writing && category === currentCategory;
               return (
@@ -64,7 +66,9 @@ export function WorkflowLoading({
                       ? `${count}개 입력`
                       : active
                         ? "입력 중"
-                        : "입력 보류"}
+                        : entries.every((entry) => entry.unchanged)
+                          ? "기존 값 유지"
+                          : "입력 보류"}
                     {active && count > 0 && <small>입력 중</small>}
                   </span>
                 </li>

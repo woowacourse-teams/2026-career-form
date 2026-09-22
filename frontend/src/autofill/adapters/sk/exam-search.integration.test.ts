@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, expect, it } from "vitest";
 
@@ -405,9 +405,11 @@ it("does not confirm SK exam when two live results match the same canonical valu
       }),
     );
     await waitFor(() =>
-      expect(document.body.textContent).toContain(
-        "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
-      ),
+      expect(
+        within(
+          screen.getByRole("region", { name: "확인 필요한 항목" }),
+        ).getAllByText("입력 못함").length,
+      ).toBeGreaterThan(0),
     );
     expect(exam.value).toBe("");
   } finally {
@@ -489,9 +491,11 @@ it.each([
     );
     try {
       await waitFor(() =>
-        expect(document.body.textContent).toContain(
-          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
-        ),
+        expect(
+          within(
+            screen.getByRole("region", { name: "확인 필요한 항목" }),
+          ).getAllByText("입력 못함").length,
+        ).toBeGreaterThan(0),
       );
       expect(input.value).toBe("");
     } finally {
@@ -606,9 +610,11 @@ it.each([false, true])(
       expect(
         Array.from(rows[1].querySelectorAll("input")).map((e) => e.value),
       ).toEqual(["정보처리기사", "Public issuer", "2025-02"]);
-      expect(document.body.textContent).toContain(
-        "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
-      );
+      expect(
+        within(
+          screen.getByRole("region", { name: "확인 필요한 항목" }),
+        ).getAllByText("입력 못함").length,
+      ).toBeGreaterThan(0);
     } finally {
       removeBridge();
     }

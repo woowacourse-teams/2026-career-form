@@ -16,6 +16,105 @@ const item: ReviewPlanItem = {
   reason: "후보 여러 개",
 };
 
+it("announces the completed summary without moving focus or including interactive details", () => {
+  const { rerender } = render(
+    <div>
+      <input aria-label="사용자가 입력 중인 필드" />
+    </div>,
+  );
+  const input = screen.getByRole("textbox", {
+    name: "사용자가 입력 중인 필드",
+  });
+  input.focus();
+  rerender(
+    <div>
+      <input aria-label="사용자가 입력 중인 필드" />
+      <WorkflowResults
+        reviewItems={[item]}
+        results={[{ candidateId: "name", status: "written" }]}
+      />
+    </div>,
+  );
+  const status = screen.getByRole("status");
+  expect(status).toHaveAttribute("aria-atomic", "true");
+  expect(
+    within(status).getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
+  expect(within(status).getByLabelText("입력 완료 1개")).toBeInTheDocument();
+  expect(within(status).getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  expect(within(status).queryByRole("button")).not.toBeInTheDocument();
+  expect(within(status).queryByText("컴퓨터공학")).not.toBeInTheDocument();
+  expect(input).toHaveFocus();
+});
+
+it("presents unsuccessful writes as an actionable review item instead of a separate failure group", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[{ ...item, status: "available" }]}
+      results={[
+        {
+          candidateId: "major",
+          status: "skipped",
+          reason: "네이티브 컨트롤에 안전하게 입력할 수 없습니다.",
+        },
+      ]}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
+  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  expect(screen.getByText("입력 못함")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "입력 실패" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "확인할 항목 보기" }));
+  expect(
+    screen.getByRole("region", { name: "확인 필요한 항목" }),
+  ).toHaveFocus();
+});
+
+it("marks an uncertain written value as entered without counting it again as completed", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[{ ...item, status: "needs-review" }]}
+      results={[{ candidateId: "major", status: "written" }]}
+      progress={[
+        { id: "dom-major", label: "전공", category: "학력", status: "written" },
+      ]}
+      wasWritten={() => true}
+      progressIdFor={() => "dom-major"}
+      fieldStateFor={() => ({ visible: true, value: "다른 전공" })}
+    />,
+  );
+  expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
+  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  const review = screen.getByRole("region", { name: "확인 필요한 항목" });
+  expect(within(review).getByText("입력됨")).toBeInTheDocument();
+  expect(within(review).getByText("입력 결과 확인")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "입력 완료 내역" }),
+  ).not.toBeInTheDocument();
+});
+
+it("puts an already matching value under collapsed skipped details with its actual reason", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[item]}
+      results={[]}
+      fieldStateFor={() => ({ visible: true, value: "컴퓨터공학" })}
+    />,
+  );
+  const skipped = screen.getByText(/건너뛴 항목 보기/).closest("details")!;
+  expect(skipped).not.toHaveAttribute("open");
+  expect(within(skipped).getByText("기존 값 유지")).toBeInTheDocument();
+  expect(within(skipped).queryByText("후보 여러 개")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "확인할 항목 보기" }),
+  ).not.toBeInTheDocument();
+});
+
 it("keeps completed categories from earlier writes and opens their details on request", () => {
   render(
     <WorkflowResults
@@ -30,13 +129,10 @@ it("keeps completed categories from earlier writes and opens their details on re
           status: "written",
         },
         { id: "school", label: "학교명", category: "학력", status: "written" },
-        { id: "major", label: "전공", category: "학력", status: "skipped" },
       ]}
     />,
   );
-  expect(
-    screen.getByRole("heading", { name: "3개 항목을 입력했어요" }),
-  ).toBeInTheDocument();
+  expect(screen.getByLabelText("입력 완료 3개")).toBeInTheDocument();
   const categories = screen.getByRole("list", { name: "범주별 입력 결과" });
   expect(within(categories).getByText("기본 정보")).toBeInTheDocument();
   expect(within(categories).getByText("2개 입력")).toBeInTheDocument();
@@ -49,6 +145,30 @@ it("keeps completed categories from earlier writes and opens their details on re
   expect(summary).toHaveFocus();
   expect(screen.getByText("학교명")).toBeInTheDocument();
   expect(screen.queryByText("전공")).not.toBeInTheDocument();
+});
+it("keeps an earlier failure visible without locating a reused candidate from another snapshot", () => {
+  const onLocate = vi.fn();
+  render(
+    <WorkflowResults
+      reviewItems={[]}
+      results={[]}
+      onLocate={onLocate}
+      progress={[
+        {
+          id: "stable-major",
+          candidateId: "field-1",
+          label: "전공",
+          category: "학력",
+          status: "skipped",
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "전공 필드로 이동" }),
+  ).toBeDisabled();
+  expect(screen.getByText("입력 못함")).toBeInTheDocument();
 });
 
 it("focuses required review inside the panel without locating an application field", () => {
@@ -83,9 +203,7 @@ it("treats an empty final progress ledger as zero instead of reviving stale writ
       progress={[]}
     />,
   );
-  expect(
-    screen.getByRole("heading", { name: "입력한 항목이 없어요" }),
-  ).toBeInTheDocument();
+  expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "입력한 항목 보기" }),
   ).not.toBeInTheDocument();
@@ -141,14 +259,14 @@ it("does not count unmapped, missing-profile, hidden, or already matching fields
   ).toHaveLength(1);
 });
 
-it("keeps a written but review-required mapping in the review list", () => {
+it("keeps an unverified written mapping only in the review count", () => {
   render(
     <WorkflowResults
       reviewItems={[{ ...item, status: "needs-review" }]}
       results={[{ candidateId: "major", status: "written" }]}
     />,
   );
-  expect(screen.getByLabelText("입력 완료 1개")).toBeInTheDocument();
+  expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
 });
 
@@ -166,10 +284,8 @@ it("keeps a ready but unwritten field in review when its live value is still bla
   expect(
     screen.getByRole("button", { name: "전공 필드로 이동" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("후보 여러 개")).toBeInTheDocument();
-  expect(
-    screen.getByRole("heading", { name: "입력한 항목이 없어요" }),
-  ).toBeInTheDocument();
+  expect(screen.getByText("선택 필요")).toBeInTheDocument();
+  expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
 });
 
 it("does not ask to review an unwritten field whose current value already matches the profile", () => {
@@ -205,12 +321,12 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
     />,
   );
   expect(screen.getByText("컴퓨터공학")).toBeInTheDocument();
-  expect(screen.getByText("후보 여러 개")).toBeInTheDocument();
+  expect(screen.getByText("선택 필요")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "전공 필드로 이동" }));
   expect(screen.getByText("이동 불가")).toBeInTheDocument();
 });
 
-it("separates write failures from unresolved fields and preserves masked previews", () => {
+it("combines write failures with unresolved fields and preserves masked previews", () => {
   render(
     <WorkflowResults
       reviewItems={[
@@ -236,11 +352,9 @@ it("separates write failures from unresolved fields and preserves masked preview
     />,
   );
   expect(screen.getByLabelText("입력 완료 1개")).toBeInTheDocument();
-  expect(screen.getByLabelText("입력 실패 1개")).toBeInTheDocument();
-  expect(
-    screen.getByRole("heading", { name: "입력 실패" }),
-  ).toBeInTheDocument();
-  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  expect(screen.queryByLabelText("입력 실패 1개")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("확인 필요 2개")).toBeInTheDocument();
+  expect(screen.getByText("입력 못함")).toBeInTheDocument();
   expect(screen.queryByText("5000")).not.toBeInTheDocument();
 });
 

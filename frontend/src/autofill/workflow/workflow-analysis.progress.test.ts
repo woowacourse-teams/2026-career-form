@@ -105,9 +105,11 @@ it.each(["write", "settle"] as const)(
     expect(progress).toEqual([
       {
         id: expect.any(String),
+        candidateId: expect.any(String),
         label: "국문 성",
         category: "기본 인적사항",
         status: "written",
+        unchanged: false,
       },
     ]);
   },

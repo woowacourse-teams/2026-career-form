@@ -11,6 +11,10 @@
   border-radius: 12px;
   background: var(--color-surface);
 }
+.summaryText {
+  display: grid;
+  gap: 12px;
+}
 .results .summary h3 {
   margin: 0;
   font-size: 20px;
@@ -26,6 +30,9 @@
 }
 .counts strong {
   color: var(--color-action-strong);
+}
+.counts > [data-state="completed"] strong {
+  color: var(--color-success);
 }
 .primary {
   display: flex;
@@ -74,6 +81,21 @@
 }
 .heading strong {
   font-size: 14px;
+}
+.fieldTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.writtenTag {
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
 }
 .heading button {
   flex: none;
@@ -141,5 +163,32 @@
   gap: 6px;
   padding-left: 18px;
   color: var(--color-text-muted);
+  font-size: 12px;
+}
+.skipped {
+  color: var(--color-text-muted);
+}
+.skipped summary span {
+  margin-left: 6px;
+  font-size: 12px;
+}
+.skipped ul {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.skipped li {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.skipped strong {
+  color: var(--color-text);
+  font-weight: 550;
+}
+.skipped small {
   font-size: 12px;
 }

@@ -26,6 +26,8 @@ import {
 
 interface WorkflowScreensProps {
   wasWritten?: WorkflowResultsProps["wasWritten"];
+  progressIdFor?: WorkflowResultsProps["progressIdFor"];
+  progressStateFor?: WorkflowResultsProps["progressStateFor"];
   activity?: WorkflowActivity;
   progress?: readonly WriteProgress[];
   fieldStateFor?: WorkflowResultsProps["fieldStateFor"];
@@ -56,6 +58,8 @@ interface WorkflowScreensProps {
 
 export function WorkflowScreens({
   wasWritten,
+  progressIdFor,
+  progressStateFor,
   progress,
   activity,
   fieldStateFor,
@@ -346,6 +350,8 @@ export function WorkflowScreens({
         )}
         <WorkflowResults
           wasWritten={wasWritten}
+          progressIdFor={progressIdFor}
+          progressStateFor={progressStateFor}
           progress={progress}
           fieldStateFor={fieldStateFor}
           profile={profile}

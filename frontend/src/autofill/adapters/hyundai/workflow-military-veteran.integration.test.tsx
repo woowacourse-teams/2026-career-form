@@ -1,4 +1,4 @@
-import { waitFor } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
 import {
@@ -399,7 +399,13 @@ it("leaves an incompatible veteran number blank while completing other fields", 
     ).toBeInTheDocument(),
   );
   expect(control("branchNo").value).toBe("");
-  expect(result.getByLabelText("입력 실패 1개")).toBeInTheDocument();
+  const review = result.getByRole("region", { name: "확인 필요한 항목" });
+  const veteranRow = within(review)
+    .getByRole("button", {
+      name: /보훈번호 필드로 이동$/,
+    })
+    .closest("article")!;
+  expect(within(veteranRow).getByText("입력 못함")).toBeInTheDocument();
   expect(hidden("branchRel")).toBe("1");
   expect(control("milStartDt").value).toBe("2020-03");
   expect(control("engNm").value).toBe("Fixture");
