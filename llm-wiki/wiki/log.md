@@ -213,3 +213,9 @@
 - Approval-Digest: 514b194740c528ad3a9354d2de0f96e4e38719507d2990c34dc0143be4794daa
 - Raw: [CF-96 bundle](../raw/issues/CF-96/manifest.md)
 - 승인된 후보 3개를 기록하고 [랜딩·온보딩 topic](topics/landing-onboarding.md)을 색인에 연결했다.
+
+## [2026-09-22] ingest | CF-99 입력 위치 표시와 설치 안내
+
+- Approval-Digest: 2a87ccd12e581e9177e8a4b527ab2df5d39800efdebddfc7ef698c47392463d2
+- Raw: [CF-99 bundle](../raw/issues/CF-99/manifest.md)
+- 승인된 후보 3개를 기록하고 [입력 위치 표시와 설치 안내 topic](topics/autofill-follow-and-install.md)을 색인에 연결했다.
