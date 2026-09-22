@@ -22,11 +22,12 @@ describe("website navigation", () => {
   });
   it("moves through installation guidance without collecting profile data or replaying a demo", () => {
     const { container } = render(<SiteApp path="/onboarding/" />);
-    fireEvent.click(screen.getByRole("button", { name: /프로필 등록 방법/ }));
+    expect(screen.getByRole("link", { name: /Chrome에 추가/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /다음: 프로필 등록/ }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "프로필",
     );
-    fireEvent.click(screen.getByRole("button", { name: /첫 실행 방법/ }));
+    fireEvent.click(screen.getByRole("button", { name: /다음: 첫 지원서/ }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "지원서",
     );

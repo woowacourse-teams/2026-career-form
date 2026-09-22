@@ -37,7 +37,9 @@ function Header({ landing }: { landing: boolean }) {
           <InstallLink />
         </>
       ) : (
-        <SiteLink href="/">소개 페이지로 ↗</SiteLink>
+        <SiteLink className={styles.introductionLink} href="/">
+          소개 페이지로 ↗
+        </SiteLink>
       )}
     </header>
   );
@@ -156,7 +158,7 @@ function Landing() {
     </main>
   );
 }
-function Onboarding() {
+function Onboarding({ installed }: { installed: boolean }) {
   const [step, setStep] = useState(0);
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
@@ -172,16 +174,16 @@ function Onboarding() {
   return (
     <main id="main" className={styles.onboarding}>
       <aside>
-        <p className={styles.eyebrow}>설치·사용 안내</p>
+        <p className={styles.eyebrow}>시작 안내</p>
         <h2>
-          설치하고,
+          {installed ? "설치 완료!" : "커리어폼과 함께,"}
           <br />첫 지원을 준비하세요.
         </h2>
         <ol>
           {steps.map((item, i) => (
             <li key={item.label} aria-current={step === i ? "step" : undefined}>
               <span>0{i + 1}</span>
-              {item.label}
+              {installed && i === 0 ? "커리어폼 열기" : item.label}
             </li>
           ))}
         </ol>
@@ -189,43 +191,49 @@ function Onboarding() {
       </aside>
       <section className={styles.guideContent}>
         <div className={styles.stepCount}>
-          설치·사용 안내 <span>0{step + 1} / 03</span>
+          시작 안내 <span>0{step + 1} / 03</span>
         </div>
         <h1 ref={heading} tabIndex={-1}>
-          {current.title}
+          {installed && step === 0 ? "커리어폼을 열어보세요." : current.title}
         </h1>
-        <p className={styles.description}>{current.description}</p>
-        {step === 0 && (
-          <>
-            <div className={styles.notice}>
-              <strong>Chrome 웹 스토어에서 설치</strong>
-              <p>
-                스토어에서 ‘Chrome에 추가’를 누르세요. 설치를 마치면 이 페이지로
-                돌아와 아래 설정을 진행하세요.
-              </p>
-              <InstallLink />
-            </div>
-            <ChromeGuide />
-          </>
+        <p className={styles.description}>
+          {installed && step === 0
+            ? "Chrome 퍼즐 메뉴에서 Career Form을 선택하면 시작할 수 있어요."
+            : current.description}
+        </p>
+        {step === 0 && !installed && (
+          <div className={styles.notice}>
+            <strong>Chrome 웹 스토어에서 설치</strong>
+            <p>
+              스토어에서 ‘Chrome에 추가’를 누르세요. 설치를 마치면 이 페이지로
+              돌아와 아래 설정을 진행하세요.
+            </p>
+            <InstallLink />
+          </div>
         )}
-        {step === 1 && <ServiceGuide kind="profile" />}
-        {step === 2 && (
-          <>
-            <OpeningGuide />
-            <ServiceGuide kind="autofill" />
-          </>
-        )}
-        <ol className={styles.instructions}>
-          {current.instructions.map(([title, body], i) => (
-            <li key={title}>
-              <span>{i + 1}</span>
-              <div>
-                <h2>{title}</h2>
-                <p>{body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <div className={step < 2 ? styles.guideLayout : undefined}>
+          <div className={styles.guideVisual}>
+            {step === 0 && <ChromeGuide />}
+            {step === 1 && <ServiceGuide kind="profile" />}
+            {step === 2 && (
+              <>
+                <OpeningGuide />
+                <ServiceGuide kind="autofill" />
+              </>
+            )}
+          </div>
+          <ol className={styles.instructions}>
+            {current.instructions.map(([title, body], i) => (
+              <li key={title}>
+                <span>{i + 1}</span>
+                <div>
+                  <h2>{title}</h2>
+                  <p>{body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
         {step === 2 && (
           <div className={styles.notice}>
             <strong>네모 아이콘이 보이지 않나요?</strong>
@@ -236,14 +244,12 @@ function Onboarding() {
           </div>
         )}
         <div className={styles.stepActions}>
-          {step > 0 ? (
+          {step > 0 && (
             <button onClick={() => go(step - 1)}>← 이전 안내</button>
-          ) : (
-            <small>이 페이지에서는 설치 여부를 자동 확인하지 않아요.</small>
           )}
           {step < 2 ? (
             <button className={styles.primary} onClick={() => go(step + 1)}>
-              {step === 0 ? "프로필 등록 방법" : "첫 실행 방법"}{" "}
+              {step === 0 ? "다음: 프로필 등록" : "다음: 첫 지원서"}{" "}
               <Icon name="arrow" />
             </button>
           ) : (
@@ -252,9 +258,6 @@ function Onboarding() {
             </SiteLink>
           )}
         </div>
-        <p className={styles.guideNote}>
-          실제 설정은 설치한 확장 프로그램에서 진행하세요.
-        </p>
       </section>
     </main>
   );
@@ -295,8 +298,10 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
 }
 export function SiteApp({
   path = window.location.pathname,
+  installed = false,
 }: {
   path?: string;
+  installed?: boolean;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
@@ -309,7 +314,7 @@ export function SiteApp({
       {landing ? (
         <Landing />
       ) : normalized === "/onboarding" ? (
-        <Onboarding />
+        <Onboarding installed={installed} />
       ) : normalized === "/privacy" || normalized === "/terms" ? (
         <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />
       ) : (
