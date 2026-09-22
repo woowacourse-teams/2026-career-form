@@ -18,15 +18,27 @@ function InstallLink() {
     </a>
   );
 }
-function Header({ landing }: { landing: boolean }) {
+interface InstallationActions {
+  openOptions(): Promise<void> | void;
+  close(): void;
+}
+function Header({
+  landing,
+  installation,
+}: {
+  landing: boolean;
+  installation?: InstallationActions;
+}) {
   return (
     <header className={styles.header}>
-      <a className={styles.brand} href="/">
+      <a className={styles.brand} href={installation ? "#main" : "/"}>
         <img src={logo} alt="" />
         career<span>form</span>
         <b>.</b>
       </a>
-      {landing ? (
+      {installation ? (
+        <button onClick={installation.close}>나중에 할게요</button>
+      ) : landing ? (
         <>
           <nav aria-label="주 메뉴">
             <a href="#features">주요 기능</a>
@@ -41,14 +53,16 @@ function Header({ landing }: { landing: boolean }) {
     </header>
   );
 }
-function Footer() {
+function Footer({ installed = false }: { installed?: boolean }) {
   return (
     <footer className={styles.footer}>
       <span>careerform. · 채용 지원서 자동 입력</span>
-      <nav aria-label="정책 안내">
-        <a href="/privacy/">개인정보처리방침</a>
-        <a href="/terms/">이용약관</a>
-      </nav>
+      {!installed && (
+        <nav aria-label="정책 안내">
+          <a href="/privacy/">개인정보처리방침</a>
+          <a href="/terms/">이용약관</a>
+        </nav>
+      )}
       <small>© 2026 Career Form</small>
     </footer>
   );
@@ -154,8 +168,9 @@ function Landing() {
     </main>
   );
 }
-function Onboarding() {
+function Onboarding({ installation }: { installation?: InstallationActions }) {
   const [step, setStep] = useState(0);
+  const [failed, setFailed] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
   const current = steps[step];
@@ -196,21 +211,50 @@ function Onboarding() {
         {step === 0 && (
           <>
             <div className={styles.notice}>
-              <strong>Chrome 웹 스토어에서 설치</strong>
+              <strong>
+                {installation
+                  ? "커리어폼 설치 완료"
+                  : "Chrome 웹 스토어에서 설치"}
+              </strong>
               <p>
-                스토어에서 ‘Chrome에 추가’를 누르세요. 설치를 마치면 이 페이지로
-                돌아와 아래 설정을 진행하세요.
+                {installation
+                  ? "아래 안내에 따라 커리어폼을 열고 프로필을 준비하세요."
+                  : "스토어에서 ‘Chrome에 추가’를 누르세요. 설치를 마치면 이 페이지로 돌아와 아래 설정을 진행하세요."}
               </p>
-              <InstallLink />
+              {!installation && <InstallLink />}
             </div>
             <ChromeGuide />
           </>
         )}
-        {step === 1 && <ServiceGuide kind="profile" />}
+        {step === 1 && (
+          <>
+            <ServiceGuide kind="profile" installed={!!installation} />
+            {installation && (
+              <button
+                className={styles.primary}
+                onClick={async () => {
+                  try {
+                    setFailed(false);
+                    await installation.openOptions();
+                  } catch {
+                    setFailed(true);
+                  }
+                }}
+              >
+                프로필 관리 열기
+              </button>
+            )}
+            {failed && (
+              <p role="alert">
+                프로필 관리를 열지 못했어요. 다시 시도해 주세요.
+              </p>
+            )}
+          </>
+        )}
         {step === 2 && (
           <>
             <OpeningGuide />
-            <ServiceGuide kind="autofill" />
+            <ServiceGuide kind="autofill" installed={!!installation} />
           </>
         )}
         <ol className={styles.instructions}>
@@ -237,12 +281,20 @@ function Onboarding() {
           {step > 0 ? (
             <button onClick={() => go(step - 1)}>← 이전 안내</button>
           ) : (
-            <small>이 페이지에서는 설치 여부를 자동 확인하지 않아요.</small>
+            <small>
+              {installation
+                ? "설치가 끝났어요. 다음 단계로 진행하세요."
+                : "이 페이지에서는 설치 여부를 자동 확인하지 않아요."}
+            </small>
           )}
           {step < 2 ? (
             <button className={styles.primary} onClick={() => go(step + 1)}>
               {step === 0 ? "프로필 등록 방법" : "첫 실행 방법"}{" "}
               <Icon name="arrow" />
+            </button>
+          ) : installation ? (
+            <button className={styles.primary} onClick={installation.close}>
+              안내 마치기 <Icon name="arrow" />
             </button>
           ) : (
             <a className={styles.primary} href="/">
@@ -290,8 +342,10 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
 }
 export function SiteApp({
   path = window.location.pathname,
+  installation,
 }: {
   path?: string;
+  installation?: InstallationActions;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
@@ -300,11 +354,11 @@ export function SiteApp({
       <a className={styles.skip} href="#main">
         본문으로 건너뛰기
       </a>
-      <Header landing={landing} />
+      <Header landing={landing} installation={installation} />
       {landing ? (
         <Landing />
       ) : normalized === "/onboarding" ? (
-        <Onboarding />
+        <Onboarding installation={installation} />
       ) : normalized === "/privacy" || normalized === "/terms" ? (
         <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />
       ) : (
@@ -313,7 +367,7 @@ export function SiteApp({
           <a href="/">소개 페이지로</a>
         </main>
       )}
-      <Footer />
+      <Footer installed={!!installation} />
     </div>
   );
 }

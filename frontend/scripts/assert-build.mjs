@@ -74,6 +74,7 @@ await Promise.all(
     "options.html",
     "sidepanel.html",
     "onboarding.html",
+    "onboarding-guide.html",
     "content-scripts/autofill.js",
     "content-scripts/autofill.css",
   ].map((fileName) => readFile(resolve(outputDirectory, fileName))),

@@ -80,14 +80,24 @@ export function OpeningGuide() {
     </div>
   );
 }
-export function ServiceGuide({ kind }: { kind: "profile" | "autofill" }) {
+export function ServiceGuide({
+  kind,
+  installed = false,
+}: {
+  kind: "profile" | "autofill";
+  installed?: boolean;
+}) {
   return (
     <figure className={styles.figure}>
       <iframe
         title={
           kind === "profile" ? "프로필 관리 버튼 위치" : "자동 기입 버튼 위치"
         }
-        src={`/demo/?view=guide-${kind}`}
+        src={
+          installed
+            ? `/onboarding-guide.html?kind=${kind}`
+            : `/demo/?view=guide-${kind}`
+        }
         tabIndex={-1}
         inert
       />
