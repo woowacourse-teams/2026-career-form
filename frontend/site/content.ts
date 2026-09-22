@@ -69,7 +69,7 @@ export const steps = [
   },
   {
     title: "작성할 지원서에서 커리어폼을 여세요.",
-    label: "첫 지원서에서 실행",
+    label: "지원서에서 사용",
     description: "두 가지 방법 중 편한 쪽으로 패널을 열면 돼요.",
     instructions: [
       [

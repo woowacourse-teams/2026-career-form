@@ -519,6 +519,10 @@
 }
 .stepActions .primary {
   margin-left: auto;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 .policy {
   max-width: 820px;

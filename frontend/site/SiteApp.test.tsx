@@ -29,7 +29,9 @@ describe("website navigation", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "프로필",
     );
-    fireEvent.click(screen.getByRole("button", { name: /사용 방법 알아보기/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /지원서에서 사용하기/ }),
+    );
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "지원서",
     );

@@ -169,7 +169,9 @@ function Onboarding({
   const [step, setStep] = useState(0);
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
-  const current = steps[step];
+  const visibleSteps = installed ? steps.slice(1) : steps;
+  const current = visibleSteps[step];
+  const contentStep = step + (installed ? 1 : 0);
   useEffect(() => {
     if (moved.current) heading.current?.focus({ preventScroll: true });
   }, [step]);
@@ -187,10 +189,10 @@ function Onboarding({
           <br />첫 지원을 준비하세요.
         </h2>
         <ol>
-          {steps.map((item, i) => (
+          {visibleSteps.map((item, i) => (
             <li key={item.label} aria-current={step === i ? "step" : undefined}>
               <span>0{i + 1}</span>
-              {installed && i === 0 ? "커리어폼 열기" : item.label}
+              {item.label}
             </li>
           ))}
         </ol>
@@ -198,16 +200,15 @@ function Onboarding({
       </aside>
       <section className={styles.guideContent}>
         <div className={styles.stepCount}>
-          시작 안내 <span>0{step + 1} / 03</span>
+          시작 안내{" "}
+          <span>
+            0{step + 1} / 0{visibleSteps.length}
+          </span>
         </div>
         <h1 ref={heading} tabIndex={-1}>
-          {installed && step === 0 ? "커리어폼을 열어보세요." : current.title}
+          {current.title}
         </h1>
-        <p className={styles.description}>
-          {installed && step === 0
-            ? "작성할 지원서 페이지에서 Chrome 퍼즐 메뉴의 Career Form을 선택하세요."
-            : current.description}
-        </p>
+        <p className={styles.description}>{current.description}</p>
         {step === 0 && !installed && (
           <div className={styles.notice}>
             <strong>Chrome 웹 스토어에서 설치</strong>
@@ -218,11 +219,11 @@ function Onboarding({
             <InstallLink />
           </div>
         )}
-        <div className={step < 2 ? styles.guideLayout : undefined}>
+        <div className={contentStep < 2 ? styles.guideLayout : undefined}>
           <div className={styles.guideVisual}>
-            {step === 0 && <ChromeGuide />}
-            {step === 1 && <ServiceGuide kind="profile" />}
-            {step === 2 && (
+            {contentStep === 0 && <ChromeGuide />}
+            {contentStep === 1 && <ServiceGuide kind="profile" />}
+            {contentStep === 2 && (
               <>
                 <OpeningGuide />
                 <ServiceGuide kind="autofill" />
@@ -236,11 +237,11 @@ function Onboarding({
                 <div>
                   <h2>{title}</h2>
                   <p>
-                    {step === 1 && i === 0 && profileHref
+                    {contentStep === 1 && i === 0 && profileHref
                       ? "아래 ‘프로필 등록하기’를 눌러 내 정보를 등록하세요. 지원서 패널의 ‘프로필 관리’에서도 열 수 있어요."
                       : body}
                   </p>
-                  {step === 1 && i === 0 && profileHref && (
+                  {contentStep === 1 && i === 0 && profileHref && (
                     <a
                       className={styles.primary}
                       href={profileHref}
@@ -255,7 +256,7 @@ function Onboarding({
             ))}
           </ol>
         </div>
-        {step === 2 && (
+        {contentStep === 2 && (
           <div className={styles.notice}>
             <strong>네모 아이콘이 보이지 않나요?</strong>
             <p>
@@ -268,14 +269,16 @@ function Onboarding({
           {step > 0 && (
             <button onClick={() => go(step - 1)}>← 이전 안내</button>
           )}
-          {step < 2 ? (
+          {step < visibleSteps.length - 1 ? (
             <button className={styles.primary} onClick={() => go(step + 1)}>
-              {step === 0 ? "프로필 등록 알아보기" : "사용 방법 알아보기"}{" "}
+              {contentStep === 0
+                ? "프로필 등록 알아보기"
+                : "지원서에서 사용하기"}{" "}
               <Icon name="arrow" />
             </button>
           ) : (
             <SiteLink className={styles.primary} href="/">
-              안내 마치기 <Icon name="arrow" />
+              시작하기 <Icon name="arrow" />
             </SiteLink>
           )}
         </div>
