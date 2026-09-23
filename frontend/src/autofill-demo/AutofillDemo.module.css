@@ -12,8 +12,9 @@
 }
 .resultTitle {
   margin: 0;
-  font-size: 18px;
-  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
 }
 .addressResult {
   font-size: 12px;

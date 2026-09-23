@@ -35,9 +35,9 @@ it("keeps result layout and actions styled without the separately loaded entry s
     const locate = view.getByRole("button", { name: "전공 필드로 이동" });
 
     expect(getComputedStyle(summary).display).toBe("grid");
-    expect(getComputedStyle(summary).padding).toBe("0px 0px 4px");
-    expect(getComputedStyle(counts).display).toBe("flex");
-    expect(getComputedStyle(counts).gap).toBe("8px 16px");
+    expect(getComputedStyle(summary).padding).toBe("0px 0px 20px");
+    expect(getComputedStyle(counts).display).toBe("grid");
+    expect(getComputedStyle(counts).gap).toBe("8px");
     expect(getComputedStyle(locate).width).toBe("28px");
     expect(getComputedStyle(locate).borderTopStyle).toBe("none");
   } finally {
@@ -102,6 +102,6 @@ it("places the field name, full value, and compact action in one grid row with t
   expect(getComputedStyle(view.getByText("전공")).wordBreak).toBe("keep-all");
   expect(getComputedStyle(view.getByText("전공")).textWrap).toBe("balance");
   expect(getComputedStyle(reason).wordBreak).toBe("keep-all");
-  expect(getComputedStyle(reason).marginLeft).toBe("0px");
-  expect(getComputedStyle(reason).fontSize).toBe("12px");
+  expect(getComputedStyle(reason).marginLeft).toBe("-4px");
+  expect(getComputedStyle(reason).fontSize).toBe("13px");
 });
