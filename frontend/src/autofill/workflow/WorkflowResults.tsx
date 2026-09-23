@@ -135,7 +135,7 @@ export function WorkflowResults({
                     )}
                   </div>
                   <span className={styles.connector} aria-hidden="true">
-                    →
+                    :
                   </span>
                   <div className={styles.values}>
                     {item &&

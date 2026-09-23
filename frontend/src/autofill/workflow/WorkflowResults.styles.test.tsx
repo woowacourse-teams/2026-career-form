@@ -78,7 +78,7 @@ it("places the field name, full value, and compact action in one grid row with t
 
   expect(getComputedStyle(heading).display).toBe("grid");
   expect(getComputedStyle(heading).gridTemplateColumns).toBe(
-    "fit-content(35%) 12px minmax(0, 1fr) 28px",
+    "fit-content(35%) 4px minmax(0, 1fr) 28px",
   );
   expect(heading).toContainElement(view.getByText("전공"));
   expect(heading).toContainElement(preview);

@@ -16,11 +16,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-top: 1px solid var(--color-border-strong);
-  border-bottom: 1px solid var(--color-border-strong);
   padding: 10px 16px;
   color: var(--color-text-strong);
-  background: var(--color-accent-soft);
+  background: transparent;
 }
 
 .toolbar button {
@@ -28,11 +26,11 @@
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  border: 1px solid var(--color-action-strong);
+  border: 1px solid var(--color-border-strong);
   border-radius: 8px;
   padding: 8px 12px;
-  color: var(--color-on-action);
-  background: var(--color-action-strong);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
@@ -40,7 +38,7 @@
 }
 
 .toolbar button:hover {
-  background: var(--color-text-strong);
+  background: var(--color-accent-soft);
 }
 
 .toolbar button:focus-visible {

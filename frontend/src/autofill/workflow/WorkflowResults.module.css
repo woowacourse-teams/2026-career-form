@@ -75,13 +75,13 @@
   align-items: center;
   gap: 7px;
   margin-bottom: 6px;
-  color: var(--color-action-strong);
+  color: var(--color-text-strong);
 }
 .reviewTitle > span {
   padding: 2px 7px;
   border-radius: 6px;
-  background: var(--color-action-strong);
-  color: var(--color-on-action);
+  background: var(--color-accent);
+  color: var(--color-text-strong);
   font-size: 12px;
   font-weight: 600;
 }
@@ -99,27 +99,27 @@
 }
 .row {
   padding: 12px;
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: var(--color-warning-soft);
+  background: var(--color-accent-soft);
   overflow-wrap: anywhere;
 }
 .heading {
   display: grid;
-  grid-template-columns: fit-content(35%) 12px minmax(0, 1fr) 28px;
+  grid-template-columns: fit-content(35%) 4px minmax(0, 1fr) 28px;
   align-items: start;
   gap: 6px;
 }
 .connector {
   padding-top: 4px;
-  color: var(--color-action-strong);
+  color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.5;
 }
 .heading strong {
-  color: var(--color-action-strong);
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.5;
   word-break: keep-all;
   text-wrap: balance;
@@ -196,7 +196,7 @@
 .row .guidance {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--color-accent);
+  border-top: 1px solid var(--color-border);
   color: var(--color-text);
 }
 .results summary {
