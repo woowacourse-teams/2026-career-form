@@ -76,7 +76,7 @@ it.each<[WriteFailureCode, string]>([
       />,
     );
     expect(screen.getByText(guidance)).toBeVisible();
-    expect(screen.getAllByText("합성테스트전공")).toHaveLength(1);
+    expect(screen.queryByText("합성테스트전공")).not.toBeInTheDocument();
     expect(screen.queryByText(/RAW_PRIVATE_ERROR/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
     expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
@@ -107,7 +107,7 @@ it("keeps specific failure guidance after its snapshot disappears without retain
   ).toBeDisabled();
 });
 
-it("uses a cautious fallback for unknown failures and keeps sensitive previews masked", () => {
+it("uses a cautious fallback for unknown failures without displaying sensitive previews", () => {
   render(
     <WorkflowResults
       reviewItems={[
@@ -128,7 +128,7 @@ it("uses a cautious fallback for unknown failures and keeps sensitive previews m
     />,
   );
   expect(screen.queryByText(/PRIVATE_VALUE/)).not.toBeInTheDocument();
-  expect(screen.getByText("••••••••")).toBeInTheDocument();
+  expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
   expect(
     screen.getByText(
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",

@@ -45,7 +45,7 @@ it("keeps result layout and actions styled without the separately loaded entry s
   }
 });
 
-it("places the field name, full value, and compact action in one grid row with the reason below", () => {
+it("shows only the field name and action above the guidance, without profile values", () => {
   const value =
     "컴퓨터공학과에서소프트웨어시스템설계와분산데이터처리를전공했습니다";
   const { container } = render(
@@ -71,24 +71,18 @@ it("places the field name, full value, and compact action in one grid row with t
   const view = within(container);
   const locate = view.getByRole("button", { name: "전공 필드로 이동" });
   const heading = locate.parentElement!;
-  const preview = view.getByText(value);
+  expect(view.queryByText(value)).not.toBeInTheDocument();
   const reason = view.getByText(
     "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
   );
 
   expect(getComputedStyle(heading).display).toBe("grid");
   expect(getComputedStyle(heading).gridTemplateColumns).toBe(
-    "fit-content(35%) 4px minmax(0, 1fr) 28px",
+    "minmax(0, 1fr) 28px",
   );
   expect(heading).toContainElement(view.getByText("전공"));
-  expect(heading).toContainElement(preview);
   expect(heading).not.toContainElement(reason);
   expect(heading.nextElementSibling).toBe(reason);
-  expect(getComputedStyle(preview.parentElement!).minWidth).toBe("0px");
-  expect(getComputedStyle(preview).whiteSpace).toBe("pre-wrap");
-  expect(getComputedStyle(preview).overflowWrap).toBe("anywhere");
-  expect(getComputedStyle(preview).textOverflow).not.toBe("ellipsis");
-  expect(getComputedStyle(preview).overflow).not.toBe("hidden");
   expect(getComputedStyle(locate).minHeight).toBe("28px");
   const rowStyle = getComputedStyle(locate.closest("article")!);
   expect(parseFloat(rowStyle.paddingLeft)).toBeGreaterThanOrEqual(12);

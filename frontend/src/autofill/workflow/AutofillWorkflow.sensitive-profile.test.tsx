@@ -333,7 +333,7 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
   expect(
     screen.queryByText("desired-salary-result-secret"),
   ).not.toBeInTheDocument();
-  expect(screen.getByText("••••••••")).toBeVisible();
+  expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
   expect(screen.queryByText(/복수.*부전공명 진단/)).not.toBeInTheDocument();
   expect(screen.queryByText(/선행 선택 완료/)).not.toBeInTheDocument();
 });

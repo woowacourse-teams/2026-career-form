@@ -7,7 +7,7 @@
   min-height: 0;
   overflow: hidden;
   color: var(--color-text);
-  background: var(--color-page);
+  background: var(--color-surface);
   font-family: var(--font-ui);
 }
 

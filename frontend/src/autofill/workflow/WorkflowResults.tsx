@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import styles from "./WorkflowResults.module.css";
 import resultCss from "./WorkflowResults.module.css?inline";
 import type { Profile } from "../../profile/model";
-import { resultPreview } from "./result-preview";
 import type { WriteProgress } from "./progress-model";
 import { buildResultModel } from "./result-model";
 import { resultFieldLabel } from "./result-label";
@@ -89,7 +88,10 @@ export function WorkflowResults({
               입력 완료 <strong>{completed.length}개</strong>
             </span>
             {pending.length > 0 && (
-              <span aria-label={`확인 필요 ${pending.length}개`}>
+              <span
+                data-state="pending"
+                aria-label={`확인 필요 ${pending.length}개`}
+              >
                 확인 필요 <strong>{pending.length}개</strong>
               </span>
             )}
@@ -133,15 +135,6 @@ export function WorkflowResults({
                     {written && (
                       <span className={styles.writtenTag}>입력됨</span>
                     )}
-                  </div>
-                  <span className={styles.connector} aria-hidden="true">
-                    :
-                  </span>
-                  <div className={styles.values}>
-                    {item &&
-                      resultPreview(item, profile).map((value, index) => (
-                        <p key={index}>{value}</p>
-                      ))}
                   </div>
                   <button
                     type="button"

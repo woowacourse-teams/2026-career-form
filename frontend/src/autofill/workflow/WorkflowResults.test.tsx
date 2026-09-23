@@ -302,7 +302,7 @@ it("keeps completed fields out of the way while review remains visible", () => {
   );
   const review = screen.getByRole("region", { name: "확인 필요한 항목" });
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
-  expect(within(review).getByText("컴퓨터공학")).toBeVisible();
+  expect(within(review).getByText("전공")).toBeVisible();
   const categories = within(completed).getByRole("list", {
     name: "범주별 입력 결과",
     hidden: true,
@@ -310,7 +310,7 @@ it("keeps completed fields out of the way while review remains visible", () => {
   expect(categories).not.toBeVisible();
   fireEvent.click(within(completed).getByText("입력 완료 1개"));
   expect(categories).toBeVisible();
-  expect(within(review).getByText("컴퓨터공학")).toBeVisible();
+  expect(within(review).getByText("전공")).toBeVisible();
 });
 it("keeps an earlier failure visible without locating a reused candidate from another snapshot", () => {
   const onLocate = vi.fn();
@@ -497,7 +497,7 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
       onLocate={() => false}
     />,
   );
-  expect(screen.getByText("컴퓨터공학")).toBeInTheDocument();
+  expect(screen.queryByText("컴퓨터공학")).not.toBeInTheDocument();
   expect(
     screen.getByText(
       "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
@@ -507,7 +507,7 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
   expect(screen.getByText("이동 불가")).toBeInTheDocument();
 });
 
-it("combines write failures with unresolved fields and preserves masked previews", () => {
+it("combines write failures with unresolved fields without showing profile previews", () => {
   render(
     <WorkflowResults
       reviewItems={[
@@ -540,7 +540,7 @@ it("combines write failures with unresolved fields and preserves masked previews
       "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
     ),
   ).toBeInTheDocument();
-  expect(screen.getByText("••••••••")).toBeInTheDocument();
+  expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
   expect(screen.queryByText("5000")).not.toBeInTheDocument();
 });
 
