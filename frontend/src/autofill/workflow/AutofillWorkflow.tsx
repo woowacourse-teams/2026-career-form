@@ -61,6 +61,7 @@ import {
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
 export function AutofillWorkflow({
+  exitInToolbar = false,
   followFields = false,
   apiClient,
   repository,
@@ -673,6 +674,7 @@ export function AutofillWorkflow({
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
       onExit={onExit}
+      exitInToolbar={exitInToolbar}
       currentCategory={currentCategory}
       onLocate={(candidateId) =>
         !!fieldsSnapshot &&

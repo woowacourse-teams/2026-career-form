@@ -24,6 +24,7 @@ import {
 } from "./workflow-model";
 
 interface WorkflowScreensProps {
+  exitInToolbar?: boolean;
   wasWritten?: WorkflowResultsProps["wasWritten"];
   progressIdFor?: WorkflowResultsProps["progressIdFor"];
   progressStateFor?: WorkflowResultsProps["progressStateFor"];
@@ -56,6 +57,7 @@ interface WorkflowScreensProps {
 }
 
 export function WorkflowScreens({
+  exitInToolbar = false,
   wasWritten,
   progressIdFor,
   progressStateFor,
@@ -348,9 +350,11 @@ export function WorkflowScreens({
           reviewItems={reviewItems}
           onLocate={onLocate}
         />
-        <button className={styles.primary} type="button" onClick={onExit}>
-          수동 복사로 돌아가기
-        </button>
+        {!exitInToolbar && (
+          <button className={styles.primary} type="button" onClick={onExit}>
+            수동 복사로 돌아가기
+          </button>
+        )}
       </div>
     );
   }
@@ -364,9 +368,11 @@ export function WorkflowScreens({
           있으며, 수동 복사는 계속 사용할 수 있습니다.
         </p>
       </div>
-      <button className={styles.primary} type="button" onClick={onExit}>
-        수동 복사로 돌아가기
-      </button>
+      {!exitInToolbar && (
+        <button className={styles.primary} type="button" onClick={onExit}>
+          수동 복사로 돌아가기
+        </button>
+      )}
     </div>
   );
 }

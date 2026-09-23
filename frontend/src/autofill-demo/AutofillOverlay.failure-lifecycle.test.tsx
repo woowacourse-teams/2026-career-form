@@ -33,6 +33,13 @@ describe("AutofillOverlay failure and lifecycle", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText("me@example.test")).not.toBeInTheDocument();
+    const back = screen.getAllByRole("button", {
+      name: "수동 복사로 돌아가기",
+    });
+    expect(back).toHaveLength(1);
+    expect(back[0]!.parentElement!.nextElementSibling).toContainElement(
+      screen.getByRole("heading", { name: "분석을 완료하지 못했습니다" }),
+    );
   });
 
   it("keeps profile values hidden when field analysis reports the page as blocked", async () => {
@@ -229,7 +236,9 @@ describe("AutofillOverlay failure and lifecycle", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "목록으로 돌아가기" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "수동 복사로 돌아가기" }),
+    );
     expect(closeFromAction).toHaveBeenCalledOnce();
 
     unmount();
@@ -251,7 +260,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
       { container },
     );
     fireEvent.keyDown(
-      overlay.getByRole("button", { name: "목록으로 돌아가기" }),
+      overlay.getByRole("button", { name: "수동 복사로 돌아가기" }),
       { key: "Escape" },
     );
     expect(closeFromEscape).toHaveBeenCalledOnce();

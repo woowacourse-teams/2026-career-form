@@ -91,6 +91,12 @@ describe("AutofillOverlay", () => {
           ? "기입 결과"
           : "조건부 선택을 안전하게 적용하지 못했습니다",
       });
+      expect(
+        screen.getAllByRole("button", { name: "수동 복사로 돌아가기" }),
+      ).toHaveLength(1);
+      expect(
+        screen.queryByRole("button", { name: "목록으로 돌아가기" }),
+      ).not.toBeInTheDocument();
       expect(observedLanguageValues).toEqual(
         selectionAvailable ? ["", "영어"] : [""],
       );

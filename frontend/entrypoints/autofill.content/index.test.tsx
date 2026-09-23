@@ -203,7 +203,7 @@ describe("content script panel lifecycle", () => {
     expect(shells).toHaveLength(1);
     expect(boundary.preparation).toHaveBeenCalledOnce();
     expect(
-      panel().getByRole("button", { name: "목록으로 돌아가기" }),
+      panel().getByRole("button", { name: "수동 복사로 돌아가기" }),
     ).toBeVisible();
     expect(receive({ type: "unknown" })).toBeUndefined();
   });
@@ -216,7 +216,7 @@ describe("content script panel lifecycle", () => {
       panel().getByRole("region", { name: "지원서 자동 기입" }),
     ).toBeVisible();
     fireEvent.keyDown(
-      panel().getByRole("button", { name: "목록으로 돌아가기" }),
+      panel().getByRole("button", { name: "수동 복사로 돌아가기" }),
       { key: "Escape" },
     );
     await waitFor(() =>
@@ -255,7 +255,9 @@ describe("content script panel lifecycle", () => {
     );
     await start();
     await send(OPEN_AUTOFILL_OVERLAY_MESSAGE);
-    fireEvent.click(panel().getByRole("button", { name: "목록으로 돌아가기" }));
+    fireEvent.click(
+      panel().getByRole("button", { name: "수동 복사로 돌아가기" }),
+    );
     await send(OPEN_AUTOFILL_OVERLAY_MESSAGE);
     await act(async () =>
       resolveFirst({

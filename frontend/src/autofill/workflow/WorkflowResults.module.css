@@ -82,16 +82,17 @@
   font-weight: 600;
 }
 .reviewList {
+  display: grid;
+  gap: 12px;
   padding: 0;
   border: none;
 }
 .row {
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(92, 72, 55, 0.12);
+  padding: 14px 12px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: inset 3px 0 0 var(--color-accent);
   overflow-wrap: anywhere;
-}
-.row:last-child {
-  border-bottom: 0;
 }
 .heading {
   display: grid;
@@ -170,7 +171,7 @@
 }
 .row small {
   display: block;
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.5;

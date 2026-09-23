@@ -93,8 +93,13 @@ it("places the field name, full value, and compact action in one grid row with t
   expect(getComputedStyle(preview).textOverflow).not.toBe("ellipsis");
   expect(getComputedStyle(preview).overflow).not.toBe("hidden");
   expect(getComputedStyle(locate).minHeight).toBe("28px");
-  expect(getComputedStyle(locate.closest("article")!).padding).toBe("14px 0px");
+  const rowStyle = getComputedStyle(locate.closest("article")!);
+  expect(parseFloat(rowStyle.paddingLeft)).toBeGreaterThanOrEqual(12);
+  expect(parseFloat(rowStyle.paddingTop)).toBeGreaterThanOrEqual(14);
+  expect(rowStyle.borderRadius).toBe("10px");
   const group = locate.closest("article")!.parentElement!;
+  expect(getComputedStyle(group).display).toBe("grid");
+  expect(parseFloat(getComputedStyle(group).gap)).toBeGreaterThanOrEqual(12);
   expect(getComputedStyle(group).padding).toBe("0px");
   expect(getComputedStyle(group).borderTopStyle).toBe("none");
   expect(getComputedStyle(view.getByText("전공")).wordBreak).toBe("keep-all");

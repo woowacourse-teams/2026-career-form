@@ -119,6 +119,7 @@ export const addressValue = (profile: Profile): AddressValue => ({
 });
 
 export interface WorkflowProps {
+  exitInToolbar?: boolean;
   followFields?: boolean;
   addressSearch?: AddressSearch;
   apiClient: AnalysisApiClient;

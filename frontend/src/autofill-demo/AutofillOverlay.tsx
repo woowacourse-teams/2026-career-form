@@ -51,11 +51,12 @@ export function AutofillOverlay({
     >
       <div className={styles.toolbar}>
         <button type="button" onClick={onClose}>
-          목록으로 돌아가기
+          수동 복사로 돌아가기
         </button>
       </div>
       <div className={styles.body}>
         <AutofillWorkflow
+          exitInToolbar
           apiClient={apiClient}
           repository={repository}
           pageDocument={pageDocument}
