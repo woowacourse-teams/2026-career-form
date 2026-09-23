@@ -175,11 +175,6 @@
   color: var(--color-action);
   font-size: 12px;
 }
-.locate:hover:not(:disabled) {
-  color: var(--color-action-strong);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
 .locate:disabled {
   cursor: default;
 }
