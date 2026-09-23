@@ -209,6 +209,23 @@ export function App({
           </button>
         </div>
         <div className={styles.titleRow}>
+          {autofillActive && returnToProfile && (
+            <button
+              type="button"
+              className={styles.returnButton}
+              aria-label="수동 복사로 돌아가기"
+              title="수동 복사로 돌아가기"
+              onClick={returnToProfile}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                event.stopPropagation();
+                returnToProfile();
+              }}
+            >
+              <span aria-hidden="true">←</span>
+            </button>
+          )}
           <h1>{autofillActive ? "자동 기입" : "내 지원 정보"}</h1>
           <button
             className={styles.profileButton}
@@ -220,23 +237,6 @@ export function App({
             프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
-        {autofillActive && returnToProfile && (
-          <section className={styles.autofillAction}>
-            <button
-              type="button"
-              onClick={returnToProfile}
-              className={styles.returnButton}
-              onKeyDown={(event) => {
-                if (event.key !== "Escape") return;
-                event.preventDefault();
-                event.stopPropagation();
-                returnToProfile();
-              }}
-            >
-              <span aria-hidden="true">← </span>수동 복사로 돌아가기
-            </button>
-          </section>
-        )}
         {!autofillActive && actionPosition === "top" && (
           <section className={styles.autofillAction}>
             <button

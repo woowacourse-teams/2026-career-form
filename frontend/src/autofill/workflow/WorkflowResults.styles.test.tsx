@@ -35,10 +35,9 @@ it("keeps result layout and actions styled without the separately loaded entry s
     const locate = view.getByRole("button", { name: "전공 필드로 이동" });
 
     expect(getComputedStyle(summary).display).toBe("grid");
-    expect(getComputedStyle(summary).padding).toBe("0px 0px 20px");
-    expect(getComputedStyle(counts).display).toBe("flex");
-    expect(getComputedStyle(counts).flexWrap).toBe("wrap");
-    expect(getComputedStyle(counts).borderTopStyle).toBe("none");
+    expect(getComputedStyle(summary).padding).toBe("0px");
+    expect(getComputedStyle(counts).display).toBe("grid");
+    expect(counts).toHaveAttribute("role", "tablist");
     expect(getComputedStyle(counts.firstElementChild!).borderTopStyle).toBe(
       "none",
     );

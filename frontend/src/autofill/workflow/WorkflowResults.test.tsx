@@ -174,8 +174,13 @@ it("announces the completed summary without moving focus or including interactiv
   expect(
     within(status).getByRole("heading", { name: "자동 기입을 마쳤어요" }),
   ).toBeInTheDocument();
-  expect(within(status).getByLabelText("입력 완료 1개")).toBeInTheDocument();
-  expect(within(status).getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  expect(
+    screen.getByRole("tab", { name: "입력 완료 1개" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "확인 필요 1개" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   expect(within(status).queryByRole("button")).not.toBeInTheDocument();
   expect(within(status).queryByText("컴퓨터공학")).not.toBeInTheDocument();
   expect(input).toHaveFocus();
@@ -255,7 +260,7 @@ it("keeps already matching values out of both required review and skipped UI", (
   ).not.toBeInTheDocument();
 });
 
-it("keeps completed categories collapsed until explicitly opened without losing earlier writes", () => {
+it("opens completed categories by default when no review is needed without losing earlier writes", () => {
   render(
     <WorkflowResults
       reviewItems={[]}
@@ -277,23 +282,22 @@ it("keeps completed categories collapsed until explicitly opened without losing 
     name: "범주별 입력 결과",
     hidden: true,
   });
-  expect(categories).not.toBeVisible();
+  expect(categories).toBeVisible();
   expect(within(categories).getByText("기본 정보")).toBeInTheDocument();
   expect(within(categories).getByText("2개 입력")).toBeInTheDocument();
   expect(within(categories).getByText("학력")).toBeInTheDocument();
   expect(within(categories).getByText("1개 입력")).toBeInTheDocument();
-  const summary = screen.getByText("입력 완료 3개").closest("summary")!;
-  expect(summary.closest("details")).not.toHaveAttribute("open");
-  fireEvent.click(screen.getByRole("button", { name: "입력한 항목 보기" }));
-  expect(summary.closest("details")).toHaveAttribute("open");
-  expect(summary).toHaveFocus();
+  expect(screen.getByRole("tab", { name: "입력 완료 3개" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   expect(categories).toBeVisible();
   expect(within(categories).getAllByText("기본 정보")).toHaveLength(1);
   expect(screen.getByText("학교명")).toBeInTheDocument();
   expect(screen.queryByText("전공")).not.toBeInTheDocument();
 });
 
-it("keeps completed fields out of the way while review remains visible", () => {
+it("defaults to review and switches exclusive result panels with click and keyboard", () => {
   render(
     <WorkflowResults
       reviewItems={[item]}
@@ -301,15 +305,20 @@ it("keeps completed fields out of the way while review remains visible", () => {
     />,
   );
   const review = screen.getByRole("region", { name: "확인 필요한 항목" });
-  const completed = screen.getByRole("region", { name: "입력 완료 내역" });
+  expect(screen.queryByRole("region", { name: "입력 완료 내역" })).toBeNull();
   expect(within(review).getByText("전공")).toBeVisible();
+  const completedTab = screen.getByRole("tab", { name: "입력 완료 1개" });
+  fireEvent.click(completedTab);
+  const completed = screen.getByRole("region", { name: "입력 완료 내역" });
   const categories = within(completed).getByRole("list", {
     name: "범주별 입력 결과",
     hidden: true,
   });
-  expect(categories).not.toBeVisible();
-  fireEvent.click(within(completed).getByText("입력 완료 1개"));
   expect(categories).toBeVisible();
+  expect(screen.queryByRole("region", { name: "확인 필요한 항목" })).toBeNull();
+  expect(completedTab).toHaveAttribute("aria-selected", "true");
+  fireEvent.keyDown(completedTab, { key: "ArrowLeft" });
+  expect(screen.getByRole("tab", { name: "확인 필요 1개" })).toHaveFocus();
   expect(within(review).getByText("전공")).toBeVisible();
 });
 it("keeps an earlier failure visible without locating a reused candidate from another snapshot", () => {
@@ -359,9 +368,7 @@ it("shows required review immediately without moving application focus", () => {
     screen.getByRole("region", { name: "확인 필요한 항목" }),
   ).toBeVisible();
   expect(application).toHaveFocus();
-  expect(
-    screen.getByText("입력 완료 1개").closest("details"),
-  ).not.toHaveAttribute("open");
+  expect(screen.queryByRole("region", { name: "입력 완료 내역" })).toBeNull();
   application.remove();
 });
 
@@ -377,7 +384,10 @@ it("treats an empty final progress ledger as zero instead of reviving stale writ
   expect(
     screen.queryByRole("button", { name: "입력한 항목 보기" }),
   ).not.toBeInTheDocument();
-  expect(screen.queryByLabelText("확인 필요 0개")).not.toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "확인 필요 0개" })).toHaveAttribute(
+    "aria-selected",
+    "false",
+  );
   expect(screen.queryByLabelText("입력 실패 0개")).not.toBeInTheDocument();
 });
 
