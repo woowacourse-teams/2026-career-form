@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import type { AnalysisApiClient } from "../api/types";
@@ -56,11 +56,7 @@ it("keeps an unchanged value out of new-write totals while counting a verified c
   expect(screen.getByLabelText("입력 완료 1개")).toBeVisible();
   expect(screen.queryByLabelText(/확인 필요 [1-9]/)).not.toBeInTheDocument();
   expect(document.querySelector("select")).toHaveValue("KR");
-  const skipped = screen.getByText(/건너뛴 항목 보기/).closest("details")!;
-  expect(skipped).not.toHaveAttribute("open");
-  expect(
-    within(skipped).getByLabelText("기존 값 유지 1개"),
-  ).toBeInTheDocument();
+  expect(screen.queryByText(/건너뛴 항목 보기/)).not.toBeInTheDocument();
   expect(document.querySelector("input")).toHaveValue("테스트");
-  expect(within(skipped).getByText("기존 값 유지")).toBeInTheDocument();
+  expect(screen.queryByText("기존 값 유지")).not.toBeInTheDocument();
 });

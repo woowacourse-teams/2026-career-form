@@ -131,8 +131,9 @@ it.each([
       ).toBe(detail),
     );
     expect(searches).toBe(1);
-    expect(document.body.textContent).toContain(
+    expect(document.body.textContent).not.toContain(
       "주소 검색 선택과 지원서 반영을 확인했습니다.",
     );
+    expect(screen.queryByText("주소 입력 확인 완료")).not.toBeInTheDocument();
   },
 );

@@ -82,16 +82,12 @@
   font-weight: 600;
 }
 .reviewList {
-  padding: 0 10px;
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface);
+  padding: 0;
+  border: none;
 }
 .row {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--color-border);
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(92, 72, 55, 0.12);
   overflow-wrap: anywhere;
 }
 .row:last-child {
@@ -99,15 +95,17 @@
 }
 .heading {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) 28px;
   align-items: start;
-  gap: 8px;
+  gap: 12px;
 }
 .heading strong {
   color: var(--color-text-muted);
   font-size: 12px;
-  font-weight: 550;
+  font-weight: 500;
   line-height: 1.5;
+  word-break: keep-all;
+  text-wrap: balance;
 }
 .fieldTitle {
   display: flex;
@@ -132,9 +130,9 @@
   min-width: 28px;
   min-height: 28px;
   padding: 0;
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: 6px;
-  background: var(--color-surface);
+  background: transparent;
   color: var(--color-action-strong);
   cursor: pointer;
   font: inherit;
@@ -164,7 +162,7 @@
   overflow-wrap: anywhere;
 }
 .row details {
-  margin: 6px 0 0 80px;
+  margin: 8px 0 0;
 }
 .row details p {
   margin: 8px 0 4px;
@@ -172,10 +170,11 @@
 }
 .row small {
   display: block;
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.5;
+  word-break: keep-all;
 }
 .results summary {
   cursor: pointer;
@@ -251,30 +250,4 @@
   overflow-wrap: anywhere;
   color: var(--color-text-muted);
   font-size: 12px;
-}
-.skipped {
-  color: var(--color-text-muted);
-}
-.skipped summary span {
-  margin-left: 6px;
-  font-size: 12px;
-}
-.skipped ul {
-  display: grid;
-  gap: 12px;
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.skipped li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.skipped strong {
-  flex: none;
-  color: var(--color-text);
-  font-weight: 550;
 }

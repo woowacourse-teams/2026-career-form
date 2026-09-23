@@ -330,19 +330,10 @@ export function WorkflowScreens({
     return (
       <div className={`${styles.screen} ${styles.resultScreen}`}>
         <h2 className={styles.resultTitle}>기입 결과</h2>
-        {addressResult && (
+        {addressResult && addressResult.status !== "written" && (
           <details className={styles.addressResult}>
-            <summary>
-              {addressResult.status === "written"
-                ? "주소 입력 확인 완료"
-                : "주소 확인 필요"}
-            </summary>
-            <p>
-              {addressResult.status === "written"
-                ? "주소 확인 완료: "
-                : "주소 직접 확인 필요: "}
-              {addressResult.reason}
-            </p>
+            <summary>주소 확인 필요</summary>
+            <p>주소 직접 확인 필요: {addressResult.reason}</p>
           </details>
         )}
         <WorkflowResults

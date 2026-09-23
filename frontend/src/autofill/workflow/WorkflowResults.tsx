@@ -58,7 +58,7 @@ export function WorkflowResults({
   const [unavailable, setUnavailable] = useState<ReadonlySet<string>>(
     new Set(),
   );
-  const { completed, pending, skipped } = buildResultModel({
+  const { completed, pending } = buildResultModel({
     reviewItems,
     results,
     progress,
@@ -74,10 +74,6 @@ export function WorkflowResults({
       ...(categories.get(entry.category) ?? []),
       entry,
     ]);
-  }
-  const skippedReasons = new Map<string, number>();
-  for (const { reason } of skipped) {
-    skippedReasons.set(reason, (skippedReasons.get(reason) ?? 0) + 1);
   }
   return (
     <section className={styles.results}>
@@ -214,21 +210,6 @@ export function WorkflowResults({
             </ul>
           </details>
         </section>
-      )}
-      {skipped.length > 0 && (
-        <details className={styles.skipped}>
-          <summary>
-            건너뛴 항목 보기 <span>{skipped.length}개</span>
-          </summary>
-          <ul>
-            {[...skippedReasons].map(([reason, count]) => (
-              <li key={reason} aria-label={`${reason} ${count}개`}>
-                <span>{reason.replaceAll("·", "/")}</span>
-                <strong>{count}개</strong>
-              </li>
-            ))}
-          </ul>
-        </details>
       )}
     </section>
   );

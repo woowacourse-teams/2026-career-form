@@ -42,7 +42,7 @@ it("keeps result layout and actions styled without the separately loaded entry s
     expect(getComputedStyle(primary).display).toBe("flex");
     expect(getComputedStyle(primary).borderRadius).toBe("8px");
     expect(getComputedStyle(locate).width).toBe("28px");
-    expect(getComputedStyle(locate).borderRadius).toBe("6px");
+    expect(getComputedStyle(locate).borderTopStyle).toBe("none");
   } finally {
     externalStyles.forEach((style) => document.head.append(style));
   }
@@ -81,7 +81,7 @@ it("places the field name, full value, and compact action in one grid row with t
 
   expect(getComputedStyle(heading).display).toBe("grid");
   expect(getComputedStyle(heading).gridTemplateColumns).toBe(
-    "72px minmax(0, 1fr) 28px",
+    "minmax(0, 1fr) minmax(0, 1.35fr) 28px",
   );
   expect(heading).toContainElement(view.getByText("전공"));
   expect(heading).toContainElement(preview);
@@ -93,10 +93,13 @@ it("places the field name, full value, and compact action in one grid row with t
   expect(getComputedStyle(preview).textOverflow).not.toBe("ellipsis");
   expect(getComputedStyle(preview).overflow).not.toBe("hidden");
   expect(getComputedStyle(locate).minHeight).toBe("28px");
-  expect(getComputedStyle(locate.closest("article")!).padding).toBe("10px 0px");
+  expect(getComputedStyle(locate.closest("article")!).padding).toBe("14px 0px");
   const group = locate.closest("article")!.parentElement!;
-  expect(getComputedStyle(group).borderRadius).toBe("10px");
-  expect(getComputedStyle(group).borderTopWidth).toBe("1px");
+  expect(getComputedStyle(group).padding).toBe("0px");
+  expect(getComputedStyle(group).borderTopStyle).toBe("none");
+  expect(getComputedStyle(view.getByText("전공")).wordBreak).toBe("keep-all");
+  expect(getComputedStyle(view.getByText("전공")).textWrap).toBe("balance");
+  expect(getComputedStyle(reason).wordBreak).toBe("keep-all");
   expect(getComputedStyle(reason).marginLeft).toBe("0px");
   expect(getComputedStyle(reason).fontSize).toBe("12px");
 });

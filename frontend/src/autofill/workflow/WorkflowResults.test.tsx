@@ -104,7 +104,7 @@ it("keeps repeat rows and school levels identifiable in concise completed labels
   expect(within(completed).queryByText(/필수항목/)).not.toBeInTheDocument();
 });
 
-it("summarizes a large skipped inventory by reason instead of listing every page control", () => {
+it("omits skipped inventory without turning excluded controls into required review", () => {
   render(
     <WorkflowResults
       reviewItems={Array.from({ length: 108 }, (_, index) => ({
@@ -117,17 +117,15 @@ it("summarizes a large skipped inventory by reason instead of listing every page
       results={[]}
     />,
   );
-  const skipped = screen.getByText(/건너뛴 항목 보기/).closest("details")!;
   expect(
-    within(skipped).getAllByRole("listitem", { hidden: true }),
-  ).toHaveLength(1);
-  expect(within(skipped).getByText("자동 입력 미지원")).toBeInTheDocument();
+    screen.queryAllByText(
+      /건너뛴 항목 보기|자동 입력 미지원|지원하지 않는 입력/,
+    ),
+  ).toHaveLength(0);
   expect(
-    within(skipped).getByLabelText("자동 입력 미지원 108개"),
-  ).toBeInTheDocument();
-  expect(
-    within(skipped).queryByText(/지원하지 않는 입력/),
+    screen.queryByRole("region", { name: "확인 필요한 항목" }),
   ).not.toBeInTheDocument();
+  expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
 });
 
 it("does not present a top-level education choice as belonging to one repeated school", () => {
@@ -242,7 +240,7 @@ it("marks an uncertain written value as entered without counting it again as com
   ).not.toBeInTheDocument();
 });
 
-it("puts an already matching value under collapsed skipped details with its actual reason", () => {
+it("keeps already matching values out of both required review and skipped UI", () => {
   render(
     <WorkflowResults
       reviewItems={[item]}
@@ -250,10 +248,9 @@ it("puts an already matching value under collapsed skipped details with its actu
       fieldStateFor={() => ({ visible: true, value: "컴퓨터공학" })}
     />,
   );
-  const skipped = screen.getByText(/건너뛴 항목 보기/).closest("details")!;
-  expect(skipped).not.toHaveAttribute("open");
-  expect(within(skipped).getByText("기존 값 유지")).toBeInTheDocument();
-  expect(within(skipped).queryByText("후보 여러 개")).not.toBeInTheDocument();
+  expect(
+    screen.queryAllByText(/건너뛴 항목 보기|기존 값 유지|후보 여러 개/),
+  ).toHaveLength(0);
   expect(
     screen.queryByRole("button", { name: "확인할 항목 보기" }),
   ).not.toBeInTheDocument();
