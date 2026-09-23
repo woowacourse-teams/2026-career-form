@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import type { Profile } from "../../src/profile/model";
 import {
@@ -16,16 +16,22 @@ export function PersonalEditor({
   repository,
   onSaved,
   onCancel,
+  fieldId,
 }: {
   profile: Profile;
   repository: ProfileRepository;
   onSaved(profile: Profile): void;
   onCancel(): void;
+  fieldId: string;
 }) {
   const [draft, setDraft] = useState(() => ({ ...profile.personal }));
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const pending = useRef(false);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    input.current?.focus({ preventScroll: true });
+  }, []);
   async function save() {
     if (pending.current) return;
     pending.current = true;
@@ -35,6 +41,7 @@ export function PersonalEditor({
       const latest = await repository.load();
       const changed = Object.fromEntries(
         fields
+          .filter((field) => field.id === fieldId)
           .filter(
             ({ id }) => (draft[id] ?? "") !== (profile.personal[id] ?? ""),
           )
@@ -57,33 +64,38 @@ export function PersonalEditor({
     <form
       className={styles.personalEditor}
       aria-label="기본 인적사항 수정"
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!saving) onCancel();
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         void save();
       }}
     >
-      <p className={styles.editorHint}>
-        저장하면 이후 복사와 자동 기입에 반영됩니다.
-      </p>
       <fieldset disabled={saving}>
         <legend className={styles.visuallyHidden}>기본 인적사항</legend>
         <div className={styles.editorFields}>
-          {fields.map((field, index) => (
-            <label key={field.id}>
-              <span>{field.label}</span>
-              <input
-                autoFocus={index === 0}
-                type={field.inputType === "date" ? "date" : "text"}
-                value={draft[field.id] ?? ""}
-                onChange={(event) =>
-                  setDraft((previous) => ({
-                    ...previous,
-                    [field.id]: event.target.value,
-                  }))
-                }
-              />
-            </label>
-          ))}
+          {fields
+            .filter((field) => field.id === fieldId)
+            .map((field) => (
+              <label key={field.id}>
+                <span className={styles.visuallyHidden}>{field.label}</span>
+                <input
+                  ref={input}
+                  type={field.inputType === "date" ? "date" : "text"}
+                  value={draft[field.id] ?? ""}
+                  onChange={(event) =>
+                    setDraft((previous) => ({
+                      ...previous,
+                      [field.id]: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+            ))}
         </div>
         {failed && (
           <p role="alert" className={styles.copyError}>

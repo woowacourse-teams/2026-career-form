@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     css: {
-      include: /WorkflowResults\.module\.css/,
+      include: /WorkflowResults\.module\.css|sidepanel\/App\.module\.css/,
       modules: { classNameStrategy: "scoped" },
     },
     coverage: {

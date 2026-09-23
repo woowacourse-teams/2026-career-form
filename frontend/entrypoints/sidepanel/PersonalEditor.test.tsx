@@ -20,9 +20,9 @@ function setup() {
 it("edits personal fields inline, preserving fresh unrelated data and updating copied values", async () => {
   const { profile, repository, copyText } = setup();
   fireEvent.click(
-    await screen.findByRole("button", { name: "기본 인적사항 수정" }),
+    await screen.findByRole("button", { name: "국문 이름 수정" }),
   );
-  expect(screen.getByLabelText("국문 성")).toHaveFocus();
+  expect(screen.getByLabelText("국문 이름")).toHaveFocus();
   expect(screen.getByRole("button", { name: "자동 기입" })).toBeDisabled();
   fireEvent.change(screen.getByLabelText("국문 이름"), {
     target: { value: " 새 이름 " },
@@ -44,15 +44,16 @@ it("edits personal fields inline, preserving fresh unrelated data and updating c
 it("cancels drafts without writing and retains failed edits for retry", async () => {
   const { repository } = setup();
   fireEvent.click(
-    await screen.findByRole("button", { name: "기본 인적사항 수정" }),
+    await screen.findByRole("button", { name: "국문 이름 수정" }),
   );
   fireEvent.change(screen.getByLabelText("국문 이름"), {
     target: { value: "취소할 이름" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "취소" }));
+  fireEvent.keyDown(screen.getByLabelText("국문 이름"), { key: "Escape" });
   expect(repository.save).not.toHaveBeenCalled();
   expect(screen.getByText("합성 이름")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "기본 인적사항 수정" }));
+  expect(screen.getByRole("button", { name: "국문 이름 수정" })).toHaveFocus();
+  fireEvent.click(screen.getByRole("button", { name: "국문 이름 수정" }));
   repository.save.mockRejectedValueOnce(new Error("PRIVATE_ERROR"));
   fireEvent.change(screen.getByLabelText("국문 이름"), {
     target: { value: "재시도 이름" },
@@ -76,7 +77,7 @@ it("allows clearing personal values and prevents duplicate writes while saving",
       }),
   );
   fireEvent.click(
-    await screen.findByRole("button", { name: "기본 인적사항 수정" }),
+    await screen.findByRole("button", { name: "국문 이름 수정" }),
   );
   fireEvent.change(screen.getByLabelText("국문 이름"), {
     target: { value: "" },
@@ -91,4 +92,25 @@ it("allows clearing personal values and prevents duplicate writes while saving",
   expect(screen.getByRole("button", { name: "취소" })).toBeDisabled();
   finish();
   await waitFor(() => expect(screen.queryByRole("form")).toBeNull());
+});
+
+it("keeps the search and uses non-scrolling focus without refocusing while typing", async () => {
+  setup();
+  await screen.findByText("합성 이름");
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "국문" },
+  });
+  const focus = vi.spyOn(HTMLInputElement.prototype, "focus");
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "국문 이름 수정" }));
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    const focusCount = focus.mock.calls.length;
+    fireEvent.change(screen.getByLabelText("국문 이름"), {
+      target: { value: "수정중" },
+    });
+    expect(focus).toHaveBeenCalledTimes(focusCount);
+    expect(screen.getByRole("searchbox")).toHaveValue("국문");
+  } finally {
+    focus.mockRestore();
+  }
 });

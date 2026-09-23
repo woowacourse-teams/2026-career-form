@@ -13,6 +13,7 @@ import {
 } from "../../src/profile/profile-search";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import styles from "./App.module.css";
+import panelCss from "./App.module.css?inline";
 import { PersonalEditor } from "./PersonalEditor";
 
 interface AppProps {
@@ -108,10 +109,11 @@ export function App({
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [personalSaved, setPersonalSaved] = useState(false);
   const editButton = useRef<HTMLButtonElement>(null);
+  const editingItemId = useRef<string>("");
   const wasEditingPersonal = useRef(false);
   useEffect(() => {
     if (wasEditingPersonal.current && !editingPersonal)
-      editButton.current?.focus();
+      editButton.current?.focus({ preventScroll: true });
     wasEditingPersonal.current = editingPersonal;
   }, [editingPersonal]);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
@@ -200,10 +202,17 @@ export function App({
     <div
       className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${actionPosition === "bottom" ? styles.bottomActionPanel : ""}`}
     >
+      <style>{panelCss}</style>
       <header className={styles.header}>
         <div className={styles.brandRow}>
           <div className={styles.brandIdentity}>
-            <img className={styles.brandMark} src={logoUrl} alt="커리어폼" />
+            <img
+              className={styles.brandMark}
+              src={logoUrl}
+              alt="커리어폼"
+              width={42}
+              height={42}
+            />
             <div>
               <p>CAREER FORM</p>
               <span>지원서 패널</span>
@@ -366,64 +375,75 @@ export function App({
                             {actionLabel}
                           </small>
                         </button>
-                        {group.id === "personal" && !editingPersonal && (
-                          <button
-                            type="button"
-                            ref={editButton}
-                            className={styles.editButton}
-                            aria-label="기본 인적사항 수정"
-                            onClick={() => {
-                              setPersonalSaved(false);
-                              setQuery("");
-                              setOpenGroups((current) =>
-                                new Set(current).add("personal"),
-                              );
-                              setEditingPersonal(true);
-                            }}
-                          >
-                            수정
-                          </button>
-                        )}
                       </div>
-                      {group.id === "personal" && editingPersonal && profile ? (
-                        <PersonalEditor
-                          profile={profile}
-                          repository={repository}
-                          onSaved={(next) => {
-                            setProfile(next);
-                            setCopiedId(undefined);
-                            setEditingPersonal(false);
-                            setPersonalSaved(true);
-                          }}
-                          onCancel={() => setEditingPersonal(false)}
-                        />
-                      ) : (
-                        <>
-                          {group.id === "personal" && personalSaved && (
-                            <p role="status" className={styles.savedNotice}>
-                              인적사항을 저장했어요.
-                            </p>
-                          )}
-                          {isOpen && (
-                            <div className={styles.groupValues} id={regionId}>
-                              {groupItems.length === 0 && (
-                                <p className={styles.groupEmpty}>
-                                  등록된 정보가 없습니다.
-                                </p>
-                              )}
-                              {groupItems.map((item) => {
-                                const isRevealed =
-                                  !item.sensitive || revealed.has(item.id);
-                                return (
-                                  <article
-                                    className={styles.valueRow}
-                                    key={item.id}
-                                  >
-                                    <div className={styles.valueMeta}>
-                                      {group.categoryIds.length > 1 && (
-                                        <span>{item.categoryLabel}</span>
-                                      )}
-                                      <strong>{item.fieldLabel}</strong>
+                      <>
+                        {group.id === "personal" && personalSaved && (
+                          <p role="status" className={styles.savedNotice}>
+                            인적사항을 저장했어요.
+                          </p>
+                        )}
+                        {isOpen && (
+                          <div className={styles.groupValues} id={regionId}>
+                            {groupItems.length === 0 && (
+                              <p className={styles.groupEmpty}>
+                                등록된 정보가 없습니다.
+                              </p>
+                            )}
+                            {groupItems.map((item) => {
+                              const isRevealed =
+                                !item.sensitive || revealed.has(item.id);
+                              return (
+                                <article
+                                  className={styles.valueRow}
+                                  key={item.id}
+                                >
+                                  <div className={styles.valueMeta}>
+                                    {group.categoryIds.length > 1 && (
+                                      <span>{item.categoryLabel}</span>
+                                    )}
+                                    <strong>{item.fieldLabel}</strong>
+                                    {group.id === "personal" && profile ? (
+                                      editingPersonal &&
+                                      editingItemId.current === item.id ? (
+                                        <PersonalEditor
+                                          profile={profile}
+                                          repository={repository}
+                                          fieldId={item.id.slice(
+                                            "personal-".length,
+                                          )}
+                                          onSaved={(next) => {
+                                            setProfile(next);
+                                            setCopiedId(undefined);
+                                            setEditingPersonal(false);
+                                            setPersonalSaved(true);
+                                          }}
+                                          onCancel={() =>
+                                            setEditingPersonal(false)
+                                          }
+                                        />
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          className={styles.editableValue}
+                                          ref={(node) => {
+                                            if (
+                                              editingItemId.current === item.id
+                                            )
+                                              editButton.current = node;
+                                          }}
+                                          aria-label={`${item.fieldLabel} 수정`}
+                                          title="클릭하여 수정"
+                                          disabled={editingPersonal}
+                                          onClick={() => {
+                                            editingItemId.current = item.id;
+                                            setPersonalSaved(false);
+                                            setEditingPersonal(true);
+                                          }}
+                                        >
+                                          {item.value}
+                                        </button>
+                                      )
+                                    ) : (
                                       <span
                                         className={
                                           isRevealed
@@ -435,40 +455,40 @@ export function App({
                                           ? item.value
                                           : "••••••••, 값 가림"}
                                       </span>
-                                    </div>
-                                    {isRevealed ? (
-                                      <button
-                                        type="button"
-                                        data-copied={copiedId === item.id}
-                                        aria-label={`${item.fieldLabel} 복사`}
-                                        onClick={() =>
-                                          void copy(item.id, item.value)
-                                        }
-                                      >
-                                        {copiedId === item.id
-                                          ? "복사됨"
-                                          : "복사"}
-                                      </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        aria-label={`${item.fieldLabel} 펼치기`}
-                                        onClick={() =>
-                                          setRevealed((current) =>
-                                            new Set(current).add(item.id),
-                                          )
-                                        }
-                                      >
-                                        펼치기
-                                      </button>
                                     )}
-                                  </article>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </>
-                      )}
+                                  </div>
+                                  {editingPersonal &&
+                                  editingItemId.current ===
+                                    item.id ? null : isRevealed ? (
+                                    <button
+                                      type="button"
+                                      data-copied={copiedId === item.id}
+                                      aria-label={`${item.fieldLabel} 복사`}
+                                      onClick={() =>
+                                        void copy(item.id, item.value)
+                                      }
+                                    >
+                                      {copiedId === item.id ? "복사됨" : "복사"}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      aria-label={`${item.fieldLabel} 펼치기`}
+                                      onClick={() =>
+                                        setRevealed((current) =>
+                                          new Set(current).add(item.id),
+                                        )
+                                      }
+                                    >
+                                      펼치기
+                                    </button>
+                                  )}
+                                </article>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
                     </section>
                   );
                 })}

@@ -210,24 +210,29 @@
   flex: 1;
   min-width: 0;
 }
-.editButton {
-  flex: none;
-  margin-right: 12px;
-  padding: 7px 10px;
-  border: 1px solid var(--color-accent);
-  border-radius: 7px;
-  color: var(--color-action-strong);
-  background: var(--color-accent-soft);
-  font-size: 11px;
-  font-weight: 650;
-  cursor: pointer;
+.editableValue {
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text-strong);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
 }
-.editButton:hover {
-  background: var(--color-accent-hover);
+.editableValue:hover:not(:disabled) {
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+.valueMeta:has(.personalEditor) {
+  grid-column: 1 / -1;
 }
 .personalEditor {
-  padding: 12px;
-  border-top: 1px solid var(--color-border);
+  min-width: 0;
 }
 .editorHint,
 .savedNotice {
@@ -249,7 +254,7 @@
 }
 .editorFields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px 8px;
 }
 .editorFields label {
