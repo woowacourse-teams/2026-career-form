@@ -13,6 +13,7 @@ import {
 } from "../../src/profile/profile-search";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import styles from "./App.module.css";
+import { PersonalEditor } from "./PersonalEditor";
 
 interface AppProps {
   repository?: ProfileRepository;
@@ -104,6 +105,15 @@ export function App({
     [injectedRepository],
   );
   const [profile, setProfile] = useState<Profile>();
+  const [editingPersonal, setEditingPersonal] = useState(false);
+  const [personalSaved, setPersonalSaved] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const wasEditingPersonal = useRef(false);
+  useEffect(() => {
+    if (wasEditingPersonal.current && !editingPersonal)
+      editButton.current?.focus();
+    wasEditingPersonal.current = editingPersonal;
+  }, [editingPersonal]);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [query, setQuery] = useState("");
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
@@ -172,7 +182,7 @@ export function App({
   };
 
   const startAutofill = async () => {
-    if (startPending.current) return;
+    if (startPending.current || editingPersonal) return;
     startPending.current = true;
     setAutofillPending(true);
     try {
@@ -231,6 +241,7 @@ export function App({
             className={styles.profileButton}
             data-profile-management
             hidden={autofillActive}
+            disabled={editingPersonal}
             type="button"
             onClick={() => void openProfileManagement()}
           >
@@ -243,7 +254,7 @@ export function App({
               data-autofill-start
               ref={startButton}
               type="button"
-              disabled={autofillPending}
+              disabled={autofillPending || editingPersonal}
               onClick={() => void startAutofill()}
             >
               자동 기입 <span aria-hidden="true">→</span>
@@ -289,6 +300,7 @@ export function App({
               </svg>
               <input
                 type="search"
+                disabled={editingPersonal}
                 value={query}
                 placeholder="이메일, 자격증, 학교 검색"
                 onChange={(event) => setQuery(event.target.value)}
@@ -316,7 +328,10 @@ export function App({
               {loadStatus === "ready" &&
                 visibleGroups.map((group) => {
                   const groupItems = itemsForGroup(results, group);
-                  const isOpen = hasQuery || openGroups.has(group.id);
+                  const isOpen =
+                    hasQuery ||
+                    openGroups.has(group.id) ||
+                    (group.id === "personal" && editingPersonal);
                   const recordCount = profile
                     ? countGroupRecords(profile, group)
                     : 0;
@@ -332,79 +347,127 @@ export function App({
 
                   return (
                     <section className={styles.group} key={group.id}>
-                      <button
-                        className={styles.groupToggle}
-                        type="button"
-                        aria-expanded={isOpen}
-                        aria-controls={regionId}
-                        aria-label={`${group.label} ${countLabel}${actionLabel}`}
-                        disabled={hasQuery}
-                        onClick={() => toggleGroup(group.id)}
-                      >
-                        <span>{group.label}</span>
-                        <small>
-                          {countLabel}
-                          {actionLabel}
-                        </small>
-                      </button>
-                      {isOpen && (
-                        <div className={styles.groupValues} id={regionId}>
-                          {groupItems.length === 0 && (
-                            <p className={styles.groupEmpty}>
-                              등록된 정보가 없습니다.
+                      <div className={styles.groupHeader}>
+                        <button
+                          className={styles.groupToggle}
+                          type="button"
+                          aria-expanded={isOpen}
+                          aria-controls={regionId}
+                          aria-label={`${group.label} ${countLabel}${actionLabel}`}
+                          disabled={
+                            hasQuery ||
+                            (group.id === "personal" && editingPersonal)
+                          }
+                          onClick={() => toggleGroup(group.id)}
+                        >
+                          <span>{group.label}</span>
+                          <small>
+                            {countLabel}
+                            {actionLabel}
+                          </small>
+                        </button>
+                        {group.id === "personal" && !editingPersonal && (
+                          <button
+                            type="button"
+                            ref={editButton}
+                            className={styles.editButton}
+                            aria-label="기본 인적사항 수정"
+                            onClick={() => {
+                              setPersonalSaved(false);
+                              setQuery("");
+                              setOpenGroups((current) =>
+                                new Set(current).add("personal"),
+                              );
+                              setEditingPersonal(true);
+                            }}
+                          >
+                            수정
+                          </button>
+                        )}
+                      </div>
+                      {group.id === "personal" && editingPersonal && profile ? (
+                        <PersonalEditor
+                          profile={profile}
+                          repository={repository}
+                          onSaved={(next) => {
+                            setProfile(next);
+                            setCopiedId(undefined);
+                            setEditingPersonal(false);
+                            setPersonalSaved(true);
+                          }}
+                          onCancel={() => setEditingPersonal(false)}
+                        />
+                      ) : (
+                        <>
+                          {group.id === "personal" && personalSaved && (
+                            <p role="status" className={styles.savedNotice}>
+                              인적사항을 저장했어요.
                             </p>
                           )}
-                          {groupItems.map((item) => {
-                            const isRevealed =
-                              !item.sensitive || revealed.has(item.id);
-                            return (
-                              <article
-                                className={styles.valueRow}
-                                key={item.id}
-                              >
-                                <div className={styles.valueMeta}>
-                                  {group.categoryIds.length > 1 && (
-                                    <span>{item.categoryLabel}</span>
-                                  )}
-                                  <strong>{item.fieldLabel}</strong>
-                                  <span
-                                    className={
-                                      isRevealed ? styles.value : styles.masked
-                                    }
+                          {isOpen && (
+                            <div className={styles.groupValues} id={regionId}>
+                              {groupItems.length === 0 && (
+                                <p className={styles.groupEmpty}>
+                                  등록된 정보가 없습니다.
+                                </p>
+                              )}
+                              {groupItems.map((item) => {
+                                const isRevealed =
+                                  !item.sensitive || revealed.has(item.id);
+                                return (
+                                  <article
+                                    className={styles.valueRow}
+                                    key={item.id}
                                   >
-                                    {isRevealed
-                                      ? item.value
-                                      : "••••••••, 값 가림"}
-                                  </span>
-                                </div>
-                                {isRevealed ? (
-                                  <button
-                                    type="button"
-                                    data-copied={copiedId === item.id}
-                                    aria-label={`${item.fieldLabel} 복사`}
-                                    onClick={() =>
-                                      void copy(item.id, item.value)
-                                    }
-                                  >
-                                    {copiedId === item.id ? "복사됨" : "복사"}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    aria-label={`${item.fieldLabel} 펼치기`}
-                                    onClick={() =>
-                                      setRevealed((current) =>
-                                        new Set(current).add(item.id),
-                                      )
-                                    }
-                                  >
-                                    펼치기
-                                  </button>
-                                )}
-                              </article>
-                            );
-                          })}
-                        </div>
+                                    <div className={styles.valueMeta}>
+                                      {group.categoryIds.length > 1 && (
+                                        <span>{item.categoryLabel}</span>
+                                      )}
+                                      <strong>{item.fieldLabel}</strong>
+                                      <span
+                                        className={
+                                          isRevealed
+                                            ? styles.value
+                                            : styles.masked
+                                        }
+                                      >
+                                        {isRevealed
+                                          ? item.value
+                                          : "••••••••, 값 가림"}
+                                      </span>
+                                    </div>
+                                    {isRevealed ? (
+                                      <button
+                                        type="button"
+                                        data-copied={copiedId === item.id}
+                                        aria-label={`${item.fieldLabel} 복사`}
+                                        onClick={() =>
+                                          void copy(item.id, item.value)
+                                        }
+                                      >
+                                        {copiedId === item.id
+                                          ? "복사됨"
+                                          : "복사"}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        aria-label={`${item.fieldLabel} 펼치기`}
+                                        onClick={() =>
+                                          setRevealed((current) =>
+                                            new Set(current).add(item.id),
+                                          )
+                                        }
+                                      >
+                                        펼치기
+                                      </button>
+                                    )}
+                                  </article>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
                       )}
                     </section>
                   );
@@ -424,7 +487,7 @@ export function App({
                 data-autofill-start
                 ref={startButton}
                 type="button"
-                disabled={autofillPending}
+                disabled={autofillPending || editingPersonal}
                 onClick={() => void startAutofill()}
               >
                 자동 기입 <span aria-hidden="true">→</span>

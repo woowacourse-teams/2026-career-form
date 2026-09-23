@@ -201,6 +201,107 @@
   text-align: left;
   cursor: pointer;
 }
+.groupHeader {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface-muted);
+}
+.groupHeader .groupToggle {
+  flex: 1;
+  min-width: 0;
+}
+.editButton {
+  flex: none;
+  margin-right: 12px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-accent);
+  border-radius: 7px;
+  color: var(--color-action-strong);
+  background: var(--color-accent-soft);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.editButton:hover {
+  background: var(--color-accent-hover);
+}
+.personalEditor {
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+}
+.editorHint,
+.savedNotice {
+  margin: 0 0 12px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.savedNotice {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--color-success);
+}
+.personalEditor fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.editorFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 8px;
+}
+.editorFields label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: var(--color-text);
+  font-size: 11px;
+}
+.editorFields input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px;
+  border: 1px solid var(--color-field-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+  font-size: 12px;
+}
+.editorFields input:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 1px;
+}
+.editorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.editorActions button {
+  min-height: 40px;
+  min-width: 64px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+.editorActions button[type="submit"] {
+  border-color: var(--color-action);
+  background: var(--color-action);
+  color: #fff;
+}
+.editorActions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
 .groupToggle[aria-expanded="true"] {
   background: var(--color-accent-soft);
   color: var(--color-action-strong);
