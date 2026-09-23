@@ -1,0 +1,115 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Synthetic panel stacking fixture</title>
+<style>
+  #outside {
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 8px;
+  }
+  @keyframes page-layer {
+    from {
+      opacity: 0.99;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  #page-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    transform: translateZ(0);
+    pointer-events: none;
+    animation: page-layer 300ms infinite alternate;
+  }
+  #page-layer button {
+    position: absolute;
+    right: 20px;
+    top: 80px;
+    width: min(380px, calc(100vw - 40px));
+    height: calc(100vh - 100px);
+    pointer-events: auto;
+  }
+</style>
+<button id="outside" type="button">Outside</button>
+<dialog id="page-dialog">
+  <button id="dialog-close" type="button">Close page dialog</button>
+</dialog>
+<script>
+  // Only extension runtime/storage boundaries are replaced. The panel and WXT
+  // shadow host below come from the unmodified production build.
+  const listeners = [];
+  const fixture = { outsideClicks: 0, errors: [] };
+  window.fixture = fixture;
+  addEventListener("error", (event) => fixture.errors.push(event.message));
+  addEventListener("unhandledrejection", (event) =>
+    fixture.errors.push(String(event.reason)),
+  );
+  document.querySelector("#outside").onclick = () => fixture.outsideClicks++;
+  document.querySelector("#dialog-close").onclick = () =>
+    document.querySelector("#page-dialog").close();
+  const profile = {
+    personal: { koreanGivenName: "합성 테스트" },
+    contact: {},
+    education: [],
+    languages: [],
+    certifications: [],
+    careers: [],
+    projects: [],
+    publications: [],
+    compensation: {},
+    military: {},
+    veteran: {},
+    disability: {},
+    health: [],
+  };
+  const runtime = {
+    id: "synthetic-panel-fixture",
+    getURL: (path) => `${location.origin}/bundle/${path.replace(/^\//, "")}`,
+    onMessage: {
+      addListener: (listener) => listeners.push(listener),
+      removeListener: (listener) =>
+        listeners.splice(listeners.indexOf(listener), 1),
+    },
+    async sendMessage() {
+      return {};
+    },
+  };
+  window.chrome = window.browser = {
+    runtime,
+    storage: {
+      local: {
+        async get() {
+          return { "careerForm.profile": { schemaVersion: 1, profile } };
+        },
+        async set() {},
+      },
+      onChanged: { addListener() {}, removeListener() {} },
+    },
+  };
+  fixture.ready = () => listeners.length > 0;
+  fixture.open = async () => {
+    for (const listener of listeners)
+      await listener({ type: "career-form:open-in-page-profile-panel" });
+  };
+  fixture.host = () => document.querySelector("career-form-profile-panel");
+  fixture.closeButton = () =>
+    fixture.host()?.shadowRoot?.querySelector('button[aria-label="닫기"]');
+  fixture.center = (element) => {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  };
+  fixture.panelWins = () => {
+    const point = fixture.center(fixture.closeButton());
+    return document.elementFromPoint(point.x, point.y) === fixture.host();
+  };
+  fixture.addPageLayer = () => {
+    const layer = document.createElement("div");
+    layer.id = "page-layer";
+    layer.innerHTML = '<button type="button">Ordinary page content</button>';
+    document.body.append(layer);
+  };
+</script>
+<script src="/bundle/content-scripts/autofill.js"></script>

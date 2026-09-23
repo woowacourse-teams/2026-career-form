@@ -21,6 +21,11 @@
   font-synthesis: none;
 }
 
+:host::backdrop {
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
 .career-form-in-page-panel {
   position: fixed;
   top: 80px;

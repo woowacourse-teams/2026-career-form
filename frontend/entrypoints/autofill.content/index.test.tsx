@@ -56,6 +56,7 @@ import definition from "./index";
 interface Shell {
   mounted: boolean;
   host: HTMLElement;
+  shadowHost: HTMLElement;
   container: HTMLDivElement;
   mount(): void;
   remove(): void;
@@ -93,6 +94,7 @@ beforeEach(() => {
       let root: Root | undefined;
       const shell: Shell = {
         host,
+        shadowHost: host,
         container,
         mounted: false,
         mount() {
