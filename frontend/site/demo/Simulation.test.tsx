@@ -53,7 +53,7 @@ describe("isolated automatic demonstration", () => {
     fireEvent.pointerEnter(container.firstElementChild!);
     await screen.findByRole(
       "heading",
-      { name: "기입 결과" },
+      { name: "자동 기입을 마쳤어요" },
       { timeout: 5000 },
     );
     for (const [label, value] of [
@@ -80,7 +80,7 @@ describe("isolated automatic demonstration", () => {
       fireEvent[event](container.firstElementChild!);
       await screen.findByRole(
         "heading",
-        { name: "기입 결과" },
+        { name: "자동 기입을 마쳤어요" },
         { timeout: 5000 },
       );
     },

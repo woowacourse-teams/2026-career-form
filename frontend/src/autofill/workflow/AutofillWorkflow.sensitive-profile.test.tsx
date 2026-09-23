@@ -143,7 +143,7 @@ function setupVeteran() {
 
 it("automatically prepares veteran status and detail without sensitive-value confirmation", async () => {
   const run = setupVeteran();
-  await screen.findByRole("heading", { name: "기입 결과" });
+  await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
   expect(screen.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
   expect(run.target.checked).toBe(true);
   expect(run.events()).toBe(1);

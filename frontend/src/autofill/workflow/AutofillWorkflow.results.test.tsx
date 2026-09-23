@@ -52,7 +52,7 @@ it("keeps an unchanged value out of new-write totals while counting a verified c
       onExit={() => undefined}
     />,
   );
-  await screen.findByRole("heading", { name: "기입 결과" });
+  await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
   expect(screen.getByLabelText("입력 완료 1개")).toBeVisible();
   expect(screen.queryByLabelText(/확인 필요 [1-9]/)).not.toBeInTheDocument();
   expect(document.querySelector("select")).toHaveValue("KR");

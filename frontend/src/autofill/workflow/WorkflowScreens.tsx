@@ -331,7 +331,6 @@ export function WorkflowScreens({
   if (stage === "result") {
     return (
       <div className={`${styles.screen} ${styles.resultScreen}`}>
-        <h2 className={styles.resultTitle}>기입 결과</h2>
         {addressResult && addressResult.status !== "written" && (
           <details className={styles.addressResult}>
             <summary>주소 확인 필요</summary>

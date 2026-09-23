@@ -172,7 +172,7 @@ describe("AutofillOverlay failure and lifecycle", () => {
     expect(email!.value).toBe("");
     fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
     expect(
-      await screen.findByRole("heading", { name: "기입 결과" }),
+      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
     ).toBeInTheDocument();
     expect(email!.value).toBe("me@example.test");
     expect(jobSpecific!.value).toBe("");

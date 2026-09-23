@@ -56,7 +56,7 @@ describe("AutofillDemo", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "결과 보기" }));
     expect(
-      screen.getByRole("heading", { name: "기입 결과" }),
+      screen.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("지원서의 실제 값을 직접 확인해 주세요."),

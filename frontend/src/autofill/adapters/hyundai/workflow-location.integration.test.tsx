@@ -209,7 +209,7 @@ it.each([
             .value,
         ).toBe(expectedCity);
         expect(
-          screen.getByRole("heading", { name: "기입 결과" }),
+          screen.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
         ).toBeInTheDocument();
       },
       { timeout: 9000 },

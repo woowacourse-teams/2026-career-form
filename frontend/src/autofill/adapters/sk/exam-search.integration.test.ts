@@ -277,7 +277,7 @@ it("maps two delayed widget-local exam results and retains both names through th
     }),
   );
   await waitFor(() => {
-    expect(document.body.textContent).toContain("기입 결과");
+    expect(document.body.textContent).toContain("자동 기입을 마쳤어요");
     expect(firstScore.value).toBe("830");
     expect(secondScore.value).toBe("advanced");
   });
@@ -598,7 +598,7 @@ it.each([false, true])(
         return;
       }
       await waitFor(() =>
-        expect(document.body.textContent).toContain("기입 결과"),
+        expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
       );
       expect(
         document.querySelector<HTMLInputElement>("[name=prsEngFirstName]")!

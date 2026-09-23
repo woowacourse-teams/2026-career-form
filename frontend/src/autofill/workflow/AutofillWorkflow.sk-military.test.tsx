@@ -472,7 +472,7 @@ it("keeps military details closed for a non-target status and leaves unsupported
 it("connects veteran target to number and relation while preserving unsupported military fields", async () => {
   const run = await setup("비대상", "대상");
   await waitFor(() => {
-    expect(document.body.textContent).toContain("기입 결과");
+    expect(document.body.textContent).toContain("자동 기입을 마쳤어요");
     expect(
       document.querySelector<HTMLInputElement>(
         "[name='prsVeteranBenefitNumber']",
@@ -500,7 +500,7 @@ it("preserves an existing non-target military selection while continuing veteran
   const run = await setup("군필", "대상", { military: "비대상" });
 
   await waitFor(() => {
-    expect(document.body.textContent).toContain("기입 결과");
+    expect(document.body.textContent).toContain("자동 기입을 마쳤어요");
     expect(
       document.querySelector<HTMLInputElement>(
         "[name='prsVeteranBenefitNumber']",
@@ -528,7 +528,9 @@ it("preserves a different existing military status", async () => {
     militaryStatus: "미필",
   });
 
-  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
+  await waitFor(() =>
+    expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
+  );
   expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1);
   expect(
     document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
@@ -541,7 +543,7 @@ it("uses the profile veteran status over an existing non-target selection while 
   const run = await setup("군필", "대상", { veteran: "비대상" });
 
   await waitFor(() => {
-    expect(document.body.textContent).toContain("기입 결과");
+    expect(document.body.textContent).toContain("자동 기입을 마쳤어요");
     expect(
       document.querySelector<HTMLSelectElement>("[name='prsMilitarySvcStatus']")
         ?.value,
@@ -571,7 +573,9 @@ it("does not re-dispatch already matching military and veteran selections", asyn
     veteran: "대상",
   });
 
-  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
+  await waitFor(() =>
+    expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
+  );
   expect(run.fieldAnalysisCalls()).toBeGreaterThanOrEqual(1);
   expect(run.militaryTargetClicks()).toBe(0);
   expect(run.militaryStatusChanges()).toBe(0);

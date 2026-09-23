@@ -186,7 +186,7 @@ describe("AutofillOverlay review", () => {
     expect(pageDocument.querySelector("input")?.value).toBe("");
     fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
     expect(
-      await screen.findByRole("heading", { name: "기입 결과" }),
+      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
     ).toBeInTheDocument();
     expect(pageDocument.querySelector("input")?.value).toBe("me@example.test");
   });
@@ -247,7 +247,7 @@ describe("AutofillOverlay review", () => {
       expect(sections[1]!.querySelector("div")!.hidden).toBe(false);
     });
     expect(
-      await screen.findByRole("heading", { name: "기입 결과" }),
+      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
     ).toBeInTheDocument();
   });
 
@@ -272,11 +272,15 @@ describe("AutofillOverlay review", () => {
       within(dialog).getByRole("button", { name: "1개 항목 기입하기" }),
     );
     expect(
-      await within(dialog).findByRole("heading", { name: "기입 결과" }),
+      await within(dialog).findByRole("heading", {
+        name: "자동 기입을 마쳤어요",
+      }),
     ).toBeInTheDocument();
     expect(pageInput.value).toBe("me@example.test");
     expect(
-      await within(dialog).findByRole("heading", { name: "기입 결과" }),
+      await within(dialog).findByRole("heading", {
+        name: "자동 기입을 마쳤어요",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -298,7 +302,7 @@ describe("AutofillOverlay review", () => {
       await screen.findByRole("button", { name: "1개 항목 기입하기" }),
     );
     expect(
-      await screen.findByRole("heading", { name: "기입 결과" }),
+      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
     ).toBeInTheDocument();
     expect(pageDocument.querySelector("input")?.value).toBe("me@example.test");
     expect(
@@ -562,7 +566,7 @@ describe("AutofillOverlay review", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "1개 항목 기입하기" }),
     );
-    await screen.findByRole("heading", { name: "기입 결과" });
+    await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
 
     expect(
       screen.queryByText("이메일: 승인하지 않아 건너뜀"),

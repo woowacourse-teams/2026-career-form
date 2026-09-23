@@ -232,7 +232,7 @@ export function AutofillDemo({
   if (stage === "result") {
     return (
       <div className={styles.screen}>
-        <Header step="완료" title="기입 결과" />
+        <Header step="완료" title="자동 기입을 마쳤어요" />
         <div className={styles.resultGrid}>
           <div>
             <strong>{selectedCount}</strong>
