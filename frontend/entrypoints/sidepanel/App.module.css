@@ -1,30 +1,30 @@
 .panel {
-  /* White surfaces throughout; black text and outlines define hierarchy. */
+  /* Capybara caramel and cocoa; white canvas preserves action hierarchy. */
   --color-surface: #ffffff;
-  --color-surface-muted: #ffffff;
-  --color-accent-soft: #ffffff;
-  --color-accent-hover: #ffffff;
-  --color-accent: #000000;
-  --color-result-action-surface: #ffffff;
-  --color-action: #000000;
-  --color-action-strong: #000000;
-  --color-text: #000000;
-  --color-text-strong: #000000;
-  --color-text-muted: #000000;
-  --color-text-subtle: #000000;
-  --color-border: #000000;
-  --color-border-strong: #000000;
-  --color-field-border: #000000;
-  --color-success: #000000;
-  --color-success-soft: #ffffff;
-  --color-info: #000000;
-  --color-info-soft: #ffffff;
-  --color-info-border: #000000;
-  --color-focus: rgb(0 0 0 / 15%);
-  --color-danger-border: #000000;
-  --color-danger-text: #000000;
-  --color-danger-soft: #ffffff;
-  --shadow-card: 0 3px 14px rgb(0 0 0 / 6%);
+  --color-surface-muted: #fdfaf6;
+  --color-accent-soft: #fffaf4;
+  --color-accent-hover: #f8ecdc;
+  --color-accent: #cfaa7b;
+  --color-result-action-surface: #f8ecdc;
+  --color-action: #a65f2d;
+  --color-action-strong: #754522;
+  --color-text: #594637;
+  --color-text-strong: #39291d;
+  --color-text-muted: #786453;
+  --color-text-subtle: #816e5b;
+  --color-border: #e7d8c5;
+  --color-border-strong: #ceb596;
+  --color-field-border: #cbb79d;
+  --color-success: #556b4d;
+  --color-success-soft: #f5f7f2;
+  --color-info: #786453;
+  --color-info-soft: #fffaf4;
+  --color-info-border: #e7d8c5;
+  --color-focus: rgb(166 95 45 / 22%);
+  --color-danger-border: #d9a49b;
+  --color-danger-text: #923d31;
+  --color-danger-soft: #fff6f3;
+  --shadow-card: 0 3px 14px rgb(117 69 34 / 6%);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
@@ -344,10 +344,15 @@
 }
 .autofillAction button[data-autofill-start] {
   border-width: 2px;
-  box-shadow: 0 2px 0 #000;
+  border-color: var(--color-action);
+  background: var(--color-action);
+  color: #fff;
+  box-shadow: 0 2px 0 var(--color-action-strong);
 }
 .autofillAction button[data-autofill-start]:hover {
-  box-shadow: 0 3px 0 #000;
+  background: var(--color-action-strong);
+  border-color: var(--color-action-strong);
+  box-shadow: 0 3px 0 var(--color-action-strong);
 }
 .autofillAction .returnButton {
   width: auto;
