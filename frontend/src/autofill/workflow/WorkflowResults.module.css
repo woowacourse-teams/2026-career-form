@@ -20,39 +20,31 @@
   letter-spacing: -0.035em;
 }
 .counts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0;
-  padding: 12px 0;
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  border: none;
   color: var(--color-text);
   font-size: 13px;
 }
 .counts > span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 0 12px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   border: none;
 }
-.counts > span + span {
-  border-left-width: 1px;
-  border-left-style: solid;
-  border-left-color: var(--color-border);
-}
-.counts > span:only-child {
-  grid-column: 1 / -1;
+.counts > span + span::before {
+  content: "·";
+  margin-right: 8px;
+  font-weight: 400;
 }
 .counts strong {
-  color: var(--color-action-strong);
+  color: inherit;
+  font-weight: 700;
 }
 .counts > [data-state="completed"] strong {
-  color: var(--color-success);
+  font-weight: 400;
 }
 .primary {
   display: flex;

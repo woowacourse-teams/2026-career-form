@@ -85,14 +85,14 @@ export function WorkflowResults({
               data-state="completed"
               aria-label={`입력 완료 ${completed.length}개`}
             >
-              입력 완료 <strong>{completed.length}개</strong>
+              <strong>{completed.length}개</strong> 입력 완료
             </span>
             {pending.length > 0 && (
               <span
                 data-state="pending"
                 aria-label={`확인 필요 ${pending.length}개`}
               >
-                확인 필요 <strong>{pending.length}개</strong>
+                <strong>{pending.length}개</strong> 확인 필요
               </span>
             )}
           </div>
