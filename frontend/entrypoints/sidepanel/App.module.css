@@ -1,12 +1,25 @@
 .panel {
-  /* Keep the panel neutral and warm; reserve caramel for actions. */
-  --color-surface-muted: #f8f6f3;
-  --color-accent-soft: #faf7f2;
-  --color-accent-hover: #f5eadb;
-  --color-text: #554c44;
-  --color-text-strong: #352f2a;
-  --color-text-muted: #776d63;
-  --shadow-card: 0 3px 14px rgb(61 43 32 / 5%);
+  /* Desaturated apricot components on white; the primary action stays vivid. */
+  --color-surface: #ffffff;
+  --color-surface-muted: #faf6f1;
+  --color-accent-soft: #f8f0e6;
+  --color-accent-hover: #f0e1ce;
+  --color-accent: #d9bb96;
+  --color-action: #946b42;
+  --color-action-strong: #795637;
+  --color-text: #584b3e;
+  --color-text-strong: #3c3025;
+  --color-text-muted: #796b5c;
+  --color-text-subtle: #8a7968;
+  --color-border: #e7d9c8;
+  --color-border-strong: #cdb79b;
+  --color-field-border: #d8c5ad;
+  --color-success: #73634e;
+  --color-success-soft: #f6f2eb;
+  --color-info: #796b5c;
+  --color-info-soft: #f8f0e6;
+  --color-info-border: #e7d9c8;
+  --shadow-card: 0 3px 14px rgb(121 86 55 / 6%);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
@@ -178,7 +191,7 @@
   border: 0;
   padding: 13px 14px;
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--color-surface-muted);
   text-align: left;
   cursor: pointer;
 }

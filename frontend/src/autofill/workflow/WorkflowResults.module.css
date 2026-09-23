@@ -37,9 +37,11 @@
 }
 .counts > [data-state="completed"] {
   border-color: var(--color-success);
+  background: var(--color-success-soft);
 }
 .counts > [data-state="pending"] {
   border-color: var(--color-action-strong);
+  background: var(--color-accent-soft);
 }
 .counts > [data-state="completed"] strong {
   color: var(--color-success);
@@ -217,7 +219,7 @@
   min-width: 0;
   border: 1px solid var(--color-success);
   border-radius: 10px;
-  background: var(--color-surface);
+  background: var(--color-success-soft);
 }
 .completed > details > summary {
   display: flex;
