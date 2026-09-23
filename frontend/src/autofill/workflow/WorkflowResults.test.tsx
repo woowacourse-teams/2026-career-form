@@ -1,5 +1,12 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { expect, it, vi } from "vitest";
+import { createEmptyProfile } from "../../profile/model";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { WorkflowResults } from "./WorkflowResults";
 
@@ -507,7 +514,7 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
       onLocate={() => false}
     />,
   );
-  expect(screen.queryByText("컴퓨터공학")).not.toBeInTheDocument();
+  expect(screen.getByText("컴퓨터공학")).toBeVisible();
   expect(
     screen.getByText(
       "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
@@ -517,7 +524,7 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
   expect(screen.getByText("이동 불가")).toBeInTheDocument();
 });
 
-it("combines write failures with unresolved fields without showing profile previews", () => {
+it("combines write failures with unresolved fields while masking sensitive values", () => {
   render(
     <WorkflowResults
       reviewItems={[
@@ -565,4 +572,125 @@ it("shows only the live options supplied for an unresolved field", () => {
   expect(screen.getByText("컴퓨터공학부")).toBeInTheDocument();
   expect(screen.getByText("컴퓨터공학과")).toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+});
+
+it("groups remaining values by section and copies independently of field location", async () => {
+  const copyText = vi.fn(async () => undefined);
+  const onLocate = vi.fn(() => true);
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          profileFieldKey: "education.university.majorName",
+          itemIndex: 0,
+        },
+        {
+          ...item,
+          candidateId: "address",
+          fieldLabel: "기본주소",
+          profileFieldKey: "contact.contact.addressLine1",
+          profileValue: "합성 테스트 주소",
+        },
+      ]}
+      results={[]}
+      copyText={copyText}
+      onLocate={onLocate}
+    />,
+  );
+  expect(screen.getByRole("heading", { name: "대학교" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "연락처와 주소" })).toBeVisible();
+  expect(screen.getByText("컴퓨터공학")).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: "대학교 / 주전공명 (1) 복사" }),
+  );
+  await waitFor(() => expect(copyText).toHaveBeenCalledWith("컴퓨터공학"));
+  expect(onLocate).not.toHaveBeenCalled();
+  expect(await screen.findByText("복사됨")).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: "대학교 / 주전공명 (1) 필드로 이동" }),
+  );
+  expect(onLocate).toHaveBeenCalledWith("major");
+});
+
+it("keeps unavailable sensitive values masked and uncopyable", () => {
+  const copyText = vi.fn(async () => undefined);
+  const { container } = render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          profileFieldKey: "compensation.compensation.desiredSalary",
+          profileValue: "PRIVATE_SALARY",
+          revealed: false,
+        },
+      ]}
+      results={[]}
+      copyText={copyText}
+    />,
+  );
+  expect(container.innerHTML).not.toContain("PRIVATE_SALARY");
+  expect(screen.getByText("값 가림")).toBeVisible();
+  const copy = screen.getByRole("button", { name: /복사/ });
+  expect(copy).toBeDisabled();
+  fireEvent.click(copy);
+  expect(copyText).not.toHaveBeenCalled();
+});
+
+it("keeps copy failures retryable without exposing raw clipboard errors", async () => {
+  const copyText = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("PRIVATE_CLIPBOARD_ERROR"))
+    .mockResolvedValueOnce(undefined);
+  render(
+    <WorkflowResults reviewItems={[item]} results={[]} copyText={copyText} />,
+  );
+  const copy = screen.getByRole("button", { name: "전공 복사" });
+  fireEvent.click(copy);
+  expect(await screen.findByRole("alert")).not.toHaveTextContent(
+    "PRIVATE_CLIPBOARD_ERROR",
+  );
+  fireEvent.click(copy);
+  expect(await screen.findByText("복사됨")).toBeVisible();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("keeps ambiguous saved records separately copyable without picking a write target", async () => {
+  const profile = createEmptyProfile();
+  profile.education = [
+    {
+      id: "first",
+      sectionId: "university",
+      values: { majorName: "첫 합성 전공" },
+    },
+    {
+      id: "second",
+      sectionId: "university",
+      values: { majorName: "두 번째 합성 전공" },
+    },
+  ];
+  const copyText = vi.fn(async () => undefined);
+  render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          profileValue: undefined,
+          profileFieldKey: "education.university.majorName",
+          revealed: false,
+        },
+      ]}
+      profile={profile}
+      results={[]}
+      copyText={copyText}
+    />,
+  );
+  expect(screen.getByText("첫 합성 전공")).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: "대학교 / 주전공명 값 2 복사" }),
+  );
+  await waitFor(() =>
+    expect(copyText).toHaveBeenCalledWith("두 번째 합성 전공"),
+  );
+  expect(screen.queryByRole("textbox")).toBeNull();
 });

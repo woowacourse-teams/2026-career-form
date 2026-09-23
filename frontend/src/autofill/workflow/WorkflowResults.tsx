@@ -6,8 +6,8 @@ import resultCss from "./WorkflowResults.module.css?inline";
 import type { Profile } from "../../profile/model";
 import type { WriteProgress } from "./progress-model";
 import { buildResultModel } from "./result-model";
-import { resultFieldLabel } from "./result-label";
-import { resultGuidance } from "./result-guidance";
+import { PendingResultRow } from "./PendingResultRow";
+import { pendingResultPresentation } from "./pending-result-presentation";
 
 export interface WorkflowResultsProps {
   progress?: readonly WriteProgress[];
@@ -22,6 +22,7 @@ export interface WorkflowResultsProps {
   ): { visible: boolean; value: string } | undefined;
   optionsFor?(candidateId: string): readonly string[];
   onLocate?(candidateId: string): boolean;
+  copyText?(value: string): Promise<void>;
 }
 export function WorkflowResults({
   progress,
@@ -34,14 +35,12 @@ export function WorkflowResults({
   fieldStateFor,
   optionsFor,
   onLocate,
+  copyText = (value) => navigator.clipboard.writeText(value),
 }: WorkflowResultsProps) {
   const tabsId = useId();
   const [selectedTab, setSelectedTab] = useState<
     "pending" | "completed" | null
   >(null);
-  const [unavailable, setUnavailable] = useState<ReadonlySet<string>>(
-    new Set(),
-  );
   const { completed, pending } = buildResultModel({
     reviewItems,
     results,
@@ -52,6 +51,18 @@ export function WorkflowResults({
     progressStateFor,
     fieldStateFor,
   });
+  const pendingGroups = new Map<string, typeof pending>();
+  for (const entry of pending) {
+    const category =
+      progress
+        ?.find((step) => `progress:${step.id}` === entry.id)
+        ?.category.replaceAll("·", "/") ??
+      pendingResultPresentation(entry.item).category;
+    pendingGroups.set(category, [
+      ...(pendingGroups.get(category) ?? []),
+      entry,
+    ]);
+  }
   const categories = new Map<string, typeof completed>();
   const activeTab =
     selectedTab ?? (pending.length > 0 ? "pending" : "completed");
@@ -114,66 +125,28 @@ export function WorkflowResults({
       >
         {pending.length > 0 ? (
           <section className={styles.review} aria-label="확인 필요한 항목">
-            <h3 className={styles.reviewTitle}>확인 필요</h3>
             <p className={styles.reviewHint}>
-              아래 항목을 눌러 지원서에서 확인해 주세요.
+              항목명으로 입력칸을 찾고, 값을 복사해 채워 주세요.
             </p>
             <div className={styles.reviewList}>
-              {pending.map(({ id, item, reason, written, failureCode }) => (
-                <article key={id} className={styles.row}>
-                  <div className={styles.heading}>
-                    <div className={styles.fieldTitle}>
-                      <strong>
-                        {item ? resultFieldLabel(item) : "프로필 정보"}
-                      </strong>
-                      {written && (
-                        <span className={styles.writtenTag}>입력됨</span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      title="필드로 이동"
-                      disabled={
-                        !onLocate ||
-                        unavailable.has(id) ||
-                        id.startsWith("progress:")
-                      }
-                      aria-label={`${item ? resultFieldLabel(item) : "입력 필드"} 필드로 이동`}
-                      onClick={() => {
-                        if (!onLocate?.(id))
-                          setUnavailable(
-                            (previous) => new Set([...previous, id]),
-                          );
-                      }}
-                    >
-                      {!onLocate ||
-                      unavailable.has(id) ||
-                      id.startsWith("progress:")
-                        ? "직접 확인"
-                        : "입력칸으로 이동"}
-                      {onLocate &&
-                        !unavailable.has(id) &&
-                        !id.startsWith("progress:") && (
-                          <span aria-hidden="true">↗</span>
-                        )}
-                    </button>
-                  </div>
-                  <small className={styles.guidance}>
-                    <span className={styles.guidanceLabel}>확인 안내</span>
-                    {resultGuidance(reason, failureCode)}
-                  </small>
-                  {!!optionsFor?.(id).length && (
-                    <details>
-                      <summary>지원서 선택지</summary>
-                      {optionsFor(id).map((label, index) => (
-                        <p key={index}>{label}</p>
-                      ))}
-                    </details>
-                  )}
-                  {unavailable.has(id) && (
-                    <small role="status">이동 불가</small>
-                  )}
-                </article>
+              {[...pendingGroups].map(([category, entries]) => (
+                <section
+                  key={category}
+                  className={styles.pendingGroup}
+                  aria-label={category}
+                >
+                  <h4 className={styles.pendingCategory}>{category}</h4>
+                  {entries.map((entry) => (
+                    <PendingResultRow
+                      key={entry.id}
+                      entry={entry}
+                      profile={profile}
+                      options={optionsFor?.(entry.id)}
+                      onLocate={onLocate}
+                      copyText={copyText}
+                    />
+                  ))}
+                </section>
               ))}
             </div>
           </section>

@@ -76,7 +76,7 @@ it.each<[WriteFailureCode, string]>([
       />,
     );
     expect(screen.getByText(guidance)).toBeVisible();
-    expect(screen.queryByText("합성테스트전공")).not.toBeInTheDocument();
+    expect(screen.getByText("합성테스트전공")).toBeVisible();
     expect(screen.queryByText(/RAW_PRIVATE_ERROR/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
     expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();

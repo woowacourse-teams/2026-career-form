@@ -44,15 +44,16 @@ it("keeps result layout and actions styled without the separately loaded entry s
     expect(getComputedStyle(counts.lastElementChild!).borderLeftStyle).toBe(
       "none",
     );
-    expect(locate).toHaveTextContent("입력칸으로 이동");
-    expect(getComputedStyle(locate).minHeight).toBe("24px");
+    expect(locate).toHaveTextContent("전공");
+    expect(view.getByRole("button", { name: "전공 복사" })).toBeVisible();
+    expect(getComputedStyle(locate).minHeight).toBe("32px");
     expect(getComputedStyle(locate).borderTopStyle).toBe("none");
   } finally {
     externalStyles.forEach((style) => document.head.append(style));
   }
 });
 
-it("shows only the field name and action above the guidance, without profile values", () => {
+it("lays out a plain field row with an ellipsized value and separate copy action", () => {
   const value =
     "컴퓨터공학과에서소프트웨어시스템설계와분산데이터처리를전공했습니다";
   const { container } = render(
@@ -77,39 +78,31 @@ it("shows only the field name and action above the guidance, without profile val
   );
   const view = within(container);
   const locate = view.getByRole("button", { name: "전공 필드로 이동" });
-  const heading = locate.parentElement!;
-  expect(view.queryByText(value)).not.toBeInTheDocument();
+  const heading = locate.parentElement!.parentElement!;
+  expect(view.getByText(value)).toBeVisible();
   const reason = view.getByText(
     "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
   );
 
   expect(getComputedStyle(heading).display).toBe("grid");
   expect(getComputedStyle(heading).gridTemplateColumns).toBe(
-    "minmax(0, 1fr) auto",
+    "minmax(0, 0.8fr) minmax(0, 1.2fr)",
   );
   expect(heading).toContainElement(view.getByText("전공"));
   expect(heading).not.toContainElement(reason);
   expect(heading.nextElementSibling).toBe(reason);
-  expect(getComputedStyle(locate).minHeight).toBe("24px");
+  expect(getComputedStyle(locate).minHeight).toBe("32px");
   const rowStyle = getComputedStyle(locate.closest("article")!);
-  expect(parseFloat(rowStyle.paddingLeft)).toBeGreaterThanOrEqual(12);
-  expect(rowStyle.paddingTop).toBe("8px");
-  expect(rowStyle.paddingBottom).toBe("8px");
-  expect(rowStyle.borderRadius).toBe("10px");
-  const group = locate.closest("article")!.parentElement!;
-  expect(getComputedStyle(group).display).toBe("grid");
-  expect(getComputedStyle(group).gap).toBe("6px");
-  expect(getComputedStyle(group).padding).toBe("0px");
-  expect(getComputedStyle(group).borderTopStyle).toBe("none");
-  expect(getComputedStyle(view.getByText("전공")).wordBreak).toBe("keep-all");
-  expect(getComputedStyle(view.getByText("전공")).textWrap).toBe("balance");
+  expect(rowStyle.paddingTop).toBe("10px");
+  expect(rowStyle.paddingLeft).toBe("0px");
+  const valueStyle = getComputedStyle(view.getByText(value));
+  expect(valueStyle.whiteSpace).toBe("nowrap");
+  expect(valueStyle.textOverflow).toBe("ellipsis");
+  expect(view.getByText(value)).toHaveAttribute("title", value);
+  expect(heading).toContainElement(
+    view.getByRole("button", { name: "전공 복사" }),
+  );
   expect(getComputedStyle(reason).wordBreak).toBe("keep-all");
-  expect(getComputedStyle(reason).marginLeft).toBe("0px");
-  expect(getComputedStyle(reason).paddingBottom).toBe("0px");
-  expect(getComputedStyle(view.getByText("확인 안내")).display).toBe("inline");
-  expect(getComputedStyle(reason).fontSize).toBe("13px");
-  expect(getComputedStyle(reason).fontWeight).toBe("400");
-  expect(getComputedStyle(reason).backgroundColor).toBe("transparent");
-  expect(view.getByText("확인 안내")).toBeInTheDocument();
-  expect(getComputedStyle(view.getByText("전공")).fontWeight).toBe("700");
+  expect(getComputedStyle(reason).fontSize).toBe("12px");
+  expect(view.queryByText("확인 안내")).not.toBeInTheDocument();
 });

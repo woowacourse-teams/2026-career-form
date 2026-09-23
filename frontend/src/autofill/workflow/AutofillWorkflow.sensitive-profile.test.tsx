@@ -328,7 +328,11 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
     />,
   );
 
-  expect(screen.getByText("처우 / 희망연봉(만원)")).toBeVisible();
+  expect(screen.getByRole("heading", { name: "처우" })).toBeVisible();
+  expect(screen.getByText("희망연봉(만원)")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "처우 / 희망연봉(만원) 필드로 이동" }),
+  ).toBeDisabled();
   expect(screen.getAllByText("프로필 정보")).toHaveLength(1);
   expect(
     screen.queryByText("desired-salary-result-secret"),
