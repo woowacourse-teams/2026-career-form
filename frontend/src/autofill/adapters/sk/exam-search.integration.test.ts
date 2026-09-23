@@ -408,8 +408,8 @@ it("does not confirm SK exam when two live results match the same canonical valu
       expect(
         within(
           screen.getByRole("region", { name: "확인 필요한 항목" }),
-        ).getAllByText("입력 못함").length,
-      ).toBeGreaterThan(0),
+        ).getByText(/일치하는 검색 결과가 여러 개.*목록에서 직접 골라/),
+      ).toBeInTheDocument(),
     );
     expect(exam.value).toBe("");
   } finally {
@@ -494,8 +494,8 @@ it.each([
         expect(
           within(
             screen.getByRole("region", { name: "확인 필요한 항목" }),
-          ).getAllByText("입력 못함").length,
-        ).toBeGreaterThan(0),
+          ).getByText(/검색 결과가 없어요.*다른 이름으로 찾아/),
+        ).toBeInTheDocument(),
       );
       expect(input.value).toBe("");
     } finally {
@@ -613,8 +613,15 @@ it.each([false, true])(
       expect(
         within(
           screen.getByRole("region", { name: "확인 필요한 항목" }),
-        ).getAllByText("입력 못함").length,
-      ).toBeGreaterThan(0);
+        ).getByText(/목록 선택을 확인하지 못했어요.*항목을 직접 골라/),
+      ).toBeInTheDocument();
+      expect(
+        within(
+          screen.getByRole("region", { name: "확인 필요한 항목" }),
+        ).getAllByText(
+          /같은 행의 검색 항목을 확정하지 못해.*검색 항목을 목록에서 고른 뒤/,
+        ),
+      ).toHaveLength(2);
     } finally {
       removeBridge();
     }

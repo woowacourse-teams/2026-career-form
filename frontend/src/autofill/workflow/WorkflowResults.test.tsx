@@ -201,7 +201,11 @@ it("presents unsuccessful writes as an actionable review item instead of a separ
   ).toBeInTheDocument();
   expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
-  expect(screen.getByText("입력 못함")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
+    ),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", { name: "입력 실패" }),
   ).not.toBeInTheDocument();
@@ -228,7 +232,11 @@ it("marks an uncertain written value as entered without counting it again as com
   expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
   const review = screen.getByRole("region", { name: "확인 필요한 항목" });
   expect(within(review).getByText("입력됨")).toBeInTheDocument();
-  expect(within(review).getByText("입력 결과 확인")).toBeInTheDocument();
+  expect(
+    within(review).getByText(
+      "입력 결과를 확인하지 못했어요. 지원서에 값이 들어갔는지 확인해 주세요.",
+    ),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole("region", { name: "입력 완료 내역" }),
   ).not.toBeInTheDocument();
@@ -330,7 +338,11 @@ it("keeps an earlier failure visible without locating a reused candidate from an
   expect(
     screen.getByRole("button", { name: "전공 필드로 이동" }),
   ).toBeDisabled();
-  expect(screen.getByText("입력 못함")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
+    ),
+  ).toBeInTheDocument();
 });
 
 it("focuses required review inside the panel without locating an application field", () => {
@@ -446,7 +458,11 @@ it("keeps a ready but unwritten field in review when its live value is still bla
   expect(
     screen.getByRole("button", { name: "전공 필드로 이동" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("선택 필요")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
+    ),
+  ).toBeInTheDocument();
   expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
 });
 
@@ -483,7 +499,11 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
     />,
   );
   expect(screen.getByText("컴퓨터공학")).toBeInTheDocument();
-  expect(screen.getByText("선택 필요")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
+    ),
+  ).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "전공 필드로 이동" }));
   expect(screen.getByText("이동 불가")).toBeInTheDocument();
 });
@@ -516,7 +536,11 @@ it("combines write failures with unresolved fields and preserves masked previews
   expect(screen.getByLabelText("입력 완료 1개")).toBeInTheDocument();
   expect(screen.queryByLabelText("입력 실패 1개")).not.toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 2개")).toBeInTheDocument();
-  expect(screen.getByText("입력 못함")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
+    ),
+  ).toBeInTheDocument();
   expect(screen.getByText("••••••••")).toBeInTheDocument();
   expect(screen.queryByText("5000")).not.toBeInTheDocument();
 });

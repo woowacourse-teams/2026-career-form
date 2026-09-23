@@ -8,6 +8,7 @@ import { resultPreview } from "./result-preview";
 import type { WriteProgress } from "./progress-model";
 import { buildResultModel } from "./result-model";
 import { resultFieldLabel } from "./result-label";
+import { resultGuidance } from "./result-guidance";
 
 function focusInPanel(target: HTMLElement | null) {
   if (!target) return;
@@ -131,7 +132,7 @@ export function WorkflowResults({
             확인 필요 <span aria-hidden="true">{pending.length}</span>
           </h3>
           <div className={styles.reviewList}>
-            {pending.map(({ id, item, reason, written }) => (
+            {pending.map(({ id, item, reason, written, failureCode }) => (
               <article key={id} className={styles.row}>
                 <div className={styles.heading}>
                   <div className={styles.fieldTitle}>
@@ -167,7 +168,7 @@ export function WorkflowResults({
                     <span aria-hidden="true">↗</span>
                   </button>
                 </div>
-                {reason && <small>{reason.replaceAll("·", "/")}</small>}
+                <small>{resultGuidance(reason, failureCode)}</small>
                 {!!optionsFor?.(id).length && (
                   <details>
                     <summary>지원서 선택지</summary>

@@ -18,6 +18,7 @@ import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import type { ProfileRepository } from "../../profile/profile-repository";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { WorkflowActivity } from "./progress-model";
+import type { WriteFailureCode } from "../write/failure";
 import {
   adapterProfileValue,
   addressValue,
@@ -35,6 +36,10 @@ type AddressRun = {
   button?: Element;
   task?: Promise<AddressResult>;
 };
+export type DeferredDriverFailures = WeakMap<
+  Element,
+  { key: string; code: WriteFailureCode }
+>;
 
 interface WorkflowAnalysisContext {
   onActivity?: (activity: WorkflowActivity) => void;
@@ -53,6 +58,7 @@ interface WorkflowAnalysisContext {
   consideredSensitiveValues: MutableRefObject<Map<string, string>>;
   completedDriverKeys: MutableRefObject<ReadonlySet<string>>;
   deferredDriverGroups: MutableRefObject<ReadonlySet<Element>>;
+  deferredDriverFailures?: MutableRefObject<DeferredDriverFailures>;
   setAddressResult: Dispatch<SetStateAction<AddressResult | undefined>>;
   setExceptionTitle: Dispatch<SetStateAction<string>>;
   setStage: Dispatch<SetStateAction<Stage>>;
@@ -74,6 +80,7 @@ export function createAnalyzeFields({
   consideredSensitiveValues,
   completedDriverKeys,
   deferredDriverGroups,
+  deferredDriverFailures = { current: new WeakMap() },
   setAddressResult,
   setExceptionTitle,
   setStage,
@@ -345,6 +352,11 @@ export function createAnalyzeFields({
       const currentStateDriverItems = stateDriverItems.filter(
         (driver) => driver.stage === nextStage,
       );
+      const failureCodes = new Map<string, WriteFailureCode>();
+      const reportFor = (item: ReviewPlanItem) => (code: WriteFailureCode) => {
+        if (!run.controller.signal.aborted)
+          failureCodes.set(item.candidateId, code);
+      };
       const deferFailedGroups = async (
         successful: readonly boolean[],
         writesVerified = false,
@@ -369,6 +381,29 @@ export function createAnalyzeFields({
           nextGroups.add(group);
         }
         if (run.controller.signal.aborted) return true;
+        currentStateDriverItems.forEach((driver, index) => {
+          const element = driver.handle.elements[0];
+          if (!successful[index] && element)
+            deferredDriverFailures.current.set(element, {
+              key: driver.key,
+              code:
+                failureCodes.get(driver.item.candidateId) ??
+                "SEARCH_UNCONFIRMED",
+            });
+          if (!successful[index])
+            onWriteResult?.(
+              driver.item,
+              {
+                candidateId: driver.item.candidateId,
+                status: "skipped",
+                reason: "조건부 선택을 확인하지 못했습니다.",
+                failureCode:
+                  failureCodes.get(driver.item.candidateId) ??
+                  "SEARCH_UNCONFIRMED",
+              },
+              snapshot.registry,
+            );
+        });
         if (writesVerified) {
           currentStateDriverItems.forEach(({ item }, index) => {
             if (successful[index])
@@ -389,8 +424,12 @@ export function createAnalyzeFields({
       };
       const driversReady = await Promise.all(
         currentStateDriverItems.map(
-          ({ handle }) =>
-            adapter.waitForStateDriverReady?.(pageDocument, handle) ?? true,
+          ({ handle, item }) =>
+            adapter.waitForStateDriverReady?.(
+              pageDocument,
+              handle,
+              reportFor(item),
+            ) ?? true,
         ),
       );
       if (!driversReady.every(Boolean)) {
@@ -399,10 +438,7 @@ export function createAnalyzeFields({
         setStage("exception");
         return;
       }
-      const stateSelectionResults: Pick<
-        ApprovedWriteResult,
-        "candidateId" | "status"
-      >[] = [];
+      const stateSelectionResults: ApprovedWriteResult[] = [];
       for (const { item } of currentStateDriverItems) {
         const lookup = snapshot.registry.lookupField(item.candidateId);
         const eligible =
@@ -425,6 +461,7 @@ export function createAnalyzeFields({
               lookup.handle,
               item,
               run.controller.signal,
+              reportFor(item),
             )
           : undefined;
         stateSelectionResults.push(
@@ -435,20 +472,33 @@ export function createAnalyzeFields({
                 registry: snapshot.registry,
               })
             : [
-                {
-                  candidateId: item.candidateId,
-                  status: special ? ("written" as const) : ("skipped" as const),
-                },
+                special
+                  ? {
+                      candidateId: item.candidateId,
+                      status: "written" as const,
+                    }
+                  : {
+                      candidateId: item.candidateId,
+                      status: "skipped" as const,
+                      reason: "조건부 선택을 확인하지 못했습니다.",
+                    },
               ]),
         );
+        const result = stateSelectionResults.at(-1);
+        if (result?.status === "skipped" && result.failureCode)
+          reportFor(item)(result.failureCode);
       }
       if (
         stateSelectionResults.every((result) => result.status === "written")
       ) {
         const settled = await Promise.all(
           currentStateDriverItems.map(
-            ({ handle }) =>
-              adapter.settleStateDriver?.(pageDocument, handle) ?? true,
+            ({ handle, item }) =>
+              adapter.settleStateDriver?.(
+                pageDocument,
+                handle,
+                reportFor(item),
+              ) ?? true,
           ),
         );
         if (!settled.every(Boolean)) {
@@ -485,9 +535,13 @@ export function createAnalyzeFields({
         // A successful write still needs its normal settle check before continuing.
         const successful = await Promise.all(
           currentStateDriverItems.map(
-            async ({ handle }, index) =>
+            async ({ handle, item }, index) =>
               stateSelectionResults[index]?.status === "written" &&
-              ((await adapter.settleStateDriver?.(pageDocument, handle)) ??
+              ((await adapter.settleStateDriver?.(
+                pageDocument,
+                handle,
+                reportFor(item),
+              )) ??
                 true),
           ),
         );
@@ -557,6 +611,35 @@ export function createAnalyzeFields({
       signal: run.controller.signal,
     });
     if (run.controller.signal.aborted) return;
+    const deferredResults = deferredItems.map((item): ApprovedWriteResult => {
+      const lookup = snapshot.registry.lookupField(item.candidateId);
+      const handle =
+        lookup.status === "ready" || lookup.status === "blocked"
+          ? lookup.handle
+          : undefined;
+      const source = handle?.elements[0];
+      const failure = source
+        ? deferredDriverFailures.current.get(source)
+        : undefined;
+      const key =
+        handle &&
+        stateDriverKey(
+          item,
+          handle.candidate.domName ?? handle.candidate.domId,
+          handle.itemIndex,
+        );
+      const result: ApprovedWriteResult = {
+        candidateId: item.candidateId,
+        status: "skipped",
+        reason:
+          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
+        failureCode:
+          failure && failure.key === key
+            ? failure.code
+            : "ROW_SEARCH_UNCONFIRMED",
+      };
+      return result;
+    });
     setResults([
       ...writeResults,
       ...automaticItems
@@ -578,12 +661,7 @@ export function createAnalyzeFields({
           candidateId: item.candidateId,
           status: "written",
         })),
-      ...deferredItems.map((item): ApprovedWriteResult => ({
-        candidateId: item.candidateId,
-        status: "skipped",
-        reason:
-          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
-      })),
+      ...deferredResults,
     ]);
     setStage("result");
   };

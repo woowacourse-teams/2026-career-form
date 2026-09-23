@@ -1,6 +1,7 @@
 import type { Profile } from "../../profile/model";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
+import type { WriteFailureCode } from "../write/failure";
 import { progressCategory, type WriteProgress } from "./progress-model";
 import { savedResultValues } from "./result-preview";
 import { isSkippedByApproval } from "./workflow-model";
@@ -26,6 +27,7 @@ export interface ResultModel {
     item?: ReviewPlanItem;
     reason: string;
     written: boolean;
+    failureCode?: WriteFailureCode;
   }[];
   skipped: { id: string; item: ReviewPlanItem; reason: string }[];
 }
@@ -66,6 +68,9 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
         label: item ? resultFieldLabel(item) : "입력 필드",
         category: item ? progressCategory(item) : "기타 항목",
         status: result.status,
+        ...(result.status === "skipped" && result.failureCode
+          ? { failureCode: result.failureCode }
+          : {}),
       };
     });
   const entries = new Map<string, WriteProgress>(
@@ -104,13 +109,26 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       live?.visible === true &&
       matches &&
       progressStateFor?.(stableId) === true;
+    const failureCode =
+      result?.status === "skipped" && !isSkippedByApproval(result)
+        ? (result.failureCode ??
+          (entry?.status === "skipped" ? entry.failureCode : undefined))
+        : !result && entry?.status === "skipped"
+          ? entry.failureCode
+          : undefined;
     const skip = (reason: string) => {
       completed.delete(stableId);
       skipped.push({ id, item, reason });
     };
-    const review = (reason: string) => {
+    const review = (reason: string, failureCode?: WriteFailureCode) => {
       completed.delete(stableId);
-      pending.push({ id, item, reason, written: written && !entry?.unchanged });
+      pending.push({
+        id,
+        item,
+        reason,
+        written: written && !entry?.unchanged,
+        ...(failureCode ? { failureCode } : {}),
+      });
     };
     if (live?.visible === false) {
       skip("현재 표시되지 않는 항목");
@@ -122,6 +140,12 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
           ? "등록된 정보 없음"
           : "자동 입력 미지원",
       );
+    } else if (
+      failureCode &&
+      !recoveredRetry &&
+      !(failureCode === "ROW_SEARCH_UNCONFIRMED" && entry?.unchanged && matches)
+    ) {
+      review("입력 못함", failureCode);
     } else if (entry?.unchanged && matches) {
       skip("기존 값 유지");
     } else if (
@@ -129,7 +153,7 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       !isSkippedByApproval(result) &&
       !recoveredRetry
     ) {
-      review("입력 못함");
+      review("입력 못함", result.failureCode ?? entry?.failureCode);
     } else if (written) {
       const uncertain =
         item.status === "needs-review" ||
@@ -147,7 +171,10 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     } else if (matches) {
       skip("기존 값 유지");
     } else {
-      review(pendingReason(item));
+      review(
+        pendingReason(item),
+        entry?.status === "skipped" ? entry.failureCode : undefined,
+      );
     }
   }
   for (const result of resultsById.values()) {
@@ -164,6 +191,7 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       id: result.candidateId,
       reason: "입력 못함",
       written: false,
+      ...(result.failureCode ? { failureCode: result.failureCode } : {}),
     });
   }
   for (const entry of entries.values()) {
@@ -176,6 +204,9 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       id,
       written: entry.status === "written" && !entry.unchanged,
       reason: entry.status === "written" ? "입력 결과 확인" : "입력 못함",
+      ...(entry.status === "skipped" && entry.failureCode
+        ? { failureCode: entry.failureCode }
+        : {}),
       item: {
         candidateId: id,
         fieldLabel: entry.label,

@@ -8,6 +8,7 @@ import {
 } from "./military-veteran";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
+import type { FailureReporter } from "../../write/failure";
 import type { WorkflowAdapter } from "../workflow";
 
 const STATE_SETTLE_TIMEOUT_MILLISECONDS = 3_000;
@@ -216,10 +217,7 @@ function hasOwnOptions(handle: FieldCandidateHandle): boolean {
   );
 }
 
-function languageDetailsAreEnabled(group: HTMLElement): boolean {
-  const textFields = ["acqNm", "acqDt"].map((name) =>
-    group.querySelector<HTMLInputElement>(`input[name='${name}']`),
-  );
+function languageScoreIsEnabled(group: HTMLElement): boolean {
   const point = group.querySelector<HTMLInputElement>("input[name='point']");
   const grade = group.querySelector<HTMLInputElement>("input[name='grade']");
   const gradeButton =
@@ -227,12 +225,19 @@ function languageDetailsAreEnabled(group: HTMLElement): boolean {
   const gradeOptions = gradeButton
     ?.closest(".select-wrap")
     ?.querySelector(".select-option button[data-code]:not([data-code=''])");
+  return Boolean(
+    (point && !point.disabled) ||
+    (gradeButton && !gradeButton.matches(":disabled") && gradeOptions),
+  );
+}
+
+function languageDetailsAreEnabled(group: HTMLElement): boolean {
+  const textFields = ["acqNm", "acqDt"].map((name) =>
+    group.querySelector<HTMLInputElement>(`input[name='${name}']`),
+  );
   return (
     textFields.every((field) => field && !field.disabled) &&
-    Boolean(
-      (point && !point.disabled) ||
-      (gradeButton && !gradeButton.matches(":disabled") && gradeOptions),
-    )
+    languageScoreIsEnabled(group)
   );
 }
 
@@ -271,9 +276,36 @@ async function settleLanguageDriver(
 async function settleExamDriver(
   document: Document,
   handle: FieldCandidateHandle,
+  onFailure?: FailureReporter,
 ): Promise<boolean> {
   const group = fieldGroup(handle);
   if (!group) return false;
+  const exam = handle.elements[0];
+  const examValues = group.querySelectorAll<HTMLInputElement>(
+    "input[type='hidden'][name='foreExamCd']",
+  );
+  const examValue = examValues.length === 1 ? examValues[0] : undefined;
+  const selectedCode = examValue?.value;
+  const selectedLabel =
+    exam instanceof HTMLInputElement ? exam.value : undefined;
+  const reportScoreNotReady = () => {
+    if (
+      group.isConnected &&
+      fieldGroup(handle) === group &&
+      handle.isCurrentContext?.() !== false &&
+      exam instanceof HTMLInputElement &&
+      exam.isConnected &&
+      selectedLabel?.trim() &&
+      exam.value === selectedLabel &&
+      examValue?.isConnected &&
+      examValue.closest(".field-group") === group &&
+      selectedCode?.trim() &&
+      examValue.value === selectedCode &&
+      !languageScoreIsEnabled(group)
+    ) {
+      onFailure?.("EXAM_SCORE_NOT_READY");
+    }
+  };
   const directInput = () =>
     Array.from(
       group.querySelectorAll<HTMLButtonElement>("button.exam_cancle"),
@@ -283,11 +315,16 @@ async function settleExamDriver(
     document,
     () => languageDetailsAreEnabled(group) || directInput().length === 1,
   );
+  if (!ready) reportScoreNotReady();
   if (!ready || languageDetailsAreEnabled(group)) return ready;
   const manualActions = directInput();
   if (manualActions.length !== 1) return false;
   manualActions[0]!.click();
-  return waitFor(document, () => languageDetailsAreEnabled(group));
+  const detailsReady = await waitFor(document, () =>
+    languageDetailsAreEnabled(group),
+  );
+  if (!detailsReady) reportScoreNotReady();
+  return detailsReady;
 }
 
 export const hyundaiWorkflowAdapter: WorkflowAdapter = {
@@ -295,11 +332,17 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
   addressFieldNames: hyundaiAddressNames,
   prepareEducation: prepareHyundaiEducation,
   educationPreparationActionId: "hyundai:add:academic",
-  executeStateDriver: async (document, handle, item, signal) => {
+  executeStateDriver: async (document, handle, item, signal, onFailure) => {
     if (structuralBase(handle) === "nationCd1Nm")
       return runHyundaiNationality(document, handle, item, signal);
     if (isEducationSearch(handle))
-      return runHyundaiEducationSearch(document, handle, item, signal);
+      return runHyundaiEducationSearch(
+        document,
+        handle,
+        item,
+        signal,
+        onFailure,
+      );
     return undefined;
   },
   repeatedProfileSectionHint: (actionDomId) => {
@@ -365,7 +408,7 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     structuralBase(handle) === "nationCd1Nm" || isEducationSearch(handle)
       ? Promise.resolve(true)
       : waitFor(document, () => hasOwnOptions(handle)),
-  settleStateDriver: (document, handle) => {
+  settleStateDriver: (document, handle, onFailure) => {
     if (exactConditionalDriver(handle)) {
       return waitFor(document, () =>
         conditionalDriverSettled(document, handle),
@@ -375,7 +418,7 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
       return settleLanguageDriver(document, handle);
     }
     if (structuralBase(handle) === "foreExamCd") {
-      return settleExamDriver(document, handle);
+      return settleExamDriver(document, handle, onFailure);
     }
     return Promise.resolve(true);
   },

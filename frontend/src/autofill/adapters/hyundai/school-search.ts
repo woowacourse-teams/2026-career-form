@@ -1,5 +1,6 @@
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
+import type { FailureReporter } from "../../write/failure";
 
 const SEARCH_TIMEOUT_MILLISECONDS = 3_000;
 
@@ -327,22 +328,44 @@ function isVisibleAction(button: HTMLButtonElement): boolean {
 function exactResult(
   results: HTMLElement,
   query: string,
+  onFailure?: FailureReporter,
 ): { button: HTMLButtonElement; code: string } | undefined {
-  const matches = Array.from(
+  const visibleResults = Array.from(
     results.querySelectorAll<HTMLButtonElement>(
       "li button.auto_result[type='button']",
     ),
   ).filter(
     (button) =>
       button.closest(".search-result-list") === results &&
-      isVisibleAction(button) &&
+      isVisibleAction(button),
+  );
+  const matches = visibleResults.filter(
+    (button) =>
       normalize(button.dataset.search) === query &&
       normalize(button.dataset.result) === query,
   );
-  if (matches.length !== 1) return undefined;
+  if (matches.length !== 1) {
+    onFailure?.(
+      matches.length > 1
+        ? "SEARCH_AMBIGUOUS"
+        : visibleResults.some(
+              (button) =>
+                normalize(button.dataset.search) === query &&
+                normalize(button.dataset.result) !== "" &&
+                validResultCode(button.dataset.code),
+            )
+          ? "SEARCH_NO_EXACT_MATCH"
+          : "SEARCH_UNCONFIRMED",
+    );
+    return undefined;
+  }
   const button = matches[0]!;
   const code = button.dataset.code;
-  return validResultCode(code) ? { button, code } : undefined;
+  if (!validResultCode(code)) {
+    onFailure?.("SEARCH_UNCONFIRMED");
+    return undefined;
+  }
+  return { button, code };
 }
 
 function waitForFreshExactResult(
@@ -350,10 +373,12 @@ function waitForFreshExactResult(
   field: SearchField,
   query: string,
   signal?: AbortSignal,
+  onFailure?: FailureReporter,
 ): Promise<{ button: HTMLButtonElement; code: string } | undefined> {
   const view = document.defaultView;
   if (!view || signal?.aborted) return Promise.resolve(undefined);
   return new Promise((resolve) => {
+    const before = currentState(field);
     let finished = false;
     let changed = false;
     const finish = (
@@ -379,17 +404,27 @@ function waitForFreshExactResult(
         return;
       }
       if (!changed || field.results.childElementCount === 0) return;
-      finish(exactResult(field.results, query));
+      finish(exactResult(field.results, query, onFailure));
     };
     const observer = new view.MutationObserver(() => {
       changed = true;
       inspect();
     });
     observer.observe(field.results, { childList: true, subtree: true });
-    const timeout = view.setTimeout(
-      () => finish(undefined),
-      SEARCH_TIMEOUT_MILLISECONDS,
-    );
+    const timeout = view.setTimeout(() => {
+      if (
+        !signal?.aborted &&
+        field.display.isConnected &&
+        field.hidden.isConnected &&
+        field.results.isConnected &&
+        field.display.value === query &&
+        field.hidden.value === before.hiddenValue &&
+        field.display.getAttribute("data-search-result") === before.searchResult
+      ) {
+        onFailure?.("SEARCH_TIMEOUT");
+      }
+      finish(undefined);
+    }, SEARCH_TIMEOUT_MILLISECONDS);
     signal?.addEventListener("abort", aborted, { once: true });
 
     if (signal?.aborted || !setNativeValue(field.display, query)) {
@@ -408,6 +443,7 @@ export async function runHyundaiEducationSearch(
   handle: FieldCandidateHandle,
   item: ReviewPlanItem,
   signal?: AbortSignal,
+  onFailure?: FailureReporter,
 ): Promise<boolean> {
   if (signal?.aborted) return false;
   const spec = searchSpec(handle);
@@ -427,7 +463,13 @@ export async function runHyundaiEducationSearch(
   }
 
   const before = currentState(field);
-  const result = await waitForFreshExactResult(document, field, query, signal);
+  const result = await waitForFreshExactResult(
+    document,
+    field,
+    query,
+    signal,
+    onFailure,
+  );
   if (
     signal?.aborted ||
     !result ||
@@ -442,6 +484,7 @@ export async function runHyundaiEducationSearch(
     result.button.closest(".search-result-list") !== field.results
   ) {
     restoreIfUnchanged(field, query, before);
+    if (result && !signal?.aborted) onFailure?.("SEARCH_UNCONFIRMED");
     return false;
   }
 
@@ -455,6 +498,7 @@ export async function runHyundaiEducationSearch(
     field.hidden.value !== result.code
   ) {
     restoreOwnedSelectionIfUnchanged(field, query, result.code, before);
+    onFailure?.("SEARCH_UNCONFIRMED");
     return false;
   }
   markConfirmed(field);

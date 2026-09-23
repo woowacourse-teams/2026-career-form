@@ -172,10 +172,10 @@
 }
 .row small {
   display: block;
-  margin: 2px 0 0 80px;
+  margin: 6px 0 0;
   color: var(--color-text-muted);
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .results summary {
   cursor: pointer;

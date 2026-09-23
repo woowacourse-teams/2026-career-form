@@ -26,6 +26,36 @@ function snapshot() {
     fields: collected.request.sections.flatMap((s) => s.fields),
   };
 }
+it("retains only a failure code across snapshots and clears it after a successful retry", () => {
+  document.body.innerHTML = '<label>이름<input id="name"></label>';
+  const tracker = createProgressTracker();
+  const first = snapshot();
+  const a = item(first.fields[0].candidateId);
+  const failed = tracker.record(
+    a,
+    {
+      candidateId: a.candidateId,
+      status: "skipped",
+      reason: "RAW_PRIVATE_ERROR private-value",
+      failureCode: "SEARCH_NO_RESULTS",
+    },
+    first.registry,
+  );
+  expect(failed[0]).toMatchObject({
+    status: "skipped",
+    failureCode: "SEARCH_NO_RESULTS",
+  });
+  expect(JSON.stringify(failed)).not.toMatch(/RAW_PRIVATE_ERROR|private-value/);
+  const next = snapshot();
+  const b = item(next.fields[0].candidateId);
+  const recovered = tracker.record(
+    b,
+    { candidateId: b.candidateId, status: "written" },
+    next.registry,
+  );
+  expect(recovered).toHaveLength(1);
+  expect(recovered[0].failureCode).toBeUndefined();
+});
 it("retains a concise field label when completed controls leave the latest snapshot", () => {
   document.body.innerHTML =
     "<label>국적 *필수항목<select><option>대한민국</option><option>가나</option><option>가봉</option></select></label>";

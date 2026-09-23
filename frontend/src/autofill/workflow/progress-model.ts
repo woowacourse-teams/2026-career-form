@@ -1,6 +1,7 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
+import type { WriteFailureCode } from "../write/failure";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { matchesResultValue } from "./result-value-match";
 import { resultFieldLabel } from "./result-label";
@@ -13,6 +14,7 @@ export interface WriteProgress {
   candidateId?: string;
   unchanged?: boolean;
   retryRecovered?: boolean;
+  failureCode?: WriteFailureCode;
 }
 export type WorkflowActivity = "matching" | "preparing" | "address";
 function uniqueDomId(element: Element): string | undefined {
@@ -233,6 +235,9 @@ export function createProgressTracker() {
         status,
         unchanged,
         ...(retryRecovered ? { retryRecovered: true } : {}),
+        ...(result.status === "skipped" && !retryRecovered && result.failureCode
+          ? { failureCode: result.failureCode }
+          : {}),
       });
       verifiers.set(
         id,

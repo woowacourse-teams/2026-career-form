@@ -38,7 +38,10 @@ import {
   type ApprovedWriteResult,
 } from "../write/executor";
 import { WorkflowScreens } from "./WorkflowScreens";
-import { createAnalyzeFields } from "./workflow-analysis";
+import {
+  createAnalyzeFields,
+  type DeferredDriverFailures,
+} from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
 import { createReviewActions } from "./review-actions";
 import {
@@ -115,6 +118,7 @@ export function AutofillWorkflow({
   const consideredSensitiveValues = useRef(new Map<string, string>());
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const deferredDriverGroups = useRef<ReadonlySet<Element>>(new Set());
+  const deferredDriverFailures = useRef<DeferredDriverFailures>(new WeakMap());
   const [revealedPreparationKeys, setRevealedPreparationKeys] = useState<
     ReadonlySet<string>
   >(new Set());
@@ -153,6 +157,7 @@ export function AutofillWorkflow({
     consideredSensitiveValues,
     completedDriverKeys,
     deferredDriverGroups,
+    deferredDriverFailures,
     setAddressResult,
     setExceptionTitle,
     setStage,

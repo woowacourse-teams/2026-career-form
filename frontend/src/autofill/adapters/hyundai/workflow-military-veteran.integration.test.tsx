@@ -405,7 +405,11 @@ it("leaves an incompatible veteran number blank while completing other fields", 
       name: /보훈번호 필드로 이동$/,
     })
     .closest("article")!;
-  expect(within(veteranRow).getByText("입력 못함")).toBeInTheDocument();
+  expect(
+    within(veteranRow).getByText(
+      "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
+    ),
+  ).toBeInTheDocument();
   expect(hidden("branchRel")).toBe("1");
   expect(control("milStartDt").value).toBe("2020-03");
   expect(control("engNm").value).toBe("Fixture");

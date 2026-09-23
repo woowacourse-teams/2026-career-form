@@ -35,6 +35,62 @@ const entry = {
 };
 const written = [{ candidateId: "field-1", status: "written" as const }];
 
+it("keeps an originally matching value excluded when only another search in its row failed", () => {
+  const result = buildResultModel({
+    reviewItems: [{ ...item, currentValue: "학사" }],
+    results: [
+      {
+        candidateId: "field-1",
+        status: "skipped",
+        reason: "row deferred",
+        failureCode: "ROW_SEARCH_UNCONFIRMED",
+      },
+    ],
+    progress: [{ ...entry, unchanged: true }],
+    progressIdFor: () => "stable-1",
+    wasWritten: () => true,
+  });
+  expect(result.pending).toEqual([]);
+  expect(result.completed).toEqual([]);
+  expect(result.skipped).toMatchObject([{ reason: "기존 값 유지" }]);
+});
+
+it.each(["result", "ledger"] as const)(
+  "keeps a proven selection failure from %s in review even when the visible text is unchanged",
+  (source) => {
+    const result = buildResultModel({
+      reviewItems: [{ ...item, currentValue: "학사" }],
+      results:
+        source === "result"
+          ? [
+              {
+                candidateId: "field-1",
+                status: "skipped",
+                reason: "failed",
+                failureCode: "SEARCH_UNCONFIRMED",
+              },
+            ]
+          : [],
+      progress: [
+        {
+          ...entry,
+          status: "skipped",
+          unchanged: true,
+          ...(source === "ledger"
+            ? { failureCode: "SEARCH_UNCONFIRMED" as const }
+            : {}),
+        },
+      ],
+      progressIdFor: () => "stable-1",
+    });
+    expect(result.completed).toEqual([]);
+    expect(result.skipped).toEqual([]);
+    expect(result.pending).toMatchObject([
+      { failureCode: "SEARCH_UNCONFIRMED", written: false },
+    ]);
+  },
+);
+
 it("counts a verified conditional write only as completed", () => {
   const result = buildResultModel({
     reviewItems: [item],

@@ -75,7 +75,9 @@ it("places the field name, full value, and compact action in one grid row with t
   const locate = view.getByRole("button", { name: "전공 필드로 이동" });
   const heading = locate.parentElement!;
   const preview = view.getByText(value);
-  const reason = view.getByText("선택 필요");
+  const reason = view.getByText(
+    "자동으로 선택하기 어려운 항목이에요. 지원서 목록에서 직접 골라 주세요.",
+  );
 
   expect(getComputedStyle(heading).display).toBe("grid");
   expect(getComputedStyle(heading).gridTemplateColumns).toBe(
@@ -95,5 +97,6 @@ it("places the field name, full value, and compact action in one grid row with t
   const group = locate.closest("article")!.parentElement!;
   expect(getComputedStyle(group).borderRadius).toBe("10px");
   expect(getComputedStyle(group).borderTopWidth).toBe("1px");
-  expect(getComputedStyle(reason).marginLeft).toBe("80px");
+  expect(getComputedStyle(reason).marginLeft).toBe("0px");
+  expect(getComputedStyle(reason).fontSize).toBe("12px");
 });

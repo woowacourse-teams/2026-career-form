@@ -694,6 +694,14 @@ describe("approved native-control writes", () => {
 
       expect(input.value).toBe("");
       expect(result[0]).toMatchObject({ status: "skipped" });
+      expect(result[0]).toHaveProperty(
+        "failureCode",
+        _state === "disabled"
+          ? "FIELD_DISABLED"
+          : _state === "readonly"
+            ? "FIELD_READONLY"
+            : "FIELD_CHANGED",
+      );
     },
   );
 

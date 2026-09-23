@@ -3,10 +3,16 @@ import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
+import type { WriteFailureCode } from "./failure";
 
 export type ApprovedWriteResult =
   | { candidateId: string; status: "written" }
-  | { candidateId: string; status: "skipped"; reason: string };
+  | {
+      candidateId: string;
+      status: "skipped";
+      reason: string;
+      failureCode?: WriteFailureCode;
+    };
 export type WriteResultListener = (
   item: ReviewPlanItem,
   result: ApprovedWriteResult,
@@ -194,6 +200,12 @@ export function executeApprovedWrites({
         candidateId: item.candidateId,
         status: "skipped",
         reason: "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
+        failureCode:
+          lookup.status === "blocked" && lookup.reason === "disabled"
+            ? "FIELD_DISABLED"
+            : lookup.status === "blocked" && lookup.reason === "readonly"
+              ? "FIELD_READONLY"
+              : "FIELD_CHANGED",
       };
     }
     if (!executeWrite(item, handle)) {
@@ -224,6 +236,7 @@ export function executeApprovedWrites({
           candidateId: item.candidateId,
           status: "skipped",
           reason: "다른 입력 변경 후 선택값을 유지하지 못했습니다.",
+          failureCode: "VALUE_NOT_RETAINED",
         };
       }
       return result;

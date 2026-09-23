@@ -1,4 +1,5 @@
 import type { FieldCandidateHandle } from "../../dom/types";
+import type { FailureReporter, WriteFailureCode } from "../../write/failure";
 
 export const SK_AUTOCOMPLETE_REQUEST_EVENT =
   "career-form:sk-autocomplete-request";
@@ -19,9 +20,18 @@ interface BridgeMessage {
   fieldName?: SkAutocompleteFieldName;
   status?: BridgeStatus;
   selectedValue?: string;
+  failureCode?: unknown;
 }
 
 const RESPONSE_TIMEOUT_MILLISECONDS = 4_000;
+const FAILURE_CODES: ReadonlySet<WriteFailureCode> = new Set([
+  "SEARCH_NO_RESULTS",
+  "SEARCH_NO_EXACT_MATCH",
+  "SEARCH_AMBIGUOUS",
+  "SEARCH_TIMEOUT",
+  "SEARCH_UNCONFIRMED",
+  "EXAM_SCORE_NOT_READY",
+]);
 const queues = new WeakMap<Document, Promise<void>>();
 
 function targetInput(
@@ -70,6 +80,7 @@ function request(
   document: Document,
   handle: FieldCandidateHandle,
   command: BridgeCommand,
+  onFailure?: FailureReporter,
 ): Promise<boolean> {
   const input = targetInput(document, handle);
   if (!input || input.hasAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE)) {
@@ -90,7 +101,7 @@ function request(
       return;
     }
     let completed = false;
-    const finish = (confirmed: boolean) => {
+    const finish = (confirmed: boolean, failureCode?: WriteFailureCode) => {
       if (completed) return;
       completed = true;
       view.clearTimeout(timeout);
@@ -98,6 +109,7 @@ function request(
       if (input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) === requestId) {
         input.removeAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE);
       }
+      if (!confirmed && failureCode) onFailure?.(failureCode);
       resolve(confirmed);
     };
     const onResponse = (event: Event) => {
@@ -120,20 +132,36 @@ function request(
       }
       if (response.requestId !== requestId) return;
       const expectedStatus = command === "probe" ? "ready" : "confirmed";
+      const validContext =
+        response.command === command &&
+        response.fieldName === input.name &&
+        input.isConnected &&
+        input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) === requestId;
       finish(
         response.status === expectedStatus &&
-          response.command === command &&
-          response.fieldName === input.name &&
-          input.isConnected &&
-          input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) === requestId &&
+          validContext &&
           (command === "probe" ||
             (typeof response.selectedValue === "string" &&
               input.value === response.selectedValue)),
+        validContext &&
+          response.status === "rejected" &&
+          FAILURE_CODES.has(response.failureCode as WriteFailureCode)
+          ? (response.failureCode as WriteFailureCode)
+          : undefined,
       );
     };
     document.addEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, onResponse);
     const timeout = view.setTimeout(
-      () => finish(false),
+      () =>
+        finish(
+          false,
+          input.isConnected &&
+            input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) ===
+              requestId &&
+            input.value === initialValue
+            ? "SEARCH_TIMEOUT"
+            : "SEARCH_UNCONFIRMED",
+        ),
       RESPONSE_TIMEOUT_MILLISECONDS,
     );
     dispatchMessage(document, {
@@ -154,11 +182,12 @@ export function isSkAutocompleteBridgeReady(
 export function confirmSkAutocomplete(
   document: Document,
   handle: FieldCandidateHandle,
+  onFailure?: FailureReporter,
 ): Promise<boolean> {
   const previous = queues.get(document) ?? Promise.resolve();
   const current = previous
     .catch(() => undefined)
-    .then(() => request(document, handle, "confirm"));
+    .then(() => request(document, handle, "confirm", onFailure));
   queues.set(
     document,
     current.then(
