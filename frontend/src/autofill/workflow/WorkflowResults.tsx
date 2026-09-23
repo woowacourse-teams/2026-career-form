@@ -52,7 +52,6 @@ export function WorkflowResults({
   optionsFor,
   onLocate,
 }: WorkflowResultsProps) {
-  const reviewRegion = useRef<HTMLElement>(null);
   const completedDetails = useRef<HTMLDetailsElement>(null);
   const completedSummary = useRef<HTMLElement>(null);
   const [unavailable, setUnavailable] = useState<ReadonlySet<string>>(
@@ -99,34 +98,30 @@ export function WorkflowResults({
             <p className={styles.empty}>확인할 항목이 없어요.</p>
           )}
         </div>
-        {(pending.length > 0 || completed.length > 0) && (
+        {pending.length === 0 && completed.length > 0 && (
           <button
             className={styles.primary}
             type="button"
             onClick={() => {
-              if (pending.length > 0) {
-                focusInPanel(reviewRegion.current);
-              } else if (completedDetails.current) {
+              if (completedDetails.current) {
                 completedDetails.current.open = true;
                 focusInPanel(completedSummary.current);
               }
             }}
           >
-            {pending.length > 0 ? "확인할 항목 보기" : "입력한 항목 보기"}
+            입력한 항목 보기
             <span aria-hidden="true">↓</span>
           </button>
         )}
       </div>
       {pending.length > 0 && (
-        <section
-          ref={reviewRegion}
-          tabIndex={-1}
-          className={styles.review}
-          aria-label="확인 필요한 항목"
-        >
+        <section className={styles.review} aria-label="확인 필요한 항목">
           <h3 className={styles.reviewTitle}>
             확인 필요 <span aria-hidden="true">{pending.length}</span>
           </h3>
+          <p className={styles.reviewHint}>
+            항목별 프로필 값과 확인 이유를 살펴보세요.
+          </p>
           <div className={styles.reviewList}>
             {pending.map(({ id, item, reason, written, failureCode }) => (
               <article key={id} className={styles.row}>
@@ -139,6 +134,9 @@ export function WorkflowResults({
                       <span className={styles.writtenTag}>입력됨</span>
                     )}
                   </div>
+                  <span className={styles.connector} aria-hidden="true">
+                    →
+                  </span>
                   <div className={styles.values}>
                     {item &&
                       resultPreview(item, profile).map((value, index) => (
@@ -164,7 +162,9 @@ export function WorkflowResults({
                     <span aria-hidden="true">↗</span>
                   </button>
                 </div>
-                <small>{resultGuidance(reason, failureCode)}</small>
+                <small className={styles.guidance}>
+                  {resultGuidance(reason, failureCode)}
+                </small>
                 {!!optionsFor?.(id).length && (
                   <details>
                     <summary>지원서 선택지</summary>

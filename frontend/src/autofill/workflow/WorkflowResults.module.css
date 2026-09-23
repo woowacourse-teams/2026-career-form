@@ -74,12 +74,22 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
+  color: var(--color-action-strong);
 }
 .reviewTitle > span {
-  color: var(--color-action-strong);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--color-action-strong);
+  color: var(--color-on-action);
   font-size: 12px;
   font-weight: 600;
+}
+.reviewHint {
+  margin: 0 0 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 .reviewList {
   display: grid;
@@ -88,22 +98,28 @@
   border: none;
 }
 .row {
-  padding: 14px 12px;
+  padding: 12px;
+  border: 1px solid var(--color-accent);
   border-radius: 10px;
-  background: var(--color-surface);
-  box-shadow: inset 3px 0 0 var(--color-accent);
+  background: var(--color-warning-soft);
   overflow-wrap: anywhere;
 }
 .heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) 28px;
+  grid-template-columns: fit-content(35%) 12px minmax(0, 1fr) 28px;
   align-items: start;
-  gap: 12px;
+  gap: 6px;
+}
+.connector {
+  padding-top: 4px;
+  color: var(--color-action-strong);
+  font-size: 13px;
+  line-height: 1.5;
 }
 .heading strong {
-  color: var(--color-text-muted);
+  color: var(--color-action-strong);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.5;
   word-break: keep-all;
   text-wrap: balance;
@@ -176,6 +192,12 @@
   font-size: 12px;
   line-height: 1.5;
   word-break: keep-all;
+}
+.row .guidance {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-accent);
+  color: var(--color-text);
 }
 .results summary {
   cursor: pointer;

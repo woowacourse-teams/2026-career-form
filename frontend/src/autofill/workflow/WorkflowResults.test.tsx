@@ -207,10 +207,9 @@ it("presents unsuccessful writes as an actionable review item instead of a separ
   expect(
     screen.queryByRole("heading", { name: "입력 실패" }),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "확인할 항목 보기" }));
   expect(
     screen.getByRole("region", { name: "확인 필요한 항목" }),
-  ).toHaveFocus();
+  ).toBeVisible();
 });
 
 it("marks an uncertain written value as entered without counting it again as completed", () => {
@@ -342,9 +341,10 @@ it("keeps an earlier failure visible without locating a reused candidate from an
   ).toBeInTheDocument();
 });
 
-it("focuses required review inside the panel without locating an application field", () => {
+it("shows required review immediately without moving application focus", () => {
   const application = document.createElement("input");
   document.body.append(application);
+  application.focus();
   render(
     <WorkflowResults
       reviewItems={[item]}
@@ -355,11 +355,10 @@ it("focuses required review inside the panel without locating an application fie
       }}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "확인할 항목 보기" }));
   expect(
     screen.getByRole("region", { name: "확인 필요한 항목" }),
-  ).toHaveFocus();
-  expect(application).not.toHaveFocus();
+  ).toBeVisible();
+  expect(application).toHaveFocus();
   expect(
     screen.getByText("입력 완료 1개").closest("details"),
   ).not.toHaveAttribute("open");
@@ -382,7 +381,7 @@ it("treats an empty final progress ledger as zero instead of reviving stale writ
   expect(screen.queryByLabelText("입력 실패 0개")).not.toBeInTheDocument();
 });
 
-it("scrolls only the enclosing panel viewport when opening required review", () => {
+it("shows review without an extra navigation action or automatic scrolling", () => {
   render(
     <div aria-label="테스트 패널" style={{ overflowY: "auto" }}>
       <WorkflowResults reviewItems={[item]} results={[]} />
@@ -398,8 +397,11 @@ it("scrolls only the enclosing panel viewport when opening required review", () 
   );
   viewport.scrollTop = 40;
   const pageScroll = document.documentElement.scrollTop;
-  fireEvent.click(screen.getByRole("button", { name: "확인할 항목 보기" }));
-  expect(viewport.scrollTop).toBe(240);
+  expect(review).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "확인할 항목 보기" }),
+  ).not.toBeInTheDocument();
+  expect(viewport.scrollTop).toBe(40);
   expect(document.documentElement.scrollTop).toBe(pageScroll);
 });
 

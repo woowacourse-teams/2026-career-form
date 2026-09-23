@@ -32,15 +32,12 @@ it("keeps result layout and actions styled without the separately loaded entry s
     const view = within(container);
     const summary = view.getByRole("status").parentElement!;
     const counts = view.getByLabelText("입력 완료 1개").parentElement!;
-    const primary = view.getByRole("button", { name: "확인할 항목 보기" });
     const locate = view.getByRole("button", { name: "전공 필드로 이동" });
 
     expect(getComputedStyle(summary).display).toBe("grid");
     expect(getComputedStyle(summary).padding).toBe("16px");
     expect(getComputedStyle(counts).display).toBe("flex");
     expect(getComputedStyle(counts).gap).toBe("8px 16px");
-    expect(getComputedStyle(primary).display).toBe("flex");
-    expect(getComputedStyle(primary).borderRadius).toBe("8px");
     expect(getComputedStyle(locate).width).toBe("28px");
     expect(getComputedStyle(locate).borderTopStyle).toBe("none");
   } finally {
@@ -81,7 +78,7 @@ it("places the field name, full value, and compact action in one grid row with t
 
   expect(getComputedStyle(heading).display).toBe("grid");
   expect(getComputedStyle(heading).gridTemplateColumns).toBe(
-    "minmax(0, 1fr) minmax(0, 1.35fr) 28px",
+    "fit-content(35%) 12px minmax(0, 1fr) 28px",
   );
   expect(heading).toContainElement(view.getByText("전공"));
   expect(heading).toContainElement(preview);
@@ -95,7 +92,7 @@ it("places the field name, full value, and compact action in one grid row with t
   expect(getComputedStyle(locate).minHeight).toBe("28px");
   const rowStyle = getComputedStyle(locate.closest("article")!);
   expect(parseFloat(rowStyle.paddingLeft)).toBeGreaterThanOrEqual(12);
-  expect(parseFloat(rowStyle.paddingTop)).toBeGreaterThanOrEqual(14);
+  expect(parseFloat(rowStyle.paddingTop)).toBeGreaterThanOrEqual(12);
   expect(rowStyle.borderRadius).toBe("10px");
   const group = locate.closest("article")!.parentElement!;
   expect(getComputedStyle(group).display).toBe("grid");

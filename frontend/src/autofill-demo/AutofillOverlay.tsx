@@ -51,6 +51,7 @@ export function AutofillOverlay({
     >
       <div className={styles.toolbar}>
         <button type="button" onClick={onClose}>
+          <span aria-hidden="true">←</span>
           수동 복사로 돌아가기
         </button>
       </div>
