@@ -2,6 +2,7 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
 import { useRef, useState } from "react";
 import styles from "./WorkflowResults.module.css";
+import resultCss from "./WorkflowResults.module.css?inline";
 import type { Profile } from "../../profile/model";
 import { resultPreview } from "./result-preview";
 import type { WriteProgress } from "./progress-model";
@@ -79,6 +80,8 @@ export function WorkflowResults({
   }
   return (
     <section className={styles.results}>
+      {/* Keep scoped selectors with their markup when entry CSS is fetched later. */}
+      <style>{resultCss}</style>
       <div className={styles.summary}>
         <div className={styles.summaryText} role="status" aria-atomic="true">
           <h3>자동 기입을 마쳤어요</h3>

@@ -2,6 +2,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    css: {
+      include: /WorkflowResults\.module\.css/,
+      modules: { classNameStrategy: "scoped" },
+    },
     coverage: {
       exclude: [
         "**/*.test.{ts,tsx}",
