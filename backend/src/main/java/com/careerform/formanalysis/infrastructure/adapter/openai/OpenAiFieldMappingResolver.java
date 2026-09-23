@@ -9,7 +9,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.ai.util.JacksonUtils;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
+import com.careerform.formanalysis.infrastructure.SelectedOpenAi;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -29,11 +30,7 @@ import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.node.ArrayNode;
 
 @Component
-@ConditionalOnProperty(
-    prefix = "career-form.llm",
-    name = "enabled",
-    havingValue = "true"
-)
+@Conditional(SelectedOpenAi.class)
 public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
 
     private static final String INVALID_RESPONSE_MESSAGE =

@@ -20,8 +20,8 @@ spring:
         include-error-logging: false
     openai:
       api-key: ${OPENAI_API_KEY:}
-      timeout: ${CAREER_FORM_LLM_TIMEOUT:60s}
-      max-retries: ${CAREER_FORM_LLM_MAX_RETRIES:1}
+      timeout: 8s
+      max-retries: 0
       chat:
         model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
         reasoning-effort: none
@@ -32,8 +32,17 @@ spring:
       enabled: true
 
 career-form:
+  analysis:
+    enabled: ${CAREER_FORM_ANALYSIS_ENABLED:}
+    provider: ${CAREER_FORM_ANALYSIS_PROVIDER:openai}
+    jev:
+      api-key: ${TYPESAFE_API_KEY:}
+      model: ${CAREER_FORM_JEV_MODEL:jev-latest}
+      timeout-ms: ${CAREER_FORM_JEV_TIMEOUT_MS:8000}
+      min-confidence: ${CAREER_FORM_JEV_MIN_CONFIDENCE:0.8}
+      data-policy-reviewed: ${CAREER_FORM_JEV_DATA_POLICY_REVIEWED:false}
   llm:
-    enabled: ${CAREER_FORM_LLM_ENABLED:false}
+    enabled: ${CAREER_FORM_LLM_ENABLED:}
 
 management:
   endpoints:

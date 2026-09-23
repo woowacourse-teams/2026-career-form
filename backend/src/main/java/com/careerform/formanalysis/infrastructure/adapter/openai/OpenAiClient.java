@@ -14,7 +14,8 @@ import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.converter.StructuredOutputConverter;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.util.JacksonUtils;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
+import com.careerform.formanalysis.infrastructure.SelectedOpenAi;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -31,11 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.type.LogicalType;
 
 @Component
-@ConditionalOnProperty(
-    prefix = "career-form.llm",
-    name = "enabled",
-    havingValue = "true"
-)
+@Conditional(SelectedOpenAi.class)
 public final class OpenAiClient {
 
     private static final String INVALID_RESPONSE_MESSAGE =

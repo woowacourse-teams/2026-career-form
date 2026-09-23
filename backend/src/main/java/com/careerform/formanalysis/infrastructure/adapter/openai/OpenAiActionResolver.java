@@ -5,7 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
+import com.careerform.formanalysis.infrastructure.SelectedOpenAi;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -18,11 +19,7 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest.Section;
 import com.careerform.formanalysis.exception.ResolverException;
 
 @Component
-@ConditionalOnProperty(
-    prefix = "career-form.llm",
-    name = "enabled",
-    havingValue = "true"
-)
+@Conditional(SelectedOpenAi.class)
 public final class OpenAiActionResolver implements ActionResolver {
 
     private static final String INVALID_RESPONSE_MESSAGE =
