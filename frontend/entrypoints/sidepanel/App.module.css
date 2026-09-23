@@ -342,6 +342,27 @@
 .autofillAction button:hover {
   background: var(--color-accent-hover);
 }
+.autofillAction button[data-autofill-start] {
+  border-width: 2px;
+  box-shadow: 0 2px 0 #000;
+}
+.autofillAction button[data-autofill-start]:hover {
+  box-shadow: 0 3px 0 #000;
+}
+.autofillAction .returnButton {
+  width: auto;
+  min-height: 44px;
+  padding: 8px 0;
+  border: none;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+}
+.autofillAction .returnButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 .autofillAction p {
   margin: 8px 0 0;
   color: var(--color-text-muted);

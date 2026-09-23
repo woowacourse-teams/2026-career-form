@@ -225,6 +225,7 @@ export function App({
             <button
               type="button"
               onClick={returnToProfile}
+              className={styles.returnButton}
               onKeyDown={(event) => {
                 if (event.key !== "Escape") return;
                 event.preventDefault();

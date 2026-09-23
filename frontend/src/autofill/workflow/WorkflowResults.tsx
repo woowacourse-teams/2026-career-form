@@ -122,7 +122,7 @@ export function WorkflowResults({
             확인 필요 <span aria-hidden="true">{pending.length}</span>
           </h3>
           <p className={styles.reviewHint}>
-            항목을 누르면 지원서의 해당 입력칸으로 이동해요.
+            아래 항목을 눌러 지원서에서 확인해 주세요.
           </p>
           <div className={styles.reviewList}>
             {pending.map(({ id, item, reason, written, failureCode }) => (
@@ -152,7 +152,16 @@ export function WorkflowResults({
                         );
                     }}
                   >
-                    <span aria-hidden="true">↗</span>
+                    {!onLocate ||
+                    unavailable.has(id) ||
+                    id.startsWith("progress:")
+                      ? "직접 확인"
+                      : "입력칸으로 이동"}
+                    {onLocate &&
+                      !unavailable.has(id) &&
+                      !id.startsWith("progress:") && (
+                        <span aria-hidden="true">↗</span>
+                      )}
                   </button>
                 </div>
                 <small className={styles.guidance}>

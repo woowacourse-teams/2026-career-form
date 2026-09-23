@@ -45,7 +45,8 @@ it("keeps result layout and actions styled without the separately loaded entry s
     expect(getComputedStyle(counts.lastElementChild!).borderLeftStyle).toBe(
       "none",
     );
-    expect(getComputedStyle(locate).width).toBe("28px");
+    expect(locate).toHaveTextContent("입력칸으로 이동");
+    expect(getComputedStyle(locate).minHeight).toBe("40px");
     expect(getComputedStyle(locate).borderTopStyle).toBe("none");
   } finally {
     externalStyles.forEach((style) => document.head.append(style));
@@ -85,12 +86,12 @@ it("shows only the field name and action above the guidance, without profile val
 
   expect(getComputedStyle(heading).display).toBe("grid");
   expect(getComputedStyle(heading).gridTemplateColumns).toBe(
-    "minmax(0, 1fr) 28px",
+    "minmax(0, 1fr) auto",
   );
   expect(heading).toContainElement(view.getByText("전공"));
   expect(heading).not.toContainElement(reason);
   expect(heading.nextElementSibling).toBe(reason);
-  expect(getComputedStyle(locate).minHeight).toBe("28px");
+  expect(getComputedStyle(locate).minHeight).toBe("40px");
   const rowStyle = getComputedStyle(locate.closest("article")!);
   expect(parseFloat(rowStyle.paddingLeft)).toBeGreaterThanOrEqual(12);
   expect(parseFloat(rowStyle.paddingTop)).toBeGreaterThanOrEqual(12);
@@ -105,4 +106,6 @@ it("shows only the field name and action above the guidance, without profile val
   expect(getComputedStyle(reason).wordBreak).toBe("keep-all");
   expect(getComputedStyle(reason).marginLeft).toBe("-4px");
   expect(getComputedStyle(reason).fontSize).toBe("13px");
+  expect(getComputedStyle(reason).fontWeight).toBe("400");
+  expect(getComputedStyle(view.getByText("전공")).fontWeight).toBe("700");
 });

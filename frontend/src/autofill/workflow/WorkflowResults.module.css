@@ -118,12 +118,14 @@
 .row:has(.heading button:focus-visible) {
   background: var(--color-accent-hover);
   border-color: var(--color-accent);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 12%);
 }
 .heading button:not(:disabled)::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 10px;
+  cursor: pointer;
 }
 .row:has(.heading button:focus-visible) {
   outline: 2px solid var(--color-action-strong);
@@ -131,14 +133,14 @@
 }
 .heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
 }
 .heading strong {
   color: var(--color-text);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.5;
   word-break: keep-all;
   text-wrap: balance;
@@ -159,25 +161,28 @@
   white-space: nowrap;
 }
 .heading button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 2px;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--color-action-strong);
   cursor: pointer;
   font: inherit;
-  font-size: 15px;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 18px;
   white-space: nowrap;
 }
 .heading button:hover:not(:disabled) {
   background: var(--color-surface-muted);
   border-color: var(--color-action-strong);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .heading button:disabled {
   cursor: default;
@@ -208,7 +213,7 @@
   background: var(--color-accent-hover);
   color: var(--color-text-strong);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.6;
 }
 .results summary {
