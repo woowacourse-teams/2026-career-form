@@ -110,7 +110,7 @@ describe("side panel App", () => {
     expect(
       await screen.findByRole("heading", { name: "내 지원 정보" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("4개 범주 등록")).toBeInTheDocument();
+    expect(screen.queryByText(/개 범주 등록/)).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "기본 인적사항 접기" }),
     ).toBeInTheDocument();
@@ -203,8 +203,8 @@ describe("side panel App", () => {
     await screen.findByText("copy@example.com");
 
     expect(
-      screen.getByText("직접 복사하거나 자동 기입을 시작하세요"),
-    ).toBeInTheDocument();
+      screen.queryByText("직접 복사하거나 자동 기입을 시작하세요"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "자동 기입" }),
     ).toBeInTheDocument();

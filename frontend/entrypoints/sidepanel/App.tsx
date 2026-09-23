@@ -4,7 +4,6 @@ import {
   openAutofillOverlay,
   openOptionsPage,
 } from "../../src/extension/navigation";
-import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import type { Profile, ProfileCategoryId } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import {
@@ -77,16 +76,6 @@ const DEFAULT_OPEN_GROUPS = new Set(
   PANEL_GROUPS.filter((group) => group.defaultOpen).map((group) => group.id),
 );
 
-function hasCategoryData(profile: Profile, categoryId: ProfileCategoryId) {
-  const value = profile[categoryId];
-  if (Array.isArray(value)) {
-    return value.some((entry) =>
-      Object.values(entry.values).some((field) => field.trim()),
-    );
-  }
-  return Object.values(value).some((field) => field.trim());
-}
-
 function countGroupRecords(profile: Profile, group: PanelGroup) {
   return group.categoryIds.reduce((count, categoryId) => {
     const value = profile[categoryId];
@@ -150,11 +139,6 @@ export function App({
   const items = profile ? buildSearchItems(profile) : [];
   const results = searchProfileItems(items, query);
   const hasQuery = Boolean(query.trim());
-  const registeredCategoryCount = profile
-    ? PROFILE_CATEGORIES.filter((category) =>
-        hasCategoryData(profile, category.id),
-      ).length
-    : 0;
   const visibleGroups = PANEL_GROUPS.filter(
     (group) => !hasQuery || itemsForGroup(results, group).length > 0,
   );
@@ -309,13 +293,6 @@ export function App({
                 onChange={(event) => setQuery(event.target.value)}
               />
             </label>
-
-            {loadStatus === "ready" && (
-              <p className={styles.readiness}>
-                <span>{registeredCategoryCount}개 범주 등록</span>
-                <span>직접 복사하거나 자동 기입을 시작하세요</span>
-              </p>
-            )}
 
             <section className={styles.groups} aria-label="프로필 범주">
               {loadStatus === "loading" && (
