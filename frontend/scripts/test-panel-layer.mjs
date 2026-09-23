@@ -145,184 +145,45 @@ async function click(send, point) {
   });
 }
 
-function assertStableGeometry(before, after, phase) {
-  for (const key of [
-    "pageX",
-    "pageY",
-    "mainX",
-    "mainY",
-    "rowTop",
-    "rowHeight",
-    "nextTop",
-  ])
-    assert.ok(
-      Math.abs(after[key] - before[key]) <= 1,
-      `${phase} changed ${key}: ${before[key]} → ${after[key]}`,
-    );
-  assert.equal(
-    after.horizontalOverflow,
-    false,
-    `${phase} overflows the panel.`,
-  );
-  assert.equal(
-    after.controlsFit,
-    true,
-    `${phase} crowds or wraps the editor controls.`,
-  );
-}
-
-async function verifyInlineEditing(client, panelWidth) {
+async function verifyReadOnlyValues(client, panelWidth) {
   const { send, evaluate } = client;
   await poll(
-    () => evaluate('!!fixture.editButton("국문 이름")'),
+    () => evaluate('!!fixture.fieldRow("국문 이름")'),
     "Personal values did not load.",
+  );
+  assert.equal(
+    await evaluate(
+      'fixture.fieldRow("국문 이름").querySelector("strong + span")?.textContent',
+    ),
+    "합성 테스트",
+    "Personal value is not displayed as plain text.",
+  );
+  assert.equal(
+    await evaluate(
+      `!!fixture.panelRoot().querySelector('form, button[aria-label$=" 수정"], [contenteditable="true"]')`,
+    ),
+    false,
+    "The profile panel still exposes inline editing.",
+  );
+  assert.equal(
+    await evaluate(
+      `!!fixture.fieldRow("국문 이름").querySelector('button[aria-label="국문 이름 복사"]')`,
+    ),
+    true,
+    "The personal value copy action is missing.",
   );
   await evaluate("fixture.resolveExtensionImages()");
   await poll(
     () => evaluate('fixture.panelRoot().querySelector("img").naturalWidth > 0'),
     "Panel logo did not load from the actual bundle.",
   );
-  const screenshot = async (state) => {
-    const { data } = await send("Page.captureScreenshot", { format: "png" });
-    await writeFile(
-      join(tmpdir(), `cf99-inline-${panelWidth}-${state}.png`),
-      Buffer.from(data, "base64"),
-    );
-  };
-  await screenshot("overview");
-  await evaluate('fixture.positionField("국문 이름"); fixture.settle()');
-  const before = await evaluate('fixture.geometry("국문 이름")');
-  assert.ok(
-    before.pageY > 0 && before.mainY > 0,
-    "Fixture must exercise both scrollers.",
-  );
-  await screenshot("before");
-  await click(
-    send,
-    await evaluate('fixture.center(fixture.editButton("국문 이름"))'),
-  );
-  await poll(
-    () => evaluate("!!fixture.editor()"),
-    "Inline editor did not open.",
-  );
-  await evaluate("fixture.settle()");
-  await screenshot("edit");
-  assertStableGeometry(
-    before,
-    await evaluate('fixture.geometry("국문 이름")'),
-    "Opening editor",
-  );
-  await send("Input.insertText", { text: "수정 확인 " });
-  await evaluate("fixture.settle()");
-  assertStableGeometry(
-    before,
-    await evaluate('fixture.geometry("국문 이름")'),
-    "Typing",
-  );
-  const savedValue = await evaluate(
-    'fixture.editor().querySelector("input").value.trim()',
-  );
-  await click(
-    send,
-    await evaluate('fixture.center(fixture.editorAction("저장"))'),
-  );
-  await poll(
-    () => evaluate("!fixture.editor()"),
-    "Inline save did not finish.",
-  );
-  await evaluate("fixture.settle()");
-  assertStableGeometry(
-    before,
-    await evaluate('fixture.geometry("국문 이름")'),
-    "Saving",
-  );
-  assert.equal(
-    await evaluate('fixture.editButton("국문 이름").textContent.trim()'),
-    savedValue,
-    "Inline save did not preserve the typed value.",
-  );
-  assert.equal(
-    await evaluate(
-      'fixture.panelRoot().activeElement === fixture.editButton("국문 이름")',
-    ),
-    true,
-    "Inline save did not return keyboard focus to the edited value.",
-  );
-  await click(
-    send,
-    await evaluate('fixture.center(fixture.editButton("국문 이름"))'),
-  );
-  await poll(() => evaluate("!!fixture.editor()"), "Saved row did not reopen.");
-  await send("Input.insertText", { text: "취소할 초안 " });
-  await evaluate("fixture.settle()");
-  assertStableGeometry(
-    before,
-    await evaluate('fixture.geometry("국문 이름")'),
-    "Reopening and typing",
-  );
-  await click(
-    send,
-    await evaluate('fixture.center(fixture.editorAction("취소"))'),
-  );
-  await poll(
-    () => evaluate("!fixture.editor()"),
-    "Inline cancellation did not finish.",
-  );
-  await evaluate("fixture.settle()");
-  assertStableGeometry(
-    before,
-    await evaluate('fixture.geometry("국문 이름")'),
-    "Cancelling",
-  );
-  assert.equal(
-    await evaluate('fixture.editButton("국문 이름").textContent.trim()'),
-    savedValue,
-    "Cancelling changed the saved value.",
-  );
-  assert.equal(
-    await evaluate(
-      'fixture.panelRoot().textContent.includes("값을 누르면 바로 수정할 수 있어요.")',
-    ),
-    true,
-    "Personal editing instructions are not present at rest.",
-  );
-  const cue = await evaluate(
-    'getComputedStyle(fixture.editButton("국문 이름")).borderTopWidth',
-  );
-  assert.ok(
-    Number.parseFloat(cue) > 0,
-    "Resting editable value has no visible field boundary.",
-  );
-
-  await evaluate('fixture.positionField("생년월일"); fixture.settle()');
-  const dateBefore = await evaluate('fixture.geometry("생년월일")');
-  await click(
-    send,
-    await evaluate('fixture.center(fixture.editButton("생년월일"))'),
-  );
-  await poll(() => evaluate("!!fixture.editor()"), "Date editor did not open.");
-  await evaluate("fixture.settle()");
-  assertStableGeometry(
-    dateBefore,
-    await evaluate('fixture.geometry("생년월일")'),
-    "Opening date editor",
-  );
-  await click(
-    send,
-    await evaluate('fixture.center(fixture.editorAction("취소"))'),
-  );
-  await poll(
-    () => evaluate("!fixture.editor()"),
-    "Date cancellation did not finish.",
-  );
-  await evaluate("fixture.settle()");
-  assertStableGeometry(
-    dateBefore,
-    await evaluate('fixture.geometry("생년월일")'),
-    "Cancelling date editor",
+  const { data } = await send("Page.captureScreenshot", { format: "png" });
+  await writeFile(
+    join(tmpdir(), `cf99-readonly-${panelWidth}.png`),
+    Buffer.from(data, "base64"),
   );
   console.log(
-    `PASS actual bundle: ${panelWidth}px inline editing, stable document/panel scroll and row geometry`,
+    `PASS actual bundle: ${panelWidth}px personal values are read-only with copy available`,
   );
 }
 
@@ -349,7 +210,7 @@ async function verifyWidth(client, origin, panelWidth) {
     true,
     "Panel is not clickable before the page layer.",
   );
-  await verifyInlineEditing(client, panelWidth);
+  await verifyReadOnlyValues(client, panelWidth);
   await evaluate("fixture.addPageLayer()");
   assert.equal(
     await evaluate("fixture.panelWins()"),

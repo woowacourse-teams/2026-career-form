@@ -2,9 +2,6 @@
 <meta charset="utf-8" />
 <title>Synthetic panel stacking fixture</title>
 <style>
-  body {
-    min-height: 2400px;
-  }
   #outside {
     position: fixed;
     top: 0;
@@ -53,7 +50,7 @@
   document.querySelector("#outside").onclick = () => fixture.outsideClicks++;
   document.querySelector("#dialog-close").onclick = () =>
     document.querySelector("#page-dialog").close();
-  let profile = {
+  const profile = {
     personal: {
       koreanFamilyName: "김",
       koreanGivenName: "합성 테스트",
@@ -103,10 +100,7 @@
         async get() {
           return { "careerForm.profile": { schemaVersion: 1, profile } };
         },
-        async set(values) {
-          if (values["careerForm.profile"])
-            profile = structuredClone(values["careerForm.profile"].profile);
-        },
+        async set() {},
       },
       onChanged: { addListener() {}, removeListener() {} },
     },
@@ -128,67 +122,10 @@
       if (image.src.startsWith(prefix))
         image.src = runtime.getURL(image.src.slice(prefix.length));
   };
-  fixture.main = () =>
-    fixture.panelRoot()?.querySelector('main[aria-label="지원 정보 목록"]');
   fixture.fieldRow = (label) =>
     [...fixture.panelRoot().querySelectorAll("article")].find(
       (row) => row.querySelector("strong")?.textContent === label,
     );
-  fixture.editButton = (label) =>
-    fixture
-      .fieldRow(label)
-      ?.querySelector(`button[aria-label="${label} 수정"]`);
-  fixture.editor = () =>
-    fixture.panelRoot()?.querySelector('form[aria-label="기본 인적사항 수정"]');
-  fixture.editorAction = (label) =>
-    [...fixture.editor().querySelectorAll("button")].find(
-      (button) => button.textContent === label,
-    );
-  fixture.settle = () =>
-    new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve)),
-    );
-  fixture.positionField = (label) => {
-    window.scrollTo(0, 240);
-    const main = fixture.main();
-    main.scrollTop +=
-      fixture.fieldRow(label).getBoundingClientRect().top -
-      main.getBoundingClientRect().top -
-      84;
-  };
-  fixture.geometry = (label) => {
-    const main = fixture.main();
-    const row = fixture.fieldRow(label);
-    const rect = row.getBoundingClientRect();
-    const next = row.nextElementSibling?.getBoundingClientRect();
-    const input = fixture.editor()?.querySelector("input");
-    const inputRect = input?.getBoundingClientRect();
-    const actionRects = [
-      ...(fixture.editor()?.querySelectorAll("button") ?? []),
-    ].map((button) => button.getBoundingClientRect());
-    return {
-      pageX: window.scrollX,
-      pageY: window.scrollY,
-      mainX: main.scrollLeft,
-      mainY: main.scrollTop,
-      rowTop: rect.top,
-      rowHeight: rect.height,
-      nextTop: next?.top,
-      horizontalOverflow:
-        main.scrollWidth > main.clientWidth ||
-        row.scrollWidth > row.clientWidth,
-      controlsFit:
-        !inputRect ||
-        (inputRect.width >= 60 &&
-          inputRect.left >= rect.left &&
-          actionRects.every(
-            (action) =>
-              action.right <= rect.right &&
-              Math.abs(action.top - inputRect.top) <= 1 &&
-              Math.abs(action.bottom - inputRect.bottom) <= 1,
-          )),
-    };
-  };
   fixture.center = (element) => {
     const rect = element.getBoundingClientRect();
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };

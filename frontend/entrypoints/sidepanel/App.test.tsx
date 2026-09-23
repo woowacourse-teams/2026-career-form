@@ -28,6 +28,22 @@ function createRepository(): ProfileRepository {
 }
 
 describe("side panel App", () => {
+  it("keeps personal values read-only while retaining copy and profile management", async () => {
+    const repository = createRepository();
+    const copyText = vi.fn(async () => undefined);
+    render(<App repository={repository} copyText={copyText} />);
+    const value = await screen.findByText("지원");
+    expect(value.closest("button")).toBeNull();
+    fireEvent.click(value);
+    expect(screen.queryByRole("form")).toBeNull();
+    expect(screen.queryByRole("button", { name: /수정|저장|취소/ })).toBeNull();
+    expect(screen.queryByText("값을 누르면 바로 수정할 수 있어요.")).toBeNull();
+    expect(screen.getByRole("button", { name: "프로필 관리" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "국문 이름 복사" }));
+    expect(copyText).toHaveBeenCalledWith("지원");
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it("renders in-page mode without viewport-height panel sizing", async () => {
     render(
       <App
