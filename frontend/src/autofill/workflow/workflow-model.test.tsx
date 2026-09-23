@@ -52,9 +52,9 @@ describe("workflow model safety decisions", () => {
   it("uses a direct binding over a stale item-level profile key", () => {
     const bound = item({ profileFieldKey: "contact.contact.email" });
     expect(reviewProfileFieldKey(bound)).toBe("personal.personal.nationality");
-    expect(
-      stateDriverKey(bound, "nation", 2),
-    ).toBe("item-2|personal.personal.nationality|nation");
+    expect(stateDriverKey(bound, "nation", 2)).toBe(
+      "item-2|personal.personal.nationality|nation",
+    );
   });
 
   it("keeps driver identities distinct for profile entries and unbound fields", () => {
@@ -86,14 +86,18 @@ describe("workflow model safety decisions", () => {
     };
 
     expect(
-      adapterProfileValue(adapter as never, "personal.personal.nationality", "대한민국"),
+      adapterProfileValue(
+        adapter as never,
+        "personal.personal.nationality",
+        "대한민국",
+      ),
     ).toBe("personal.personal.nationality:대한민국");
   });
 
   it("keeps result-only skipped outcomes distinct from writes", () => {
-    expect(
-      writeResultOutcome({ candidateId: "a", status: "written" }),
-    ).toBe("success");
+    expect(writeResultOutcome({ candidateId: "a", status: "written" })).toBe(
+      "success",
+    );
     expect(
       writeResultOutcome({ candidateId: "a", status: "skipped", reason: "x" }),
     ).toBe("needs-verification");

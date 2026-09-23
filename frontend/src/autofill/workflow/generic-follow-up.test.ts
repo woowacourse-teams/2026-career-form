@@ -34,9 +34,9 @@ describe("generic conditional follow-up safety", () => {
     expect(genericControlledRegions(handle(button))).toEqual([
       document.querySelector("#dependent"),
     ]);
-    expect(isGenericStateDriver(driverItem("SELECT_OPTION"), handle(button))).toBe(
-      true,
-    );
+    expect(
+      isGenericStateDriver(driverItem("SELECT_OPTION"), handle(button)),
+    ).toBe(true);
   });
 
   it("rejects ambiguous, self-controlled, listbox, and non-editable regions", () => {
@@ -51,9 +51,9 @@ describe("generic conditional follow-up safety", () => {
     `;
 
     for (const id of ["many", "self-driver", "listbox-driver", "text-driver"]) {
-      expect(genericControlledRegions(handle(document.querySelector(`#${id}`)!))).toEqual(
-        [],
-      );
+      expect(
+        genericControlledRegions(handle(document.querySelector(`#${id}`)!)),
+      ).toEqual([]);
     }
   });
 
@@ -62,7 +62,9 @@ describe("generic conditional follow-up safety", () => {
       '<button aria-controls="dependent">continue</button><section id="dependent"><input></section>';
     const button = document.querySelector<HTMLButtonElement>("button")!;
 
-    expect(isGenericStateDriver(driverItem("SET_TEXT"), handle(button))).toBe(false);
+    expect(isGenericStateDriver(driverItem("SET_TEXT"), handle(button))).toBe(
+      false,
+    );
     const adapterItem = driverItem("CHECK_RADIO");
     adapterItem.analysis!.mappingStatus = "ADAPTER_VERIFIED";
     expect(isGenericStateDriver(adapterItem, handle(button))).toBe(false);
@@ -79,8 +81,8 @@ describe("generic conditional follow-up safety", () => {
     target.remove();
     const controller = new AbortController();
     controller.abort();
-    await expect(waitForGenericEffect([target], controller.signal)).resolves.toBe(
-      false,
-    );
+    await expect(
+      waitForGenericEffect([target], controller.signal),
+    ).resolves.toBe(false);
   });
 });

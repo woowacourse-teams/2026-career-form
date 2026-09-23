@@ -1033,7 +1033,6 @@ describe("approved native-control writes", () => {
   );
 });
 
-
 describe("generic native write safety boundaries", () => {
   function writeText(
     type: string,
@@ -1063,44 +1062,71 @@ describe("generic native write safety boundaries", () => {
 
   it.each([
     ["date", "2024-02-30", undefined],
-    ["date", "2023-12-31", (input: HTMLInputElement) => (input.min = "2024-01-01")],
-    ["date", "2024-01-02", (input: HTMLInputElement) => {
-      input.min = "2024-01-01";
-      input.step = "2";
-    }],
+    [
+      "date",
+      "2023-12-31",
+      (input: HTMLInputElement) => (input.min = "2024-01-01"),
+    ],
+    [
+      "date",
+      "2024-01-02",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01-01";
+        input.step = "2";
+      },
+    ],
     ["month", "2024-13", undefined],
-    ["month", "2024-02", (input: HTMLInputElement) => {
-      input.min = "2024-01";
-      input.step = "2";
-    }],
+    [
+      "month",
+      "2024-02",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01";
+        input.step = "2";
+      },
+    ],
     ["number", "not-a-number", undefined],
     ["number", "11", (input: HTMLInputElement) => (input.max = "10")],
     ["number", "1.5", (input: HTMLInputElement) => (input.step = "1")],
-  ])("rejects unsafe %s values without mutating the control", (type, value, configure) => {
-    const { input, result } = writeText(type, value, configure);
+  ])(
+    "rejects unsafe %s values without mutating the control",
+    (type, value, configure) => {
+      const { input, result } = writeText(type, value, configure);
 
-    expect(input.value).toBe("");
-    expect(result).toMatchObject({
-      status: "skipped",
-      outcome: "unsupported",
-      code: "UNSUPPORTED_FORMAT",
-    });
-  });
+      expect(input.value).toBe("");
+      expect(result).toMatchObject({
+        status: "skipped",
+        outcome: "unsupported",
+        code: "UNSUPPORTED_FORMAT",
+      });
+    },
+  );
 
   it.each([
-    ["date", "2024-01-03", (input: HTMLInputElement) => {
-      input.min = "2024-01-01";
-      input.step = "2";
-    }],
-    ["month", "2024-03", (input: HTMLInputElement) => {
-      input.min = "2024-01";
-      input.step = "2";
-    }],
-    ["number", "1e1", (input: HTMLInputElement) => {
-      input.min = "0";
-      input.max = "10";
-      input.step = "any";
-    }],
+    [
+      "date",
+      "2024-01-03",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01-01";
+        input.step = "2";
+      },
+    ],
+    [
+      "month",
+      "2024-03",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01";
+        input.step = "2";
+      },
+    ],
+    [
+      "number",
+      "1e1",
+      (input: HTMLInputElement) => {
+        input.min = "0";
+        input.max = "10";
+        input.step = "any";
+      },
+    ],
   ])("writes an in-range stepped %s value", (type, value, configure) => {
     const { input, result } = writeText(type, value, configure);
 
@@ -1109,7 +1135,12 @@ describe("generic native write safety boundaries", () => {
   });
 
   it("preserves an unobserved text value rather than overwriting it", () => {
-    const { input, result } = writeText("text", "new value", undefined, "old value");
+    const { input, result } = writeText(
+      "text",
+      "new value",
+      undefined,
+      "old value",
+    );
     input.value = "someone else";
     const registry = register(input, {
       candidateId: "conflict-field",
@@ -1176,7 +1207,6 @@ describe("generic native write safety boundaries", () => {
   });
 });
 
-
 describe("generic writer fail-closed native boundaries", () => {
   it.each([
     "file",
@@ -1204,7 +1234,9 @@ describe("generic writer fail-closed native boundaries", () => {
     const analysis = { ...textAnalysis, candidateId: `unsafe-${type}` };
 
     const result = executeApprovedWrites({
-      items: [reviewItem(analysis, "replacement", { currentValue: input.value })],
+      items: [
+        reviewItem(analysis, "replacement", { currentValue: input.value }),
+      ],
       approvedCandidateIds: new Set([`unsafe-${type}`]),
       registry,
     })[0]!;
@@ -1213,11 +1245,16 @@ describe("generic writer fail-closed native boundaries", () => {
     expect(result).toMatchObject({
       status: "skipped",
       outcome: type === "hidden" ? "needs-verification" : "unsupported",
-      code: type === "hidden"
-        ? "STALE_TARGET"
-        : type === "range" || type === "color" || type === "time" || type === "datetime-local" || type === "week"
-          ? "UNSUPPORTED_FORMAT"
-          : "UNSUPPORTED_CONTROL",
+      code:
+        type === "hidden"
+          ? "STALE_TARGET"
+          : type === "range" ||
+              type === "color" ||
+              type === "time" ||
+              type === "datetime-local" ||
+              type === "week"
+            ? "UNSUPPORTED_FORMAT"
+            : "UNSUPPORTED_CONTROL",
     });
   });
 
@@ -1245,7 +1282,10 @@ describe("generic writer fail-closed native boundaries", () => {
 
   it.each([
     ["search semantic metadata", { inputType: "search" as const }],
-    ["consent label metadata", { labels: [{ source: "label" as const, text: "개인정보 동의" }] }],
+    [
+      "consent label metadata",
+      { labels: [{ source: "label" as const, text: "개인정보 동의" }] },
+    ],
   ])("refuses unsafe generic metadata: %s", (_name, semanticContext) => {
     const input = document.createElement("input");
     const registry = register(input, {
@@ -1258,7 +1298,10 @@ describe("generic writer fail-closed native boundaries", () => {
 
     const result = executeApprovedWrites({
       items: [
-        reviewItem({ ...textAnalysis, candidateId: "unsafe-metadata" }, "value"),
+        reviewItem(
+          { ...textAnalysis, candidateId: "unsafe-metadata" },
+          "value",
+        ),
       ],
       approvedCandidateIds: new Set(["unsafe-metadata"]),
       registry,
@@ -1274,7 +1317,10 @@ describe("generic writer fail-closed native boundaries", () => {
       "ambiguous matching options",
       [new Option("같은 값", "first"), new Option("같은 값", "second")],
     ],
-    ["disabled matching option", [Object.assign(new Option("같은 값", "only"), { disabled: true })]],
+    [
+      "disabled matching option",
+      [Object.assign(new Option("같은 값", "only"), { disabled: true })],
+    ],
   ])("preserves native select when there is %s", (_name, options) => {
     const select = document.createElement("select");
     const mapped = new Map<string, HTMLOptionElement>();
@@ -1334,7 +1380,10 @@ describe("generic writer fail-closed native boundaries", () => {
 
     const result = executeApprovedWrites({
       items: [
-        reviewItem({ ...textAnalysis, candidateId: "readonly-generic" }, "value"),
+        reviewItem(
+          { ...textAnalysis, candidateId: "readonly-generic" },
+          "value",
+        ),
       ],
       approvedCandidateIds: new Set(["readonly-generic"]),
       registry,

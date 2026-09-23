@@ -180,7 +180,10 @@ describe("approved search batch boundaries", () => {
 
     const stopped = await executeApprovedSearchWrites({
       ...test,
-      writeOrdinary: (item) => ({ candidateId: item.candidateId, status: "written" }),
+      writeOrdinary: (item) => ({
+        candidateId: item.candidateId,
+        status: "written",
+      }),
     });
 
     expect(stopped).toBe(false);
@@ -206,7 +209,10 @@ describe("approved search batch boundaries", () => {
       status: "written" as const,
     }));
 
-    const stopped = await executeApprovedSearchWrites({ ...test, writeOrdinary });
+    const stopped = await executeApprovedSearchWrites({
+      ...test,
+      writeOrdinary,
+    });
 
     expect(stopped).toBe(true);
     expect(writeOrdinary).not.toHaveBeenCalled();
