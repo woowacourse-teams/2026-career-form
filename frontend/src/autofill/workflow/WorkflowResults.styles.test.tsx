@@ -93,6 +93,11 @@ it("lays out a plain field row with an ellipsized value and separate copy action
   expect(heading.nextElementSibling).toBe(reason);
   expect(getComputedStyle(locate).minHeight).toBe("32px");
   const rowStyle = getComputedStyle(locate.closest("article")!);
+  expect(rowStyle.position).toBe("relative");
+  expect(rowStyle.isolation).toBe("isolate");
+  expect(
+    getComputedStyle(view.getByRole("button", { name: "전공 복사" })).zIndex,
+  ).toBe("2");
   expect(rowStyle.paddingTop).toBe("10px");
   expect(rowStyle.paddingLeft).toBe("0px");
   const valueStyle = getComputedStyle(view.getByText(value));
