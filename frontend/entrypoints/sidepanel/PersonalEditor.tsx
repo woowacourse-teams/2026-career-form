@@ -97,17 +97,17 @@ export function PersonalEditor({
               </label>
             ))}
         </div>
-        {failed && (
-          <p role="alert" className={styles.copyError}>
-            저장하지 못했습니다. 입력 내용은 유지되니 다시 시도해 주세요.
-          </p>
-        )}
         <div className={styles.editorActions}>
           <button type="button" onClick={onCancel}>
             취소
           </button>
           <button type="submit">{saving ? "저장 중…" : "저장"}</button>
         </div>
+        {failed && (
+          <p role="alert" className={styles.copyError}>
+            저장하지 못했습니다. 입력 내용은 유지되니 다시 시도해 주세요.
+          </p>
+        )}
       </fieldset>
     </form>
   );

@@ -377,13 +377,21 @@ export function App({
                         </button>
                       </div>
                       <>
-                        {group.id === "personal" && personalSaved && (
-                          <p role="status" className={styles.savedNotice}>
-                            인적사항을 저장했어요.
-                          </p>
-                        )}
                         {isOpen && (
                           <div className={styles.groupValues} id={regionId}>
+                            {group.id === "personal" &&
+                              groupItems.length > 0 && (
+                                <p
+                                  id={`${regionId}-edit-hint`}
+                                  role="status"
+                                  className={styles.editorHint}
+                                  data-saved={personalSaved}
+                                >
+                                  {personalSaved
+                                    ? "인적사항을 저장했어요."
+                                    : "값을 누르면 바로 수정할 수 있어요."}
+                                </p>
+                              )}
                             {groupItems.length === 0 && (
                               <p className={styles.groupEmpty}>
                                 등록된 정보가 없습니다.
@@ -432,7 +440,8 @@ export function App({
                                               editButton.current = node;
                                           }}
                                           aria-label={`${item.fieldLabel} 수정`}
-                                          title="클릭하여 수정"
+                                          aria-describedby={`${regionId}-edit-hint`}
+                                          title={`${item.value} (클릭하여 수정)`}
                                           disabled={editingPersonal}
                                           onClick={() => {
                                             editingItemId.current = item.id;
@@ -440,7 +449,18 @@ export function App({
                                             setEditingPersonal(true);
                                           }}
                                         >
-                                          {item.value}
+                                          <span>{item.value}</span>
+                                          <svg
+                                            aria-hidden="true"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.6"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          >
+                                            <path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" />
+                                          </svg>
                                         </button>
                                       )
                                     ) : (

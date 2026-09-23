@@ -2,6 +2,9 @@
 <meta charset="utf-8" />
 <title>Synthetic panel stacking fixture</title>
 <style>
+  body {
+    min-height: 2400px;
+  }
   #outside {
     position: fixed;
     top: 0;
@@ -50,9 +53,25 @@
   document.querySelector("#outside").onclick = () => fixture.outsideClicks++;
   document.querySelector("#dialog-close").onclick = () =>
     document.querySelector("#page-dialog").close();
-  const profile = {
-    personal: { koreanGivenName: "합성 테스트" },
-    contact: {},
+  let profile = {
+    personal: {
+      koreanFamilyName: "김",
+      koreanGivenName: "합성 테스트",
+      hanjaFamilyName: "金",
+      hanjaGivenName: "合成",
+      englishFamilyName: "SYNTHETIC",
+      englishGivenName: "FIXTURE NAME",
+      gender: "선택 안 함",
+      birthDate: "2000-01-02",
+      nationality: "대한민국",
+    },
+    contact: {
+      email: "fixture@example.test",
+      phoneNumber: "010-0000-0000",
+      postalCode: "00000",
+      addressLine1: "합성 테스트 주소",
+      addressLine2: "합성 테스트 상세주소",
+    },
     education: [],
     languages: [],
     certifications: [],
@@ -84,7 +103,10 @@
         async get() {
           return { "careerForm.profile": { schemaVersion: 1, profile } };
         },
-        async set() {},
+        async set(values) {
+          if (values["careerForm.profile"])
+            profile = structuredClone(values["careerForm.profile"].profile);
+        },
       },
       onChanged: { addListener() {}, removeListener() {} },
     },
@@ -97,6 +119,76 @@
   fixture.host = () => document.querySelector("career-form-profile-panel");
   fixture.closeButton = () =>
     fixture.host()?.shadowRoot?.querySelector('button[aria-label="닫기"]');
+  fixture.panelRoot = () => fixture.host()?.shadowRoot;
+  fixture.resolveExtensionImages = () => {
+    // A regular-page harness has no registered extension origin. Route only
+    // its synthetic packaged images through the same actual-bundle server.
+    const prefix = `chrome-extension://${runtime.id}/`;
+    for (const image of fixture.panelRoot().querySelectorAll("img"))
+      if (image.src.startsWith(prefix))
+        image.src = runtime.getURL(image.src.slice(prefix.length));
+  };
+  fixture.main = () =>
+    fixture.panelRoot()?.querySelector('main[aria-label="지원 정보 목록"]');
+  fixture.fieldRow = (label) =>
+    [...fixture.panelRoot().querySelectorAll("article")].find(
+      (row) => row.querySelector("strong")?.textContent === label,
+    );
+  fixture.editButton = (label) =>
+    fixture
+      .fieldRow(label)
+      ?.querySelector(`button[aria-label="${label} 수정"]`);
+  fixture.editor = () =>
+    fixture.panelRoot()?.querySelector('form[aria-label="기본 인적사항 수정"]');
+  fixture.editorAction = (label) =>
+    [...fixture.editor().querySelectorAll("button")].find(
+      (button) => button.textContent === label,
+    );
+  fixture.settle = () =>
+    new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    );
+  fixture.positionField = (label) => {
+    window.scrollTo(0, 240);
+    const main = fixture.main();
+    main.scrollTop +=
+      fixture.fieldRow(label).getBoundingClientRect().top -
+      main.getBoundingClientRect().top -
+      84;
+  };
+  fixture.geometry = (label) => {
+    const main = fixture.main();
+    const row = fixture.fieldRow(label);
+    const rect = row.getBoundingClientRect();
+    const next = row.nextElementSibling?.getBoundingClientRect();
+    const input = fixture.editor()?.querySelector("input");
+    const inputRect = input?.getBoundingClientRect();
+    const actionRects = [
+      ...(fixture.editor()?.querySelectorAll("button") ?? []),
+    ].map((button) => button.getBoundingClientRect());
+    return {
+      pageX: window.scrollX,
+      pageY: window.scrollY,
+      mainX: main.scrollLeft,
+      mainY: main.scrollTop,
+      rowTop: rect.top,
+      rowHeight: rect.height,
+      nextTop: next?.top,
+      horizontalOverflow:
+        main.scrollWidth > main.clientWidth ||
+        row.scrollWidth > row.clientWidth,
+      controlsFit:
+        !inputRect ||
+        (inputRect.width >= 60 &&
+          inputRect.left >= rect.left &&
+          actionRects.every(
+            (action) =>
+              action.right <= rect.right &&
+              Math.abs(action.top - inputRect.top) <= 1 &&
+              Math.abs(action.bottom - inputRect.bottom) <= 1,
+          )),
+    };
+  };
   fixture.center = (element) => {
     const rect = element.getBoundingClientRect();
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };

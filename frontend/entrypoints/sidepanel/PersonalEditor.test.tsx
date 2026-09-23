@@ -114,3 +114,19 @@ it("keeps the search and uses non-scrolling focus without refocusing while typin
     focus.mockRestore();
   }
 });
+
+it("explains direct editing and reuses the hint for save feedback", async () => {
+  setup();
+  const value = await screen.findByRole("button", { name: "국문 이름 수정" });
+  const hint = screen.getByText("값을 누르면 바로 수정할 수 있어요.");
+  expect(value).toHaveAccessibleDescription(hint.textContent!);
+  expect(screen.queryByRole("button", { name: "수정" })).toBeNull();
+  fireEvent.click(value);
+  fireEvent.change(screen.getByLabelText("국문 이름"), {
+    target: { value: "저장 이름" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(await screen.findByText("인적사항을 저장했어요.")).toBe(hint);
+  fireEvent.click(screen.getByRole("button", { name: "국문 이름 수정" }));
+  expect(screen.getByText("값을 누르면 바로 수정할 수 있어요.")).toBe(hint);
+});
