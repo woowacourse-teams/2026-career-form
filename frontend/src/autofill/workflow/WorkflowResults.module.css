@@ -69,18 +69,19 @@
   font-size: 13px;
 }
 .row {
-  padding: 14px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--color-border);
   overflow-wrap: anywhere;
 }
 .heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
+  align-items: start;
+  gap: 8px;
 }
 .heading strong {
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 .fieldTitle {
   display: flex;
@@ -98,28 +99,46 @@
   white-space: nowrap;
 }
 .heading button {
-  flex: none;
-  padding: 7px 10px;
+  min-width: 52px;
+  min-height: 28px;
+  padding: 3px 7px;
   border: 1px solid var(--color-border);
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
 }
 .heading button:disabled {
   cursor: default;
   opacity: 0.6;
 }
-.row p {
+.values {
+  min-width: 0;
+}
+.values p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.row details {
+  margin-top: 6px;
+}
+.row details p {
   margin: 8px 0 4px;
   font-size: 14px;
 }
 .row small {
   display: block;
+  margin-top: 4px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.45;
 }
 .results summary {
   cursor: pointer;

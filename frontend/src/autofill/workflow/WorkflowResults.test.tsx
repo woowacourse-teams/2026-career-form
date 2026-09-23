@@ -16,6 +16,36 @@ const item: ReviewPlanItem = {
   reason: "후보 여러 개",
 };
 
+it("keeps the compact locate action identifiable and moves to its application field", () => {
+  const applicationField = document.createElement("input");
+  document.body.append(applicationField);
+  try {
+    render(
+      <WorkflowResults
+        reviewItems={[{ ...item, fieldLabel: "대학교 / 주전공명 (1)" }]}
+        results={[]}
+        optionsFor={() => ["컴퓨터공학부", "컴퓨터공학과"]}
+        onLocate={(id) => {
+          if (id !== "major") return false;
+          applicationField.focus();
+          return true;
+        }}
+      />,
+    );
+    const locate = screen.getByRole("button", {
+      name: "대학교 / 주전공명 (1) 필드로 이동",
+    });
+    expect(locate).toHaveTextContent("이동 ↗");
+    expect(
+      screen.getByText("지원서 선택지").closest("details"),
+    ).not.toHaveAttribute("open");
+    fireEvent.click(locate);
+    expect(applicationField).toHaveFocus();
+  } finally {
+    applicationField.remove();
+  }
+});
+
 it("shows a concise bound field name instead of required markers and all select options", () => {
   render(
     <WorkflowResults
@@ -460,6 +490,7 @@ it("combines write failures with unresolved fields and preserves masked previews
   expect(screen.queryByLabelText("입력 실패 1개")).not.toBeInTheDocument();
   expect(screen.getByLabelText("확인 필요 2개")).toBeInTheDocument();
   expect(screen.getByText("입력 못함")).toBeInTheDocument();
+  expect(screen.getByText("••••••••")).toBeInTheDocument();
   expect(screen.queryByText("5000")).not.toBeInTheDocument();
 });
 

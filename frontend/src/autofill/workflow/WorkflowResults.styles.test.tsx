@@ -41,9 +41,55 @@ it("keeps result layout and actions styled without the separately loaded entry s
     expect(getComputedStyle(counts).gap).toBe("8px 16px");
     expect(getComputedStyle(primary).display).toBe("flex");
     expect(getComputedStyle(primary).borderRadius).toBe("8px");
-    expect(getComputedStyle(locate).padding).toBe("7px 10px");
-    expect(getComputedStyle(locate).borderRadius).toBe("7px");
+    expect(getComputedStyle(locate).padding).toBe("3px 7px");
+    expect(getComputedStyle(locate).borderRadius).toBe("6px");
   } finally {
     externalStyles.forEach((style) => document.head.append(style));
   }
+});
+
+it("places the field name, full value, and compact action in one grid row with the reason below", () => {
+  const value =
+    "컴퓨터공학과에서소프트웨어시스템설계와분산데이터처리를전공했습니다";
+  const { container } = render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          candidateId: "major",
+          fieldLabel: "전공",
+          currentValue: "",
+          previewValue: value,
+          profileValue: value,
+          status: "unavailable",
+          selected: false,
+          disabled: true,
+          revealed: true,
+          reason: "후보 여러 개",
+        },
+      ]}
+      results={[]}
+      onLocate={() => true}
+    />,
+  );
+  const view = within(container);
+  const locate = view.getByRole("button", { name: "전공 필드로 이동" });
+  const heading = locate.parentElement!;
+  const preview = view.getByText(value);
+  const reason = view.getByText("선택 필요");
+
+  expect(getComputedStyle(heading).display).toBe("grid");
+  expect(getComputedStyle(heading).gridTemplateColumns).toBe(
+    "minmax(0, 0.8fr) minmax(0, 1.2fr) auto",
+  );
+  expect(heading).toContainElement(view.getByText("전공"));
+  expect(heading).toContainElement(preview);
+  expect(heading).not.toContainElement(reason);
+  expect(heading.nextElementSibling).toBe(reason);
+  expect(getComputedStyle(preview.parentElement!).minWidth).toBe("0px");
+  expect(getComputedStyle(preview).whiteSpace).toBe("pre-wrap");
+  expect(getComputedStyle(preview).overflowWrap).toBe("anywhere");
+  expect(getComputedStyle(preview).textOverflow).not.toBe("ellipsis");
+  expect(getComputedStyle(preview).overflow).not.toBe("hidden");
+  expect(getComputedStyle(locate).minHeight).toBe("28px");
+  expect(getComputedStyle(locate.closest("article")!).padding).toBe("10px 0px");
 });

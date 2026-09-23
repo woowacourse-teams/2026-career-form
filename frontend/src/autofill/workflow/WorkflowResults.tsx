@@ -137,6 +137,12 @@ export function WorkflowResults({
                   </strong>
                   {written && <span className={styles.writtenTag}>입력됨</span>}
                 </div>
+                <div className={styles.values}>
+                  {item &&
+                    resultPreview(item, profile).map((value, index) => (
+                      <p key={index}>{value}</p>
+                    ))}
+                </div>
                 <button
                   type="button"
                   disabled={
@@ -150,13 +156,9 @@ export function WorkflowResults({
                       setUnavailable((previous) => new Set([...previous, id]));
                   }}
                 >
-                  필드로 이동
+                  이동 <span aria-hidden="true">↗</span>
                 </button>
               </div>
-              {item &&
-                resultPreview(item, profile).map((value, index) => (
-                  <p key={index}>{value}</p>
-                ))}
               {reason && <small>{reason.replaceAll("·", "/")}</small>}
               {!!optionsFor?.(id).length && (
                 <details>
