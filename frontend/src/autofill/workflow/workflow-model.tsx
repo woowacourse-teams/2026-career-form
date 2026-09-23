@@ -511,6 +511,8 @@ export function resultStatusLabel(result: ApprovedWriteResult): string {
   switch (writeResultOutcome(result)) {
     case "success":
       return "기입 성공";
+    case "unchanged":
+      return "이미 같은 값";
     case "failed":
       return "기입 실패";
     case "unsupported":
@@ -524,7 +526,7 @@ export function resultStatusLabel(result: ApprovedWriteResult): string {
 
 export function writeResultOutcome(
   result: ApprovedWriteResult,
-): "success" | "failed" | "needs-verification" | "unsupported" {
+): "success" | "failed" | "needs-verification" | "unsupported" | "unchanged" {
   return (
     result.outcome ??
     (result.status === "written" ? "success" : "needs-verification")

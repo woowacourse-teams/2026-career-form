@@ -1,3 +1,8 @@
+import type {
+  InteractionDecisionRequest,
+  InteractionDecisionResponse,
+} from "./interaction-types";
+import { validateInteractionDecisionResponse } from "./validate-interaction-response";
 import { browser } from "wxt/browser";
 
 import type { AnalysisResponseEnvelope } from "./messages";
@@ -42,6 +47,16 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     private readonly sendMessage: SendMessage = (message) =>
       browser.runtime.sendMessage(message),
   ) {}
+
+  async decideInteractions(
+    request: InteractionDecisionRequest,
+  ): Promise<InteractionDecisionResponse> {
+    const response = await this.request({
+      type: "AUTOFILL_DECIDE_INTERACTIONS",
+      payload: request,
+    });
+    return validateInteractionDecisionResponse(request, response);
+  }
 
   async analyzePreparation(
     request: PreparationAnalyzeRequest,

@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
   AnalysisApiClient,
@@ -14,6 +14,8 @@ import {
   createRepository,
   createSkFixtureDocument,
 } from "./AutofillOverlay.test-fixtures";
+
+afterEach(cleanup);
 
 describe("AutofillOverlay", () => {
   it.each([true, false])(
@@ -391,8 +393,7 @@ describe("AutofillOverlay", () => {
   });
 
   it("reanalyzes newly added education rows before filling conditional majors", async () => {
-    const pageDocument =
-      document.implementation.createHTMLDocument("application");
+    const pageDocument = createSkFixtureDocument();
     pageDocument.body.innerHTML = `
       <section>
         <h2>학력</h2>
@@ -451,9 +452,10 @@ describe("AutofillOverlay", () => {
     const apiClient: AnalysisApiClient = {
       analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => {
         preparationCallCount += 1;
-        const actions = request.sections.flatMap(
-          (candidate) => candidate.actionCandidates,
-        );
+        const actions = request.sections.flatMap((section) => [
+          ...section.actionCandidates,
+          ...(section.items ?? []).flatMap((item) => item.actionCandidates),
+        ]);
         const add = actions.find(
           (candidate) => candidate.domId === "btnAddEducationUniv",
         );

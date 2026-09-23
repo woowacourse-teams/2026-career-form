@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>CF-98 국내 지역 링크 검색 예시</title>
+  </head>
+  <body>
+    <h1>국내 지역 링크 검색 예시</h1>
+    <p>비식별 합성 화면입니다. 지원서 저장·제출 기능은 없습니다.</p>
+    <fieldset>
+      <legend>고등학교 학력</legend>
+      <article
+        data-repeater-item
+        data-repeatable-group="education"
+        data-row-index="0"
+      >
+        <dl>
+          <dt>학교 구분</dt>
+          <dd>
+            <select name="education.highSchool[0].schoolType">
+              <option selected>고등학교</option>
+            </select>
+          </dd>
+          <dt><label for="high-name">학교명</label></dt>
+          <dd>
+            <input
+              id="high-name"
+              name="education.highSchool[0].schoolName"
+              type="text"
+              readonly
+              value="서울고"
+            />
+          </dd>
+          <dt><label for="high-region">학교소재지</label></dt>
+          <dd>
+            <input
+              id="high-region"
+              name="education.highSchool[0].schoolRegion"
+              type="text"
+              readonly
+            />
+            <button
+              id="high-open"
+              type="button"
+              aria-controls="high-dialog"
+              aria-haspopup="dialog"
+            >
+              학교소재지 검색
+            </button>
+          </dd>
+        </dl>
+      </article>
+    </fieldset>
+    <fieldset>
+      <legend>대학교 학력</legend>
+      <article
+        data-repeater-item
+        data-repeatable-group="education"
+        data-row-index="0"
+      >
+        <dl>
+          <dt>학교 구분</dt>
+          <dd>
+            <select name="education.university[0].schoolType">
+              <option selected>대학교</option>
+            </select>
+          </dd>
+          <dt><label for="uni-name">학교명</label></dt>
+          <dd>
+            <input
+              id="uni-name"
+              name="education.university[0].schoolName"
+              type="text"
+              readonly
+              value="서울대학교"
+            />
+          </dd>
+          <dt><label for="uni-region">학교소재지</label></dt>
+          <dd>
+            <input
+              id="uni-region"
+              name="education.university[0].schoolRegion"
+              type="text"
+              readonly
+            />
+            <button
+              id="uni-open"
+              type="button"
+              aria-controls="uni-dialog"
+              aria-haspopup="dialog"
+            >
+              학교소재지 검색
+            </button>
+          </dd>
+        </dl>
+      </article>
+    </fieldset>
+    <dialog id="high-dialog" aria-label="고등학교 학교소재지 검색">
+      <iframe
+        title="고등학교 학교소재지 검색"
+        style="width: 32rem; height: 24rem; border: 0"
+      ></iframe>
+      <button type="button">닫기</button>
+    </dialog>
+    <dialog id="uni-dialog" aria-label="대학교 학교소재지 검색">
+      <iframe
+        title="대학교 학교소재지 검색"
+        style="width: 32rem; height: 24rem; border: 0"
+      ></iframe>
+      <button type="button">닫기</button>
+    </dialog>
+    <p id="status" role="status">두 값 모두 빈 상태</p>
+    <script>
+      for (const prefix of ["high", "uni"]) {
+        const dialog = document.querySelector(`#${prefix}-dialog`);
+        document
+          .querySelector(`#${prefix}-open`)
+          .addEventListener("click", () => {
+            dialog.querySelector("iframe").src = "./region-list-frame.html";
+            dialog.showModal();
+          });
+        dialog
+          .querySelector("button")
+          .addEventListener("click", () => dialog.close());
+      }
+    </script>
+  </body>
+</html>

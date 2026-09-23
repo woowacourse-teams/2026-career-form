@@ -1,3 +1,8 @@
+import type {
+  InteractionDecisionRequest,
+  InteractionDecisionResponse,
+} from "./interaction-types";
+
 export type AnalysisMode = "ADAPTER" | "GENERIC";
 export type AnalysisStatus = "COMPLETE" | "PARTIAL" | "BLOCKED";
 export type Visibility = "visible" | "hidden";
@@ -171,6 +176,7 @@ export interface PreparationAnalyzeResponse {
 }
 
 export type WriteCommand =
+  | "SEARCH_SELECTION"
   | "SET_TEXT"
   | "SELECT_OPTION"
   | "SELECT_BUTTON_OPTION"
@@ -242,6 +248,9 @@ export interface FieldsAnalyzeResponse {
 }
 
 export interface AnalysisApiClient {
+  decideInteractions?(
+    request: InteractionDecisionRequest,
+  ): Promise<InteractionDecisionResponse>;
   analyzePreparation(
     request: PreparationAnalyzeRequest,
   ): Promise<PreparationAnalyzeResponse>;

@@ -174,6 +174,7 @@ export function AutofillWorkflow({
   }>({ controller: new AbortController() });
   const [addressResult, setAddressResult] = useState<AddressResult>();
   const executionPending = useRef(false);
+  const writeController = useRef(new AbortController());
   const mounted = useRef(true);
   const [stage, setStage] = useState<Stage>("analyzing");
   const [profile, setProfile] = useState<Profile>();
@@ -250,6 +251,7 @@ export function AutofillWorkflow({
     mounted.current = true;
     return () => {
       mounted.current = false;
+      writeController.current.abort();
     };
   }, []);
 
@@ -396,6 +398,13 @@ export function AutofillWorkflow({
       const preparationOptions = (
         snapshot: ReturnType<typeof collectPreparationSnapshot>,
       ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
+        document: pageDocument,
+        signal: writeController.current.signal,
+        assertCurrent: () =>
+          mounted.current && !writeController.current.signal.aborted,
+        beforeMutation: async () =>
+          mounted.current &&
+          JSON.stringify(await repository.load()) === JSON.stringify(profile),
         initialSnapshot: {
           registry: snapshot.registry,
           isTargetSectionVisible: (targetSectionId) =>
@@ -667,10 +676,26 @@ export function AutofillWorkflow({
         return;
       }
       setStage("writing");
+      writeController.current.abort();
+      writeController.current = new AbortController();
+      const approvedProfile = JSON.stringify(profile);
       const nextResults = await executeApprovedWritesAfterPageSettles({
         items: executableReviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
+        ...(analysisSummary?.mode === "GENERIC" && apiClient.decideInteractions
+          ? {
+              interactionDecisionProvider:
+                apiClient.decideInteractions.bind(apiClient),
+            }
+          : {}),
+        assertCurrent: () =>
+          mounted.current && !writeController.current.signal.aborted,
+        signal: writeController.current.signal,
+        document: pageDocument,
+        beforeMutation: async () =>
+          mounted.current &&
+          JSON.stringify(await repository.load()) === approvedProfile,
       });
       if (!mounted.current) return;
       setResults([...retainedDrivers.results, ...nextResults]);

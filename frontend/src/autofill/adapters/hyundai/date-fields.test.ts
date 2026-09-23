@@ -227,7 +227,7 @@ describe("Hyundai language and certificate date fields", () => {
       {
         candidateId: languageDate.candidateId,
         status: "skipped",
-        reason: "사용자가 승인한 입력 항목이 아닙니다.",
+        reason: "연결할 프로필 항목이 없습니다.",
       },
     ]);
     expect(

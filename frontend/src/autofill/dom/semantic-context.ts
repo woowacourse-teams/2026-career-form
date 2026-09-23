@@ -1,4 +1,4 @@
-import { unassociatedLabelOf } from "./metadata";
+import { definitionListLabelOf, unassociatedLabelOf } from "./metadata";
 import type { SemanticContext } from "../api/types";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 
@@ -341,6 +341,7 @@ function contextLabels(
       ),
     );
   }
+  add("label", semanticText(definitionListLabelOf(element)));
   add("placeholder", semanticText(element.getAttribute("placeholder")));
   add(
     "legend",

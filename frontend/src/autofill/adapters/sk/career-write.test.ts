@@ -57,6 +57,15 @@ function setup() {
     }
   ).jsdom.reconfigure({ url: "https://www.skcareers.com/apply" });
   document.body.innerHTML = `<div id="applyContentCareer" class="apply-form-box career-root"><div class="form-body">${row(1)}${row(2)}</div></div><div style="display:none" id="Career_Item">${row(3)}</div>`;
+  for (const input of document.querySelectorAll<HTMLInputElement>(
+    "input[name=carFromDate], input[name=carToDate]",
+  )) {
+    input.addEventListener("input", () => {
+      input.value = input.value
+        .replace(/[^0-9]/g, "")
+        .replace(/^(\d{4})(\d{2})$/, "$1-$2");
+    });
+  }
   const profile = createEmptyProfile();
   profile.careers = [
     {

@@ -1,103 +1,531 @@
 <!doctype html>
 <html lang="ko">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Career Form generic autofill fixture</title>
     <style>
-      :root { color-scheme: light; font-family: system-ui, sans-serif; }
-      body { margin: 0; background: #f5f7fb; color: #172033; }
-      main { width: min(52rem, calc(100% - 2rem)); margin: 2rem auto; }
-      section, fieldset { margin: 1rem 0; padding: 1rem; border: 1px solid #c7cfdd; border-radius: .75rem; background: white; }
-      legend, h1, h2, h3 { font-weight: 700; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
-      .field { display: grid; gap: .35rem; }
-      label, .field > span { font-weight: 600; }
-      input, select, textarea, button { min-height: 2.75rem; box-sizing: border-box; font: inherit; }
-      input, select, textarea { width: 100%; padding: .55rem .65rem; border: 1px solid #8794a8; border-radius: .4rem; }
-      button { padding: .55rem .8rem; border: 1px solid #405d92; border-radius: .4rem; background: #eef3ff; cursor: pointer; }
-      button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #e19b22; outline-offset: 2px; }
-      .hint, .status { color: #4c5a70; font-size: .92rem; }
-      .row { display: grid; gap: .8rem; margin: .8rem 0; padding: .8rem; border: 1px dashed #aeb9c9; border-radius: .5rem; }
-      .choices { display: flex; flex-wrap: wrap; gap: .8rem; }
-      .choices label { display: inline-flex; align-items: center; gap: .35rem; font-weight: 500; }
-      .choices input { width: auto; min-height: auto; }
-      [role="listbox"] { margin: .25rem 0 0; padding: 0; list-style: none; border: 1px solid #8794a8; border-radius: .4rem; background: white; }
-      [role="option"] { padding: .65rem; cursor: pointer; }
-      [role="option"][aria-selected="true"], [role="option"]:hover { background: #e8efff; }
-      .tools { display: flex; flex-wrap: wrap; gap: .6rem; }
-      .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #f5f7fb;
+        color: #172033;
+      }
+      main {
+        width: min(52rem, calc(100% - 2rem));
+        margin: 2rem auto;
+      }
+      section,
+      fieldset {
+        margin: 1rem 0;
+        padding: 1rem;
+        border: 1px solid #c7cfdd;
+        border-radius: 0.75rem;
+        background: white;
+      }
+      legend,
+      h1,
+      h2,
+      h3 {
+        font-weight: 700;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+        gap: 1rem;
+      }
+      .field {
+        display: grid;
+        gap: 0.35rem;
+      }
+      label,
+      .field > span {
+        font-weight: 600;
+      }
+      input,
+      select,
+      textarea,
+      button {
+        min-height: 2.75rem;
+        box-sizing: border-box;
+        font: inherit;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.55rem 0.65rem;
+        border: 1px solid #8794a8;
+        border-radius: 0.4rem;
+      }
+      button {
+        padding: 0.55rem 0.8rem;
+        border: 1px solid #405d92;
+        border-radius: 0.4rem;
+        background: #eef3ff;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid #e19b22;
+        outline-offset: 2px;
+      }
+      .hint,
+      .status {
+        color: #4c5a70;
+        font-size: 0.92rem;
+      }
+      .row {
+        display: grid;
+        gap: 0.8rem;
+        margin: 0.8rem 0;
+        padding: 0.8rem;
+        border: 1px dashed #aeb9c9;
+        border-radius: 0.5rem;
+      }
+      .choices {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+      }
+      .choices label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 500;
+      }
+      .choices input {
+        width: auto;
+        min-height: auto;
+      }
+      [role="listbox"] {
+        margin: 0.25rem 0 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid #8794a8;
+        border-radius: 0.4rem;
+        background: white;
+      }
+      [role="option"] {
+        padding: 0.65rem;
+        cursor: pointer;
+      }
+      [role="option"][aria-selected="true"],
+      [role="option"]:hover {
+        background: #e8efff;
+      }
+      .tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+      }
     </style>
     <script src="./form.js" defer></script>
   </head>
   <body>
     <main>
       <h1>범용 자동 입력 합성 fixture</h1>
-      <p class="hint">공개 합성값만 포함한 로컬 DOM fixture입니다. 저장·제출·외부 요청을 수행하지 않습니다.</p>
-      <p id="fixture-status" class="status" role="status" aria-live="polite">준비됨</p>
+      <p class="hint">
+        공개 합성값만 포함한 로컬 DOM fixture입니다. 저장·제출·외부 요청을
+        수행하지 않습니다.
+      </p>
+      <p id="fixture-status" class="status" role="status" aria-live="polite">
+        준비됨
+      </p>
 
-      <form id="synthetic-application" action="/synthetic-fixture" method="post">
+      <form
+        id="synthetic-application"
+        action="/synthetic-fixture"
+        method="post"
+      >
         <section aria-labelledby="contact-heading">
           <h2 id="contact-heading">기본 및 연락처</h2>
           <div class="grid">
-            <div class="field" role="group"><label for="missing-family-target">국문 성</label><input id="family-name" name="personal.personal.koreanFamilyName" autocomplete="family-name"></div>
-            <div class="field"><label for="given-name">국문 이름</label><input id="given-name" name="personal.personal.koreanGivenName" autocomplete="given-name"></div>
-            <div class="field"><label for="birth-date">생년월일</label><input id="birth-date" name="personal.personal.birthDate" type="date" autocomplete="bday"></div>
-            <div class="field"><label for="fixture-email">이메일주소</label><input id="fixture-email" name="contact.contact.email" type="email" autocomplete="email"></div>
-            <div class="field" role="group"><label for="missing-phone-target">연락처</label><div><input id="fixture-phone" name="contact.contact.phoneNumber" type="tel" autocomplete="tel"></div></div>
-            <div class="field"><label for="postal-code">우편번호</label><input id="postal-code" name="contact.contact.postalCode" autocomplete="postal-code" inputmode="numeric"></div>
-            <div class="field"><label for="address-line1">기본주소</label><input id="address-line1" name="contact.contact.addressLine1" autocomplete="address-line1"></div>
-            <div class="field"><label for="address-line2">주소</label><input id="address-line2" name="contact.contact.addressLine2" autocomplete="address-line2" placeholder="나머지 주소를 입력해주세요."></div>
+            <div class="field" role="group">
+              <label for="missing-family-target">국문 성</label
+              ><input
+                id="family-name"
+                name="personal.personal.koreanFamilyName"
+                autocomplete="family-name"
+              />
+            </div>
+            <div class="field">
+              <label for="given-name">국문 이름</label
+              ><input
+                id="given-name"
+                name="personal.personal.koreanGivenName"
+                autocomplete="given-name"
+              />
+            </div>
+            <div class="field">
+              <label for="birth-date">생년월일</label
+              ><input
+                id="birth-date"
+                name="personal.personal.birthDate"
+                type="date"
+                autocomplete="bday"
+              />
+            </div>
+            <div class="field">
+              <label for="fixture-email">이메일주소</label
+              ><input
+                id="fixture-email"
+                name="contact.contact.email"
+                type="email"
+                autocomplete="email"
+              />
+            </div>
+            <div class="field" role="group">
+              <label for="missing-phone-target">연락처</label>
+              <div>
+                <input
+                  id="fixture-phone"
+                  name="contact.contact.phoneNumber"
+                  type="tel"
+                  autocomplete="tel"
+                />
+              </div>
+            </div>
+            <div class="field">
+              <label for="postal-code">우편번호</label
+              ><input
+                id="postal-code"
+                name="contact.contact.postalCode"
+                autocomplete="postal-code"
+                inputmode="numeric"
+              />
+            </div>
+            <div class="field">
+              <label for="address-line1">기본주소</label
+              ><input
+                id="address-line1"
+                name="contact.contact.addressLine1"
+                autocomplete="address-line1"
+              />
+            </div>
+            <div class="field">
+              <label for="address-line2">주소</label
+              ><input
+                id="address-line2"
+                name="contact.contact.addressLine2"
+                autocomplete="address-line2"
+                placeholder="나머지 주소를 입력해주세요."
+              />
+            </div>
           </div>
         </section>
 
         <section aria-labelledby="education-heading">
           <h2 id="education-heading">대학교 학력: select·date·number</h2>
           <div class="grid">
-            <div class="field"><label for="degree-level">학위구분</label><select id="degree-level" name="education.university.degreeLevel"><option value="" selected>선택</option><option value="전문학사">전문학사</option><option value="학사">학사</option><option value="석사">석사</option></select></div>
-            <div class="field"><label for="school-choice">학교명</label><input id="school-choice" name="education.university.schoolName" role="combobox" aria-controls="school-options" aria-expanded="false" aria-autocomplete="list" autocomplete="organization"><ul id="school-options" role="listbox" hidden><li id="school-option-1" role="option" aria-selected="false">서울대학교</li><li id="school-option-2" role="option" aria-selected="false">서울고</li><li id="school-option-3" role="option" aria-selected="false">공개대학교</li></ul><span id="school-live" class="visually-hidden" aria-live="polite"></span></div>
-            <div class="field"><label for="school-start">입학일</label><input id="school-start" name="education.university.startDate" type="date"></div>
-            <div class="field"><label for="gpa-score">평점</label><input id="gpa-score" name="education.university.gpaScore" type="number" min="0" max="4.5" step="0.01" inputmode="decimal"></div>
+            <div class="field">
+              <label for="degree-level">학위구분</label
+              ><select
+                id="degree-level"
+                name="education.university.degreeLevel"
+              >
+                <option value="" selected>선택</option>
+                <option value="전문학사">전문학사</option>
+                <option value="학사">학사</option>
+                <option value="석사">석사</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="school-choice">학교명</label
+              ><input
+                id="school-choice"
+                name="education.university.schoolName"
+                role="combobox"
+                aria-controls="school-options"
+                aria-expanded="false"
+                aria-autocomplete="list"
+                autocomplete="organization"
+              />
+              <ul id="school-options" role="listbox" hidden>
+                <li id="school-option-1" role="option" aria-selected="false">
+                  서울대학교
+                </li>
+                <li id="school-option-2" role="option" aria-selected="false">
+                  서울고
+                </li>
+                <li id="school-option-3" role="option" aria-selected="false">
+                  공개대학교
+                </li>
+              </ul>
+              <span
+                id="school-live"
+                class="visually-hidden"
+                aria-live="polite"
+              ></span>
+            </div>
+            <div class="field">
+              <label for="school-start">입학일</label
+              ><input
+                id="school-start"
+                name="education.university.startDate"
+                type="date"
+              />
+            </div>
+            <div class="field">
+              <label for="gpa-score">평점</label
+              ><input
+                id="gpa-score"
+                name="education.university.gpaScore"
+                type="number"
+                min="0"
+                max="4.5"
+                step="0.01"
+                inputmode="decimal"
+              />
+            </div>
           </div>
         </section>
 
         <section aria-labelledby="cert-heading">
           <h2 id="cert-heading">자격증 반복 행</h2>
-          <p class="hint">두 행은 같은 radio name과 같은 선택지 label을 사용해 행 경계를 확인합니다.</p>
+          <p class="hint">
+            두 행은 같은 radio name과 같은 선택지 label을 사용해 행 경계를
+            확인합니다.
+          </p>
           <div id="certification-list">
-            <article class="row certification-item" data-repeater-item data-repeatable-group="certifications">
+            <article
+              class="row certification-item"
+              data-repeater-item
+              data-repeatable-group="certifications"
+            >
               <h3>자격증 행 1</h3>
-              <div class="grid"><div class="field"><label for="cert-name-1">자격증명</label><input id="cert-name-1" name="certifications.certificate.name"></div><div class="field"><label for="cert-date-1">취득일</label><input id="cert-date-1" name="certifications.certificate.acquisitionDate" type="date"></div></div>
-              <fieldset><legend>등급</legend><div class="choices"><label><input type="radio" name="certification-status" value="유효"> 유효</label><label><input type="radio" name="certification-status" value="갱신 필요"> 갱신 필요</label></div></fieldset>
+              <div class="grid">
+                <div class="field">
+                  <label for="cert-name-1">자격증명</label
+                  ><input
+                    id="cert-name-1"
+                    name="certifications.certificate.name"
+                  />
+                </div>
+                <div class="field">
+                  <label for="cert-date-1">취득일</label
+                  ><input
+                    id="cert-date-1"
+                    name="certifications.certificate.acquisitionDate"
+                    type="date"
+                  />
+                </div>
+              </div>
+              <fieldset>
+                <legend>등급</legend>
+                <div class="choices">
+                  <label
+                    ><input
+                      type="radio"
+                      name="certification-status"
+                      value="유효"
+                    />
+                    유효</label
+                  ><label
+                    ><input
+                      type="radio"
+                      name="certification-status"
+                      value="갱신 필요"
+                    />
+                    갱신 필요</label
+                  >
+                </div>
+              </fieldset>
             </article>
-            <article class="row certification-item" data-repeater-item data-repeatable-group="certifications">
+            <article
+              class="row certification-item"
+              data-repeater-item
+              data-repeatable-group="certifications"
+            >
               <h3>자격증 행 2</h3>
-              <div class="grid"><div class="field"><label for="cert-name-2">자격증명</label><input id="cert-name-2" name="certifications.certificate.name"></div><div class="field"><label for="cert-date-2">취득일</label><input id="cert-date-2" name="certifications.certificate.acquisitionDate" type="date"></div></div>
-              <fieldset><legend>등급</legend><div class="choices"><label><input type="radio" name="certification-status" value="유효"> 유효</label><label><input type="radio" name="certification-status" value="갱신 필요"> 갱신 필요</label></div></fieldset>
+              <div class="grid">
+                <div class="field">
+                  <label for="cert-name-2">자격증명</label
+                  ><input
+                    id="cert-name-2"
+                    name="certifications.certificate.name"
+                  />
+                </div>
+                <div class="field">
+                  <label for="cert-date-2">취득일</label
+                  ><input
+                    id="cert-date-2"
+                    name="certifications.certificate.acquisitionDate"
+                    type="date"
+                  />
+                </div>
+              </div>
+              <fieldset>
+                <legend>등급</legend>
+                <div class="choices">
+                  <label
+                    ><input
+                      type="radio"
+                      name="certification-status"
+                      value="유효"
+                    />
+                    유효</label
+                  ><label
+                    ><input
+                      type="radio"
+                      name="certification-status"
+                      value="갱신 필요"
+                    />
+                    갱신 필요</label
+                  >
+                </div>
+              </fieldset>
             </article>
           </div>
-          <template id="certification-template"><article class="row certification-item" data-repeater-item data-repeatable-group="certifications"><h3 data-row-title>자격증 행</h3><div class="grid"><div class="field"><label data-name-label>자격증명</label><input data-name-field name="certifications.certificate.name"></div><div class="field"><label data-date-label>취득일</label><input data-date-field name="certifications.certificate.acquisitionDate" type="date"></div></div><fieldset><legend>등급</legend><div class="choices"><label><input type="radio" name="certification-status" value="유효"> 유효</label><label><input type="radio" name="certification-status" value="갱신 필요"> 갱신 필요</label></div></fieldset></article></template>
-          <button id="add-certification" type="button">자격증 행 추가</button> <span id="certification-count" class="hint">행 2개</span>
+          <template id="certification-template"
+            ><article
+              class="row certification-item"
+              data-repeater-item
+              data-repeatable-group="certifications"
+            >
+              <h3 data-row-title>자격증 행</h3>
+              <div class="grid">
+                <div class="field">
+                  <label data-name-label>자격증명</label
+                  ><input
+                    data-name-field
+                    name="certifications.certificate.name"
+                  />
+                </div>
+                <div class="field">
+                  <label data-date-label>취득일</label
+                  ><input
+                    data-date-field
+                    name="certifications.certificate.acquisitionDate"
+                    type="date"
+                  />
+                </div>
+              </div>
+              <fieldset>
+                <legend>등급</legend>
+                <div class="choices">
+                  <label
+                    ><input
+                      type="radio"
+                      name="certification-status"
+                      value="유효"
+                    />
+                    유효</label
+                  ><label
+                    ><input
+                      type="radio"
+                      name="certification-status"
+                      value="갱신 필요"
+                    />
+                    갱신 필요</label
+                  >
+                </div>
+              </fieldset>
+            </article></template
+          >
+          <button id="add-certification" type="button">자격증 행 추가</button>
+          <span id="certification-count" class="hint">행 2개</span>
         </section>
 
         <section aria-labelledby="military-heading">
           <h2 id="military-heading">native choice와 숨은 상세</h2>
-          <fieldset><legend>병역 상태</legend><div class="choices"><label><input type="radio" name="military.military.militaryStatus" value="군필" aria-controls="military-details" aria-expanded="false"> 군필</label><label><input type="radio" name="military.military.militaryStatus" value="비대상" aria-controls="military-details" aria-expanded="false"> 비대상</label></div></fieldset>
-          <div id="military-details" hidden><div class="grid"><div class="field"><label for="military-start">복무 시작일</label><input id="military-start" name="military.military.serviceStartDate" type="date"></div><div class="field"><label for="military-branch">군별</label><select id="military-branch" name="military.military.militaryBranch"><option value="" selected>선택</option><option value="육군">육군</option><option value="해군">해군</option></select></div></div></div>
+          <fieldset>
+            <legend>병역 상태</legend>
+            <div class="choices">
+              <label
+                ><input
+                  type="radio"
+                  name="military.military.militaryStatus"
+                  value="군필"
+                  aria-controls="military-details"
+                  aria-expanded="false"
+                />
+                군필</label
+              ><label
+                ><input
+                  type="radio"
+                  name="military.military.militaryStatus"
+                  value="비대상"
+                  aria-controls="military-details"
+                  aria-expanded="false"
+                />
+                비대상</label
+              >
+            </div>
+          </fieldset>
+          <div id="military-details" hidden>
+            <div class="grid">
+              <div class="field">
+                <label for="military-start">복무 시작일</label
+                ><input
+                  id="military-start"
+                  name="military.military.serviceStartDate"
+                  type="date"
+                />
+              </div>
+              <div class="field">
+                <label for="military-branch">군별</label
+                ><select
+                  id="military-branch"
+                  name="military.military.militaryBranch"
+                >
+                  <option value="" selected>선택</option>
+                  <option value="육군">육군</option>
+                  <option value="해군">해군</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section aria-labelledby="activities-heading">
           <div>
             <h2 id="activities-heading">봉사 및 교내외 활동</h2>
-            <div class="field"><label for="activity-details">활동내역</label><textarea id="activity-details"></textarea></div>
+            <div class="field">
+              <label for="activity-details">활동내역</label
+              ><textarea id="activity-details"></textarea>
+            </div>
           </div>
         </section>
 
         <section aria-labelledby="diagnostics-heading">
           <h2 id="diagnostics-heading">안전한 합성 진단 시나리오</h2>
-          <div class="field"><label for="unmatched-field">페이지 전용 내부 값</label><input id="unmatched-field" name="fixture.unmatchedField"></div>
-          <div class="field"><label for="conflict-email">이메일주소(기존값 충돌)</label><input id="conflict-email" name="contact.contact.email" type="email" value="existing@fixture.test" autocomplete="email"></div>
-          <div class="tools"><button id="demo-unmatched" type="button">비일치 필드 포커스</button><button id="demo-conflict" type="button">충돌 값 적용</button><button id="demo-rerender" type="button">첫 행 다시 그리기(값 유실)</button></div>
+          <div class="field">
+            <label for="unmatched-field">페이지 전용 내부 값</label
+            ><input id="unmatched-field" name="fixture.unmatchedField" />
+          </div>
+          <div class="field">
+            <label for="conflict-email">이메일주소(기존값 충돌)</label
+            ><input
+              id="conflict-email"
+              name="contact.contact.email"
+              type="email"
+              value="existing@fixture.test"
+              autocomplete="email"
+            />
+          </div>
+          <div class="tools">
+            <button id="demo-unmatched" type="button">비일치 필드 포커스</button
+            ><button id="demo-conflict" type="button">충돌 값 적용</button
+            ><button id="demo-rerender" type="button">
+              첫 행 다시 그리기(값 유실)
+            </button>
+          </div>
         </section>
       </form>
     </main>

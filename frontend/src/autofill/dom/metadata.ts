@@ -1,4 +1,8 @@
 const MAX_METADATA_LENGTH = 120;
+const DEFINITION_LIST_CONTROL_SELECTOR =
+  "input:not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']), select, textarea, [contenteditable='true']";
+const LABEL_BOUNDARY_SELECTOR =
+  "[data-repeatable-group], [data-repeater-item], fieldset, [role='group']";
 
 export function metadata(value: string | null | undefined): string | undefined {
   const normalized = value?.replace(/\s+/g, " ").trim();
@@ -38,6 +42,48 @@ export function unassociatedLabelOf(
   return undefined;
 }
 
+function labelBoundary(element: Element): Element | null {
+  return element.closest(LABEL_BOUNDARY_SELECTOR);
+}
+
+/**
+ * Read a definition-list label without crossing a repeat row or group.
+ * A dd is eligible only when it owns this single non-button control; its
+ * current value and any other text inside the dd are intentionally ignored.
+ */
+export function definitionListLabelOf(
+  element: HTMLElement,
+): string | undefined {
+  const definition = element.closest("dd");
+  const list = definition?.closest("dl");
+  if (
+    !definition ||
+    !list ||
+    labelBoundary(definition) !== labelBoundary(element)
+  ) {
+    return undefined;
+  }
+
+  const controls = Array.from(
+    definition.querySelectorAll<HTMLElement>(DEFINITION_LIST_CONTROL_SELECTOR),
+  ).filter((control) => control.closest("dd") === definition);
+  if (controls.length !== 1 || controls[0] !== element) return undefined;
+
+  const precedingTerms = Array.from(list.querySelectorAll("dt")).filter(
+    (term) =>
+      term.closest("dl") === list &&
+      Boolean(
+        term.compareDocumentPosition(definition) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+  );
+  const nearestTerm = precedingTerms[precedingTerms.length - 1];
+  if (!nearestTerm || labelBoundary(nearestTerm) !== labelBoundary(element)) {
+    return undefined;
+  }
+  return metadata(nearestTerm.textContent);
+}
+
 export function labelOf(element: HTMLElement): string | undefined {
   const ariaLabelledBy = metadata(element.getAttribute("aria-labelledby"));
   if (ariaLabelledBy) {
@@ -62,6 +108,8 @@ export function labelOf(element: HTMLElement): string | undefined {
     const placeholder = metadata(element.getAttribute("placeholder"));
     if (placeholder) return placeholder;
   }
+  const definitionListLabel = definitionListLabelOf(element);
+  if (definitionListLabel) return definitionListLabel;
   return metadata(element.textContent);
 }
 

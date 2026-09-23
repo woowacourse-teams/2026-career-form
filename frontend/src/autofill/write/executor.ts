@@ -1,32 +1,23 @@
+import {
+  skipped,
+  written,
+  outcomeForWriteCode,
+  type ApprovedWriteResult,
+} from "./write-result";
+export type { ApprovedWriteResult } from "./write-result";
+import { acquireDocumentRun } from "../interaction/document-run";
+import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
-
-export type ApprovedWriteResult =
-  | {
-      candidateId: string;
-      status: "written";
-      outcome?: "success";
-      code?: "WRITTEN";
-    }
-  | {
-      candidateId: string;
-      status: "skipped";
-      reason: string;
-      outcome?: "failed" | "needs-verification" | "unsupported";
-      code?:
-        | "NOT_APPROVED"
-        | "REVIEW_UNAVAILABLE"
-        | "DUPLICATE_BINDING"
-        | "STALE_TARGET"
-        | "CONFLICT"
-        | "RETAINED_VALUE_UNCONFIRMED"
-        | "UNSUPPORTED_CONTROL"
-        | "UNSUPPORTED_FORMAT"
-        | "EXECUTION_FAILED";
-    };
+import {
+  bindingKey,
+  executeApprovedSearchWrites,
+  isSelectableApproved,
+  settledSearchSelectionResult,
+} from "./search-executor";
 
 type WriteOutcome =
   | { written: true }
@@ -42,43 +33,6 @@ const CONFLICT = "입력 직전 지원서에 다른 값이 있어 기존 값을 
 const RETENTION = "입력 후 값이 유지되지 않아 확인이 필요합니다.";
 const FORBIDDEN =
   /약관|동의|agreement|consent|인증|verification|verify|auth|login|password|비밀번호|upload|첨부|file|검색|search|lookup/i;
-
-function skipped(
-  candidateId: string,
-  outcome: "failed" | "needs-verification" | "unsupported",
-  code: NonNullable<
-    Extract<ApprovedWriteResult, { status: "skipped" }>["code"]
-  >,
-  reason: string,
-): ApprovedWriteResult {
-  return { candidateId, status: "skipped", outcome, code, reason };
-}
-
-function written(candidateId: string): ApprovedWriteResult {
-  return {
-    candidateId,
-    status: "written",
-    outcome: "success",
-    code: "WRITTEN",
-  };
-}
-
-function outcomeForWriteCode(
-  code: Extract<ApprovedWriteResult, { status: "skipped" }>["code"],
-): "failed" | "needs-verification" | "unsupported" {
-  switch (code) {
-    case "EXECUTION_FAILED":
-      return "failed";
-    case "NOT_APPROVED":
-    case "DUPLICATE_BINDING":
-    case "STALE_TARGET":
-    case "CONFLICT":
-    case "RETAINED_VALUE_UNCONFIRMED":
-      return "needs-verification";
-    default:
-      return "unsupported";
-  }
-}
 
 function dispatchValueEvents(element: Element): void {
   element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -123,18 +77,6 @@ function profileOption(
   return matches.length === 1 && matches[0]!.isConnected
     ? matches[0]
     : undefined;
-}
-
-function isSelectableApproved(item: ReviewPlanItem): boolean {
-  if (
-    !item.selected ||
-    item.disabled ||
-    !item.analysis ||
-    !item.profileValue ||
-    item.status === "unavailable"
-  )
-    return false;
-  return item.status !== "sensitive" || item.revealed;
 }
 
 function writableHandle(
@@ -588,16 +530,6 @@ function writeItem(
   return writeGeneric(item, handle, false);
 }
 
-function bindingKey(item: ReviewPlanItem): string | undefined {
-  if (item.analysis?.mappingStatus !== "LLM_SUGGESTED") return undefined;
-  const key =
-    item.analysis?.valueBinding?.profileFieldKey ??
-    item.analysis?.profileFieldKey;
-  return item.profileEntryId && key
-    ? `${item.profileEntryId}:${key}`
-    : undefined;
-}
-
 function resultForItem(
   item: ReviewPlanItem,
   registry: CandidateRegistry,
@@ -653,7 +585,7 @@ export function executeApprovedWrites({
 }): ApprovedWriteResult[] {
   const candidates = new Set<string>(),
     bindings = new Set<string>();
-  const results = items.map((item) => {
+  const results = items.map((item): ApprovedWriteResult => {
     const key = bindingKey(item);
     if (
       !approvedCandidateIds.has(item.candidateId) ||
@@ -746,37 +678,116 @@ export async function executeApprovedWritesAfterPageSettles({
   items,
   approvedCandidateIds,
   registry,
+  interactionDecisionProvider,
+  assertCurrent,
+  beforeMutation,
+  signal,
+  document: suppliedDocument,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
   registry: CandidateRegistry;
+  interactionDecisionProvider?: InteractionDecisionProvider;
+  assertCurrent?: () => boolean;
+  beforeMutation?: () => Promise<boolean>;
+  signal?: AbortSignal;
+  document?: Document;
 }): Promise<ApprovedWriteResult[]> {
-  const initial = executeApprovedWrites({
-    items,
-    approvedCandidateIds,
-    registry,
-  });
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  const adapterItems = items.filter(
-    (item, index) =>
-      initial[index]?.status === "written" &&
-      item.analysis?.mappingStatus === "ADAPTER_VERIFIED",
-  );
-  const retried = executeApprovedWrites({
-    items: adapterItems,
-    approvedCandidateIds: new Set(
-      adapterItems.map(({ candidateId }) => candidateId),
-    ),
-    registry,
-  });
-  const adapterResults = new Map(
-    retried.map((result) => [result.candidateId, result]),
-  );
-  return initial.map((result, index) => {
-    const item = items[index];
-    if (!item || result.status !== "written") return result;
-    return item.analysis?.mappingStatus === "ADAPTER_VERIFIED"
-      ? (adapterResults.get(item.candidateId) ?? result)
-      : settledGenericResult(item, registry);
-  });
+  const first = items[0] && registry.lookupField(items[0].candidateId);
+  const document =
+    suppliedDocument ??
+    (first && "handle" in first
+      ? first.handle.elements[0]?.ownerDocument
+      : undefined);
+  const release = document ? acquireDocumentRun(document) : undefined;
+  if (document && !release)
+    return items.map((item) =>
+      skipped(
+        item.candidateId,
+        "needs-verification",
+        "STALE_TARGET",
+        "이미 자동 기입이 실행 중입니다.",
+      ),
+    );
+  const url = document?.URL;
+  const runCurrent = () =>
+    !signal?.aborted && assertCurrent?.() !== false && document?.URL === url;
+  try {
+    const initial = executeApprovedWrites({
+      items,
+      approvedCandidateIds: new Set(),
+      registry,
+    });
+    const halted = await executeApprovedSearchWrites({
+      items,
+      approvedCandidateIds,
+      registry,
+      interactionDecisionProvider,
+      assertCurrent: runCurrent,
+      beforeMutation,
+      signal,
+      writeOrdinary: (item) =>
+        executeApprovedWrites({
+          items: [item],
+          approvedCandidateIds,
+          registry,
+        })[0]!,
+      results: initial,
+    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    const adapterItems = items.filter(
+      (item, index) =>
+        !halted &&
+        runCurrent() &&
+        initial[index]?.status === "written" &&
+        item.analysis?.mappingStatus === "ADAPTER_VERIFIED",
+    );
+    const retried: ApprovedWriteResult[] = [];
+    for (const item of adapterItems) {
+      if (
+        !runCurrent() ||
+        (beforeMutation && !(await beforeMutation())) ||
+        !runCurrent()
+      )
+        break;
+      retried.push(
+        ...executeApprovedWrites({
+          items: [item],
+          approvedCandidateIds: new Set([item.candidateId]),
+          registry,
+        }),
+      );
+    }
+    const adapterResults = new Map(
+      retried.map((result) => [result.candidateId, result]),
+    );
+    let profileCurrent = true;
+    try {
+      profileCurrent = !beforeMutation || (await beforeMutation());
+    } catch {
+      profileCurrent = false;
+    }
+    return initial.map((result, index) => {
+      const item = items[index];
+      if (
+        !item ||
+        (result.status !== "written" && result.outcome !== "unchanged")
+      )
+        return result;
+      if (!profileCurrent || !runCurrent())
+        return skipped(
+          item.candidateId,
+          "needs-verification",
+          "STALE_TARGET",
+          "실행 중 프로필 또는 지원서 상태가 변경되어 입력 결과를 확인해 주세요.",
+        );
+      if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
+        return settledSearchSelectionResult(item, registry, result);
+      return item.analysis?.mappingStatus === "ADAPTER_VERIFIED"
+        ? (adapterResults.get(item.candidateId) ?? result)
+        : settledGenericResult(item, registry);
+    });
+  } finally {
+    release?.();
+  }
 }

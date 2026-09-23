@@ -321,6 +321,9 @@ export function WorkflowScreens({
     const successful = displayResults.filter(
       (result) => writeResultOutcome(result) === "success",
     ).length;
+    const unchanged = displayResults.filter(
+      (result) => writeResultOutcome(result) === "unchanged",
+    ).length;
     const failed = skippedResults.filter(
       (result) => writeResultOutcome(result) === "failed",
     );
@@ -383,6 +386,11 @@ export function WorkflowScreens({
             <span>입력 불가</span>
           </div>
         </div>
+        {unchanged > 0 && (
+          <p role="status">
+            이미 같은 값이 입력된 항목 {unchanged}개는 변경하지 않았습니다.
+          </p>
+        )}
         <p className={styles.safety}>
           성공한 항목은 지원서에서 한 번만 확인해 주세요. 저장과 제출은 직접
           진행합니다.

@@ -1,5 +1,5 @@
-import { waitFor } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { cleanup, configure, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
   control,
@@ -10,7 +10,15 @@ import {
   service,
 } from "./workflow-military-veteran.integration.test-fixtures";
 
+beforeEach(() => {
+  // Hyundai's verified conditional workflow has a 5-second settlement budget.
+  // Keep this integration suite's result waits inside that same bound under V8 coverage.
+  configure({ asyncUtilTimeout: 5_000 });
+});
+
 afterEach(() => {
+  cleanup();
+  configure({ asyncUtilTimeout: 1_000 });
   document.body.replaceChildren();
   (
     globalThis as unknown as {
@@ -54,7 +62,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   ]).toEqual([false, "", "기존 장애 메모"]);
   expect(control("engNm").value).toBe("Fixture");
   expect(first.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "0직접 확인 필요",
+    "2직접 확인 필요",
   );
   const firstClicks = { ...clicks };
   first.unmount();
@@ -174,7 +182,7 @@ it("treats the legacy 만기전역 profile value as 군필 only during Hyundai a
     "2021-09",
   ]);
   expect(result.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "0직접 확인 필요",
+    "2직접 확인 필요",
   );
 });
 
@@ -403,8 +411,11 @@ it("leaves an incompatible veteran number blank while completing other fields", 
     ).toBeInTheDocument(),
   );
   expect(control("branchNo").value).toBe("");
-  expect(result.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "1직접 확인 필요",
+  const verificationSummary = result
+    .getAllByText("직접 확인 필요")
+    .find((element) => element.tagName === "SPAN");
+  expect(verificationSummary?.parentElement).toHaveTextContent(
+    "3직접 확인 필요",
   );
   expect(hidden("branchRel")).toBe("1");
   expect(control("milStartDt").value).toBe("2020-03");

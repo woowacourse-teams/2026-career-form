@@ -1,3 +1,9 @@
+import {
+  isReadonlySearchEligible,
+  observeReadonlySearch,
+} from "../interaction";
+import { normalized } from "../interaction/readonly-search";
+import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
 import type {
   FieldAnalysis,
   FieldsAnalyzeResponse,
@@ -15,6 +21,7 @@ import type {
 import type { ValueBinding } from "../api/types";
 import { resolveValueBinding } from "../profile/value-binding";
 import { matchStandardOption } from "../profile/standard-option-match";
+import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 
 export type ProfileValueResolution =
@@ -208,6 +215,7 @@ function itemForAnalysis(
   registry: CandidateRegistry,
   ignoreCurrentValueCandidateIds: ReadonlySet<string>,
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
+  generic = true,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
@@ -227,11 +235,44 @@ function itemForAnalysis(
   }
 
   const lookup = registry.lookupField(analysis.candidateId);
-  if (lookup.status !== "ready") {
+  const searchCommand = analysis.writePlan.command === "SEARCH_SELECTION";
+  if (
+    searchCommand &&
+    (!generic ||
+      analysis.mappingStatus !== "LLM_SUGGESTED" ||
+      analysis.valueBinding?.type !== "DIRECT" ||
+      !isAutofillProfileFieldKey(analysis.valueBinding.profileFieldKey))
+  ) {
     return unavailableItem(
       analysis.candidateId,
       fieldLabel,
-      "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
+      "검색 대상의 프로필 연결과 실행 경로를 확인할 수 없습니다.",
+      analysis,
+    );
+  }
+  const readonlySearch =
+    analysis.mappingStatus === "LLM_SUGGESTED" &&
+    analysis.writePlan.command === "SEARCH_SELECTION" &&
+    lookup.status === "blocked" &&
+    lookup.reason === "readonly" &&
+    isReadonlySearchEligible(
+      lookup.handle,
+      lookup.handle.elements[0]!.ownerDocument,
+    );
+  if (
+    (searchCommand && !readonlySearch) ||
+    (lookup.status !== "ready" && !readonlySearch)
+  ) {
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      analysis.writePlan.command === "SEARCH_SELECTION" &&
+        lookup.status === "blocked" &&
+        lookup.reason === "readonly"
+        ? observeReadonlySearch(lookup.handle).status === "ambiguous"
+          ? "검색 버튼이 여러 개여서 원래 입력칸과 유일하게 연결할 수 없습니다."
+          : "원래 입력칸과 같은 필드 그룹에서 안전한 검색 버튼을 찾지 못했습니다."
+        : "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
       analysis,
     );
   }
@@ -328,7 +369,14 @@ function itemForAnalysis(
   const hasConflict =
     !ignoreCurrentValueCandidateIds.has(analysis.candidateId) &&
     pageValue.trim().length > 0 &&
-    pageValue.trim() !== resolvedProfileValue.value.trim();
+    (searchCommand
+      ? !(
+          binding.type === "DIRECT" &&
+          binding.profileFieldKey.endsWith(".schoolRegion")
+            ? schoolRegionSearchValues(resolvedProfileValue.value)
+            : [resolvedProfileValue.value]
+        ).some((value) => normalized(pageValue) === normalized(value))
+      : pageValue.trim() !== resolvedProfileValue.value.trim());
   if (
     requiresSensitiveConfirmation(
       binding.profileFieldKey,
@@ -481,6 +529,7 @@ export function buildReviewPlan({
       registry,
       ignoreCurrentValueCandidateIds,
       normalizeDirectValue,
+      analysis.mode === "GENERIC",
     ),
   );
   return {

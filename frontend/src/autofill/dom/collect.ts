@@ -31,6 +31,8 @@ const EXPLICIT_ROW_SELECTOR = "[data-repeatable-group], [data-repeater-item]";
 const SECTION_SELECTOR = "fieldset, section, [role='group'], .apply-form-box";
 const FORBIDDEN_ACTION =
   /저장|제출|지원|완료|다음|이전|이동|미리보기|삭제|업로드|계산기|submit|save|next|previous|preview|delete|upload|remove|calculator/i;
+const GENERIC_PREPARATION_FORBIDDEN_ACTION =
+  /초기화|재설정|reset|clear|검색|조회|찾기|search|find|lookup/i;
 
 export interface CollectedSnapshot<TRequest> {
   request: TRequest;
@@ -500,6 +502,17 @@ function collectActionElements(document: Document) {
   });
 }
 
+function isGenericPreparationAction(element: HTMLElement): boolean {
+  const label = [
+    labelOf(element),
+    element.getAttribute("title"),
+    element.getAttribute("aria-label"),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return !GENERIC_PREPARATION_FORBIDDEN_ACTION.test(label);
+}
+
 function repeatableItemElements(
   container: Element | null,
   adapter: CollectionAdapter,
@@ -662,8 +675,9 @@ export function collectPreparationSnapshot(
     ...collectActionElements(document).filter(
       (element) =>
         !generic ||
-        element instanceof HTMLButtonElement ||
-        (element instanceof HTMLInputElement && element.type === "button"),
+        ((element instanceof HTMLButtonElement ||
+          (element instanceof HTMLInputElement && element.type === "button")) &&
+          isGenericPreparationAction(element)),
     ),
     ...(adapter.additionalActionElements?.(document) ?? []),
   ];
