@@ -45,7 +45,7 @@ it("keeps result layout and actions styled without the separately loaded entry s
       "none",
     );
     expect(locate).toHaveTextContent("입력칸으로 이동");
-    expect(getComputedStyle(locate).minHeight).toBe("40px");
+    expect(getComputedStyle(locate).minHeight).toBe("24px");
     expect(getComputedStyle(locate).borderTopStyle).toBe("none");
   } finally {
     externalStyles.forEach((style) => document.head.append(style));
@@ -90,20 +90,23 @@ it("shows only the field name and action above the guidance, without profile val
   expect(heading).toContainElement(view.getByText("전공"));
   expect(heading).not.toContainElement(reason);
   expect(heading.nextElementSibling).toBe(reason);
-  expect(getComputedStyle(locate).minHeight).toBe("40px");
+  expect(getComputedStyle(locate).minHeight).toBe("24px");
   const rowStyle = getComputedStyle(locate.closest("article")!);
   expect(parseFloat(rowStyle.paddingLeft)).toBeGreaterThanOrEqual(12);
-  expect(parseFloat(rowStyle.paddingTop)).toBeGreaterThanOrEqual(12);
+  expect(rowStyle.paddingTop).toBe("8px");
+  expect(rowStyle.paddingBottom).toBe("8px");
   expect(rowStyle.borderRadius).toBe("10px");
   const group = locate.closest("article")!.parentElement!;
   expect(getComputedStyle(group).display).toBe("grid");
-  expect(parseFloat(getComputedStyle(group).gap)).toBeGreaterThanOrEqual(12);
+  expect(getComputedStyle(group).gap).toBe("6px");
   expect(getComputedStyle(group).padding).toBe("0px");
   expect(getComputedStyle(group).borderTopStyle).toBe("none");
   expect(getComputedStyle(view.getByText("전공")).wordBreak).toBe("keep-all");
   expect(getComputedStyle(view.getByText("전공")).textWrap).toBe("balance");
   expect(getComputedStyle(reason).wordBreak).toBe("keep-all");
-  expect(getComputedStyle(reason).marginLeft).toBe("-4px");
+  expect(getComputedStyle(reason).marginLeft).toBe("0px");
+  expect(getComputedStyle(reason).paddingBottom).toBe("0px");
+  expect(getComputedStyle(view.getByText("확인 안내")).display).toBe("inline");
   expect(getComputedStyle(reason).fontSize).toBe("13px");
   expect(getComputedStyle(reason).fontWeight).toBe("400");
   expect(getComputedStyle(reason).backgroundColor).toBe("transparent");
