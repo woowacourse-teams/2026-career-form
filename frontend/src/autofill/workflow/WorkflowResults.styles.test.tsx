@@ -37,7 +37,15 @@ it("keeps result layout and actions styled without the separately loaded entry s
     expect(getComputedStyle(summary).display).toBe("grid");
     expect(getComputedStyle(summary).padding).toBe("0px 0px 20px");
     expect(getComputedStyle(counts).display).toBe("grid");
-    expect(getComputedStyle(counts).gap).toBe("8px");
+    expect(getComputedStyle(counts).gap).toBe("0px");
+    expect(getComputedStyle(counts).borderTopStyle).toBe("solid");
+    expect(getComputedStyle(counts).borderRadius).toBe("10px");
+    expect(getComputedStyle(counts.firstElementChild!).borderTopStyle).toBe(
+      "none",
+    );
+    expect(getComputedStyle(counts.lastElementChild!).borderLeftStyle).toBe(
+      "solid",
+    );
     expect(getComputedStyle(locate).width).toBe("28px");
     expect(getComputedStyle(locate).borderTopStyle).toBe("none");
   } finally {
