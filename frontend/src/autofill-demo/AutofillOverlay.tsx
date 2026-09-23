@@ -8,6 +8,7 @@ import { ChromeProfileStorage } from "../storage/chrome-profile-storage";
 import styles from "./AutofillOverlay.module.css";
 
 interface AutofillOverlayProps {
+  returnInHeader?: boolean;
   passive?: boolean;
   onClose(): void;
   apiClient?: AnalysisApiClient;
@@ -16,6 +17,7 @@ interface AutofillOverlayProps {
 }
 
 export function AutofillOverlay({
+  returnInHeader = false,
   passive = false,
   onClose,
   apiClient: injectedApiClient,
@@ -38,7 +40,7 @@ export function AutofillOverlay({
   return (
     <section
       ref={region}
-      className={styles.panel}
+      className={`${styles.panel} ${returnInHeader ? styles.headerReturn : ""}`}
       role="region"
       aria-label="지원서 자동 기입"
       tabIndex={-1}
@@ -49,12 +51,14 @@ export function AutofillOverlay({
         onClose();
       }}
     >
-      <div className={styles.toolbar}>
-        <button type="button" onClick={onClose}>
-          <span aria-hidden="true">←</span>
-          수동 복사로 돌아가기
-        </button>
-      </div>
+      {!returnInHeader && (
+        <div className={styles.toolbar}>
+          <button type="button" onClick={onClose}>
+            <span aria-hidden="true">←</span>
+            수동 복사로 돌아가기
+          </button>
+        </div>
+      )}
       <div className={styles.body}>
         <AutofillWorkflow
           exitInToolbar

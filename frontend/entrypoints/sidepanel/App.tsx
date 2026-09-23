@@ -24,6 +24,7 @@ interface AppProps {
   inPage?: boolean;
   logoUrl?: string;
   autofillView?: ReactNode;
+  returnToProfile?: () => void;
   actionPosition?: "top" | "bottom";
 }
 
@@ -106,6 +107,7 @@ export function App({
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
   autofillView,
+  returnToProfile,
   actionPosition = "top",
 }: AppProps) {
   const repository = useMemo(
@@ -234,6 +236,22 @@ export function App({
             프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
+        {autofillActive && returnToProfile && (
+          <section className={styles.autofillAction}>
+            <button
+              type="button"
+              onClick={returnToProfile}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                event.stopPropagation();
+                returnToProfile();
+              }}
+            >
+              <span aria-hidden="true">← </span>수동 복사로 돌아가기
+            </button>
+          </section>
+        )}
         {!autofillActive && actionPosition === "top" && (
           <section className={styles.autofillAction}>
             <button

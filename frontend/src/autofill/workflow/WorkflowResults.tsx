@@ -120,7 +120,7 @@ export function WorkflowResults({
             확인 필요 <span aria-hidden="true">{pending.length}</span>
           </h3>
           <p className={styles.reviewHint}>
-            항목별 프로필 값과 확인 이유를 살펴보세요.
+            항목을 누르면 지원서의 해당 입력칸으로 이동해요.
           </p>
           <div className={styles.reviewList}>
             {pending.map(({ id, item, reason, written, failureCode }) => (

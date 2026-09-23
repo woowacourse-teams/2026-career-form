@@ -6,10 +6,7 @@
 .summary {
   display: grid;
   gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface);
+  padding: 0 0 4px;
 }
 .summaryText {
   display: grid;
@@ -78,11 +75,8 @@
   color: var(--color-text-strong);
 }
 .reviewTitle > span {
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: var(--color-accent);
-  color: var(--color-text-strong);
-  font-size: 12px;
+  color: var(--color-action-strong);
+  font-size: 14px;
   font-weight: 600;
 }
 .reviewHint {
@@ -98,11 +92,27 @@
   border: none;
 }
 .row {
+  position: relative;
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-accent-soft);
   overflow-wrap: anywhere;
+}
+.row:has(.heading button:not(:disabled)):hover,
+.row:has(.heading button:focus-visible) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent);
+}
+.heading button:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+}
+.row:has(.heading button:focus-visible) {
+  outline: 2px solid var(--color-action-strong);
+  outline-offset: 2px;
 }
 .heading {
   display: grid;
@@ -179,6 +189,8 @@
   overflow-wrap: anywhere;
 }
 .row details {
+  position: relative;
+  z-index: 1;
   margin: 8px 0 0;
 }
 .row details p {

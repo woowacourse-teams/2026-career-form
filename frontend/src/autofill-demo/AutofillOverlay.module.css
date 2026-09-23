@@ -20,17 +20,20 @@
   color: var(--color-text-strong);
   background: transparent;
 }
+.headerReturn {
+  grid-template-rows: minmax(0, 1fr);
+}
 
 .toolbar button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-brand-hover);
   border-radius: 8px;
   padding: 8px 12px;
-  color: var(--color-text-strong);
-  background: var(--color-surface);
+  color: var(--color-on-brand);
+  background: var(--color-brand);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
@@ -38,7 +41,7 @@
 }
 
 .toolbar button:hover {
-  background: var(--color-accent-soft);
+  background: var(--color-brand-hover);
 }
 
 .toolbar button:focus-visible {
