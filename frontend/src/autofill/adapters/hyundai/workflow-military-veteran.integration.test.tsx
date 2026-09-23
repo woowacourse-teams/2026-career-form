@@ -25,7 +25,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   await waitFor(
     () =>
       expect(
-        first.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        first.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     { timeout: 5000 },
   );
@@ -60,7 +60,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   await waitFor(
     () =>
       expect(
-        second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        second.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     { timeout: 5000 },
   );
@@ -74,7 +74,7 @@ it("automatically writes Hyundai drivers and details without sensitive-value con
 
   await waitFor(() =>
     expect(
-      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      result.getByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument(),
   );
   expect(result.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
@@ -101,7 +101,7 @@ it("automatically writes Hyundai disability status, grade, and type without sens
 
   await waitFor(() =>
     expect(
-      first.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      first.getByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument(),
   );
   expect(first.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
@@ -119,7 +119,7 @@ it("automatically writes Hyundai disability status, grade, and type without sens
   const second = run(profile);
   await waitFor(() =>
     expect(
-      second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      second.getByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument(),
   );
   expect(clicks).toEqual(firstClicks);
@@ -139,7 +139,7 @@ it.each(["", "disability-status:unverified", "veteran-status:eligible"])(
     const result = await run(profile);
     await waitFor(() =>
       expect(
-        result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        result.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     );
     expect([
@@ -158,7 +158,7 @@ it("treats the legacy 만기전역 profile value as 군필 only during Hyundai a
   const result = await run(profile);
   await waitFor(() =>
     expect(
-      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      result.getByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument(),
   );
   expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
@@ -202,7 +202,7 @@ it.each([
     const first = await run(profile);
     await waitFor(() =>
       expect(
-        first.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        first.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     );
     expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
@@ -224,7 +224,7 @@ it.each([
     const second = await run(profile);
     await waitFor(() =>
       expect(
-        second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        second.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     );
     expect(clicks).toEqual(firstClicks);
@@ -257,7 +257,7 @@ it.each([
     const result = await run(profile);
     await waitFor(() =>
       expect(
-        result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        result.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     );
     expect([
@@ -291,7 +291,7 @@ it("preserves opposite existing selections while continuing an unrelated field",
   const result = await run(fixtureProfile());
   await waitFor(() =>
     expect(
-      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      result.getByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument(),
   );
   expect([
@@ -336,7 +336,7 @@ it.each([
     const result = await run(fixtureProfile());
     await waitFor(() =>
       expect(
-        result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        result.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     );
     expect(hidden(id)).toBe(code);
@@ -352,7 +352,7 @@ it("does not write military details after a partial driver transition and still 
   await waitFor(
     () =>
       expect(
-        result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        result.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     { timeout: 5000 },
   );
@@ -374,7 +374,7 @@ it("leaves enabled military details blank when the profile has no supported stat
   const result = await run(profile);
   await waitFor(() =>
     expect(
-      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      result.getByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument(),
   );
   expect([
@@ -395,7 +395,7 @@ it("leaves an incompatible veteran number blank while completing other fields", 
   const result = await run(profile);
   await waitFor(() =>
     expect(
-      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      result.getByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument(),
   );
   expect(control("branchNo").value).toBe("");
@@ -477,7 +477,7 @@ it.each([
     const result = await run(profile);
     await waitFor(() =>
       expect(
-        result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+        result.getByRole("heading", { name: "기입 결과" }),
       ).toBeInTheDocument(),
     );
     expect([

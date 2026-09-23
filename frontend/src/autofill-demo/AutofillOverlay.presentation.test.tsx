@@ -66,7 +66,7 @@ it.each(["workflow", "overlay"])(
         ),
       );
 
-      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
+      await screen.findByRole("heading", { name: "기입 결과" });
       expect(page.input).toHaveValue("me@example.test");
       expect(page.observed.length).toBeGreaterThan(0);
       for (const state of page.observed) {
@@ -93,7 +93,7 @@ it("locates a review field only when its result action is clicked", async () => 
         onClose={() => {}}
       />,
     );
-    await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
+    await screen.findByRole("heading", { name: "기입 결과" });
     expect(page.top()).toBe(1200);
     expect(page.input.style.backgroundColor).toBe("red");
     fireEvent.click(

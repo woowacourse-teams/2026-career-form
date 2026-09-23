@@ -422,9 +422,7 @@ it("defers an ambiguous additional major and continues the same university row",
     }),
   );
 
-  await waitFor(() =>
-    expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
-  );
+  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
   expect(additionalMajor.value).toBe("");
   expect(
     document.querySelector<HTMLInputElement>("[name=dblMajor]")!.value,

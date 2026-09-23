@@ -116,7 +116,7 @@ describe("AutofillOverlay repeatable preparation", () => {
     fireEvent.click(screen.getByRole("button", { name: "준비하고 계속" }));
 
     expect(
-      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      await screen.findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
     expect(clicks).toBe(2);
     expect(

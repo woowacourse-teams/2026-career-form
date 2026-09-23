@@ -273,7 +273,7 @@ function setup({
 
 it("prioritizes canonical SK status values through 0→1 and 1→0, then fills only reanalyzed visible details", async () => {
   const run = setup();
-  await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
+  await screen.findByRole("heading", { name: "기입 결과" });
   expect(
     document.querySelector<HTMLInputElement>(
       "[name=prsVeteranBenefitYN][value='1']",
@@ -313,7 +313,7 @@ it("supports legacy 대상/비대상 values and writes SK disability grade/type 
     disability: "대상",
     initialDisability: "0",
   });
-  await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
+  await screen.findByRole("heading", { name: "기입 결과" });
   expect(
     document.querySelector<HTMLInputElement>("[name=prsDisabledYN][value='1']")
       ?.checked,
@@ -340,7 +340,7 @@ it.each([
       overrides: { prsVeteranBenefitYN: value },
     });
     await waitFor(() =>
-      expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
+      expect(document.body.textContent).toContain("기입 결과"),
     );
     expect(
       document.querySelector<HTMLInputElement>(
@@ -360,7 +360,7 @@ it.each([
   async (_case, veteran) => {
     const run = setup({ initialVeteran: "0", veteran });
     await waitFor(() =>
-      expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
+      expect(document.body.textContent).toContain("기입 결과"),
     );
     expect(
       document.querySelector<HTMLInputElement>(
@@ -373,9 +373,7 @@ it.each([
 
 it("does not override a generic host", async () => {
   const run = setup({ host: "example.test" });
-  await waitFor(() =>
-    expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
-  );
+  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
   expect(
     document.querySelector<HTMLInputElement>(
       "[name=prsVeteranBenefitYN][value='0']",
@@ -386,9 +384,7 @@ it("does not override a generic host", async () => {
 
 it("does not override an LLM-suggested SK mapping", async () => {
   const run = setup({ mappingStatus: "LLM_SUGGESTED" });
-  await waitFor(() =>
-    expect(document.body.textContent).toContain("자동 기입을 마쳤어요"),
-  );
+  await waitFor(() => expect(document.body.textContent).toContain("기입 결과"));
   expect(
     document.querySelector<HTMLInputElement>(
       "[name=prsVeteranBenefitYN][value='0']",

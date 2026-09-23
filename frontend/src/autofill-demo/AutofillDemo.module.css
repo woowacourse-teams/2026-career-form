@@ -9,7 +9,6 @@
 .resultScreen {
   gap: 12px;
   padding: 16px;
-  background: var(--color-surface);
 }
 .resultTitle {
   margin: 0;

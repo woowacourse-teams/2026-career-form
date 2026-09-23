@@ -117,7 +117,7 @@ it.each([
       ),
     );
     expect(
-      screen.queryByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      screen.queryByRole("heading", { name: "기입 결과" }),
     ).not.toBeInTheDocument();
     await act(async () => continueSearch());
     await waitFor(() =>

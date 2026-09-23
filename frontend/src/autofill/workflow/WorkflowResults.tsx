@@ -86,11 +86,11 @@ export function WorkflowResults({
               data-state="completed"
               aria-label={`입력 완료 ${completed.length}개`}
             >
-              <span>✓ 입력 완료</span> <strong>{completed.length}개</strong>
+              입력 완료 <strong>{completed.length}개</strong>
             </span>
             {pending.length > 0 && (
               <span aria-label={`확인 필요 ${pending.length}개`}>
-                <span>! 확인 필요</span> <strong>{pending.length}개</strong>
+                확인 필요 <strong>{pending.length}개</strong>
               </span>
             )}
           </div>
@@ -127,7 +127,6 @@ export function WorkflowResults({
               <article key={id} className={styles.row}>
                 <div className={styles.heading}>
                   <div className={styles.fieldTitle}>
-                    <span className={styles.metaLabel}>지원서 항목</span>
                     <strong>
                       {item ? resultFieldLabel(item) : "프로필 정보"}
                     </strong>
@@ -139,7 +138,6 @@ export function WorkflowResults({
                     :
                   </span>
                   <div className={styles.values}>
-                    <span className={styles.metaLabel}>프로필 값</span>
                     {item &&
                       resultPreview(item, profile).map((value, index) => (
                         <p key={index}>{value}</p>
@@ -165,16 +163,8 @@ export function WorkflowResults({
                   </button>
                 </div>
                 <small className={styles.guidance}>
-                  <span className={styles.commentLabel}>자동 기입 코멘트</span>
                   {resultGuidance(reason, failureCode)}
                 </small>
-                <div className={styles.cardAction} aria-hidden="true">
-                  {!onLocate ||
-                  unavailable.has(id) ||
-                  id.startsWith("progress:")
-                    ? "현재 이동할 수 없는 항목"
-                    : "입력칸으로 이동 ↗"}
-                </div>
                 {!!optionsFor?.(id).length && (
                   <details>
                     <summary>지원서 선택지</summary>

@@ -79,9 +79,7 @@ async function fillScore(disableAfterInput: boolean) {
     />,
   );
   await waitFor(() =>
-    expect(
-      screen.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
-    ).toBeVisible(),
+    expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible(),
   );
   return input;
 }

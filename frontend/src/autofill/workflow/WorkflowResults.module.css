@@ -27,19 +27,10 @@
   font-size: 13px;
 }
 .counts > span {
-  display: grid;
-  gap: 4px;
   padding: 10px;
-  border: 2px solid var(--color-action-strong);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: transparent;
-}
-.counts > [data-state="completed"] {
-  border-color: var(--color-success);
-}
-.counts strong {
-  font-size: 24px;
-  line-height: 1.2;
+  background: var(--color-surface);
 }
 .counts strong {
   color: var(--color-action-strong);
@@ -110,17 +101,15 @@
 .row {
   position: relative;
   padding: 12px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: var(--color-surface);
-  box-shadow: 0 2px 0 var(--color-border);
+  background: var(--color-accent-soft);
   overflow-wrap: anywhere;
 }
 .row:has(.heading button:not(:disabled)):hover,
 .row:has(.heading button:focus-visible) {
-  background: var(--color-surface);
-  border-color: var(--color-action);
-  box-shadow: 0 3px 8px rgb(117 65 38 / 14%);
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent);
 }
 .heading button:not(:disabled)::after {
   content: "";
@@ -139,7 +128,7 @@
   gap: 6px;
 }
 .connector {
-  padding-top: 23px;
+  padding-top: 4px;
   color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.5;
@@ -155,41 +144,10 @@
 .fieldTitle {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 0;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   padding-top: 4px;
-}
-.metaLabel {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 16px;
-}
-.commentLabel {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--color-action-strong);
-  font-size: 11px;
-  font-weight: 650;
-}
-.commentLabel::before {
-  content: "“";
-  margin-right: 5px;
-  font-size: 18px;
-  line-height: 12px;
-}
-.cardAction {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border);
-  color: var(--color-action-strong);
-  font-size: 12px;
-  font-weight: 650;
-  text-align: right;
 }
 .writtenTag {
   padding: 2px 6px;
@@ -257,9 +215,9 @@
 .row .guidance {
   margin: 10px -4px 0;
   padding: 10px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: transparent;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 6px 6px;
+  background: var(--color-accent-hover);
   color: var(--color-text-strong);
   font-size: 13px;
   font-weight: 500;
@@ -273,7 +231,7 @@
   min-width: 0;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: transparent;
+  background: var(--color-surface);
 }
 .completed > details > summary {
   display: flex;

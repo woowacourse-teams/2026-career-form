@@ -88,7 +88,7 @@ describe("AutofillOverlay", () => {
       );
       await screen.findByRole("heading", {
         name: selectionAvailable
-          ? "자동 기입을 마쳤어요"
+          ? "기입 결과"
           : "조건부 선택을 안전하게 적용하지 못했습니다",
       });
       expect(
@@ -231,7 +231,7 @@ describe("AutofillOverlay", () => {
           pageDocument={pageDocument}
         />,
       );
-      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
+      await screen.findByRole("heading", { name: "기입 결과" });
       expect(fieldsPass).toBe(2);
       expect(
         pageDocument.querySelector<HTMLInputElement>("[name=eduMajorDouble]")!
@@ -296,7 +296,7 @@ describe("AutofillOverlay", () => {
           pageDocument={pageDocument}
         />,
       );
-      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
+      await screen.findByRole("heading", { name: "기입 결과" });
       expect(pageDocument.querySelector("input")?.value).toBe(
         "PRIVATE_PROFILE_SENTINEL",
       );
@@ -323,7 +323,7 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      await screen.findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("1 / 3")).not.toBeInTheDocument();
     expect(screen.queryByText("2 / 3")).not.toBeInTheDocument();
@@ -391,7 +391,7 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      await screen.findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
     expect(pageDocument.querySelector("input")?.value).toBe("자격증 A");
   });
@@ -540,7 +540,7 @@ describe("AutofillOverlay", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" }),
+      await screen.findByRole("heading", { name: "기입 결과" }),
     ).toBeInTheDocument();
     expect(apiClient.analyzePreparation).toHaveBeenCalledTimes(2);
     expect(

@@ -162,7 +162,7 @@ it("runs the sensitive re-analysis once when the review action is clicked twice"
   expect(screen.getByRole("status").closest('[aria-busy="true"]')).toBeNull();
   expect(document.querySelector('[aria-busy="true"]')).toBeVisible();
 
-  await screen.findByRole("heading", { name: "자동 기입을 마쳤어요" });
+  await screen.findByRole("heading", { name: "기입 결과" });
   expect(analyses).toBe(2);
 });
 
@@ -283,9 +283,7 @@ it("shows writing status while the automatic workflow writer is pending", async 
   await act(async () => {
     await vi.runAllTimersAsync();
   });
-  expect(
-    screen.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
-  ).toBeVisible();
+  expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
   expect(screen.getByLabelText("입력 완료 1개")).toBeVisible();
   expect(
     screen.getByRole("list", { name: "범주별 입력 결과", hidden: true }),
