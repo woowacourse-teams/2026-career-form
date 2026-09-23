@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { resolveCompany } from "../adapters/company";
 import { createAddressSearch } from "../address/runtime";
 import type {
   AddressSearch,
@@ -161,7 +162,7 @@ function matchesProfileCategory(
   sectionDisplayName: string | undefined,
 ): boolean {
   if (!category.repeatable) return false;
-  const sectionLabel = normalized(sectionDisplayName);
+  const sectionLabel = normalized(sectionDisplayName).toLowerCase();
   const keywords = PROFILE_CATEGORY_KEYWORDS[
     category.id as RepeatedProfileCategoryId
   ] ?? [normalized(category.label)];
@@ -240,6 +241,37 @@ export function localItemCount(
   ]
     .filter(Boolean)
     .join(" ");
+  if (resolveCompany(snapshot.request.site.host) === "generic") {
+    const categories = PROFILE_CATEGORIES.filter((category) =>
+      matchesProfileCategory(category, matchLabel),
+    );
+    if (categories.length !== 1) return undefined;
+    const category = categories[0];
+    const entries = profile[category.id as RepeatedProfileCategoryId];
+    const sectionIds = new Set(entries.map((entry) => entry.sectionId));
+    if (category.id === "education") {
+      const sectionId = educationProfileSectionId(matchLabel);
+      if (!sectionId && sectionIds.size > 1) return undefined;
+      return sectionId
+        ? entries.filter((entry) => entry.sectionId === sectionId).length
+        : entries.length;
+    }
+    if (category.id === "languages") {
+      const tests = /시험|성적|test|exam/i.test(matchLabel);
+      const skills = /활용|회화|skill|proficiency/i.test(matchLabel);
+      if (tests && skills) return undefined;
+      const sectionId = tests
+        ? "languageTest"
+        : skills
+          ? "languageSkill"
+          : undefined;
+      if (!sectionId && sectionIds.size > 1) return undefined;
+      return sectionId
+        ? entries.filter((entry) => entry.sectionId === sectionId).length
+        : entries.length;
+    }
+    return sectionIds.size <= 1 ? entries.length : undefined;
+  }
   const profileSectionHint = getWorkflowAdapter(
     snapshot.request.site.host,
   ).repeatedProfileSectionHint?.(action?.domId);
@@ -377,7 +409,13 @@ export function preparationItem(
   return {
     plan,
     actionLabel: actionLabel(plan, snapshot),
-    runnable: true,
+    runnable: localCount !== undefined && currentGroupCount !== undefined,
+    ...(localCount === undefined || currentGroupCount === undefined
+      ? {
+          unavailableReason:
+            "반복 행과 프로필 종류를 하나로 확인할 수 없습니다.",
+        }
+      : {}),
     localItemCount: localCount,
     currentGroupCount,
     ...(requiredAdditions !== undefined ? { requiredAdditions } : {}),
@@ -470,14 +508,81 @@ export function diagnosticLabel(code: WorkflowDiagnostic["code"]): string {
 }
 
 export function resultStatusLabel(result: ApprovedWriteResult): string {
-  if (result.status === "written") return "기입 성공";
-  return result.reason === SKIPPED_BY_APPROVAL_REASON
-    ? "승인하지 않아 건너뜀"
-    : "직접 입력 필요";
+  switch (writeResultOutcome(result)) {
+    case "success":
+      return "기입 성공";
+    case "unchanged":
+      return "이미 같은 값";
+    case "failed":
+      return "기입 실패";
+    case "unsupported":
+      return "입력 불가";
+    default:
+      return result.code === "NOT_APPROVED"
+        ? "승인하지 않아 건너뜀"
+        : "직접 확인 필요";
+  }
+}
+
+export function writeResultOutcome(
+  result: ApprovedWriteResult,
+): "success" | "failed" | "needs-verification" | "unsupported" | "unchanged" {
+  return (
+    result.outcome ??
+    (result.status === "written" ? "success" : "needs-verification")
+  );
 }
 
 export function isSkippedByApproval(result: ApprovedWriteResult): boolean {
   return (
-    result.status === "skipped" && result.reason === SKIPPED_BY_APPROVAL_REASON
+    result.status === "skipped" &&
+    (result.code === "NOT_APPROVED" ||
+      (result.outcome === undefined &&
+        result.reason === SKIPPED_BY_APPROVAL_REASON))
   );
+}
+
+export function resultItemsForDisplay(
+  items: readonly ReviewPlanItem[],
+  results: readonly ApprovedWriteResult[],
+): ApprovedWriteResult[] {
+  const normalizedResults = results.map((result) =>
+    result.outcome
+      ? result
+      : result.status === "written"
+        ? { ...result, outcome: "success" as const, code: "WRITTEN" as const }
+        : { ...result, outcome: "needs-verification" as const },
+  );
+  const byCandidateId = new Map(
+    normalizedResults.map((result) => [result.candidateId, result]),
+  );
+  const itemIds = new Set<string>();
+  const reviewed = items.flatMap((item) => {
+    if (itemIds.has(item.candidateId)) return [];
+    itemIds.add(item.candidateId);
+    if (item.status === "unavailable") {
+      return [
+        {
+          candidateId: item.candidateId,
+          status: "skipped" as const,
+          outcome: "unsupported" as const,
+          code: "REVIEW_UNAVAILABLE" as const,
+          reason: item.reason,
+        },
+      ];
+    }
+    return [
+      byCandidateId.get(item.candidateId) ?? {
+        candidateId: item.candidateId,
+        status: "skipped" as const,
+        outcome: "needs-verification" as const,
+        code: "NOT_APPROVED" as const,
+        reason: "사용자가 승인한 입력 항목이 아닙니다.",
+      },
+    ];
+  });
+  return [
+    ...reviewed,
+    ...normalizedResults.filter((result) => !itemIds.has(result.candidateId)),
+  ];
 }

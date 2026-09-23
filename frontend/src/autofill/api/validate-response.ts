@@ -126,7 +126,10 @@ export function validatePreparationResponse(
     ]) ||
     value.snapshotId !== request.snapshotId ||
     !Array.isArray(value.preparationPlans) ||
-    !validateStringArray(value.warningCodes, ["MANUAL_REVEAL_REQUIRED"])
+    !validateStringArray(value.warningCodes, [
+      "MANUAL_REVEAL_REQUIRED",
+      "LLM_UNAVAILABLE",
+    ])
   ) {
     throw new AnalysisContractError();
   }
@@ -409,17 +412,41 @@ function validateFieldAnalysis(
   }
 
   if (value.writePlan !== undefined) {
-    const expectedCommand =
+    const directKey =
+      isRecord(value.valueBinding) && value.valueBinding.type === "DIRECT"
+        ? value.valueBinding.profileFieldKey
+        : undefined;
+    const searchSelection =
+      value.mappingStatus === "LLM_SUGGESTED" &&
       candidate.element === "input" &&
       candidate.control === "text" &&
-      isRecord(value.valueBinding) &&
-      value.valueBinding.type === "BUTTON_OPTION"
+      candidate.semanticContext?.inputType === "text" &&
+      candidate.readonly === true &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      typeof directKey === "string" &&
+      isAutofillProfileFieldKey(directKey);
+    if (
+      candidate.readonly &&
+      value.mappingStatus === "LLM_SUGGESTED" &&
+      !searchSelection
+    ) {
+      throw new AnalysisContractError();
+    }
+    const expectedCommand = searchSelection
+      ? "SEARCH_SELECTION"
+      : candidate.element === "input" &&
+          candidate.control === "text" &&
+          isRecord(value.valueBinding) &&
+          value.valueBinding.type === "BUTTON_OPTION"
         ? "SELECT_BUTTON_OPTION"
         : writeCommandForControl[candidate.control];
     if (
       !isRecord(value.writePlan) ||
       !hasOnlyKeys(value.writePlan, ["command"]) ||
       !isOneOf(value.writePlan.command, [
+        "SEARCH_SELECTION",
         "SET_TEXT",
         "SELECT_OPTION",
         "SELECT_BUTTON_OPTION",
@@ -481,6 +508,14 @@ export function validateFieldsResponse(
     let candidateId: string;
     try {
       candidateId = validateFieldAnalysis(field, candidates);
+      if (
+        isRecord(field) &&
+        isRecord(field.writePlan) &&
+        field.writePlan.command === "SEARCH_SELECTION" &&
+        value.mode !== "GENERIC"
+      ) {
+        throw new AnalysisContractError();
+      }
     } catch (error) {
       if (error instanceof AnalysisContractError) {
         const candidateLabel =

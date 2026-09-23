@@ -4,6 +4,10 @@ export function preparationFailureMessage(
   reason: PreparationFailureReason,
 ): string {
   switch (reason) {
+    case "run-in-progress":
+      return "이미 자동 기입이 실행 중입니다";
+    case "execution-cancelled":
+      return "승인한 프로필 또는 실행 상태가 변경되어 중단했습니다";
     case "expected-fields-not-visible":
       return "조건부 입력 항목이 표시되지 않았습니다";
     case "action-not-ready":

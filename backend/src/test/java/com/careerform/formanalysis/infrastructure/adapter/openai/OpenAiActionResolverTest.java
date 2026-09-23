@@ -69,20 +69,24 @@ class OpenAiActionResolverTest {
         ));
         assertThat(model.lastPrompt().getUserMessage().getText()).isEqualTo(
             "{\"schemaVersion\":2,\"snapshotId\":\"snapshot-1\",\"sections\":["
-                + "{\"sectionId\":\"section-actions\",\"displayName\":\"학력\","
+                + "{\"sectionId\":\"section-actions\",\"displayName\":\"education\","
                 + "\"actionCandidates\":[{\"candidateId\":\"action-direct\","
-                + "\"displayName\":\"학력 펼치기\",\"element\":\"button\","
+                + "\"displayName\":\"education; reveal section\","
+                + "\"element\":\"button\","
                 + "\"control\":\"button\",\"visibility\":\"hidden\","
-                + "\"domId\":\"synthetic-action-id\","
-                + "\"domName\":\"synthetic-action-name\",\"disabled\":true}],"
+                + "\"disabled\":true,\"semanticContext\":{\"labels\":[{"
+                + "\"source\":\"label\","
+                + "\"text\":\"education; reveal section\"}]}}],"
                 + "\"items\":[{\"itemId\":\"item-1\",\"actionCandidates\":[{"
                 + "\"candidateId\":\"action-add\",\"element\":\"input\","
                 + "\"control\":\"button\",\"visibility\":\"visible\"}]}]},"
                 + "{\"sectionId\":\"section-target\","
                 + "\"parentSectionId\":\"section-actions\","
                 + "\"actionCandidates\":[{\"candidateId\":\"action-reveal\","
-                + "\"displayName\":\"합성 버튼\",\"element\":\"custom\","
-                + "\"control\":\"custom\",\"visibility\":\"visible\"}]}]}"
+                + "\"displayName\":\"성\",\"element\":\"custom\","
+                + "\"control\":\"custom\",\"visibility\":\"visible\","
+                + "\"semanticContext\":{\"labels\":[{\"source\":\"label\","
+                + "\"text\":\"성\"}]}}]}]}"
         );
         assertThat(model.lastPrompt().getUserMessage().getText())
             .doesNotContain(

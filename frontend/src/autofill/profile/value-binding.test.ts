@@ -71,6 +71,33 @@ describe("resolveValueBinding", () => {
     },
   );
 
+  it.each([
+    ["highSchool", "region:seoul", "서울"],
+    ["university", "서울특별시", "서울"],
+    ["university", "광주광역시", "광주"],
+  ])(
+    "normalizes %s school region %s to %s for autofill",
+    (sectionId, storedValue, expectedValue) => {
+      const profile = createEmptyProfile();
+      profile.education.push({
+        id: `education-${sectionId}`,
+        sectionId,
+        values: { schoolRegion: storedValue },
+      });
+
+      expect(
+        resolveValueBinding(
+          profile,
+          {
+            type: "DIRECT",
+            profileFieldKey: `education.${sectionId}.schoolRegion`,
+          },
+          0,
+        ),
+      ).toMatchObject({ status: "resolved", value: expectedValue });
+    },
+  );
+
   it("converts a backend-selected boolean profile field to Y", () => {
     const profile = createEmptyProfile();
     profile.disability.disabilityStatus = "대상";

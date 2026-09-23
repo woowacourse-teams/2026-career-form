@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.careerform.formanalysis.application.FormAnalysisRouter.ActionRoute;
@@ -26,6 +27,7 @@ import com.careerform.formanalysis.dto.PreparationAnalysisResponse.PreparationPl
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.RevealSectionPlan;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
 import com.careerform.formanalysis.exception.ResolverException;
+import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
 @Service
 public final class PreparationAnalysisService {
@@ -38,13 +40,24 @@ public final class PreparationAnalysisService {
 
     private final Optional<ActionResolver> resolver;
     private final FormAnalysisRouter router;
+    private final boolean analysisEnabled;
 
     public PreparationAnalysisService(
         Optional<ActionResolver> resolver,
         FormAnalysisRouter router
     ) {
+        this(resolver, router, new AnalysisProviderSelection(true, "openai"));
+    }
+
+    @Autowired
+    public PreparationAnalysisService(
+        Optional<ActionResolver> resolver,
+        FormAnalysisRouter router,
+        AnalysisProviderSelection selection
+    ) {
         this.resolver = resolver;
         this.router = router;
+        this.analysisEnabled = selection.enabled();
     }
 
     public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request) {
@@ -69,7 +82,7 @@ public final class PreparationAnalysisService {
             : Mode.GENERIC;
         Optional<ActionResolver> selectedResolver = route.kind() == RouteKind.ADAPTER
             ? Optional.of(route.resolver())
-            : resolver;
+            : analysisEnabled ? resolver : Optional.empty();
         if (selectedResolver.isEmpty()) {
             return PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
         }

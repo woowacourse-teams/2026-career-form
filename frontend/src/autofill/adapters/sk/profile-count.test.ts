@@ -22,10 +22,10 @@ it.each([0, 2])(
     ).jsdom.reconfigure({ url: "https://www.skcareers.com/apply" });
     document.body.innerHTML = `
     <div id="applyContentLinguistics" class="apply-form-box langExam-root">
-      <div class="form-body"><button id="btnAddLangExam">공인 외국어 시험 추가</button></div>
+      <div class="form-body"><div class="form-item-group langExam-Item"><div class="form-item-asset"><div class="form-item-column"><div class="form-add-control column"><button type="button" class="btn medium btn-dashed btnAddLangExam">공인 외국어 시험 추가</button></div></div></div></div></div>
     </div>
     <div id="applyContentLanguage" class="apply-form-box langAbility-root">
-      <div class="form-body"><button id="btnAddLangAbility">외국어 능력 추가</button></div>
+      <div class="form-body"><div class="form-item-group langAbility-item"><div class="form-item-asset"><div class="form-item-column btn-control"><div class="form-add-control column"><button type="button" class="btn medium btn-dashed btnAddLangAbility">외국어 능력 추가</button></div></div></div></div></div>
     </div>`;
     const snapshot = collectPreparationSnapshot(document);
     const profile = createEmptyProfile();

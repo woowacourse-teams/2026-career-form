@@ -116,8 +116,8 @@ class FormAnalysisEnabledProviderApiTest {
     @DisplayName("OpenAI timeout과 retry 제한을 Spring 표준 속성에 고정한다")
     void pinsProviderTimeoutAndRetryLimits() {
         assertThat(openAiCommonProperties.getTimeout())
-            .isEqualTo(Duration.ofSeconds(60));
-        assertThat(openAiCommonProperties.getMaxRetries()).isEqualTo(1);
+            .isEqualTo(Duration.ofSeconds(8));
+        assertThat(openAiCommonProperties.getMaxRetries()).isZero();
     }
 
     @Test

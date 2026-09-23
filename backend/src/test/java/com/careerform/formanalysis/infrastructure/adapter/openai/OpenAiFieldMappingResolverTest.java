@@ -76,29 +76,32 @@ class OpenAiFieldMappingResolverTest {
         ));
         assertThat(model.lastPrompt().getUserMessage().getText()).isEqualTo(
             "{\"schemaVersion\":2,\"snapshotId\":\"snapshot-1\",\"sections\":["
-                + "{\"sectionId\":\"section-root\",\"displayName\":\"기본 정보\","
-                + "\"fields\":[{\"candidateId\":\"field-direct\","
+                + "{\"sectionId\":\"section-root\",\"fields\":[{"
+                + "\"candidateId\":\"field-direct\","
                 + "\"displayName\":\"이메일\",\"element\":\"input\","
-                + "\"control\":\"text\"}],\"items\":[{\"itemId\":\"item-1\","
+                + "\"control\":\"text\",\"visibility\":\"hidden\","
+                + "\"disabled\":true,\"readonly\":true,\"inert\":true,"
+                + "\"semanticContext\":{\"labels\":[{\"source\":\"label\","
+                + "\"text\":\"이메일\"}]}}],\"items\":[{\"itemId\":\"item-1\","
                 + "\"fields\":[{\"candidateId\":\"field-item-1\","
-                + "\"displayName\":\"국적\",\"element\":\"select\","
-                + "\"control\":\"select\",\"options\":[{"
-                + "\"displayName\":\"대한민국\"}]},{\"candidateId\":\"field-item-2\","
-                + "\"element\":\"input\",\"control\":\"text\"}]}]},"
+                + "\"displayName\":\"nationality\",\"element\":\"select\","
+                + "\"control\":\"select\",\"visibility\":\"hidden\","
+                + "\"disabled\":true,\"readonly\":true,\"inert\":true,"
+                + "\"semanticContext\":{\"labels\":[{\"source\":\"label\","
+                + "\"text\":\"nationality\"}]},\"options\":[]},{"
+                + "\"candidateId\":\"field-item-2\",\"element\":\"input\","
+                + "\"control\":\"text\",\"visibility\":\"hidden\","
+                + "\"disabled\":true,\"readonly\":true,\"inert\":true}]}]},"
                 + "{\"sectionId\":\"section-child\","
                 + "\"parentSectionId\":\"section-root\",\"fields\":[]}]}"
         );
         assertThat(model.lastPrompt().getUserMessage().getText())
             .doesNotContain(
                 "site",
-                "visibility",
                 "domId",
                 "domName",
                 "placeholder",
                 "optionId",
-                "disabled",
-                "readonly",
-                "inert",
                 PRIVATE_SITE_MARKER,
                 PRIVATE_DOM_MARKER,
                 PRIVATE_PLACEHOLDER_MARKER,

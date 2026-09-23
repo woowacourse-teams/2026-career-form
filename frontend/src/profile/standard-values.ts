@@ -112,10 +112,10 @@ const SCHOOL_REGION_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "region:ulsan": ["울산광역시"],
   "region:sejong": ["세종특별자치시"],
   "region:gyeonggi": ["경기도"],
-  "region:gangwon": ["강원도"],
+  "region:gangwon": ["강원도", "강원특별자치도"],
   "region:chungbuk": ["충청북도"],
   "region:chungnam": ["충청남도"],
-  "region:jeonbuk": ["전라북도"],
+  "region:jeonbuk": ["전라북도", "전북특별자치도"],
   "region:jeonnam": ["전라남도"],
   "region:gyeongbuk": ["경상북도"],
   "region:gyeongnam": ["경상남도"],
@@ -167,6 +167,29 @@ export function standardValueAliases(value: string): readonly string[] {
         ...(SCHOOL_REGION_ALIASES[value] ?? []),
       ]
     : [];
+}
+
+const normalizedStandardValue = (value: string) =>
+  value.normalize("NFKC").trim().toLowerCase();
+
+export function schoolRegionOption(
+  value: string,
+): StandardValueOption | undefined {
+  const source = normalizedStandardValue(value);
+  if (!source) return undefined;
+  const matches = SCHOOL_REGION_OPTIONS.filter((option) =>
+    [option.value, ...standardValueAliases(option.value)].some(
+      (candidate) => normalizedStandardValue(candidate) === source,
+    ),
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+export function schoolRegionSearchValues(value: string): readonly string[] {
+  const option = schoolRegionOption(value);
+  return option
+    ? [option.label, ...standardValueAliases(option.value)]
+    : [value];
 }
 
 export function isStandardValueId(value: string): boolean {

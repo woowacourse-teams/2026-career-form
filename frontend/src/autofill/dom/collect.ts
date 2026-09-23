@@ -19,12 +19,20 @@ import {
   createStructuralSignature,
 } from "./candidate-registry";
 import type { CandidateBlockReason } from "./types";
+import {
+  collectSemanticContext,
+  collectActionSemanticContext,
+} from "./semantic-context";
+import { metadata, labelOf, sectionName } from "./metadata";
+import { genericRowFor, genericRows } from "./repeatable-rows";
+
+const EXPLICIT_ROW_SELECTOR = "[data-repeatable-group], [data-repeater-item]";
 
 const SECTION_SELECTOR = "fieldset, section, [role='group'], .apply-form-box";
 const FORBIDDEN_ACTION =
   /저장|제출|지원|완료|다음|이전|이동|미리보기|삭제|업로드|계산기|submit|save|next|previous|preview|delete|upload|remove|calculator/i;
-// The analysis API rejects candidate labels longer than 120 characters.
-const MAX_METADATA_LENGTH = 120;
+const GENERIC_PREPARATION_FORBIDDEN_ACTION =
+  /초기화|재설정|reset|clear|검색|조회|찾기|search|find|lookup/i;
 
 export interface CollectedSnapshot<TRequest> {
   request: TRequest;
@@ -52,49 +60,6 @@ export function hasVisibleFormControl(item: Element): boolean {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >("input, select, textarea"),
   ).some((control) => !isHidden(control));
-}
-
-function metadata(value: string | null | undefined): string | undefined {
-  const normalized = value?.replace(/\s+/g, " ").trim();
-  if (!normalized) return undefined;
-  return normalized.slice(0, MAX_METADATA_LENGTH);
-}
-
-function labelOf(element: HTMLElement): string | undefined {
-  const ariaLabelledBy = metadata(element.getAttribute("aria-labelledby"));
-  if (ariaLabelledBy) {
-    const text = ariaLabelledBy
-      .split(/\s+/)
-      .map((id) => element.ownerDocument.getElementById(id)?.textContent ?? "")
-      .join(" ");
-    const labelledText = metadata(text);
-    if (labelledText) return labelledText;
-  }
-  const ariaLabel = metadata(element.getAttribute("aria-label"));
-  if (ariaLabel) return ariaLabel;
-  if (
-    element instanceof HTMLInputElement ||
-    element instanceof HTMLSelectElement ||
-    element instanceof HTMLTextAreaElement
-  ) {
-    const labelText = metadata(element.labels?.[0]?.textContent);
-    if (labelText) return labelText;
-    const placeholder = metadata(element.getAttribute("placeholder"));
-    if (placeholder) return placeholder;
-  }
-  return metadata(element.textContent);
-}
-
-function sectionName(container: Element | null): string | undefined {
-  if (!container) return undefined;
-  return (
-    metadata(container.getAttribute("aria-label")) ??
-    metadata(
-      container.querySelector(
-        ":scope > legend, :scope > h1, :scope > h2, :scope > h3",
-      )?.textContent,
-    )
-  );
 }
 
 function isTemplateLike(element: Element): boolean {
@@ -203,10 +168,15 @@ function documentHost(document: Document): string {
 function groupBySection<T extends Element>(
   elements: T[],
   selector: string,
+  generic = false,
 ): Map<Element | null, T[]> {
   const groups = new Map<Element | null, T[]>();
   for (const element of elements) {
-    const section = element.closest(selector);
+    const row = generic
+      ? genericRowFor(element)
+      : element.closest(EXPLICIT_ROW_SELECTOR);
+    const section =
+      row?.parentElement?.closest(selector) ?? element.closest(selector);
     groups.set(section, [...(groups.get(section) ?? []), element]);
   }
   if (groups.size === 0) groups.set(null, []);
@@ -276,6 +246,7 @@ export function collectFieldsSnapshot(
   const groups = groupBySection(
     collectFieldElements(document, adapter),
     sectionSelector(adapter),
+    adapter === collectionAdapterForHost(""),
   );
 
   Array.from(groups.entries()).forEach(
@@ -316,7 +287,12 @@ export function collectFieldsSnapshot(
                 (peer) =>
                   peer instanceof HTMLInputElement &&
                   peer.type === element.type &&
-                  peer.name === element.name,
+                  peer.name === element.name &&
+                  repeatableItems.find(({ element: row }) => row.contains(peer))
+                    ?.element ===
+                    repeatableItems.find(({ element: row }) =>
+                      row.contains(element),
+                    )?.element,
               )
             : [element];
         grouped.forEach((peer) => consumed.add(peer));
@@ -328,10 +304,7 @@ export function collectFieldsSnapshot(
         );
         const item = matchingItems.length === 1 ? matchingItems[0] : undefined;
         let candidate: FieldCandidate;
-        const optionElements = new Map<
-          string,
-          HTMLOptionElement | HTMLInputElement
-        >();
+        const optionElements = new Map<string, HTMLElement>();
         if (isChoice) {
           const options = grouped.map((peer, optionIndex) => {
             const optionId = createOpaqueId(
@@ -389,6 +362,41 @@ export function collectFieldsSnapshot(
           };
         }
 
+        if (first.getAttribute("role") === "combobox") {
+          const ids =
+            first.getAttribute("aria-controls")?.trim().split(/\s+/) ?? [];
+          const menu =
+            ids.length === 1 ? document.getElementById(ids[0]) : null;
+          if (menu?.getAttribute("role") === "listbox") {
+            const options = Array.from(
+              menu.querySelectorAll<HTMLElement>("[role='option']"),
+            );
+            if (options.length <= 128) {
+              candidate.options = options.map((option, index) => {
+                const optionId = createOpaqueId(`${candidateId}-option`, index);
+                optionElements.set(optionId, option);
+                return {
+                  optionId,
+                  displayName: metadata(option.textContent) ?? "선택지",
+                };
+              });
+            }
+          }
+        }
+        const semanticContext = collectSemanticContext(first, container);
+        if (item) {
+          const rowCount = repeatableItems.filter(
+            (row) => row.itemGroupId === item.itemGroupId,
+          ).length;
+          if (rowCount <= 128) {
+            semanticContext.repeat = {
+              groupId: `${sectionId}-group-${Array.from(itemGroupIndexes.keys()).indexOf(item.itemGroupId ?? "") + 1}`,
+              rowIndex: item.itemIndex,
+              rowCount,
+            };
+          }
+        }
+        candidate = { ...candidate, semanticContext };
         if (item) item.fields.push(candidate);
         else fields.push(candidate);
         const elementsForHandle = grouped as Array<
@@ -405,13 +413,23 @@ export function collectFieldsSnapshot(
             ...(item
               ? {
                   itemId: item.itemId,
-                  ...(adapter.itemGroupId?.(item.element) !== undefined
-                    ? {
-                        isCurrentContext: () =>
-                          adapter.itemGroupId!(item.element) ===
-                          item.itemGroupId,
-                      }
-                    : {}),
+                  isCurrentContext: () => {
+                    const currentRows = repeatableItemElements(
+                      container,
+                      adapter,
+                      "fields",
+                    ).filter(
+                      (row) =>
+                        (adapter.itemGroupId?.(row) ??
+                          repeatableItemGroupId(row)) === item.itemGroupId,
+                    );
+                    return (
+                      currentRows.length ===
+                        itemGroupIndexes.get(item.itemGroupId ?? "") &&
+                      currentRows[item.itemIndex] === item.element &&
+                      grouped.every((field) => item.element.contains(field))
+                    );
+                  },
                   itemIndex: item.itemIndex,
                   ...(item.itemGroupId
                     ? { itemGroupId: item.itemGroupId }
@@ -472,6 +490,8 @@ function collectActionElements(document: Document) {
       HTMLButtonElement | HTMLInputElement | HTMLSelectElement
     >("button, input[type='button'], input[type='radio'], select"),
   ).filter((element) => {
+    if (element instanceof HTMLButtonElement && element.type !== "button")
+      return false;
     const label = labelOf(element);
     if (element instanceof HTMLSelectElement) {
       return !isHidden(element) && Boolean(element.id || element.name);
@@ -482,12 +502,28 @@ function collectActionElements(document: Document) {
   });
 }
 
+function isGenericPreparationAction(element: HTMLElement): boolean {
+  const label = [
+    labelOf(element),
+    element.getAttribute("title"),
+    element.getAttribute("aria-label"),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return !GENERIC_PREPARATION_FORBIDDEN_ACTION.test(label);
+}
+
 function repeatableItemElements(
   container: Element | null,
   adapter: CollectionAdapter,
   phase: CollectionPhase,
 ): Element[] {
   if (!container) return [];
+  if (adapter === collectionAdapterForHost("")) {
+    return genericRows(container).filter(
+      (row) => !isTemplateLike(row) && hasVisibleFormControl(row),
+    );
+  }
 
   const filterForAdapter = (
     items: Element[],
@@ -634,12 +670,23 @@ export function collectPreparationSnapshot(
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: PreparationSection[] = [];
+  const generic = adapter === collectionAdapterForHost("");
   const actions = [
-    ...collectActionElements(document),
+    ...collectActionElements(document).filter(
+      (element) =>
+        !generic ||
+        ((element instanceof HTMLButtonElement ||
+          (element instanceof HTMLInputElement && element.type === "button")) &&
+          isGenericPreparationAction(element)),
+    ),
     ...(adapter.additionalActionElements?.(document) ?? []),
   ];
   const selector = sectionSelector(adapter);
-  const actionsBySection = groupBySection(actions, selector);
+  const actionsBySection = groupBySection(
+    actions,
+    selector,
+    adapter === collectionAdapterForHost(""),
+  );
   const containers: Array<Element | null> = Array.from(
     document.querySelectorAll(selector),
   );
@@ -672,6 +719,7 @@ export function collectPreparationSnapshot(
               ? "radio"
               : "button",
         visibility: visibility(element),
+        semanticContext: collectActionSemanticContext(element, container),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
         ...(actionDomId(element, adapter)
           ? { domId: actionDomId(element, adapter) }

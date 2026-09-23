@@ -85,14 +85,17 @@ function directValue(
       educationEntries.find(
         (candidate) => candidate.sectionId === "university",
       ) ?? educationEntries[0];
-    const value = entry?.values[parts.fieldId]?.trim();
+    const source = entry?.values[parts.fieldId]?.trim();
+    const value = source ? normalizeProfileOptionValue(key, source) : "";
     return value
       ? {
           status: "resolved",
           value,
           sensitive: parts.sensitive,
           profileEntryId: entry.id,
-          ...(isStandardValueId(value) ? { standardValueId: value } : {}),
+          ...(source && isStandardValueId(source)
+            ? { standardValueId: source }
+            : {}),
         }
       : { status: "missing", sensitive: parts.sensitive };
   }
@@ -110,14 +113,17 @@ function directValue(
   ) {
     return { status: "missing", sensitive: parts.sensitive };
   }
-  const value = entry?.values[parts.fieldId]?.trim();
+  const source = entry?.values[parts.fieldId]?.trim();
+  const value = source ? normalizeProfileOptionValue(key, source) : "";
   return value
     ? {
         status: "resolved",
         value,
         sensitive: parts.sensitive,
         ...(itemIndex !== undefined ? { profileEntryId: entry.id } : {}),
-        ...(isStandardValueId(value) ? { standardValueId: value } : {}),
+        ...(source && isStandardValueId(source)
+          ? { standardValueId: source }
+          : {}),
       }
     : { status: "missing", sensitive: parts.sensitive };
 }

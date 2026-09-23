@@ -10,12 +10,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.InputType;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.SemanticContext;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.InteractionStatus;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.ReasonCode;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.WriteCommand;
@@ -25,6 +28,92 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.WritePlan;
 class FieldInteractionPolicyTest {
 
     private final FieldInteractionPolicy policy = new FieldInteractionPolicy();
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "education.university.schoolName", "education.university.schoolRegion",
+        "education.university.majorName", "education.highSchool.schoolName",
+        "education.graduateSchool.schoolName", "careers.career.companyName"
+    })
+    void genericReadonlyTextRequiresLocalSearchSelection(String key) {
+        FieldInteractionPolicy.Decision decision = policy.evaluate(
+            searchCandidate(InputType.TEXT, Visibility.VISIBLE, null, null),
+            new FieldMappingResolver.Match("field-1", key),
+            true
+        );
+
+        assertThat(decision.interactionStatus()).isEqualTo(InteractionStatus.READY);
+        assertThat(decision.writePlan()).isEqualTo(new WritePlan(WriteCommand.SEARCH_SELECTION));
+    }
+
+    @ParameterizedTest
+    @MethodSource("unsafeSearchCandidates")
+    void rejectsInsufficientSearchEvidenceEvenWithReadonlyOverride(FieldCandidate candidate) {
+        FieldInteractionPolicy.Decision decision = policy.evaluate(
+            candidate,
+            new FieldMappingResolver.Match("field-1", "education.university.schoolName", true),
+            true
+        );
+
+        assertThat(decision.writePlan()).isNull();
+        assertThat(decision.interactionStatus()).isNotEqualTo(InteractionStatus.READY);
+    }
+
+    @Test
+    void staticReadonlySearchDoesNotGainGenericExecution() {
+        assertThat(policy.evaluate(
+            searchCandidate(InputType.TEXT, Visibility.VISIBLE, null, null),
+            new FieldMappingResolver.Match("field-1", "education.university.schoolName"),
+            false
+        ).writePlan()).isNull();
+    }
+
+    @ParameterizedTest
+    @MethodSource("nonDirectSearchMappings")
+    void rejectsNonCanonicalOrNonDirectSearchBindings(FieldMappingResolver.Match mapping) {
+        assertThat(policy.evaluate(
+            searchCandidate(InputType.TEXT, Visibility.VISIBLE, null, null), mapping, true
+        ).writePlan()).isNull();
+    }
+
+    private static Stream<FieldMappingResolver.Match> nonDirectSearchMappings() {
+        return Stream.of(
+            new FieldMappingResolver.Match("field-1", "education.university.unknown"),
+            new FieldMappingResolver.Match("field-1", new FieldMappingResolver.DerivedBinding(
+                FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME)),
+            new FieldMappingResolver.Match("field-1", new FieldMappingResolver.LookupBinding(
+                "education.university.schoolName", java.util.Map.of("합성", "option-1"))),
+            new FieldMappingResolver.Match("field-1", new FieldMappingResolver.ButtonOptionBinding(
+                "education.university.schoolName", java.util.Map.of("합성", "option-1"),
+                java.util.Map.of("option-1", "code-1")))
+        );
+    }
+
+    private static Stream<FieldCandidate> unsafeSearchCandidates() {
+        return Stream.concat(
+            Stream.of(InputType.values()).filter(type -> type != InputType.TEXT)
+                .map(type -> searchCandidate(type, Visibility.VISIBLE, null, null)),
+            Stream.of(
+                searchCandidate(null, Visibility.VISIBLE, null, null),
+                searchCandidate(InputType.TEXT, null, null, null),
+                searchCandidate(InputType.TEXT, Visibility.HIDDEN, null, null),
+                searchCandidate(InputType.TEXT, Visibility.VISIBLE, true, null),
+                searchCandidate(InputType.TEXT, Visibility.VISIBLE, null, true),
+                candidate(FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE, null, true, null),
+                candidate(FormElement.TEXTAREA, FormControl.TEXTAREA, Visibility.VISIBLE, null, true, null)
+            )
+        );
+    }
+
+    private static FieldCandidate searchCandidate(
+        InputType inputType, Visibility visibility, Boolean disabled, Boolean inert
+    ) {
+        return new FieldCandidate(
+            "field-1", FormElement.INPUT, FormControl.TEXT, visibility,
+            "합성 검색 필드", null, null, null, disabled, true, inert, null,
+            new SemanticContext(null, inputType, null, null, null, null, null, null)
+        );
+    }
 
     @Test
     @DisplayName("NO_MATCH는 후보 상태보다 먼저 BLOCKED로 결정한다")

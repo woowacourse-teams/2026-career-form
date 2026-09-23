@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.careerform.formanalysis.application.FormAnalysisRouter.FieldRoute;
@@ -16,6 +17,7 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonOptionBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.ValueBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
@@ -30,6 +32,7 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.Mode;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.NoMatchFieldAnalysis;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
 import com.careerform.formanalysis.exception.ResolverException;
+import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
 @Service
 public final class FieldsAnalysisService {
@@ -44,6 +47,7 @@ public final class FieldsAnalysisService {
     private final FormAnalysisRouter router;
     private final FieldInteractionPolicy interactionPolicy;
     private final SupportedProfileFields supportedProfileFields;
+    private final boolean analysisEnabled;
 
     public FieldsAnalysisService(
         Optional<FieldMappingResolver> resolver,
@@ -51,10 +55,23 @@ public final class FieldsAnalysisService {
         FieldInteractionPolicy interactionPolicy,
         SupportedProfileFields supportedProfileFields
     ) {
+        this(resolver, router, interactionPolicy, supportedProfileFields,
+            new AnalysisProviderSelection(true, "openai"));
+    }
+
+    @Autowired
+    public FieldsAnalysisService(
+        Optional<FieldMappingResolver> resolver,
+        FormAnalysisRouter router,
+        FieldInteractionPolicy interactionPolicy,
+        SupportedProfileFields supportedProfileFields,
+        AnalysisProviderSelection selection
+    ) {
         this.resolver = resolver;
         this.router = router;
         this.interactionPolicy = interactionPolicy;
         this.supportedProfileFields = supportedProfileFields;
+        this.analysisEnabled = selection.enabled();
     }
 
     public FieldsAnalysisResponse analyze(FieldsAnalysisRequest request) {
@@ -75,7 +92,7 @@ public final class FieldsAnalysisService {
         Optional<FieldMappingResolver> selectedResolver =
             route.kind() == RouteKind.ADAPTER
                 ? Optional.of(route.resolver())
-                : resolver;
+                : analysisEnabled ? resolver : Optional.empty();
         if (selectedResolver.isEmpty()) {
             return FieldsAnalysisResponse.llmUnavailable(request.snapshotId());
         }
@@ -109,6 +126,7 @@ public final class FieldsAnalysisService {
         }
 
         Set<String> candidateIds = new HashSet<>();
+        Map<String, Integer> repeatGroupCounts = new HashMap<>();
         for (Section section : request.sections()) {
             if (section == null
                 || isBlank(section.sectionId())
@@ -121,6 +139,23 @@ public final class FieldsAnalysisService {
                 || isBlank(candidate.candidateId())
                 || !candidateIds.add(candidate.candidateId())) {
                 invalidSnapshot();
+            }
+            FieldsAnalysisRequest.SemanticContext context = candidate.semanticContext();
+            if (context != null && context.repeat() != null) {
+                if (isBlank(context.repeat().groupId())
+                    || context.repeat().rowIndex() == null
+                    || context.repeat().rowCount() == null
+                    || context.repeat().rowIndex() >= context.repeat().rowCount()) {
+                    invalidSnapshot();
+                }
+                Integer knownCount = repeatGroupCounts.putIfAbsent(
+                    context.repeat().groupId(),
+                    context.repeat().rowCount()
+                );
+                if (knownCount != null
+                    && !knownCount.equals(context.repeat().rowCount())) {
+                    invalidSnapshot();
+                }
             }
         }
     }
@@ -156,6 +191,8 @@ public final class FieldsAnalysisService {
                         ? lookup.profileFieldKey()
                         : binding instanceof ButtonOptionBinding buttonOption
                             ? buttonOption.profileFieldKey()
+                            : binding instanceof DerivedBinding derived
+                                ? derived.profileFieldKey()
                         : null;
                 if (profileFieldKey != null
                     && !supportedProfileFields.contains(profileFieldKey)) {
@@ -192,7 +229,11 @@ public final class FieldsAnalysisService {
         MappingStatus mappingStatus
     ) {
         FieldInteractionPolicy.Decision decision =
-            interactionPolicy.evaluate(candidate, mapping);
+            interactionPolicy.evaluate(
+                candidate,
+                mapping,
+                mappingStatus == MappingStatus.LLM_SUGGESTED
+            );
         if (mapping instanceof FieldMappingResolver.NoMatch) {
             return new NoMatchFieldAnalysis(
                 candidate.candidateId(),
@@ -209,6 +250,8 @@ public final class FieldsAnalysisService {
                 ? lookup.profileFieldKey()
                 : match.valueBinding() instanceof ButtonOptionBinding buttonOption
                     ? buttonOption.profileFieldKey()
+                    : match.valueBinding() instanceof DerivedBinding derived
+                        ? derived.profileFieldKey()
                 : null;
         AutofillPolicy autofillPolicy = profileFieldKey == null
             ? AutofillPolicy.ALLOWED

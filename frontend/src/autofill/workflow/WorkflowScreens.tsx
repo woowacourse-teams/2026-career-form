@@ -11,20 +11,27 @@ import { WorkflowLoading } from "./WorkflowLoading";
 import {
   Header,
   diagnosticLabel,
-  isSkippedByApproval,
   mappingLabel,
   profileFieldLabel,
   reviewProfileFieldKey,
   resultStatusLabel,
+  resultItemsForDisplay,
   statusLabel,
   interactionLabel,
   currentPreview,
+  writeResultOutcome,
   userFacingReason,
   type PreparationItem,
   type Stage,
 } from "./workflow-model";
 
 interface WorkflowScreensProps {
+  analysisSummary?: {
+    mode: "ADAPTER" | "GENERIC";
+    durationMs: number;
+    fieldCount: number;
+    matchedCount: number;
+  };
   stage: Stage;
   preparationItems: readonly PreparationItem[];
   warnings: readonly string[];
@@ -61,6 +68,7 @@ export function WorkflowScreens({
   revealSensitiveItem,
   executeWrites,
   results,
+  analysisSummary,
   addressResult,
   adapter,
   workflowDiagnostics,
@@ -114,7 +122,9 @@ export function WorkflowScreens({
             분석 경고:{" "}
             {warning === "MANUAL_REVEAL_REQUIRED"
               ? "수동으로 펼쳐야 하는 영역이 있습니다."
-              : warning}
+              : warning === "LLM_UNAVAILABLE"
+                ? "준비 항목을 분석하지 못했습니다. 현재 입력칸으로 계속합니다."
+                : warning}
           </aside>
         ))}
         {sensitivePreparations.length > 0 && (
@@ -303,18 +313,53 @@ export function WorkflowScreens({
   }
 
   if (stage === "result") {
-    const visibleResults = results.filter(
-      (result) => !isSkippedByApproval(result),
+    const displayResults = resultItemsForDisplay(reviewItems, results);
+    const skippedResults = displayResults.filter(
+      (result): result is Extract<ApprovedWriteResult, { status: "skipped" }> =>
+        result.status === "skipped",
     );
-    const successful = visibleResults.filter(
-      (result) => result.status === "written",
+    const successful = displayResults.filter(
+      (result) => writeResultOutcome(result) === "success",
     ).length;
-    const manualResults = visibleResults.filter(
-      (result) => result.status !== "written",
+    const unchanged = displayResults.filter(
+      (result) => writeResultOutcome(result) === "unchanged",
+    ).length;
+    const failed = skippedResults.filter(
+      (result) => writeResultOutcome(result) === "failed",
     );
+    const needsVerification = skippedResults.filter(
+      (result) => writeResultOutcome(result) === "needs-verification",
+    );
+    const unsupported = skippedResults.filter(
+      (result) => writeResultOutcome(result) === "unsupported",
+    );
+    const manualResults = [...failed, ...needsVerification];
     return (
       <div className={styles.screen}>
         <Header step="완료" title="기입 결과" />
+        {analysisSummary && (
+          <p className={styles.safety}>
+            {analysisSummary.mode === "GENERIC" ? "범용" : "사이트 전용"} 필드
+            분석 {(analysisSummary.durationMs / 1000).toFixed(1)}초 · 탐지{" "}
+            {analysisSummary.fieldCount}개 중 프로필 연결{" "}
+            {analysisSummary.matchedCount}개
+          </p>
+        )}
+        {partial && (
+          <aside className={styles.safety}>
+            일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
+          </aside>
+        )}
+        {warnings.map((warning) => (
+          <aside className={styles.safety} key={`result-${warning}`}>
+            분석 경고:{" "}
+            {warning === "UNRESOLVED_FIELD"
+              ? "일부 필드를 연결하지 못했습니다."
+              : warning === "LLM_UNAVAILABLE"
+                ? "LLM 분석 일부 미완료"
+                : warning}
+          </aside>
+        ))}
         {addressResult && (
           <p role="status">
             {addressResult.status === "written"
@@ -329,15 +374,45 @@ export function WorkflowScreens({
             <span>기입 성공</span>
           </div>
           <div>
-            <strong>{visibleResults.length - successful}</strong>
+            <strong>{failed.length}</strong>
+            <span>기입 실패</span>
+          </div>
+          <div>
+            <strong>{needsVerification.length}</strong>
             <span>직접 확인 필요</span>
           </div>
+          <div>
+            <strong>{unsupported.length}</strong>
+            <span>입력 불가</span>
+          </div>
         </div>
+        {unchanged > 0 && (
+          <p role="status">
+            이미 같은 값이 입력된 항목 {unchanged}개는 변경하지 않았습니다.
+          </p>
+        )}
         <p className={styles.safety}>
           성공한 항목은 지원서에서 한 번만 확인해 주세요. 저장과 제출은 직접
           진행합니다.
         </p>
-        {manualResults.length > 0 && <h3>확인 필요</h3>}
+        {manualResults.length > 0 && <h3>실패 및 확인 필요</h3>}
+        {unsupported.length > 0 && (
+          <details className={styles.safety}>
+            <summary>입력 불가 항목 {unsupported.length}개</summary>
+            <ul>
+              {unsupported.map((result) => {
+                const item = reviewItems.find(
+                  (candidate) => candidate.candidateId === result.candidateId,
+                );
+                return (
+                  <li key={result.candidateId}>
+                    {item?.fieldLabel ?? "지원서 필드"}: {result.reason}
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        )}
         {manualResults.length > 0 && (
           <ul className={`${styles.boundaries} ${styles.resultList}`}>
             {manualResults.map((result) => {

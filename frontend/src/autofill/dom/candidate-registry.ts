@@ -19,6 +19,19 @@ function liveBlockReason(element: Element): CandidateBlockReason | undefined {
   ) {
     return "hidden";
   }
+  if (element instanceof HTMLElement) {
+    const view = element.ownerDocument.defaultView;
+    for (
+      let current: Element | null = element;
+      current;
+      current = current.parentElement
+    ) {
+      const style = view?.getComputedStyle(current);
+      if (style?.display === "none" || style?.visibility === "hidden") {
+        return "hidden";
+      }
+    }
+  }
   if (element instanceof HTMLElement && element.closest("[inert]")) {
     return "inert";
   }
@@ -28,7 +41,7 @@ function liveBlockReason(element: Element): CandidateBlockReason | undefined {
       element instanceof HTMLTextAreaElement ||
       element instanceof HTMLButtonElement ||
       element instanceof HTMLOptionElement) &&
-    element.disabled
+    (element.disabled || element.matches(":disabled"))
   ) {
     return "disabled";
   }
@@ -191,12 +204,10 @@ export class CandidateRegistry {
     ) {
       return { status: "stale" };
     }
-    const currentBlockReason = [
-      ...elements,
-      ...(registered.handle.kind === "field"
-        ? [...registered.handle.optionElements.values()]
-        : []),
-    ]
+    // A disabled placeholder option, or an initially hidden combobox menu,
+    // must not make its owning field unavailable. The concrete target option
+    // is checked immediately before its write instead.
+    const currentBlockReason = elements
       .map(liveBlockReason)
       .find((reason) => reason !== undefined);
     if (registered.blockedReason || currentBlockReason) {

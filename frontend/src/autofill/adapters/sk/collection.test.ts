@@ -21,7 +21,7 @@ function appendRenderedCareerRow(formBody: Element, hasNoSpace = true): void {
           <textarea name="carRetireDesc"></textarea>
           <div class="form-item-column btn-control">
             <div class="form-add-control column">
-              <button class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
+              <button type="button" class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
             </div>
           </div>
         </div>
@@ -49,7 +49,7 @@ function appendRenderedCertificationRow(
           <input name="cerCertFile" type="file" />
           <div class="form-item-column">
             <div class="form-add-control column">
-              <button class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
+              <button type="button" class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
             </div>
           </div>
         </div>
@@ -78,7 +78,7 @@ function renderedLanguageRow(
       <div class="form-item-asset">
         <div class="${fixture.controlColumnClass}">
           <div class="form-add-control column">
-            <button class="btn medium btn-dashed ${fixture.actionClass}">${fixture.actionLabel}</button>
+            <button type="button" class="btn medium btn-dashed ${fixture.actionClass}">${fixture.actionLabel}</button>
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@ function renderedEducationRow(
         <input name="${fixture.schoolName}" type="text" />
         <div class="form-item-column btn-control">
           <div class="form-add-control column">
-            <button class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
+            <button type="button" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
           </div>
         </div>
       </div>
@@ -158,7 +158,7 @@ describe("SK collection adapter", () => {
           <div class="form-item-group career-item no-space">
             <input name="carCorpName" type="text" />
             <div class="form-add-control column">
-              <button class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
+              <button type="button" class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
             </div>
           </div>
         </div>
@@ -169,7 +169,7 @@ describe("SK collection adapter", () => {
             <div class="form-item-asset">
               <div class="form-item-column btn-control">
                 <div class="form-add-control column">
-                  <button class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
+                  <button type="button" class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
                 </div>
               </div>
             </div>
@@ -178,7 +178,7 @@ describe("SK collection adapter", () => {
         <div id="applyContentCareer" class="apply-form-box career-root">
           <div class="form-body">
             <div class="form-add-control">
-              <button id="btnAddCareer" class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
+              <button id="btnAddCareer" type="button" class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
             </div>
           </div>
         </div>
@@ -228,7 +228,7 @@ describe("SK collection adapter", () => {
       <div id="applyContentCareer" class="apply-form-box career-root">
         <div class="form-body">
           <div class="form-add-control column">
-            <button class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
+            <button type="button" class="btn medium btn-dashed btnAddCareer">경력 사항 추가</button>
           </div>
         </div>
       </div>
@@ -294,7 +294,7 @@ describe("SK collection adapter", () => {
           <div class="form-item-group cert-Item">
             <input name="cerCertName" type="text" />
             <div class="form-add-control column">
-              <button class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
+              <button type="button" class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
             </div>
           </div>
         </div>
@@ -305,7 +305,7 @@ describe("SK collection adapter", () => {
             <div class="form-item-asset">
               <div class="form-item-column">
                 <div class="form-add-control column">
-                  <button class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
+                  <button type="button" class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
                 </div>
               </div>
             </div>
@@ -314,7 +314,7 @@ describe("SK collection adapter", () => {
         <div id="applyContentLicense" class="apply-form-box cert-root">
           <div class="form-body">
             <div class="form-add-control">
-              <button id="btnAddCert" class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
+              <button id="btnAddCert" type="button" class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
             </div>
           </div>
         </div>
@@ -364,7 +364,7 @@ describe("SK collection adapter", () => {
       <div id="applyContentLicense" class="apply-form-box cert-root">
         <div class="form-body">
           <div class="form-add-control column">
-            <button class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
+            <button type="button" class="btn medium btn-dashed btnAddCert">자격/면허 추가</button>
           </div>
         </div>
       </div>
@@ -431,7 +431,7 @@ describe("SK collection adapter", () => {
           <div id="${fixture.templateId}">
             <div class="form-item-group ${fixture.itemClass}">
               <div class="form-add-control column">
-                <button class="btn medium btn-dashed ${fixture.actionClass}">${fixture.actionLabel}</button>
+                <button type="button" class="btn medium btn-dashed ${fixture.actionClass}">${fixture.actionLabel}</button>
               </div>
             </div>
           </div>
@@ -443,7 +443,7 @@ describe("SK collection adapter", () => {
           <div id="${fixture.rootId}" class="apply-form-box ${fixture.rootClass}">
             <div class="form-body">
               <div class="form-add-control">
-                <button id="${fixture.actionId}" class="btn medium btn-dashed ${fixture.actionClass}">${fixture.actionLabel}</button>
+                <button id="${fixture.actionId}" type="button" class="btn medium btn-dashed ${fixture.actionClass}">${fixture.actionLabel}</button>
               </div>
             </div>
           </div>
@@ -500,7 +500,7 @@ describe("SK collection adapter", () => {
         <div id="applyContentAcademic" class="apply-form-box education-root">
           <div class="form-body">
             <div class="form-add-control">
-              <button id="${fixture.actionId}" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
+              <button id="${fixture.actionId}" type="button" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
             </div>
           </div>
         </div>
@@ -559,7 +559,7 @@ describe("SK collection adapter", () => {
     const incomplete = document.querySelector(
       ".education-root .form-item-group .form-add-control",
     )!;
-    incomplete.innerHTML = `<button class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>`;
+    incomplete.innerHTML = `<button type="button" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>`;
     document.querySelector(".education-root .form-item-group input")!.remove();
     document
       .querySelectorAll(".education-root .form-item-group")[1]!
@@ -582,7 +582,7 @@ describe("SK collection adapter", () => {
     document.body.innerHTML = `
       <div id="applyContentAcademic" class="apply-form-box education-root">
         <div class="form-body">
-          <button id="${fixture.actionId}" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
+          <button id="${fixture.actionId}" type="button" class="btn medium btn-dashed ${fixture.actionId}">${fixture.actionLabel}</button>
         </div>
       </div>
     `;

@@ -7,6 +7,7 @@ import { isAnalysisRequestMessage } from "./messages";
 
 const endpointByType: Record<AnalysisRequestMessage["type"], string> = {
   AUTOFILL_ANALYZE_PREPARATION: "/api/v1/preparation/analyze",
+  AUTOFILL_DECIDE_INTERACTIONS: "/api/v1/generic/interaction-decisions",
   AUTOFILL_ANALYZE_FIELDS: "/api/v1/fields/analyze",
 };
 
@@ -40,7 +41,14 @@ export function createAnalysisMessageHandler({
     }
 
     const controller = new AbortController();
-    const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+    const requestTimeout =
+      message.type === "AUTOFILL_DECIDE_INTERACTIONS"
+        ? Math.min(timeoutMs, 8_000)
+        : timeoutMs;
+    const timeout = globalThis.setTimeout(
+      () => controller.abort(),
+      requestTimeout,
+    );
     try {
       const response = await fetcher(
         `${normalizedBaseUrl}${endpointByType[message.type]}`,

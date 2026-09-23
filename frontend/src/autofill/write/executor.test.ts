@@ -127,7 +127,12 @@ describe("approved native-control writes", () => {
 
     expect(input.value).toBe("김민수");
     expect(result).toEqual([
-      { candidateId: "field-derived", status: "written" },
+      {
+        candidateId: "field-derived",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
     ]);
   });
 
@@ -152,7 +157,14 @@ describe("approved native-control writes", () => {
 
     expect(input.value).toBe("me@example.test");
     expect(events).toEqual(["input", "change"]);
-    expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
   });
 
   it("writes a readonly text field only for an adapter-verified write plan", () => {
@@ -256,10 +268,17 @@ describe("approved native-control writes", () => {
     });
 
     expect(select.value).toBe("kr");
-    expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
   });
 
-  it("reapplies an approved select after a queued page reset", async () => {
+  it("reapplies an adapter-approved select and reports a reset generic value", async () => {
     const select = document.createElement("select");
     const professionalCollege = new Option("전문대학(전문학사)", "associate");
     const university = new Option("대학(학사)", "bachelor");
@@ -332,10 +351,16 @@ describe("approved native-control writes", () => {
     });
 
     expect(select.value).toBe("bachelor");
-    expect(schoolName.value).toBe("대학교");
+    expect(schoolName.value).toBe("");
     expect(result).toEqual([
       { candidateId: "education-type", status: "written" },
-      { candidateId: "school-name", status: "written" },
+      {
+        candidateId: "school-name",
+        status: "skipped",
+        outcome: "needs-verification",
+        code: "RETAINED_VALUE_UNCONFIRMED",
+        reason: "입력 후 값이 유지되지 않아 확인이 필요합니다.",
+      },
     ]);
   });
 
@@ -368,14 +393,23 @@ describe("approved native-control writes", () => {
     };
 
     const result = executeApprovedWrites({
-      items: [reviewItem(analysis, "대학교 학사")],
+      items: [
+        reviewItem(analysis, "대학교 학사", {
+          currentValue: "전문대학(학사)",
+        }),
+      ],
       approvedCandidateIds: new Set(["education-type"]),
       registry,
     });
 
     expect(select.value).toBe("university");
     expect(result).toEqual([
-      { candidateId: "education-type", status: "written" },
+      {
+        candidateId: "education-type",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
     ]);
   });
 
@@ -424,7 +458,14 @@ describe("approved native-control writes", () => {
 
     expect(first.checked).toBe(false);
     expect(target.checked).toBe(true);
-    expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
   });
 
   it("does not guess different radio labels without a backend-derived value", () => {
@@ -479,6 +520,8 @@ describe("approved native-control writes", () => {
       {
         candidateId: "disability-status",
         status: "skipped",
+        outcome: "unsupported",
+        code: "UNSUPPORTED_CONTROL",
         reason: "네이티브 컨트롤에 안전하게 입력할 수 없습니다.",
       },
     ]);
@@ -488,10 +531,12 @@ describe("approved native-control writes", () => {
     const existing = document.createElement("input");
     existing.type = "checkbox";
     existing.name = "skills";
+    existing.value = "Java";
     existing.checked = true;
     const target = document.createElement("input");
     target.type = "checkbox";
     target.name = "skills";
+    target.value = "TypeScript";
     document.body.append(existing, target);
     const registry = new CandidateRegistry();
     registry.registerField({
@@ -521,7 +566,7 @@ describe("approved native-control writes", () => {
     };
 
     executeApprovedWrites({
-      items: [reviewItem(analysis, "TypeScript")],
+      items: [reviewItem(analysis, "TypeScript", { currentValue: "Java" })],
       approvedCandidateIds: new Set(["field-1"]),
       registry,
     });
@@ -762,7 +807,12 @@ describe("approved native-control writes", () => {
 
     expect(trigger.value).toBe("대리");
     expect(result).toEqual([
-      { candidateId: "career-position", status: "written" },
+      {
+        candidateId: "career-position",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
     ]);
   });
 
@@ -981,4 +1031,368 @@ describe("approved native-control writes", () => {
       expect(field.classList.contains("exist")).toBe(expected);
     },
   );
+});
+
+describe("generic native write safety boundaries", () => {
+  function writeText(
+    type: string,
+    value: string,
+    configure?: (input: HTMLInputElement) => void,
+    currentValue = "",
+  ) {
+    const input = document.createElement("input");
+    input.type = type;
+    configure?.(input);
+    const registry = register(input, {
+      candidateId: "format-field",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis = { ...textAnalysis, candidateId: "format-field" };
+    return {
+      input,
+      result: executeApprovedWrites({
+        items: [reviewItem(analysis, value, { currentValue })],
+        approvedCandidateIds: new Set(["format-field"]),
+        registry,
+      })[0]!,
+    };
+  }
+
+  it.each([
+    ["date", "2024-02-30", undefined],
+    [
+      "date",
+      "2023-12-31",
+      (input: HTMLInputElement) => (input.min = "2024-01-01"),
+    ],
+    [
+      "date",
+      "2024-01-02",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01-01";
+        input.step = "2";
+      },
+    ],
+    ["month", "2024-13", undefined],
+    [
+      "month",
+      "2024-02",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01";
+        input.step = "2";
+      },
+    ],
+    ["number", "not-a-number", undefined],
+    ["number", "11", (input: HTMLInputElement) => (input.max = "10")],
+    ["number", "1.5", (input: HTMLInputElement) => (input.step = "1")],
+  ])(
+    "rejects unsafe %s values without mutating the control",
+    (type, value, configure) => {
+      const { input, result } = writeText(type, value, configure);
+
+      expect(input.value).toBe("");
+      expect(result).toMatchObject({
+        status: "skipped",
+        outcome: "unsupported",
+        code: "UNSUPPORTED_FORMAT",
+      });
+    },
+  );
+
+  it.each([
+    [
+      "date",
+      "2024-01-03",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01-01";
+        input.step = "2";
+      },
+    ],
+    [
+      "month",
+      "2024-03",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01";
+        input.step = "2";
+      },
+    ],
+    [
+      "number",
+      "1e1",
+      (input: HTMLInputElement) => {
+        input.min = "0";
+        input.max = "10";
+        input.step = "any";
+      },
+    ],
+  ])("writes an in-range stepped %s value", (type, value, configure) => {
+    const { input, result } = writeText(type, value, configure);
+
+    expect(input.value).toBe(value);
+    expect(result).toMatchObject({ status: "written", code: "WRITTEN" });
+  });
+
+  it("preserves an unobserved text value rather than overwriting it", () => {
+    const { input, result } = writeText(
+      "text",
+      "new value",
+      undefined,
+      "old value",
+    );
+    input.value = "someone else";
+    const registry = register(input, {
+      candidateId: "conflict-field",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis = { ...textAnalysis, candidateId: "conflict-field" };
+    const conflict = executeApprovedWrites({
+      items: [reviewItem(analysis, "new value", { currentValue: "old value" })],
+      approvedCandidateIds: new Set(["conflict-field"]),
+      registry,
+    })[0]!;
+
+    expect(result.status).toBe("written");
+    expect(input.value).toBe("someone else");
+    expect(conflict).toMatchObject({
+      outcome: "needs-verification",
+      code: "CONFLICT",
+    });
+  });
+
+  it("refuses an uncaptured radio from a different repeated row", () => {
+    const first = document.createElement("input");
+    const second = document.createElement("input");
+    first.type = second.type = "radio";
+    first.name = second.name = "status";
+    first.value = "yes";
+    second.value = "no";
+    document.body.append(first, second);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "radio-field",
+      candidate: {
+        candidateId: "radio-field",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [{ optionId: "yes", displayName: "yes" }],
+      },
+      elements: [first],
+      optionElements: new Map([["yes", first]]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([first]),
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "radio-field",
+      writePlan: { command: "CHECK_RADIO" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "yes")],
+      approvedCandidateIds: new Set(["radio-field"]),
+      registry,
+    })[0]!;
+
+    expect(first.checked).toBe(false);
+    expect(result).toMatchObject({
+      outcome: "unsupported",
+      code: "UNSUPPORTED_CONTROL",
+    });
+  });
+});
+
+describe("generic writer fail-closed native boundaries", () => {
+  it.each([
+    "file",
+    "hidden",
+    "password",
+    "submit",
+    "reset",
+    "image",
+    "search",
+    "range",
+    "color",
+    "time",
+    "datetime-local",
+    "week",
+  ])("does not mutate unsupported input type %s", (type) => {
+    const input = document.createElement("input");
+    input.type = type;
+    if (type === "hidden") input.value = "preserve";
+    const registry = register(input, {
+      candidateId: `unsafe-${type}`,
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis = { ...textAnalysis, candidateId: `unsafe-${type}` };
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(analysis, "replacement", { currentValue: input.value }),
+      ],
+      approvedCandidateIds: new Set([`unsafe-${type}`]),
+      registry,
+    })[0]!;
+
+    expect(input.value).not.toBe("replacement");
+    expect(result).toMatchObject({
+      status: "skipped",
+      outcome: type === "hidden" ? "needs-verification" : "unsupported",
+      code:
+        type === "hidden"
+          ? "STALE_TARGET"
+          : type === "range" ||
+              type === "color" ||
+              type === "time" ||
+              type === "datetime-local" ||
+              type === "week"
+            ? "UNSUPPORTED_FORMAT"
+            : "UNSUPPORTED_CONTROL",
+    });
+  });
+
+  it("does not write a value that exceeds a native text limit", () => {
+    const input = document.createElement("input");
+    input.maxLength = 3;
+    const registry = register(input, {
+      candidateId: "limited-text",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem({ ...textAnalysis, candidateId: "limited-text" }, "four"),
+      ],
+      approvedCandidateIds: new Set(["limited-text"]),
+      registry,
+    })[0]!;
+
+    expect(input.value).toBe("");
+    expect(result).toMatchObject({ code: "UNSUPPORTED_FORMAT" });
+  });
+
+  it.each([
+    ["search semantic metadata", { inputType: "search" as const }],
+    [
+      "consent label metadata",
+      { labels: [{ source: "label" as const, text: "개인정보 동의" }] },
+    ],
+  ])("refuses unsafe generic metadata: %s", (_name, semanticContext) => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "unsafe-metadata",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+      semanticContext,
+    });
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          { ...textAnalysis, candidateId: "unsafe-metadata" },
+          "value",
+        ),
+      ],
+      approvedCandidateIds: new Set(["unsafe-metadata"]),
+      registry,
+    })[0]!;
+
+    expect(input.value).toBe("");
+    expect(result).toMatchObject({ code: "UNSUPPORTED_CONTROL" });
+  });
+
+  it.each([
+    ["no matching option", [new Option("다른 값", "other")]],
+    [
+      "ambiguous matching options",
+      [new Option("같은 값", "first"), new Option("같은 값", "second")],
+    ],
+    [
+      "disabled matching option",
+      [Object.assign(new Option("같은 값", "only"), { disabled: true })],
+    ],
+  ])("preserves native select when there is %s", (_name, options) => {
+    const select = document.createElement("select");
+    const mapped = new Map<string, HTMLOptionElement>();
+    options.forEach((option, index) => {
+      select.append(option);
+      mapped.set(`option-${index}`, option);
+    });
+    const registry = register(
+      select,
+      {
+        candidateId: "select-boundary",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: options.map((option, index) => ({
+          optionId: `option-${index}`,
+          displayName: option.text,
+        })),
+      },
+      mapped,
+    );
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          {
+            ...textAnalysis,
+            candidateId: "select-boundary",
+            writePlan: { command: "SELECT_OPTION" },
+          },
+          "같은 값",
+          { currentValue: select.selectedOptions[0]?.textContent ?? "" },
+        ),
+      ],
+      approvedCandidateIds: new Set(["select-boundary"]),
+      registry,
+    })[0]!;
+
+    expect(select.value).not.toBe("second");
+    expect(result).toMatchObject({ code: "UNSUPPORTED_CONTROL" });
+  });
+
+  it("treats a readonly generic target as stale rather than bypassing review", () => {
+    const input = document.createElement("input");
+    input.readOnly = true;
+    const registry = register(
+      input,
+      {
+        candidateId: "readonly-generic",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+        readonly: true,
+      },
+      new Map(),
+      "readonly",
+    );
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          { ...textAnalysis, candidateId: "readonly-generic" },
+          "value",
+        ),
+      ],
+      approvedCandidateIds: new Set(["readonly-generic"]),
+      registry,
+    })[0]!;
+
+    expect(input.value).toBe("");
+    expect(result).toMatchObject({
+      outcome: "needs-verification",
+      code: "STALE_TARGET",
+    });
+  });
 });

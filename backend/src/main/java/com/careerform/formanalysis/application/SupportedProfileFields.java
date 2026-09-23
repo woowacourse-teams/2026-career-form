@@ -4,10 +4,12 @@ import static java.util.Map.entry;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
@@ -15,6 +17,10 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.AutofillPolicy;
 
 @Component
 public final class SupportedProfileFields {
+
+    private static final Pattern CAMEL_BOUNDARY = Pattern.compile(
+        "(?<=[a-z0-9])(?=[A-Z])"
+    );
 
     private static final Map<String, AutofillPolicy> ENTRIES = entries(
         entry("personal.personal.koreanFamilyName", AutofillPolicy.ALLOWED),
@@ -153,6 +159,49 @@ public final class SupportedProfileFields {
 
     public Optional<AutofillPolicy> policyOf(String key) {
         return Optional.ofNullable(ENTRIES.get(key));
+    }
+
+    public String promptCatalog() {
+        return keys().stream()
+            .map(key -> key + " — " + canonicalMeaning(key))
+            .reduce((left, right) -> left + "\n" + right)
+            .orElse("");
+    }
+
+    public String promptGuidance() {
+        return """
+            Family name and given name are separate values; never split a full name.
+            KOREAN_FULL_NAME is family name plus given name without a separator.
+            English full-name recipes differ only by the explicit target order.
+            Primary email differs from secondary email. Phone differs from emergency phone.
+            Address line 1 is the base, street, road-name, or parcel address. Address
+            line 2 is the detail, remainder, or remaining address. Never map explicit
+            address-line-2 evidence to address line 1, or the reverse.
+            Education dates and fields belong to the high-school, university, or
+            graduate-school record named in the canonical key; do not cross record types.
+            GPA score, GPA scale, and total credits are different numeric meanings.
+            Language-test registration number and certificate registration number differ.
+            Start and end dates belong to the record category named in the canonical key.
+            Generic activity dates or details are projects only with explicit project context.
+            Unsupported volunteer, extracurricular, award, contest, and overseas-experience
+            sections are not projects. Omit their candidates because the profile has no
+            corresponding category.
+            Status, type, branch, specialty, rank, number, relation, and reason are distinct.
+            Omit a candidate when these boundaries or its repeated-row meaning are unclear.
+            """;
+    }
+
+    private static String canonicalMeaning(String key) {
+        String[] parts = key.split("\\.");
+        return "category " + words(parts[0])
+            + ", record " + words(parts[1])
+            + ", field " + words(parts[2]);
+    }
+
+    private static String words(String camelCase) {
+        return CAMEL_BOUNDARY.matcher(camelCase)
+            .replaceAll(" ")
+            .toLowerCase(Locale.ROOT);
     }
 
     @SafeVarargs

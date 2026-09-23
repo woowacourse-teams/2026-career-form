@@ -379,6 +379,10 @@ describe("approved preparation plan executor", () => {
       action.style.display = "none";
       const row = document.createElement("div");
       row.className = "form-item-group cert-Item";
+      row.innerHTML = `
+        <input name="cerCertName" type="text" />
+        <input name="cerCertSource" type="text" />
+      `;
       formBody.append(row);
       const helperAction = document.createElement("button");
       helperAction.type = "button";
@@ -462,12 +466,20 @@ describe("approved preparation plan executor", () => {
       clicks.push("highSchool");
       const row = document.createElement("div");
       row.className = "form-item-group educationhigh-item";
+      row.innerHTML = `
+        <input name="eduhgEducationName" type="text" />
+        <input name="eduhgGraduationDate" type="text" />
+      `;
       formBody.insertBefore(row, highAction);
     });
     universityAction.addEventListener("click", () => {
       clicks.push("university");
       const row = document.createElement("div");
       row.className = "form-item-group educationUniv-item";
+      row.innerHTML = `
+        <input name="eduEducationName" type="text" />
+        <input name="eduGraduationDate" type="text" />
+      `;
       formBody.insertBefore(row, universityAction);
     });
 

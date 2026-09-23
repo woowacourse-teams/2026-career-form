@@ -4,6 +4,8 @@ import {
   MILITARY_RANK_OPTIONS,
   MILITARY_STATUS_OPTIONS,
   VETERAN_STATUS_OPTIONS,
+  SCHOOL_REGION_OPTIONS,
+  standardValueAliases,
   type StandardValueOption,
 } from "../../profile/standard-values";
 
@@ -15,6 +17,9 @@ const PROFILE_OPTIONS: Readonly<
   "military.military.militaryRank": MILITARY_RANK_OPTIONS,
   "veteran.veteran.veteranStatus": VETERAN_STATUS_OPTIONS,
   "disability.disability.disabilityStatus": DISABILITY_STATUS_OPTIONS,
+  "education.highSchool.schoolRegion": SCHOOL_REGION_OPTIONS,
+  "education.university.schoolRegion": SCHOOL_REGION_OPTIONS,
+  "education.graduateSchool.schoolRegion": SCHOOL_REGION_OPTIONS,
 };
 
 const normalized = (value: string) =>
@@ -30,7 +35,7 @@ export function normalizeProfileOptionValue(
   const source = normalized(value);
   if (!source) return "";
   const matches = options.filter((option) =>
-    [option.value, option.label, ...(option.aliases ?? [])].some(
+    [option.value, ...standardValueAliases(option.value)].some(
       (alias) => normalized(alias) === source,
     ),
   );

@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.careerform.formanalysis.application.port.ActionResolver;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
+import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
 @SpringBootTest(properties = {
     "spring.mongodb.uri=mongodb://localhost/career-form-test",
@@ -306,6 +307,12 @@ class PreparationAnalysisApiTest {
 
     @TestConfiguration(proxyBeanMethods = false)
     static class FakeResolverConfiguration {
+
+        @Bean
+        @Primary
+        AnalysisProviderSelection enabledAnalysisProviderSelection() {
+            return new AnalysisProviderSelection(true, "openai");
+        }
 
         @Bean
         @Primary

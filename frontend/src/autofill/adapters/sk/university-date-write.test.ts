@@ -8,6 +8,11 @@ import { createEmptyProfile } from "../../../profile/model";
 afterEach(() => document.body.replaceChildren());
 
 it("writes university year-month values through the site formatter and preserves existing dates", () => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(o: { url: string }): void };
+    }
+  ).jsdom.reconfigure({ url: "https://www.skcareers.com/apply" });
   document.body.innerHTML = `<section>
     <input id="eduFromDate" name="eduFromDate" type="tel" maxlength="6" placeholder="YYYY-MM" />
     <input id="eduToDate" name="eduToDate" type="tel" maxlength="6" placeholder="YYYY-MM" />

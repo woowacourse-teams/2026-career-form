@@ -213,3 +213,9 @@
 - Approval-Digest: 514b194740c528ad3a9354d2de0f96e4e38719507d2990c34dc0143be4794daa
 - Raw: [CF-96 bundle](../raw/issues/CF-96/manifest.md)
 - 승인된 후보 3개를 기록하고 [랜딩·온보딩 topic](topics/landing-onboarding.md)을 색인에 연결했다.
+
+## [2026-09-23] ingest | CF-98 범용 분석과 검색 표면
+
+- 승인 digest `09f47713670f79bb2053d52af823b912cd0b06bc635066c63f9457d7b9f74db3`의 후보 6개와 제안 ADR 전문을 [CF-98 bundle](../raw/issues/CF-98/manifest.md)에 비식별 기록했다.
+- 정적 정책 우선, OpenAI/Jev 단일 공급자 선택, 비식별 의미 문맥, 로컬 검색 링크 1회 클릭과 사후 검증을 분석 API·데이터 경계·검색 표면 topic에 연결했다.
+- 합성 확장과 실제 CJ 화면의 관측 범위를 구분했다. Jev 실호출·보관 정책, Greeting 실제 화면, CJ 항목별 확장 판정과 저장 상태는 미검증으로 유지했다.
