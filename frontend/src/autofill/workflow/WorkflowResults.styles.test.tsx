@@ -107,5 +107,7 @@ it("shows only the field name and action above the guidance, without profile val
   expect(getComputedStyle(reason).marginLeft).toBe("-4px");
   expect(getComputedStyle(reason).fontSize).toBe("13px");
   expect(getComputedStyle(reason).fontWeight).toBe("400");
+  expect(getComputedStyle(reason).backgroundColor).toBe("transparent");
+  expect(view.getByText("확인 안내")).toBeInTheDocument();
   expect(getComputedStyle(view.getByText("전공")).fontWeight).toBe("700");
 });

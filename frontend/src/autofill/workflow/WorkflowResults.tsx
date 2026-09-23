@@ -165,6 +165,7 @@ export function WorkflowResults({
                   </button>
                 </div>
                 <small className={styles.guidance}>
+                  <span className={styles.guidanceLabel}>확인 안내</span>
                   {resultGuidance(reason, failureCode)}
                 </small>
                 {!!optionsFor?.(id).length && (

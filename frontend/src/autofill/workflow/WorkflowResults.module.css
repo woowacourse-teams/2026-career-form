@@ -209,12 +209,19 @@
   margin: 10px -4px 0;
   padding: 10px 8px;
   border-top: 1px solid var(--color-border);
-  border-radius: 0 0 6px 6px;
-  background: var(--color-accent-hover);
+  background: transparent;
   color: var(--color-text-strong);
   font-size: 13px;
   font-weight: 400;
   line-height: 1.6;
+}
+.guidanceLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 .results summary {
   cursor: pointer;
