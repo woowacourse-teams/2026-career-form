@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Simulation } from "./Simulation";
+import { PanelGuide } from "./PanelPreview";
 
 vi.mock("wxt/browser", () => import("./browser"));
 let observeVisible: (visible: boolean) => void;
@@ -70,6 +71,9 @@ describe("isolated automatic demonstration", () => {
     ]) {
       expect(screen.getByLabelText(label!)).toHaveValue(value);
     }
+    expect(container.querySelector("[data-demo-panel]")).toContainElement(
+      screen.getByRole("region", { name: "지원서 자동 기입" }),
+    );
     expect(fetch).not.toHaveBeenCalled();
     expect(scroll).not.toHaveBeenCalled();
   });
@@ -85,4 +89,18 @@ describe("isolated automatic demonstration", () => {
       );
     },
   );
+});
+
+it("shows the current grouped result with isolated example values", async () => {
+  render(<PanelGuide kind="results" />);
+  expect(
+    await screen.findByRole("tab", { name: "확인 필요 2개" }),
+  ).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("button", { name: "기본주소 복사" })).toBeVisible();
+  expect(screen.getByText("예시시 가상로 100")).toBeVisible();
+  fireEvent.click(screen.getByRole("tab", { name: "입력 완료 2개" }));
+  expect(
+    screen.getByRole("tabpanel", { name: "입력 완료 2개" }),
+  ).toHaveTextContent("이메일");
+  expect(fetch).not.toHaveBeenCalled();
 });

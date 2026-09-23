@@ -101,19 +101,23 @@ export function Simulation() {
         <ExampleForm started={started} />
         <aside className={styles.sidebar}>
           <div className={styles.panelLocation}>확장 프로그램 · 사이드패널</div>
-          <PanelPreview onAutofill={async () => setStarted(true)} />
+          <PanelPreview
+            onAutofill={async () => setStarted(true)}
+            onReturn={() => setStarted(false)}
+            autofillView={
+              started ? (
+                <AutofillOverlay
+                  returnInHeader
+                  passive
+                  onClose={() => setStarted(false)}
+                  apiClient={demoAnalysisClient}
+                  repository={demoRepository}
+                />
+              ) : undefined
+            }
+          />
         </aside>
       </div>
-      {started && (
-        <div className={styles.result} inert>
-          <AutofillOverlay
-            passive
-            onClose={() => {}}
-            apiClient={demoAnalysisClient}
-            repository={demoRepository}
-          />
-        </div>
-      )}
       <svg
         className={styles.cursor}
         style={{

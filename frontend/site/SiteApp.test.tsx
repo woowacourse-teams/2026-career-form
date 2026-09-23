@@ -15,7 +15,7 @@ describe("website navigation", () => {
       );
       expect(link).toHaveAttribute("target", "_blank");
     }
-    expect(container.querySelectorAll("iframe")).toHaveLength(1);
+    expect(container.querySelectorAll("iframe")).toHaveLength(2);
     expect(
       screen.getByRole("link", { name: "개인정보처리방침" }),
     ).toHaveAttribute("href", "/privacy/");
@@ -63,4 +63,21 @@ describe("website navigation", () => {
       "찾을 수",
     );
   });
+});
+
+it("explains grouped results and copy after the application step", () => {
+  const { container } = render(
+    <SiteApp path="/onboarding/" installed profileHref="/options.html" />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: /지원서에서 사용하기/ }));
+  fireEvent.click(screen.getByRole("button", { name: /결과 확인 알아보기/ }));
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    "남은 항목",
+  );
+  expect(screen.getByTitle("확인 필요 항목과 복사 위치")).toHaveAttribute(
+    "src",
+    "/demo/?view=guide-results",
+  );
+  expect(screen.getByText(/설명과 여백/)).toBeVisible();
+  expect(container.querySelector("input")).toBeNull();
 });

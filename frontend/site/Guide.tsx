@@ -83,13 +83,23 @@ export function OpeningGuide() {
     </div>
   );
 }
-export function ServiceGuide({ kind }: { kind: "profile" | "autofill" }) {
+export function ServiceGuide({
+  kind,
+}: {
+  kind: "profile" | "autofill" | "results";
+}) {
   const siteUrl = useSiteUrl();
   return (
-    <figure className={styles.figure}>
+    <figure
+      className={`${styles.figure} ${kind === "results" ? styles.resultFigure : ""}`}
+    >
       <iframe
         title={
-          kind === "profile" ? "프로필 관리 버튼 위치" : "자동 기입 버튼 위치"
+          kind === "profile"
+            ? "프로필 관리 버튼 위치"
+            : kind === "results"
+              ? "확인 필요 항목과 복사 위치"
+              : "자동 기입 버튼 위치"
         }
         src={siteUrl(`/demo/?view=guide-${kind}`)}
         tabIndex={-1}
@@ -99,10 +109,18 @@ export function ServiceGuide({ kind }: { kind: "profile" | "autofill" }) {
         <strong>
           {kind === "profile"
             ? "↑ 패널 상단의 프로필 관리"
-            : "↑ 패널 상단의 자동 기입"}
+            : kind === "results"
+              ? "범주별 확인과 값 복사"
+              : "↑ 패널 상단의 자동 기입"}
         </strong>
         <span>
-          <strong>테두리로 표시한 버튼을 설치된 커리어폼에서 누르세요.</strong>
+          {kind === "results" ? (
+            "실제 결과 화면에 가상 정보를 넣은 예시예요. 입력 항목과 결과는 지원서마다 달라요."
+          ) : (
+            <strong>
+              테두리로 표시한 버튼을 설치된 커리어폼에서 누르세요.
+            </strong>
+          )}
         </span>
       </figcaption>
     </figure>

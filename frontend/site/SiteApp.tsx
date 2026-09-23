@@ -65,16 +65,16 @@ function Landing() {
           <div>
             <p className={styles.eyebrow}>지원서 자동 입력 · 커리어폼</p>
             <h1>
-              내 정보는 한 번만.
+              반복 입력은 줄이고,
               <br />
-              <em>지원서는 자동으로.</em>
+              <em>확인은 놓치지 않게.</em>
             </h1>
           </div>
           <div className={styles.heroDetail}>
             <p>
               채용사이트 옆에 커리어폼을 열어보세요.
               <br />
-              저장한 정보로 지원서의 입력 가능한 항목을 한 번에 채워요.
+              입력 가능한 항목은 자동으로, 남은 항목은 복사해서 채워요.
             </p>
             <div className={styles.actions}>
               <InstallLink />
@@ -94,7 +94,9 @@ function Landing() {
             tabIndex={-1}
             inert
           />
-          <figcaption>커서를 올려 자동 입력 과정을 확인해 보세요.</figcaption>
+          <figcaption>
+            마우스를 올리거나 탭·터치하면 재생돼요. 가상 정보로 만든 예시입니다.
+          </figcaption>
         </figure>
       </section>
       <section className={styles.features} id="features">
@@ -125,11 +127,43 @@ function Landing() {
           ))}
         </div>
       </section>
+      <section
+        className={styles.resultFeature}
+        aria-labelledby="result-feature-title"
+      >
+        <div>
+          <p className={styles.eyebrow}>입력 다음도, 같은 패널에서</p>
+          <h2 id="result-feature-title">
+            남은 항목만 모아서,
+            <br />
+            하나씩 마무리하세요.
+          </h2>
+          <p>
+            ‘확인 필요’에는 항목별 이유와 저장한 값이 함께 보여요. 지원서를
+            오가며 무엇이 남았는지 찾을 필요가 줄어들어요.
+          </p>
+          <ol>
+            <li>
+              <strong>범주별로 확인</strong>
+              <span>연락처, 학력, 자격증을 한눈에 살펴봐요.</span>
+            </li>
+            <li>
+              <strong>넓은 영역을 눌러 이동</strong>
+              <span>항목명과 설명, 여백을 누르면 입력칸으로 이동해요.</span>
+            </li>
+            <li>
+              <strong>필요한 값만 복사</strong>
+              <span>옆의 복사 버튼으로 직접 입력을 마무리해요.</span>
+            </li>
+          </ol>
+        </div>
+        <ServiceGuide kind="results" />
+      </section>
       <section className={styles.setupLink}>
         <div>
           <p className={styles.eyebrow}>사용 준비</p>
-          <h2>설치부터 첫 입력까지.</h2>
-          <p>확장 프로그램 설치와 프로필 등록 방법을 안내해요.</p>
+          <h2>설치부터 결과 확인까지.</h2>
+          <p>프로필 등록, 자동 기입, 남은 항목 확인까지 순서대로 안내해요.</p>
         </div>
         <SiteLink className={styles.primary} href="/onboarding/">
           설치·사용 안내 <Icon name="arrow" />
@@ -213,16 +247,17 @@ function Onboarding({
           <div className={styles.notice}>
             <strong>Chrome 웹 스토어에서 설치</strong>
             <p>
-              스토어에서 <strong>‘Chrome에 추가’를 누르세요.</strong> 설치를
-              마치면 이 페이지로 돌아와 아래 설정을 진행하세요.
+              스토어에서 <strong>‘Chrome에 추가’를 누르세요.</strong> 설치가
+              끝나면 시작 안내가 열려요. 프로필 등록부터 이어서 진행하세요.
             </p>
             <InstallLink />
           </div>
         )}
-        <div className={contentStep < 2 ? styles.guideLayout : undefined}>
+        <div className={contentStep !== 2 ? styles.guideLayout : undefined}>
           <div className={styles.guideVisual}>
             {contentStep === 0 && <ChromeGuide />}
             {contentStep === 1 && <ServiceGuide kind="profile" />}
+            {contentStep === 3 && <ServiceGuide kind="results" />}
             {contentStep === 2 && (
               <>
                 <OpeningGuide />
@@ -269,8 +304,7 @@ function Onboarding({
             <strong>네모 아이콘이 보이지 않나요?</strong>
             <p>
               <strong>Chrome 퍼즐 메뉴에서 Career Form을 선택하세요.</strong>{" "}
-              자동 기입이 되지 않는 항목은{" "}
-              <strong>프로필에 값이 있는지 확인하고 직접 작성해 주세요.</strong>
+              자동 기입 후 남은 항목은 ‘확인 필요’에서 안내를 확인할 수 있어요.
             </p>
           </div>
         )}
@@ -282,12 +316,14 @@ function Onboarding({
             <button className={styles.primary} onClick={() => go(step + 1)}>
               {contentStep === 0
                 ? "프로필 등록 알아보기"
-                : "지원서에서 사용하기"}{" "}
+                : contentStep === 1
+                  ? "지원서에서 사용하기"
+                  : "결과 확인 알아보기"}{" "}
               <Icon name="arrow" />
             </button>
           ) : (
             <SiteLink className={styles.primary} href="/">
-              시작하기 <Icon name="arrow" />
+              소개 페이지로 돌아가기 <Icon name="arrow" />
             </SiteLink>
           )}
         </div>

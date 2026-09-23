@@ -7,7 +7,7 @@
 }
 :global(body) {
   margin: 0;
-  background: #f6fcff;
+  background: #ffffff;
 }
 .site {
   font:
@@ -80,16 +80,16 @@
 }
 .introductionLink {
   padding: 9px 16px;
-  border: 1px solid #b4c7d0;
+  border: 1px solid #ead7c5;
   border-radius: 10px;
   background: #fff;
-  color: #344f5d !important;
+  color: #754126 !important;
   font-size: 14px;
   font-weight: 650;
   white-space: nowrap;
 }
 .introductionLink:hover {
-  background: #e7f2f7;
+  background: #fff3e6;
 }
 .brand {
   font-size: 23px;
@@ -112,13 +112,14 @@
   color: #ad5b2f;
 }
 .primary {
+  box-shadow: inset 0 0 0 1px #e1bd94;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   min-height: 48px;
   padding: 12px 21px;
-  background: #efa64e !important;
+  background: #fff1dc !important;
   border-radius: 10px;
   color: #3d2b20 !important;
   font-size: 14px;
@@ -127,7 +128,7 @@
   white-space: nowrap;
 }
 .primary:hover {
-  background: #e99a3e !important;
+  background: #ffe5c2 !important;
 }
 .header .primary {
   min-height: 40px;
@@ -205,7 +206,7 @@
   height: 700px;
   border: 1px solid #d2dce2;
   border-radius: 12px;
-  box-shadow: 0 14px 44px #233e5010;
+
   pointer-events: none;
 }
 .simulation figcaption {
@@ -249,7 +250,7 @@
   padding-right: 0;
 }
 .benefits article + article {
-  border-left: 1px solid #dce5e9;
+  border-left: 1px solid #ead7c5;
 }
 .benefits svg {
   width: 44px;
@@ -281,7 +282,7 @@
   gap: 30px;
   padding-top: 40px;
   padding-bottom: 48px;
-  border-top: 1px solid #d9e6ec;
+  border-top: 1px solid #ead7c5;
 }
 .setupLink h2 {
   font-size: 30px;
@@ -296,7 +297,7 @@
   padding-bottom: 80px;
 }
 .faq details {
-  border-bottom: 1px solid #d7e1e6;
+  border-bottom: 1px solid #ead7c5;
 }
 .faq summary {
   display: flex;
@@ -321,7 +322,7 @@
   line-height: 1.9;
 }
 .footer {
-  border-top: 1px solid #dce5e9;
+  border-top: 1px solid #ead7c5;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -352,11 +353,11 @@
   margin: auto;
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr);
-  border-top: 1px solid #dce5e9;
+  border-top: 1px solid #ead7c5;
 }
 .onboarding > aside {
   padding: 45px 28px;
-  background: #edf7fb;
+  background: #fffaf5;
 }
 .onboarding > aside h2 {
   font-size: 25px;
@@ -375,7 +376,7 @@
   color: #77838a;
 }
 .onboarding > aside li span {
-  border: 1px solid #ccdce3;
+  border: 1px solid #ead7c5;
   border-radius: 50%;
   width: 35px;
   height: 35px;
@@ -453,8 +454,8 @@
   color: #655d54;
 }
 .notice {
-  background: #edf5f8;
-  border: 1px solid #d7e5eb;
+  background: #fffaf5;
+  border: 1px solid #ead7c5;
   border-radius: 12px;
   padding: 22px 24px;
   margin: 26px 0;
@@ -477,7 +478,7 @@
   display: flex;
   gap: 18px;
   padding: 24px 0;
-  border-bottom: 1px solid #dce6e9;
+  border-bottom: 1px solid #ead7c5;
 }
 .instructions li:last-child {
   border: 0;
@@ -488,8 +489,8 @@
   height: 30px;
   display: grid;
   place-items: center;
-  background: #e7f2f7;
-  color: #476b7d;
+  background: #fff3e6;
+  color: #754126;
   border-radius: 50%;
   font-weight: 700;
 }
@@ -503,7 +504,7 @@
   line-height: 1.85;
 }
 .stepActions {
-  border-top: 1px solid #dce6e9;
+  border-top: 1px solid #ead7c5;
   padding-top: 22px;
   margin-top: 30px;
   display: flex;
@@ -544,7 +545,7 @@
   display: grid;
   gap: 8px;
   background: #fff;
-  border: 1px solid #dce6e9;
+  border: 1px solid #ead7c5;
   border-radius: 12px;
   padding: 24px;
   font-size: 14px;
@@ -670,7 +671,7 @@
   }
   .benefits article + article {
     border-left: 0;
-    border-top: 1px solid #dce5e9;
+    border-top: 1px solid #ead7c5;
   }
   .benefits h3 {
     font-size: 23px;
@@ -728,5 +729,87 @@
 @media (max-width: 700px) {
   .simulation iframe {
     height: 1060px;
+  }
+}
+
+.resultFeature {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 44px 24px 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 80px;
+  align-items: center;
+}
+.resultFeature h2 {
+  font-size: 36px;
+  letter-spacing: -1px;
+  margin: 12px 0 22px;
+}
+.resultFeature > div > p:not(.eyebrow) {
+  max-width: 480px;
+  color: #655d54;
+}
+.resultFeature ol {
+  list-style: none;
+  padding: 0;
+  margin: 28px 0 0;
+}
+.resultFeature li {
+  padding: 14px 0;
+  border-top: 1px solid #ead7c5;
+}
+.resultFeature li strong,
+.resultFeature li span {
+  display: block;
+}
+.resultFeature li strong {
+  color: #754126;
+  font-size: 16px;
+}
+.resultFeature li span {
+  color: #746c65;
+  font-size: 14px;
+  margin-top: 4px;
+}
+.resultFeature figure {
+  margin: 0;
+}
+@media (max-width: 800px) {
+  .resultFeature {
+    gap: 28px;
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .resultFeature h2 {
+    font-size: 29px;
+  }
+}
+@media (max-width: 650px) {
+  .resultFeature {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 18px 44px;
+  }
+  .resultFeature figure {
+    width: 100%;
+    max-width: 380px;
+    margin: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .brand img {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    margin-right: 6px;
+  }
+  .introductionLink {
+    font-size: 12px;
+    padding: 8px 10px;
   }
 }

@@ -1,8 +1,8 @@
 .figure {
   max-width: 520px;
   margin: 26px 0;
-  background: #f1f7fa;
-  border: 1px solid #d7e5eb;
+  background: #fffaf5;
+  border: 1px solid #ead7c5;
   border-radius: 14px;
   overflow: hidden;
 }
@@ -201,5 +201,15 @@
   }
   .figure iframe {
     height: 210px;
+  }
+}
+
+.figure.resultFigure iframe {
+  height: 555px;
+}
+
+@media (max-width: 600px) {
+  .figure.resultFigure iframe {
+    height: 620px;
   }
 }

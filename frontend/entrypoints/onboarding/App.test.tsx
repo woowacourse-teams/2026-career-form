@@ -16,15 +16,21 @@ it("starts installed users with profile registration and finishes after usage gu
     "/options.html",
   );
   expect(screen.queryByRole("button", { name: "프로필 관리 열기" })).toBeNull();
-  expect(screen.getByText("01 / 02")).toBeVisible();
+  expect(screen.getByText("01 / 03")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /지원서에서 사용하기/ }));
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("지원서");
-  expect(screen.getByText("02 / 02")).toBeVisible();
-  expect(screen.getByRole("link", { name: /시작하기/ })).toHaveAttribute(
-    "href",
-    "/onboarding.html?page=%2F",
+  expect(screen.getByText("02 / 03")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /결과 확인 알아보기/ }));
+  expect(screen.getByText("03 / 03")).toBeVisible();
+  expect(screen.getByTitle("확인 필요 항목과 복사 위치")).toHaveAttribute(
+    "src",
+    "/onboarding-guide.html?view=guide-results",
   );
+  expect(
+    screen.getByRole("link", { name: /소개 페이지로 돌아가기/ }),
+  ).toHaveAttribute("href", "/onboarding.html?page=%2F");
   expect(container.querySelector("input")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /이전 안내/ }));
   fireEvent.click(screen.getByRole("button", { name: /이전 안내/ }));
   expect(screen.getByRole("link", { name: /프로필 등록하기/ })).toBeVisible();
 });
