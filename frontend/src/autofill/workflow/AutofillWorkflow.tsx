@@ -58,7 +58,7 @@ import {
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
 export function AutofillWorkflow({
-  followFields = true,
+  followFields = false,
   apiClient,
   repository,
   pageDocument,

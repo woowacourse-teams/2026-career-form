@@ -56,7 +56,6 @@ export function AutofillOverlay({
       </div>
       <div className={styles.body}>
         <AutofillWorkflow
-          followFields={!passive}
           apiClient={apiClient}
           repository={repository}
           pageDocument={pageDocument}
