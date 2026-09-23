@@ -43,6 +43,12 @@
   color: inherit;
   font-weight: 700;
 }
+.counts > [data-state="completed"] {
+  color: var(--color-success);
+}
+.counts > [data-state="pending"] {
+  color: var(--color-review-status, var(--color-action-strong));
+}
 .counts > [data-state="completed"] strong {
   font-weight: 400;
 }
@@ -87,10 +93,10 @@
   align-items: center;
   gap: 7px;
   margin-bottom: 6px;
-  color: var(--color-text-strong);
+  color: var(--color-review-status, var(--color-action-strong));
 }
 .reviewTitle > span {
-  color: var(--color-action-strong);
+  color: inherit;
   font-size: 14px;
   font-weight: 600;
 }
@@ -248,6 +254,7 @@
   display: none;
 }
 .completionLabel {
+  color: var(--color-success);
   display: flex;
   align-items: center;
   gap: 8px;
