@@ -127,81 +127,90 @@ export function WorkflowResults({
           className={styles.review}
           aria-label="확인 필요한 항목"
         >
-          <h3>확인 필요</h3>
-          {pending.map(({ id, item, reason, written }) => (
-            <article key={id} className={styles.row}>
-              <div className={styles.heading}>
-                <div className={styles.fieldTitle}>
-                  <strong>
-                    {item ? resultFieldLabel(item) : "프로필 정보"}
-                  </strong>
-                  {written && <span className={styles.writtenTag}>입력됨</span>}
+          <h3 className={styles.reviewTitle}>
+            확인 필요 <span aria-hidden="true">{pending.length}</span>
+          </h3>
+          <div className={styles.reviewList}>
+            {pending.map(({ id, item, reason, written }) => (
+              <article key={id} className={styles.row}>
+                <div className={styles.heading}>
+                  <div className={styles.fieldTitle}>
+                    <strong>
+                      {item ? resultFieldLabel(item) : "프로필 정보"}
+                    </strong>
+                    {written && (
+                      <span className={styles.writtenTag}>입력됨</span>
+                    )}
+                  </div>
+                  <div className={styles.values}>
+                    {item &&
+                      resultPreview(item, profile).map((value, index) => (
+                        <p key={index}>{value}</p>
+                      ))}
+                  </div>
+                  <button
+                    type="button"
+                    title="필드로 이동"
+                    disabled={
+                      !onLocate ||
+                      unavailable.has(id) ||
+                      id.startsWith("progress:")
+                    }
+                    aria-label={`${item ? resultFieldLabel(item) : "입력 필드"} 필드로 이동`}
+                    onClick={() => {
+                      if (!onLocate?.(id))
+                        setUnavailable(
+                          (previous) => new Set([...previous, id]),
+                        );
+                    }}
+                  >
+                    <span aria-hidden="true">↗</span>
+                  </button>
                 </div>
-                <div className={styles.values}>
-                  {item &&
-                    resultPreview(item, profile).map((value, index) => (
-                      <p key={index}>{value}</p>
+                {reason && <small>{reason.replaceAll("·", "/")}</small>}
+                {!!optionsFor?.(id).length && (
+                  <details>
+                    <summary>지원서 선택지</summary>
+                    {optionsFor(id).map((label, index) => (
+                      <p key={index}>{label}</p>
                     ))}
-                </div>
-                <button
-                  type="button"
-                  disabled={
-                    !onLocate ||
-                    unavailable.has(id) ||
-                    id.startsWith("progress:")
-                  }
-                  aria-label={`${item ? resultFieldLabel(item) : "입력 필드"} 필드로 이동`}
-                  onClick={() => {
-                    if (!onLocate?.(id))
-                      setUnavailable((previous) => new Set([...previous, id]));
-                  }}
-                >
-                  이동 <span aria-hidden="true">↗</span>
-                </button>
-              </div>
-              {reason && <small>{reason.replaceAll("·", "/")}</small>}
-              {!!optionsFor?.(id).length && (
-                <details>
-                  <summary>지원서 선택지</summary>
-                  {optionsFor(id).map((label, index) => (
-                    <p key={index}>{label}</p>
-                  ))}
-                </details>
-              )}
-              {unavailable.has(id) && <small role="status">이동 불가</small>}
-            </article>
-          ))}
+                  </details>
+                )}
+                {unavailable.has(id) && <small role="status">이동 불가</small>}
+              </article>
+            ))}
+          </div>
         </section>
       )}
       {completed.length > 0 && (
         <section className={styles.completed} aria-label="입력 완료 내역">
-          <ul className={styles.categories} aria-label="범주별 입력 결과">
-            {[...categories].map(([category, entries]) => (
-              <li key={category}>
-                <span>
-                  <span className={styles.check} aria-hidden="true">
-                    ✓
-                  </span>
-                  {category.replaceAll("·", "/")}
-                </span>
-                <strong>{entries.length}개 입력</strong>
-              </li>
-            ))}
-          </ul>
           <details ref={completedDetails}>
             <summary ref={completedSummary}>
-              입력 완료 {completed.length}개
+              <span className={styles.completionLabel}>
+                <span className={styles.check} aria-hidden="true">
+                  ✓
+                </span>
+                <span>입력 완료 {completed.length}개</span>
+              </span>
+              <span className={styles.chevron} aria-hidden="true">
+                ⌄
+              </span>
             </summary>
-            {[...categories].map(([category, entries]) => (
-              <div className={styles.completedGroup} key={category}>
-                <h4>{category.replaceAll("·", "/")}</h4>
-                <ul>
-                  {entries.map((entry) => (
-                    <li key={entry.id}>{entry.label.replaceAll("·", "/")}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <ul className={styles.categories} aria-label="범주별 입력 결과">
+              {[...categories].map(([category, entries]) => (
+                <li key={category}>
+                  <div className={styles.categoryHeading}>
+                    <h4>{category.replaceAll("·", "/")}</h4>
+                    <strong>{entries.length}개 입력</strong>
+                  </div>
+                  <ul className={styles.completedFields}>
+                    {entries.map((entry) => (
+                      <li key={entry.id}>{entry.label.replaceAll("·", "/")}</li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
           </details>
         </section>
       )}

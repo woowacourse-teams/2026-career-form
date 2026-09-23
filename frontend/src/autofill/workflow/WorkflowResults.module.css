@@ -54,6 +54,8 @@
 }
 .review:focus-visible,
 .completed summary:focus-visible,
+.heading button:focus-visible,
+.row summary:focus-visible,
 .primary:focus-visible {
   outline: 2px solid var(--color-action-strong);
   outline-offset: 4px;
@@ -68,19 +70,43 @@
   color: var(--color-text-muted);
   font-size: 13px;
 }
+.results .reviewTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.reviewTitle > span {
+  color: var(--color-action-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+.reviewList {
+  padding: 0 10px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
 .row {
   padding: 10px 0;
   border-bottom: 1px solid var(--color-border);
   overflow-wrap: anywhere;
 }
+.row:last-child {
+  border-bottom: 0;
+}
 .heading {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
+  grid-template-columns: 72px minmax(0, 1fr) 28px;
   align-items: start;
   gap: 8px;
 }
 .heading strong {
-  font-size: 13px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 550;
   line-height: 1.5;
 }
 .fieldTitle {
@@ -89,6 +115,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  padding-top: 4px;
 }
 .writtenTag {
   padding: 2px 6px;
@@ -99,18 +126,25 @@
   white-space: nowrap;
 }
 .heading button {
-  min-width: 52px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-width: 28px;
   min-height: 28px;
-  padding: 3px 7px;
+  padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--color-action-strong);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 18px;
   white-space: nowrap;
+}
+.heading button:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+  border-color: var(--color-action-strong);
 }
 .heading button:disabled {
   cursor: default;
@@ -118,6 +152,9 @@
 }
 .values {
   min-width: 0;
+  padding-top: 4px;
+  color: var(--color-text-strong);
+  font-weight: 600;
 }
 .values p {
   margin: 0;
@@ -127,7 +164,7 @@
   overflow-wrap: anywhere;
 }
 .row details {
-  margin-top: 6px;
+  margin: 6px 0 0 80px;
 }
 .row details p {
   margin: 8px 0 4px;
@@ -135,7 +172,7 @@
 }
 .row small {
   display: block;
-  margin-top: 4px;
+  margin: 2px 0 0 80px;
   color: var(--color-text-muted);
   font-size: 11px;
   line-height: 1.45;
@@ -145,21 +182,44 @@
   font-size: 13px;
 }
 .completed {
-  display: grid;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+.completed > details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  list-style: none;
+  font-weight: 550;
+}
+.completed > details > summary::-webkit-details-marker {
+  display: none;
+}
+.completionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chevron {
+  color: var(--color-text-muted);
+}
+.completed > details[open] .chevron {
+  transform: rotate(180deg);
 }
 .categories {
   margin: 0;
-  padding: 0;
+  padding: 0 12px;
   list-style: none;
 }
 .categories > li {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
   font-size: 13px;
 }
 .categories strong {
@@ -169,18 +229,26 @@
   color: var(--color-text-muted);
 }
 .check {
-  margin-right: 8px;
   color: var(--color-success);
 }
-.completedGroup h4 {
-  margin: 16px 0 8px;
+.categoryHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.categoryHeading h4 {
+  margin: 0;
   font-size: 13px;
   font-weight: 650;
 }
-.completedGroup ul {
+.completedFields {
   display: grid;
-  gap: 6px;
-  padding-left: 18px;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
   color: var(--color-text-muted);
   font-size: 12px;
 }

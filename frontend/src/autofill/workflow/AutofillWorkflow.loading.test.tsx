@@ -286,7 +286,7 @@ it("shows writing status while the automatic workflow writer is pending", async 
   expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
   expect(screen.getByLabelText("입력 완료 1개")).toBeVisible();
   expect(
-    screen.getByRole("list", { name: "범주별 입력 결과" }),
+    screen.getByRole("list", { name: "범주별 입력 결과", hidden: true }),
   ).toHaveTextContent("기본 인적사항1개 입력");
 });
 

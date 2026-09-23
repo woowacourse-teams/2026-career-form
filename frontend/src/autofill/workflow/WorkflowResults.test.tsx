@@ -35,7 +35,8 @@ it("keeps the compact locate action identifiable and moves to its application fi
     const locate = screen.getByRole("button", {
       name: "대학교 / 주전공명 (1) 필드로 이동",
     });
-    expect(locate).toHaveTextContent("이동 ↗");
+    expect(locate).toHaveTextContent("↗");
+    expect(locate).toHaveAttribute("title", "필드로 이동");
     expect(
       screen.getByText("지원서 선택지").closest("details"),
     ).not.toHaveAttribute("open");
@@ -250,7 +251,7 @@ it("puts an already matching value under collapsed skipped details with its actu
   ).not.toBeInTheDocument();
 });
 
-it("keeps completed categories from earlier writes and opens their details on request", () => {
+it("keeps completed categories collapsed until explicitly opened without losing earlier writes", () => {
   render(
     <WorkflowResults
       reviewItems={[]}
@@ -268,18 +269,44 @@ it("keeps completed categories from earlier writes and opens their details on re
     />,
   );
   expect(screen.getByLabelText("입력 완료 3개")).toBeInTheDocument();
-  const categories = screen.getByRole("list", { name: "범주별 입력 결과" });
+  const categories = screen.getByRole("list", {
+    name: "범주별 입력 결과",
+    hidden: true,
+  });
+  expect(categories).not.toBeVisible();
   expect(within(categories).getByText("기본 정보")).toBeInTheDocument();
   expect(within(categories).getByText("2개 입력")).toBeInTheDocument();
   expect(within(categories).getByText("학력")).toBeInTheDocument();
   expect(within(categories).getByText("1개 입력")).toBeInTheDocument();
-  const summary = screen.getByText("입력 완료 3개");
+  const summary = screen.getByText("입력 완료 3개").closest("summary")!;
   expect(summary.closest("details")).not.toHaveAttribute("open");
   fireEvent.click(screen.getByRole("button", { name: "입력한 항목 보기" }));
   expect(summary.closest("details")).toHaveAttribute("open");
   expect(summary).toHaveFocus();
+  expect(categories).toBeVisible();
+  expect(within(categories).getAllByText("기본 정보")).toHaveLength(1);
   expect(screen.getByText("학교명")).toBeInTheDocument();
   expect(screen.queryByText("전공")).not.toBeInTheDocument();
+});
+
+it("keeps completed fields out of the way while review remains visible", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[item]}
+      results={[{ candidateId: "email", status: "written" }]}
+    />,
+  );
+  const review = screen.getByRole("region", { name: "확인 필요한 항목" });
+  const completed = screen.getByRole("region", { name: "입력 완료 내역" });
+  expect(within(review).getByText("컴퓨터공학")).toBeVisible();
+  const categories = within(completed).getByRole("list", {
+    name: "범주별 입력 결과",
+    hidden: true,
+  });
+  expect(categories).not.toBeVisible();
+  fireEvent.click(within(completed).getByText("입력 완료 1개"));
+  expect(categories).toBeVisible();
+  expect(within(review).getByText("컴퓨터공학")).toBeVisible();
 });
 it("keeps an earlier failure visible without locating a reused candidate from another snapshot", () => {
   const onLocate = vi.fn();
