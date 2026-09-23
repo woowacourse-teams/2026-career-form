@@ -118,9 +118,7 @@ export function WorkflowResults({
       </div>
       {pending.length > 0 && (
         <section className={styles.review} aria-label="확인 필요한 항목">
-          <h3 className={styles.reviewTitle}>
-            확인 필요 <span aria-hidden="true">{pending.length}</span>
-          </h3>
+          <h3 className={styles.reviewTitle}>확인 필요</h3>
           <p className={styles.reviewHint}>
             아래 항목을 눌러 지원서에서 확인해 주세요.
           </p>
