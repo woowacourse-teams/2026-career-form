@@ -101,6 +101,9 @@ it("shows the current grouped result with isolated example values", async () => 
   fireEvent.click(screen.getByRole("tab", { name: "입력 완료 2개" }));
   expect(
     screen.getByRole("tabpanel", { name: "입력 완료 2개" }),
-  ).toHaveTextContent("이메일");
+  ).toHaveTextContent("연락처와 주소");
+  expect(
+    screen.getByRole("tabpanel", { name: "입력 완료 2개" }),
+  ).not.toHaveTextContent("이메일");
   expect(fetch).not.toHaveBeenCalled();
 });

@@ -43,20 +43,14 @@ function props(reviewItems = items) {
     }),
   };
 }
-it("summarizes separate education records and only marks a section checked explicitly", () => {
+it("shows a category count and only marks a section checked explicitly", () => {
   const locate = vi.fn(() => true);
   render(<WorkflowResults {...props()} onLocateSection={locate} />);
   expect(
     screen.getByRole("heading", { name: "제출 전, 입력한 내용을 살펴보세요" }),
   ).toBeVisible();
-  const summaries = [
-    screen.getByText("대학교 1").closest("li")!,
-    screen.getByText("대학교 2").closest("li")!,
-  ];
-  expect(summaries).toHaveLength(2);
-  expect(summaries[0]).toHaveTextContent("합성대학교");
-  expect(summaries[0]).toHaveTextContent("합성전공");
-  expect(summaries[0]).not.toHaveTextContent("두번째대학교");
+  expect(screen.getByText("3개 입력")).toBeVisible();
+  expect(screen.queryByText("합성대학교")).toBeNull();
   const checked = screen.getByRole("button", { name: "학력 확인했어요" });
   expect(checked).toHaveAttribute("aria-pressed", "false");
   fireEvent.click(screen.getByRole("button", { name: "학력 구역 보기" }));
@@ -113,7 +107,7 @@ it("does not invent values for historical records or locate a reused candidate",
     />,
   );
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
-  expect(within(completed).getByText("지원서에서 확인")).toBeVisible();
+  expect(within(completed).queryByText("지원서에서 확인")).toBeNull();
   expect(within(completed).queryByText("UNRELATED_VALUE")).toBeNull();
   expect(
     within(completed).getByRole("button", { name: "학력 구역 보기" }),
@@ -155,26 +149,27 @@ it("resets only the changed section and never restores a removed section's check
     screen.getByRole("button", { name: "연락처와 주소 확인했어요" }),
   ).toHaveAttribute("aria-pressed", "false");
 });
-it("keeps top-level education choices outside a school record", () => {
+it("counts top-level education choices in the category without displaying them", () => {
   const all = [
     ...items,
     field("latest", "education.university.latestEducationType", "대학(학사)"),
   ];
   render(<WorkflowResults {...props(all)} onLocateSection={() => true} />);
-  const school = screen.getByText("대학교 1").closest("li")!;
-  expect(school).not.toHaveTextContent("최종학력");
-  expect(screen.getByText("최종학력").closest("li")).toHaveTextContent(
-    "대학(학사)",
-  );
+  expect(screen.getByRole("button", { name: "학력 구역 보기" })).toBeEnabled();
+  expect(screen.getByText("4개 입력")).toBeVisible();
+  expect(screen.queryByText("최종학력")).toBeNull();
 });
-it("keeps repeated records without identity separate", () => {
+it("counts all repeated fields in one category", () => {
   const all = items.map((item) => ({
     ...item,
     itemIndex: undefined,
     profileEntryId: undefined,
   }));
   render(<WorkflowResults {...props(all)} onLocateSection={() => true} />);
-  expect(screen.getAllByText("대학교")).toHaveLength(3);
+  expect(screen.getByText("3개 입력")).toBeVisible();
+  expect(
+    screen.getAllByRole("button", { name: "학력 구역 보기" }),
+  ).toHaveLength(1);
 });
 it("does not attach an old progress entry to a reused current candidate", () => {
   const current = props(items.slice(0, 1));
@@ -195,7 +190,7 @@ it("does not attach an old progress entry to a reused current candidate", () => 
     />,
   );
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
-  expect(within(completed).getByText("지원서에서 확인")).toBeVisible();
+  expect(within(completed).queryByText("지원서에서 확인")).toBeNull();
   expect(within(completed).queryByText("합성대학교")).toBeNull();
   expect(
     within(completed).getByRole("button", { name: "학력 구역 보기" }),
@@ -205,7 +200,7 @@ it("never substitutes stored profile values when a live value is unavailable", (
   render(<WorkflowResults {...props()} fieldStateFor={undefined} />);
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
   expect(within(completed).queryByText("합성대학교")).toBeNull();
-  expect(within(completed).getAllByText("지원서에서 확인")).toHaveLength(3);
+  expect(within(completed).queryByText("지원서에서 확인")).toBeNull();
 });
 
 it("navigates a whole category and collapses its summary on explicit confirmation", () => {
@@ -222,13 +217,15 @@ it("navigates a whole category and collapses its summary on explicit confirmatio
   expect(locate).toHaveBeenCalledWith(["school", "major", "school2"]);
   expect(locateField).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "학력 확인했어요" }));
-  expect(screen.queryByText("합성대학교")).not.toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "학력 요약 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
   const reopen = screen.getByRole("button", {
     name: "학력 확인 완료, 요약 펼치기",
   });
   expect(reopen).toHaveFocus();
   fireEvent.click(reopen);
-  expect(screen.getByText("합성대학교")).toBeVisible();
+  expect(screen.getByRole("button", { name: "학력 확인 취소" })).toBeVisible();
   expect(
     screen.getByRole("button", { name: "학력 확인 취소" }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -245,5 +242,23 @@ it("does not mark a manually collapsed section checked and preserves keyboard fo
   expect(
     screen.getByRole("button", { name: "학력 요약 펼치기" }),
   ).toHaveFocus();
-  expect(screen.getByText("합성대학교")).not.toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "학력 요약 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
+});
+
+it("shows only category navigation and counts, with no individual values or fallback placeholders", () => {
+  const { container } = render(
+    <WorkflowResults {...props()} onLocateSection={() => true} />,
+  );
+  expect(screen.getByRole("button", { name: "학력 구역 보기" })).toBeVisible();
+  expect(screen.getByText("3개 입력")).toBeVisible();
+  for (const value of [
+    "합성대학교",
+    "합성전공",
+    "두번째대학교",
+    "학교명",
+    "지원서에서 확인",
+  ])
+    expect(container.innerHTML).not.toContain(value);
 });

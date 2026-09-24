@@ -41,10 +41,33 @@ export function presentSection(
     return rect.width > 0 && rect.height > 0 ? [element] : [];
   });
   if (!elements.length) return;
-  const union = () => {
+  const readingBounds = (
+    element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+  ) => {
+    const rect = element.getBoundingClientRect();
+    const labels = [...(element.labels ?? [])]
+      .map((label) => label.getBoundingClientRect())
+      .filter(
+        (label) =>
+          label.width > 0 &&
+          label.height > 0 &&
+          Math.abs(label.top - rect.top) < 100,
+      );
+    const left = Math.min(rect.left, ...labels.map((label) => label.left));
+    const top = Math.min(rect.top, ...labels.map((label) => label.top));
+    return new DOMRect(
+      left,
+      top,
+      Math.max(rect.right, ...labels.map((label) => label.right)) - left,
+      Math.max(rect.bottom, ...labels.map((label) => label.bottom)) - top,
+    );
+  };
+  const union = (withLabels = false) => {
     const rects = elements
       .filter((element) => element.isConnected)
-      .map((element) => element.getBoundingClientRect());
+      .map((element) =>
+        withLabels ? readingBounds(element) : element.getBoundingClientRect(),
+      );
     const left = Math.min(...rects.map((rect) => rect.left));
     const top = Math.min(...rects.map((rect) => rect.top));
     return new DOMRect(
@@ -54,6 +77,11 @@ export function presentSection(
       Math.max(...rects.map((rect) => rect.bottom)) - top,
     );
   };
+  const neighbors = [
+    ...document.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >("input,select,textarea"),
+  ].filter((element) => !elements.includes(element));
   let common: HTMLElement | null = elements[0].parentElement;
   while (common && !elements.every((element) => common!.contains(element)))
     common = common.parentElement;
@@ -70,17 +98,29 @@ export function presentSection(
     containerBounds.width <= fields.width + 240
       ? common
       : undefined;
-  const bounds = () =>
-    container?.getBoundingClientRect() ??
-    (() => {
-      const rect = union();
-      return new DOMRect(
-        rect.left - 8,
-        rect.top - 20,
-        rect.width + 16,
-        rect.height + 26,
-      );
-    })();
+  const bounds = () => {
+    const rect = container?.isConnected
+      ? container.getBoundingClientRect()
+      : union(true);
+    const side = container ? 20 : 24;
+    let top = rect.top - 20;
+    let bottom = rect.bottom + 20;
+    // Use available whitespace, without drawing across the neighboring section's labels or controls.
+    for (const neighbor of neighbors) {
+      if (!neighbor.isConnected) continue;
+      const control = neighbor.getBoundingClientRect();
+      if (!control.width || !control.height) continue;
+      const other = readingBounds(neighbor);
+      if (other.right <= rect.left || other.left >= rect.right) continue;
+      if (other.bottom <= rect.top)
+        top = Math.max(top, (other.bottom + rect.top) / 2);
+      if (other.top >= rect.bottom)
+        bottom = Math.min(bottom, (other.top + rect.bottom) / 2);
+    }
+    const left = Math.max(4, rect.left - side);
+    const right = Math.min(view.innerWidth - 4, rect.right + side);
+    return new DOMRect(left, top, Math.max(0, right - left), bottom - top);
+  };
   const rect = bounds();
   const available = view.innerHeight - 104;
   if (
@@ -122,7 +162,7 @@ export function presentSection(
   overlay.setAttribute("data-career-form-section-highlight", "");
   overlay.setAttribute("aria-hidden", "true");
   overlay.style.cssText =
-    "all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:2px solid #a65f2d;border-radius:10px;background:transparent;z-index:2147483000;";
+    "all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:1px solid #b77b50;border-radius:14px;background:transparent;z-index:2147483000;";
   const update = () => {
     if (!elements.some((element) => element.isConnected)) {
       clear();

@@ -357,62 +357,9 @@
   font-weight: 400;
   color: var(--color-text-muted);
 }
-.summaryRecords {
-  margin: 0;
-  padding: 0 6px;
-  list-style: none;
-}
-.summaryRecords > li + li {
-  border-top: 1px solid var(--color-border);
-}
-.recordSummary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px 8px;
-  width: 100%;
-  min-height: 56px;
-  padding: 10px 6px 14px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-}
 .confirmReview:focus-visible {
   outline: 2px solid var(--color-action-strong);
   outline-offset: -2px;
-}
-.recordTitle {
-  grid-column: 1;
-  color: var(--color-text-muted);
-  font-size: 11px;
-}
-.recordValues {
-  grid-column: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 14px;
-  min-width: 0;
-}
-.summaryFact {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 5px;
-  min-width: 0;
-  max-width: 100%;
-  line-height: 1.6;
-}
-.factLabel {
-  color: var(--color-text-muted);
-  font-size: 10px;
-}
-.factValue {
-  color: var(--color-text-strong);
-  font-size: 13px;
-  font-weight: 550;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
 }
 .confirmReview {
   display: flex;

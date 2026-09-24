@@ -104,8 +104,44 @@ it("tracks section bounds while scrolling and removes the overlay on clear", () 
   ) as HTMLElement;
   section.getBoundingClientRect = () => new DOMRect(20, 100, 700, 260);
   document.dispatchEvent(new Event("scroll"));
-  expect(overlay.style.top).toBe("100px");
+  expect(overlay.style.top).toBe("80px");
   p.clear();
   document.dispatchEvent(new Event("scroll"));
   expect(overlay.isConnected).toBe(false);
+});
+
+it("leaves breathing room outside the section container", () => {
+  const { section, snapshot, ids } = fixture();
+  const p = createFieldPresentation(document);
+  p.showSection(snapshot.registry, ids);
+  const overlay = document.querySelector(
+    "[data-career-form-section-highlight]",
+  ) as HTMLElement;
+  const rect = section.getBoundingClientRect();
+  expect(parseFloat(overlay.style.top)).toBeLessThanOrEqual(rect.top - 20);
+  expect(parseFloat(overlay.style.height)).toBeGreaterThanOrEqual(
+    rect.height + 40,
+  );
+  p.clear();
+});
+
+it("keeps expanded margins between adjacent section labels", () => {
+  const { snapshot, ids } = fixture();
+  const label = document.createElement("label");
+  label.textContent = "다음 구역";
+  const input = document.createElement("input");
+  input.name = "next";
+  label.append(input);
+  document.body.append(label);
+  label.getBoundingClientRect = () => new DOMRect(20, 450, 700, 50);
+  input.getBoundingClientRect = () => new DOMRect(40, 470, 500, 30);
+  const p = createFieldPresentation(document);
+  p.showSection(snapshot.registry, ids);
+  const overlay = document.querySelector(
+    "[data-career-form-section-highlight]",
+  ) as HTMLElement;
+  expect(parseFloat(overlay.style.top) + parseFloat(overlay.style.height)).toBe(
+    445,
+  );
+  p.clear();
 });

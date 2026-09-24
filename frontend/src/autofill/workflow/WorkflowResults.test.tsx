@@ -102,8 +102,8 @@ it("keeps repeat rows and school levels identifiable in concise completed labels
     />,
   );
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
-  expect(within(completed).getByText("고등학교 1")).toBeInTheDocument();
-  expect(within(completed).getByText("대학교 2")).toBeInTheDocument();
+  expect(within(completed).queryByText("고등학교 1")).toBeNull();
+  expect(within(completed).queryByText("대학교 2")).toBeNull();
   expect(within(completed).queryByText(/필수항목/)).not.toBeInTheDocument();
 });
 
@@ -296,7 +296,7 @@ it("opens completed categories by default when no review is needed without losin
   );
   expect(categories).toBeVisible();
   expect(within(categories).getAllByText("기본 정보")).toHaveLength(1);
-  expect(screen.getByText("학교명")).toBeInTheDocument();
+  expect(screen.queryByText("학교명")).toBeNull();
   expect(screen.queryByText("전공")).not.toBeInTheDocument();
 });
 
@@ -702,11 +702,11 @@ it("makes completed values reviewable and locates the field without claiming ver
     />,
   );
   const region = screen.getByRole("region", { name: "입력 완료 내역" });
-  expect(within(region).getByText("컴퓨터공학")).toBeVisible();
+  expect(within(region).queryByText("컴퓨터공학")).toBeNull();
   expect(
     within(region).getByRole("button", { name: "기타 항목 구역 보기" }),
   ).toBeEnabled();
-  expect(within(region).getByText(/이름·날짜·숫자/)).toBeVisible();
+  expect(within(region).getByText(/구역을 눌러 지원서에서/)).toBeVisible();
   fireEvent.click(
     within(region).getByRole("button", { name: "기타 항목 구역 보기" }),
   );
@@ -737,6 +737,6 @@ it("masks unrevealed sensitive completed values including tooltips", () => {
       fieldStateFor={() => ({ visible: true, value })}
     />,
   );
-  expect(screen.getByText("값 가림")).toBeVisible();
+  expect(screen.queryByText("값 가림")).toBeNull();
   expect(container.innerHTML).not.toContain(value);
 });
