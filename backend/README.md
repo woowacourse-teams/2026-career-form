@@ -99,12 +99,13 @@ LLM Resolver를 활성화할 때는 다음 값을 프로세스 실행 환경에 
 | `CAREER_FORM_LLM_ENABLED` | `false` | `true`일 때 범용 LLM Resolver 두 개를 활성화한다. |
 | `CAREER_FORM_LLM_MODEL` | `gpt-5.6-luna` | Spring AI OpenAI chat model 이름이다. |
 | `OPENAI_API_KEY` | 빈 값 | 활성화 시 공백이 아닌 실행 환경 시크릿이어야 한다. |
-| `CAREER_FORM_LLM_TIMEOUT` | `10s` | OpenAI 요청 timeout이다. |
-| `CAREER_FORM_LLM_MAX_RETRIES` | `1` | OpenAI client 최대 retry 횟수다. |
-| `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | `2048` | completion token 상한이다. |
+| `CAREER_FORM_LLM_TIMEOUT` | `30s` | 준비·필드 OpenAI 요청 timeout이다. `0`보다 크고 `60s`보다 작아야 하며, 잘못된 값이면 시작이 실패한다. |
+| `CAREER_FORM_LLM_MAX_RETRIES` | `0` | OpenAI client 최대 retry 횟수다. 분석 공급자는 실행 설정과 무관하게 0으로 강제한다. |
+| `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | runtime `8192`, 예시 `2048` | completion token 상한이다. 예시는 출력 한도 상향이 아니다. |
 
-모델 호출은 Spring AI의 OpenAI structured output을 사용한다. 데모 설정은
-`gpt-5.6-luna`, reasoning effort `none`, completion 상한 2,048 tokens를 사용한다.
+모델 호출은 Spring AI의 OpenAI structured output을 사용한다. runtime 기본 설정은
+`gpt-5.6-luna`, reasoning effort `none`, completion 상한 8,192 tokens를 사용한다.
+`.env.example`의 2,048은 로컬 실행 예시의 명시값이며 한도 상향을 제안하지 않는다.
 로컬 Compose에서는 [`.env.example`](../.env.example)을 `.env.local`의 출발점으로
 사용할 수 있다.
 

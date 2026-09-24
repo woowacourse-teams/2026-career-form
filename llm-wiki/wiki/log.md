@@ -219,3 +219,9 @@
 - 승인 digest `09f47713670f79bb2053d52af823b912cd0b06bc635066c63f9457d7b9f74db3`의 후보 6개와 제안 ADR 전문을 [CF-98 bundle](../raw/issues/CF-98/manifest.md)에 비식별 기록했다.
 - 정적 정책 우선, OpenAI/Jev 단일 공급자 선택, 비식별 의미 문맥, 로컬 검색 링크 1회 클릭과 사후 검증을 분석 API·데이터 경계·검색 표면 topic에 연결했다.
 - 합성 확장과 실제 CJ 화면의 관측 범위를 구분했다. Jev 실호출·보관 정책, Greeting 실제 화면, CJ 항목별 확장 판정과 저장 상태는 미검증으로 유지했다.
+
+## [2026-09-24] ingest | CF-102 OpenAI 분석 예산과 안전 진단
+
+- 승인 digest `e350514e46e5143c397314f3209dc2d4295bfdd7b8654d2d61d492b94bd79476`의 후보 3개를 [CF-102 bundle](../raw/issues/CF-102/manifest.md)에 비식별 기록했다.
+- 준비·필드 30초 기본/60초 미만, 상호작용 별도 SDK 8초·무재시도, 구조화된 종료 사유와 안전한 실패 분류를 [topic](topics/openai-analysis-budget-and-diagnostics.md)에 연결했다.
+- Docker/실제 공급자/CJ 검증은 환경 및 승인 부재로 미완료로 남겼다.
