@@ -102,12 +102,8 @@ it("keeps repeat rows and school levels identifiable in concise completed labels
     />,
   );
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
-  expect(
-    within(completed).getByText("고등학교 / 학교명 (1)"),
-  ).toBeInTheDocument();
-  expect(
-    within(completed).getByText("대학교 / 학교명 (2)"),
-  ).toBeInTheDocument();
+  expect(within(completed).getByText("고등학교 1")).toBeInTheDocument();
+  expect(within(completed).getByText("대학교 2")).toBeInTheDocument();
   expect(within(completed).queryByText(/필수항목/)).not.toBeInTheDocument();
 });
 
@@ -708,15 +704,15 @@ it("makes completed values reviewable and locates the field without claiming ver
   const region = screen.getByRole("region", { name: "입력 완료 내역" });
   expect(within(region).getByText("컴퓨터공학")).toBeVisible();
   expect(
-    within(region).getByRole("button", { name: "전공 입력값 확인" }),
+    within(region).getByRole("button", { name: "전공 지원서에서 보기" }),
   ).toHaveAccessibleDescription("컴퓨터공학");
   expect(within(region).getByText(/이름·날짜·숫자/)).toBeVisible();
   fireEvent.click(
-    within(region).getByRole("button", { name: "전공 입력값 확인" }),
+    within(region).getByRole("button", { name: "전공 지원서에서 보기" }),
   );
   expect(onLocate).toHaveBeenCalledWith("major");
   expect(
-    within(region).getByRole("button", { name: "전공 입력값 확인" }),
+    within(region).getByRole("button", { name: "전공 지원서에서 보기" }),
   ).toBeDisabled();
   expect(
     within(region).getByText("지원서에서 직접 확인해 주세요."),
