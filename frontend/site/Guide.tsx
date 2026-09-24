@@ -102,31 +102,27 @@ export function ServiceGuide({
           kind === "profile"
             ? "프로필 관리 버튼 위치"
             : kind === "results"
-              ? "구역별 결과 확인 체험"
+              ? "값을 복사해 지원서에 붙여넣는 시연"
               : "자동 기입 버튼 위치"
         }
         src={siteUrl(`/demo/?view=guide-${kind}`)}
         tabIndex={kind === "results" ? 0 : -1}
         inert={kind !== "results"}
       />
-      <figcaption>
-        <strong>
-          {kind === "profile"
-            ? "↑ 패널 상단의 프로필 관리"
-            : kind === "results"
-              ? "남은 항목은 복사해서 마무리하세요."
+      {kind !== "results" && (
+        <figcaption>
+          <strong>
+            {kind === "profile"
+              ? "↑ 패널 상단의 프로필 관리"
               : "↑ 패널 상단의 자동 기입"}
-        </strong>
-        <span>
-          {kind === "results" ? (
-            "마우스를 올리면 복사한 값을 지원서에 붙여넣는 모습을 볼 수 있어요."
-          ) : (
+          </strong>
+          <span>
             <strong>
               테두리로 표시한 버튼을 설치된 커리어폼에서 누르세요.
             </strong>
-          )}
-        </span>
-      </figcaption>
+          </span>
+        </figcaption>
+      )}
     </figure>
   );
 }

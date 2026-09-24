@@ -74,10 +74,9 @@ it("explains grouped results and copy after the application step", () => {
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     "입력한 내용",
   );
-  expect(screen.getByTitle("구역별 결과 확인 체험")).toHaveAttribute(
-    "src",
-    "/demo/?view=guide-results",
-  );
+  expect(
+    screen.getByTitle("값을 복사해 지원서에 붙여넣는 시연"),
+  ).toHaveAttribute("src", "/demo/?view=guide-results");
   expect(screen.getByText(/값을 복사해 지원서에 붙여넣으세요/)).toBeVisible();
   expect(container.querySelector("input")).toBeNull();
 });

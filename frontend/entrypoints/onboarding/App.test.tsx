@@ -22,10 +22,9 @@ it("starts installed users with profile registration and finishes after usage gu
   expect(screen.getByText("02 / 03")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /결과 확인 알아보기/ }));
   expect(screen.getByText("03 / 03")).toBeVisible();
-  expect(screen.getByTitle("구역별 결과 확인 체험")).toHaveAttribute(
-    "src",
-    "/onboarding-guide.html?view=guide-results",
-  );
+  expect(
+    screen.getByTitle("값을 복사해 지원서에 붙여넣는 시연"),
+  ).toHaveAttribute("src", "/onboarding-guide.html?view=guide-results");
   expect(
     screen.getByRole("link", { name: /소개 페이지로 돌아가기/ }),
   ).toHaveAttribute("href", "/onboarding.html?page=%2F");

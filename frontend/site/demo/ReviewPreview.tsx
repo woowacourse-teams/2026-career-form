@@ -89,7 +89,9 @@ export function ReviewPreview() {
     >
       <div className={styles.caption}>
         <strong>남은 항목은 복사해서 마무리하세요.</strong>
-        <span>{run ? "가상 정보로 만든 예시" : "마우스를 올려보세요"}</span>
+        <span>
+          {run ? "가상 정보로 만든 예시" : "마우스를 올리거나 눌러보세요"}
+        </span>
       </div>
       <div className={styles.form} aria-label="예시 지원서">
         <span className={styles.eyebrow}>지원서 작성</span>

@@ -214,17 +214,13 @@ function Onboarding({
             <InstallLink />
           </div>
         )}
-        <div className={contentStep !== 2 ? styles.guideLayout : undefined}>
+        {contentStep === 2 && <OpeningGuide />}
+        <div className={styles.guideLayout}>
           <div className={styles.guideVisual}>
             {contentStep === 0 && <ChromeGuide />}
             {contentStep === 1 && <ServiceGuide kind="profile" />}
             {contentStep === 3 && <ServiceGuide kind="results" />}
-            {contentStep === 2 && (
-              <>
-                <OpeningGuide />
-                <ServiceGuide kind="autofill" />
-              </>
-            )}
+            {contentStep === 2 && <ServiceGuide kind="autofill" />}
           </div>
           <ol className={styles.instructions}>
             {current.instructions.map(([title, body], i) => (
@@ -260,15 +256,6 @@ function Onboarding({
             ))}
           </ol>
         </div>
-        {contentStep === 2 && (
-          <div className={styles.notice}>
-            <strong>네모 아이콘이 보이지 않나요?</strong>
-            <p>
-              <strong>Chrome 퍼즐 메뉴에서 Career Form을 선택하세요.</strong>{" "}
-              자동 기입 후 남은 항목은 ‘확인 필요’에서 안내를 확인할 수 있어요.
-            </p>
-          </div>
-        )}
         <div className={styles.stepActions}>
           {step > 0 && (
             <button onClick={() => go(step - 1)}>← 이전 안내</button>
