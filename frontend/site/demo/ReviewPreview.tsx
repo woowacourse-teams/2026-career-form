@@ -113,28 +113,24 @@ export function ReviewPreview() {
           pressed: false,
         });
     };
+    const target =
+      step === 1
+        ? '[aria-label="기본주소 필드로 이동"]'
+        : step === 2
+          ? '[aria-label="기본주소 복사"]'
+          : '[aria-label="직장경력 구역 보기"]';
     const timers = [
       window.setTimeout(
-        () => click('[role="tab"][data-state="completed"]'),
+        () =>
+          click(
+            `[role="tab"][data-state="${step === 3 ? "completed" : "pending"}"]`,
+          ),
         20,
       ),
+      window.setTimeout(() => move(target), 100),
       window.setTimeout(() => {
-        if (step === 2) click('[aria-label="직장경력 구역 보기"]');
-        move(
-          step === 1
-            ? '[aria-label="직장경력 구역 보기"]'
-            : step === 2
-              ? "#review-demo-company"
-              : '[aria-label="직장경력 확인했어요"]',
-        );
-      }, 100),
-      window.setTimeout(() => {
-        if (step === 1) click('[aria-label="직장경력 구역 보기"]');
-        if (step === 3) {
-          click('[aria-label="직장경력 확인했어요"]');
-          presentation.clear();
-        }
-        setCursor((current) => ({ ...current, pressed: step !== 2 }));
+        click(target);
+        setCursor((current) => ({ ...current, pressed: true }));
       }, 750),
     ];
     return () => {
@@ -178,24 +174,26 @@ export function ReviewPreview() {
           <span>숫자에 마우스를 올려보세요</span>
         </div>
         <ol aria-label="결과 확인 시연 단계">
-          {["구역 선택", "입력칸 확인", "확인하고 접기"].map((label, index) => (
-            <li
-              key={label}
-              aria-current={step === index + 1 ? "step" : undefined}
-            >
-              <button
-                type="button"
-                onMouseEnter={() => selectStep(index + 1)}
-                onFocus={() => selectStep(index + 1)}
-                onClick={() => selectStep(index + 1)}
-                aria-label={`${index + 1}. ${label}`}
-                aria-pressed={step === index + 1}
+          {["남은 항목 찾기", "값 복사하기", "입력 완료 살펴보기"].map(
+            (label, index) => (
+              <li
+                key={label}
+                aria-current={step === index + 1 ? "step" : undefined}
               >
-                <span>{index + 1}</span>
-                {label}
-              </button>
-            </li>
-          ))}
+                <button
+                  type="button"
+                  onMouseEnter={() => selectStep(index + 1)}
+                  onFocus={() => selectStep(index + 1)}
+                  onClick={() => selectStep(index + 1)}
+                  aria-label={`${index + 1}. ${label}`}
+                  aria-pressed={step === index + 1}
+                >
+                  <span>{index + 1}</span>
+                  {label}
+                </button>
+              </li>
+            ),
+          )}
         </ol>
       </div>
       <svg
@@ -267,15 +265,19 @@ export function ReviewPreview() {
           {step
             ? [
                 "",
-                "직장경력을 선택하면",
-                "입력한 두 칸이 함께 강조돼요",
-                "확인한 구역은 접히고 진행률에 반영돼요",
+                "확인 필요 항목을 누르면 입력칸으로 이동해요",
+                "값을 복사한 뒤 검색·선택은 직접 마무리해요",
+                "입력 완료에서 구역별로 입력한 내용을 살펴보세요",
               ][step]
             : feedback}
         </p>
         {snapshot && (
           <WorkflowResults
             key={run}
+            copyText={async (value) => {
+              // Simulated hover clicks never change the reader's clipboard.
+              if (!step) await navigator.clipboard.writeText(value);
+            }}
             reviewItems={items}
             results={bound.map((example) =>
               example.written

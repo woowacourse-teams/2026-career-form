@@ -150,7 +150,7 @@ it("lets readers switch highlighted sections and explicitly confirm the current 
   expect(fetch).not.toHaveBeenCalled();
 });
 
-it("shows each hovered step with a moving cursor and resets previous confirmations", async () => {
+it("demonstrates pending fields and copying before reviewing completed entries", async () => {
   vi.useFakeTimers();
   try {
     const { container } = render(<PanelGuide kind="results" />);
@@ -160,34 +160,30 @@ it("shows each hovered step with a moving cursor and resets previous confirmatio
         input.getBoundingClientRect = () =>
           new DOMRect(20, 60 + index * 55, 240, 36);
       });
-    fireEvent.mouseEnter(screen.getByRole("button", { name: "1. 구역 선택" }));
-    await act(() => vi.advanceTimersByTimeAsync(800));
-    expect(container.firstElementChild).toHaveAttribute("data-step", "1");
+    for (const [number, label] of [
+      [1, "남은 항목 찾기"],
+      [2, "값 복사하기"],
+      [3, "입력 완료 살펴보기"],
+    ] as const) {
+      fireEvent.mouseEnter(
+        screen.getByRole("button", { name: `${number}. ${label}` }),
+      );
+      await act(() => vi.advanceTimersByTimeAsync(800));
+      expect(
+        screen.getByRole("tab", {
+          name: number === 3 ? "입력 완료 4개" : "확인 필요 2개",
+        }),
+      ).toHaveAttribute("aria-selected", "true");
+      if (number === 1)
+        expect(screen.getByLabelText("기본주소")).toHaveStyle({
+          outlineOffset: "-2px",
+        });
+      if (number === 2) expect(screen.getByText("복사됨")).toBeVisible();
+    }
+    expect(screen.getByText("0 / 2개 구역 확인")).toBeVisible();
     expect(
       document.querySelectorAll("[data-career-form-section-highlight]"),
     ).toHaveLength(2);
-    fireEvent.mouseEnter(
-      screen.getByRole("button", { name: "2. 입력칸 확인" }),
-    );
-    await act(() => vi.advanceTimersByTimeAsync(800));
-    expect(container.firstElementChild).toHaveAttribute("data-step", "2");
-    expect(
-      container.querySelector('svg[data-visible="true"]'),
-    ).toBeInTheDocument();
-    fireEvent.mouseEnter(
-      screen.getByRole("button", { name: "3. 확인하고 접기" }),
-    );
-    await act(() => vi.advanceTimersByTimeAsync(800));
-    expect(screen.getByText("1 / 2개 구역 확인")).toBeVisible();
-    expect(
-      document.querySelectorAll("[data-career-form-section-highlight]"),
-    ).toHaveLength(0);
-    expect(
-      screen.getByRole("button", { name: "직장경력 요약 펼치기" }),
-    ).toHaveAttribute("aria-expanded", "false");
-    fireEvent.focus(screen.getByRole("button", { name: "1. 구역 선택" }));
-    await act(() => vi.advanceTimersByTimeAsync(800));
-    expect(screen.getByText("0 / 2개 구역 확인")).toBeVisible();
   } finally {
     vi.useRealTimers();
   }
