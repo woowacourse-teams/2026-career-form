@@ -694,3 +694,51 @@ it("keeps ambiguous saved records separately copyable without picking a write ta
   );
   expect(screen.queryByRole("textbox")).toBeNull();
 });
+
+it("makes completed values reviewable and locates the field without claiming verification", () => {
+  const onLocate = vi.fn(() => false);
+  render(
+    <WorkflowResults
+      reviewItems={[item]}
+      results={[{ candidateId: "major", status: "written" }]}
+      fieldStateFor={() => ({ visible: true, value: "컴퓨터공학" })}
+      onLocate={onLocate}
+    />,
+  );
+  const region = screen.getByRole("region", { name: "입력 완료 내역" });
+  expect(within(region).getByText("컴퓨터공학")).toBeVisible();
+  expect(
+    within(region).getByRole("button", { name: "전공 입력값 확인" }),
+  ).toHaveAccessibleDescription("컴퓨터공학");
+  expect(within(region).getByText(/이름·날짜·숫자/)).toBeVisible();
+  fireEvent.click(
+    within(region).getByRole("button", { name: "전공 입력값 확인" }),
+  );
+  expect(onLocate).toHaveBeenCalledWith("major");
+  expect(
+    within(region).getByRole("button", { name: "전공 입력값 확인" }),
+  ).toBeDisabled();
+  expect(
+    within(region).getByText("지원서에서 직접 확인해 주세요."),
+  ).toBeVisible();
+});
+it("masks unrevealed sensitive completed values including tooltips", () => {
+  const value = "synthetic-private-completed";
+  const { container } = render(
+    <WorkflowResults
+      reviewItems={[
+        {
+          ...item,
+          profileFieldKey: "compensation.compensation.desiredSalary",
+          profileValue: value,
+          previewValue: value,
+          revealed: false,
+        },
+      ]}
+      results={[{ candidateId: "major", status: "written" }]}
+      fieldStateFor={() => ({ visible: true, value })}
+    />,
+  );
+  expect(screen.getByText("값 가림")).toBeVisible();
+  expect(container.innerHTML).not.toContain(value);
+});

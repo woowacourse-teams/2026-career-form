@@ -22,8 +22,11 @@ function ChromeWindow() {
         <strong>확장 프로그램</strong>
         <p>이 사이트에서 사용</p>
         <div>
-          <img src={logo} alt="" />
-          <span>Career Form</span>
+          <span className={styles.extensionTarget}>
+            <img src={logo} alt="" />
+            <span>Career Form</span>
+            <span aria-hidden="true">↖</span>
+          </span>
           <span className={styles.pin}>
             <Icon name="pin" />
           </span>
@@ -41,7 +44,8 @@ export function ChromeGuide() {
       <figcaption>
         <strong>퍼즐 메뉴에서 Career Form 선택</strong>
         <span>
-          옆의 핀을 누르면 도구 모음에 고정할 수 있어요. 고정은 선택 사항입니다.
+          강조된 Career Form 이름 영역을 누르면 패널이 열려요. 오른쪽 핀은 도구
+          모음 고정용이에요.
         </span>
         <small>
           Chrome 기준 안내 그림입니다. 펼쳐진 메뉴는 위치 설명용이며 실제 화면과

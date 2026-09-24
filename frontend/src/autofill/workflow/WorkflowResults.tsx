@@ -6,6 +6,7 @@ import resultCss from "./WorkflowResults.module.css?inline";
 import type { Profile } from "../../profile/model";
 import type { WriteProgress } from "./progress-model";
 import { buildResultModel } from "./result-model";
+import { CompletedResultRow } from "./CompletedResultRow";
 import { PendingResultRow } from "./PendingResultRow";
 import { pendingResultPresentation } from "./pending-result-presentation";
 
@@ -163,6 +164,13 @@ export function WorkflowResults({
       >
         {completed.length > 0 ? (
           <section className={styles.completed} aria-label="입력 완료 내역">
+            <div className={styles.completedIntro}>
+              <h4>입력한 내용, 한 번 더 살펴보세요</h4>
+              <p>
+                이름·날짜·숫자가 맞는지 확인해 주세요. 이동 가능한 항목은 눌러서
+                지원서에서 볼 수 있어요.
+              </p>
+            </div>
             <ul className={styles.categories} aria-label="범주별 입력 결과">
               {[...categories].map(([category, entries]) => (
                 <li key={category}>
@@ -172,12 +180,28 @@ export function WorkflowResults({
                   </div>
                   <ul className={styles.completedFields}>
                     {entries.map((entry) => (
-                      <li key={entry.id}>{entry.label.replaceAll("·", "/")}</li>
+                      <CompletedResultRow
+                        key={entry.id}
+                        entry={entry}
+                        item={reviewItems.find(
+                          (item) => item.candidateId === entry.candidateId,
+                        )}
+                        live={
+                          entry.candidateId
+                            ? fieldStateFor?.(entry.candidateId)
+                            : undefined
+                        }
+                        onLocate={onLocate}
+                      />
                     ))}
                   </ul>
                 </li>
               ))}
             </ul>
+            <p className={styles.completedFootnote}>
+              입력 완료는 내용 검토나 제출 완료를 뜻하지 않아요. 저장과 제출은
+              지원서에서 직접 진행해 주세요.
+            </p>
           </section>
         ) : (
           <p className={styles.empty}>입력 완료된 항목이 없어요.</p>

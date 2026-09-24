@@ -125,8 +125,6 @@
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
-  outline: 2px solid #ad5b2f;
-  outline-offset: 2px;
   border-radius: 4px;
 }
 .pin svg {
@@ -212,4 +210,21 @@
   .figure.resultFigure iframe {
     height: 620px;
   }
+}
+
+.extensionTarget {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px 6px;
+  margin-left: -6px;
+  border-radius: 5px;
+  background: #edf0f5;
+  color: #303238;
+}
+.extensionTarget > span:last-child {
+  margin-left: auto;
+  font-size: 20px;
+  color: #303238;
 }
