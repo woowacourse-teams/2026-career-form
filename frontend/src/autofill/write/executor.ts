@@ -11,6 +11,7 @@ import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { revalidateDateTarget } from "../review/date-target-format";
+import { executeApprovedCalendarWrite } from "./calendar-executor";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
 import {
@@ -602,6 +603,13 @@ export function executeApprovedWrites({
   const candidates = new Set<string>(),
     bindings = new Set<string>();
   const results = items.map((item): ApprovedWriteResult => {
+    if (item.analysis?.writePlan?.command === "SELECT_DATE")
+      return skipped(
+        item.candidateId,
+        "needs-verification",
+        "NOT_APPROVED",
+        "달력은 별도의 날짜 선택 승인으로만 실행할 수 있습니다.",
+      );
     const key = bindingKey(item);
     if (
       !approvedCandidateIds.has(item.candidateId) ||
@@ -699,6 +707,7 @@ export async function executeApprovedWritesAfterPageSettles({
   beforeMutation,
   signal,
   document: suppliedDocument,
+  calendarOnly = false,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
@@ -708,6 +717,7 @@ export async function executeApprovedWritesAfterPageSettles({
   beforeMutation?: () => Promise<boolean>;
   signal?: AbortSignal;
   document?: Document;
+  calendarOnly?: boolean;
 }): Promise<ApprovedWriteResult[]> {
   const first = items[0] && registry.lookupField(items[0].candidateId);
   const document =
@@ -729,6 +739,40 @@ export async function executeApprovedWritesAfterPageSettles({
   const runCurrent = () =>
     !signal?.aborted && assertCurrent?.() !== false && document?.URL === url;
   try {
+    if (calendarOnly) {
+      const calendarResults: ApprovedWriteResult[] = [];
+      let halted = false;
+      for (const item of items) {
+        if (
+          halted ||
+          item.analysis?.writePlan?.command !== "SELECT_DATE" ||
+          !approvedCandidateIds.has(item.candidateId)
+        ) {
+          calendarResults.push(
+            skipped(
+              item.candidateId,
+              "needs-verification",
+              halted ? "STALE_TARGET" : "NOT_APPROVED",
+              halted
+                ? "이전 달력 선택 결과를 확인할 수 없어 후속 입력을 중단했습니다."
+                : "선택한 달력 항목만 별도로 실행할 수 있습니다.",
+            ),
+          );
+          continue;
+        }
+        const { effect, ...result } = await executeApprovedCalendarWrite({
+          item,
+          registry,
+          interactionDecisionProvider,
+          assertCurrent: runCurrent,
+          beforeMutation,
+          signal,
+        });
+        calendarResults.push(result);
+        if (effect === "stop") halted = true;
+      }
+      return calendarResults;
+    }
     const initial = executeApprovedWrites({
       items,
       approvedCandidateIds: new Set(),

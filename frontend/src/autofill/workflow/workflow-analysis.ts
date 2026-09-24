@@ -312,6 +312,8 @@ export function createAnalyzeFields({
       );
     };
     const automaticItems = plan.items.map((item) => {
+      if (item.analysis?.writePlan?.command === "SELECT_DATE")
+        return { ...item, selected: false };
       const key = reviewProfileFieldKey(item);
       const automatic =
         item.status === "sensitive" &&
@@ -334,6 +336,14 @@ export function createAnalyzeFields({
         : automatic;
     });
     setReviewItems(automaticItems);
+    if (
+      automaticItems.some(
+        (item) => item.analysis?.writePlan?.command === "SELECT_DATE",
+      )
+    ) {
+      setStage("review");
+      return;
+    }
     const retainedDriverCandidates = new Map<
       string,
       Array<{

@@ -45,6 +45,7 @@ interface WorkflowScreensProps {
   toggleReviewItem(candidateId: string): void;
   revealSensitiveItem(candidateId: string): void;
   executeWrites(): Promise<void>;
+  executeCalendarWrites?(): Promise<void>;
   results: readonly ApprovedWriteResult[];
   addressResult?: AddressResult;
   adapter: WorkflowAdapter;
@@ -67,6 +68,7 @@ export function WorkflowScreens({
   toggleReviewItem,
   revealSensitiveItem,
   executeWrites,
+  executeCalendarWrites,
   results,
   analysisSummary,
   addressResult,
@@ -200,11 +202,16 @@ export function WorkflowScreens({
   }
 
   if (stage === "review") {
+    const isCalendar = (item: ReviewPlanItem) =>
+      item.analysis?.writePlan?.command === "SELECT_DATE";
     const selectedCount = reviewItems.filter(
-      (item) => item.selected && !item.disabled,
+      (item) => item.selected && !item.disabled && !isCalendar(item),
+    ).length;
+    const selectedCalendarCount = reviewItems.filter(
+      (item) => item.selected && !item.disabled && isCalendar(item),
     ).length;
     const exceptionalItems = reviewItemsForDisplay(reviewItems).filter(
-      (item) => item.status !== "available",
+      (item) => item.status !== "available" || isCalendar(item),
     );
     return (
       <div className={styles.screen}>
@@ -278,7 +285,7 @@ export function WorkflowScreens({
                       값 보기
                     </button>
                   )}
-                  {item.status !== "available" &&
+                  {(item.status !== "available" || isCalendar(item)) &&
                     !item.disabled &&
                     (item.status !== "sensitive" || item.revealed) && (
                       <button
@@ -299,6 +306,15 @@ export function WorkflowScreens({
         <p className={styles.safety}>
           지원서 저장·이동·제출은 실행하지 않습니다.
         </p>
+        {selectedCalendarCount > 0 && executeCalendarWrites && (
+          <button
+            className={styles.primary}
+            type="button"
+            onClick={() => void executeCalendarWrites()}
+          >
+            선택한 날짜만 입력
+          </button>
+        )}
         <button
           className={styles.primary}
           type="button"

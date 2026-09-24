@@ -1222,3 +1222,77 @@ describe("review plan", () => {
     ).toEqual({ status: "blocked", items: [] });
   });
 });
+
+describe("calendar review plan", () => {
+  it("keeps SELECT_DATE separately approved and unselected by default", () => {
+    const target = document.createElement("input");
+    target.type = "text";
+    target.readOnly = true;
+    target.id = "calendar-target";
+    const opener = document.createElement("button");
+    opener.setAttribute("aria-labelledby", target.id);
+    opener.setAttribute("aria-controls", "calendar-popup");
+    opener.textContent = "월 선택";
+    const popup = document.createElement("div");
+    popup.id = "calendar-popup";
+    popup.setAttribute("role", "dialog");
+    const year = document.createElement("button");
+    year.textContent = "2026";
+    const months = Array.from({ length: 12 }, (_, index) => {
+      const month = document.createElement("button");
+      month.textContent = `${index + 1}월`;
+      return month;
+    });
+    popup.append(year, ...months);
+    document.body.append(target, opener, popup);
+
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "calendar-field",
+      candidate: {
+        candidateId: "calendar-field",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+        displayName: "입사 가능 월",
+      },
+      elements: [target],
+      optionElements: new Map(),
+      sectionId: "calendar-section",
+      signature: createStructuralSignature([target]),
+    });
+    const profile = createEmptyProfile();
+    profile.personal.birthDate = "2026-03-15";
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          candidateId: "calendar-field",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey: "personal.personal.birthDate",
+          },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "LLM_SUGGESTED",
+          interactionStatus: "READY",
+          writePlan: { command: "SELECT_DATE" },
+        },
+      ]),
+      profile,
+      registry,
+    }).items;
+    expect(item).toMatchObject({
+      profileValue: "2026-03",
+      previewValue: "2026-03",
+      status: "available",
+      selected: false,
+      calendarApproval: {
+        target,
+        targetYearMonth: "2026-03",
+        unit: "month",
+      },
+    });
+    expect(item.dateApproval).toBeUndefined();
+  });
+});
