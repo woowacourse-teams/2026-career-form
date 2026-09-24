@@ -117,8 +117,22 @@ it("lets readers switch highlighted sections and explicitly confirm the current 
       input.getBoundingClientRect = () =>
         new DOMRect(20, 60 + index * 55, 240, 36);
     });
+  fireEvent.click(screen.getByRole("button", { name: "기본주소 필드로 이동" }));
+  expect(container.querySelector('[aria-label="결과 체험"]')).toHaveAttribute(
+    "data-guided",
+    "false",
+  );
+  expect(screen.getByLabelText("기본주소")).toHaveStyle({
+    outlineOffset: "-2px",
+  });
+  expect(screen.getByText(/위 지원서의 기본주소/)).toBeVisible();
   fireEvent.click(screen.getByRole("tab", { name: "입력 완료 4개" }));
+  expect(container.querySelector('[aria-label="결과 체험"]')).toHaveAttribute(
+    "data-guided",
+    "true",
+  );
   fireEvent.click(screen.getByRole("button", { name: "직장경력 구역 보기" }));
+  expect(screen.getByLabelText("기본주소").style.outlineOffset).toBe("");
   const old = [
     ...document.querySelectorAll("[data-career-form-section-highlight]"),
   ];

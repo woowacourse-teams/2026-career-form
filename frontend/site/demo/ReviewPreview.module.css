@@ -37,12 +37,10 @@
   min-width: 0;
 }
 .control label {
-  position: absolute;
-  top: -7px;
-  left: 10px;
+  display: block;
+  margin-bottom: 5px;
   font-size: 10px;
   line-height: 14px;
-  z-index: 1;
 }
 .control input {
   box-sizing: border-box;
@@ -75,4 +73,37 @@
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.demoBadge {
+  display: inline-block;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: var(--color-text);
+  color: white;
+  font-size: 11px;
+  vertical-align: middle;
+}
+.results[data-guided="true"]
+  button:is(
+    [aria-label="기본주소 필드로 이동"],
+    [aria-label="직장경력 구역 보기"]
+  )::before {
+  content: "☝";
+  display: inline-block;
+  padding: 3px;
+  margin-right: 3px;
+  border-radius: 5px;
+  background: #ad5b2f;
+  color: white;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.results
+  button:is([aria-label$="필드로 이동"], [aria-label$="구역 보기"]):hover {
+  color: #ad5b2f;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }

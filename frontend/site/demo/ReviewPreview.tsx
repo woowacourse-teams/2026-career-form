@@ -58,6 +58,8 @@ const examples = [
 
 /** Synthetic, read-only form. Uses production result and highlight components without profile access. */
 export function ReviewPreview() {
+  const [explored, setExplored] = useState(false);
+  const [feedback, setFeedback] = useState("아래 패널을 직접 눌러보세요");
   const form = useRef<HTMLDivElement>(null);
   const [snapshot, setSnapshot] =
     useState<ReturnType<typeof collectFieldsSnapshot>>();
@@ -129,9 +131,21 @@ export function ReviewPreview() {
           </section>
         ))}
       </div>
-      <div className={styles.results} aria-label="결과 체험">
-        <h3>기입 결과</h3>
-        <p className={styles.hint}>두 탭에서 항목과 구역을 직접 눌러보세요.</p>
+      <div
+        className={styles.results}
+        aria-label="결과 체험"
+        data-guided={!explored}
+        onClickCapture={(event) => {
+          if ((event.target as HTMLElement).closest('[role="tab"]'))
+            setExplored(false);
+        }}
+      >
+        <h3>
+          <span className={styles.demoBadge}>직접 체험</span> 기입 결과
+        </h3>
+        <p className={styles.hint} role="status">
+          {feedback}
+        </p>
         {snapshot && (
           <WorkflowResults
             reviewItems={items}
@@ -159,10 +173,36 @@ export function ReviewPreview() {
                 ? { visible: true, value: example.written ? example.value : "" }
                 : undefined;
             }}
-            onLocate={(id) => presentation.show(snapshot.registry, id)}
-            onLocateSection={(ids) =>
-              presentation.showSection(snapshot.registry, ids)
-            }
+            onLocate={(id) => {
+              const shown = presentation.show(snapshot.registry, id);
+              if (shown) {
+                const field = bound.find(
+                  (example) => example.candidateId === id,
+                );
+                const input = document.getElementById(
+                  `review-demo-${field?.id}`,
+                );
+                input?.style.setProperty("outline-offset", "-2px", "important");
+                setExplored(true);
+                setFeedback(
+                  `↑ 위 지원서의 ${field?.label ?? "입력칸"}을 찾아드렸어요`,
+                );
+              }
+              return shown;
+            }}
+            onLocateSection={(ids) => {
+              const shown = presentation.showSection(snapshot.registry, ids);
+              if (shown) {
+                setExplored(true);
+                const field = bound.find((example) =>
+                  ids.includes(example.candidateId),
+                );
+                setFeedback(
+                  `↑ 위 지원서에서 ${field?.category ?? "선택한 구역"} 입력칸을 확인하세요`,
+                );
+              }
+              return shown;
+            }}
           />
         )}
       </div>
