@@ -162,7 +162,7 @@ export function presentSection(
   overlay.setAttribute("data-career-form-section-highlight", "");
   overlay.setAttribute("aria-hidden", "true");
   overlay.style.cssText =
-    "all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:1px solid #b77b50;border-radius:14px;background:transparent;z-index:2147483000;";
+    "all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:3px solid #a65f2d;border-radius:14px;background:transparent;z-index:2147483000;";
   const update = () => {
     if (!elements.some((element) => element.isConnected)) {
       clear();
