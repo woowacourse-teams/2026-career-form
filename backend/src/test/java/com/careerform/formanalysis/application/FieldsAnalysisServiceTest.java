@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
@@ -47,6 +48,47 @@ import tools.jackson.databind.ObjectMapper;
 
 @DisplayName("필드 분석 서비스")
 class FieldsAnalysisServiceTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "education.university.schoolName", "education.university.schoolRegion",
+        "education.university.majorName", "education.highSchool.schoolName",
+        "education.graduateSchool.schoolName"
+    })
+    void returnsGenericSearchPlanForCanonicalReadonlyText(String key) {
+        FieldsAnalysisResponse response = searchResponse(key);
+
+        assertThat(response.mode()).isEqualTo(Mode.GENERIC);
+        assertThat(response.analysisStatus()).isEqualTo(AnalysisStatus.COMPLETE);
+        assertThat(response.fields()).containsExactly(new MatchedFieldAnalysis(
+            "search-field", MatchType.MATCH, new DirectBinding(key),
+            AutofillPolicy.CONDITIONAL, MappingStatus.LLM_SUGGESTED,
+            InteractionStatus.READY, new WritePlan(WriteCommand.SEARCH_SELECTION)
+        ));
+    }
+
+    @Test
+    void invalidCanonicalSearchBindingFailsClosedBeforeCreatingPlan() {
+        assertUnavailable(searchResponse("education.university.schoolLocation"));
+    }
+
+    private static FieldsAnalysisResponse searchResponse(String key) {
+        FieldCandidate candidate = new FieldCandidate(
+            "search-field", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE,
+            "합성 검색 필드", null, null, null, null, true, null, null,
+            new FieldsAnalysisRequest.SemanticContext(
+                null, FieldsAnalysisRequest.InputType.TEXT, null, null, null, null, null, null
+            )
+        );
+        FieldsAnalysisRequest request = new FieldsAnalysisRequest(
+            2, "search-snapshot", site(),
+            List.of(new Section("section-1", null, null, List.of(candidate), null))
+        );
+        FieldMappingResolver resolver = resolver(ignored -> new FieldMappingResolver.Resolution(
+            2, "search-snapshot", List.of(new FieldMappingResolver.Match("search-field", key))
+        ));
+        return service(Optional.of(resolver)).analyze(request);
+    }
 
     @Test
     @DisplayName("Resolver가 없으면 후보가 없어도 PARTIAL 응답을 반환한다")

@@ -1,5 +1,5 @@
-import { waitFor, within } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { cleanup, configure, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
   control,
@@ -10,7 +10,15 @@ import {
   service,
 } from "./workflow-military-veteran.integration.test-fixtures";
 
+beforeEach(() => {
+  // Hyundai's verified conditional workflow has a 5-second settlement budget.
+  // Keep this integration suite's result waits inside that same bound under V8 coverage.
+  configure({ asyncUtilTimeout: 5_000 });
+});
+
 afterEach(() => {
+  cleanup();
+  configure({ asyncUtilTimeout: 1_000 });
   document.body.replaceChildren();
   (
     globalThis as unknown as {

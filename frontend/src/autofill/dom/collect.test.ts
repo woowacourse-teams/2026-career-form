@@ -120,15 +120,19 @@ describe("application form DOM collection", () => {
 
   it.each([
     ["https://www.skcareers.com/apply", 1],
-    ["https://careers.example.test/apply", 2],
+    ["https://careers.example.test/apply", 1],
   ] as const)(
     "uses the selected company's hidden repeatable-row policy: %s",
     (url, expectedCount) => {
       setPageUrl(url);
       document.body.innerHTML = `
         <div class="apply-form-box">
-          <div class="educationUniv-item"><input name="eduMajorSub" /></div>
-          <div class="educationUniv-item" hidden><input name="eduMajorSub" /></div>
+          <div class="educationUniv-item">
+            <input name="eduMajorSub" /><input name="eduGraduationDate" />
+          </div>
+          <div class="educationUniv-item" hidden>
+            <input name="eduMajorSub" /><input name="eduGraduationDate" />
+          </div>
         </div>
       `;
 
@@ -233,9 +237,11 @@ describe("application form DOM collection", () => {
       <div class="apply-form-box education-root">
         <div class="form-item-group educationhigh-item">
           <input id="high-school" name="highSchoolName" />
+          <input name="highSchoolGraduationDate" />
         </div>
         <div class="form-item-group educationUniv-item">
           <input id="university" name="universityName" />
+          <input name="universityGraduationDate" />
         </div>
       </div>
     `;
@@ -266,9 +272,9 @@ describe("application form DOM collection", () => {
   it("invalidates all repeated candidates when a row disappears after collection", () => {
     document.body.innerHTML = `
       <section>
-        <div class="cert-Item"><input id="first" /></div>
-        <div class="cert-Item"><input id="middle" /></div>
-        <div class="cert-Item"><input id="last" /></div>
+        <div class="cert-Item"><input id="first" /><input name="issuer" /></div>
+        <div class="cert-Item"><input id="middle" /><input name="issuer" /></div>
+        <div class="cert-Item"><input id="last" /><input name="issuer" /></div>
       </section>
     `;
 
@@ -286,10 +292,14 @@ describe("application form DOM collection", () => {
     document.head.innerHTML = `<style>#TempleteItems { display: none; }</style>`;
     document.body.innerHTML = `
       <div class="apply-form-box">
-        <div class="cert-Item"><input id="visible-certificate" /></div>
+        <div class="cert-Item">
+          <input id="visible-certificate" /><input name="visible-issuer" />
+        </div>
       </div>
       <div id="TempleteItems">
-        <div class="cert-Item"><input id="template-certificate" /></div>
+        <div class="cert-Item">
+          <input id="template-certificate" /><input name="template-issuer" />
+        </div>
       </div>
     `;
 
@@ -322,7 +332,9 @@ describe("application form DOM collection", () => {
             <div class="form-item"><button type="button">자격/면허 추가</button></div>
           </div>
           <div class="form-item-group cert-Item">
-            <div class="form-item"><input name="cerCertName" /></div>
+            <div class="form-item">
+              <input name="cerCertName" /><input name="cerCertSource" />
+            </div>
           </div>
         </div>
       </div>
@@ -372,6 +384,7 @@ describe("application form DOM collection", () => {
   });
 
   it("caps preparation select options to the analysis API contract", () => {
+    setPageUrl("https://talent.hyundai.com/apply");
     document.body.innerHTML = `
       <label for="job-role">직무 선택</label>
       <select id="job-role" name="jobRole">
@@ -392,9 +405,15 @@ describe("application form DOM collection", () => {
   it("counts different repeatable groups independently within one section", () => {
     document.body.innerHTML = `
       <div class="apply-form-box education-root">
-        <div class="form-item-group educationhigh-item"></div>
-        <div class="form-item-group educationUniv-item"></div>
-        <div class="form-item-group educationGrad-item"></div>
+        <div class="form-item-group educationhigh-item">
+          <input name="educationHighName" /><input name="educationHighDate" />
+        </div>
+        <div class="form-item-group educationUniv-item">
+          <input name="educationUnivName" /><input name="educationUnivDate" />
+        </div>
+        <div class="form-item-group educationGrad-item">
+          <input name="educationGradName" /><input name="educationGradDate" />
+        </div>
         <button class="btnAddEducationHigh" type="button">고등학교 학력 정보 추가</button>
         <button class="btnAddEducationUniv" type="button">대학 학력 정보 추가</button>
         <button class="btnAddEducationGrad" type="button">대학원 학력 정보 추가</button>
@@ -411,11 +430,15 @@ describe("application form DOM collection", () => {
     ).toEqual([1, 1, 1]);
   });
 
-  it("keeps hidden repeatable rows in generic-form counts", () => {
+  it("excludes hidden repeatable rows from generic-form counts", () => {
     document.body.innerHTML = `
       <div class="apply-form-box education-root">
-        <div class="educationUniv-item"><input name="eduMajorSub" /></div>
-        <div class="educationUniv-item" hidden><input name="eduMajorSub" /></div>
+        <div class="educationUniv-item">
+          <input name="eduMajorSub" /><input name="eduGraduationDate" />
+        </div>
+        <div class="educationUniv-item" hidden>
+          <input name="eduMajorSub" /><input name="eduGraduationDate" />
+        </div>
       </div>
     `;
 
@@ -426,7 +449,7 @@ describe("application form DOM collection", () => {
     expect(visibleCandidate.domName).toBe("eduMajorSub");
     expect(
       collected.registry.fieldItemCount(visibleCandidate.candidateId),
-    ).toBe(2);
+    ).toBe(1);
   });
 
   it("limits the hidden-template exception to SK Careers", () => {
@@ -451,7 +474,9 @@ describe("application form DOM collection", () => {
   it("does not count a sibling education row for an empty education group", () => {
     document.body.innerHTML = `
       <div class="apply-form-box education-root">
-        <div class="form-item-group educationhigh-item"></div>
+        <div class="form-item-group educationhigh-item">
+          <input name="educationHighName" /><input name="educationHighDate" />
+        </div>
         <button class="btnAddEducationHigh" type="button">고등학교 학력 정보 추가</button>
         <button class="btnAddEducationUniv" type="button">대학 학력 정보 추가</button>
       </div>

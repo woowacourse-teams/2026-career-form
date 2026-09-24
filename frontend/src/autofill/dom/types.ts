@@ -23,7 +23,11 @@ export interface FieldCandidateHandle extends CandidateHandleBase {
   isCurrentContext?: () => boolean;
   candidate: FieldCandidate;
   elements: Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
-  optionElements: Map<string, HTMLOptionElement | HTMLInputElement>;
+  /**
+   * Exact option nodes collected with this field. Native controls use option or
+   * input nodes; a bounded ARIA combobox may use a role=option HTMLElement.
+   */
+  optionElements: ReadonlyMap<string, HTMLElement>;
 }
 
 export type CandidateLookup<T> =

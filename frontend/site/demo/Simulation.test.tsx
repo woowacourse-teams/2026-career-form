@@ -42,6 +42,9 @@ describe("isolated automatic demonstration", () => {
       input.scrollIntoView = scroll;
     });
     expect(screen.getByLabelText("학교명")).toHaveValue("");
+    expect(screen.getByLabelText("졸업일")).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("취득일")).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("학점")).toHaveAttribute("type", "text");
     act(() => observeVisible(false));
     expect(
       screen.queryByRole("region", { name: "지원서 자동 기입" }),

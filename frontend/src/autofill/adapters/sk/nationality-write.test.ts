@@ -100,7 +100,7 @@ describe("SK nationality policy binding and write integration", () => {
       profileValue: "대한민국",
     });
     expect(select.value).toBe("대한민국");
-    expect(events).toEqual(["input", "change", "input", "change"]);
+    expect(events).toEqual(["input", "change"]);
     expect(results).toEqual([
       { candidateId: candidate.candidateId, status: "written" },
     ]);

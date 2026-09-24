@@ -1,3 +1,5 @@
+import type { Profile } from "../../profile/model";
+import { localProfileValue } from "./workflow-model";
 import type { Dispatch, SetStateAction } from "react";
 import {
   revealSensitiveReviewItem,
@@ -27,4 +29,13 @@ export function createReviewActions(
     );
   };
   return { toggleReviewItem, revealSensitiveItem };
+}
+
+export function sensitiveValueApproved(
+  approved: ReadonlyMap<string, string>,
+  profile: Profile,
+  key: string,
+): boolean {
+  const value = localProfileValue(profile, key);
+  return value !== undefined && approved.get(key) === value;
 }

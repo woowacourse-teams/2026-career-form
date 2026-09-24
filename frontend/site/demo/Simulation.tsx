@@ -31,6 +31,7 @@ function ExampleForm({ started }: { started: boolean }) {
             <input
               id={id}
               name={id}
+              type={id === "graduated" || id === "acquired" ? "date" : "text"}
               autoComplete="off"
               tabIndex={-1}
               placeholder=""

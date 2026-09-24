@@ -165,6 +165,7 @@ public record FieldsAnalysisResponse(
 
     public enum WriteCommand {
         SET_TEXT,
+        SEARCH_SELECTION,
         SELECT_OPTION,
         SELECT_BUTTON_OPTION,
         CHECK_RADIO,

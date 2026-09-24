@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.careerform.formanalysis.application.port.ActionResolver;
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
+import com.careerform.formanalysis.application.port.InteractionDecisionProvider;
 import com.careerform.formanalysis.infrastructure.adapter.openai.OpenAiClient;
 
 @SpringBootTest(properties = {
@@ -65,6 +66,9 @@ class FormAnalysisDisabledContextTest {
         ).isEmpty();
         org.assertj.core.api.Assertions.assertThat(
             context.getBeansOfType(FieldMappingResolver.class)
+        ).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(
+            context.getBeansOfType(InteractionDecisionProvider.class)
         ).isEmpty();
         org.assertj.core.api.Assertions.assertThat(
             context.getBeansOfType(OpenAiClient.class)

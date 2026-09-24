@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>지역 선택</title>
+  </head>
+  <body>
+    <h1>소재지 찾기</h1>
+    <label
+      >국가<select>
+        <option value="KOR" selected>한국</option>
+      </select></label
+    >
+    <ul id="regions"></ul>
+    <script>
+      const regions = [
+        "강원특별자치도",
+        "경기도",
+        "경상남도",
+        "경상북도",
+        "광주광역시",
+        "대구광역시",
+        "대전광역시",
+        "부산광역시",
+        "서울특별시",
+        "세종특별자치시",
+        "울산광역시",
+        "인천광역시",
+        "전라남도",
+        "전북특별자치도",
+        "제주특별자치도",
+        "충청남도",
+        "충청북도",
+      ];
+      document.querySelector("#regions").replaceChildren(
+        ...regions.map((region) => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.textContent = region;
+          a.href = `javascript:chooseRegion('ST||${region}||KOR');`;
+          li.append(a);
+          return li;
+        }),
+      );
+      window.chooseRegion = function (payload) {
+        const [code, label, country] = payload.split("||");
+        if (code !== "ST" || country !== "KOR" || !regions.includes(label))
+          return;
+        const dialog = parent.document.querySelector("dialog[open]");
+        if (!dialog || !["high-dialog", "uni-dialog"].includes(dialog.id))
+          return;
+        const prefix = dialog.id === "high-dialog" ? "high" : "uni";
+        parent.document.querySelector("#" + prefix + "-region").value = label;
+        parent.document.querySelector("#status").textContent = "선택 반영";
+        dialog.close();
+      };
+    </script>
+  </body>
+</html>

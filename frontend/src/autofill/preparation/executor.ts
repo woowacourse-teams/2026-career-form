@@ -1,3 +1,4 @@
+import { acquireDocumentRun } from "../interaction/document-run";
 import type { PreparationPlan } from "../api/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 
@@ -21,6 +22,10 @@ export interface ApprovedPreparationPlan {
 
 export interface PreparationExecutionOptions {
   onAction?: (element: HTMLElement) => void;
+  document?: Document;
+  signal?: AbortSignal;
+  assertCurrent?: () => boolean;
+  beforeMutation?: () => Promise<boolean>;
   approvedPlans: readonly ApprovedPreparationPlan[];
   initialSnapshot: PreparationSnapshot;
   refreshSnapshot: () => Promise<PreparationSnapshot>;
@@ -47,7 +52,9 @@ export type PreparationFailureReason =
   | "profile-value-unavailable"
   | "option-label-mismatch"
   | "unsupported-option-action"
-  | "target-not-visible";
+  | "target-not-visible"
+  | "run-in-progress"
+  | "execution-cancelled";
 
 export type OptionSelectionResult =
   | "selected"
@@ -184,7 +191,35 @@ function failure(
   };
 }
 
-export async function executeApprovedPreparationPlans({
+export async function executeApprovedPreparationPlans(
+  options: PreparationExecutionOptions,
+): Promise<PreparationExecutionResult> {
+  const first = options.approvedPlans.find(({ approved }) => approved);
+  const lookup =
+    first &&
+    options.initialSnapshot.registry.lookupAction(first.plan.actionCandidateId);
+  const document =
+    options.document ??
+    (lookup && "handle" in lookup
+      ? lookup.handle.element.ownerDocument
+      : undefined);
+  const release = document ? acquireDocumentRun(document) : undefined;
+  if (document && !release) return failure("run-in-progress", 0);
+  const url = document?.URL;
+  try {
+    return await executePreparation({
+      ...options,
+      assertCurrent: () =>
+        !options.signal?.aborted &&
+        options.assertCurrent?.() !== false &&
+        document?.URL === url,
+    });
+  } finally {
+    release?.();
+  }
+}
+
+async function executePreparation({
   approvedPlans,
   initialSnapshot,
   refreshSnapshot,
@@ -192,7 +227,18 @@ export async function executeApprovedPreparationPlans({
   selectProfileOption,
   waitForExpectedFields,
   onAction,
+  assertCurrent,
+  beforeMutation,
 }: PreparationExecutionOptions): Promise<PreparationExecutionResult> {
+  const permitted = async () => {
+    if (assertCurrent?.() === false) return false;
+    try {
+      if (beforeMutation && !(await beforeMutation())) return false;
+    } catch {
+      return false;
+    }
+    return assertCurrent?.() !== false;
+  };
   const selectedPlans = approvedPlans.filter(({ approved }) => approved);
   if (selectedPlans.length === 0) {
     return {
@@ -207,6 +253,8 @@ export async function executeApprovedPreparationPlans({
   const unavailableActionCandidateIds = new Set<string>();
 
   for (const approvedPlan of selectedPlans) {
+    if (!(await permitted()))
+      return failure("execution-cancelled", executedPlanCount);
     const { plan } = approvedPlan;
     if (plan.command === "SEARCH_ADDRESS") {
       return failure("action-not-executable", executedPlanCount);
@@ -299,6 +347,8 @@ export async function executeApprovedPreparationPlans({
     }
 
     for (let addition = 0; addition < requiredAdditions; addition += 1) {
+      if (!(await permitted()))
+        return failure("execution-cancelled", executedPlanCount);
       const currentAction = actionIsReadyWithIdentity(
         snapshot,
         plan.actionCandidateId,

@@ -66,10 +66,30 @@ public final class FormAnalysisRouter {
         );
     }
 
+    public GenericRouteKind routeGeneric(String host, String pathPattern) {
+        CompanyFormPolicyProvider.LookupResult lookup = policyProvider.find(
+            host,
+            pathPattern
+        );
+        if (lookup instanceof NotRegistered) {
+            return GenericRouteKind.GENERIC;
+        }
+        if (lookup instanceof Available) {
+            return GenericRouteKind.STATIC_POLICY_PRESENT;
+        }
+        return GenericRouteKind.POLICY_UNAVAILABLE;
+    }
+
     public enum RouteKind {
         GENERIC,
         ADAPTER,
         STRUCTURE_MISMATCH,
+        POLICY_UNAVAILABLE
+    }
+
+    public enum GenericRouteKind {
+        GENERIC,
+        STATIC_POLICY_PRESENT,
         POLICY_UNAVAILABLE
     }
 

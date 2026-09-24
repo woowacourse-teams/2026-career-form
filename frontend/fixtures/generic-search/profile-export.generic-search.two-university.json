@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "personal": {},
+    "contact": {},
+    "education": [
+      {
+        "id": "generic-search-university-1",
+        "sectionId": "university",
+        "values": {
+          "schoolName": "서울대학교",
+          "schoolRegion": "가상지역",
+          "majorName": "가상전공학과"
+        }
+      },
+      {
+        "id": "generic-search-university-2",
+        "sectionId": "university",
+        "values": {
+          "schoolName": "공개대학교",
+          "schoolRegion": "공개지역",
+          "majorName": "공개전공학과"
+        }
+      }
+    ],
+    "languages": [],
+    "certifications": [],
+    "careers": [],
+    "projects": [],
+    "publications": [],
+    "compensation": {},
+    "military": {},
+    "veteran": {
+      "veteranStatus": "대상",
+      "veteranType": "독립유공자",
+      "veteranRelation": "본인",
+      "veteranNumber": "1234567890"
+    },
+    "disability": {
+      "disabilityStatus": "대상",
+      "disabilityType": "지체장애",
+      "disabilityGrade": "중증",
+      "disabilityRegistrationNumber": "DIS-DEMO-001",
+      "disabilityRegistrationDate": "2020-01-01"
+    },
+    "health": []
+  }
+}

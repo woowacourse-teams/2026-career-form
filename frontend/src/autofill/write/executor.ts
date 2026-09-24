@@ -1,331 +1,147 @@
-import type { FieldCandidateHandle } from "../dom/types";
+import { acquireDocumentRun } from "../interaction/document-run";
+import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { getWriteAdapter } from "../adapters/write";
-import { normalizeDisplayName } from "./display-name";
-import type { WriteFailureCode } from "./failure";
-
-export type ApprovedWriteResult =
-  | { candidateId: string; status: "written" }
-  | {
-      candidateId: string;
-      status: "skipped";
-      reason: string;
-      failureCode?: WriteFailureCode;
-    };
-export type WriteResultListener = (
-  item: ReviewPlanItem,
-  result: ApprovedWriteResult,
-  registry: CandidateRegistry,
-) => void;
-
-function dispatchValueEvents(element: Element): void {
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function setNativeValue(
-  element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
-  value: string,
-): boolean {
-  const prototype =
-    element instanceof HTMLInputElement
-      ? HTMLInputElement.prototype
-      : element instanceof HTMLSelectElement
-        ? HTMLSelectElement.prototype
-        : HTMLTextAreaElement.prototype;
-  const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
-  if (!setter) return false;
-  setter.call(element, value);
-  return element.value === value;
-}
-
-function setNativeChecked(element: HTMLInputElement): boolean {
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "checked",
-  )?.set;
-  if (!setter) return false;
-  setter.call(element, true);
-  return element.checked;
-}
-
-function matchingLocalOption(
-  handle: FieldCandidateHandle,
-  profileValue: string,
-): HTMLOptionElement | HTMLInputElement | undefined {
-  const desired = normalizeDisplayName(profileValue);
-  if (!desired || !handle.candidate.options) return undefined;
-
-  const matches = handle.candidate.options.flatMap((option) => {
-    const exact = normalizeDisplayName(option.displayName) === desired;
-    if (!exact) return [];
-    const element = handle.optionElements.get(option.optionId);
-    if (!element) return [];
-    const displayName =
-      element instanceof HTMLOptionElement
-        ? (element.textContent ?? "")
-        : option.displayName;
-    return normalizeDisplayName(displayName) === desired ? [element] : [];
-  });
-  return matches.length === 1 ? matches[0] : undefined;
-}
-
-function isSelectableApproved(item: ReviewPlanItem): boolean {
-  if (
-    !item.selected ||
-    item.disabled ||
-    !item.analysis ||
-    !item.profileValue ||
-    item.status === "unavailable"
-  ) {
-    return false;
-  }
-  return item.status !== "sensitive" || item.revealed;
-}
-
-function writableHandle(
-  item: ReviewPlanItem,
-  lookup: ReturnType<CandidateRegistry["lookupField"]>,
-): FieldCandidateHandle | undefined {
-  if (lookup.status === "ready") return lookup.handle;
-  if (
-    lookup.status === "blocked" &&
-    lookup.reason === "readonly" &&
-    item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
-    item.analysis.writePlan?.command === "SET_TEXT" &&
-    lookup.handle.candidate.element === "input" &&
-    lookup.handle.candidate.control === "text"
-  ) {
-    return lookup.handle;
-  }
-  return undefined;
-}
-
-function executeWrite(
-  item: ReviewPlanItem,
-  handle: FieldCandidateHandle,
-): boolean {
-  const command = item.analysis?.writePlan?.command;
-  const value = item.profileValue;
-  if (!command || !value) return false;
-
-  const adapter = getWriteAdapter(
-    handle.elements[0]?.ownerDocument.location?.host ?? "",
-  );
-  const attempt = adapter.tryWrite(handle, item);
-  if (attempt.handled) return attempt.written;
-
-  if (command === "SET_TEXT") {
-    if (
-      handle.candidate.control !== "text" &&
-      handle.candidate.control !== "textarea"
-    ) {
-      return false;
-    }
-    const element = handle.elements[0];
-    if (!element || element instanceof HTMLSelectElement) return false;
-    if (!setNativeValue(element, value)) return false;
-    dispatchValueEvents(element);
-    return true;
-  }
-
-  if (command === "SELECT_BUTTON_OPTION") {
-    return false;
-  }
-
-  const option = matchingLocalOption(handle, value);
-  if (!option) return false;
-
-  if (command === "SELECT_OPTION") {
-    const element = handle.elements[0];
-    if (
-      handle.candidate.control !== "select" ||
-      !(element instanceof HTMLSelectElement) ||
-      !(option instanceof HTMLOptionElement) ||
-      !setNativeValue(element, option.value) ||
-      !element.selectedOptions.length ||
-      normalizeDisplayName(element.selectedOptions[0]?.textContent ?? "") !==
-        normalizeDisplayName(value)
-    ) {
-      return false;
-    }
-    dispatchValueEvents(element);
-    return true;
-  }
-
-  const expectedType = command === "CHECK_RADIO" ? "radio" : "checkbox";
-  if (
-    !(option instanceof HTMLInputElement) ||
-    handle.candidate.control !== expectedType ||
-    option.type !== expectedType ||
-    !setNativeChecked(option)
-  ) {
-    return false;
-  }
-  dispatchValueEvents(option);
-  return true;
-}
-
-export function executeApprovedWrites({
-  items,
-  approvedCandidateIds,
-  registry,
-  deferFinalization = false,
-}: {
-  items: readonly ReviewPlanItem[];
-  approvedCandidateIds: ReadonlySet<string>;
-  registry: CandidateRegistry;
-  deferFinalization?: boolean;
-}): ApprovedWriteResult[] {
-  const processed = new Set<string>();
-  const results: ApprovedWriteResult[] = items.map((item) => {
-    if (
-      processed.has(item.candidateId) ||
-      !approvedCandidateIds.has(item.candidateId) ||
-      !isSelectableApproved(item)
-    ) {
-      return {
-        candidateId: item.candidateId,
-        status: "skipped",
-        reason: "사용자가 승인한 입력 항목이 아닙니다.",
-      };
-    }
-    processed.add(item.candidateId);
-
-    const lookup = registry.lookupField(item.candidateId);
-    const handle = writableHandle(item, lookup);
-    if (!handle) {
-      return {
-        candidateId: item.candidateId,
-        status: "skipped",
-        reason: "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
-        failureCode:
-          lookup.status === "blocked" && lookup.reason === "disabled"
-            ? "FIELD_DISABLED"
-            : lookup.status === "blocked" && lookup.reason === "readonly"
-              ? "FIELD_READONLY"
-              : "FIELD_CHANGED",
-      };
-    }
-    if (!executeWrite(item, handle)) {
-      return {
-        candidateId: item.candidateId,
-        status: "skipped",
-        reason: "네이티브 컨트롤에 안전하게 입력할 수 없습니다.",
-      };
-    }
-    return { candidateId: item.candidateId, status: "written" };
-  });
-
-  if (deferFinalization) return results;
-  const verifiedResults: ApprovedWriteResult[] = results.map(
-    (result, index) => {
-      const item = items[index];
-      if (
-        !item ||
-        result.status !== "written" ||
-        item.analysis?.writePlan?.command !== "SELECT_OPTION"
-      ) {
-        return result;
-      }
-      const lookup = registry.lookupField(item.candidateId);
-      const handle = writableHandle(item, lookup);
-      if (!handle || !executeWrite(item, handle)) {
-        return {
-          candidateId: item.candidateId,
-          status: "skipped",
-          reason: "다른 입력 변경 후 선택값을 유지하지 못했습니다.",
-          failureCode: "VALUE_NOT_RETAINED",
-        };
-      }
-      return result;
-    },
-  );
-  verifiedResults.forEach((result, index) => {
-    if (result.status !== "written") return;
-    const item = items[index];
-    const lookup = registry.lookupField(result.candidateId);
-    if (!item || lookup.status !== "ready") return;
-    getWriteAdapter(
-      lookup.handle.elements[0]?.ownerDocument.location?.host ?? "",
-    ).afterWrite?.(lookup.handle, item);
-  });
-  return verifiedResults;
-}
+import { skipped, type ApprovedWriteResult } from "./write-result";
+import {
+  executeApprovedSearchWrites,
+  settledSearchSelectionResult,
+} from "./search-executor";
+import {
+  executeApprovedWrites,
+  settledGenericResult,
+  type WriteResultListener,
+} from "./native-executor";
+export { executeApprovedWrites } from "./native-executor";
+export type { WriteResultListener } from "./native-executor";
+export type { ApprovedWriteResult } from "./write-result";
 
 export async function executeApprovedWritesAfterPageSettles({
   items,
   approvedCandidateIds,
   registry,
   beforeWrite,
-  signal,
   onResult,
+  interactionDecisionProvider,
+  assertCurrent,
+  beforeMutation,
+  signal,
+  document: suppliedDocument,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
   registry: CandidateRegistry;
   beforeWrite?: (item: ReviewPlanItem) => Promise<void>;
-  signal?: AbortSignal;
   onResult?: WriteResultListener;
+  interactionDecisionProvider?: InteractionDecisionProvider;
+  assertCurrent?: () => boolean;
+  beforeMutation?: () => Promise<boolean>;
+  signal?: AbortSignal;
+  document?: Document;
 }): Promise<ApprovedWriteResult[]> {
-  const initialResults: ApprovedWriteResult[] = [];
-  if (beforeWrite) {
-    const processed = new Set<string>();
-    for (const item of items) {
-      if (signal?.aborted) return initialResults;
-      const eligible =
-        !processed.has(item.candidateId) &&
-        approvedCandidateIds.has(item.candidateId) &&
-        isSelectableApproved(item);
-      if (eligible) await beforeWrite(item);
-      if (signal?.aborted) return initialResults;
-      initialResults.push(
+  const first = items[0] && registry.lookupField(items[0].candidateId);
+  const document =
+    suppliedDocument ??
+    (first && "handle" in first
+      ? first.handle.elements[0]?.ownerDocument
+      : undefined);
+  const release = document ? acquireDocumentRun(document) : undefined;
+  if (document && !release)
+    return items.map((item) =>
+      skipped(
+        item.candidateId,
+        "needs-verification",
+        "STALE_TARGET",
+        "이미 자동 기입이 실행 중입니다.",
+      ),
+    );
+  const url = document?.URL;
+  const runCurrent = () =>
+    !signal?.aborted && assertCurrent?.() !== false && document?.URL === url;
+  try {
+    const initial = executeApprovedWrites({
+      items,
+      approvedCandidateIds: new Set(),
+      registry,
+    });
+    const halted = await executeApprovedSearchWrites({
+      items,
+      approvedCandidateIds,
+      registry,
+      interactionDecisionProvider,
+      assertCurrent: runCurrent,
+      beforeMutation,
+      signal,
+      writeOrdinary: (item) =>
+        executeApprovedWrites({
+          items: [item],
+          approvedCandidateIds,
+          registry,
+        })[0]!,
+      beforeWrite,
+      onResult: (item, result) => onResult?.(item, result, registry),
+      results: initial,
+    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    const adapterItems = items.filter(
+      (item, index) =>
+        !halted &&
+        runCurrent() &&
+        initial[index]?.status === "written" &&
+        item.analysis?.mappingStatus === "ADAPTER_VERIFIED",
+    );
+    const retried: ApprovedWriteResult[] = [];
+    for (const item of adapterItems) {
+      if (
+        !runCurrent() ||
+        (beforeMutation && !(await beforeMutation())) ||
+        !runCurrent()
+      )
+        break;
+      retried.push(
         ...executeApprovedWrites({
           items: [item],
-          approvedCandidateIds: processed.has(item.candidateId)
-            ? new Set()
-            : approvedCandidateIds,
+          approvedCandidateIds: new Set([item.candidateId]),
           registry,
-          deferFinalization: true,
         }),
       );
-      if (eligible && !signal?.aborted)
-        onResult?.(item, initialResults[initialResults.length - 1], registry);
-      if (eligible)
-        await new Promise<void>((resolve) => setTimeout(resolve, 16));
-      processed.add(item.candidateId);
     }
-  } else {
-    if (signal?.aborted) return initialResults;
-    initialResults.push(
-      ...executeApprovedWrites({ items, approvedCandidateIds, registry }),
+    const adapterResults = new Map(
+      retried.map((result) => [result.candidateId, result]),
     );
+    let profileCurrent = true;
+    try {
+      profileCurrent = !beforeMutation || (await beforeMutation());
+    } catch {
+      profileCurrent = false;
+    }
+    const finalResults = initial.map((result, index) => {
+      const item = items[index];
+      if (
+        !item ||
+        (result.status !== "written" && result.outcome !== "unchanged")
+      )
+        return result;
+      if (!profileCurrent || !runCurrent())
+        return skipped(
+          item.candidateId,
+          "needs-verification",
+          "STALE_TARGET",
+          "실행 중 프로필 또는 지원서 상태가 변경되어 입력 결과를 확인해 주세요.",
+        );
+      if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
+        return settledSearchSelectionResult(item, registry, result);
+      return item.analysis?.mappingStatus === "ADAPTER_VERIFIED"
+        ? (adapterResults.get(item.candidateId) ?? result)
+        : settledGenericResult(item, registry);
+    });
+    if (runCurrent())
+      finalResults.forEach((result, index) => {
+        if (approvedCandidateIds.has(result.candidateId))
+          onResult?.(items[index]!, result, registry);
+      });
+    return finalResults;
+  } finally {
+    release?.();
   }
-  const completedItems = items.filter(
-    (_item, index) => initialResults[index]?.status === "written",
-  );
-  if (completedItems.length === 0) return initialResults;
-
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  if (signal?.aborted) return initialResults;
-
-  const retryResults = executeApprovedWrites({
-    items: completedItems,
-    approvedCandidateIds: new Set(
-      completedItems.map((item) => item.candidateId),
-    ),
-    registry,
-  });
-  const retryByCandidateId = new Map(
-    retryResults.map((result) => [result.candidateId, result]),
-  );
-  const finalResults = initialResults.map(
-    (result) => retryByCandidateId.get(result.candidateId) ?? result,
-  );
-  finalResults.forEach((result, index) => {
-    if (!signal?.aborted && approvedCandidateIds.has(result.candidateId))
-      onResult?.(items[index], result, registry);
-  });
-  return finalResults;
 }

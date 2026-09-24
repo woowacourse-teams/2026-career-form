@@ -220,6 +220,48 @@ function selectWrite(
       select.selectedOptions[0] === target,
   };
 }
+const YEAR_MONTH_FIELDS: Readonly<Record<string, string>> = {
+  carFromDate: "careers.career.startDate",
+  carToDate: "careers.career.endDate",
+  eduFromDate: "education.university.startDate",
+  eduToDate: "education.university.endDate",
+};
+
+function yearMonthWrite(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+): CompanyWriteAttempt | undefined {
+  const input = handle.elements[0];
+  const key = YEAR_MONTH_FIELDS[handle.candidate.domName ?? ""];
+  const binding = item.analysis?.valueBinding;
+  const profileValue = item.profileValue;
+  if (!key) return undefined;
+  if (
+    handle.elements.length !== 1 ||
+    !(input instanceof HTMLInputElement) ||
+    input.type !== "tel" ||
+    input.maxLength !== 6 ||
+    item.analysis?.writePlan?.command !== "SET_TEXT" ||
+    binding?.type !== "DERIVED" ||
+    binding.recipe !== "YEAR_MONTH" ||
+    binding.profileFieldKey !== key ||
+    !profileValue ||
+    !/^\d{4}-\d{2}$/.test(profileValue)
+  )
+    return { handled: true, written: false };
+  if (input.value === profileValue) return { handled: true, written: true };
+  if (input.value !== "") return { handled: true, written: false };
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  if (!setter) return { handled: true, written: false };
+  setter.call(input, profileValue.replace("-", ""));
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  return { handled: true, written: input.value === profileValue };
+}
+
 function textWrite(
   handle: FieldCandidateHandle,
   item: ReviewPlanItem,
@@ -262,6 +304,8 @@ function textWrite(
 
 export const skWriteAdapter: CompanyWriteAdapter = {
   tryWrite(handle, item) {
+    const yearMonth = yearMonthWrite(handle, item);
+    if (yearMonth) return yearMonth;
     switch (handle.candidate.domName) {
       case "prsMilitarySvcLevel":
       case "prsDisabledNumber":

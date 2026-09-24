@@ -60,6 +60,7 @@ async function analyzePartiallyFailingDrivers(
       stateDriverFailureGroup: (_item, handle) =>
         handle.elements[0]?.closest("fieldset") ?? undefined,
     },
+    completedGenericStateDrivers: { current: new Map() },
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
     apiClient: {

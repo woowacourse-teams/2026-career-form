@@ -9,8 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.net.ConnectException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +23,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
+import org.springframework.ai.chat.metadata.ChatGenerationMetadata;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.model.openai.autoconfigure.OpenAiChatProperties;
@@ -40,9 +43,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(properties = {
     "spring.mongodb.uri=mongodb://localhost/career-form-test",
     "career-form.llm.enabled=true",
+    "CAREER_FORM_LLM_TIMEOUT=41s",
+    "spring.ai.openai.timeout=45s",
     "spring.ai.openai.api-key=synthetic-test-key",
-    "spring.ai.openai.chat.model=gpt-5.6-luna",
-    "spring.ai.openai.chat.max-completion-tokens=2048"
+    "spring.ai.openai.chat.model=gpt-5.6-luna"
 })
 @AutoConfigureMockMvc
 @Import({
@@ -113,11 +117,17 @@ class FormAnalysisEnabledProviderApiTest {
     }
 
     @Test
-    @DisplayName("OpenAI timeout과 retry 제한을 Spring 표준 속성에 고정한다")
-    void pinsProviderTimeoutAndRetryLimits() {
+    @DisplayName("Spring 표준 timeout이 환경변수 timeout보다 우선 적용된다")
+    void appliesExplicitTimeoutBeforeEnvironmentTimeoutAndPinsRetries() {
         assertThat(openAiCommonProperties.getTimeout())
-            .isEqualTo(Duration.ofSeconds(60));
-        assertThat(openAiCommonProperties.getMaxRetries()).isEqualTo(1);
+            .isEqualTo(Duration.ofSeconds(45));
+        assertThat(openAiCommonProperties.getMaxRetries()).isZero();
+    }
+
+    @Test
+    @DisplayName("OpenAI 출력 한도의 기본 설정을 적용한다")
+    void appliesDefaultOpenAiOutputTokenLimit() {
+        assertThat(openAiChatProperties.getMaxCompletionTokens()).isEqualTo(8192);
     }
 
     @Test
@@ -226,6 +236,25 @@ class FormAnalysisEnabledProviderApiTest {
         assertFieldsPartial();
     }
 
+    @Test
+    @DisplayName("공급자 timeout, 연결 실패와 length 종료를 기존 부분 실패 계약으로 유지한다")
+    void preservesPartialContractForProviderRuntimeFailures() throws Exception {
+        List<RuntimeException> failures = List.of(
+            new RuntimeException(new TimeoutException("private-timeout-marker")),
+            new RuntimeException(new ConnectException("private-network-marker"))
+        );
+
+        for (RuntimeException failure : failures) {
+            model.failWith(failure);
+            assertPreparationPartial();
+            assertFieldsPartial();
+        }
+
+        model.respondWithLength("{\"private\":\"provider-response-marker\"}");
+        assertPreparationPartial();
+        assertFieldsPartial();
+    }
+
     private void assertPreparationPartial() throws Exception {
         mockMvc.perform(post("/api/v1/preparation/analyze")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -282,6 +311,13 @@ class FormAnalysisEnabledProviderApiTest {
             behavior = ignored -> {
                 throw exception;
             };
+        }
+
+        void respondWithLength(String responseJson) {
+            behavior = ignored -> new ChatResponse(List.of(new Generation(
+                new AssistantMessage(responseJson),
+                ChatGenerationMetadata.builder().finishReason("length").build()
+            )));
         }
 
         @Override

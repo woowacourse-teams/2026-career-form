@@ -34,6 +34,12 @@ interface WorkflowScreensProps {
   profile?: Profile;
   optionsFor?(candidateId: string): readonly string[];
   currentCategory?: string;
+  analysisSummary?: {
+    mode: "ADAPTER" | "GENERIC";
+    durationMs: number;
+    fieldCount: number;
+    matchedCount: number;
+  };
   stage: Stage;
   preparationItems: readonly PreparationItem[];
   warnings: readonly string[];
@@ -144,7 +150,9 @@ export function WorkflowScreens({
             분석 경고:{" "}
             {warning === "MANUAL_REVEAL_REQUIRED"
               ? "수동으로 펼쳐야 하는 영역이 있습니다."
-              : warning}
+              : warning === "LLM_UNAVAILABLE"
+                ? "준비 항목을 분석하지 못했습니다. 현재 입력칸으로 계속합니다."
+                : warning}
           </aside>
         ))}
         {sensitivePreparations.length > 0 && (

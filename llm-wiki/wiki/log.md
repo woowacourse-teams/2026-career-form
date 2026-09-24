@@ -219,3 +219,21 @@
 - Approval-Digest: 2a87ccd12e581e9177e8a4b527ab2df5d39800efdebddfc7ef698c47392463d2
 - Raw: [CF-99 bundle](../raw/issues/CF-99/manifest.md)
 - 승인된 후보 3개를 기록하고 [입력 위치 표시와 설치 안내 topic](topics/autofill-follow-and-install.md)을 색인에 연결했다.
+
+## [2026-09-23] ingest | CF-98 범용 분석과 검색 표면
+
+- 승인 digest `09f47713670f79bb2053d52af823b912cd0b06bc635066c63f9457d7b9f74db3`의 후보 6개와 제안 ADR 전문을 [CF-98 bundle](../raw/issues/CF-98/manifest.md)에 비식별 기록했다.
+- 정적 정책 우선, OpenAI/Jev 단일 공급자 선택, 비식별 의미 문맥, 로컬 검색 링크 1회 클릭과 사후 검증을 분석 API·데이터 경계·검색 표면 topic에 연결했다.
+- 합성 확장과 실제 CJ 화면의 관측 범위를 구분했다. Jev 실호출·보관 정책, Greeting 실제 화면, CJ 항목별 확장 판정과 저장 상태는 미검증으로 유지했다.
+
+## [2026-09-24] ingest | CF-102 OpenAI 분석 예산과 안전 진단
+
+- 승인 digest `e350514e46e5143c397314f3209dc2d4295bfdd7b8654d2d61d492b94bd79476`의 후보 3개를 [CF-102 bundle](../raw/issues/CF-102/manifest.md)에 비식별 기록했다.
+- 준비·필드 30초 기본/60초 미만, 상호작용 별도 SDK 8초·무재시도, 구조화된 종료 사유와 안전한 실패 분류를 [topic](topics/openai-analysis-budget-and-diagnostics.md)에 연결했다.
+- Docker/실제 공급자/CJ 검증은 환경 및 승인 부재로 미완료로 남겼다.
+
+## [2026-09-24] ingest | CF-101 범용 날짜 형식 변환과 로컬 승인
+
+- 승인 digest `62463e58e4e9043e334ba50b33b3a8b81140469f775e2b9eb9598763ea975219`의 후보 3개를 [CF-101 bundle](../raw/issues/CF-101/manifest.md)에 비식별 기록했다.
+- 엄격한 날짜 DIRECT 변환, 로컬 DOM 승인 재검증과 원본 fallback 금지를 [topic](topics/generic-date-format.md)에 연결했다.
+- 합성 통합·설치 UI·실사이트 검증을 구분하고 개별 unavailable 이유의 기존 표시 제한을 기록했다.

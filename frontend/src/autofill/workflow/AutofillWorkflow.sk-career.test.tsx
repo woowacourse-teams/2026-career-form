@@ -183,7 +183,7 @@ it("runs each SK career status driver in one stage, reanalyzes, and fills only t
     document.querySelector<HTMLTextAreaElement>("#carRetireDesc_2")!.value,
   ).toBe("");
   expect(run.fieldAnalysisCount()).toBe(2);
-  expect(run.changeCounts).toEqual([2, 2]);
+  expect(run.changeCounts).toEqual([1, 1]);
 });
 
 it("preserves a conflicting existing status without revealing its retirement reason", async () => {
@@ -197,5 +197,5 @@ it("preserves a conflicting existing status without revealing its retirement rea
   expect(
     document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
   ).toBe("");
-  expect(run.changeCounts).toEqual([0, 2]);
+  expect(run.changeCounts).toEqual([0, 1]);
 });

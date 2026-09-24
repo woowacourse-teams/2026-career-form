@@ -1,6 +1,11 @@
+import type { InteractionDecisionRequest } from "./interaction-types";
 import type { FieldsAnalyzeRequest, PreparationAnalyzeRequest } from "./types";
 
 export type AnalysisRequestMessage =
+  | {
+      type: "AUTOFILL_DECIDE_INTERACTIONS";
+      payload: InteractionDecisionRequest;
+    }
   | {
       type: "AUTOFILL_ANALYZE_PREPARATION";
       payload: PreparationAnalyzeRequest;
@@ -30,7 +35,8 @@ export function isAnalysisRequestMessage(
   const payload = (value as { payload?: unknown }).payload;
   return (
     (type === "AUTOFILL_ANALYZE_PREPARATION" ||
-      type === "AUTOFILL_ANALYZE_FIELDS") &&
+      type === "AUTOFILL_ANALYZE_FIELDS" ||
+      type === "AUTOFILL_DECIDE_INTERACTIONS") &&
     typeof payload === "object" &&
     payload !== null &&
     "schemaVersion" in payload &&

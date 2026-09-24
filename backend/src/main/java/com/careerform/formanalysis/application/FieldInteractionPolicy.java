@@ -1,6 +1,7 @@
 package com.careerform.formanalysis.application;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
@@ -8,6 +9,7 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.InputType;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.InteractionStatus;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.ReasonCode;
@@ -17,9 +19,19 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.WritePlan;
 @Component
 public final class FieldInteractionPolicy {
 
+    private static final Set<String> CANONICAL_FIELDS = new SupportedProfileFields().keys();
+
     public Decision evaluate(
         FieldCandidate candidate,
         FieldMappingResolver.Result mapping
+    ) {
+        return evaluate(candidate, mapping, false);
+    }
+
+    public Decision evaluate(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping,
+        boolean generic
     ) {
         if (mapping instanceof FieldMappingResolver.NoMatch) {
             return new Decision(
@@ -32,14 +44,19 @@ public final class FieldInteractionPolicy {
             || Boolean.TRUE.equals(candidate.inert())) {
             return withoutWrite(InteractionStatus.BLOCKED);
         }
+        boolean searchSelection = generic
+            && isSearchSelection(candidate, mapping);
         if (Boolean.TRUE.equals(candidate.readonly())
-            && !allowsReadonlyText(candidate, mapping)) {
+            && !searchSelection
+            && (generic || !allowsReadonlyText(candidate, mapping))) {
             return withoutWrite(InteractionStatus.BLOCKED);
         }
         if (candidate.visibility() == Visibility.HIDDEN) {
             return withoutWrite(InteractionStatus.MANUAL_REVEAL_REQUIRED);
         }
-        WriteCommand command = writeCommand(candidate, mapping);
+        WriteCommand command = searchSelection
+            ? WriteCommand.SEARCH_SELECTION
+            : writeCommand(candidate, mapping);
         if (command == null) {
             return withoutWrite(InteractionStatus.UNVERIFIED);
         }
@@ -48,6 +65,24 @@ public final class FieldInteractionPolicy {
             List.of(),
             new WritePlan(command)
         );
+    }
+
+    // This authorizes local preflight, never a direct write or an assumed safe popup.
+    private static boolean isSearchSelection(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping
+    ) {
+        if (!Boolean.TRUE.equals(candidate.readonly())
+            || candidate.element() != FormElement.INPUT
+            || candidate.control() != FormControl.TEXT
+            || candidate.visibility() != Visibility.VISIBLE
+            || candidate.semanticContext() == null
+            || candidate.semanticContext().inputType() != InputType.TEXT
+            || !(mapping instanceof FieldMappingResolver.Match match)
+            || !(match.valueBinding() instanceof FieldMappingResolver.DirectBinding direct)) {
+            return false;
+        }
+        return CANONICAL_FIELDS.contains(direct.profileFieldKey());
     }
 
     private static Decision withoutWrite(InteractionStatus status) {
