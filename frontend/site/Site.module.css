@@ -814,3 +814,15 @@
     padding: 8px 10px;
   }
 }
+
+.guideLayout:has(iframe[src*="guide-results"]) {
+  grid-template-columns: 1fr;
+}
+.resultFeature {
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+.resultFeature figure {
+  width: 100%;
+  max-width: none;
+}

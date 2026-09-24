@@ -150,7 +150,7 @@ it("lets readers switch highlighted sections and explicitly confirm the current 
   expect(fetch).not.toHaveBeenCalled();
 });
 
-it("demonstrates selection, highlighting and confirmation in three timed steps", async () => {
+it("shows each hovered step with a moving cursor and resets previous confirmations", async () => {
   vi.useFakeTimers();
   try {
     const { container } = render(<PanelGuide kind="results" />);
@@ -160,22 +160,30 @@ it("demonstrates selection, highlighting and confirmation in three timed steps",
         input.getBoundingClientRect = () =>
           new DOMRect(20, 60 + index * 55, 240, 36);
       });
-    fireEvent.click(screen.getByRole("button", { name: /다시 재생/ }));
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "1. 구역 선택" }));
+    await act(() => vi.advanceTimersByTimeAsync(800));
     expect(container.firstElementChild).toHaveAttribute("data-step", "1");
-    await act(() => vi.advanceTimersByTimeAsync(2000));
-    expect(container.firstElementChild).toHaveAttribute("data-step", "2");
     expect(
       document.querySelectorAll("[data-career-form-section-highlight]"),
     ).toHaveLength(2);
-    await act(() => vi.advanceTimersByTimeAsync(2500));
-    expect(container.firstElementChild).toHaveAttribute("data-step", "3");
+    fireEvent.mouseEnter(
+      screen.getByRole("button", { name: "2. 입력칸 확인" }),
+    );
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    expect(container.firstElementChild).toHaveAttribute("data-step", "2");
+    expect(
+      container.querySelector('svg[data-visible="true"]'),
+    ).toBeInTheDocument();
+    fireEvent.mouseEnter(
+      screen.getByRole("button", { name: "3. 확인하고 접기" }),
+    );
+    await act(() => vi.advanceTimersByTimeAsync(800));
     expect(screen.getByText("1 / 2개 구역 확인")).toBeVisible();
     expect(
       screen.getByRole("button", { name: "직장경력 요약 펼치기" }),
     ).toHaveAttribute("aria-expanded", "false");
-    await act(() => vi.advanceTimersByTimeAsync(2500));
-    fireEvent.click(screen.getByRole("button", { name: /다시 재생/ }));
-    await act(() => vi.advanceTimersByTimeAsync(2000));
+    fireEvent.focus(screen.getByRole("button", { name: "1. 구역 선택" }));
+    await act(() => vi.advanceTimersByTimeAsync(800));
     expect(screen.getByText("0 / 2개 구역 확인")).toBeVisible();
   } finally {
     vi.useRealTimers();

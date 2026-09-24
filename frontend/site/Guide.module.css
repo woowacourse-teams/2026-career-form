@@ -229,3 +229,12 @@
   font-size: 20px;
   color: #303238;
 }
+
+.figure.resultFigure {
+  max-width: none;
+  width: 100%;
+  container-type: inline-size;
+}
+.figure.resultFigure iframe {
+  height: min(760px, 100cqw);
+}

@@ -59,7 +59,14 @@ const examples = [
 /** Synthetic, read-only form. Uses production result and highlight components without profile access. */
 export function ReviewPreview() {
   const root = useRef<HTMLDivElement>(null);
-  const [playing, setPlaying] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+  const scale = Math.min(1, viewportWidth / 760);
+  const [cursor, setCursor] = useState({
+    x: 320,
+    y: 75,
+    visible: false,
+    pressed: false,
+  });
   const [run, setRun] = useState(0);
   const [step, setStep] = useState(0);
   const [explored, setExplored] = useState(false);
@@ -79,48 +86,59 @@ export function ReviewPreview() {
     return () => presentation.clear();
   }, [presentation]);
   useEffect(() => {
-    if (
-      !snapshot ||
-      !root.current ||
-      typeof IntersectionObserver === "undefined"
-    )
-      return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setPlaying(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(root.current);
-    return () => observer.disconnect();
-  }, [snapshot]);
+    const resize = () => setViewportWidth(window.innerWidth);
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+  const selectStep = (next: number) => {
+    setStep(next);
+    setRun((value) => value + 1);
+  };
   useEffect(() => {
-    if (!playing || !snapshot) return;
-    const click = (selector: string) =>
-      root.current?.querySelector<HTMLButtonElement>(selector)?.click();
+    if (!step || !snapshot) return;
     presentation.clear();
-    setStep(1);
+    setCursor((current) => ({ ...current, visible: true, pressed: false }));
+    const find = (selector: string) =>
+      root.current?.querySelector<HTMLElement>(selector);
+    const click = (selector: string) => find(selector)?.click();
+    const move = (selector: string) => {
+      const target = find(selector)?.getBoundingClientRect();
+      const origin = root.current?.getBoundingClientRect();
+      if (target && origin)
+        setCursor({
+          x: (target.left - origin.left + target.width * 0.45) / scale,
+          y: (target.top - origin.top + target.height * 0.5) / scale,
+          visible: true,
+          pressed: false,
+        });
+    };
     const timers = [
       window.setTimeout(
         () => click('[role="tab"][data-state="completed"]'),
-        50,
+        20,
       ),
       window.setTimeout(() => {
-        click('[aria-label="직장경력 구역 보기"]');
-        setStep(2);
-      }, 2000),
+        if (step > 1) click('[aria-label="직장경력 구역 보기"]');
+        move(
+          step === 1
+            ? '[aria-label="직장경력 구역 보기"]'
+            : step === 2
+              ? "#review-demo-company"
+              : '[aria-label="직장경력 확인했어요"]',
+        );
+      }, 100),
       window.setTimeout(() => {
-        click('[aria-label="직장경력 확인했어요"]');
-        setStep(3);
-      }, 4500),
-      window.setTimeout(() => setPlaying(false), 7000),
+        if (step === 1) click('[aria-label="직장경력 구역 보기"]');
+        if (step === 3) click('[aria-label="직장경력 확인했어요"]');
+        setCursor((current) => ({ ...current, pressed: step !== 2 }));
+      }, 750),
     ];
-    return () => timers.forEach(window.clearTimeout);
-  }, [playing, run, snapshot, presentation]);
+    return () => {
+      timers.forEach(window.clearTimeout);
+      presentation.clear();
+    };
+  }, [step, run, snapshot, presentation, scale]);
   const candidates =
     snapshot?.request.sections.flatMap((section) => section.fields) ?? [];
   const bound = examples.flatMap((example) => {
@@ -149,23 +167,12 @@ export function ReviewPreview() {
       ref={root}
       className={styles.preview}
       data-step={step}
-      data-playing={playing}
+      style={{ width: `${Math.max(760, viewportWidth)}px`, zoom: scale }}
     >
       <div className={styles.story}>
         <div className={styles.storyHeading}>
           <strong>입력 후에는 이렇게 확인해요</strong>
-          <button
-            type="button"
-            onClick={() => {
-              if (playing) setPlaying(false);
-              else {
-                setRun((value) => value + 1);
-                setPlaying(true);
-              }
-            }}
-          >
-            {playing ? "일시정지" : "↻ 다시 재생"}
-          </button>
+          <span>숫자에 마우스를 올려보세요</span>
         </div>
         <ol aria-label="결과 확인 시연 단계">
           {["구역 선택", "입력칸 확인", "확인하고 접기"].map((label, index) => (
@@ -173,12 +180,38 @@ export function ReviewPreview() {
               key={label}
               aria-current={step === index + 1 ? "step" : undefined}
             >
-              <span>{index + 1}</span>
-              {label}
+              <button
+                type="button"
+                onMouseEnter={() => selectStep(index + 1)}
+                onFocus={() => selectStep(index + 1)}
+                onClick={() => selectStep(index + 1)}
+                aria-label={`${index + 1}. ${label}`}
+                aria-pressed={step === index + 1}
+              >
+                <span>{index + 1}</span>
+                {label}
+              </button>
             </li>
           ))}
         </ol>
       </div>
+      <svg
+        className={styles.cursor}
+        aria-hidden="true"
+        data-visible={cursor.visible}
+        data-pressed={cursor.pressed}
+        style={{ left: cursor.x, top: cursor.y }}
+        width="32"
+        height="40"
+        viewBox="0 0 32 40"
+      >
+        <path
+          d="M3 2 L3 29 L10 23 L16 36 L22 33 L16 21 L27 21 Z"
+          fill="#594637"
+          stroke="white"
+          strokeWidth="2"
+        />
+      </svg>
       <div ref={form} className={styles.form} aria-label="가상 지원서">
         <div className={styles.caption}>
           <strong>예시 지원서</strong>
@@ -217,8 +250,8 @@ export function ReviewPreview() {
         data-guided={!explored}
         onClickCapture={(event) => {
           if (event.nativeEvent.isTrusted) {
-            setPlaying(false);
             setStep(0);
+            setCursor((current) => ({ ...current, visible: false }));
           }
           if ((event.target as HTMLElement).closest('[role="tab"]'))
             setExplored(false);

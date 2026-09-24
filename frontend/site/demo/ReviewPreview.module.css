@@ -1,15 +1,17 @@
 .preview {
-  height: 100vh;
+  height: 760px;
+  position: relative;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 350px;
   background: var(--color-page);
   color: var(--color-text);
   font-family: var(--font-ui);
 }
 .form {
   padding: 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: white;
+  border-right: 1px solid var(--color-border);
+  background: #faf8f4;
 }
 .caption {
   display: flex;
@@ -92,6 +94,7 @@
 }
 
 .story {
+  grid-column: 1 / -1;
   padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
   background: #fff8ee;
@@ -145,22 +148,59 @@
   background: var(--color-brand);
   color: var(--color-on-brand);
 }
-.preview[data-playing="true"][data-step="1"]
-  button[aria-label="직장경력 구역 보기"] {
-  animation: demonstrate 1s ease-in-out infinite;
-  border-radius: 6px;
+
+.story li button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: white;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
-@keyframes demonstrate {
-  50% {
-    background: #fff1d8;
-    box-shadow: 0 0 0 3px #ad5b2f55;
-  }
+.story li button[aria-pressed="true"] {
+  background: var(--color-brand);
+  border-color: var(--color-border-strong);
+}
+.storyHeading > span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+.cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2147483640;
+  transition:
+    left 600ms ease,
+    top 600ms ease,
+    transform 180ms;
+  opacity: 0;
+  filter: drop-shadow(0 2px 3px #59463744);
+}
+.cursor[data-visible="true"] {
+  opacity: 1;
+}
+.cursor[data-pressed="true"] {
+  transform: scale(0.85);
+}
+.form {
+  padding: 32px 24px;
+}
+.category {
+  margin-top: 28px;
+}
+.fields {
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .preview button {
-    animation: none !important;
+  .cursor {
+    transition: none;
   }
-}
-.preview[data-step]:not([data-step="0"]) .category:not(:nth-child(2)) {
-  display: none;
 }
