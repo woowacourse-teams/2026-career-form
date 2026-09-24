@@ -28,6 +28,22 @@ function createRepository(): ProfileRepository {
 }
 
 describe("side panel App", () => {
+  it("keeps personal values read-only while retaining copy and profile management", async () => {
+    const repository = createRepository();
+    const copyText = vi.fn(async () => undefined);
+    render(<App repository={repository} copyText={copyText} />);
+    const value = await screen.findByText("지원");
+    expect(value.closest("button")).toBeNull();
+    fireEvent.click(value);
+    expect(screen.queryByRole("form")).toBeNull();
+    expect(screen.queryByRole("button", { name: /수정|저장|취소/ })).toBeNull();
+    expect(screen.queryByText("값을 누르면 바로 수정할 수 있어요.")).toBeNull();
+    expect(screen.getByRole("button", { name: "프로필 관리" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "국문 이름 복사" }));
+    expect(copyText).toHaveBeenCalledWith("지원");
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it("renders in-page mode without viewport-height panel sizing", async () => {
     render(
       <App
@@ -110,7 +126,7 @@ describe("side panel App", () => {
     expect(
       await screen.findByRole("heading", { name: "내 지원 정보" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("4개 범주 등록")).toBeInTheDocument();
+    expect(screen.queryByText(/개 범주 등록/)).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "기본 인적사항 접기" }),
     ).toBeInTheDocument();
@@ -203,8 +219,8 @@ describe("side panel App", () => {
     await screen.findByText("copy@example.com");
 
     expect(
-      screen.getByText("직접 복사하거나 자동 기입을 시작하세요"),
-    ).toBeInTheDocument();
+      screen.queryByText("직접 복사하거나 자동 기입을 시작하세요"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "자동 기입" }),
     ).toBeInTheDocument();
@@ -240,7 +256,7 @@ describe("side panel App", () => {
     const autofillButton = screen.getByRole("button", { name: "자동 기입" });
 
     expect(profileList).not.toContainElement(autofillButton);
-    expect(autofillButton.closest("footer")).not.toBeNull();
+    expect(autofillButton.closest("header")).not.toBeNull();
   });
 
   it("reports when the current webpage cannot open the autofill overlay", async () => {

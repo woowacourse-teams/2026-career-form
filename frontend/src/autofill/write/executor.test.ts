@@ -99,6 +99,64 @@ function register(
 }
 
 describe("approved native-control writes", () => {
+  it("reports each actual write result and never reports an unapproved field as completed", async () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const events: string[] = [];
+    await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+      beforeWrite: async () => {},
+      onResult: (item, result, sourceRegistry) => {
+        expect(sourceRegistry).toBe(registry);
+        if (result.status === "written") {
+          expect(input.value).toBe("example");
+          events.push(item.fieldLabel);
+        }
+      },
+    });
+    expect(events.length).toBeGreaterThan(0);
+    const skipped: string[] = [];
+    await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "other")],
+      approvedCandidateIds: new Set(),
+      registry,
+      onResult: (_item, result) => {
+        skipped.push(result.status);
+      },
+    });
+    expect(skipped).not.toContain("written");
+  });
+  it("presents each approved field before writing and stops on abort", async () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const controller = new AbortController();
+    let presented = false;
+    await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example@example.com")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+      signal: controller.signal,
+      beforeWrite: async () => {
+        presented = true;
+        expect(input.value).toBe("");
+        controller.abort();
+      },
+    });
+    expect(presented).toBe(true);
+    expect(input.value).toBe("");
+  });
   it("writes a locally resolved derived binding value", () => {
     const input = document.createElement("input");
     const registry = register(input, {
@@ -682,6 +740,14 @@ describe("approved native-control writes", () => {
 
       expect(input.value).toBe("");
       expect(result[0]).toMatchObject({ status: "skipped" });
+      expect(result[0]).toHaveProperty(
+        "failureCode",
+        _state === "disabled"
+          ? "FIELD_DISABLED"
+          : _state === "readonly"
+            ? "FIELD_READONLY"
+            : "FIELD_CHANGED",
+      );
     },
   );
 

@@ -21,6 +21,7 @@ export interface ApprovedPreparationPlan {
 }
 
 export interface PreparationExecutionOptions {
+  onAction?: (element: HTMLElement) => void;
   document?: Document;
   signal?: AbortSignal;
   assertCurrent?: () => boolean;
@@ -225,6 +226,7 @@ async function executePreparation({
   countRepeatableGroups,
   selectProfileOption,
   waitForExpectedFields,
+  onAction,
   assertCurrent,
   beforeMutation,
 }: PreparationExecutionOptions): Promise<PreparationExecutionResult> {
@@ -269,6 +271,7 @@ async function executePreparation({
         return failure("action-not-executable", executedPlanCount);
       }
       action.element.click();
+      onAction?.(action.element);
       executedPlanCount += 1;
       const refreshed = await refresh(refreshSnapshot);
       if (!refreshed) {
@@ -364,6 +367,7 @@ async function executePreparation({
       }
 
       currentAction.element.click();
+      onAction?.(currentAction.element);
       executedPlanCount += 1;
       const expectedFieldsVisible =
         plan.expectedFieldNames && plan.expectedFieldNames.length > 0

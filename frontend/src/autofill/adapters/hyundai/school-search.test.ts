@@ -1,8 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { runHyundaiEducationSearch } from "./school-search";
+import { hyundaiWorkflowAdapter } from "./workflow";
 
 interface SearchCase {
   itemGroupId: string;
@@ -256,10 +257,154 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   document.body.replaceChildren();
 });
 
 describe("Hyundai education normal search", () => {
+  it.each([
+    { kind: "nonmatching", code: "SEARCH_NO_EXACT_MATCH" },
+    { kind: "ambiguous", code: "SEARCH_AMBIGUOUS" },
+    { kind: "invalid-code", code: "SEARCH_UNCONFIRMED" },
+    { kind: "invalid-nonmatching", code: "SEARCH_UNCONFIRMED" },
+    { kind: "missing-result", code: "SEARCH_UNCONFIRMED" },
+    { kind: "other-query", code: "SEARCH_UNCONFIRMED" },
+  ] as const)(
+    "reports $code for fresh $kind results without selecting or keeping the query",
+    async ({ kind, code }) => {
+      const search = SEARCH_CASES[5]!;
+      const { display, hidden, results, otherDisplay, otherHidden } =
+        renderSearch(search);
+      const onFailure = vi.fn();
+      let clicks = 0;
+      display.addEventListener("keyup", () => {
+        queueMicrotask(() => {
+          const button = resultButton(search, {
+            ...(kind === "nonmatching" || kind === "invalid-nonmatching"
+              ? { result: "시각디자인" }
+              : {}),
+            ...(kind === "invalid-code" || kind === "invalid-nonmatching"
+              ? { code: "9999" }
+              : {}),
+            ...(kind === "missing-result" ? { result: "" } : {}),
+            ...(kind === "other-query" ? { search: "이전 검색어" } : {}),
+          });
+          button.addEventListener("click", () => {
+            clicks += 1;
+          });
+          results.replaceChildren(button.parentElement!);
+          if (kind === "ambiguous") {
+            results.append(resultButton(search).parentElement!);
+          }
+        });
+      });
+
+      await expect(
+        hyundaiWorkflowAdapter.executeStateDriver?.(
+          document,
+          handleFor(search, display),
+          itemFor(search),
+          new AbortController().signal,
+          onFailure,
+        ),
+      ).resolves.toBe(false);
+
+      expect(onFailure.mock.calls).toEqual([[code]]);
+      expect(clicks).toBe(0);
+      expect(display.value).toBe("");
+      expect(hidden.value).toBe("");
+      expect(display.hasAttribute("data-search-result")).toBe(false);
+      expect(otherDisplay.value).toBe("기존 다른 행 값");
+      expect(otherHidden.value).toBe("OTHER");
+    },
+  );
+
+  it.each([false, true])(
+    "reports timeout rather than no-results without a completed response (cleared stale list: %s)",
+    async (clearStaleList) => {
+      vi.useFakeTimers();
+      const search = SEARCH_CASES[1]!;
+      const { display, hidden, results } = renderSearch(search);
+      if (clearStaleList) {
+        results.append(resultButton(search).parentElement!);
+        display.addEventListener("keyup", () => results.replaceChildren());
+      }
+      const onFailure = vi.fn();
+      const pending = runHyundaiEducationSearch(
+        document,
+        handleFor(search, display),
+        itemFor(search),
+        undefined,
+        onFailure,
+      );
+
+      await vi.advanceTimersByTimeAsync(2999);
+      expect(onFailure).not.toHaveBeenCalled();
+      expect(display.value).toBe(search.query);
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(pending).resolves.toBe(false);
+      expect(onFailure.mock.calls).toEqual([["SEARCH_TIMEOUT"]]);
+      expect(display.value).toBe("");
+      expect(hidden.value).toBe("");
+    },
+  );
+
+  it("reports unconfirmed when an exact result click does not confirm the selected code", async () => {
+    const search = SEARCH_CASES[1]!;
+    const { display, hidden, results } = renderSearch(search);
+    const onFailure = vi.fn();
+    let clicks = 0;
+    display.addEventListener("keyup", () => {
+      queueMicrotask(() => {
+        const button = resultButton(search);
+        button.addEventListener("click", () => {
+          clicks += 1;
+        });
+        results.replaceChildren(button.parentElement!);
+      });
+    });
+
+    await expect(
+      runHyundaiEducationSearch(
+        document,
+        handleFor(search, display),
+        itemFor(search),
+        undefined,
+        onFailure,
+      ),
+    ).resolves.toBe(false);
+
+    expect(clicks).toBe(1);
+    expect(onFailure.mock.calls).toEqual([["SEARCH_UNCONFIRMED"]]);
+    expect(hidden.value).toBe("");
+    expect(display.hasAttribute("data-search-result")).toBe(false);
+  });
+
+  it("does not diagnose a timeout after the user confirms another code during the wait", async () => {
+    vi.useFakeTimers();
+    const search = SEARCH_CASES[1]!;
+    const { display, hidden } = renderSearch(search);
+    const onFailure = vi.fn();
+    const pending = runHyundaiEducationSearch(
+      document,
+      handleFor(search, display),
+      itemFor(search),
+      undefined,
+      onFailure,
+    );
+    hidden.value = "USER";
+    display.dataset.searchResult = search.query;
+
+    await vi.advanceTimersByTimeAsync(3000);
+
+    await expect(pending).resolves.toBe(false);
+    expect(onFailure).not.toHaveBeenCalled();
+    expect(hidden.value).toBe("USER");
+    expect(display.value).toBe(search.query);
+    expect(display.dataset.searchResult).toBe(search.query);
+  });
+
   it.each(SEARCH_CASES)(
     "selects the fresh exact result for $profileFieldKey",
     async (search) => {
@@ -269,6 +414,7 @@ describe("Hyundai education normal search", () => {
       results.append(stale.parentElement!);
       let staleClicks = 0;
       let keyups = 0;
+      const onFailure = vi.fn();
       stale.addEventListener("click", () => {
         staleClicks += 1;
       });
@@ -286,10 +432,13 @@ describe("Hyundai education normal search", () => {
           document,
           handleFor(search, display),
           itemFor(search),
+          undefined,
+          onFailure,
         ),
       ).resolves.toBe(true);
 
       expect(keyups).toBe(1);
+      expect(onFailure).not.toHaveBeenCalled();
       expect(staleClicks).toBe(0);
       expect(display.value).toBe(search.query);
       expect(display.dataset.searchResult).toBe(search.query);
@@ -574,6 +723,7 @@ describe("Hyundai education normal search", () => {
   it("preserves a late user edit and respects cancellation", async () => {
     const search = SEARCH_CASES[1]!;
     const first = renderSearch(search);
+    const onFailure = vi.fn();
     let clicks = 0;
     first.display.addEventListener("keyup", () => {
       queueMicrotask(() => {
@@ -591,10 +741,13 @@ describe("Hyundai education normal search", () => {
         document,
         handleFor(search, first.display),
         itemFor(search),
+        undefined,
+        onFailure,
       ),
     ).resolves.toBe(false);
     expect(first.display.value).toBe("사용자 수정");
     expect(clicks).toBe(0);
+    expect(onFailure).not.toHaveBeenCalled();
 
     const second = renderSearch(search);
     const controller = new AbortController();
@@ -607,9 +760,11 @@ describe("Hyundai education normal search", () => {
         handleFor(search, second.display),
         itemFor(search),
         controller.signal,
+        onFailure,
       ),
     ).resolves.toBe(false);
     expect(second.display.value).toBe("");
+    expect(onFailure).not.toHaveBeenCalled();
   });
 
   it("does not click a fresh exact result hidden by an ancestor", async () => {

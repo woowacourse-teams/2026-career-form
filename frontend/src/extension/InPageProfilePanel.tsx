@@ -53,9 +53,11 @@ export function InPageProfilePanel({
         closePanel();
       }}
       openAutofill={async () => controller.startAutofill()}
+      returnToProfile={controller.showProfile}
       autofillView={
         mode === "autofill" ? (
           <AutofillOverlay
+            returnInHeader
             apiClient={apiClient}
             repository={repository}
             pageDocument={pageDocument}

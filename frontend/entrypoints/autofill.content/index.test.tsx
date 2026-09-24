@@ -56,6 +56,7 @@ import definition from "./index";
 interface Shell {
   mounted: boolean;
   host: HTMLElement;
+  shadowHost: HTMLElement;
   container: HTMLDivElement;
   mount(): void;
   remove(): void;
@@ -93,6 +94,7 @@ beforeEach(() => {
       let root: Root | undefined;
       const shell: Shell = {
         host,
+        shadowHost: host,
         container,
         mounted: false,
         mount() {
@@ -149,6 +151,37 @@ function panel() {
 // Catches splitting the workflow into a second Shadow DOM, remounts on messages,
 // and an old deferred close removing a newly reopened panel.
 describe("content script panel lifecycle", () => {
+  it("keeps the panel open while the page accepts clicks, focus, and manual edits", async () => {
+    const input = document.createElement("input");
+    input.setAttribute("aria-label", "지원서 직접 입력");
+    document.body.append(input);
+    const originalOverflow = document.body.style.overflow;
+    try {
+      await start();
+      await send(OPEN_AUTOFILL_OVERLAY_MESSAGE);
+      const region = panel().getByRole("region", { name: "지원서 자동 기입" });
+      expect(region).not.toHaveAttribute("aria-modal", "true");
+      fireEvent.click(input);
+      input.focus();
+      fireEvent.input(input, { target: { value: "합성 직접 입력" } });
+      expect(input).toHaveFocus();
+      expect(input).toHaveValue("합성 직접 입력");
+      expect(shells[0]!.mounted).toBe(true);
+      expect(region).toBeVisible();
+      expect(document.body.style.overflow).toBe(originalOverflow);
+      expect(input.closest("[inert]")).toBeNull();
+      fireEvent.click(panel().getByRole("button", { name: "닫기" }));
+      await act(async () => {
+        await Promise.resolve();
+        for (const callback of queued.splice(0)) callback();
+      });
+      expect(shells[0]!.mounted).toBe(false);
+      expect(input).toHaveValue("합성 직접 입력");
+    } finally {
+      input.remove();
+    }
+  });
+
   it("starts autofill inside the existing profile panel without another UI root", async () => {
     await start();
     await send(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
@@ -170,7 +203,7 @@ describe("content script panel lifecycle", () => {
     expect(shells).toHaveLength(1);
     expect(boundary.preparation).toHaveBeenCalledOnce();
     expect(
-      panel().getByRole("button", { name: "목록으로 돌아가기" }),
+      panel().getByRole("button", { name: "수동 복사로 돌아가기" }),
     ).toBeVisible();
     expect(receive({ type: "unknown" })).toBeUndefined();
   });
@@ -183,7 +216,7 @@ describe("content script panel lifecycle", () => {
       panel().getByRole("region", { name: "지원서 자동 기입" }),
     ).toBeVisible();
     fireEvent.keyDown(
-      panel().getByRole("button", { name: "목록으로 돌아가기" }),
+      panel().getByRole("button", { name: "수동 복사로 돌아가기" }),
       { key: "Escape" },
     );
     await waitFor(() =>
@@ -222,7 +255,9 @@ describe("content script panel lifecycle", () => {
     );
     await start();
     await send(OPEN_AUTOFILL_OVERLAY_MESSAGE);
-    fireEvent.click(panel().getByRole("button", { name: "목록으로 돌아가기" }));
+    fireEvent.click(
+      panel().getByRole("button", { name: "수동 복사로 돌아가기" }),
+    );
     await send(OPEN_AUTOFILL_OVERLAY_MESSAGE);
     await act(async () =>
       resolveFirst({

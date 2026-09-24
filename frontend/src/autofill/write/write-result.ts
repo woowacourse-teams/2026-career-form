@@ -1,3 +1,4 @@
+import type { WriteFailureCode } from "./failure";
 export type ApprovedWriteResult =
   | {
       candidateId: string;
@@ -9,6 +10,7 @@ export type ApprovedWriteResult =
       candidateId: string;
       status: "skipped";
       reason: string;
+      failureCode?: WriteFailureCode;
       outcome?: "failed" | "needs-verification" | "unsupported" | "unchanged";
       code?:
         | "ALREADY_MATCHED"

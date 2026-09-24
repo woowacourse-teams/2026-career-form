@@ -4,7 +4,6 @@ import {
   openAutofillOverlay,
   openOptionsPage,
 } from "../../src/extension/navigation";
-import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import type { Profile, ProfileCategoryId } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import {
@@ -14,6 +13,7 @@ import {
 } from "../../src/profile/profile-search";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import styles from "./App.module.css";
+import panelCss from "./App.module.css?inline";
 
 interface AppProps {
   repository?: ProfileRepository;
@@ -24,6 +24,8 @@ interface AppProps {
   inPage?: boolean;
   logoUrl?: string;
   autofillView?: ReactNode;
+  returnToProfile?: () => void;
+  actionPosition?: "top" | "bottom";
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -75,16 +77,6 @@ const DEFAULT_OPEN_GROUPS = new Set(
   PANEL_GROUPS.filter((group) => group.defaultOpen).map((group) => group.id),
 );
 
-function hasCategoryData(profile: Profile, categoryId: ProfileCategoryId) {
-  const value = profile[categoryId];
-  if (Array.isArray(value)) {
-    return value.some((entry) =>
-      Object.values(entry.values).some((field) => field.trim()),
-    );
-  }
-  return Object.values(value).some((field) => field.trim());
-}
-
 function countGroupRecords(profile: Profile, group: PanelGroup) {
   return group.categoryIds.reduce((count, categoryId) => {
     const value = profile[categoryId];
@@ -105,6 +97,8 @@ export function App({
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
   autofillView,
+  returnToProfile,
+  actionPosition = "top",
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -146,11 +140,6 @@ export function App({
   const items = profile ? buildSearchItems(profile) : [];
   const results = searchProfileItems(items, query);
   const hasQuery = Boolean(query.trim());
-  const registeredCategoryCount = profile
-    ? PROFILE_CATEGORIES.filter((category) =>
-        hasCategoryData(profile, category.id),
-      ).length
-    : 0;
   const visibleGroups = PANEL_GROUPS.filter(
     (group) => !hasQuery || itemsForGroup(results, group).length > 0,
   );
@@ -199,11 +188,20 @@ export function App({
   };
 
   return (
-    <div className={`${styles.panel} ${inPage ? styles.inPagePanel : ""}`}>
+    <div
+      className={`${styles.panel} ${inPage ? styles.inPagePanel : ""} ${actionPosition === "bottom" ? styles.bottomActionPanel : ""}`}
+    >
+      <style>{panelCss}</style>
       <header className={styles.header}>
         <div className={styles.brandRow}>
           <div className={styles.brandIdentity}>
-            <img className={styles.brandMark} src={logoUrl} alt="커리어폼" />
+            <img
+              className={styles.brandMark}
+              src={logoUrl}
+              alt="커리어폼"
+              width={42}
+              height={42}
+            />
             <div>
               <p>CAREER FORM</p>
               <span>지원서 패널</span>
@@ -219,9 +217,27 @@ export function App({
           </button>
         </div>
         <div className={styles.titleRow}>
+          {autofillActive && returnToProfile && (
+            <button
+              type="button"
+              className={styles.returnButton}
+              aria-label="수동 복사로 돌아가기"
+              title="수동 복사로 돌아가기"
+              onClick={returnToProfile}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                event.stopPropagation();
+                returnToProfile();
+              }}
+            >
+              <span aria-hidden="true">←</span>
+            </button>
+          )}
           <h1>{autofillActive ? "자동 기입" : "내 지원 정보"}</h1>
           <button
             className={styles.profileButton}
+            data-profile-management
             hidden={autofillActive}
             type="button"
             onClick={() => void openProfileManagement()}
@@ -229,6 +245,26 @@ export function App({
             프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
+        {!autofillActive && actionPosition === "top" && (
+          <section className={styles.autofillAction}>
+            <button
+              data-autofill-start
+              ref={startButton}
+              type="button"
+              disabled={autofillPending}
+              onClick={() => void startAutofill()}
+            >
+              자동 기입 <span aria-hidden="true">→</span>
+            </button>
+
+            {autofillFailed && (
+              <p className={styles.autofillError} role="alert">
+                현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서
+                페이지에서 다시 시도해 주세요.
+              </p>
+            )}
+          </section>
+        )}
       </header>
       {autofillActive ? (
         <main className={styles.workflowMain} aria-label="지원서 작업 화면">
@@ -246,6 +282,7 @@ export function App({
                 프로필 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
               </p>
             )}
+
             <label className={styles.search}>
               <span className={styles.visuallyHidden}>프로필 검색</span>
               <svg
@@ -265,13 +302,6 @@ export function App({
                 onChange={(event) => setQuery(event.target.value)}
               />
             </label>
-
-            {loadStatus === "ready" && (
-              <p className={styles.readiness}>
-                <span>{registeredCategoryCount}개 범주 등록</span>
-                <span>직접 복사하거나 자동 기입을 시작하세요</span>
-              </p>
-            )}
 
             <section className={styles.groups} aria-label="프로필 범주">
               {loadStatus === "loading" && (
@@ -394,23 +424,22 @@ export function App({
               )}
             </section>
           </main>
-          <footer className={styles.footer}>
-            <button
-              ref={startButton}
-              type="button"
-              disabled={autofillPending}
-              onClick={() => void startAutofill()}
+          {actionPosition === "bottom" && (
+            <footer
+              className={`${styles.autofillAction} ${styles.previewFooter}`}
             >
-              자동 기입 <span aria-hidden="true">→</span>
-            </button>
-            <p>선택 후 분석과 검토를 시작합니다</p>
-            {autofillFailed && (
-              <p className={styles.autofillError} role="alert">
-                현재 페이지에 자동 기입 화면을 열지 못했습니다. 지원서
-                페이지에서 다시 시도해 주세요.
-              </p>
-            )}
-          </footer>
+              <button
+                data-autofill-start
+                ref={startButton}
+                type="button"
+                disabled={autofillPending}
+                onClick={() => void startAutofill()}
+              >
+                자동 기입 <span aria-hidden="true">→</span>
+              </button>
+              <p>선택 후 분석과 검토를 시작합니다</p>
+            </footer>
+          )}
         </>
       )}
     </div>

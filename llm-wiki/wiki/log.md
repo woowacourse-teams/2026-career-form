@@ -214,6 +214,12 @@
 - Raw: [CF-96 bundle](../raw/issues/CF-96/manifest.md)
 - 승인된 후보 3개를 기록하고 [랜딩·온보딩 topic](topics/landing-onboarding.md)을 색인에 연결했다.
 
+## [2026-09-22] ingest | CF-99 입력 위치 표시와 설치 안내
+
+- Approval-Digest: 2a87ccd12e581e9177e8a4b527ab2df5d39800efdebddfc7ef698c47392463d2
+- Raw: [CF-99 bundle](../raw/issues/CF-99/manifest.md)
+- 승인된 후보 3개를 기록하고 [입력 위치 표시와 설치 안내 topic](topics/autofill-follow-and-install.md)을 색인에 연결했다.
+
 ## [2026-09-23] ingest | CF-98 범용 분석과 검색 표면
 
 - 승인 digest `09f47713670f79bb2053d52af823b912cd0b06bc635066c63f9457d7b9f74db3`의 후보 6개와 제안 ADR 전문을 [CF-98 bundle](../raw/issues/CF-98/manifest.md)에 비식별 기록했다.
@@ -231,3 +237,10 @@
 - 승인 digest `62463e58e4e9043e334ba50b33b3a8b81140469f775e2b9eb9598763ea975219`의 후보 3개를 [CF-101 bundle](../raw/issues/CF-101/manifest.md)에 비식별 기록했다.
 - 엄격한 날짜 DIRECT 변환, 로컬 DOM 승인 재검증과 원본 fallback 금지를 [topic](topics/generic-date-format.md)에 연결했다.
 - 합성 통합·설치 UI·실사이트 검증을 구분하고 개별 unavailable 이유의 기존 표시 제한을 기록했다.
+
+
+## [2026-09-24] ingest | CF-99 최종 입력 결과와 안내 흐름
+
+- Approval-Digest: 20126b48eacbf09b8af7fcaddbaad25843ec829a766fb688ebe465b8363c913b
+- [CF-99 bundle](../raw/issues/CF-99/manifest.md)의 최종 후보 6개를 반영했다.
+- 입력 중 화면 고정, 범주별 결과 검토, 선택적인 접기, 합성 안내 시연과 현대·SK 진단 경계를 관련 topic 및 현황표에 연결했다.

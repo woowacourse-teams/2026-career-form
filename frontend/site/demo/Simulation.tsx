@@ -47,6 +47,13 @@ function ExampleForm({ started }: { started: boolean }) {
 }
 export function Simulation() {
   const root = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(window.innerWidth);
+  const scale = Math.min(1, width / 900);
+  useEffect(() => {
+    const resize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
   const [started, setStarted] = useState(false);
   const [cursor, setCursor] = useState({ x: 25, y: 24, visible: false });
   useEffect(() => {
@@ -60,45 +67,45 @@ export function Simulation() {
           .matches,
         move: () => {
           const button = root.current?.querySelector<HTMLButtonElement>(
-            "[data-demo-panel] footer button",
+            "[data-demo-panel] [data-autofill-start]",
           );
           const bounds = button?.getBoundingClientRect();
           const frame = root.current?.getBoundingClientRect();
           if (bounds && frame)
             setCursor({
-              x: bounds.left - frame.left + bounds.width * 0.65,
-              y: bounds.top - frame.top + bounds.height * 0.6,
+              x:
+                (bounds.left - frame.left + bounds.width * 0.65) /
+                Math.min(1, window.innerWidth / 900),
+              y:
+                (bounds.top - frame.top + bounds.height * 0.6) /
+                Math.min(1, window.innerWidth / 900),
               visible: true,
             });
         },
         click: () =>
           root.current
             ?.querySelector<HTMLButtonElement>(
-              "[data-demo-panel] footer button",
+              "[data-demo-panel] [data-autofill-start]",
             )
             ?.click(),
         hide: () => setCursor((current) => ({ ...current, visible: false })),
       });
     };
-    // Observe the iframe in its parent viewport; an inner viewport alone is always visible.
-    const target = window.frameElement ?? root.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          start();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 },
-    );
-    if (target) observer.observe(target);
+    // The inert iframe cannot receive pointer events; its figure owns activation.
+    const target = window.frameElement?.parentElement ?? root.current;
+    const events = ["pointerenter", "focusin", "pointerdown"];
+    events.forEach((event) => target?.addEventListener(event, start));
     return () => {
-      observer.disconnect();
+      events.forEach((event) => target?.removeEventListener(event, start));
       dispose();
     };
   }, []);
   return (
-    <div ref={root} className={styles.simulation}>
+    <div
+      ref={root}
+      className={styles.simulation}
+      style={{ width: Math.max(900, width), height: 660, zoom: scale }}
+    >
       <div className={styles.browserBar}>
         <span>● ● ●</span>
         <div>
@@ -110,18 +117,23 @@ export function Simulation() {
         <ExampleForm started={started} />
         <aside className={styles.sidebar}>
           <div className={styles.panelLocation}>확장 프로그램 · 사이드패널</div>
-          <PanelPreview onAutofill={async () => setStarted(true)} />
+          <PanelPreview
+            onAutofill={async () => setStarted(true)}
+            onReturn={() => setStarted(false)}
+            autofillView={
+              started ? (
+                <AutofillOverlay
+                  returnInHeader
+                  passive
+                  onClose={() => setStarted(false)}
+                  apiClient={demoAnalysisClient}
+                  repository={demoRepository}
+                />
+              ) : undefined
+            }
+          />
         </aside>
       </div>
-      {started && (
-        <div className={styles.result} inert>
-          <AutofillOverlay
-            onClose={() => {}}
-            apiClient={demoAnalysisClient}
-            repository={demoRepository}
-          />
-        </div>
-      )}
       <svg
         className={styles.cursor}
         style={{

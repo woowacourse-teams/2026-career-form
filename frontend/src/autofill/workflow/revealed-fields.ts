@@ -6,16 +6,28 @@ import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
 } from "../review/review-plan";
-import { executeApprovedWrites } from "../write/executor";
+import {
+  executeApprovedWritesAfterPageSettles,
+  type WriteResultListener,
+} from "../write/executor";
+import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { WorkflowActivity } from "./progress-model";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import type { Profile } from "../../profile/model";
 import { adapterProfileValue, type PreparationItem } from "./workflow-model";
 
 interface RevealedFieldsContext {
+  onActivity?: (activity: WorkflowActivity) => void;
+  onWriteResult?: WriteResultListener;
   adapter: WorkflowAdapter;
   apiClient: AnalysisApiClient;
   pageDocument: Document;
   setWorkflowDiagnostics: Dispatch<SetStateAction<WorkflowDiagnostic[]>>;
+  presentField?(
+    registry: CandidateRegistry,
+    item: ReviewPlanItem,
+  ): Promise<void>;
+  signal?: AbortSignal;
 }
 
 export function createWriteRevealedFields({
@@ -23,6 +35,10 @@ export function createWriteRevealedFields({
   apiClient,
   pageDocument,
   setWorkflowDiagnostics,
+  presentField,
+  signal,
+  onWriteResult,
+  onActivity,
 }: RevealedFieldsContext) {
   const writeRevealedFields = async (
     loadedProfile: Profile,
@@ -37,7 +53,9 @@ export function createWriteRevealedFields({
     ];
 
     const snapshot = collectFieldsSnapshot(pageDocument);
+    onActivity?.("matching");
     const analysis = await apiClient.analyzeFields(snapshot.request);
+    if (signal?.aborted) return;
     if (analysis.analysisStatus === "BLOCKED") {
       setWorkflowDiagnostics([
         ...diagnostics,
@@ -106,11 +124,17 @@ export function createWriteRevealedFields({
       ];
     });
     diagnostics.push({ code: "ELIGIBLE_FIELDS", count: items.length });
-    const results = executeApprovedWrites({
+    const results = await executeApprovedWritesAfterPageSettles({
+      onResult: onWriteResult,
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
       registry: snapshot.registry,
+      beforeWrite: presentField
+        ? (item) => presentField(snapshot.registry, item)
+        : undefined,
+      signal,
     });
+    if (signal?.aborted) return;
     diagnostics.push(
       {
         code: "WRITTEN",

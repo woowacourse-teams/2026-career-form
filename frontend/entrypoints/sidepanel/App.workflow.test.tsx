@@ -40,8 +40,10 @@ describe("side panel workflow presentation", () => {
     view.rerender(
       <App
         {...common}
+        returnToProfile={() => view.rerender(<App {...common} />)}
         autofillView={
           <AutofillOverlay
+            returnInHeader
             apiClient={apiClient}
             repository={repository}
             pageDocument={document.implementation.createHTMLDocument("fixture")}
@@ -63,7 +65,12 @@ describe("side panel workflow presentation", () => {
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
     expect(closePanel).toHaveBeenCalledOnce();
 
-    view.rerender(<App {...common} />);
+    const back = screen.getByRole("button", { name: "수동 복사로 돌아가기" });
+    expect(back.closest("header")).not.toBeNull();
+    expect(
+      screen.getAllByRole("button", { name: "수동 복사로 돌아가기" }),
+    ).toHaveLength(1);
+    fireEvent.click(back);
     expect(screen.getByRole("searchbox", { name: "프로필 검색" })).toHaveValue(
       "이메일",
     );
