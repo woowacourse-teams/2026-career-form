@@ -1,3 +1,5 @@
+@import "../src/styles/theme.css";
+
 @font-face {
   font-family: SitePretendard;
   src: url("pretendard/dist/web/variable/woff2/PretendardVariable.woff2")
@@ -7,13 +9,13 @@
 }
 :global(body) {
   margin: 0;
-  background: #ffffff;
+  background: var(--color-page);
 }
 .site {
   font:
     16px/1.75 SitePretendard,
     sans-serif;
-  color: #51483f;
+  color: var(--color-text);
   word-break: keep-all;
   -webkit-font-smoothing: antialiased;
 }
@@ -36,7 +38,7 @@
 .site h1,
 .site h2,
 .site h3 {
-  color: #3d2b20;
+  color: var(--color-text-strong);
   line-height: 1.35;
 }
 .site p {
@@ -45,7 +47,7 @@
 .site a:focus-visible,
 .site button:focus-visible,
 .site summary:focus-visible {
-  outline: 3px solid #ad5b2f;
+  outline: 3px solid var(--color-action);
   outline-offset: 4px;
 }
 .site button {
@@ -80,16 +82,16 @@
 }
 .introductionLink {
   padding: 9px 16px;
-  border: 1px solid #ead7c5;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fff;
-  color: #754126 !important;
+  background: var(--color-surface);
+  color: var(--color-action-strong) !important;
   font-size: 14px;
   font-weight: 650;
   white-space: nowrap;
 }
 .introductionLink:hover {
-  background: #fff3e6;
+  background: var(--color-accent-soft);
 }
 .brand {
   font-size: 23px;
@@ -109,26 +111,25 @@
   font-weight: 400;
 }
 .brand b {
-  color: #ad5b2f;
+  color: var(--color-action);
 }
 .primary {
-  box-shadow: inset 0 0 0 1px #e1bd94;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   min-height: 48px;
   padding: 12px 21px;
-  background: #fff1dc !important;
+  background: var(--color-brand) !important;
   border-radius: 10px;
-  color: #3d2b20 !important;
+  color: var(--color-on-brand) !important;
   font-size: 14px;
   font-weight: 650;
   border: 0;
   white-space: nowrap;
 }
 .primary:hover {
-  background: #ffe5c2 !important;
+  background: var(--color-brand-hover) !important;
 }
 .header .primary {
   min-height: 40px;
@@ -139,7 +140,7 @@
   position: fixed;
   top: -100px;
   left: 20px;
-  background: #fff;
+  background: var(--color-surface);
   padding: 14px;
   z-index: 10;
 }
@@ -149,7 +150,7 @@
 .eyebrow {
   text-transform: uppercase;
   font-size: 12px;
-  color: #8c532f;
+  color: var(--color-action-strong);
   font-weight: 650;
   letter-spacing: 0.05em;
 }
@@ -167,7 +168,7 @@
 }
 .hero h1 em {
   font-style: normal;
-  color: #ad5b2f;
+  color: var(--color-action);
 }
 .heroDetail {
   align-self: center;
@@ -190,13 +191,13 @@
 }
 .heroDetail > small {
   font-size: 12px;
-  color: #746c65;
+  color: var(--color-text-muted);
 }
 .simulation {
   margin: 0;
 }
 .simulation:focus-visible {
-  outline: 3px solid #ad5b2f;
+  outline: 3px solid var(--color-action);
   outline-offset: 4px;
   border-radius: 12px;
 }
@@ -204,7 +205,7 @@
   display: block;
   width: 100%;
   height: 700px;
-  border: 1px solid #d2dce2;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
 
   pointer-events: none;
@@ -212,7 +213,7 @@
 .simulation figcaption {
   font-size: 11px;
   text-align: center;
-  color: #76848c;
+  color: var(--color-text-muted);
   padding: 14px 0;
 }
 .features {
@@ -233,7 +234,7 @@
 }
 .sectionHeading > p {
   font-size: 16px;
-  color: #655d54;
+  color: var(--color-text);
 }
 .benefits {
   display: grid;
@@ -250,15 +251,15 @@
   padding-right: 0;
 }
 .benefits article + article {
-  border-left: 1px solid #ead7c5;
+  border-left: 1px solid var(--color-border);
 }
 .benefits svg {
   width: 44px;
   height: 44px;
   padding: 5px;
-  background: #fff0dc;
+  background: var(--color-accent-soft);
   border-radius: 10px;
-  color: #9a542b;
+  color: var(--color-action);
 }
 .benefits h3 {
   font-size: 23px;
@@ -267,11 +268,11 @@
 }
 .benefits p {
   font-size: 16px;
-  color: #655d54;
+  color: var(--color-text);
 }
 .benefits strong {
   display: block;
-  color: #443b33;
+  color: var(--color-text-strong);
   font-weight: 550;
   margin-bottom: 7px;
 }
@@ -282,7 +283,7 @@
   gap: 30px;
   padding-top: 40px;
   padding-bottom: 48px;
-  border-top: 1px solid #ead7c5;
+  border-top: 1px solid var(--color-border);
 }
 .setupLink h2 {
   font-size: 30px;
@@ -297,7 +298,7 @@
   padding-bottom: 80px;
 }
 .faq details {
-  border-bottom: 1px solid #ead7c5;
+  border-bottom: 1px solid var(--color-border);
 }
 .faq summary {
   display: flex;
@@ -317,12 +318,12 @@
 }
 .faq details p {
   font-size: 15px;
-  color: #655d54;
+  color: var(--color-text);
   padding-bottom: 22px;
   line-height: 1.9;
 }
 .footer {
-  border-top: 1px solid #ead7c5;
+  border-top: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -346,18 +347,18 @@
 }
 .footer small {
   font-size: 11px;
-  color: #746c65;
+  color: var(--color-text-muted);
 }
 .onboarding {
   max-width: 1160px;
   margin: auto;
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr);
-  border-top: 1px solid #ead7c5;
+  border-top: 1px solid var(--color-border);
 }
 .onboarding > aside {
   padding: 45px 28px;
-  background: #fffaf5;
+  background: var(--color-accent-soft);
 }
 .onboarding > aside h2 {
   font-size: 25px;
@@ -373,10 +374,10 @@
   align-items: center;
   padding: 18px 0;
   font-size: 14px;
-  color: #77838a;
+  color: var(--color-text-muted);
 }
 .onboarding > aside li span {
-  border: 1px solid #ead7c5;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
   width: 35px;
   height: 35px;
@@ -385,12 +386,12 @@
   font-size: 11px;
 }
 .onboarding > aside li[aria-current] {
-  color: #754126;
+  color: var(--color-action-strong);
   font-weight: 700;
 }
 .onboarding > aside li[aria-current] span {
-  background: #ffecd2;
-  border-color: #dfba8c;
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
 }
 .onboarding > aside > img {
   width: 100px;
@@ -440,7 +441,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #637681;
+  color: var(--color-text-muted);
   margin-bottom: 32px;
 }
 .guideContent h1 {
@@ -451,23 +452,23 @@
 }
 .description {
   font-size: 17px;
-  color: #655d54;
+  color: var(--color-text);
 }
 .notice {
-  background: #fffaf5;
-  border: 1px solid #ead7c5;
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 22px 24px;
   margin: 26px 0;
 }
 .notice p {
   font-size: 14px;
-  color: #657681;
+  color: var(--color-text-muted);
   margin: 8px 0 16px;
   line-height: 1.8;
 }
 .notice strong {
-  color: #443b33;
+  color: var(--color-text-strong);
 }
 .instructions {
   list-style: none;
@@ -478,7 +479,7 @@
   display: flex;
   gap: 18px;
   padding: 24px 0;
-  border-bottom: 1px solid #ead7c5;
+  border-bottom: 1px solid var(--color-border);
 }
 .instructions li:last-child {
   border: 0;
@@ -489,8 +490,8 @@
   height: 30px;
   display: grid;
   place-items: center;
-  background: #fff3e6;
-  color: #754126;
+  background: var(--color-accent-soft);
+  color: var(--color-action-strong);
   border-radius: 50%;
   font-weight: 700;
 }
@@ -499,12 +500,12 @@
   margin: 2px 0 10px;
 }
 .instructions p {
-  color: #655d54;
+  color: var(--color-text);
   font-size: 16px;
   line-height: 1.85;
 }
 .stepActions {
-  border-top: 1px solid #ead7c5;
+  border-top: 1px solid var(--color-border);
   padding-top: 22px;
   margin-top: 30px;
   display: flex;
@@ -518,11 +519,11 @@
 }
 .instructions p strong {
   font-weight: 700;
-  color: #443b33;
+  color: var(--color-text-strong);
 }
 .stepActions button:not(.primary) {
   font-size: 14px;
-  color: #655d54;
+  color: var(--color-text);
   padding: 8px 0;
 }
 .stepActions .primary {
@@ -544,8 +545,8 @@
 .policy nav {
   display: grid;
   gap: 8px;
-  background: #fff;
-  border: 1px solid #ead7c5;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 24px;
   font-size: 14px;
@@ -671,7 +672,7 @@
   }
   .benefits article + article {
     border-left: 0;
-    border-top: 1px solid #ead7c5;
+    border-top: 1px solid var(--color-border);
   }
   .benefits h3 {
     font-size: 23px;
@@ -748,7 +749,7 @@
 }
 .resultFeature > div > p:not(.eyebrow) {
   max-width: 480px;
-  color: #655d54;
+  color: var(--color-text);
 }
 .resultFeature ol {
   list-style: none;
@@ -757,18 +758,18 @@
 }
 .resultFeature li {
   padding: 14px 0;
-  border-top: 1px solid #ead7c5;
+  border-top: 1px solid var(--color-border);
 }
 .resultFeature li strong,
 .resultFeature li span {
   display: block;
 }
 .resultFeature li strong {
-  color: #754126;
+  color: var(--color-action-strong);
   font-size: 16px;
 }
 .resultFeature li span {
-  color: #746c65;
+  color: var(--color-text-muted);
   font-size: 14px;
   margin-top: 4px;
 }

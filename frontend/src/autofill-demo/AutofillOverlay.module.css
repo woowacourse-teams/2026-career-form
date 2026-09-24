@@ -29,11 +29,11 @@
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  border: 1px solid var(--color-brand-hover);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px 12px;
-  color: var(--color-on-brand);
-  background: var(--color-brand);
+  color: var(--color-action-strong);
+  background: var(--color-surface);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
@@ -41,7 +41,7 @@
 }
 
 .toolbar button:hover {
-  background: var(--color-brand-hover);
+  background: var(--color-accent-soft);
 }
 
 .toolbar button:focus-visible {

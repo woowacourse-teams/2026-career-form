@@ -1,0 +1,45 @@
+/* Shared by web pages and the extension's isolated panel. */
+:root,
+:host {
+  --font-ui:
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --color-page: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #fffaf4;
+  --color-accent-soft: #fffaf4;
+  --color-accent-hover: #fffaf4;
+  --color-accent: #cfaa7b;
+  --color-action: #a65f2d;
+  --color-action-strong: #754522;
+  --color-on-action: #ffffff;
+  --color-brand: #a65f2d;
+  --color-brand-hover: #754522;
+  --color-on-brand: #ffffff;
+  --color-text: #594637;
+  --color-text-strong: #39291d;
+  --color-text-muted: #786453;
+  --color-text-subtle: #816e5b;
+  --color-border: #e7d8c5;
+  --color-border-strong: #ceb596;
+  --color-field-border: #cbb79d;
+  --color-focus: rgb(166 95 45 / 22%);
+  --color-info: #786453;
+  --color-info-soft: #fffaf4;
+  --color-info-border: #e7d8c5;
+  --color-success: #24724f;
+  --color-success-soft: #f5f7f2;
+  --color-review-status: #a65317;
+  --color-warning: #895511;
+  --color-warning-soft: #fff1d8;
+  --color-danger: #923d31;
+  --color-danger-border: #d9a49b;
+  --color-danger-text: #923d31;
+  --color-danger-soft: #fff6f3;
+  --color-result-action-surface: #fffaf4;
+  --color-backdrop: rgb(57 41 29 / 36%);
+  --radius-control: 9px;
+  --radius-card: 14px;
+  --shadow-card: none;
+  --shadow-panel: 0 16px 48px rgb(57 41 29 / 18%);
+}

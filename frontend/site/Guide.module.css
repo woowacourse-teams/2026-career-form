@@ -1,8 +1,8 @@
 .figure {
   max-width: 520px;
   margin: 26px 0;
-  background: #fffaf5;
-  border: 1px solid #ead7c5;
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -20,13 +20,13 @@
 }
 .figure figcaption strong {
   font-size: 14px;
-  color: #754126;
+  color: var(--color-action-strong);
 }
 .figure figcaption span,
 .figure figcaption small {
   font-size: 12px;
   line-height: 1.7;
-  color: #687780;
+  color: var(--color-text-muted);
 }
 .figure figcaption span strong {
   font-size: inherit;
@@ -80,7 +80,7 @@
   padding: 8px;
 }
 .target {
-  outline: 2px solid #ad5b2f;
+  outline: 2px solid var(--color-action);
   outline-offset: 3px;
   border-radius: 3px;
   display: flex;
@@ -183,7 +183,7 @@
   border-radius: 12px;
   object-fit: cover;
   object-position: 58% 38%;
-  outline: 2px solid #ad5b2f;
+  outline: 2px solid var(--color-action);
   outline-offset: 5px;
   box-shadow: 0 4px 14px #0004;
 }
