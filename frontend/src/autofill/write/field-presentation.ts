@@ -29,6 +29,11 @@ export function createFieldPresentation(document: Document) {
     }
     return true;
   };
+  const fullyCovered = (target: DOMRect, cover: DOMRect) =>
+    target.left >= cover.left &&
+    target.right <= cover.right &&
+    target.top >= cover.top &&
+    target.bottom <= cover.bottom;
   let restore: (() => void) | undefined;
   let restorePanel: (() => void) | undefined;
   const clear = () => {
@@ -38,7 +43,8 @@ export function createFieldPresentation(document: Document) {
     restorePanel = undefined;
   };
   const show = (registry: CandidateRegistry, id: string): boolean => {
-    clear();
+    restore?.();
+    restore = undefined;
     const lookup = registry.lookupField(id);
     if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
     if (
@@ -102,13 +108,7 @@ export function createFieldPresentation(document: Document) {
     );
     const rect = element.getBoundingClientRect();
     const panelRect = panel?.getBoundingClientRect();
-    if (
-      panelRect &&
-      rect.right > panelRect.left &&
-      rect.left < panelRect.right &&
-      rect.bottom > panelRect.top &&
-      rect.top < panelRect.bottom
-    ) {
+    if (panelRect && fullyCovered(rect, panelRect)) {
       let ancestor = element.parentElement;
       while (ancestor && ancestor.scrollWidth <= ancestor.clientWidth)
         ancestor = ancestor.parentElement;
@@ -117,7 +117,7 @@ export function createFieldPresentation(document: Document) {
         behavior: "instant",
       });
       const target = element.getBoundingClientRect();
-      if (panel && target.right > panelRect.left) {
+      if (panel && fullyCovered(target, panelRect)) {
         // Never shrink the results panel to expose a field: that hides the
         // list the user is navigating and can clamp its scroll position.
         const gap = 12;
@@ -138,7 +138,7 @@ export function createFieldPresentation(document: Document) {
           value: panel.style.getPropertyValue(name),
           priority: panel.style.getPropertyPriority(name),
         }));
-        restorePanel = () => {
+        restorePanel ??= () => {
           for (const { name, value, priority } of panelStyles) {
             if (value) panel.style.setProperty(name, value, priority);
             else panel.style.removeProperty(name);
@@ -159,6 +159,49 @@ export function createFieldPresentation(document: Document) {
       target.left + target.width / 2,
       target.top + target.height / 2,
     );
+    // A partly exposed field is enough: do not move the panel just because
+    // its center is covered. Verify an exposed strip, not an unrelated overlay.
+    if (hit === panelHost && panel) {
+      const cover = panel.getBoundingClientRect();
+      const strips = [
+        [
+          target.left,
+          target.top,
+          Math.min(target.right, cover.left),
+          target.bottom,
+        ],
+        [
+          Math.max(target.left, cover.right),
+          target.top,
+          target.right,
+          target.bottom,
+        ],
+        [
+          target.left,
+          target.top,
+          target.right,
+          Math.min(target.bottom, cover.top),
+        ],
+        [
+          target.left,
+          Math.max(target.top, cover.bottom),
+          target.right,
+          target.bottom,
+        ],
+      ];
+      const exposed = strips.some(([left, top, right, bottom]) => {
+        if (right <= left || bottom <= top) return false;
+        const visibleHit = document.elementFromPoint?.(
+          (left + right) / 2,
+          (top + bottom) / 2,
+        );
+        return (
+          visibleHit === element ||
+          (!!visibleHit && element.contains(visibleHit))
+        );
+      });
+      if (exposed) return true;
+    }
     if (hit && hit !== element && !element.contains(hit)) {
       clear();
       return false;

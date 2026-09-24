@@ -217,7 +217,7 @@ it("keeps panel size and scroll intact when there is no room beside the field", 
   const panel = root.firstElementChild as HTMLElement;
   panel.scrollTop = 180;
   input.getBoundingClientRect = () => new DOMRect(100, 300, 800, 30);
-  panel.getBoundingClientRect = () => new DOMRect(650, 12, 350, 700);
+  panel.getBoundingClientRect = () => new DOMRect(50, 12, 950, 700);
   const before = panel.style.cssText;
   expect(createFieldPresentation(document).show(snapshot.registry, id)).toBe(
     false,
@@ -225,4 +225,52 @@ it("keeps panel size and scroll intact when there is no room beside the field", 
   expect(panel.style.cssText).toBe(before);
   expect(panel.scrollTop).toBe(180);
   expect(input.style.backgroundColor).toBe("red");
+});
+
+it.each([new DOMRect(600, 300, 200, 30), new DOMRect(700, 70, 200, 30)])(
+  "keeps a partially covered field and panel still even when its center is covered",
+  (rect) => {
+    const { input, snapshot, id } = fixture();
+    input.getBoundingClientRect = () => rect;
+    const host = document.createElement("career-form-profile-panel");
+    document.body.append(host);
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = '<div class="career-form-in-page-panel"></div>';
+    const panel = root.firstElementChild as HTMLElement;
+    panel.getBoundingClientRect = () => new DOMRect(650, 80, 350, 660);
+    const scroll = vi.fn();
+    input.parentElement!.scrollBy = scroll;
+    const original = document.elementFromPoint;
+    document.elementFromPoint = (x, y) => (x >= 650 && y >= 80 ? host : input);
+    try {
+      expect(
+        createFieldPresentation(document).show(snapshot.registry, id),
+      ).toBe(true);
+      expect(panel.style.cssText).toBe("");
+      expect(scroll).not.toHaveBeenCalled();
+      expect(input.scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      document.elementFromPoint = original;
+    }
+  },
+);
+
+it("keeps the relocated panel in place for the next partly covered field", () => {
+  const { input, snapshot, id } = fixture();
+  const host = document.createElement("career-form-profile-panel");
+  document.body.append(host);
+  const root = host.attachShadow({ mode: "open" });
+  root.innerHTML = '<div class="career-form-in-page-panel"></div>';
+  const panel = root.firstElementChild as HTMLElement;
+  panel.getBoundingClientRect = () =>
+    new DOMRect(panel.style.left ? 12 : 650, 80, 350, 660);
+  input.getBoundingClientRect = () => new DOMRect(700, 300, 200, 30);
+  const presentation = createFieldPresentation(document);
+  expect(presentation.show(snapshot.registry, id)).toBe(true);
+  input.getBoundingClientRect = () => new DOMRect(300, 300, 200, 30);
+  expect(presentation.show(snapshot.registry, id)).toBe(true);
+  expect(panel.style.left).toBe("12px");
+  presentation.clear();
+  expect(panel.style.left).toBe("");
+  expect(panel.style.right).toBe("");
 });
