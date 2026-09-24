@@ -1067,3 +1067,94 @@ it("rejects SET_TEXT for a text-trigger BUTTON_OPTION binding", () => {
     }),
   ).toThrow(AnalysisContractError);
 });
+
+describe("SELECT_DATE capability", () => {
+  const calendarRequest: FieldsAnalyzeRequest = {
+    ...fieldsRequest,
+    supportedWriteCommands: ["SELECT_DATE"],
+    sections: [
+      {
+        ...fieldsRequest.sections[0]!,
+        fields: [
+          {
+            candidateId: "field-1",
+            element: "input",
+            control: "text",
+            visibility: "visible",
+            readonly: true,
+            semanticContext: { inputType: "text" },
+          },
+        ],
+      },
+    ],
+  };
+  const calendarResponse = {
+    snapshotId: "snapshot-b",
+    mode: "GENERIC",
+    analysisStatus: "COMPLETE",
+    fields: [
+      {
+        candidateId: "field-1",
+        matchType: "MATCH",
+        valueBinding: {
+          type: "DIRECT",
+          profileFieldKey: "military.military.serviceStartDate",
+        },
+        autofillPolicy: "ALLOWED",
+        mappingStatus: "LLM_SUGGESTED",
+        interactionStatus: "READY",
+        writePlan: { command: "SELECT_DATE" },
+      },
+    ],
+  };
+
+  it("accepts SELECT_DATE for a date-defined DIRECT profile key", () => {
+    expect(
+      validateFieldsResponse(calendarRequest, calendarResponse).fields[0],
+    ).toMatchObject({ writePlan: { command: "SELECT_DATE" } });
+  });
+
+  it("rejects SELECT_DATE for a non-date DIRECT profile key", () => {
+    expect(() =>
+      validateFieldsResponse(calendarRequest, {
+        ...calendarResponse,
+        fields: [
+          {
+            ...calendarResponse.fields[0],
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "education.university.schoolName",
+            },
+          },
+        ],
+      }),
+    ).toThrow(AnalysisContractError);
+  });
+
+  it("rejects SELECT_DATE when the client does not support it", () => {
+    expect(() =>
+      validateFieldsResponse(
+        { ...calendarRequest, supportedWriteCommands: undefined },
+        calendarResponse,
+      ),
+    ).toThrow(AnalysisContractError);
+  });
+
+  it("keeps SEARCH_SELECTION for a non-date readonly text field", () => {
+    expect(
+      validateFieldsResponse(calendarRequest, {
+        ...calendarResponse,
+        fields: [
+          {
+            ...calendarResponse.fields[0],
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "education.university.schoolName",
+            },
+            writePlan: { command: "SEARCH_SELECTION" },
+          },
+        ],
+      }).fields[0],
+    ).toMatchObject({ writePlan: { command: "SEARCH_SELECTION" } });
+  });
+});

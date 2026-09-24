@@ -19,7 +19,8 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.WritePlan;
 @Component
 public final class FieldInteractionPolicy {
 
-    private static final Set<String> CANONICAL_FIELDS = new SupportedProfileFields().keys();
+    private static final SupportedProfileFields SUPPORTED_FIELDS = new SupportedProfileFields();
+    private static final Set<String> CANONICAL_FIELDS = SUPPORTED_FIELDS.keys();
 
     public Decision evaluate(
         FieldCandidate candidate,
@@ -33,6 +34,15 @@ public final class FieldInteractionPolicy {
         FieldMappingResolver.Result mapping,
         boolean generic
     ) {
+        return evaluate(candidate, mapping, generic, List.of());
+    }
+
+    public Decision evaluate(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping,
+        boolean generic,
+        List<WriteCommand> supportedWriteCommands
+    ) {
         if (mapping instanceof FieldMappingResolver.NoMatch) {
             return new Decision(
                 InteractionStatus.BLOCKED,
@@ -44,18 +54,23 @@ public final class FieldInteractionPolicy {
             || Boolean.TRUE.equals(candidate.inert())) {
             return withoutWrite(InteractionStatus.BLOCKED);
         }
-        boolean searchSelection = generic
+        boolean dateSelection = generic && isDateSelection(
+            candidate, mapping, supportedWriteCommands
+        );
+        boolean searchSelection = generic && !dateSelection
             && isSearchSelection(candidate, mapping);
         if (Boolean.TRUE.equals(candidate.readonly())
             && !searchSelection
+            && !dateSelection
             && (generic || !allowsReadonlyText(candidate, mapping))) {
             return withoutWrite(InteractionStatus.BLOCKED);
         }
         if (candidate.visibility() == Visibility.HIDDEN) {
             return withoutWrite(InteractionStatus.MANUAL_REVEAL_REQUIRED);
         }
-        WriteCommand command = searchSelection
-            ? WriteCommand.SEARCH_SELECTION
+        WriteCommand command = dateSelection
+            ? WriteCommand.SELECT_DATE
+            : searchSelection ? WriteCommand.SEARCH_SELECTION
             : writeCommand(candidate, mapping);
         if (command == null) {
             return withoutWrite(InteractionStatus.UNVERIFIED);
@@ -68,6 +83,26 @@ public final class FieldInteractionPolicy {
     }
 
     // This authorizes local preflight, never a direct write or an assumed safe popup.
+    private static boolean isDateSelection(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping,
+        List<WriteCommand> supportedWriteCommands
+    ) {
+        if (supportedWriteCommands == null
+            || !supportedWriteCommands.contains(WriteCommand.SELECT_DATE)
+            || !Boolean.TRUE.equals(candidate.readonly())
+            || candidate.element() != FormElement.INPUT
+            || candidate.control() != FormControl.TEXT
+            || candidate.visibility() != Visibility.VISIBLE
+            || candidate.semanticContext() == null
+            || candidate.semanticContext().inputType() != InputType.TEXT
+            || !(mapping instanceof FieldMappingResolver.Match match)
+            || !(match.valueBinding() instanceof FieldMappingResolver.DirectBinding direct)) {
+            return false;
+        }
+        return SUPPORTED_FIELDS.isDateField(direct.profileFieldKey());
+    }
+
     private static boolean isSearchSelection(
         FieldCandidate candidate,
         FieldMappingResolver.Result mapping

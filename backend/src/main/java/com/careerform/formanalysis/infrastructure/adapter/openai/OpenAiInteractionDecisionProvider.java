@@ -27,7 +27,10 @@ public final class OpenAiInteractionDecisionProvider
         unrelated. SEARCH_POPUP_OPENER selects only a visible enabled button-like
         control in the target field group or repeat row. SEARCH_QUERY_INPUT selects
         only a visible writable text/search input in the dialog. SEARCH_SUBMIT selects
-        only a visible enabled search submit control in the dialog. Do not invent
+        only a visible enabled search submit control in the dialog. CALENDAR_OPENER
+        selects only a visible enabled button-like control in the target field group
+        or repeat row. CALENDAR_YEAR_TRIGGER and CALENDAR_APPLY select only a visible
+        enabled button-like control in the calendar container or dialog. Do not invent
         selectors, identifiers, values, actions, code, results, or execution claims.
         The browser performs all DOM actions and verifies every effect locally.
         """;

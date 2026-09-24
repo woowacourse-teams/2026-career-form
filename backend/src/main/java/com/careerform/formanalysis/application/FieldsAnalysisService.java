@@ -218,7 +218,8 @@ public final class FieldsAnalysisService {
             .map(candidate -> toAnalysis(
                 candidate,
                 mappings.get(candidate.candidateId()),
-                mappingStatus
+                mappingStatus,
+                request.supportedWriteCommands()
             ))
             .toList();
     }
@@ -226,13 +227,15 @@ public final class FieldsAnalysisService {
     private FieldAnalysis toAnalysis(
         FieldCandidate candidate,
         FieldMappingResolver.Result mapping,
-        MappingStatus mappingStatus
+        MappingStatus mappingStatus,
+        List<FieldsAnalysisResponse.WriteCommand> supportedWriteCommands
     ) {
         FieldInteractionPolicy.Decision decision =
             interactionPolicy.evaluate(
                 candidate,
                 mapping,
-                mappingStatus == MappingStatus.LLM_SUGGESTED
+                mappingStatus == MappingStatus.LLM_SUGGESTED,
+                supportedWriteCommands
             );
         if (mapping instanceof FieldMappingResolver.NoMatch) {
             return new NoMatchFieldAnalysis(

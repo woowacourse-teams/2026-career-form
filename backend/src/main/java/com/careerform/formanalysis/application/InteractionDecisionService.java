@@ -259,7 +259,7 @@ public final class InteractionDecisionService {
             return false;
         }
         return switch (role) {
-            case SEARCH_POPUP_OPENER -> !Boolean.TRUE.equals(candidate.readonly())
+            case SEARCH_POPUP_OPENER, CALENDAR_OPENER -> !Boolean.TRUE.equals(candidate.readonly())
                 && (candidate.element() == Element.BUTTON
                     || candidate.element() == Element.LINK
                     || candidate.element() == Element.INPUT)
@@ -276,9 +276,10 @@ public final class InteractionDecisionService {
                     == InteractionDecisionRequest.RelationToTarget.DIALOG_CONTROL
                     || candidate.relationToTarget()
                         == InteractionDecisionRequest.RelationToTarget.SAME_CONTAINER);
-            case SEARCH_SUBMIT -> !Boolean.TRUE.equals(candidate.readonly())
+            case SEARCH_SUBMIT, CALENDAR_YEAR_TRIGGER, CALENDAR_APPLY -> !Boolean.TRUE.equals(candidate.readonly())
                 && (candidate.element() == Element.BUTTON
-                    || candidate.element() == Element.INPUT)
+                    || candidate.element() == Element.INPUT
+                    || candidate.element() == Element.LINK)
                 && (candidate.control() == Control.BUTTON
                     || candidate.control() == Control.SUBMIT)
                 && (candidate.relationToTarget()

@@ -128,6 +128,8 @@ export interface PreparationAnalyzeRequest {
 
 export interface FieldsAnalyzeRequest {
   schemaVersion: 2;
+  /** Optional so pre-calendar servers retain the schemaVersion 2 contract. */
+  supportedWriteCommands?: ["SELECT_DATE"];
   snapshotId: string;
   site: SiteDescriptor;
   sections: FieldsSection[];
@@ -181,7 +183,8 @@ export type WriteCommand =
   | "SELECT_OPTION"
   | "SELECT_BUTTON_OPTION"
   | "CHECK_RADIO"
-  | "CHECK_CHECKBOX";
+  | "CHECK_CHECKBOX"
+  | "SELECT_DATE";
 
 export type DerivedRecipe =
   | "KOREAN_FULL_NAME"

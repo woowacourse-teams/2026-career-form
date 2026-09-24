@@ -1,7 +1,12 @@
 import type { SemanticContext, SiteDescriptor } from "./types";
 
 export type InteractionRole =
-  "SEARCH_POPUP_OPENER" | "SEARCH_QUERY_INPUT" | "SEARCH_SUBMIT";
+  | "SEARCH_POPUP_OPENER"
+  | "SEARCH_QUERY_INPUT"
+  | "SEARCH_SUBMIT"
+  | "CALENDAR_OPENER"
+  | "CALENDAR_YEAR_TRIGGER"
+  | "CALENDAR_APPLY";
 
 export interface InteractionCandidate {
   candidateId: string;
