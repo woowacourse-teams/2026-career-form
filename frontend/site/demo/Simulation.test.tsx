@@ -98,14 +98,13 @@ it("plays one copy-and-paste scene on hover without network or clipboard access"
     expect(screen.getByLabelText("상세주소")).toHaveValue("");
     expect(screen.queryByLabelText("결과 확인 시연 단계")).toBeNull();
     fireEvent.pointerEnter(container.firstElementChild!);
-    await act(() => vi.advanceTimersByTimeAsync(800));
+    await act(() => vi.advanceTimersByTimeAsync(1000));
     expect(screen.getByText("복사됨")).toBeInTheDocument();
     expect(screen.getByLabelText("상세주소")).toHaveValue("");
-    await act(() => vi.advanceTimersByTimeAsync(1300));
+    await act(() => vi.advanceTimersByTimeAsync(2200));
     expect(screen.getByLabelText("상세주소")).toHaveValue("101동 1001호");
-    expect(screen.getByText("붙여넣었어요")).toBeVisible();
+    expect(screen.getByText("남은 칸을 채웠어요.")).toBeVisible();
     expect(fetch).not.toHaveBeenCalled();
-    await act(() => vi.advanceTimersByTimeAsync(1000));
     fireEvent.pointerEnter(container.firstElementChild!);
     expect(screen.getByLabelText("상세주소")).toHaveValue("");
   } finally {

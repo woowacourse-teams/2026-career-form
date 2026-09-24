@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { WorkflowResults } from "../../src/autofill/workflow/WorkflowResults";
+import { PendingResultRow } from "../../src/autofill/workflow/PendingResultRow";
 import styles from "./ReviewPreview.module.css";
 
 const value = "101동 1001호";
@@ -21,8 +21,7 @@ const item = {
 export function ReviewPreview() {
   const root = useRef<HTMLDivElement>(null);
   const running = useRef(false);
-  const [width, setWidth] = useState(window.innerWidth);
-  const scale = Math.min(1, width / 760);
+  const [phase, setPhase] = useState("idle");
   const [run, setRun] = useState(0);
   const [pasted, setPasted] = useState(false);
   const [cursor, setCursor] = useState({
@@ -35,13 +34,9 @@ export function ReviewPreview() {
     if (running.current) return;
     running.current = true;
     setPasted(false);
+    setPhase("copy");
     setRun((current) => current + 1);
   };
-  useEffect(() => {
-    const resize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
   useEffect(() => {
     if (!run) return;
     const move = (selector: string) => {
@@ -51,8 +46,8 @@ export function ReviewPreview() {
       const origin = root.current?.getBoundingClientRect();
       if (target && origin)
         setCursor({
-          x: (target.left - origin.left + target.width / 2) / scale,
-          y: (target.top - origin.top + target.height / 2) / scale,
+          x: target.left - origin.left + target.width / 2,
+          y: target.top - origin.top + target.height / 2,
           visible: true,
           pressed: false,
         });
@@ -64,23 +59,26 @@ export function ReviewPreview() {
           ?.querySelector<HTMLButtonElement>('[aria-label="상세주소 복사"]')
           ?.click();
         setCursor((current) => ({ ...current, pressed: true }));
-      }, 750),
-      window.setTimeout(() => move("#example-address-detail"), 1300),
+        setPhase("copied");
+      }, 900),
+      window.setTimeout(() => {
+        setPhase("paste");
+        move("#example-address-detail");
+      }, 2100),
       window.setTimeout(() => {
         setPasted(true);
-        setCursor((current) => ({ ...current, pressed: true }));
-      }, 2000),
-      window.setTimeout(() => {
+        setPhase("done");
         running.current = false;
-      }, 3000),
+        setCursor((current) => ({ ...current, pressed: true }));
+      }, 3100),
     ];
     return () => timers.forEach(window.clearTimeout);
-  }, [run, scale]);
+  }, [run]);
   return (
     <div
       ref={root}
       className={styles.preview}
-      style={{ width: Math.max(760, width), zoom: scale }}
+      data-phase={phase}
       onPointerEnter={start}
       onPointerDown={start}
       onFocus={start}
@@ -88,52 +86,63 @@ export function ReviewPreview() {
       aria-label="복사해서 지원서에 붙여넣는 시연"
     >
       <div className={styles.caption}>
-        <strong>남은 항목은 복사해서 마무리하세요.</strong>
-        <span>
-          {run ? "가상 정보로 만든 예시" : "마우스를 올리거나 눌러보세요"}
-        </span>
+        <strong>상세주소 한 칸이 남았어요.</strong>
+        <span>자동 입력 후 · 가상 예시</span>
       </div>
-      <div className={styles.form} aria-label="예시 지원서">
-        <span className={styles.eyebrow}>지원서 작성</span>
-        <h3>연락처와 주소</h3>
-        <label htmlFor="example-address">기본주소</label>
-        <input
-          id="example-address"
-          value="예시시 가상로 100"
-          readOnly
-          tabIndex={-1}
-        />
-        <label htmlFor="example-address-detail">상세주소</label>
-        <input
-          id="example-address-detail"
-          value={pasted ? value : ""}
-          readOnly
-          tabIndex={-1}
-          placeholder="상세주소를 입력하세요"
-          data-filled={pasted}
-        />
-        <p className={styles.feedback} role="status">
-          {pasted ? "붙여넣었어요" : "\u00a0"}
-        </p>
-      </div>
-      <div className={styles.panel} aria-label="지원서 패널 예시" inert>
-        <div className={styles.panelHeading}>
-          CAREER FORM <span>지원서 패널</span>
+      <div className={styles.scene}>
+        <div className={styles.form} aria-label="예시 지원서">
+          <h3>지원서</h3>
+          <label htmlFor="example-address-detail">상세주소</label>
+          <input
+            id="example-address-detail"
+            value={pasted ? value : ""}
+            readOnly
+            tabIndex={-1}
+            placeholder="비어 있는 칸"
+            data-filled={pasted}
+          />
+          <p className={styles.feedback}>
+            {pasted ? "붙여넣기 완료" : "이 칸에 넣을 거예요"}
+          </p>
         </div>
-        <WorkflowResults
-          key={run}
-          reviewItems={[item]}
-          results={[
+        <div className={styles.panel} aria-label="지원서 패널 예시" inert>
+          <h3>커리어폼</h3>
+          <div className={styles.pending}>
+            확인 필요 <strong>1</strong>
+          </div>
+          <PendingResultRow
+            key={run}
+            entry={{
+              id: item.candidateId,
+              item,
+              reason: item.reason,
+              written: false,
+            }}
+            copyText={async () => {
+              /* No access to the system clipboard. */
+            }}
+          />
+        </div>
+      </div>
+      <div className={styles.playback}>
+        <p role="status">
+          {
             {
-              candidateId: item.candidateId,
-              status: "skipped",
-              reason: "직접 입력 필요",
-            },
-          ]}
-          copyText={async () => {
-            /* Simulated copying stays inside this scene. */
-          }}
-        />
+              idle: "오른쪽 값을 복사해 왼쪽 칸에 넣어볼게요.",
+              copy: "패널에서 ‘복사’를 눌러요.",
+              copied: "상세주소를 복사했어요.",
+              paste: "지원서의 빈 칸에 붙여넣어요.",
+              done: "남은 칸을 채웠어요.",
+            }[phase]
+          }
+        </p>
+        <button type="button" onClick={start}>
+          {phase === "idle"
+            ? "시연 보기"
+            : phase === "done"
+              ? "다시 보기"
+              : "재생 중"}
+        </button>
       </div>
       <svg
         className={styles.cursor}

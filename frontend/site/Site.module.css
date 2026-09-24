@@ -886,3 +886,29 @@
     font-size: 29px;
   }
 }
+
+.ready {
+  flex: 1;
+  padding: 20px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-muted);
+}
+.ready strong {
+  font-size: 18px;
+  color: var(--color-text-strong);
+}
+.ready p {
+  font-size: 14px;
+  margin: 6px 0 14px;
+}
+.ready > a:not(.primary) {
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 600px) {
+  .ready {
+    flex-basis: 100%;
+  }
+}

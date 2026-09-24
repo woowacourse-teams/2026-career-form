@@ -26,8 +26,8 @@ it("starts installed users with profile registration and finishes after usage gu
     screen.getByTitle("값을 복사해 지원서에 붙여넣는 시연"),
   ).toHaveAttribute("src", "/onboarding-guide.html?view=guide-results");
   expect(
-    screen.getByRole("link", { name: /소개 페이지로 돌아가기/ }),
-  ).toHaveAttribute("href", "/onboarding.html?page=%2F");
+    screen.getByRole("link", { name: /내 프로필 확인하기/ }),
+  ).toHaveAttribute("href", "/options.html");
   expect(container.querySelector("input")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /이전 안내/ }));
   fireEvent.click(screen.getByRole("button", { name: /이전 안내/ }));

@@ -270,9 +270,17 @@ function Onboarding({
               <Icon name="arrow" />
             </button>
           ) : (
-            <SiteLink className={styles.primary} href="/">
-              소개 페이지로 돌아가기 <Icon name="arrow" />
-            </SiteLink>
+            <div className={styles.ready}>
+              <strong>이제 지원서에서 시작해 보세요.</strong>
+              <p>작성 중인 지원서 탭에서 커리어폼을 열면 돼요.</p>
+              {profileHref ? (
+                <a href={profileHref} target="_blank" rel="noreferrer">
+                  내 프로필 확인하기 ↗
+                </a>
+              ) : (
+                <InstallLink />
+              )}
+            </div>
           )}
         </div>
       </section>
