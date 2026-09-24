@@ -1,4 +1,5 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import { FIELD_HIGHLIGHT } from "./field-highlight-style";
 import { fieldHighlightClip, floatingLabelRects } from "./field-highlight-clip";
 
 /** Only presentation uses these containers; this never authorizes a write. */
@@ -235,12 +236,23 @@ export function presentSection(
       ),
   );
   const overlays = outlined.map((element) => {
+    const background = element.style.getPropertyValue("background-color");
+    const priority = element.style.getPropertyPriority("background-color");
+    element.style.setProperty(
+      "background-color",
+      FIELD_HIGHLIGHT.background,
+      "important",
+    );
+    const restoreBackground = () => {
+      if (background)
+        element.style.setProperty("background-color", background, priority);
+      else element.style.removeProperty("background-color");
+    };
     const overlay = document.createElement("div");
     overlay.setAttribute("data-career-form-section-highlight", "");
     overlay.setAttribute("aria-hidden", "true");
-    overlay.style.cssText =
-      "all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:3px solid #a65f2d;border-radius:8px;background:transparent;z-index:2147483000;";
-    return { element, overlay };
+    overlay.style.cssText = `all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:${FIELD_HIGHLIGHT.border};border-radius:8px;background:transparent;z-index:2147483000;`;
+    return { element, overlay, restoreBackground };
   });
   const update = () => {
     if (!elements.some((element) => element.isConnected)) {
@@ -271,7 +283,10 @@ export function presentSection(
       ? undefined
       : new ResizeObserver(update);
   const clear = () => {
-    overlays.forEach(({ overlay }) => overlay.remove());
+    overlays.forEach(({ overlay, restoreBackground }) => {
+      overlay.remove();
+      restoreBackground();
+    });
     document.removeEventListener("scroll", update, true);
     view.removeEventListener("resize", update);
     observer?.disconnect();

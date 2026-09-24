@@ -1,5 +1,6 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { presentSection } from "./section-presentation";
+import { FIELD_HIGHLIGHT } from "./field-highlight-style";
 export function createFieldPresentation(document: Document) {
   const withinVisibleArea = (element: HTMLElement) => {
     const view = document.defaultView;
@@ -66,8 +67,8 @@ export function createFieldPresentation(document: Document) {
     if (computed?.display === "none" || computed?.visibility === "hidden")
       return false;
     const properties = {
-      "background-color": "#fff1d8",
-      outline: "2px solid #ad5b2f",
+      "background-color": FIELD_HIGHLIGHT.background,
+      outline: FIELD_HIGHLIGHT.border,
       "outline-offset": "2px",
     };
     const saved = Object.keys(properties).map((name) => ({

@@ -281,3 +281,19 @@ it("cuts a gap in the top border beneath a floating label and follows label move
   expect(outlines[0].style.clipPath).toBe("");
   p.clear();
 });
+
+it("uses the pending highlight colors and restores each field background on category change", () => {
+  const { inputs, snapshot, ids } = fixture();
+  inputs[0].style.setProperty("background-color", "pink", "important");
+  const p = createFieldPresentation(document);
+  p.showSection(snapshot.registry, ids);
+  expect(inputs[0].style.backgroundColor).toBe("rgb(255, 241, 216)");
+  expect(inputs[1].style.backgroundColor).toBe("rgb(255, 241, 216)");
+  p.showSection(snapshot.registry, [ids[1]]);
+  expect(inputs[0].style.backgroundColor).toBe("pink");
+  expect(inputs[0].style.getPropertyPriority("background-color")).toBe(
+    "important",
+  );
+  p.clear();
+  expect(inputs[1].style.backgroundColor).toBe("");
+});
