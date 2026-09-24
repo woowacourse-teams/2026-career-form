@@ -150,7 +150,7 @@ it("lets readers switch highlighted sections and explicitly confirm the current 
   expect(fetch).not.toHaveBeenCalled();
 });
 
-it("demonstrates pending fields and copying before reviewing completed entries", async () => {
+it("demonstrates finding, copying and pasting without switching away from pending", async () => {
   vi.useFakeTimers();
   try {
     const { container } = render(<PanelGuide kind="results" />);
@@ -163,7 +163,7 @@ it("demonstrates pending fields and copying before reviewing completed entries",
     for (const [number, label] of [
       [1, "남은 항목 찾기"],
       [2, "값 복사하기"],
-      [3, "입력 완료 살펴보기"],
+      [3, "검색창에 붙여넣기"],
     ] as const) {
       fireEvent.mouseEnter(
         screen.getByRole("button", { name: `${number}. ${label}` }),
@@ -171,7 +171,7 @@ it("demonstrates pending fields and copying before reviewing completed entries",
       await act(() => vi.advanceTimersByTimeAsync(800));
       expect(
         screen.getByRole("tab", {
-          name: number === 3 ? "입력 완료 4개" : "확인 필요 2개",
+          name: "확인 필요 2개",
         }),
       ).toHaveAttribute("aria-selected", "true");
       if (number === 1)
@@ -180,10 +180,13 @@ it("demonstrates pending fields and copying before reviewing completed entries",
         });
       if (number === 2) expect(screen.getByText("복사됨")).toBeVisible();
     }
-    expect(screen.getByText("0 / 2개 구역 확인")).toBeVisible();
+    expect(screen.getByLabelText("주소 검색어")).toHaveValue(
+      "예시시 가상로 100",
+    );
     expect(
       document.querySelectorAll("[data-career-form-section-highlight]"),
-    ).toHaveLength(2);
+    ).toHaveLength(0);
+    expect(fetch).not.toHaveBeenCalled();
   } finally {
     vi.useRealTimers();
   }

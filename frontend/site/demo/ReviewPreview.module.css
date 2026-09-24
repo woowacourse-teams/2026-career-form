@@ -204,3 +204,49 @@
     transition: none;
   }
 }
+
+.form {
+  position: relative;
+}
+.searchDemo {
+  position: absolute;
+  top: 110px;
+  left: 24px;
+  right: 24px;
+  z-index: 2;
+  padding: 24px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 10px 30px #59463720;
+}
+.searchDemo strong {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+}
+.searchDemo small {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+.searchDemo label {
+  display: block;
+  margin: 24px 0 8px;
+  font-size: 12px;
+}
+.searchDemo input {
+  width: 100%;
+  padding: 13px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  font-size: 13px;
+}
+.searchDemo p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}

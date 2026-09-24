@@ -69,6 +69,7 @@ export function ReviewPreview() {
   });
   const [run, setRun] = useState(0);
   const [step, setStep] = useState(0);
+  const [pasted, setPasted] = useState("");
   const [explored, setExplored] = useState(false);
   const [feedback, setFeedback] = useState("아래 패널을 직접 눌러보세요");
   const form = useRef<HTMLDivElement>(null);
@@ -92,6 +93,7 @@ export function ReviewPreview() {
     return () => window.removeEventListener("resize", resize);
   }, []);
   const selectStep = (next: number) => {
+    setPasted("");
     setStep(next);
     setRun((value) => value + 1);
   };
@@ -118,18 +120,16 @@ export function ReviewPreview() {
         ? '[aria-label="기본주소 필드로 이동"]'
         : step === 2
           ? '[aria-label="기본주소 복사"]'
-          : '[aria-label="직장경력 구역 보기"]';
+          : "#review-demo-search";
     const timers = [
-      window.setTimeout(
-        () =>
-          click(
-            `[role="tab"][data-state="${step === 3 ? "completed" : "pending"}"]`,
-          ),
-        20,
-      ),
+      window.setTimeout(() => click('[role="tab"][data-state="pending"]'), 20),
       window.setTimeout(() => move(target), 100),
       window.setTimeout(() => {
-        click(target);
+        if (step === 3)
+          setPasted(
+            examples.find((example) => example.id === "address")!.value,
+          );
+        else click(target);
         setCursor((current) => ({ ...current, pressed: true }));
       }, 750),
     ];
@@ -174,7 +174,7 @@ export function ReviewPreview() {
           <span>숫자에 마우스를 올려보세요</span>
         </div>
         <ol aria-label="결과 확인 시연 단계">
-          {["남은 항목 찾기", "값 복사하기", "입력 완료 살펴보기"].map(
+          {["남은 항목 찾기", "값 복사하기", "검색창에 붙여넣기"].map(
             (label, index) => (
               <li
                 key={label}
@@ -218,6 +218,29 @@ export function ReviewPreview() {
           <strong>예시 지원서</strong>
           <span>가상 정보 · 읽기 전용</span>
         </div>
+        {step === 3 && (
+          <div
+            className={styles.searchDemo}
+            role="region"
+            aria-label="주소 검색 시연"
+          >
+            <strong>
+              주소 검색 <small>예시 검색창</small>
+            </strong>
+            <label htmlFor="review-demo-search">주소 검색어</label>
+            <input
+              id="review-demo-search"
+              value={pasted}
+              readOnly
+              placeholder="복사한 주소를 붙여넣으세요"
+            />
+            <p role="status">
+              {pasted
+                ? "붙여넣었어요. 검색 결과에서 주소를 직접 선택하세요."
+                : "검색창에 붙여넣기"}
+            </p>
+          </div>
+        )}
         {["직장경력", "어학", "직접 채울 항목"].map((category) => (
           <section key={category} className={styles.category}>
             <h3>{category}</h3>
@@ -267,7 +290,7 @@ export function ReviewPreview() {
                 "",
                 "확인 필요 항목을 누르면 입력칸으로 이동해요",
                 "값을 복사한 뒤 검색·선택은 직접 마무리해요",
-                "입력 완료에서 구역별로 입력한 내용을 살펴보세요",
+                "복사한 주소를 검색창에 붙여넣고, 검색 결과는 직접 선택해요",
               ][step]
             : feedback}
         </p>
