@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { executeCalendarSelection } from "./calendar-executor";
 
 afterEach(() => {
@@ -337,6 +337,46 @@ it("stops when a month click changes another select even if the target value per
     .addEventListener("click", () => {
       target.value = "2026-03";
       document.querySelector("select")!.value = "b";
+      popup.hidden = true;
+    });
+  await expect(
+    executeCalendarSelection({ target, targetYearMonth: "2026-03" }),
+  ).resolves.toMatchObject({
+    status: "needs-verification",
+    reason: "other_input_changed",
+  });
+});
+
+it("never clicks a default submit button inside a form", async () => {
+  document.body.innerHTML = `<form><input id="date" readonly type="text"><button aria-labelledby="date" aria-controls="picker">월 선택</button><div id="picker" role="dialog" hidden><button>2026</button>${months}</div></form>`;
+  const opener = document.querySelector<HTMLButtonElement>(
+    "[aria-controls='picker']",
+  )!;
+  const clicked = vi.fn();
+  opener.addEventListener("click", clicked);
+  await expect(
+    executeCalendarSelection({
+      target: document.querySelector<HTMLInputElement>("#date")!,
+      targetYearMonth: "2026-03",
+    }),
+  ).resolves.toMatchObject({ status: "needs-verification" });
+  expect(clicked).not.toHaveBeenCalled();
+});
+
+it("stops when a month click changes an unrelated checkbox", async () => {
+  document.body.innerHTML = `<section><input id="date" readonly type="text"><button type="button" aria-labelledby="date" aria-controls="picker">월 선택</button><div id="picker" role="dialog" hidden><button type="button">2026</button>${months}</div></section><input id="other" type="checkbox">`;
+  const target = document.querySelector<HTMLInputElement>("#date")!;
+  const popup = document.querySelector<HTMLElement>("#picker")!;
+  document
+    .querySelector<HTMLButtonElement>("[aria-controls='picker']")!
+    .addEventListener("click", () => {
+      popup.hidden = false;
+    });
+  popup
+    .querySelector<HTMLButtonElement>("[data-month='3']")!
+    .addEventListener("click", () => {
+      target.value = "2026-03";
+      document.querySelector<HTMLInputElement>("#other")!.checked = true;
       popup.hidden = true;
     });
   await expect(

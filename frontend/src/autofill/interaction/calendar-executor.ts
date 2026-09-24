@@ -69,11 +69,18 @@ export async function executeCalendarSelection(
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >("input, select, textarea"),
     );
+  const stateOf = (
+    control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+  ) => ({
+    value: control === args.target ? read(args.target) : control.value,
+    checked:
+      control instanceof HTMLInputElement &&
+      (control.type === "checkbox" || control.type === "radio")
+        ? control.checked
+        : undefined,
+  });
   const before = new Map(
-    controls().map((control) => [
-      control,
-      control === args.target ? read(args.target) : control.value,
-    ]),
+    controls().map((control) => [control, stateOf(control)]),
   );
   let activations = 0;
   const activate = (element: HTMLElement): boolean => {
@@ -81,6 +88,9 @@ export async function executeCalendarSelection(
       args.signal?.aborted ||
       !targetIsStable() ||
       !element.isConnected ||
+      (element instanceof HTMLButtonElement &&
+        element.form !== null &&
+        element.type !== "button") ||
       ++activations > CALENDAR_MAX_ACTIVATIONS ||
       (args.now ?? Date.now)() - started >= CALENDAR_FIELD_TIMEOUT_MS
     )
@@ -233,9 +243,11 @@ export async function executeCalendarSelection(
   if (
     controls().length !== before.size ||
     Array.from(before).some(
-      ([control, value]) =>
+      ([control, state]) =>
         control !== args.target &&
-        (!control.isConnected || control.value !== value),
+        (!control.isConnected ||
+          stateOf(control).value !== state.value ||
+          stateOf(control).checked !== state.checked),
     )
   )
     return { status: "needs-verification", reason: "other_input_changed" };
