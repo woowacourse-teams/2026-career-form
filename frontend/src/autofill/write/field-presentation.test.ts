@@ -144,7 +144,7 @@ it("restores only owned styling and preserves concurrent page changes", () => {
   expect(input.style.backgroundColor).toBe("red");
 });
 
-it("moves an overlapping panel below the field and restores it on clear", () => {
+it("moves an overlapping panel sideways without shrinking it and restores it on clear", () => {
   const { input, snapshot, id } = fixture();
   const host = document.createElement("career-form-profile-panel");
   document.body.append(host);
@@ -171,10 +171,15 @@ it("moves an overlapping panel below the field and restores it on clear", () => 
     }) as DOMRect;
   const presentation = createFieldPresentation(document);
   expect(presentation.show(snapshot.registry, id)).toBe(true);
-  expect(Number.parseInt(panel.style.top)).toBeGreaterThan(330);
+  expect(panel.style.left).toBe("12px");
+  expect(panel.style.right).toBe("auto");
+  expect(panel.style.top).toBe("");
+  expect(panel.style.height).toBe("");
   presentation.clear();
   expect(panel.style.top).toBe("");
   expect(panel.style.height).toBe("");
+  expect(panel.style.left).toBe("");
+  expect(panel.style.right).toBe("");
 });
 
 it("does not claim a field hidden under an unmovable overlay is visible", () => {
@@ -200,4 +205,24 @@ it("does not claim a field hidden under an unmovable overlay is visible", () => 
   } finally {
     document.elementFromPoint = original;
   }
+});
+
+it("keeps panel size and scroll intact when there is no room beside the field", () => {
+  const { input, snapshot, id } = fixture();
+  const host = document.createElement("career-form-profile-panel");
+  document.body.append(host);
+  const root = host.attachShadow({ mode: "open" });
+  root.innerHTML =
+    '<div class="career-form-in-page-panel" style="top: 12px; height: 700px; right: 12px"><div></div></div>';
+  const panel = root.firstElementChild as HTMLElement;
+  panel.scrollTop = 180;
+  input.getBoundingClientRect = () => new DOMRect(100, 300, 800, 30);
+  panel.getBoundingClientRect = () => new DOMRect(650, 12, 350, 700);
+  const before = panel.style.cssText;
+  expect(createFieldPresentation(document).show(snapshot.registry, id)).toBe(
+    false,
+  );
+  expect(panel.style.cssText).toBe(before);
+  expect(panel.scrollTop).toBe(180);
+  expect(input.style.backgroundColor).toBe("red");
 });

@@ -96,7 +96,7 @@ export function createFieldPresentation(document: Document) {
         inline: "center",
         behavior: "instant",
       });
-    // Keep the target left of the floating panel, including in nested scrollers.
+    // Try the page's horizontal scroll space before moving the panel aside.
     const panel = panelHost?.shadowRoot?.querySelector<HTMLElement>(
       ".career-form-in-page-panel",
     );
@@ -105,6 +105,7 @@ export function createFieldPresentation(document: Document) {
     if (
       panelRect &&
       rect.right > panelRect.left &&
+      rect.left < panelRect.right &&
       rect.bottom > panelRect.top &&
       rect.top < panelRect.bottom
     ) {
@@ -117,15 +118,22 @@ export function createFieldPresentation(document: Document) {
       });
       const target = element.getBoundingClientRect();
       if (panel && target.right > panelRect.left) {
-        const below = (view?.innerHeight ?? 0) - target.bottom - 24;
-        const above = target.top - 24;
-        const height = Math.min(panelRect.height, Math.max(below, above));
-        if (height < 120) {
+        // Never shrink the results panel to expose a field: that hides the
+        // list the user is navigating and can clamp its scroll position.
+        const gap = 12;
+        const leftSpace = target.left - gap * 2;
+        const rightSpace = (view?.innerWidth ?? 0) - target.right - gap * 2;
+        const left =
+          leftSpace >= panelRect.width
+            ? gap
+            : rightSpace >= panelRect.width
+              ? (view?.innerWidth ?? 0) - panelRect.width - gap
+              : undefined;
+        if (left === undefined) {
           clear();
           return false;
         }
-        const top = below >= above ? target.bottom + 12 : 12;
-        const panelStyles = ["top", "height"].map((name) => ({
+        const panelStyles = ["left", "right"].map((name) => ({
           name,
           value: panel.style.getPropertyValue(name),
           priority: panel.style.getPropertyPriority(name),
@@ -136,8 +144,8 @@ export function createFieldPresentation(document: Document) {
             else panel.style.removeProperty(name);
           }
         };
-        panel.style.setProperty("top", `${top}px`, "important");
-        panel.style.setProperty("height", `${height}px`, "important");
+        panel.style.setProperty("left", `${left}px`, "important");
+        panel.style.setProperty("right", "auto", "important");
       }
     }
     // A fixed header or modal can still cover a centered target. Never report
