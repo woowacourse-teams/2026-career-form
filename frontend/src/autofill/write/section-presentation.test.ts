@@ -255,3 +255,29 @@ it("outlines text controls only, excluding buttons and radio labels", () => {
   ).toHaveLength(1);
   p.clear();
 });
+
+it("cuts a gap in the top border beneath a floating label and follows label movement", () => {
+  const { inputs, snapshot, ids } = fixture();
+  const label = document.createElement("label");
+  label.textContent = "국적 *";
+  inputs[0].parentElement!.append(label);
+  let left = 55;
+  label.getBoundingClientRect = () => new DOMRect(left, 222, 70, 16);
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, ids)).toBe(true);
+  const outlines = [
+    ...document.querySelectorAll<HTMLElement>(
+      "[data-career-form-section-highlight]",
+    ),
+  ];
+  expect(outlines[0].style.clipPath).not.toBe("");
+  expect(outlines[1].style.clipPath).toBe("");
+  const previous = outlines[0].style.clipPath;
+  left += 20;
+  document.dispatchEvent(new Event("scroll"));
+  expect(outlines[0].style.clipPath).not.toBe(previous);
+  label.remove();
+  document.dispatchEvent(new Event("scroll"));
+  expect(outlines[0].style.clipPath).toBe("");
+  p.clear();
+});

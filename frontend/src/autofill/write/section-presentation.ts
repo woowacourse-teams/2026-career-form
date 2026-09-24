@@ -1,4 +1,5 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import { fieldHighlightClip, floatingLabelRects } from "./field-highlight-clip";
 
 /** Only presentation uses these containers; this never authorizes a write. */
 function reviewRoots(element: HTMLElement): HTMLElement[] {
@@ -246,6 +247,7 @@ export function presentSection(
       clear();
       return;
     }
+    const labels = floatingLabelRects(document, outlined);
     for (const { element, overlay } of overlays) {
       const rect = element.getBoundingClientRect();
       const hidden =
@@ -256,6 +258,7 @@ export function presentSection(
         view.getComputedStyle(element).visibility === "hidden";
       Object.assign(overlay.style, {
         display: hidden ? "none" : "block",
+        clipPath: fieldHighlightClip(rect, labels),
         left: `${rect.left}px`,
         top: `${rect.top}px`,
         width: `${rect.width}px`,
