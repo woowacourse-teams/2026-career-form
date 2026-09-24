@@ -40,7 +40,7 @@ public final class OpenAiInteractionDecisionProvider
 
     @Override
     public Resolution decide(Batch batch) {
-        ProviderOutput output = client.generate(
+        ProviderOutput output = client.generateInteraction(
             SYSTEM_PROMPT,
             batch,
             ProviderOutput.class
