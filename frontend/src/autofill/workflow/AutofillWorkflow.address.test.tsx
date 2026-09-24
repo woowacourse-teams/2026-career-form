@@ -155,7 +155,7 @@ it.each([
       "[data-career-form-section-highlight]",
     )!;
     expect(highlight).not.toBeNull();
-    expect(parseFloat(highlight.style.height)).toBe(42);
+    expect(parseFloat(highlight.style.height)).toBe(30);
     expect(
       document.querySelectorAll("[data-career-form-section-highlight]"),
     ).toHaveLength(written);

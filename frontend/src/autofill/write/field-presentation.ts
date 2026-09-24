@@ -213,9 +213,10 @@ export function createFieldPresentation(document: Document) {
     registry: CandidateRegistry,
     ids: readonly string[],
     recorded: readonly HTMLElement[] = [],
+    highlighted?: readonly HTMLElement[],
   ): boolean => {
     restore?.();
-    restore = presentSection(document, registry, ids, recorded);
+    restore = presentSection(document, registry, ids, recorded, highlighted);
     return !!restore;
   };
   return { show, showSection, clear };

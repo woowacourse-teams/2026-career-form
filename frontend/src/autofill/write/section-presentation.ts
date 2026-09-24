@@ -34,6 +34,7 @@ export function presentSection(
   registry: CandidateRegistry,
   ids: readonly string[],
   recorded: readonly HTMLElement[] = [],
+  highlighted?: readonly HTMLElement[],
 ): (() => void) | undefined {
   const view = document.defaultView;
   if (!view) return;
@@ -47,36 +48,35 @@ export function presentSection(
       return [];
     return lookup.handle.elements;
   });
-  const elements = [...new Set([...candidates, ...recorded])].filter(
-    (element) => {
+  const isVisible = (element: HTMLElement) => {
+    if (
+      !element?.isConnected ||
+      element.ownerDocument !== document ||
+      element.getAttribute("type") === "hidden" ||
+      element.tagName === "BUTTON" ||
+      (element instanceof HTMLInputElement &&
+        element.type === "radio" &&
+        !element.checked)
+    )
+      return false;
+    for (
+      let node: HTMLElement | null = element;
+      node;
+      node = node.parentElement
+    ) {
+      const style = view.getComputedStyle(node);
       if (
-        !element?.isConnected ||
-        element.ownerDocument !== document ||
-        element.getAttribute("type") === "hidden" ||
-        element.tagName === "BUTTON" ||
-        (element instanceof HTMLInputElement &&
-          element.type === "radio" &&
-          !element.checked)
+        node.hidden ||
+        node.hasAttribute("inert") ||
+        style.display === "none" ||
+        style.visibility === "hidden"
       )
         return false;
-      for (
-        let node: HTMLElement | null = element;
-        node;
-        node = node.parentElement
-      ) {
-        const style = view.getComputedStyle(node);
-        if (
-          node.hidden ||
-          node.hasAttribute("inert") ||
-          style.display === "none" ||
-          style.visibility === "hidden"
-        )
-          return false;
-      }
-      const rect = element.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    },
-  );
+    }
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  const elements = [...new Set([...candidates, ...recorded])].filter(isVisible);
   if (!elements.length) return;
   const readingBounds = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
@@ -225,7 +225,15 @@ export function presentSection(
     });
   });
   if (!visible) return;
-  const overlays = elements.map((element) => {
+  const outlined = [...new Set(highlighted ?? elements)].filter(
+    (element) =>
+      isVisible(element) &&
+      ["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName) &&
+      !["radio", "checkbox", "submit", "reset", "image", "file"].includes(
+        element.getAttribute("type") ?? "",
+      ),
+  );
+  const overlays = outlined.map((element) => {
     const overlay = document.createElement("div");
     overlay.setAttribute("data-career-form-section-highlight", "");
     overlay.setAttribute("aria-hidden", "true");
@@ -248,10 +256,10 @@ export function presentSection(
         view.getComputedStyle(element).visibility === "hidden";
       Object.assign(overlay.style, {
         display: hidden ? "none" : "block",
-        left: `${rect.left - 6}px`,
-        top: `${rect.top - 6}px`,
-        width: `${rect.width + 12}px`,
-        height: `${rect.height + 12}px`,
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
       });
     }
   };
@@ -268,7 +276,7 @@ export function presentSection(
   document.body.append(...overlays.map(({ overlay }) => overlay));
   document.addEventListener("scroll", update, true);
   view.addEventListener("resize", update);
-  elements.forEach((element) => observer?.observe(element));
+  outlined.forEach((element) => observer?.observe(element));
   update();
   return clear;
 }

@@ -769,6 +769,7 @@ export function AutofillWorkflow({
           fieldsSnapshot.registry,
           candidateIds,
           category ? [...(operated.get(category) ?? [])] : [],
+          [...operated.values()].flatMap((elements) => [...elements]),
         )
       }
       onLocate={(candidateId) =>

@@ -32,7 +32,7 @@ it("highlights each written field without focusing or changing its original styl
     "[data-career-form-section-highlight]",
   ) as HTMLElement;
   expect(overlay).not.toBeNull();
-  expect(parseFloat(overlay.style.height)).toBe(42);
+  expect(parseFloat(overlay.style.height)).toBe(30);
   expect(
     document.querySelectorAll("[data-career-form-section-highlight]"),
   ).toHaveLength(2);
@@ -107,7 +107,7 @@ it("tracks each field while scrolling and removes every overlay on clear", () =>
   ) as HTMLElement;
   inputs[0].getBoundingClientRect = () => new DOMRect(40, 100, 500, 30);
   document.dispatchEvent(new Event("scroll"));
-  expect(overlay.style.top).toBe("94px");
+  expect(overlay.style.top).toBe("100px");
   p.clear();
   document.dispatchEvent(new Event("scroll"));
   expect(overlay.isConnected).toBe(false);
@@ -162,7 +162,7 @@ it("outlines only the written field and leaves the title and untouched controls 
   const overlay = document.querySelector<HTMLElement>(
     "[data-career-form-section-highlight]",
   )!;
-  expect(parseFloat(overlay.style.height)).toBe(42);
+  expect(parseFloat(overlay.style.height)).toBe(30);
   expect(
     document.querySelectorAll("[data-career-form-section-highlight]"),
   ).toHaveLength(1);
@@ -193,8 +193,8 @@ it("outlines the selected military control without enclosing unfilled dependenci
   const overlay = document.querySelector<HTMLElement>(
     "[data-career-form-section-highlight]",
   )!;
-  expect(parseFloat(overlay.style.top)).toBe(174);
-  expect(parseFloat(overlay.style.height)).toBe(42);
+  expect(parseFloat(overlay.style.top)).toBe(180);
+  expect(parseFloat(overlay.style.height)).toBe(30);
   p.clear();
 });
 
@@ -221,8 +221,8 @@ it("draws separate simultaneous outlines only around the written fields", () => 
   expect(outlines).toHaveLength(2);
   outlines.forEach((outline, index) => {
     const field = inputs[index].getBoundingClientRect();
-    expect(parseFloat(outline.style.top)).toBe(field.top - 6);
-    expect(parseFloat(outline.style.height)).toBe(field.height + 12);
+    expect(parseFloat(outline.style.top)).toBe(field.top);
+    expect(parseFloat(outline.style.height)).toBe(field.height);
   });
   p.showSection(snapshot.registry, [ids[0]]);
   expect(
@@ -234,7 +234,7 @@ it("draws separate simultaneous outlines only around the written fields", () => 
   ).toHaveLength(0);
 });
 
-it("does not outline search/add buttons or unselected radio alternatives", () => {
+it("outlines text controls only, excluding buttons and radio labels", () => {
   const { snapshot, inputs } = fixture();
   const button = document.createElement("button");
   const radio = document.createElement("input");
@@ -252,6 +252,6 @@ it("does not outline search/add buttons or unselected radio alternatives", () =>
   p.showSection(snapshot.registry, [], [inputs[0], button, radio]);
   expect(
     document.querySelectorAll("[data-career-form-section-highlight]"),
-  ).toHaveLength(2);
+  ).toHaveLength(1);
   p.clear();
 });
