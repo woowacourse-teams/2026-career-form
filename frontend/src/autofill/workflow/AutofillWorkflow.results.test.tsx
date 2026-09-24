@@ -61,7 +61,7 @@ it("keeps an unchanged value out of new-write totals while counting a verified c
   expect(screen.queryByText("기존 값 유지")).not.toBeInTheDocument();
 });
 
-it("highlights name, nationality, phone and address together when locating contact", async () => {
+it("replaces the previous category highlights when another category is selected", async () => {
   document.body.innerHTML = `<section><label>이름<input name="name"></label><label>국적<select name="nationality"><option value="">선택</option><option value="KR">대한민국</option></select></label></section><section><label>번호<input name="phone"></label><label>주소<input name="address"></label></section><input name="untouched">`;
   const profile = createEmptyProfile();
   profile.personal.koreanGivenName = "합성";
@@ -131,13 +131,27 @@ it("highlights name, nationality, phone and address together when locating conta
       "[data-career-form-section-highlight]",
     ),
   ];
-  expect(outlines).toHaveLength(4);
+  expect(outlines).toHaveLength(2);
   expect(
     outlines
       .map((outline) => parseFloat(outline.style.top))
       .sort((a, b) => a - b),
-  ).toEqual([100, 170, 240, 310]);
+  ).toEqual([240, 310]);
   expect(
     outlines.every((outline) => parseFloat(outline.style.height) === 36),
   ).toBe(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: "기본 인적사항 구역 보기" }),
+  );
+  expect(outlines.every((outline) => !outline.isConnected)).toBe(true);
+  const current = [
+    ...document.querySelectorAll<HTMLElement>(
+      "[data-career-form-section-highlight]",
+    ),
+  ];
+  expect(
+    current
+      .map((outline) => parseFloat(outline.style.top))
+      .sort((a, b) => a - b),
+  ).toEqual([100, 170]);
 });
