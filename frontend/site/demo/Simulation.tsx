@@ -46,6 +46,13 @@ function ExampleForm({ started }: { started: boolean }) {
 }
 export function Simulation() {
   const root = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(window.innerWidth);
+  const scale = Math.min(1, width / 900);
+  useEffect(() => {
+    const resize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
   const [started, setStarted] = useState(false);
   const [cursor, setCursor] = useState({ x: 25, y: 24, visible: false });
   useEffect(() => {
@@ -65,8 +72,12 @@ export function Simulation() {
           const frame = root.current?.getBoundingClientRect();
           if (bounds && frame)
             setCursor({
-              x: bounds.left - frame.left + bounds.width * 0.65,
-              y: bounds.top - frame.top + bounds.height * 0.6,
+              x:
+                (bounds.left - frame.left + bounds.width * 0.65) /
+                Math.min(1, window.innerWidth / 900),
+              y:
+                (bounds.top - frame.top + bounds.height * 0.6) /
+                Math.min(1, window.innerWidth / 900),
               visible: true,
             });
         },
@@ -89,7 +100,11 @@ export function Simulation() {
     };
   }, []);
   return (
-    <div ref={root} className={styles.simulation}>
+    <div
+      ref={root}
+      className={styles.simulation}
+      style={{ width: Math.max(900, width), height: 660, zoom: scale }}
+    >
       <div className={styles.browserBar}>
         <span>● ● ●</span>
         <div>

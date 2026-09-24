@@ -15,7 +15,7 @@ describe("website navigation", () => {
       );
       expect(link).toHaveAttribute("target", "_blank");
     }
-    expect(container.querySelectorAll("iframe")).toHaveLength(2);
+    expect(container.querySelectorAll("iframe")).toHaveLength(1);
     expect(
       screen.getByRole("link", { name: "개인정보처리방침" }),
     ).toHaveAttribute("href", "/privacy/");
@@ -82,10 +82,15 @@ it("explains grouped results and copy after the application step", () => {
   expect(container.querySelector("input")).toBeNull();
 });
 
-it("offers an interactive current review example and explains category-only highlighting", () => {
-  render(<SiteApp path="/" />);
-  const example = screen.getByTitle("구역별 결과 확인 체험");
-  expect(example).not.toHaveAttribute("inert");
-  expect(example).toHaveAttribute("tabindex", "0");
-  expect(screen.getAllByText(/다른 구역을 누르면 이전 강조/)[0]).toBeVisible();
+it("leads with the value of reused information and keeps detailed guidance in onboarding", () => {
+  const { container } = render(<SiteApp path="/" />);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    "지원서는 매번 달라도,내 정보는 그대로니까.",
+  );
+  expect(container.querySelector('iframe[src*="guide-results"]')).toBeNull();
+  expect(screen.queryByText(/다른 구역을 누르면 이전 강조/)).toBeNull();
+  expect(container.querySelector("details[open]")).toBeNull();
+  expect(screen.getAllByRole("link", { name: /Chrome에 추가/ })).toHaveLength(
+    3,
+  );
 });

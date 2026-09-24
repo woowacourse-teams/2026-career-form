@@ -223,59 +223,6 @@
     opacity: 1;
   }
 }
-@media (max-width: 650px) {
-  .workspace {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 355px minmax(0, 1fr);
-  }
-  .browserBar {
-    height: 36px;
-    gap: 10px;
-    padding: 0 12px;
-    font-size: 10px;
-  }
-  .browserBar small,
-  .browserBar > span,
-  .application .breadcrumb,
-  .progress,
-  .sectionTitle {
-    display: none;
-  }
-  .workspace {
-    height: calc(100% - 36px);
-  }
-  .application {
-    padding: 16px;
-  }
-  .application h1 {
-    font-size: 20px;
-    margin: 10px 0 14px;
-  }
-  .fields {
-    gap: 7px 12px;
-  }
-  .fields label {
-    gap: 3px;
-    font-size: 10px;
-  }
-  .fields input {
-    height: 29px;
-    font-size: 11px;
-    padding: 4px 20px 4px 8px;
-  }
-  .fields label::after {
-    bottom: 7px;
-    right: 8px;
-  }
-  .application .formNote {
-    margin-top: 12px;
-    font-size: 10px;
-  }
-  .sidebar {
-    border-left: 0;
-    border-top: 1px solid #ead7c5;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .cursor {
     display: none;

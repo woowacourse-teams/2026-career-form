@@ -65,20 +65,20 @@ function Landing() {
           <div>
             <p className={styles.eyebrow}>지원서 자동 입력 · 커리어폼</p>
             <h1>
-              반복 입력은 줄이고,
+              지원서는 매번 달라도,
               <br />
-              <em>확인은 놓치지 않게.</em>
+              <em>내 정보는 그대로니까.</em>
             </h1>
           </div>
           <div className={styles.heroDetail}>
             <p>
-              채용사이트 옆에 커리어폼을 열어보세요.
+              한 번 등록한 내 정보로,
               <br />
-              입력 가능한 항목은 자동으로, 남은 항목은 복사해서 채워요.
+              반복되는 지원서 입력을 줄이세요.
             </p>
             <div className={styles.actions}>
               <InstallLink />
-              <SiteLink href="/onboarding/">설치·사용 안내 ↗</SiteLink>
+              <SiteLink href="/onboarding/">사용 방법 보기 ↗</SiteLink>
             </div>
             <small>Chrome 확장 프로그램 · 프로필은 내 브라우저에</small>
           </div>
@@ -95,7 +95,7 @@ function Landing() {
             inert
           />
           <figcaption>
-            마우스를 올리거나 탭·터치하면 재생돼요. 가상 정보로 만든 예시입니다.
+            마우스를 올리거나 눌러보세요. · 가상 정보로 만든 예시
           </figcaption>
         </figure>
       </section>
@@ -104,83 +104,31 @@ function Landing() {
           <div>
             <p className={styles.eyebrow}>주요 기능</p>
             <h2>
-              지원서는 매번 달라도,
-              <br />내 정보는 그대로니까.
+              같은 정보를 쓰는 일,
+              <br />
+              이제 조금 덜 하세요.
             </h2>
           </div>
-          <p>
-            여기저기 흩어진 정보를 찾고, 복사하고, 붙여넣고.
-            <br />
-            커리어폼이 그 반복을 덜어드릴게요.
-          </p>
         </div>
         <div className={styles.benefits}>
-          {benefits.map(([title, lead, body], i) => (
+          {benefits.map(([title, body], i) => (
             <article key={title}>
               <Icon name={(["document", "panel", "check"] as const)[i]} />
               <h3>{title}</h3>
-              <p>
-                <strong>{lead}</strong>
-                {body}
-              </p>
+              <p>{body}</p>
             </article>
           ))}
         </div>
       </section>
-      <section
-        className={styles.resultFeature}
-        aria-labelledby="result-feature-title"
-      >
-        <div>
-          <p className={styles.eyebrow}>입력 다음도, 같은 패널에서</p>
-          <h2 id="result-feature-title">
-            입력한 내용도, 남은 항목도,
-            <br />
-            지원서에서 확인하세요.
-          </h2>
-          <p>
-            ‘확인 필요’에서는 남은 항목을 채우고, ‘입력 완료’에서는
-            직장경력·어학 같은 구역을 눌러 입력한 내용을 살펴보세요. 실제
-            지원서의 입력칸만 연한 크림색 배경과 갈색 테두리로 표시돼요.
-          </p>
-          <ol>
-            <li>
-              <strong>선택한 구역만 강조</strong>
-              <span>
-                다른 구역을 누르면 이전 강조는 사라져요. 항목 이름은 가리지
-                않아요.
-              </span>
-            </li>
-            <li>
-              <strong>살펴본 구역은 접기</strong>
-              <span>
-                ‘확인했어요’를 누르면 해당 구역이 접히고 검토 진행 상황에
-                표시돼요.
-              </span>
-            </li>
-            <li>
-              <strong>필요한 값만 복사</strong>
-              <span>
-                확인 필요 항목을 눌러 입력칸을 찾고, 옆의 값을 복사해
-                마무리해요.
-              </span>
-            </li>
-          </ol>
-        </div>
-        <ServiceGuide kind="results" />
-      </section>
-      <section className={styles.setupLink}>
-        <div>
-          <p className={styles.eyebrow}>사용 준비</p>
-          <h2>설치부터 결과 확인까지.</h2>
-          <p>
-            프로필 등록부터 자동 기입, 남은 항목 채우기와 구역별 검토까지
-            안내해요.
-          </p>
-        </div>
-        <SiteLink className={styles.primary} href="/onboarding/">
-          설치·사용 안내 <Icon name="arrow" />
-        </SiteLink>
+      <section className={styles.conversion} aria-labelledby="start-title">
+        <p className={styles.eyebrow}>다음 지원부터, 커리어폼</p>
+        <h2 id="start-title">
+          반복 입력은 줄이고,
+          <br />
+          다음 기회에 집중하세요.
+        </h2>
+        <InstallLink />
+        <p>Chrome에 추가하고, 내 정보부터 등록해 보세요.</p>
       </section>
       <section className={styles.faq} id="faq">
         <div>
@@ -192,8 +140,8 @@ function Landing() {
           </h2>
         </div>
         <div>
-          {faqs.map(([title, body], i) => (
-            <details key={title} open={i === 0}>
+          {faqs.map(([title, body]) => (
+            <details key={title}>
               <summary>
                 {title}
                 <span>＋</span>
