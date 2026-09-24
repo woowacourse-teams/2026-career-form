@@ -57,5 +57,6 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비·필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 검색 결과의 유일 선택·원본 링크 1회 클릭과 실제 검증 한계 | 2026-09-23 |
+| [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환·로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md) | 독립 웹 빌드와 시뮬레이션 데이터 경계, 페이지 역할 | 2026-09-19 |

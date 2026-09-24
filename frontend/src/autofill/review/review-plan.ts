@@ -23,6 +23,12 @@ import { resolveValueBinding } from "../profile/value-binding";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
+import { formatProfileDate } from "../profile/date-format";
+import type { DateTargetApproval } from "./date-target-format";
+import {
+  resolveDateTargetFormat,
+  validateDateTargetValue,
+} from "./date-target-format";
 
 export type ProfileValueResolution =
   | {
@@ -53,6 +59,7 @@ export interface ReviewPlanItem {
   revealed: boolean;
   reason: string;
   analysis?: MatchedFieldAnalysis;
+  dateApproval?: DateTargetApproval;
 }
 
 export interface ReviewPlan {
@@ -81,6 +88,7 @@ interface ProfileFieldParts {
   sensitive: boolean;
   repeatable: boolean;
   topLevel: boolean;
+  inputType: string;
 }
 
 function profileFieldParts(value: string): ProfileFieldParts | undefined {
@@ -111,6 +119,7 @@ function profileFieldParts(value: string): ProfileFieldParts | undefined {
       category.topLevelFields?.some(
         (candidate) => candidate.id === field.id,
       ) === true,
+    inputType: field.inputType,
   };
 }
 
@@ -329,16 +338,52 @@ function itemForAnalysis(
         : "입력할 프로필 값이 없습니다.";
     return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
   }
+  let dateApproval: DateTargetApproval | undefined;
+  let finalizedProfileValue = boundProfileValue;
+  if (generic && binding.type === "DIRECT" && parts?.inputType === "date") {
+    const target = resolveDateTargetFormat(lookup.handle);
+    if (target.status !== "resolved") {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        `날짜 입력 형식을 확인할 수 없습니다: ${target.reason}`,
+        analysis,
+      );
+    }
+    const converted = formatProfileDate(boundProfileValue.value, target.format);
+    if (converted.status !== "resolved") {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        `저장된 날짜를 변환할 수 없습니다: ${converted.reason}`,
+        analysis,
+      );
+    }
+    const validation = validateDateTargetValue(
+      target.approval,
+      converted.value,
+    );
+    if (validation.status !== "valid") {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        `날짜 입력값이 대상 조건과 맞지 않습니다: ${validation.reason}`,
+        analysis,
+      );
+    }
+    dateApproval = target.approval;
+    finalizedProfileValue = { ...boundProfileValue, value: converted.value };
+  }
   const profileValue =
-    binding.type === "DIRECT" && normalizeDirectValue
+    binding.type === "DIRECT" && normalizeDirectValue && !dateApproval
       ? {
-          ...boundProfileValue,
+          ...finalizedProfileValue,
           value: normalizeDirectValue(
             binding.profileFieldKey,
-            boundProfileValue.value,
+            finalizedProfileValue.value,
           ),
         }
-      : boundProfileValue;
+      : finalizedProfileValue;
 
   const liveOptionMatch =
     analysis.writePlan.command === "SELECT_OPTION" &&
@@ -403,6 +448,7 @@ function itemForAnalysis(
       revealed: false,
       reason: "민감정보는 값을 확인한 뒤에만 선택할 수 있습니다.",
       analysis,
+      ...(dateApproval ? { dateApproval } : {}),
     };
   }
   if (hasConflict) {
@@ -425,6 +471,7 @@ function itemForAnalysis(
       revealed: true,
       reason: "지원서에 기존 값이 있습니다.",
       analysis,
+      ...(dateApproval ? { dateApproval } : {}),
     };
   }
   if (analysis.autofillPolicy === "CONDITIONAL") {
@@ -447,6 +494,7 @@ function itemForAnalysis(
       revealed: true,
       reason: "지원서 조건을 확인한 뒤 선택해 주세요.",
       analysis,
+      ...(dateApproval ? { dateApproval } : {}),
     };
   }
   return {
@@ -468,6 +516,7 @@ function itemForAnalysis(
     revealed: true,
     reason: "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
     analysis,
+    ...(dateApproval ? { dateApproval } : {}),
   };
 }
 

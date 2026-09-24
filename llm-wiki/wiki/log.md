@@ -225,3 +225,9 @@
 - 승인 digest `e350514e46e5143c397314f3209dc2d4295bfdd7b8654d2d61d492b94bd79476`의 후보 3개를 [CF-102 bundle](../raw/issues/CF-102/manifest.md)에 비식별 기록했다.
 - 준비·필드 30초 기본/60초 미만, 상호작용 별도 SDK 8초·무재시도, 구조화된 종료 사유와 안전한 실패 분류를 [topic](topics/openai-analysis-budget-and-diagnostics.md)에 연결했다.
 - Docker/실제 공급자/CJ 검증은 환경 및 승인 부재로 미완료로 남겼다.
+
+## [2026-09-24] ingest | CF-101 범용 날짜 형식 변환과 로컬 승인
+
+- 승인 digest `62463e58e4e9043e334ba50b33b3a8b81140469f775e2b9eb9598763ea975219`의 후보 3개를 [CF-101 bundle](../raw/issues/CF-101/manifest.md)에 비식별 기록했다.
+- 엄격한 날짜 DIRECT 변환, 로컬 DOM 승인 재검증과 원본 fallback 금지를 [topic](topics/generic-date-format.md)에 연결했다.
+- 합성 통합·설치 UI·실사이트 검증을 구분하고 개별 unavailable 이유의 기존 표시 제한을 기록했다.
