@@ -14,12 +14,30 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import com.careerform.formanalysis.dto.FieldsAnalysisResponse.WriteCommand;
+
 public record FieldsAnalysisRequest(
     @Min(2) @Max(2) int schemaVersion,
     @NotBlank @Size(max = 128) String snapshotId,
     @NotNull @Valid Site site,
-    @NotNull @Size(min = 1) List<@NotNull @Valid Section> sections
+    @NotNull @Size(min = 1) List<@NotNull @Valid Section> sections,
+    @Size(max = 8) List<@NotNull WriteCommand> supportedWriteCommands
 ) {
+
+    public FieldsAnalysisRequest(
+        int schemaVersion,
+        String snapshotId,
+        Site site,
+        List<Section> sections
+    ) {
+        this(schemaVersion, snapshotId, site, sections, List.of());
+    }
+
+    public FieldsAnalysisRequest {
+        supportedWriteCommands = supportedWriteCommands == null
+            ? List.of()
+            : List.copyOf(supportedWriteCommands);
+    }
 
     public List<FieldCandidate> fieldCandidatesInTraversalOrder() {
         if (sections == null) {

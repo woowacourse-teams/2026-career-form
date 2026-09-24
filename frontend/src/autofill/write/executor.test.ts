@@ -1622,3 +1622,114 @@ describe("approved date-target writes", () => {
     expect(input.value).toBe("");
   });
 });
+
+describe("calendar isolation from ordinary writes", () => {
+  it("does not accept SELECT_DATE through the ordinary write action", async () => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.readOnly = true;
+    const registry = register(
+      input,
+      {
+        candidateId: "calendar-field",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+        readonly: true,
+      },
+      new Map(),
+      "readonly",
+    );
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "calendar-field",
+      writePlan: { command: "SELECT_DATE" },
+    };
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(analysis, "2025-02", { selected: true })],
+      approvedCandidateIds: new Set(["calendar-field"]),
+      registry,
+      document,
+    });
+    expect(input.value).toBe("");
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "NOT_APPROVED",
+    });
+  });
+});
+
+describe("mixed ordinary and calendar approvals", () => {
+  it("writes the ordinary field but refuses SELECT_DATE in an ordinary run", async () => {
+    const ordinary = document.createElement("input");
+    const registry = register(ordinary, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const calendar = document.createElement("input");
+    calendar.readOnly = true;
+    document.body.append(calendar);
+    registry.registerField(
+      {
+        kind: "field",
+        candidateId: "calendar-field",
+        sectionId: "section-1",
+        signature: createStructuralSignature([calendar]),
+        candidate: {
+          candidateId: "calendar-field",
+          element: "input",
+          control: "text",
+          visibility: "visible",
+          readonly: true,
+        },
+        elements: [calendar],
+        optionElements: new Map(),
+      },
+      "readonly",
+    );
+    const date: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "calendar-field",
+      writePlan: { command: "SELECT_DATE" },
+    };
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example"), reviewItem(date, "2026-03")],
+      approvedCandidateIds: new Set(["field-1", "calendar-field"]),
+      registry,
+      document,
+    });
+    expect(ordinary.value).toBe("example");
+    expect(calendar.value).toBe("");
+    expect(result[0]).toMatchObject({ status: "written" });
+    expect(result[1]).toMatchObject({
+      status: "skipped",
+      code: "NOT_APPROVED",
+    });
+  });
+});
+
+describe("calendar-only document run", () => {
+  it("never writes an ordinary field even if its id is included in the approval set", async () => {
+    const ordinary = document.createElement("input");
+    const registry = register(ordinary, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "new value")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+      document,
+      calendarOnly: true,
+    });
+    expect(ordinary.value).toBe("");
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "NOT_APPROVED",
+    });
+  });
+});

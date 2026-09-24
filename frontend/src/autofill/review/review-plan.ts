@@ -29,6 +29,9 @@ import {
   resolveDateTargetFormat,
   validateDateTargetValue,
 } from "./date-target-format";
+import type { CalendarApproval } from "./calendar-approval";
+import { createCalendarApproval } from "./calendar-approval";
+import { calendarSurfaceFor } from "../interaction/calendar-surface";
 
 export type ProfileValueResolution =
   | {
@@ -60,6 +63,7 @@ export interface ReviewPlanItem {
   reason: string;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
+  calendarApproval?: CalendarApproval;
 }
 
 export interface ReviewPlan {
@@ -268,9 +272,13 @@ function itemForAnalysis(
       lookup.handle,
       lookup.handle.elements[0]!.ownerDocument,
     );
+  const readonlyCalendar =
+    analysis.writePlan.command === "SELECT_DATE" &&
+    lookup.status === "blocked" &&
+    lookup.reason === "readonly";
   if (
     (searchCommand && !readonlySearch) ||
-    (lookup.status !== "ready" && !readonlySearch)
+    (lookup.status !== "ready" && !readonlySearch && !readonlyCalendar)
   ) {
     return unavailableItem(
       analysis.candidateId,
@@ -339,8 +347,61 @@ function itemForAnalysis(
     return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
   }
   let dateApproval: DateTargetApproval | undefined;
+  let calendarApproval: CalendarApproval | undefined;
   let finalizedProfileValue = boundProfileValue;
-  if (generic && binding.type === "DIRECT" && parts?.inputType === "date") {
+  if (generic && analysis.writePlan.command === "SELECT_DATE") {
+    if (
+      binding.type !== "DIRECT" ||
+      parts?.inputType !== "date" ||
+      lookup.handle.elements.length !== 1 ||
+      !(lookup.handle.elements[0] instanceof HTMLInputElement)
+    ) {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "월 달력 대상과 프로필 날짜 연결을 확인할 수 없습니다.",
+        analysis,
+      );
+    }
+    const source = formatProfileDate(boundProfileValue.value, "YYYY-MM");
+    if (source.status !== "resolved") {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        `달력에 사용할 원본 날짜를 확인할 수 없습니다: ${source.reason}`,
+        analysis,
+      );
+    }
+    try {
+      calendarApproval = createCalendarApproval({
+        target: lookup.handle.elements[0],
+        originalDate: boundProfileValue.value,
+        targetYearMonth: source.value,
+        profileFieldKey: binding.profileFieldKey,
+        profileEntryId: boundProfileValue.profileEntryId,
+        itemIndex,
+        repeatRow: {
+          itemId: lookup.handle.itemId,
+          itemGroupId: lookup.handle.itemGroupId,
+          itemIndex,
+        },
+      });
+    } catch {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "읽기 전용 월 달력의 대상과 소유권을 확인할 수 없습니다.",
+        analysis,
+      );
+    }
+    finalizedProfileValue = { ...boundProfileValue, value: source.value };
+  }
+  if (
+    generic &&
+    analysis.writePlan.command !== "SELECT_DATE" &&
+    binding.type === "DIRECT" &&
+    parts?.inputType === "date"
+  ) {
     const target = resolveDateTargetFormat(lookup.handle);
     if (target.status !== "resolved") {
       return unavailableItem(
@@ -449,6 +510,7 @@ function itemForAnalysis(
       reason: "민감정보는 값을 확인한 뒤에만 선택할 수 있습니다.",
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
+      ...(calendarApproval ? { calendarApproval } : {}),
     };
   }
   if (hasConflict) {
@@ -472,6 +534,7 @@ function itemForAnalysis(
       reason: "지원서에 기존 값이 있습니다.",
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
+      ...(calendarApproval ? { calendarApproval } : {}),
     };
   }
   if (analysis.autofillPolicy === "CONDITIONAL") {
@@ -495,6 +558,7 @@ function itemForAnalysis(
       reason: "지원서 조건을 확인한 뒤 선택해 주세요.",
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
+      ...(calendarApproval ? { calendarApproval } : {}),
     };
   }
   return {
@@ -511,12 +575,18 @@ function itemForAnalysis(
     profileValue: resolvedProfileValue.value,
     previewValue: resolvedProfileValue.value,
     status: "available",
-    selected: true,
+    selected: analysis.writePlan.command === "SELECT_DATE" ? false : true,
     disabled: false,
     revealed: true,
-    reason: "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
+    reason:
+      analysis.writePlan.command === "SELECT_DATE"
+        ? currentValue(lookup.handle).trim() === finalizedProfileValue.value
+          ? "지원서에 같은 연월이 이미 입력되어 있습니다."
+          : "달력 연월을 확인한 뒤 선택해 주세요."
+        : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
     analysis,
     ...(dateApproval ? { dateApproval } : {}),
+    ...(calendarApproval ? { calendarApproval } : {}),
   };
 }
 

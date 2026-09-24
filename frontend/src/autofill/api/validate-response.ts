@@ -8,6 +8,7 @@ import type {
   WriteCommand,
 } from "./types";
 import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
+import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 
 export class AnalysisContractError extends Error {
   constructor(detail?: string) {
@@ -251,6 +252,21 @@ export function validatePreparationResponse(
   return value as unknown as PreparationAnalyzeResponse;
 }
 
+function isDateProfileFieldKey(value: string): boolean {
+  const [categoryId, sectionId, fieldId] = value.split(".");
+  return PROFILE_CATEGORIES.some(
+    (category) =>
+      category.id === categoryId &&
+      category.sections.some(
+        (section) =>
+          section.id === sectionId &&
+          section.fields.some(
+            (field) => field.id === fieldId && field.inputType === "date",
+          ),
+      ),
+  );
+}
+
 const writeCommandForControl: Record<
   FieldCandidate["control"],
   WriteCommand | undefined
@@ -267,6 +283,7 @@ const writeCommandForControl: Record<
 function validateFieldAnalysis(
   value: unknown,
   candidates: Map<string, FieldCandidate>,
+  request: FieldsAnalyzeRequest,
 ): string {
   if (!isRecord(value) || !isNonEmptyString(value.candidateId)) {
     throw new AnalysisContractError();
@@ -427,21 +444,37 @@ function validateFieldAnalysis(
       !candidate.inert &&
       typeof directKey === "string" &&
       isAutofillProfileFieldKey(directKey);
+    const calendarSelection =
+      request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
+      isRecord(value.writePlan) &&
+      value.writePlan.command === "SELECT_DATE" &&
+      candidate.element === "input" &&
+      candidate.control === "text" &&
+      candidate.semanticContext?.inputType === "text" &&
+      candidate.readonly === true &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      typeof directKey === "string" &&
+      isDateProfileFieldKey(directKey);
     if (
       candidate.readonly &&
       value.mappingStatus === "LLM_SUGGESTED" &&
-      !searchSelection
+      !searchSelection &&
+      !calendarSelection
     ) {
       throw new AnalysisContractError();
     }
-    const expectedCommand = searchSelection
-      ? "SEARCH_SELECTION"
-      : candidate.element === "input" &&
-          candidate.control === "text" &&
-          isRecord(value.valueBinding) &&
-          value.valueBinding.type === "BUTTON_OPTION"
-        ? "SELECT_BUTTON_OPTION"
-        : writeCommandForControl[candidate.control];
+    const expectedCommand = calendarSelection
+      ? "SELECT_DATE"
+      : searchSelection
+        ? "SEARCH_SELECTION"
+        : candidate.element === "input" &&
+            candidate.control === "text" &&
+            isRecord(value.valueBinding) &&
+            value.valueBinding.type === "BUTTON_OPTION"
+          ? "SELECT_BUTTON_OPTION"
+          : writeCommandForControl[candidate.control];
     if (
       !isRecord(value.writePlan) ||
       !hasOnlyKeys(value.writePlan, ["command"]) ||
@@ -452,6 +485,7 @@ function validateFieldAnalysis(
         "SELECT_BUTTON_OPTION",
         "CHECK_RADIO",
         "CHECK_CHECKBOX",
+        "SELECT_DATE",
       ]) ||
       expectedCommand !== value.writePlan.command
     ) {
@@ -507,7 +541,7 @@ export function validateFieldsResponse(
   for (const field of value.fields) {
     let candidateId: string;
     try {
-      candidateId = validateFieldAnalysis(field, candidates);
+      candidateId = validateFieldAnalysis(field, candidates, request);
       if (
         isRecord(field) &&
         isRecord(field.writePlan) &&

@@ -476,6 +476,7 @@ export function collectFieldsSnapshot(
   return {
     request: {
       schemaVersion: 2,
+      supportedWriteCommands: ["SELECT_DATE"],
       snapshotId: createSnapshotId("fields"),
       site: siteOf(document),
       sections,

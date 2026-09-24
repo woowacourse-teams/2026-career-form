@@ -238,6 +238,11 @@
 - 엄격한 날짜 DIRECT 변환, 로컬 DOM 승인 재검증과 원본 fallback 금지를 [topic](topics/generic-date-format.md)에 연결했다.
 - 합성 통합·설치 UI·실사이트 검증을 구분하고 개별 unavailable 이유의 기존 표시 제한을 기록했다.
 
+## [2026-09-24] ingest | CF-104 DOM 검증 기반 연월 달력 선택
+
+- 승인 digest `0d4d85a28616d32e0e203efbedf10812ee26115f76ab57c44c80f188e5daf030`의 ADR 제안 전문을 [CF-104 bundle](../raw/issues/CF-104/manifest.md)에 기록했다.
+- 모델의 비식별 후보 역할 판별과 브라우저의 개별 승인·DOM 소유권·연월 선택·실제 값 검증을 [topic](topics/generic-calendar-selection.md)에 연결했다.
+- 합성 fixture와 설치 확장 UI 자동 검증을 수행했으며, 실제 지원서 입력과 외부 공급자 실호출은 확인하지 않았다.
 
 ## [2026-09-24] ingest | CF-99 최종 입력 결과와 안내 흐름
 

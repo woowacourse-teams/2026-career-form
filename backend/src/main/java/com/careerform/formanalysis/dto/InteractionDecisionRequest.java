@@ -78,7 +78,10 @@ public record InteractionDecisionRequest(
     public enum Role {
         SEARCH_POPUP_OPENER,
         SEARCH_QUERY_INPUT,
-        SEARCH_SUBMIT
+        SEARCH_SUBMIT,
+        CALENDAR_OPENER,
+        CALENDAR_YEAR_TRIGGER,
+        CALENDAR_APPLY
     }
 
     public enum Element {

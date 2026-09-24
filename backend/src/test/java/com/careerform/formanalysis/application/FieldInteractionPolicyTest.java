@@ -60,6 +60,58 @@ class FieldInteractionPolicyTest {
     }
 
     @Test
+    void readonlyDateUsesSelectDateOnlyWhenCapabilityIsAdvertised() {
+        FieldCandidate candidate = searchCandidate(
+            InputType.TEXT, Visibility.VISIBLE, null, null
+        );
+
+        FieldInteractionPolicy.Decision decision = policy.evaluate(
+            candidate,
+            new FieldMappingResolver.Match("field-1", "education.university.startDate"),
+            true,
+            List.of(WriteCommand.SELECT_DATE)
+        );
+
+        assertThat(decision.interactionStatus()).isEqualTo(InteractionStatus.READY);
+        assertThat(decision.writePlan()).isEqualTo(new WritePlan(WriteCommand.SELECT_DATE));
+    }
+
+    @Test
+    void readonlyDateUsesLegacySearchWithoutCapabilityAndBlocksNonDirectBinding() {
+        FieldCandidate candidate = searchCandidate(
+            InputType.TEXT, Visibility.VISIBLE, null, null
+        );
+
+        assertThat(policy.evaluate(
+            candidate,
+            new FieldMappingResolver.Match("field-1", "education.university.startDate"),
+            true,
+            List.of()
+        ).writePlan()).isEqualTo(new WritePlan(WriteCommand.SEARCH_SELECTION));
+        assertThat(policy.evaluate(
+            candidate,
+            new FieldMappingResolver.Match("field-1", new FieldMappingResolver.LookupBinding(
+                "education.university.startDate", java.util.Map.of("합성", "option-1")
+            )),
+            true,
+            List.of(WriteCommand.SELECT_DATE)
+        ).writePlan()).isNull();
+    }
+
+    @Test
+    void disabledReadonlyDateCannotUseSelectDate() {
+        FieldInteractionPolicy.Decision decision = policy.evaluate(
+            searchCandidate(InputType.TEXT, Visibility.VISIBLE, true, null),
+            new FieldMappingResolver.Match("field-1", "education.university.startDate"),
+            true,
+            List.of(WriteCommand.SELECT_DATE)
+        );
+
+        assertThat(decision.interactionStatus()).isEqualTo(InteractionStatus.BLOCKED);
+        assertThat(decision.writePlan()).isNull();
+    }
+
+    @Test
     void staticReadonlySearchDoesNotGainGenericExecution() {
         assertThat(policy.evaluate(
             searchCandidate(InputType.TEXT, Visibility.VISIBLE, null, null),

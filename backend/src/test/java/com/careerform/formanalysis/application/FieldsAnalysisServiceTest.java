@@ -68,6 +68,61 @@ class FieldsAnalysisServiceTest {
     }
 
     @Test
+    void advertisesSelectDateOnlyForReadonlyDateDirectFields() {
+        FieldCandidate candidate = new FieldCandidate(
+            "date-field", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE,
+            "입사일", null, null, null, null, true, null, null,
+            new FieldsAnalysisRequest.SemanticContext(
+                null, FieldsAnalysisRequest.InputType.TEXT, null, null, null, null, null, null
+            )
+        );
+        FieldsAnalysisRequest request = new FieldsAnalysisRequest(
+            2, "date-snapshot", site(),
+            List.of(new Section("section-1", null, null, List.of(candidate), null)),
+            List.of(WriteCommand.SELECT_DATE)
+        );
+        FieldMappingResolver resolver = resolver(ignored -> new FieldMappingResolver.Resolution(
+            2, "date-snapshot", List.of(new FieldMappingResolver.Match(
+                "date-field", "education.university.startDate"
+            ))
+        ));
+
+        FieldsAnalysisResponse response = service(Optional.of(resolver)).analyze(request);
+
+        assertThat(response.fields()).containsExactly(new MatchedFieldAnalysis(
+            "date-field", MatchType.MATCH, new DirectBinding("education.university.startDate"),
+            AutofillPolicy.ALLOWED, MappingStatus.LLM_SUGGESTED,
+            InteractionStatus.READY, new WritePlan(WriteCommand.SELECT_DATE)
+        ));
+    }
+
+    @Test
+    void omittedCapabilityKeepsReadonlyDateBlocked() {
+        FieldCandidate candidate = new FieldCandidate(
+            "date-field", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE,
+            "입사일", null, null, null, null, true, null, null,
+            new FieldsAnalysisRequest.SemanticContext(
+                null, FieldsAnalysisRequest.InputType.DATE, null, null, null, null, null, null
+            )
+        );
+        FieldsAnalysisRequest request = new FieldsAnalysisRequest(
+            2, "date-snapshot", site(),
+            List.of(new Section("section-1", null, null, List.of(candidate), null))
+        );
+        FieldMappingResolver resolver = resolver(ignored -> new FieldMappingResolver.Resolution(
+            2, "date-snapshot", List.of(new FieldMappingResolver.Match(
+                "date-field", "education.university.schoolName"
+            ))
+        ));
+
+        assertThat(service(Optional.of(resolver)).analyze(request).fields().getFirst())
+            .extracting(FieldsAnalysisResponse.FieldAnalysis::candidateId)
+            .isEqualTo("date-field");
+        assertThat(((MatchedFieldAnalysis) service(Optional.of(resolver)).analyze(request).fields().getFirst())
+            .writePlan()).isNull();
+    }
+
+    @Test
     void invalidCanonicalSearchBindingFailsClosedBeforeCreatingPlan() {
         assertUnavailable(searchResponse("education.university.schoolLocation"));
     }

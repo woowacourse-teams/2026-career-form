@@ -46,6 +46,7 @@ import {
 } from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
+import { executionItemsForAction } from "./calendar-routing";
 import {
   actionLabel,
   adapterProfileValue,
@@ -621,7 +622,9 @@ export function AutofillWorkflow({
   const { toggleReviewItem, revealSensitiveItem } =
     createReviewActions(setReviewItems);
 
-  const executeWrites = async () => {
+  const executeWrites = async (
+    action: "ordinary" | "calendar" = "ordinary",
+  ) => {
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
     try {
@@ -665,8 +668,11 @@ export function AutofillWorkflow({
       const retainedCandidateIds = new Set(
         retainedDrivers.results.map((result) => result.candidateId),
       );
-      const executableReviewItems = reviewItems.filter(
-        (item) => !retainedCandidateIds.has(item.candidateId),
+      const executableReviewItems = executionItemsForAction(
+        reviewItems.filter(
+          (item) => !retainedCandidateIds.has(item.candidateId),
+        ),
+        action,
       );
       const approvedCandidateIds = new Set(
         executableReviewItems
@@ -693,6 +699,7 @@ export function AutofillWorkflow({
         items: executableReviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
+        calendarOnly: action === "calendar",
         ...(analysisSummary?.mode === "GENERIC" && apiClient.decideInteractions
           ? {
               interactionDecisionProvider:
@@ -757,7 +764,8 @@ export function AutofillWorkflow({
       partial={partial}
       toggleReviewItem={toggleReviewItem}
       revealSensitiveItem={revealSensitiveItem}
-      executeWrites={executeWrites}
+      executeWrites={() => executeWrites("ordinary")}
+      executeCalendarWrites={() => executeWrites("calendar")}
       results={results}
       analysisSummary={analysisSummary}
       addressResult={addressResult}

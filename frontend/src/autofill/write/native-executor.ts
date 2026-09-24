@@ -549,6 +549,13 @@ function resultForItem(
   item: ReviewPlanItem,
   registry: CandidateRegistry,
 ): ApprovedWriteResult {
+  if (item.analysis?.writePlan?.command === "SELECT_DATE")
+    return skipped(
+      item.candidateId,
+      "needs-verification",
+      "NOT_APPROVED",
+      "달력 선택은 별도 승인과 실행이 필요합니다.",
+    );
   const generic = item.analysis?.mappingStatus === "LLM_SUGGESTED";
   try {
     const lookup = registry.lookupField(item.candidateId);

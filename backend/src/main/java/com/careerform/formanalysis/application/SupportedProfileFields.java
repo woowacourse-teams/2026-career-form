@@ -22,6 +22,26 @@ public final class SupportedProfileFields {
         "(?<=[a-z0-9])(?=[A-Z])"
     );
 
+    private static final Set<String> DATE_KEYS = Set.of(
+        "personal.personal.birthDate",
+        "education.highSchool.startDate",
+        "education.highSchool.endDate",
+        "education.university.startDate",
+        "education.university.endDate",
+        "education.graduateSchool.startDate",
+        "education.graduateSchool.endDate",
+        "languages.languageTest.acquisitionDate",
+        "certifications.certificate.acquisitionDate",
+        "careers.career.startDate",
+        "careers.career.endDate",
+        "projects.project.startDate",
+        "projects.project.endDate",
+        "military.military.serviceStartDate",
+        "military.military.serviceEndDate",
+        "disability.disability.disabilityRegistrationDate",
+        "health.health.healthDate"
+    );
+
     private static final Map<String, AutofillPolicy> ENTRIES = entries(
         entry("personal.personal.koreanFamilyName", AutofillPolicy.ALLOWED),
         entry("personal.personal.koreanGivenName", AutofillPolicy.ALLOWED),
@@ -155,6 +175,10 @@ public final class SupportedProfileFields {
 
     public boolean contains(String key) {
         return key != null && ENTRIES.containsKey(key);
+    }
+
+    public boolean isDateField(String key) {
+        return key != null && DATE_KEYS.contains(key);
     }
 
     public Optional<AutofillPolicy> policyOf(String key) {

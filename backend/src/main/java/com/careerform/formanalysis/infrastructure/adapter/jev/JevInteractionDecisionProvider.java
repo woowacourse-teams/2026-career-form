@@ -26,7 +26,8 @@ public final class JevInteractionDecisionProvider implements InteractionDecision
             state.put(decision.decisionId(), new ChoiceContext(decision.role().name(), decision.canonicalFieldKey(), decision.candidates()));
             questions.put(decision.decisionId(), new JevClient.Choice(
                 "Select the candidate with role " + decision.role().name() + " from observation " + decision.decisionId() +
-                ". Only meaning classification: never choose search results, values, code or execution steps.", criteria));
+                ". Choose only the observed visible enabled control structurally related to the target or calendar. " +
+                "Only meaning classification: never choose search results, values, code or execution steps.", criteria));
         }
         var answers = client.choose(state, questions);
         List<Result> results = new ArrayList<>();

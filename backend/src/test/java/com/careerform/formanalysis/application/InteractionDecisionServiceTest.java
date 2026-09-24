@@ -59,6 +59,36 @@ class InteractionDecisionServiceTest {
     }
 
     @Test
+    void acceptsCalendarRolesAndRestoresSelectedIds() {
+        InteractionDecisionRequest request = calendarRequest(false);
+        InteractionDecisionResponse response = service(batch ->
+            new InteractionDecisionProvider.Resolution(2, batch.decisions().stream()
+                .map(decision -> (InteractionDecisionProvider.Result)
+                    new InteractionDecisionProvider.Selected(
+                        decision.decisionId(), decision.role(),
+                        decision.candidates().getFirst().candidateId()))
+                .toList())).decide(request);
+
+        assertThat(response.status()).isEqualTo(InteractionDecisionResponse.Status.COMPLETE);
+        assertThat(response.decisions()).extracting(InteractionDecisionResponse.Decision::candidateId)
+            .containsExactly("calendar-opener", "calendar-year", "calendar-apply");
+    }
+
+    @Test
+    void rejectsCalendarRoleCandidateThatIsReadonly() {
+        InteractionDecisionResponse response = service(batch ->
+            new InteractionDecisionProvider.Resolution(2, batch.decisions().stream()
+                .map(decision -> (InteractionDecisionProvider.Result)
+                    new InteractionDecisionProvider.Selected(
+                        decision.decisionId(), decision.role(),
+                        decision.candidates().getFirst().candidateId()))
+                .toList())).decide(calendarRequest(true));
+
+        assertThat(response.status()).isEqualTo(InteractionDecisionResponse.Status.LLM_UNAVAILABLE);
+        assertThat(response.decisions()).isEmpty();
+    }
+
+    @Test
     void rejectsUnknownCanonicalKeyBeforeProvider() {
         assertThatThrownBy(() -> service(batch -> {
             throw new AssertionError("Unknown canonical key must not reach provider");
@@ -127,5 +157,21 @@ class InteractionDecisionServiceTest {
 
     private static Candidate candidate(String id, Element element, Control control, RelationToTarget relation) {
         return new Candidate(id, element, control, Visibility.VISIBLE, null, null, null, relation, null);
+    }
+
+    private static InteractionDecisionRequest calendarRequest(boolean readonly) {
+        List<Decision> decisions = List.of(
+            new Decision("open", Role.CALENDAR_OPENER, "education.university.schoolName",
+                List.of(new Candidate("calendar-opener", Element.BUTTON, Control.BUTTON,
+                    Visibility.VISIBLE, null, readonly, null, RelationToTarget.SAME_FIELD_GROUP, null))),
+            new Decision("year", Role.CALENDAR_YEAR_TRIGGER, "education.university.schoolName",
+                List.of(new Candidate("calendar-year", Element.BUTTON, Control.BUTTON,
+                    Visibility.VISIBLE, null, readonly, null, RelationToTarget.SAME_CONTAINER, null))),
+            new Decision("apply", Role.CALENDAR_APPLY, "education.university.schoolName",
+                List.of(new Candidate("calendar-apply", Element.BUTTON, Control.BUTTON,
+                    Visibility.VISIBLE, null, readonly, null, RelationToTarget.DIALOG_CONTROL, null)))
+        );
+        return new InteractionDecisionRequest(2, "calendar-snapshot",
+            new InteractionDecisionRequest.Site("example.test", "/application"), decisions);
     }
 }
