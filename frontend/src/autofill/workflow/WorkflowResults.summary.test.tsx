@@ -54,7 +54,7 @@ it("shows a category count and only marks a section checked explicitly", () => {
   const checked = screen.getByRole("button", { name: "학력 확인했어요" });
   expect(checked).toHaveAttribute("aria-pressed", "false");
   fireEvent.click(screen.getByRole("button", { name: "학력 구역 보기" }));
-  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"]);
+  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"], "학력");
   expect(checked).toHaveAttribute("aria-pressed", "false");
   fireEvent.click(checked);
   expect(
@@ -118,7 +118,7 @@ it("reports unavailable section navigation without checking it", () => {
   const locate = vi.fn(() => false);
   render(<WorkflowResults {...props()} onLocateSection={locate} />);
   fireEvent.click(screen.getByRole("button", { name: "학력 구역 보기" }));
-  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"]);
+  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"], "학력");
   expect(screen.getByRole("button", { name: "학력 구역 보기" })).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "학력 확인했어요" }),
@@ -214,7 +214,7 @@ it("navigates a whole category and collapses its summary on explicit confirmatio
     />,
   );
   fireEvent.click(screen.getByRole("button", { name: "학력 구역 보기" }));
-  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"]);
+  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"], "학력");
   expect(locateField).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "학력 확인했어요" }));
   expect(
@@ -261,4 +261,24 @@ it("shows only category navigation and counts, with no individual values or fall
     "지원서에서 확인",
   ])
     expect(container.innerHTML).not.toContain(value);
+});
+
+it("reviews selection-only sections without claiming successful field writes", () => {
+  const locate = vi.fn(() => true);
+  render(
+    <WorkflowResults
+      reviewItems={[]}
+      results={[]}
+      operatedCategories={["병역"]}
+      onLocateSection={locate}
+    />,
+  );
+  expect(screen.getByRole("tab", { name: "입력 완료 0개" })).toBeVisible();
+  expect(screen.getByText("선택·검색 확인")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "병역 구역 보기" }));
+  expect(locate).toHaveBeenCalledWith([], "병역");
+  fireEvent.click(screen.getByRole("button", { name: "병역 확인했어요" }));
+  expect(
+    screen.getByRole("button", { name: "병역 요약 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
 });

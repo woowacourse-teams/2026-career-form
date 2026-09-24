@@ -23,7 +23,8 @@ export interface WorkflowResultsProps {
   ): { visible: boolean; value: string } | undefined;
   optionsFor?(candidateId: string): readonly string[];
   onLocate?(candidateId: string): boolean;
-  onLocateSection?(candidateIds: readonly string[]): boolean;
+  operatedCategories?: readonly string[];
+  onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
   copyText?(value: string): Promise<void>;
 }
 export function WorkflowResults({
@@ -38,6 +39,7 @@ export function WorkflowResults({
   optionsFor,
   onLocate,
   onLocateSection,
+  operatedCategories,
   copyText = (value) => navigator.clipboard.writeText(value),
 }: WorkflowResultsProps) {
   const tabsId = useId();
@@ -157,13 +159,14 @@ export function WorkflowResults({
         tabIndex={0}
         hidden={activeTab !== "completed"}
       >
-        {completed.length > 0 ? (
+        {completed.length > 0 || !!operatedCategories?.length ? (
           <CompletedReview
             entries={completed}
             reviewItems={reviewItems}
             fieldStateFor={fieldStateFor}
             progressIdFor={progressIdFor}
             onLocateSection={onLocateSection}
+            operatedCategories={operatedCategories}
           />
         ) : (
           <p className={styles.empty}>입력 완료된 항목이 없어요.</p>

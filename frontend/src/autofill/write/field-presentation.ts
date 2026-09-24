@@ -212,9 +212,10 @@ export function createFieldPresentation(document: Document) {
   const showSection = (
     registry: CandidateRegistry,
     ids: readonly string[],
+    recorded: readonly HTMLElement[] = [],
   ): boolean => {
     restore?.();
-    restore = presentSection(document, registry, ids);
+    restore = presentSection(document, registry, ids, recorded);
     return !!restore;
   };
   return { show, showSection, clear };

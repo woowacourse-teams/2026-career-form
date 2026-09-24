@@ -42,6 +42,7 @@ export type DeferredDriverFailures = WeakMap<
 >;
 
 interface WorkflowAnalysisContext {
+  onAddressOperation?: (element: Element) => void;
   onActivity?: (activity: WorkflowActivity) => void;
   onWriteResult?: WriteResultListener;
   presentField?: (
@@ -92,6 +93,7 @@ export function createAnalyzeFields({
   presentField,
   onWriteResult,
   onActivity,
+  onAddressOperation,
 }: WorkflowAnalysisContext) {
   const sensitiveValueApproved = (loaded: Profile, key: string): boolean => {
     const value = localProfileValue(loaded, key);
@@ -190,20 +192,27 @@ export function createAnalyzeFields({
           })
         : [];
       if (permitted) onActivity?.("address");
-      run.task ??= permitted
-        ? adapter.runAddress({
+      if (!run.task && permitted) {
+        const button = run.button;
+        const onClick = () => {
+          if (button) onAddressOperation?.(button);
+        };
+        button?.addEventListener("click", onClick, { once: true });
+        run.task = adapter
+          .runAddress({
             document: pageDocument,
-            button: run.button,
+            button,
             expected: addressValue(loadedProfile),
             loadCurrent: async () => addressValue(await repository.load()),
             signal: run.controller.signal,
             search: addressSearch,
           })
-        : Promise.resolve({
-            status: "manual",
-            reason:
-              "주소 입력란의 연결을 확인하지 못했습니다. 직접 확인해 주세요.",
-          });
+          .finally(() => button?.removeEventListener("click", onClick));
+      }
+      run.task ??= Promise.resolve({
+        status: "manual",
+        reason: "주소 입력란의 연결을 확인하지 못했습니다. 직접 확인해 주세요.",
+      });
       const result = await run.task;
       if (run.controller.signal.aborted) return;
       setAddressResult(result);
@@ -289,6 +298,8 @@ export function createAnalyzeFields({
       return;
     }
     if (plan.items.length === 0) {
+      setFieldsSnapshot(snapshot);
+      setReviewItems([]);
       setResults([]);
       setStage("result");
       return;

@@ -81,10 +81,43 @@ export function AutofillWorkflow({
     [pageDocument],
   );
   const [progress, setProgress] = useState<WriteProgress[]>([]);
+  const operated = useMemo(
+    () => new Map<string, Set<HTMLElement>>(),
+    [pageDocument],
+  );
+  const [operatedCategories, setOperatedCategories] = useState<string[]>([]);
+  const recordOperation = (element: Element | undefined, category: string) => {
+    if (
+      !element ||
+      element.ownerDocument !== pageDocument ||
+      !element.isConnected
+    )
+      return;
+    const label = category.replaceAll("·", "/");
+    const anchors = operated.get(label) ?? new Set<HTMLElement>();
+    anchors.add(element as HTMLElement);
+    operated.set(label, anchors);
+    setOperatedCategories([...operated.keys()]);
+  };
   const onWriteResult: WriteResultListener = (item, result, registry) => {
     if (!mounted.current || addressRun.current.controller.signal.aborted)
       return;
-    setProgress(progressTracker.record(item, result, registry));
+    const nextProgress = progressTracker.record(item, result, registry);
+    const progressId = progressTracker.progressIdFor(
+      item.candidateId,
+      registry,
+    );
+    if (
+      result.status === "written" &&
+      nextProgress.some((entry) => entry.id === progressId && !entry.unchanged)
+    ) {
+      const lookup = registry.lookupField(item.candidateId);
+      if (lookup.status === "ready" || lookup.status === "blocked")
+        lookup.handle.elements.forEach((element) =>
+          recordOperation(element, progressCategory(item)),
+        );
+    }
+    setProgress(nextProgress);
   };
   const presentField = async (
     registry: CandidateRegistry,
@@ -148,6 +181,7 @@ export function AutofillWorkflow({
   const analyzeFields = createAnalyzeFields({
     onActivity: setActivity,
     onWriteResult,
+    onAddressOperation: (element) => recordOperation(element, "연락처와 주소"),
     adapter,
     addressRun,
     addressSearch,
@@ -330,6 +364,16 @@ export function AutofillWorkflow({
       const preparationOptions = (
         snapshot: ReturnType<typeof collectPreparationSnapshot>,
       ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
+        onAction: (element) => {
+          const hint = adapter.repeatedProfileSectionHint?.(element.id);
+          if (hint)
+            recordOperation(
+              element,
+              progressCategory({
+                profileFieldKey: `${hint.categoryId}.`,
+              } as ReviewPlanItem),
+            );
+        },
         initialSnapshot: {
           registry: snapshot.registry,
           isTargetSectionVisible: (targetSectionId) =>
@@ -385,6 +429,12 @@ export function AutofillWorkflow({
             )
               return "selected";
             lookup.handle.element.click();
+            recordOperation(
+              lookup.handle.element,
+              progressCategory({
+                profileFieldKey: plan.profileFieldKey,
+              } as ReviewPlanItem),
+            );
             return lookup.handle.element.checked &&
               adapter.canSelectProfileOption?.(
                 lookup.handle,
@@ -396,11 +446,20 @@ export function AutofillWorkflow({
           }
           if (!(lookup.handle.element instanceof HTMLSelectElement))
             return "unsupported-option-action";
-          return selectNativeProfileOption(
+          const before = lookup.handle.element.value;
+          const selected = selectNativeProfileOption(
             lookup.handle.element,
             normalizedValue,
             adapterAllowsSelection,
           );
+          if (lookup.handle.element.value !== before)
+            recordOperation(
+              lookup.handle.element,
+              progressCategory({
+                profileFieldKey: plan.profileFieldKey,
+              } as ReviewPlanItem),
+            );
+          return selected;
         },
       });
       const result = await executeApprovedPreparationPlans({
@@ -447,7 +506,23 @@ export function AutofillWorkflow({
             ) {
               return { code: "PROFILE_NOT_SELECTED" as const, count: 0 };
             }
-            return adapter.selectReveal(
+            const controls = [
+              ...pageDocument.querySelectorAll<
+                HTMLInputElement | HTMLSelectElement
+              >("input[type='radio'], select"),
+            ].filter(
+              (element) =>
+                element.name === selection.domName ||
+                element.name.startsWith(`${selection.domName}_`),
+            );
+            const state = (element: HTMLInputElement | HTMLSelectElement) =>
+              element instanceof HTMLInputElement
+                ? element.checked
+                : element.selectedIndex;
+            const before = new Map(
+              controls.map((element) => [element, state(element)]),
+            );
+            const diagnostic = adapter.selectReveal(
               pageDocument,
               selection,
               resolved.status === "resolved"
@@ -458,6 +533,17 @@ export function AutofillWorkflow({
                   )
                 : undefined,
             );
+            controls
+              .filter((element) => state(element) !== before.get(element))
+              .forEach((element) =>
+                recordOperation(
+                  element,
+                  progressCategory({
+                    profileFieldKey: selection.profileFieldKey,
+                  } as ReviewPlanItem),
+                ),
+              );
+            return diagnostic;
           }),
         );
         // Analyze that newly collected DOM once, but only execute selections:
@@ -676,9 +762,14 @@ export function AutofillWorkflow({
       onExit={onExit}
       exitInToolbar={exitInToolbar}
       currentCategory={currentCategory}
-      onLocateSection={(candidateIds) =>
+      operatedCategories={operatedCategories}
+      onLocateSection={(candidateIds, category) =>
         !!fieldsSnapshot &&
-        presentation.showSection(fieldsSnapshot.registry, candidateIds)
+        presentation.showSection(
+          fieldsSnapshot.registry,
+          candidateIds,
+          category ? [...(operated.get(category) ?? [])] : [],
+        )
       }
       onLocate={(candidateId) =>
         !!fieldsSnapshot &&

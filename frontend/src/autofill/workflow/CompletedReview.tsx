@@ -5,13 +5,18 @@ import styles from "./WorkflowResults.module.css";
 
 type Props = Pick<
   WorkflowResultsProps,
-  "reviewItems" | "fieldStateFor" | "onLocateSection" | "progressIdFor"
+  | "reviewItems"
+  | "fieldStateFor"
+  | "onLocateSection"
+  | "progressIdFor"
+  | "operatedCategories"
 > & { entries: readonly WriteProgress[] };
 interface SummaryCategory {
   label: string;
   targets: string[];
   count: number;
   signature: string;
+  operated?: boolean;
 }
 
 function summarize({
@@ -19,6 +24,7 @@ function summarize({
   reviewItems,
   fieldStateFor,
   progressIdFor,
+  operatedCategories,
 }: Props): SummaryCategory[] {
   const groups = new Map<string, SummaryCategory>();
   for (const entry of entries) {
@@ -50,6 +56,16 @@ function summarize({
     ]);
     groups.set(category, group);
   }
+  for (const label of operatedCategories ?? []) {
+    const group = groups.get(label) ?? {
+      label,
+      targets: [],
+      count: 0,
+      signature: "operation",
+    };
+    group.operated = true;
+    groups.set(label, group);
+  }
   return [...groups.values()];
 }
 
@@ -75,7 +91,10 @@ function CategorySummary({
     setCollapsed(confirmed);
   }
   const targets = category.targets;
-  const canLocate = !!onLocateSection && targets.length > 0 && !unavailable;
+  const canLocate =
+    !!onLocateSection &&
+    (targets.length > 0 || category.operated) &&
+    !unavailable;
   return (
     <li className={styles.summaryCategory} data-reviewed={confirmed}>
       <div className={styles.categoryHeading}>
@@ -92,7 +111,8 @@ function CategorySummary({
             disabled={!collapsed && !canLocate}
             onClick={() => {
               if (collapsed) setCollapsed(false);
-              else if (!onLocateSection?.(targets)) setUnavailable(true);
+              else if (!onLocateSection?.(targets, category.label))
+                setUnavailable(true);
             }}
           >
             {category.label}
@@ -110,7 +130,11 @@ function CategorySummary({
           aria-controls={contentId}
           onClick={() => setCollapsed(!collapsed)}
         >
-          {confirmed ? "확인 완료" : `${category.count}개 입력`}{" "}
+          {confirmed
+            ? "확인 완료"
+            : category.count
+              ? `${category.count}개 입력`
+              : "선택·검색 확인"}{" "}
           <span aria-hidden="true">{collapsed ? "⌄" : "⌃"}</span>
         </button>
       </div>

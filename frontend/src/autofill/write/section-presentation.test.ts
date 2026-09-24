@@ -190,3 +190,55 @@ it("places the beginning of a tall section a quarter down the viewport", () => {
   expect(inputs[0].scrollIntoView).not.toHaveBeenCalled();
   p.clear();
 });
+
+it("includes the section title and untouched controls when only one field was written", () => {
+  const { section, snapshot, ids } = fixture();
+  section.getBoundingClientRect = () => new DOMRect(20, 100, 700, 550);
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, [ids[0]])).toBe(true);
+  const overlay = document.querySelector<HTMLElement>(
+    "[data-career-form-section-highlight]",
+  )!;
+  expect(parseFloat(overlay.style.height)).toBe(590);
+  p.clear();
+});
+
+it("locates recorded address controls even when the final scan has no corresponding candidate", () => {
+  const { inputs, snapshot } = fixture();
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, [], inputs)).toBe(true);
+  p.clear();
+  inputs.forEach((input) => input.remove());
+  expect(p.showSection(snapshot.registry, [], inputs)).toBe(false);
+});
+
+it("includes unfilled military dependencies without enclosing veteran controls in the same Hyundai article", () => {
+  document.body.innerHTML = `<article id="etc" class="field-form-apply"><div class="field"><h3>병역</h3><input id="milCd" type="button"></div><div class="field"><label>복무 기간<input id="milStartDt"></label></div><div class="field"><h3>보훈</h3><input id="branchYn" type="button"></div></article>`;
+  const controls = [...document.querySelectorAll<HTMLInputElement>("input")];
+  controls.forEach((control, index) => {
+    control.getBoundingClientRect = () =>
+      new DOMRect(40, 180 + index * 180, 500, 30);
+    control.closest<HTMLElement>(".field")!.getBoundingClientRect = () =>
+      new DOMRect(20, 130 + index * 180, 600, 130);
+  });
+  const snapshot = collectFieldsSnapshot(document);
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, [], [controls[0]])).toBe(true);
+  const overlay = document.querySelector<HTMLElement>(
+    "[data-career-form-section-highlight]",
+  )!;
+  expect(parseFloat(overlay.style.top)).toBe(110);
+  expect(parseFloat(overlay.style.height)).toBe(350);
+  p.clear();
+});
+
+it("can present a tall section whose only written control remains below the viewport", () => {
+  const { section, inputs, snapshot, ids } = fixture();
+  section.getBoundingClientRect = () => new DOMRect(20, 180, 700, 1400);
+  inputs.forEach((input) => {
+    input.getBoundingClientRect = () => new DOMRect(40, 1300, 500, 30);
+  });
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, [ids[1]])).toBe(true);
+  p.clear();
+});

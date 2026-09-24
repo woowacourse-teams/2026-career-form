@@ -710,7 +710,7 @@ it("makes completed values reviewable and locates the field without claiming ver
   fireEvent.click(
     within(region).getByRole("button", { name: "기타 항목 구역 보기" }),
   );
-  expect(onLocate).toHaveBeenCalledWith(["major"]);
+  expect(onLocate).toHaveBeenCalledWith(["major"], "기타 항목");
   expect(
     within(region).getByRole("button", { name: "기타 항목 구역 보기" }),
   ).toBeDisabled();

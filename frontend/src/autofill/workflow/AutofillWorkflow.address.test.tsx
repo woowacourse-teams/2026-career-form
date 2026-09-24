@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { it, expect, afterEach } from "vitest";
 import { AutofillWorkflow } from "./AutofillWorkflow";
 import { createEmptyProfile } from "../../profile/model";
@@ -130,6 +136,26 @@ it.each([
         (document.querySelector("#prsAddressDtl") as HTMLInputElement).value,
       ).toBe(detail),
     );
+    const section = document.querySelector<HTMLElement>(
+      "#applyContentUserInfo",
+    )!;
+    section.getBoundingClientRect = () => new DOMRect(20, 180, 600, 280);
+    section
+      .querySelectorAll<HTMLElement>("button,input")
+      .forEach((element, index) => {
+        element.getBoundingClientRect = () =>
+          new DOMRect(40, 220 + index * 45, 400, 30);
+      });
+    const locate = screen.getByRole("button", {
+      name: "연락처와 주소 구역 보기",
+    });
+    expect(locate).toBeEnabled();
+    fireEvent.click(locate);
+    const highlight = document.querySelector<HTMLElement>(
+      "[data-career-form-section-highlight]",
+    )!;
+    expect(highlight).not.toBeNull();
+    expect(parseFloat(highlight.style.height)).toBe(320);
     expect(searches).toBe(1);
     expect(document.body.textContent).not.toContain(
       "주소 검색 선택과 지원서 반영을 확인했습니다.",

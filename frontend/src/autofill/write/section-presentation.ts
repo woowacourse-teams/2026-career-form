@@ -1,14 +1,43 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
 
+/** Only presentation uses these containers; this never authorizes a write. */
+function reviewRoots(element: HTMLElement): HTMLElement[] {
+  const etc = element.closest("article#etc.field-form-apply");
+  if (etc) {
+    // Hyundai puts three unrelated categories in one article. Include every
+    // dependent control of the operated family, but not the entire article.
+    const families = [
+      ["milCd", "milExcptCd", "milRank", "milDitinc", "milStartDt", "milEndDt"],
+      ["branchYn", "branchRel", "branchSupplyYn", "branchAddPoint", "branchNo"],
+      ["injuryYn", "injuryGrade", "injuryType", "injuryTypeNm", "injuryCont"],
+    ];
+    const family = families.find((ids) => ids.includes(element.id));
+    if (family)
+      return [...etc.querySelectorAll<HTMLElement>("[id]")]
+        .filter((node) => family.includes(node.id))
+        .map((node) => node.closest<HTMLElement>(".field") ?? node)
+        .filter(
+          (node) =>
+            !node.closest("[hidden], [inert]") &&
+            node.getBoundingClientRect().height > 0,
+        );
+  }
+  const root = element.closest<HTMLElement>(
+    "fieldset, section, [role='group'], .apply-form-box, article.field-form-apply",
+  );
+  return root ? [root] : [];
+}
+
 /** Presents a section without focusing a control or repositioning the results panel. */
 export function presentSection(
   document: Document,
   registry: CandidateRegistry,
   ids: readonly string[],
+  recorded: readonly HTMLElement[] = [],
 ): (() => void) | undefined {
   const view = document.defaultView;
   if (!view) return;
-  const elements = [...new Set(ids)].flatMap((id) => {
+  const candidates = [...new Set(ids)].flatMap((id) => {
     const lookup = registry.lookupField(id);
     if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
     if (
@@ -16,36 +45,38 @@ export function presentSection(
       ["hidden", "inert", "unsupported"].includes(lookup.reason)
     )
       return [];
-    const element = lookup.handle.elements[0];
-    if (
-      !element?.isConnected ||
-      element.ownerDocument !== document ||
-      element.type === "hidden"
-    )
-      return [];
-    for (
-      let node: HTMLElement | null = element;
-      node;
-      node = node.parentElement
-    ) {
-      const style = view.getComputedStyle(node);
-      if (
-        node.hidden ||
-        node.hasAttribute("inert") ||
-        style.display === "none" ||
-        style.visibility === "hidden"
-      )
-        return [];
-    }
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 ? [element] : [];
+    return lookup.handle.elements;
   });
+  const elements = [...new Set([...candidates, ...recorded])].filter(
+    (element) => {
+      if (
+        !element?.isConnected ||
+        element.ownerDocument !== document ||
+        element.getAttribute("type") === "hidden"
+      )
+        return false;
+      for (
+        let node: HTMLElement | null = element;
+        node;
+        node = node.parentElement
+      ) {
+        const style = view.getComputedStyle(node);
+        if (
+          node.hidden ||
+          node.hasAttribute("inert") ||
+          style.display === "none" ||
+          style.visibility === "hidden"
+        )
+          return false;
+      }
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    },
+  );
   if (!elements.length) return;
-  const readingBounds = (
-    element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
-  ) => {
+  const readingBounds = (element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
-    const labels = [...(element.labels ?? [])]
+    const labels = [...((element as HTMLInputElement).labels ?? [])]
       .map((label) => label.getBoundingClientRect())
       .filter(
         (label) =>
@@ -98,16 +129,39 @@ export function presentSection(
     containerBounds.width <= fields.width + 240
       ? common
       : undefined;
+  // Section structure, not the number of successful writes, defines the review boundary.
+  const roots = [...new Set(elements.flatMap(reviewRoots))];
+  const semanticBounds = () => {
+    const rects = roots
+      .filter((root) => root.isConnected)
+      .map((root) => root.getBoundingClientRect())
+      .filter((rect) => rect.width > 0 && rect.height > 0);
+    if (!rects.length) return undefined;
+    const left = Math.min(...rects.map((rect) => rect.left));
+    const top = Math.min(...rects.map((rect) => rect.top));
+    return new DOMRect(
+      left,
+      top,
+      Math.max(...rects.map((rect) => rect.right)) - left,
+      Math.max(...rects.map((rect) => rect.bottom)) - top,
+    );
+  };
   const bounds = () => {
-    const rect = container?.isConnected
-      ? container.getBoundingClientRect()
-      : union(true);
+    const rect =
+      semanticBounds() ??
+      (container?.isConnected
+        ? container.getBoundingClientRect()
+        : union(true));
     const side = container ? 20 : 24;
     let top = rect.top - 20;
     let bottom = rect.bottom + 20;
     // Use available whitespace, without drawing across the neighboring section's labels or controls.
     for (const neighbor of neighbors) {
-      if (!neighbor.isConnected) continue;
+      if (
+        !neighbor.isConnected ||
+        roots.some((root) => root.contains(neighbor))
+      )
+        continue;
       const control = neighbor.getBoundingClientRect();
       if (!control.width || !control.height) continue;
       const other = readingBounds(neighbor);
@@ -130,7 +184,10 @@ export function presentSection(
   const tolerance = Math.min(96, view.innerHeight * 0.1);
   if (Math.abs(rect.top - targetTop) > tolerance) {
     const anchor =
-      container ?? elements[0].closest<HTMLElement>("label") ?? elements[0];
+      roots[0] ??
+      container ??
+      elements[0].closest<HTMLElement>("label") ??
+      elements[0];
     const margin = anchor.style.getPropertyValue("scroll-margin-top");
     const priority = anchor.style.getPropertyPriority("scroll-margin-top");
     const offset = anchor.getBoundingClientRect().top - rect.top;
@@ -147,7 +204,7 @@ export function presentSection(
     if (margin) anchor.style.setProperty("scroll-margin-top", margin, priority);
     else anchor.style.removeProperty("scroll-margin-top");
   }
-  const visible = elements.some((element) => {
+  const visible = [...elements, ...roots].some((element) => {
     const rect = element.getBoundingClientRect();
     const left = Math.max(0, rect.left),
       right = Math.min(view.innerWidth, rect.right);
@@ -195,6 +252,7 @@ export function presentSection(
   document.body.append(overlay);
   document.addEventListener("scroll", update, true);
   view.addEventListener("resize", update);
+  roots.forEach((root) => observer?.observe(root));
   if (container) observer?.observe(container);
   else elements.forEach((element) => observer?.observe(element));
   update();
