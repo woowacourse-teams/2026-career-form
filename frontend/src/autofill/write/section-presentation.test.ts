@@ -24,7 +24,7 @@ function fixture() {
   );
   return { section, inputs, snapshot, ids };
 }
-it("highlights the whole section without focusing or highlighting individual fields", () => {
+it("highlights each written field without focusing or changing its original styles", () => {
   const { section, inputs, snapshot, ids } = fixture();
   const p = createFieldPresentation(document);
   expect(p.showSection(snapshot.registry, ids)).toBe(true);
@@ -32,7 +32,10 @@ it("highlights the whole section without focusing or highlighting individual fie
     "[data-career-form-section-highlight]",
   ) as HTMLElement;
   expect(overlay).not.toBeNull();
-  expect(parseFloat(overlay.style.height)).toBeGreaterThanOrEqual(260);
+  expect(parseFloat(overlay.style.height)).toBe(42);
+  expect(
+    document.querySelectorAll("[data-career-form-section-highlight]"),
+  ).toHaveLength(2);
   expect(inputs.every((input) => input.style.outline === "")).toBe(true);
   expect(section.scrollIntoView).not.toHaveBeenCalled();
   expect(document.activeElement).toBe(document.body);
@@ -95,55 +98,19 @@ it("ignores hidden groups and rejects a section covered by a modal", () => {
     document.querySelector("[data-career-form-section-highlight]"),
   ).toBeNull();
 });
-it("tracks section bounds while scrolling and removes the overlay on clear", () => {
-  const { section, snapshot, ids } = fixture();
+it("tracks each field while scrolling and removes every overlay on clear", () => {
+  const { inputs, snapshot, ids } = fixture();
   const p = createFieldPresentation(document);
   p.showSection(snapshot.registry, ids);
   const overlay = document.querySelector(
     "[data-career-form-section-highlight]",
   ) as HTMLElement;
-  section.getBoundingClientRect = () => new DOMRect(20, 100, 700, 260);
+  inputs[0].getBoundingClientRect = () => new DOMRect(40, 100, 500, 30);
   document.dispatchEvent(new Event("scroll"));
-  expect(overlay.style.top).toBe("80px");
+  expect(overlay.style.top).toBe("94px");
   p.clear();
   document.dispatchEvent(new Event("scroll"));
   expect(overlay.isConnected).toBe(false);
-});
-
-it("leaves breathing room outside the section container", () => {
-  const { section, snapshot, ids } = fixture();
-  const p = createFieldPresentation(document);
-  p.showSection(snapshot.registry, ids);
-  const overlay = document.querySelector(
-    "[data-career-form-section-highlight]",
-  ) as HTMLElement;
-  const rect = section.getBoundingClientRect();
-  expect(parseFloat(overlay.style.top)).toBeLessThanOrEqual(rect.top - 20);
-  expect(parseFloat(overlay.style.height)).toBeGreaterThanOrEqual(
-    rect.height + 40,
-  );
-  p.clear();
-});
-
-it("keeps expanded margins between adjacent section labels", () => {
-  const { snapshot, ids } = fixture();
-  const label = document.createElement("label");
-  label.textContent = "다음 구역";
-  const input = document.createElement("input");
-  input.name = "next";
-  label.append(input);
-  document.body.append(label);
-  label.getBoundingClientRect = () => new DOMRect(20, 450, 700, 50);
-  input.getBoundingClientRect = () => new DOMRect(40, 470, 500, 30);
-  const p = createFieldPresentation(document);
-  p.showSection(snapshot.registry, ids);
-  const overlay = document.querySelector(
-    "[data-career-form-section-highlight]",
-  ) as HTMLElement;
-  expect(parseFloat(overlay.style.top) + parseFloat(overlay.style.height)).toBe(
-    445,
-  );
-  p.clear();
 });
 
 it("centers a short section and keeps a repeated click stationary", () => {
@@ -159,12 +126,9 @@ it("centers a short section and keeps a repeated click stationary", () => {
   });
   const p = createFieldPresentation(document);
   expect(p.showSection(snapshot.registry, ids)).toBe(true);
-  const overlay = document.querySelector(
-    "[data-career-form-section-highlight]",
-  ) as HTMLElement;
-  expect(
-    parseFloat(overlay.style.top) + parseFloat(overlay.style.height) / 2,
-  ).toBe(window.innerHeight / 2);
+  expect(section.getBoundingClientRect().top + 130).toBe(
+    window.innerHeight / 2,
+  );
   p.showSection(snapshot.registry, ids);
   expect(section.scrollIntoView).toHaveBeenCalledTimes(1);
   expect(section.style.scrollMarginTop).toBe("");
@@ -183,15 +147,14 @@ it("places the beginning of a tall section a quarter down the viewport", () => {
   });
   const p = createFieldPresentation(document);
   expect(p.showSection(snapshot.registry, ids)).toBe(true);
-  const overlay = document.querySelector(
-    "[data-career-form-section-highlight]",
-  ) as HTMLElement;
-  expect(parseFloat(overlay.style.top)).toBe(window.innerHeight * 0.25);
+  expect(section.getBoundingClientRect().top - 20).toBe(
+    window.innerHeight * 0.25,
+  );
   expect(inputs[0].scrollIntoView).not.toHaveBeenCalled();
   p.clear();
 });
 
-it("includes the section title and untouched controls when only one field was written", () => {
+it("outlines only the written field and leaves the title and untouched controls outside", () => {
   const { section, snapshot, ids } = fixture();
   section.getBoundingClientRect = () => new DOMRect(20, 100, 700, 550);
   const p = createFieldPresentation(document);
@@ -199,7 +162,10 @@ it("includes the section title and untouched controls when only one field was wr
   const overlay = document.querySelector<HTMLElement>(
     "[data-career-form-section-highlight]",
   )!;
-  expect(parseFloat(overlay.style.height)).toBe(590);
+  expect(parseFloat(overlay.style.height)).toBe(42);
+  expect(
+    document.querySelectorAll("[data-career-form-section-highlight]"),
+  ).toHaveLength(1);
   p.clear();
 });
 
@@ -212,7 +178,7 @@ it("locates recorded address controls even when the final scan has no correspond
   expect(p.showSection(snapshot.registry, [], inputs)).toBe(false);
 });
 
-it("includes unfilled military dependencies without enclosing veteran controls in the same Hyundai article", () => {
+it("outlines the selected military control without enclosing unfilled dependencies or veteran controls", () => {
   document.body.innerHTML = `<article id="etc" class="field-form-apply"><div class="field"><h3>병역</h3><input id="milCd" type="button"></div><div class="field"><label>복무 기간<input id="milStartDt"></label></div><div class="field"><h3>보훈</h3><input id="branchYn" type="button"></div></article>`;
   const controls = [...document.querySelectorAll<HTMLInputElement>("input")];
   controls.forEach((control, index) => {
@@ -227,8 +193,8 @@ it("includes unfilled military dependencies without enclosing veteran controls i
   const overlay = document.querySelector<HTMLElement>(
     "[data-career-form-section-highlight]",
   )!;
-  expect(parseFloat(overlay.style.top)).toBe(110);
-  expect(parseFloat(overlay.style.height)).toBe(350);
+  expect(parseFloat(overlay.style.top)).toBe(174);
+  expect(parseFloat(overlay.style.height)).toBe(42);
   p.clear();
 });
 
@@ -240,5 +206,52 @@ it("can present a tall section whose only written control remains below the view
   });
   const p = createFieldPresentation(document);
   expect(p.showSection(snapshot.registry, [ids[1]])).toBe(true);
+  p.clear();
+});
+
+it("draws separate simultaneous outlines only around the written fields", () => {
+  const { inputs, snapshot, ids } = fixture();
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, ids)).toBe(true);
+  const outlines = [
+    ...document.querySelectorAll<HTMLElement>(
+      "[data-career-form-section-highlight]",
+    ),
+  ];
+  expect(outlines).toHaveLength(2);
+  outlines.forEach((outline, index) => {
+    const field = inputs[index].getBoundingClientRect();
+    expect(parseFloat(outline.style.top)).toBe(field.top - 6);
+    expect(parseFloat(outline.style.height)).toBe(field.height + 12);
+  });
+  p.showSection(snapshot.registry, [ids[0]]);
+  expect(
+    document.querySelectorAll("[data-career-form-section-highlight]"),
+  ).toHaveLength(1);
+  p.clear();
+  expect(
+    document.querySelectorAll("[data-career-form-section-highlight]"),
+  ).toHaveLength(0);
+});
+
+it("does not outline search/add buttons or unselected radio alternatives", () => {
+  const { snapshot, inputs } = fixture();
+  const button = document.createElement("button");
+  const radio = document.createElement("input");
+  radio.type = "radio";
+  document.body.append(button, radio);
+  [button, radio].forEach((element) => {
+    element.getBoundingClientRect = () => new DOMRect(40, 400, 40, 30);
+  });
+  const p = createFieldPresentation(document);
+  p.showSection(snapshot.registry, [], [inputs[0], button, radio]);
+  expect(
+    document.querySelectorAll("[data-career-form-section-highlight]"),
+  ).toHaveLength(1);
+  radio.checked = true;
+  p.showSection(snapshot.registry, [], [inputs[0], button, radio]);
+  expect(
+    document.querySelectorAll("[data-career-form-section-highlight]"),
+  ).toHaveLength(2);
   p.clear();
 });

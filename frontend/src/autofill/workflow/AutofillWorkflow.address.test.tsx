@@ -155,7 +155,10 @@ it.each([
       "[data-career-form-section-highlight]",
     )!;
     expect(highlight).not.toBeNull();
-    expect(parseFloat(highlight.style.height)).toBe(320);
+    expect(parseFloat(highlight.style.height)).toBe(42);
+    expect(
+      document.querySelectorAll("[data-career-form-section-highlight]"),
+    ).toHaveLength(written);
     expect(searches).toBe(1);
     expect(document.body.textContent).not.toContain(
       "주소 검색 선택과 지원서 반영을 확인했습니다.",

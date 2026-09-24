@@ -52,7 +52,11 @@ export function presentSection(
       if (
         !element?.isConnected ||
         element.ownerDocument !== document ||
-        element.getAttribute("type") === "hidden"
+        element.getAttribute("type") === "hidden" ||
+        element.tagName === "BUTTON" ||
+        (element instanceof HTMLInputElement &&
+          element.type === "radio" &&
+          !element.checked)
       )
         return false;
       for (
@@ -221,40 +225,50 @@ export function presentSection(
     });
   });
   if (!visible) return;
-  const overlay = document.createElement("div");
-  overlay.setAttribute("data-career-form-section-highlight", "");
-  overlay.setAttribute("aria-hidden", "true");
-  overlay.style.cssText =
-    "all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:3px solid #a65f2d;border-radius:14px;background:transparent;z-index:2147483000;";
+  const overlays = elements.map((element) => {
+    const overlay = document.createElement("div");
+    overlay.setAttribute("data-career-form-section-highlight", "");
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.style.cssText =
+      "all:initial;position:fixed;box-sizing:border-box;pointer-events:none;border:3px solid #a65f2d;border-radius:8px;background:transparent;z-index:2147483000;";
+    return { element, overlay };
+  });
   const update = () => {
     if (!elements.some((element) => element.isConnected)) {
       clear();
       return;
     }
-    const rect = bounds();
-    Object.assign(overlay.style, {
-      left: `${rect.left}px`,
-      top: `${rect.top}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-    });
+    for (const { element, overlay } of overlays) {
+      const rect = element.getBoundingClientRect();
+      const hidden =
+        !element.isConnected ||
+        !rect.width ||
+        !rect.height ||
+        !!element.closest("[hidden], [inert]") ||
+        view.getComputedStyle(element).visibility === "hidden";
+      Object.assign(overlay.style, {
+        display: hidden ? "none" : "block",
+        left: `${rect.left - 6}px`,
+        top: `${rect.top - 6}px`,
+        width: `${rect.width + 12}px`,
+        height: `${rect.height + 12}px`,
+      });
+    }
   };
   const observer =
     typeof ResizeObserver === "undefined"
       ? undefined
       : new ResizeObserver(update);
   const clear = () => {
-    overlay.remove();
+    overlays.forEach(({ overlay }) => overlay.remove());
     document.removeEventListener("scroll", update, true);
     view.removeEventListener("resize", update);
     observer?.disconnect();
   };
-  document.body.append(overlay);
+  document.body.append(...overlays.map(({ overlay }) => overlay));
   document.addEventListener("scroll", update, true);
   view.addEventListener("resize", update);
-  roots.forEach((root) => observer?.observe(root));
-  if (container) observer?.observe(container);
-  else elements.forEach((element) => observer?.observe(element));
+  elements.forEach((element) => observer?.observe(element));
   update();
   return clear;
 }
