@@ -79,8 +79,8 @@
   display: inline-block;
   padding: 4px 7px;
   border-radius: 5px;
-  background: var(--color-text);
-  color: white;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
   font-size: 11px;
   vertical-align: middle;
 }
@@ -142,8 +142,8 @@
   font-weight: 800;
 }
 .story li[aria-current] span {
-  background: #ad5b2f;
-  color: white;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
 .preview[data-playing="true"][data-step="1"]
   button[aria-label="직장경력 구역 보기"] {

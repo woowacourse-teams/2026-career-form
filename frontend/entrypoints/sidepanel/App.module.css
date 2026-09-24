@@ -319,13 +319,13 @@
 }
 .autofillAction button[data-autofill-start] {
   border-width: 2px;
-  border-color: var(--color-action);
-  background: var(--color-action);
-  color: #fff;
+  border-color: var(--color-border-strong);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
 .autofillAction button[data-autofill-start]:hover {
-  background: var(--color-action-strong);
-  border-color: var(--color-action-strong);
+  background: var(--color-brand-hover);
+  border-color: var(--color-brand-hover);
 }
 .returnButton {
   display: grid;
