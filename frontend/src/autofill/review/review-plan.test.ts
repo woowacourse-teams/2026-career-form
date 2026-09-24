@@ -6,6 +6,7 @@ import {
   createStructuralSignature,
 } from "../dom/candidate-registry";
 import { createEmptyProfile, type Profile } from "../../profile/model";
+import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type { ReviewPlanItem } from "./review-plan";
 import {
   buildReviewPlan,
@@ -16,10 +17,11 @@ import {
 function response(
   fields: FieldsAnalyzeResponse["fields"],
   analysisStatus: FieldsAnalyzeResponse["analysisStatus"] = "COMPLETE",
+  mode: FieldsAnalyzeResponse["mode"] = "GENERIC",
 ): FieldsAnalyzeResponse {
   return {
     snapshotId: "snapshot-1",
-    mode: "GENERIC",
+    mode,
     analysisStatus,
     fields,
   };
@@ -49,6 +51,64 @@ function registryWithTextField(currentValue = "") {
   });
 
   return registry;
+}
+
+function registryWithDateInput({
+  placeholder,
+  type = "text",
+  currentValue = "",
+  candidateId = "date-field",
+  label = "기록일",
+  itemIndex,
+}: {
+  placeholder?: string;
+  type?: string;
+  currentValue?: string;
+  candidateId?: string;
+  label?: string;
+  itemIndex?: number;
+}) {
+  const element = document.createElement("input");
+  element.type = type;
+  if (placeholder !== undefined) element.placeholder = placeholder;
+  element.value = currentValue;
+  document.body.append(element);
+  const registry = new CandidateRegistry();
+  registry.registerField({
+    kind: "field",
+    candidateId,
+    candidate: {
+      candidateId,
+      element: "input",
+      control: "text",
+      visibility: "visible",
+      displayName: label,
+    },
+    elements: [element],
+    optionElements: new Map(),
+    sectionId: "section-date",
+    ...(itemIndex !== undefined
+      ? { itemIndex, itemId: `date-row-${itemIndex}` }
+      : {}),
+    signature: createStructuralSignature([element]),
+  });
+  if (itemIndex !== undefined)
+    registry.setFieldItemCount("section-date", itemIndex + 1);
+  return { registry, element };
+}
+
+function directDateAnalysis(key: string, candidateId = "date-field") {
+  return response([
+    {
+      candidateId,
+      matchType: "MATCH",
+      valueBinding: { type: "DIRECT", profileFieldKey: key },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "LLM_SUGGESTED",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    },
+  ]);
 }
 
 function registryWithLanguageGradeOptions(options: readonly string[]) {
@@ -126,6 +186,45 @@ const allowedEmail = {
 };
 
 describe("review plan", () => {
+  it("preserves a DERIVED YEAR_MONTH value without date conversion", () => {
+    const profile = createEmptyProfile();
+    profile.education = [
+      {
+        id: "university-1",
+        sectionId: "university",
+        values: { startDate: "2019-03-15" },
+      },
+    ];
+    const { registry } = registryWithDateInput({
+      placeholder: "YYYY.MM",
+      itemIndex: 0,
+    });
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          candidateId: "date-field",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "DERIVED",
+            recipe: "YEAR_MONTH",
+            profileFieldKey: "education.university.startDate",
+          },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "LLM_SUGGESTED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ]),
+      profile,
+      registry,
+    }).items;
+    expect(item).toMatchObject({
+      profileValue: "2019-03",
+      previewValue: "2019-03",
+    });
+    expect(item.dateApproval).toBeUndefined();
+  });
+
   it("uses one live native option matched by a standard profile ID", () => {
     const [item] = buildReviewPlan({
       analysis: response([allowedLanguageGrade]),
@@ -754,6 +853,352 @@ describe("review plan", () => {
       disabled: false,
       revealed: true,
     });
+  });
+
+  it("leaves a non-date DIRECT field unchanged even when its value looks like a date", () => {
+    const profile = createEmptyProfile();
+    profile.contact.email = "2001-02-03";
+    const registry = registryWithTextField();
+    const item = buildReviewPlan({
+      analysis: directDateAnalysis("contact.contact.email", "field-1"),
+      profile,
+      registry,
+    }).items[0];
+    expect(item).toMatchObject({
+      profileValue: "2001-02-03",
+      previewValue: "2001-02-03",
+    });
+    expect(item.dateApproval).toBeUndefined();
+  });
+
+  it("does not infer date semantics from a date-like label when the definition is non-date", () => {
+    const personal = PROFILE_CATEGORIES.find(
+      (category) => category.id === "personal",
+    )!;
+    const field = personal.sections
+      .find((section) => section.id === "personal")!
+      .fields.find((item) => item.id === "birthDate")!;
+    const originalType = field.inputType;
+    Object.assign(field, { inputType: "text" });
+    try {
+      const profile = createEmptyProfile();
+      profile.personal.birthDate = "2001-02-03";
+      const { registry } = registryWithDateInput({
+        placeholder: "YYYY.MM.DD",
+        label: "Date of birth",
+      });
+      const item = buildReviewPlan({
+        analysis: directDateAnalysis("personal.personal.birthDate"),
+        profile,
+        registry,
+      }).items[0];
+      expect(item).toMatchObject({
+        profileValue: "2001-02-03",
+        previewValue: "2001-02-03",
+      });
+      expect(item.dateApproval).toBeUndefined();
+    } finally {
+      Object.assign(field, { inputType: originalType });
+    }
+  });
+
+  it("converts a military date and preserves its existing auto-fill policy", () => {
+    const profile = createEmptyProfile();
+    profile.military.serviceStartDate = "2018-03-04";
+    const { registry } = registryWithDateInput({ placeholder: "YYYY.MM.DD" });
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...(directDateAnalysis("military.military.serviceStartDate")
+            .fields[0] as Extract<
+            FieldsAnalyzeResponse["fields"][number],
+            { matchType: "MATCH" }
+          >),
+          autofillPolicy: "SENSITIVE_CONFIRMATION",
+        },
+      ]),
+      profile,
+      registry,
+    }).items;
+    expect(item).toMatchObject({
+      status: "available",
+      profileValue: "2018.03.04",
+      previewValue: "2018.03.04",
+      selected: true,
+      disabled: false,
+      dateApproval: { format: "YYYY.MM.DD" },
+    });
+  });
+
+  it("masks an individually confirmed real date and retains approval through reveal", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      health: [
+        {
+          id: "health-1",
+          sectionId: "health",
+          values: { healthDate: "2020-04-05" },
+        },
+      ],
+    };
+    const { registry } = registryWithDateInput({
+      placeholder: "YYYY.MM.DD",
+      itemIndex: 0,
+    });
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...(directDateAnalysis("health.health.healthDate")
+            .fields[0] as Extract<
+            FieldsAnalyzeResponse["fields"][number],
+            { matchType: "MATCH" }
+          >),
+          autofillPolicy: "SENSITIVE_CONFIRMATION",
+        },
+      ]),
+      profile,
+      registry,
+    }).items;
+    expect(item).toMatchObject({
+      status: "sensitive",
+      profileValue: "2020.04.05",
+      previewValue: "••••••••",
+      selected: false,
+      disabled: true,
+      revealed: false,
+      profileEntryId: "health-1",
+      itemIndex: 0,
+      dateApproval: { format: "YYYY.MM.DD" },
+    });
+    const revealed = revealSensitiveReviewItem(item);
+    expect(revealed).toMatchObject({
+      status: "sensitive",
+      previewValue: "2020.04.05",
+      selected: false,
+      disabled: false,
+      revealed: true,
+      dateApproval: item.dateApproval,
+    });
+    expect({ ...revealed, selected: true }).toMatchObject({
+      selected: true,
+      disabled: false,
+      dateApproval: item.dateApproval,
+    });
+  });
+
+  it("preserves adapter static DIRECT normalization when date-like clues are absent", () => {
+    const profile = createEmptyProfile();
+    profile.personal.birthDate = "2001-02-03";
+    const { registry } = registryWithDateInput({ label: "Adapter date field" });
+    const [item] = buildReviewPlan({
+      analysis: response(
+        [
+          {
+            candidateId: "date-field",
+            matchType: "MATCH",
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "personal.personal.birthDate",
+            },
+            autofillPolicy: "ALLOWED",
+            mappingStatus: "ADAPTER_VERIFIED",
+            interactionStatus: "READY",
+            writePlan: { command: "SET_TEXT" },
+          },
+        ],
+        "COMPLETE",
+        "ADAPTER",
+      ),
+      profile,
+      registry,
+      normalizeDirectValue: (_key, value) => value.replaceAll("-", "."),
+    }).items;
+    expect(item).toMatchObject({
+      profileValue: "2001.02.03",
+      previewValue: "2001.02.03",
+      status: "available",
+    });
+    expect(item.dateApproval).toBeUndefined();
+  });
+
+  it("keeps repeated date identity and index on the converted review item", () => {
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      education: [
+        {
+          id: "university-1",
+          sectionId: "university",
+          values: { startDate: "2019-03-15" },
+        },
+      ],
+    };
+    const { registry } = registryWithDateInput({
+      placeholder: "YYYY.MM.DD",
+      itemIndex: 0,
+    });
+    const [item] = buildReviewPlan({
+      analysis: directDateAnalysis("education.university.startDate"),
+      profile,
+      registry,
+    }).items;
+    expect(item).toMatchObject({
+      profileValue: "2019.03.15",
+      profileEntryId: "university-1",
+      itemIndex: 0,
+      dateApproval: { format: "YYYY.MM.DD" },
+    });
+  });
+
+  it.each([
+    ["missing clue", undefined, undefined, undefined],
+    ["ambiguous clue", "YYYY.MM or YYYY.MM.DD", undefined, undefined],
+    ["length conflict", "YYYY.MM", undefined, { maxlength: "6" }],
+    ["pattern conflict", "YYYY.MM", undefined, { pattern: "0000" }],
+  ])(
+    "blocks a date review when the target has %s",
+    (_label, placeholder, _unused, attrs) => {
+      const profile = createEmptyProfile();
+      profile.personal.birthDate = "2001-02-03";
+      const { registry, element } = registryWithDateInput({ placeholder });
+      for (const [name, value] of Object.entries(attrs ?? {}))
+        element.setAttribute(name, value!);
+      const [item] = buildReviewPlan({
+        analysis: directDateAnalysis("personal.personal.birthDate"),
+        profile,
+        registry,
+      }).items;
+      expect(item).toMatchObject({
+        status: "unavailable",
+        selected: false,
+        disabled: true,
+        previewValue: "입력 예정 값 없음",
+      });
+      expect(item.reason).not.toBe("");
+      expect(item.profileValue).toBeUndefined();
+      expect(item.reason).toMatch(/날짜 입력 형식|날짜 입력값/);
+    },
+  );
+
+  it("converts only an actual date profile field in generic DIRECT review", () => {
+    const element = document.createElement("input");
+    element.type = "text";
+    element.placeholder = "YYYY.MM.DD";
+    document.body.append(element);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "field-1",
+      candidate: {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+        displayName: "생년월일",
+      },
+      elements: [element],
+      optionElements: new Map(),
+      sectionId: "section-1",
+      signature: createStructuralSignature([element]),
+    });
+    const profile = createEmptyProfile();
+    profile.personal.birthDate = " 2001-02-03 ";
+
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey: "personal.personal.birthDate",
+          },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "LLM_SUGGESTED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ]),
+      profile,
+      registry,
+    }).items;
+
+    expect(item).toMatchObject({
+      profileValue: "2001.02.03",
+      previewValue: "2001.02.03",
+      status: "available",
+      selected: true,
+      dateApproval: { format: "YYYY.MM.DD" },
+    });
+
+    element.value = "2001.02.03";
+    expect(
+      buildReviewPlan({
+        analysis: response([
+          {
+            candidateId: "field-1",
+            matchType: "MATCH",
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "personal.personal.birthDate",
+            },
+            autofillPolicy: "ALLOWED",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "READY",
+            writePlan: { command: "SET_TEXT" },
+          },
+        ]),
+        profile,
+        registry,
+      }).items[0],
+    ).toMatchObject({ status: "available", selected: true });
+    element.value = "1999.02.03";
+    expect(
+      buildReviewPlan({
+        analysis: response([
+          {
+            candidateId: "field-1",
+            matchType: "MATCH",
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "personal.personal.birthDate",
+            },
+            autofillPolicy: "ALLOWED",
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "READY",
+            writePlan: { command: "SET_TEXT" },
+          },
+        ]),
+        profile,
+        registry,
+      }).items[0],
+    ).toMatchObject({ status: "conflict", selected: false });
+
+    profile.personal.birthDate = "2001-02-30";
+    const invalid = buildReviewPlan({
+      analysis: response([
+        {
+          candidateId: "field-1",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey: "personal.personal.birthDate",
+          },
+          autofillPolicy: "ALLOWED",
+          mappingStatus: "LLM_SUGGESTED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        },
+      ]),
+      profile,
+      registry,
+    }).items[0];
+    expect(invalid).toMatchObject({
+      status: "unavailable",
+      selected: false,
+      disabled: true,
+      previewValue: "입력 예정 값 없음",
+    });
+    expect(invalid.reason).toContain("변환할 수 없습니다");
   });
 
   it("keeps a partial response distinguishable from a blocked response", () => {

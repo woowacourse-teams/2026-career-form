@@ -8,6 +8,7 @@ import {
 import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateBlockReason } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { resolveDateTargetFormat } from "../review/date-target-format";
 import {
   executeApprovedWrites,
   executeApprovedWritesAfterPageSettles,
@@ -1394,5 +1395,164 @@ describe("generic writer fail-closed native boundaries", () => {
       outcome: "needs-verification",
       code: "STALE_TARGET",
     });
+  });
+});
+
+describe("approved date-target writes", () => {
+  function setupDate(value = "2024.02.29", type = "text") {
+    const input = document.createElement("input");
+    input.type = type;
+    input.id = "same-target-id";
+    if (type === "text") input.placeholder = "YYYY.MM.DD";
+    document.body.append(input);
+    const registry = register(input, {
+      candidateId: "approved-date",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const lookup = registry.lookupField("approved-date");
+    if (lookup.status !== "ready") throw new Error("test field unavailable");
+    const result = resolveDateTargetFormat(lookup.handle);
+    if (result.status !== "resolved") throw new Error(result.reason);
+    const item = reviewItem(
+      { ...textAnalysis, candidateId: "approved-date" },
+      value,
+      { dateApproval: result.approval },
+    );
+    return { input, registry, item };
+  }
+  function run(registry: CandidateRegistry, item: ReviewPlanItem) {
+    return executeApprovedWrites({
+      items: [item],
+      approvedCandidateIds: new Set([item.candidateId]),
+      registry,
+    });
+  }
+  it("writes the locally approved value and retains it", () => {
+    const { input, registry, item } = setupDate();
+    const events: string[] = [];
+    input.addEventListener("input", () => events.push("input"));
+    input.addEventListener("change", () => events.push("change"));
+    expect(run(registry, item)[0]?.status).toBe("written");
+    expect(input.value).toBe("2024.02.29");
+    expect(events).toEqual(["input", "change"]);
+  });
+  it.each([
+    [
+      "type",
+      (e: HTMLInputElement) => {
+        e.type = "date";
+      },
+    ],
+    [
+      "placeholder",
+      (e: HTMLInputElement) => {
+        e.placeholder = "YYYY.MM";
+      },
+    ],
+    ["minlength", (e: HTMLInputElement) => e.setAttribute("minlength", "40")],
+    ["maxlength", (e: HTMLInputElement) => e.setAttribute("maxlength", "3")],
+    ["pattern", (e: HTMLInputElement) => e.setAttribute("pattern", "[0-9]+")],
+    ["min", (e: HTMLInputElement) => e.setAttribute("min", "2025-01-01")],
+    ["max", (e: HTMLInputElement) => e.setAttribute("max", "2023-01-01")],
+    ["step", (e: HTMLInputElement) => e.setAttribute("step", "2")],
+    ["value", (e: HTMLInputElement) => e.setAttribute("value", "2020-01-01")],
+  ])("rejects changed approved %s before mutation", (_label, change) => {
+    const { input, registry, item } = setupDate();
+    let events = 0;
+    input.addEventListener("input", () => events++);
+    input.addEventListener("change", () => events++);
+    change(input);
+    expect(run(registry, item)[0]).toMatchObject({
+      status: "skipped",
+      code: "STALE_TARGET",
+    });
+    expect(events).toBe(0);
+    if (_label === "value") expect(input.value).toBe("2020-01-01");
+    else expect(input.value).toBe("");
+  });
+  it("rejects a replacement element", () => {
+    const { input, registry, item } = setupDate();
+    const replacement = input.cloneNode() as HTMLInputElement;
+    expect(replacement.id).toBe(input.id);
+    input.replaceWith(replacement);
+    expect(run(registry, item)[0]).toMatchObject({
+      status: "skipped",
+      code: "STALE_TARGET",
+    });
+    expect(replacement.value).toBe("");
+  });
+  it("preserves a value changed by the user since review", () => {
+    const { input, registry, item } = setupDate();
+    input.value = "2020.01.01";
+    expect(run(registry, item)[0]).toMatchObject({
+      status: "skipped",
+      code: "CONFLICT",
+    });
+    expect(input.value).toBe("2020.01.01");
+  });
+  it("does not report success or dispatch change if input handler alters the value", () => {
+    const { input, registry, item } = setupDate();
+    input.addEventListener("input", () => {
+      input.value = "2020.01.01";
+    });
+    let changes = 0;
+    input.addEventListener("change", () => changes++);
+    expect(run(registry, item)[0]?.status).toBe("skipped");
+    expect(input.value).toBe("2020.01.01");
+    expect(changes).toBe(0);
+  });
+  it("does not dispatch events on an equivalent rerun", () => {
+    const { input, registry, item } = setupDate();
+    let events = 0;
+    input.addEventListener("input", () => events++);
+    input.addEventListener("change", () => events++);
+    run(registry, item);
+    expect(
+      run(registry, { ...item, currentValue: "2024.02.29" })[0]?.status,
+    ).toBe("written");
+    expect(events).toBe(2);
+  });
+  it("accepts approved native min/value/epoch-basis fractional-step constraints", () => {
+    const { input, registry, item } = setupDate("1970-01-03", "date");
+    input.min = "1970-01-02";
+    input.setAttribute("value", "1970-01-01");
+    input.step = "0.5";
+    input.maxLength = 1;
+    const lookup = registry.lookupField(item.candidateId);
+    if (lookup.status !== "ready") throw new Error("test field unavailable");
+    const approval = resolveDateTargetFormat(lookup.handle);
+    if (approval.status !== "resolved") throw new Error(approval.reason);
+    expect(
+      run(registry, {
+        ...item,
+        currentValue: "1970-01-01",
+        dateApproval: approval.approval,
+      })[0]?.status,
+    ).toBe("written");
+    expect(input.value).toBe("1970-01-03");
+  });
+  it("leaves legacy paths without date approval unchanged", () => {
+    const input = document.createElement("input");
+    input.type = "date";
+    input.min = "2024-01-01";
+    input.step = "2";
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const result = executeApprovedWrites({
+      items: [reviewItem(textAnalysis, "2024-01-02")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "UNSUPPORTED_FORMAT",
+    });
+    expect(input.value).toBe("");
   });
 });

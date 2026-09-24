@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Synthetic Career Form Date Fixture</title>
+  </head>
+  <body>
+    <!-- Fully fabricated fixture markup and identifiers; not copied from or checked against an employer. -->
+    <form id="synthetic-application">
+      <section id="high-school" aria-label="고등학교 학력 정보">
+        <h2>고등학교 학력 정보 (synthetic)</h2>
+        <div class="educationhigh-item" data-repeatable-group="educationhigh">
+          <label
+            >입학
+            <input
+              id="high-start-0"
+              name="eduhgStart"
+              type="text"
+              placeholder="YYYY.MM"
+              value=""
+          /></label>
+          <label
+            >졸업
+            <input
+              id="high-end-0"
+              name="eduhgEnd"
+              type="text"
+              placeholder="YYYY.MM"
+              value="2020.02"
+          /></label>
+          <label
+            >일치 값
+            <input
+              id="high-equal"
+              name="eduhgEqual"
+              type="text"
+              placeholder="YYYY.MM"
+              value="2016.03"
+          /></label>
+          <label
+            >모호한 토큰
+            <input
+              id="high-ambiguous"
+              name="eduhgAmbiguous"
+              type="text"
+              placeholder="YYYY.MM / YYYY.MM.DD"
+          /></label>
+          <label
+            >길이 충돌
+            <input
+              id="high-length-conflict"
+              name="eduhgLengthConflict"
+              type="text"
+              placeholder="YYYY.MM"
+              maxlength="6"
+          /></label>
+        </div>
+        <div class="educationhigh-item" data-repeatable-group="educationhigh">
+          <label
+            >입학 2
+            <input
+              id="high-start-1"
+              name="eduhgStart"
+              type="text"
+              placeholder="YYYY.MM"
+              value="2015.03"
+          /></label>
+          <label
+            >졸업 2
+            <input
+              id="high-end-1"
+              name="eduhgEnd"
+              type="text"
+              placeholder="YYYY.MM"
+              value=""
+          /></label>
+        </div>
+      </section>
+      <section id="university" aria-label="대학교 학력 정보">
+        <h2>대학교 학력 정보 (synthetic)</h2>
+        <div class="educationuniv-item" data-repeatable-group="educationuniv">
+          <label
+            >입학 네이티브 날짜
+            <input
+              id="univ-start-date"
+              name="eduStartDate"
+              type="date"
+              value=""
+          /></label>
+          <label
+            >졸업 네이티브 월
+            <input id="univ-end-month" name="eduEndMonth" type="month" value=""
+          /></label>
+          <label
+            >전체 날짜
+            <input
+              id="univ-start-full"
+              name="eduStartFull"
+              type="text"
+              placeholder="YYYY.MM.DD"
+          /></label>
+          <label
+            >일치 값
+            <input
+              id="univ-end-equal"
+              name="eduEndEqual"
+              type="text"
+              placeholder="YYYY.MM"
+              value="2024.02"
+          /></label>
+          <label
+            >기존 값 다름
+            <input
+              id="univ-end-different"
+              name="eduEndDifferent"
+              type="text"
+              placeholder="YYYY.MM"
+              value="2023.08"
+          /></label>
+        </div>
+        <div class="educationuniv-item" data-repeatable-group="educationuniv">
+          <label
+            >입학 네이티브 날짜 2
+            <input
+              id="univ-start-date-2"
+              name="eduStartDate"
+              type="date"
+              value=""
+          /></label>
+          <label
+            >졸업 네이티브 월 2
+            <input
+              id="univ-end-month-2"
+              name="eduEndMonth"
+              type="month"
+              value=""
+          /></label>
+        </div>
+      </section>
+      <section
+        id="review-invalidation"
+        aria-label="Review invalidation controls"
+      >
+        <h2>Review invalidation controls</h2>
+        <input
+          id="after-review-attribute"
+          name="attributeDate"
+          type="text"
+          placeholder="YYYY.MM"
+          aria-label="after-review attribute change"
+        />
+        <input
+          id="after-review-replace"
+          name="replaceDate"
+          type="text"
+          placeholder="YYYY.MM"
+          aria-label="after-review replacement"
+        />
+        <input
+          id="site-reverts"
+          name="siteReverts"
+          type="text"
+          placeholder="YYYY.MM"
+          aria-label="site reversion control"
+        />
+        <input
+          id="pattern-conflict"
+          name="patternConflict"
+          type="text"
+          placeholder="YYYY.MM"
+          pattern="[0-9]{4}-[0-9]{2}"
+        />
+        <input
+          id="bad-month-source"
+          name="badMonthSource"
+          type="text"
+          placeholder="YYYY.MM"
+        />
+        <input
+          id="invalid-day-month-source"
+          name="invalidDayMonthSource"
+          type="text"
+          placeholder="YYYY.MM"
+        />
+      </section>
+      <section id="health" aria-label="건강 정보">
+        <h2>건강 정보 (synthetic sensitive date)</h2>
+        <div class="health-item" data-repeatable-group="health">
+          <label
+            >확인일
+            <input
+              id="health-date"
+              name="healthDate"
+              type="text"
+              placeholder="YYYY.MM.DD"
+          /></label>
+          <label
+            >항목 <input name="healthItemName" aria-label="health item"
+          /></label>
+        </div>
+      </section>
+    </form>
+  </body>
+</html>

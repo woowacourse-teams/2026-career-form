@@ -10,6 +10,7 @@ import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { revalidateDateTarget } from "../review/date-target-format";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
 import {
@@ -462,17 +463,23 @@ function writeGeneric(
         element instanceof HTMLInputElement ||
         element instanceof HTMLTextAreaElement
       ) ||
-      !validTextValue(element, value, strict)
+      !(item.dateApproval ? true : validTextValue(element, value, strict))
     )
       return {
         written: false,
         reason: "날짜·숫자·길이 형식을 손실 없이 확인할 수 없습니다.",
         code: "UNSUPPORTED_FORMAT",
       };
+    if (item.dateApproval && element.value === value) return { written: true };
     if (!setNativeValue(element, value)) {
       return { written: false, reason: UNSAFE, code: "EXECUTION_FAILED" };
     }
-    dispatchValueEvents(element);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    if (item.dateApproval && element.value !== value)
+      return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+    if (item.dateApproval && element.value !== value)
+      return { written: false, reason: RETENTION, code: "EXECUTION_FAILED" };
     return { written: true };
   }
   if (command === "SELECT_OPTION") {
@@ -513,6 +520,15 @@ function writeItem(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
 ): WriteOutcome {
+  if (item.dateApproval) {
+    const validation = revalidateDateTarget(
+      handle,
+      item.dateApproval,
+      item.profileValue ?? "",
+    );
+    if (validation.status !== "valid")
+      return { written: false, reason: STALE, code: "STALE_TARGET" };
+  }
   const adapter = getWriteAdapter(
     handle.elements[0]?.ownerDocument.location?.host ?? "",
   );
