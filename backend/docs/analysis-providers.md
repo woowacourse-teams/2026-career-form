@@ -19,6 +19,8 @@ Jev 및 실제 채용 사이트의 최신 빌드 검증은 남아 있으며, Iss
 | `CAREER_FORM_LLM_ENABLED` | 미지정 | 기존 enable 설정 호환 |
 | `OPENAI_API_KEY` | 없음 | OpenAI 선택 시 사람이 준비 |
 | `CAREER_FORM_LLM_MODEL` | 기존 `gpt-5.6-luna` | OpenAI 모델 |
+| `CAREER_FORM_LLM_TIMEOUT` | `30s` | 준비·필드 OpenAI 요청 timeout, `0 < timeout < 60s` |
+| `CAREER_FORM_LLM_MAX_OUTPUT_TOKENS` | runtime `8192`, 예시 `2048` | OpenAI completion token 상한, 예시는 한도 상향이 아님 |
 | `TYPESAFE_API_KEY` | 없음 | Jev 선택 시 사람이 준비 |
 | `CAREER_FORM_JEV_MODEL` | `jev-latest` | Jev 모델 |
 | `CAREER_FORM_JEV_TIMEOUT_MS` | `8000` | 1–8000ms |
@@ -34,9 +36,11 @@ Jev 시작에는 키가 필요하지만 정책 확인 설정이 false이면 외�
 기존 OpenAI 저장 옵션을 Jev의 보관 정책으로 간주하지 않는다.
 실제 키나 요청 원문을 문서·Issue·로그에 기록하지 않는다.
 
-OpenAI 전송은 8초, SDK 재시도 0회로 제한한다. 기존
-`CAREER_FORM_LLM_TIMEOUT` / `CAREER_FORM_LLM_MAX_RETRIES` 대신 이 제한을 적용한다.
-Jev도 자동 재시도와 redirect를 사용하지 않는다.
+OpenAI 준비·필드 분석은 `CAREER_FORM_LLM_TIMEOUT`으로 제어하며 기본값은 30초다.
+Spring 표준 `spring.ai.openai.timeout` 명시값이 있으면 그 값이 우선하고, 둘 중 실제
+runtime 값이 `0 < timeout < 60s`를 벗어나면 값을 기록하지 않고 시작을 실패시킨다.
+SDK 재시도는 실행 설정과 무관하게 0회로 유지한다. 검색 상호작용 결정은 별도 8초
+요청 예산과 재시도 0회를 사용한다. Jev도 자동 재시도와 redirect를 사용하지 않는다.
 Jev [공식 API](https://docs.typesafe.ai/api)의 Choice 요청/응답에 맞춰
 후보별 질문을 만들고, 응답 집합·선택지·확률 분포·confidence를 확인한 뒤 공통 결과로 변환한다.
 자유 문장을 실행 명령으로 사용하지 않는다.

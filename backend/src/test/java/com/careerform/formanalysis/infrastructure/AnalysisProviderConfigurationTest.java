@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.SpringApplication;
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -40,6 +41,82 @@ class AnalysisProviderConfigurationTest {
             "career-form.analysis.provider", "other"
         ))).isInstanceOf(IllegalStateException.class)
             .hasMessage("Unsupported analysis provider");
+    }
+
+    @Test
+    void preservesConfiguredOpenAiTimeoutWhilePinningRetriesToZero() {
+        MockEnvironment environment = environment(
+            "career-form.analysis.enabled", "true",
+            "spring.ai.openai.timeout", "45s"
+        );
+
+        new AnalysisProviderEnvironment().postProcessEnvironment(environment, new SpringApplication());
+
+        assertThat(environment.getProperty("spring.ai.openai.timeout")).isEqualTo("45s");
+        assertThat(environment.getProperty("spring.ai.openai.max-retries")).isEqualTo("0");
+    }
+
+    @Test
+    void forcesOpenAiRetriesToZeroWhenAnExplicitRetryValueIsConfigured() {
+        MockEnvironment environment = environment(
+            "career-form.analysis.enabled", "true",
+            "spring.ai.openai.timeout", "30s",
+            "spring.ai.openai.max-retries", "9"
+        );
+
+        new AnalysisProviderEnvironment().postProcessEnvironment(environment, new SpringApplication());
+
+        assertThat(environment.getProperty("spring.ai.openai.max-retries")).isEqualTo("0");
+    }
+
+    @Test
+    void keepsOpenAiAutoConfigurationDisabledForDisabledAndJevAnalysis() {
+        for (MockEnvironment environment : new MockEnvironment[] {
+            environment("career-form.analysis.enabled", "false"),
+            environment(
+                "career-form.analysis.enabled", "true",
+                "career-form.analysis.provider", "jev"
+            )
+        }) {
+            new AnalysisProviderEnvironment().postProcessEnvironment(environment, new SpringApplication());
+
+            assertThat(environment.getProperty("spring.ai.model.chat")).isEqualTo("none");
+            assertThat(environment.getProperty("spring.ai.chat.client.enabled")).isEqualTo("false");
+            assertThat(environment.getProperty("spring.ai.openai.max-retries")).isEqualTo("0");
+        }
+    }
+
+    @Test
+    void acceptsOpenAiTimeoutsInsideTheAnalysisBudget() {
+        for (String timeout : new String[] {"1ms", "59999ms", "PT0.001S", "PT59.999S"}) {
+            MockEnvironment environment = environment(
+                "career-form.analysis.enabled", "true",
+                "spring.ai.openai.timeout", timeout
+            );
+
+            new AnalysisProviderEnvironment().postProcessEnvironment(environment, new SpringApplication());
+
+            assertThat(environment.getProperty("spring.ai.openai.timeout")).isEqualTo(timeout);
+        }
+    }
+
+    @Test
+    void rejectsInvalidOpenAiTimeoutsWithoutExposingTheirValues() {
+        for (String timeout : new String[] {
+            "0", "-1ms", "60s", "61s", "private-malformed-timeout-marker",
+            "PT999999999999999999999999999999999999999999999999999999S"
+        }) {
+            MockEnvironment environment = environment(
+                "career-form.analysis.enabled", "true",
+                "spring.ai.openai.timeout", timeout
+            );
+
+            assertThatThrownBy(() -> new AnalysisProviderEnvironment()
+                .postProcessEnvironment(environment, new SpringApplication()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Invalid OpenAI analysis timeout")
+                .hasNoCause();
+        }
     }
 
     @Test

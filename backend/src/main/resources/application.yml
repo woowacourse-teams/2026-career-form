@@ -20,7 +20,7 @@ spring:
         include-error-logging: false
     openai:
       api-key: ${OPENAI_API_KEY:}
-      timeout: 8s
+      timeout: ${CAREER_FORM_LLM_TIMEOUT:30s}
       max-retries: 0
       chat:
         model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
@@ -43,6 +43,12 @@ career-form:
       data-policy-reviewed: ${CAREER_FORM_JEV_DATA_POLICY_REVIEWED:false}
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:}
+
+# Spring AI logs the full prompt when the provider returns no choices.
+# OpenAiClient records only allowlisted, non-content diagnostics instead.
+logging:
+  level:
+    org.springframework.ai.openai.OpenAiChatModel: "OFF"
 
 management:
   endpoints:
