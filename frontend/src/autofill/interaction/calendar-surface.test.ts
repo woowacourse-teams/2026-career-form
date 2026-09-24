@@ -64,3 +64,8 @@ it("requires a contained opener to name the month unit", () => {
 
   expect(calendarSurfaceFor(document.querySelector("input")!)).toBeUndefined();
 });
+
+it("rejects an ARIA-disabled calendar opener before clicking", () => {
+  document.body.innerHTML = `<section><input id="date" readonly type="text"><button type="button" aria-labelledby="date" aria-controls="popup" aria-disabled="true">월 선택</button><div id="popup" role="dialog" hidden><button>2026</button>${Array.from({ length: 12 }, (_, index) => `<button>${index + 1}월</button>`).join("")}</div></section>`;
+  expect(calendarSurfaceFor(document.querySelector("input")!)).toBeUndefined();
+});

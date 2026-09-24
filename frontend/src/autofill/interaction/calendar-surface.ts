@@ -29,8 +29,11 @@ function visible(element: HTMLElement): boolean {
 function isOpener(element: HTMLElement): boolean {
   return (
     element.matches("button, input[type='button'], [role='button']") &&
-    !element.closest("[hidden], [inert], [aria-hidden='true']") &&
-    !(element instanceof HTMLButtonElement && element.disabled)
+    !element.closest(
+      "[hidden], [inert], [aria-hidden='true'], [aria-disabled='true']",
+    ) &&
+    !(element instanceof HTMLButtonElement && element.disabled) &&
+    !(element instanceof HTMLInputElement && element.disabled)
   );
 }
 

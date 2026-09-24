@@ -63,10 +63,18 @@ export async function executeCalendarSelection(
     return { status: "needs-verification", reason: "existing_value" };
   if (openCalendarPopups(args.target.ownerDocument).length)
     return { status: "needs-verification", reason: "calendar_already_open" };
-  const allInputs = Array.from(
-    args.target.ownerDocument.querySelectorAll<HTMLInputElement>("input"),
+  const controls = () =>
+    Array.from(
+      args.target.ownerDocument.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >("input, select, textarea"),
+    );
+  const before = new Map(
+    controls().map((control) => [
+      control,
+      control === args.target ? read(args.target) : control.value,
+    ]),
   );
-  const before = new Map(allInputs.map((input) => [input, read(input)]));
   let activations = 0;
   const activate = (element: HTMLElement): boolean => {
     if (
@@ -117,18 +125,27 @@ export async function executeCalendarSelection(
       status: "needs-verification",
       reason: "multiple_calendar_popups_open",
     };
-  const yearTrigger = await resolveCalendarRole({
-    role: "CALENDAR_YEAR_TRIGGER",
-    candidates: calendarYearTriggers(surface.popup).map((candidate, index) => ({
+  // Reserve the second role request for Apply if this picker needs it.
+  const reserveApplyRole = calendarApplyControls(surface.popup).length === 1;
+  const triggerCandidates = calendarYearTriggers(surface.popup).map(
+    (candidate, index) => ({
       ...candidate,
       candidateId: `calendar-year-trigger-${index + 1}`,
-    })),
-    provider: args.interactionDecisionProvider,
-    canonicalFieldKey: args.canonicalFieldKey ?? "calendar-month",
-    deadline,
-    now: args.now,
-    signal: args.signal,
-  });
+    }),
+  );
+  const yearTrigger = reserveApplyRole
+    ? triggerCandidates.length === 1
+      ? triggerCandidates[0]
+      : undefined
+    : await resolveCalendarRole({
+        role: "CALENDAR_YEAR_TRIGGER",
+        candidates: triggerCandidates,
+        provider: args.interactionDecisionProvider,
+        canonicalFieldKey: args.canonicalFieldKey ?? "calendar-month",
+        deadline,
+        now: args.now,
+        signal: args.signal,
+      });
   if (args.signal?.aborted)
     return { status: "needs-verification", reason: "calendar_aborted" };
   if (calendarYearTriggers(surface.popup).length && !yearTrigger)
@@ -180,23 +197,45 @@ export async function executeCalendarSelection(
           : "stale_target",
     };
   const apply = calendarApplyControls(surface.popup);
-  if (apply.length && !activate(apply[0]!.element))
-    return {
-      status: "needs-verification",
-      reason: args.signal?.aborted
-        ? "calendar_aborted"
-        : targetIsStable()
-          ? "calendar_apply_unavailable"
-          : "stale_target",
-    };
+  if (apply.length) {
+    if (!reserveApplyRole)
+      return {
+        status: "needs-verification",
+        reason: "calendar_apply_unavailable",
+      };
+    const selectedApply = await resolveCalendarRole({
+      role: "CALENDAR_APPLY",
+      candidates: apply.map((candidate, index) => ({
+        ...candidate,
+        candidateId: `calendar-apply-${index + 1}`,
+      })),
+      provider: args.interactionDecisionProvider,
+      canonicalFieldKey: args.canonicalFieldKey ?? "calendar-month",
+      deadline,
+      now: args.now,
+      signal: args.signal,
+    });
+    if (!selectedApply || !activate(selectedApply.element))
+      return {
+        status: "needs-verification",
+        reason: args.signal?.aborted
+          ? "calendar_aborted"
+          : targetIsStable()
+            ? "calendar_apply_unavailable"
+            : "stale_target",
+      };
+  }
   await new Promise<void>((resolve) => setTimeout(resolve, 25));
   if (args.signal?.aborted)
     return { status: "needs-verification", reason: "calendar_aborted" };
   if (!targetIsStable())
     return { status: "needs-verification", reason: "stale_target" };
   if (
+    controls().length !== before.size ||
     Array.from(before).some(
-      ([input, value]) => input !== args.target && read(input) !== value,
+      ([control, value]) =>
+        control !== args.target &&
+        (!control.isConnected || control.value !== value),
     )
   )
     return { status: "needs-verification", reason: "other_input_changed" };

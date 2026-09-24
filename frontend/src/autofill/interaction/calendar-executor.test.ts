@@ -175,7 +175,7 @@ describe("calendar executor", () => {
     });
 
     expect(result).toEqual({ status: "completed", targetYearMonth: "2026-03" });
-    expect(roles).toEqual(["CALENDAR_OPENER", "CALENDAR_YEAR_TRIGGER"]);
+    expect(roles).toEqual(["CALENDAR_OPENER", "CALENDAR_APPLY"]);
     expect(applied).toBe(true);
   });
 
@@ -320,5 +320,29 @@ describe("calendar executor popup and abort guards", () => {
       reason: "calendar_aborted",
     });
     expect(triggerClicks).toBe(0);
+  });
+});
+
+it("stops when a month click changes another select even if the target value persists", async () => {
+  document.body.innerHTML = `<section><input id="date" readonly type="text"><button type="button" aria-labelledby="date" aria-controls="picker">월 선택</button><div id="picker" role="dialog" hidden><button>2026</button>${months}</div></section><select><option value="a">A</option><option value="b">B</option></select>`;
+  const target = document.querySelector<HTMLInputElement>("#date")!;
+  const popup = document.querySelector<HTMLElement>("#picker")!;
+  document
+    .querySelector<HTMLButtonElement>("[aria-controls='picker']")!
+    .addEventListener("click", () => {
+      popup.hidden = false;
+    });
+  popup
+    .querySelector<HTMLButtonElement>("[data-month='3']")!
+    .addEventListener("click", () => {
+      target.value = "2026-03";
+      document.querySelector("select")!.value = "b";
+      popup.hidden = true;
+    });
+  await expect(
+    executeCalendarSelection({ target, targetYearMonth: "2026-03" }),
+  ).resolves.toMatchObject({
+    status: "needs-verification",
+    reason: "other_input_changed",
   });
 });
