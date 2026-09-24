@@ -78,7 +78,7 @@ it("explains grouped results and copy after the application step", () => {
     "src",
     "/demo/?view=guide-results",
   );
-  expect(screen.getByText(/항목을 눌러 입력칸으로 이동/)).toBeVisible();
+  expect(screen.getByText(/값을 복사해 지원서에 붙여넣으세요/)).toBeVisible();
   expect(container.querySelector("input")).toBeNull();
 });
 

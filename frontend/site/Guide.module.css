@@ -236,5 +236,5 @@
   container-type: inline-size;
 }
 .figure.resultFigure iframe {
-  height: min(760px, 100cqw);
+  height: min(490px, 64.48cqw);
 }

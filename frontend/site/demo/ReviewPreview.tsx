@@ -1,200 +1,137 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { collectFieldsSnapshot } from "../../src/autofill/dom/collect";
-import { createFieldPresentation } from "../../src/autofill/write/field-presentation";
+import { useEffect, useRef, useState } from "react";
 import { WorkflowResults } from "../../src/autofill/workflow/WorkflowResults";
-import type { ReviewPlanItem } from "../../src/autofill/review/review-plan";
 import styles from "./ReviewPreview.module.css";
 
-const examples = [
-  {
-    id: "company",
-    label: "직장명",
-    category: "직장경력",
-    key: "careers.career.companyName",
-    value: "예시컴퍼니",
-    written: true,
-  },
-  {
-    id: "department",
-    label: "근무부서",
-    category: "직장경력",
-    key: "careers.career.department",
-    value: "서비스개발팀",
-    written: true,
-  },
-  {
-    id: "test",
-    label: "시험명",
-    category: "어학",
-    key: "languages.languageTest.testName",
-    value: "TOEIC",
-    written: true,
-  },
-  {
-    id: "grade",
-    label: "등급·점수",
-    category: "어학",
-    key: "languages.languageTest.grade",
-    value: "900",
-    written: true,
-  },
-  {
-    id: "address",
-    label: "기본주소",
-    category: "직접 채울 항목",
-    key: "contact.contact.addressLine1",
-    value: "예시시 가상로 100",
-    written: false,
-  },
-  {
-    id: "major",
-    label: "주전공명",
-    category: "직접 채울 항목",
-    key: "education.university.majorName",
-    value: "컴퓨터공학",
-    written: false,
-  },
-];
+const value = "101동 1001호";
+const item = {
+  candidateId: "example-detail-address",
+  fieldLabel: "상세주소",
+  profileFieldKey: "contact.contact.addressLine2",
+  profileValue: value,
+  previewValue: value,
+  currentValue: "",
+  status: "unavailable" as const,
+  selected: false,
+  disabled: true,
+  revealed: true,
+  reason: "직접 입력 필요",
+};
 
-/** Synthetic, read-only form. Uses production result and highlight components without profile access. */
+/** A single synthetic scene; never reads a profile or the system clipboard. */
 export function ReviewPreview() {
   const root = useRef<HTMLDivElement>(null);
-  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
-  const scale = Math.min(1, viewportWidth / 760);
+  const running = useRef(false);
+  const [width, setWidth] = useState(window.innerWidth);
+  const scale = Math.min(1, width / 760);
+  const [run, setRun] = useState(0);
+  const [pasted, setPasted] = useState(false);
   const [cursor, setCursor] = useState({
-    x: 320,
-    y: 75,
+    x: 560,
+    y: 80,
     visible: false,
     pressed: false,
   });
-  const [run, setRun] = useState(0);
-  const [step, setStep] = useState(0);
-  const [pasted, setPasted] = useState("");
-  const [explored, setExplored] = useState(false);
-  const [feedback, setFeedback] = useState("아래 패널을 직접 눌러보세요");
-  const form = useRef<HTMLDivElement>(null);
-  const [snapshot, setSnapshot] =
-    useState<ReturnType<typeof collectFieldsSnapshot>>();
-  const presentation = useMemo(() => createFieldPresentation(document), []);
+  const start = () => {
+    if (running.current) return;
+    running.current = true;
+    setPasted(false);
+    setRun((current) => current + 1);
+  };
   useEffect(() => {
-    // All example fields stay visible above the results; never scroll the enclosing guide.
-    form.current
-      ?.querySelectorAll<HTMLElement>("section, input")
-      .forEach((element) => {
-        element.scrollIntoView = () => {};
-      });
-    setSnapshot(collectFieldsSnapshot(document));
-    return () => presentation.clear();
-  }, [presentation]);
-  useEffect(() => {
-    const resize = () => setViewportWidth(window.innerWidth);
-    resize();
+    const resize = () => setWidth(window.innerWidth);
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
-  const selectStep = (next: number) => {
-    setPasted("");
-    setStep(next);
-    setRun((value) => value + 1);
-  };
   useEffect(() => {
-    if (!step || !snapshot) return;
-    presentation.clear();
-    setCursor((current) => ({ ...current, visible: true, pressed: false }));
-    const find = (selector: string) =>
-      root.current?.querySelector<HTMLElement>(selector);
-    const click = (selector: string) => find(selector)?.click();
+    if (!run) return;
     const move = (selector: string) => {
-      const target = find(selector)?.getBoundingClientRect();
+      const target = root.current
+        ?.querySelector(selector)
+        ?.getBoundingClientRect();
       const origin = root.current?.getBoundingClientRect();
       if (target && origin)
         setCursor({
-          x: (target.left - origin.left + target.width * 0.45) / scale,
-          y: (target.top - origin.top + target.height * 0.5) / scale,
+          x: (target.left - origin.left + target.width / 2) / scale,
+          y: (target.top - origin.top + target.height / 2) / scale,
           visible: true,
           pressed: false,
         });
     };
-    const target =
-      step === 1
-        ? '[aria-label="기본주소 필드로 이동"]'
-        : step === 2
-          ? '[aria-label="기본주소 복사"]'
-          : "#review-demo-search";
     const timers = [
-      window.setTimeout(() => click('[role="tab"][data-state="pending"]'), 20),
-      window.setTimeout(() => move(target), 100),
+      window.setTimeout(() => move('[aria-label="상세주소 복사"]'), 100),
       window.setTimeout(() => {
-        if (step === 3)
-          setPasted(
-            examples.find((example) => example.id === "address")!.value,
-          );
-        else click(target);
+        root.current
+          ?.querySelector<HTMLButtonElement>('[aria-label="상세주소 복사"]')
+          ?.click();
         setCursor((current) => ({ ...current, pressed: true }));
       }, 750),
+      window.setTimeout(() => move("#example-address-detail"), 1300),
+      window.setTimeout(() => {
+        setPasted(true);
+        setCursor((current) => ({ ...current, pressed: true }));
+      }, 2000),
+      window.setTimeout(() => {
+        running.current = false;
+      }, 3000),
     ];
-    return () => {
-      timers.forEach(window.clearTimeout);
-      presentation.clear();
-    };
-  }, [step, run, snapshot, presentation, scale]);
-  const candidates =
-    snapshot?.request.sections.flatMap((section) => section.fields) ?? [];
-  const bound = examples.flatMap((example) => {
-    const candidate = candidates.find(
-      (field) => field.domId === `review-demo-${example.id}`,
-    );
-    return candidate
-      ? [{ ...example, candidateId: candidate.candidateId }]
-      : [];
-  });
-  const items: ReviewPlanItem[] = bound.map((example) => ({
-    candidateId: example.candidateId,
-    fieldLabel: example.label,
-    profileFieldKey: example.key,
-    profileValue: example.value,
-    previewValue: example.value,
-    currentValue: "",
-    status: example.written ? "available" : "unavailable",
-    selected: example.written,
-    disabled: !example.written,
-    revealed: true,
-    reason: example.written ? "" : "직접 확인 필요",
-  }));
+    return () => timers.forEach(window.clearTimeout);
+  }, [run, scale]);
   return (
     <div
       ref={root}
       className={styles.preview}
-      data-step={step}
-      style={{ width: `${Math.max(760, viewportWidth)}px`, zoom: scale }}
+      style={{ width: Math.max(760, width), zoom: scale }}
+      onPointerEnter={start}
+      onPointerDown={start}
+      onFocus={start}
+      tabIndex={0}
+      aria-label="복사해서 지원서에 붙여넣는 시연"
     >
-      <div className={styles.story}>
-        <div className={styles.storyHeading}>
-          <strong>입력 후에는 이렇게 확인해요</strong>
-          <span>숫자에 마우스를 올려보세요</span>
+      <div className={styles.caption}>
+        <strong>남은 항목은 복사해서 마무리하세요.</strong>
+        <span>{run ? "가상 정보로 만든 예시" : "마우스를 올려보세요"}</span>
+      </div>
+      <div className={styles.form} aria-label="예시 지원서">
+        <span className={styles.eyebrow}>지원서 작성</span>
+        <h3>연락처와 주소</h3>
+        <label htmlFor="example-address">기본주소</label>
+        <input
+          id="example-address"
+          value="예시시 가상로 100"
+          readOnly
+          tabIndex={-1}
+        />
+        <label htmlFor="example-address-detail">상세주소</label>
+        <input
+          id="example-address-detail"
+          value={pasted ? value : ""}
+          readOnly
+          tabIndex={-1}
+          placeholder="상세주소를 입력하세요"
+          data-filled={pasted}
+        />
+        <p className={styles.feedback} role="status">
+          {pasted ? "붙여넣었어요" : "\u00a0"}
+        </p>
+      </div>
+      <div className={styles.panel} aria-label="지원서 패널 예시" inert>
+        <div className={styles.panelHeading}>
+          CAREER FORM <span>지원서 패널</span>
         </div>
-        <ol aria-label="결과 확인 시연 단계">
-          {["남은 항목 찾기", "값 복사하기", "검색창에 붙여넣기"].map(
-            (label, index) => (
-              <li
-                key={label}
-                aria-current={step === index + 1 ? "step" : undefined}
-              >
-                <button
-                  type="button"
-                  onMouseEnter={() => selectStep(index + 1)}
-                  onFocus={() => selectStep(index + 1)}
-                  onClick={() => selectStep(index + 1)}
-                  aria-label={`${index + 1}. ${label}`}
-                  aria-pressed={step === index + 1}
-                >
-                  <span>{index + 1}</span>
-                  {label}
-                </button>
-              </li>
-            ),
-          )}
-        </ol>
+        <WorkflowResults
+          key={run}
+          reviewItems={[item]}
+          results={[
+            {
+              candidateId: item.candidateId,
+              status: "skipped",
+              reason: "직접 입력 필요",
+            },
+          ]}
+          copyText={async () => {
+            /* Simulated copying stays inside this scene. */
+          }}
+        />
       </div>
       <svg
         className={styles.cursor}
@@ -213,152 +150,6 @@ export function ReviewPreview() {
           strokeWidth="2"
         />
       </svg>
-      <div ref={form} className={styles.form} aria-label="가상 지원서">
-        <div className={styles.caption}>
-          <strong>예시 지원서</strong>
-          <span>가상 정보 · 읽기 전용</span>
-        </div>
-        {step === 3 && (
-          <div
-            className={styles.searchDemo}
-            role="region"
-            aria-label="주소 검색 시연"
-          >
-            <strong>
-              주소 검색 <small>예시 검색창</small>
-            </strong>
-            <label htmlFor="review-demo-search">주소 검색어</label>
-            <input
-              id="review-demo-search"
-              value={pasted}
-              readOnly
-              placeholder="복사한 주소를 붙여넣으세요"
-            />
-            <p role="status">
-              {pasted
-                ? "붙여넣었어요. 검색 결과에서 주소를 직접 선택하세요."
-                : "검색창에 붙여넣기"}
-            </p>
-          </div>
-        )}
-        {["직장경력", "어학", "직접 채울 항목"].map((category) => (
-          <section key={category} className={styles.category}>
-            <h3>{category}</h3>
-            <div className={styles.fields}>
-              {examples
-                .filter((example) => example.category === category)
-                .map((example) => (
-                  <div className={styles.control} key={example.id}>
-                    <label htmlFor={`review-demo-${example.id}`}>
-                      {example.label}
-                    </label>
-                    <input
-                      id={`review-demo-${example.id}`}
-                      name={`review-demo-${example.id}`}
-                      value={example.written ? example.value : ""}
-                      placeholder={
-                        example.written ? undefined : "직접 검색·선택"
-                      }
-                      readOnly
-                      tabIndex={-1}
-                    />
-                  </div>
-                ))}
-            </div>
-          </section>
-        ))}
-      </div>
-      <div
-        className={styles.results}
-        aria-label="결과 체험"
-        data-guided={!explored}
-        onClickCapture={(event) => {
-          if (event.nativeEvent.isTrusted) {
-            setStep(0);
-            setCursor((current) => ({ ...current, visible: false }));
-          }
-          if ((event.target as HTMLElement).closest('[role="tab"]'))
-            setExplored(false);
-        }}
-      >
-        <h3>
-          <span className={styles.demoBadge}>동작 예시</span> 기입 결과
-        </h3>
-        <p className={styles.hint} role="status">
-          {step
-            ? [
-                "",
-                "확인 필요 항목을 누르면 입력칸으로 이동해요",
-                "값을 복사한 뒤 검색·선택은 직접 마무리해요",
-                "복사한 주소를 검색창에 붙여넣고, 검색 결과는 직접 선택해요",
-              ][step]
-            : feedback}
-        </p>
-        {snapshot && (
-          <WorkflowResults
-            key={run}
-            copyText={async (value) => {
-              // Simulated hover clicks never change the reader's clipboard.
-              if (!step) await navigator.clipboard.writeText(value);
-            }}
-            reviewItems={items}
-            results={bound.map((example) =>
-              example.written
-                ? {
-                    candidateId: example.candidateId,
-                    status: "written" as const,
-                  }
-                : {
-                    candidateId: example.candidateId,
-                    status: "skipped" as const,
-                    reason: "직접 확인 필요",
-                    failureCode:
-                      example.id === "address"
-                        ? ("FIELD_READONLY" as const)
-                        : ("SEARCH_NO_RESULTS" as const),
-                  },
-            )}
-            fieldStateFor={(id) => {
-              const example = bound.find(
-                (example) => example.candidateId === id,
-              );
-              return example
-                ? { visible: true, value: example.written ? example.value : "" }
-                : undefined;
-            }}
-            onLocate={(id) => {
-              const shown = presentation.show(snapshot.registry, id);
-              if (shown) {
-                const field = bound.find(
-                  (example) => example.candidateId === id,
-                );
-                const input = document.getElementById(
-                  `review-demo-${field?.id}`,
-                );
-                input?.style.setProperty("outline-offset", "-2px", "important");
-                setExplored(true);
-                setFeedback(
-                  `↑ 위 지원서의 ${field?.label ?? "입력칸"}을 찾아드렸어요`,
-                );
-              }
-              return shown;
-            }}
-            onLocateSection={(ids) => {
-              const shown = presentation.showSection(snapshot.registry, ids);
-              if (shown) {
-                setExplored(true);
-                const field = bound.find((example) =>
-                  ids.includes(example.candidateId),
-                );
-                setFeedback(
-                  `↑ 위 지원서에서 ${field?.category ?? "선택한 구역"} 입력칸을 확인하세요`,
-                );
-              }
-              return shown;
-            }}
-          />
-        )}
-      </div>
     </div>
   );
 }

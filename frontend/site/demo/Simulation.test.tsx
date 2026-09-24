@@ -91,102 +91,23 @@ describe("isolated automatic demonstration", () => {
   );
 });
 
-it("shows the current grouped result with isolated example values", async () => {
-  render(<PanelGuide kind="results" />);
-  expect(
-    await screen.findByRole("tab", { name: "확인 필요 2개" }),
-  ).toHaveAttribute("aria-selected", "true");
-  expect(screen.getByRole("button", { name: "기본주소 복사" })).toBeVisible();
-  expect(screen.getByText("예시시 가상로 100")).toBeVisible();
-  fireEvent.click(screen.getByRole("tab", { name: "입력 완료 4개" }));
-  expect(
-    screen.getByRole("tabpanel", { name: "입력 완료 4개" }),
-  ).toHaveTextContent("직장경력");
-  expect(
-    screen.getByRole("tabpanel", { name: "입력 완료 4개" }),
-  ).not.toHaveTextContent("이메일");
-  expect(fetch).not.toHaveBeenCalled();
-});
-
-it("lets readers switch highlighted sections and explicitly confirm the current example", async () => {
-  const { container } = render(<PanelGuide kind="results" />);
-  await screen.findByRole("tab", { name: "입력 완료 4개" });
-  container
-    .querySelectorAll<HTMLInputElement>("input")
-    .forEach((input, index) => {
-      input.getBoundingClientRect = () =>
-        new DOMRect(20, 60 + index * 55, 240, 36);
-    });
-  fireEvent.click(screen.getByRole("button", { name: "기본주소 필드로 이동" }));
-  expect(container.querySelector('[aria-label="결과 체험"]')).toHaveAttribute(
-    "data-guided",
-    "false",
-  );
-  expect(screen.getByLabelText("기본주소")).toHaveStyle({
-    outlineOffset: "-2px",
-  });
-  expect(screen.getByText(/위 지원서의 기본주소/)).toBeVisible();
-  fireEvent.click(screen.getByRole("tab", { name: "입력 완료 4개" }));
-  expect(container.querySelector('[aria-label="결과 체험"]')).toHaveAttribute(
-    "data-guided",
-    "true",
-  );
-  fireEvent.click(screen.getByRole("button", { name: "직장경력 구역 보기" }));
-  expect(screen.getByLabelText("기본주소").style.outlineOffset).toBe("");
-  const old = [
-    ...document.querySelectorAll("[data-career-form-section-highlight]"),
-  ];
-  expect(old).toHaveLength(2);
-  fireEvent.click(screen.getByRole("button", { name: "어학 구역 보기" }));
-  expect(old.every((element) => !element.isConnected)).toBe(true);
-  expect(
-    document.querySelectorAll("[data-career-form-section-highlight]"),
-  ).toHaveLength(2);
-  fireEvent.click(screen.getByRole("button", { name: "어학 확인했어요" }));
-  expect(
-    screen.getByRole("button", { name: "어학 요약 펼치기" }),
-  ).toHaveAttribute("aria-expanded", "false");
-  expect(screen.getByText("1 / 2개 구역 확인")).toBeVisible();
-  expect(fetch).not.toHaveBeenCalled();
-});
-
-it("demonstrates finding, copying and pasting without switching away from pending", async () => {
+it("plays one copy-and-paste scene on hover without network or clipboard access", async () => {
   vi.useFakeTimers();
   try {
     const { container } = render(<PanelGuide kind="results" />);
-    container
-      .querySelectorAll<HTMLInputElement>("input")
-      .forEach((input, index) => {
-        input.getBoundingClientRect = () =>
-          new DOMRect(20, 60 + index * 55, 240, 36);
-      });
-    for (const [number, label] of [
-      [1, "남은 항목 찾기"],
-      [2, "값 복사하기"],
-      [3, "검색창에 붙여넣기"],
-    ] as const) {
-      fireEvent.mouseEnter(
-        screen.getByRole("button", { name: `${number}. ${label}` }),
-      );
-      await act(() => vi.advanceTimersByTimeAsync(800));
-      expect(
-        screen.getByRole("tab", {
-          name: "확인 필요 2개",
-        }),
-      ).toHaveAttribute("aria-selected", "true");
-      if (number === 1)
-        expect(screen.getByLabelText("기본주소")).toHaveStyle({
-          outlineOffset: "-2px",
-        });
-      if (number === 2) expect(screen.getByText("복사됨")).toBeVisible();
-    }
-    expect(screen.getByLabelText("주소 검색어")).toHaveValue(
-      "예시시 가상로 100",
-    );
-    expect(
-      document.querySelectorAll("[data-career-form-section-highlight]"),
-    ).toHaveLength(0);
+    expect(screen.getByLabelText("상세주소")).toHaveValue("");
+    expect(screen.queryByLabelText("결과 확인 시연 단계")).toBeNull();
+    fireEvent.pointerEnter(container.firstElementChild!);
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    expect(screen.getByText("복사됨")).toBeInTheDocument();
+    expect(screen.getByLabelText("상세주소")).toHaveValue("");
+    await act(() => vi.advanceTimersByTimeAsync(1300));
+    expect(screen.getByLabelText("상세주소")).toHaveValue("101동 1001호");
+    expect(screen.getByText("붙여넣었어요")).toBeVisible();
     expect(fetch).not.toHaveBeenCalled();
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    fireEvent.pointerEnter(container.firstElementChild!);
+    expect(screen.getByLabelText("상세주소")).toHaveValue("");
   } finally {
     vi.useRealTimers();
   }
