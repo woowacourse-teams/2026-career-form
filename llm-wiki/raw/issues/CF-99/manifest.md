@@ -1,9 +1,9 @@
 # CF-99 Knowledge Bundle
 
 > Issue: CF-99
-> Collected: 2026-09-22
-> Approval-Digest: 2a87ccd12e581e9177e8a4b527ab2df5d39800efdebddfc7ef698c47392463d2
-> Source-Revision: c4e4433e0a32c6c5fb2ca1acebc7c6a90c9f2410
+> Collected: 2026-09-24
+> Approval-Digest: 20126b48eacbf09b8af7fcaddbaad25843ec829a766fb688ebe465b8363c913b
+> Source-Revision: 2da71d9c37b5e066700de91b1456e3fd42611144
 
 ## autofill-follow-and-install
 

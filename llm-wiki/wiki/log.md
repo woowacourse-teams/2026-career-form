@@ -237,3 +237,10 @@
 - 승인 digest `62463e58e4e9043e334ba50b33b3a8b81140469f775e2b9eb9598763ea975219`의 후보 3개를 [CF-101 bundle](../raw/issues/CF-101/manifest.md)에 비식별 기록했다.
 - 엄격한 날짜 DIRECT 변환, 로컬 DOM 승인 재검증과 원본 fallback 금지를 [topic](topics/generic-date-format.md)에 연결했다.
 - 합성 통합·설치 UI·실사이트 검증을 구분하고 개별 unavailable 이유의 기존 표시 제한을 기록했다.
+
+
+## [2026-09-24] ingest | CF-99 최종 입력 결과와 안내 흐름
+
+- Approval-Digest: 20126b48eacbf09b8af7fcaddbaad25843ec829a766fb688ebe465b8363c913b
+- [CF-99 bundle](../raw/issues/CF-99/manifest.md)의 최종 후보 6개를 반영했다.
+- 입력 중 화면 고정, 범주별 결과 검토, 선택적인 접기, 합성 안내 시연과 현대·SK 진단 경계를 관련 topic 및 현황표에 연결했다.
