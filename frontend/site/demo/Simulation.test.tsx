@@ -98,12 +98,40 @@ it("shows the current grouped result with isolated example values", async () => 
   ).toHaveAttribute("aria-selected", "true");
   expect(screen.getByRole("button", { name: "기본주소 복사" })).toBeVisible();
   expect(screen.getByText("예시시 가상로 100")).toBeVisible();
-  fireEvent.click(screen.getByRole("tab", { name: "입력 완료 2개" }));
+  fireEvent.click(screen.getByRole("tab", { name: "입력 완료 4개" }));
   expect(
-    screen.getByRole("tabpanel", { name: "입력 완료 2개" }),
-  ).toHaveTextContent("연락처와 주소");
+    screen.getByRole("tabpanel", { name: "입력 완료 4개" }),
+  ).toHaveTextContent("직장경력");
   expect(
-    screen.getByRole("tabpanel", { name: "입력 완료 2개" }),
+    screen.getByRole("tabpanel", { name: "입력 완료 4개" }),
   ).not.toHaveTextContent("이메일");
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it("lets readers switch highlighted sections and explicitly confirm the current example", async () => {
+  const { container } = render(<PanelGuide kind="results" />);
+  await screen.findByRole("tab", { name: "입력 완료 4개" });
+  container
+    .querySelectorAll<HTMLInputElement>("input")
+    .forEach((input, index) => {
+      input.getBoundingClientRect = () =>
+        new DOMRect(20, 60 + index * 55, 240, 36);
+    });
+  fireEvent.click(screen.getByRole("tab", { name: "입력 완료 4개" }));
+  fireEvent.click(screen.getByRole("button", { name: "직장경력 구역 보기" }));
+  const old = [
+    ...document.querySelectorAll("[data-career-form-section-highlight]"),
+  ];
+  expect(old).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: "어학 구역 보기" }));
+  expect(old.every((element) => !element.isConnected)).toBe(true);
+  expect(
+    document.querySelectorAll("[data-career-form-section-highlight]"),
+  ).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: "어학 확인했어요" }));
+  expect(
+    screen.getByRole("button", { name: "어학 요약 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByText("1 / 2개 구역 확인")).toBeVisible();
   expect(fetch).not.toHaveBeenCalled();
 });

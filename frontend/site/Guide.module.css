@@ -203,12 +203,13 @@
 }
 
 .figure.resultFigure iframe {
-  height: 555px;
+  height: 800px;
+  pointer-events: auto;
 }
 
 @media (max-width: 600px) {
   .figure.resultFigure iframe {
-    height: 620px;
+    height: 820px;
   }
 }
 

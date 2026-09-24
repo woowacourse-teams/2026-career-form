@@ -102,24 +102,24 @@ export function ServiceGuide({
           kind === "profile"
             ? "프로필 관리 버튼 위치"
             : kind === "results"
-              ? "확인 필요 항목과 복사 위치"
+              ? "구역별 결과 확인 체험"
               : "자동 기입 버튼 위치"
         }
         src={siteUrl(`/demo/?view=guide-${kind}`)}
-        tabIndex={-1}
-        inert
+        tabIndex={kind === "results" ? 0 : -1}
+        inert={kind !== "results"}
       />
       <figcaption>
         <strong>
           {kind === "profile"
             ? "↑ 패널 상단의 프로필 관리"
             : kind === "results"
-              ? "범주별 확인과 값 복사"
+              ? "두 탭을 눌러 결과 확인 체험하기"
               : "↑ 패널 상단의 자동 기입"}
         </strong>
         <span>
           {kind === "results" ? (
-            "실제 결과 화면에 가상 정보를 넣은 예시예요. 입력 항목과 결과는 지원서마다 달라요."
+            "확인 필요 항목을 눌러 입력칸을 찾고, 입력 완료에서 직장경력과 어학을 번갈아 눌러보세요. 가상 정보로 만든 예시이며 실제 프로필은 사용하지 않아요."
           ) : (
             <strong>
               테두리로 표시한 버튼을 설치된 커리어폼에서 누르세요.

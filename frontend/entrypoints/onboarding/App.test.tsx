@@ -22,7 +22,7 @@ it("starts installed users with profile registration and finishes after usage gu
   expect(screen.getByText("02 / 03")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /결과 확인 알아보기/ }));
   expect(screen.getByText("03 / 03")).toBeVisible();
-  expect(screen.getByTitle("확인 필요 항목과 복사 위치")).toHaveAttribute(
+  expect(screen.getByTitle("구역별 결과 확인 체험")).toHaveAttribute(
     "src",
     "/onboarding-guide.html?view=guide-results",
   );

@@ -134,26 +134,36 @@ function Landing() {
         <div>
           <p className={styles.eyebrow}>입력 다음도, 같은 패널에서</p>
           <h2 id="result-feature-title">
-            남은 항목만 모아서,
+            입력한 내용도, 남은 항목도,
             <br />
-            하나씩 마무리하세요.
+            지원서에서 확인하세요.
           </h2>
           <p>
-            ‘확인 필요’에는 항목별 이유와 저장한 값이 함께 보여요. 지원서를
-            오가며 무엇이 남았는지 찾을 필요가 줄어들어요.
+            ‘확인 필요’에서는 남은 항목을 채우고, ‘입력 완료’에서는
+            직장경력·어학 같은 구역을 눌러 입력한 내용을 살펴보세요. 실제
+            지원서의 입력칸만 연한 크림색 배경과 갈색 테두리로 표시돼요.
           </p>
           <ol>
             <li>
-              <strong>범주별로 확인</strong>
-              <span>연락처, 학력, 자격증을 한눈에 살펴봐요.</span>
+              <strong>선택한 구역만 강조</strong>
+              <span>
+                다른 구역을 누르면 이전 강조는 사라져요. 항목 이름은 가리지
+                않아요.
+              </span>
             </li>
             <li>
-              <strong>넓은 영역을 눌러 이동</strong>
-              <span>항목명과 설명, 여백을 누르면 입력칸으로 이동해요.</span>
+              <strong>살펴본 구역은 접기</strong>
+              <span>
+                ‘확인했어요’를 누르면 해당 구역이 접히고 검토 진행 상황에
+                표시돼요.
+              </span>
             </li>
             <li>
               <strong>필요한 값만 복사</strong>
-              <span>옆의 복사 버튼으로 직접 입력을 마무리해요.</span>
+              <span>
+                확인 필요 항목을 눌러 입력칸을 찾고, 옆의 값을 복사해
+                마무리해요.
+              </span>
             </li>
           </ol>
         </div>
@@ -163,7 +173,10 @@ function Landing() {
         <div>
           <p className={styles.eyebrow}>사용 준비</p>
           <h2>설치부터 결과 확인까지.</h2>
-          <p>프로필 등록, 자동 기입, 남은 항목 확인까지 순서대로 안내해요.</p>
+          <p>
+            프로필 등록부터 자동 기입, 남은 항목 채우기와 구역별 검토까지
+            안내해요.
+          </p>
         </div>
         <SiteLink className={styles.primary} href="/onboarding/">
           설치·사용 안내 <Icon name="arrow" />
