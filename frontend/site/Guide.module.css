@@ -1,15 +1,15 @@
 .figure {
   max-width: 520px;
   margin: 26px 0;
-  background: #f1f7fa;
-  border: 1px solid #d7e5eb;
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   overflow: hidden;
 }
 .figure iframe {
   display: block;
   width: 100%;
-  height: 130px;
+  height: 210px;
   border: 0;
   pointer-events: none;
 }
@@ -20,13 +20,17 @@
 }
 .figure figcaption strong {
   font-size: 14px;
-  color: #754126;
+  color: var(--color-action-strong);
 }
 .figure figcaption span,
 .figure figcaption small {
   font-size: 12px;
   line-height: 1.7;
-  color: #687780;
+  color: var(--color-text-muted);
+}
+.figure figcaption span strong {
+  font-size: inherit;
+  font-weight: 700;
 }
 .chrome {
   margin: 18px;
@@ -76,7 +80,7 @@
   padding: 8px;
 }
 .target {
-  outline: 2px solid #ad5b2f;
+  outline: 2px solid var(--color-action);
   outline-offset: 3px;
   border-radius: 3px;
   display: flex;
@@ -121,8 +125,6 @@
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
-  outline: 2px solid #ad5b2f;
-  outline-offset: 2px;
   border-radius: 4px;
 }
 .pin svg {
@@ -181,7 +183,7 @@
   border-radius: 12px;
   object-fit: cover;
   object-position: 58% 38%;
-  outline: 2px solid #ad5b2f;
+  outline: 2px solid var(--color-action);
   outline-offset: 5px;
   box-shadow: 0 4px 14px #0004;
 }
@@ -196,6 +198,49 @@
     gap: 9px;
   }
   .figure iframe {
-    height: 120px;
+    height: 210px;
+  }
+}
+
+.figure.resultFigure iframe {
+  height: 800px;
+  pointer-events: auto;
+}
+
+@media (max-width: 600px) {
+  .figure.resultFigure iframe {
+    height: 820px;
+  }
+}
+
+.extensionTarget {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px 6px;
+  margin-left: -6px;
+  border-radius: 5px;
+  background: #edf0f5;
+  color: #303238;
+}
+.extensionTarget > span:last-child {
+  margin-left: auto;
+  font-size: 20px;
+  color: #303238;
+}
+
+.figure.resultFigure {
+  max-width: none;
+  width: 100%;
+  container-type: inline-size;
+}
+.figure.resultFigure iframe {
+  height: 330px;
+}
+
+@container (max-width: 480px) {
+  .figure.resultFigure iframe {
+    height: 360px;
   }
 }

@@ -1,10 +1,12 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { createStructuralSignature } from "../../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../../dom/types";
 import {
   confirmSkAutocomplete,
   isSkAutocompleteBridgeReady,
+  SK_AUTOCOMPLETE_REQUEST_EVENT,
+  SK_AUTOCOMPLETE_RESPONSE_EVENT,
   SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
 } from "./autocomplete-bridge";
 import {
@@ -12,11 +14,14 @@ import {
   type SkAutocompleteItem,
   type SkJQuery,
 } from "./autocomplete-main";
+import { skWorkflowAdapter } from "./workflow";
+import type { WriteFailureCode } from "../../write/failure";
 
 const bridgeCleanups: Array<() => void> = [];
 
 afterEach(() => {
   bridgeCleanups.splice(0).forEach((cleanup) => cleanup());
+  vi.useRealTimers();
   document.body.replaceChildren();
   (
     globalThis as unknown as {
@@ -131,8 +136,256 @@ function setupAutocomplete(options: {
   });
   const removeBridge = installSkAutocompleteMainBridge(document, jquery);
   bridgeCleanups.push(removeBridge);
-  return { input, removeBridge, searches: () => searches };
+  return { input, menu, removeBridge, searches: () => searches };
 }
+
+it.each([
+  { title: "completed empty results", items: [], want: "SEARCH_NO_RESULTS" },
+  {
+    title: "completed results with no exact match",
+    items: [{ id: "1", label: "TOEIC Bridge", value: "TOEIC Bridge" }],
+    want: "SEARCH_NO_EXACT_MATCH",
+  },
+  {
+    title: "duplicate exact results",
+    items: [
+      { id: "1", label: "TOEIC", value: "TOEIC" },
+      { id: "2", label: "TOEIC", value: "TOEIC" },
+    ],
+    want: "SEARCH_AMBIGUOUS",
+  },
+  {
+    title: "an exact result with an invalid selection ID",
+    items: [{ id: "0", label: "TOEIC", value: "TOEIC" }],
+    want: "SEARCH_UNCONFIRMED",
+  },
+] as const)(
+  "reports $title without selecting a result",
+  async ({ items, want }) => {
+    const fixture = setupAutocomplete({
+      name: "lngExamName",
+      rowClass: "langExam-Item",
+      query: "TOEIC",
+      items: [...items],
+      scoreControl: "input",
+    });
+    const failures: WriteFailureCode[] = [];
+    let selections = 0;
+    fixture.menu.addEventListener("click", () => selections++);
+
+    await expect(
+      skWorkflowAdapter.settleStateDriver!(
+        document,
+        fieldHandle(fixture.input),
+        (code) => failures.push(code),
+      ),
+    ).resolves.toBe(false);
+    expect(failures).toEqual([want]);
+    expect(selections).toBe(0);
+    expect(fixture.input.value).toBe("TOEIC");
+  },
+);
+
+it("reports an unfinished search as a timeout, not empty results", async () => {
+  vi.useFakeTimers();
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: "공개 자격증",
+    items: [],
+    leavesSearchPending: true,
+  });
+  const failures: WriteFailureCode[] = [];
+  const confirmation = confirmSkAutocomplete(
+    document,
+    fieldHandle(fixture.input),
+    (code) => failures.push(code),
+  );
+  await vi.advanceTimersByTimeAsync(2_500);
+
+  await expect(confirmation).resolves.toBe(false);
+  expect(failures).toEqual(["SEARCH_TIMEOUT"]);
+  expect(fixture.input.value).toBe("공개 자격증");
+});
+
+it("does not call hidden search candidates an empty completed result", async () => {
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: "공개 자격증",
+    items: [{ label: "공개 자격증", value: "공개 자격증" }],
+  });
+  fixture.menu.firstElementChild!.setAttribute("hidden", "");
+  const failures: WriteFailureCode[] = [];
+
+  await expect(
+    confirmSkAutocomplete(document, fieldHandle(fixture.input), (code) =>
+      failures.push(code),
+    ),
+  ).resolves.toBe(false);
+  expect(failures).toEqual(["SEARCH_UNCONFIRMED"]);
+});
+
+it("keeps a settled hidden empty menu unconfirmed without response-content evidence", async () => {
+  vi.useFakeTimers();
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: "공개 자격증",
+    items: [],
+  });
+  fixture.menu.hidden = true;
+  const failures: WriteFailureCode[] = [];
+  const confirmation = confirmSkAutocomplete(
+    document,
+    fieldHandle(fixture.input),
+    (code) => failures.push(code),
+  );
+  await vi.advanceTimersByTimeAsync(2_499);
+  expect(failures).toEqual([]);
+  await vi.advanceTimersByTimeAsync(1);
+
+  await expect(confirmation).resolves.toBe(false);
+  expect(failures).toEqual(["SEARCH_UNCONFIRMED"]);
+});
+
+it("does not interpret malformed search candidate data as no exact match", async () => {
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: "공개 자격증",
+    items: [{}],
+  });
+  const failures: WriteFailureCode[] = [];
+
+  await expect(
+    confirmSkAutocomplete(document, fieldHandle(fixture.input), (code) =>
+      failures.push(code),
+    ),
+  ).resolves.toBe(false);
+  expect(failures).toEqual(["SEARCH_UNCONFIRMED"]);
+});
+
+it("reports the missing score control only after selecting the exact exam", async () => {
+  vi.useFakeTimers();
+  const fixture = setupAutocomplete({
+    name: "lngExamName",
+    rowClass: "langExam-Item",
+    query: "TOEIC",
+    items: [{ id: "1", label: "TOEIC", value: "TOEIC" }],
+  });
+  const failures: WriteFailureCode[] = [];
+  let selections = 0;
+  fixture.menu.addEventListener("click", () => selections++);
+  const confirmation = confirmSkAutocomplete(
+    document,
+    fieldHandle(fixture.input),
+    (code) => failures.push(code),
+  );
+  await vi.advanceTimersByTimeAsync(1_000);
+
+  await expect(confirmation).resolves.toBe(false);
+  expect(failures).toEqual(["EXAM_SCORE_NOT_READY"]);
+  expect(selections).toBe(1);
+});
+
+it.each([
+  ["field name", { fieldName: "eduEducationName" }],
+  ["command", { command: "probe" }],
+  ["request ID", { requestId: "another-request" }],
+  ["marker", {}],
+  ["status", { status: "confirmed" }],
+  ["failure code", { failureCode: "PRIVATE_SITE_MESSAGE" }],
+] as const)(
+  "does not trust a response with an invalid %s",
+  async (_name, override) => {
+    vi.useFakeTimers();
+    const fixture = setupAutocomplete({
+      name: "cerCertName",
+      rowClass: "cert-Item",
+      query: "공개 자격증",
+      items: [],
+    });
+    fixture.removeBridge();
+    const respond = (event: Event) => {
+      const request = JSON.parse((event as CustomEvent<string>).detail);
+      if (_name === "marker")
+        fixture.input.removeAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE);
+      document.dispatchEvent(
+        new CustomEvent(SK_AUTOCOMPLETE_RESPONSE_EVENT, {
+          detail: JSON.stringify({
+            ...request,
+            status: "rejected",
+            failureCode: "SEARCH_NO_RESULTS",
+            ...override,
+          }),
+        }),
+      );
+    };
+    document.addEventListener(SK_AUTOCOMPLETE_REQUEST_EVENT, respond);
+    bridgeCleanups.push(() =>
+      document.removeEventListener(SK_AUTOCOMPLETE_REQUEST_EVENT, respond),
+    );
+    const failures: WriteFailureCode[] = [];
+
+    const confirmation = confirmSkAutocomplete(
+      document,
+      fieldHandle(fixture.input),
+      (code) => failures.push(code),
+    );
+    await vi.advanceTimersByTimeAsync(4_000);
+    await expect(confirmation).resolves.toBe(false);
+    expect(failures).not.toContain("SEARCH_NO_RESULTS");
+    expect(failures).not.toContain("PRIVATE_SITE_MESSAGE");
+  },
+);
+
+it("keeps rejected bridge diagnostics free of the searched profile value", async () => {
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: "SYNTHETIC-PRIVATE-QUERY",
+    items: [],
+  });
+  const responses: string[] = [];
+  const collect = (event: Event) =>
+    responses.push((event as CustomEvent<string>).detail);
+  document.addEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, collect);
+  bridgeCleanups.push(() =>
+    document.removeEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, collect),
+  );
+
+  await expect(
+    confirmSkAutocomplete(document, fieldHandle(fixture.input)),
+  ).resolves.toBe(false);
+  expect(responses).toHaveLength(1);
+  expect(JSON.parse(responses[0])).toMatchObject({
+    status: "rejected",
+    failureCode: "SEARCH_NO_RESULTS",
+  });
+  expect(responses[0]).not.toContain("SYNTHETIC-PRIVATE-QUERY");
+});
+
+it("reports a missing bridge response as a timeout", async () => {
+  vi.useFakeTimers();
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: "공개 자격증",
+    items: [],
+  });
+  fixture.removeBridge();
+  const failures: WriteFailureCode[] = [];
+  const confirmation = confirmSkAutocomplete(
+    document,
+    fieldHandle(fixture.input),
+    (code) => failures.push(code),
+  );
+  await vi.advanceTimersByTimeAsync(4_000);
+
+  await expect(confirmation).resolves.toBe(false);
+  expect(failures).toEqual(["SEARCH_TIMEOUT"]);
+});
 
 it.each([
   [

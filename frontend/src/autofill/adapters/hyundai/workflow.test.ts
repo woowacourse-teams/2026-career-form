@@ -4,6 +4,7 @@ import type { ReviewPlanItem } from "../../review/review-plan";
 import { hyundaiWorkflowAdapter } from "./workflow";
 
 afterEach(() => {
+  vi.useRealTimers();
   document.body.replaceChildren();
 });
 
@@ -67,6 +68,107 @@ function searchItem(
 }
 
 describe("Hyundai language state drivers", () => {
+  it("does not claim a score readiness failure when the exam row is missing", async () => {
+    document.body.innerHTML = '<input type="button" id="foreExamCd_1" />';
+    const exam = document.querySelector<HTMLInputElement>("#foreExamCd_1")!;
+    const onFailure = vi.fn();
+
+    await expect(
+      hyundaiWorkflowAdapter.settleStateDriver?.(
+        document,
+        { elements: [exam], candidate: { domId: "foreExamCd_1" } } as never,
+        onFailure,
+      ),
+    ).resolves.toBe(false);
+
+    expect(onFailure).not.toHaveBeenCalled();
+  });
+
+  it("reports score readiness failure when the selected exam never enables its same-row details", async () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = `
+      <div class="field-group" id="target-row">
+        <input type="hidden" name="foreExamCd" value="01" />
+        <input type="button" id="foreExamCd_1" value="TOEIC" />
+        <input name="acqNm" disabled />
+        <input name="acqDt" disabled />
+        <input name="point" disabled />
+      </div>
+      <div class="field-group" id="other-row">
+        <input name="acqNm" />
+        <input name="acqDt" />
+        <input name="point" />
+      </div>
+    `;
+    const exam = document.querySelector<HTMLInputElement>("#foreExamCd_1")!;
+    const onFailure = vi.fn();
+    const pending = hyundaiWorkflowAdapter.settleStateDriver?.(
+      document,
+      { elements: [exam], candidate: { domId: "foreExamCd_1" } } as never,
+      onFailure,
+    );
+
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(onFailure).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(pending).resolves.toBe(false);
+    expect(onFailure.mock.calls).toEqual([["EXAM_SCORE_NOT_READY"]]);
+    expect(exam.value).toBe("TOEIC");
+    expect(document.querySelector("#target-row [name='point']")).toBeDisabled();
+    expect(
+      document.querySelector("#other-row [name='point']"),
+    ).not.toBeDisabled();
+  });
+
+  it.each([
+    "changed-code",
+    "changed-label",
+    "removed-row",
+    "score-ready",
+    "ambiguous-actions",
+  ])("does not diagnose score readiness from %s", async (change) => {
+    vi.useFakeTimers();
+    document.body.innerHTML = `
+      <div class="field-group" id="target-row">
+        <input type="hidden" name="foreExamCd" value="01" />
+        <input type="button" id="foreExamCd_1" value="TOEIC" />
+        <input name="acqNm" disabled />
+        <input name="acqDt" disabled />
+        <input name="point" disabled />
+      </div>
+    `;
+    const group = document.querySelector<HTMLElement>("#target-row")!;
+    const exam = document.querySelector<HTMLInputElement>("#foreExamCd_1")!;
+    const code = group.querySelector<HTMLInputElement>("[name='foreExamCd']")!;
+    const point = group.querySelector<HTMLInputElement>("[name='point']")!;
+    if (change === "ambiguous-actions") {
+      group.insertAdjacentHTML(
+        "beforeend",
+        '<button class="exam_cancle" type="button">직접입력</button><button class="exam_cancle" type="button">직접입력</button>',
+      );
+    }
+    const onFailure = vi.fn();
+    const pending = hyundaiWorkflowAdapter.settleStateDriver?.(
+      document,
+      { elements: [exam], candidate: { domId: "foreExamCd_1" } } as never,
+      onFailure,
+    );
+    if (change === "changed-code") code.value = "OTHER";
+    if (change === "changed-label") exam.value = "사용자 선택";
+    if (change === "removed-row") group.remove();
+    if (change === "score-ready") point.disabled = false;
+
+    await vi.advanceTimersByTimeAsync(3000);
+
+    await expect(pending).resolves.toBe(false);
+    expect(onFailure).not.toHaveBeenCalled();
+    expect(code.value).toBe(change === "changed-code" ? "OTHER" : "01");
+    expect(exam.value).toBe(
+      change === "changed-label" ? "사용자 선택" : "TOEIC",
+    );
+  });
+
   it("waits for the same-row exam menu after selecting a language", async () => {
     document.body.innerHTML = `
       <div class="field-group" id="target-row">
@@ -164,6 +266,7 @@ describe("Hyundai language state drivers", () => {
     let directClicks = 0;
     let otherClicks = 0;
     let loadClicks = 0;
+    const onFailure = vi.fn();
     target.addEventListener("click", () => {
       directClicks += 1;
       document
@@ -188,14 +291,19 @@ describe("Hyundai language state drivers", () => {
       ),
     ).toBe(2);
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(document, {
-        elements: [exam],
-        candidate: { domId: "foreExamCd_1" },
-      } as never),
+      hyundaiWorkflowAdapter.settleStateDriver?.(
+        document,
+        {
+          elements: [exam],
+          candidate: { domId: "foreExamCd_1" },
+        } as never,
+        onFailure,
+      ),
     ).resolves.toBe(true);
     expect(directClicks).toBe(1);
     expect(otherClicks).toBe(0);
     expect(loadClicks).toBe(0);
+    expect(onFailure).not.toHaveBeenCalled();
     await expect(
       hyundaiWorkflowAdapter.settleStateDriver?.(document, {
         elements: [exam],

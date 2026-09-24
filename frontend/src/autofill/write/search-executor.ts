@@ -46,6 +46,8 @@ type ExecuteApprovedSearchWritesArgs = {
   results: ApprovedWriteResult[];
   beforeMutation?: () => Promise<boolean>;
   signal?: AbortSignal;
+  beforeWrite?: (item: ReviewPlanItem) => Promise<void>;
+  onResult?: (item: ReviewPlanItem, result: ApprovedWriteResult) => void;
   writeOrdinary?: (item: ReviewPlanItem) => ApprovedWriteResult;
 };
 
@@ -234,6 +236,8 @@ export async function executeApprovedSearchWrites({
   beforeMutation,
   signal,
   writeOrdinary,
+  beforeWrite,
+  onResult,
 }: ExecuteApprovedSearchWritesArgs): Promise<boolean> {
   const seenBindings = new Set<string>();
   const seenCandidates = new Set<string>();
@@ -268,6 +272,8 @@ export async function executeApprovedSearchWrites({
       );
       continue;
     }
+    if (signal?.aborted || assertCurrent?.() === false) return true;
+    if (beforeWrite) await beforeWrite(item);
     let profileCurrent = true;
     try {
       profileCurrent = !beforeMutation || (await beforeMutation());
@@ -285,7 +291,10 @@ export async function executeApprovedSearchWrites({
       return true;
     }
     if (item.analysis?.writePlan?.command !== "SEARCH_SELECTION") {
-      if (writeOrdinary) results[index] = writeOrdinary(item);
+      if (writeOrdinary) {
+        results[index] = writeOrdinary(item);
+        onResult?.(item, results[index]!);
+      }
       continue;
     }
     const direct = item.analysis.valueBinding;
@@ -407,6 +416,7 @@ export async function executeApprovedSearchWrites({
               failureCode(failedResult!.reason),
               searchFailureMessage(failedResult!.reason),
             );
+    onResult?.(item, results[index]!);
     if (
       result.status !== "selected" &&
       result.status !== "unchanged" &&

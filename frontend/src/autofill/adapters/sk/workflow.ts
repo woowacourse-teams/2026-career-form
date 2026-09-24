@@ -454,12 +454,12 @@ export const skWorkflowAdapter: WorkflowAdapter = {
     SEARCH_FIELD_BINDINGS.has(handle.candidate.domName)
       ? isSkAutocompleteBridgeReady(document, handle)
       : Promise.resolve(true),
-  settleStateDriver: (document, handle) =>
+  settleStateDriver: (document, handle, onFailure) =>
     isProfilePriorityStatus(handle.candidate.domName)
       ? settleProfilePriorityStatus(document, handle)
       : handle.candidate.domName &&
           SEARCH_FIELD_BINDINGS.has(handle.candidate.domName)
-        ? confirmSkAutocomplete(document, handle)
+        ? confirmSkAutocomplete(document, handle, onFailure)
         : Promise.resolve(true),
   stateDriverFailureGroup: (item, handle) => {
     if (!isVerifiedSearchDriver(item, handle) || handle.elements.length !== 1)

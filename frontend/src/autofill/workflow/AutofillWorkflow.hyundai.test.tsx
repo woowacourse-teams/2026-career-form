@@ -220,6 +220,7 @@ it("runs Hyundai language, exam, direct-entry, then text stages in one workflow"
   );
 
   await waitFor(() => {
+    expect(document.body.textContent).toContain("기입 결과");
     expect(
       document.querySelector<HTMLInputElement>("[name='acqNm']")?.value,
     ).toBe("FIXTURE-REG");

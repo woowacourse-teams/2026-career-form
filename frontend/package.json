@@ -14,6 +14,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:panel": "node scripts/test-panel-layer.mjs",
     "typecheck": "wxt prepare && tsc --noEmit",
     "zip": "wxt zip && node scripts/assert-zip.mjs",
     "dev:site": "vite --config vite.site.config.ts",

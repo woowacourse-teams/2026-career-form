@@ -10,6 +10,7 @@ import {
 } from "../review/calendar-approval";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
+import { executeApprovedWritesAfterPageSettles } from "./executor";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -412,6 +413,123 @@ describe("calendar write guards", () => {
       effect: "stop",
     });
     expect(events.opener).toHaveBeenCalledTimes(1);
+    expect(events.month).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("calendar-only orchestration with field presentation", () => {
+  it("presents an approved calendar and reports the retained write once", async () => {
+    const { target, events } = syntheticCalendar();
+    const registry = registryFor(target);
+    const item = approvedItem(target);
+    const order: string[] = [];
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [item],
+      approvedCandidateIds: new Set([item.candidateId]),
+      registry,
+      calendarOnly: true,
+      document,
+      beforeWrite: async () => {
+        expect(target.value).toBe("");
+        order.push("presented");
+      },
+      onResult: (reportedItem, reportedResult, reportedRegistry) => {
+        expect(reportedItem).toBe(item);
+        expect(reportedRegistry).toBe(registry);
+        expect(target.value).toBe("2026-03");
+        order.push(reportedResult.status);
+      },
+    });
+    expect(result[0]).toMatchObject({ status: "written" });
+    expect(order).toEqual(["presented", "written"]);
+    expect(events.month).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not activate after the presentation aborts the run", async () => {
+    const { target, events } = syntheticCalendar();
+    const controller = new AbortController();
+    const item = approvedItem(target);
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [item],
+      approvedCandidateIds: new Set([item.candidateId]),
+      registry: registryFor(target),
+      calendarOnly: true,
+      document,
+      signal: controller.signal,
+      beforeWrite: async () => {
+        controller.abort();
+      },
+    });
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "STALE_TARGET",
+    });
+    expect(events.opener).not.toHaveBeenCalled();
+    expect(target.value).toBe("");
+  });
+
+  it("stops subsequent calendars after a failed first selection", async () => {
+    const { target, events } = syntheticCalendar("2026-04");
+    const item = approvedItem(target);
+    const second = { ...item, candidateId: "later-calendar" };
+    const presented = vi.fn(async () => {});
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [item, second],
+      approvedCandidateIds: new Set([item.candidateId, second.candidateId]),
+      registry: registryFor(target),
+      calendarOnly: true,
+      document,
+      beforeWrite: presented,
+    });
+    expect(result.map((entry) => entry.status)).toEqual(["skipped", "skipped"]);
+    expect(result[0]).toMatchObject({ code: "CONFLICT" });
+    expect(result[1]).toMatchObject({ code: "STALE_TARGET" });
+    expect(presented).toHaveBeenCalledTimes(1);
+    expect(events.opener).not.toHaveBeenCalled();
+  });
+
+  it("keeps ordinary items out of the calendar-only mutation path", async () => {
+    const { target, events } = syntheticCalendar();
+    const ordinary = document.querySelector<HTMLInputElement>("#other")!;
+    const registry = registryFor(target);
+    registry.registerField({
+      kind: "field",
+      candidateId: "ordinary",
+      sectionId: "experience",
+      signature: createStructuralSignature([ordinary]),
+      candidate: {
+        candidateId: "ordinary",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      },
+      elements: [ordinary],
+      optionElements: new Map(),
+    });
+    const date = approvedItem(target);
+    const text: ReviewPlanItem = {
+      ...calendarItem(),
+      candidateId: "ordinary",
+      profileValue: "secret",
+      analysis: {
+        ...calendarItem().analysis!,
+        candidateId: "ordinary",
+        writePlan: { command: "SET_TEXT" },
+      },
+    };
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [text, date],
+      approvedCandidateIds: new Set([text.candidateId, date.candidateId]),
+      registry,
+      calendarOnly: true,
+      document,
+    });
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "NOT_APPROVED",
+    });
+    expect(result[1]).toMatchObject({ status: "written" });
+    expect(ordinary.value).toBe("");
     expect(events.month).toHaveBeenCalledTimes(1);
   });
 });

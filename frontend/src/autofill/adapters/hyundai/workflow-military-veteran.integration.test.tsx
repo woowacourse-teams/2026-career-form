@@ -1,4 +1,4 @@
-import { cleanup, configure, waitFor } from "@testing-library/react";
+import { cleanup, configure, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
@@ -61,9 +61,7 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
     control("injuryMemo").value,
   ]).toEqual([false, "", "기존 장애 메모"]);
   expect(control("engNm").value).toBe("Fixture");
-  expect(first.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "2직접 확인 필요",
-  );
+  expect(first.queryByLabelText(/입력 실패 \d+개/)).not.toBeInTheDocument();
   const firstClicks = { ...clicks };
   first.unmount();
   const second = await run(fixtureProfile());
@@ -181,9 +179,7 @@ it("treats the legacy 만기전역 profile value as 군필 only during Hyundai a
     "2020-03",
     "2021-09",
   ]);
-  expect(result.getByText("직접 확인 필요").parentElement).toHaveTextContent(
-    "2직접 확인 필요",
-  );
+  expect(result.queryByLabelText(/입력 실패 \d+개/)).not.toBeInTheDocument();
 });
 
 it.each([
@@ -411,12 +407,17 @@ it("leaves an incompatible veteran number blank while completing other fields", 
     ).toBeInTheDocument(),
   );
   expect(control("branchNo").value).toBe("");
-  const verificationSummary = result
-    .getAllByText("직접 확인 필요")
-    .find((element) => element.tagName === "SPAN");
-  expect(verificationSummary?.parentElement).toHaveTextContent(
-    "3직접 확인 필요",
-  );
+  const review = result.getByRole("region", { name: "확인 필요한 항목" });
+  const veteranRow = within(review)
+    .getByRole("button", {
+      name: /보훈번호 필드로 이동$/,
+    })
+    .closest("article")!;
+  expect(
+    within(veteranRow).getByText(
+      "자동으로 입력하지 못했어요. 지원서에서 이 값을 직접 입력해 주세요.",
+    ),
+  ).toBeInTheDocument();
   expect(hidden("branchRel")).toBe("1");
   expect(control("milStartDt").value).toBe("2020-03");
   expect(control("engNm").value).toBe("Fixture");

@@ -225,8 +225,8 @@ it("identifies same-labelled sensitive candidates without revealing their values
 
   const { rerender } = render(<WorkflowScreens {...screenProps()} />);
 
-  expect(screen.getByText("프로필 항목: 처우 · 희망연봉(만원)")).toBeVisible();
-  expect(screen.getByText("프로필 항목: 처우 · 직전연봉(만원)")).toBeVisible();
+  expect(screen.getByText("프로필 항목: 처우 / 희망연봉(만원)")).toBeVisible();
+  expect(screen.getByText("프로필 항목: 처우 / 직전연봉(만원)")).toBeVisible();
   expect(screen.queryByText("desired-salary-secret")).not.toBeInTheDocument();
   expect(screen.queryByText("previous-salary-secret")).not.toBeInTheDocument();
   expect(screen.getAllByText(/입력 예정값: •+/)).toHaveLength(2);
@@ -321,17 +321,23 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
           reason: "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.",
         },
       ]}
-      adapter={getWorkflowAdapter("example.test")}
-      workflowDiagnostics={[]}
+      adapter={getWorkflowAdapter("www.skcareers.com")}
+      workflowDiagnostics={[{ code: "SELECTED", count: 1 }]}
       exceptionTitle=""
       onExit={() => undefined}
     />,
   );
 
-  expect(screen.getByText("처우 · 희망연봉(만원)")).toBeVisible();
+  expect(screen.getByRole("heading", { name: "처우" })).toBeVisible();
+  expect(screen.getByText("희망연봉(만원)")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "처우 / 희망연봉(만원) 필드로 이동" }),
+  ).toBeDisabled();
   expect(screen.getAllByText("프로필 정보")).toHaveLength(1);
   expect(
     screen.queryByText("desired-salary-result-secret"),
   ).not.toBeInTheDocument();
-  expect(screen.getByText("••••••••")).toBeVisible();
+  expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
+  expect(screen.queryByText(/복수.*부전공명 진단/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/선행 선택 완료/)).not.toBeInTheDocument();
 });

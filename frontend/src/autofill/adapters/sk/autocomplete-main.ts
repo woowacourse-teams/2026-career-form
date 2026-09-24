@@ -8,6 +8,7 @@ import {
   isStandardValueId,
   standardValueAliases,
 } from "../../../profile/standard-values";
+import type { FailureReporter, WriteFailureCode } from "../../write/failure";
 
 export interface SkAutocompleteItem {
   id?: unknown;
@@ -152,13 +153,17 @@ function exactMenuItem(
   input: HTMLInputElement,
   fieldName: SkAutocompleteFieldName,
   instance: SkAutocompleteInstance,
+  onFailure?: FailureReporter,
 ): { element: HTMLElement; item: SkAutocompleteItem } | undefined {
   const query = normalize(input.value);
   const menu = instance.menu?.element?.[0];
   if (!query || !menu || !visible(menu)) return undefined;
-  const matches = Array.from(
+  const elements = Array.from(
     menu.querySelectorAll<HTMLElement>(".ui-menu-item"),
-  ).flatMap((element) => {
+  ).filter(visible);
+  let unverifiableCandidate =
+    elements.length === 0 && menu.childElementCount > 0;
+  const matches = elements.flatMap((element) => {
     const item = jquery(element).data("ui-autocomplete-item") as
       SkAutocompleteItem | undefined;
     const label = normalize(item?.label);
@@ -171,10 +176,21 @@ function exactMenuItem(
     const exact = label === query && value === query;
     const canonicalExam =
       fieldName === "lngExamName" && matchesSkExamStandardValue(query, item);
-    return item && visible(element) && (exact || canonicalExam) && validId
+    if (!item || !label || !value || !validId) unverifiableCandidate = true;
+    return item && (exact || canonicalExam) && validId
       ? [{ element, item }]
       : [];
   });
+  if (matches.length !== 1)
+    onFailure?.(
+      matches.length > 1
+        ? "SEARCH_AMBIGUOUS"
+        : unverifiableCandidate
+          ? "SEARCH_UNCONFIRMED"
+          : elements.length > 0
+            ? "SEARCH_NO_EXACT_MATCH"
+            : "SEARCH_NO_RESULTS",
+    );
   return matches.length === 1 ? matches[0] : undefined;
 }
 
@@ -184,6 +200,7 @@ function waitForExactMenuItem(
   input: HTMLInputElement,
   request: RequestMessage,
   query: string,
+  onFailure?: FailureReporter,
 ): Promise<{ element: HTMLElement; item: SkAutocompleteItem } | undefined> {
   const current = () => {
     if (
@@ -192,7 +209,11 @@ function waitForExactMenuItem(
         request.requestId ||
       input.value !== query
     ) {
-      return { done: true, match: undefined };
+      return {
+        done: true,
+        match: undefined,
+        failureCode: "SEARCH_UNCONFIRMED" as const,
+      };
     }
     const instance = autocompleteInstance(jquery, input);
     const requestSettled =
@@ -200,29 +221,47 @@ function waitForExactMenuItem(
       normalize(instance.term) === normalize(query) &&
       instance.pending === 0;
     if (!requestSettled) return { done: false, match: undefined };
-    const match = exactMenuItem(jquery, input, request.fieldName, instance);
+    let failureCode: WriteFailureCode | undefined = "SEARCH_UNCONFIRMED";
+    const match = exactMenuItem(
+      jquery,
+      input,
+      request.fieldName,
+      instance,
+      (code) => {
+        failureCode = code;
+      },
+    );
     const menu = instance.menu?.element?.[0];
-    return { done: Boolean(menu && visible(menu)), match };
+    return {
+      done: Boolean(menu && visible(menu)),
+      match,
+      failureCode: match ? undefined : failureCode,
+    };
   };
   const initial = current();
-  if (initial.done) return Promise.resolve(initial.match);
+  if (initial.done) {
+    if (initial.failureCode) onFailure?.(initial.failureCode);
+    return Promise.resolve(initial.match);
+  }
   const view = document.defaultView;
   if (!view) return Promise.resolve(undefined);
   return new Promise((resolve) => {
     let completed = false;
     const finish = (
       match: { element: HTMLElement; item: SkAutocompleteItem } | undefined,
+      failureCode?: WriteFailureCode,
     ) => {
       if (completed) return;
       completed = true;
       observer.disconnect();
       view.clearInterval(interval);
       view.clearTimeout(timeout);
+      if (failureCode) onFailure?.(failureCode);
       resolve(match);
     };
     const inspect = () => {
       const result = current();
-      if (result.done) finish(result.match);
+      if (result.done) finish(result.match, result.failureCode);
     };
     const observer = new view.MutationObserver(inspect);
     observer.observe(document.documentElement, {
@@ -233,7 +272,7 @@ function waitForExactMenuItem(
     });
     const interval = view.setInterval(inspect, 25);
     const timeout = view.setTimeout(
-      () => finish(undefined),
+      () => finish(undefined, current().failureCode ?? "SEARCH_TIMEOUT"),
       MENU_SETTLE_TIMEOUT_MILLISECONDS,
     );
   });
@@ -293,6 +332,7 @@ async function confirmSelection(
   document: Document,
   jquery: SkJQuery,
   request: RequestMessage,
+  onFailure?: FailureReporter,
 ): Promise<{ selectedValue: string } | undefined> {
   const input = markedInput(document, request);
   if (!input || !visible(input)) return undefined;
@@ -310,6 +350,7 @@ async function confirmSelection(
     input,
     request,
     query,
+    onFailure,
   );
   if (
     !match ||
@@ -329,12 +370,14 @@ async function confirmSelection(
   const scoreReady =
     request.fieldName !== "lngExamName" || (await waitForExamScore(input));
   const selected = autocompleteInstance(jquery, input)?.selectedItem;
-  return scoreReady &&
+  const selectionConfirmed =
     input.isConnected &&
     input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) ===
       request.requestId &&
     jquery(input).data("confirmed") === true &&
-    sameItem(selected, match.item, request.fieldName === "lngExamName")
+    sameItem(selected, match.item, request.fieldName === "lngExamName");
+  if (selectionConfirmed && !scoreReady) onFailure?.("EXAM_SCORE_NOT_READY");
+  return scoreReady && selectionConfirmed
     ? { selectedValue: input.value }
     : undefined;
 }
@@ -344,6 +387,7 @@ function respond(
   request: RequestMessage,
   status: "ready" | "confirmed" | "rejected",
   selectedValue?: string,
+  failureCode?: WriteFailureCode,
 ): void {
   const EventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
   document.dispatchEvent(
@@ -354,6 +398,7 @@ function respond(
         fieldName: request.fieldName,
         status,
         ...(selectedValue !== undefined ? { selectedValue } : {}),
+        ...(failureCode ? { failureCode } : {}),
       }),
     }),
   );
@@ -391,7 +436,10 @@ export function installSkAutocompleteMainBridge(
       return;
     }
     const writtenValue = input.value;
-    void confirmSelection(document, jquery, request).then((confirmed) => {
+    let failureCode: WriteFailureCode = "SEARCH_UNCONFIRMED";
+    void confirmSelection(document, jquery, request, (code) => {
+      failureCode = code;
+    }).then((confirmed) => {
       const previousValue = valuesBeforeWrite.get(input);
       valuesBeforeWrite.delete(input);
       if (
@@ -410,6 +458,7 @@ export function installSkAutocompleteMainBridge(
         request,
         confirmed ? "confirmed" : "rejected",
         confirmed?.selectedValue,
+        confirmed ? undefined : failureCode,
       );
     });
   };

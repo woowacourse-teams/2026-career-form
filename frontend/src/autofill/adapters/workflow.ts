@@ -5,6 +5,7 @@ import type { RepeatedProfileCategoryId } from "../../profile/model";
 import { resolveCompany } from "./company";
 import { hyundaiWorkflowAdapter } from "./hyundai/workflow";
 import { skWorkflowAdapter } from "./sk/workflow";
+import type { FailureReporter } from "../write/failure";
 
 export interface FreshRowPreparation {
   plan: PreparationPlan;
@@ -53,6 +54,7 @@ export interface WorkflowAdapter {
     handle: FieldCandidateHandle,
     item: ReviewPlanItem,
     signal: AbortSignal,
+    onFailure?: FailureReporter,
   ): Promise<boolean | undefined>;
   canSelectProfileOption?(
     handle: ActionCandidateHandle,
@@ -87,10 +89,12 @@ export interface WorkflowAdapter {
   waitForStateDriverReady?(
     document: Document,
     handle: FieldCandidateHandle,
+    onFailure?: FailureReporter,
   ): Promise<boolean>;
   settleStateDriver?(
     document: Document,
     handle: FieldCandidateHandle,
+    onFailure?: FailureReporter,
   ): Promise<boolean>;
   // Opt-in only: a failed search may defer its whole independently bound row.
   stateDriverFailureGroup?(

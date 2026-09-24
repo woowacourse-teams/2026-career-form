@@ -4,7 +4,24 @@
   gap: 15px;
   min-height: 100%;
   padding: 18px 16px;
-  background: var(--color-page);
+  background: var(--color-surface);
+}
+.resultScreen {
+  gap: 12px;
+  padding: 16px;
+}
+.resultTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.addressResult {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.addressResult p {
+  margin: 8px 0 0;
 }
 
 .header span {
@@ -32,11 +49,7 @@
   height: 150px;
   place-items: center;
   border-radius: var(--radius-card);
-  background: linear-gradient(
-    145deg,
-    var(--color-accent-soft),
-    var(--color-accent)
-  );
+  background: var(--color-accent-soft);
 }
 
 @keyframes analysis-spinner {
@@ -464,8 +477,8 @@
 
 .exceptionTabs button[aria-pressed="true"] {
   border-color: var(--color-action-strong);
-  color: var(--color-on-action);
-  background: var(--color-action-strong);
+  color: var(--color-on-brand);
+  background: var(--color-brand);
 }
 
 .exceptionCard p {

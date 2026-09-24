@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, expect, it } from "vitest";
 
@@ -277,6 +277,7 @@ it("maps two delayed widget-local exam results and retains both names through th
     }),
   );
   await waitFor(() => {
+    expect(document.body.textContent).toContain("기입 결과");
     expect(firstScore.value).toBe("830");
     expect(secondScore.value).toBe("advanced");
   });
@@ -404,9 +405,11 @@ it("does not confirm SK exam when two live results match the same canonical valu
       }),
     );
     await waitFor(() =>
-      expect(document.body.textContent).toContain(
-        "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
-      ),
+      expect(
+        within(
+          screen.getByRole("region", { name: "확인 필요한 항목" }),
+        ).getByText(/일치하는 검색 결과가 여러 개.*목록에서 직접 골라/),
+      ).toBeInTheDocument(),
     );
     expect(exam.value).toBe("");
   } finally {
@@ -488,9 +491,11 @@ it.each([
     );
     try {
       await waitFor(() =>
-        expect(document.body.textContent).toContain(
-          "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
-        ),
+        expect(
+          within(
+            screen.getByRole("region", { name: "확인 필요한 항목" }),
+          ).getByText(/검색 결과가 없어요.*다른 이름으로 찾아/),
+        ).toBeInTheDocument(),
       );
       expect(input.value).toBe("");
     } finally {
@@ -605,9 +610,18 @@ it.each([false, true])(
       expect(
         Array.from(rows[1].querySelectorAll("input")).map((e) => e.value),
       ).toEqual(["정보처리기사", "Public issuer", "2025-02"]);
-      expect(document.body.textContent).toContain(
-        "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다",
-      );
+      expect(
+        within(
+          screen.getByRole("region", { name: "확인 필요한 항목" }),
+        ).getByText(/목록 선택을 확인하지 못했어요.*항목을 직접 골라/),
+      ).toBeInTheDocument();
+      expect(
+        within(
+          screen.getByRole("region", { name: "확인 필요한 항목" }),
+        ).getAllByText(
+          /같은 행의 검색 항목을 확정하지 못해.*검색 항목을 목록에서 고른 뒤/,
+        ),
+      ).toHaveLength(2);
     } finally {
       removeBridge();
     }

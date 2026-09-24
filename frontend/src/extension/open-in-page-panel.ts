@@ -27,11 +27,15 @@ export async function openInPagePanel(
     tabs: browser.tabs,
     scripting: browser.scripting,
   },
+  tabId?: number,
 ): Promise<void> {
-  const [tab] = await dependencies.tabs.query({
-    active: true,
-    currentWindow: true,
-  });
+  const [tab] =
+    tabId !== undefined
+      ? [{ id: tabId }]
+      : await dependencies.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
   if (tab?.id === undefined) {
     throw new Error("현재 지원서 페이지를 확인할 수 없습니다.");
   }

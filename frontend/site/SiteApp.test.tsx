@@ -22,11 +22,16 @@ describe("website navigation", () => {
   });
   it("moves through installation guidance without collecting profile data or replaying a demo", () => {
     const { container } = render(<SiteApp path="/onboarding/" />);
-    fireEvent.click(screen.getByRole("button", { name: /프로필 등록 방법/ }));
+    expect(screen.getByRole("link", { name: /Chrome에 추가/ })).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: /프로필 등록 알아보기/ }),
+    );
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "프로필",
     );
-    fireEvent.click(screen.getByRole("button", { name: /첫 실행 방법/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /지원서에서 사용하기/ }),
+    );
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "지원서",
     );
@@ -58,4 +63,33 @@ describe("website navigation", () => {
       "찾을 수",
     );
   });
+});
+
+it("explains grouped results and copy after the application step", () => {
+  const { container } = render(
+    <SiteApp path="/onboarding/" installed profileHref="/options.html" />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: /지원서에서 사용하기/ }));
+  fireEvent.click(screen.getByRole("button", { name: /결과 확인 알아보기/ }));
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    "입력한 내용",
+  );
+  expect(
+    screen.getByTitle("값을 복사해 지원서에 붙여넣는 시연"),
+  ).toHaveAttribute("src", "/demo/?view=guide-results");
+  expect(screen.getByText(/값을 복사해 지원서에 붙여넣으세요/)).toBeVisible();
+  expect(container.querySelector("input")).toBeNull();
+});
+
+it("leads with the value of reused information and keeps detailed guidance in onboarding", () => {
+  const { container } = render(<SiteApp path="/" />);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    "지원서는 매번 달라도,내 정보는 그대로니까.",
+  );
+  expect(container.querySelector('iframe[src*="guide-results"]')).toBeNull();
+  expect(screen.queryByText(/다른 구역을 누르면 이전 강조/)).toBeNull();
+  expect(container.querySelector("details[open]")).toBeNull();
+  expect(screen.getAllByRole("link", { name: /Chrome에 추가/ })).toHaveLength(
+    3,
+  );
 });

@@ -1,11 +1,13 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Simulation } from "./Simulation";
+import { PanelGuide } from "./PanelPreview";
 
 vi.mock("wxt/browser", () => import("./browser"));
 let observeVisible: (visible: boolean) => void;
 const disconnect = vi.fn();
 beforeEach(() => {
+  observeVisible = () => {};
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -33,8 +35,12 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 describe("isolated automatic demonstration", () => {
-  it("starts only when visible and fills all ten example inputs through the real workflow", async () => {
-    render(<Simulation />);
+  it("waits for hover even when visible, then fills without scrolling the page", async () => {
+    const scroll = vi.fn();
+    const { container } = render(<Simulation />);
+    container.querySelectorAll("input").forEach((input) => {
+      input.scrollIntoView = scroll;
+    });
     expect(screen.getByLabelText("학교명")).toHaveValue("");
     expect(screen.getByLabelText("졸업일")).toHaveAttribute("type", "date");
     expect(screen.getByLabelText("취득일")).toHaveAttribute("type", "date");
@@ -44,6 +50,11 @@ describe("isolated automatic demonstration", () => {
       screen.queryByRole("region", { name: "지원서 자동 기입" }),
     ).not.toBeInTheDocument();
     act(() => observeVisible(true));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
+    expect(
+      screen.queryByRole("region", { name: "지원서 자동 기입" }),
+    ).not.toBeInTheDocument();
+    fireEvent.pointerEnter(container.firstElementChild!);
     await screen.findByRole(
       "heading",
       { name: "기입 결과" },
@@ -63,14 +74,43 @@ describe("isolated automatic demonstration", () => {
     ]) {
       expect(screen.getByLabelText(label!)).toHaveValue(value);
     }
-    expect(fetch).not.toHaveBeenCalled();
-  });
-  it("disconnects the observer when unmounted before entering view", async () => {
-    const { unmount } = render(<Simulation />);
-    await waitFor(() =>
-      expect(screen.getByText("career@example.com")).toBeInTheDocument(),
+    expect(container.querySelector("[data-demo-panel]")).toContainElement(
+      screen.getByRole("region", { name: "지원서 자동 기입" }),
     );
-    unmount();
-    expect(disconnect).toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(scroll).not.toHaveBeenCalled();
   });
+  it.each(["focusIn", "pointerDown"] as const)(
+    "supports %s without a mouse",
+    async (event) => {
+      const { container } = render(<Simulation />);
+      fireEvent[event](container.firstElementChild!);
+      await screen.findByRole(
+        "heading",
+        { name: "기입 결과" },
+        { timeout: 5000 },
+      );
+    },
+  );
+});
+
+it("plays one copy-and-paste scene on hover without network or clipboard access", async () => {
+  vi.useFakeTimers();
+  try {
+    const { container } = render(<PanelGuide kind="results" />);
+    expect(screen.getByLabelText("상세주소")).toHaveValue("");
+    expect(screen.queryByLabelText("결과 확인 시연 단계")).toBeNull();
+    fireEvent.pointerEnter(container.firstElementChild!);
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    expect(screen.getByText("복사됨")).toBeInTheDocument();
+    expect(screen.getByLabelText("상세주소")).toHaveValue("");
+    await act(() => vi.advanceTimersByTimeAsync(2200));
+    expect(screen.getByLabelText("상세주소")).toHaveValue("101동 1001호");
+    expect(screen.getByText("남은 칸을 채웠어요.")).toBeVisible();
+    expect(fetch).not.toHaveBeenCalled();
+    fireEvent.pointerEnter(container.firstElementChild!);
+    expect(screen.getByLabelText("상세주소")).toHaveValue("");
+  } finally {
+    vi.useRealTimers();
+  }
 });

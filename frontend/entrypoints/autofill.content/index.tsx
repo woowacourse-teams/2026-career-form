@@ -71,6 +71,17 @@ export default defineContentScript({
       const panel = await getProfilePanel();
       if (invalidated) return;
       if (!panel.mounted) panel.mount();
+      const host = panel.shadowHost;
+      // Rise above ordinary page layers only on an explicit open request.
+      // Site modals retain priority and page controls never become inert.
+      if (
+        typeof host.showPopover === "function" &&
+        !document.querySelector("dialog:modal") &&
+        !host.matches(":popover-open")
+      ) {
+        host.popover = "manual";
+        host.showPopover();
+      }
       setFloatingSidePanelLauncherVisibility(document, false);
     };
     const openAutofill = async () => {

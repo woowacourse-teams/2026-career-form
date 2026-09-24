@@ -1,12 +1,14 @@
+@import "../../src/styles/theme.css";
+
 .panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
   color: var(--color-text);
-  background: var(--color-page);
+  background: var(--color-surface);
   /* The Shadow DOM host resets inherited font properties with all: initial. */
   font-family: var(--font-ui);
   font-synthesis: none;
@@ -17,8 +19,8 @@
 }
 .header {
   padding: 20px 20px 16px;
-  border-bottom: 1px solid var(--color-info-border);
-  background: linear-gradient(125deg, var(--color-info-soft), #f9fdff 90%);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 .brandRow,
 .brandIdentity,
@@ -38,7 +40,7 @@
   display: block;
   width: 42px;
   height: 42px;
-  border: 1px solid var(--color-info-border);
+  border: 1px solid var(--color-border);
   border-radius: 13px;
   object-fit: cover;
 }
@@ -50,7 +52,7 @@
   letter-spacing: 0.08em;
 }
 .brandIdentity span {
-  color: var(--color-info);
+  color: var(--color-text-muted);
   font-size: 11px;
 }
 .closeButton {
@@ -148,26 +150,10 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.readiness {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  margin: 12px 0 16px;
-  color: var(--color-text-muted);
-  font-size: 10px;
-}
-.readiness span:first-child {
-  padding: 3px 7px;
-  border: 1px solid var(--color-info-border);
-  border-radius: 6px;
-  color: var(--color-info);
-  background: var(--color-info-soft);
-  font-weight: 650;
-}
 .groups {
   display: grid;
   gap: 12px;
+  margin-top: 16px;
 }
 .group {
   overflow: hidden;
@@ -186,7 +172,7 @@
   border: 0;
   padding: 13px 14px;
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--color-surface-muted);
   text-align: left;
   cursor: pointer;
 }
@@ -282,7 +268,7 @@
   display: grid;
   gap: 7px;
   margin: 0;
-  border: 1px dashed var(--color-info-border);
+  border: 1px dashed var(--color-border-strong);
   border-radius: 12px;
   padding: 28px 14px;
   color: var(--color-text-muted);
@@ -301,37 +287,74 @@
   background: var(--color-danger-soft);
   font-size: 12px;
 }
-.footer {
+.autofillAction {
+  margin: 14px 0 0;
+}
+.bottomActionPanel {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.previewFooter {
+  margin: 0;
   border-top: 1px solid var(--color-border);
   padding: 14px 16px 12px;
   background: var(--color-surface);
-  box-shadow: 0 -6px 20px rgb(49 79 93 / 6%);
 }
-.footer button {
+.autofillAction button {
   width: 100%;
   min-height: 46px;
-  border: 1px solid var(--color-brand-hover);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 12px 16px;
-  color: var(--color-on-brand);
-  background: var(--color-brand);
+  color: var(--color-text);
+  background: var(--color-surface);
   font-size: 14px;
   font-weight: 750;
   cursor: pointer;
 }
-.footer button > span {
+.autofillAction button > span {
   margin-left: 6px;
 }
-.footer button:hover {
-  background: var(--color-brand-hover);
+.autofillAction button:hover {
+  background: var(--color-accent-hover);
 }
-.footer p {
+.autofillAction button[data-autofill-start] {
+  border-width: 2px;
+  border-color: var(--color-border-strong);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+.autofillAction button[data-autofill-start]:hover {
+  background: var(--color-brand-hover);
+  border-color: var(--color-brand-hover);
+}
+.returnButton {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-action-strong);
+  font-size: 24px;
+  cursor: pointer;
+}
+.returnButton:hover {
+  background: var(--color-accent-hover);
+}
+.titleRow:has(.returnButton) {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.autofillAction p {
   margin: 8px 0 0;
   color: var(--color-text-muted);
   font-size: 10px;
   text-align: center;
 }
-.footer .autofillError {
+.autofillAction .autofillError {
   color: var(--color-danger-text);
 }
 @media (max-width: 340px) {
@@ -359,7 +382,7 @@
   min-height: 0;
   overflow: hidden;
 }
-.footer button:disabled {
+.autofillAction button:disabled {
   cursor: wait;
   opacity: 0.65;
 }

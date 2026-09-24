@@ -93,3 +93,8 @@ CF-83 후속 negative fixture는 현대 복수전공의 정확 결과 0개를 �
 | API 및 상태 추적 | BUTTON_OPTION text는 SELECT_BUTTON_OPTION만 허용, SET_TEXT 거부; 국가·도시를 DOM 식별자로 구분 | 실제 설치 경로 확인 |
 
 최종 자동 검증은 프론트 79개 파일의 701개 통과·20개 건너뜀, typecheck/lint/format/build, 백엔드 전체 Gradle 테스트, 하네스 검증 통과다. 소재지 실패 격리 회귀는 처리 제거 시 실패하고 원복 후 4개 통과를 확인했다. 빌드는 `VITE_API_BASE_URL=http://localhost:8080`과 manifest/background의 localhost API를 확인했고 로컬 백엔드를 갱신했다. 코드 지원·자동 테스트와 실제 설치 확인 범위를 구분하며, 현대의 별도 검색 재시도·수동 확인을 전체 성공으로 해석하지 않는다. 실제 지원서 저장·제출·페이지 이동·미리보기, 운영 정책 배포는 하지 않았다.
+
+
+## CF-99 결과 패널 진단 (2026-09-24)
+
+현대 학교·전공 및 SK 학교·자격증·시험 검색의 실패 사유와 성적란 준비 실패를 결과 패널에 연결했다. 신규 지원 필드는 추가하지 않는다. 비식별 자동 테스트로 진단 전달을 확인했으며 실제 설치·저장·제출 검증 범위를 확대하지 않는다. 상세 근거는 [CF-99 승인 결정](../../raw/issues/CF-99/documents/autofill-follow-and-install.md)을 따른다.
