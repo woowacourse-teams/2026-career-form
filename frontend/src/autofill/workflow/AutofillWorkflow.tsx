@@ -676,6 +676,10 @@ export function AutofillWorkflow({
       onExit={onExit}
       exitInToolbar={exitInToolbar}
       currentCategory={currentCategory}
+      onLocateSection={(candidateIds) =>
+        !!fieldsSnapshot &&
+        presentation.showSection(fieldsSnapshot.registry, candidateIds)
+      }
       onLocate={(candidateId) =>
         !!fieldsSnapshot &&
         presentation.show(fieldsSnapshot.registry, candidateId)

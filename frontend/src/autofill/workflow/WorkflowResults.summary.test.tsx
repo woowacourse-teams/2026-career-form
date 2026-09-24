@@ -45,27 +45,29 @@ function props(reviewItems = items) {
 }
 it("summarizes separate education records and only marks a section checked explicitly", () => {
   const locate = vi.fn(() => true);
-  render(<WorkflowResults {...props()} onLocate={locate} />);
+  render(<WorkflowResults {...props()} onLocateSection={locate} />);
   expect(
     screen.getByRole("heading", { name: "제출 전, 입력한 내용을 살펴보세요" }),
   ).toBeVisible();
-  const summaries = screen.getAllByRole("button", {
-    name: /대학교 .*지원서에서 보기/,
-  });
+  const summaries = [
+    screen.getByText("대학교 1").closest("li")!,
+    screen.getByText("대학교 2").closest("li")!,
+  ];
   expect(summaries).toHaveLength(2);
   expect(summaries[0]).toHaveTextContent("합성대학교");
   expect(summaries[0]).toHaveTextContent("합성전공");
   expect(summaries[0]).not.toHaveTextContent("두번째대학교");
   const checked = screen.getByRole("button", { name: "학력 확인했어요" });
   expect(checked).toHaveAttribute("aria-pressed", "false");
-  fireEvent.click(summaries[0]);
-  expect(locate).toHaveBeenCalledWith("school");
+  fireEvent.click(screen.getByRole("button", { name: "학력 구역 보기" }));
+  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"]);
   expect(checked).toHaveAttribute("aria-pressed", "false");
   fireEvent.click(checked);
   expect(
-    screen.getByRole("button", { name: "학력 확인 취소" }),
-  ).toHaveAttribute("aria-pressed", "true");
+    screen.getByRole("button", { name: "학력 요약 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByText("1 / 1개 구역 확인")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "학력 요약 펼치기" }));
   fireEvent.click(screen.getByRole("button", { name: "학력 확인 취소" }));
   expect(screen.getByText("0 / 1개 구역 확인")).toBeVisible();
 });
@@ -75,8 +77,8 @@ it("retains explicit checks across tabs, but resets them when summary contents c
   fireEvent.click(screen.getByRole("tab", { name: "확인 필요 0개" }));
   fireEvent.click(screen.getByRole("tab", { name: "입력 완료 3개" }));
   expect(
-    screen.getByRole("button", { name: "학력 확인 취소" }),
-  ).toHaveAttribute("aria-pressed", "true");
+    screen.getByRole("button", { name: "학력 요약 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
   const updated = items.map((item) =>
     item.candidateId === "major"
       ? { ...item, profileValue: "변경된전공" }
@@ -107,24 +109,23 @@ it("does not invent values for historical records or locate a reused candidate",
         },
       ]}
       fieldStateFor={() => ({ visible: true, value: "UNRELATED_VALUE" })}
-      onLocate={locate}
+      onLocateSection={locate}
     />,
   );
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
   expect(within(completed).getByText("지원서에서 확인")).toBeVisible();
   expect(within(completed).queryByText("UNRELATED_VALUE")).toBeNull();
   expect(
-    within(completed).queryByRole("button", { name: /지원서에서 보기/ }),
-  ).toBeNull();
+    within(completed).getByRole("button", { name: "학력 구역 보기" }),
+  ).toBeDisabled();
   expect(locate).not.toHaveBeenCalled();
 });
-it("falls back to another field in the same record when the first location is unavailable", () => {
-  const locate = vi.fn((id: string) => id === "major");
-  render(<WorkflowResults {...props()} onLocate={locate} />);
-  fireEvent.click(
-    screen.getAllByRole("button", { name: /대학교 .*지원서에서 보기/ })[0],
-  );
-  expect(locate.mock.calls.map(([id]) => id)).toEqual(["school", "major"]);
+it("reports unavailable section navigation without checking it", () => {
+  const locate = vi.fn(() => false);
+  render(<WorkflowResults {...props()} onLocateSection={locate} />);
+  fireEvent.click(screen.getByRole("button", { name: "학력 구역 보기" }));
+  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"]);
+  expect(screen.getByRole("button", { name: "학력 구역 보기" })).toBeDisabled();
   expect(
     screen.getByRole("button", { name: "학력 확인했어요" }),
   ).toHaveAttribute("aria-pressed", "false");
@@ -146,8 +147,8 @@ it("resets only the changed section and never restores a removed section's check
     screen.getByRole("button", { name: "학력 확인했어요" }),
   ).toHaveAttribute("aria-pressed", "false");
   expect(
-    screen.getByRole("button", { name: "연락처와 주소 확인 취소" }),
-  ).toHaveAttribute("aria-pressed", "true");
+    screen.getByRole("button", { name: "연락처와 주소 요약 펼치기" }),
+  ).toHaveAttribute("aria-expanded", "false");
   view.rerender(<WorkflowResults {...props(items)} />);
   view.rerender(<WorkflowResults {...props(all)} />);
   expect(
@@ -159,14 +160,12 @@ it("keeps top-level education choices outside a school record", () => {
     ...items,
     field("latest", "education.university.latestEducationType", "대학(학사)"),
   ];
-  render(<WorkflowResults {...props(all)} onLocate={() => true} />);
-  const school = screen.getAllByRole("button", {
-    name: /대학교 .*지원서에서 보기/,
-  })[0];
+  render(<WorkflowResults {...props(all)} onLocateSection={() => true} />);
+  const school = screen.getByText("대학교 1").closest("li")!;
   expect(school).not.toHaveTextContent("최종학력");
-  expect(
-    screen.getByRole("button", { name: "최종학력 지원서에서 보기" }),
-  ).toHaveTextContent("대학(학사)");
+  expect(screen.getByText("최종학력").closest("li")).toHaveTextContent(
+    "대학(학사)",
+  );
 });
 it("keeps repeated records without identity separate", () => {
   const all = items.map((item) => ({
@@ -174,10 +173,8 @@ it("keeps repeated records without identity separate", () => {
     itemIndex: undefined,
     profileEntryId: undefined,
   }));
-  render(<WorkflowResults {...props(all)} onLocate={() => true} />);
-  expect(
-    screen.getAllByRole("button", { name: "대학교 지원서에서 보기" }),
-  ).toHaveLength(3);
+  render(<WorkflowResults {...props(all)} onLocateSection={() => true} />);
+  expect(screen.getAllByText("대학교")).toHaveLength(3);
 });
 it("does not attach an old progress entry to a reused current candidate", () => {
   const current = props(items.slice(0, 1));
@@ -194,19 +191,59 @@ it("does not attach an old progress entry to a reused current candidate", () => 
         },
       ]}
       progressIdFor={() => "different-record"}
-      onLocate={() => true}
+      onLocateSection={() => true}
     />,
   );
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
   expect(within(completed).getByText("지원서에서 확인")).toBeVisible();
   expect(within(completed).queryByText("합성대학교")).toBeNull();
   expect(
-    within(completed).queryByRole("button", { name: /지원서에서 보기/ }),
-  ).toBeNull();
+    within(completed).getByRole("button", { name: "학력 구역 보기" }),
+  ).toBeDisabled();
 });
 it("never substitutes stored profile values when a live value is unavailable", () => {
   render(<WorkflowResults {...props()} fieldStateFor={undefined} />);
   const completed = screen.getByRole("region", { name: "입력 완료 내역" });
   expect(within(completed).queryByText("합성대학교")).toBeNull();
   expect(within(completed).getAllByText("지원서에서 확인")).toHaveLength(3);
+});
+
+it("navigates a whole category and collapses its summary on explicit confirmation", () => {
+  const locate = vi.fn(() => true);
+  const locateField = vi.fn(() => true);
+  render(
+    <WorkflowResults
+      {...props()}
+      onLocateSection={locate}
+      onLocate={locateField}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "학력 구역 보기" }));
+  expect(locate).toHaveBeenCalledWith(["school", "major", "school2"]);
+  expect(locateField).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "학력 확인했어요" }));
+  expect(screen.queryByText("합성대학교")).not.toBeVisible();
+  const reopen = screen.getByRole("button", {
+    name: "학력 확인 완료, 요약 펼치기",
+  });
+  expect(reopen).toHaveFocus();
+  fireEvent.click(reopen);
+  expect(screen.getByText("합성대학교")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "학력 확인 취소" }),
+  ).toHaveAttribute("aria-pressed", "true");
+});
+
+it("does not mark a manually collapsed section checked and preserves keyboard focus without navigation", () => {
+  render(<WorkflowResults {...props()} />);
+  fireEvent.click(screen.getByRole("button", { name: "학력 요약 접기" }));
+  expect(screen.getByText("0 / 1개 구역 확인")).toBeVisible();
+  expect(screen.queryByText("✓")).toBeNull();
+  const buttons = screen.getAllByRole("button", { name: "학력 요약 펼치기" });
+  fireEvent.click(buttons[0]);
+  fireEvent.click(screen.getByRole("button", { name: "학력 확인했어요" }));
+  expect(
+    screen.getByRole("button", { name: "학력 요약 펼치기" }),
+  ).toHaveFocus();
+  expect(screen.getByText("합성대학교")).not.toBeVisible();
 });

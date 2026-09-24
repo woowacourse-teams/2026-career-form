@@ -1,4 +1,5 @@
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import { presentSection } from "./section-presentation";
 export function createFieldPresentation(document: Document) {
   const withinVisibleArea = (element: HTMLElement) => {
     const view = document.defaultView;
@@ -208,5 +209,13 @@ export function createFieldPresentation(document: Document) {
     }
     return true;
   };
-  return { show, clear };
+  const showSection = (
+    registry: CandidateRegistry,
+    ids: readonly string[],
+  ): boolean => {
+    restore?.();
+    restore = presentSection(document, registry, ids);
+    return !!restore;
+  };
+  return { show, showSection, clear };
 }

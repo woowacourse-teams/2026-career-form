@@ -53,6 +53,7 @@ interface WorkflowScreensProps {
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
   onLocate?(candidateId: string): boolean;
+  onLocateSection?(candidateIds: readonly string[]): boolean;
   onExit(): void;
 }
 
@@ -84,6 +85,7 @@ export function WorkflowScreens({
   exceptionTitle,
   onExit,
   onLocate,
+  onLocateSection,
   currentCategory,
 }: WorkflowScreensProps) {
   if (stage === "analyzing" || stage === "writing") {
@@ -349,6 +351,7 @@ export function WorkflowScreens({
           results={results}
           reviewItems={reviewItems}
           onLocate={onLocate}
+          onLocateSection={onLocateSection}
         />
         {!exitInToolbar && (
           <button className={styles.primary} type="button" onClick={onExit}>

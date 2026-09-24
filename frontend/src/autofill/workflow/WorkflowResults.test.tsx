@@ -698,24 +698,26 @@ it("makes completed values reviewable and locates the field without claiming ver
       reviewItems={[item]}
       results={[{ candidateId: "major", status: "written" }]}
       fieldStateFor={() => ({ visible: true, value: "컴퓨터공학" })}
-      onLocate={onLocate}
+      onLocateSection={onLocate}
     />,
   );
   const region = screen.getByRole("region", { name: "입력 완료 내역" });
   expect(within(region).getByText("컴퓨터공학")).toBeVisible();
   expect(
-    within(region).getByRole("button", { name: "전공 지원서에서 보기" }),
-  ).toHaveAccessibleDescription("컴퓨터공학");
+    within(region).getByRole("button", { name: "기타 항목 구역 보기" }),
+  ).toBeEnabled();
   expect(within(region).getByText(/이름·날짜·숫자/)).toBeVisible();
   fireEvent.click(
-    within(region).getByRole("button", { name: "전공 지원서에서 보기" }),
+    within(region).getByRole("button", { name: "기타 항목 구역 보기" }),
   );
-  expect(onLocate).toHaveBeenCalledWith("major");
+  expect(onLocate).toHaveBeenCalledWith(["major"]);
   expect(
-    within(region).getByRole("button", { name: "전공 지원서에서 보기" }),
+    within(region).getByRole("button", { name: "기타 항목 구역 보기" }),
   ).toBeDisabled();
   expect(
-    within(region).getByText("지원서에서 직접 확인해 주세요."),
+    within(region).getByText(
+      "이 구역으로 이동할 수 없어요. 지원서에서 직접 확인해 주세요.",
+    ),
   ).toBeVisible();
 });
 it("masks unrevealed sensitive completed values including tooltips", () => {

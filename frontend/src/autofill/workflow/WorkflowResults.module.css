@@ -378,16 +378,6 @@
   font: inherit;
   text-align: left;
 }
-button.recordSummary {
-  cursor: pointer;
-}
-button.recordSummary:hover:not(:disabled) {
-  background: var(--color-accent-soft);
-}
-button.recordSummary:disabled {
-  cursor: default;
-}
-button.recordSummary:focus-visible,
 .confirmReview:focus-visible {
   outline: 2px solid var(--color-action-strong);
   outline-offset: -2px;
@@ -424,13 +414,6 @@ button.recordSummary:focus-visible,
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.recordArrow {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  align-self: center;
-  color: var(--color-action);
-  font-size: 14px;
-}
 .confirmReview {
   display: flex;
   align-items: center;
@@ -463,4 +446,79 @@ button.recordSummary:focus-visible,
   margin: 0 6px 10px;
   color: var(--color-text-muted);
   font-size: 11px;
+}
+
+.summaryCategory {
+  position: relative;
+  isolation: isolate;
+}
+.categoryHeading h4 {
+  flex: 1;
+  min-width: 0;
+}
+.categoryLocate {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 36px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.categoryLocate > span {
+  color: var(--color-action);
+  font-size: 12px;
+}
+.categoryLocate:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+.categoryLocate:disabled {
+  cursor: default;
+}
+.summaryCategory:has(.categoryLocate:not(:disabled)):hover {
+  background: var(--color-accent-soft);
+}
+.toggleSummary,
+.confirmReview {
+  position: relative;
+  z-index: 2;
+}
+.toggleSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.summaryCategory[data-reviewed="true"] .toggleSummary {
+  color: var(--color-success);
+}
+.categoryLocate:focus-visible,
+.toggleSummary:focus-visible {
+  outline: 2px solid var(--color-action-strong);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.categoryHeading {
+  padding: 6px 12px;
+}
+
+.summaryCategory[data-reviewed="true"] .categoryLocate > span {
+  color: var(--color-success);
 }

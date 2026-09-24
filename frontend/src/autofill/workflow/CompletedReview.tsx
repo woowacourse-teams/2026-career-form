@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type { WorkflowResultsProps } from "./WorkflowResults";
 import type { WriteProgress } from "./progress-model";
@@ -7,7 +7,7 @@ import styles from "./WorkflowResults.module.css";
 
 type Props = Pick<
   WorkflowResultsProps,
-  "reviewItems" | "fieldStateFor" | "onLocate" | "progressIdFor"
+  "reviewItems" | "fieldStateFor" | "onLocateSection" | "progressIdFor"
 > & { entries: readonly WriteProgress[] };
 interface SummaryField {
   id: string;
@@ -114,63 +114,120 @@ function summarize({
   return [...groups.values()];
 }
 
-function RecordSummary({
-  record,
-  onLocate,
+function CategorySummary({
+  category,
+  confirmed,
+  onConfirm,
+  onLocateSection,
 }: {
-  record: SummaryRecord;
-  onLocate?: Props["onLocate"];
+  category: SummaryCategory;
+  confirmed: boolean;
+  onConfirm(): void;
+  onLocateSection?: Props["onLocateSection"];
 }) {
-  const descriptionId = useId();
+  const contentId = useId();
+  const heading = useRef<HTMLButtonElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [previousConfirmed, setPreviousConfirmed] = useState(confirmed);
   const [unavailable, setUnavailable] = useState(false);
-  const targets = record.fields.flatMap((field) =>
-    field.candidateId ? [field.candidateId] : [],
+  if (previousConfirmed !== confirmed) {
+    setPreviousConfirmed(confirmed);
+    setCollapsed(confirmed);
+  }
+  const targets = category.records.flatMap((record) =>
+    record.fields.flatMap((field) =>
+      field.candidateId ? [field.candidateId] : [],
+    ),
   );
-  const content = (
-    <>
-      <span className={styles.recordTitle}>{record.label}</span>
-      <span id={descriptionId} className={styles.recordValues}>
-        {record.fields.map((field) => (
-          <span key={field.id} className={styles.summaryFact}>
-            {field.label !== record.label && (
-              <>
-                <span className={styles.factLabel}>{field.label}</span>{" "}
-              </>
-            )}
-            <span className={styles.factValue}>{field.value}</span>{" "}
-          </span>
-        ))}
-      </span>
-      {onLocate && targets.length > 0 && !unavailable && (
-        <span className={styles.recordArrow} aria-hidden="true">
-          ↗
-        </span>
-      )}
-    </>
-  );
+  const canLocate = !!onLocateSection && targets.length > 0 && !unavailable;
   return (
-    <li>
-      {onLocate && targets.length > 0 ? (
+    <li className={styles.summaryCategory} data-reviewed={confirmed}>
+      <div className={styles.categoryHeading}>
+        <h4>
+          <button
+            ref={heading}
+            type="button"
+            className={styles.categoryLocate}
+            aria-label={
+              collapsed
+                ? `${category.label} ${confirmed ? "확인 완료, " : ""}요약 펼치기`
+                : `${category.label} 구역 보기`
+            }
+            disabled={!collapsed && !canLocate}
+            onClick={() => {
+              if (collapsed) setCollapsed(false);
+              else if (!onLocateSection?.(targets)) setUnavailable(true);
+            }}
+          >
+            {category.label}
+            <span aria-hidden="true">
+              {confirmed ? "✓" : !collapsed && canLocate ? "↗" : ""}
+            </span>
+          </button>
+        </h4>
         <button
           type="button"
-          className={styles.recordSummary}
-          aria-label={`${record.label} 지원서에서 보기`}
-          aria-describedby={descriptionId}
-          disabled={unavailable}
+          ref={toggle}
+          className={styles.toggleSummary}
+          aria-label={`${category.label} 요약 ${collapsed ? "펼치기" : "접기"}`}
+          aria-expanded={!collapsed}
+          aria-controls={contentId}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {confirmed ? "확인 완료" : `${category.count}개 입력`}{" "}
+          <span aria-hidden="true">{collapsed ? "⌄" : "⌃"}</span>
+        </button>
+      </div>
+      <div id={contentId} hidden={collapsed}>
+        <ul className={styles.summaryRecords}>
+          {category.records.map((record) => (
+            <li key={record.id}>
+              <div className={styles.recordSummary}>
+                <span className={styles.recordTitle}>{record.label}</span>
+                <span className={styles.recordValues}>
+                  {record.fields.map((field) => (
+                    <span key={field.id} className={styles.summaryFact}>
+                      {field.label !== record.label && (
+                        <>
+                          <span className={styles.factLabel}>
+                            {field.label}
+                          </span>{" "}
+                        </>
+                      )}
+                      <span className={styles.factValue}>
+                        {field.value}
+                      </span>{" "}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {unavailable && (
+          <p className={styles.completedUnavailable} role="status">
+            이 구역으로 이동할 수 없어요. 지원서에서 직접 확인해 주세요.
+          </p>
+        )}
+        <button
+          type="button"
+          className={styles.confirmReview}
+          aria-pressed={confirmed}
+          aria-label={`${category.label} ${confirmed ? "확인 취소" : "확인했어요"}`}
           onClick={() => {
-            if (!targets.some((id) => onLocate(id))) setUnavailable(true);
+            if (!confirmed)
+              (heading.current?.disabled
+                ? toggle.current
+                : heading.current
+              )?.focus({ preventScroll: true });
+            onConfirm();
           }}
         >
-          {content}
+          <span aria-hidden="true">{confirmed ? "✓" : "○"}</span>
+          {confirmed ? "확인 취소" : "이 구역 확인했어요"}
         </button>
-      ) : (
-        <div className={styles.recordSummary}>{content}</div>
-      )}
-      {unavailable && (
-        <p className={styles.completedUnavailable} role="status">
-          지원서에서 직접 확인해 주세요.
-        </p>
-      )}
+      </div>
     </li>
   );
 }
@@ -202,8 +259,8 @@ export function CompletedReview(props: Props) {
         </span>
         <h4>제출 전, 입력한 내용을 살펴보세요</h4>
         <p>
-          이름·날짜·숫자를 살펴보고 확인한 구역에 표시해 주세요. 요약을 누르면
-          지원서에서 볼 수 있어요.
+          이름·날짜·숫자를 살펴보고 확인한 구역에 표시해 주세요. 구역을 누르면
+          지원서의 해당 영역으로 이동해요. 확인한 구역은 접혀요.
         </p>
         <div className={styles.reviewProgress}>
           <span role="status">
@@ -228,43 +285,21 @@ export function CompletedReview(props: Props) {
         {categories.map((category) => {
           const confirmed = checked.includes(category.label);
           return (
-            <li
+            <CategorySummary
               key={category.label}
-              className={styles.summaryCategory}
-              data-reviewed={confirmed}
-            >
-              <div className={styles.categoryHeading}>
-                <h4>{category.label}</h4>
-                <strong>{category.count}개 입력</strong>
-              </div>
-              <ul className={styles.summaryRecords}>
-                {category.records.map((record) => (
-                  <RecordSummary
-                    key={record.id}
-                    record={record}
-                    onLocate={props.onLocate}
-                  />
-                ))}
-              </ul>
-              <button
-                type="button"
-                className={styles.confirmReview}
-                aria-pressed={confirmed}
-                aria-label={`${category.label} ${confirmed ? "확인 취소" : "확인했어요"}`}
-                onClick={() =>
-                  setReview({
-                    snapshot,
-                    signatures,
-                    checked: confirmed
-                      ? checked.filter((label) => label !== category.label)
-                      : [...checked, category.label],
-                  })
-                }
-              >
-                <span aria-hidden="true">{confirmed ? "✓" : "○"}</span>
-                {confirmed ? "확인했어요" : "이 구역 확인했어요"}
-              </button>
-            </li>
+              category={category}
+              confirmed={confirmed}
+              onLocateSection={props.onLocateSection}
+              onConfirm={() =>
+                setReview({
+                  snapshot,
+                  signatures,
+                  checked: confirmed
+                    ? checked.filter((label) => label !== category.label)
+                    : [...checked, category.label],
+                })
+              }
+            />
           );
         })}
       </ul>
