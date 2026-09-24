@@ -145,3 +145,48 @@ it("keeps expanded margins between adjacent section labels", () => {
   );
   p.clear();
 });
+
+it("centers a short section and keeps a repeated click stationary", () => {
+  const { section, inputs, snapshot, ids } = fixture();
+  let top = 1300;
+  section.getBoundingClientRect = () => new DOMRect(20, top, 700, 260);
+  inputs.forEach((input, index) => {
+    input.getBoundingClientRect = () =>
+      new DOMRect(40, top + 50 + index * 120, 500, 30);
+  });
+  section.scrollIntoView = vi.fn(() => {
+    top = parseFloat(section.style.scrollMarginTop);
+  });
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, ids)).toBe(true);
+  const overlay = document.querySelector(
+    "[data-career-form-section-highlight]",
+  ) as HTMLElement;
+  expect(
+    parseFloat(overlay.style.top) + parseFloat(overlay.style.height) / 2,
+  ).toBe(window.innerHeight / 2);
+  p.showSection(snapshot.registry, ids);
+  expect(section.scrollIntoView).toHaveBeenCalledTimes(1);
+  expect(section.style.scrollMarginTop).toBe("");
+  p.clear();
+});
+it("places the beginning of a tall section a quarter down the viewport", () => {
+  const { section, inputs, snapshot, ids } = fixture();
+  let top = 1300;
+  section.getBoundingClientRect = () => new DOMRect(20, top, 700, 1100);
+  inputs.forEach((input, index) => {
+    input.getBoundingClientRect = () =>
+      new DOMRect(40, top + 50 + index * 900, 500, 30);
+  });
+  section.scrollIntoView = vi.fn(() => {
+    top = parseFloat(section.style.scrollMarginTop);
+  });
+  const p = createFieldPresentation(document);
+  expect(p.showSection(snapshot.registry, ids)).toBe(true);
+  const overlay = document.querySelector(
+    "[data-career-form-section-highlight]",
+  ) as HTMLElement;
+  expect(parseFloat(overlay.style.top)).toBe(window.innerHeight * 0.25);
+  expect(inputs[0].scrollIntoView).not.toHaveBeenCalled();
+  p.clear();
+});

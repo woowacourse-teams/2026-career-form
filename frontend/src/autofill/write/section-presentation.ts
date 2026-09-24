@@ -122,17 +122,23 @@ export function presentSection(
     return new DOMRect(left, top, Math.max(0, right - left), bottom - top);
   };
   const rect = bounds();
-  const available = view.innerHeight - 104;
-  if (
-    rect.top < 80 ||
-    rect.top >= view.innerHeight - 80 ||
-    (rect.height <= available && rect.bottom > view.innerHeight - 24)
-  ) {
+  const targetTop =
+    rect.height <= view.innerHeight - 96
+      ? (view.innerHeight - rect.height) / 2
+      : view.innerHeight * 0.25;
+  // Avoid small repeated jumps when the section is already near the reading position.
+  const tolerance = Math.min(96, view.innerHeight * 0.1);
+  if (Math.abs(rect.top - targetTop) > tolerance) {
     const anchor =
       container ?? elements[0].closest<HTMLElement>("label") ?? elements[0];
     const margin = anchor.style.getPropertyValue("scroll-margin-top");
     const priority = anchor.style.getPropertyPriority("scroll-margin-top");
-    anchor.style.setProperty("scroll-margin-top", "96px", "important");
+    const offset = anchor.getBoundingClientRect().top - rect.top;
+    anchor.style.setProperty(
+      "scroll-margin-top",
+      `${targetTop + offset}px`,
+      "important",
+    );
     anchor.scrollIntoView?.({
       block: "start",
       inline: "nearest",
