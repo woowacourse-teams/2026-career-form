@@ -158,6 +158,7 @@ export async function executeApprovedCalendarWrite(
       targetYearMonth: approval.targetYearMonth,
       interactionDecisionProvider: decisionProvider,
       canonicalFieldKey: approval.profileFieldKey ?? "calendar-month",
+      signal: args.signal,
     });
     if (execution.status !== "completed")
       return stop(

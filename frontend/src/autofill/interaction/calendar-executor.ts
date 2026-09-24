@@ -4,7 +4,7 @@ import {
   calendarYears,
   calendarYearTriggers,
 } from "./calendar-controls";
-import { calendarSurfaceFor } from "./calendar-surface";
+import { calendarSurfaceFor, openCalendarPopups } from "./calendar-surface";
 import { resolveCalendarRole } from "./calendar-role-resolver";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 
@@ -42,6 +42,8 @@ export async function executeCalendarSelection(
   if (!parts)
     return { status: "needs-verification", reason: "invalid_target_month" };
   const started = (args.now ?? Date.now)();
+  if (args.signal?.aborted)
+    return { status: "needs-verification", reason: "calendar_aborted" };
   const surface = calendarSurfaceFor(args.target);
   if (!surface)
     return {
@@ -59,6 +61,8 @@ export async function executeCalendarSelection(
     return { status: "needs-verification", reason: "stale_target" };
   if (read(args.target))
     return { status: "needs-verification", reason: "existing_value" };
+  if (openCalendarPopups(args.target.ownerDocument).length)
+    return { status: "needs-verification", reason: "calendar_already_open" };
   const allInputs = Array.from(
     args.target.ownerDocument.querySelectorAll<HTMLInputElement>("input"),
   );
@@ -66,6 +70,7 @@ export async function executeCalendarSelection(
   let activations = 0;
   const activate = (element: HTMLElement): boolean => {
     if (
+      args.signal?.aborted ||
       !targetIsStable() ||
       !element.isConnected ||
       ++activations > CALENDAR_MAX_ACTIVATIONS ||
@@ -85,7 +90,9 @@ export async function executeCalendarSelection(
     now: args.now,
     signal: args.signal,
   });
-  if (!opener || args.signal?.aborted)
+  if (args.signal?.aborted)
+    return { status: "needs-verification", reason: "calendar_aborted" };
+  if (!opener)
     return {
       status: "needs-verification",
       reason: "calendar_opener_unavailable",
@@ -93,7 +100,22 @@ export async function executeCalendarSelection(
   if (!activate(opener.element))
     return {
       status: "needs-verification",
-      reason: targetIsStable() ? "calendar_budget_exhausted" : "stale_target",
+      reason: args.signal?.aborted
+        ? "calendar_aborted"
+        : targetIsStable()
+          ? "calendar_budget_exhausted"
+          : "stale_target",
+    };
+  const openPopups = openCalendarPopups(args.target.ownerDocument);
+  if (!openPopups.includes(surface.popup))
+    return {
+      status: "needs-verification",
+      reason: "owned_calendar_not_opened",
+    };
+  if (openPopups.length !== 1)
+    return {
+      status: "needs-verification",
+      reason: "multiple_calendar_popups_open",
     };
   const yearTrigger = await resolveCalendarRole({
     role: "CALENDAR_YEAR_TRIGGER",
@@ -107,6 +129,8 @@ export async function executeCalendarSelection(
     now: args.now,
     signal: args.signal,
   });
+  if (args.signal?.aborted)
+    return { status: "needs-verification", reason: "calendar_aborted" };
   if (calendarYearTriggers(surface.popup).length && !yearTrigger)
     return {
       status: "needs-verification",
@@ -115,9 +139,11 @@ export async function executeCalendarSelection(
   if (yearTrigger && !activate(yearTrigger.element))
     return {
       status: "needs-verification",
-      reason: targetIsStable()
-        ? "year_list_trigger_unavailable"
-        : "stale_target",
+      reason: args.signal?.aborted
+        ? "calendar_aborted"
+        : targetIsStable()
+          ? "year_list_trigger_unavailable"
+          : "stale_target",
     };
   const yearCandidates = calendarYears(surface.popup)
     .filter((candidate) => candidate.year === parts.year)
@@ -130,7 +156,11 @@ export async function executeCalendarSelection(
   if (!activate(yearCandidates[0]!.element))
     return {
       status: "needs-verification",
-      reason: targetIsStable() ? "target_year_unavailable" : "stale_target",
+      reason: args.signal?.aborted
+        ? "calendar_aborted"
+        : targetIsStable()
+          ? "target_year_unavailable"
+          : "stale_target",
     };
   const monthCandidates = calendarMonths(surface.popup)
     .filter((candidate) => candidate.month === parts.month)
@@ -143,13 +173,21 @@ export async function executeCalendarSelection(
   if (!activate(monthCandidates[0]!.element))
     return {
       status: "needs-verification",
-      reason: targetIsStable() ? "target_month_unavailable" : "stale_target",
+      reason: args.signal?.aborted
+        ? "calendar_aborted"
+        : targetIsStable()
+          ? "target_month_unavailable"
+          : "stale_target",
     };
   const apply = calendarApplyControls(surface.popup);
   if (apply.length && !activate(apply[0]!.element))
     return {
       status: "needs-verification",
-      reason: targetIsStable() ? "calendar_apply_unavailable" : "stale_target",
+      reason: args.signal?.aborted
+        ? "calendar_aborted"
+        : targetIsStable()
+          ? "calendar_apply_unavailable"
+          : "stale_target",
     };
   await new Promise<void>((resolve) => setTimeout(resolve, 25));
   if (args.signal?.aborted)

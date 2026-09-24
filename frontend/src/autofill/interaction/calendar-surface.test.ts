@@ -58,3 +58,9 @@ describe("calendar surface ownership", () => {
     ).toBeUndefined();
   });
 });
+
+it("requires a contained opener to name the month unit", () => {
+  document.body.innerHTML = `<section><input readonly type="text"><button type="button">열기</button><div role="dialog"><button>2026</button>${Array.from({ length: 12 }, (_, index) => `<button>${index + 1}월</button>`).join("")}</div></section>`;
+
+  expect(calendarSurfaceFor(document.querySelector("input")!)).toBeUndefined();
+});

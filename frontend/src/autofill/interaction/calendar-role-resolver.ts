@@ -24,7 +24,9 @@ export async function resolveCalendarRole<T extends HTMLElement>(args: {
   const request: InteractionDecisionRequest = {
     schemaVersion: 2 as const,
     snapshotId,
-    site: { host: location.host, pathPattern: location.pathname || "/" },
+    // Keep provider context non-identifying: calendar pages may include application,
+    // session, or date values in their pathname.
+    site: { host: location.host, pathPattern: "/" },
     decisions: [
       {
         decisionId: "calendar-role",
@@ -35,7 +37,10 @@ export async function resolveCalendarRole<T extends HTMLElement>(args: {
           element: element instanceof HTMLInputElement ? "input" : "button",
           control: "button",
           visibility: "visible",
-          relationToTarget: "DIALOG_CONTROL",
+          relationToTarget:
+            args.role === "CALENDAR_OPENER"
+              ? "SAME_FIELD_GROUP"
+              : "DIALOG_CONTROL",
           // Calendar date text is deliberately omitted from provider labels.
         })),
       },

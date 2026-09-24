@@ -13,8 +13,12 @@ const months = Array.from(
 
 describe("calendar executor", () => {
   it("clicks only the approved year and month then verifies the retained target value", async () => {
-    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog"><button data-year="2026">2026</button>${months}</div></section>`;
+    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog" hidden><button data-year="2026">2026</button>${months}</div></section>`;
     const target = document.querySelector<HTMLInputElement>("input")!;
+    const popup = document.querySelector<HTMLElement>("[role='dialog']")!;
+    document
+      .querySelector<HTMLButtonElement>("button")!
+      .addEventListener("click", () => popup.removeAttribute("hidden"));
     const year = document.querySelector<HTMLButtonElement>("[data-year]");
     const month = document.querySelector<HTMLButtonElement>("[data-month='3']");
     year!.addEventListener("click", () =>
@@ -78,8 +82,12 @@ describe("calendar executor", () => {
   });
 
   it("does not report completion until the owned popup closes", async () => {
-    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog"><button>2026</button>${months}</div></section>`;
+    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog" hidden><button>2026</button>${months}</div></section>`;
     const target = document.querySelector<HTMLInputElement>("input")!;
+    const popup = document.querySelector<HTMLElement>("[role='dialog']")!;
+    document
+      .querySelector<HTMLButtonElement>("button")!
+      .addEventListener("click", () => popup.removeAttribute("hidden"));
     document
       .querySelector("[data-month='3']")!
       .addEventListener("click", () =>
@@ -99,7 +107,7 @@ describe("calendar executor", () => {
   });
 
   it("stops when the target is replaced while selecting", async () => {
-    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog"><button>2026</button>${months}</div></section>`;
+    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog" hidden><button>2026</button>${months}</div></section>`;
     const target = document.querySelector<HTMLInputElement>("input")!;
     document
       .querySelector("[data-year], button")
@@ -172,9 +180,12 @@ describe("calendar executor", () => {
   });
 
   it("rejects a target value that the site reverts after the calendar closes", async () => {
-    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog"><button>2026</button>${months}</div></section>`;
+    document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog" hidden><button>2026</button>${months}</div></section>`;
     const target = document.querySelector<HTMLInputElement>("input")!;
     const popup = document.querySelector<HTMLElement>("[role='dialog']")!;
+    document
+      .querySelector<HTMLButtonElement>("button")!
+      .addEventListener("click", () => popup.removeAttribute("hidden"));
     popup
       .querySelector<HTMLButtonElement>("[data-month='3']")!
       .addEventListener("click", () => {
@@ -215,5 +226,99 @@ describe("calendar executor", () => {
       status: "needs-verification",
     });
     expect(clicks).toBe(0);
+  });
+});
+
+describe("calendar executor popup and abort guards", () => {
+  it("rejects an already open month calendar before clicking its opener", async () => {
+    document.body.innerHTML = `<section><input readonly type="text"><button type="button" aria-label="월 선택">월 선택</button><div role="dialog"><button>2026</button>${months}</div></section>`;
+    const target = document.querySelector<HTMLInputElement>("input")!;
+    const opener = document.querySelector<HTMLButtonElement>("button")!;
+    let openerClicks = 0;
+    opener.addEventListener("click", () => openerClicks++);
+
+    await expect(
+      executeCalendarSelection({ target, targetYearMonth: "2026-03" }),
+    ).resolves.toMatchObject({
+      status: "needs-verification",
+      reason: "calendar_already_open",
+    });
+    expect(openerClicks).toBe(0);
+  });
+
+  it("requires the owned hidden popup to newly open after its opener activation", async () => {
+    document.body.innerHTML = `<section><input id="target" readonly type="text"><button type="button" aria-labelledby="target" aria-controls="picker">월 선택</button><div id="picker" role="dialog" hidden><button>2026</button>${months}</div></section>`;
+    const target = document.querySelector<HTMLInputElement>("input")!;
+
+    await expect(
+      executeCalendarSelection({ target, targetYearMonth: "2026-03" }),
+    ).resolves.toMatchObject({
+      status: "needs-verification",
+      reason: "owned_calendar_not_opened",
+    });
+  });
+
+  it("rejects a simultaneous unrelated open month calendar after opening the owned popup", async () => {
+    document.body.innerHTML = `<section><input id="target" readonly type="text"><button type="button" aria-labelledby="target" aria-controls="picker">월 선택</button><div id="picker" role="dialog" hidden><button>2026</button>${months}</div></section><div role="dialog" hidden><button>2026</button>${months}</div>`;
+    const target = document.querySelector<HTMLInputElement>("input")!;
+    const opener = document.querySelector<HTMLButtonElement>("button")!;
+    const [owned, unrelated] =
+      document.querySelectorAll<HTMLElement>("[role='dialog']");
+    opener.addEventListener("click", () => {
+      owned!.removeAttribute("hidden");
+      unrelated!.removeAttribute("hidden");
+    });
+
+    await expect(
+      executeCalendarSelection({ target, targetYearMonth: "2026-03" }),
+    ).resolves.toMatchObject({
+      status: "needs-verification",
+      reason: "multiple_calendar_popups_open",
+    });
+  });
+
+  it("does not activate a year control when its role response aborts", async () => {
+    document.body.innerHTML = `<section><input id="target" readonly type="text"><button type="button" aria-labelledby="target" aria-controls="picker">월 선택</button><div id="picker" role="dialog" hidden><button type="button" aria-haspopup="listbox" aria-controls="years">연도 선택</button><div id="years" role="listbox" hidden><button role="option">2026</button></div>${months}</div></section>`;
+    const target = document.querySelector<HTMLInputElement>("input")!;
+    const popup = document.querySelector<HTMLElement>("#picker")!;
+    const opener =
+      document.querySelector<HTMLButtonElement>("[aria-labelledby]")!;
+    const trigger =
+      document.querySelector<HTMLButtonElement>("[aria-haspopup]")!;
+    const controller = new AbortController();
+    let triggerClicks = 0;
+    opener.addEventListener("click", () => popup.removeAttribute("hidden"));
+    trigger.addEventListener("click", () => triggerClicks++);
+
+    await expect(
+      executeCalendarSelection({
+        target,
+        targetYearMonth: "2026-03",
+        signal: controller.signal,
+        interactionDecisionProvider: async (request) => {
+          if (request.decisions[0]!.role === "CALENDAR_YEAR_TRIGGER")
+            controller.abort();
+          const decision = request.decisions[0]!;
+          return {
+            schemaVersion: 2,
+            snapshotId: request.snapshotId,
+            status: "COMPLETE",
+            mode: "GENERIC",
+            decisions: [
+              {
+                decisionId: decision.decisionId,
+                role: decision.role,
+                selection: "SELECTED",
+                candidateId: decision.candidates[0]!.candidateId,
+              },
+            ],
+          };
+        },
+      }),
+    ).resolves.toMatchObject({
+      status: "needs-verification",
+      reason: "calendar_aborted",
+    });
+    expect(triggerClicks).toBe(0);
   });
 });

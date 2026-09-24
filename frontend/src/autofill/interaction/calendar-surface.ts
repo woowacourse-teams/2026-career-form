@@ -6,6 +6,26 @@ export interface CalendarSurface {
   popup: HTMLElement;
 }
 
+function accessibleName(element: HTMLElement): string {
+  const document = element.ownerDocument;
+  const labelledBy = (element.getAttribute("aria-labelledby") ?? "")
+    .split(/\s+/)
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ");
+  return [element.getAttribute("aria-label"), labelledBy, element.textContent]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .trim();
+}
+
+function hasMonthUnitClue(opener: HTMLElement): boolean {
+  return /(?:월|month)/iu.test(accessibleName(opener));
+}
+
+function visible(element: HTMLElement): boolean {
+  return !element.closest("[hidden], [inert], [aria-hidden='true']");
+}
+
 function isOpener(element: HTMLElement): boolean {
   return (
     element.matches("button, input[type='button'], [role='button']") &&
@@ -71,10 +91,19 @@ function containedSurface(
     ),
   )
     .filter(isOpener)
+    .filter(hasMonthUnitClue)
     .filter((opener) => !popups.some((popup) => popup.contains(opener)));
   return openers.length === 1 && popups.length === 1
     ? { target, opener: openers[0]!, popup: popups[0]! }
     : undefined;
+}
+
+export function openCalendarPopups(document: Document): HTMLElement[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "[role='dialog'], [role='listbox'], [role='grid']",
+    ),
+  ).filter((popup) => visible(popup) && calendarRoot(popup));
 }
 
 export function calendarSurfaceFor(

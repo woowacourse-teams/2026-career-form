@@ -68,11 +68,14 @@ describe("approved calendar writes", () => {
     document.body.innerHTML = `<section>
       <input id="month" type="text" readonly>
       <button type="button" aria-labelledby="month" aria-controls="calendar">월 선택</button>
-      <div id="calendar" role="dialog"><button>2026</button>${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((month) => `<button>${month}</button>`).join("")}</div>
+      <div id="calendar" role="dialog" hidden><button>2026</button>${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((month) => `<button>${month}</button>`).join("")}</div>
     </section>`;
     const target = document.querySelector<HTMLInputElement>("#month")!;
     const opener =
       document.querySelector<HTMLButtonElement>("[aria-controls]")!;
+    opener.addEventListener("click", () => {
+      document.querySelector<HTMLElement>("#calendar")!.hidden = false;
+    });
     const year = document.querySelector<HTMLButtonElement>("#calendar button")!;
     const month = Array.from(
       document.querySelectorAll<HTMLButtonElement>("#calendar button"),
@@ -133,7 +136,7 @@ describe("approved calendar writes", () => {
         element: "button",
         control: "button",
         visibility: "visible",
-        relationToTarget: "DIALOG_CONTROL",
+        relationToTarget: "SAME_FIELD_GROUP",
       },
     ]);
     expect(JSON.stringify(request.decisions[0]!.candidates)).not.toContain(
@@ -183,7 +186,7 @@ describe("approved calendar writes", () => {
 });
 
 function syntheticCalendar(value = "") {
-  document.body.innerHTML = `<section><input id="month" type="text" readonly value="${value}"><button id="opener" type="button" aria-labelledby="month" aria-controls="calendar">월 선택</button><div id="calendar" role="dialog"><button data-year="2026">2026</button>${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((month) => `<button>${month}</button>`).join("")}</div><input id="other" type="text"></section>`;
+  document.body.innerHTML = `<section><input id="month" type="text" readonly value="${value}"><button id="opener" type="button" aria-labelledby="month" aria-controls="calendar">월 선택</button><div id="calendar" role="dialog" hidden><button data-year="2026">2026</button>${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((month) => `<button>${month}</button>`).join("")}</div><input id="other" type="text"></section>`;
   const target = document.querySelector<HTMLInputElement>("#month")!;
   const popup = document.querySelector<HTMLElement>("#calendar")!;
   const opener = document.querySelector<HTMLButtonElement>("#opener")!;
@@ -191,7 +194,10 @@ function syntheticCalendar(value = "") {
     popup.querySelectorAll<HTMLButtonElement>("button"),
   ).slice(1);
   const events = { opener: vi.fn(), year: vi.fn(), month: vi.fn() };
-  opener.addEventListener("click", events.opener);
+  opener.addEventListener("click", () => {
+    events.opener();
+    popup.hidden = false;
+  });
   popup
     .querySelector<HTMLButtonElement>("[data-year]")!
     .addEventListener("click", events.year);
@@ -367,6 +373,24 @@ describe("calendar write guards", () => {
     const result = await execution;
     expect(result).toMatchObject({ status: "skipped", effect: "stop" });
     expect(events.opener).not.toHaveBeenCalled();
+    expect(events.year).not.toHaveBeenCalled();
+    expect(events.month).not.toHaveBeenCalled();
+  });
+
+  it("stops before year and month when aborted by opener click", async () => {
+    const { target, opener, popup, events } = syntheticCalendar();
+    popup.setAttribute("aria-hidden", "true");
+    const controller = new AbortController();
+    opener.addEventListener("click", () => controller.abort(), { once: true });
+
+    const result = await executeApprovedCalendarWrite({
+      item: approvedItem(target),
+      registry: registryFor(target),
+      signal: controller.signal,
+    });
+
+    expect(result).toMatchObject({ status: "skipped", effect: "stop" });
+    expect(events.opener).toHaveBeenCalledTimes(1);
     expect(events.year).not.toHaveBeenCalled();
     expect(events.month).not.toHaveBeenCalled();
   });
