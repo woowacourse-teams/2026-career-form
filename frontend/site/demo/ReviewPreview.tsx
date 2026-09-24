@@ -119,7 +119,7 @@ export function ReviewPreview() {
         20,
       ),
       window.setTimeout(() => {
-        if (step > 1) click('[aria-label="직장경력 구역 보기"]');
+        if (step === 2) click('[aria-label="직장경력 구역 보기"]');
         move(
           step === 1
             ? '[aria-label="직장경력 구역 보기"]'
@@ -130,7 +130,10 @@ export function ReviewPreview() {
       }, 100),
       window.setTimeout(() => {
         if (step === 1) click('[aria-label="직장경력 구역 보기"]');
-        if (step === 3) click('[aria-label="직장경력 확인했어요"]');
+        if (step === 3) {
+          click('[aria-label="직장경력 확인했어요"]');
+          presentation.clear();
+        }
         setCursor((current) => ({ ...current, pressed: step !== 2 }));
       }, 750),
     ];

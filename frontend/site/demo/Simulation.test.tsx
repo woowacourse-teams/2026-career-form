@@ -180,6 +180,9 @@ it("shows each hovered step with a moving cursor and resets previous confirmatio
     await act(() => vi.advanceTimersByTimeAsync(800));
     expect(screen.getByText("1 / 2개 구역 확인")).toBeVisible();
     expect(
+      document.querySelectorAll("[data-career-form-section-highlight]"),
+    ).toHaveLength(0);
+    expect(
       screen.getByRole("button", { name: "직장경력 요약 펼치기" }),
     ).toHaveAttribute("aria-expanded", "false");
     fireEvent.focus(screen.getByRole("button", { name: "1. 구역 선택" }));
