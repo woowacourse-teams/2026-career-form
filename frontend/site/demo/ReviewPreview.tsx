@@ -58,6 +58,10 @@ const examples = [
 
 /** Synthetic, read-only form. Uses production result and highlight components without profile access. */
 export function ReviewPreview() {
+  const root = useRef<HTMLDivElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [run, setRun] = useState(0);
+  const [step, setStep] = useState(0);
   const [explored, setExplored] = useState(false);
   const [feedback, setFeedback] = useState("아래 패널을 직접 눌러보세요");
   const form = useRef<HTMLDivElement>(null);
@@ -74,6 +78,49 @@ export function ReviewPreview() {
     setSnapshot(collectFieldsSnapshot(document));
     return () => presentation.clear();
   }, [presentation]);
+  useEffect(() => {
+    if (
+      !snapshot ||
+      !root.current ||
+      typeof IntersectionObserver === "undefined"
+    )
+      return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setPlaying(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(root.current);
+    return () => observer.disconnect();
+  }, [snapshot]);
+  useEffect(() => {
+    if (!playing || !snapshot) return;
+    const click = (selector: string) =>
+      root.current?.querySelector<HTMLButtonElement>(selector)?.click();
+    presentation.clear();
+    setStep(1);
+    const timers = [
+      window.setTimeout(
+        () => click('[role="tab"][data-state="completed"]'),
+        50,
+      ),
+      window.setTimeout(() => {
+        click('[aria-label="직장경력 구역 보기"]');
+        setStep(2);
+      }, 2000),
+      window.setTimeout(() => {
+        click('[aria-label="직장경력 확인했어요"]');
+        setStep(3);
+      }, 4500),
+      window.setTimeout(() => setPlaying(false), 7000),
+    ];
+    return () => timers.forEach(window.clearTimeout);
+  }, [playing, run, snapshot, presentation]);
   const candidates =
     snapshot?.request.sections.flatMap((section) => section.fields) ?? [];
   const bound = examples.flatMap((example) => {
@@ -98,7 +145,40 @@ export function ReviewPreview() {
     reason: example.written ? "" : "직접 확인 필요",
   }));
   return (
-    <div className={styles.preview}>
+    <div
+      ref={root}
+      className={styles.preview}
+      data-step={step}
+      data-playing={playing}
+    >
+      <div className={styles.story}>
+        <div className={styles.storyHeading}>
+          <strong>입력 후에는 이렇게 확인해요</strong>
+          <button
+            type="button"
+            onClick={() => {
+              if (playing) setPlaying(false);
+              else {
+                setRun((value) => value + 1);
+                setPlaying(true);
+              }
+            }}
+          >
+            {playing ? "일시정지" : "↻ 다시 재생"}
+          </button>
+        </div>
+        <ol aria-label="결과 확인 시연 단계">
+          {["구역 선택", "입력칸 확인", "확인하고 접기"].map((label, index) => (
+            <li
+              key={label}
+              aria-current={step === index + 1 ? "step" : undefined}
+            >
+              <span>{index + 1}</span>
+              {label}
+            </li>
+          ))}
+        </ol>
+      </div>
       <div ref={form} className={styles.form} aria-label="가상 지원서">
         <div className={styles.caption}>
           <strong>예시 지원서</strong>
@@ -136,18 +216,30 @@ export function ReviewPreview() {
         aria-label="결과 체험"
         data-guided={!explored}
         onClickCapture={(event) => {
+          if (event.nativeEvent.isTrusted) {
+            setPlaying(false);
+            setStep(0);
+          }
           if ((event.target as HTMLElement).closest('[role="tab"]'))
             setExplored(false);
         }}
       >
         <h3>
-          <span className={styles.demoBadge}>직접 체험</span> 기입 결과
+          <span className={styles.demoBadge}>동작 예시</span> 기입 결과
         </h3>
         <p className={styles.hint} role="status">
-          {feedback}
+          {step
+            ? [
+                "",
+                "직장경력을 선택하면",
+                "입력한 두 칸이 함께 강조돼요",
+                "확인한 구역은 접히고 진행률에 반영돼요",
+              ][step]
+            : feedback}
         </p>
         {snapshot && (
           <WorkflowResults
+            key={run}
             reviewItems={items}
             results={bound.map((example) =>
               example.written

@@ -1,7 +1,7 @@
 .preview {
   height: 100vh;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   background: var(--color-page);
   color: var(--color-text);
   font-family: var(--font-ui);
@@ -84,26 +84,83 @@
   font-size: 11px;
   vertical-align: middle;
 }
-.results[data-guided="true"]
-  button:is(
-    [aria-label="기본주소 필드로 이동"],
-    [aria-label="직장경력 구역 보기"]
-  )::before {
-  content: "☝";
-  display: inline-block;
-  padding: 3px;
-  margin-right: 3px;
-  border-radius: 5px;
-  background: #ad5b2f;
-  color: white;
-  font-size: 17px;
-  line-height: 1;
-  font-weight: 700;
-  white-space: nowrap;
-}
 .results
   button:is([aria-label$="필드로 이동"], [aria-label$="구역 보기"]):hover {
   color: #ad5b2f;
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+.story {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: #fff8ee;
+}
+.storyHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.storyHeading button {
+  border: 0;
+  background: transparent;
+  color: #ad5b2f;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 6px 0;
+}
+.story ol {
+  display: flex;
+  gap: 8px;
+  padding: 0;
+  margin: 12px 0 0;
+  list-style: none;
+}
+.story li {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+.story li span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #eadfce;
+  font-weight: 800;
+}
+.story li[aria-current] {
+  color: #ad5b2f;
+  font-weight: 800;
+}
+.story li[aria-current] span {
+  background: #ad5b2f;
+  color: white;
+}
+.preview[data-playing="true"][data-step="1"]
+  button[aria-label="직장경력 구역 보기"] {
+  animation: demonstrate 1s ease-in-out infinite;
+  border-radius: 6px;
+}
+@keyframes demonstrate {
+  50% {
+    background: #fff1d8;
+    box-shadow: 0 0 0 3px #ad5b2f55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview button {
+    animation: none !important;
+  }
+}
+.preview[data-step]:not([data-step="0"]) .category:not(:nth-child(2)) {
+  display: none;
 }
