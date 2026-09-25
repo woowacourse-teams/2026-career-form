@@ -55,6 +55,29 @@ describe("generic search controls", () => {
     expect(submitControls(surface)[0]?.textContent).toBe("검색");
   });
 
+  it("recognizes an unlabelled input submit by its value without bypassing risk filters", () => {
+    const { surface, container } = surfaceFixture(
+      '<div role="dialog" aria-modal="true"><iframe></iframe></div>',
+    );
+    const frame = container.querySelector("iframe")!;
+    const popup = frame.contentDocument!;
+    popup.body.innerHTML = `
+      <input type="submit" value="검색">
+      <input type="button" value="검색 저장">
+      <input type="text" value="검색">`;
+    const framedSurface = new SearchSurface(
+      "same-origin-iframe",
+      container,
+      popup,
+      surface.opener,
+      surface.target,
+      frame,
+    );
+    expect(submitControls(framedSurface)).toEqual([
+      popup.querySelector("input[type='submit']"),
+    ]);
+  });
+
   it("recognizes a result root explicitly linked by the query", () => {
     const { surface, container } = surfaceFixture(`
       <div role="dialog" aria-modal="true">

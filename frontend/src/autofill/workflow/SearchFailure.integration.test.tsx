@@ -172,6 +172,7 @@ it.each(["input", "button"] as const)(
     expect(results[0]).toMatchObject({
       status: "skipped",
       failureCode: "SEARCH_FORM_UNVERIFIED",
+      reason: "검색 폼과 지원서 제출 동작을 안전하게 구분할 수 없습니다.",
     });
     expect(results[1]).toMatchObject({
       status: "skipped",

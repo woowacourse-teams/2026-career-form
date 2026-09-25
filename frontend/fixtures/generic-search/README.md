@@ -64,8 +64,19 @@ DOM에 명시했다. 자동 기입 구현은 이 자료를 읽을 뿐 fixture �
 
 ## POST/hidden school refusal and independent KOR region fixture
 
-[legacy-search-form.html](./legacy-search-form.html) uses public synthetic values and two separate **same-origin iframe** popups. The school iframe ([legacy-school-frame.html](./legacy-school-frame.html)) preserves the reported structure: POST form, hidden row context, fieldset, text query, unlabelled `<input type="submit" value="검색">`, and a result `ul/li/a` **inside the form** with `href="javascript:;"` and a literal-only inline callback. There is no invented completion marker. Its original unlabelled submit input is currently not discovered as a submit control, so the expected first failure is `search_submit_not_found`, before the POST/hidden form guard. The separate labelled **button** variant in the interaction test is solely diagnostic and reaches `unverified_search_form`; it is not a claim about the observed page.
+[legacy-search-form.html](./legacy-search-form.html) uses public synthetic values and two separate **same-origin iframe** popups. The school iframe ([legacy-school-frame.html](./legacy-school-frame.html)) preserves the reported structure: POST form, hidden row context, fieldset, text query, unlabelled `<input type="submit" value="검색">`, and a result `ul/li/a` **inside the form** with `href="javascript:;"` and a literal-only inline callback. There is no invented completion marker. The CF-108 regression originally expected `search_submit_not_found` because the unlabelled submit input was not discovered. With the bounded CF-110 label change, its `value="검색"` is recognized, and the current expected first failure is `unverified_search_form` at the POST/hidden form guard. The separately labelled **button** variant in the interaction test remains diagnostic and also expects `unverified_search_form`; it is not a claim about the observed page. Both variants must leave submitted and selected counts at zero and preserve the original school values and codes. This is a synthetic refusal regression, not a live-site success or evidence that POST selection is safe.
 
 The independent [legacy-region-frame.html](./legacy-region-frame.html) has no school form: it presents the KOR/한국 country select and 17 public regions outside a form. Selecting a region reflects its label and synthetic code and closes only its popup. The school and region opener, query, submit, and selection counters are exposed by `syntheticLegacyCounts()`. The other school row starts with a synthetic existing value and code; neither scenario should change it. Serve from `frontend/fixtures` using the local server instructions above. These fixtures are structural reproductions, not proof of company support or live-site behavior.
 
 Native GET characterization in `search-results.test.ts` records the present contract: completed navigation without a completion marker, count, or full position evidence still rejects an incomplete list. A declared count can permit the result; this is not evidence that the original school POST form is supported.
+
+## CF-110 대학교 주전공 검색 경계
+
+`education.university.majorName`의 승인된 첫 번째 대학교 주전공만 CJ 전용 검색 계약의 대상입니다. 정확 일치 결과가 하나라는 판단은 **완전히 수신하고 구조를 검증한 렌더링 응답 전체**에 한정되며, CJ 데이터베이스 전체에 유일한 전공명이라는 뜻이 아닙니다. 표시값과 코드의 반영뿐 아니라 검토된 팝업 닫기 경로와 닫힌 상태의 안정성까지 확인해야 성공으로 집계합니다. 상호작용을 시작한 뒤 확인에 실패하면 뒤따르는 승인 검색도 중단하고 원래 필드의 기존 값과 관계없는 다른 필드를 보존합니다. 기존 학교명 POST/hidden 검색은 계속 지원하지 않습니다.
+
+### CF-110 검증 기록 (2026-09-25)
+
+- 최종 전체 테스트는 `npm test -- --maxWorkers=2`로 1,715개 통과, 19개 건너뜀을 확인했습니다. typecheck, lint, `VITE_API_BASE_URL=http://localhost:8080 npm run build`, 하네스 검증과 staged diff 공백 검사도 통과했습니다. 초기 기본 병렬 실행 실패와 수정 전 실패를 최종 통과로 대신하지 않습니다.
+- `cj-major-browser-harness.html`과 TS entry를 실제 브라우저의 독립된 합성 문서에서 실행했습니다. CJ의 공개 검색 endpoint와 실제 공개 팝업 라이브러리를 사용하되, 입력 대상은 비식별 가상 필드이며 사용자 지원서가 아닙니다. 생산 코드의 origin 검사나 서버 응답을 테스트용으로 완화하지 않았습니다.
+- 최종 생산 코드의 두 번 실행에서 표시값과 공개 결과 코드의 독립 대조, 팝업 닫힘, 다른 입력값·체크 상태 보존을 확인했습니다. 닫힌 뒤 유지 관찰은 각각 550ms, 536ms였으며, 초기화 후 재실행으로 팝업 라이브러리의 재사용도 확인했습니다.
+- 이는 실제 브라우저에서 합성 입력 대상과 공개 검색을 연결한 검증입니다. 설치된 확장의 전체 패널 흐름이나 실제 지원서 입력 성공, 저장·제출 호환성, CJ 데이터베이스 전체의 유일성을 입증한 것은 아닙니다.

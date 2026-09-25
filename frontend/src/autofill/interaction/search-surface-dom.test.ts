@@ -4,6 +4,7 @@ import {
   activeModal,
   elements,
   interactive,
+  label,
   linked,
   roots,
   safeActivation,
@@ -84,6 +85,24 @@ describe("search surface DOM safety", () => {
     anchor.textContent = "검색";
     document.body.append(anchor);
     expect(safeActivation(anchor)).toBe(false);
+  });
+
+  it("uses value as a label only for action input types", () => {
+    for (const type of ["button", "submit", "reset"]) {
+      const input = document.createElement("input");
+      input.type = type;
+      input.value = "검색";
+      expect(label(input)).toBe("검색");
+    }
+    for (const type of ["text", "password", "hidden"]) {
+      const input = document.createElement("input");
+      input.type = type;
+      input.value = "검색";
+      expect(label(input)).toBe("");
+    }
+    const unrelated = document.createElement("div");
+    (unrelated as HTMLDivElement & { value: string }).value = "검색";
+    expect(label(unrelated)).toBe("");
   });
 
   it("rejects risky targets, downloads, and non-search links", () => {
