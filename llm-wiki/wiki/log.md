@@ -249,3 +249,9 @@
 - Approval-Digest: 20126b48eacbf09b8af7fcaddbaad25843ec829a766fb688ebe465b8363c913b
 - [CF-99 bundle](../raw/issues/CF-99/manifest.md)의 최종 후보 6개를 반영했다.
 - 입력 중 화면 고정, 범주별 결과 검토, 선택적인 접기, 합성 안내 시연과 현대·SK 진단 경계를 관련 topic 및 현황표에 연결했다.
+
+## [2026-09-25] ingest | CF-108 범용 검색 실패 진단과 후속 보류
+
+- Approval-Digest: 80dfb2e074f122e975d4d611d9d0c2f5c80519bcbac1247d1d8d3720bae3deb9
+- 승인된 후보 4개를 [CF-108 bundle](../raw/issues/CF-108/manifest.md)에 기록했다.
+- 공개 진단과 승인된 후속 보류, 학교 구조의 미지원 경계, native GET 완료 검사 정정과 격리 설치 검증 범위를 [검색 표면 topic](topics/generic-autofill-search.md)에 반영했다. 실제 CJ와 서버 저장은 미검증이다.

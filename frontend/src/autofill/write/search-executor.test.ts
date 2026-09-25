@@ -110,7 +110,11 @@ describe("approved search batch boundaries", () => {
         test.registry,
         test.results[0]!,
       ),
-    ).toMatchObject({ status: "skipped", outcome: "needs-verification" });
+    ).toMatchObject({
+      status: "skipped",
+      outcome: "needs-verification",
+      failureCode: "VALUE_NOT_RETAINED",
+    });
   });
 
   it("does not search a later item after an unresolved failed transaction", async () => {
@@ -257,6 +261,110 @@ describe("approved search batch boundaries", () => {
     ).toMatchObject({
       outcome: "needs-verification",
       code: "RETAINED_VALUE_UNCONFIRMED",
+      failureCode: "VALUE_NOT_RETAINED",
     });
+  });
+});
+
+describe("search failure diagnostics", () => {
+  it.each([
+    ["unverified_search_form", "SEARCH_FORM_UNVERIFIED"],
+    ["search_submit_not_found", "SEARCH_FORM_UNVERIFIED"],
+    ["surface_navigation_unsafe", "SEARCH_NAVIGATION_UNSAFE"],
+    ["result_set_incomplete", "SEARCH_RESULTS_INCOMPLETE"],
+    ["result_activation_unsafe", "SEARCH_ACTIVATION_UNSAFE"],
+    ["result_pending", "SEARCH_TIMEOUT"],
+    ["deadline_exceeded", "SEARCH_TIMEOUT"],
+    ["multiple_matching_results", "SEARCH_AMBIGUOUS"],
+    ["search_results_not_found", "SEARCH_NO_EXACT_MATCH"],
+  ] as const)(
+    "delivers %s as %s through the approved result",
+    async (reason, failureCode) => {
+      const test = setup();
+      test.items[0]!.currentValue = "";
+      document.querySelector<HTMLInputElement>("input")!.value = "";
+      vi.mocked(executeReadonlySearch).mockResolvedValue({
+        status: "skipped",
+        targetCandidateId: "field-0",
+        reason,
+        effect: "none",
+      });
+      const stopped = await executeApprovedSearchWrites(test);
+      expect(stopped).toBe(false);
+      expect(test.results[0]).toMatchObject({ status: "skipped", failureCode });
+    },
+  );
+
+  it("distinguishes the failed search from later halted approved writes", async () => {
+    const test = setup(3);
+    test.items[0]!.currentValue = "";
+    document.querySelector<HTMLInputElement>("input")!.value = "";
+    test.items[1]!.analysis!.writePlan = { command: "SET_TEXT" };
+    test.approvedCandidateIds.delete("field-2");
+    vi.mocked(executeReadonlySearch).mockResolvedValue({
+      status: "skipped",
+      targetCandidateId: "field-0",
+      reason: "result_activation_unsafe",
+      effect: "interaction-started",
+    });
+    const writeOrdinary = vi.fn(
+      (item: ReviewPlanItem): ApprovedWriteResult => ({
+        candidateId: item.candidateId,
+        status: "written",
+      }),
+    );
+    const stopped = await executeApprovedSearchWrites({
+      ...test,
+      writeOrdinary,
+    });
+    expect(stopped).toBe(true);
+    expect(writeOrdinary).not.toHaveBeenCalled();
+    expect(test.results[0]).toMatchObject({
+      failureCode: "SEARCH_ACTIVATION_UNSAFE",
+    });
+    expect(test.results[1]).toMatchObject({
+      failureCode: "SEARCH_FOLLOWUP_HALTED",
+    });
+    expect(test.results[2]).not.toHaveProperty(
+      "failureCode",
+      "SEARCH_FOLLOWUP_HALTED",
+    );
+  });
+});
+
+describe("safe continuation after a search rejection", () => {
+  it("executes a later approved operation when the rejected search had no effect", async () => {
+    const test = setup(3);
+    test.items[0]!.currentValue = "";
+    document.querySelector<HTMLInputElement>("input")!.value = "";
+    test.items[1]!.analysis!.writePlan = { command: "SET_TEXT" };
+    test.approvedCandidateIds.delete("field-2");
+    vi.mocked(executeReadonlySearch).mockResolvedValue({
+      status: "skipped",
+      targetCandidateId: "field-0",
+      reason: "unverified_search_form",
+      effect: "none",
+    });
+    const writeOrdinary = vi.fn(
+      (item: ReviewPlanItem): ApprovedWriteResult => ({
+        candidateId: item.candidateId,
+        status: "written",
+      }),
+    );
+    const stopped = await executeApprovedSearchWrites({
+      ...test,
+      writeOrdinary,
+    });
+    expect(stopped).toBe(false);
+    expect(writeOrdinary).toHaveBeenCalledTimes(1);
+    expect(writeOrdinary).toHaveBeenCalledWith(test.items[1]);
+    expect(test.results[0]).toMatchObject({
+      failureCode: "SEARCH_FORM_UNVERIFIED",
+    });
+    expect(test.results[1]).toMatchObject({ status: "written" });
+    expect(test.results[2]).not.toHaveProperty(
+      "failureCode",
+      "SEARCH_FOLLOWUP_HALTED",
+    );
   });
 });

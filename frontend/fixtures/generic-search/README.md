@@ -61,3 +61,11 @@ DOM에 명시했다. 자동 기입 구현은 이 자료를 읽을 뿐 fixture �
 - 2026-09-23 실제 설치 확장의 OpenAI 범용 경로에서 한 행의 세 검색 표면을 확인했습니다. 분석 화면 표시는 2.2초, 탐지 5개/연결 3개, 기입 성공 3개/실패 0개/확인 필요 0개/입력 불가 2개였습니다. 실제 세 필드 값 반영과 검색 화면 종료를 확인했습니다.
 - 재실행은 분석 화면 표시 2.9초, 새 기입 0개, 동일값 유지 3개, 입력 불가 2개였습니다. 이 수치는 단일 로컬 합성 화면의 관측값이며 실제 채용 사이트 또는 공급자 간 성능 비교가 아닙니다.
 - 가져오기 UI 전후에 내보내기를 수행해 원래 프로필의 전체 `profile` 객체가 동일하게 복원됨을 확인했습니다. 원본 프로필이나 백업 내용은 저장소에 기록하지 않았습니다.
+
+## POST/hidden school refusal and independent KOR region fixture
+
+[legacy-search-form.html](./legacy-search-form.html) uses public synthetic values and two separate **same-origin iframe** popups. The school iframe ([legacy-school-frame.html](./legacy-school-frame.html)) preserves the reported structure: POST form, hidden row context, fieldset, text query, unlabelled `<input type="submit" value="검색">`, and a result `ul/li/a` **inside the form** with `href="javascript:;"` and a literal-only inline callback. There is no invented completion marker. Its original unlabelled submit input is currently not discovered as a submit control, so the expected first failure is `search_submit_not_found`, before the POST/hidden form guard. The separate labelled **button** variant in the interaction test is solely diagnostic and reaches `unverified_search_form`; it is not a claim about the observed page.
+
+The independent [legacy-region-frame.html](./legacy-region-frame.html) has no school form: it presents the KOR/한국 country select and 17 public regions outside a form. Selecting a region reflects its label and synthetic code and closes only its popup. The school and region opener, query, submit, and selection counters are exposed by `syntheticLegacyCounts()`. The other school row starts with a synthetic existing value and code; neither scenario should change it. Serve from `frontend/fixtures` using the local server instructions above. These fixtures are structural reproductions, not proof of company support or live-site behavior.
+
+Native GET characterization in `search-results.test.ts` records the present contract: completed navigation without a completion marker, count, or full position evidence still rejects an incomplete list. A declared count can permit the result; this is not evidence that the original school POST form is supported.

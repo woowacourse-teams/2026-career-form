@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>합성 검색 구조</title>
+  </head>
+  <body>
+    <h1>합성 학교 검색과 독립 소재지</h1>
+    <fieldset>
+      <legend>대학교</legend>
+      <div data-repeater-item>
+        <label>학교명 A <input id="school-a" readonly /></label>
+        <input id="code-a" type="hidden" value="synthetic-code-a" />
+        <button type="button" id="open-school" aria-controls="school-popup">
+          학교 검색
+        </button>
+      </div>
+      <div data-repeater-item>
+        <label
+          >학교명 B <input id="school-b" readonly value="기존 합성 학교"
+        /></label>
+        <input id="code-b" type="hidden" value="synthetic-code-b" />
+      </div>
+      <div data-repeater-item>
+        <label>학교 소재지 <input id="region" readonly /></label>
+        <input id="region-code" type="hidden" value="synthetic-region-code" />
+        <button type="button" id="open-region" aria-controls="region-popup">
+          소재지 검색
+        </button>
+      </div>
+    </fieldset>
+    <section id="school-popup" role="dialog" aria-modal="true" hidden>
+      <iframe
+        id="school-frame"
+        title="학교 검색 결과"
+        src="legacy-school-frame.html"
+      ></iframe>
+    </section>
+    <section id="region-popup" role="dialog" aria-modal="true" hidden>
+      <iframe
+        id="region-frame"
+        title="소재지 선택"
+        src="legacy-region-frame.html"
+      ></iframe>
+    </section>
+    <script src="legacy-search-form.js"></script>
+  </body>
+</html>
