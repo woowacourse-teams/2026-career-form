@@ -315,6 +315,52 @@ describe("approved university major search boundary", () => {
     ]);
   });
 
+  it("continues to the approved region using the country URL changed by a completed school search", async () => {
+    const test = setup(2);
+    test.items.forEach((item) => { item.currentValue = ""; });
+    const [school, region] = document.querySelectorAll<HTMLInputElement>("input");
+    school!.value = ""; region!.value = "";
+    test.items[0]!.analysis!.valueBinding!.profileFieldKey = "education.university.schoolName";
+    test.items[0]!.profileValue = "합성대학교";
+    test.items[1]!.analysis!.valueBinding!.profileFieldKey = "education.university.schoolRegion";
+    test.items[1]!.profileValue = "서울";
+    const regionOpener = document.querySelectorAll<HTMLButtonElement>("button")[1]!;
+    regionOpener.setAttribute("data-iframe-url", "https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0");
+    vi.mocked(executeReadonlySearch).mockImplementation(async (args) => {
+      if (args.canonicalFieldKey === "education.university.schoolName") {
+        school!.value = "합성대학교";
+        regionOpener.setAttribute("data-iframe-url", "https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0&country_cd=KOR");
+      } else {
+        expect(regionOpener.getAttribute("data-iframe-url")).toContain("country_cd=KOR");
+        region!.value = "서울특별시";
+      }
+      return {status: "selected", targetCandidateId: args.targetCandidateId, identity: {} as never};
+    });
+    const stopped = await executeApprovedSearchWrites(test);
+    expect(stopped).toBe(false);
+    expect(vi.mocked(executeReadonlySearch).mock.calls.map(([args]) => args.canonicalFieldKey))
+      .toEqual(["education.university.schoolName", "education.university.schoolRegion"]);
+    expect(test.results.map(result => result.status)).toEqual(["written", "written"]);
+  });
+
+  it("halts a later approved region after an interacted school lookup fails without treating the region as searched", async () => {
+    const test = setup(2);
+    test.items.forEach(item => { item.currentValue = ""; });
+    document.querySelectorAll<HTMLInputElement>("input").forEach(input => {input.value = "";});
+    test.items[0]!.analysis!.valueBinding!.profileFieldKey = "education.university.schoolName";
+    test.items[1]!.analysis!.valueBinding!.profileFieldKey = "education.university.schoolRegion";
+    vi.mocked(executeReadonlySearch).mockResolvedValue({
+      status: "failed", targetCandidateId: "field-0", reason: "popup_unresolved", effect: "value-observed",
+    });
+    const stopped = await executeApprovedSearchWrites(test);
+    expect(stopped).toBe(true);
+    expect(executeReadonlySearch).toHaveBeenCalledTimes(1);
+    expect(test.results).toMatchObject([
+      {status: "skipped", outcome: "needs-verification"},
+      {status: "skipped", failureCode: "SEARCH_FOLLOWUP_HALTED"},
+    ]);
+  });
+
   it("halts the next approved search after interaction-started failure and distinguishes both reasons", async () => {
     const test = setup(2);
     test.items.forEach((item) => {

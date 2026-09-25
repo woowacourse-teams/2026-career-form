@@ -45,6 +45,18 @@ describe("CJ school request", () => {
     expect([bundle.regionDisplay.value, bundle.regionCode.value, doc.querySelector<HTMLInputElement>('[name="new_country"]')!.value, doc.querySelector<HTMLInputElement>("#mm_major_nm2_0")!.value])
       .toEqual(["", "", "KOR", ""]);
   });
+  it("updates an existing country only when unapproved country metadata stays consistent", () => {
+    const doc = row();
+    doc.querySelector<HTMLInputElement>('[name="reg_region"]')!.value = "USA";
+    doc.querySelector<HTMLInputElement>('[name="new_country"]')!.value = "";
+    const bundle = validateCjSchoolRow(doc.querySelector<HTMLInputElement>("#zz_school_nm2_0")!);
+    const restore = writeCjSchoolBundle(bundle, {code: "SYN001", label: "합성대학교", country: "KOR"});
+    expect(bundle.country.value).toBe("KOR");
+    expect(bundle.regionOpener.getAttribute("data-iframe-url")).toContain("country_cd=KOR");
+    restore();
+    expect(bundle.country.value).toBe("USA");
+    expect(bundle.regionOpener.getAttribute("data-iframe-url")).toBe(bundle.existingUrl);
+  });
   it("rejects mismatched preserved new_country before any write", () => {
     const doc = row();
     const bundle = validateCjSchoolRow(doc.querySelector<HTMLInputElement>("#zz_school_nm2_0")!);

@@ -36,7 +36,47 @@ $(document).ready(function(){
  $(this).val(str);
  });
 });`;
-const noComments = (text: string) => text.replace(/\/\/[^\n]*/g, "").replace(/\s+/g, "").trim();
+// Compare lexical tokens, not whitespace-free text: `var x` and `varx` differ.
+// Quoted strings and regex syntax remain byte-exact. Only line comments and
+// inter-token whitespace are ignored in the reviewed public source.
+function scriptTokens(source: string): string {
+  const tokens: string[] = [];
+  for (let i = 0; i < source.length;) {
+    const char = source[i]!;
+    if (/\s/.test(char)) { i++; continue; }
+    if (source.startsWith("//", i)) {
+      const end = source.indexOf("\n", i);
+      i = end === -1 ? source.length : end;
+      continue;
+    }
+    if (source.startsWith("/*", i)) fail();
+    if (char === "'" || char === '"' || char === "`") {
+      const start = i++;
+      let closed = false;
+      while (i < source.length) {
+        if (source[i] === "\\") { i += 2; continue; }
+        if (source[i++] === char) { closed = true; break; }
+      }
+      if (!closed) fail();
+      tokens.push(source.slice(start, i));
+      continue;
+    }
+    if (/[A-Za-z_$]/.test(char)) {
+      const start = i++;
+      while (i < source.length && /[\w$]/.test(source[i]!)) i++;
+      tokens.push(source.slice(start, i));
+      continue;
+    }
+    if (/[0-9]/.test(char)) {
+      const start = i++;
+      while (i < source.length && /[0-9]/.test(source[i]!)) i++;
+      tokens.push(source.slice(start, i));
+      continue;
+    }
+    tokens.push(char); i++;
+  }
+  return tokens.join("\u0000");
+}
 const rowsSelector = ".container_wrap > #popupBasic4.popup.popup_college.iframe_opened > .popup_inner > .popup_content > .sec_top > .sec_mid.scroll-list-wrap > .iScroll > .sec_inner > ul.sch_list";
 
 /** A complete received document proves only rendered-result uniqueness, never database uniqueness. */
@@ -82,8 +122,8 @@ export function parseCjSchoolResponse(
   ) fail();
   const scripts = [...doc.querySelectorAll<HTMLScriptElement>("script")];
   if (scripts.length !== 13 || scripts[1]?.src || scripts[12]?.src ||
-    noComments(scripts[1]?.textContent ?? "") !== noComments("window.jQuery = window.jQuery || {}; window.jQuery.migrateMute = true; console.trace = function() {};") ||
-    noComments(scripts[12]?.textContent ?? "") !== noComments(reviewedScript)
+    scriptTokens(scripts[1]?.textContent ?? "") !== scriptTokens("window.jQuery = window.jQuery || {}; window.jQuery.migrateMute = true; console.trace = function() {};") ||
+    scriptTokens(scripts[12]?.textContent ?? "") !== scriptTokens(reviewedScript)
   ) fail();
   for (let i = 0; i < scriptPaths.length; i++) {
     const source = scripts[i === 0 ? 0 : i + 1]?.getAttribute("src");

@@ -49,6 +49,34 @@ it("posts only school_name and num, retains country bundle and preserves unrelat
   expect(f.doc.querySelector<HTMLInputElement>("#sectionNormalUniversity1 input")!.value).toBe("다른행");
   f.session.stop(); f.dom.window.close();
 });
+it("restores only its own bundle after close failure and leaves subsequent user code change", async () => {
+  const f = fixture();
+  vi.stubGlobal("fetch", vi.fn(async () => response()));
+  const code = f.doc.querySelector<HTMLInputElement>('[name="school_code"]')!;
+  const country = f.doc.querySelector<HTMLInputElement>('[name="reg_region"]')!;
+  const opener = f.doc.querySelector<HTMLButtonElement>('[name="bt_zz_state_nm"]')!;
+  const original = opener.getAttribute("data-iframe-url");
+  const lease = {check: async () => true, close: async () => {code.value = "USER_UPDATED"; return false;}};
+  await expect(executeCjSchoolSearch(f.surface, f.session, lease, "합성대학교", f.guard, () => {}, () => {})).rejects.toThrow();
+  expect(f.target.value).toBe("");
+  expect(code.value).toBe("USER_UPDATED");
+  expect(country.value).toBe("KOR");
+  expect(opener.getAttribute("data-iframe-url")).toBe(original);
+  f.session.stop(); f.dom.window.close();
+});
+
+it("rejects a no-match response before changing any school or country field", async () => {
+  const f = fixture();
+  const noMatch = template.replace("setUniversityData('SYN001', '합성대학교', 'KOR')", "setUniversityData('SYN001', '다른대학교', 'KOR')")
+    .replace('>합성대학교</a>', '>다른대학교</a>');
+  vi.stubGlobal("fetch", vi.fn(async () => ({...response(), body: new ReadableStream<Uint8Array>({start(controller) {controller.enqueue(new TextEncoder().encode(noMatch));controller.close();}})})));
+  await expect(executeCjSchoolSearch(f.surface, f.session, f.lease, "합성대학교", f.guard, () => {}, () => {})).rejects.toThrow();
+  expect(f.target.value).toBe("");
+  expect(f.doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value).toBe("");
+  expect(f.doc.querySelector<HTMLInputElement>('[name="reg_region"]')!.value).toBe("KOR");
+  f.session.stop(); f.dom.window.close();
+});
+
 it("rejects existing region before POST or write", async () => {
   const f = fixture("기존지역");
   const request = vi.fn(); vi.stubGlobal("fetch", request);

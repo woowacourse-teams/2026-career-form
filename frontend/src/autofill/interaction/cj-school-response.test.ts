@@ -59,6 +59,7 @@ describe("CJ school inert response", () => {
     response(row("SYN001", "합성대학교")).replace('class="sch_list"', 'class="sch_list loading"'),
     response(row("SYN001", "합성대학교")).replace("</body>", '<button>다음 페이지</button></body>'),
     response(row("SYN001", "합성대학교")).replace("parent.universityCallback2_0", "parent.evilCallback"),
+    publicTemplate.replace("var universityData", "varuniversityData"),
     response(row("SYN001", "합성대학교")).replace('name="num" value="2_0"', 'name="num" value="2_0"><input name="private" value="secret"'),
   ])("rejects ambiguous or unverified result data", (html) => {
     expect(() => parseCjSchoolResponse(html, "합성대학교", "2_0")).toThrow();
