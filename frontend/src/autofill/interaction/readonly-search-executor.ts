@@ -167,8 +167,8 @@ export async function executeReadonlySearch(
     )
       throw new SearchFailure("stale_target");
     const schoolCandidate = isCjSchoolCandidate(document, canonicalFieldKey, identity);
-    if (schoolCandidate) validateCjSchoolRow(target);
-    if (normalized(initialValue)) {
+    if (schoolCandidate) validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
+    if (normalized(initialValue) && !schoolCandidate) {
       if (!matches(initialValue))
         throw new SearchFailure("existing_value_conflict");
       await session.prepareMutation();
@@ -207,7 +207,7 @@ export async function executeReadonlySearch(
     if ((cjCandidate && !cjMajor) || (schoolCandidate && !cjSchool))
       throw new SearchFailure("unverified_search_form");
     if (cjMajor) validateCjMajorPreflight(identity);
-    if (cjSchool) validateCjSchoolRow(target);
+    if (cjSchool) validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
     const cjLease = cjMajor
       ? await prepareCjMajorClose(opener, session)
       : cjSchool ? await prepareCjSchoolClose(opener, session) : undefined;
@@ -222,7 +222,7 @@ export async function executeReadonlySearch(
       )
         throw new SearchFailure("unverified_search_form");
       if (cjMajor) validateCjMajorPreflight(identity);
-      else validateCjSchoolRow(target);
+      else validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
     }
     effect = "interaction-started";
     opener.click();
@@ -245,7 +245,7 @@ export async function executeReadonlySearch(
     surfaceGuard();
     if (cjLease) {
       const runCj = cjMajor ? executeCjMajorSearch : executeCjSchoolSearch;
-      await runCj(
+      const cjResult = await runCj(
         currentSurface,
         session,
         cjLease,
@@ -254,7 +254,7 @@ export async function executeReadonlySearch(
         () => observation.assertOwned(currentSurface),
         () => { effect = "value-observed"; },
       );
-      return { status: "selected", targetCandidateId, identity, effect };
+      return { status: cjResult === "unchanged" ? "unchanged" : "selected", targetCandidateId, identity, effect };
     }
     const controls = await session.wait(() => {
       surfaceGuard();

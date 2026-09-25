@@ -13,14 +13,15 @@ export async function executeCjSchoolSearch(
   surface: SearchSurface, session: SearchSession, lease: CjMajorCloseLease,
   expected: string, guard: (allowed: readonly string[]) => HTMLInputElement,
   assertOwned: () => void, onObserved: () => void,
-): Promise<void> {
+): Promise<"selected" | "unchanged"> {
   if (surface.kind !== "same-origin-iframe" || !surface.frame ||
     surface.document.location.origin !== "https://recruit.cj.net" ||
     surface.document.location.pathname !== "/recruit/ko/resume/search/search_university.fo" ||
     surface.document.location.search !== "?num=2_0")
     throw new SearchFailure("unverified_search_form");
   const target = surface.target;
-  const bundle = validateCjSchoolRow(target);
+  const existing = target.value === expected;
+  const bundle = validateCjSchoolRow(target, existing ? expected : undefined);
   const form = surface.document.querySelector("form");
   const query = form?.querySelector<HTMLInputElement>('input#school_name[name="school_name"]');
   const hidden = form?.querySelector('input[type="hidden"][name="num"]');
@@ -43,9 +44,9 @@ export async function executeCjSchoolSearch(
     validateCjSchoolRequest(surface.document, expected, "2_0").toString() === body.toString();
   const check = () => {
     session.check();
-    if (guard([""]) !== target || !siblingsCurrent()) throw new SearchFailure("surface_stale");
+    if (guard([existing ? expected : ""]) !== target || !siblingsCurrent()) throw new SearchFailure("surface_stale");
     assertOwned(); surface.revalidate();
-    const live = validateCjSchoolRow(target);
+    const live = validateCjSchoolRow(target, existing ? expected : undefined);
     if (live.row !== bundle.row || live.schoolCode !== bundle.schoolCode ||
       live.country !== bundle.country || live.regionOpener !== bundle.regionOpener ||
       live.existingCountry !== bundle.existingCountry || live.existingUrl !== bundle.existingUrl ||
@@ -86,17 +87,48 @@ export async function executeCjSchoolSearch(
     await session.prepareMutation(); check();
     if (!(await lease.check(surface))) throw new SearchFailure("result_activation_unsafe");
     check();
-    // The site's new_country field is deliberately preserved. A mismatch is unsafe.
-    if (bundle.newCountry.value && bundle.newCountry.value !== selected.country)
-      throw new SearchFailure("unverified_search_form");
-    onObserved();
-    const restore = writeCjSchoolBundle(bundle, selected);
+    if (existing) {
+      // Verify the complete row against a unique, exact result. Never treat a
+      // matching display string or locally populated code as proof by itself.
+      if (bundle.schoolCode.value !== selected.code ||
+        bundle.country.value !== selected.country ||
+        bundle.existingUrl !==
+          `https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0&country_cd=${encodeURIComponent(selected.country)}`)
+        throw new SearchFailure("existing_value_conflict");
+      check();
+      const stableExisting = () => {
+        session.check();
+        if (guard([expected]) !== target || !siblingsCurrent() ||
+          !bundle.row.isConnected ||
+          bundle.school.closest("#sectionNormalUniversity0") !== bundle.row ||
+          bundle.schoolCode.closest("#sectionNormalUniversity0") !== bundle.row ||
+          bundle.country.closest("#sectionNormalUniversity0") !== bundle.row ||
+          bundle.regionOpener.closest("#sectionNormalUniversity0") !== bundle.row ||
+          bundle.schoolCode.value !== selected.code || bundle.country.value !== selected.country ||
+          bundle.regionOpener.getAttribute("data-iframe-url") !== bundle.existingUrl)
+          throw new SearchFailure("result_not_reflected");
+      };
+      await session.prepareMutation(); stableExisting();
+      if (!(await lease.close(surface))) throw new SearchFailure("popup_unresolved");
+      const closedAt = performance.now();
+      await session.wait(() => {
+        stableExisting();
+        return surface.closure() === "closed" && performance.now() - closedAt >= 500
+          ? true : undefined;
+      }, "popup_unresolved", 2_000);
+      return "unchanged";
+    }
+    const restore = writeCjSchoolBundle(bundle, selected, onObserved);
     try {
       const stable = () => {
         session.check();
         if (guard([selected.label]) !== target || !siblingsCurrent() ||
           !bundle.row.isConnected || !bundle.schoolCode.isConnected ||
           !bundle.country.isConnected || !bundle.regionOpener.isConnected ||
+          bundle.regionOpener.closest("#sectionNormalUniversity0") !== bundle.row ||
+          bundle.school.closest("#sectionNormalUniversity0") !== bundle.row ||
+          bundle.schoolCode.closest("#sectionNormalUniversity0") !== bundle.row ||
+          bundle.country.closest("#sectionNormalUniversity0") !== bundle.row ||
           bundle.schoolCode.value !== selected.code ||
           bundle.country.value !== selected.country ||
           bundle.regionOpener.getAttribute("data-iframe-url") !==
@@ -112,6 +144,7 @@ export async function executeCjSchoolSearch(
         return surface.closure() === "closed" && performance.now() - closedAt >= 500
           ? true : undefined;
       }, "popup_unresolved", 2_000);
+      return "selected";
     } catch (error) {
       restore();
       throw error;

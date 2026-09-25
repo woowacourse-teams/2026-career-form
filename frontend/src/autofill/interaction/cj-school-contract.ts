@@ -24,7 +24,7 @@ export interface CjSchoolRow {
 }
 
 /** Refuse populated region: a school country could invalidate that unapproved value. */
-export function validateCjSchoolRow(school: HTMLInputElement): CjSchoolRow {
+export function validateCjSchoolRow(school: HTMLInputElement, expectedExisting?: string): CjSchoolRow {
   const row = school.closest("#sectionNormalUniversity0");
   function one<T extends Element>(selector: string): T | undefined {
     const nodes = row?.querySelectorAll<T>(selector);
@@ -39,9 +39,16 @@ export function validateCjSchoolRow(school: HTMLInputElement): CjSchoolRow {
   const schoolOpener = one<HTMLButtonElement>('button[name="bt_zz_school_nm"]');
   const original = regionOpener?.getAttribute("data-iframe-url") ?? "";
   const regionUrl = (() => { try { return new URL(original); } catch { return undefined; } })();
+  // A displayed school is never sufficient by itself. Re-execution requires an
+  // existing code and an explicit, consistent country URL, then checks the
+  // exact code against the inert public response before returning unchanged.
+  const existing = expectedExisting !== undefined && school.value === expectedExisting;
   if (!row || !row.isConnected || school.id !== "zz_school_nm2_0" ||
       school.name !== "zz_school_nm" || school.type !== "text" || !school.readOnly ||
-      school.value !== "" || !schoolCode || schoolCode.value !== "" ||
+      (!existing && school.value !== "") || !schoolCode ||
+      (existing ? !/^[A-Za-z0-9_-]{1,64}$/.test(schoolCode.value) ||
+        !/^[A-Z]{2,3}$/.test(country?.value ?? "") ||
+        regionUrl?.searchParams.get("country_cd") !== country?.value : schoolCode.value !== "") ||
       !country || !newCountry || !regionDisplay || !regionDisplay.readOnly || regionDisplay.value !== "" ||
       !regionCode || regionCode.value !== "" || !regionOpener || !schoolOpener ||
       schoolOpener.type !== "button" || schoolOpener.getAttribute("data-iframe-url") !== CJ_SCHOOL_POPUP_URL ||
@@ -51,6 +58,7 @@ export function validateCjSchoolRow(school: HTMLInputElement): CjSchoolRow {
       regionUrl.pathname !== "/recruit/ko/resume/search/search_school_place.fo" ||
       regionUrl.searchParams.get("num") !== "5_0" ||
       regionUrl.searchParams.size > 2 ||
+      (existing && regionUrl.searchParams.size !== 2) ||
       (regionUrl.searchParams.size === 2 &&
         (!regionUrl.searchParams.has("country_cd") ||
           regionUrl.searchParams.get("country_cd") !== country.value)) ||
@@ -71,28 +79,30 @@ const nativeSet = (input: HTMLInputElement, value: string): void => {
 export function writeCjSchoolBundle(
   bundle: CjSchoolRow,
   selected: {code: string; label: string; country: string},
+  onFirstEffect?: () => void,
 ): () => void {
-  const {school, schoolCode, country, newCountry, regionDisplay, regionCode, regionOpener} = bundle;
+  const {school, schoolCode, country, regionDisplay, regionCode, regionOpener} = bundle;
   const newUrl = `${CJ_REGION_URL}&country_cd=${encodeURIComponent(selected.country)}`;
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(selected.code) ||
       !selected.label.trim() || !/^[A-Z]{2,3}$/.test(selected.country) ||
-      (newCountry.value !== "" && newCountry.value !== selected.country) ||
       !bundle.row.isConnected || !school.isConnected || !schoolCode.isConnected ||
       !country.isConnected || !regionOpener.isConnected ||
+      regionOpener.closest("#sectionNormalUniversity0") !== bundle.row ||
       school.value !== "" || schoolCode.value !== "" ||
       country.value !== bundle.existingCountry ||
       regionOpener.getAttribute("data-iframe-url") !== bundle.existingUrl ||
       regionDisplay.value !== "" || regionCode.value !== "") refuse();
   const restore = () => {
-    if (school.isConnected && school.value === selected.label) nativeSet(school, "");
-    if (schoolCode.isConnected && schoolCode.value === selected.code) nativeSet(schoolCode, "");
-    if (country.isConnected && country.value === selected.country &&
+    if (school.closest("#sectionNormalUniversity0") === bundle.row && school.value === selected.label) nativeSet(school, "");
+    if (schoolCode.closest("#sectionNormalUniversity0") === bundle.row && schoolCode.value === selected.code) nativeSet(schoolCode, "");
+    if (country.closest("#sectionNormalUniversity0") === bundle.row && country.value === selected.country &&
         bundle.existingCountry !== selected.country) nativeSet(country, bundle.existingCountry);
-    if (regionOpener.isConnected && regionOpener.getAttribute("data-iframe-url") === newUrl)
+    if (regionOpener.closest("#sectionNormalUniversity0") === bundle.row && regionOpener.getAttribute("data-iframe-url") === newUrl)
       regionOpener.setAttribute("data-iframe-url", bundle.existingUrl);
   };
   try {
-    nativeSet(school, selected.label);
+    try { nativeSet(school, selected.label); }
+    finally { if (school.value === selected.label) onFirstEffect?.(); }
     nativeSet(schoolCode, selected.code);
     nativeSet(country, selected.country);
     regionOpener.setAttribute("data-iframe-url", newUrl);

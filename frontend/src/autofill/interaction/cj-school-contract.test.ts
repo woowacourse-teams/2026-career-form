@@ -45,7 +45,7 @@ describe("CJ school request", () => {
     expect([bundle.regionDisplay.value, bundle.regionCode.value, doc.querySelector<HTMLInputElement>('[name="new_country"]')!.value, doc.querySelector<HTMLInputElement>("#mm_major_nm2_0")!.value])
       .toEqual(["", "", "KOR", ""]);
   });
-  it("updates an existing country only when unapproved country metadata stays consistent", () => {
+  it("conditionally restores an approved country change without touching new_country", () => {
     const doc = row();
     doc.querySelector<HTMLInputElement>('[name="reg_region"]')!.value = "USA";
     doc.querySelector<HTMLInputElement>('[name="new_country"]')!.value = "";
@@ -57,12 +57,26 @@ describe("CJ school request", () => {
     expect(bundle.country.value).toBe("USA");
     expect(bundle.regionOpener.getAttribute("data-iframe-url")).toBe(bundle.existingUrl);
   });
-  it("rejects mismatched preserved new_country before any write", () => {
+  it("signals observed effect only after the first write, never on rejected preflight", () => {
     const doc = row();
     const bundle = validateCjSchoolRow(doc.querySelector<HTMLInputElement>("#zz_school_nm2_0")!);
-    expect(() => writeCjSchoolBundle(bundle, {code: "SYN001", label: "합성대학교", country: "USA"})).toThrow();
-    expect(bundle.school.value).toBe("");
+    const observations: Array<[string, string]> = [];
+    expect(() => writeCjSchoolBundle(bundle, {code: "", label: "합성대학교", country: "KOR"},
+      () => observations.push([bundle.school.value, bundle.schoolCode.value]))).toThrow();
+    expect(observations).toEqual([]);
+    writeCjSchoolBundle(bundle, {code: "SYN001", label: "합성대학교", country: "KOR"},
+      () => observations.push([bundle.school.value, bundle.schoolCode.value]));
+    expect(observations).toEqual([["합성대학교", ""]]);
+  });
+  it("changes approved country despite old new_country when the region is empty, preserving new_country", () => {
+    const doc = row();
+    doc.querySelector<HTMLInputElement>('[name="reg_region"]')!.value = "USA";
+    doc.querySelector<HTMLInputElement>('[name="new_country"]')!.value = "USA";
+    const bundle = validateCjSchoolRow(doc.querySelector<HTMLInputElement>("#zz_school_nm2_0")!);
+    writeCjSchoolBundle(bundle, {code: "SYN001", label: "합성대학교", country: "KOR"});
     expect(bundle.country.value).toBe("KOR");
+    expect(bundle.newCountry.value).toBe("USA");
+    expect(bundle.regionOpener.getAttribute("data-iframe-url")).toContain("country_cd=KOR");
   });
   it("captures the first-row school and country bundle without touching new_country", () => {
     const doc = row();

@@ -72,7 +72,7 @@ Native GET characterization in `search-results.test.ts` records the present cont
 
 ## CF-110 대학교 주전공 검색 경계
 
-`education.university.majorName`의 승인된 첫 번째 대학교 주전공만 CJ 전용 검색 계약의 대상입니다. 정확 일치 결과가 하나라는 판단은 **완전히 수신하고 구조를 검증한 렌더링 응답 전체**에 한정되며, CJ 데이터베이스 전체에 유일한 전공명이라는 뜻이 아닙니다. 표시값과 코드의 반영뿐 아니라 검토된 팝업 닫기 경로와 닫힌 상태의 안정성까지 확인해야 성공으로 집계합니다. 상호작용을 시작한 뒤 확인에 실패하면 뒤따르는 승인 검색도 중단하고 원래 필드의 기존 값과 관계없는 다른 필드를 보존합니다. 기존 학교명 POST/hidden 검색은 계속 지원하지 않습니다.
+`education.university.majorName`의 승인된 첫 번째 대학교 주전공만 CJ 전용 검색 계약의 대상입니다. 정확 일치 결과가 하나라는 판단은 **완전히 수신하고 구조를 검증한 렌더링 응답 전체**에 한정되며, CJ 데이터베이스 전체에 유일한 전공명이라는 뜻이 아닙니다. 표시값과 코드의 반영뿐 아니라 검토된 팝업 닫기 경로와 닫힌 상태의 안정성까지 확인해야 성공으로 집계합니다. 상호작용을 시작한 뒤 확인에 실패하면 뒤따르는 승인 검색도 중단하고 원래 필드의 기존 값과 관계없는 다른 필드를 보존합니다. 당시 학교명 POST/hidden 검색은 지원하지 않았습니다. CF-112의 첫 대학교 전용 계약은 아래 별도 범위입니다.
 
 ### CF-110 검증 기록 (2026-09-25)
 
@@ -93,10 +93,23 @@ POST `school_name`과 `num=2_0`, 표시값·학교 코드·국가 코드의 결�
 
 `education.university.schoolName`은 CJ 첫 대학교 행에만 허용합니다. 이미 입력된 소재지 표시값·지역 코드가
 있으면 국가 정합성을 추측하지 않고 **검색 전에 거부**합니다. 검증된 결과의 학교명·학교 코드와 국가 코드,
-해당 행의 소재지 검색 URL 내 국가 문맥만 함께 바꾸며 `new_country`, 전공, 다른 행은 유지합니다.
+해당 행의 소재지 검색 URL 내 국가 문맥만 함께 바꾸며 `new_country`, 전공, 다른 행은 유지합니다. 소재지가 빈 상태라면 기존 `new_country`가 선택 국가와 달라도 이를 덮어쓰거나 거부하지 않습니다. 동일 학교명이 재실행되면 표시값만으로 성공 처리하지 않고 코드·국가·URL의 완전한 기존 묶음을 실제 검색 응답과 다시 대조합니다. 소재지 opener가 다른 행으로 이동하면 성공하지 않으며 이동된 요소의 URL을 복구 명목으로 덮어쓰지 않습니다.
 원본 callback과 `bookmark()`를 실행하지 않습니다. 요청은 폼 직렬화가 아닌 최소 두 필드 POST이며
 학교 계약 밖 일반 POST는 기존 거부를 유지합니다. 결과 반영만으로 성공이라 하지 않고 팝업 종료와
 500ms 유지, 실패 시 자신이 쓴 값·속성의 조건부 복구를 검사합니다.
 
 실제 공개 응답의 비식별 fixture를 이용한 Vitest, 공개 엔드포인트 검색 구조 관측, 설치 확장과 실제 지원서
 실행은 서로 별개입니다. 이 문서만으로 설치 확장 전체 패널, 실제 지원서 저장이나 제출 성공을 주장하지 않습니다.
+
+### CF-112 격리 브라우저 하네스 (아직 실제 브라우저 실행 결과 아님)
+
+[`cj-school-browser-harness.html`](./cj-school-browser-harness.html) 및
+[`cj-school-browser-harness.ts`](./cj-school-browser-harness.ts)는 CJ origin의 **빈 일회용 문서**에만 장착합니다.
+공개 jQuery와 검토된 `needPopup.js`를 HTML에서 로드한 뒤 TS entry를 신뢰된 IIFE로 묶어 주입합니다.
+예: `cd frontend && npx esbuild fixtures/generic-search/cj-school-browser-harness.ts --bundle --format=iife --platform=browser --outfile=/tmp/cf112-school-harness.js`.
+이 경로는 빌드 예시일 뿐이며, 실제 사이트 지원서 문서에 주입하면 안 됩니다. 주입 전에 빈 문서의 origin이
+`https://recruit.cj.net`이고 사용자 지원서의 form·필드가 없는지 확인해야 합니다. 지원서 자동 기입,
+임시저장, 제출, 페이지 이동은 하지 않습니다. 하네스는 공개 비개인 검색어를 쓰며 표시·코드·국가·
+소재지 opener URL·기존 `new_country`·무관 항목 보존·팝업 종료 후 500ms를 따로 출력합니다.
+정확 결과와 코드가 공개 응답에 없거나 사이트 구조가 바뀌면 pass 대신 실패 또는 unsupported로 남깁니다.
+실행 전에는 공개 엔드포인트 및 실제 팝업 검증을 완료했다고 기록하지 않습니다.

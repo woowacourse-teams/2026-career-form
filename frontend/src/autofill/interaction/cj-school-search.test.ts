@@ -14,10 +14,15 @@ function response() {
   return { ok: true, redirected: false, url, headers: new Headers({"content-type": "text/html;charset=UTF-8"}),
     body: new ReadableStream<Uint8Array>({start(controller) {controller.enqueue(new TextEncoder().encode(template)); controller.close();}}) } as Response;
 }
-function fixture(region = "") {
+function fixture(region = "", existing = false) {
   const dom = new JSDOM(`<!doctype html><html><body><div id="sectionNormalUniversity0"><dd><input type="text" readonly id="zz_school_nm2_0" name="zz_school_nm"><input type="hidden" name="school_code"><button type="button" name="bt_zz_school_nm" data-popup-show="" data-iframe-url="${url}?num=2_0">검색</button></dd><dd><input type="text" readonly id="zz_state_nm5_0" name="zz_state_nm" value="${region}"><input type="hidden" name="zz_state"><input type="hidden" name="reg_region" value="KOR"><input type="hidden" name="new_country" value="KOR"><button type="button" name="bt_zz_state_nm" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0">검색</button></dd><dd><input type="text" id="mm_major_nm2_0" value="기존전공"></dd></div><div id="sectionNormalUniversity1"><input value="다른행"></div><iframe src="${url}?num=2_0"></iframe></body></html>`, {url: "https://recruit.cj.net/recruit/ko/resume/apply.fo"});
   const doc = dom.window.document;
   const target = doc.querySelector<HTMLInputElement>("#zz_school_nm2_0")!;
+  if (existing) {
+    target.value = "합성대학교";
+    doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value = "SYN001";
+    doc.querySelector<HTMLButtonElement>('[name="bt_zz_state_nm"]')!.setAttribute("data-iframe-url", "https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0&country_cd=KOR");
+  }
   const frame = doc.querySelector<HTMLIFrameElement>("iframe")!;
   const inner = frame.contentDocument!;
   inner.open(); inner.write(emptyForm); inner.close();
@@ -28,6 +33,30 @@ function fixture(region = "") {
   return {dom, doc, target, frame, surface, session, lease, guard};
 }
 afterEach(() => {vi.unstubAllGlobals(); vi.useRealTimers();});
+it("classifies a verified complete existing school/code/country bundle as unchanged only after exact response", async () => {
+  vi.useFakeTimers();
+  const f = fixture("", true);
+  const fetcher = vi.fn(async () => response()); vi.stubGlobal("fetch", fetcher);
+  let observed = 0;
+  const pending = executeCjSchoolSearch(f.surface, f.session, f.lease, "합성대학교", f.guard, () => {}, () => observed++);
+  const assertion = expect(pending).resolves.toBe("unchanged");
+  await vi.advanceTimersByTimeAsync(700);
+  await assertion;
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(observed).toBe(0);
+  expect(f.doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value).toBe("SYN001");
+  f.session.stop(); f.dom.window.close();
+});
+
+it("refuses same display with an unverified code rather than returning unchanged", async () => {
+  const f = fixture("", true);
+  f.doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value = "OTHER";
+  vi.stubGlobal("fetch", vi.fn(async () => response()));
+  await expect(executeCjSchoolSearch(f.surface, f.session, f.lease, "합성대학교", f.guard, () => {}, () => {})).rejects.toThrow();
+  expect(f.doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value).toBe("OTHER");
+  f.session.stop(); f.dom.window.close();
+});
+
 it("posts only school_name and num, retains country bundle and preserves unrelated fields", async () => {
   vi.useFakeTimers();
   const f = fixture();
@@ -39,7 +68,7 @@ it("posts only school_name and num, retains country bundle and preserves unrelat
   vi.stubGlobal("fetch", request);
   const pending = executeCjSchoolSearch(f.surface, f.session, f.lease, "합성대학교", f.guard, () => {}, () => {});
   await vi.advanceTimersByTimeAsync(700);
-  await expect(pending).resolves.toBeUndefined();
+  await expect(pending).resolves.toBe("selected");
   expect(f.target.value).toBe("합성대학교");
   expect(f.doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value).toBe("SYN001");
   expect(f.doc.querySelector<HTMLInputElement>('[name="reg_region"]')!.value).toBe("KOR");
@@ -62,6 +91,21 @@ it("restores only its own bundle after close failure and leaves subsequent user 
   expect(code.value).toBe("USER_UPDATED");
   expect(country.value).toBe("KOR");
   expect(opener.getAttribute("data-iframe-url")).toBe(original);
+  f.session.stop(); f.dom.window.close();
+});
+
+it("rejects region opener moved to another row during close and never restores its new owner", async () => {
+  const f = fixture();
+  vi.stubGlobal("fetch", vi.fn(async () => response()));
+  const opener = f.doc.querySelector<HTMLButtonElement>('[name="bt_zz_state_nm"]')!;
+  const destination = f.doc.querySelector("#sectionNormalUniversity1")!;
+  const lease = {check: async () => true, close: async () => {destination.append(opener);f.frame.remove();return true;}};
+  const selectedUrl = "https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0&country_cd=KOR";
+  await expect(executeCjSchoolSearch(f.surface, f.session, lease, "합성대학교", f.guard, () => {}, () => {})).rejects.toThrow();
+  expect(f.target.value).toBe("");
+  expect(f.doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value).toBe("");
+  expect(opener.parentElement).toBe(destination);
+  expect(opener.getAttribute("data-iframe-url")).toBe(selectedUrl);
   f.session.stop(); f.dom.window.close();
 });
 
