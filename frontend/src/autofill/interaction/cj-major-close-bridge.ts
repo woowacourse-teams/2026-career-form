@@ -11,6 +11,7 @@ import {
   methodSource,
   reviewedMethod,
   validMajorOpener,
+  validSchoolOpener,
 } from "./cj-major-close-contract";
 
 export interface CjMajorCloseLease {
@@ -60,7 +61,7 @@ function exactPopup(
   opener: HTMLElement,
   requireOpened: boolean,
 ): boolean {
-  if (!validMajorOpener(opener)) return false;
+  if (!validMajorOpener(opener) && !validSchoolOpener(opener)) return false;
   const wrappers = doc.querySelectorAll(".popup_wrapper");
   const popups = doc.querySelectorAll("#popupIframe2");
   const closes = doc.querySelectorAll("#popup_cls");
@@ -95,7 +96,9 @@ function exactPopup(
     const url = new URL(frame.getAttribute("src") ?? "", doc.URL);
     return (
       url.origin === CJ_MAJOR_ORIGIN &&
-      url.pathname === "/recruit/ko/resume/search/search_major.fo" &&
+      url.pathname === (validMajorOpener(opener)
+        ? "/recruit/ko/resume/search/search_major.fo"
+        : "/recruit/ko/resume/search/search_university.fo") &&
       url.searchParams.size === 1 &&
       url.searchParams.get("num") === "2_0"
     );
@@ -153,7 +156,7 @@ export function installCjMajorCloseBridge(doc: Document): void {
           ? marked[0]
           : undefined;
       const popup = popupContract(doc);
-      if (!opener || !validMajorOpener(opener) || !popup) {
+      if (!opener || (!validMajorOpener(opener) && !validSchoolOpener(opener)) || !popup) {
         respond(nonce, action, false);
         return;
       }
@@ -190,7 +193,7 @@ export function installCjMajorCloseBridge(doc: Document): void {
     const live = popupContract(doc);
     const valid =
       live === lease.popup &&
-      validMajorOpener(lease.opener) &&
+      (validMajorOpener(lease.opener) || validSchoolOpener(lease.opener)) &&
       lease.opener.getAttribute(CJ_MAJOR_OPENER_MARKER) === nonce &&
       live.show === lease.show &&
       live.hide === lease.hide &&
@@ -272,8 +275,23 @@ export async function prepareCjMajorClose(
   opener: HTMLElement,
   session: SearchSession,
 ): Promise<CjMajorCloseLease> {
+  return prepareCjClose(opener, session, validMajorOpener);
+}
+
+export async function prepareCjSchoolClose(
+  opener: HTMLElement,
+  session: SearchSession,
+): Promise<CjMajorCloseLease> {
+  return prepareCjClose(opener, session, validSchoolOpener);
+}
+
+async function prepareCjClose(
+  opener: HTMLElement,
+  session: SearchSession,
+  validOpener: (element: Element) => boolean,
+): Promise<CjMajorCloseLease> {
   session.check();
-  if (!validMajorOpener(opener) || opener.hasAttribute(CJ_MAJOR_OPENER_MARKER))
+  if (!validOpener(opener) || opener.hasAttribute(CJ_MAJOR_OPENER_MARKER))
     throw new SearchFailure("unverified_search_form");
   const doc = opener.ownerDocument;
   const nonce = crypto.randomUUID();

@@ -1,7 +1,130 @@
 import { SearchFailure } from "./search-session";
+import type { TargetIdentity } from "./readonly-search";
+import { validSchoolOpener } from "./cj-major-close-contract";
 
 export const CJ_SCHOOL_URL =
   "https://recruit.cj.net/recruit/ko/resume/search/search_university.fo";
+
+export const CJ_SCHOOL_POPUP_URL = `${CJ_SCHOOL_URL}?num=2_0`;
+export const CJ_REGION_URL =
+  "https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0";
+
+export interface CjSchoolRow {
+  row: Element;
+  school: HTMLInputElement;
+  schoolCode: HTMLInputElement;
+  country: HTMLInputElement;
+  newCountry: HTMLInputElement;
+  regionDisplay: HTMLInputElement;
+  regionCode: HTMLInputElement;
+  regionOpener: HTMLButtonElement;
+  schoolOpener: HTMLButtonElement;
+  existingUrl: string;
+  existingCountry: string;
+}
+
+/** Refuse populated region: a school country could invalidate that unapproved value. */
+export function validateCjSchoolRow(school: HTMLInputElement): CjSchoolRow {
+  const row = school.closest("#sectionNormalUniversity0");
+  function one<T extends Element>(selector: string): T | undefined {
+    const nodes = row?.querySelectorAll<T>(selector);
+    return nodes?.length === 1 ? nodes[0] : undefined;
+  }
+  const schoolCode = one<HTMLInputElement>('input[type="hidden"][name="school_code"]');
+  const country = one<HTMLInputElement>('input[type="hidden"][name="reg_region"]');
+  const newCountry = one<HTMLInputElement>('input[type="hidden"][name="new_country"]');
+  const regionDisplay = one<HTMLInputElement>('input#zz_state_nm5_0[name="zz_state_nm"]');
+  const regionCode = one<HTMLInputElement>('input[type="hidden"][name="zz_state"]');
+  const regionOpener = one<HTMLButtonElement>('button[name="bt_zz_state_nm"]');
+  const schoolOpener = one<HTMLButtonElement>('button[name="bt_zz_school_nm"]');
+  const original = regionOpener?.getAttribute("data-iframe-url") ?? "";
+  const regionUrl = (() => { try { return new URL(original); } catch { return undefined; } })();
+  if (!row || !row.isConnected || school.id !== "zz_school_nm2_0" ||
+      school.name !== "zz_school_nm" || school.type !== "text" || !school.readOnly ||
+      school.value !== "" || !schoolCode || schoolCode.value !== "" ||
+      !country || !newCountry || !regionDisplay || !regionDisplay.readOnly || regionDisplay.value !== "" ||
+      !regionCode || regionCode.value !== "" || !regionOpener || !schoolOpener ||
+      schoolOpener.type !== "button" || schoolOpener.getAttribute("data-iframe-url") !== CJ_SCHOOL_POPUP_URL ||
+      schoolOpener.closest("dd") !== school.closest("dd") ||
+      regionOpener.type !== "button" ||
+      regionUrl?.origin !== "https://recruit.cj.net" ||
+      regionUrl.pathname !== "/recruit/ko/resume/search/search_school_place.fo" ||
+      regionUrl.searchParams.get("num") !== "5_0" ||
+      regionUrl.searchParams.size > 2 ||
+      (regionUrl.searchParams.size === 2 &&
+        (!regionUrl.searchParams.has("country_cd") ||
+          regionUrl.searchParams.get("country_cd") !== country.value)) ||
+      regionUrl.hash || regionUrl.username || regionUrl.password
+  ) refuse();
+  return { row, school, schoolCode, country, newCountry, regionDisplay, regionCode,
+    regionOpener, schoolOpener, existingUrl: original, existingCountry: country.value };
+}
+
+const nativeSet = (input: HTMLInputElement, value: string): void => {
+  const view = input.ownerDocument.defaultView;
+  const setter = view && Object.getOwnPropertyDescriptor(view.HTMLInputElement.prototype, "value")?.set;
+  if (!setter) refuse();
+  setter.call(input, value);
+};
+
+/** Synchronous four-effect bundle; cleanup may only restore values still owned by this write. */
+export function writeCjSchoolBundle(
+  bundle: CjSchoolRow,
+  selected: {code: string; label: string; country: string},
+): () => void {
+  const {school, schoolCode, country, newCountry, regionDisplay, regionCode, regionOpener} = bundle;
+  const newUrl = `${CJ_REGION_URL}&country_cd=${encodeURIComponent(selected.country)}`;
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(selected.code) ||
+      !selected.label.trim() || !/^[A-Z]{2,3}$/.test(selected.country) ||
+      (newCountry.value !== "" && newCountry.value !== selected.country) ||
+      !bundle.row.isConnected || !school.isConnected || !schoolCode.isConnected ||
+      !country.isConnected || !regionOpener.isConnected ||
+      school.value !== "" || schoolCode.value !== "" ||
+      country.value !== bundle.existingCountry ||
+      regionOpener.getAttribute("data-iframe-url") !== bundle.existingUrl ||
+      regionDisplay.value !== "" || regionCode.value !== "") refuse();
+  const restore = () => {
+    if (school.isConnected && school.value === selected.label) nativeSet(school, "");
+    if (schoolCode.isConnected && schoolCode.value === selected.code) nativeSet(schoolCode, "");
+    if (country.isConnected && country.value === selected.country &&
+        bundle.existingCountry !== selected.country) nativeSet(country, bundle.existingCountry);
+    if (regionOpener.isConnected && regionOpener.getAttribute("data-iframe-url") === newUrl)
+      regionOpener.setAttribute("data-iframe-url", bundle.existingUrl);
+  };
+  try {
+    nativeSet(school, selected.label);
+    nativeSet(schoolCode, selected.code);
+    nativeSet(country, selected.country);
+    regionOpener.setAttribute("data-iframe-url", newUrl);
+  } catch (error) {
+    restore();
+    throw error;
+  }
+  return restore;
+}
+
+export function isCjSchoolCandidate(
+  doc: Document, key: string, identity: TargetIdentity,
+): boolean {
+  return doc.location?.origin === "https://recruit.cj.net" &&
+    key === "education.university.schoolName" &&
+    identity.target.ownerDocument === doc;
+}
+
+export function isCjSchoolTarget(
+  doc: Document, key: string, identity: TargetIdentity, opener: Element,
+): boolean {
+  return isCjSchoolCandidate(doc, key, identity) &&
+    identity.target.id === "zz_school_nm2_0" &&
+    identity.target.name === "zz_school_nm" &&
+    identity.target.type === "text" && identity.target.readOnly &&
+    identity.target.closest("#sectionNormalUniversity0") !== null &&
+    validSchoolOpener(opener) &&
+    opener.closest("dd") === identity.target.closest("dd") &&
+    opener.closest("#sectionNormalUniversity0") === identity.target.closest("#sectionNormalUniversity0") &&
+    identity.fieldGroup.contains(opener) &&
+    (!identity.repeatRow || identity.repeatRow.contains(opener));
+}
 
 function refuse(): never {
   throw new SearchFailure("unverified_search_form");

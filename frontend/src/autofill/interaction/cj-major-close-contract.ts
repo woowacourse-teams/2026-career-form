@@ -22,6 +22,8 @@ export const CJ_MAJOR_SHOW_SOURCE =
   'function(b, c) {\n\n\t\t\ta.focus = c;\n\t\t\tif (isIE() <=9 ) {\n\t\t\t\t//a.wrapper.width($(a.html).width()-17);\n\t\t\t}\n\n\t\t\tc ? a.trigger = c : a.trigger = 0\n\t\t\t, a.target ? needPopup.hide(!0) : (a.scrollTopVal = a.window.pageYOffset\n\t\t\t, $(a.body).css({ top: -a.scrollTopVal})\n\t\t\t, $(a.html).addClass(a.openHtmlClass))\n\n\t\t\ta.target = $(b)\n\t\t\t\n\t\t\ta.options = {}\n\t\t\t\n\t\t\t$.extend(a.options, needPopup.config["default"])\n\t\t\ta.target.data("popupOptions") && $.extend(a.options, needPopup.config[a.target.data("popupOptions")])\n\n\t\t\t\n\t\t\tif(a.target.find("iframe").length){\n\t\t\t\ta.target.find("iframe").attr("allowfullscreen","1")\n\t\t\t}\n\n\t\t\ta.minWidth = a.target.outerWidth();\n\n\t\t\tif(a.scroll){\n\t\t\t\t$(a.body).css({ top: 0,"position":"static","overflow-y":"auto"});\n\t\t\t\t$(a.body).scrollTop(a.scrollTopVal);\n\t\t\t\t$(a.html).scrollTop(a.scrollTopVal);\n\t\t\t}\n\n\t\t\tif(c.data("iframe-url")){\n\t\t\t\tc.data("iframe-url" , c.attr("data-iframe-url"));\n\t\t\t\tvar tw = c.data("width");\n\t\t\t\tvar th = c.data("height");\n\t\t\t\tvar tclass = c.data(\'class\');\n\t\t\t\tif (tclass === undefined) tclass = "";\n\t\t\t\tvar inner = $(\'<div id="popupIframe2" class="popup \'+ tclass +\'"><div class="popup_inner"></div></div>\');\n\t\t\t\tinner.width(tw).height(th).css("margin-left",-tw/2 );\n\t\t\t\tvar iframe = $(\'<iframe src="" title="" allowfullscreen="1"></iframe>\');\n\t\t\t\tiframe.width(\'100%\').height(\'100%\')\n\t\t\t\tiframe.attr("src",c.data("iframe-url"));\n\t\t\t\tiframe.attr("title",c.attr("title"));\n\t\t\t\tiframe.load(function(){\n\t\t\t\t\tif($(this).contents().find(".container_wrap").height() != null){\n\t\t\t\t\t\tinner.height($(this).contents().find(".container_wrap").height());\n\t\t\t\t\t}\n\t\t\t\t});\n\n\t\t\t\tinner.find(".popup_inner").width(\'100%\').height(\'100%\').append(iframe);\n\t\t\t\ta.wrapper.append(inner);\n\t\t\t\tdestroyTarget = inner;\n\t\t\t\ta.target = inner;\n\t\t\t\tdestroy = true;\n\t\t\t\tinner.show();\n\t\t\t}else{\n\t\t\t\t a.wrapper.append(a.target)\n\t\t\t\t , a.target.show()\n\t\t\t};\n\n\t\t\t"outside" == a.options.removerPlace ? a.wrapper.after(\'<a href="#" id="popup_cls" class="popup_cls"><span class="blind">닫기</span></a>\') : "inside" == a.options.removerPlace && a.target.append(\'<a href="#" id="popup_cls" class="popup_cls"><span class="blind">닫기</span></a>\')\n\t\t\t, a.options.onBeforeShow.call(a, a.target)\n\t\t\t, needPopup.centrify(), setTimeout(function() {\n\t\t\t\t\ta.target.addClass("opened"), a.options.onShow.call(a, a.target)\n\t\t\t}, 10);\n\n\t\t\t$(a.target).prepend(\'<span tabindex="0" class="tab_span"></span>\');\n\t\t\t$(a.target).append(\'<span tabindex="1" class="tab_span"></span>\');\n\t\t\t$(a.target).attr("tabindex","-1");\n\t\t\t\n\t\t\t\n\t\t\t$(a.target).find(\'*\').each(function(i,val) {\n\t\t\t\tif(val.nodeName.match(/^A$|AREA|INPUT|TEXTAREA|SELECT|BUTTON/gim) && parseInt(val.getAttribute("tabIndex")) !== -1) {\n\t\t\t\t\tfocusable.push(val);\n\t\t\t\t}\n\t\t\t\tif((val.getAttribute("tabIndex") !== null) && (parseInt(val.getAttribute("tabIndex")) >= 0) && (val.getAttribute("tabIndex", 2) !== 32768)) {\n\t\t\t\t\tfocusable.push(val);\n\t\t\t\t}\n\t\t\t});\n\t\t\t\n\t\t\tif(focusable.length){\n\t\t\t\t$(a.target).find(".tab_span").eq(0).focus();\n\t\t\t\tkeyListener = $(a.target).find(".popup_cls").tabkeyListener(needPopup.tabForward);\n\t\t\t\tkeyListener2 = $(focusable[0]).tabkeyListener(null,needPopup.tabbackward);\n\t\t\t}\n\t\t\t\t\t\t\n\t\t}';
 export const CJ_MAJOR_HIDE_SOURCE =
   'function(b) {\n\t\t\tfocusable = [];\n\t\t\ta.target.hide().removeClass("opened");\n\t\t\t$(".popup_cls").remove();\n\t\t\ta.target.find(".tab_span").remove();\n\n\t\t\tif(a.scroll){\n\t\t\t\tb || ($(a.html).removeClass(a.openHtmlClass).removeClass("popup_overflow"));\n\t\t\t}else{\n\t\t\t\tb || ($(a.html).removeClass(a.openHtmlClass).removeClass("popup_overflow"),\t$(a.body).css({top: 0}).scrollTop(a.scrollTopVal),$(a.html).scrollTop(a.scrollTopVal));\t\n\t\t\t}\n\n\t\t\ta.options.onHide.call(a, a.target);\n\t\t\ta.target = 0;\n\t\t\tif(focusable.length){\n\t\t\t\tkeyListener.remove();\n\t\t\t\tkeyListener2.remove();\n\t\t\t}\n\t\t\t\n\t\t\t$(".popup_wrapper").find("iframe").attr("src","");\n\n\t\t\tif(destroy){\n\t\t\t\t$(destroyTarget).remove();\n\t\t\t};\n\t\t\ta.scroll = false;\n\t\t\t$(a.focus).focus();\n\t\t}';
+import { CJ_SCHOOL_POPUP_URL } from "./cj-school-contract";
+
 export const CJ_MAJOR_REQUEST_EVENT = "career-form:cj-major-close-request";
 export const CJ_MAJOR_ACK_EVENT = "career-form:cj-major-close-ack";
 export const CJ_MAJOR_OPENER_MARKER = "data-career-form-cj-major-close";
@@ -86,6 +88,26 @@ export function validMajorOpener(opener: Element): boolean {
       1 &&
     opener.closest("dd")?.querySelectorAll('input[type="hidden"][name="major"]')
       .length === 1
+  );
+}
+
+export function validSchoolOpener(opener: Element): boolean {
+  const doc = opener.ownerDocument;
+  const allowed = new Set([
+    "type", "name", "title", "class", "aria-label", "data-popup-show",
+    "data-iframe-url", "data-width", "data-height", CJ_MAJOR_OPENER_MARKER,
+  ]);
+  return (
+    doc.location.origin === CJ_MAJOR_ORIGIN && opener.isConnected &&
+    opener.matches('button[type="button"][name="bt_zz_school_nm"]:not([id])') &&
+    [...opener.attributes].every(({ name }) => allowed.has(name.toLowerCase()) && !/^on|^form/i.test(name)) &&
+    (!opener.hasAttribute("data-popup-show") || opener.getAttribute("data-popup-show") === "") &&
+    opener.getAttribute("data-iframe-url") === CJ_SCHOOL_POPUP_URL &&
+    !opener.hasAttribute("data-popup-options") &&
+    opener.closest("#sectionNormalUniversity0") !== null &&
+    doc.querySelectorAll('#sectionNormalUniversity0 [name="bt_zz_school_nm"]').length === 1 &&
+    opener.closest("dd")?.querySelectorAll('input#zz_school_nm2_0[name="zz_school_nm"][readonly]').length === 1 &&
+    opener.closest("#sectionNormalUniversity0")?.querySelectorAll('input[type="hidden"][name="school_code"]').length === 1
   );
 }
 
