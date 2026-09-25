@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { collectFieldsSnapshot } from "../dom/collect";
 import { executeReadonlySearch } from "./readonly-search-executor";
 import { installVerifiedJsResultClickBridge } from "./js-result-click-bridge";
+import { safeActivation } from "./search-surface-dom";
 import { validateFieldsResponse } from "../api/validate-response";
 import { buildReviewPlan } from "../review/review-plan";
 import { createEmptyProfile } from "../../profile/model";
@@ -22,6 +23,8 @@ type Scenario = {
   existing?: string;
   queryValue?: string;
   directRegion?: boolean;
+  legacySchool?: boolean;
+  legacyDiagnosticButton?: boolean;
   completeRegion?: boolean;
   expectedValue?: string;
   reflectedValue?: string;
@@ -42,10 +45,10 @@ type Scenario = {
 };
 
 function fixture(options: Scenario = {}) {
-  document.body.innerHTML = `${options.existingHighRegion ? `<fieldset><legend>고등학교</legend><dl><dt>학교소재지</dt><dd><input id="high-region" name="zz_state_nm" type="text" readonly placeholder="지역"><button id="high-opener" type="button" title="학교소재지 검색">검색</button></dd></dl></fieldset>` : ""}<fieldset><legend>대학교</legend><div data-repeater-item><dl><dt>전공</dt><dd>
-    <input id="target" type="text" readonly aria-label="전공"><input id="code" type="hidden" value="initial-code">
-    ${Array.from({ length: options.openerCount ?? 1 }, () => '<button type="button">전공 검색</button>').join("")}
-  </dd></dl></div></fieldset>`;
+  document.body.innerHTML = `${options.existingHighRegion ? `<fieldset><legend>고등학교</legend><dl><dt>학교소재지</dt><dd><input id="high-region" name="zz_state_nm" type="text" readonly placeholder="지역"><button id="high-opener" type="button" title="학교소재지 검색">검색</button></dd></dl></fieldset>` : ""}<fieldset><legend>대학교</legend><div data-repeater-item><dl><dt>${options.legacySchool ? "학교명" : "전공"}</dt><dd>
+    <input id="target" type="text" readonly aria-label="${options.legacySchool ? "학교명" : "전공"}"><input id="code" type="hidden" value="initial-code">
+    ${Array.from({ length: options.openerCount ?? 1 }, () => `<button type="button">${options.legacySchool ? "학교 검색" : "전공 검색"}</button>`).join("")}
+  </dd></dl></div>${options.legacySchool ? `<div data-repeater-item><dl><dt>학교명</dt><dd><input id="other-row-value" readonly aria-label="다른 대학교 학교명" value="기존 합성 학교"><input id="other-row-code" type="hidden" value="synthetic-other-code"></dd></dl></div>` : ""}</fieldset>`;
   const input = document.querySelector<HTMLInputElement>("#target")!;
   const code = document.querySelector<HTMLInputElement>("#code")!;
   input.value = options.existing ?? "";
@@ -84,6 +87,7 @@ function fixture(options: Scenario = {}) {
     targetEvents: 0,
   };
   let siteSelection = false;
+  let legacyQueryCount = 0;
   let approved = true;
   input.addEventListener("input", () => actions.targetEvents++);
   input.addEventListener("change", () => actions.targetEvents++);
@@ -146,7 +150,31 @@ function fixture(options: Scenario = {}) {
           } else if (options.completeRegion) surface.remove();
           else frame.remove();
         };
-        if (options.completeRegion) {
+        if (options.legacySchool) {
+          Object.defineProperty(popup, "URL", {
+            configurable: true,
+            value: "about:srcdoc",
+          });
+          popup.body.innerHTML = `<form method="post" action="/generic-search/search-school">
+            <input type="hidden" name="rowContext" value="synthetic-row">
+            <fieldset><legend>학교 검색</legend><label>학교명 입력
+              <input name="school_query" type="text" aria-label="학교명 입력"></label>
+              ${options.legacyDiagnosticButton ? `<button type="submit">검색</button>` : `<input type="submit" value="검색">`}</fieldset>
+            <ul aria-label="검색 결과"><li><a href="javascript:;"
+              onclick="selectSyntheticSchool('synthetic-id','합성대학교','synthetic-code')">합성대학교</a></li></ul>
+          </form>`;
+          popup
+            .querySelector<HTMLInputElement>("[name=school_query]")!
+            .addEventListener("input", () => legacyQueryCount++);
+          popup.querySelector("form")!.addEventListener("submit", (event) => {
+            event.preventDefault();
+            actions.search++;
+          });
+          popup.querySelector("a")!.addEventListener("click", (event) => {
+            event.preventDefault();
+            actions.result++;
+          });
+        } else if (options.completeRegion) {
           Object.defineProperty(popup, "URL", {
             configurable: true,
             value: "about:srcdoc",
@@ -284,6 +312,7 @@ function fixture(options: Scenario = {}) {
     highCandidate,
     highOpenerClicks: () => highOpenerClicks,
     actions,
+    legacyQueryCount: () => legacyQueryCount,
     run: async () => {
       const pending = executeReadonlySearch({
         document,
@@ -442,6 +471,123 @@ describe("readonly search transaction", () => {
     expect(test.code.value).toBe("initial-code");
     expect(test.actions).toMatchObject({ opener: 1, search: 0, result: 0 });
     expect(test.actions.unsafeTargetWrites).toBe(0);
+  });
+
+  it.each([
+    ["original unlabelled submit input", false, "search_submit_not_found"],
+    [
+      "separately labelled diagnostic submit button",
+      true,
+      "unverified_search_form",
+    ],
+  ] as const)(
+    "rejects %s without changing either school row",
+    async (_name, diagnostic, reason) => {
+      const test = fixture({
+        key: "education.university.schoolName",
+        legacySchool: true,
+        legacyDiagnosticButton: diagnostic,
+        expectedValue: "합성대학교",
+      });
+      const otherInput =
+        document.querySelector<HTMLInputElement>("#other-row-value")!;
+      const otherCode =
+        document.querySelector<HTMLInputElement>("#other-row-code")!;
+      const original = {
+        value: test.input.value,
+        code: test.code.value,
+        otherValue: otherInput.value,
+        otherCode: otherCode.value,
+      };
+      const result = await test.run();
+      expect(test.legacyQueryCount()).toBe(0);
+      expect(result).toMatchObject({
+        status: "failed",
+        reason,
+        effect: "interaction-started",
+      });
+      expect(test.actions).toEqual({
+        opener: 1,
+        search: 0,
+        result: 0,
+        unsafeTargetWrites: 0,
+        targetEvents: 0,
+      });
+      expect({
+        value: test.input.value,
+        code: test.code.value,
+        otherValue: otherInput.value,
+        otherCode: otherCode.value,
+      }).toEqual(original);
+      const popup =
+        document.querySelector<HTMLIFrameElement>("iframe")!.contentDocument!;
+      const form = popup.querySelector("form")!;
+      expect(form.method).toBe("post");
+      expect(
+        form.querySelector(
+          diagnostic ? "button[type=submit]" : "input[type=submit][value=검색]",
+        ),
+      ).not.toBeNull();
+      expect(
+        form.querySelector("input[type=hidden]")?.getAttribute("value"),
+      ).toBe("synthetic-row");
+      expect(
+        form.querySelector("fieldset input[name=school_query]"),
+      ).not.toBeNull();
+      expect(form.querySelector("ul > li > a")?.getAttribute("href")).toBe(
+        "javascript:;",
+      );
+    },
+  );
+
+  it("rejects a form-internal literal onclick even when its href is inert", () => {
+    document.body.innerHTML = `<form><ul><li><a href="javascript:;"
+      onclick="selectSyntheticSchool('synthetic-id','합성대학교','synthetic-code')">합성대학교</a></li></ul></form>`;
+    const link = document.querySelector<HTMLAnchorElement>("a")!;
+    expect(safeActivation(link, ["합성대학교"])).toBe(false);
+  });
+
+  it("selects a unique region from the complete KOR list independently and preserves the other row", async () => {
+    const test = fixture({
+      existingHighRegion: true,
+      key: "education.university.schoolRegion",
+      completeRegion: true,
+      expectedValue: "서울",
+      reflectedValue: "서울특별시",
+    });
+    const result = await test.run();
+    expect(result).toMatchObject({
+      status: "selected",
+      effect: "value-observed",
+    });
+    expect(test.input.value).toBe("서울특별시");
+    expect(test.code.value).toBe("selected-code");
+    expect(test.highInput!.value).toBe("서울특별시");
+    expect(test.highOpenerClicks()).toBe(0);
+    expect(document.querySelector("[role=dialog]")).toBeNull();
+    expect(test.actions).toMatchObject({
+      opener: 1,
+      search: 0,
+      result: 1,
+      unsafeTargetWrites: 0,
+    });
+  });
+
+  it("does not open the KOR list when a different region already exists", async () => {
+    const test = fixture({
+      key: "education.university.schoolRegion",
+      completeRegion: true,
+      existing: "경기도",
+      expectedValue: "서울",
+    });
+    expect(await test.run()).toMatchObject({
+      status: "unsupported",
+      reason: "existing_value_conflict",
+      effect: "none",
+    });
+    expect(test.input.value).toBe("경기도");
+    expect(test.code.value).toBe("initial-code");
+    expect(test.actions).toMatchObject({ opener: 0, search: 0, result: 0 });
   });
 
   it.each([

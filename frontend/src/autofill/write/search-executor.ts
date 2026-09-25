@@ -15,6 +15,7 @@ import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "./executor";
+import type { WriteFailureCode } from "./failure";
 
 const MAX_SEARCHES = 4;
 const STALE = "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.";
@@ -80,8 +81,16 @@ function skipped(
     Extract<ApprovedWriteResult, { status: "skipped" }>["code"]
   >,
   reason: string,
+  failureCode?: WriteFailureCode,
 ): ApprovedWriteResult {
-  return { candidateId, status: "skipped", outcome, code, reason };
+  return {
+    candidateId,
+    status: "skipped",
+    outcome,
+    code,
+    reason,
+    ...(failureCode ? { failureCode } : {}),
+  };
 }
 
 function written(candidateId: string): ApprovedWriteResult {
@@ -132,6 +141,7 @@ export function settledSearchSelectionResult(
         "needs-verification",
         "RETAINED_VALUE_UNCONFIRMED",
         RETENTION,
+        "VALUE_NOT_RETAINED",
       );
 }
 
@@ -161,6 +171,39 @@ function failureCode(
   if (reason.startsWith("stale_")) return "STALE_TARGET";
   if (reason.endsWith("_conflict")) return "CONFLICT";
   return "UNSUPPORTED_CONTROL";
+}
+
+// Public diagnostic taxonomy, deliberately independent of coarse result codes and raw page text.
+function searchDiagnosticCode(
+  reason: SearchFailureReason,
+): WriteFailureCode | undefined {
+  switch (reason) {
+    case "unverified_search_form":
+    case "search_submit_not_found":
+      return "SEARCH_FORM_UNVERIFIED";
+    case "surface_navigation_unsafe":
+      return "SEARCH_NAVIGATION_UNSAFE";
+    case "result_set_incomplete":
+      return "SEARCH_RESULTS_INCOMPLETE";
+    case "result_activation_unsafe":
+      return "SEARCH_ACTIVATION_UNSAFE";
+    case "result_pending":
+    case "deadline_exceeded":
+      return "SEARCH_TIMEOUT";
+    case "multiple_matching_results":
+      return "SEARCH_AMBIGUOUS";
+    case "search_results_not_found":
+      return "SEARCH_NO_EXACT_MATCH";
+    case "result_not_reflected":
+    case "popup_unresolved":
+      return "SEARCH_UNCONFIRMED";
+    case "stale_target":
+    case "stale_field_group":
+    case "stale_repeat_row":
+      return "FIELD_CHANGED";
+    default:
+      return undefined;
+  }
 }
 
 function searchFailureMessage(reason: SearchFailureReason): string {
@@ -415,6 +458,7 @@ export async function executeApprovedSearchWrites({
                 : failureOutcome(failedResult!.reason),
               failureCode(failedResult!.reason),
               searchFailureMessage(failedResult!.reason),
+              searchDiagnosticCode(failedResult!.reason),
             );
     onResult?.(item, results[index]!);
     if (
@@ -423,11 +467,17 @@ export async function executeApprovedSearchWrites({
       result.effect !== "none"
     ) {
       for (let later = index + 1; later < items.length; later++) {
+        if (
+          !approvedCandidateIds.has(items[later]!.candidateId) ||
+          !isSelectableApproved(items[later]!)
+        )
+          continue;
         results[later] = skipped(
           items[later]!.candidateId,
           "needs-verification",
           "STALE_TARGET",
           "이전 검색을 확인할 수 없어 후속 자동 기입을 중단했습니다.",
+          "SEARCH_FOLLOWUP_HALTED",
         );
       }
       return true;

@@ -124,3 +124,69 @@ describe("search result completeness and exactness", () => {
     missing.session.stop();
   });
 });
+
+describe("native GET completion characterization", () => {
+  it("requires declared result count after native GET navigation before accepting a bound query", () => {
+    document.body.innerHTML = `<input id="target" readonly><button id="opener" type="button">검색</button><iframe></iframe>`;
+    const target = document.querySelector<HTMLInputElement>("#target")!;
+    const opener = document.querySelector<HTMLButtonElement>("#opener")!;
+    const frame = document.querySelector<HTMLIFrameElement>("iframe")!;
+    const before = frame.contentDocument!;
+    Object.defineProperty(before, "URL", {
+      configurable: true,
+      value: "about:srcdoc",
+    });
+    before.body.innerHTML = `<ul data-search-results><li><button type="button">가상값</button></li></ul>`;
+    const surface = new SearchSurface(
+      "same-origin-iframe",
+      frame,
+      before,
+      opener,
+      target,
+      frame,
+    );
+    const session = new SearchSession({
+      document,
+      registry: undefined as never,
+      targetCandidateId: "field-1",
+      canonicalFieldKey: "education.university.schoolName",
+      expectedValue: "가상값",
+    });
+    const baseline = resultBaseline(surface);
+    const observed = observeResults(surface, session, baseline, "가상값");
+    // An untagged, nonempty query is not ready before completed navigation.
+    expect(observed.exact(["가상값"])).toBeUndefined();
+    const destination = new URL(
+      "/generic-search/search-school?school_query=%EA%B0%80%EC%83%81%EA%B0%92",
+      document.URL,
+    );
+    surface.expectNavigation(destination);
+    expect(observed.exact(["가상값"])).toBeUndefined();
+    const destinationFrame = document.createElement("iframe");
+    document.body.append(destinationFrame);
+    const after = destinationFrame.contentDocument!;
+    after.body.innerHTML = `<ul data-search-results><li><button type="button">가상값</button></li></ul>`;
+    Object.defineProperty(after, "URL", {
+      configurable: true,
+      value: destination.href,
+    });
+    Object.defineProperty(after, "readyState", {
+      configurable: true,
+      value: "complete",
+    });
+    Object.defineProperty(frame, "contentDocument", {
+      configurable: true,
+      get: () => after,
+    });
+    expect(surface.settleNavigation()).toBe(true);
+    expect(surface.documentGeneration).toBe(1);
+    expect(surface.hasCompletedNavigation()).toBe(true);
+    expect(() => observed.exact(["가상값"])).toThrowError(
+      expect.objectContaining({ reason: "result_set_incomplete" }),
+    );
+    after.querySelector("ul")!.setAttribute("data-result-count", "1");
+    // The current contract accepts this declared count after navigation; no policy expansion is implied.
+    expect(observed.exact(["가상값"])?.element.textContent).toBe("가상값");
+    session.stop();
+  });
+});

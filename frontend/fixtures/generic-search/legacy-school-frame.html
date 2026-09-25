@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>합성 학교 검색 팝업</title>
+  </head>
+  <body>
+    <form method="post" action="/generic-search/search-school">
+      <input type="hidden" name="rowContext" value="synthetic-row-a" />
+      <fieldset>
+        <legend>학교 검색</legend>
+        <label>학교명 입력 <input name="school_query" type="text" /></label>
+        <input type="submit" value="검색" />
+      </fieldset>
+      <ul aria-label="검색 결과">
+        <!-- prettier-ignore -->
+        <li><a href="javascript:;" onclick="selectSyntheticSchool('synthetic-id','합성대학교','synthetic-code')">합성대학교</a></li>
+      </ul>
+    </form>
+  </body>
+</html>

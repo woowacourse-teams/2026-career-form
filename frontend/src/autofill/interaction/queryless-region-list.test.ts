@@ -62,20 +62,32 @@ describe("complete queryless school-region list", () => {
     expect(match?.element.textContent).toBe("서울특별시");
     expect(safeActivation(match!.element, ["서울", "서울특별시"])).toBe(true);
   });
-  it("rejects wrong field, country, missing region, duplicate and unsafe script", () => {
+  it("rejects wrong field, foreign country, missing and duplicate regions, and unsafe links", () => {
     const { surface, popup } = setup();
+    const key = "education.highSchool.schoolRegion";
     expect(
       completeRegionList(surface, "education.university.majorName"),
     ).toBeUndefined();
-    popup.querySelector("select")!.value = "";
-    expect(
-      completeRegionList(surface, "education.highSchool.schoolRegion"),
-    ).toBeUndefined();
-    popup.querySelector("select")!.value = "KOR";
-    popup.querySelector("li")!.remove();
-    expect(
-      completeRegionList(surface, "education.highSchool.schoolRegion"),
-    ).toBeUndefined();
+    const country = popup.querySelector("select")!;
+    country.insertAdjacentHTML(
+      "beforeend",
+      '<option value="USA">미국</option>',
+    );
+    country.value = "USA";
+    expect(completeRegionList(surface, key)).toBeUndefined();
+    country.value = "KOR";
+    const first = popup.querySelector("li")!;
+    const copy = first.cloneNode(true);
+    first.parentElement!.removeChild(first);
+    expect(completeRegionList(surface, key)).toBeUndefined();
+    popup.querySelector("ul")!.prepend(first);
+    popup.querySelector("ul")!.append(copy);
+    expect(completeRegionList(surface, key)).toBeUndefined();
+    copy.parentElement!.removeChild(copy);
+    popup
+      .querySelector("a")!
+      .setAttribute("onclick", "selectResult('강원특별자치도')");
+    expect(completeRegionList(surface, key)).toBeUndefined();
   });
 });
 

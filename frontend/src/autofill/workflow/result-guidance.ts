@@ -9,6 +9,15 @@ const guidance: Record<WriteFailureCode, string> = {
   SEARCH_TIMEOUT:
     "검색 결과를 기다렸지만 응답을 확인하지 못했어요. 지원서에서 다시 검색해 주세요.",
   SEARCH_UNCONFIRMED: "목록 선택을 확인하지 못했어요. 항목을 직접 골라 주세요.",
+  SEARCH_FORM_UNVERIFIED:
+    "검색창 구조를 안전하게 확인하지 못해 입력을 보류했어요.",
+  SEARCH_NAVIGATION_UNSAFE:
+    "검색 화면 이동을 안전하게 확인하지 못해 입력을 보류했어요.",
+  SEARCH_RESULTS_INCOMPLETE:
+    "전체 검색 결과를 확인하지 못해 선택을 보류했어요.",
+  SEARCH_ACTIVATION_UNSAFE:
+    "검색 결과의 선택 동작을 안전하게 확인하지 못해 입력을 보류했어요.",
+  SEARCH_FOLLOWUP_HALTED: "앞선 검색 실패로 후속 입력을 보류했어요.",
   EXAM_SCORE_NOT_READY:
     "시험명 선택 뒤에도 점수 칸을 확인하지 못했어요. 시험명을 목록에서 다시 고른 뒤 점수를 입력해 주세요.",
   ROW_SEARCH_UNCONFIRMED:

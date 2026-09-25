@@ -136,3 +136,97 @@ it("uses a cautious fallback for unknown failures without displaying sensitive p
   ).toBeVisible();
   expect(screen.queryByText(/검색 결과가 없어요/)).not.toBeInTheDocument();
 });
+
+it.each<[WriteFailureCode, string]>([
+  [
+    "SEARCH_FORM_UNVERIFIED",
+    "검색창 구조를 안전하게 확인하지 못해 입력을 보류했어요.",
+  ],
+  [
+    "SEARCH_NAVIGATION_UNSAFE",
+    "검색 화면 이동을 안전하게 확인하지 못해 입력을 보류했어요.",
+  ],
+  [
+    "SEARCH_RESULTS_INCOMPLETE",
+    "전체 검색 결과를 확인하지 못해 선택을 보류했어요.",
+  ],
+  [
+    "SEARCH_ACTIVATION_UNSAFE",
+    "검색 결과의 선택 동작을 안전하게 확인하지 못해 입력을 보류했어요.",
+  ],
+  ["SEARCH_FOLLOWUP_HALTED", "앞선 검색 실패로 후속 입력을 보류했어요."],
+])(
+  "renders normalized %s without raw site or profile text",
+  (failureCode, guidance) => {
+    render(
+      <WorkflowResults
+        reviewItems={[
+          {
+            ...item,
+            profileValue: "PRIVATE_PROFILE",
+            previewValue: "PRIVATE_PROFILE",
+            status: "sensitive",
+            revealed: false,
+          },
+        ]}
+        results={[
+          {
+            candidateId: "search",
+            status: "skipped",
+            reason: "RAW_SITE_PRIVATE_PROFILE",
+            failureCode,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText(guidance)).toBeVisible();
+    expect(
+      screen.queryByText(/RAW_SITE|PRIVATE_PROFILE/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
+    expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
+  },
+);
+
+it("shows the failed search separately from its halted follow-up in the result UI", () => {
+  render(
+    <WorkflowResults
+      reviewItems={[
+        item,
+        {
+          ...item,
+          candidateId: "region",
+          fieldLabel: "소재지",
+          profileValue: "합성지역",
+          previewValue: "합성지역",
+        },
+      ]}
+      results={[
+        {
+          candidateId: "search",
+          status: "skipped",
+          reason: "RAW_SITE_QUERY",
+          failureCode: "SEARCH_FORM_UNVERIFIED",
+          outcome: "needs-verification",
+          code: "UNSUPPORTED_CONTROL",
+        },
+        {
+          candidateId: "region",
+          status: "skipped",
+          reason: "RAW_SITE_FOLLOWUP",
+          failureCode: "SEARCH_FOLLOWUP_HALTED",
+          outcome: "needs-verification",
+          code: "STALE_TARGET",
+        },
+      ]}
+    />,
+  );
+  expect(
+    screen.getByText("검색창 구조를 안전하게 확인하지 못해 입력을 보류했어요."),
+  ).toBeVisible();
+  expect(
+    screen.getByText("앞선 검색 실패로 후속 입력을 보류했어요."),
+  ).toBeVisible();
+  expect(screen.getByLabelText("확인 필요 2개")).toBeInTheDocument();
+  expect(screen.queryByText(/RAW_SITE/)).not.toBeInTheDocument();
+});
