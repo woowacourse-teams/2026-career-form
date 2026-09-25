@@ -474,14 +474,14 @@ describe("readonly search transaction", () => {
   });
 
   it.each([
-    ["original unlabelled submit input", false, "search_submit_not_found"],
+    ["original unlabelled submit input", false, "unverified_search_form"],
     [
       "separately labelled diagnostic submit button",
       true,
       "unverified_search_form",
     ],
   ] as const)(
-    "rejects %s without changing either school row",
+    "rejects POST/hidden school form with %s without changing either school row",
     async (_name, diagnostic, reason) => {
       const test = fixture({
         key: "education.university.schoolName",

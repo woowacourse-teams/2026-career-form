@@ -266,6 +266,134 @@ describe("approved search batch boundaries", () => {
   });
 });
 
+describe("approved university major search boundary", () => {
+  beforeEach(() => {
+    vi.mocked(executeReadonlySearch).mockReset();
+  });
+
+  afterEach(() => {
+    vi.mocked(executeReadonlySearch).mockReset();
+    document.body.innerHTML = "";
+  });
+
+  it("continues to the next approved search after a selected major", async () => {
+    const test = setup(2);
+    test.items.forEach((item) => {
+      item.currentValue = "";
+      item.profileValue = `합성전공-${item.candidateId}`;
+    });
+    document.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+      input.value = "";
+    });
+    vi.mocked(executeReadonlySearch).mockImplementation(async (args) => {
+      const input = document.querySelectorAll<HTMLInputElement>("input")[
+        Number(args.targetCandidateId.replace("field-", ""))
+      ]!;
+      input.value = args.expectedValue;
+      return {
+        status: "selected",
+        targetCandidateId: args.targetCandidateId,
+        identity: {} as never,
+      };
+    });
+
+    const stopped = await executeApprovedSearchWrites(test);
+
+    expect(stopped).toBe(false);
+    expect(executeReadonlySearch).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(executeReadonlySearch).mock.calls.map(([args]) => [
+      args.targetCandidateId,
+      args.canonicalFieldKey,
+      args.expectedValue,
+    ])).toEqual([
+      ["field-0", "education.university.majorName", "합성전공-field-0"],
+      ["field-1", "education.university.majorName", "합성전공-field-1"],
+    ]);
+    expect(test.results).toMatchObject([
+      { candidateId: "field-0", status: "written", outcome: "success" },
+      { candidateId: "field-1", status: "written", outcome: "success" },
+    ]);
+  });
+
+  it("halts the next approved search after interaction-started failure and distinguishes both reasons", async () => {
+    const test = setup(2);
+    test.items.forEach((item) => {
+      item.currentValue = "";
+    });
+    document.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+      input.value = "";
+    });
+    vi.mocked(executeReadonlySearch).mockResolvedValue({
+      status: "skipped",
+      targetCandidateId: "field-0",
+      reason: "result_set_incomplete",
+      effect: "interaction-started",
+    });
+
+    const stopped = await executeApprovedSearchWrites(test);
+
+    expect(stopped).toBe(true);
+    expect(executeReadonlySearch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(executeReadonlySearch).mock.calls[0]![0]).toMatchObject({
+      targetCandidateId: "field-0",
+      canonicalFieldKey: "education.university.majorName",
+    });
+    expect(test.results).toMatchObject([
+      { candidateId: "field-0", status: "skipped", outcome: "needs-verification", failureCode: "SEARCH_RESULTS_INCOMPLETE" },
+      { candidateId: "field-1", status: "skipped", outcome: "needs-verification", failureCode: "SEARCH_FOLLOWUP_HALTED" },
+    ]);
+  });
+
+  it("preserves an unrelated existing field while writing an approved major", async () => {
+    const test = setup(2);
+    test.items[0]!.currentValue = "";
+    test.items[0]!.profileValue = "합성전공";
+    test.items[1]!.currentValue = "기존 학과";
+    test.items[1]!.profileValue = "다른 학과";
+    const [major, unrelated] = document.querySelectorAll<HTMLInputElement>("input");
+    major!.value = "";
+    unrelated!.value = "기존 학과";
+    test.approvedCandidateIds.delete("field-1");
+    vi.mocked(executeReadonlySearch).mockImplementation(async (args) => {
+      major!.value = args.expectedValue;
+      return { status: "selected", targetCandidateId: args.targetCandidateId, identity: {} as never };
+    });
+
+    const stopped = await executeApprovedSearchWrites(test);
+
+    expect(stopped).toBe(false);
+    expect(executeReadonlySearch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(executeReadonlySearch).mock.calls[0]![0].targetCandidateId).toBe("field-0");
+    expect(test.results[0]).toMatchObject({ status: "written", outcome: "success" });
+    expect(test.results[1]).toMatchObject({ candidateId: "field-1", status: "skipped", reason: "pending" });
+    expect(unrelated!.value).toBe("기존 학과");
+  });
+
+  it("does not replace a label-only existing school with a different approved school", async () => {
+    const test = setup();
+    test.items[0]!.analysis!.valueBinding = {
+      type: "DIRECT",
+      profileFieldKey: "education.university.schoolName",
+    };
+    test.items[0]!.currentValue = "기존 학교";
+    test.items[0]!.profileValue = "다른 학교";
+    const school = document.querySelector<HTMLInputElement>("input")!;
+    school.value = "기존 학교";
+
+    const stopped = await executeApprovedSearchWrites(test);
+
+    expect(stopped).toBe(false);
+    expect(executeReadonlySearch).not.toHaveBeenCalled();
+    expect(test.results[0]).toMatchObject({
+      candidateId: "field-0",
+      status: "skipped",
+      outcome: "needs-verification",
+      code: "CONFLICT",
+    });
+    expect(school.value).toBe("기존 학교");
+  });
+});
+
 describe("search failure diagnostics", () => {
   it.each([
     ["unverified_search_form", "SEARCH_FORM_UNVERIFIED"],

@@ -72,12 +72,18 @@ export function label(element: Element): string {
           .map((item) => item.textContent)
           .join(" ")
       : "";
+  const actionValue =
+    element.tagName === "INPUT" &&
+    ["button", "submit", "reset"].includes((element as HTMLInputElement).type)
+      ? (element as HTMLInputElement).value
+      : "";
   return normalized(
     [
       element.getAttribute("aria-label"),
       element.getAttribute("title"),
       element.getAttribute("placeholder"),
       inputLabels,
+      actionValue,
       element.textContent,
     ]
       .filter(Boolean)

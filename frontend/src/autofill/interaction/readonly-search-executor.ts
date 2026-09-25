@@ -32,6 +32,13 @@ import {
 import { observeResults, resultBaseline } from "./search-results";
 import { interactive, elements, safeActivation } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
+import {
+  isCjMajorCandidate,
+  isCjMajorTarget,
+  validateCjMajorPreflight,
+} from "./cj-major-contract";
+import { prepareCjMajorClose } from "./cj-major-close-bridge";
+import { executeCjMajorSearch } from "./cj-major-search";
 
 const activeTransactions = new WeakSet<Document>();
 export function acceptedSearchValues(
@@ -184,6 +191,31 @@ export async function executeReadonlySearch(
       !interactive(opener)
     )
       throw new SearchFailure("stale_field_group");
+    const cjCandidate = isCjMajorCandidate(
+      document,
+      canonicalFieldKey,
+      identity,
+    );
+    const cjMajor =
+      cjCandidate &&
+      isCjMajorTarget(document, canonicalFieldKey, identity, opener);
+    if (cjCandidate && !cjMajor)
+      throw new SearchFailure("unverified_search_form");
+    if (cjMajor) validateCjMajorPreflight(identity);
+    const cjLease = cjMajor
+      ? await prepareCjMajorClose(opener, session)
+      : undefined;
+    guard(initialValue);
+    if (cjLease) {
+      if (
+        !openerRole!.current() ||
+        !safeSearchOpener(opener) ||
+        !interactive(opener) ||
+        !isCjMajorTarget(document, canonicalFieldKey, identity, opener)
+      )
+        throw new SearchFailure("unverified_search_form");
+      validateCjMajorPreflight(identity);
+    }
     effect = "interaction-started";
     opener.click();
     surface = await session.wait(
@@ -203,6 +235,20 @@ export async function executeReadonlySearch(
       validateRegionContext(args, currentSurface);
     };
     surfaceGuard();
+    if (cjLease) {
+      await executeCjMajorSearch(
+        currentSurface,
+        session,
+        cjLease,
+        expectedValue,
+        (allowed) => guard(allowed),
+        () => observation.assertOwned(currentSurface),
+        () => {
+          effect = "value-observed";
+        },
+      );
+      return { status: "selected", targetCandidateId, identity, effect };
+    }
     const controls = await session.wait(() => {
       surfaceGuard();
       const queries = queryControls(currentSurface);

@@ -1,4 +1,3 @@
-// @ts-expect-error jsdom is a test-only dependency without a checked-in type package.
 import { JSDOM } from "jsdom";
 
 import html from "./hypothesis-validation-interview.html?raw";

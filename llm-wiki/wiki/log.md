@@ -255,3 +255,10 @@
 - Approval-Digest: 80dfb2e074f122e975d4d611d9d0c2f5c80519bcbac1247d1d8d3720bae3deb9
 - 승인된 후보 4개를 [CF-108 bundle](../raw/issues/CF-108/manifest.md)에 기록했다.
 - 공개 진단과 승인된 후속 보류, 학교 구조의 미지원 경계, native GET 완료 검사 정정과 격리 설치 검증 범위를 [검색 표면 topic](topics/generic-autofill-search.md)에 반영했다. 실제 CJ와 서버 저장은 미검증이다.
+
+## [2026-09-25] ingest | CF-110 검증된 CJ 대학교 주전공 검색
+
+- Approval-Digest: ad86e9a311c54fb3b9fc132310c2375b1972ebc129c46261fef22aa1d6c0bd19
+- 승인된 후보 3개와 제한된 ADR을 [CF-110 bundle](../raw/issues/CF-110/manifest.md)에 기록하고 [범용 검색 topic](topics/generic-autofill-search.md)에 연결했다.
+- 검색 POST의 정확한 소유권·두 필드, callback 비실행과 응답 내 유일성·표시값/코드/팝업 종료/500ms 유지, 버튼형 input 라벨·실패 보호 경계를 반영했다. 일반 검색 거부와 CF-108 진단은 유지한다.
+- 합성 입력 대상 브라우저 검증과 설치 확장 실제 화면의 읽기 전용 관측을 구분한다. 실제 화면 결과 UI는 확인 필요 및 입력 완료 0개였으며, 전체 패널 성공·서버 저장·제출·CJ 데이터베이스 전체 유일성은 입증되지 않았다.

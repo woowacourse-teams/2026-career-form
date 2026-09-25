@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>CF-110 synthetic CJ major browser harness</title>
+    <style>
+      body {
+        font: 16px/1.5 sans-serif;
+        max-width: 760px;
+        margin: 2rem auto;
+      }
+      dd {
+        margin: 0.5rem 0 1rem;
+      }
+      button {
+        margin: 0.4rem;
+      }
+      output {
+        display: block;
+        white-space: pre-wrap;
+        margin: 1rem 0;
+        padding: 1rem;
+        background: #eee;
+      }
+      /* Synthetic fixture layout only; the real needPopup.js owns popup creation and removal. */
+      .popup_wrapper {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        pointer-events: none;
+      }
+      .popup_wrapper:has(> #popupIframe2) {
+        background: rgb(0 0 0 / 55%);
+        pointer-events: auto;
+      }
+      .popup_wrapper > #popupIframe2 {
+        position: absolute;
+        left: 50%;
+        background: white;
+      }
+      .popup_wrapper > #popupIframe2 iframe {
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Synthetic browser + live public endpoint, NOT installed-extension proof. Mount only in a disposable blank document at the exact CJ origin; no application form, save, or submit. -->
+    <main data-cf110-synthetic-harness>
+      <h1>CF-110 synthetic major search</h1>
+      <p>
+        Public, nonpersonal test query: 컴퓨터공학. This is not a user profile
+        value.
+      </p>
+      <section id="sectionNormalUniversity0" aria-label="대학교">
+        <dl>
+          <dt>전공</dt>
+          <dd>
+            <label for="mm_major_nm2_0">전공</label>
+            <input
+              id="mm_major_nm2_0"
+              name="mm_major_nm"
+              type="text"
+              readonly
+            />
+            <input name="major" type="hidden" value="" />
+            <button
+              name="bt_mm_major_nm"
+              type="button"
+              title="전공 검색"
+              data-popup-show=""
+              data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_major.fo?num=2_0"
+              data-width="504"
+              data-height="600"
+            >
+              전공 검색
+            </button>
+          </dd>
+        </dl>
+      </section>
+      <section aria-label="Unrelated synthetic controls">
+        <label
+          >Unrelated field
+          <input id="cf110-other-field" value="synthetic-untouched"
+        /></label>
+        <input
+          id="cf110-other-code"
+          type="hidden"
+          value="synthetic-code-untouched"
+        />
+        <label
+          >Unrelated choice
+          <input id="cf110-other-check" type="checkbox" checked
+        /></label>
+      </section>
+      <nav aria-label="Harness controls">
+        <button id="cf110-run" type="button" disabled>
+          Run synthetic search
+        </button>
+        <button id="cf110-reset" type="button" disabled>
+          Reset synthetic fields
+        </button>
+      </nav>
+      <output id="cf110-result" role="status" aria-live="polite"
+        >Waiting for harness bundle</output
+      >
+    </main>
+    <script>
+      window.__CF110_SYNTHETIC_HARNESS__ = true;
+    </script>
+    <script src="https://imgrec.cj.net/recruit/ko/js/jquery-1.11.3.min.js"></script>
+    <!-- needPopup.js expects the site's tabkeyListener dependency. This tiny focus-only
+       adapter is synthetic fixture scaffolding, not production code or a popup mock. -->
+    <script>
+      if (window.jQuery) {
+        window.jQuery.fn.tabkeyListener = function (forward, backward) {
+          return this.on("keydown.cf110focus", function (event) {
+            if (event.which !== 9) return;
+            if (event.shiftKey && backward) {
+              event.preventDefault();
+              backward();
+            } else if (!event.shiftKey && forward) {
+              event.preventDefault();
+              forward();
+            }
+          });
+        };
+      }
+    </script>
+    <script src="https://imgrec.cj.net/recruit/ko/js/needPopup.js"></script>
+    <!-- Parent bundles cj-major-browser-harness.ts to an IIFE and injects that trusted
+       compiled file here after these public scripts load. No extension is installed. -->
+  </body>
+</html>
