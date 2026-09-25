@@ -37,7 +37,9 @@ import {
   isCjMajorTarget,
   validateCjMajorPreflight,
 } from "./cj-major-contract";
-import { prepareCjMajorClose } from "./cj-major-close-bridge";
+import { prepareCjMajorClose, prepareCjSchoolClose } from "./cj-major-close-bridge";
+import { isCjSchoolCandidate, isCjSchoolTarget, validateCjSchoolRow } from "./cj-school-contract";
+import { executeCjSchoolSearch } from "./cj-school-search";
 import { executeCjMajorSearch } from "./cj-major-search";
 
 const activeTransactions = new WeakSet<Document>();
@@ -164,7 +166,9 @@ export async function executeReadonlySearch(
       normalized(initialValue) !== normalized(args.expectedCurrentValue)
     )
       throw new SearchFailure("stale_target");
-    if (normalized(initialValue)) {
+    const schoolCandidate = isCjSchoolCandidate(document, canonicalFieldKey, identity);
+    if (schoolCandidate) validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
+    if (normalized(initialValue) && !schoolCandidate) {
       if (!matches(initialValue))
         throw new SearchFailure("existing_value_conflict");
       await session.prepareMutation();
@@ -199,22 +203,26 @@ export async function executeReadonlySearch(
     const cjMajor =
       cjCandidate &&
       isCjMajorTarget(document, canonicalFieldKey, identity, opener);
-    if (cjCandidate && !cjMajor)
+    const cjSchool = schoolCandidate && isCjSchoolTarget(document, canonicalFieldKey, identity, opener);
+    if ((cjCandidate && !cjMajor) || (schoolCandidate && !cjSchool))
       throw new SearchFailure("unverified_search_form");
     if (cjMajor) validateCjMajorPreflight(identity);
+    if (cjSchool) validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
     const cjLease = cjMajor
       ? await prepareCjMajorClose(opener, session)
-      : undefined;
+      : cjSchool ? await prepareCjSchoolClose(opener, session) : undefined;
     guard(initialValue);
     if (cjLease) {
       if (
         !openerRole!.current() ||
         !safeSearchOpener(opener) ||
         !interactive(opener) ||
-        !isCjMajorTarget(document, canonicalFieldKey, identity, opener)
+        !(cjMajor ? isCjMajorTarget(document, canonicalFieldKey, identity, opener) :
+          isCjSchoolTarget(document, canonicalFieldKey, identity, opener))
       )
         throw new SearchFailure("unverified_search_form");
-      validateCjMajorPreflight(identity);
+      if (cjMajor) validateCjMajorPreflight(identity);
+      else validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
     }
     effect = "interaction-started";
     opener.click();
@@ -236,18 +244,17 @@ export async function executeReadonlySearch(
     };
     surfaceGuard();
     if (cjLease) {
-      await executeCjMajorSearch(
+      const runCj = cjMajor ? executeCjMajorSearch : executeCjSchoolSearch;
+      const cjResult = await runCj(
         currentSurface,
         session,
         cjLease,
         expectedValue,
         (allowed) => guard(allowed),
         () => observation.assertOwned(currentSurface),
-        () => {
-          effect = "value-observed";
-        },
+        () => { effect = "value-observed"; },
       );
-      return { status: "selected", targetCandidateId, identity, effect };
+      return { status: cjResult === "unchanged" ? "unchanged" : "selected", targetCandidateId, identity, effect };
     }
     const controls = await session.wait(() => {
       surfaceGuard();

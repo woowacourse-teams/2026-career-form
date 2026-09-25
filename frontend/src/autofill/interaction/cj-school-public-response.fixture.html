@@ -1,0 +1,152 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="no" />  <!-- 앱 화면 모드 -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />  <!-- 상단바 스타일 default (회색) , black , black-translucent ( 반투명 ) -->
+<title>CJ RECRUIT </title>
+<meta name="description" content="세계를 향해 도약하는 글로벌 생활문화기업 CJ그룹 채용 사이트입니다." />
+<link rel="shortcut icon" href="/recruit/images/favicon.ico" />
+<link rel="apple-touch-icon" href="/recruit/ko/images/common/phone_icon.png" />  <!-- 모바일용 바탕화면 바로가기 아이콘(iOS) 114×114 -->
+<link rel="shortcut icon" href="/recruit/ko/images/common/phone_icon.png" />  <!-- 모바일용 바탕화면 바로가기 아이콘(Android) -->
+<link rel="apple-touch-startup-image" href="/recruit/ko/images/common/phone_icon.png" />  <!-- 스타트업 이미지 640×920(4), 640×1138(5) -->
+
+<link rel="stylesheet" type="text/css" href="https://imgrec.cj.net/recruit/ko/css/sub.css?1790355847885" />
+<link rel="stylesheet" type="text/css" href="https://imgrec.cj.net/recruit/ko/css/cjRecruit.css?1790355847885" />
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/jquery-1.11.3.min.js"></script>
+<script>
+window.jQuery = window.jQuery || {};
+window.jQuery.migrateMute = true;
+console.trace = function() {};
+</script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/default.js?201304181746"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/jquery.easing.1.3.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/util.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/ui.common.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/json2.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/util.js?201304181746"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/js/jqGrid/frameone.jquery.jqGrid.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/jquery.common.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/timer.js?201304181746"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/jquery.ui.datepicker.js"></script>
+<!-- <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-48450551-3', 'auto');
+  ga('send', 'pageview');
+</script> -->
+</head>
+<body class="no_scroll">
+        <script type="text/javascript">
+        function goSearch() {
+            $("#mainForm").submit();
+        }
+
+        function setUniversityData(dtl_cd, dtl_cd_long_nm, country_cd) {
+            var universityData = {
+                dtl_cd: dtl_cd,
+                dtl_cd_long_nm: dtl_cd_long_nm,
+                country_cd: country_cd
+            };
+            parent.universityCallback2_0(universityData);
+            parent.needpopHide(); // 레이어 닫기
+        }
+
+        function applyUniversityData() {
+            var school_name = $("input[name='direct_school_name']").val();
+            setUniversityData('', school_name, '');
+        }
+
+        $(document).ready(function(){
+            $("input[name='school_name']").focus();
+
+            // input tab 입력시 공백으로 치환
+            $("input").bind('change',function(e){
+                var str = $(this).val();
+                str = str.replace(/\t/g, " ");
+                $(this).val(str);
+            });
+        });
+    </script>
+
+    <form name="mainForm" id="mainForm" action="https://recruit.cj.net/recruit/ko/resume/search/search_university.fo" method="post" onsubmit="return goSearch();">
+    <input type="hidden" name="num" value="2_0" />
+    <div class="container_wrap">
+       <!-- 대학교 찾기 팝업 -->
+        <div id="popupBasic4" class="popup popup_college iframe_opened">
+            <div class="popup_inner">
+                <div class="popup_header">
+                    <div class="mod_title pop_title_type">
+                        <h1 class="title">대학교 찾기</h1><!-- 대학교 찾기 -->
+                    </div>
+                </div>
+                <!-- popup_content-->
+                <div class="popup_content">
+                    <div class="sec_top">
+                        <p class="desc desc_pop_top">교육부에 등록되어 있는 학교명을 정확히 입력하시고, [검색]버튼을 클릭하세요</p><!-- 교육부에 등록되어 있는 학교명을 정확히 입력하시고, [검색]버튼을 클릭하세요 -->
+                        <dl class="box_ex">
+                            <dt class="blind">학교 검색 예시</dt>
+                            <dd class="first">
+                                <ul class="list_ex">
+                                <li><span title="학교 검색 틀린 예">성대, 성균관대(X)</span><span class="bar_ex">-</span><strong title="학교 검색 바른 예">합성대학교(O)</strong></li>
+                                <li><span title="학교 검색 틀린 예">UCLA(X)</span><span class="bar_ex">-</span><strong title="학교 검색 바른 예">University of California Los Angeles(O)</strong></li>
+                                <li><span title="학교 검색 틀린 예">Peking University(X)</span><span class="bar_ex">-</span><strong title="학교 검색 바른 예">북경대학교, Beijing Univ(O)</strong></li>
+                                </ul>
+                            </dd>
+                        </dl>
+                        <!-- area_schForm -->
+                        <div class="area_schForm">
+                        <fieldset>
+                            <legend>학교명 검색</legend>
+                            <div class="box_sch">
+                            <!-- 검색 -->
+                                <span class="iw"><input type="text" class="iText" id="school_name" name="school_name" value="합성대학교" title="학교명 입력" maxlength="30" title="학교명 입력"></span>
+                                <span class="btn_pack btn_medium btn_type btn_pSch active"><input type="submit" value="검색"></span>
+                            </div>
+                        </fieldset>
+                        </div>
+
+                        <!-- 초기값 -->
+
+                        <!-- //초기값 -->
+
+                        <!-- 검색결과 출력 -->
+
+                        <div class="sec_mid scroll-list-wrap">
+                        <div class="iScroll">
+                                <div class="sec_inner">
+                                    <ul class="sch_list">
+
+                                        <li><a href="javascript:;" onclick="setUniversityData('SYN001', '합성대학교', 'KOR')" title="선택 시 본창에 값이 들어가며 레이어창 닫힘">합성대학교</a></li>
+
+                                        <li><a href="javascript:;" onclick="setUniversityData('SYN002', '합성대학교(캠퍼스)', 'KOR')" title="선택 시 본창에 값이 들어가며 레이어창 닫힘">합성대학교(캠퍼스)</a></li>
+
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- //검색결과 출력 -->
+
+                        <!-- 검색결과 없을때 -->
+
+                        <!-- //검색결과 없을때 -->
+
+                    </div>
+                </div>
+                <!-- // popup_content-->
+            </div>
+        </div>
+        <!-- // 대학교 찾기 팝업 -->
+    </div>
+    </form>
+
+
+</body>
+</html>

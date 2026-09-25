@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   installCjMajorCloseBridge,
   prepareCjMajorClose,
+  prepareCjSchoolClose,
 } from "./cj-major-close-bridge";
 import { SearchSession } from "./search-session";
 import { SearchSurface } from "./search-surface";
@@ -39,6 +40,28 @@ const reviewedSource = (
 ).source;
 
 describe("CJ main major close lease", () => {
+  it.each(["major", "school"] as const)("serializes %s and the other popup lease, then releases it", async (first) => {
+    const dom = new JSDOM(
+      '<section id="sectionNormalUniversity0"><dd><input readonly id="mm_major_nm2_0" name="mm_major_nm"><input type="hidden" name="major"><button type="button" name="bt_mm_major_nm" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_major.fo?num=2_0">검색</button></dd><dd><input readonly id="zz_school_nm2_0" name="zz_school_nm"><input type="hidden" name="school_code"><button type="button" name="bt_zz_school_nm" data-popup-show="" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_university.fo?num=2_0">검색</button></dd></section>',
+      { url: "https://recruit.cj.net/recruit/ko/resume/apply.fo", runScripts: "outside-only" },
+    );
+    dom.window.eval(reviewedSource);
+    installCjMajorCloseBridge(dom.window.document);
+    const major = dom.window.document.querySelector<HTMLElement>('[name="bt_mm_major_nm"]')!;
+    const school = dom.window.document.querySelector<HTMLElement>('[name="bt_zz_school_nm"]')!;
+    const one = new SearchSession({} as ExecuteReadonlySearchArgs);
+    const two = new SearchSession({} as ExecuteReadonlySearchArgs);
+    const firstOpen = first === "major" ? prepareCjMajorClose : prepareCjSchoolClose;
+    const secondOpen = first === "major" ? prepareCjSchoolClose : prepareCjMajorClose;
+    const firstButton = first === "major" ? major : school;
+    const secondButton = first === "major" ? school : major;
+    await firstOpen(firstButton, one);
+    await expect(secondOpen(secondButton, two)).rejects.toMatchObject({ reason: "unverified_search_form" });
+    one.stop();
+    await secondOpen(secondButton, two);
+    two.stop();
+    dom.window.close();
+  });
   it("arms the actual id-less first-row opener despite another row's hidden code", async () => {
     const dom = new JSDOM(
       '<div id="sectionNormalUniversity0"><dd><input id="mm_major_nm2_0" name="mm_major_nm"><input type="hidden" name="major"><button type="button" name="bt_mm_major_nm" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_major.fo?num=2_0">전공 검색</button></dd></div><div id="sectionNormalUniversity1"><input type="hidden" name="major"></div>',

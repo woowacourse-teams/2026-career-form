@@ -9,6 +9,24 @@ vi.mock("./cj-major-close-bridge", () => ({ prepareCjMajorClose: vi.fn() }));
 
 const url =
   "https://recruit.cj.net/recruit/ko/resume/search/search_major.fo?num=2_0";
+
+it("does not call a matching school display unchanged when its code and country are unverified", async () => {
+  const dom = new JSDOM('<!doctype html><html><body><fieldset><legend>대학교</legend><div id="sectionNormalUniversity0"><dl><dt>학교명</dt><dd><input type="text" readonly id="zz_school_nm2_0" name="zz_school_nm" aria-label="학교명" value="합성대학교"><input type="hidden" name="school_code" value="OTHER"><button type="button" name="bt_zz_school_nm" data-popup-show="" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_university.fo?num=2_0">검색</button></dd><dd><input readonly id="zz_state_nm5_0" name="zz_state_nm"><input type="hidden" name="zz_state"><input type="hidden" name="reg_region" value="KOR"><input type="hidden" name="new_country" value="KOR"><button type="button" name="bt_zz_state_nm" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0">검색</button></dd></dl></div></fieldset></body></html>', {url: "https://recruit.cj.net/recruit/ko/resume/apply.fo"});
+  const doc = dom.window.document;
+  const target = doc.querySelector<HTMLInputElement>("#zz_school_nm2_0")!;
+  for (const name of ["HTMLInputElement", "HTMLSelectElement", "HTMLTextAreaElement", "HTMLButtonElement", "HTMLElement", "Element", "Node"] as const) vi.stubGlobal(name, dom.window[name]);
+  const snapshot = collectFieldsSnapshot(doc);
+  const candidate = snapshot.request.sections.flatMap(section => [...section.fields, ...(section.items?.flatMap(item => item.fields) ?? [])]).find(field => {
+    const result = snapshot.registry.lookupField(field.candidateId);
+    return result.status === "blocked" && result.handle.elements[0] === target;
+  });
+  expect(candidate).toBeDefined();
+  const result = await executeReadonlySearch({document:doc, registry:snapshot.registry, targetCandidateId:candidate!.candidateId, canonicalFieldKey:"education.university.schoolName", expectedValue:"합성대학교", expectedCurrentValue:"합성대학교"});
+  expect(result.status).not.toBe("unchanged");
+  expect(target.value).toBe("합성대학교");
+  expect(doc.querySelector<HTMLInputElement>('[name="school_code"]')!.value).toBe("OTHER");
+  dom.window.close();
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.mocked(prepareCjMajorClose).mockReset();
