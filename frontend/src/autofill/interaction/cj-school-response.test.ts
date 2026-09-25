@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseCjSchoolResponse } from "./cj-school-response";
+import publicTemplate from "./cj-school-public-response.fixture.html?raw";
 
 const externals = [
   "/recruit/ko/js/jquery-1.11.3.min.js",
@@ -40,6 +41,10 @@ function response(rows: string, query = "합성대학교", num = "2_0") {
 }
 
 describe("CJ school inert response", () => {
+  it("parses the sanitized complete public POST response without executing its script", () => {
+    expect(parseCjSchoolResponse(publicTemplate, "합성대학교", "2_0"))
+      .toEqual({ code: "SYN001", label: "합성대학교", country: "KOR" });
+  });
   it("selects only one exact label from the complete rendered response", () => {
     expect(parseCjSchoolResponse(response(row("SYN001", "합성대학교") + row("SYN002", "합성대학교(캠퍼스)")), "합성대학교", "2_0"))
       .toEqual({ code: "SYN001", label: "합성대학교", country: "KOR" });
