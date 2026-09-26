@@ -225,6 +225,7 @@ export function localItemCount(
     ReturnType<typeof collectPreparationSnapshot>["request"]
   >,
   profile: Profile,
+  adapter: WorkflowAdapter = getWorkflowAdapter(snapshot.request.site.host),
 ): number | undefined {
   if (plan.command !== "ADD_REPEATABLE_GROUP") return undefined;
   const section = snapshot.request.sections.find((candidate) =>
@@ -235,6 +236,8 @@ export function localItemCount(
   const action = section?.actionCandidates.find(
     (candidate) => candidate.candidateId === plan.actionCandidateId,
   );
+  const adapterCount = adapter.repeatableProfileCount?.(action?.domId, profile);
+  if (adapterCount !== undefined) return adapterCount ?? undefined;
   const matchLabel = [
     section?.displayName,
     action?.displayName,
@@ -243,7 +246,10 @@ export function localItemCount(
   ]
     .filter(Boolean)
     .join(" ");
-  if (resolveCompany(snapshot.request.site.host) === "generic") {
+  if (
+    resolveCompany(snapshot.request.site.host) === "generic" &&
+    !adapter.repeatedProfileSectionHint?.(action?.domId)
+  ) {
     const categories = PROFILE_CATEGORIES.filter((category) =>
       matchesProfileCategory(category, matchLabel),
     );
@@ -274,9 +280,9 @@ export function localItemCount(
     }
     return sectionIds.size <= 1 ? entries.length : undefined;
   }
-  const profileSectionHint = getWorkflowAdapter(
-    snapshot.request.site.host,
-  ).repeatedProfileSectionHint?.(action?.domId);
+  const profileSectionHint = adapter.repeatedProfileSectionHint?.(
+    action?.domId,
+  );
   const category = profileSectionHint
     ? PROFILE_CATEGORIES.find(
         (candidate) => candidate.id === profileSectionHint.categoryId,
@@ -289,9 +295,7 @@ export function localItemCount(
       ? (() => {
           const sectionId = educationProfileSectionId(
             matchLabel,
-            getWorkflowAdapter(
-              snapshot.request.site.host,
-            ).educationSectionHint?.(matchLabel),
+            adapter.educationSectionHint?.(matchLabel),
           );
           return sectionId
             ? profile.education.filter((entry) => entry.sectionId === sectionId)
@@ -342,7 +346,7 @@ export function preparationItem(
   profile: Profile,
   adapter: WorkflowAdapter,
 ): PreparationItem {
-  const localCount = localItemCount(plan, snapshot, profile);
+  const localCount = localItemCount(plan, snapshot, profile, adapter);
   if (plan.command !== "ADD_REPEATABLE_GROUP") {
     const value =
       plan.command === "SELECT_OPTION_TO_REVEAL"

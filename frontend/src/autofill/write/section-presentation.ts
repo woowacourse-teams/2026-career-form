@@ -48,14 +48,14 @@ export function presentSection(
       ["hidden", "inert", "unsupported"].includes(lookup.reason)
     )
       return [];
-    return lookup.handle.elements;
+    return [...lookup.handle.elements, ...(lookup.handle.customElements ?? [])];
   });
   const isVisible = (element: HTMLElement) => {
     if (
       !element?.isConnected ||
       element.ownerDocument !== document ||
       element.getAttribute("type") === "hidden" ||
-      element.tagName === "BUTTON" ||
+      (element.tagName === "BUTTON" && !candidates.includes(element)) ||
       (element instanceof HTMLInputElement &&
         element.type === "radio" &&
         !element.checked)
@@ -230,7 +230,10 @@ export function presentSection(
   const outlined = [...new Set(highlighted ?? elements)].filter(
     (element) =>
       isVisible(element) &&
-      ["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName) &&
+      (["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName) ||
+        (candidates.includes(element) &&
+          (element.tagName === "BUTTON" ||
+            element.getAttribute("role") === "radiogroup"))) &&
       !["radio", "checkbox", "submit", "reset", "image", "file"].includes(
         element.getAttribute("type") ?? "",
       ),

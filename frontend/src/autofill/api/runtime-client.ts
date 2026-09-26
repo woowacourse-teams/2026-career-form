@@ -9,12 +9,14 @@ import type { AnalysisResponseEnvelope } from "./messages";
 import { isAnalysisResponseEnvelope } from "./messages";
 import type {
   AnalysisApiClient,
+  ExecutionAdapterId,
   FieldsAnalyzeRequest,
   FieldsAnalyzeResponse,
   PreparationAnalyzeRequest,
   PreparationAnalyzeResponse,
 } from "./types";
 import {
+  AnalysisContractError,
   validateFieldsResponse,
   validatePreparationResponse,
 } from "./validate-response";
@@ -44,6 +46,7 @@ export class AnalysisServiceError extends Error {
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
   private routingContext: string | undefined;
+  private executionAdapterId: ExecutionAdapterId | undefined;
 
   constructor(
     private readonly sendMessage: SendMessage = (message) =>
@@ -64,12 +67,14 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     request: PreparationAnalyzeRequest,
   ): Promise<PreparationAnalyzeResponse> {
     this.routingContext = undefined;
+    this.executionAdapterId = undefined;
     const response = await this.request({
       type: "AUTOFILL_ANALYZE_PREPARATION",
       payload: request,
     });
     const analysis = validatePreparationResponse(request, response);
     this.routingContext = analysis.routingContext;
+    this.executionAdapterId = analysis.executionAdapterId;
     return analysis;
   }
 
@@ -83,7 +88,14 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       type: "AUTOFILL_ANALYZE_FIELDS",
       payload: contextualRequest,
     });
-    return validateFieldsResponse(contextualRequest, response);
+    const analysis = validateFieldsResponse(contextualRequest, response);
+    if (
+      analysis.analysisStatus !== "BLOCKED" &&
+      analysis.executionAdapterId !== this.executionAdapterId
+    ) {
+      throw new AnalysisContractError();
+    }
+    return analysis;
   }
 
   private async request(message: unknown): Promise<unknown> {

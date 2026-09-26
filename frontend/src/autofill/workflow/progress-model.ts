@@ -1,3 +1,4 @@
+import { customFieldValue } from "../dom/custom-field-value";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
@@ -69,7 +70,12 @@ function stillReflected(
         .map((option) => option.displayName)
         .join(", ") ?? "";
   }
-  return matchesResultValue(item, value, item.profileValue ?? "");
+  return matchesResultValue(
+    item,
+    customFieldValue(handle) ?? value,
+    item.profileValue ?? "",
+    handle,
+  );
 }
 function retryBinding(item: ReviewPlanItem): string | undefined {
   const analysis = item.analysis;
@@ -136,7 +142,7 @@ export function createProgressTracker() {
     const lookup = registry.lookupField(candidateId);
     const element =
       lookup.status === "ready" || lookup.status === "blocked"
-        ? lookup.handle.elements[0]
+        ? (lookup.handle.elements[0] ?? lookup.handle.customElements?.[0])
         : undefined;
     return (
       (element && elements.get(element)) ??
@@ -152,6 +158,27 @@ export function createProgressTracker() {
       const id = progressIdFor(candidateId, registry);
       return !!id && entries.get(id)?.status === "written";
     },
+    rebindWritten(
+      item: ReviewPlanItem,
+      originalRegistry: CandidateRegistry,
+      resultRegistry: CandidateRegistry,
+    ): boolean {
+      const id = progressIdFor(item.candidateId, originalRegistry);
+      if (!id || entries.get(id)?.status !== "written") return false;
+      const lookup = resultRegistry.lookupField(item.candidateId);
+      if (lookup.status !== "ready" && lookup.status !== "blocked")
+        return false;
+      const element =
+        lookup.handle.elements[0] ?? lookup.handle.customElements?.[0];
+      if (!element) return false;
+      const registryIds =
+        candidateIds.get(resultRegistry) ?? new Map<string, string>();
+      registryIds.set(item.candidateId, id);
+      candidateIds.set(resultRegistry, registryIds);
+      elements.set(element, id);
+      verifiers.set(id, () => stillReflected(item, resultRegistry));
+      return true;
+    },
     record(
       item: ReviewPlanItem,
       result: ApprovedWriteResult,
@@ -162,7 +189,7 @@ export function createProgressTracker() {
         lookup.status === "ready" || lookup.status === "blocked"
           ? lookup.handle
           : undefined;
-      const element = handle?.elements[0];
+      const element = handle?.elements[0] ?? handle?.customElements?.[0];
       const registryIds =
         candidateIds.get(registry) ?? new Map<string, string>();
       let id = progressIdFor(item.candidateId, registry);
@@ -222,6 +249,7 @@ export function createProgressTracker() {
         item,
         item.currentValue,
         item.profileValue ?? "",
+        handle,
       );
       const unchanged = previous
         ? previous.unchanged === true &&

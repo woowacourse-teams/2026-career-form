@@ -1,3 +1,5 @@
+import type { ExecutionAdapterId } from "../api/types";
+import { greetingWriteAdapter } from "./greeting/write";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { resolveCompany } from "./company";
@@ -19,7 +21,11 @@ const standardWriteAdapter: CompanyWriteAdapter = {
   tryWrite: () => ({ handled: false }),
 };
 
-export function getWriteAdapter(host: string): CompanyWriteAdapter {
+export function getWriteAdapter(
+  host: string,
+  executionAdapterId?: ExecutionAdapterId,
+): CompanyWriteAdapter {
+  if (executionAdapterId === "greeting-v1") return greetingWriteAdapter;
   switch (resolveCompany(host)) {
     case "hyundai":
       return hyundaiWriteAdapter;

@@ -1,3 +1,5 @@
+import type { ExecutionAdapterId } from "../api/types";
+import { greetingCollectionAdapter } from "./greeting/collection";
 import { resolveCompany } from "./company";
 import { hyundaiCollectionAdapter } from "./hyundai/collection";
 import { skCollectionAdapter } from "./sk/collection";
@@ -26,7 +28,11 @@ const genericCollectionAdapter: CollectionAdapter = {
   requiresVisibleControl: () => false,
 };
 
-export function collectionAdapterForHost(host: string): CollectionAdapter {
+export function collectionAdapterForHost(
+  host: string,
+  executionAdapterId?: ExecutionAdapterId,
+): CollectionAdapter {
+  if (executionAdapterId === "greeting-v1") return greetingCollectionAdapter;
   switch (resolveCompany(host)) {
     case "hyundai":
       return hyundaiCollectionAdapter;

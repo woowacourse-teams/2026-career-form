@@ -1,7 +1,9 @@
+import type { ExecutionAdapterId } from "../api/types";
+import { greetingWorkflowAdapter } from "./greeting/workflow";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
 import type { ActionCandidateHandle, FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
-import type { RepeatedProfileCategoryId } from "../../profile/model";
+import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import { resolveCompany } from "./company";
 import { hyundaiWorkflowAdapter } from "./hyundai/workflow";
 import { skWorkflowAdapter } from "./sk/workflow";
@@ -55,6 +57,7 @@ export interface WorkflowAdapter {
     item: ReviewPlanItem,
     signal: AbortSignal,
     onFailure?: FailureReporter,
+    beforeMutation?: () => Promise<boolean>,
   ): Promise<boolean | undefined>;
   canSelectProfileOption?(
     handle: ActionCandidateHandle,
@@ -76,6 +79,12 @@ export interface WorkflowAdapter {
         sectionId: string;
       }
     | undefined;
+  repeatableProfileCount?(
+    actionDomId: string | undefined,
+    profile: Profile,
+  ): number | null | undefined;
+  followUpRepeatableAction?(actionDomId: string | undefined): boolean;
+  freshDefaultAfterAdd?(handle: ActionCandidateHandle): Element | undefined;
   educationSectionHint?(
     matchLabel: string,
   ): "highSchool" | "university" | "graduateSchool" | undefined;
@@ -127,7 +136,11 @@ const genericWorkflowAdapter: WorkflowAdapter = {
   revealedProfileFieldKey: () => undefined,
 };
 
-export function getWorkflowAdapter(host: string): WorkflowAdapter {
+export function getWorkflowAdapter(
+  host: string,
+  executionAdapterId?: ExecutionAdapterId,
+): WorkflowAdapter {
+  if (executionAdapterId === "greeting-v1") return greetingWorkflowAdapter;
   switch (resolveCompany(host)) {
     case "hyundai":
       return hyundaiWorkflowAdapter;

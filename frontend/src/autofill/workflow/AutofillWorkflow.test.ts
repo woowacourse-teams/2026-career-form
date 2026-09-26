@@ -4,6 +4,7 @@ import type { PreparationPlan } from "../api/types";
 import { collectPreparationSnapshot } from "../dom/collect";
 import { createEmptyProfile } from "../../profile/model";
 import { localItemCount } from "./AutofillWorkflow";
+import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -112,5 +113,47 @@ describe("Hyundai repeated profile counts", () => {
         profile,
       ),
     ).toBe(3);
+  });
+});
+
+describe("Greeting graduate major count", () => {
+  it("adds only one complete second major from the matching graduate profile row", () => {
+    const prefix = "educationalBackground.graduateSchools.0";
+    document.body.innerHTML = `<div data-scope="field" data-part="root"><label>대학원*</label>
+      <div data-scope="accordion" data-part="root"><div data-scope="accordion" data-part="item">
+        <input name="${prefix}.schoolName">
+        <div data-scope="field" data-part="root"><label>전공*</label>
+          <button name="${prefix}.majors.0.majorClassification">주전공</button>
+          <button name="${prefix}.majors.0.majorField">공학계열</button>
+          <input name="${prefix}.majors.0" role="combobox">
+          <button type="button" data-scope="tooltip" data-part="trigger">전공 추가</button>
+        </div></div></div></div>`;
+    const snapshot = collectPreparationSnapshot(document, {
+      executionAdapterId: "greeting-v1",
+    });
+    const plan = addPlan(snapshot, "greeting:add:graduateSchools:0:majors");
+    const profile = createEmptyProfile();
+    const values = {
+      additionalMajorClassification: "복수전공",
+      additionalMajorField: "사회계열",
+      additionalMajorName: "경영학",
+    };
+    profile.education.push({
+      id: "graduate-1",
+      sectionId: "graduateSchool",
+      values,
+    });
+    expect(
+      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+    ).toBe(2);
+    delete (values as Partial<typeof values>).additionalMajorField;
+    expect(
+      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+    ).toBeUndefined();
+    delete (values as Partial<typeof values>).additionalMajorName;
+    delete (values as Partial<typeof values>).additionalMajorClassification;
+    expect(
+      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+    ).toBe(1);
   });
 });

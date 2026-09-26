@@ -38,9 +38,11 @@ it.each(cases)(
       expect(veteran).toMatchObject({
         veteranStatus: "대상",
         veteranRelation: "본인",
-        veteranNumber: "1234567890",
+        veteranNumber: file.includes("greeting") ? "12-345678" : "1234567890",
       });
-      expect(veteran.veteranNumber).toMatch(/^\d{10}$/);
+      expect(veteran.veteranNumber).toMatch(
+        file.includes("greeting") ? /^\d{2}-\d{6}$/ : /^\d{10}$/,
+      );
     }
   },
 );
@@ -71,4 +73,24 @@ it("preserves the military-completed alias fixture as a single-value variant", (
     ...base,
     military: { ...base.military, militaryStatus: "만기전역" },
   });
+});
+
+it("provides a full synthetic Greeting profile with repeated universities and graduate school", () => {
+  const fixture =
+    fixtures["../../fixtures/profile-export.greeting.example.json"];
+  const profile = parseProfileImport(JSON.stringify(fixture));
+  expect(profile.personal.birthDate).toBe("2000-01-01");
+  expect(profile.contact.email).toBe("example@example.test");
+  expect(
+    profile.education?.filter((item) => item.sectionId === "university"),
+  ).toHaveLength(2);
+  expect(
+    profile.education
+      ?.filter((item) => item.sectionId === "university")
+      .map((item) => item.values.transferStatus),
+  ).toEqual(["비해당", "비해당"]);
+  expect(
+    profile.education?.filter((item) => item.sectionId === "graduateSchool"),
+  ).toHaveLength(1);
+  expect(parseProfileImport(serializeProfileExport(profile))).toEqual(profile);
 });

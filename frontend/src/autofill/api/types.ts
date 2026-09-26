@@ -119,7 +119,10 @@ export interface FieldsSection {
   items?: FieldsItem[];
 }
 
+export type ExecutionAdapterId = "greeting-v1";
+
 export interface PreparationAnalyzeRequest {
+  routingContext?: string;
   schemaVersion: 2;
   snapshotId: string;
   site: SiteDescriptor;
@@ -167,6 +170,7 @@ export type PreparationPlan =
     };
 
 export interface PreparationAnalyzeResponse {
+  executionAdapterId?: ExecutionAdapterId;
   snapshotId: string;
   mode: AnalysisMode;
   analysisStatus: AnalysisStatus;
@@ -245,6 +249,7 @@ export interface NoMatchFieldAnalysis {
 export type FieldAnalysis = MatchedFieldAnalysis | NoMatchFieldAnalysis;
 
 export interface FieldsAnalyzeResponse {
+  executionAdapterId?: ExecutionAdapterId;
   snapshotId: string;
   mode: AnalysisMode;
   analysisStatus: AnalysisStatus;

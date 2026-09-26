@@ -1,4 +1,9 @@
 import {
+  approveGreetingGpaPairs,
+  type GreetingGpaApproval,
+} from "../adapters/greeting/gpa";
+import { customFieldValue } from "../dom/custom-field-value";
+import {
   isReadonlySearchEligible,
   observeReadonlySearch,
 } from "../interaction";
@@ -64,6 +69,8 @@ export interface ReviewPlanItem {
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
+  greetingGpaApproval?: GreetingGpaApproval;
+  verifiedFreshDefaultValue?: string;
 }
 
 export interface ReviewPlan {
@@ -174,6 +181,8 @@ export function resolveProfileFieldValue(
 }
 
 function currentValue(handle: FieldCandidateHandle): string {
+  const customValue = customFieldValue(handle);
+  if (customValue !== undefined) return customValue;
   if (
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
@@ -227,8 +236,10 @@ function itemForAnalysis(
   profile: Profile,
   registry: CandidateRegistry,
   ignoreCurrentValueCandidateIds: ReadonlySet<string>,
+  freshDefaultCandidateIds: ReadonlySet<string>,
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
   generic = true,
+  greeting = false,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
@@ -249,8 +260,19 @@ function itemForAnalysis(
 
   const lookup = registry.lookupField(analysis.candidateId);
   const searchCommand = analysis.writePlan.command === "SEARCH_SELECTION";
+  const greetingSearch =
+    greeting &&
+    searchCommand &&
+    analysis.mappingStatus === "ADAPTER_VERIFIED" &&
+    analysis.valueBinding?.type === "DIRECT" &&
+    isAutofillProfileFieldKey(analysis.valueBinding.profileFieldKey) &&
+    lookup.status === "ready" &&
+    /^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
+      lookup.handle.candidate.domName ?? "",
+    );
   if (
     searchCommand &&
+    !greetingSearch &&
     (!generic ||
       analysis.mappingStatus !== "LLM_SUGGESTED" ||
       analysis.valueBinding?.type !== "DIRECT" ||
@@ -277,7 +299,7 @@ function itemForAnalysis(
     lookup.status === "blocked" &&
     lookup.reason === "readonly";
   if (
-    (searchCommand && !readonlySearch) ||
+    (searchCommand && !readonlySearch && !greetingSearch) ||
     (lookup.status !== "ready" && !readonlySearch && !readonlyCalendar)
   ) {
     return unavailableItem(
@@ -472,8 +494,21 @@ function itemForAnalysis(
       : profileValue;
 
   const pageValue = currentValue(lookup.handle);
+  const verifiedFreshDefault =
+    greeting &&
+    freshDefaultCandidateIds.has(analysis.candidateId) &&
+    analysis.mappingStatus === "ADAPTER_VERIFIED" &&
+    analysis.writePlan.command === "SELECT_BUTTON_OPTION" &&
+    binding.type === "DIRECT" &&
+    binding.profileFieldKey ===
+      "education.graduateSchool.additionalMajorClassification" &&
+    /^educationalBackground\.graduateSchools\.(0|[1-9]\d*)\.majors\.1\.majorClassification$/.test(
+      lookup.handle.candidate.domName ?? "",
+    ) &&
+    pageValue.trim() === "주전공";
   const hasConflict =
     !ignoreCurrentValueCandidateIds.has(analysis.candidateId) &&
+    !verifiedFreshDefault &&
     pageValue.trim().length > 0 &&
     (searchCommand
       ? !(
@@ -557,6 +592,7 @@ function itemForAnalysis(
       revealed: true,
       reason: "지원서 조건을 확인한 뒤 선택해 주세요.",
       analysis,
+      ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
     };
@@ -585,6 +621,7 @@ function itemForAnalysis(
           : "달력 연월을 확인한 뒤 선택해 주세요."
         : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
     analysis,
+    ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
   };
@@ -630,12 +667,14 @@ export function buildReviewPlan({
   profile,
   registry,
   ignoreCurrentValueCandidateIds = new Set<string>(),
+  freshDefaultCandidateIds = new Set<string>(),
   normalizeDirectValue,
 }: {
   analysis: FieldsAnalyzeResponse;
   profile: Profile;
   registry: CandidateRegistry;
   ignoreCurrentValueCandidateIds?: ReadonlySet<string>;
+  freshDefaultCandidateIds?: ReadonlySet<string>;
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string;
 }): ReviewPlan {
   if (analysis.analysisStatus === "BLOCKED") {
@@ -647,13 +686,23 @@ export function buildReviewPlan({
       profile,
       registry,
       ignoreCurrentValueCandidateIds,
+      freshDefaultCandidateIds,
       normalizeDirectValue,
       analysis.mode === "GENERIC",
+      analysis.executionAdapterId === "greeting-v1" &&
+        analysis.mode === "ADAPTER",
     ),
   );
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
-    items: rejectDuplicateRepeatedBindings(items),
+    items:
+      analysis.executionAdapterId === "greeting-v1" &&
+      analysis.mode === "ADAPTER"
+        ? approveGreetingGpaPairs(
+            rejectDuplicateRepeatedBindings(items),
+            registry,
+          )
+        : rejectDuplicateRepeatedBindings(items),
   };
 }
 

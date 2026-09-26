@@ -1,3 +1,4 @@
+import type { ExecutionAdapterId } from "../api/types";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AddressResult, AddressSearch } from "../address/types";
 import type { WorkflowAdapter } from "../adapters/workflow";
@@ -13,6 +14,7 @@ import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { WorkflowActivity } from "./progress-model";
 import type { WriteFailureCode } from "../write/failure";
 import type { Stage } from "./workflow-model";
+import type { GreetingResultTargets } from "./greeting-result-registry";
 
 type FieldsSnapshot = CollectedSnapshot<
   ReturnType<typeof collectFieldsSnapshot>["request"]
@@ -31,6 +33,13 @@ export interface CompletedGenericStateDriver {
   profileValue: string;
 }
 
+export interface GreetingStateDriverReceipt {
+  originalItem: ReviewPlanItem;
+  sourceRegistry: CandidateRegistry;
+  captured: GreetingResultTargets;
+  identity: string;
+}
+
 export interface WorkflowAnalysisContext {
   onAddressOperation?: (element: Element) => void;
   onActivity?: (activity: WorkflowActivity) => void;
@@ -46,6 +55,7 @@ export interface WorkflowAnalysisContext {
     matchedCount: number;
   }) => void;
   adapter: WorkflowAdapter;
+  executionAdapterId?: ExecutionAdapterId;
   addressRun: MutableRefObject<AddressRun>;
   addressSearch: AddressSearch;
   apiClient: AnalysisApiClient;
@@ -53,9 +63,13 @@ export interface WorkflowAnalysisContext {
   repository: Pick<ProfileRepository, "load">;
   approvedSensitiveValues: MutableRefObject<Map<string, string>>;
   consideredSensitiveValues: MutableRefObject<Map<string, string>>;
+  freshDefaultControls: MutableRefObject<WeakSet<Element>>;
   completedDriverKeys: MutableRefObject<ReadonlySet<string>>;
   completedGenericStateDrivers: MutableRefObject<
     ReadonlyMap<string, CompletedGenericStateDriver>
+  >;
+  completedGreetingStateDrivers?: MutableRefObject<
+    Map<string, GreetingStateDriverReceipt>
   >;
   deferredDriverGroups: MutableRefObject<ReadonlySet<Element>>;
   deferredDriverFailures?: MutableRefObject<DeferredDriverFailures>;
@@ -63,6 +77,12 @@ export interface WorkflowAnalysisContext {
   setExceptionTitle: Dispatch<SetStateAction<string>>;
   setStage: Dispatch<SetStateAction<Stage>>;
   setFieldsSnapshot: Dispatch<SetStateAction<FieldsSnapshot | undefined>>;
+  setResultRegistry?: Dispatch<SetStateAction<CandidateRegistry | undefined>>;
+  rebindResultProgress?: (
+    items: readonly ReviewPlanItem[],
+    originalRegistry: CandidateRegistry,
+    resultRegistry: CandidateRegistry,
+  ) => void;
   setReviewItems: Dispatch<SetStateAction<ReviewPlanItem[]>>;
   setPartial: Dispatch<SetStateAction<boolean>>;
   setWarnings: Dispatch<SetStateAction<string[]>>;

@@ -1,6 +1,7 @@
 import { acquireDocumentRun } from "../interaction/document-run";
 import type { PreparationPlan } from "../api/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { ActionCandidateHandle } from "../dom/types";
 
 export interface PreparationSnapshot {
   registry: CandidateRegistry;
@@ -22,6 +23,11 @@ export interface ApprovedPreparationPlan {
 
 export interface PreparationExecutionOptions {
   onAction?: (element: HTMLElement) => void;
+  onVerifiedAddition?: (
+    action: ActionCandidateHandle,
+    countBefore: number,
+    countAfter: number,
+  ) => void;
   document?: Document;
   signal?: AbortSignal;
   assertCurrent?: () => boolean;
@@ -227,6 +233,7 @@ async function executePreparation({
   selectProfileOption,
   waitForExpectedFields,
   onAction,
+  onVerifiedAddition,
   assertCurrent,
   beforeMutation,
 }: PreparationExecutionOptions): Promise<PreparationExecutionResult> {
@@ -399,7 +406,7 @@ async function executePreparation({
             ),
           )
         : undefined;
-      if (countAfter === undefined) {
+      if (!refreshedAction || countAfter === undefined) {
         return failure(
           "action-not-reidentified",
           executedPlanCount,
@@ -409,6 +416,7 @@ async function executePreparation({
       if (countAfter !== countBefore + 1) {
         return failure("group-count-not-incremented", executedPlanCount);
       }
+      onVerifiedAddition?.(refreshedAction, countBefore, countAfter);
       snapshot = refreshed;
     }
   }

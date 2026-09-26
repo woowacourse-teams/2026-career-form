@@ -121,11 +121,16 @@ export function validatePreparationResponse(
       "snapshotId",
       "mode",
       "analysisStatus",
+      "executionAdapterId",
       "preparationPlans",
       "routingContext",
       "warningCodes",
       "blockCode",
     ]) ||
+    (value.executionAdapterId !== undefined &&
+      (value.executionAdapterId !== "greeting-v1" ||
+        value.mode !== "ADAPTER" ||
+        value.analysisStatus !== "COMPLETE")) ||
     value.snapshotId !== request.snapshotId ||
     !Array.isArray(value.preparationPlans) ||
     !validateStringArray(value.warningCodes, [
@@ -292,6 +297,7 @@ function validateFieldAnalysis(
   value: unknown,
   candidates: Map<string, FieldCandidate>,
   request: FieldsAnalyzeRequest,
+  greeting = false,
 ): string {
   if (!isRecord(value) || !isNonEmptyString(value.candidateId)) {
     throw new AnalysisContractError();
@@ -441,6 +447,36 @@ function validateFieldAnalysis(
       isRecord(value.valueBinding) && value.valueBinding.type === "DIRECT"
         ? value.valueBinding.profileFieldKey
         : undefined;
+    const greetingReady =
+      greeting &&
+      value.mappingStatus === "ADAPTER_VERIFIED" &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      typeof directKey === "string" &&
+      isAutofillProfileFieldKey(directKey);
+    const greetingSearch =
+      greetingReady &&
+      candidate.element === "input" &&
+      candidate.control === "text" &&
+      !candidate.readonly &&
+      /^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
+        candidate.domName ?? "",
+      );
+    const greetingDate =
+      request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
+      greetingReady &&
+      candidate.element === "input" &&
+      candidate.control === "button" &&
+      typeof directKey === "string" &&
+      isDateProfileFieldKey(directKey) &&
+      (candidate.domName === "basicInformation.birthdate" ||
+        /^educationalBackground\.(universities|graduateSchools)\.\d+\.enrollmentPeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ));
     const searchSelection =
       value.mappingStatus === "LLM_SUGGESTED" &&
       candidate.element === "input" &&
@@ -473,16 +509,17 @@ function validateFieldAnalysis(
     ) {
       throw new AnalysisContractError();
     }
-    const expectedCommand = calendarSelection
-      ? "SELECT_DATE"
-      : searchSelection
-        ? "SEARCH_SELECTION"
-        : candidate.element === "input" &&
-            candidate.control === "text" &&
-            isRecord(value.valueBinding) &&
-            value.valueBinding.type === "BUTTON_OPTION"
-          ? "SELECT_BUTTON_OPTION"
-          : writeCommandForControl[candidate.control];
+    const expectedCommand =
+      calendarSelection || greetingDate
+        ? "SELECT_DATE"
+        : searchSelection || greetingSearch
+          ? "SEARCH_SELECTION"
+          : candidate.element === "input" &&
+              candidate.control === "text" &&
+              isRecord(value.valueBinding) &&
+              value.valueBinding.type === "BUTTON_OPTION"
+            ? "SELECT_BUTTON_OPTION"
+            : writeCommandForControl[candidate.control];
     if (
       !isRecord(value.writePlan) ||
       !hasOnlyKeys(value.writePlan, ["command"]) ||
@@ -517,10 +554,15 @@ export function validateFieldsResponse(
       "snapshotId",
       "mode",
       "analysisStatus",
+      "executionAdapterId",
       "fields",
       "warningCodes",
       "blockCode",
     ]) ||
+    (value.executionAdapterId !== undefined &&
+      (value.executionAdapterId !== "greeting-v1" ||
+        value.mode !== "ADAPTER" ||
+        value.analysisStatus !== "COMPLETE")) ||
     value.snapshotId !== request.snapshotId ||
     !Array.isArray(value.fields) ||
     !validateStringArray(value.warningCodes, [
@@ -550,12 +592,18 @@ export function validateFieldsResponse(
   for (const field of value.fields) {
     let candidateId: string;
     try {
-      candidateId = validateFieldAnalysis(field, candidates, request);
+      candidateId = validateFieldAnalysis(
+        field,
+        candidates,
+        request,
+        value.executionAdapterId === "greeting-v1",
+      );
       if (
         isRecord(field) &&
         isRecord(field.writePlan) &&
         field.writePlan.command === "SEARCH_SELECTION" &&
-        value.mode !== "GENERIC"
+        value.mode !== "GENERIC" &&
+        value.executionAdapterId !== "greeting-v1"
       ) {
         throw new AnalysisContractError();
       }

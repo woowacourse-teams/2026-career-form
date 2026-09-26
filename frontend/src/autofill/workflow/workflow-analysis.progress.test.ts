@@ -97,6 +97,7 @@ async function analyzePartiallyFailingDrivers(
     repository: { load: async () => profile },
     approvedSensitiveValues: { current: new Map() },
     consideredSensitiveValues: { current: new Map() },
+    freshDefaultControls: { current: new WeakSet() },
     completedDriverKeys: { current: new Set() },
     deferredDriverGroups: { current: new Set() },
     setAddressResult: () => undefined,

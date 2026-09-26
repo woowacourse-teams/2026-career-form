@@ -18,7 +18,7 @@ const message = {
 };
 
 describe("analysis background handler", () => {
-  it("negotiates both preparation capabilities as exact tokens", async () => {
+  it("negotiates preparation capabilities including Greeting execution", async () => {
     const fetcher = vi.fn<typeof fetch>(
       async () =>
         new Response(JSON.stringify({ snapshotId: "preparation-1" }), {
@@ -48,7 +48,8 @@ describe("analysis background handler", () => {
       expect.objectContaining({
         headers: {
           "Content-Type": "application/json",
-          "X-Career-Form-Capabilities": "address-search-v1,routing-context-v1",
+          "X-Career-Form-Capabilities":
+            "address-search-v1,routing-context-v1,greeting-adapter-v1",
         },
       }),
     );
@@ -101,6 +102,10 @@ describe("analysis background handler", () => {
       "https://api.example.test/api/v1/fields/analyze",
       expect.objectContaining({
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Career-Form-Capabilities": "greeting-adapter-v1",
+        },
         body: JSON.stringify(message.payload),
       }),
     );

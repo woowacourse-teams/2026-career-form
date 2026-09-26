@@ -1214,3 +1214,146 @@ describe("SELECT_DATE capability", () => {
     ).toMatchObject({ writePlan: { command: "SEARCH_SELECTION" } });
   });
 });
+
+describe("backend-designated execution adapter", () => {
+  const cases = [
+    [
+      "preparation",
+      (value: unknown) =>
+        validatePreparationResponse(
+          { ...preparationRequest, sections: [] },
+          value,
+        ),
+      { snapshotId: "snapshot-a", preparationPlans: [] },
+    ],
+    [
+      "fields",
+      (value: unknown) =>
+        validateFieldsResponse({ ...fieldsRequest, sections: [] }, value),
+      { snapshotId: "snapshot-b", fields: [] },
+    ],
+  ] as const;
+
+  it.each(cases)(
+    "accepts Greeting on complete adapter %s responses",
+    (_name, validate, body) => {
+      expect(
+        validate({
+          ...body,
+          mode: "ADAPTER",
+          analysisStatus: "COMPLETE",
+          executionAdapterId: "greeting-v1",
+        }),
+      ).toMatchObject({ executionAdapterId: "greeting-v1" });
+    },
+  );
+
+  it.each(cases)(
+    "rejects unknown or incompatible adapter IDs on %s responses",
+    (_name, validate, body) => {
+      for (const [mode, analysisStatus, executionAdapterId] of [
+        ["ADAPTER", "COMPLETE", "unknown"],
+        ["GENERIC", "COMPLETE", "greeting-v1"],
+        ["ADAPTER", "PARTIAL", "greeting-v1"],
+        ["ADAPTER", "BLOCKED", "greeting-v1"],
+      ]) {
+        expect(() =>
+          validate({
+            ...body,
+            mode,
+            analysisStatus,
+            executionAdapterId,
+            ...(analysisStatus === "BLOCKED"
+              ? { blockCode: "ADAPTER_STRUCTURE_MISMATCH" }
+              : {}),
+          }),
+        ).toThrow(AnalysisContractError);
+      }
+    },
+  );
+});
+
+describe("Greeting custom execution contracts", () => {
+  function contract(command: "SEARCH_SELECTION" | "SELECT_DATE") {
+    const date = command === "SELECT_DATE";
+    const request: FieldsAnalyzeRequest = {
+      schemaVersion: 2,
+      snapshotId: "greeting-contract",
+      site: { host: "custom.example", pathPattern: "/apply" },
+      supportedWriteCommands: ["SELECT_DATE"],
+      sections: [
+        {
+          sectionId: "s1",
+          fields: [
+            {
+              candidateId: "f1",
+              element: "input",
+              control: date ? "button" : "text",
+              visibility: "visible",
+              domName: date
+                ? "basicInformation.birthdate"
+                : "educationalBackground.universities.0.schoolName",
+            },
+          ],
+        },
+      ],
+    };
+    const response = {
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      executionAdapterId: "greeting-v1",
+      analysisStatus: "COMPLETE",
+      fields: [
+        {
+          candidateId: "f1",
+          matchType: "MATCH",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          autofillPolicy: "ALLOWED",
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey: date
+              ? "personal.personal.birthDate"
+              : "education.university.schoolName",
+          },
+          writePlan: { command },
+        },
+      ],
+    };
+    return { request, response };
+  }
+  it.each(["SEARCH_SELECTION", "SELECT_DATE"] as const)(
+    "allows %s only with the Greeting designation",
+    (command) => {
+      const { request, response } = contract(command);
+      expect(validateFieldsResponse(request, response).fields[0]).toMatchObject(
+        { writePlan: { command } },
+      );
+      expect(() =>
+        validateFieldsResponse(request, {
+          ...response,
+          executionAdapterId: undefined,
+        }),
+      ).toThrow(AnalysisContractError);
+    },
+  );
+  it("requires the calendar capability even for a designated Greeting date", () => {
+    const { request, response } = contract("SELECT_DATE");
+    expect(() =>
+      validateFieldsResponse(
+        { ...request, supportedWriteCommands: undefined },
+        response,
+      ),
+    ).toThrow(AnalysisContractError);
+  });
+  it("allows a designated Greeting military month date with its date profile key", () => {
+    const { request, response } = contract("SELECT_DATE");
+    request.sections[0]!.fields[0]!.domName =
+      "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.startDate";
+    response.fields[0]!.valueBinding.profileFieldKey =
+      "military.military.serviceStartDate";
+    expect(validateFieldsResponse(request, response).fields[0]).toMatchObject({
+      writePlan: { command: "SELECT_DATE" },
+    });
+  });
+});

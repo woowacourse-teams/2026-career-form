@@ -10,6 +10,7 @@ import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { revalidateDateTarget } from "../review/date-target-format";
 import { getWriteAdapter } from "../adapters/write";
+import type { ExecutionAdapterId } from "../api/types";
 import { normalizeDisplayName } from "./display-name";
 import { bindingKey, isSelectableApproved } from "./search-executor";
 
@@ -518,6 +519,7 @@ function writeGeneric(
 function writeItem(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
+  executionAdapterId?: ExecutionAdapterId,
 ): WriteOutcome {
   if (item.dateApproval) {
     const validation = revalidateDateTarget(
@@ -529,7 +531,9 @@ function writeItem(
       return { written: false, reason: STALE, code: "STALE_TARGET" };
   }
   const adapter = getWriteAdapter(
-    handle.elements[0]?.ownerDocument.location?.host ?? "",
+    (handle.elements[0] ?? handle.customElements?.[0])?.ownerDocument.location
+      ?.host ?? "",
+    executionAdapterId,
   );
   const attempt = adapter.tryWrite(handle, item);
   if (attempt.handled)
@@ -548,6 +552,7 @@ function writeItem(
 function resultForItem(
   item: ReviewPlanItem,
   registry: CandidateRegistry,
+  executionAdapterId?: ExecutionAdapterId,
 ): ApprovedWriteResult {
   if (item.analysis?.writePlan?.command === "SELECT_DATE")
     return skipped(
@@ -580,7 +585,7 @@ function resultForItem(
         failureCode,
       };
     }
-    const outcome = writeItem(item, handle);
+    const outcome = writeItem(item, handle, executionAdapterId);
     return outcome.written
       ? generic
         ? written(item.candidateId)
@@ -617,10 +622,12 @@ export function executeApprovedWrites({
   items,
   approvedCandidateIds,
   registry,
+  executionAdapterId,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
   registry: CandidateRegistry;
+  executionAdapterId?: ExecutionAdapterId;
 }): ApprovedWriteResult[] {
   const candidates = new Set<string>(),
     bindings = new Set<string>();
@@ -650,7 +657,7 @@ export function executeApprovedWrites({
     }
     candidates.add(item.candidateId);
     if (key) bindings.add(key);
-    return resultForItem(item, registry);
+    return resultForItem(item, registry, executionAdapterId);
   });
   results.forEach((result, index) => {
     if (result.status !== "written") return;
@@ -658,7 +665,9 @@ export function executeApprovedWrites({
       lookup = item && registry.lookupField(item.candidateId);
     if (item && lookup?.status === "ready")
       getWriteAdapter(
-        lookup.handle.elements[0]?.ownerDocument.location?.host ?? "",
+        (lookup.handle.elements[0] ?? lookup.handle.customElements?.[0])
+          ?.ownerDocument.location?.host ?? "",
+        executionAdapterId,
       ).afterWrite?.(lookup.handle, item);
   });
   return results;
