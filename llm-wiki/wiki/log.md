@@ -269,3 +269,9 @@
 - 승인된 후보 2개와 Issue의 결정을 [CF-112 bundle](../raw/issues/CF-112/manifest.md)에 비식별 기록하고 [범용 검색 topic](topics/generic-autofill-search.md)에 연결했다.
 - 최소 학교 POST, 학교명·코드·국가·같은 행 소재지 URL 묶음, 기존 `new_country` 보존, 전체 기존 묶음의 재검증, 학교·전공 공유 팝업 lease와 조건부 복구를 기록했다. 일반 POST 허용이나 회사 전체 어댑터 지원으로 확장하지 않는다.
 - 공개 검색과 공개 팝업을 연결한 합성 브라우저에서 두 번의 선택·닫힘·500ms 이상 유지를 확인하고 공개 결과 코드와 독립 대조했다. 설치 확장 전체 패널, 실제 지원서, 저장·제출은 검증하지 않았다.
+
+## [2026-09-26] ingest | CF-114 범용 자격증 검색과 후속 재검토
+
+- Approval-Digest: 90d7fdfda386fb1e7451130ed6401efc3669ea4ee10ab3685e883b7ce3fb752a
+- 승인된 후보 5개를 [CF-114 bundle](../raw/issues/CF-114/manifest.md)에 기록하고 [범용 검색 topic](topics/generic-autofill-search.md)과 [지원 현황](topics/adapter-field-inventory.md)에 연결했다.
+- 회사 중립 반복 행·검색·새 승인 경계를 기록했다. 합성 회귀와 설치 빌드 확인을 실제 CJ 또는 다른 회사의 자동 입력 성공으로 확대하지 않는다.
