@@ -13,12 +13,25 @@ public record FieldsAnalysisResponse(
     AnalysisStatus analysisStatus,
     List<FieldAnalysis> fields,
     List<WarningCode> warningCodes,
-    BlockCode blockCode
+    BlockCode blockCode,
+    String executionAdapterId
 ) {
 
     public FieldsAnalysisResponse {
         fields = List.copyOf(fields);
         warningCodes = warningCodes == null ? null : List.copyOf(warningCodes);
+    }
+
+    public FieldsAnalysisResponse(
+        String snapshotId, Mode mode, AnalysisStatus analysisStatus,
+        List<FieldAnalysis> fields, List<WarningCode> warningCodes, BlockCode blockCode
+    ) {
+        this(snapshotId, mode, analysisStatus, fields, warningCodes, blockCode, null);
+    }
+
+    public FieldsAnalysisResponse withExecutionAdapterId(String adapterId) {
+        return new FieldsAnalysisResponse(snapshotId, mode, analysisStatus,
+            fields, warningCodes, blockCode, adapterId);
     }
 
     public static FieldsAnalysisResponse complete(

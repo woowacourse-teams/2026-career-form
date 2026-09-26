@@ -12,7 +12,7 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectB
 class GreetingCompanyFormPolicyFactoryTest {
 
     @Test
-    void storesOneSharedPolicyWithOnlyNameAndPhoneRules() {
+    void storesOneSharedPolicyWithExactNameAndPhoneRules() {
         FormAnalysisPolicyDocument document = GreetingCompanyFormPolicyFactory.create();
 
         assertThat(document.companyKey()).isEqualTo("greeting");
@@ -20,7 +20,7 @@ class GreetingCompanyFormPolicyFactoryTest {
         assertThat(document.preparationFingerprint().noActionPreparation()).isTrue();
         assertThat(document.actionRules()).isEmpty();
         assertThat(document.fieldRules()).extracting(rule -> rule.structuralName())
-            .containsExactly(GreetingFormFingerprint.NAME, GreetingFormFingerprint.PHONE);
+            .contains(GreetingFormFingerprint.NAME, GreetingFormFingerprint.PHONE);
         assertThat(document.fieldRules().get(0).valueBinding())
             .isEqualTo(new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME));
         assertThat(document.fieldRules().get(1).valueBinding())

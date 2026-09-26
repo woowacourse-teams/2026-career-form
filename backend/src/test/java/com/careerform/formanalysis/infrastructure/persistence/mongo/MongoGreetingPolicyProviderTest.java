@@ -32,7 +32,9 @@ class MongoGreetingPolicyProviderTest {
         assertThat(result).isInstanceOfSatisfying(Available.class, available -> {
             assertThat(available.policy().companyKey()).isEqualTo("greeting");
             assertThat(available.policy().version()).isEqualTo(1);
-            assertThat(available.policy().fieldRules()).hasSize(2);
+            assertThat(available.policy().fieldRules()).extracting(rule -> rule.structuralName())
+                .contains("basicInformation.name", "basicInformation.phoneNumber.nationalNumber",
+                    "educationalBackground.universities.*.schoolName");
         });
     }
 

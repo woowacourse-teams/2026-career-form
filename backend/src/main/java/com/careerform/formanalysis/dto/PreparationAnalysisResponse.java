@@ -13,7 +13,8 @@ public record PreparationAnalysisResponse(
     List<PreparationPlan> preparationPlans,
     List<WarningCode> warningCodes,
     BlockCode blockCode,
-    String routingContext
+    String routingContext,
+    String executionAdapterId
 ) {
 
     public PreparationAnalysisResponse {
@@ -30,13 +31,27 @@ public record PreparationAnalysisResponse(
         BlockCode blockCode
     ) {
         this(snapshotId, mode, analysisStatus, preparationPlans,
-            warningCodes, blockCode, null);
+            warningCodes, blockCode, null, null);
+    }
+
+    public PreparationAnalysisResponse(
+        String snapshotId, Mode mode, AnalysisStatus analysisStatus,
+        List<PreparationPlan> preparationPlans, List<WarningCode> warningCodes,
+        BlockCode blockCode, String routingContext
+    ) {
+        this(snapshotId, mode, analysisStatus, preparationPlans, warningCodes,
+            blockCode, routingContext, null);
+    }
+
+    public PreparationAnalysisResponse withExecutionAdapterId(String adapterId) {
+        return new PreparationAnalysisResponse(snapshotId, mode, analysisStatus,
+            preparationPlans, warningCodes, blockCode, routingContext, adapterId);
     }
 
     public PreparationAnalysisResponse withRoutingContext(String context) {
         return new PreparationAnalysisResponse(
             snapshotId, mode, analysisStatus, preparationPlans,
-            warningCodes, blockCode, context
+            warningCodes, blockCode, context, executionAdapterId
         );
     }
 

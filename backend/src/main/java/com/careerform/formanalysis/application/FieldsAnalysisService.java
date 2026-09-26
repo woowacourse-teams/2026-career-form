@@ -31,6 +31,7 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalys
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.Mode;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.NoMatchFieldAnalysis;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
+import com.careerform.formanalysis.exception.ClientCapabilityRequiredException;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
@@ -75,8 +76,16 @@ public final class FieldsAnalysisService {
     }
 
     public FieldsAnalysisResponse analyze(FieldsAnalysisRequest request) {
+        return analyze(request, false);
+    }
+
+    public FieldsAnalysisResponse analyze(FieldsAnalysisRequest request, boolean greetingAdapterCapability) {
         validateSnapshot(request);
         FieldRoute route = router.route(request);
+        if (route.greeting() && !greetingAdapterCapability) {
+            throw new ClientCapabilityRequiredException();
+        }
+        String executionAdapterId = route.greeting() ? "greeting-v1" : null;
         if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
             return FieldsAnalysisResponse.adapterStructureMismatch(request.snapshotId());
         }
@@ -100,7 +109,8 @@ public final class FieldsAnalysisService {
             return FieldsAnalysisResponse.llmUnavailable(request.snapshotId());
         }
         if (request.fieldCandidatesInTraversalOrder().isEmpty()) {
-            return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of());
+            return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of())
+                .withExecutionAdapterId(executionAdapterId);
         }
         try {
             FieldMappingResolver.Resolution resolution =
@@ -109,8 +119,8 @@ public final class FieldsAnalysisService {
             return FieldsAnalysisResponse.complete(
                 request.snapshotId(),
                 mode,
-                mapFieldsInRequestOrder(request, resolution, mappingStatus)
-            );
+                mapFieldsInRequestOrder(request, resolution, mappingStatus, route.greeting())
+            ).withExecutionAdapterId(executionAdapterId);
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER
@@ -211,7 +221,8 @@ public final class FieldsAnalysisService {
     private List<FieldAnalysis> mapFieldsInRequestOrder(
         FieldsAnalysisRequest request,
         FieldMappingResolver.Resolution resolution,
-        MappingStatus mappingStatus
+        MappingStatus mappingStatus,
+        boolean greeting
     ) {
         Map<String, FieldMappingResolver.Result> mappings = new HashMap<>();
         for (FieldMappingResolver.Result result : resolution.results()) {
@@ -222,7 +233,7 @@ public final class FieldsAnalysisService {
                 candidate,
                 mappings.get(candidate.candidateId()),
                 mappingStatus,
-                request.supportedWriteCommands()
+                request.supportedWriteCommands(), greeting
             ))
             .toList();
     }
@@ -231,10 +242,11 @@ public final class FieldsAnalysisService {
         FieldCandidate candidate,
         FieldMappingResolver.Result mapping,
         MappingStatus mappingStatus,
-        List<FieldsAnalysisResponse.WriteCommand> supportedWriteCommands
+        List<FieldsAnalysisResponse.WriteCommand> supportedWriteCommands,
+        boolean greeting
     ) {
         FieldInteractionPolicy.Decision decision =
-            interactionPolicy.evaluate(
+            greeting ? interactionPolicy.evaluateGreeting(candidate, mapping, supportedWriteCommands) : interactionPolicy.evaluate(
                 candidate,
                 mapping,
                 mappingStatus == MappingStatus.LLM_SUGGESTED,

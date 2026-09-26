@@ -95,13 +95,21 @@ public final class PreparationAnalysisService {
         boolean addressSearch,
         boolean routingContextCapability
     ) {
+        return analyze(request, addressSearch, routingContextCapability, false);
+    }
+
+    public PreparationAnalysisResponse analyze(
+        PreparationAnalysisRequest request, boolean addressSearch,
+        boolean routingContextCapability, boolean greetingAdapterCapability
+    ) {
         validateSnapshot(request);
         ActionRoute route = router.route(request);
-        if (route.greeting() && !routingContextCapability) {
+        if (route.greeting() && (!routingContextCapability || !greetingAdapterCapability)) {
             throw new ClientCapabilityRequiredException();
         }
         String routingContext = route.greeting() && routingContextCapability
-            ? routingContexts.issue(request.site().host(), request.site().pathPattern())
+            ? request.routingContext() != null ? request.routingContext()
+                : routingContexts.issue(request.site().host(), request.site().pathPattern())
             : null;
         if (route.greeting() && routingContext == null) {
             throw new RoutingContextUnavailableException();
@@ -128,12 +136,13 @@ public final class PreparationAnalysisService {
         if (selectedResolver.isEmpty()) {
             return PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
         }
+        String executionAdapterId = route.greeting() ? "greeting-v1" : null;
         if (request.actionCandidatesInTraversalOrder().isEmpty()) {
             return PreparationAnalysisResponse.complete(
                 request.snapshotId(),
                 mode,
                 List.of()
-            ).withRoutingContext(routingContext);
+            ).withRoutingContext(routingContext).withExecutionAdapterId(executionAdapterId);
         }
         try {
             ActionResolver.Resolution resolution = selectedResolver.orElseThrow()
@@ -147,7 +156,7 @@ public final class PreparationAnalysisService {
                     resolution,
                     addressSearch && mode == Mode.ADAPTER
                 )
-            ).withRoutingContext(routingContext);
+            ).withRoutingContext(routingContext).withExecutionAdapterId(executionAdapterId);
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER

@@ -82,6 +82,38 @@ public final class FieldInteractionPolicy {
         );
     }
 
+    public Decision evaluateGreeting(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping,
+        List<WriteCommand> supportedWriteCommands
+    ) {
+        Decision ordinary = evaluate(candidate, mapping);
+        if (ordinary.interactionStatus() != InteractionStatus.READY
+            || !(mapping instanceof FieldMappingResolver.Match match)
+            || !(match.valueBinding() instanceof FieldMappingResolver.DirectBinding direct)
+            || candidate.domName() == null || candidate.element() != FormElement.INPUT) {
+            return ordinary;
+        }
+        String name = candidate.domName();
+        if (candidate.control() == FormControl.BUTTON
+            && SUPPORTED_FIELDS.isDateField(direct.profileFieldKey())
+            && (name.equals("basicInformation.birthdate")
+                || name.equals("militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.startDate")
+                || name.equals("militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.endDate")
+                || name.matches("educationalBackground\\.(universities|graduateSchools)\\.[0-9]+\\.enrollmentPeriod\\.(startDate|endDate)"))) {
+            if (supportedWriteCommands == null || !supportedWriteCommands.contains(WriteCommand.SELECT_DATE)) {
+                return withoutWrite(InteractionStatus.UNVERIFIED);
+            }
+            return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SELECT_DATE));
+        }
+        if (candidate.control() == FormControl.TEXT
+            && (name.matches("educationalBackground\\.(universities|graduateSchools)\\.[0-9]+\\.(schoolName|majors\\.0)")
+                || name.matches("educationalBackground\\.graduateSchools\\.[0-9]+\\.majors\\.1"))) {
+            return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SEARCH_SELECTION));
+        }
+        return ordinary;
+    }
+
     // This authorizes local preflight, never a direct write or an assumed safe popup.
     private static boolean isDateSelection(
         FieldCandidate candidate,

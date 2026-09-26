@@ -71,7 +71,7 @@ class GreetingAnalysisIntegrationTest {
         );
 
         PreparationAnalysisResponse preparation = preparationService.analyze(
-            preparationRequest, false, true
+            preparationRequest, false, true, true
         );
 
         assertThat(preparation.mode()).isEqualTo(PreparationAnalysisResponse.Mode.ADAPTER);
@@ -89,7 +89,7 @@ class GreetingAnalysisIntegrationTest {
             fieldsFixture.sections(), preparation.routingContext()
         );
 
-        FieldsAnalysisResponse fields = fieldsService.analyze(fieldsRequest);
+        FieldsAnalysisResponse fields = fieldsService.analyze(fieldsRequest, true);
 
         assertThat(fields.snapshotId()).isEqualTo("synthetic-fields");
         assertThat(fields.mode()).isEqualTo(FieldsAnalysisResponse.Mode.ADAPTER);

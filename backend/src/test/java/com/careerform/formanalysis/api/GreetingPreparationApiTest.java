@@ -18,6 +18,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.careerform.formanalysis.application.FormAnalysisRouter;
+import com.careerform.formanalysis.application.FieldsAnalysisService;
+import com.careerform.formanalysis.application.FieldInteractionPolicy;
+import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.GreetingRoutingContext;
 import com.careerform.formanalysis.application.PreparationAnalysisService;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicyFixture;
@@ -45,11 +48,12 @@ class GreetingPreparationApiTest {
     @DisplayName("새 클라이언트에는 ADAPTER 응답과 분석 문맥을 반환한다")
     void acceptsCapableClient() throws Exception {
         mvc(Decision.POSITIVE, true).perform(post("/api/v1/preparation/analyze")
-                .header("X-Career-Form-Capabilities", "routing-context-v1")
+                .header("X-Career-Form-Capabilities", "routing-context-v1,greeting-adapter-v1")
                 .contentType(MediaType.APPLICATION_JSON).content(fixture()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mode").value("ADAPTER"))
-            .andExpect(jsonPath("$.routingContext").isString());
+            .andExpect(jsonPath("$.routingContext").isString())
+            .andExpect(jsonPath("$.executionAdapterId").value("greeting-v1"));
     }
 
     @Test
@@ -58,7 +62,8 @@ class GreetingPreparationApiTest {
         mvc(Decision.NO_POSITIVE_EVIDENCE, true).perform(post("/api/v1/preparation/analyze")
                 .contentType(MediaType.APPLICATION_JSON).content(fixture()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.mode").value("GENERIC"));
+            .andExpect(jsonPath("$.mode").value("GENERIC"))
+            .andExpect(jsonPath("$.executionAdapterId").doesNotExist());
     }
 
     @Test
@@ -69,7 +74,7 @@ class GreetingPreparationApiTest {
             contexts.issue("career.example.org", "/ko/o/*/apply");
         }
         mvc(Decision.POSITIVE, true, contexts).perform(post("/api/v1/preparation/analyze")
-                .header("X-Career-Form-Capabilities", "routing-context-v1")
+                .header("X-Career-Form-Capabilities", "routing-context-v1,greeting-adapter-v1")
                 .contentType(MediaType.APPLICATION_JSON).content(fixture()))
             .andExpect(status().isServiceUnavailable())
             .andExpect(jsonPath("$.code").value("ROUTING_CONTEXT_UNAVAILABLE"));
@@ -83,6 +88,75 @@ class GreetingPreparationApiTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.analysisStatus").value("BLOCKED"))
             .andExpect(jsonPath("$.blockCode").value("GREETING_DNS_UNAVAILABLE"));
+    }
+
+    @Test
+    void rejectsClientWithoutGreetingExecutionCapability() throws Exception {
+        mvc(Decision.POSITIVE, true).perform(post("/api/v1/preparation/analyze")
+                .header("X-Career-Form-Capabilities", "routing-context-v1,greeting-adapter-v10")
+                .contentType(MediaType.APPLICATION_JSON).content(fixture()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("CLIENT_CAPABILITY_REQUIRED"))
+            .andExpect(jsonPath("$.executionAdapterId").doesNotExist());
+    }
+
+    @Test
+    void reusesBoundContextForSecondPreparationWithoutDnsEvidence() throws Exception {
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
+        String token = contexts.issue("kakaomobility.career.greetinghr.com", "/ko/o/*/apply");
+        String request = fixture().replace("\"schemaVersion\": 2,",
+            "\"schemaVersion\": 2, \"routingContext\": \"" + token + "\",");
+        mvc(Decision.RETRYABLE_FAILURE, true, contexts)
+            .perform(post("/api/v1/preparation/analyze")
+                .header("X-Career-Form-Capabilities", "routing-context-v1,greeting-adapter-v1")
+                .contentType(MediaType.APPLICATION_JSON).content(request))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
+            .andExpect(jsonPath("$.routingContext").value(token))
+            .andExpect(jsonPath("$.executionAdapterId").value("greeting-v1"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"forged", "wrong-host", "wrong-path"})
+    void rejectsInvalidContextEvenWhenDnsWouldConfirmGreeting(String kind) throws Exception {
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
+        String token = switch (kind) {
+            case "wrong-host" -> contexts.issue("career.other.com", "/ko/o/*/apply");
+            case "wrong-path" -> contexts.issue("kakaomobility.career.greetinghr.com", "/ko/o/*");
+            default -> "invalid";
+        };
+        String request = fixture().replace("\"schemaVersion\": 2,",
+            "\"schemaVersion\": 2, \"routingContext\": \"" + token + "\",");
+        mvc(Decision.POSITIVE, true, contexts).perform(post("/api/v1/preparation/analyze")
+                .header("X-Career-Form-Capabilities", "routing-context-v1,greeting-adapter-v1")
+                .contentType(MediaType.APPLICATION_JSON).content(request))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.analysisStatus").value("BLOCKED"))
+            .andExpect(jsonPath("$.executionAdapterId").doesNotExist());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void negotiatesFieldsExecutionAdapter(boolean capable) throws Exception {
+        GreetingRoutingContext contexts = new GreetingRoutingContext();
+        String token = contexts.issue("career.hyundai-autoever.com", "/ko/o/*/apply");
+        String request = new ClassPathResource("formanalysis/greeting-fields-current-v2.json")
+            .getContentAsString(StandardCharsets.UTF_8)
+            .replace("\"schemaVersion\": 2,",
+                "\"schemaVersion\": 2, \"routingContext\": \"" + token + "\",");
+        var result = mvc(Decision.RETRYABLE_FAILURE, true, contexts)
+            .perform(post("/api/v1/fields/analyze")
+                .header("X-Career-Form-Capabilities", capable ? "greeting-adapter-v1" : "routing-context-v1")
+                .contentType(MediaType.APPLICATION_JSON).content(request));
+        if (capable) {
+            result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
+                .andExpect(jsonPath("$.executionAdapterId").value("greeting-v1"));
+        } else {
+            result.andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CLIENT_CAPABILITY_REQUIRED"))
+                .andExpect(jsonPath("$.executionAdapterId").doesNotExist());
+        }
     }
 
     private static MockMvc mvc(Decision evidence, boolean policyAvailable) {
@@ -103,7 +177,9 @@ class GreetingPreparationApiTest {
             2, request.snapshotId(), List.of()
         );
         return MockMvcBuilders.standaloneSetup(new PreparationAnalysisController(
-                new PreparationAnalysisService(Optional.of(generic), router, contexts)))
+                new PreparationAnalysisService(Optional.of(generic), router, contexts)),
+                new FieldsAnalysisController(new FieldsAnalysisService(Optional.empty(), router,
+                    new FieldInteractionPolicy(), new SupportedProfileFields())))
             .setControllerAdvice(new FormAnalysisExceptionHandler()).build();
     }
 

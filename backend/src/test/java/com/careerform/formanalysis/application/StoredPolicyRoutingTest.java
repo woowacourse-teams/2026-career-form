@@ -144,7 +144,7 @@ class StoredPolicyRoutingTest {
         var fixtureFields = fields("greeting-fields-current-v2.json");
 
         var blocked = new PreparationAnalysisService(Optional.empty(), router, contexts)
-            .analyze(preparation, false, true);
+            .analyze(preparation, false, true, true);
         assertThat(blocked.blockCode())
             .isEqualTo(PreparationAnalysisResponse.BlockCode.ADAPTER_POLICY_UNAVAILABLE);
         assertThat(blocked.routingContext()).matches("[A-Za-z0-9_-]{32}");
@@ -214,7 +214,7 @@ class StoredPolicyRoutingTest {
             .analyze(newCustom, false, false))
             .isInstanceOf(ClientCapabilityRequiredException.class);
         var blocked = new PreparationAnalysisService(Optional.empty(), custom, contexts)
-            .analyze(newCustom, false, true);
+            .analyze(newCustom, false, true, true);
         assertThat(blocked.analysisStatus())
             .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.BLOCKED);
         assertThat(blocked.routingContext()).isNotBlank();
@@ -272,7 +272,7 @@ class StoredPolicyRoutingTest {
         PreparationAnalysisService preparationService = new PreparationAnalysisService(
             Optional.empty(), router, contexts
         );
-        var supported = preparationService.analyze(preparation, false, true);
+        var supported = preparationService.analyze(preparation, false, true, true);
         assertThat(supported.preparationPlans()).isEmpty();
         assertThat(supported.routingContext()).matches("[A-Za-z0-9_-]{32}");
         assertThatThrownBy(() -> preparationService.analyze(preparation, false, false))

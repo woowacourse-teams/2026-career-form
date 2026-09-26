@@ -9,6 +9,8 @@ import com.careerform.formanalysis.application.policy.StoredPolicyActionResolver
 import com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver;
 import com.careerform.formanalysis.application.policy.StoredPolicyFingerprint;
 import com.careerform.formanalysis.application.policy.GreetingFormFingerprint;
+import com.careerform.formanalysis.application.policy.GreetingFieldMappingResolver;
+import com.careerform.formanalysis.application.policy.GreetingActionResolver;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Available;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.NotRegistered;
@@ -64,7 +66,15 @@ public final class FormAnalysisRouter {
         );
         boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
-            lookup = greetingLookup(request.site().host(), request.site().pathPattern());
+            if (request.routingContext() != null) {
+                if (!routingContexts.isValid(request.routingContext(), request.site().host(),
+                    request.site().pathPattern())) {
+                    return new ActionRoute(RouteKind.POLICY_UNAVAILABLE, null);
+                }
+                lookup = greetingPolicyProvider.find();
+            } else {
+                lookup = greetingLookup(request.site().host(), request.site().pathPattern());
+            }
             if (lookup instanceof NotRegistered) {
                 return new ActionRoute(RouteKind.GENERIC, null);
             }
@@ -82,7 +92,8 @@ public final class FormAnalysisRouter {
         }
         return new ActionRoute(
             RouteKind.ADAPTER,
-            new StoredPolicyActionResolver(policy),
+            "greeting".equals(policy.companyKey()) ? new GreetingActionResolver()
+                : new StoredPolicyActionResolver(policy),
             "greeting".equals(policy.companyKey())
         );
     }
@@ -125,7 +136,8 @@ public final class FormAnalysisRouter {
         }
         return new FieldRoute(
             RouteKind.ADAPTER,
-            new StoredPolicyFieldMappingResolver(policy, greeting)
+            greeting ? new GreetingFieldMappingResolver(policy)
+                : new StoredPolicyFieldMappingResolver(policy), greeting
         );
     }
 
@@ -183,6 +195,9 @@ public final class FormAnalysisRouter {
         }
     }
 
-    public record FieldRoute(RouteKind kind, FieldMappingResolver resolver) {
+    public record FieldRoute(RouteKind kind, FieldMappingResolver resolver, boolean greeting) {
+        public FieldRoute(RouteKind kind, FieldMappingResolver resolver) {
+            this(kind, resolver, false);
+        }
     }
 }
