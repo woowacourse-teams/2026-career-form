@@ -135,6 +135,9 @@ public final class FormAnalysisRouter {
             pathPattern
         );
         if (lookup instanceof NotRegistered) {
+            lookup = greetingLookup(host, pathPattern);
+        }
+        if (lookup instanceof NotRegistered) {
             return GenericRouteKind.GENERIC;
         }
         if (lookup instanceof Available) {
