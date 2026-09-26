@@ -82,7 +82,7 @@ export function observeResults(
         root.getAttribute("data-search-complete") === "true";
       const ready =
         query === undefined ||
-        surface.hasCompletedNavigation() ||
+        surface.hasCompletedNavigation(query) ||
         (queryTagged && completeMarker) ||
         (busySeen && changed && root.getAttribute("aria-busy") === "false");
       if (!ready) return undefined;

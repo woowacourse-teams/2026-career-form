@@ -70,4 +70,54 @@ describe("generic form groups", () => {
 
     expect(genericFormGroups(document)).toEqual([]);
   });
+
+  it("does not choose the first of conflicting visible maximum notices", () => {
+    document.body.innerHTML = `<section><h3>자격</h3><p>최대 3개</p><p>최대 7개</p><div ismultirow="true"><input><input></div><button>추가</button></section>`;
+    expect(genericFormGroups(document)[0]?.maximumRows).toBe("ambiguous");
+  });
+
+  it("does not combine marked rows with different field structures", () => {
+    document.body.innerHTML = `<section><h3>자격</h3><div ismultirow="true"><input><input></div><div ismultirow="true"><select></select><textarea></textarea></div><button>추가</button></section>`;
+    expect(genericFormGroups(document)).toEqual([]);
+  });
+
+  it("keeps a group when only one marked row reveals a conditional grade select", () => {
+    document.body.innerHTML = `
+      <section><h3>자격</h3>
+        <div ismultirow="true"><input name="name"><input name="issuer"><input name="date"></div>
+        <div ismultirow="true"><input name="name"><select name="grade"></select><input name="issuer"><input name="date"></div>
+        <button type="button">추가</button>
+      </section>
+    `;
+
+    const groups = genericFormGroups(document);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.rows).toHaveLength(2);
+  });
+
+  it("does not accept rows sharing only one input when their remaining controls differ", () => {
+    document.body.innerHTML = `
+      <section><h3>자격</h3>
+        <div ismultirow="true"><input name="name"><select name="grade"></select></div>
+        <div ismultirow="true"><input name="name"><textarea name="issuer"></textarea></div>
+        <button type="button">추가</button>
+      </section>
+    `;
+
+    expect(genericFormGroups(document)).toEqual([]);
+  });
+
+  it("does not infer a titled repeat area through nested group boundaries", () => {
+    document.body.innerHTML = `
+      <section><h3>자격</h3>
+        <div class="outer">
+          <div ismultirow="true"><input /><input /></div>
+          <div class="inner"><h4>다른 영역</h4><button type="button">추가</button></div>
+        </div>
+      </section>
+    `;
+
+    expect(genericFormGroups(document)).toEqual([]);
+  });
 });

@@ -33,6 +33,53 @@ function controls(row: Element): Element[] {
   );
 }
 
+function controlShape(row: Element): string[] {
+  return controls(row).map(
+    (control) => `${control.tagName}:${control.getAttribute("type") ?? "text"}`,
+  );
+}
+
+function commonControlShape(left: string[], right: string[]): string[] {
+  const lengths = Array.from({ length: left.length + 1 }, () =>
+    Array<number>(right.length + 1).fill(0),
+  );
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1)
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1)
+      lengths[leftIndex]![rightIndex] =
+        left[leftIndex - 1] === right[rightIndex - 1]
+          ? lengths[leftIndex - 1]![rightIndex - 1]! + 1
+          : Math.max(
+              lengths[leftIndex - 1]![rightIndex]!,
+              lengths[leftIndex]![rightIndex - 1]!,
+            );
+  const common: string[] = [];
+  for (
+    let leftIndex = left.length, rightIndex = right.length;
+    leftIndex && rightIndex;
+  ) {
+    if (left[leftIndex - 1] === right[rightIndex - 1]) {
+      common.unshift(left[--leftIndex]!);
+      rightIndex -= 1;
+    } else if (
+      lengths[leftIndex - 1]![rightIndex]! >=
+      lengths[leftIndex]![rightIndex - 1]!
+    ) {
+      leftIndex -= 1;
+    } else rightIndex -= 1;
+  }
+  return common;
+}
+
+function rowsShareCommonControlCore(rows: readonly Element[]): boolean {
+  const [first, ...rest] = rows;
+  if (!first) return false;
+  const common = rest.reduce(
+    (shape, row) => commonControlShape(shape, controlShape(row)),
+    controlShape(first),
+  );
+  return common.length >= 2;
+}
+
 function actionLabel(action: HTMLElement): string {
   return [
     action.textContent,
@@ -60,6 +107,19 @@ function addActions(area: Element, rows: readonly Element[]): HTMLElement[] {
   );
 }
 
+function crossesNestedHeadingBoundary(
+  area: Element,
+  seed: Element,
+  action: HTMLElement,
+): boolean {
+  return Array.from(area.querySelectorAll("h1, h2, h3, h4, h5, h6")).some(
+    (heading) => {
+      const boundary = heading.parentElement;
+      return Boolean(boundary?.contains(action) && !boundary.contains(seed));
+    },
+  );
+}
+
 function maximumRows(
   area: Element,
   action: HTMLElement,
@@ -72,8 +132,10 @@ function maximumRows(
     )
     .map(Number)
     .filter((value) => Number.isInteger(value) && value >= 0);
-  const textMatch = area.textContent?.match(/최대\s*(\d+)\s*(?:개|건|항목)/);
-  if (textMatch) rawValues.push(Number(textMatch[1]));
+  const textMatches = (area.textContent ?? "").matchAll(
+    /최대\s*(\d+)\s*(?:개|건|항목)/g,
+  );
+  for (const match of textMatches) rawValues.push(Number(match[1]));
   const values = [...new Set(rawValues)];
   return values.length > 1 ? "ambiguous" : values[0];
 }
@@ -103,9 +165,11 @@ function groupFromSeed(seed: Element): GenericFormGroup | undefined {
     const displayName = groupTitle(area);
     if (!displayName) continue;
     const rows = candidateRows(area, seed);
+    if (!rowsShareCommonControlCore(rows)) break;
     const actions = addActions(area, rows);
     if (actions.length === 1) {
       const action = actions[0]!;
+      if (crossesNestedHeadingBoundary(area, seed, action)) break;
       const maximum = maximumRows(area, action);
       return {
         area,

@@ -1,6 +1,7 @@
 import { acquireDocumentRun } from "../interaction/document-run";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
 import { skipped, type ApprovedWriteResult } from "./write-result";
@@ -29,6 +30,7 @@ export async function executeApprovedWritesAfterPageSettles({
   signal,
   document: suppliedDocument,
   calendarOnly = false,
+  onSearchFollowUp,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
@@ -41,6 +43,10 @@ export async function executeApprovedWritesAfterPageSettles({
   signal?: AbortSignal;
   document?: Document;
   calendarOnly?: boolean;
+  onSearchFollowUp?: (
+    item: ReviewPlanItem,
+    controls: readonly SearchFollowUpControl[],
+  ) => void;
 }): Promise<ApprovedWriteResult[]> {
   const first = items[0] && registry.lookupField(items[0].candidateId);
   const document =
@@ -131,6 +137,7 @@ export async function executeApprovedWritesAfterPageSettles({
       beforeWrite,
       onResult: (item, result) => onResult?.(item, result, registry),
       results: initial,
+      onSearchFollowUp,
     });
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     const adapterItems = items.filter(

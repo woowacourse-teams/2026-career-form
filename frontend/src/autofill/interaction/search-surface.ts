@@ -11,14 +11,24 @@ import {
 export type SearchSurfaceKind =
   "same-document-dialog" | "same-origin-iframe" | "inline-listbox";
 export type SearchMode = "existing-options" | "query-only" | "query-and-submit";
+
+function normalizedSearchValue(value: string | undefined): string {
+  return value?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
+}
+
 export class SearchSurface {
   documentGeneration = 0;
   queryGeneration = 0;
   mode?: SearchMode;
   private readonly frameSignature?: string;
-  private expectedNavigation?: URL;
+  private expectedNavigation?: {
+    url: URL;
+    method: "get" | "post";
+    query?: string;
+  };
   private previousDocument?: Document;
   private acceptedSearchPath?: string;
+  private acceptedSearchQuery?: string;
   private readonly origin: string;
   private readonly openerSignature: string;
   private rootIdentity: SearchRoot;
@@ -98,10 +108,16 @@ export class SearchSurface {
         throw new SearchFailure("surface_navigation_unsafe");
     }
   }
-  expectNavigation(url: URL): void {
+  expectNavigation(
+    url: URL,
+    query?: string,
+    method: "get" | "post" = "get",
+  ): void {
     if (!this.frame || url.origin !== this.origin)
       throw new SearchFailure("surface_navigation_unsafe");
-    this.expectedNavigation = url;
+    this.expectedNavigation = { url, method, ...(query ? { query } : {}) };
+    this.acceptedSearchPath = undefined;
+    this.acceptedSearchQuery = undefined;
     this.previousDocument = this.document;
   }
   navigationPending(): boolean {
@@ -119,23 +135,27 @@ export class SearchSurface {
     )
       return false;
     const actual = new URL(next.URL);
+    const expected = this.expectedNavigation;
     if (
-      actual.origin !== this.expectedNavigation.origin ||
-      actual.pathname !== this.expectedNavigation.pathname ||
-      [...this.expectedNavigation.searchParams].some(
-        ([key, value]) => actual.searchParams.get(key) !== value,
-      )
+      actual.origin !== expected.url.origin ||
+      actual.pathname !== expected.url.pathname ||
+      actual.searchParams.toString() !== expected.url.searchParams.toString()
     )
       throw new SearchFailure("surface_navigation_unsafe");
     this.acceptedSearchPath = actual.pathname;
+    this.acceptedSearchQuery = expected.query;
     this.root = next;
     this.rootIdentity = next;
     this.documentGeneration++;
     this.expectedNavigation = undefined;
     return true;
   }
-  hasCompletedNavigation(): boolean {
-    return this.acceptedSearchPath !== undefined;
+  hasCompletedNavigation(query?: string): boolean {
+    if (this.acceptedSearchPath === undefined) return false;
+    return query === undefined
+      ? true
+      : normalizedSearchValue(this.acceptedSearchQuery) ===
+          normalizedSearchValue(query);
   }
   resultRoots(): HTMLElement[] {
     const root = this.root;

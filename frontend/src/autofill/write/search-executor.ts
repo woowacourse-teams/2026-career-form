@@ -15,6 +15,7 @@ import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "./executor";
+import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { WriteFailureCode } from "./failure";
 
 const MAX_SEARCHES = 4;
@@ -49,6 +50,10 @@ type ExecuteApprovedSearchWritesArgs = {
   signal?: AbortSignal;
   beforeWrite?: (item: ReviewPlanItem) => Promise<void>;
   onResult?: (item: ReviewPlanItem, result: ApprovedWriteResult) => void;
+  onSearchFollowUp?: (
+    item: ReviewPlanItem,
+    controls: readonly SearchFollowUpControl[],
+  ) => void;
   writeOrdinary?: (item: ReviewPlanItem) => ApprovedWriteResult;
 };
 
@@ -186,6 +191,7 @@ function searchDiagnosticCode(
     case "result_set_incomplete":
       return "SEARCH_RESULTS_INCOMPLETE";
     case "result_activation_unsafe":
+    case "selection_effect_unverified":
       return "SEARCH_ACTIVATION_UNSAFE";
     case "result_pending":
     case "deadline_exceeded":
@@ -195,6 +201,7 @@ function searchDiagnosticCode(
     case "search_results_not_found":
       return "SEARCH_NO_EXACT_MATCH";
     case "result_not_reflected":
+    case "selection_postcondition_failed":
     case "popup_unresolved":
       return "SEARCH_UNCONFIRMED";
     case "stale_target":
@@ -208,6 +215,10 @@ function searchDiagnosticCode(
 
 function searchFailureMessage(reason: SearchFailureReason): string {
   const messages: Partial<Record<SearchFailureReason, string>> = {
+    selection_effect_unverified:
+      "선택 시 변경될 항목과 연결 값을 확인할 수 없어 결과를 선택하지 않았습니다.",
+    selection_postcondition_failed:
+      "검색 선택 후 예상과 다른 변경을 확인했습니다. 일부 값이 변경되었을 수 있어 후속 기입을 중단했습니다.",
     popup_unresolved:
       "선택값 반영과 검색 화면 닫힘을 함께 확인할 수 없어 후속 자동 기입을 중단했습니다.",
     surface_not_found: "원래 입력칸에 연결된 검색 화면을 확인할 수 없습니다.",
@@ -281,6 +292,7 @@ export async function executeApprovedSearchWrites({
   writeOrdinary,
   beforeWrite,
   onResult,
+  onSearchFollowUp,
 }: ExecuteApprovedSearchWritesArgs): Promise<boolean> {
   const seenBindings = new Set<string>();
   const seenCandidates = new Set<string>();
@@ -398,10 +410,27 @@ export async function executeApprovedSearchWrites({
     const expectedKey = direct.profileFieldKey;
     const expectedEntryId = item.profileEntryId;
     const expectedCandidateId = item.candidateId;
+    const expectedSearchPlan = JSON.stringify(item.searchValuePlan);
+    const localSearchPlan = item.searchValuePlan;
+    if (
+      localSearchPlan &&
+      (expectedKey !== "certifications.certificate.name" ||
+        localSearchPlan.profileEntryId !== expectedEntryId ||
+        localSearchPlan.originalName !== expectedValue)
+    ) {
+      results[index] = skipped(
+        item.candidateId,
+        "needs-verification",
+        "STALE_TARGET",
+        STALE,
+      );
+      continue;
+    }
     const currentApproval = () =>
       assertCurrent?.() !== false &&
       item.candidateId === expectedCandidateId &&
       item.profileEntryId === expectedEntryId &&
+      JSON.stringify(item.searchValuePlan) === expectedSearchPlan &&
       item.analysis?.candidateId === expectedCandidateId &&
       approvedCandidateIds.has(item.candidateId) &&
       isSelectableApproved(item) &&
@@ -418,6 +447,9 @@ export async function executeApprovedSearchWrites({
       targetCandidateId: item.candidateId,
       canonicalFieldKey: expectedKey,
       expectedValue,
+      ...(localSearchPlan
+        ? { searchValues: localSearchPlan.forms.map((form) => form.name) }
+        : {}),
       expectedCurrentValue,
       decisionProvider: decisionSession,
       assertCurrent: currentApproval,
@@ -430,7 +462,7 @@ export async function executeApprovedSearchWrites({
         document: input.ownerDocument,
         acceptedValues: expectedKey.endsWith(".schoolRegion")
           ? schoolRegionSearchValues(expectedValue)
-          : [expectedValue],
+          : [result.selectedValue ?? expectedValue],
         assertCurrent: currentApproval,
       });
     }
@@ -461,6 +493,20 @@ export async function executeApprovedSearchWrites({
               searchDiagnosticCode(failedResult!.reason),
             );
     onResult?.(item, results[index]!);
+    if (result.status === "selected" && result.followUp?.controls.length) {
+      onSearchFollowUp?.(item, result.followUp.controls);
+      for (let later = index + 1; later < items.length; later++) {
+        if (!approvedCandidateIds.has(items[later]!.candidateId)) continue;
+        results[later] = skipped(
+          items[later]!.candidateId,
+          "needs-verification",
+          "STALE_TARGET",
+          "검색 후 입력 항목이 변경되어 새로 확인한 뒤 기입합니다.",
+          "SEARCH_FOLLOWUP_HALTED",
+        );
+      }
+      return true;
+    }
     if (
       result.status !== "selected" &&
       result.status !== "unchanged" &&
