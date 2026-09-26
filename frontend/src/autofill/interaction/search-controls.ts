@@ -62,11 +62,30 @@ export function submitControls(
   );
 }
 
+export interface SearchFormBinding {
+  destination: URL;
+  method: "get" | "post";
+  queryName: string;
+  hiddenValues: readonly (readonly [string, string])[];
+  current(): boolean;
+}
+
+function hasSubmitHandler(element: Element): boolean {
+  return (
+    Array.from(element.attributes).some((attribute) =>
+      /^on/i.test(attribute.name),
+    ) ||
+    ["onsubmit", "onformdata", "onclick", "oninput", "onchange"].some(
+      (name) => typeof Reflect.get(element, name) === "function",
+    )
+  );
+}
+
 export function searchDestination(
   surface: SearchSurface,
   query: HTMLInputElement,
   submit: HTMLButtonElement | HTMLInputElement,
-): URL | undefined {
+): SearchFormBinding | undefined {
   if (
     !interactive(query) ||
     !interactive(submit) ||
@@ -86,16 +105,39 @@ export function searchDestination(
     return undefined;
   }
   const controls = Array.from(form.elements);
-  // Hidden values must never be sent by a generic native submission.
+  const hidden = controls.filter(
+    (control): control is HTMLInputElement =>
+      control.tagName === "INPUT" &&
+      (control as HTMLInputElement).type === "hidden",
+  );
   if (
-    controls.some((control) => control !== query && control !== submit) ||
+    controls.some(
+      (control) =>
+        control !== query &&
+        control !== submit &&
+        !hidden.some((hiddenControl) => hiddenControl === control),
+    ) ||
     controls.some((control) => !form.contains(control)) ||
+    hidden.some(
+      (control, index) =>
+        !control.name ||
+        control.disabled ||
+        control.name === query.name ||
+        hasSubmitHandler(control) ||
+        hidden.some(
+          (other, otherIndex) =>
+            otherIndex !== index && other.name === control.name,
+        ),
+    ) ||
+    hasSubmitHandler(form) ||
+    hasSubmitHandler(query) ||
+    hasSubmitHandler(submit) ||
     !surface.contains(form) ||
     form.parentElement?.closest("form")
   )
     throw new SearchFailure("unverified_search_form");
   if (submit.type === "button") {
-    if (!safeActivation(submit))
+    if (hidden.length || !safeActivation(submit))
       throw new SearchFailure("unverified_search_form");
     return undefined;
   }
@@ -117,7 +159,8 @@ export function searchDestination(
     submit.type !== "submit" ||
     submit.name ||
     target !== "_self" ||
-    method !== "get" ||
+    !["get", "post"].includes(method) ||
+    !query.name ||
     !action
   )
     throw new SearchFailure("surface_navigation_unsafe");
@@ -132,7 +175,89 @@ export function searchDestination(
     destination.password
   )
     throw new SearchFailure("surface_navigation_unsafe");
-  return destination;
+  const hiddenValues = hidden.map(
+    (control) => [control.name, control.value] as const,
+  );
+  const signature = {
+    method,
+    action: destination.href,
+    target,
+    queryName: query.name,
+  };
+  return {
+    destination,
+    method: method as "get" | "post",
+    queryName: query.name,
+    hiddenValues,
+    current: () => {
+      if (
+        !form.isConnected ||
+        !query.isConnected ||
+        !submit.isConnected ||
+        query.form !== form ||
+        submit.form !== form ||
+        !form.contains(query) ||
+        !form.contains(submit) ||
+        !surface.contains(form)
+      )
+        return false;
+      const currentMethod = (
+        submit.getAttribute("formmethod") ||
+        form.getAttribute("method") ||
+        "get"
+      ).toLowerCase();
+      const currentAction = new URL(
+        submit.getAttribute("formaction") || form.getAttribute("action") || "",
+        form.ownerDocument.baseURI,
+      ).href;
+      const currentTarget = (
+        submit.getAttribute("formtarget") ||
+        form.getAttribute("target") ||
+        form.ownerDocument.querySelector("base")?.getAttribute("target") ||
+        "_self"
+      ).toLowerCase();
+      const currentControls = Array.from(form.elements);
+      const currentHidden = currentControls.filter(
+        (control): control is HTMLInputElement =>
+          control.tagName === "INPUT" &&
+          (control as HTMLInputElement).type === "hidden",
+      );
+      return (
+        currentMethod === signature.method &&
+        currentAction === signature.action &&
+        currentTarget === signature.target &&
+        query.name === signature.queryName &&
+        ["text", "search"].includes(query.type) &&
+        !query.readOnly &&
+        interactive(query) &&
+        interactive(submit) &&
+        submit.type === "submit" &&
+        !submit.name &&
+        !hasSubmitHandler(form) &&
+        !hasSubmitHandler(query) &&
+        !hasSubmitHandler(submit) &&
+        currentControls.length === hiddenValues.length + 2 &&
+        currentControls.every(
+          (control) =>
+            form.contains(control) &&
+            (control === query ||
+              control === submit ||
+              currentHidden.some((hiddenControl) => hiddenControl === control)),
+        ) &&
+        currentHidden.length === hiddenValues.length &&
+        currentHidden.every(
+          (control, index) =>
+            control.isConnected &&
+            control.form === form &&
+            form.contains(control) &&
+            control.name === hiddenValues[index]?.[0] &&
+            control.value === hiddenValues[index]?.[1] &&
+            !control.disabled &&
+            !hasSubmitHandler(control),
+        )
+      );
+    },
+  };
 }
 
 export function queryOnly(
@@ -153,6 +278,7 @@ export async function resolveRoles(
     collect: () => HTMLElement[];
     scope: Element | null;
   }[],
+  options: { readonly deterministicRebind?: boolean } = {},
 ): Promise<RoleSelection[]> {
   const bindings = roles.map(({ role, collect, scope }, index) => {
     const candidates = bindCandidates(
@@ -168,18 +294,27 @@ export async function resolveRoles(
       throw new SearchFailure("decision_abstained");
     return decision("d" + index, role, candidates);
   });
+  const deterministicRebind =
+    options.deterministicRebind &&
+    bindings.every((binding) => binding.candidates.length === 1);
   session.candidateCount += bindings.reduce(
     (sum, binding) => sum + binding.candidates.length,
     0,
   );
-  session.decisions += bindings.length;
+  // A fresh native response document has new elements, but when each role has
+  // exactly one locally verified candidate there is no new selection decision
+  // to make. Keep that deterministic rebind within the original session's
+  // provider/decision budget.
+  if (!deterministicRebind) session.decisions += bindings.length;
   if (session.candidateCount > 24 || session.decisions > 3)
     throw new SearchFailure("decision_budget_exhausted");
-  const request = requestFor(
-    session.args.document,
-    session.args.canonicalFieldKey,
-    bindings,
-  );
+  const request = deterministicRebind
+    ? undefined
+    : requestFor(
+        session.args.document,
+        session.args.canonicalFieldKey,
+        bindings,
+      );
   let response: InteractionDecisionResponse | undefined;
   if (request) {
     if (!session.args.decisionProvider)

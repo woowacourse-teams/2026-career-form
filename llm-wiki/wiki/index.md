@@ -57,7 +57,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비·필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
-| [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 기본 거부 정책과 CJ 첫 대학교 주전공·학교명/국가 묶음의 제한된 검색·검증 경계 | 2026-09-26 |
+| [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행·검색·후속 재검토와 기존 CJ 계약 및 실사이트 검증 경계 | 2026-09-26 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환·로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 달력 실행의 안전 경계 | 2026-09-24 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |

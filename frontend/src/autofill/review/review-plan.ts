@@ -24,6 +24,10 @@ import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import { formatProfileDate } from "../profile/date-format";
+import {
+  buildLocalSearchValuePlan,
+  type LocalSearchValuePlan,
+} from "../profile/search-value-plan";
 import type { DateTargetApproval } from "./date-target-format";
 import {
   resolveDateTargetFormat,
@@ -64,6 +68,8 @@ export interface ReviewPlanItem {
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
+  /** Local-only approved search forms; never include these values in API requests. */
+  searchValuePlan?: LocalSearchValuePlan;
 }
 
 export interface ReviewPlan {
@@ -220,6 +226,34 @@ function labelFor(candidateId: string, registry: CandidateRegistry): string {
     return lookup.handle.candidate.displayName ?? "지원서 필드";
   }
   return "지원서 필드";
+}
+
+function certificateSearchValuePlan(
+  profile: Profile,
+  profileFieldKey: string,
+  profileEntryId: string | undefined,
+  originalName: string,
+): LocalSearchValuePlan | undefined {
+  if (
+    profileFieldKey !== "certifications.certificate.name" ||
+    !profileEntryId
+  ) {
+    return undefined;
+  }
+  const gradeCandidates = profile.certifications
+    .filter(
+      (entry) =>
+        entry.sectionId === "certificate" && entry.id === profileEntryId,
+    )
+    .map((entry) => ({
+      profileEntryId: entry.id,
+      grade: entry.values.grade ?? "",
+    }));
+  return buildLocalSearchValuePlan({
+    profileEntryId,
+    originalName,
+    gradeCandidates,
+  });
 }
 
 function itemForAnalysis(
@@ -470,6 +504,15 @@ function itemForAnalysis(
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
+  const searchValuePlan =
+    searchCommand && binding.type === "DIRECT"
+      ? certificateSearchValuePlan(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
+          resolvedProfileValue.value,
+        )
+      : undefined;
 
   const pageValue = currentValue(lookup.handle);
   const hasConflict =
@@ -511,6 +554,7 @@ function itemForAnalysis(
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
   if (hasConflict) {
@@ -535,6 +579,7 @@ function itemForAnalysis(
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
   if (analysis.autofillPolicy === "CONDITIONAL") {
@@ -559,6 +604,7 @@ function itemForAnalysis(
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
   return {
@@ -587,6 +633,7 @@ function itemForAnalysis(
     analysis,
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
+    ...(searchValuePlan ? { searchValuePlan } : {}),
   };
 }
 

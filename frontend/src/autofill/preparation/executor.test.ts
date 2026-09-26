@@ -713,3 +713,66 @@ describe("approved preparation plan executor", () => {
     });
   });
 });
+
+describe("generic repeat row value protection", () => {
+  it("stops after an add action changes an existing row value", async () => {
+    document.body.innerHTML = `
+      <section>
+        <h3>자격증</h3>
+        <div ismultirow="true"><input name="credential0" value="기존 값" /><input name="date0" /></div>
+        <button type="button">항목 추가</button>
+      </section>
+    `;
+    const action = document.querySelector<HTMLButtonElement>("button")!;
+    action.addEventListener("click", () => {
+      document.querySelector<HTMLInputElement>("[name='credential0']")!.value =
+        "변경 값";
+      const row = document.createElement("div");
+      row.setAttribute("ismultirow", "true");
+      row.innerHTML = `<input name="credential1" /><input name="date1" />`;
+      action.before(row);
+    });
+
+    const initial = collectPreparationSnapshot(document);
+    const candidateId = initial.request.sections
+      .flatMap((section) => section.actionCandidates)
+      .find((candidate) => candidate.displayName === "항목 추가")!.candidateId;
+    const executionSnapshot = () => {
+      const collected = collectPreparationSnapshot(document);
+      return {
+        registry: collected.registry,
+        isTargetSectionVisible: () => true,
+        countRepeatableGroups: (
+          plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
+        ) => collected.countRepeatableGroups(plan.actionCandidateId),
+        repeatableGroupState: (
+          plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
+        ) => collected.repeatableGroupState(plan.actionCandidateId),
+      };
+    };
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [
+        {
+          plan: {
+            actionCandidateId: candidateId,
+            command: "ADD_REPEATABLE_GROUP",
+            expectedEffect: "GROUP_COUNT_INCREMENT",
+          },
+          approved: true,
+          localItemCount: 2,
+        },
+      ],
+      initialSnapshot: executionSnapshot(),
+      refreshSnapshot: async () => executionSnapshot(),
+      countRepeatableGroups: (snapshot, plan) =>
+        snapshot.countRepeatableGroups?.(plan) ?? -1,
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "existing-group-value-changed",
+      executedPlanCount: 1,
+    });
+  });
+});

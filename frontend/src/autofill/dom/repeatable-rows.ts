@@ -1,3 +1,5 @@
+import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
+
 const MARKERS = "[data-repeatable-group], [data-repeater-item]";
 const CONTROLS =
   "input:not([type='hidden']):not([type='button']), select, textarea";
@@ -55,6 +57,10 @@ export function isGenericRepeatableRow(element: Element): boolean {
 }
 
 export function genericRowFor(element: Element): Element | undefined {
+  const grouped = genericFormGroupFor(element)?.rows.find(
+    (row) => row === element || row.contains(element),
+  );
+  if (grouped) return grouped;
   let ancestor = element.parentElement;
   while (ancestor && !ancestor.matches("form, body")) {
     if (isGenericRepeatableRow(ancestor)) return ancestor;
@@ -69,8 +75,13 @@ export function genericRows(container: Element): Element[] {
       `${MARKERS}, [class], [id], fieldset, [role='group']`,
     ),
   ).filter(isGenericRepeatableRow);
-  return candidates.filter(
-    (row) =>
-      !candidates.some((parent) => parent !== row && parent.contains(row)),
+  const groupedRows = genericFormGroups(container.ownerDocument)
+    .filter(
+      (group) => group.area === container || container.contains(group.area),
+    )
+    .flatMap((group) => group.rows);
+  return [...new Set([...candidates, ...groupedRows])].filter(
+    (row, _, rows) =>
+      !rows.some((parent) => parent !== row && parent.contains(row)),
   );
 }

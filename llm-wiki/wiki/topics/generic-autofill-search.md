@@ -2,11 +2,15 @@
 
 > Topic: generic-autofill-search
 > Status: Current
-> Current: [CF-112 CJ 첫 대학교 학교명과 국가 문맥 검색의 제한 경계](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md)
-> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md)
+> Current: [CF-114 범용 자격증 검색과 후속 재검토 경계](../../raw/issues/CF-114/documents/generic-certificate-search.md)
+> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md)
 > Updated: 2026-09-26
 
 ## 현재 상태
+
+CF-114는 회사 중립 반복 행 준비, native form의 현재 query·응답 세대 검증, 최대 두 로컬 검색형과 검색 후 새 필드의 재분석·새 승인을 연결한다. 아래 CF-112까지의 POST/hidden 일괄 거부는 역사적 경계이며, 현재는 검증된 native GET/POST와 기존 hidden routing만 제한적으로 허용한다. inline handler나 불투명 callback은 이 확장에 포함하지 않는다. 기존 CJ 학교·전공의 별도 계약은 유지한다.
+
+선택 전 변경 범위·관계 값과 완결된 유일 정확 후보를 확인할 수 없으면 클릭하지 않는다. 검색 후 이름·행·프로필 변경은 후속 쓰기를 차단한다. CJ 적응 때문에 범용 안전 조건을 완화하지 않으며 다른 회사에도 적용 가능한 공통 경로 개선을 우선한다. 세 가지 합성 마크업의 자동 회귀와 설치 확장 전체 smoke 미완료, 실제 CJ 자동 입력 미입증을 구분한다. 상세 근거는 위 Current 문서를 따른다.
 
 승인된 nonempty readonly DIRECT 필드, 소유된 검색 표면, 로컬 exact 선택, DOM/행/기존값 재검증과 원본 제어 1회 조작 경계를 유지한다. 완전한 동일 출처 국내 17개 학교 소재지 목록은 한국 국가 문맥과 명시적 별칭으로만 처리한다. 일반 경로에서 callback 직접 호출, 주소 평가, readonly/hidden 강제 입력과 저장/제출은 금지한다. 아래 CJ 전용 주전공 두 필드와 첫 대학교 학교명·국가 문맥 묶음의 반영은 이 일반 경로를 완화하지 않는 별도 계약이다.
 

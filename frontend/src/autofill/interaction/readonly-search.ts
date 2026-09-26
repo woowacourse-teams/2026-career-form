@@ -12,6 +12,7 @@ import {
 } from "../dom/semantic-context";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { SearchFollowUpControl } from "./search-follow-up";
 import { genericRowFor } from "../dom/repeatable-rows";
 import {
   elementSignature,
@@ -79,6 +80,8 @@ export type ReadonlySearchFailureReason =
   | "result_set_incomplete"
   | "result_pending"
   | "result_stale"
+  | "selection_effect_unverified"
+  | "selection_postcondition_failed"
   | "deadline_exceeded"
   | "run_in_progress";
 
@@ -88,6 +91,9 @@ export type ReadonlySearchExecutionResult = (
       status: "selected" | "unchanged";
       targetCandidateId: string;
       identity: TargetIdentity;
+      followUp?: { controls: readonly SearchFollowUpControl[] };
+      /** Local-only search form retained from the approved review plan. */
+      selectedValue?: string;
     }
   | {
       status: "skipped" | "unsupported" | "failed";
@@ -152,6 +158,8 @@ export interface ExecuteReadonlySearchArgs {
   expectedValue: string;
   /** A known pre-review value, also retained locally for the conflict guard. */
   expectedCurrentValue?: string;
+  /** Local-only exact search forms. The original expected value is always first. */
+  searchValues?: readonly string[];
   decisionProvider?: InteractionDecisionProvider;
   /** Lets the workflow invalidate an approved review item before each click/type. */
   assertCurrent?: () => boolean;
