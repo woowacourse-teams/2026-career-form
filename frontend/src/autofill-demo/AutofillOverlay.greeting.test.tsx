@@ -2,12 +2,13 @@ import { render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import profileExportExample from "../../fixtures/profile-export.example.json";
 import { RuntimeAnalysisApiClient } from "../autofill/api/runtime-client";
 import type {
   FieldsAnalyzeRequest,
   PreparationAnalyzeRequest,
 } from "../autofill/api/types";
-import { createEmptyProfile } from "../profile/model";
+import { parseProfileImport } from "../profile/profile-transfer";
 import { AutofillOverlay } from "./AutofillOverlay";
 import { createRepository } from "./AutofillOverlay.test-fixtures";
 
@@ -70,16 +71,12 @@ describe("Greeting with generic autofill controls", () => {
   it.each([
     "kakaomobility.career.greetinghr.com",
     "career.hyundai-autoever.com",
-  ])("writes and retains only native name and phone on %s", async (host) => {
+  ])("uses full profile, writes only name and phone on %s", async (host) => {
     const page = greetingDocument(host);
     const form = render(<ControlledGreetingForm renderCount={0} />, {
       container: page.body,
     });
-    const profile = createEmptyProfile();
-    profile.personal.koreanFamilyName = "테스트";
-    profile.personal.koreanGivenName = "지원";
-    profile.contact.phoneNumber = "01012345678";
-    profile.contact.email = "synthetic@example.test";
+    const profile = parseProfileImport(JSON.stringify(profileExportExample));
     const seenRequests: unknown[] = [];
     const sendMessage = vi.fn(async (message: unknown) => {
       seenRequests.push(message);
@@ -114,7 +111,10 @@ describe("Greeting with generic autofill controls", () => {
                 return {
                   candidateId: field.candidateId,
                   matchType: "MATCH",
-                  valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+                  valueBinding: {
+                    type: "DERIVED",
+                    recipe: "KOREAN_FULL_NAME",
+                  },
                   autofillPolicy: "ALLOWED",
                   mappingStatus: "ADAPTER_VERIFIED",
                   interactionStatus: "READY",
@@ -163,12 +163,12 @@ describe("Greeting with generic autofill controls", () => {
     expect(
       page.querySelector<HTMLInputElement>("[name='basicInformation.name']")
         ?.value,
-    ).toBe("테스트지원");
+    ).toBe("예시사용자");
     expect(
       page.querySelector<HTMLInputElement>(
         "[name='basicInformation.phoneNumber.nationalNumber']",
       )?.value,
-    ).toBe("01012345678");
+    ).toBe("010-0000-0000");
     expect(
       page.querySelector<HTMLInputElement>("[name='basicInformation.email']")
         ?.value,
@@ -177,10 +177,8 @@ describe("Greeting with generic autofill controls", () => {
       page.querySelector<HTMLInputElement>("[name='education.startDate']")
         ?.value,
     ).toBe("");
-    expect(JSON.stringify(seenRequests)).not.toContain("01012345678");
-    expect(JSON.stringify(seenRequests)).not.toContain(
-      "synthetic@example.test",
-    );
+    expect(JSON.stringify(seenRequests)).not.toContain("010-0000-0000");
+    expect(JSON.stringify(seenRequests)).not.toContain("example@example.test");
 
     editInput(
       page.querySelector<HTMLInputElement>("[name='basicInformation.name']")!,
