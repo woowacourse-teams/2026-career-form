@@ -24,6 +24,7 @@ import {
   collectActionSemanticContext,
 } from "./semantic-context";
 import { metadata, labelOf, sectionName } from "./metadata";
+import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
 
 const EXPLICIT_ROW_SELECTOR = "[data-repeatable-group], [data-repeater-item]";
@@ -42,6 +43,12 @@ export interface CollectedSnapshot<TRequest> {
 export interface PreparationCollectedSnapshot extends CollectedSnapshot<PreparationAnalyzeRequest> {
   isSectionVisible(sectionId: string): boolean;
   countRepeatableGroups(actionCandidateId: string): number | undefined;
+  repeatableGroupState(
+    actionCandidateId: string,
+  ): readonly string[] | undefined;
+  repeatableGroupLimit(
+    actionCandidateId: string,
+  ): number | "ambiguous" | undefined;
 }
 
 function createOpaqueId(prefix: string, index: number): string {
@@ -172,11 +179,14 @@ function groupBySection<T extends Element>(
 ): Map<Element | null, T[]> {
   const groups = new Map<Element | null, T[]>();
   for (const element of elements) {
+    const group = generic ? genericFormGroupFor(element) : undefined;
     const row = generic
       ? genericRowFor(element)
       : element.closest(EXPLICIT_ROW_SELECTOR);
     const section =
-      row?.parentElement?.closest(selector) ?? element.closest(selector);
+      group?.area ??
+      row?.parentElement?.closest(selector) ??
+      element.closest(selector);
     groups.set(section, [...(groups.get(section) ?? []), element]);
   }
   if (groups.size === 0) groups.set(null, []);
@@ -602,6 +612,20 @@ function repeatableItemElements(
   );
 }
 
+function repeatableRowState(row: Element): string {
+  return JSON.stringify(
+    Array.from(
+      row.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >("input:not([type='hidden']):not([type='button']), select, textarea"),
+    ).map((control) =>
+      control instanceof HTMLSelectElement
+        ? [control.tagName, control.name, control.value, control.selectedIndex]
+        : [control.tagName, control.name, control.value],
+    ),
+  );
+}
+
 function actionGroupKey(action: Element | undefined): string | undefined {
   if (!action) return undefined;
   const identifiers = [
@@ -691,6 +715,11 @@ export function collectPreparationSnapshot(
   const containers: Array<Element | null> = Array.from(
     document.querySelectorAll(selector),
   );
+  if (generic) {
+    for (const group of genericFormGroups(document)) {
+      if (!containers.includes(group.area)) containers.push(group.area);
+    }
+  }
   if (actionsBySection.has(null) || containers.length === 0) {
     containers.push(null);
   }
@@ -800,6 +829,21 @@ export function collectPreparationSnapshot(
         actionElements.get(actionCandidateId),
         adapter,
       ).length;
+    },
+    repeatableGroupState(actionCandidateId) {
+      const sectionId = actionSectionIds.get(actionCandidateId);
+      if (!sectionId) return undefined;
+      const root = sectionRoots.get(sectionId);
+      if (root === undefined || (root && !root.isConnected)) return undefined;
+      return repeatableItemElementsForAction(
+        root,
+        actionElements.get(actionCandidateId),
+        adapter,
+      ).map(repeatableRowState);
+    },
+    repeatableGroupLimit(actionCandidateId) {
+      const action = actionElements.get(actionCandidateId);
+      return action ? genericFormGroupFor(action)?.maximumRows : undefined;
     },
   };
 }

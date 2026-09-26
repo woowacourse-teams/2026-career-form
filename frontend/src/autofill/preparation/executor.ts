@@ -8,6 +8,9 @@ export interface PreparationSnapshot {
   countRepeatableGroups?(
     plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
   ): number | undefined;
+  repeatableGroupState?(
+    plan: Extract<PreparationPlan, { command: "ADD_REPEATABLE_GROUP" }>,
+  ): readonly string[] | undefined;
 }
 
 export interface ApprovedPreparationPlan {
@@ -46,6 +49,7 @@ export type PreparationFailureReason =
   | "invalid-local-item-count"
   | "invalid-group-count"
   | "group-count-not-incremented"
+  | "existing-group-value-changed"
   | "refresh-failed"
   | "expected-fields-not-visible"
   | "action-not-ready"
@@ -357,11 +361,16 @@ async function executePreparation({
       if (!currentAction) {
         return failure("action-not-executable", executedPlanCount);
       }
+      const currentPlan = planWithActionCandidateId(
+        plan,
+        currentAction.candidate.candidateId,
+      );
       const countBefore = inspectGroupCount(
         countRepeatableGroups,
         snapshot,
-        planWithActionCandidateId(plan, currentAction.candidate.candidateId),
+        currentPlan,
       );
+      const stateBefore = snapshot.repeatableGroupState?.(currentPlan);
       if (countBefore === undefined) {
         return failure("invalid-group-count", executedPlanCount);
       }
@@ -389,25 +398,36 @@ async function executePreparation({
         plan.actionCandidateId,
         identity,
       );
-      const countAfter = refreshedAction
-        ? inspectGroupCount(
-            countRepeatableGroups,
-            refreshed,
-            planWithActionCandidateId(
-              plan,
-              refreshedAction.candidate.candidateId,
-            ),
-          )
-        : undefined;
-      if (countAfter === undefined) {
+      if (!refreshedAction) {
         return failure(
           "action-not-reidentified",
           executedPlanCount,
           plan.actionCandidateId,
         );
       }
+      const countAfter = inspectGroupCount(
+        countRepeatableGroups,
+        refreshed,
+        planWithActionCandidateId(plan, refreshedAction.candidate.candidateId),
+      );
+      if (countAfter === undefined) {
+        return failure("invalid-group-count", executedPlanCount);
+      }
       if (countAfter !== countBefore + 1) {
         return failure("group-count-not-incremented", executedPlanCount);
+      }
+      const refreshedPlan = planWithActionCandidateId(
+        plan,
+        refreshedAction.candidate.candidateId,
+      );
+      const stateAfter = refreshed.repeatableGroupState?.(refreshedPlan);
+      if (
+        stateBefore &&
+        (!stateAfter ||
+          stateAfter.length < stateBefore.length ||
+          stateBefore.some((state, index) => stateAfter[index] !== state))
+      ) {
+        return failure("existing-group-value-changed", executedPlanCount);
       }
       snapshot = refreshed;
     }

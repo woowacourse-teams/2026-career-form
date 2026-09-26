@@ -520,3 +520,46 @@ describe("application form DOM collection", () => {
     ]);
   });
 });
+
+describe("generic single-row repeat areas", () => {
+  it("collects one marked div row and its outside add action in the same titled area", () => {
+    document.body.innerHTML = `
+      <div class="credential-panel">
+        <div class="area-heading"><h3>자격증·면허증</h3></div>
+        <div class="area-body">
+          <div class="credential-row" ismultirow="true">
+            <label>자격증명<input name="credentialName0" /></label>
+            <label>취득일<input name="credentialDate0" /></label>
+          </div>
+          <div class="area-actions"><button type="button">항목 추가</button></div>
+        </div>
+      </div>
+    `;
+
+    const fields = collectFieldsSnapshot(document);
+    const preparation = collectPreparationSnapshot(document);
+    const fieldSection = fields.request.sections[0]!;
+    const action = preparation.request.sections
+      .flatMap((section) => section.actionCandidates)
+      .find((candidate) => candidate.displayName === "항목 추가");
+
+    expect(fieldSection.displayName).toBe("자격증·면허증");
+    expect(fieldSection.items).toHaveLength(1);
+    expect(fieldSection.items?.[0]?.fields).toHaveLength(2);
+    expect(action).toBeDefined();
+    expect(preparation.countRepeatableGroups(action!.candidateId)).toBe(1);
+  });
+
+  it("does not attach a marked row when the titled area has multiple add actions", () => {
+    document.body.innerHTML = `
+      <div><h3>자격증</h3>
+        <div ismultirow="true"><input /><input /></div>
+        <button type="button">첫 행 추가</button>
+        <button type="button">둘째 행 추가</button>
+      </div>
+    `;
+
+    const collected = collectFieldsSnapshot(document);
+    expect(collected.request.sections[0]?.items).toBeUndefined();
+  });
+});

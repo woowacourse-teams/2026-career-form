@@ -365,6 +365,8 @@ export function AutofillWorkflow({
             snapshot.isSectionVisible(targetSectionId),
           countRepeatableGroups: (plan) =>
             snapshot.countRepeatableGroups(plan.actionCandidateId),
+          repeatableGroupState: (plan) =>
+            snapshot.repeatableGroupState(plan.actionCandidateId),
         },
         refreshSnapshot: async () => {
           const refreshed = collectPreparationSnapshot(pageDocument);
@@ -374,6 +376,8 @@ export function AutofillWorkflow({
               refreshed.isSectionVisible(targetSectionId),
             countRepeatableGroups: (plan) =>
               refreshed.countRepeatableGroups(plan.actionCandidateId),
+            repeatableGroupState: (plan) =>
+              refreshed.repeatableGroupState(plan.actionCandidateId),
           };
         },
         countRepeatableGroups: (snapshot, plan) =>

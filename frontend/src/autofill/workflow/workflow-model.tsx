@@ -403,6 +403,12 @@ export function preparationItem(
   const currentGroupCount = snapshot.countRepeatableGroups(
     plan.actionCandidateId,
   );
+  const groupLimit = snapshot.repeatableGroupLimit(plan.actionCandidateId);
+  const limitBlocks =
+    groupLimit === "ambiguous" ||
+    (typeof groupLimit === "number" &&
+      localCount !== undefined &&
+      localCount > groupLimit);
   const requiredAdditions =
     localCount !== undefined && currentGroupCount !== undefined
       ? Math.max(0, localCount - currentGroupCount)
@@ -411,13 +417,23 @@ export function preparationItem(
   return {
     plan,
     actionLabel: actionLabel(plan, snapshot),
-    runnable: localCount !== undefined && currentGroupCount !== undefined,
+    runnable:
+      localCount !== undefined &&
+      currentGroupCount !== undefined &&
+      !limitBlocks,
     ...(localCount === undefined || currentGroupCount === undefined
       ? {
           unavailableReason:
             "반복 행과 프로필 종류를 하나로 확인할 수 없습니다.",
         }
-      : {}),
+      : limitBlocks
+        ? {
+            unavailableReason:
+              groupLimit === "ambiguous"
+                ? "반복 행 최대 개수를 하나로 확인할 수 없습니다."
+                : `현재 화면은 최대 ${groupLimit}개까지만 추가할 수 있습니다.`,
+          }
+        : {}),
     localItemCount: localCount,
     currentGroupCount,
     ...(requiredAdditions !== undefined ? { requiredAdditions } : {}),
