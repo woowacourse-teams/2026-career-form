@@ -2,9 +2,9 @@
 
 > Topic: adapter-development
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-46/documents/adapter-development.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md)
-> Updated: 2026-09-08
+> Current: [Greeting을 포함한 어댑터 경계](../../raw/issues/CF-94/documents/adapter-development.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-development.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-development.md)
+> Updated: 2026-09-27
 
 ## 현재 상태
 
@@ -17,3 +17,9 @@
 현대·SK 프론트 분리 결과와 LG 검색의 후속 설계 경계를 승인된 CF-46 근거로 기록했다.
 
 현대 최신 검증은 주소의 유일 결과·modal cleanup, 국적1 `KR`와 국적2 불변, 학력 그룹별 준비·재분석, 실제 학교 `school`·전공 `basic` auto-type을 확인했다. 설치 smoke는 고교·학사 2행과 주소·국적1을 독립 대조했고, API 7회가 모두 HTTP 200/ADAPTER/COMPLETE였다. UI 38/0은 writer 집계이며 전체 성공이 아니고, 저장·제출과 실제 toolbar icon 클릭은 검증하지 않았다.
+
+## Greeting 플랫폼 경계
+
+SK·현대의 FE host 분기는 유지한다. Greeting은 [CF-94 ADR](../../raw/issues/CF-94/documents/adr/94-greeting-platform-routing.md)에 따라 BE가 연결과 공통 정책을 판정하고 `greeting-v1`을 지정한다. FE는 새 DOM snapshot으로 준비·분석·입력하되 공급업체나 정적/범용 경로를 독자 판정하지 않는다. 양성 판정 뒤 구조 불일치와 모호한 필드는 범용 매처로 우회하지 않는다.
+
+이름 없는 이메일 combobox는 `이메일주소` 또는 `이메일`이라는 단일 소유 라벨과 유일한 칸을 확인한 경우에만 연결한다. 값 입력과 이메일 확인을 분리한다. 메디퀴터스 설치 확장에서 비식별 기본 필드 3개 입력을 확인했으며, 다른 Greeting 화면의 전 항목 성공으로 확대하지 않는다. 필드별 경계는 [Greeting 근거](../../raw/issues/CF-94/documents/adapter-greeting.md)에 기록했다.

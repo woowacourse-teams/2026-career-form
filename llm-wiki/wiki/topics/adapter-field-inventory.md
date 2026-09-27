@@ -2,9 +2,9 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md)
-> Updated: 2026-09-10
+> Current: [Greeting을 포함한 필드 현황](../../raw/issues/CF-94/documents/adapter-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md)
+> Updated: 2026-09-27
 
 ## 현재 상태
 
@@ -98,3 +98,7 @@ CF-83 후속 negative fixture는 현대 복수전공의 정확 결과 0개를 �
 ## CF-99 결과 패널 진단 (2026-09-24)
 
 현대 학교·전공 및 SK 학교·자격증·시험 검색의 실패 사유와 성적란 준비 실패를 결과 패널에 연결했다. 신규 지원 필드는 추가하지 않는다. 비식별 자동 테스트로 진단 전달을 확인했으며 실제 설치·저장·제출 검증 범위를 확대하지 않는다. 상세 근거는 [CF-99 승인 결정](../../raw/issues/CF-99/documents/autofill-follow-and-install.md)을 따른다.
+
+## Greeting 공통 정책 현황 (CF-94)
+
+[CF-94 필드별 표](../../raw/issues/CF-94/documents/adapter-field-inventory.md)는 카카오모빌리티의 기본정보·민감정보·대학교/대학원 대응 항목과 화면 없음·의미 불일치·미검증 범주를 분리한다. 설치 확장에서는 카카오모빌리티 48개 입력과 재실행 새 입력 0개, 현대오토에버·무신사 공통 3개, 당근서비스 국적 포함 4개, 메디퀴터스의 `이메일` 표시명 포함 3개를 각각 확인했다. 이 숫자는 개별 공개 화면의 실행 결과이며 기업 전체 지원이나 저장·제출 검증이 아니다. 메디퀴터스의 이메일 확인 버튼은 실행하지 않았다.
