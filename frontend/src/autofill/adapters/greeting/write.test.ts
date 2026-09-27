@@ -212,8 +212,8 @@ it("leaves Greeting email suggestion dismissal to settled verification", () => {
   expect(education.hasAttribute("aria-hidden")).toBe(true);
 });
 
-function emailFixture() {
-  document.body.innerHTML = `<div data-scope="field" data-part="root"><label>이메일주소*</label><input type="email" role="combobox" data-scope="combobox" data-part="input" aria-expanded="false"></div>`;
+function emailFixture(label = "이메일주소*", type = "email") {
+  document.body.innerHTML = `<div data-scope="field" data-part="root"><label>${label}</label><input type="${type}" role="combobox" data-scope="combobox" data-part="input" aria-expanded="false"></div>`;
   const input = document.querySelector("input")!;
   const snapshot = collectFieldsSnapshot(document, {
     executionAdapterId: "greeting-v1",
@@ -237,6 +237,16 @@ function emailFixture() {
   } as ReviewPlanItem;
   return { input, handle: lookup.handle, item };
 }
+
+it("collects and writes the short-label text email field without verification", () => {
+  const { input, handle, item } = emailFixture("이메일*", "text");
+
+  expect(greetingWriteAdapter.tryWrite(handle, item)).toEqual({
+    handled: true,
+    written: true,
+  });
+  expect(input.value).toBe("example@example.test");
+});
 
 it("focuses the blank email editor before committing so delayed page state accepts the value", async () => {
   vi.useFakeTimers();

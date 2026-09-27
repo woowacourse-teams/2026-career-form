@@ -281,11 +281,22 @@ describe("Greeting collection", () => {
     expect(greetingSyntheticDomName(input)).toBeUndefined();
   });
 
+  it("recognizes the short email label on a unique unnamed Greeting combobox", () => {
+    document.body.innerHTML =
+      '<div data-scope="field" data-part="root"><label>이메일*</label><input role="combobox" data-scope="combobox" data-part="input" /></div>';
+
+    expect(greetingSyntheticDomName(document.querySelector("input")!)).toBe(
+      "basicInformation.email",
+    );
+  });
+
   it("rejects duplicate email comboboxes and supports verified radio identities through the shared helper", () => {
     const email =
       '<div data-scope="field" data-part="root"><label>이메일주소*</label><input role="combobox" data-scope="combobox" data-part="input" /></div>';
+    const shortEmail =
+      '<div data-scope="field" data-part="root"><label>이메일*</label><input role="combobox" data-scope="combobox" data-part="input" /></div>';
     document.body.innerHTML =
-      email + email + toggle("장애여부*", ["비대상", "대상"]);
+      email + shortEmail + toggle("장애여부*", ["비대상", "대상"]);
     expect(
       [...document.querySelectorAll("input")].map(greetingSyntheticDomName),
     ).toEqual([undefined, undefined]);

@@ -168,7 +168,9 @@ export function greetingSyntheticDomName(element: Element): string | undefined {
     (candidate) => {
       const field = labeledField(candidate);
       return (
-        !candidate.closest(ROW) && field && ownedLabel(field) === "이메일주소"
+        !candidate.closest(ROW) &&
+        field &&
+        ["이메일주소", "이메일"].includes(ownedLabel(field) ?? "")
       );
     },
   );
