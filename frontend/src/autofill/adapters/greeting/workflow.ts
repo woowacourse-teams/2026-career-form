@@ -1,3 +1,8 @@
+import {
+  graduateMajorAdd,
+  graduateMajorProfileCount,
+} from "./workflow-major-count";
+import { ownedPopup, retainedSearchPopup } from "./workflow-popup";
 import type { WorkflowAdapter } from "../workflow";
 import {
   greetingCollectionAdapter,
@@ -10,7 +15,6 @@ import {
 import { customFieldValue } from "../../dom/custom-field-value";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import type { Profile } from "../../../profile/model";
 import {
   greetingApproved,
   greetingRadioWrite,
@@ -20,48 +24,6 @@ import {
 
 const education =
   /^educationalBackground\.(universities|graduateSchools)\.(0|[1-9]\d*)\./;
-const graduateMajorAdd = /^greeting:add:graduateSchools:(0|[1-9]\d*):majors$/;
-const additionalMajorTypes = new Set([
-  "복수전공",
-  "부전공",
-  "연계전공",
-  "융합전공",
-]);
-const majorFields = new Set([
-  "인문계열",
-  "사회계열",
-  "교육계열",
-  "공학계열",
-  "자연과학계열",
-  "의약학계열",
-  "예체능계열",
-  "농수해양/생명자원계열",
-  "기타",
-]);
-function graduateMajorProfileCount(
-  actionDomId: string | undefined,
-  profile: Profile,
-): number | null | undefined {
-  const match = graduateMajorAdd.exec(actionDomId ?? "");
-  if (!match) return undefined;
-  const index = Number(match[1]);
-  if (index > 127) return null;
-  const graduate = profile.education.filter(
-    (entry) => entry.sectionId === "graduateSchool",
-  )[index];
-  if (!graduate) return null;
-  const classification = graduate.values.additionalMajorClassification?.trim();
-  const field = graduate.values.additionalMajorField?.trim();
-  const name = graduate.values.additionalMajorName?.trim();
-  if (!classification && !field && !name) return 1;
-  return classification &&
-    field &&
-    name &&
-    additionalMajorTypes.has(classification) &&
-    majorFields.has(field)
-    ? 2
-    : null;
-}
 function control(handle: FieldCandidateHandle): HTMLElement | undefined {
   return handle.customElements?.[0] ?? handle.elements[0];
 }
@@ -78,64 +40,6 @@ function currentTrigger(
     greetingUsable(trigger) &&
     trigger.getAttribute("name") === handle.candidate.domName
   );
-}
-function ownedPopup(trigger: HTMLElement): HTMLElement | undefined {
-  const id = trigger.getAttribute("aria-controls");
-  if (!id || /\s/.test(id)) return undefined;
-  const matches = [
-    ...trigger.ownerDocument.querySelectorAll<HTMLElement>("[id]"),
-  ].filter((node) => node.id === id);
-  return matches.length === 1 && greetingUsable(matches[0])
-    ? matches[0]
-    : undefined;
-}
-function retainedSearchPopup(
-  input: HTMLInputElement,
-):
-  | { popup: HTMLElement; usable: (element: HTMLElement) => boolean }
-  | undefined {
-  const id = input.getAttribute("aria-controls");
-  if (!id || /\s/.test(id) || input.getAttribute("aria-expanded") !== "true")
-    return undefined;
-  const matches = [
-    ...input.ownerDocument.querySelectorAll<HTMLElement>("[id]"),
-  ].filter((node) => node.id === id);
-  if (matches.length !== 1) return undefined;
-  const popup = matches[0];
-  const root = popup.parentElement;
-  const positioner = root?.parentElement;
-  if (
-    !popup.matches(
-      '[data-scope="scroll-area"][data-part="viewport"][role="presentation"][data-state="open"]',
-    ) ||
-    !root?.matches('[data-scope="scroll-area"][data-part="root"]') ||
-    !positioner?.matches('[data-scope="combobox"][data-part="positioner"]')
-  )
-    return undefined;
-  const usable = (element: HTMLElement) => {
-    if (
-      !element.isConnected ||
-      element.matches(':disabled, [aria-disabled="true"]')
-    )
-      return false;
-    for (
-      let node: HTMLElement | null = element;
-      node;
-      node = node.parentElement
-    ) {
-      if (
-        node.hasAttribute("hidden") ||
-        node.hasAttribute("inert") ||
-        (node.getAttribute("aria-hidden") === "true" && node !== positioner)
-      )
-        return false;
-      const style = node.ownerDocument.defaultView?.getComputedStyle(node);
-      if (!style || style.display === "none" || style.visibility === "hidden")
-        return false;
-    }
-    return true;
-  };
-  return usable(popup) ? { popup, usable } : undefined;
 }
 async function waitFor<T>(
   read: () => T | undefined,

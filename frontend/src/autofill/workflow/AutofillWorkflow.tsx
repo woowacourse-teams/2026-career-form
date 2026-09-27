@@ -1,3 +1,8 @@
+import {
+  createPreparationOptions,
+  prepareApprovedPlans,
+  preparationExceptionTitle,
+} from "./preparation-options";
 import { useWriteProgress } from "./use-write-progress";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
@@ -25,14 +30,9 @@ import {
   collectPreparationSnapshot,
   type CollectedSnapshot,
 } from "../dom/collect";
-import {
-  executeApprovedPreparationPlans,
-  type PreparationExecutionOptions,
-} from "../preparation/executor";
+import { executeApprovedPreparationPlans } from "../preparation/executor";
 import { preparationFailureMessage } from "../preparation/failure-message";
-import { selectNativeProfileOption } from "../preparation/select-profile-option";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
-import { waitForExpectedFields } from "../preparation/wait-for-fields";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -53,7 +53,6 @@ import { createWriteRevealedFields } from "./revealed-fields";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
 import { executionItemsForAction } from "./calendar-routing";
 import {
-  actionLabel,
   adapterProfileValue,
   localProfileValue,
   preparationItem,
@@ -368,33 +367,14 @@ export function AutofillWorkflow({
     if (!profile || !preparationSnapshot || executionPending.current) return;
     executionPending.current = true;
     try {
-      if (stage === "preparation-review") {
-        for (const item of preparationItems) {
-          if (
-            !item.sensitive ||
-            item.plan.command !== "SELECT_OPTION_TO_REVEAL"
-          )
-            continue;
-          const key = item.plan.profileFieldKey;
-          const value = localProfileValue(profile, key);
-          if (value === undefined) continue;
-          consideredSensitiveValues.current.set(key, value);
-          if (item.runnable && selectedPreparationKeys.has(key))
-            approvedSensitiveValues.current.set(key, value);
-        }
-      }
-      const isApprovedPreparation = (item: PreparationItem) =>
-        item.runnable &&
-        (!item.sensitive ||
-          (item.plan.command === "SELECT_OPTION_TO_REVEAL" &&
-            sensitiveValueApproved(
-              approvedSensitiveValues.current,
-              profile,
-              item.plan.profileFieldKey,
-            )));
-      const runnablePlans = preparationItems
-        .filter(isApprovedPreparation)
-        .map((item) => ({ ...item, approved: true }));
+      const { runnablePlans, isApprovedPreparation } = prepareApprovedPlans({
+        stage,
+        profile,
+        preparationItems,
+        selectedPreparationKeys,
+        consideredSensitiveValues: consideredSensitiveValues.current,
+        approvedSensitiveValues: approvedSensitiveValues.current,
+      });
 
       setStage("analyzing");
       setActivity("preparing");
@@ -403,120 +383,16 @@ export function AutofillWorkflow({
         await analyzeFields(profile, addedRowsToEmptyForm);
         return;
       }
-      const preparationOptions = (
-        snapshot: ReturnType<typeof collectPreparationSnapshot>,
-      ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
-        onVerifiedAddition: (action, before, after) => {
-          if (before !== 1 || after !== 2) return;
-          const control = adapter.freshDefaultAfterAdd?.(action);
-          if (control) freshDefaultControls.current.add(control);
-        },
-        onAction: (element) => {
-          const hint = adapter.repeatedProfileSectionHint?.(element.id);
-          if (hint)
-            recordOperation(
-              element,
-              progressCategory({
-                profileFieldKey: `${hint.categoryId}.`,
-              } as ReviewPlanItem),
-            );
-        },
-        document: pageDocument,
-        signal: writeController.current.signal,
-        assertCurrent: () =>
-          mounted.current && !writeController.current.signal.aborted,
-        beforeMutation: async () =>
-          mounted.current &&
-          JSON.stringify(await repository.load()) === JSON.stringify(profile),
-        initialSnapshot: {
-          registry: snapshot.registry,
-          isTargetSectionVisible: (targetSectionId) =>
-            snapshot.isSectionVisible(targetSectionId),
-          countRepeatableGroups: (plan) =>
-            snapshot.countRepeatableGroups(plan.actionCandidateId),
-        },
-        refreshSnapshot: async () => {
-          const refreshed = collectPreparationSnapshot(pageDocument, {
-            executionAdapterId: executionAdapterId.current,
-          });
-          return {
-            registry: refreshed.registry,
-            isTargetSectionVisible: (targetSectionId) =>
-              refreshed.isSectionVisible(targetSectionId),
-            countRepeatableGroups: (plan) =>
-              refreshed.countRepeatableGroups(plan.actionCandidateId),
-          };
-        },
-        countRepeatableGroups: (snapshot, plan) =>
-          snapshot.countRepeatableGroups?.(plan) ?? -1,
-        waitForExpectedFields: async (plan) =>
-          waitForExpectedFields(
-            pageDocument,
-            ("expectedFieldNames" in plan ? plan.expectedFieldNames : []) ?? [],
-          ),
-        selectProfileOption: (plan, snapshot) => {
-          const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
-          if (lookup.status !== "ready") {
-            return "action-not-ready";
-          }
-          const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
-          if (value.status !== "resolved") return "profile-value-unavailable";
-          const normalizedValue = adapterProfileValue(
-            adapter,
-            plan.profileFieldKey,
-            value.value,
-          );
-          const adapterAllowsSelection = adapter.canSelectProfileOption?.(
-            lookup.handle,
-            normalizedValue,
-            plan.profileFieldKey,
-          );
-          if (adapterAllowsSelection === false) return "action-not-ready";
-          if (
-            lookup.handle.element instanceof HTMLInputElement &&
-            lookup.handle.element.type === "radio"
-          ) {
-            const label = plan.optionDisplayName ?? normalizedValue;
-            if (lookup.handle.candidate.displayName !== label)
-              return "option-label-mismatch";
-            if (
-              adapterAllowsSelection === true &&
-              lookup.handle.element.checked
-            )
-              return "selected";
-            lookup.handle.element.click();
-            recordOperation(
-              lookup.handle.element,
-              progressCategory({
-                profileFieldKey: plan.profileFieldKey,
-              } as ReviewPlanItem),
-            );
-            return lookup.handle.element.checked &&
-              adapter.canSelectProfileOption?.(
-                lookup.handle,
-                normalizedValue,
-                plan.profileFieldKey,
-              ) !== false
-              ? "selected"
-              : "action-not-ready";
-          }
-          if (!(lookup.handle.element instanceof HTMLSelectElement))
-            return "unsupported-option-action";
-          const before = lookup.handle.element.value;
-          const selected = selectNativeProfileOption(
-            lookup.handle.element,
-            normalizedValue,
-            adapterAllowsSelection,
-          );
-          if (lookup.handle.element.value !== before)
-            recordOperation(
-              lookup.handle.element,
-              progressCategory({
-                profileFieldKey: plan.profileFieldKey,
-              } as ReviewPlanItem),
-            );
-          return selected;
-        },
+      const preparationOptions = createPreparationOptions({
+        adapter,
+        pageDocument,
+        profile,
+        repository,
+        executionAdapterId,
+        freshDefaultControls,
+        writeController,
+        mounted,
+        recordOperation,
       });
       const result = await executeApprovedPreparationPlans({
         approvedPlans: runnablePlans,
@@ -524,21 +400,8 @@ export function AutofillWorkflow({
       });
 
       if (result.status !== "completed") {
-        const failedPlan =
-          result.status === "failed" && result.failedActionCandidateId
-            ? runnablePlans.find(
-                ({ plan }) =>
-                  plan.actionCandidateId === result.failedActionCandidateId,
-              )?.plan
-            : undefined;
         setExceptionTitle(
-          result.status === "failed"
-            ? `${preparationFailureMessage(result.reason)}${
-                failedPlan
-                  ? ` (${actionLabel(failedPlan, preparationSnapshot)})`
-                  : ""
-              }`
-            : "준비 동작을 안전하게 완료하지 못했습니다",
+          preparationExceptionTitle(result, runnablePlans, preparationSnapshot),
         );
         setStage("exception");
         return;
