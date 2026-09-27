@@ -447,5 +447,79 @@ class GenericAutofillCliTest(unittest.TestCase):
         )
 
 
+class GenericAutofillFixtureTest(unittest.TestCase):
+    ROOT = Path(__file__).resolve().parents[2]
+    FIXTURES = ROOT / "harness" / "fixtures" / "generic-autofill"
+    SCRIPT = ROOT / "harness" / "scripts" / "evaluate-generic-autofill.py"
+
+    def test_covers_five_sites_and_reproduces_the_committed_baseline(self) -> None:
+        truth_path = self.FIXTURES / "ground-truth-v1.json"
+        runs_path = self.FIXTURES / "observations-v1.json"
+        baseline_path = self.FIXTURES / "baseline-v1.json"
+        truth = json.loads(truth_path.read_text(encoding="utf-8"))
+        runs = json.loads(runs_path.read_text(encoding="utf-8"))
+        expected_sites = {
+            "naver-cloud",
+            "lg-ai-research",
+            "neowiz-lever",
+            "kakao-mobility-greeting",
+            "megazone",
+        }
+
+        self.assertEqual(expected_sites, {site["site_id"] for site in truth["sites"]})
+        self.assertEqual(
+            expected_sites,
+            {
+                run["site_id"]
+                for run in runs["runs"]
+                if run["source"] == "LIVE_SITE"
+            },
+        )
+        self.assertEqual(
+            expected_sites,
+            {
+                run["site_id"]
+                for run in runs["runs"]
+                if run["source"] == "FIXTURE"
+            },
+        )
+        self.assertTrue(
+            all(
+                run["status"] in {"MEASURED", "INCONCLUSIVE"}
+                for run in runs["runs"]
+                if run["source"] == "LIVE_SITE"
+            )
+        )
+        self.assertTrue(
+            all(
+                run["status"] == "MEASURED"
+                for run in runs["runs"]
+                if run["source"] == "FIXTURE"
+            )
+        )
+        self.assertEqual(3, len(runs["follow_up_priorities"]))
+
+        completed = subprocess.run(
+            (
+                sys.executable,
+                str(self.SCRIPT),
+                "--ground-truth",
+                str(truth_path),
+                "--observations",
+                str(runs_path),
+            ),
+            cwd=self.ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        self.assertEqual(
+            json.loads(baseline_path.read_text(encoding="utf-8")),
+            json.loads(completed.stdout),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

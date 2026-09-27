@@ -1,0 +1,647 @@
+{
+  "contract_version": "1.0",
+  "follow_up_priorities": [
+    {
+      "evidence": [
+        {
+          "candidate_id": "c001",
+          "field_id": "f001",
+          "reason_code": "MAPPING_NO_MATCH",
+          "site_id": "megazone"
+        }
+      ],
+      "item_id": "PVTI_lADOA_44FM4BfMn-zg85LJI",
+      "priority": 1,
+      "title": "accessible name과 구조 문맥 보강"
+    },
+    {
+      "evidence": [
+        {
+          "candidate_id": "c003",
+          "field_id": "f007",
+          "reason_code": "MAPPING_INCORRECT",
+          "site_id": "lg-ai-research"
+        }
+      ],
+      "item_id": "PVTI_lADOA_44FM4BfMn-zg85LLs",
+      "priority": 2,
+      "title": "분할 이메일과 생년월일 값 바인딩"
+    },
+    {
+      "evidence": [
+        {
+          "candidate_id": "c003",
+          "field_id": "f005",
+          "reason_code": "WRITE_FAILED",
+          "site_id": "kakao-mobility-greeting"
+        }
+      ],
+      "item_id": "PVTI_lADOA_44FM4BfMn-zg85LOA",
+      "priority": 3,
+      "title": "조건부 반복 및 커스텀 컨트롤 실행"
+    }
+  ],
+  "inputs": {
+    "ground_truth_sha256": "8ad7c5f9bd43e205015893033e468a22dc39d1c0c088f1db651b839e3fc09dad",
+    "observations_sha256": "9ffce5b4a772313b8f6f1041fb18444acae85873e5258e42f3ecd6abb3482177"
+  },
+  "profile_version": "profile-export-example-v1",
+  "sources": {
+    "FIXTURE": {
+      "inconclusive_sites": 0,
+      "measured_sites": 5,
+      "overall": {
+        "correct_input_rate": {
+          "denominator": 42,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "execution_retention_rate": {
+          "denominator": 2,
+          "numerator": 0,
+          "rate": 0.0
+        },
+        "existing_value_damage": 0,
+        "mapping_precision": {
+          "denominator": 5,
+          "numerator": 3,
+          "rate": 0.6
+        },
+        "mapping_recall": {
+          "denominator": 42,
+          "numerator": 3,
+          "rate": 0.07142857142857142
+        },
+        "miswrite_rate": {
+          "denominator": 4,
+          "numerator": 4,
+          "rate": 1.0
+        },
+        "stage_counts": {
+          "BOUND": 4,
+          "DEFERRED": 1,
+          "DISCOVERED": 6,
+          "FAILED": 5,
+          "MAPPED": 5,
+          "RETAINED": 0,
+          "WRITTEN": 4
+        },
+        "usage": {
+          "cost_usd": null,
+          "duration_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "provider_calls": 0
+        }
+      },
+      "sites": {
+        "kakao-mobility-greeting": {
+          "correct_input_rate": {
+            "denominator": 7,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "execution_retention_rate": {
+            "denominator": 2,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 2,
+            "numerator": 2,
+            "rate": 1.0
+          },
+          "mapping_recall": {
+            "denominator": 7,
+            "numerator": 2,
+            "rate": 0.2857142857142857
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 2,
+            "numerator": 2,
+            "rate": 1.0
+          },
+          "model": "deterministic",
+          "profile_version": "profile-export-example-v1",
+          "provider": "fixture",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 2,
+            "DEFERRED": 0,
+            "DISCOVERED": 2,
+            "FAILED": 2,
+            "MAPPED": 2,
+            "RETAINED": 0,
+            "WRITTEN": 2
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 0
+          }
+        },
+        "lg-ai-research": {
+          "correct_input_rate": {
+            "denominator": 7,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "execution_retention_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 1,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "mapping_recall": {
+            "denominator": 7,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 1,
+            "numerator": 1,
+            "rate": 1.0
+          },
+          "model": "deterministic",
+          "profile_version": "profile-export-example-v1",
+          "provider": "fixture",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 1,
+            "DEFERRED": 0,
+            "DISCOVERED": 1,
+            "FAILED": 1,
+            "MAPPED": 1,
+            "RETAINED": 0,
+            "WRITTEN": 1
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 0
+          }
+        },
+        "megazone": {
+          "correct_input_rate": {
+            "denominator": 7,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "execution_retention_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "mapping_recall": {
+            "denominator": 7,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "model": "deterministic",
+          "profile_version": "profile-export-example-v1",
+          "provider": "fixture",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 0,
+            "DEFERRED": 0,
+            "DISCOVERED": 1,
+            "FAILED": 1,
+            "MAPPED": 0,
+            "RETAINED": 0,
+            "WRITTEN": 0
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 0
+          }
+        },
+        "naver-cloud": {
+          "correct_input_rate": {
+            "denominator": 11,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "execution_retention_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EXISTING_VALUES",
+          "mapping_precision": {
+            "denominator": 1,
+            "numerator": 1,
+            "rate": 1.0
+          },
+          "mapping_recall": {
+            "denominator": 11,
+            "numerator": 1,
+            "rate": 0.09090909090909091
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "model": "deterministic",
+          "profile_version": "profile-export-example-v1",
+          "provider": "fixture",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 0,
+            "DEFERRED": 1,
+            "DISCOVERED": 1,
+            "FAILED": 0,
+            "MAPPED": 1,
+            "RETAINED": 0,
+            "WRITTEN": 0
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 0
+          }
+        },
+        "neowiz-lever": {
+          "correct_input_rate": {
+            "denominator": 10,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "execution_retention_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 1,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "mapping_recall": {
+            "denominator": 10,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 1,
+            "numerator": 1,
+            "rate": 1.0
+          },
+          "model": "deterministic",
+          "profile_version": "profile-export-example-v1",
+          "provider": "fixture",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 1,
+            "DEFERRED": 0,
+            "DISCOVERED": 1,
+            "FAILED": 1,
+            "MAPPED": 1,
+            "RETAINED": 0,
+            "WRITTEN": 1
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 0
+          }
+        }
+      }
+    },
+    "LIVE_SITE": {
+      "inconclusive_sites": 1,
+      "measured_sites": 4,
+      "overall": {
+        "correct_input_rate": {
+          "denominator": 31,
+          "numerator": 8,
+          "rate": 0.25806451612903225
+        },
+        "execution_retention_rate": {
+          "denominator": 10,
+          "numerator": 8,
+          "rate": 0.8
+        },
+        "existing_value_damage": 0,
+        "mapping_precision": {
+          "denominator": 13,
+          "numerator": 11,
+          "rate": 0.8461538461538461
+        },
+        "mapping_recall": {
+          "denominator": 31,
+          "numerator": 11,
+          "rate": 0.3548387096774194
+        },
+        "miswrite_rate": {
+          "denominator": 12,
+          "numerator": 4,
+          "rate": 0.3333333333333333
+        },
+        "stage_counts": {
+          "BOUND": 12,
+          "DEFERRED": 1,
+          "DISCOVERED": 14,
+          "FAILED": 5,
+          "MAPPED": 13,
+          "RETAINED": 8,
+          "WRITTEN": 12
+        },
+        "usage": {
+          "cost_usd": null,
+          "duration_ms": 20426,
+          "input_tokens": 18914,
+          "output_tokens": 837,
+          "provider_calls": 8
+        }
+      },
+      "sites": {
+        "kakao-mobility-greeting": {
+          "correct_input_rate": {
+            "denominator": 7,
+            "numerator": 2,
+            "rate": 0.2857142857142857
+          },
+          "execution_retention_rate": {
+            "denominator": 4,
+            "numerator": 2,
+            "rate": 0.5
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 4,
+            "numerator": 4,
+            "rate": 1.0
+          },
+          "mapping_recall": {
+            "denominator": 7,
+            "numerator": 4,
+            "rate": 0.5714285714285714
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 4,
+            "numerator": 2,
+            "rate": 0.5
+          },
+          "model": "gpt-5.6-luna",
+          "profile_version": "profile-export-example-v1",
+          "provider": "openai",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 4,
+            "DEFERRED": 0,
+            "DISCOVERED": 4,
+            "FAILED": 2,
+            "MAPPED": 4,
+            "RETAINED": 2,
+            "WRITTEN": 4
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 7909,
+            "input_tokens": 5318,
+            "output_tokens": 340,
+            "provider_calls": 3
+          }
+        },
+        "lg-ai-research": {
+          "correct_input_rate": {
+            "denominator": 7,
+            "numerator": 2,
+            "rate": 0.2857142857142857
+          },
+          "execution_retention_rate": {
+            "denominator": 2,
+            "numerator": 2,
+            "rate": 1.0
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 4,
+            "numerator": 3,
+            "rate": 0.75
+          },
+          "mapping_recall": {
+            "denominator": 7,
+            "numerator": 3,
+            "rate": 0.42857142857142855
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 3,
+            "numerator": 1,
+            "rate": 0.3333333333333333
+          },
+          "model": "gpt-5.6-luna",
+          "profile_version": "profile-export-example-v1",
+          "provider": "openai",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 3,
+            "DEFERRED": 1,
+            "DISCOVERED": 4,
+            "FAILED": 1,
+            "MAPPED": 4,
+            "RETAINED": 2,
+            "WRITTEN": 3
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 6141,
+            "input_tokens": 4533,
+            "output_tokens": 209,
+            "provider_calls": 2
+          }
+        },
+        "megazone": {
+          "correct_input_rate": {
+            "denominator": 7,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "execution_retention_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "mapping_recall": {
+            "denominator": 7,
+            "numerator": 0,
+            "rate": 0.0
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 0,
+            "numerator": 0,
+            "rate": null
+          },
+          "model": "gpt-5.6-luna",
+          "profile_version": "profile-export-example-v1",
+          "provider": "openai",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 0,
+            "DEFERRED": 0,
+            "DISCOVERED": 1,
+            "FAILED": 1,
+            "MAPPED": 0,
+            "RETAINED": 0,
+            "WRITTEN": 0
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 1575,
+            "input_tokens": 4017,
+            "output_tokens": 44,
+            "provider_calls": 1
+          }
+        },
+        "naver-cloud": {
+          "inconclusive_reason": "MANUAL_VERIFICATION_UNAVAILABLE",
+          "initial_state": "EXISTING_VALUES",
+          "max_output_tokens": 2048,
+          "metrics": null,
+          "model": "gpt-5.6-luna",
+          "profile_version": "profile-export-example-v1",
+          "provider": "openai",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "status": "INCONCLUSIVE",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "provider_calls": 0
+          }
+        },
+        "neowiz-lever": {
+          "correct_input_rate": {
+            "denominator": 10,
+            "numerator": 4,
+            "rate": 0.4
+          },
+          "execution_retention_rate": {
+            "denominator": 4,
+            "numerator": 4,
+            "rate": 1.0
+          },
+          "existing_value_damage": 0,
+          "inconclusive_reason": null,
+          "initial_state": "EMPTY",
+          "mapping_precision": {
+            "denominator": 5,
+            "numerator": 4,
+            "rate": 0.8
+          },
+          "mapping_recall": {
+            "denominator": 10,
+            "numerator": 4,
+            "rate": 0.4
+          },
+          "max_output_tokens": 2048,
+          "miswrite_rate": {
+            "denominator": 5,
+            "numerator": 1,
+            "rate": 0.2
+          },
+          "model": "gpt-5.6-luna",
+          "profile_version": "profile-export-example-v1",
+          "provider": "openai",
+          "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+          "stage_counts": {
+            "BOUND": 5,
+            "DEFERRED": 0,
+            "DISCOVERED": 5,
+            "FAILED": 1,
+            "MAPPED": 5,
+            "RETAINED": 4,
+            "WRITTEN": 5
+          },
+          "status": "MEASURED",
+          "timeout_ms": 30000,
+          "usage": {
+            "cost_usd": null,
+            "duration_ms": 4801,
+            "input_tokens": 5046,
+            "output_tokens": 244,
+            "provider_calls": 2
+          }
+        }
+      }
+    }
+  }
+}
