@@ -136,6 +136,8 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     };
     if (live?.visible === false) {
       skip("현재 표시되지 않는 항목");
+    } else if (item.manualReviewReason) {
+      review(item.manualReviewReason);
     } else if (!saved.length) {
       skip(
         item.profileFieldKey ||

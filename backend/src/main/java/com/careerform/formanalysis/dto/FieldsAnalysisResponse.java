@@ -184,7 +184,8 @@ public record FieldsAnalysisResponse(
     }
 
     public enum ReasonCode {
-        NO_MATCH
+        NO_MATCH,
+        ENGLISH_NAME_ORDER_UNVERIFIED
     }
 
     public enum WriteCommand {

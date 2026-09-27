@@ -308,6 +308,19 @@ function validateFieldAnalysis(
   }
 
   if (value.matchType === "NO_MATCH") {
+    const ordinaryNoMatch =
+      value.interactionStatus === "BLOCKED" &&
+      Array.isArray(value.reasonCodes) &&
+      value.reasonCodes[0] === "NO_MATCH";
+    const englishNameReview =
+      greeting &&
+      value.mappingStatus === "ADAPTER_VERIFIED" &&
+      value.interactionStatus === "UNVERIFIED" &&
+      Array.isArray(value.reasonCodes) &&
+      value.reasonCodes[0] === "ENGLISH_NAME_ORDER_UNVERIFIED" &&
+      candidate.domName === "basicInformation.englishName" &&
+      candidate.element === "input" &&
+      candidate.control === "text";
     if (
       !hasOnlyKeys(value, [
         "candidateId",
@@ -317,10 +330,9 @@ function validateFieldAnalysis(
         "reasonCodes",
       ]) ||
       !isOneOf(value.mappingStatus, ["ADAPTER_VERIFIED", "LLM_SUGGESTED"]) ||
-      value.interactionStatus !== "BLOCKED" ||
       !Array.isArray(value.reasonCodes) ||
       value.reasonCodes.length !== 1 ||
-      value.reasonCodes[0] !== "NO_MATCH"
+      (!ordinaryNoMatch && !englishNameReview)
     ) {
       throw new AnalysisContractError();
     }

@@ -141,6 +141,14 @@ public interface FieldMappingResolver {
         }
     }
 
-    record NoMatch(String candidateId) implements Result {
+    enum NoMatchReason {
+        UNMAPPED,
+        ENGLISH_NAME_ORDER_UNVERIFIED
+    }
+
+    record NoMatch(String candidateId, NoMatchReason reason) implements Result {
+        public NoMatch(String candidateId) {
+            this(candidateId, NoMatchReason.UNMAPPED);
+        }
     }
 }

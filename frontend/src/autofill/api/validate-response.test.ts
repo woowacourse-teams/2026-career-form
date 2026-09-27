@@ -1357,3 +1357,69 @@ describe("Greeting custom execution contracts", () => {
     });
   });
 });
+
+describe("Greeting English name manual review", () => {
+  const request: FieldsAnalyzeRequest = {
+    ...fieldsRequest,
+    sections: [
+      {
+        sectionId: "s1",
+        fields: [
+          {
+            ...fieldsRequest.sections[0]!.fields[0]!,
+            domName: "basicInformation.englishName",
+          },
+        ],
+      },
+    ],
+  };
+  const response = {
+    snapshotId: request.snapshotId,
+    mode: "ADAPTER",
+    analysisStatus: "COMPLETE",
+    executionAdapterId: "greeting-v1",
+    fields: [
+      {
+        candidateId: "field-1",
+        matchType: "NO_MATCH",
+        mappingStatus: "ADAPTER_VERIFIED",
+        interactionStatus: "UNVERIFIED",
+        reasonCodes: ["ENGLISH_NAME_ORDER_UNVERIFIED"],
+      },
+    ],
+  };
+  it("accepts a designated English name review without a write plan", () => {
+    expect(validateFieldsResponse(request, response).fields[0]).toMatchObject({
+      interactionStatus: "UNVERIFIED",
+    });
+  });
+  it.each([
+    { executionAdapterId: undefined },
+    { fields: [{ ...response.fields[0], writePlan: { command: "SET_TEXT" } }] },
+    { fields: [{ ...response.fields[0], mappingStatus: "LLM_SUGGESTED" }] },
+  ])("rejects an untrusted or writable manual review contract", (override) => {
+    expect(() =>
+      validateFieldsResponse(request, { ...response, ...override }),
+    ).toThrow(AnalysisContractError);
+  });
+  it.each([
+    { domName: "customQuestion.englishName" },
+    { control: "select" as const },
+    { element: "textarea" as const },
+  ])("rejects the reason on unrelated fields", (override) => {
+    expect(() =>
+      validateFieldsResponse(
+        {
+          ...request,
+          sections: [
+            {
+              sectionId: "s1",
+              fields: [{ ...request.sections[0]!.fields[0]!, ...override }],
+            },
+          ],
+        },
+        response,
+      ),
+    ).toThrow(AnalysisContractError);
+  });
+});

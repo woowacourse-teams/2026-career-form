@@ -26,6 +26,31 @@ class GreetingExpandedMappingTest {
     }
 
     @Test
+    void marksOnlyUniqueGreetingEnglishFullNameForManualOrderReview() {
+        var policy = new com.careerform.formanalysis.application.FieldInteractionPolicy();
+        var englishName = field("english", "basicInformation.englishName", FormControl.TEXT, null);
+        var ordinaryQuestion = field("question", "applicationDetail.englishName", FormControl.TEXT, null);
+        var wrongControl = field("button", "basicInformation.englishName", FormControl.BUTTON, null);
+        var mappings = resolve(List.of(englishName, ordinaryQuestion), null);
+
+        assertThat(mappings).allMatch(NoMatch.class::isInstance);
+        var englishDecision = policy.evaluateGreeting(englishName, mappings.getFirst(), List.of());
+        assertThat(englishDecision.interactionStatus()).isEqualTo(InteractionStatus.UNVERIFIED);
+        assertThat(englishDecision.reasonCodes()).extracting(Enum::name)
+            .containsExactly("ENGLISH_NAME_ORDER_UNVERIFIED");
+        assertThat(englishDecision.writePlan()).isNull();
+        assertThat(policy.evaluateGreeting(ordinaryQuestion, mappings.get(1), List.of()).interactionStatus())
+            .isEqualTo(InteractionStatus.BLOCKED);
+        assertThat(policy.evaluateGreeting(wrongControl, resolve(List.of(wrongControl), null).getFirst(), List.of()).interactionStatus())
+            .isEqualTo(InteractionStatus.BLOCKED);
+
+        var duplicates = resolve(List.of(englishName,
+            field("english-copy", "basicInformation.englishName", FormControl.TEXT, null)), null);
+        assertThat(policy.evaluateGreeting(englishName, duplicates.getFirst(), List.of()).interactionStatus())
+            .isEqualTo(InteractionStatus.BLOCKED);
+    }
+
+    @Test
     void rejectsEveryCandidateWithAnAmbiguousGreetingName() {
         var repeat = new RepeatContext("educationuniversity", 0, 1);
         assertThat(resolve(List.of(

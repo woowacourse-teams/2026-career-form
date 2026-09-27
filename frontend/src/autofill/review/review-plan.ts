@@ -66,6 +66,7 @@ export interface ReviewPlanItem {
   disabled: boolean;
   revealed: boolean;
   reason: string;
+  manualReviewReason?: "영문 이름 순서 확인";
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
@@ -243,6 +244,17 @@ function itemForAnalysis(
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
+    if (
+      greeting &&
+      analysis.interactionStatus === "UNVERIFIED" &&
+      analysis.reasonCodes[0] === "ENGLISH_NAME_ORDER_UNVERIFIED"
+    ) {
+      const reason = "영문 성·이름 순서를 확인하고 직접 입력해 주세요.";
+      return {
+        ...unavailableItem(analysis.candidateId, fieldLabel, reason),
+        manualReviewReason: "영문 이름 순서 확인",
+      };
+    }
     return unavailableItem(
       analysis.candidateId,
       fieldLabel,

@@ -11,6 +11,9 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldRul
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
+import com.careerform.formanalysis.dto.FieldsAnalysisRequest.Visibility;
 
 /** Exact Greeting names, with independently verified education row metadata. */
 public final class GreetingFieldMappingResolver implements FieldMappingResolver {
@@ -37,14 +40,21 @@ public final class GreetingFieldMappingResolver implements FieldMappingResolver 
             }
         }
         var candidates = request.fieldCandidatesInTraversalOrder();
+        Map<String, Integer> nameCounts = new HashMap<>();
         Map<String, Integer> matchedNames = new HashMap<>();
         for (int index = 0; index < results.size(); index++) {
+            if (candidates.get(index).domName() != null)
+                nameCounts.merge(candidates.get(index).domName(), 1, Integer::sum);
             if (results.get(index) instanceof Match)
                 matchedNames.merge(candidates.get(index).domName(), 1, Integer::sum);
         }
         for (int index = 0; index < results.size(); index++) {
             if (results.get(index) instanceof Match
                 && matchedNames.get(candidates.get(index).domName()) > 1)
+                results.set(index, new NoMatch(candidates.get(index).candidateId()));
+            if (results.get(index) instanceof NoMatch noMatch
+                && noMatch.reason() == NoMatchReason.ENGLISH_NAME_ORDER_UNVERIFIED
+                && nameCounts.get(candidates.get(index).domName()) > 1)
                 results.set(index, new NoMatch(candidates.get(index).candidateId()));
         }
         return new Resolution(request.schemaVersion(), request.snapshotId(), List.copyOf(results));
@@ -74,7 +84,18 @@ public final class GreetingFieldMappingResolver implements FieldMappingResolver 
             && exactName.equals(rule.requiredDomName())
             && Objects.equals(itemGroupId, rule.requiredItemGroupId())
             && candidate.element() == rule.element() && candidate.control() == rule.control()).toList();
-        if (matches.size() != 1) return new NoMatch(candidate.candidateId());
+        if (matches.size() != 1) {
+            if ("basicInformation.englishName".equals(name)
+                && candidate.element() == FormElement.INPUT
+                && candidate.control() == FormControl.TEXT
+                && candidate.visibility() == Visibility.VISIBLE
+                && !Boolean.TRUE.equals(candidate.disabled())
+                && !Boolean.TRUE.equals(candidate.inert())
+                && !Boolean.TRUE.equals(candidate.readonly())) {
+                return new NoMatch(candidate.candidateId(), NoMatchReason.ENGLISH_NAME_ORDER_UNVERIFIED);
+            }
+            return new NoMatch(candidate.candidateId());
+        }
         var rule = matches.getFirst();
         return new Match(candidate.candidateId(), rule.valueBinding(), rule.allowReadonlyWrite());
     }

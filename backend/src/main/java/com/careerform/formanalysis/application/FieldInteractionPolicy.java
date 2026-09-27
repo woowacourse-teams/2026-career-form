@@ -6,6 +6,7 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.NoMatchReason;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
@@ -87,6 +88,11 @@ public final class FieldInteractionPolicy {
         FieldMappingResolver.Result mapping,
         List<WriteCommand> supportedWriteCommands
     ) {
+        if (mapping instanceof FieldMappingResolver.NoMatch noMatch
+            && noMatch.reason() == NoMatchReason.ENGLISH_NAME_ORDER_UNVERIFIED) {
+            return new Decision(InteractionStatus.UNVERIFIED,
+                List.of(ReasonCode.ENGLISH_NAME_ORDER_UNVERIFIED), null);
+        }
         Decision ordinary = evaluate(candidate, mapping);
         if (ordinary.interactionStatus() != InteractionStatus.READY
             || !(mapping instanceof FieldMappingResolver.Match match)

@@ -238,13 +238,21 @@ export interface MatchedFieldAnalysis {
   writePlan?: { command: WriteCommand };
 }
 
-export interface NoMatchFieldAnalysis {
+export type NoMatchFieldAnalysis = {
   candidateId: string;
   matchType: "NO_MATCH";
-  mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED";
-  interactionStatus: "BLOCKED";
-  reasonCodes: ["NO_MATCH"];
-}
+} & (
+  | {
+      mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED";
+      interactionStatus: "BLOCKED";
+      reasonCodes: ["NO_MATCH"];
+    }
+  | {
+      mappingStatus: "ADAPTER_VERIFIED";
+      interactionStatus: "UNVERIFIED";
+      reasonCodes: ["ENGLISH_NAME_ORDER_UNVERIFIED"];
+    }
+);
 
 export type FieldAnalysis = MatchedFieldAnalysis | NoMatchFieldAnalysis;
 
