@@ -472,9 +472,12 @@ function validateFieldAnalysis(
       candidate.element === "input" &&
       candidate.control === "text" &&
       !candidate.readonly &&
-      /^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
+      (/^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
         candidate.domName ?? "",
-      );
+      ) ||
+        (candidate.domName === "basicInformation.nationalityCode" &&
+          candidate.displayName === "국적" &&
+          directKey === "personal.personal.nationality"));
     const greetingDate =
       request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
       greetingReady &&

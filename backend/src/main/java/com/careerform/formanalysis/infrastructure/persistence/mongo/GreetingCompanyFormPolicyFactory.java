@@ -46,6 +46,7 @@ final class GreetingCompanyFormPolicyFactory {
             new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME), false, GreetingFormFingerprint.NAME));
         add(rules, GreetingFormFingerprint.PHONE, FormControl.TEXT, "contact.contact.phoneNumber", null);
         add(rules, "basicInformation.email", FormControl.TEXT, "contact.contact.email", null);
+        add(rules, "basicInformation.nationalityCode", FormControl.TEXT, "personal.personal.nationality", null);
         add(rules, "basicInformation.birthdate", FormControl.BUTTON, "personal.personal.birthDate", null);
         add(rules, "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceStatus",
             FormControl.BUTTON, "military.military.militaryStatus", null);

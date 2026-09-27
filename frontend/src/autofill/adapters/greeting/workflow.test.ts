@@ -1266,3 +1266,166 @@ it.each(["abort", "stale profile", "detached input"])(
     expect(reselect).not.toHaveBeenCalled();
   },
 );
+
+it.each([
+  "valid",
+  "wrong-label",
+  "wrong-structure",
+  "duplicate-field",
+  "duplicate-option",
+  "wrong-id",
+])(
+  "verifies nationality search and retained selection: %s",
+  async (mode) => {
+    document.body.innerHTML = `<div data-scope="field" data-part="root"><label>${mode === "wrong-label" ? "관심국가" : "국적"}</label><input name="basicInformation.nationalityCode" data-scope="combobox" data-part="input" role="${mode === "wrong-structure" ? "textbox" : "combobox"}" aria-controls="countries"></div><div id="countries" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div role="option" data-scope="combobox" data-part="item" data-state="unchecked" data-value="KR">대한민국</div>${mode === "duplicate-option" ? '<div role="option" data-scope="combobox" data-part="item" data-value="KR2">대한민국</div>' : ""}</div>`;
+    const input = document.querySelector<HTMLInputElement>("input")!;
+    if (mode === "duplicate-field") input.after(input.cloneNode());
+    const popup = document.querySelector<HTMLElement>("#countries")!;
+    const option = popup.querySelector<HTMLElement>('[role="option"]')!;
+    let clicks = 0;
+    let edits = 0;
+    input.oninput = () => {
+      edits++;
+    };
+    input.onclick = () => {
+      input.setAttribute("aria-expanded", "true");
+    };
+    option.onclick = () => {
+      clicks++;
+      option.setAttribute("data-state", "checked");
+      if (mode === "wrong-id") option.setAttribute("data-value", "US");
+      input.setAttribute("aria-expanded", "false");
+    };
+    input.onkeydown = (event) => {
+      if (event.key === "Escape") {
+        input.setAttribute("aria-expanded", "false");
+        popup.remove();
+      }
+    };
+    const handle = {
+      kind: "field",
+      candidateId: "nationality",
+      candidate: {
+        candidateId: "nationality",
+        domName: input.name,
+        control: "text",
+      },
+      elements: [input],
+      optionElements: new Map(),
+    } as unknown as FieldCandidateHandle;
+    const item = {
+      candidateId: "nationality",
+      profileValue: "대한민국",
+      selected: true,
+      disabled: false,
+      analysis: {
+        candidateId: "nationality",
+        mappingStatus: "ADAPTER_VERIFIED",
+        interactionStatus: "READY",
+        writePlan: { command: "SEARCH_SELECTION" },
+      },
+    } as ReviewPlanItem;
+    expect(greetingWorkflowAdapter.isStateDriver?.(item, input.name)).toBe(
+      true,
+    );
+    const execute = () =>
+      greetingWorkflowAdapter.executeStateDriver?.(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      );
+    expect(await execute()).toBe(mode === "valid");
+    if (mode === "valid") {
+      const positioner = document.createElement("div");
+      positioner.setAttribute("data-scope", "combobox");
+      positioner.setAttribute("data-part", "positioner");
+      const root = document.createElement("div");
+      root.setAttribute("data-scope", "scroll-area");
+      root.setAttribute("data-part", "root");
+      root.append(popup);
+      positioner.append(root);
+      document.body.append(positioner);
+      expect(await execute()).toBe(true);
+      expect(clicks).toBe(1);
+      expect(edits).toBe(1);
+    } else {
+      expect(input.value).toBe("");
+      expect(clicks).toBe(mode === "wrong-id" ? 1 : 0);
+    }
+  },
+  10000,
+);
+
+it.each([
+  ["nationality", 250, 0, true, 0],
+  ["nationality", 250, 249, true, 249],
+  ["nationality", 300, 299, false, 256],
+  ["school", 250, 249, false, 128],
+] as const)(
+  "navigates %s's %i options to index %i within its keyboard budget",
+  async (kind, count, targetIndex, expected, expectedActiveIndex) => {
+    const { input, popup, option, handle, item } = greetingSearchFixture();
+    const profileValue = kind === "nationality" ? "대한민국" : "서울대학교";
+    item.profileValue = profileValue;
+    if (kind === "nationality") {
+      input.name = "basicInformation.nationalityCode";
+      handle.candidate.domName = input.name;
+    }
+    const field = document.createElement("div");
+    field.dataset.scope = "field";
+    field.dataset.part = "root";
+    const label = document.createElement("label");
+    label.textContent = "국적";
+    input.before(field);
+    field.append(label, input);
+    option.remove();
+    for (let index = 0; index < count; index++) {
+      const country = document.createElement("div");
+      const code = index === targetIndex ? "KR" : `COUNTRY-${index}`;
+      country.id = `combobox:countries:option:${code}`;
+      country.setAttribute("role", "option");
+      country.dataset.scope = "combobox";
+      country.dataset.part = "item";
+      country.dataset.state = "unchecked";
+      country.dataset.value = code;
+      country.textContent =
+        index === targetIndex ? profileValue : `항목 ${index}`;
+      popup.append(country);
+    }
+    let activeIndex = -1;
+    let entered = false;
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        if (!popup.isConnected) document.body.append(popup);
+        if (!entered) activeIndex++;
+        input.setAttribute("aria-expanded", "true");
+        input.setAttribute(
+          "aria-activedescendant",
+          popup.children[activeIndex].id,
+        );
+      }
+      if (event.key === "Enter") {
+        entered = true;
+        (popup.children[activeIndex] as HTMLElement).dataset.state = "checked";
+        input.setAttribute("aria-expanded", "false");
+        popup.remove();
+      }
+      if (event.key === "Escape") input.setAttribute("aria-expanded", "false");
+    });
+    expect(
+      await greetingWorkflowAdapter.executeStateDriver!(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(expected);
+    expect(entered).toBe(expected);
+    expect(input.value).toBe(expected ? item.profileValue : "");
+    expect(activeIndex).toBe(expectedActiveIndex);
+    expect(
+      popup.querySelector('[data-state="checked"]')?.getAttribute("data-value"),
+    ).toBe(expected ? "KR" : undefined);
+  },
+);

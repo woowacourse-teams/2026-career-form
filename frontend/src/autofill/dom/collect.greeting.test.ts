@@ -384,3 +384,22 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
     expect(second.countRepeatableGroups(secondMajor!.candidateId)).toBe(2);
   });
 });
+
+it("collects nationality identity without its query or country suggestions", () => {
+  document.body.innerHTML = `<div data-scope="field" data-part="root"><label>국적*</label><input name="basicInformation.nationalityCode" data-scope="combobox" data-part="input" role="combobox" aria-controls="countries" value="개인검색어"></div><div id="countries" role="listbox"><div role="option" data-value="KR">대한민국</div></div>`;
+  const snapshot = collectFieldsSnapshot(document, {
+    executionAdapterId: "greeting-v1",
+  });
+  const nationality = snapshot.request.sections
+    .flatMap((section) => section.fields)
+    .find((field) => field.domName === "basicInformation.nationalityCode");
+  expect(nationality).toMatchObject({
+    displayName: "국적",
+    element: "input",
+    control: "text",
+  });
+  expect(nationality?.options).toBeUndefined();
+  expect(JSON.stringify(snapshot.request)).not.toMatch(
+    /개인검색어|대한민국|"KR"/,
+  );
+});

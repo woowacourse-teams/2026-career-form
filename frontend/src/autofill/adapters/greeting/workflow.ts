@@ -2,6 +2,7 @@ import type { WorkflowAdapter } from "../workflow";
 import {
   greetingCollectionAdapter,
   greetingFieldElements,
+  greetingFieldLabel,
   greetingMajorRowsForAction,
   greetingRadioGroupDomName,
   greetingSyntheticDomName,
@@ -255,6 +256,17 @@ async function selectButton(
       );
   }
 }
+function nationalitySearch(input: HTMLInputElement): boolean {
+  return (
+    input.name === "basicInformation.nationalityCode" &&
+    greetingFieldLabel(input) === "국적" &&
+    !input.closest('[data-scope="accordion"][data-part="item"]') &&
+    input.ownerDocument.querySelectorAll(
+      '[name="basicInformation.nationalityCode"]',
+    ).length === 1
+  );
+}
+
 async function search(
   input: HTMLElement,
   item: ReviewPlanItem,
@@ -268,9 +280,10 @@ async function search(
     !input.matches(
       '[data-scope="combobox"][data-part="input"][role="combobox"][aria-controls]',
     ) ||
-    !/^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
+    (!/^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
       input.name,
-    )
+    ) &&
+      !nationalitySearch(input))
   )
     return false;
   if (input.value && input.value !== item.profileValue) return false;
@@ -278,6 +291,8 @@ async function search(
   const current = () =>
     currentTrigger(handle, item, input, signal) &&
     !input.readOnly &&
+    (input.name !== "basicInformation.nationalityCode" ||
+      nationalitySearch(input)) &&
     input.getAttribute("aria-controls") === popupId;
   if (!current()) return false;
   const original = input.value;
@@ -466,11 +481,11 @@ async function search(
       const count = popup.querySelectorAll(
         '[data-scope="combobox"][data-part="item"][role="option"]',
       ).length;
-      if (count > 128) return false;
+      const navigationLimit = nationalitySearch(input) ? 256 : 128;
       for (
         let step = 0;
         input.getAttribute("aria-activedescendant") !== option.id &&
-        step <= count;
+        step < Math.min(count + 1, navigationLimit);
         step++
       ) {
         const previous = input.getAttribute("aria-activedescendant");
@@ -764,7 +779,8 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
     !!name &&
     (education.test(name) ||
       name.startsWith("militaryServicePreferentialEmploymentStatus.") ||
-      name === "basicInformation.birthdate") &&
+      name === "basicInformation.birthdate" ||
+      name === "basicInformation.nationalityCode") &&
     [
       "SELECT_BUTTON_OPTION",
       "CHECK_RADIO",

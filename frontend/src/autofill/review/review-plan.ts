@@ -279,9 +279,13 @@ function itemForAnalysis(
     analysis.valueBinding?.type === "DIRECT" &&
     isAutofillProfileFieldKey(analysis.valueBinding.profileFieldKey) &&
     lookup.status === "ready" &&
-    /^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
+    (/^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
       lookup.handle.candidate.domName ?? "",
-    );
+    ) ||
+      (lookup.handle.candidate.domName === "basicInformation.nationalityCode" &&
+        lookup.handle.candidate.displayName === "국적" &&
+        analysis.valueBinding.profileFieldKey ===
+          "personal.personal.nationality"));
   if (
     searchCommand &&
     !greetingSearch &&

@@ -26,6 +26,21 @@ class GreetingExpandedMappingTest {
     }
 
     @Test
+    void mapsOnlyExactGreetingNationalityComboboxToSearchSelection() {
+        var nationality = field("nationality", "basicInformation.nationalityCode", FormControl.TEXT, null);
+        var mappings = resolve(List.of(nationality,
+            field("custom", "applicationDetail.nationalityCode", FormControl.TEXT, null)), null);
+
+        assertThat(mappings).containsExactly(new Match("nationality", "personal.personal.nationality"),
+            new NoMatch("custom"));
+        assertThat(resolve(List.of(field("wrong-control", "basicInformation.nationalityCode",
+            FormControl.BUTTON, null)), null)).containsExactly(new NoMatch("wrong-control"));
+        assertThat(new com.careerform.formanalysis.application.FieldInteractionPolicy()
+            .evaluateGreeting(nationality, mappings.getFirst(), List.of()).writePlan().command())
+            .isEqualTo(WriteCommand.SEARCH_SELECTION);
+    }
+
+    @Test
     void marksOnlyUniqueGreetingEnglishFullNameForManualOrderReview() {
         var policy = new com.careerform.formanalysis.application.FieldInteractionPolicy();
         var englishName = field("english", "basicInformation.englishName", FormControl.TEXT, null);

@@ -1,3 +1,4 @@
+import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
 import { buildResultModel } from "../workflow/result-model";
 import { describe, expect, it } from "vitest";
 
@@ -1378,3 +1379,80 @@ it("keeps ordinary unmatched fields out of the manual review count", () => {
   expect(result.pending).toEqual([]);
   expect(result.skipped).toHaveLength(1);
 });
+
+it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
+  "passes only approved nationality from review into the Greeting state driver: %s",
+  async (mode) => {
+    const name =
+      mode === "wrong-name"
+        ? "customQuestion.country"
+        : "basicInformation.nationalityCode";
+    const label = mode === "wrong-label" ? "관심국가" : "국적";
+    document.body.innerHTML = `<div data-scope="field" data-part="root"><label>${label}</label><input name="${name}" data-scope="combobox" data-part="input" role="combobox" aria-controls="countries"></div><div id="countries" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div role="option" data-scope="combobox" data-part="item" data-value="KR" data-state="unchecked">대한민국</div></div>`;
+    const input = document.querySelector<HTMLInputElement>("input")!;
+    const option = document.querySelector<HTMLElement>('[role="option"]')!;
+    option.onclick = () => {
+      option.setAttribute("data-state", "checked");
+    };
+    const registry = new CandidateRegistry();
+    const handle = {
+      kind: "field" as const,
+      candidateId: "nationality",
+      candidate: {
+        candidateId: "nationality",
+        element: "input" as const,
+        control: "text" as const,
+        visibility: "visible" as const,
+        domName: name,
+        displayName: label,
+      },
+      elements: [input],
+      optionElements: new Map(),
+      sectionId: "root",
+      signature: createStructuralSignature([input]),
+    };
+    registry.registerField(handle);
+    const profile = createEmptyProfile();
+    profile.personal.nationality = "대한민국";
+    profile.personal.gender = "남성";
+    const analysis: FieldsAnalyzeResponse = {
+      ...response([], "COMPLETE", "ADAPTER"),
+      executionAdapterId: "greeting-v1",
+      fields: [
+        {
+          candidateId: "nationality",
+          matchType: "MATCH",
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey:
+              mode === "wrong-binding"
+                ? "personal.personal.gender"
+                : "personal.personal.nationality",
+          },
+          autofillPolicy: "CONDITIONAL",
+          mappingStatus:
+            mode === "untrusted" ? "LLM_SUGGESTED" : "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SEARCH_SELECTION" },
+        },
+      ],
+    };
+    const item = buildReviewPlan({ analysis, profile, registry }).items[0]!;
+    expect(item.disabled).toBe(mode !== "valid");
+    if (mode === "valid") {
+      expect(item.profileValue).toBe("대한민국");
+      expect(greetingWorkflowAdapter.isStateDriver?.(item, name)).toBe(true);
+      expect(
+        await greetingWorkflowAdapter.executeStateDriver?.(
+          document,
+          handle,
+          item,
+          new AbortController().signal,
+        ),
+      ).toBe(true);
+      expect(option.getAttribute("data-state")).toBe("checked");
+    } else {
+      expect(input.value).toBe("");
+    }
+  },
+);

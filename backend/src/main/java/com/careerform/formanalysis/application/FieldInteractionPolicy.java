@@ -113,7 +113,8 @@ public final class FieldInteractionPolicy {
             return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SELECT_DATE));
         }
         if (candidate.control() == FormControl.TEXT
-            && (name.matches("educationalBackground\\.(universities|graduateSchools)\\.[0-9]+\\.(schoolName|majors\\.0)")
+            && (name.equals("basicInformation.nationalityCode")
+                || name.matches("educationalBackground\\.(universities|graduateSchools)\\.[0-9]+\\.(schoolName|majors\\.0)")
                 || name.matches("educationalBackground\\.graduateSchools\\.[0-9]+\\.majors\\.1"))) {
             return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SEARCH_SELECTION));
         }

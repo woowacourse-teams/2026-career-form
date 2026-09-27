@@ -1337,6 +1337,22 @@ describe("Greeting custom execution contracts", () => {
       ).toThrow(AnalysisContractError);
     },
   );
+  it("accepts nationality search only for the exact nationality binding", () => {
+    const { request, response } = contract("SEARCH_SELECTION");
+    request.sections[0]!.fields[0]!.domName =
+      "basicInformation.nationalityCode";
+    request.sections[0]!.fields[0]!.displayName = "국적";
+    response.fields[0]!.valueBinding.profileFieldKey =
+      "personal.personal.nationality";
+    expect(validateFieldsResponse(request, response).fields[0]).toMatchObject({
+      writePlan: { command: "SEARCH_SELECTION" },
+    });
+    response.fields[0]!.valueBinding.profileFieldKey =
+      "education.university.schoolName";
+    expect(() => validateFieldsResponse(request, response)).toThrow(
+      AnalysisContractError,
+    );
+  });
   it("requires the calendar capability even for a designated Greeting date", () => {
     const { request, response } = contract("SELECT_DATE");
     expect(() =>
