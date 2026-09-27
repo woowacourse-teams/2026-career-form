@@ -34,6 +34,30 @@ python3 harness/scripts/ensure-environment.py
 
 이 명령은 하네스 테스트, 하네스 코드 커버리지 80%, Git 공백 오류를 검사한다. 애플리케이션 스택이 확정되면 포맷, 린트, 애플리케이션 테스트, 빌드 명령을 이 진입점에 추가한다.
 
+## 범용 자동 입력 기준선 평가
+
+`evaluate-generic-autofill.py`는 비식별 정답 목록과 단계별 관측을 검증하고 사이트별 및 전체 지표를 JSON으로 만든다. 실사이트 관측인 `LIVE_SITE`와 자동 회귀 입력인 `FIXTURE`는 독립된 구획으로 집계한다. fixture 성공은 실사이트 성공에 합산하지 않는다.
+
+정답 목록은 페이지의 모든 대상 필드를 `AUTOFILLABLE`, `CONDITIONAL`, `PROFILE_VALUE_MISSING`, `FORBIDDEN`, `CREATED_AFTER_ACTION` 중 하나로 분류한다. 발견하지 못한 `AUTOFILLABLE` 필드도 매핑 재현율과 정답 입력률의 분모에 남는다. 관측 candidate는 `DISCOVERED`, `MAPPED`, `BOUND`, `WRITTEN`, `RETAINED` 순서의 prefix와 `DEFERRED` 또는 `FAILED` 종결 결과를 기록한다.
+
+실행할 수 없는 사이트는 성공값 대신 `INCONCLUSIVE`와 유한 사유를 기록한다. 비용을 관측하지 못했으면 `cost_usd`를 `null`로 둔다. 실제 지원서 값, 전체 HTML, URL과 query, selector, 프롬프트와 응답 원문, 계정과 세션 정보는 입력 및 artifact에 포함하지 않는다.
+
+```bash
+.venv/bin/python harness/scripts/evaluate-generic-autofill.py \
+  --ground-truth harness/fixtures/generic-autofill/ground-truth-v1.json \
+  --observations harness/fixtures/generic-autofill/observations-v1.json \
+  --output harness/fixtures/generic-autofill/baseline-v1.json
+```
+
+재측정은 새 observations 파일을 입력하고 기존 artifact를 `--compare-to`로 전달한다. 비교 결과는 metric별 numerator, denominator와 rate delta를 보존하고 오입력률, 기존 값 훼손 증가 및 품질 지표 하락을 regression으로 분리한다.
+
+```bash
+.venv/bin/python harness/scripts/evaluate-generic-autofill.py \
+  --ground-truth harness/fixtures/generic-autofill/ground-truth-v1.json \
+  --observations /tmp/generic-autofill-observations.json \
+  --compare-to harness/fixtures/generic-autofill/baseline-v1.json
+```
+
 ## Project Issue 기획
 
 `cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[AI]`는 제품의 LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용하고 `[Harness]`는 개발 하네스와 워크플로우 변경에 사용한다. `[Plan]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.

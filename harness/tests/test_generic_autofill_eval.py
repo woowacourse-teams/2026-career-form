@@ -1,5 +1,10 @@
 import copy
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from harness.lib.generic_autofill_eval import (
     EvaluationError,
@@ -315,6 +320,131 @@ class GenericAutofillEvaluationTest(unittest.TestCase):
         truth: dict[str, object], runs: dict[str, object]
     ) -> None:
         runs["runs"][0]["usage"]["provider_calls"] = 0
+
+
+class GenericAutofillCliTest(unittest.TestCase):
+    SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "evaluate-generic-autofill.py"
+
+    def test_writes_the_same_deterministic_artifact_to_stdout_and_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            truth_path = self._write(root / "truth.json", ground_truth())
+            runs_path = self._write(root / "runs.json", observations())
+            output_path = root / "artifact.json"
+
+            completed = self._run(
+                "--ground-truth",
+                str(truth_path),
+                "--observations",
+                str(runs_path),
+                "--output",
+                str(output_path),
+            )
+
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout), json.loads(output_path.read_text()))
+            self.assertTrue(completed.stdout.endswith("\n"))
+            self.assertEqual(completed.stdout, output_path.read_text(encoding="utf-8"))
+
+    def test_compares_rates_and_reports_harm_regressions(self) -> None:
+        previous = observations()
+        previous["runs"][1]["candidates"][0] = candidate(
+            "c001",
+            "f001",
+            ["DISCOVERED", "MAPPED"],
+            mapping_result="INCORRECT",
+            terminal_result="FAILED",
+            reason_code="MAPPING_INCORRECT",
+        )
+        current = observations()
+        current["runs"][0]["candidates"].append(
+            candidate(
+                "c002",
+                "f002",
+                ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"],
+                mapping_result="CORRECT",
+                write_result="CORRECT",
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            truth_path = self._write(root / "truth.json", ground_truth())
+            previous_path = self._write(root / "previous-runs.json", previous)
+            current_path = self._write(root / "current-runs.json", current)
+            baseline_path = root / "baseline.json"
+            baseline = self._run(
+                "--ground-truth",
+                str(truth_path),
+                "--observations",
+                str(previous_path),
+                "--output",
+                str(baseline_path),
+            )
+            self.assertEqual(0, baseline.returncode, baseline.stderr)
+
+            compared = self._run(
+                "--ground-truth",
+                str(truth_path),
+                "--observations",
+                str(current_path),
+                "--compare-to",
+                str(baseline_path),
+            )
+
+        self.assertEqual(0, compared.returncode, compared.stderr)
+        result = json.loads(compared.stdout)
+        live = result["comparison"]["sources"]["LIVE_SITE"]
+        self.assertEqual(1 / 3, live["correct_input_rate"]["rate_delta"])
+        self.assertEqual(1 / 3, live["miswrite_rate"]["rate_delta"])
+        self.assertEqual(1, live["existing_value_damage_delta"])
+        self.assertEqual(
+            [
+                {
+                    "delta": 1,
+                    "metric": "existing_value_damage",
+                    "source": "LIVE_SITE",
+                },
+                {
+                    "delta": 1 / 3,
+                    "metric": "miswrite_rate",
+                    "source": "LIVE_SITE",
+                },
+            ],
+            result["comparison"]["regressions"],
+        )
+
+    def test_rejects_invalid_json_without_a_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            truth_path = root / "truth.json"
+            truth_path.write_text("{", encoding="utf-8")
+            runs_path = self._write(root / "runs.json", observations())
+
+            completed = self._run(
+                "--ground-truth",
+                str(truth_path),
+                "--observations",
+                str(runs_path),
+            )
+
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn("JSON 입력을 읽을 수 없습니다", completed.stderr)
+        self.assertNotIn("Traceback", completed.stderr)
+
+    @staticmethod
+    def _write(path: Path, value: dict[str, object]) -> Path:
+        path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def _run(self, *arguments: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            (sys.executable, str(self.SCRIPT), *arguments),
+            cwd=Path(__file__).resolve().parents[2],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
 
 if __name__ == "__main__":
