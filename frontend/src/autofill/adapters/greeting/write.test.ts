@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { mockGreetingEditingCommand } from "../../interaction/test-utils/greeting-email-editing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 let restoreEditingCommand: (() => void) | undefined;
@@ -65,9 +75,7 @@ afterEach(() => document.body.replaceChildren());
 describe("Greeting exact radio write", () => {
   it("rejects a sensitive radio group whose verified field label changed after collection", () => {
     document.body.innerHTML = `<div data-scope="field" data-part="root"><label>보훈여부*</label><div data-scope="toggle-group" data-part="root" role="radiogroup"><button type="button" data-scope="toggle-group" data-part="item" role="radio" aria-checked="false">비대상</button><button type="button" data-scope="toggle-group" data-part="item" role="radio" aria-checked="false">대상</button></div></div>`;
-    const snapshot = collectFieldsSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const snapshot = collectFieldsSnapshot(document);
     const candidate = snapshot.request.sections
       .flatMap((section) => section.fields)
       .find((field) => field.domName?.endsWith("veteran.veteranStatus"))!;
@@ -182,9 +190,7 @@ it("leaves Greeting email suggestion dismissal to settled verification", () => {
     input.setAttribute("aria-expanded", "true");
     education.setAttribute("aria-hidden", "true");
   });
-  const snapshot = collectFieldsSnapshot(document, {
-    executionAdapterId: "greeting-v1",
-  });
+  const snapshot = collectFieldsSnapshot(document);
   const candidate = snapshot.request.sections
     .flatMap((section) => section.fields)
     .find((field) => field.domName === "basicInformation.email")!;
@@ -215,9 +221,7 @@ it("leaves Greeting email suggestion dismissal to settled verification", () => {
 function emailFixture(label = "이메일주소*", type = "email") {
   document.body.innerHTML = `<div data-scope="field" data-part="root"><label>${label}</label><input type="${type}" role="combobox" data-scope="combobox" data-part="input" aria-expanded="false"></div>`;
   const input = document.querySelector("input")!;
-  const snapshot = collectFieldsSnapshot(document, {
-    executionAdapterId: "greeting-v1",
-  });
+  const snapshot = collectFieldsSnapshot(document);
   const candidate = snapshot.request.sections
     .flatMap((section) => section.fields)
     .find((field) => field.domName === "basicInformation.email")!;
@@ -401,3 +405,19 @@ it("dispatches email value events only inside the acknowledged MAIN commit", () 
     );
   }
 });
+
+it.each(["IH", "NaN", "Infinity", "-1", "1e3", "1,000", ""])(
+  "rejects nonnumeric language score %s before the native writer",
+  (profileValue) => {
+    const handle = {
+      candidateId: "score",
+      candidate: {
+        domName:
+          "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.score.score",
+      },
+    } as FieldCandidateHandle;
+    expect(
+      greetingWriteAdapter.tryWrite(handle, { profileValue } as ReviewPlanItem),
+    ).toEqual({ handled: true, written: false });
+  },
+);

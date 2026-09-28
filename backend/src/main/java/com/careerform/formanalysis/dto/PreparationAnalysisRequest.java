@@ -18,15 +18,8 @@ public record PreparationAnalysisRequest(
     @Min(2) @Max(2) int schemaVersion,
     @NotBlank @Size(max = 128) String snapshotId,
     @NotNull @Valid Site site,
-    @NotNull @Size(min = 1) List<@NotNull @Valid Section> sections,
-    @Size(min = 1, max = 128) String routingContext
+    @NotNull @Size(min = 1) List<@NotNull @Valid Section> sections
 ) {
-
-    public PreparationAnalysisRequest(
-        int schemaVersion, String snapshotId, Site site, List<Section> sections
-    ) {
-        this(schemaVersion, snapshotId, site, sections, null);
-    }
 
     public List<ActionCandidate> actionCandidatesInTraversalOrder() {
         if (sections == null) {

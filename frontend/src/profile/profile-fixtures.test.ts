@@ -94,3 +94,32 @@ it("provides a full synthetic Greeting profile with repeated universities and gr
   ).toHaveLength(1);
   expect(parseProfileImport(serializeProfileExport(profile))).toEqual(profile);
 });
+
+it("provides Greeting browser coverage for gender and both numeric and graded language tests", () => {
+  const profile = parseProfileImport(
+    JSON.stringify(
+      fixtures["../../fixtures/profile-export.greeting.example.json"],
+    ),
+  );
+  expect(["남성", "여성"]).toContain(profile.personal.gender);
+  const tests = profile.languages.filter(
+    (entry) => entry.sectionId === "languageTest",
+  );
+  expect(
+    tests.some(
+      (entry) =>
+        entry.values.testName === "TOEIC" &&
+        /^\d+$/.test(entry.values.grade ?? ""),
+    ),
+  ).toBe(true);
+  expect(
+    tests.some(
+      (entry) =>
+        entry.values.testName === "OPIc(영어)" &&
+        entry.values.grade === "Advanced Low",
+    ),
+  ).toBe(true);
+  expect(new Set(profile.languages.map((entry) => entry.id)).size).toBe(
+    profile.languages.length,
+  );
+});

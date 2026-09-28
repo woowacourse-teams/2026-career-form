@@ -1,13 +1,19 @@
 import {
-  graduateMajorAdd,
+  control,
+  currentTrigger,
+  mayMutate,
+  waitFor,
+} from "./workflow-controls";
+import { search } from "./workflow-search";
+import {
+  educationMajorAdd,
   graduateMajorProfileCount,
 } from "./workflow-major-count";
-import { ownedPopup, retainedSearchPopup } from "./workflow-popup";
+import { ownedPopup } from "./workflow-popup";
 import type { WorkflowAdapter } from "../workflow";
 import {
   greetingCollectionAdapter,
   greetingFieldElements,
-  greetingFieldLabel,
   greetingMajorRowsForAction,
   greetingRadioGroupDomName,
   greetingSyntheticDomName,
@@ -17,53 +23,14 @@ import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import {
   greetingApproved,
+  greetingEmploymentWrite,
   greetingRadioWrite,
   greetingText,
   greetingUsable,
 } from "./write";
 
 const education =
-  /^educationalBackground\.(universities|graduateSchools)\.(0|[1-9]\d*)\./;
-function control(handle: FieldCandidateHandle): HTMLElement | undefined {
-  return handle.customElements?.[0] ?? handle.elements[0];
-}
-function currentTrigger(
-  handle: FieldCandidateHandle,
-  item: ReviewPlanItem,
-  trigger: HTMLElement,
-  signal: AbortSignal,
-): boolean {
-  return (
-    !signal.aborted &&
-    greetingApproved(handle, item) &&
-    control(handle) === trigger &&
-    greetingUsable(trigger) &&
-    trigger.getAttribute("name") === handle.candidate.domName
-  );
-}
-async function waitFor<T>(
-  read: () => T | undefined,
-  signal: AbortSignal,
-  timeoutMs = 1200,
-): Promise<T | undefined> {
-  const deadline = Date.now() + timeoutMs;
-  while (!signal.aborted && Date.now() < deadline) {
-    const value = read();
-    if (value !== undefined) return value;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  return undefined;
-}
-async function mayMutate(
-  signal: AbortSignal,
-  beforeMutation?: () => Promise<boolean>,
-): Promise<boolean> {
-  return (
-    !signal.aborted &&
-    (!beforeMutation || (await beforeMutation())) &&
-    !signal.aborted
-  );
-}
+  /^educationalBackground\.(?:(universities|graduateSchools)\.(0|[1-9]\d*)|highSchool)\./;
 async function selectButton(
   trigger: HTMLElement,
   item: ReviewPlanItem,
@@ -75,7 +42,7 @@ async function selectButton(
   const freshDefault =
     item.verifiedFreshDefaultValue === "주전공" &&
     item.currentValue === "주전공" &&
-    /^educationalBackground\.graduateSchools\.(0|[1-9]\d*)\.majors\.1\.majorClassification$/.test(
+    /^educationalBackground\.(?:graduateSchools|universities)\.(0|[1-9]\d*)\.majors\.[12]\.majorClassification$/.test(
       trigger.getAttribute("name") ?? "",
     );
   const canReplace = (value: string) =>
@@ -160,310 +127,6 @@ async function selectButton(
       );
   }
 }
-function nationalitySearch(input: HTMLInputElement): boolean {
-  return (
-    input.name === "basicInformation.nationalityCode" &&
-    greetingFieldLabel(input) === "국적" &&
-    !input.closest('[data-scope="accordion"][data-part="item"]') &&
-    input.ownerDocument.querySelectorAll(
-      '[name="basicInformation.nationalityCode"]',
-    ).length === 1
-  );
-}
-
-async function search(
-  input: HTMLElement,
-  item: ReviewPlanItem,
-  signal: AbortSignal,
-  handle: FieldCandidateHandle,
-  beforeMutation?: () => Promise<boolean>,
-): Promise<boolean> {
-  if (
-    !(input instanceof HTMLInputElement) ||
-    input.readOnly ||
-    !input.matches(
-      '[data-scope="combobox"][data-part="input"][role="combobox"][aria-controls]',
-    ) ||
-    (!/^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
-      input.name,
-    ) &&
-      !nationalitySearch(input))
-  )
-    return false;
-  if (input.value && input.value !== item.profileValue) return false;
-  const popupId = input.getAttribute("aria-controls");
-  const current = () =>
-    currentTrigger(handle, item, input, signal) &&
-    !input.readOnly &&
-    (input.name !== "basicInformation.nationalityCode" ||
-      nationalitySearch(input)) &&
-    input.getAttribute("aria-controls") === popupId;
-  if (!current()) return false;
-  const original = input.value;
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  if (!setter) return false;
-  let success = false;
-  let attemptedWrite = false;
-  try {
-    if (
-      !(await mayMutate(signal, beforeMutation)) ||
-      !current() ||
-      input.value !== original
-    )
-      return false;
-    if (original) {
-      // Greeting unmounts closed search popups. Reopen the existing selection
-      // without issuing another input event or choosing a different result.
-      if (!retainedSearchPopup(input)) {
-        input.focus();
-        if (!current() || input.value !== original) return false;
-        input.click();
-      }
-      if (!current() || input.value !== original) return false;
-      const retained = await waitFor(() => {
-        if (!current() || input.value !== original) return false;
-        const retainedPopup = retainedSearchPopup(input);
-        if (!retainedPopup) return undefined;
-        const checked = [
-          ...retainedPopup.popup.querySelectorAll<HTMLElement>(
-            '[data-scope="combobox"][data-part="item"][role="option"][data-state="checked"]',
-          ),
-        ];
-        if (checked.length > 1) return false;
-        if (checked.length === 0) return undefined;
-        return (
-          !!checked[0].getAttribute("data-value") &&
-          retainedPopup.usable(checked[0]) &&
-          greetingText(checked[0]) === item.profileValue
-        );
-      }, signal);
-      if (
-        retained !== true ||
-        !(await mayMutate(signal, beforeMutation)) ||
-        !current() ||
-        input.value !== original
-      )
-        return false;
-      input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-      );
-      const closed = await waitFor(() => {
-        if (!current() || input.value !== original) return false;
-        if (input.getAttribute("aria-expanded") !== "false") return undefined;
-        const linked = [
-          ...input.ownerDocument.querySelectorAll<HTMLElement>("[id]"),
-        ].filter((node) => node.id === popupId);
-        return linked.length === 0 ? true : undefined;
-      }, signal);
-      if (closed !== true) return false;
-      input.blur();
-      success = current() && input.value === original;
-      return success;
-    }
-    input.focus();
-    input.click();
-    if (!current() || input.value !== original) return false;
-    attemptedWrite = true;
-    setter.call(input, item.profileValue);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    if (
-      !(await mayMutate(signal, beforeMutation)) ||
-      !current() ||
-      input.value !== item.profileValue ||
-      input.ownerDocument.activeElement !== input
-    )
-      return false;
-    input.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowDown",
-        code: "ArrowDown",
-        bubbles: true,
-      }),
-    );
-    input.dispatchEvent(
-      new KeyboardEvent("keyup", {
-        key: "ArrowDown",
-        code: "ArrowDown",
-        bubbles: true,
-      }),
-    );
-    let popup = await waitFor(() => ownedPopup(input), signal, 5000);
-    if (
-      !current() ||
-      input.value !== item.profileValue ||
-      !popup?.matches(
-        '[data-scope="scroll-area"][data-part="viewport"][role="presentation"][data-state="open"]',
-      )
-    )
-      return false;
-    const option = await waitFor(
-      () => {
-        const livePopup = ownedPopup(input);
-        if (
-          !livePopup?.matches(
-            '[data-scope="scroll-area"][data-part="viewport"][role="presentation"][data-state="open"]',
-          )
-        )
-          return undefined;
-        popup = livePopup;
-        const options = [
-          ...popup.querySelectorAll<HTMLElement>(
-            '[data-scope="combobox"][data-part="item"][role="option"][data-value]',
-          ),
-        ].filter(
-          (node) =>
-            greetingUsable(node) &&
-            !!node.getAttribute("data-value") &&
-            greetingText(node) === item.profileValue,
-        );
-        return options.length === 1
-          ? options[0]
-          : options.length > 1
-            ? null
-            : undefined;
-      },
-      signal,
-      5000,
-    );
-    if (
-      !option ||
-      !current() ||
-      input.value !== item.profileValue ||
-      ownedPopup(input) !== popup ||
-      !greetingUsable(option)
-    )
-      return false;
-    if (
-      !(await mayMutate(signal, beforeMutation)) ||
-      !current() ||
-      input.value !== item.profileValue ||
-      ownedPopup(input) !== popup ||
-      !greetingUsable(option)
-    )
-      return false;
-    const selectedId = option.getAttribute("data-value");
-    const key = async (value: "ArrowDown" | "Enter") => {
-      if (
-        !(await mayMutate(signal, beforeMutation)) ||
-        !current() ||
-        input.value !== item.profileValue
-      )
-        return false;
-      if (value === "Enter") {
-        const active = [
-          ...(ownedPopup(input)?.querySelectorAll<HTMLElement>(
-            '[data-scope="combobox"][data-part="item"][role="option"]',
-          ) ?? []),
-        ].filter(
-          (node) => node.id === input.getAttribute("aria-activedescendant"),
-        );
-        if (
-          active.length !== 1 ||
-          active[0].id !== option.id ||
-          active[0].getAttribute("data-value") !== selectedId ||
-          greetingText(active[0]) !== item.profileValue ||
-          !greetingUsable(active[0])
-        )
-          return false;
-      }
-      input.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: value,
-          code: value,
-          bubbles: true,
-        }),
-      );
-      input.dispatchEvent(
-        new KeyboardEvent("keyup", { key: value, code: value, bubbles: true }),
-      );
-      return true;
-    };
-    if (option.id) {
-      const count = popup.querySelectorAll(
-        '[data-scope="combobox"][data-part="item"][role="option"]',
-      ).length;
-      const navigationLimit = nationalitySearch(input) ? 256 : 128;
-      for (
-        let step = 0;
-        input.getAttribute("aria-activedescendant") !== option.id &&
-        step < Math.min(count + 1, navigationLimit);
-        step++
-      ) {
-        const previous = input.getAttribute("aria-activedescendant");
-        if (!(await key("ArrowDown"))) return false;
-        const changed = await waitFor(
-          () => {
-            const active = input.getAttribute("aria-activedescendant");
-            return active && active !== previous ? true : undefined;
-          },
-          signal,
-          250,
-        );
-        if (!changed) return false;
-      }
-      if (!(await key("Enter"))) return false;
-    } else {
-      option.click();
-    }
-    const selected = () => {
-      if (!current() || input.value !== item.profileValue) return undefined;
-      const popups = [
-        ...input.ownerDocument.querySelectorAll<HTMLElement>("[id]"),
-      ].filter(
-        (node) =>
-          node.id === popupId &&
-          node.matches(
-            '[data-scope="scroll-area"][data-part="viewport"][role="presentation"]',
-          ),
-      );
-      if (popups.length !== 1) return undefined;
-      const checked = [
-        ...popups[0].querySelectorAll<HTMLElement>(
-          '[data-scope="combobox"][data-part="item"][role="option"][data-state="checked"]',
-        ),
-      ];
-      return checked.length === 1 &&
-        checked[0].getAttribute("data-value") === selectedId &&
-        greetingText(checked[0]) === item.profileValue
-        ? true
-        : undefined;
-    };
-    success = !!(await waitFor(selected, signal));
-    if (
-      !success &&
-      option.id &&
-      current() &&
-      input.value === item.profileValue &&
-      input.getAttribute("aria-expanded") === "false" &&
-      (await key("ArrowDown"))
-    ) {
-      success = !!(await waitFor(selected, signal, 5000));
-    }
-    return success;
-  } finally {
-    if (
-      attemptedWrite &&
-      !success &&
-      (await mayMutate(signal, beforeMutation)) &&
-      current() &&
-      input.value === item.profileValue
-    ) {
-      setter.call(input, original);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    if (
-      (await mayMutate(signal, beforeMutation)) &&
-      current() &&
-      input.getAttribute("aria-expanded") === "true"
-    )
-      input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-      );
-  }
-}
 async function selectDate(
   trigger: HTMLElement,
   item: ReviewPlanItem,
@@ -473,10 +136,16 @@ async function selectDate(
 ): Promise<boolean> {
   const source = item.profileValue!;
   const monthOnly =
-    /^educationalBackground\.(universities|graduateSchools)\.\d+\.enrollmentPeriod\.(startDate|endDate)$/.test(
+    /^educationalBackground\.(?:(?:universities|graduateSchools)\.\d+|highSchool)\.enrollmentPeriod\.(startDate|endDate)$/.test(
       trigger.getAttribute("name") ?? "",
     ) ||
     /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.test(
+      trigger.getAttribute("name") ?? "",
+    ) ||
+    /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.test(
+      trigger.getAttribute("name") ?? "",
+    ) ||
+    /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.test(
       trigger.getAttribute("name") ?? "",
     );
   const validFullDate =
@@ -653,20 +322,21 @@ export function isGreetingEmailStateDriver(
 
 export const greetingWorkflowAdapter: WorkflowAdapter = {
   followUpRepeatableAction: (actionDomId) =>
-    graduateMajorAdd.test(actionDomId ?? ""),
+    educationMajorAdd.test(actionDomId ?? ""),
   freshDefaultAfterAdd: (handle) => {
     const action = handle.element;
-    const match = graduateMajorAdd.exec(handle.candidate.domId ?? "");
+    const match = educationMajorAdd.exec(handle.candidate.domId ?? "");
     if (
       !match ||
       !(action instanceof HTMLElement) ||
       greetingCollectionAdapter.actionDomId(action) !==
         handle.candidate.domId ||
-      greetingMajorRowsForAction(action)?.length !== 2
+      ![2, 3].includes(greetingMajorRowsForAction(action)?.length ?? 0)
     )
       return undefined;
     const row = action.closest('[data-scope="accordion"][data-part="item"]');
-    const name = `educationalBackground.graduateSchools.${match[1]}.majors.1.majorClassification`;
+    const majorIndex = greetingMajorRowsForAction(action)!.length - 1;
+    const name = `educationalBackground.${match[1]}.${match[2]}.majors.${majorIndex}.majorClassification`;
     const buttons = row?.querySelectorAll<HTMLButtonElement>(
       `button[name="${name}"]`,
     );
@@ -683,11 +353,15 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
     !!name &&
     (education.test(name) ||
       name.startsWith("militaryServicePreferentialEmploymentStatus.") ||
+      name === "basicInformation.gender" ||
+      name.startsWith("workHistory.workExperiences.") ||
+      name.startsWith("languagesCertificationsAndOtherActivity.") ||
       name === "basicInformation.birthdate" ||
       name === "basicInformation.nationalityCode") &&
     [
       "SELECT_BUTTON_OPTION",
       "CHECK_RADIO",
+      "CHECK_CHECKBOX",
       "SEARCH_SELECTION",
       "SELECT_DATE",
     ].includes(item.analysis?.writePlan?.command ?? ""),
@@ -696,10 +370,21 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
     const name = handle.candidate.domName;
     if (!name || !greetingApproved(handle, item)) return undefined;
     const command = item.analysis?.writePlan?.command;
-    if (command === "CHECK_RADIO" || command === "SELECT_BUTTON_OPTION")
+    if (
+      /\.(grade|conversationalProficiency)$/.test(name) &&
+      command === "SELECT_BUTTON_OPTION"
+    )
+      return 3;
+    if (
+      command === "CHECK_RADIO" ||
+      command === "CHECK_CHECKBOX" ||
+      command === "SELECT_BUTTON_OPTION"
+    )
       return 1;
     if (command === "SEARCH_SELECTION")
-      return name.endsWith(".schoolName") ? 2 : 3;
+      return /\.(schoolName|companyName|testName|credentials)$/.test(name)
+        ? 2
+        : 3;
     if (command === "SELECT_DATE") return 4;
     return undefined;
   },
@@ -720,6 +405,10 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
     )
       return false;
     const command = item.analysis?.writePlan?.command;
+    if (command === "CHECK_CHECKBOX") {
+      if (!(await mayMutate(signal, beforeMutation))) return false;
+      return greetingEmploymentWrite(handle, item);
+    }
     if (command === "CHECK_RADIO") {
       if (
         !(await mayMutate(signal, beforeMutation)) ||
@@ -766,7 +455,15 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
       ? { categoryId: "education", sectionId: "university" }
       : action === "greeting:add:graduateSchools"
         ? { categoryId: "education", sectionId: "graduateSchool" }
-        : undefined,
+        : action === "greeting:add:workExperiences"
+          ? { categoryId: "careers", sectionId: "career" }
+          : action === "greeting:add:certifiedLanguageTests"
+            ? { categoryId: "languages", sectionId: "languageTest" }
+            : action === "greeting:add:foreignLanguageProficiencies"
+              ? { categoryId: "languages", sectionId: "languageSkill" }
+              : action === "greeting:add:certificatesLicenses"
+                ? { categoryId: "certifications", sectionId: "certificate" }
+                : undefined,
   educationSectionHint: (label) =>
     label.includes("greeting:add:graduateSchools")
       ? "graduateSchool"

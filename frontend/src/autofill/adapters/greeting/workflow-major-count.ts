@@ -1,5 +1,8 @@
+import { universityAdditionalMajors } from "../../profile/university-additional-majors";
 import type { Profile } from "../../../profile/model";
 
+export const educationMajorAdd =
+  /^greeting:add:(universities|graduateSchools):(0|[1-9]\d*):majors$/;
 export const graduateMajorAdd =
   /^greeting:add:graduateSchools:(0|[1-9]\d*):majors$/;
 const additionalMajorTypes = new Set([
@@ -23,10 +26,18 @@ export function graduateMajorProfileCount(
   actionDomId: string | undefined,
   profile: Profile,
 ): number | null | undefined {
-  const match = graduateMajorAdd.exec(actionDomId ?? "");
+  const match = educationMajorAdd.exec(actionDomId ?? "");
   if (!match) return undefined;
-  const index = Number(match[1]);
+  const index = Number(match[2]);
   if (index > 127) return null;
+  if (match[1] === "universities") {
+    const university = profile.education.filter(
+      (entry) => entry.sectionId === "university",
+    )[index];
+    if (!university) return null;
+    const majors = universityAdditionalMajors(university.values);
+    return majors ? 1 + majors.length : null;
+  }
   const graduate = profile.education.filter(
     (entry) => entry.sectionId === "graduateSchool",
   )[index];

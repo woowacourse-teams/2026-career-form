@@ -118,6 +118,13 @@ describe("Hyundai repeated profile counts", () => {
 
 describe("Greeting graduate major count", () => {
   it("adds only one complete second major from the matching graduate profile row", () => {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(options: { url: string }): void };
+      }
+    ).jsdom.reconfigure({
+      url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+    });
     const prefix = "educationalBackground.graduateSchools.0";
     document.body.innerHTML = `<div data-scope="field" data-part="root"><label>대학원*</label>
       <div data-scope="accordion" data-part="root"><div data-scope="accordion" data-part="item">
@@ -128,9 +135,7 @@ describe("Greeting graduate major count", () => {
           <input name="${prefix}.majors.0" role="combobox">
           <button type="button" data-scope="tooltip" data-part="trigger">전공 추가</button>
         </div></div></div></div>`;
-    const snapshot = collectPreparationSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const snapshot = collectPreparationSnapshot(document);
     const plan = addPlan(snapshot, "greeting:add:graduateSchools:0:majors");
     const profile = createEmptyProfile();
     const values = {

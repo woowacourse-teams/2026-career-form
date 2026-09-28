@@ -8,7 +8,7 @@
       "hanjaGivenName": "使用者",
       "englishFamilyName": "Example",
       "englishGivenName": "User",
-      "gender": "미지정",
+      "gender": "남성",
       "birthDate": "2000-01-01",
       "nationality": "대한민국"
     },
@@ -120,6 +120,18 @@
         "values": {
           "language": "일본어",
           "conversationalLevel": "일상 대화"
+        }
+      },
+      {
+        "id": "language-example-3",
+        "sectionId": "languageTest",
+        "values": {
+          "language": "영어",
+          "testName": "OPIc(영어)",
+          "registrationNo": "DEMO-EN-002",
+          "acquisitionDate": "2024-06-15",
+          "grade": "Advanced Low",
+          "evidenceDocumentPath": "demo-language-certificate-2.pdf"
         }
       }
     ],

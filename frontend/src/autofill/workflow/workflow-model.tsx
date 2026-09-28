@@ -1,5 +1,4 @@
 import { browser } from "wxt/browser";
-import { resolveCompany } from "../adapters/company";
 import { createAddressSearch } from "../address/runtime";
 import type {
   AddressSearch,
@@ -225,9 +224,17 @@ export function localItemCount(
     ReturnType<typeof collectPreparationSnapshot>["request"]
   >,
   profile: Profile,
-  adapter: WorkflowAdapter = getWorkflowAdapter(snapshot.request.site.host),
+  adapter?: WorkflowAdapter,
 ): number | undefined {
   if (plan.command !== "ADD_REPEATABLE_GROUP") return undefined;
+  const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
+  const selectedAdapter =
+    adapter ??
+    getWorkflowAdapter(
+      "handle" in lookup
+        ? lookup.handle.element.ownerDocument
+        : snapshot.request.site.host,
+    );
   const section = snapshot.request.sections.find((candidate) =>
     candidate.actionCandidates.some(
       (action) => action.candidateId === plan.actionCandidateId,
@@ -236,7 +243,10 @@ export function localItemCount(
   const action = section?.actionCandidates.find(
     (candidate) => candidate.candidateId === plan.actionCandidateId,
   );
-  const adapterCount = adapter.repeatableProfileCount?.(action?.domId, profile);
+  const adapterCount = selectedAdapter.repeatableProfileCount?.(
+    action?.domId,
+    profile,
+  );
   if (adapterCount !== undefined) return adapterCount ?? undefined;
   const matchLabel = [
     section?.displayName,
@@ -247,8 +257,8 @@ export function localItemCount(
     .filter(Boolean)
     .join(" ");
   if (
-    resolveCompany(snapshot.request.site.host) === "generic" &&
-    !adapter.repeatedProfileSectionHint?.(action?.domId)
+    selectedAdapter === getWorkflowAdapter("") &&
+    !selectedAdapter.repeatedProfileSectionHint?.(action?.domId)
   ) {
     const categories = PROFILE_CATEGORIES.filter((category) =>
       matchesProfileCategory(category, matchLabel),
@@ -280,7 +290,7 @@ export function localItemCount(
     }
     return sectionIds.size <= 1 ? entries.length : undefined;
   }
-  const profileSectionHint = adapter.repeatedProfileSectionHint?.(
+  const profileSectionHint = selectedAdapter.repeatedProfileSectionHint?.(
     action?.domId,
   );
   const category = profileSectionHint
@@ -295,7 +305,7 @@ export function localItemCount(
       ? (() => {
           const sectionId = educationProfileSectionId(
             matchLabel,
-            adapter.educationSectionHint?.(matchLabel),
+            selectedAdapter.educationSectionHint?.(matchLabel),
           );
           return sectionId
             ? profile.education.filter((entry) => entry.sectionId === sectionId)

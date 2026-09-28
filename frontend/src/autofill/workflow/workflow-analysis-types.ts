@@ -1,4 +1,3 @@
-import type { ExecutionAdapterId } from "../api/types";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AddressResult, AddressSearch } from "../address/types";
 import type { WorkflowAdapter } from "../adapters/workflow";
@@ -83,7 +82,6 @@ export interface WorkflowAnalysisContext {
     matchedCount: number;
   }) => void;
   adapter: WorkflowAdapter;
-  executionAdapterId?: ExecutionAdapterId;
   addressRun: MutableRefObject<AddressRun>;
   addressSearch: AddressSearch;
   apiClient: AnalysisApiClient;

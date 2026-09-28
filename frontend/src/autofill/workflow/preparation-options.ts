@@ -2,7 +2,6 @@ import { preparationFailureMessage } from "../preparation/failure-message";
 import type { RefObject } from "react";
 import type { Profile } from "../../profile/model";
 import type { WorkflowAdapter } from "../adapters/workflow";
-import type { ExecutionAdapterId } from "../api/types";
 import { collectPreparationSnapshot } from "../dom/collect";
 import type {
   PreparationExecutionResult,
@@ -30,7 +29,6 @@ interface PreparationContext {
   pageDocument: Document;
   profile: Profile;
   repository: WorkflowProps["repository"];
-  executionAdapterId: RefObject<ExecutionAdapterId | undefined>;
   freshDefaultControls: RefObject<WeakSet<Element>>;
   writeController: RefObject<AbortController>;
   mounted: RefObject<boolean>;
@@ -42,7 +40,6 @@ export function createPreparationOptions({
   pageDocument,
   profile,
   repository,
-  executionAdapterId,
   freshDefaultControls,
   writeController,
   mounted,
@@ -52,7 +49,8 @@ export function createPreparationOptions({
     snapshot: ReturnType<typeof collectPreparationSnapshot>,
   ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
     onVerifiedAddition: (action, before, after) => {
-      if (before !== 1 || after !== 2) return;
+      if (!Number.isSafeInteger(before) || before < 1 || after !== before + 1)
+        return;
       const control = adapter.freshDefaultAfterAdd?.(action);
       if (control) freshDefaultControls.current.add(control);
     },
@@ -83,9 +81,7 @@ export function createPreparationOptions({
         snapshot.repeatableGroupState(plan.actionCandidateId),
     },
     refreshSnapshot: async () => {
-      const refreshed = collectPreparationSnapshot(pageDocument, {
-        executionAdapterId: executionAdapterId.current,
-      });
+      const refreshed = collectPreparationSnapshot(pageDocument);
       return {
         registry: refreshed.registry,
         isTargetSectionVisible: (targetSectionId) =>

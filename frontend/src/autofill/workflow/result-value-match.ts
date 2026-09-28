@@ -77,6 +77,27 @@ function greetingDatePrecision(
       `education.${education[1] === "universities" ? "university" : "graduateSchool"}.${education[3]}`
   )
     return "month";
+  const highSchool =
+    /^educationalBackground\.highSchool\.enrollmentPeriod\.(startDate|endDate)$/.exec(
+      name,
+    );
+  if (highSchool && key === `education.highSchool.${highSchool[1]}`)
+    return "month";
+  const career =
+    /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.exec(
+      name,
+    );
+  if (career && key === `careers.career.${career[1]}`) return "month";
+  const acquisition =
+    /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.exec(
+      name,
+    );
+  if (
+    acquisition &&
+    key ===
+      `${acquisition[1] === "certifiedLanguageTests" ? "languages.languageTest" : "certifications.certificate"}.acquisitionDate`
+  )
+    return "month";
   const military =
     /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.exec(
       name,

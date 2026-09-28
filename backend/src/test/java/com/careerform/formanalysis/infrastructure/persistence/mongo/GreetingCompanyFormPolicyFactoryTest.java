@@ -21,9 +21,11 @@ class GreetingCompanyFormPolicyFactoryTest {
         assertThat(document.actionRules()).isEmpty();
         assertThat(document.fieldRules()).extracting(rule -> rule.structuralName())
             .contains(GreetingFormFingerprint.NAME, GreetingFormFingerprint.PHONE);
-        assertThat(document.fieldRules().get(0).valueBinding())
-            .isEqualTo(new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME));
-        assertThat(document.fieldRules().get(1).valueBinding())
-            .isEqualTo(new DirectBinding("contact.contact.phoneNumber"));
+        assertThat(document.fieldRules()).filteredOn(rule -> GreetingFormFingerprint.NAME.equals(rule.structuralName()))
+            .extracting(rule -> rule.valueBinding()).containsExactly(new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME));
+        assertThat(document.fieldRules()).filteredOn(rule -> GreetingFormFingerprint.PHONE.equals(rule.structuralName()))
+            .extracting(rule -> rule.valueBinding()).containsExactly(new DirectBinding("contact.contact.phoneNumber"));
+        assertThat(document.fieldRules()).filteredOn(rule -> "basicInformation.englishName".equals(rule.structuralName()))
+            .extracting(rule -> rule.valueBinding()).containsExactly(new DerivedBinding(DerivedRecipe.ENGLISH_FULL_NAME_GIVEN_FIRST));
     }
 }

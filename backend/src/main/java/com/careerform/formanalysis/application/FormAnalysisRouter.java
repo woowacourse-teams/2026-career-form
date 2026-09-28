@@ -24,39 +24,22 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 public final class FormAnalysisRouter {
 
     private final CompanyFormPolicyProvider policyProvider;
-    private final GreetingDomainEvidence greetingDomainEvidence;
     private final GreetingPolicyProvider greetingPolicyProvider;
-    private final GreetingRoutingContext routingContexts;
+    private final GreetingDomainEvidence greetingDomainEvidence;
     private final StoredPolicyFingerprint fingerprint = new StoredPolicyFingerprint();
     private final GreetingFormFingerprint greetingFingerprint = new GreetingFormFingerprint();
 
     public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider) {
-        this(policyProvider,
-            (host, path) -> GreetingDomainEvidence.Decision.NO_POSITIVE_EVIDENCE,
-            CompanyFormPolicyProvider.Unavailable::new,
-            new GreetingRoutingContext());
-    }
-
-    public FormAnalysisRouter(
-        CompanyFormPolicyProvider policyProvider,
-        GreetingDomainEvidence greetingDomainEvidence,
-        GreetingPolicyProvider greetingPolicyProvider
-    ) {
-        this(policyProvider, greetingDomainEvidence, greetingPolicyProvider,
-            new GreetingRoutingContext());
+        this(policyProvider, (host, path) -> GreetingDomainEvidence.Decision.NO_POSITIVE_EVIDENCE,
+            CompanyFormPolicyProvider.Unavailable::new);
     }
 
     @Autowired
-    public FormAnalysisRouter(
-        CompanyFormPolicyProvider policyProvider,
-        GreetingDomainEvidence greetingDomainEvidence,
-        GreetingPolicyProvider greetingPolicyProvider,
-        GreetingRoutingContext routingContexts
-    ) {
+    public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider,
+        GreetingDomainEvidence greetingDomainEvidence, GreetingPolicyProvider greetingPolicyProvider) {
         this.policyProvider = policyProvider;
         this.greetingDomainEvidence = greetingDomainEvidence;
         this.greetingPolicyProvider = greetingPolicyProvider;
-        this.routingContexts = routingContexts;
     }
 
     public ActionRoute route(PreparationAnalysisRequest request) {
@@ -66,20 +49,9 @@ public final class FormAnalysisRouter {
         );
         boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
-            if (request.routingContext() != null) {
-                if (!routingContexts.isValid(request.routingContext(), request.site().host(),
-                    request.site().pathPattern())) {
-                    return new ActionRoute(RouteKind.POLICY_UNAVAILABLE, null);
-                }
-                lookup = greetingPolicyProvider.find();
-            } else {
-                lookup = greetingLookup(request.site().host(), request.site().pathPattern());
-            }
+            lookup = greetingLookup(request.site().host(), request.site().pathPattern());
             if (lookup instanceof NotRegistered) {
                 return new ActionRoute(RouteKind.GENERIC, null);
-            }
-            if (lookup == null) {
-                return new ActionRoute(RouteKind.DNS_UNAVAILABLE, null);
             }
             greetingCandidate = true;
         }
@@ -104,25 +76,11 @@ public final class FormAnalysisRouter {
             request.site().pathPattern()
         );
         if (lookup instanceof NotRegistered) {
-            if (request.routingContext() != null) {
-                lookup = routingContexts.isValid(
-                    request.routingContext(),
-                    request.site().host(),
-                    request.site().pathPattern()
-                ) ? greetingPolicyProvider.find() : new CompanyFormPolicyProvider.Unavailable();
-            }
-            else {
-                lookup = greetingLookup(request.site().host(), request.site().pathPattern());
-                if (lookup instanceof Available) {
-                    return new FieldRoute(RouteKind.POLICY_UNAVAILABLE, null);
-                }
-            }
+            lookup = greetingLookup(request.site().host(), request.site().pathPattern());
             if (lookup instanceof NotRegistered) {
                 return new FieldRoute(RouteKind.GENERIC, null);
             }
-            if (lookup == null) {
-                return new FieldRoute(RouteKind.DNS_UNAVAILABLE, null);
-            }
+
         }
         if (!(lookup instanceof Available available)) {
             return new FieldRoute(RouteKind.POLICY_UNAVAILABLE, null);
@@ -163,14 +121,9 @@ public final class FormAnalysisRouter {
         String pathPattern
     ) {
         return switch (greetingDomainEvidence.classify(host, pathPattern)) {
-            case OUT_OF_SCOPE -> new NotRegistered();
-            case POSITIVE_STABLE -> greetingPolicyProvider.find();
-            case POSITIVE -> routingContexts.rememberPositive(host, pathPattern)
-                ? greetingPolicyProvider.find() : new CompanyFormPolicyProvider.Unavailable();
-            case NO_POSITIVE_EVIDENCE -> routingContexts.requiresFailClosedOnMissingEvidence(
-                host, pathPattern)
-                ? null : new NotRegistered();
-            case RETRYABLE_FAILURE -> null;
+            case POSITIVE -> greetingPolicyProvider.find();
+            case NO_POSITIVE_EVIDENCE -> new NotRegistered();
+            case RETRYABLE_FAILURE -> new CompanyFormPolicyProvider.Unavailable();
         };
     }
 
@@ -178,8 +131,7 @@ public final class FormAnalysisRouter {
         GENERIC,
         ADAPTER,
         STRUCTURE_MISMATCH,
-        POLICY_UNAVAILABLE,
-        DNS_UNAVAILABLE
+        POLICY_UNAVAILABLE
     }
 
     public enum GenericRouteKind {

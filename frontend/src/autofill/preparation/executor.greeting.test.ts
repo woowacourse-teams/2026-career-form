@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { describe, expect, it } from "vitest";
 
 import type { PreparationPlan } from "../api/types";
@@ -37,9 +47,7 @@ describe("Greeting approved preparation plan executor", () => {
       );
     });
     const snapshot = () => {
-      const collected = collectPreparationSnapshot(document, {
-        executionAdapterId: "greeting-v1",
-      });
+      const collected = collectPreparationSnapshot(document);
       return {
         registry: collected.registry,
         isTargetSectionVisible: () => true,

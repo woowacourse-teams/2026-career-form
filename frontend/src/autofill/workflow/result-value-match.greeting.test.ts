@@ -303,3 +303,26 @@ it("accepts the live Greeting date spacing only on a verified date trigger", () 
     ),
   ).toBe(false);
 });
+
+it.each([
+  [
+    "educationalBackground.highSchool.enrollmentPeriod.startDate",
+    "education.highSchool.startDate",
+  ],
+  [
+    "workHistory.workExperiences.0.employmentPeriod.startDate",
+    "careers.career.startDate",
+  ],
+  [
+    "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.acquisitionDate",
+    "languages.languageTest.acquisitionDate",
+  ],
+  [
+    "languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate",
+    "certifications.certificate.acquisitionDate",
+  ],
+])("reads the retained month for %s", (name, key) => {
+  const { item, handle } = fixture(name, key);
+  expect(matchesResultValue(item, "2020.03", "2020-03-01", handle)).toBe(true);
+  expect(matchesResultValue(item, "2020.04", "2020-03-01", handle)).toBe(false);
+});

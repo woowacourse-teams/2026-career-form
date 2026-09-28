@@ -48,8 +48,7 @@ describe("analysis background handler", () => {
       expect.objectContaining({
         headers: {
           "Content-Type": "application/json",
-          "X-Career-Form-Capabilities":
-            "address-search-v1,routing-context-v1,greeting-adapter-v1",
+          "X-Career-Form-Capabilities": "address-search-v1",
         },
       }),
     );
@@ -104,7 +103,6 @@ describe("analysis background handler", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Career-Form-Capabilities": "greeting-adapter-v1",
         },
         body: JSON.stringify(message.payload),
       }),

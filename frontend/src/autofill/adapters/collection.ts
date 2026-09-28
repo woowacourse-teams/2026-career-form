@@ -1,6 +1,5 @@
-import type { ExecutionAdapterId } from "../api/types";
 import { greetingCollectionAdapter } from "./greeting/collection";
-import { resolveCompany } from "./company";
+import { resolveCompany, resolveDocumentCompany } from "./company";
 import { hyundaiCollectionAdapter } from "./hyundai/collection";
 import { skCollectionAdapter } from "./sk/collection";
 
@@ -29,11 +28,15 @@ const genericCollectionAdapter: CollectionAdapter = {
 };
 
 export function collectionAdapterForHost(
-  host: string,
-  executionAdapterId?: ExecutionAdapterId,
+  source: string | Document,
 ): CollectionAdapter {
-  if (executionAdapterId === "greeting-v1") return greetingCollectionAdapter;
-  switch (resolveCompany(host)) {
+  switch (
+    typeof source === "string"
+      ? resolveCompany(source)
+      : resolveDocumentCompany(source)
+  ) {
+    case "greeting":
+      return greetingCollectionAdapter;
     case "hyundai":
       return hyundaiCollectionAdapter;
     case "sk":

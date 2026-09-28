@@ -1,3 +1,4 @@
+import { greetingEmploymentStatusValue } from "../adapters/greeting/write";
 import { customFieldValue } from "../dom/custom-field-value";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 
@@ -33,7 +34,10 @@ export function resultFieldState(
   }
   return {
     visible: !hidden,
-    value: customFieldValue(handle) ?? value,
+    value:
+      greetingEmploymentStatusValue(handle) ??
+      customFieldValue(handle) ??
+      value,
     handle,
   };
 }

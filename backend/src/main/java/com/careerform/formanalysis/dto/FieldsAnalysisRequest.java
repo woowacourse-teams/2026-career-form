@@ -21,8 +21,7 @@ public record FieldsAnalysisRequest(
     @NotBlank @Size(max = 128) String snapshotId,
     @NotNull @Valid Site site,
     @NotNull @Size(min = 1) List<@NotNull @Valid Section> sections,
-    @Size(max = 8) List<@NotNull WriteCommand> supportedWriteCommands,
-    @Size(max = 128) @Pattern(regexp = "^[A-Za-z0-9_-]+$") String routingContext
+    @Size(max = 8) List<@NotNull WriteCommand> supportedWriteCommands
 ) {
 
     public FieldsAnalysisRequest(
@@ -31,27 +30,7 @@ public record FieldsAnalysisRequest(
         Site site,
         List<Section> sections
     ) {
-        this(schemaVersion, snapshotId, site, sections, List.of(), null);
-    }
-
-    public FieldsAnalysisRequest(
-        int schemaVersion,
-        String snapshotId,
-        Site site,
-        List<Section> sections,
-        List<WriteCommand> supportedWriteCommands
-    ) {
-        this(schemaVersion, snapshotId, site, sections, supportedWriteCommands, null);
-    }
-
-    public FieldsAnalysisRequest(
-        int schemaVersion,
-        String snapshotId,
-        Site site,
-        List<Section> sections,
-        String routingContext
-    ) {
-        this(schemaVersion, snapshotId, site, sections, List.of(), routingContext);
+        this(schemaVersion, snapshotId, site, sections, List.of());
     }
 
     public FieldsAnalysisRequest {

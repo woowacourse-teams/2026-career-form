@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { mockGreetingEditingCommand } from "../interaction/test-utils/greeting-email-editing";
 import { afterEach, beforeEach, expect, it } from "vitest";
 let restoreEditingCommand: (() => void) | undefined;
@@ -54,13 +64,19 @@ function fixture() {
       writePlan: { command: "SET_TEXT" },
     },
   } as ReviewPlanItem;
-  const run = (adapter = true) =>
-    executeApprovedWrites({
+  const run = (adapter = true) => {
+    if (!adapter)
+      (
+        globalThis as unknown as {
+          jsdom: { reconfigure(options: { url: string }): void };
+        }
+      ).jsdom.reconfigure({ url: "https://unregistered.example/apply" });
+    return executeApprovedWrites({
       items: [item],
       registry,
       approvedCandidateIds: new Set(["email"]),
-      ...(adapter ? { executionAdapterId: "greeting-v1" as const } : {}),
     });
+  };
   return { input, item, run };
 }
 it("writes the verified Greeting free-entry email without requiring suggestion selection", () => {

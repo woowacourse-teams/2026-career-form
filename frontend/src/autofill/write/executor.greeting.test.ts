@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { mockGreetingEditingCommand } from "../interaction/test-utils/greeting-email-editing";
 import { afterEach, beforeEach, expect, it } from "vitest";
 let restoreEditingCommand: (() => void) | undefined;
@@ -78,9 +88,7 @@ it.each([false, true])(
       input.setAttribute("aria-expanded", "false");
       education.removeAttribute("aria-hidden");
     });
-    const snapshot = collectFieldsSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const snapshot = collectFieldsSnapshot(document);
     const candidate = snapshot.request.sections
       .flatMap((section) => section.fields)
       .find((field) => field.domName === "basicInformation.email")!;
@@ -122,7 +130,6 @@ it.each([false, true])(
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
       registry: snapshot.registry,
-      executionAdapterId: "greeting-v1",
       beforeWrite: async (next) => {
         if (next === item) return;
         await new Promise((resolve) => setTimeout(resolve, 60));
@@ -235,7 +242,6 @@ function fixture(gpa = false, veteran = false, phone = false) {
     items: [item],
     approvedCandidateIds: new Set(["field"]),
     registry,
-    executionAdapterId: "greeting-v1" as const,
   };
   return { input, item, collect, options };
 }
@@ -411,9 +417,7 @@ it("does not confirm a settled value after the run is aborted", async () => {
 
 it("keeps an independently retained native field verified when email settlement fails", async () => {
   document.body.innerHTML = `<div data-scope="field" data-part="root"><label>이메일주소*</label><input type="text" role="combobox" data-scope="combobox" data-part="input" aria-expanded="false"></div><input name="basicInformation.name"><input name="basicInformation.phoneNumber.nationalNumber">`;
-  const snapshot = collectFieldsSnapshot(document, {
-    executionAdapterId: "greeting-v1",
-  });
+  const snapshot = collectFieldsSnapshot(document);
   const fields = snapshot.request.sections.flatMap((section) => section.fields);
   const items = ["basicInformation.email", "basicInformation.name"].map(
     (name, index) => {
@@ -467,7 +471,6 @@ it("keeps an independently retained native field verified when email settlement 
     items,
     approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
     registry: snapshot.registry,
-    executionAdapterId: "greeting-v1",
     beforeWrite: async (item) => {
       if (item === items[2]) laterDriverRan = true;
     },
@@ -488,4 +491,42 @@ it("keeps an independently retained native field verified when email settlement 
     document.querySelector<HTMLInputElement>('[name="basicInformation.name"]')!
       .value,
   ).toBe("테스트");
+});
+
+it("keeps Greeting readback when the first candidate is stale", async () => {
+  document.body.innerHTML =
+    '<input name="basicInformation.name"><input name="basicInformation.phoneNumber.nationalNumber">';
+  const snapshot = collectFieldsSnapshot(document);
+  const fields = snapshot.request.sections.flatMap((section) => section.fields);
+  const items = fields.map(
+    (field, index) =>
+      ({
+        candidateId: field.candidateId,
+        profileValue: index ? "01000000000" : "테스트",
+        selected: true,
+        disabled: false,
+        analysis: {
+          candidateId: field.candidateId,
+          matchType: "MATCH",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey: index
+              ? "contact.contact.phoneNumber"
+              : "personal.personal.koreanGivenName",
+          },
+        },
+      }) as ReviewPlanItem,
+  );
+  document.querySelector('input[name="basicInformation.name"]')!.remove();
+  const results = await executeApprovedWritesAfterPageSettles({
+    items,
+    registry: snapshot.registry,
+    approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
+    settledRegistry: () => undefined,
+  });
+  expect(results[0].status).toBe("skipped");
+  expect(results[1]).toMatchObject({ status: "skipped", code: "STALE_TARGET" });
 });

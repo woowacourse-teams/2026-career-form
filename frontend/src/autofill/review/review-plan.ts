@@ -1,3 +1,4 @@
+import { resolveDocumentCompany } from "../adapters/company";
 import {
   approveGreetingGpaPairs,
   type GreetingGpaApproval,
@@ -70,7 +71,6 @@ export interface ReviewPlanItem {
   disabled: boolean;
   revealed: boolean;
   reason: string;
-  manualReviewReason?: "영문 이름 순서 확인";
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
@@ -278,17 +278,6 @@ function itemForAnalysis(
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
-    if (
-      greeting &&
-      analysis.interactionStatus === "UNVERIFIED" &&
-      analysis.reasonCodes[0] === "ENGLISH_NAME_ORDER_UNVERIFIED"
-    ) {
-      const reason = "영문 성·이름 순서를 확인하고 직접 입력해 주세요.";
-      return {
-        ...unavailableItem(analysis.candidateId, fieldLabel, reason),
-        manualReviewReason: "영문 이름 순서 확인",
-      };
-    }
     return unavailableItem(
       analysis.candidateId,
       fieldLabel,
@@ -310,10 +299,14 @@ function itemForAnalysis(
     greeting &&
     searchCommand &&
     analysis.mappingStatus === "ADAPTER_VERIFIED" &&
-    analysis.valueBinding?.type === "DIRECT" &&
-    isAutofillProfileFieldKey(analysis.valueBinding.profileFieldKey) &&
+    ((analysis.valueBinding?.type === "DIRECT" &&
+      isAutofillProfileFieldKey(analysis.valueBinding.profileFieldKey)) ||
+      (analysis.valueBinding?.type === "DERIVED" &&
+        /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_NAME$/.test(
+          analysis.valueBinding.recipe,
+        ))) &&
     lookup.status === "ready" &&
-    (/^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
+    (/^(?:educationalBackground\.(?:(?:universities|graduateSchools)\.\d+\.(?:schoolName|majors\.\d+)|highSchool\.schoolName)|workHistory\.workExperiences\.\d+\.companyName|languagesCertificationsAndOtherActivity\.(?:certifiedLanguageTests\.\d+\.testName|certificatesLicenses\.\d+\.credentials))$/.test(
       lookup.handle.candidate.domName ?? "",
     ) ||
       (lookup.handle.candidate.domName === "basicInformation.nationalityCode" &&
@@ -379,9 +372,15 @@ function itemForAnalysis(
       analysis,
     );
   }
-  const parts = binding.profileFieldKey
-    ? profileFieldParts(binding.profileFieldKey)
-    : undefined;
+  const parts =
+    binding.type === "DERIVED" &&
+    /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_(NAME|CLASSIFICATION)$/.test(
+      binding.recipe,
+    )
+      ? profileFieldParts("education.university.additionalMajorName")
+      : binding.profileFieldKey
+        ? profileFieldParts(binding.profileFieldKey)
+        : undefined;
   let itemIndex = lookup.handle.itemIndex;
   // A field inside a repeated row whose group boundary could not be proven
   // has a row but no index; it must not fall back to the sole profile entry.
@@ -562,12 +561,19 @@ function itemForAnalysis(
     freshDefaultCandidateIds.has(analysis.candidateId) &&
     analysis.mappingStatus === "ADAPTER_VERIFIED" &&
     analysis.writePlan.command === "SELECT_BUTTON_OPTION" &&
-    binding.type === "DIRECT" &&
-    binding.profileFieldKey ===
-      "education.graduateSchool.additionalMajorClassification" &&
-    /^educationalBackground\.graduateSchools\.(0|[1-9]\d*)\.majors\.1\.majorClassification$/.test(
-      lookup.handle.candidate.domName ?? "",
-    ) &&
+    ((binding.type === "DIRECT" &&
+      binding.profileFieldKey ===
+        "education.graduateSchool.additionalMajorClassification" &&
+      /^educationalBackground\.graduateSchools\.(0|[1-9]\d*)\.majors\.1\.majorClassification$/.test(
+        lookup.handle.candidate.domName ?? "",
+      )) ||
+      (binding.type === "DERIVED" &&
+        /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_CLASSIFICATION$/.test(
+          binding.recipe,
+        ) &&
+        new RegExp(
+          `^educationalBackground\\.universities\\.(0|[1-9]\\d*)\\.majors\\.${binding.recipe.includes("_1_") ? "1" : "2"}\\.majorClassification$`,
+        ).test(lookup.handle.candidate.domName ?? ""))) &&
     pageValue.trim() === "주전공";
   const hasConflict =
     !ignoreCurrentValueCandidateIds.has(analysis.candidateId) &&
@@ -747,6 +753,16 @@ export function buildReviewPlan({
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
   }
+  const greeting = analysis.fields.some((field) => {
+    const lookup = registry.lookupField(field.candidateId);
+    if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
+    const document = (
+      lookup.handle.elements[0] ?? lookup.handle.customElements?.[0]
+    )?.ownerDocument;
+    return (
+      document !== undefined && resolveDocumentCompany(document) === "greeting"
+    );
+  });
   const items = analysis.fields.map((field) =>
     itemForAnalysis(
       field,
@@ -756,15 +772,13 @@ export function buildReviewPlan({
       freshDefaultCandidateIds,
       normalizeDirectValue,
       analysis.mode === "GENERIC",
-      analysis.executionAdapterId === "greeting-v1" &&
-        analysis.mode === "ADAPTER",
+      greeting && analysis.mode === "ADAPTER",
     ),
   );
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
     items:
-      analysis.executionAdapterId === "greeting-v1" &&
-      analysis.mode === "ADAPTER"
+      greeting && analysis.mode === "ADAPTER"
         ? approveGreetingGpaPairs(
             rejectDuplicateRepeatedBindings(items),
             registry,

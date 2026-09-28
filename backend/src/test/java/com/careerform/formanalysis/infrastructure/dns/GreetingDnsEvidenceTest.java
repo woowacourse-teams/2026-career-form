@@ -2,104 +2,81 @@ package com.careerform.formanalysis.infrastructure.dns;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision;
+import com.careerform.formanalysis.infrastructure.dns.GreetingDnsEvidence.Alias;
+import com.careerform.formanalysis.infrastructure.dns.GreetingDnsEvidence.NoAlias;
+import com.careerform.formanalysis.infrastructure.dns.GreetingDnsEvidence.LookupFailure;
 
 class GreetingDnsEvidenceTest {
-
-    private static final String APPLY_PATH = "/ko/o/*/apply";
+    private static final String PATH = "/ko/o/*/apply";
 
     @Test
-    void recognizesOnlyTheExactGreetingBaseDomainBoundary() {
-        AtomicInteger queries = new AtomicInteger();
-        GreetingDnsEvidence evidence = new GreetingDnsEvidence(host -> {
-            queries.incrementAndGet();
-            return new GreetingDnsEvidence.NoAlias();
-        }, Set.of());
-
-        assertThat(evidence.classify("kakaomobility.career.greetinghr.com", APPLY_PATH))
-            .isEqualTo(Decision.POSITIVE_STABLE);
-        assertThat(evidence.classify("career.greetinghr.com.evil.example", APPLY_PATH))
-            .isEqualTo(Decision.OUT_OF_SCOPE);
-        assertThat(evidence.classify("career.greetinghr.com", APPLY_PATH))
-            .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
-        assertThat(queries).hasValue(1);
+    void arbitraryCustomDomainResolvesThroughBoundedCnameChain() {
+        Map<String, String> aliases = Map.of("new-customer.example.org", "edge.example.org",
+            "edge.example.org", "TENANT.career.greetinghr.com.");
+        List<String> queried = new ArrayList<>();
+        var evidence = new GreetingDnsEvidence(host -> {
+            queried.add(host);
+            return new Alias(aliases.get(host));
+        });
+        assertThat(evidence.classify("new-customer.example.org", PATH)).isEqualTo(Decision.POSITIVE);
+        assertThat(queried).containsExactly("new-customer.example.org", "edge.example.org");
+        assertThat(evidence.classify("new-customer.example.org", "/en/o/123/apply")).isEqualTo(Decision.POSITIVE);
+        assertThat(queried).hasSize(2);
     }
 
     @Test
-    void recognizesPositiveCustomDomainCnameButNotSimilarTarget() {
-        GreetingDnsEvidence evidence = new GreetingDnsEvidence(host ->
-            host.equals("career.hyundai-autoever.com")
-                ? new GreetingDnsEvidence.Alias("hyundai-autoever.career.greetinghr.com.")
-                : new GreetingDnsEvidence.Alias("career.greetinghr.com.evil.example"), Set.of());
+    void defaultDomainNeedsNoDnsLookup() {
+        var evidence = new GreetingDnsEvidence(host -> { throw new AssertionError("no lookup"); });
+        assertThat(evidence.classify("tenant.career.greetinghr.com", PATH)).isEqualTo(Decision.POSITIVE);
+    }
 
-        assertThat(evidence.classify("career.hyundai-autoever.com", APPLY_PATH))
-            .isEqualTo(Decision.POSITIVE);
-        assertThat(evidence.classify("careers.example.com", APPLY_PATH))
-            .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+    @ParameterizedTest
+    @ValueSource(strings = {"tenant.career.greetinghr.com.evil.org", "evilcareer.greetinghr.com", "career.greetinghr.com", "a.b.career.greetinghr.com"})
+    void lookalikeCnameDoesNotConfirmGreeting(String alias) {
+        var evidence = new GreetingDnsEvidence(host -> host.equals("new-customer.example.org")
+            ? new Alias(alias) : new NoAlias());
+        assertThat(evidence.classify("new-customer.example.org", PATH)).isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"localhost", "127.0.0.1", "10.0.0.1", "host.local", "host.internal", "host.test", "[::1]", "host.example.org:8080"})
+    void privateOrInvalidHostDoesNotQueryDns(String host) {
+        var evidence = new GreetingDnsEvidence(name -> { throw new AssertionError("no lookup"); });
+        assertThat(evidence.classify(host, PATH)).isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
     }
 
     @Test
-    void keepsNormalNoAliasSeparateFromRetryableDnsFailure() {
-        GreetingDnsEvidence absent = new GreetingDnsEvidence(
-            host -> new GreetingDnsEvidence.NoAlias(), Set.of());
-        GreetingDnsEvidence failed = new GreetingDnsEvidence(
-            host -> new GreetingDnsEvidence.LookupFailure(), Set.of());
+    void unrelatedPathDoesNotQueryDns() {
+        var evidence = new GreetingDnsEvidence(host -> { throw new AssertionError("no lookup"); });
+        assertThat(evidence.classify("new-customer.example.org", "/home")).isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+    }
 
-        assertThat(absent.classify("careers.example.com", APPLY_PATH))
-            .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
-        assertThat(failed.classify("careers.example.com", APPLY_PATH))
+    @Test
+    void failureAndUnresolvedChainsRemainUnavailable() {
+        assertThat(new GreetingDnsEvidence(host -> new LookupFailure()).classify("new-customer.example.org", PATH))
             .isEqualTo(Decision.RETRYABLE_FAILURE);
+        assertThat(new GreetingDnsEvidence(host -> new Alias(host)).classify("new-customer.example.org", PATH))
+            .isEqualTo(Decision.RETRYABLE_FAILURE);
+        AtomicInteger calls = new AtomicInteger();
+        var evidence = new GreetingDnsEvidence(host -> new Alias("hop" + calls.incrementAndGet() + ".example.org"));
+        assertThat(evidence.classify("new-customer.example.org", PATH)).isEqualTo(Decision.RETRYABLE_FAILURE);
+        assertThat(calls).hasValue(3);
     }
 
     @Test
-    void explicitHostRegistrationCoversHiddenCnameWithoutQuery() {
-        GreetingDnsEvidence evidence = new GreetingDnsEvidence(
-            host -> { throw new AssertionError("registered host must not query DNS"); },
-            Set.of("careers.hybecorp.com"));
-
-        assertThat(evidence.classify("CAREERS.HYBECORP.COM.", APPLY_PATH))
-            .isEqualTo(Decision.POSITIVE_STABLE);
-    }
-
-    @Test
-    void toleratesRepeatedConfiguredHosts() {
-        GreetingDnsEvidence evidence = new GreetingDnsEvidence(
-            "career.hyundai-autoever.com,career.hyundai-autoever.com"
-        );
-
-        assertThat(evidence.classify("career.hyundai-autoever.com", APPLY_PATH))
-            .isEqualTo(Decision.POSITIVE_STABLE);
-    }
-
-    @Test
-    void rejectsIrrelevantPathsAndLocalTargetsBeforeLookup() {
-        GreetingDnsEvidence evidence = new GreetingDnsEvidence(
-            host -> { throw new AssertionError("irrelevant page must not query DNS"); },
-            Set.of());
-
-        assertThat(evidence.classify("careers.example.com", "/features/career-site"))
-            .isEqualTo(Decision.OUT_OF_SCOPE);
-        assertThat(evidence.classify("localhost:3000", APPLY_PATH))
-            .isEqualTo(Decision.OUT_OF_SCOPE);
-        assertThat(evidence.classify("127.0.0.1", APPLY_PATH))
-            .isEqualTo(Decision.OUT_OF_SCOPE);
-    }
-
-    @Test
-    void boundsCachedDnsHosts() {
-        GreetingDnsEvidence evidence = new GreetingDnsEvidence(
-            host -> new GreetingDnsEvidence.NoAlias(), Set.of());
-
-        for (int index = 0; index < 4_200; index++) {
-            assertThat(evidence.classify("career" + index + ".example.org", APPLY_PATH))
-                .isEqualTo(Decision.NO_POSITIVE_EVIDENCE);
+    void domainCacheIsBoundedAndDoesNotBlockUncachedLookup() {
+        var evidence = new GreetingDnsEvidence(host -> new Alias("tenant.career.greetinghr.com"));
+        for (int i = 0; i < 4100; i++) {
+            assertThat(evidence.classify("customer" + i + ".example.org", PATH)).isEqualTo(Decision.POSITIVE);
         }
-
-        assertThat(evidence.cachedHostCount()).isLessThanOrEqualTo(4_096);
+        assertThat(evidence.cachedHostCount()).isEqualTo(4096);
     }
 }

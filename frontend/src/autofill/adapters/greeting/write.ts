@@ -1,6 +1,6 @@
 import { commitGreetingEmailInput } from "../../interaction/greeting-email-close-bridge";
 import { greetingGpaSafe } from "./gpa";
-import { greetingSyntheticDomName } from "./collection";
+import { greetingSyntheticDomName, greetingRowIdentity } from "./collection";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { CompanyWriteAdapter } from "../write";
@@ -88,6 +88,53 @@ export function greetingRadioWrite(
       .length === 1
   );
 }
+/** The unchecked native control represents retired, not an empty profile choice. */
+export function greetingEmploymentStatusValue(
+  handle: FieldCandidateHandle,
+): "재직중" | "퇴사" | undefined {
+  const input = handle.elements[0];
+  const options = handle.candidate.options ?? [];
+  if (
+    !(input instanceof HTMLInputElement) ||
+    input.type !== "checkbox" ||
+    handle.elements.length !== 1 ||
+    !greetingUsable(input) ||
+    handle.isCurrentContext?.() === false ||
+    !/^workHistory\.workExperiences\.(0|[1-9]\d*)\.employmentStatus$/.test(
+      input.name,
+    ) ||
+    greetingRowIdentity(
+      input.closest('[data-scope="accordion"][data-part="item"]') ?? input,
+    )?.itemGroupId !== "careerscareer" ||
+    input.ownerDocument.querySelectorAll(`[name="${input.name}"]`).length !==
+      1 ||
+    input.name !== handle.candidate.domName ||
+    options.length !== 1 ||
+    !["재직중", "재직 중"].includes(options[0].displayName) ||
+    handle.optionElements.size !== 1 ||
+    handle.optionElements.get(options[0].optionId) !== input
+  )
+    return undefined;
+  return input.checked ? "재직중" : "퇴사";
+}
+export function greetingEmploymentWrite(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+): boolean {
+  if (
+    !greetingApproved(handle, item) ||
+    item.analysis?.writePlan?.command !== "CHECK_CHECKBOX"
+  )
+    return false;
+  const current = greetingEmploymentStatusValue(handle);
+  if (!current || !["재직중", "퇴사"].includes(item.profileValue ?? ""))
+    return false;
+  if (current === item.profileValue) return true;
+  if (current === "재직중") return false;
+  const input = handle.elements[0] as HTMLInputElement;
+  input.click();
+  return input.isConnected && input.checked;
+}
 /** Email suggestions are optional; this exact Greeting field accepts free text. */
 function greetingEmailWrite(
   handle: FieldCandidateHandle,
@@ -133,6 +180,20 @@ function greetingEmailWrite(
 }
 export const greetingWriteAdapter: CompanyWriteAdapter = {
   tryWrite(handle, item) {
+    if (
+      /^languagesCertificationsAndOtherActivity\.certifiedLanguageTests\.\d+\.score\.score$/.test(
+        handle.candidate.domName ?? "",
+      ) &&
+      (!/^\d+(?:\.\d+)?$/.test(item.profileValue ?? "") ||
+        !Number.isFinite(Number(item.profileValue)))
+    )
+      return { handled: true, written: false };
+    if (
+      /^workHistory\.workExperiences\.\d+\.employmentStatus$/.test(
+        handle.candidate.domName ?? "",
+      )
+    )
+      return { handled: true, written: greetingEmploymentWrite(handle, item) };
     if (handle.candidate.domName === "basicInformation.email")
       return { handled: true, written: greetingEmailWrite(handle, item) };
     if (

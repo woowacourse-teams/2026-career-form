@@ -107,35 +107,6 @@ it("keeps specific failure guidance after its snapshot disappears without retain
   ).toBeDisabled();
 });
 
-it("explains why a Greeting English full name needs manual entry", () => {
-  render(
-    <WorkflowResults
-      reviewItems={[
-        {
-          ...item,
-          candidateId: "english",
-          fieldLabel: "영문이름",
-          profileValue: undefined,
-          previewValue: "",
-          status: "unavailable",
-          selected: false,
-          disabled: true,
-          manualReviewReason: "영문 이름 순서 확인",
-        },
-      ]}
-      results={[]}
-    />,
-  );
-  expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
-  expect(
-    screen.getByText("영문 성·이름 순서를 확인하고 직접 입력해 주세요."),
-  ).toBeVisible();
-  expect(
-    screen.queryByText(/자동으로 입력하지 못했어요/),
-  ).not.toBeInTheDocument();
-  expect(screen.queryByText("입력됨")).not.toBeInTheDocument();
-});
-
 it("uses a cautious fallback for unknown failures without displaying sensitive previews", () => {
   render(
     <WorkflowResults

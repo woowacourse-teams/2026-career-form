@@ -35,7 +35,6 @@ function reviewIdentity(item: ReviewPlanItem): string {
     item.analysis?.mappingStatus,
     item.analysis?.valueBinding,
     item.analysis?.writePlan,
-    item.manualReviewReason,
     item.status,
     item.selected,
     item.disabled,
@@ -49,32 +48,13 @@ export function captureGreetingResultTargets(
 ): GreetingResultTargets {
   const targets: ResultTarget[] = [];
   for (const item of items) {
-    const englishNameReview =
-      item.manualReviewReason === "영문 이름 순서 확인" &&
-      item.status === "unavailable" &&
-      item.disabled &&
-      !item.selected &&
-      !item.analysis &&
-      !item.profileValue;
-    if (
-      item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" &&
-      !englishNameReview
-    )
-      continue;
+    if (item.analysis?.mappingStatus !== "ADAPTER_VERIFIED") continue;
     const lookup = registry.lookupField(item.candidateId);
     if (lookup.status !== "ready" && lookup.status !== "blocked") continue;
     const handle = lookup.handle;
     const element = firstElement(handle);
     const domName = handle.candidate.domName;
     if (!element || !domName) continue;
-    if (
-      englishNameReview &&
-      (domName !== "basicInformation.englishName" ||
-        handle.candidate.element !== "input" ||
-        handle.candidate.control !== "text" ||
-        handle.itemGroupId !== undefined)
-    )
-      continue;
     const row =
       handle.itemGroupId !== undefined
         ? (element.closest('[data-scope="accordion"][data-part="item"]') ??
@@ -105,9 +85,7 @@ export function recollectGreetingResultRegistry(
   captured: GreetingResultTargets,
   items: readonly ReviewPlanItem[],
 ): CandidateRegistry {
-  const fresh = collectFieldsSnapshot(document, {
-    executionAdapterId: "greeting-v1",
-  });
+  const fresh = collectFieldsSnapshot(document);
   const candidates = fresh.request.sections.flatMap((section) => [
     ...section.fields,
     ...(section.items ?? []).flatMap((row) => row.fields),

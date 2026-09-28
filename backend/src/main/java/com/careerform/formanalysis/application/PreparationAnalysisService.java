@@ -26,8 +26,6 @@ import com.careerform.formanalysis.dto.PreparationAnalysisResponse.Mode;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.PreparationPlan;
 import com.careerform.formanalysis.dto.PreparationAnalysisResponse.RevealSectionPlan;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
-import com.careerform.formanalysis.exception.ClientCapabilityRequiredException;
-import com.careerform.formanalysis.exception.RoutingContextUnavailableException;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
@@ -43,89 +41,34 @@ public final class PreparationAnalysisService {
     private final Optional<ActionResolver> resolver;
     private final FormAnalysisRouter router;
     private final boolean analysisEnabled;
-    private final GreetingRoutingContext routingContexts;
-
-    public PreparationAnalysisService(
-        Optional<ActionResolver> resolver,
-        FormAnalysisRouter router
-    ) {
-        this(resolver, router, new AnalysisProviderSelection(true, "openai"),
-            new GreetingRoutingContext());
-    }
-
-    public PreparationAnalysisService(
-        Optional<ActionResolver> resolver,
-        FormAnalysisRouter router,
-        AnalysisProviderSelection selection
-    ) {
-        this(resolver, router, selection, new GreetingRoutingContext());
-    }
-
-    public PreparationAnalysisService(
-        Optional<ActionResolver> resolver,
-        FormAnalysisRouter router,
-        GreetingRoutingContext routingContexts
-    ) {
-        this(resolver, router, new AnalysisProviderSelection(true, "openai"), routingContexts);
+    public PreparationAnalysisService(Optional<ActionResolver> resolver, FormAnalysisRouter router) {
+        this(resolver, router, new AnalysisProviderSelection(true, "openai"));
     }
 
     @Autowired
-    public PreparationAnalysisService(
-        Optional<ActionResolver> resolver,
-        FormAnalysisRouter router,
-        AnalysisProviderSelection selection,
-        GreetingRoutingContext routingContexts
-    ) {
+    public PreparationAnalysisService(Optional<ActionResolver> resolver, FormAnalysisRouter router,
+        AnalysisProviderSelection selection) {
         this.resolver = resolver;
         this.router = router;
         this.analysisEnabled = selection.enabled();
-        this.routingContexts = routingContexts;
     }
 
     public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request) {
-        return analyze(request, false, false);
+        return analyze(request, false);
     }
 
     public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request, boolean addressSearch) {
-        return analyze(request, addressSearch, false);
-    }
-
-    public PreparationAnalysisResponse analyze(
-        PreparationAnalysisRequest request,
-        boolean addressSearch,
-        boolean routingContextCapability
-    ) {
-        return analyze(request, addressSearch, routingContextCapability, false);
-    }
-
-    public PreparationAnalysisResponse analyze(
-        PreparationAnalysisRequest request, boolean addressSearch,
-        boolean routingContextCapability, boolean greetingAdapterCapability
-    ) {
         validateSnapshot(request);
         ActionRoute route = router.route(request);
-        if (route.greeting() && (!routingContextCapability || !greetingAdapterCapability)) {
-            throw new ClientCapabilityRequiredException();
-        }
-        String routingContext = route.greeting() && routingContextCapability
-            ? request.routingContext() != null ? request.routingContext()
-                : routingContexts.issue(request.site().host(), request.site().pathPattern())
-            : null;
-        if (route.greeting() && routingContext == null) {
-            throw new RoutingContextUnavailableException();
-        }
         if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
             return PreparationAnalysisResponse.adapterStructureMismatch(
                 request.snapshotId()
-            ).withRoutingContext(routingContext);
+            );
         }
         if (route.kind() == RouteKind.POLICY_UNAVAILABLE) {
             return PreparationAnalysisResponse.adapterPolicyUnavailable(
                 request.snapshotId()
-            ).withRoutingContext(routingContext);
-        }
-        if (route.kind() == RouteKind.DNS_UNAVAILABLE) {
-            return PreparationAnalysisResponse.greetingDnsUnavailable(request.snapshotId());
+            );
         }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER
@@ -136,13 +79,12 @@ public final class PreparationAnalysisService {
         if (selectedResolver.isEmpty()) {
             return PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
         }
-        String executionAdapterId = route.greeting() ? "greeting-v1" : null;
         if (request.actionCandidatesInTraversalOrder().isEmpty()) {
             return PreparationAnalysisResponse.complete(
                 request.snapshotId(),
                 mode,
                 List.of()
-            ).withRoutingContext(routingContext).withExecutionAdapterId(executionAdapterId);
+            );
         }
         try {
             ActionResolver.Resolution resolution = selectedResolver.orElseThrow()
@@ -156,7 +98,7 @@ public final class PreparationAnalysisService {
                     resolution,
                     addressSearch && mode == Mode.ADAPTER
                 )
-            ).withRoutingContext(routingContext).withExecutionAdapterId(executionAdapterId);
+            );
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER

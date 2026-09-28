@@ -1312,55 +1312,6 @@ describe("calendar review plan", () => {
   });
 });
 
-it("keeps an ambiguous Greeting English name in manual review without an automatic write", () => {
-  const profile = createEmptyProfile();
-  profile.personal.englishFamilyName = "Kim";
-  profile.personal.englishGivenName = "Min Su";
-  const analysis = {
-    ...response([], "COMPLETE", "ADAPTER"),
-    executionAdapterId: "greeting-v1",
-    fields: [
-      {
-        candidateId: "field-1",
-        matchType: "NO_MATCH",
-        mappingStatus: "ADAPTER_VERIFIED",
-        interactionStatus: "UNVERIFIED",
-        reasonCodes: ["ENGLISH_NAME_ORDER_UNVERIFIED"],
-      },
-    ],
-  } satisfies FieldsAnalyzeResponse;
-  const plan = buildReviewPlan({
-    analysis,
-    profile,
-    registry: registryWithTextField("", "영문이름"),
-  });
-  expect(plan.items[0]).toMatchObject({ selected: false, disabled: true });
-  expect(plan.items[0]!.profileValue).toBeUndefined();
-  expect(plan.items[0]!.analysis?.writePlan).toBeUndefined();
-  const result = buildResultModel({
-    reviewItems: plan.items,
-    results: [],
-    profile,
-  });
-  expect(result.completed).toEqual([]);
-  expect(result.skipped).toEqual([]);
-  expect(result.pending).toMatchObject([
-    {
-      id: "field-1",
-      item: { fieldLabel: "영문이름" },
-      written: false,
-      reason: expect.stringContaining("영문"),
-    },
-  ]);
-  const hiddenResult = buildResultModel({
-    reviewItems: plan.items,
-    results: [],
-    profile,
-    fieldStateFor: () => ({ visible: false, value: "" }),
-  });
-  expect(hiddenResult.pending).toEqual([]);
-});
-
 it("keeps ordinary unmatched fields out of the manual review count", () => {
   const plan = buildReviewPlan({
     analysis: response([
@@ -1383,6 +1334,14 @@ it("keeps ordinary unmatched fields out of the manual review count", () => {
 it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
   "passes only approved nationality from review into the Greeting state driver: %s",
   async (mode) => {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(options: { url: string }): void };
+      }
+    ).jsdom.reconfigure({
+      url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+    });
+
     const name =
       mode === "wrong-name"
         ? "customQuestion.country"
@@ -1417,7 +1376,6 @@ it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
     profile.personal.gender = "남성";
     const analysis: FieldsAnalyzeResponse = {
       ...response([], "COMPLETE", "ADAPTER"),
-      executionAdapterId: "greeting-v1",
       fields: [
         {
           candidateId: "nationality",

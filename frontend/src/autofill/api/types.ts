@@ -119,10 +119,7 @@ export interface FieldsSection {
   items?: FieldsItem[];
 }
 
-export type ExecutionAdapterId = "greeting-v1";
-
 export interface PreparationAnalyzeRequest {
-  routingContext?: string;
   schemaVersion: 2;
   snapshotId: string;
   site: SiteDescriptor;
@@ -136,7 +133,6 @@ export interface FieldsAnalyzeRequest {
   snapshotId: string;
   site: SiteDescriptor;
   sections: FieldsSection[];
-  routingContext?: string;
 }
 
 export type PreparationPlan =
@@ -170,17 +166,14 @@ export type PreparationPlan =
     };
 
 export interface PreparationAnalyzeResponse {
-  executionAdapterId?: ExecutionAdapterId;
   snapshotId: string;
   mode: AnalysisMode;
   analysisStatus: AnalysisStatus;
   preparationPlans: PreparationPlan[];
-  routingContext?: string;
   warningCodes?: ("MANUAL_REVEAL_REQUIRED" | "LLM_UNAVAILABLE")[];
   blockCode?:
     | "ADAPTER_STRUCTURE_MISMATCH"
     | "ADAPTER_POLICY_UNAVAILABLE"
-    | "GREETING_DNS_UNAVAILABLE"
     | "UNSUPPORTED_SNAPSHOT";
 }
 
@@ -198,7 +191,11 @@ export type DerivedRecipe =
   | "ENGLISH_FULL_NAME_GIVEN_FIRST"
   | "ENGLISH_FULL_NAME_FAMILY_FIRST"
   | "BOOLEAN_YN"
-  | "YEAR_MONTH";
+  | "YEAR_MONTH"
+  | "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME"
+  | "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION"
+  | "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME"
+  | "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION";
 
 export type ValueBinding =
   | { type: "DIRECT"; profileFieldKey: string }
@@ -238,35 +235,23 @@ export interface MatchedFieldAnalysis {
   writePlan?: { command: WriteCommand };
 }
 
-export type NoMatchFieldAnalysis = {
+export interface NoMatchFieldAnalysis {
   candidateId: string;
   matchType: "NO_MATCH";
-} & (
-  | {
-      mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED";
-      interactionStatus: "BLOCKED";
-      reasonCodes: ["NO_MATCH"];
-    }
-  | {
-      mappingStatus: "ADAPTER_VERIFIED";
-      interactionStatus: "UNVERIFIED";
-      reasonCodes: ["ENGLISH_NAME_ORDER_UNVERIFIED"];
-    }
-);
+  mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED";
+  interactionStatus: "BLOCKED";
+  reasonCodes: ["NO_MATCH"];
+}
 
 export type FieldAnalysis = MatchedFieldAnalysis | NoMatchFieldAnalysis;
 
 export interface FieldsAnalyzeResponse {
-  executionAdapterId?: ExecutionAdapterId;
   snapshotId: string;
   mode: AnalysisMode;
   analysisStatus: AnalysisStatus;
   fields: FieldAnalysis[];
   warningCodes?: ("UNRESOLVED_FIELD" | "LLM_UNAVAILABLE")[];
-  blockCode?:
-    | "ADAPTER_STRUCTURE_MISMATCH"
-    | "ADAPTER_POLICY_UNAVAILABLE"
-    | "GREETING_DNS_UNAVAILABLE";
+  blockCode?: "ADAPTER_STRUCTURE_MISMATCH" | "ADAPTER_POLICY_UNAVAILABLE";
 }
 
 export interface AnalysisApiClient {

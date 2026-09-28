@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { afterEach, expect, it } from "vitest";
 import { collectFieldsSnapshot } from "../dom/collect";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -50,9 +60,7 @@ function setup() {
       <div data-scope="field" data-part="root"><label>학점</label><input name="${scoreName}" value="4.2"></div>
     </div>
   </div></section>`;
-  const snapshot = collectFieldsSnapshot(document, {
-    executionAdapterId: "greeting-v1",
-  });
+  const snapshot = collectFieldsSnapshot(document);
   const fields = snapshot.request.sections.flatMap((section) => [
     ...section.fields,
     ...(section.items ?? []).flatMap((row) => row.fields),
@@ -228,45 +236,4 @@ it("rejects a remounted row whose named index changed", () => {
   )!;
   row.outerHTML = row.outerHTML.replaceAll(".0.", ".1.");
   expect(recollect().lookupField(review.candidateId).status).toBe("unknown");
-});
-
-it("reconnects an English-name manual-review target without making it writable", () => {
-  document.body.innerHTML = `<section><div data-scope="field" data-part="root">
-    <label>영문이름</label><input name="basicInformation.englishName" type="text">
-  </div></section>`;
-  const snapshot = collectFieldsSnapshot(document, {
-    executionAdapterId: "greeting-v1",
-  });
-  const field = snapshot.request.sections
-    .flatMap((section) => section.fields)
-    .find((candidate) => candidate.domName === "basicInformation.englishName")!;
-  const review: ReviewPlanItem = {
-    candidateId: field.candidateId,
-    fieldLabel: "영문이름",
-    currentValue: "",
-    previewValue: "",
-    status: "unavailable",
-    selected: false,
-    disabled: true,
-    revealed: false,
-    reason: "영문 성·이름 순서를 확인하고 직접 입력해 주세요.",
-    manualReviewReason: "영문 이름 순서 확인",
-  };
-  const captured = captureGreetingResultTargets(snapshot.registry, [review]);
-  const input = document.querySelector<HTMLInputElement>(
-    'input[name="basicInformation.englishName"]',
-  )!;
-  input.outerHTML = input.outerHTML;
-  const registry = recollectGreetingResultRegistry(document, captured, [
-    review,
-  ]);
-  expect(registry.lookupField(review.candidateId).status).toBe("ready");
-  const model = buildResultModel({
-    reviewItems: [review],
-    results: [],
-    fieldStateFor: (id) => resultFieldState(registry, document, id),
-  });
-  expect(model.pending).toHaveLength(1);
-  expect(model.completed).toHaveLength(0);
-  expect(input.isConnected).toBe(false);
 });

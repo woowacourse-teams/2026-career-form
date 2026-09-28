@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { executeApprovedWrites } from "../../write/executor";
 import {
   CandidateRegistry,
@@ -160,7 +170,6 @@ function reviewFixture() {
   const analysis: FieldsAnalyzeResponse = {
     snapshotId: "s",
     mode: "ADAPTER",
-    executionAdapterId: "greeting-v1",
     analysisStatus: "COMPLETE",
     fields: [
       {
@@ -238,7 +247,6 @@ it("keeps the native score blank when review skips a conflicting existing scale"
         .filter((item) => item.selected)
         .map((item) => item.candidateId),
     ),
-    executionAdapterId: "greeting-v1",
   });
   expect(document.querySelector("input")!.value).toBe("");
   expect(document.querySelector("button")!.textContent).toBe("4.0");
@@ -261,7 +269,6 @@ it("writes the native score only after the scale driver confirms the matching sc
     items: review.items,
     registry,
     approvedCandidateIds: new Set(review.items.map((item) => item.candidateId)),
-    executionAdapterId: "greeting-v1",
   });
   expect(document.querySelector("input")!.value).toBe("4.20");
   expect(document.querySelector("button")!.textContent).toBe("4.5");
@@ -277,7 +284,6 @@ it("writes a score when the selected scale retains data-placeholder=false", () =
     items: review.items,
     registry,
     approvedCandidateIds: new Set(review.items.map((item) => item.candidateId)),
-    executionAdapterId: "greeting-v1",
   });
   expect(results.find((result) => result.candidateId === "score")?.status).toBe(
     "written",
@@ -318,7 +324,6 @@ it("selects an initial placeholder-shown GPA scale and then writes its paired sc
     items: review.items,
     registry,
     approvedCandidateIds: new Set(review.items.map((item) => item.candidateId)),
-    executionAdapterId: "greeting-v1",
   });
   expect(results.find((result) => result.candidateId === "score")?.status).toBe(
     "written",

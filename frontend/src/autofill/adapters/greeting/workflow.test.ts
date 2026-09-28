@@ -203,8 +203,12 @@ it("waits for a Greeting radio's React selection before confirming it", async ()
   ).toBe(true);
   expect(options[1].getAttribute("aria-checked")).toBe("true");
 });
-it("replaces the verified default of a freshly added second graduate major", async () => {
-  document.body.innerHTML = `<button type="button" name="educationalBackground.graduateSchools.0.majors.1.majorClassification" aria-controls="major-options" aria-expanded="false">주전공</button><div role="listbox" id="major-options" hidden><button type="button" role="option">복수전공</button></div>`;
+it.each([
+  "graduateSchools.0.majors.1",
+  "universities.0.majors.1",
+  "universities.0.majors.2",
+])("replaces only the verified fresh classification for %s", async (path) => {
+  document.body.innerHTML = `<button type="button" name="educationalBackground.${path}.majorClassification" aria-controls="major-options" aria-expanded="false">주전공</button><div role="listbox" id="major-options" hidden><button type="button" role="option">복수전공</button></div>`;
   const trigger = document.querySelector<HTMLButtonElement>("button")!;
   const popup = document.getElementById("major-options")!;
   trigger.onclick = () => {
@@ -400,6 +404,16 @@ it.each([
   [
     "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.endDate",
     "2020-03-01",
+  ],
+  ["educationalBackground.highSchool.enrollmentPeriod.startDate", "2020-03"],
+  ["workHistory.workExperiences.0.employmentPeriod.startDate", "2020-03"],
+  [
+    "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.acquisitionDate",
+    "2020-03",
+  ],
+  [
+    "languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate",
+    "2020-03",
   ],
 ])(
   "selects a month for %s from %s by exact year label",

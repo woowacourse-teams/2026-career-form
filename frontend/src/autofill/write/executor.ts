@@ -1,9 +1,9 @@
+import { resolveDocumentCompany } from "../adapters/company";
 import {
   closeGreetingEmailPopup,
   waitForGreetingEmailAcceptance,
 } from "../interaction/greeting-email-close-bridge";
 import { acquireDocumentRun } from "../interaction/document-run";
-import type { ExecutionAdapterId } from "../api/types";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
@@ -126,7 +126,6 @@ export async function executeApprovedWritesAfterPageSettles({
   signal,
   document: suppliedDocument,
   calendarOnly = false,
-  executionAdapterId,
   settledRegistry,
   onSearchFollowUp,
 }: {
@@ -141,7 +140,6 @@ export async function executeApprovedWritesAfterPageSettles({
   signal?: AbortSignal;
   document?: Document;
   calendarOnly?: boolean;
-  executionAdapterId?: ExecutionAdapterId;
   /** Greeting-only readback registry, with the original candidate IDs safely rebound. */
   settledRegistry?: () =>
     CandidateRegistry | undefined | Promise<CandidateRegistry | undefined>;
@@ -150,13 +148,16 @@ export async function executeApprovedWritesAfterPageSettles({
     controls: readonly SearchFollowUpControl[],
   ) => void;
 }): Promise<ApprovedWriteResult[]> {
-  const first = items[0] && registry.lookupField(items[0].candidateId);
+  const first = items
+    .map((item) => registry.lookupField(item.candidateId))
+    .find((lookup) => "handle" in lookup);
   const document =
     suppliedDocument ??
     (first && "handle" in first
       ? (first.handle.elements[0] ?? first.handle.customElements?.[0])
           ?.ownerDocument
       : undefined);
+  const companyId = document ? resolveDocumentCompany(document) : "generic";
   const release = document ? acquireDocumentRun(document) : undefined;
   if (document && !release)
     return debugWriteRun(
@@ -234,7 +235,6 @@ export async function executeApprovedWritesAfterPageSettles({
       items,
       approvedCandidateIds: new Set(),
       registry,
-      executionAdapterId,
     });
     let emailSettlementFailed = false;
     let pendingEmail:
@@ -280,10 +280,9 @@ export async function executeApprovedWritesAfterPageSettles({
           items: [item],
           approvedCandidateIds,
           registry,
-          executionAdapterId,
         })[0]!;
         if (
-          executionAdapterId === "greeting-v1" &&
+          companyId === "greeting" &&
           result.status === "written" &&
           item.analysis?.valueBinding?.type === "DIRECT" &&
           item.analysis.valueBinding.profileFieldKey === "contact.contact.email"
@@ -304,7 +303,7 @@ export async function executeApprovedWritesAfterPageSettles({
     const executedResults = [...initial];
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     let greetingRegistry: CandidateRegistry | undefined = registry;
-    if (executionAdapterId === "greeting-v1" && settledRegistry) {
+    if (companyId === "greeting" && settledRegistry) {
       try {
         greetingRegistry = await settledRegistry();
       } catch {
@@ -313,7 +312,7 @@ export async function executeApprovedWritesAfterPageSettles({
     }
     const adapterItems = items.filter(
       (item, index) =>
-        executionAdapterId !== "greeting-v1" &&
+        companyId !== "greeting" &&
         !halted &&
         runCurrent() &&
         initial[index]?.status === "written" &&
@@ -332,7 +331,6 @@ export async function executeApprovedWritesAfterPageSettles({
           items: [item],
           approvedCandidateIds: new Set([item.candidateId]),
           registry,
-          executionAdapterId,
         }),
       );
     }
@@ -362,7 +360,7 @@ export async function executeApprovedWritesAfterPageSettles({
       if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
         return settledSearchSelectionResult(item, registry, result);
       if (
-        executionAdapterId === "greeting-v1" &&
+        companyId === "greeting" &&
         item.analysis?.mappingStatus === "ADAPTER_VERIFIED"
       )
         return result.status === "written"

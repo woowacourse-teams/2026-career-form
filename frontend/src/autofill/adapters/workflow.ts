@@ -1,10 +1,9 @@
-import type { ExecutionAdapterId } from "../api/types";
 import { greetingWorkflowAdapter } from "./greeting/workflow";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
 import type { ActionCandidateHandle, FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
-import { resolveCompany } from "./company";
+import { resolveCompany, resolveDocumentCompany } from "./company";
 import { hyundaiWorkflowAdapter } from "./hyundai/workflow";
 import { skWorkflowAdapter } from "./sk/workflow";
 import type { FailureReporter } from "../write/failure";
@@ -136,12 +135,14 @@ const genericWorkflowAdapter: WorkflowAdapter = {
   revealedProfileFieldKey: () => undefined,
 };
 
-export function getWorkflowAdapter(
-  host: string,
-  executionAdapterId?: ExecutionAdapterId,
-): WorkflowAdapter {
-  if (executionAdapterId === "greeting-v1") return greetingWorkflowAdapter;
-  switch (resolveCompany(host)) {
+export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
+  switch (
+    typeof source === "string"
+      ? resolveCompany(source)
+      : resolveDocumentCompany(source)
+  ) {
+    case "greeting":
+      return greetingWorkflowAdapter;
     case "hyundai":
       return hyundaiWorkflowAdapter;
     case "sk":

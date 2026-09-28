@@ -1,3 +1,8 @@
+import {
+  greetingSections,
+  greetingSectionPrefix,
+  type GreetingSectionKind,
+} from "./sections";
 import type { CollectionAdapter } from "../collection";
 
 const ROW = '[data-scope="accordion"][data-part="item"]';
@@ -5,13 +10,11 @@ const ACCORDION = '[data-scope="accordion"][data-part="root"]';
 const TOGGLE =
   '[data-scope="toggle-group"][data-part="root"][role="radiogroup"]';
 const FIELD = '[data-scope="field"][data-part="root"]';
-const EDUCATION_NAME =
-  /^educationalBackground\.(universities|graduateSchools)\.(0|[1-9]\d*)\.(.+)$/;
 const BUTTON_FIELD =
   /^(enrollmentPeriod\.(startDate|endDate)|completionStatus|gpa\.scoreScale|majors\.\d+\.(majorClassification|majorField)|degreeLevel)$/;
 
 export interface GreetingRowIdentity {
-  itemGroupId: "educationuniversity" | "educationgraduateschool";
+  itemGroupId: (typeof greetingSections)[GreetingSectionKind]["group"];
   index: number;
   prefix: string;
 }
@@ -26,27 +29,32 @@ export function greetingRowIdentity(
   );
   const names = controls.map((control) => control.getAttribute("name")!);
   if (new Set(names).size !== names.length) return undefined;
-  const matches = names.map((name) => EDUCATION_NAME.exec(name));
-  const school = matches.filter((match) => match?.[3] === "schoolName");
-  if (school.length !== 1) return undefined;
-  const identity = school[0]!;
-  const kind = identity[1]!;
-  const index = Number(identity[2]);
-  if (
-    !Number.isSafeInteger(index) ||
-    matches.some(
-      (match) => !match || match[1] !== kind || Number(match[2]) !== index,
+  for (const section of Object.values(greetingSections)) {
+    const base = `${section.prefix}.`;
+    if (!names.length || names.some((name) => !name.startsWith(base))) continue;
+    const suffixes = names.map((name) => name.slice(base.length));
+    const parts = suffixes.map((suffix) =>
+      section.singleton
+        ? ["0", suffix]
+        : /^(0|[1-9]\d*)\.(.+)$/.exec(suffix)?.slice(1),
+    );
+    if (parts.some((part) => !part)) return undefined;
+    const index = Number(parts[0]![0]);
+    if (
+      !Number.isSafeInteger(index) ||
+      index > 127 ||
+      parts.some((part) => Number(part![0]) !== index)
     )
-  )
-    return undefined;
-  return {
-    itemGroupId:
-      kind === "universities"
-        ? "educationuniversity"
-        : "educationgraduateschool",
-    index,
-    prefix: `educationalBackground.${kind}.${index}`,
-  };
+      return undefined;
+    if (parts.filter((part) => part![1] === section.anchor).length !== 1)
+      return undefined;
+    return {
+      itemGroupId: section.group,
+      index,
+      prefix: section.singleton ? section.prefix : `${section.prefix}.${index}`,
+    };
+  }
+  return undefined;
 }
 
 function ownedLabel(field: Element): string | undefined {
@@ -142,6 +150,9 @@ function radioGroupName(element: Element): string | undefined {
   const identity = row && greetingRowIdentity(row);
   if (
     !identity ||
+    !["educationuniversity", "educationgraduateschool"].includes(
+      identity.itemGroupId,
+    ) ||
     (spec.universityOnly && identity.itemGroupId !== "educationuniversity")
   )
     return undefined;
@@ -189,6 +200,7 @@ export function greetingFieldElements(document: Document): HTMLElement[] {
     const name = element.getAttribute("name")!;
     const topLevelLabels: Record<string, string> = {
       "basicInformation.birthdate": "생년월일",
+      "basicInformation.gender": "성별",
       "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceStatus":
         "병역사항",
       "militaryServicePreferentialEmploymentStatus.militaryService.branchOfService":
@@ -214,10 +226,29 @@ export function greetingFieldElements(document: Document): HTMLElement[] {
         document.querySelectorAll(`[name="${name}"]`).length === 1,
       );
     }
-    const match = EDUCATION_NAME.exec(name);
-    if (!match || !BUTTON_FIELD.test(match[3]!)) return false;
     const row = element.closest(ROW);
     const identity = row && greetingRowIdentity(row);
+    if (!identity || !name.startsWith(`${identity.prefix}.`)) return false;
+    const suffix = name.slice(identity.prefix.length + 1);
+    const supported =
+      identity.itemGroupId === "educationuniversity" ||
+      identity.itemGroupId === "educationgraduateschool"
+        ? BUTTON_FIELD.test(suffix)
+        : identity.itemGroupId === "educationhighschool"
+          ? /^(completionStatus|enrollmentPeriod\.(startDate|endDate))$/.test(
+              suffix,
+            )
+          : identity.itemGroupId === "careerscareer"
+            ? /^(employmentType|employmentPeriod\.(startDate|endDate))$/.test(
+                suffix,
+              )
+            : identity.itemGroupId === "languageslanguagetest"
+              ? /^(foreignLanguage|acquisitionDate|grade)$/.test(suffix)
+              : identity.itemGroupId === "languageslanguageskill"
+                ? /^(foreignLanguage|conversationalProficiency)$/.test(suffix)
+                : identity.itemGroupId === "certificationscertificate" &&
+                  suffix === "acquisitionDate";
+    if (!supported) return false;
     return Boolean(
       identity &&
       name.startsWith(`${identity.prefix}.`) &&
@@ -226,20 +257,16 @@ export function greetingFieldElements(document: Document): HTMLElement[] {
   });
 }
 
-function educationSectionKind(
-  field: Element,
-): "universities" | "graduateSchools" | undefined {
+function greetingSectionKind(field: Element): GreetingSectionKind | undefined {
   if (!field.matches(FIELD)) return undefined;
   const labels = [
     ...field.querySelectorAll('label, [data-scope="field"][data-part="label"]'),
   ].filter((label) => label.closest(FIELD) === field);
   if (labels.length !== 1) return undefined;
   const label = labels[0]!.textContent?.replace(/[\s*]/g, "");
-  return label === "대학교"
-    ? "universities"
-    : label === "대학원"
-      ? "graduateSchools"
-      : undefined;
+  return (Object.keys(greetingSections) as GreetingSectionKind[]).find(
+    (kind) => greetingSections[kind].label === label,
+  );
 }
 
 export function greetingSectionContainer(
@@ -247,10 +274,10 @@ export function greetingSectionContainer(
 ): Element | undefined {
   let field = element.closest(FIELD);
   while (field) {
-    const kind = educationSectionKind(field);
+    const kind = greetingSectionKind(field);
     if (kind) {
       const matches = [...element.ownerDocument.querySelectorAll(FIELD)].filter(
-        (candidate) => educationSectionKind(candidate) === kind,
+        (candidate) => greetingSectionKind(candidate) === kind,
       );
       return matches.length === 1 ? field : undefined;
     }
@@ -259,7 +286,7 @@ export function greetingSectionContainer(
   return undefined;
 }
 
-function educationAddAction(element: HTMLElement): string | undefined {
+function sectionAddAction(element: HTMLElement): string | undefined {
   if (
     !element.matches('button[data-scope="tooltip"][data-part="trigger"]') ||
     element.textContent?.trim() !== "항목 추가"
@@ -267,7 +294,8 @@ function educationAddAction(element: HTMLElement): string | undefined {
     return undefined;
   const field = greetingSectionContainer(element);
   if (!field || element.parentElement !== field) return undefined;
-  const kind = educationSectionKind(field)!;
+  const kind = greetingSectionKind(field)!;
+  if (greetingSections[kind].singleton) return undefined;
   const addButtons = [
     ...field.querySelectorAll(
       'button[data-scope="tooltip"][data-part="trigger"]',
@@ -283,15 +311,19 @@ function educationAddAction(element: HTMLElement): string | undefined {
     rows.some(
       (row) =>
         !greetingRowIdentity(row)?.prefix.startsWith(
-          `educationalBackground.${kind}.`,
+          greetingSectionPrefix(kind),
         ),
     )
   )
     return undefined;
+  const indices = rows
+    .map((row) => greetingRowIdentity(row)!.index)
+    .sort((a, b) => a - b);
+  if (indices.some((index, position) => index !== position)) return undefined;
   return `greeting:add:${kind}`;
 }
 
-/** A graduate major row is counted only when all three named controls share its index. */
+/** A major row is counted only when all three named controls share its index. */
 export function greetingMajorRowsForAction(
   element: Element,
 ): HTMLInputElement[] | undefined {
@@ -305,7 +337,9 @@ export function greetingMajorRowsForAction(
   const identity = row && greetingRowIdentity(row);
   if (
     !identity ||
-    identity.itemGroupId !== "educationgraduateschool" ||
+    !["educationuniversity", "educationgraduateschool"].includes(
+      identity.itemGroupId,
+    ) ||
     identity.index > 127
   )
     return undefined;
@@ -365,7 +399,7 @@ function majorAddAction(element: HTMLElement): string | undefined {
   if (!greetingMajorRowsForAction(element)) return undefined;
   const row = element.closest(ROW)!;
   const identity = greetingRowIdentity(row)!;
-  return `greeting:add:graduateSchools:${identity.index}:majors`;
+  return `greeting:add:${identity.itemGroupId === "educationuniversity" ? "universities" : "graduateSchools"}:${identity.index}:majors`;
 }
 
 export const greetingCollectionAdapter: CollectionAdapter = {
@@ -373,10 +407,10 @@ export const greetingCollectionAdapter: CollectionAdapter = {
   collectsInputButtonFields: false,
   itemGroupId: (element) => greetingRowIdentity(element)?.itemGroupId,
   actionDomId: (element) =>
-    majorAddAction(element) ?? educationAddAction(element),
+    majorAddAction(element) ?? sectionAddAction(element),
   repeatableItemCandidates(container) {
     const isAccordion = container.matches(ACCORDION);
-    const sectionKind = educationSectionKind(container);
+    const sectionKind = greetingSectionKind(container);
     if (
       !isAccordion &&
       (!sectionKind || greetingSectionContainer(container) !== container)
@@ -393,9 +427,7 @@ export const greetingCollectionAdapter: CollectionAdapter = {
         (identity) =>
           !identity ||
           (sectionKind &&
-            !identity.prefix.startsWith(
-              `educationalBackground.${sectionKind}.`,
-            )),
+            !identity.prefix.startsWith(greetingSectionPrefix(sectionKind))),
       )
     )
       return [];

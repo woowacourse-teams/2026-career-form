@@ -1,3 +1,5 @@
+import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
+import { resolveDocumentCompany } from "../adapters/company";
 import { isGreetingEmailStateDriver } from "../adapters/greeting/workflow";
 import { sensitiveValueApproved } from "./review-actions";
 import type { CandidateRegistry } from "../dom/candidate-registry";
@@ -72,7 +74,6 @@ function greetingReceiptIdentity(item: ReviewPlanItem): string {
 export function createAnalyzeFields({
   onAnalysis,
   adapter,
-  executionAdapterId,
   addressRun,
   addressSearch,
   apiClient,
@@ -105,6 +106,7 @@ export function createAnalyzeFields({
   onAddressOperation,
 }: WorkflowAnalysisContext) {
   let analysisGeneration = 0;
+  const companyId = resolveDocumentCompany(pageDocument);
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
@@ -137,9 +139,7 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = collectFieldsSnapshot(pageDocument, {
-      executionAdapterId,
-    });
+    const snapshot = collectFieldsSnapshot(pageDocument);
 
     const analysisStarted = performance.now();
     let analysis = await apiClient.analyzeFields(snapshot.request);
@@ -165,9 +165,25 @@ export function createAnalyzeFields({
       return;
     }
     if (
-      executionAdapterId &&
-      (analysis.executionAdapterId !== executionAdapterId ||
-        analysis.mode !== "ADAPTER")
+      companyId === "generic" &&
+      analysis.mode === "ADAPTER" &&
+      hasGreetingFieldCandidates(
+        snapshot.request.sections.flatMap((section) => [
+          ...section.fields,
+          ...(section.items ?? []).flatMap((item) => item.fields),
+        ]),
+      )
+    ) {
+      setExceptionTitle("페이지 구조를 확인할 수 없습니다. 다시 시작해 주세요");
+      setStage("exception");
+      return;
+    }
+    if (
+      companyId === "greeting" &&
+      (analysis.mode !== "ADAPTER" ||
+        analysis.fields.some(
+          (field) => field.mappingStatus !== "ADAPTER_VERIFIED",
+        ))
     ) {
       setExceptionTitle(
         "페이지 실행 방식이 변경되었습니다. 다시 시작해 주세요",
@@ -323,7 +339,7 @@ export function createAnalyzeFields({
       return;
     }
     const adapterDate = (item: ReviewPlanItem) =>
-      executionAdapterId === "greeting-v1" &&
+      companyId === "greeting" &&
       analysis.mode === "ADAPTER" &&
       item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
       item.analysis.writePlan?.command === "SELECT_DATE";
@@ -412,7 +428,7 @@ export function createAnalyzeFields({
       return;
     }
     if (
-      executionAdapterId === "greeting-v1" &&
+      companyId === "greeting" &&
       automaticItems.filter(
         (item) =>
           item.analysis?.valueBinding?.type === "DIRECT" &&
@@ -451,7 +467,7 @@ export function createAnalyzeFields({
               stage,
               key,
               captured:
-                executionAdapterId === "greeting-v1"
+                companyId === "greeting"
                   ? captureGreetingResultTargets(snapshot.registry, [item])
                   : undefined,
               genericTargets:
@@ -478,7 +494,7 @@ export function createAnalyzeFields({
       // Greeting replaces controls during React updates. Recollect after each
       // confirmed selection so a later driver never uses an earlier DOM handle.
       const currentStateDriverItems =
-        executionAdapterId === "greeting-v1"
+        companyId === "greeting"
           ? sameStageDrivers.slice(0, 1)
           : sameStageDrivers;
       const rememberGreetingWrite = (
@@ -647,7 +663,7 @@ export function createAnalyzeFields({
             return;
           }
         }
-        if (executionAdapterId === "greeting-v1" && stage === 0) {
+        if (companyId === "greeting" && stage === 0) {
           if (!captured || !isGreetingEmailStateDriver(item, lookup.handle)) {
             setExceptionTitle(
               "이메일 입력 대상이 변경되었습니다. 다시 시작해 주세요",
@@ -657,7 +673,6 @@ export function createAnalyzeFields({
           }
           stateSelectionResults.push(
             ...(await executeApprovedWritesAfterPageSettles({
-              executionAdapterId,
               items: [item],
               approvedCandidateIds: new Set([item.candidateId]),
               registry: snapshot.registry,
@@ -705,7 +720,6 @@ export function createAnalyzeFields({
                   ? executeApprovedWritesAfterPageSettles
                   : executeApprovedWrites
               )({
-                executionAdapterId,
                 items: [item],
                 approvedCandidateIds: new Set([item.candidateId]),
                 registry: snapshot.registry,
@@ -823,7 +837,7 @@ export function createAnalyzeFields({
         );
         if (await deferFailedGroups(successful, true)) return;
         const failedLabel =
-          executionAdapterId === "greeting-v1"
+          companyId === "greeting"
             ? currentStateDriverItems.find((_, index) => !successful[index])
                 ?.item.fieldLabel
             : undefined;
@@ -913,7 +927,7 @@ export function createAnalyzeFields({
     if (run.controller.signal.aborted) return;
     setStage("writing");
     const greetingTargets =
-      executionAdapterId === "greeting-v1"
+      companyId === "greeting"
         ? captureGreetingResultTargets(snapshot.registry, automaticItems)
         : undefined;
     const greetingDriverKeys = new Map<string, string>();
@@ -933,7 +947,7 @@ export function createAnalyzeFields({
     }
     let greetingResultRegistry: CandidateRegistry | undefined;
     const writeResults = await executeApprovedWritesAfterPageSettles({
-      executionAdapterId,
+      document: pageDocument,
       onResult: onWriteResult,
       items: finalWriteItems,
       approvedCandidateIds,
@@ -1011,7 +1025,7 @@ export function createAnalyzeFields({
             live.handle,
           ) &&
           (item.analysis?.writePlan?.command !== "SEARCH_SELECTION" ||
-            (executionAdapterId === "greeting-v1" &&
+            (companyId === "greeting" &&
               (await adapter.executeStateDriver?.(
                 pageDocument,
                 current.handle,
@@ -1108,7 +1122,7 @@ export function createAnalyzeFields({
           return (
             (lookup.status === "ready" || lookup.status === "blocked") &&
             analysis.mode !== "GENERIC" &&
-            executionAdapterId !== "greeting-v1" &&
+            companyId !== "greeting" &&
             completedStateDriverKeys.has(
               stateDriverKey(
                 item,

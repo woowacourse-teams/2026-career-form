@@ -1,3 +1,5 @@
+import { greetingBasicControls } from "../adapters/greeting/fingerprint";
+import { resolveDocumentCompany } from "../adapters/company";
 import {
   createPreparationOptions,
   prepareApprovedPlans,
@@ -23,7 +25,7 @@ import {
   getWorkflowAdapter,
   type WorkflowDiagnostic,
 } from "../adapters/workflow";
-import type { ExecutionAdapterId, PreparationPlan } from "../api/types";
+import type { PreparationPlan } from "../api/types";
 import type { Profile } from "../../profile/model";
 import {
   collectFieldsSnapshot,
@@ -65,7 +67,6 @@ import {
   safeErrorTitle,
   type PreparationItem,
   type Stage,
-  pageHost,
   runtimeAddressSearch,
   type WorkflowProps,
 } from "./workflow-model";
@@ -81,11 +82,8 @@ export function AutofillWorkflow({
   onExit,
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
-  const executionAdapterId = useRef<ExecutionAdapterId | undefined>(undefined);
-  const routingContext = useRef<string | undefined>(undefined);
-  const [selectedAdapterId, setSelectedAdapterId] =
-    useState<ExecutionAdapterId>();
-  const adapter = getWorkflowAdapter(pageHost(pageDocument), selectedAdapterId);
+  const companyId = resolveDocumentCompany(pageDocument);
+  const adapter = getWorkflowAdapter(pageDocument);
   const presentation = useMemo(
     () => createFieldPresentation(pageDocument),
     [pageDocument],
@@ -184,11 +182,7 @@ export function AutofillWorkflow({
       onAddressOperation: (element) =>
         recordOperation(element, "연락처와 주소"),
       onAnalysis: setAnalysisSummary,
-      adapter: getWorkflowAdapter(
-        pageHost(pageDocument),
-        executionAdapterId.current,
-      ),
-      executionAdapterId: executionAdapterId.current,
+      adapter: getWorkflowAdapter(pageDocument),
       addressRun,
       addressSearch,
       apiClient,
@@ -253,40 +247,17 @@ export function AutofillWorkflow({
         if (!active) return;
         setProfile(loadedProfile);
         completedGreetingStateDrivers.current.clear();
-        executionAdapterId.current = undefined;
-        routingContext.current = undefined;
-        setSelectedAdapterId(undefined);
-        let snapshot = collectPreparationSnapshot(pageDocument);
-        let analysis = await apiClient.analyzePreparation(snapshot.request);
-        if (!active) return;
+        const snapshot = collectPreparationSnapshot(pageDocument);
+        const analysis = await apiClient.analyzePreparation(snapshot.request);
         if (
-          analysis.executionAdapterId === "greeting-v1" &&
-          analysis.analysisStatus !== "BLOCKED"
-        ) {
-          if (!analysis.routingContext)
-            throw new Error("Missing adapter routing context");
-          executionAdapterId.current = analysis.executionAdapterId;
-          setSelectedAdapterId(analysis.executionAdapterId);
-          snapshot = collectPreparationSnapshot(pageDocument, {
-            executionAdapterId: analysis.executionAdapterId,
-          });
-          analysis = await apiClient.analyzePreparation({
-            ...snapshot.request,
-            routingContext: analysis.routingContext,
-          });
-          if (
-            analysis.executionAdapterId !== executionAdapterId.current ||
-            analysis.mode !== "ADAPTER" ||
-            analysis.analysisStatus === "BLOCKED" ||
-            !analysis.routingContext
-          )
-            throw new Error("Execution adapter changed");
-          routingContext.current = analysis.routingContext;
-        }
-        const adapter = getWorkflowAdapter(
-          pageHost(pageDocument),
-          executionAdapterId.current,
-        );
+          companyId === "generic" &&
+          analysis.mode === "ADAPTER" &&
+          greetingBasicControls(pageDocument)
+        )
+          throw new Error("Unverified Greeting page structure");
+        if (companyId === "greeting" && analysis.mode !== "ADAPTER")
+          throw new Error("Unexpected generic response for registered adapter");
+        const adapter = getWorkflowAdapter(pageDocument);
 
         if (!active) return;
         if (analysis.analysisStatus === "BLOCKED") {
@@ -403,7 +374,6 @@ export function AutofillWorkflow({
         pageDocument,
         profile,
         repository,
-        executionAdapterId,
         freshDefaultControls,
         writeController,
         mounted,
@@ -435,29 +405,16 @@ export function AutofillWorkflow({
         );
         // Newly created school rows can reveal their own major add action.
         // Only an adapter-opted-in action may run here, with its live row count.
-        const followUpSnapshot = collectPreparationSnapshot(pageDocument, {
-          executionAdapterId: executionAdapterId.current,
-        });
+        const followUpSnapshot = collectPreparationSnapshot(pageDocument);
         setActivity("matching");
-        if (executionAdapterId.current && !routingContext.current)
-          throw new Error("Missing adapter routing context");
         const followUpAnalysis = await apiClient.analyzePreparation(
-          executionAdapterId.current
-            ? {
-                ...followUpSnapshot.request,
-                routingContext: routingContext.current,
-              }
-            : followUpSnapshot.request,
+          followUpSnapshot.request,
         );
         if (
           followUpAnalysis.analysisStatus === "BLOCKED" ||
-          followUpAnalysis.executionAdapterId !== executionAdapterId.current ||
-          (executionAdapterId.current &&
-            (followUpAnalysis.mode !== "ADAPTER" ||
-              !followUpAnalysis.routingContext))
+          (companyId === "greeting" && followUpAnalysis.mode !== "ADAPTER")
         )
-          throw new Error("Execution adapter changed");
-        routingContext.current = followUpAnalysis.routingContext;
+          throw new Error("Unexpected adapter response");
 
         if (adapter.diagnosticsTitle) {
           setWorkflowDiagnostics((previous) => [
@@ -530,7 +487,6 @@ export function AutofillWorkflow({
   };
 
   const writeRevealedFields = createWriteRevealedFields({
-    executionAdapterId: selectedAdapterId,
     onActivity: setActivity,
     onWriteResult,
     adapter,
@@ -622,12 +578,11 @@ export function AutofillWorkflow({
       writeController.current = new AbortController();
       const approvedProfile = JSON.stringify(profile);
       const greetingTargets =
-        selectedAdapterId === "greeting-v1"
+        companyId === "greeting"
           ? captureGreetingResultTargets(fieldsSnapshot.registry, reviewItems)
           : undefined;
       let settledGreetingRegistry: CandidateRegistry | undefined;
       const nextResults = await executeApprovedWritesAfterPageSettles({
-        executionAdapterId: selectedAdapterId,
         ...(greetingTargets
           ? {
               settledRegistry: () => {
@@ -728,7 +683,7 @@ export function AutofillWorkflow({
   }, [preparationExecutionPending]);
 
   const visibleRegistry =
-    stage === "result" && selectedAdapterId === "greeting-v1"
+    stage === "result" && companyId === "greeting"
       ? (resultRegistry ?? fieldsSnapshot?.registry)
       : fieldsSnapshot?.registry;
 

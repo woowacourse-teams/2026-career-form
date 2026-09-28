@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { WorkflowAdapter, WorkflowDiagnostic } from "../adapters/workflow";
-import type { ExecutionAdapterId, AnalysisApiClient } from "../api/types";
+import type { AnalysisApiClient } from "../api/types";
 import { collectFieldsSnapshot } from "../dom/collect";
 import { debugAnalysis } from "../debug/autofill-debug";
 import {
@@ -21,7 +21,6 @@ interface RevealedFieldsContext {
   onActivity?: (activity: WorkflowActivity) => void;
   onWriteResult?: WriteResultListener;
   adapter: WorkflowAdapter;
-  executionAdapterId?: ExecutionAdapterId;
   apiClient: AnalysisApiClient;
   pageDocument: Document;
   setWorkflowDiagnostics: Dispatch<SetStateAction<WorkflowDiagnostic[]>>;
@@ -34,7 +33,6 @@ interface RevealedFieldsContext {
 
 export function createWriteRevealedFields({
   adapter,
-  executionAdapterId,
   apiClient,
   pageDocument,
   setWorkflowDiagnostics,
@@ -55,9 +53,7 @@ export function createWriteRevealedFields({
       { code: "FOLLOW_UP_BINDINGS", count: revealedFieldBindings.size },
     ];
 
-    const snapshot = collectFieldsSnapshot(pageDocument, {
-      executionAdapterId,
-    });
+    const snapshot = collectFieldsSnapshot(pageDocument);
     onActivity?.("matching");
     const analysis = await apiClient.analyzeFields(snapshot.request);
     debugAnalysis(snapshot, analysis);
@@ -131,7 +127,7 @@ export function createWriteRevealedFields({
     });
     diagnostics.push({ code: "ELIGIBLE_FIELDS", count: items.length });
     const results = await executeApprovedWritesAfterPageSettles({
-      executionAdapterId,
+      document: pageDocument,
       onResult: onWriteResult,
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),

@@ -234,6 +234,42 @@ export function installGreetingEmailCloseBridge(doc: Document): void {
     });
     timer = setTimeout(() => finish(false), 800);
     try {
+      const popup = doc.getElementById(controls ?? "");
+      if (
+        exactPopup(input) &&
+        popup?.hasAttribute("data-empty") &&
+        doc.defaultView?.getComputedStyle(popup).display === "none"
+      ) {
+        // Empty suggestion popups can retain Greeting's accessibility mask.
+        // Escape is the site's observed dismissal; no suggestion or email
+        // confirmation is activated, and the closed state is still verified.
+        input.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "Escape",
+            code: "Escape",
+            bubbles: true,
+          }),
+        );
+        if (!unchanged()) {
+          finish(false);
+          return;
+        }
+        input.dispatchEvent(
+          new KeyboardEvent("keyup", {
+            key: "Escape",
+            code: "Escape",
+            bubbles: true,
+          }),
+        );
+        if (!unchanged()) {
+          finish(false);
+          return;
+        }
+        if (input.getAttribute("aria-expanded") === "false") {
+          finish(true);
+          return;
+        }
+      }
       // Greeting ignores outside-pointer dismissal while this input has focus.
       // Acceptance was already checked; blur may close the popup by itself.
       input.blur();
@@ -324,9 +360,18 @@ export async function closeGreetingEmailPopup(
           input.getAttribute(MARKER) !== nonce ||
           input.value !== value ||
           input.getAttribute("aria-controls") !== controls ||
-          !exactPopup(input) ||
           !confirmationReady(input)
         ) {
+          finish(false);
+          return;
+        }
+        // The site can finish dismissing while this bounded settling task waits.
+        // The same accepted input and value still need to pass every guard.
+        if (input.getAttribute("aria-expanded") === "false") {
+          finish(true);
+          return;
+        }
+        if (!exactPopup(input)) {
           finish(false);
           return;
         }

@@ -9,13 +9,14 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormElement;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest.FormControl;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest.Visibility;
 
-/** Only FE-verified education add buttons participate in Greeting preparation. */
+/** Only FE-verified repeated-section add buttons participate in Greeting preparation. */
 public final class GreetingActionResolver implements ActionResolver {
     private static final Set<String> ADD_IDS = Set.of(
-        "greeting:add:universities", "greeting:add:graduateSchools");
+        "greeting:add:universities", "greeting:add:graduateSchools", "greeting:add:workExperiences",
+        "greeting:add:certifiedLanguageTests", "greeting:add:foreignLanguageProficiencies", "greeting:add:certificatesLicenses");
 
-    private static final Pattern GRADUATE_MAJOR_ADD = Pattern.compile(
-        "^greeting:add:graduateSchools:(0|[1-9][0-9]{0,2}):majors$");
+    private static final Pattern MAJOR_ADD = Pattern.compile(
+        "^greeting:add:(?:graduateSchools|universities):(0|[1-9][0-9]{0,2}):majors$");
 
     @Override
     public Resolution resolve(PreparationAnalysisRequest request) {
@@ -30,7 +31,7 @@ public final class GreetingActionResolver implements ActionResolver {
 
     private static boolean supportedAddId(String domId) {
         if (ADD_IDS.contains(domId)) return true;
-        var majorAdd = GRADUATE_MAJOR_ADD.matcher(domId);
+        var majorAdd = MAJOR_ADD.matcher(domId);
         return majorAdd.matches() && Integer.parseInt(majorAdd.group(1)) <= 127;
     }
 

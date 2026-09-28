@@ -41,24 +41,25 @@ class GreetingExpandedMappingTest {
     }
 
     @Test
-    void marksOnlyUniqueGreetingEnglishFullNameForManualOrderReview() {
+    void mapsOnlyUniqueGreetingEnglishFullNameGivenFirst() {
         var policy = new com.careerform.formanalysis.application.FieldInteractionPolicy();
         var englishName = field("english", "basicInformation.englishName", FormControl.TEXT, null);
         var ordinaryQuestion = field("question", "applicationDetail.englishName", FormControl.TEXT, null);
         var wrongControl = field("button", "basicInformation.englishName", FormControl.BUTTON, null);
         var mappings = resolve(List.of(englishName, ordinaryQuestion), null);
 
-        assertThat(mappings).allMatch(NoMatch.class::isInstance);
+        assertThat(mappings).containsExactly(new Match("english", new DerivedBinding(DerivedRecipe.ENGLISH_FULL_NAME_GIVEN_FIRST), false), new NoMatch("question"));
         var englishDecision = policy.evaluateGreeting(englishName, mappings.getFirst(), List.of());
-        assertThat(englishDecision.interactionStatus()).isEqualTo(InteractionStatus.UNVERIFIED);
-        assertThat(englishDecision.reasonCodes()).extracting(Enum::name)
-            .containsExactly("ENGLISH_NAME_ORDER_UNVERIFIED");
-        assertThat(englishDecision.writePlan()).isNull();
+        assertThat(englishDecision.interactionStatus()).isEqualTo(InteractionStatus.READY);
+        assertThat(englishDecision.reasonCodes()).isEmpty();
+        assertThat(englishDecision.writePlan().command()).isEqualTo(WriteCommand.SET_TEXT);
         assertThat(policy.evaluateGreeting(ordinaryQuestion, mappings.get(1), List.of()).interactionStatus())
             .isEqualTo(InteractionStatus.BLOCKED);
         assertThat(policy.evaluateGreeting(wrongControl, resolve(List.of(wrongControl), null).getFirst(), List.of()).interactionStatus())
             .isEqualTo(InteractionStatus.BLOCKED);
 
+        assertThat(resolve(List.of(englishName, wrongControl), null))
+            .containsExactly(new NoMatch("english"), new NoMatch("button"));
         var duplicates = resolve(List.of(englishName,
             field("english-copy", "basicInformation.englishName", FormControl.TEXT, null)), null);
         assertThat(policy.evaluateGreeting(englishName, duplicates.getFirst(), List.of()).interactionStatus())
@@ -191,7 +192,7 @@ class GreetingExpandedMappingTest {
             default -> List.of();
         };
         var response = service.analyze(new FieldsAnalysisRequest(request.schemaVersion(), request.snapshotId(),
-            request.site(), request.sections(), commands, null), true);
+            request.site(), request.sections(), commands));
         var birth = (MatchedFieldAnalysis) response.fields().stream()
             .filter(result -> result.candidateId().equals("birth")).findFirst().orElseThrow();
         if (capability.equals("supported")) {
@@ -277,7 +278,7 @@ class GreetingExpandedMappingTest {
             new Match("name", "education.graduateSchool.additionalMajorName"),
             new Match("classification", "education.graduateSchool.additionalMajorClassification"),
             new Match("field", "education.graduateSchool.additionalMajorField"),
-            new NoMatch("third"), new NoMatch("wrong-row"), new NoMatch("university"));
+            new NoMatch("third"), new NoMatch("wrong-row"), new Match("university", new DerivedBinding(DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_1_NAME)));
         assertThat(new com.careerform.formanalysis.application.FieldInteractionPolicy()
             .evaluateGreeting(major, results.getFirst(), List.of()).writePlan().command())
             .isEqualTo(com.careerform.formanalysis.dto.FieldsAnalysisResponse.WriteCommand.SEARCH_SELECTION);

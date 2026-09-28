@@ -1,3 +1,5 @@
+import { resolveDocumentCompany } from "../adapters/company";
+import type { CompanyId } from "../adapters/company";
 import type {
   ActionCandidate,
   FieldCandidate,
@@ -6,9 +8,9 @@ import type {
   FieldsSection,
   PreparationAnalyzeRequest,
   PreparationSection,
-  ExecutionAdapterId,
 } from "../api/types";
 import {
+  greetingCollectionAdapter,
   greetingFieldElements,
   greetingFieldLabel,
   greetingMajorRowsForAction,
@@ -273,7 +275,7 @@ function baseCandidate(
 function collectFieldElements(
   document: Document,
   adapter: CollectionAdapter,
-  executionAdapterId?: ExecutionAdapterId,
+  companyId?: CompanyId,
 ): HTMLElement[] {
   const native = Array.from(
     document.querySelectorAll<
@@ -289,28 +291,24 @@ function collectFieldElements(
       element.type,
     );
   });
-  return executionAdapterId === "greeting-v1"
+  return companyId === "greeting"
     ? [...native, ...greetingFieldElements(document)]
     : native;
 }
 
 export function collectFieldsSnapshot(
   document: Document,
-  options: { executionAdapterId?: ExecutionAdapterId } = {},
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
-  const { executionAdapterId } = options;
-  const adapter = collectionAdapterForHost(
-    documentHost(document),
-    executionAdapterId,
-  );
+  const companyId = resolveDocumentCompany(document);
+  const adapter = collectionAdapterForHost(document);
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: FieldsSection[] = [];
   const groups = groupBySection(
-    collectFieldElements(document, adapter, executionAdapterId),
+    collectFieldElements(document, adapter, companyId),
     sectionSelector(adapter),
     adapter === collectionAdapterForHost(""),
-    executionAdapterId === "greeting-v1" ? greetingSectionContainer : undefined,
+    companyId === "greeting" ? greetingSectionContainer : undefined,
   );
 
   Array.from(groups.entries()).forEach(
@@ -327,7 +325,7 @@ export function collectFieldsSnapshot(
         container
           ? assignRepeatGroups(
               container,
-              revalidate && executionAdapterId === "greeting-v1"
+              revalidate && companyId === "greeting"
                 ? (adapter.repeatableItemCandidates(container) ?? []).filter(
                     (row) => !isTemplateLike(row),
                   )
@@ -349,7 +347,7 @@ export function collectFieldsSnapshot(
       for (const element of elements) {
         if (consumed.has(element)) continue;
         const customRadio =
-          executionAdapterId === "greeting-v1" &&
+          companyId === "greeting" &&
           element.getAttribute("role") === "radiogroup";
         const isChoice =
           customRadio ||
@@ -402,7 +400,7 @@ export function collectFieldsSnapshot(
             ...baseCandidate(
               first,
               candidateId,
-              executionAdapterId === "greeting-v1"
+              companyId === "greeting"
                 ? greetingSyntheticDomName(first)
                 : undefined,
             ),
@@ -432,7 +430,7 @@ export function collectFieldsSnapshot(
             ...baseCandidate(
               first,
               candidateId,
-              executionAdapterId === "greeting-v1"
+              companyId === "greeting"
                 ? greetingSyntheticDomName(first)
                 : undefined,
             ),
@@ -448,7 +446,7 @@ export function collectFieldsSnapshot(
             ...baseCandidate(
               first,
               candidateId,
-              executionAdapterId === "greeting-v1"
+              companyId === "greeting"
                 ? greetingSyntheticDomName(first)
                 : undefined,
             ),
@@ -466,7 +464,7 @@ export function collectFieldsSnapshot(
         // Greeting search suggestions can echo the user's typed answer.
         // Its local workflow resolves options without sending them to analysis.
         if (
-          executionAdapterId !== "greeting-v1" &&
+          companyId !== "greeting" &&
           first.getAttribute("role") === "combobox"
         ) {
           const ids =
@@ -490,7 +488,7 @@ export function collectFieldsSnapshot(
           }
         }
         const semanticContext = collectSemanticContext(first, container);
-        if (executionAdapterId === "greeting-v1") {
+        if (companyId === "greeting") {
           const label = metadata(greetingFieldLabel(first));
           delete candidate.displayName;
           if (label) candidate.displayName = label;
@@ -506,7 +504,7 @@ export function collectFieldsSnapshot(
         ) {
           semanticContext.repeat = {
             groupId:
-              executionAdapterId === "greeting-v1" && item.itemGroupId
+              companyId === "greeting" && item.itemGroupId
                 ? item.itemGroupId
                 : `${sectionId}-group-${item.groupOrdinal}`,
             rowIndex: item.itemIndex,
@@ -673,7 +671,11 @@ function repeatableItemElements(
       (item) =>
         !isTemplateLike(item) &&
         (!adapter.requiresVisibleControl(phase, source) ||
-          hasVisibleFormControl(item)),
+          hasVisibleFormControl(item) ||
+          (adapter === greetingCollectionAdapter &&
+            greetingFieldElements(item.ownerDocument).some(
+              (control) => item.contains(control) && !isHidden(control),
+            ))),
     );
 
   const adapterItems = adapter.repeatableItemCandidates(container);
@@ -844,20 +846,16 @@ function repeatableItemElementsForAction(
 
 export function collectPreparationSnapshot(
   document: Document,
-  options: { executionAdapterId?: ExecutionAdapterId } = {},
 ): PreparationCollectedSnapshot {
-  const { executionAdapterId } = options;
-  const adapter = collectionAdapterForHost(
-    documentHost(document),
-    executionAdapterId,
-  );
+  const companyId = resolveDocumentCompany(document);
+  const adapter = collectionAdapterForHost(document);
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: PreparationSection[] = [];
   const generic = adapter === collectionAdapterForHost("");
   const actions = [
     ...collectActionElements(document).filter((element) =>
-      executionAdapterId === "greeting-v1"
+      companyId === "greeting"
         ? Boolean(adapter.actionDomId(element))
         : !generic ||
           ((element instanceof HTMLButtonElement ||
@@ -872,7 +870,7 @@ export function collectPreparationSnapshot(
     actions,
     selector,
     adapter === collectionAdapterForHost(""),
-    executionAdapterId === "greeting-v1" ? greetingSectionContainer : undefined,
+    companyId === "greeting" ? greetingSectionContainer : undefined,
   );
   const containers: Array<Element | null> = Array.from(
     new Set([
@@ -951,7 +949,9 @@ export function collectPreparationSnapshot(
       actionSectionIds.set(candidateId, sectionId);
       actionElements.set(candidateId, element);
       if (
-        /^greeting:add:graduateSchools:(0|[1-9]\d*):majors$/.test(domId ?? "")
+        /^greeting:add:(universities|graduateSchools):(0|[1-9]\d*):majors$/.test(
+          domId ?? "",
+        )
       )
         majorActionIds.set(candidateId, domId!);
       return candidate;
@@ -1014,6 +1014,29 @@ export function collectPreparationSnapshot(
       if (!sectionId) return undefined;
       const root = sectionRoots.get(sectionId);
       if (root === undefined || (root && !root.isConnected)) return undefined;
+      if (majorActionIds.has(actionCandidateId)) {
+        const action = actionElements.get(actionCandidateId);
+        if (
+          !(action instanceof HTMLElement) ||
+          adapter.actionDomId(action) !== majorActionIds.get(actionCandidateId)
+        )
+          return undefined;
+        return greetingMajorRowsForAction(action)?.map((input) => {
+          const field = input.closest(
+            '[data-scope="field"][data-part="root"]',
+          )!;
+          const buttons = Array.from(
+            field.querySelectorAll<HTMLButtonElement>("button[name]"),
+          )
+            .filter(
+              (button) =>
+                button.name === `${input.name}.majorClassification` ||
+                button.name === `${input.name}.majorField`,
+            )
+            .map((button) => [button.name, button.textContent?.trim() ?? ""]);
+          return JSON.stringify([input.name, input.value, ...buttons]);
+        });
+      }
       return repeatableItemElementsForAction(
         root,
         actionElements.get(actionCandidateId),

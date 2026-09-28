@@ -13,25 +13,12 @@ public record FieldsAnalysisResponse(
     AnalysisStatus analysisStatus,
     List<FieldAnalysis> fields,
     List<WarningCode> warningCodes,
-    BlockCode blockCode,
-    String executionAdapterId
+    BlockCode blockCode
 ) {
 
     public FieldsAnalysisResponse {
         fields = List.copyOf(fields);
         warningCodes = warningCodes == null ? null : List.copyOf(warningCodes);
-    }
-
-    public FieldsAnalysisResponse(
-        String snapshotId, Mode mode, AnalysisStatus analysisStatus,
-        List<FieldAnalysis> fields, List<WarningCode> warningCodes, BlockCode blockCode
-    ) {
-        this(snapshotId, mode, analysisStatus, fields, warningCodes, blockCode, null);
-    }
-
-    public FieldsAnalysisResponse withExecutionAdapterId(String adapterId) {
-        return new FieldsAnalysisResponse(snapshotId, mode, analysisStatus,
-            fields, warningCodes, blockCode, adapterId);
     }
 
     public static FieldsAnalysisResponse complete(
@@ -86,17 +73,6 @@ public record FieldsAnalysisResponse(
             List.of(),
             null,
             BlockCode.ADAPTER_POLICY_UNAVAILABLE
-        );
-    }
-
-    public static FieldsAnalysisResponse greetingDnsUnavailable(String snapshotId) {
-        return new FieldsAnalysisResponse(
-            snapshotId,
-            Mode.ADAPTER,
-            AnalysisStatus.BLOCKED,
-            List.of(),
-            null,
-            BlockCode.GREETING_DNS_UNAVAILABLE
         );
     }
 
@@ -184,8 +160,7 @@ public record FieldsAnalysisResponse(
     }
 
     public enum ReasonCode {
-        NO_MATCH,
-        ENGLISH_NAME_ORDER_UNVERIFIED
+        NO_MATCH
     }
 
     public enum WriteCommand {
@@ -203,7 +178,6 @@ public record FieldsAnalysisResponse(
 
     public enum BlockCode {
         ADAPTER_STRUCTURE_MISMATCH,
-        ADAPTER_POLICY_UNAVAILABLE,
-        GREETING_DNS_UNAVAILABLE
+        ADAPTER_POLICY_UNAVAILABLE
     }
 }

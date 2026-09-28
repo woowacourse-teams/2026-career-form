@@ -106,7 +106,11 @@ public interface FieldMappingResolver {
         ENGLISH_FULL_NAME_GIVEN_FIRST,
         ENGLISH_FULL_NAME_FAMILY_FIRST,
         BOOLEAN_YN,
-        YEAR_MONTH
+        YEAR_MONTH,
+        UNIVERSITY_ADDITIONAL_MAJOR_1_NAME,
+        UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION,
+        UNIVERSITY_ADDITIONAL_MAJOR_2_NAME,
+        UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION
     }
 
     Resolution resolve(FieldsAnalysisRequest request);
@@ -141,14 +145,6 @@ public interface FieldMappingResolver {
         }
     }
 
-    enum NoMatchReason {
-        UNMAPPED,
-        ENGLISH_NAME_ORDER_UNVERIFIED
-    }
-
-    record NoMatch(String candidateId, NoMatchReason reason) implements Result {
-        public NoMatch(String candidateId) {
-            this(candidateId, NoMatchReason.UNMAPPED);
-        }
+    record NoMatch(String candidateId) implements Result {
     }
 }

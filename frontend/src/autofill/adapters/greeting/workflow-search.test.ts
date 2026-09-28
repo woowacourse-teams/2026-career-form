@@ -4,8 +4,14 @@ import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 
 afterEach(() => document.body.replaceChildren());
-it("confirms school search using only a unique option owned by the input", async () => {
-  document.body.innerHTML = `<input name="educationalBackground.universities.0.schoolName" data-scope="combobox" data-part="input" role="combobox" aria-controls="schools"><div id="schools" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div role="option" data-scope="combobox" data-part="item" data-state="unchecked" data-value="K0000019">서울대학교</div></div>`;
+it.each([
+  "educationalBackground.universities.0.schoolName",
+  "educationalBackground.highSchool.schoolName",
+  "workHistory.workExperiences.0.companyName",
+  "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.testName",
+  "languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials",
+])("confirms exact owned search for %s", async (name) => {
+  document.body.innerHTML = `<input name="${name}" data-scope="combobox" data-part="input" role="combobox" aria-controls="schools"><div id="schools" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div role="option" data-scope="combobox" data-part="item" data-state="unchecked" data-value="K0000019">서울대학교</div></div>`;
   const input = document.querySelector<HTMLInputElement>("input")!;
   const option = document.querySelector<HTMLElement>('[role="option"]')!;
   option.onclick = () => {

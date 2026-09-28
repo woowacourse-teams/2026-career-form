@@ -16,9 +16,9 @@ class PreparationAnalysisControllerCapabilitiesTest {
         PreparationAnalysisRequest request = mock(PreparationAnalysisRequest.class);
         PreparationAnalysisController controller = new PreparationAnalysisController(service);
 
-        controller.analyze(request, "address-search-v1, routing-context-v1, greeting-adapter-v1");
+        controller.analyze(request, "address-search-v1");
 
-        verify(service).analyze(request, true, true, true);
+        verify(service).analyze(request, true);
     }
 
     @Test
@@ -27,9 +27,9 @@ class PreparationAnalysisControllerCapabilitiesTest {
         PreparationAnalysisRequest request = mock(PreparationAnalysisRequest.class);
 
         new PreparationAnalysisController(service).analyze(
-            request, "address-search-v1-extra,routing-context-v10,greeting-adapter-v10"
+            request, "address-search-v1-extra"
         );
 
-        verify(service).analyze(request, false, false, false);
+        verify(service).analyze(request, false);
     }
 }

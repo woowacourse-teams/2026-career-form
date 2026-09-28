@@ -3,9 +3,9 @@ package com.careerform.formanalysis.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,7 +18,6 @@ import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.No
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
-import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.AutofillPolicy;
@@ -43,19 +42,16 @@ class GreetingAnalysisIntegrationTest {
         "kakaomobility.career.greetinghr.com",
         "career.hyundai-autoever.com"
     })
-    @DisplayName("준비 응답의 토큰으로 DNS 근거 소실 후에도 검증된 이름과 전화번호만 입력 가능하다")
-    void continuesPreparationTokenIntoVerifiedFieldsAfterDnsEvidenceDisappears(String host)
+    @DisplayName("기존 요청으로 준비와 필드 매핑을 각각 검증한다")
+    void mapsKnownSitesUsingIndependentRequests(String host)
         throws Exception {
-        AtomicReference<Decision> dns = new AtomicReference<>(Decision.POSITIVE);
-        GreetingRoutingContext contexts = new GreetingRoutingContext();
         FormAnalysisRouter router = new FormAnalysisRouter(
             (candidateHost, path) -> new NotRegistered(),
-            (candidateHost, path) -> dns.get(),
-            () -> new Available(CompanyFormPolicyFixture.greeting()),
-            contexts
+            (candidateHost, path) -> Decision.POSITIVE,
+            () -> new Available(CompanyFormPolicyFixture.greeting())
         );
         PreparationAnalysisService preparationService = new PreparationAnalysisService(
-            Optional.empty(), router, contexts
+            Optional.empty(), router
         );
         FieldsAnalysisService fieldsService = new FieldsAnalysisService(
             Optional.empty(), router, new FieldInteractionPolicy(), new SupportedProfileFields()
@@ -71,25 +67,23 @@ class GreetingAnalysisIntegrationTest {
         );
 
         PreparationAnalysisResponse preparation = preparationService.analyze(
-            preparationRequest, false, true, true
+            preparationRequest
         );
 
         assertThat(preparation.mode()).isEqualTo(PreparationAnalysisResponse.Mode.ADAPTER);
         assertThat(preparation.analysisStatus())
             .isEqualTo(PreparationAnalysisResponse.AnalysisStatus.COMPLETE);
         assertThat(preparation.preparationPlans()).isEmpty();
-        assertThat(preparation.routingContext()).isNotBlank();
 
-        dns.set(Decision.NO_POSITIVE_EVIDENCE);
         FieldsAnalysisRequest fieldsFixture = mapper.readValue(
             fixture("greeting-fields-current-v2.json"), FieldsAnalysisRequest.class
         );
         FieldsAnalysisRequest fieldsRequest = new FieldsAnalysisRequest(
             2, "synthetic-fields", new FieldsAnalysisRequest.Site(host, "/ko/o/*/apply"),
-            fieldsFixture.sections(), preparation.routingContext()
+            fieldsFixture.sections()
         );
 
-        FieldsAnalysisResponse fields = fieldsService.analyze(fieldsRequest, true);
+        FieldsAnalysisResponse fields = fieldsService.analyze(fieldsRequest);
 
         assertThat(fields.snapshotId()).isEqualTo("synthetic-fields");
         assertThat(fields.mode()).isEqualTo(FieldsAnalysisResponse.Mode.ADAPTER);

@@ -1,3 +1,5 @@
+import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
+import { resolveCompany } from "../adapters/company";
 import { isAddressSearchAction } from "../adapters/address-contract";
 import type {
   FieldCandidate,
@@ -121,28 +123,16 @@ export function validatePreparationResponse(
       "snapshotId",
       "mode",
       "analysisStatus",
-      "executionAdapterId",
       "preparationPlans",
-      "routingContext",
       "warningCodes",
       "blockCode",
     ]) ||
-    (value.executionAdapterId !== undefined &&
-      (value.executionAdapterId !== "greeting-v1" ||
-        value.mode !== "ADAPTER" ||
-        value.analysisStatus !== "COMPLETE")) ||
     value.snapshotId !== request.snapshotId ||
     !Array.isArray(value.preparationPlans) ||
     !validateStringArray(value.warningCodes, [
       "MANUAL_REVEAL_REQUIRED",
       "LLM_UNAVAILABLE",
-    ]) ||
-    (value.routingContext !== undefined &&
-      (value.mode !== "ADAPTER" ||
-        (value.analysisStatus !== "COMPLETE" &&
-          value.analysisStatus !== "BLOCKED") ||
-        typeof value.routingContext !== "string" ||
-        !/^[A-Za-z0-9_-]{32}$/.test(value.routingContext)))
+    ])
   ) {
     throw new AnalysisContractError();
   }
@@ -153,7 +143,6 @@ export function validatePreparationResponse(
       (!isOneOf(value.blockCode, [
         "ADAPTER_STRUCTURE_MISMATCH",
         "ADAPTER_POLICY_UNAVAILABLE",
-        "GREETING_DNS_UNAVAILABLE",
         "UNSUPPORTED_SNAPSHOT",
       ]) ||
         value.preparationPlans.length > 0)) ||
@@ -312,15 +301,6 @@ function validateFieldAnalysis(
       value.interactionStatus === "BLOCKED" &&
       Array.isArray(value.reasonCodes) &&
       value.reasonCodes[0] === "NO_MATCH";
-    const englishNameReview =
-      greeting &&
-      value.mappingStatus === "ADAPTER_VERIFIED" &&
-      value.interactionStatus === "UNVERIFIED" &&
-      Array.isArray(value.reasonCodes) &&
-      value.reasonCodes[0] === "ENGLISH_NAME_ORDER_UNVERIFIED" &&
-      candidate.domName === "basicInformation.englishName" &&
-      candidate.element === "input" &&
-      candidate.control === "text";
     if (
       !hasOnlyKeys(value, [
         "candidateId",
@@ -332,7 +312,7 @@ function validateFieldAnalysis(
       !isOneOf(value.mappingStatus, ["ADAPTER_VERIFIED", "LLM_SUGGESTED"]) ||
       !Array.isArray(value.reasonCodes) ||
       value.reasonCodes.length !== 1 ||
-      (!ordinaryNoMatch && !englishNameReview)
+      !ordinaryNoMatch
     ) {
       throw new AnalysisContractError();
     }
@@ -410,6 +390,10 @@ function validateFieldAnalysis(
             "ENGLISH_FULL_NAME_FAMILY_FIRST",
             "BOOLEAN_YN",
             "YEAR_MONTH",
+            "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
+            "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+            "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
+            "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
           ]) ||
           (value.valueBinding.profileFieldKey !== undefined &&
             (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
@@ -465,14 +449,19 @@ function validateFieldAnalysis(
       candidate.visibility === "visible" &&
       !candidate.disabled &&
       !candidate.inert &&
-      typeof directKey === "string" &&
-      isAutofillProfileFieldKey(directKey);
+      ((typeof directKey === "string" &&
+        isAutofillProfileFieldKey(directKey)) ||
+        (isRecord(value.valueBinding) &&
+          value.valueBinding.type === "DERIVED" &&
+          /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_NAME$/.test(
+            String(value.valueBinding.recipe),
+          )));
     const greetingSearch =
       greetingReady &&
       candidate.element === "input" &&
       candidate.control === "text" &&
       !candidate.readonly &&
-      (/^educationalBackground\.(universities|graduateSchools)\.\d+\.(schoolName|majors\.\d+)$/.test(
+      (/^(?:educationalBackground\.(?:(?:universities|graduateSchools)\.\d+\.(?:schoolName|majors\.\d+)|highSchool\.schoolName)|workHistory\.workExperiences\.\d+\.companyName|languagesCertificationsAndOtherActivity\.(?:certifiedLanguageTests\.\d+\.testName|certificatesLicenses\.\d+\.credentials))$/.test(
         candidate.domName ?? "",
       ) ||
         (candidate.domName === "basicInformation.nationalityCode" &&
@@ -486,10 +475,16 @@ function validateFieldAnalysis(
       typeof directKey === "string" &&
       isDateProfileFieldKey(directKey) &&
       (candidate.domName === "basicInformation.birthdate" ||
-        /^educationalBackground\.(universities|graduateSchools)\.\d+\.enrollmentPeriod\.(startDate|endDate)$/.test(
+        /^educationalBackground\.(?:(?:universities|graduateSchools)\.\d+|highSchool)\.enrollmentPeriod\.(startDate|endDate)$/.test(
           candidate.domName ?? "",
         ) ||
         /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.test(
           candidate.domName ?? "",
         ));
     const searchSelection =
@@ -569,15 +564,10 @@ export function validateFieldsResponse(
       "snapshotId",
       "mode",
       "analysisStatus",
-      "executionAdapterId",
       "fields",
       "warningCodes",
       "blockCode",
     ]) ||
-    (value.executionAdapterId !== undefined &&
-      (value.executionAdapterId !== "greeting-v1" ||
-        value.mode !== "ADAPTER" ||
-        value.analysisStatus !== "COMPLETE")) ||
     value.snapshotId !== request.snapshotId ||
     !Array.isArray(value.fields) ||
     !validateStringArray(value.warningCodes, [
@@ -594,7 +584,6 @@ export function validateFieldsResponse(
       (!isOneOf(value.blockCode, [
         "ADAPTER_STRUCTURE_MISMATCH",
         "ADAPTER_POLICY_UNAVAILABLE",
-        "GREETING_DNS_UNAVAILABLE",
       ]) ||
         value.fields.length > 0)) ||
     (!isBlocked && value.blockCode !== undefined)
@@ -603,6 +592,9 @@ export function validateFieldsResponse(
   }
 
   const candidates = collectFieldCandidates(request);
+  const greeting =
+    resolveCompany(request.site.host) === "greeting" ||
+    hasGreetingFieldCandidates(candidates.values());
   const seen = new Set<string>();
   for (const field of value.fields) {
     let candidateId: string;
@@ -611,17 +603,16 @@ export function validateFieldsResponse(
         field,
         candidates,
         request,
-        value.executionAdapterId === "greeting-v1",
+        greeting && value.mode === "ADAPTER",
       );
       if (
         isRecord(field) &&
         isRecord(field.writePlan) &&
         field.writePlan.command === "SEARCH_SELECTION" &&
         value.mode !== "GENERIC" &&
-        value.executionAdapterId !== "greeting-v1"
-      ) {
+        !greeting
+      )
         throw new AnalysisContractError();
-      }
     } catch (error) {
       if (error instanceof AnalysisContractError) {
         const candidateLabel =

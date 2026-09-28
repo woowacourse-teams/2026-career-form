@@ -40,8 +40,6 @@ export function resultGuidance(
 ): string {
   if (code && Object.hasOwn(guidance, code)) return guidance[code];
   switch (reason) {
-    case "영문 이름 순서 확인":
-      return "영문 성·이름 순서를 확인하고 직접 입력해 주세요.";
     case "승인 필요":
       return "민감한 정보라 자동으로 입력하지 않았어요. 필요한 경우 직접 입력해 주세요.";
     case "기존 값과 다름":

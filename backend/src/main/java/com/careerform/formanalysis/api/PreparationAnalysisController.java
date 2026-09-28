@@ -36,9 +36,7 @@ public final class PreparationAnalysisController {
                 .collect(Collectors.toSet());
         return service.analyze(
             request,
-            supported.contains("address-search-v1"),
-            supported.contains("routing-context-v1"),
-            supported.contains("greeting-adapter-v1")
+            supported.contains("address-search-v1")
         );
     }
 }

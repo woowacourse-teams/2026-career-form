@@ -573,3 +573,77 @@ it.each(["hidden", "inert", "aria-ancestor", "closed", "wrong-popup"])(
     expect(await closeGreetingEmailPopup(input, () => true)).toBe(false);
   },
 );
+
+it("accepts a safely retained popup that closes during the dismissal settling interval", async () => {
+  vi.useFakeTimers();
+  const input = fixture();
+  installGreetingEmailCloseBridge(document);
+  const requests = vi.fn();
+  document.addEventListener(requestEvent, requests);
+  try {
+    const result = closeGreetingEmailPopup(input, () => true);
+    setTimeout(() => {
+      input.setAttribute("aria-expanded", "false");
+      document.getElementById("email-popup")?.remove();
+    }, 50);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await result).toBe(true);
+    expect(requests).not.toHaveBeenCalled();
+  } finally {
+    document.removeEventListener(requestEvent, requests);
+  }
+});
+
+it("closes an exact empty hidden Greeting email popup with Escape without confirming", async () => {
+  vi.useFakeTimers();
+  const input = fixture();
+  installGreetingEmailCloseBridge(document);
+  input.focus();
+  const popup = document.getElementById("email-popup")!;
+  popup.setAttribute("data-empty", "");
+  popup.setAttribute("data-state", "open");
+  popup.style.display = "none";
+  const confirmation = input.parentElement!.querySelector("button")!;
+  confirmation.setAttribute("aria-hidden", "true");
+  const confirmClick = vi.spyOn(confirmation, "click");
+  const outside = vi.fn();
+  document.body.addEventListener("pointerdown", outside);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      input.setAttribute("aria-expanded", "false");
+      confirmation.removeAttribute("aria-hidden");
+    }
+  });
+  try {
+    const result = closeGreetingEmailPopup(input, () => true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await result).toBe(true);
+    expect(outside).not.toHaveBeenCalled();
+    expect(confirmClick).not.toHaveBeenCalled();
+    expect(input.value).toBe("example@example.test");
+  } finally {
+    document.body.removeEventListener("pointerdown", outside);
+  }
+});
+
+it.each(["value", "controls", "replacement"])(
+  "rejects changed email identity after empty-popup Escape: %s",
+  async (change) => {
+    vi.useFakeTimers();
+    const input = fixture();
+    installGreetingEmailCloseBridge(document);
+    const popup = document.getElementById("email-popup")!;
+    popup.setAttribute("data-empty", "");
+    popup.style.display = "none";
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      input.setAttribute("aria-expanded", "false");
+      if (change === "value") input.value = "changed@example.test";
+      if (change === "controls") input.setAttribute("aria-controls", "other");
+      if (change === "replacement") input.replaceWith(input.cloneNode(true));
+    });
+    const result = closeGreetingEmailPopup(input, () => true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await result).toBe(false);
+  },
+);

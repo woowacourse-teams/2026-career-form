@@ -1,9 +1,6 @@
 package com.careerform.formanalysis.api;
 
-import java.util.Arrays;
-
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,12 +20,7 @@ public final class FieldsAnalysisController {
     }
 
     @PostMapping("/api/v1/fields/analyze")
-    public FieldsAnalysisResponse analyze(
-        @Valid @RequestBody FieldsAnalysisRequest request,
-        @RequestHeader(value = "X-Career-Form-Capabilities", required = false) String capabilities
-    ) {
-        return service.analyze(request, capabilities != null
-            && Arrays.stream(capabilities.split(","))
-                .map(String::trim).anyMatch("greeting-adapter-v1"::equals));
+    public FieldsAnalysisResponse analyze(@Valid @RequestBody FieldsAnalysisRequest request) {
+        return service.analyze(request);
     }
 }

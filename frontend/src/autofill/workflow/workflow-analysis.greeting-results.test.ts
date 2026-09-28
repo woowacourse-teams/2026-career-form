@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
@@ -157,7 +167,6 @@ async function run(
         return true;
       },
     },
-    executionAdapterId: "greeting-v1",
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
@@ -185,7 +194,6 @@ async function run(
       analyzeFields: async (request) => ({
         snapshotId: request.snapshotId,
         mode: "ADAPTER",
-        executionAdapterId: "greeting-v1",
         analysisStatus: "COMPLETE",
         fields: request.sections
           .flatMap((section) => section.fields)

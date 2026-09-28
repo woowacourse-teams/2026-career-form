@@ -12,47 +12,12 @@ public record PreparationAnalysisResponse(
     AnalysisStatus analysisStatus,
     List<PreparationPlan> preparationPlans,
     List<WarningCode> warningCodes,
-    BlockCode blockCode,
-    String routingContext,
-    String executionAdapterId
+    BlockCode blockCode
 ) {
 
     public PreparationAnalysisResponse {
         preparationPlans = List.copyOf(preparationPlans);
         warningCodes = warningCodes == null ? null : List.copyOf(warningCodes);
-    }
-
-    public PreparationAnalysisResponse(
-        String snapshotId,
-        Mode mode,
-        AnalysisStatus analysisStatus,
-        List<PreparationPlan> preparationPlans,
-        List<WarningCode> warningCodes,
-        BlockCode blockCode
-    ) {
-        this(snapshotId, mode, analysisStatus, preparationPlans,
-            warningCodes, blockCode, null, null);
-    }
-
-    public PreparationAnalysisResponse(
-        String snapshotId, Mode mode, AnalysisStatus analysisStatus,
-        List<PreparationPlan> preparationPlans, List<WarningCode> warningCodes,
-        BlockCode blockCode, String routingContext
-    ) {
-        this(snapshotId, mode, analysisStatus, preparationPlans, warningCodes,
-            blockCode, routingContext, null);
-    }
-
-    public PreparationAnalysisResponse withExecutionAdapterId(String adapterId) {
-        return new PreparationAnalysisResponse(snapshotId, mode, analysisStatus,
-            preparationPlans, warningCodes, blockCode, routingContext, adapterId);
-    }
-
-    public PreparationAnalysisResponse withRoutingContext(String context) {
-        return new PreparationAnalysisResponse(
-            snapshotId, mode, analysisStatus, preparationPlans,
-            warningCodes, blockCode, context, executionAdapterId
-        );
     }
 
     public static PreparationAnalysisResponse complete(
@@ -111,17 +76,6 @@ public record PreparationAnalysisResponse(
             List.of(),
             null,
             BlockCode.ADAPTER_POLICY_UNAVAILABLE
-        );
-    }
-
-    public static PreparationAnalysisResponse greetingDnsUnavailable(String snapshotId) {
-        return new PreparationAnalysisResponse(
-            snapshotId,
-            Mode.ADAPTER,
-            AnalysisStatus.BLOCKED,
-            List.of(),
-            null,
-            BlockCode.GREETING_DNS_UNAVAILABLE
         );
     }
 
@@ -202,7 +156,6 @@ public record PreparationAnalysisResponse(
     public enum BlockCode {
         ADAPTER_STRUCTURE_MISMATCH,
         ADAPTER_POLICY_UNAVAILABLE,
-        GREETING_DNS_UNAVAILABLE,
         UNSUPPORTED_SNAPSHOT
     }
 }

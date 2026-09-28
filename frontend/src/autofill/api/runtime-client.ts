@@ -10,14 +10,12 @@ import { isAnalysisResponseEnvelope } from "./messages";
 import { debugApiMessage } from "../debug/autofill-debug";
 import type {
   AnalysisApiClient,
-  ExecutionAdapterId,
   FieldsAnalyzeRequest,
   FieldsAnalyzeResponse,
   PreparationAnalyzeRequest,
   PreparationAnalyzeResponse,
 } from "./types";
 import {
-  AnalysisContractError,
   validateFieldsResponse,
   validatePreparationResponse,
 } from "./validate-response";
@@ -46,9 +44,6 @@ export class AnalysisServiceError extends Error {
 }
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
-  private routingContext: string | undefined;
-  private executionAdapterId: ExecutionAdapterId | undefined;
-
   constructor(
     private readonly sendMessage: SendMessage = (message) =>
       browser.runtime.sendMessage(message),
@@ -67,37 +62,23 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
   async analyzePreparation(
     request: PreparationAnalyzeRequest,
   ): Promise<PreparationAnalyzeResponse> {
-    this.routingContext = undefined;
-    this.executionAdapterId = undefined;
     const response = await this.request({
       type: "AUTOFILL_ANALYZE_PREPARATION",
       payload: request,
     });
     const analysis = validatePreparationResponse(request, response);
-    this.routingContext = analysis.routingContext;
-    this.executionAdapterId = analysis.executionAdapterId;
     return analysis;
   }
 
   async analyzeFields(
     request: FieldsAnalyzeRequest,
   ): Promise<FieldsAnalyzeResponse> {
-    const contextualRequest = this.routingContext
-      ? { ...request, routingContext: this.routingContext }
-      : request;
     const response = await this.request({
       type: "AUTOFILL_ANALYZE_FIELDS",
-      payload: contextualRequest,
+      payload: request,
     });
     try {
-      const analysis = validateFieldsResponse(contextualRequest, response);
-      if (
-        analysis.analysisStatus !== "BLOCKED" &&
-        analysis.executionAdapterId !== this.executionAdapterId
-      ) {
-        throw new AnalysisContractError();
-      }
-      return analysis;
+      return validateFieldsResponse(request, response);
     } catch (error) {
       debugApiMessage(
         { type: "AUTOFILL_ANALYZE_FIELDS (응답 검증 실패)" },

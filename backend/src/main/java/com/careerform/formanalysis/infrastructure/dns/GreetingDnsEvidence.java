@@ -1,8 +1,8 @@
 package com.careerform.formanalysis.infrastructure.dns;
 
 import java.util.Hashtable;
-import java.util.Arrays;
 import java.util.Locale;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -24,9 +24,8 @@ import com.careerform.formanalysis.application.port.GreetingDomainEvidence;
 @Component
 public final class GreetingDnsEvidence implements GreetingDomainEvidence {
 
-    private static final String GREETING_SUFFIX = ".career.greetinghr.com";
-    private static final String DEFAULT_DNS_PROVIDER_URL =
-        "dns://1.1.1.1 dns://8.8.8.8";
+    private static final Pattern GREETING_HOST = Pattern.compile(
+        "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.career\\.greetinghr\\.com$");
     private static final Pattern APPLICATION_PATH = Pattern.compile(
         "^/[a-z]{2}/o/(?:\\*|[0-9]+)(?:/apply)?$"
     );
@@ -40,7 +39,6 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
     private static final int MAX_CACHED_HOSTS = 4096;
 
     private final CnameLookup lookup;
-    private final Set<String> registeredHosts;
     private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
     private final Semaphore queries = new Semaphore(16);
 
@@ -50,42 +48,28 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
 
     @Autowired
     public GreetingDnsEvidence(
-        @Value("${careerform.greeting.registered-hosts:}") String registeredHosts,
         @Value("${careerform.greeting.dns-provider-url:dns://1.1.1.1 dns://8.8.8.8}")
         String dnsProviderUrl
     ) {
-        this(host -> queryCname(host, dnsProviderUrl),
-            Arrays.stream(registeredHosts.split(","))
-                .collect(java.util.stream.Collectors.toSet()));
+        this(host -> queryCname(host, dnsProviderUrl));
     }
 
-    public GreetingDnsEvidence(String registeredHosts) {
-        this(registeredHosts, DEFAULT_DNS_PROVIDER_URL);
-    }
-
-    GreetingDnsEvidence(CnameLookup lookup, Set<String> registeredHosts) {
+    GreetingDnsEvidence(CnameLookup lookup) {
         this.lookup = lookup;
-        this.registeredHosts = registeredHosts.stream()
-            .map(GreetingDnsEvidence::normalize)
-            .filter(host -> !host.isBlank())
-            .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     @Override
     public Decision classify(String host, String pathPattern) {
         if (host == null || pathPattern == null
             || !APPLICATION_PATH.matcher(pathPattern).matches()) {
-            return Decision.OUT_OF_SCOPE;
+            return Decision.NO_POSITIVE_EVIDENCE;
         }
         String normalized = normalize(host);
         if (!isPublicHost(normalized)) {
-            return Decision.OUT_OF_SCOPE;
+            return Decision.NO_POSITIVE_EVIDENCE;
         }
-        if (normalized.endsWith(GREETING_SUFFIX)) {
-            return Decision.POSITIVE_STABLE;
-        }
-        if (registeredHosts.contains(normalized)) {
-            return Decision.POSITIVE_STABLE;
+        if (GREETING_HOST.matcher(normalized).matches()) {
+            return Decision.POSITIVE;
         }
         CacheEntry cached = cache.get(normalized);
         long now = System.nanoTime();
@@ -94,9 +78,7 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
         }
         Decision decision = queryAliasChain(normalized);
         long ttl = switch (decision) {
-            case OUT_OF_SCOPE -> NEGATIVE_TTL_NANOS;
             case POSITIVE -> POSITIVE_TTL_NANOS;
-            case POSITIVE_STABLE -> POSITIVE_TTL_NANOS;
             case NO_POSITIVE_EVIDENCE -> NEGATIVE_TTL_NANOS;
             case RETRYABLE_FAILURE -> FAILURE_TTL_NANOS;
         };
@@ -120,7 +102,11 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
         }
         try {
             String current = host;
+            Set<String> visited = new HashSet<>();
             for (int hop = 0; hop < 3; hop++) {
+                if (!visited.add(current)) {
+                    return Decision.RETRYABLE_FAILURE;
+                }
                 LookupResult result;
                 try {
                     result = lookup.find(current);
@@ -138,11 +124,11 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
                 if (!isPublicHost(current)) {
                     return Decision.NO_POSITIVE_EVIDENCE;
                 }
-                if (current.endsWith(GREETING_SUFFIX)) {
+                if (GREETING_HOST.matcher(current).matches()) {
                     return Decision.POSITIVE;
                 }
             }
-            return Decision.NO_POSITIVE_EVIDENCE;
+            return Decision.RETRYABLE_FAILURE;
         }
         finally {
             queries.release();
@@ -190,6 +176,9 @@ public final class GreetingDnsEvidence implements GreetingDomainEvidence {
     }
 
     private static String normalize(String host) {
+        if (host == null) {
+            return "";
+        }
         String lower = host.toLowerCase(Locale.ROOT).trim();
         return lower.endsWith(".") ? lower.substring(0, lower.length() - 1) : lower;
     }

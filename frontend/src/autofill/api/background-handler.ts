@@ -58,12 +58,9 @@ export function createAnalysisMessageHandler({
             "Content-Type": "application/json",
             ...(message.type === "AUTOFILL_ANALYZE_PREPARATION"
               ? {
-                  "X-Career-Form-Capabilities":
-                    "address-search-v1,routing-context-v1,greeting-adapter-v1",
+                  "X-Career-Form-Capabilities": "address-search-v1",
                 }
-              : message.type === "AUTOFILL_ANALYZE_FIELDS"
-                ? { "X-Career-Form-Capabilities": "greeting-adapter-v1" }
-                : {}),
+              : {}),
           },
           body: JSON.stringify(message.payload),
           signal: controller.signal,

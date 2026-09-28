@@ -1,8 +1,7 @@
-import type { ExecutionAdapterId } from "../api/types";
 import { greetingWriteAdapter } from "./greeting/write";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { resolveCompany } from "./company";
+import { resolveCompany, resolveDocumentCompany } from "./company";
 import { hyundaiWriteAdapter } from "./hyundai/write";
 import { skWriteAdapter } from "./sk/write";
 
@@ -22,11 +21,15 @@ const standardWriteAdapter: CompanyWriteAdapter = {
 };
 
 export function getWriteAdapter(
-  host: string,
-  executionAdapterId?: ExecutionAdapterId,
+  source: string | Document,
 ): CompanyWriteAdapter {
-  if (executionAdapterId === "greeting-v1") return greetingWriteAdapter;
-  switch (resolveCompany(host)) {
+  switch (
+    typeof source === "string"
+      ? resolveCompany(source)
+      : resolveDocumentCompany(source)
+  ) {
+    case "greeting":
+      return greetingWriteAdapter;
     case "hyundai":
       return hyundaiWriteAdapter;
     case "sk":

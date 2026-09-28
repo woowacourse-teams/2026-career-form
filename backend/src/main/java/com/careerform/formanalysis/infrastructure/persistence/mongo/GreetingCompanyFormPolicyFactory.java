@@ -44,6 +44,8 @@ final class GreetingCompanyFormPolicyFactory {
         List<FieldRule> rules = new ArrayList<>();
         rules.add(new FieldRule(GreetingFormFingerprint.NAME, FormElement.INPUT, FormControl.TEXT,
             new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME), false, GreetingFormFingerprint.NAME));
+        rules.add(new FieldRule("basicInformation.englishName", FormElement.INPUT, FormControl.TEXT,
+            new DerivedBinding(DerivedRecipe.ENGLISH_FULL_NAME_GIVEN_FIRST), false, "basicInformation.englishName"));
         add(rules, GreetingFormFingerprint.PHONE, FormControl.TEXT, "contact.contact.phoneNumber", null);
         add(rules, "basicInformation.email", FormControl.TEXT, "contact.contact.email", null);
         add(rules, "basicInformation.nationalityCode", FormControl.TEXT, "personal.personal.nationality", null);
@@ -54,10 +56,50 @@ final class GreetingCompanyFormPolicyFactory {
             FormControl.RADIO, "disability.disability.disabilityStatus", null);
         add(rules, "militaryServicePreferentialEmploymentStatus.veteran.veteranStatus",
             FormControl.RADIO, "veteran.veteran.veteranStatus", null);
+        remainingFields(rules);
         conditionalDetails(rules);
         education(rules, "universities", "university", "educationuniversity");
         education(rules, "graduateSchools", "graduateSchool", "educationgraduateschool");
         return List.copyOf(rules);
+    }
+
+    private static void remainingFields(List<FieldRule> rules) {
+        lookup(rules, "basicInformation.gender", "personal.personal.gender", Map.of(
+            "남성", "남성", "여성", "여성", "남자", "남성", "여자", "여성"));
+        String high = "educationalBackground.highSchool.";
+        add(rules, high + "schoolName", FormControl.TEXT, "education.highSchool.schoolName", "educationhighschool");
+        add(rules, high + "completionStatus", FormControl.BUTTON, "education.highSchool.completionStatus", "educationhighschool");
+        add(rules, high + "enrollmentPeriod.startDate", FormControl.BUTTON, "education.highSchool.startDate", "educationhighschool");
+        add(rules, high + "enrollmentPeriod.endDate", FormControl.BUTTON, "education.highSchool.endDate", "educationhighschool");
+
+        String work = "workHistory.workExperiences.*.";
+        lookup(rules, work + "employmentType", "careers.career.employmentType", Map.of(
+            "정규", "정규직", "계약", "계약직", "파견", "파견직", "프리랜서", "프리랜서",
+            "개인사업", "개인사업", "병역특례", "병역특례", "인턴", "인턴", "아르바이트", "아르바이트", "기타", "기타"), "careerscareer");
+        add(rules, work + "companyName", FormControl.TEXT, "careers.career.companyName", "careerscareer");
+        add(rules, work + "employmentPeriod.startDate", FormControl.BUTTON, "careers.career.startDate", "careerscareer");
+        add(rules, work + "employmentPeriod.endDate", FormControl.BUTTON, "careers.career.endDate", "careerscareer");
+        add(rules, work + "employmentStatus", FormControl.CHECKBOX, "careers.career.employmentStatus", "careerscareer");
+        add(rules, work + "department", FormControl.TEXT, "careers.career.department", "careerscareer");
+        add(rules, work + "positionRank", FormControl.TEXT, "careers.career.position", "careerscareer");
+        rules.add(new FieldRule(work + "dutiesResponsibility", FormElement.TEXTAREA, FormControl.TEXTAREA,
+            new DirectBinding("careers.career.responsibilities"), false, work + "dutiesResponsibility", "careerscareer"));
+
+        String activities = "languagesCertificationsAndOtherActivity.";
+        String test = activities + "certifiedLanguageTests.*.";
+        add(rules, test + "foreignLanguage", FormControl.BUTTON, "languages.languageTest.language", "languageslanguagetest");
+        add(rules, test + "testName", FormControl.TEXT, "languages.languageTest.testName", "languageslanguagetest");
+        add(rules, test + "acquisitionDate", FormControl.BUTTON, "languages.languageTest.acquisitionDate", "languageslanguagetest");
+        add(rules, test + "grade", FormControl.BUTTON, "languages.languageTest.grade", "languageslanguagetest");
+        add(rules, test + "score.score", FormControl.TEXT, "languages.languageTest.grade", "languageslanguagetest");
+        String skill = activities + "foreignLanguageProficiencies.*.";
+        add(rules, skill + "foreignLanguage", FormControl.BUTTON, "languages.languageSkill.language", "languageslanguageskill");
+        lookup(rules, skill + "conversationalProficiency", "languages.languageSkill.conversationalLevel", Map.of(
+            "기초수준", "기초수준", "일상 대화", "일상 대화 가능", "일상 대화 가능", "일상 대화 가능", "비즈니스 가능", "비즈니스 가능", "원어민 수준", "원어민 수준"), "languageslanguageskill");
+        String certificate = activities + "certificatesLicenses.*.";
+        add(rules, certificate + "credentials", FormControl.TEXT, "certifications.certificate.name", "certificationscertificate");
+        add(rules, certificate + "issuingAgency", FormControl.TEXT, "certifications.certificate.issuer", "certificationscertificate");
+        add(rules, certificate + "acquisitionDate", FormControl.BUTTON, "certifications.certificate.acquisitionDate", "certificationscertificate");
     }
 
     private static void conditionalDetails(List<FieldRule> rules) {
@@ -90,8 +132,12 @@ final class GreetingCompanyFormPolicyFactory {
     }
 
     private static void lookup(List<FieldRule> rules, String name, String key, Map<String, String> options) {
+        lookup(rules, name, key, options, null);
+    }
+
+    private static void lookup(List<FieldRule> rules, String name, String key, Map<String, String> options, String groupId) {
         rules.add(new FieldRule(name, FormElement.INPUT, FormControl.BUTTON,
-            new LookupBinding(key, options), false, name));
+            new LookupBinding(key, options), false, name, groupId));
     }
 
     private static void education(List<FieldRule> rules, String siteGroup, String profileGroup, String groupId) {
@@ -123,6 +169,15 @@ final class GreetingCompanyFormPolicyFactory {
         }
         add(rules, name + "majors.0", FormControl.TEXT, key + "majorName", groupId);
         if (siteGroup.equals("universities")) {
+            for (int slot : List.of(1, 2)) {
+                String major = name + "majors." + slot;
+                rules.add(new FieldRule(major, FormElement.INPUT, FormControl.TEXT,
+                    new DerivedBinding(slot == 1 ? DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_1_NAME : DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_2_NAME),
+                    false, major, groupId));
+                rules.add(new FieldRule(major + ".majorClassification", FormElement.INPUT, FormControl.BUTTON,
+                    new DerivedBinding(slot == 1 ? DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION : DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION),
+                    false, major + ".majorClassification", groupId));
+            }
             rules.add(new FieldRule(name + "admissionType", FormElement.INPUT, FormControl.RADIO,
                 new LookupBinding(key + "transferStatus", Map.of("비해당", "입학", "해당", "편입")),
                 false, name + "admissionType", groupId));

@@ -153,61 +153,21 @@ const nestedFieldsRequest: FieldsAnalyzeRequest = {
 };
 
 describe("analysis API response validation", () => {
-  it("accepts a bounded opaque context on a verified adapter decision", () => {
-    const base = {
-      snapshotId: "snapshot-a",
-      mode: "ADAPTER",
-      analysisStatus: "COMPLETE",
-      preparationPlans: [],
-    };
-    expect(
-      validatePreparationResponse(preparationRequest, {
-        ...base,
-        routingContext: "a".repeat(32),
-      }).routingContext,
-    ).toBe("a".repeat(32));
-    expect(() =>
-      validatePreparationResponse(preparationRequest, {
-        ...base,
-        routingContext: "short",
-      }),
-    ).toThrow(AnalysisContractError);
-    expect(() =>
-      validatePreparationResponse(preparationRequest, {
-        ...base,
-        mode: "GENERIC",
-        routingContext: "a".repeat(32),
-      }),
-    ).toThrow(AnalysisContractError);
-    expect(
-      validatePreparationResponse(preparationRequest, {
-        ...base,
-        analysisStatus: "BLOCKED",
-        blockCode: "ADAPTER_POLICY_UNAVAILABLE",
-        routingContext: "a".repeat(32),
-      }).routingContext,
-    ).toBe("a".repeat(32));
-  });
-
-  it("accepts retryable Greeting DNS blocks without any write plan", () => {
-    expect(
-      validatePreparationResponse(preparationRequest, {
-        snapshotId: "snapshot-a",
-        mode: "ADAPTER",
-        analysisStatus: "BLOCKED",
-        preparationPlans: [],
-        blockCode: "GREETING_DNS_UNAVAILABLE",
-      }).blockCode,
-    ).toBe("GREETING_DNS_UNAVAILABLE");
-    expect(
-      validateFieldsResponse(fieldsRequest, {
-        snapshotId: "snapshot-b",
-        mode: "ADAPTER",
-        analysisStatus: "BLOCKED",
-        fields: [],
-        blockCode: "GREETING_DNS_UNAVAILABLE",
-      }).blockCode,
-    ).toBe("GREETING_DNS_UNAVAILABLE");
+  it("rejects site-specific metadata in the common response", () => {
+    for (const extra of [
+      { routingContext: "a".repeat(32) },
+      { executionAdapterId: "greeting-v1" },
+    ]) {
+      expect(() =>
+        validatePreparationResponse(preparationRequest, {
+          snapshotId: "snapshot-a",
+          mode: "ADAPTER",
+          analysisStatus: "COMPLETE",
+          preparationPlans: [],
+          ...extra,
+        }),
+      ).toThrow(AnalysisContractError);
+    }
   });
   it("accepts a preparation plan that targets a candidate from the same snapshot", () => {
     const result = validatePreparationResponse(preparationRequest, {
@@ -1215,71 +1175,13 @@ describe("SELECT_DATE capability", () => {
   });
 });
 
-describe("backend-designated execution adapter", () => {
-  const cases = [
-    [
-      "preparation",
-      (value: unknown) =>
-        validatePreparationResponse(
-          { ...preparationRequest, sections: [] },
-          value,
-        ),
-      { snapshotId: "snapshot-a", preparationPlans: [] },
-    ],
-    [
-      "fields",
-      (value: unknown) =>
-        validateFieldsResponse({ ...fieldsRequest, sections: [] }, value),
-      { snapshotId: "snapshot-b", fields: [] },
-    ],
-  ] as const;
-
-  it.each(cases)(
-    "accepts Greeting on complete adapter %s responses",
-    (_name, validate, body) => {
-      expect(
-        validate({
-          ...body,
-          mode: "ADAPTER",
-          analysisStatus: "COMPLETE",
-          executionAdapterId: "greeting-v1",
-        }),
-      ).toMatchObject({ executionAdapterId: "greeting-v1" });
-    },
-  );
-
-  it.each(cases)(
-    "rejects unknown or incompatible adapter IDs on %s responses",
-    (_name, validate, body) => {
-      for (const [mode, analysisStatus, executionAdapterId] of [
-        ["ADAPTER", "COMPLETE", "unknown"],
-        ["GENERIC", "COMPLETE", "greeting-v1"],
-        ["ADAPTER", "PARTIAL", "greeting-v1"],
-        ["ADAPTER", "BLOCKED", "greeting-v1"],
-      ]) {
-        expect(() =>
-          validate({
-            ...body,
-            mode,
-            analysisStatus,
-            executionAdapterId,
-            ...(analysisStatus === "BLOCKED"
-              ? { blockCode: "ADAPTER_STRUCTURE_MISMATCH" }
-              : {}),
-          }),
-        ).toThrow(AnalysisContractError);
-      }
-    },
-  );
-});
-
 describe("Greeting custom execution contracts", () => {
   function contract(command: "SEARCH_SELECTION" | "SELECT_DATE") {
     const date = command === "SELECT_DATE";
     const request: FieldsAnalyzeRequest = {
       schemaVersion: 2,
       snapshotId: "greeting-contract",
-      site: { host: "custom.example", pathPattern: "/apply" },
+      site: { host: "sample.career.greetinghr.com", pathPattern: "/apply" },
       supportedWriteCommands: ["SELECT_DATE"],
       sections: [
         {
@@ -1301,7 +1203,6 @@ describe("Greeting custom execution contracts", () => {
     const response = {
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
-      executionAdapterId: "greeting-v1",
       analysisStatus: "COMPLETE",
       fields: [
         {
@@ -1323,6 +1224,74 @@ describe("Greeting custom execution contracts", () => {
     return { request, response };
   }
   it.each(["SEARCH_SELECTION", "SELECT_DATE"] as const)(
+    "validates %s on an arbitrary custom domain using the existing base candidates",
+    (command) => {
+      const { request, response } = contract(command);
+      const basicFields = [
+        "basicInformation.name",
+        "basicInformation.phoneNumber.nationalNumber",
+      ].map((domName, index) => ({
+        candidateId: `base-${index}`,
+        element: "input" as const,
+        control: "text" as const,
+        visibility: "visible" as const,
+        domName,
+      }));
+      const customRequest = {
+        ...request,
+        site: {
+          host: "jobs.unregistered.example",
+          pathPattern: "/ko/o/*/apply",
+        },
+        sections: [
+          {
+            ...request.sections[0]!,
+            fields: [...request.sections[0]!.fields, ...basicFields],
+          },
+        ],
+      };
+      const customResponse = {
+        ...response,
+        fields: [
+          ...response.fields,
+          ...basicFields.map((field) => ({
+            candidateId: field.candidateId,
+            matchType: "NO_MATCH",
+            mappingStatus: "ADAPTER_VERIFIED",
+            interactionStatus: "BLOCKED",
+            reasonCodes: ["NO_MATCH"],
+          })),
+        ],
+      };
+      expect(
+        validateFieldsResponse(customRequest, customResponse).fields[0],
+      ).toMatchObject({ writePlan: { command } });
+      expect(() =>
+        validateFieldsResponse(
+          {
+            ...customRequest,
+            sections: [
+              {
+                ...customRequest.sections[0],
+                fields: [
+                  ...customRequest.sections[0].fields,
+                  { ...basicFields[0], candidateId: "duplicate-name" },
+                ],
+              },
+            ],
+          },
+          {
+            ...customResponse,
+            fields: [
+              ...customResponse.fields,
+              { ...customResponse.fields[1], candidateId: "duplicate-name" },
+            ],
+          },
+        ),
+      ).toThrow(AnalysisContractError);
+    },
+  );
+  it.each(["SEARCH_SELECTION", "SELECT_DATE"] as const)(
     "allows %s only with the Greeting designation",
     (command) => {
       const { request, response } = contract(command);
@@ -1330,11 +1299,88 @@ describe("Greeting custom execution contracts", () => {
         { writePlan: { command } },
       );
       expect(() =>
-        validateFieldsResponse(request, {
-          ...response,
-          executionAdapterId: undefined,
-        }),
+        validateFieldsResponse(
+          {
+            ...request,
+            site: { ...request.site, host: "unregistered.example" },
+          },
+          response,
+        ),
       ).toThrow(AnalysisContractError);
+    },
+  );
+  it.each([
+    [
+      "educationalBackground.highSchool.schoolName",
+      "education.highSchool.schoolName",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "workHistory.workExperiences.0.companyName",
+      "careers.career.companyName",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.testName",
+      "languages.languageTest.testName",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials",
+      "certifications.certificate.name",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "educationalBackground.highSchool.enrollmentPeriod.startDate",
+      "education.highSchool.startDate",
+      "SELECT_DATE",
+    ],
+    [
+      "workHistory.workExperiences.0.employmentPeriod.startDate",
+      "careers.career.startDate",
+      "SELECT_DATE",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.acquisitionDate",
+      "languages.languageTest.acquisitionDate",
+      "SELECT_DATE",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate",
+      "certifications.certificate.acquisitionDate",
+      "SELECT_DATE",
+    ],
+  ] as const)(
+    "validates supported dependent field %s",
+    (name, key, command) => {
+      const { request, response } = contract(command);
+      request.sections[0]!.fields[0]!.domName = name;
+      response.fields[0]!.valueBinding.profileFieldKey = key;
+      expect(validateFieldsResponse(request, response).fields[0]).toMatchObject(
+        { writePlan: { command } },
+      );
+    },
+  );
+  it.each([1, 2])(
+    "validates composed additional major slot %s without a new API field",
+    (slot) => {
+      const { request, response } = contract("SEARCH_SELECTION");
+      request.sections[0]!.fields[0]!.domName = `educationalBackground.universities.0.majors.${slot}`;
+      const derived = {
+        ...response,
+        fields: [
+          {
+            ...response.fields[0],
+            valueBinding: {
+              type: "DERIVED",
+              recipe: `UNIVERSITY_ADDITIONAL_MAJOR_${slot}_NAME`,
+            },
+          },
+        ],
+      };
+      expect(validateFieldsResponse(request, derived).fields[0]).toMatchObject({
+        writePlan: { command: "SEARCH_SELECTION" },
+      });
     },
   );
   it("accepts nationality search only for the exact nationality binding", () => {
@@ -1377,6 +1423,7 @@ describe("Greeting custom execution contracts", () => {
 describe("Greeting English name manual review", () => {
   const request: FieldsAnalyzeRequest = {
     ...fieldsRequest,
+    site: { host: "sample.career.greetinghr.com", pathPattern: "/apply" },
     sections: [
       {
         sectionId: "s1",
@@ -1393,7 +1440,6 @@ describe("Greeting English name manual review", () => {
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
-    executionAdapterId: "greeting-v1",
     fields: [
       {
         candidateId: "field-1",
@@ -1404,13 +1450,12 @@ describe("Greeting English name manual review", () => {
       },
     ],
   };
-  it("accepts a designated English name review without a write plan", () => {
-    expect(validateFieldsResponse(request, response).fields[0]).toMatchObject({
-      interactionStatus: "UNVERIFIED",
-    });
+  it("rejects the obsolete English name order review response", () => {
+    expect(() => validateFieldsResponse(request, response)).toThrow(
+      AnalysisContractError,
+    );
   });
   it.each([
-    { executionAdapterId: undefined },
     { fields: [{ ...response.fields[0], writePlan: { command: "SET_TEXT" } }] },
     { fields: [{ ...response.fields[0], mappingStatus: "LLM_SUGGESTED" }] },
   ])("rejects an untrusted or writable manual review contract", (override) => {

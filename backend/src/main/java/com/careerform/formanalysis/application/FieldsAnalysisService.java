@@ -31,7 +31,6 @@ import com.careerform.formanalysis.dto.FieldsAnalysisResponse.MatchedFieldAnalys
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.Mode;
 import com.careerform.formanalysis.dto.FieldsAnalysisResponse.NoMatchFieldAnalysis;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
-import com.careerform.formanalysis.exception.ClientCapabilityRequiredException;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
@@ -76,24 +75,13 @@ public final class FieldsAnalysisService {
     }
 
     public FieldsAnalysisResponse analyze(FieldsAnalysisRequest request) {
-        return analyze(request, false);
-    }
-
-    public FieldsAnalysisResponse analyze(FieldsAnalysisRequest request, boolean greetingAdapterCapability) {
         validateSnapshot(request);
         FieldRoute route = router.route(request);
-        if (route.greeting() && !greetingAdapterCapability) {
-            throw new ClientCapabilityRequiredException();
-        }
-        String executionAdapterId = route.greeting() ? "greeting-v1" : null;
         if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
             return FieldsAnalysisResponse.adapterStructureMismatch(request.snapshotId());
         }
         if (route.kind() == RouteKind.POLICY_UNAVAILABLE) {
             return FieldsAnalysisResponse.adapterPolicyUnavailable(request.snapshotId());
-        }
-        if (route.kind() == RouteKind.DNS_UNAVAILABLE) {
-            return FieldsAnalysisResponse.greetingDnsUnavailable(request.snapshotId());
         }
         Mode mode = route.kind() == RouteKind.ADAPTER
             ? Mode.ADAPTER
@@ -109,8 +97,7 @@ public final class FieldsAnalysisService {
             return FieldsAnalysisResponse.llmUnavailable(request.snapshotId());
         }
         if (request.fieldCandidatesInTraversalOrder().isEmpty()) {
-            return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of())
-                .withExecutionAdapterId(executionAdapterId);
+            return FieldsAnalysisResponse.complete(request.snapshotId(), mode, List.of());
         }
         try {
             FieldMappingResolver.Resolution resolution =
@@ -120,7 +107,7 @@ public final class FieldsAnalysisService {
                 request.snapshotId(),
                 mode,
                 mapFieldsInRequestOrder(request, resolution, mappingStatus, route.greeting())
-            ).withExecutionAdapterId(executionAdapterId);
+            );
         }
         catch (ResolverException exception) {
             return mode == Mode.ADAPTER

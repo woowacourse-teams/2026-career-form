@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
@@ -48,7 +58,6 @@ it("executes server-approved Greeting birth and education dates through their ow
   const errors: string[] = [];
   const analyze = createAnalyzeFields({
     adapter: greetingWorkflowAdapter,
-    executionAdapterId: "greeting-v1",
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
@@ -69,7 +78,6 @@ it("executes server-approved Greeting birth and education dates through their ow
           {
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
-            executionAdapterId: "greeting-v1",
             analysisStatus: "COMPLETE",
             fields: request.sections
               .flatMap((section) => [
@@ -149,7 +157,6 @@ it("stops before a Greeting calendar click when the saved profile changes after 
   const errors: string[] = [];
   const analyze = createAnalyzeFields({
     adapter: greetingWorkflowAdapter,
-    executionAdapterId: "greeting-v1",
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
@@ -169,7 +176,6 @@ it("stops before a Greeting calendar click when the saved profile changes after 
         return {
           snapshotId: request.snapshotId,
           mode: "ADAPTER" as const,
-          executionAdapterId: "greeting-v1" as const,
           analysisStatus: "COMPLETE" as const,
           fields: request.sections.flatMap((section) =>
             section.fields.map((field) => ({
@@ -239,7 +245,6 @@ it("recollects a Greeting control after a preceding selection rerenders the form
         return true;
       },
     },
-    executionAdapterId: "greeting-v1",
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
@@ -257,7 +262,6 @@ it("recollects a Greeting control after a preceding selection rerenders the form
       analyzeFields: async (request) => ({
         snapshotId: request.snapshotId,
         mode: "ADAPTER" as const,
-        executionAdapterId: "greeting-v1" as const,
         analysisStatus: "COMPLETE" as const,
         fields: request.sections.flatMap((section) =>
           section.fields.map((field) => ({

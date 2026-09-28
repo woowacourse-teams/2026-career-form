@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -41,22 +51,26 @@ function ControlledGreetingForm({ renderCount }: { renderCount: number }) {
   const [phone, setPhone] = useState("");
   return (
     <section aria-label="기본 정보" data-render-count={renderCount}>
-      <label>
-        이름{" "}
-        <input
-          name="basicInformation.name"
-          value={name}
-          onChange={(event) => setName(event.currentTarget.value)}
-        />
-      </label>
-      <label>
-        전화번호{" "}
-        <input
-          name="basicInformation.phoneNumber.nationalNumber"
-          value={phone}
-          onChange={(event) => setPhone(event.currentTarget.value)}
-        />
-      </label>
+      <div data-scope="field" data-part="root">
+        <label>
+          이름{" "}
+          <input
+            name="basicInformation.name"
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+          />
+        </label>
+      </div>
+      <div data-scope="field" data-part="root">
+        <label>
+          전화번호{" "}
+          <input
+            name="basicInformation.phoneNumber.nationalNumber"
+            value={phone}
+            onChange={(event) => setPhone(event.currentTarget.value)}
+          />
+        </label>
+      </div>
       <label>
         이메일 <input name="basicInformation.email" />
       </label>
@@ -173,15 +187,12 @@ describe("Greeting with generic autofill controls", () => {
           mode: "ADAPTER" as const,
           analysisStatus: "COMPLETE" as const,
           preparationPlans,
-          executionAdapterId: "greeting-v1" as const,
-          routingContext: "r".repeat(32),
         };
       },
       analyzeFields: async (request: FieldsAnalyzeRequest) => ({
         snapshotId: request.snapshotId,
         mode: "ADAPTER" as const,
         analysisStatus: "COMPLETE" as const,
-        executionAdapterId: "greeting-v1" as const,
         fields: request.sections
           .flatMap((section) => [
             ...section.fields,
@@ -215,8 +226,7 @@ describe("Greeting with generic autofill controls", () => {
     );
 
     await screen.findByRole("heading", { name: "기입 결과" });
-    expect(preparationRequests).toHaveLength(3);
-    expect(preparationRequests[2].routingContext).toBe("r".repeat(32));
+    expect(preparationRequests).toHaveLength(2);
     expect(schoolClicks).toBe(1);
     expect(majorClicks).toBe(1);
     expect(
@@ -231,31 +241,33 @@ describe("Greeting with generic autofill controls", () => {
     ).toHaveLength(2);
   });
 
-  it("recollects preparation with the server-designated adapter and routing context", async () => {
-    const page = greetingDocument("custom-career.example.test");
+  it("collects the local adapter immediately and uses one preparation call", async () => {
+    const page = greetingDocument("jobs.unregistered.example");
     render(<ControlledGreetingForm renderCount={0} />, {
       container: page.body,
     });
+    const calls: string[] = [];
     const requests: PreparationAnalyzeRequest[] = [];
     const apiClient = {
       analyzePreparation: async (request: PreparationAnalyzeRequest) => {
+        calls.push("preparation");
         requests.push(request);
         return {
           snapshotId: request.snapshotId,
           mode: "ADAPTER" as const,
           analysisStatus: "COMPLETE" as const,
           preparationPlans: [],
-          executionAdapterId: "greeting-v1" as const,
-          routingContext: "r".repeat(32),
         };
       },
-      analyzeFields: async (request: FieldsAnalyzeRequest) => ({
-        snapshotId: request.snapshotId,
-        mode: "ADAPTER" as const,
-        analysisStatus: "COMPLETE" as const,
-        executionAdapterId: "greeting-v1" as const,
-        fields: [],
-      }),
+      analyzeFields: async (request: FieldsAnalyzeRequest) => {
+        calls.push("fields");
+        return {
+          snapshotId: request.snapshotId,
+          mode: "ADAPTER" as const,
+          analysisStatus: "COMPLETE" as const,
+          fields: [],
+        };
+      },
     };
     render(
       <AutofillOverlay
@@ -266,34 +278,43 @@ describe("Greeting with generic autofill controls", () => {
       />,
     );
     await screen.findByRole("heading", { name: "기입 결과" });
-    expect(requests).toHaveLength(2);
-    expect(requests[1].snapshotId).not.toBe(requests[0].snapshotId);
-    expect(requests[0].routingContext).toBeUndefined();
-    expect(requests[1].routingContext).toBe("r".repeat(32));
+    expect(requests).toHaveLength(1);
+    expect(calls).toEqual(["preparation", "fields"]);
   });
-  it.each([undefined, "greeting-v2"])(
-    "stops when field analysis changes the designated adapter to %s",
-    async (fieldAdapterId) => {
-      const page = greetingDocument("custom-career.example.test");
+  it.each(["preparation", "fields", "llm-fields"] as const)(
+    "stops when a known Greeting site receives generic %s",
+    async (phase) => {
+      const page = greetingDocument("jobs.unregistered.example");
       render(<ControlledGreetingForm renderCount={0} />, {
         container: page.body,
       });
       const apiClient = {
         analyzePreparation: async (request: PreparationAnalyzeRequest) => ({
           snapshotId: request.snapshotId,
-          mode: "ADAPTER" as const,
+          mode:
+            phase === "preparation"
+              ? ("GENERIC" as const)
+              : ("ADAPTER" as const),
           analysisStatus: "COMPLETE" as const,
           preparationPlans: [],
-          executionAdapterId: "greeting-v1" as const,
-          routingContext: "r".repeat(32),
         }),
         analyzeFields: async (request: FieldsAnalyzeRequest) =>
           ({
             snapshotId: request.snapshotId,
-            mode: "ADAPTER" as const,
+            mode: phase === "llm-fields" ? "ADAPTER" : "GENERIC",
             analysisStatus: "COMPLETE" as const,
-            executionAdapterId: fieldAdapterId,
-            fields: [],
+            fields:
+              phase === "llm-fields"
+                ? request.sections
+                    .flatMap((section) => section.fields)
+                    .map((field) => ({
+                      candidateId: field.candidateId,
+                      matchType: "NO_MATCH",
+                      mappingStatus: "LLM_SUGGESTED",
+                      interactionStatus: "BLOCKED",
+                      reasonCodes: ["NO_MATCH"],
+                    }))
+                : [],
           }) as import("../autofill/api/types").FieldsAnalyzeResponse,
       };
       render(
@@ -305,7 +326,10 @@ describe("Greeting with generic autofill controls", () => {
         />,
       );
       await screen.findByRole("heading", {
-        name: "페이지 실행 방식이 변경되었습니다. 다시 시작해 주세요",
+        name:
+          phase === "preparation"
+            ? "분석을 완료하지 못했습니다"
+            : "페이지 실행 방식이 변경되었습니다. 다시 시작해 주세요",
       });
       expect(
         page.querySelector<HTMLInputElement>("[name='basicInformation.name']")
@@ -316,6 +340,7 @@ describe("Greeting with generic autofill controls", () => {
   it.each([
     "kakaomobility.career.greetinghr.com",
     "career.hyundai-autoever.com",
+    "jobs.unregistered.example",
   ])("uses full profile, writes only name and phone on %s", async (host) => {
     const page = greetingDocument(host);
     const form = render(<ControlledGreetingForm renderCount={0} />, {
@@ -337,12 +362,10 @@ describe("Greeting with generic autofill controls", () => {
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",
             preparationPlans: [],
-            routingContext: "r".repeat(32),
           },
         };
       }
       const request = typed.payload as FieldsAnalyzeRequest;
-      expect(request.routingContext).toBe("r".repeat(32));
       return {
         ok: true as const,
         data: {
@@ -469,4 +492,41 @@ describe("Greeting with generic autofill controls", () => {
     ).toHaveLength(2);
     expect(conflictingValueWrites).not.toHaveBeenCalled();
   });
+});
+
+it("stops before actions when an adapter response has only unowned Greeting name markers", async () => {
+  const page = greetingDocument("jobs.unregistered.example");
+  page.body.innerHTML =
+    '<label>이름<input name="basicInformation.name"></label><label>전화번호<input name="basicInformation.phoneNumber.nationalNumber"></label>';
+  const calls: string[] = [];
+  render(
+    <AutofillOverlay
+      onClose={vi.fn()}
+      repository={createRepository()}
+      pageDocument={page}
+      apiClient={{
+        analyzePreparation: async (request) => {
+          calls.push("preparation");
+          return {
+            snapshotId: request.snapshotId,
+            mode: "ADAPTER",
+            analysisStatus: "COMPLETE",
+            preparationPlans: [],
+          };
+        },
+        analyzeFields: async (request) => {
+          calls.push("fields");
+          return {
+            snapshotId: request.snapshotId,
+            mode: "ADAPTER",
+            analysisStatus: "COMPLETE",
+            fields: [],
+          };
+        },
+      }}
+    />,
+  );
+  await screen.findByRole("heading", { name: "분석을 완료하지 못했습니다" });
+  expect(calls).toEqual(["preparation"]);
+  expect(page.querySelector<HTMLInputElement>("input")!.value).toBe("");
 });

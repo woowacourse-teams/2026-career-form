@@ -1,3 +1,13 @@
+import { beforeEach as useGreetingHost } from "vitest";
+useGreetingHost(() => {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({
+    url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
+  });
+});
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { collectFieldsSnapshot, collectPreparationSnapshot } from "./collect";
@@ -39,9 +49,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
   it("emits one root section when a Greeting form has no repeatable actions", () => {
     document.body.innerHTML = `<div data-scope="field" data-part="root"><label>이름</label><input name="basicInformation.name"></div>`;
 
-    const snapshot = collectPreparationSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const snapshot = collectPreparationSnapshot(document);
 
     expect(
       snapshot.request.sections.map((section) => section.sectionId),
@@ -76,9 +84,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       <div id="email-options" role="listbox"><div role="option">private@example.com</div></div>`,
     );
 
-    const fields = collectFieldsSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const fields = collectFieldsSnapshot(document);
     const candidates = fields.request.sections.flatMap((section) => [
       ...section.fields,
       ...(section.items ?? []).flatMap((item) => item.fields),
@@ -95,9 +101,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
         (field) => field.domName === `${UNIVERSITY}.enrollmentPeriod.startDate`,
       )?.semanticContext?.labels,
     ).toEqual([{ source: "label", text: "입학일" }]);
-    const preparation = collectPreparationSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const preparation = collectPreparationSnapshot(document);
     expect(
       preparation.request.sections
         .flatMap((section) => section.actionCandidates)
@@ -132,9 +136,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       '<div class="application-template"><input name="template-hidden-field"></div>',
     );
 
-    const snapshot = collectFieldsSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const snapshot = collectFieldsSnapshot(document);
     const names = snapshot.request.sections.flatMap((section) => [
       ...section.fields.map((field) => field.domName),
       ...(section.items ?? []).flatMap((item) =>
@@ -147,9 +149,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
   });
 
   it("collects verified custom controls and education rows by named identity", () => {
-    const fields = collectFieldsSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const fields = collectFieldsSnapshot(document);
     const candidates = fields.request.sections.flatMap((section) => [
       ...section.fields,
       ...(section.items ?? []).flatMap((item) => item.fields),
@@ -188,9 +188,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
         "ready",
       );
     }
-    const preparation = collectPreparationSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const preparation = collectPreparationSnapshot(document);
     const add = preparation.request.sections
       .flatMap((section) => section.actionCandidates)
       .find((candidate) => candidate.domId === "greeting:add:universities");
@@ -198,7 +196,12 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
     expect(preparation.countRepeatableGroups(add!.candidateId)).toBe(1);
   });
 
-  it("does not infer Greeting controls without an explicit adapter ID", () => {
+  it("does not infer Greeting controls on an unregistered host", () => {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(options: { url: string }): void };
+      }
+    ).jsdom.reconfigure({ url: "https://unregistered.example/apply" });
     const fields = collectFieldsSnapshot(document);
     const candidates = fields.request.sections.flatMap((section) => [
       ...section.fields,
@@ -240,9 +243,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       </div>`,
     );
 
-    const fields = collectFieldsSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const fields = collectFieldsSnapshot(document);
     const rows = fields.request.sections.flatMap(
       (section) => section.items ?? [],
     );
@@ -259,9 +260,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       rowIndex: 1,
       rowCount: 2,
     });
-    const preparation = collectPreparationSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const preparation = collectPreparationSnapshot(document);
     const actions = preparation.request.sections.flatMap(
       (section) => section.actionCandidates,
     );
@@ -288,9 +287,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       "beforeend",
       '<div data-scope="accordion" data-part="item"><input name="educationalBackground.universities.1.schoolName" role="combobox"></div>',
     );
-    const snapshot = collectFieldsSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const snapshot = collectFieldsSnapshot(document);
     const school = snapshot.request.sections
       .flatMap((section) => section.items ?? [])
       .flatMap((item) => item.fields)
@@ -334,9 +331,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
     expect(greetingCollectionAdapter.actionDomId(firstAdd)).toBe(
       "greeting:add:graduateSchools:0:majors",
     );
-    const first = collectPreparationSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const first = collectPreparationSnapshot(document);
     const major = first.request.sections
       .flatMap((section) => section.actionCandidates)
       .find(
@@ -344,6 +339,8 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       );
     expect(major).toBeDefined();
     expect(first.countRepeatableGroups(major!.candidateId)).toBe(1);
+    const beforeState = first.repeatableGroupState(major!.candidateId);
+    expect(beforeState).toHaveLength(1);
     const oldPrefix = "educationalBackground.graduateSchools.0";
     const changedPrefix = "educationalBackground.graduateSchools.1";
     for (const control of document.querySelectorAll<HTMLElement>(
@@ -355,6 +352,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       );
     }
     expect(first.countRepeatableGroups(major!.candidateId)).toBeUndefined();
+    expect(first.repeatableGroupState(major!.candidateId)).toBeUndefined();
     for (const control of document.querySelectorAll<HTMLElement>(
       `[name^="${changedPrefix}."]`,
     )) {
@@ -372,9 +370,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       "beforebegin",
       `<button name="${prefix}.majors.1.majorClassification">복수전공</button><button name="${prefix}.majors.1.majorField">사회계열</button><input name="${prefix}.majors.1" role="combobox">`,
     );
-    const second = collectPreparationSnapshot(document, {
-      executionAdapterId: "greeting-v1",
-    });
+    const second = collectPreparationSnapshot(document);
     const secondMajor = second.request.sections
       .flatMap((section) => section.actionCandidates)
       .find(
@@ -382,14 +378,33 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
       );
     expect(secondMajor).toBeDefined();
     expect(second.countRepeatableGroups(secondMajor!.candidateId)).toBe(2);
+    expect(second.repeatableGroupState(secondMajor!.candidateId)).toHaveLength(
+      2,
+    );
+    expect(second.repeatableGroupState(secondMajor!.candidateId)?.[0]).toBe(
+      beforeState?.[0],
+    );
+    const existingName = document.querySelector<HTMLInputElement>(
+      `[name="${prefix}.majors.0"]`,
+    )!;
+    existingName.value = "changed major";
+    expect(second.repeatableGroupState(secondMajor!.candidateId)?.[0]).not.toBe(
+      beforeState?.[0],
+    );
+    existingName.value = "";
+    const existingClassification = document.querySelector<HTMLElement>(
+      `[name="${prefix}.majors.0.majorClassification"]`,
+    )!;
+    existingClassification.textContent = "복수전공";
+    expect(second.repeatableGroupState(secondMajor!.candidateId)?.[0]).not.toBe(
+      beforeState?.[0],
+    );
   });
 });
 
 it("collects nationality identity without its query or country suggestions", () => {
   document.body.innerHTML = `<div data-scope="field" data-part="root"><label>국적*</label><input name="basicInformation.nationalityCode" data-scope="combobox" data-part="input" role="combobox" aria-controls="countries" value="개인검색어"></div><div id="countries" role="listbox"><div role="option" data-value="KR">대한민국</div></div>`;
-  const snapshot = collectFieldsSnapshot(document, {
-    executionAdapterId: "greeting-v1",
-  });
+  const snapshot = collectFieldsSnapshot(document);
   const nationality = snapshot.request.sections
     .flatMap((section) => section.fields)
     .find((field) => field.domName === "basicInformation.nationalityCode");
