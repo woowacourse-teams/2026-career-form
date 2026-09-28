@@ -7,6 +7,7 @@ import { browser } from "wxt/browser";
 
 import type { AnalysisResponseEnvelope } from "./messages";
 import { isAnalysisResponseEnvelope } from "./messages";
+import { debugApiMessage } from "../debug/autofill-debug";
 import type {
   AnalysisApiClient,
   FieldsAnalyzeRequest,
@@ -75,16 +76,31 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       type: "AUTOFILL_ANALYZE_FIELDS",
       payload: request,
     });
-    return validateFieldsResponse(request, response);
+    try {
+      return validateFieldsResponse(request, response);
+    } catch (error) {
+      debugApiMessage(
+        { type: "AUTOFILL_ANALYZE_FIELDS (응답 검증 실패)" },
+        { error },
+      );
+      throw error;
+    }
   }
 
   private async request(message: unknown): Promise<unknown> {
     let envelope: unknown;
     try {
       envelope = await this.sendMessage(message);
-    } catch {
+    } catch (error) {
+      debugApiMessage(message, { error });
       throw new AnalysisServiceError(errorMessages.NETWORK);
     }
+    debugApiMessage(message, {
+      envelope,
+      ...(isAnalysisResponseEnvelope(envelope) && !envelope.ok
+        ? { error: envelope.code }
+        : {}),
+    });
     if (!isAnalysisResponseEnvelope(envelope)) {
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     }

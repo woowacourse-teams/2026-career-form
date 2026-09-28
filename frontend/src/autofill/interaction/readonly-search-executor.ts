@@ -16,6 +16,7 @@ import {
   type TargetIdentity,
 } from "./readonly-search";
 import { SearchFailure, SearchSession } from "./search-session";
+import { debugSearchFailure, debugSearchStep } from "../debug/autofill-debug";
 import { clickVerifiedJsResult } from "./js-result-click-bridge";
 import {
   completeRegionList,
@@ -147,6 +148,17 @@ export async function executeReadonlySearch(
       effect: "none",
     };
   activeTransactions.add(document);
+  let step = "시작";
+  const trace = (next: string, detail?: unknown) => {
+    step = next;
+    debugSearchStep(targetCandidateId, next, detail);
+  };
+  trace("시작", {
+    canonicalFieldKey,
+    expectedValue,
+    expectedCurrentValue: args.expectedCurrentValue,
+    searchValues: args.searchValues,
+  });
   const session = new SearchSession(args);
   const outerUrl = document.URL;
   let effect: SearchEffect = "none";
@@ -171,6 +183,7 @@ export async function executeReadonlySearch(
     const initialValue = target.value;
     const values = acceptedSearchValues(canonicalFieldKey, expectedValue);
     const attempts = searchAttempts(args, values[0]!);
+    trace("검색 대상 확인", { initialValue, values, attempts, target });
     const matchingValues = args.searchValues ? attempts : values;
     const matches = (value: string) =>
       matchingValues.some(
@@ -214,8 +227,10 @@ export async function executeReadonlySearch(
         throw new SearchFailure("existing_value_conflict");
       await session.prepareMutation();
       guard(values);
+      trace("이미 같은 값이 입력되어 변경 없음");
       return { status: "unchanged", targetCandidateId, identity, effect };
     }
+    trace("검색 버튼 탐색", identity.fieldGroup);
     const [openerRole] = await resolveRoles(session, [
       {
         role: "SEARCH_POPUP_OPENER",
@@ -279,11 +294,16 @@ export async function executeReadonlySearch(
         );
     }
     effect = "interaction-started";
+    trace("검색 버튼 클릭", {
+      opener,
+      flow: cjMajor ? "cj-major" : cjSchool ? "cj-school" : "generic",
+    });
     opener.click();
     surface = await session.wait(
       () => observation.discover(opener),
       "surface_not_found",
     );
+    trace("검색 화면 발견", surface);
     // Capture settled opener metadata once its attributed surface has appeared.
     identity.openerSignature = controlSignature(opener);
     identity.openerSignatures = identity.openers.map(controlSignature);
@@ -298,6 +318,7 @@ export async function executeReadonlySearch(
     };
     surfaceGuard();
     if (cjLease) {
+      trace(cjMajor ? "CJ 전공 검색 실행" : "CJ 학교 검색 실행");
       const runCj = cjMajor ? executeCjMajorSearch : executeCjSchoolSearch;
       const cjResult = await runCj(
         currentSurface,
@@ -367,6 +388,13 @@ export async function executeReadonlySearch(
         ? "query-and-submit"
         : "query-only"
       : "existing-options";
+    trace("검색 입력/실행 버튼 확인", {
+      mode: currentSurface.mode,
+      queries: queries.length,
+      submits: submits.length,
+      query,
+      submit,
+    });
     const initialSearchText = attempts[0]!;
     if (
       query &&
@@ -383,6 +411,7 @@ export async function executeReadonlySearch(
     let selectedSearchText = initialSearchText;
     for (const [attemptIndex, searchText] of attempts.entries()) {
       const attemptValues = args.searchValues ? [searchText] : values;
+      trace(`검색 시도 ${attemptIndex + 1}/${attempts.length}`, searchText);
       const baseline = resultBaseline(currentSurface);
       if (baseline.some((entry) => entry.busy === "true"))
         throw new SearchFailure("result_pending");
@@ -437,6 +466,15 @@ export async function executeReadonlySearch(
               nativeFormBinding.method,
             );
           }
+          trace(
+            "검색 실행 버튼 클릭",
+            nativeFormBinding
+              ? {
+                  method: nativeFormBinding.method,
+                  destination: nativeFormBinding.destination,
+                }
+              : submit,
+          );
           submit.click();
           if (nativeFormBinding) {
             await session.wait(
@@ -463,6 +501,7 @@ export async function executeReadonlySearch(
             : results.exact(attemptValues);
         }, "result_pending");
         selectedSearchText = searchText;
+        trace("일치 결과 발견", candidate?.element);
         break;
       } catch (error) {
         if (
@@ -529,6 +568,7 @@ export async function executeReadonlySearch(
     followUpObservation = selectionBinding
       ? captureSearchFollowUp(selectionBinding.scope, identity.target)
       : undefined;
+    trace("결과 선택 클릭", candidate.element);
     const resultLink =
       candidate.element.tagName === "A"
         ? (candidate.element as HTMLAnchorElement)
@@ -573,6 +613,11 @@ export async function executeReadonlySearch(
       : [];
     await session.prepareMutation();
     guard(selectedValues);
+    trace("선택 완료", {
+      selectedSearchText,
+      targetValue: identity.target.value,
+      followUpControls: followUpControls.length,
+    });
     return {
       status: "selected",
       targetCandidateId,
@@ -584,12 +629,14 @@ export async function executeReadonlySearch(
         : {}),
     };
   } catch (error) {
+    const reason =
+      error instanceof SearchFailure ? error.reason : "execution_failed";
+    debugSearchFailure(targetCandidateId, step, reason, effect, error);
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,
       effect,
-      reason:
-        error instanceof SearchFailure ? error.reason : "execution_failed",
+      reason,
     };
   } finally {
     followUpObservation?.dispose();

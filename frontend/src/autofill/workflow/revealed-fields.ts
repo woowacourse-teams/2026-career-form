@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { WorkflowAdapter, WorkflowDiagnostic } from "../adapters/workflow";
 import type { AnalysisApiClient } from "../api/types";
 import { collectFieldsSnapshot } from "../dom/collect";
+import { debugAnalysis } from "../debug/autofill-debug";
 import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
@@ -55,6 +56,7 @@ export function createWriteRevealedFields({
     const snapshot = collectFieldsSnapshot(pageDocument);
     onActivity?.("matching");
     const analysis = await apiClient.analyzeFields(snapshot.request);
+    debugAnalysis(snapshot, analysis);
     if (signal?.aborted) return;
     if (analysis.analysisStatus === "BLOCKED") {
       setWorkflowDiagnostics([
