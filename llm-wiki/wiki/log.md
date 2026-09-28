@@ -276,3 +276,15 @@
 - 승인된 후보 5개와 Issue의 ADR 결정을 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 비식별 기록했다.
 - BE 판정·문맥과 FE 어댑터 실행의 경계, 카카오모빌리티·현대오토에버·무신사·당근서비스·메디퀴터스의 화면별 지원 현황, `이메일주소`/`이메일` 단일 칸 호환을 topic과 지원 현황표에 연결했다.
 - 자동 테스트와 Aside 설치 확장의 입력 관측을 구분했다. 이메일 인증, 파일, 동의, 실제 저장·제출과 다른 Greeting 양식 전체의 호환성은 검증하지 않았다.
+## [2026-09-26] ingest | CF-114 범용 자격증 검색과 후속 재검토
+
+- Approval-Digest: 90d7fdfda386fb1e7451130ed6401efc3669ea4ee10ab3685e883b7ce3fb752a
+- 승인된 후보 5개를 [CF-114 bundle](../raw/issues/CF-114/manifest.md)에 기록하고 [범용 검색 topic](topics/generic-autofill-search.md)과 [지원 현황](topics/adapter-field-inventory.md)에 연결했다.
+- 회사 중립 반복 행·검색·새 승인 경계를 기록했다. 합성 회귀와 설치 빌드 확인을 실제 CJ 또는 다른 회사의 자동 입력 성공으로 확대하지 않는다.
+
+## [2026-09-28] ingest | CF-115 범용 자동 기입 실사이트 평가 기준선
+
+- Approval-Digest: 518589069f3ccddb753ef238afbb1cfba40604807f9fd95170192ba96ddbb65b
+- 승인된 후보 3개와 5개 사이트의 비식별 기준선을 [CF-115 bundle](../raw/issues/CF-115/manifest.md)에 기록하고 [평가 기준선 topic](topics/generic-autofill-evaluation-baselines.md)을 추가했다.
+- 실사이트 4개 측정과 1개 미확정, 단계별 지표, 실행 사용량과 오입력 구조를 기록했다. 실제 값, HTML, URL query, selector, 요청과 응답 원문, 계정과 세션 정보는 포함하지 않았다.
+- Issue raw는 실행 근거, topic은 revision별 사람용 이력, 하네스 JSON은 기계 판독 정본으로 구분했다. 여러 기준선의 자동 추세 집계는 현재 범위에 포함하지 않았다.

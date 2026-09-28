@@ -77,6 +77,8 @@ await Promise.all(
     "onboarding-guide.html",
     "content-scripts/autofill.js",
     "content-scripts/autofill.css",
+    // Re-injected by open-in-page-panel.ts for tabs opened before install.
+    "content-scripts/verified-js-result-main.js",
   ].map((fileName) => readFile(resolve(outputDirectory, fileName))),
 );
 

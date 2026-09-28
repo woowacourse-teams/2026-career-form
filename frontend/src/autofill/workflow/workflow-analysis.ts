@@ -13,12 +13,14 @@ export type {
   CompletedGenericStateDriver,
   DeferredDriverFailures,
   GreetingStateDriverReceipt,
+  GenericSearchFollowUp,
 } from "./workflow-analysis-types";
 import {
   retainedDriverCandidates,
   retainedDriverReviewResults,
 } from "./retained-drivers";
 import { collectFieldsSnapshot } from "../dom/collect";
+import { debugAnalysis, debugReviewPlan } from "../debug/autofill-debug";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -31,6 +33,17 @@ import {
 } from "../write/executor";
 import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import type { WriteFailureCode } from "../write/failure";
+import {
+  currentSearchFollowUps,
+  missingFollowUpGrade,
+  rebindSearchFollowUps,
+  searchFollowUpIsCurrent,
+  type SearchFollowUpAnalysisOptions,
+} from "./search-follow-up-analysis";
+import { takeWrittenSearchFollowUp } from "./search-follow-up-state";
+import { runAddressAnalysis } from "./address-analysis";
+import { belongsToFailedGroup } from "./workflow-write-items";
+
 import {
   isGenericStateDriver,
   genericControlledRegions,
@@ -85,21 +98,42 @@ export function createAnalyzeFields({
   setResults,
   presentField,
   onWriteResult,
+  onSearchFollowUp,
+  searchFollowUp,
+  completedSearchFollowUps,
   onActivity,
   onAddressOperation,
 }: WorkflowAnalysisContext) {
+  let analysisGeneration = 0;
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
     completedStateDriverKeys: ReadonlySet<string> = completedDriverKeys.current,
     failedGroups: ReadonlySet<Element> = deferredDriverGroups.current,
     genericPass = 0,
+    options: SearchFollowUpAnalysisOptions = {},
   ) => {
+    const currentAnalysisGeneration = ++analysisGeneration;
     completedDriverKeys.current = completedStateDriverKeys;
     deferredDriverGroups.current = failedGroups;
     const run = addressRun.current;
     const snapshotUrl = pageDocument.URL;
     if (run.controller.signal.aborted) return;
+    const reviewFollowUps = options.reviewOnly
+      ? currentSearchFollowUps(completedSearchFollowUps, options.searchFollowUp)
+      : [];
+    if (
+      options.reviewOnly &&
+      (!options.searchFollowUp ||
+        !reviewFollowUps.length ||
+        !reviewFollowUps.every((followUp) =>
+          searchFollowUpIsCurrent(followUp, loadedProfile, pageDocument),
+        ))
+    ) {
+      setExceptionTitle("검색 후 입력 항목이 변경되어 다시 확인해야 합니다");
+      setStage("exception");
+      return;
+    }
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
@@ -109,7 +143,20 @@ export function createAnalyzeFields({
 
     const analysisStarted = performance.now();
     let analysis = await apiClient.analyzeFields(snapshot.request);
-    if (run.controller.signal.aborted) return;
+    debugAnalysis(snapshot, analysis);
+    if (
+      run.controller.signal.aborted ||
+      currentAnalysisGeneration !== analysisGeneration
+    )
+      return;
+    if (
+      options.reviewOnly &&
+      JSON.stringify(await repository.load()) !== JSON.stringify(loadedProfile)
+    ) {
+      setExceptionTitle("확인 중 프로필이 변경되었습니다. 다시 시작해 주세요");
+      setStage("exception");
+      return;
+    }
     if (pageDocument.URL !== snapshotUrl) {
       setExceptionTitle(
         "분석 후 지원서 페이지가 변경되었습니다. 다시 시작해 주세요",
@@ -161,134 +208,22 @@ export function createAnalyzeFields({
       return;
     }
 
-    if (run.button && adapter.runAddress) {
-      const addressNames = adapter.addressFieldNames ?? [];
-      const keys = [
-        "contact.contact.postalCode",
-        "contact.contact.addressLine1",
-        "contact.contact.addressLine2",
-      ];
-      const fields = snapshot.request.sections.flatMap((section) => [
-        ...section.fields,
-        ...(section.items ?? []).flatMap((item) => item.fields),
-      ]);
-      const permitted =
-        analysis.mode === "ADAPTER" &&
-        addressNames.length === 3 &&
-        addressNames.every((name, index) => {
-          const candidates = fields.filter(
-            (field) => field.domId === name || field.domName === name,
-          );
-          if (candidates.length !== 1) return false;
-          const candidate = candidates[0];
-          const mapping = analysis.fields.find(
-            (field) => field.candidateId === candidate.candidateId,
-          );
-          return (
-            candidate.domId === name &&
-            candidate.domName === name &&
-            candidate.element === "input" &&
-            candidate.control === "text" &&
-            candidate.visibility === "visible" &&
-            !candidate.disabled &&
-            !candidate.inert &&
-            !!candidate.readonly === index < 2 &&
-            mapping?.matchType === "MATCH" &&
-            mapping.mappingStatus === "ADAPTER_VERIFIED" &&
-            mapping.valueBinding?.type === "DIRECT" &&
-            mapping.valueBinding.profileFieldKey === keys[index]
-          );
-        });
-      const addressTargets = permitted
-        ? addressNames.flatMap((name, index) => {
-            const candidate = fields.find((field) => field.domId === name)!;
-            const lookup = snapshot.registry.lookupField(candidate.candidateId);
-            if (lookup.status !== "ready" && lookup.status !== "blocked")
-              return [];
-            const element = lookup.handle.elements[0];
-            return element instanceof HTMLInputElement
-              ? [
-                  {
-                    candidateId: candidate.candidateId,
-                    fieldLabel: ["우편번호", "기본주소", "상세주소"][index],
-                    profileFieldKey: keys[index],
-                    element,
-                    originalValue: element.value,
-                  },
-                ]
-              : [];
-          })
-        : [];
-      if (permitted) onActivity?.("address");
-      if (!run.task && permitted) {
-        const button = run.button;
-        const onClick = () => {
-          if (button) onAddressOperation?.(button);
-        };
-        button?.addEventListener("click", onClick, { once: true });
-        run.task = adapter
-          .runAddress({
-            document: pageDocument,
-            button,
-            expected: addressValue(loadedProfile),
-            loadCurrent: async () => addressValue(await repository.load()),
-            signal: run.controller.signal,
-            search: addressSearch,
-          })
-          .finally(() => button?.removeEventListener("click", onClick));
-      }
-      run.task ??= Promise.resolve({
-        status: "manual",
-        reason: "주소 입력란의 연결을 확인하지 못했습니다. 직접 확인해 주세요.",
-      });
-      const result = await run.task;
-      if (run.controller.signal.aborted) return;
-      setAddressResult(result);
-      if (result.status === "written") {
-        for (const target of addressTargets) {
-          const lookup = snapshot.registry.lookupField(target.candidateId);
-          if (
-            (lookup.status !== "ready" &&
-              !(lookup.status === "blocked" && lookup.reason === "readonly")) ||
-            lookup.handle.elements[0] !== target.element ||
-            !target.element.value.trim() ||
-            target.element.value === target.originalValue
-          )
-            continue;
-          onWriteResult?.(
-            {
-              candidateId: target.candidateId,
-              fieldLabel: target.fieldLabel,
-              profileFieldKey: target.profileFieldKey,
-              currentValue: target.originalValue,
-              profileValue: target.element.value,
-              previewValue: target.element.value,
-              status: "available",
-              selected: true,
-              disabled: false,
-              revealed: true,
-              reason: result.reason,
-            },
-            { candidateId: target.candidateId, status: "written" },
-            snapshot.registry,
-          );
-        }
-      }
-      onActivity?.("matching");
-      const ids = new Set(
-        fields
-          .filter(
-            (field) =>
-              addressNames.includes(field.domId ?? "") ||
-              addressNames.includes(field.domName ?? ""),
-          )
-          .map((field) => field.candidateId),
-      );
-      analysis = {
-        ...analysis,
-        fields: analysis.fields.filter((field) => !ids.has(field.candidateId)),
-      };
-    }
+    const addressAnalysis = await runAddressAnalysis({
+      analysis,
+      snapshot,
+      adapter,
+      run,
+      pageDocument,
+      profile: loadedProfile,
+      repository,
+      addressSearch,
+      onActivity,
+      onAddressOperation,
+      onWriteResult,
+      setAddressResult,
+    });
+    if (!addressAnalysis) return;
+    analysis = addressAnalysis;
 
     const ignoreCurrentValueCandidateIds = new Set(
       ignoreFreshRowDefaults
@@ -332,17 +267,49 @@ export function createAnalyzeFields({
       normalizeDirectValue: (key, value) =>
         adapterProfileValue(adapter, key, value),
     });
+    debugReviewPlan(plan);
     if (plan.status === "blocked") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
       return;
     }
+    const completedSearchItems = options.reviewOnly
+      ? rebindSearchFollowUps(
+          reviewFollowUps,
+          plan.items,
+          snapshot,
+          completedSearchFollowUps,
+        )
+      : undefined;
+    if (options.reviewOnly && !completedSearchItems) {
+      setExceptionTitle(
+        "검색으로 채운 항목을 새 분석 결과에 다시 연결하지 못했습니다",
+      );
+      setStage("exception");
+      return;
+    }
+    const completedSearchCandidateIds = new Set(
+      completedSearchItems?.map((item) => item.candidateId),
+    );
     setFieldsSnapshot(snapshot);
     setPartial(plan.status === "partial");
-    setWarnings(analysis.warningCodes ?? []);
+    const analysisWarnings: string[] = [...(analysis.warningCodes ?? [])];
+    if (
+      options.reviewOnly &&
+      reviewFollowUps.some((followUp) =>
+        missingFollowUpGrade(followUp, loadedProfile, plan.items, snapshot),
+      )
+    ) {
+      analysisWarnings.push("검색 후 드러난 급수 항목은 직접 확인해 주세요.");
+    }
+    setWarnings(analysisWarnings);
     if (plan.items.length === 0) {
       setReviewItems([]);
       setResults([]);
+      if (options.reviewOnly) {
+        setStage("review");
+        return;
+      }
       if (
         analysis.mode === "GENERIC" &&
         completedGenericStateDrivers.current.size > 0
@@ -355,21 +322,22 @@ export function createAnalyzeFields({
       setStage("result");
       return;
     }
-    const belongsToFailedGroup = (item: ReviewPlanItem) => {
-      const lookup = snapshot.registry.lookupField(item.candidateId);
-      return (
-        (lookup.status === "ready" || lookup.status === "blocked") &&
-        [...failedGroups].some((group) =>
-          lookup.handle.elements.some((element) => group.contains(element)),
-        )
-      );
-    };
     const adapterDate = (item: ReviewPlanItem) =>
       executionAdapterId === "greeting-v1" &&
       analysis.mode === "ADAPTER" &&
       item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
       item.analysis.writePlan?.command === "SELECT_DATE";
     const automaticItems = plan.items.map((item) => {
+      if (options.reviewOnly) {
+        return completedSearchCandidateIds.has(item.candidateId)
+          ? {
+              ...item,
+              selected: false,
+              disabled: true,
+              reason: "검색 결과가 같은 행에 유지되어 다시 검색하지 않습니다.",
+            }
+          : { ...item, selected: false };
+      }
       if (
         item.analysis?.writePlan?.command === "SELECT_DATE" &&
         !adapterDate(item)
@@ -403,6 +371,10 @@ export function createAnalyzeFields({
         : automatic;
     });
     setReviewItems(automaticItems);
+    if (options.reviewOnly) {
+      setStage("review");
+      return;
+    }
     if (
       automaticItems.some(
         (item) =>
@@ -465,7 +437,7 @@ export function createAnalyzeFields({
           ? 1
           : undefined);
       const key = stateDriverKey(item, domName, lookup.handle.itemIndex);
-      return belongsToFailedGroup(item) ||
+      return belongsToFailedGroup(item, snapshot, failedGroups) ||
         !item.selected ||
         item.disabled ||
         stage === undefined ||
@@ -903,7 +875,7 @@ export function createAnalyzeFields({
         .map((item) => item.candidateId),
     );
     const deferredItems = automaticItems.filter((item) => {
-      if (!belongsToFailedGroup(item)) return false;
+      if (!belongsToFailedGroup(item, snapshot, failedGroups)) return false;
       if (analysis.mode !== "GENERIC") return true;
       const lookup = snapshot.registry.lookupField(item.candidateId);
       return (
@@ -918,7 +890,7 @@ export function createAnalyzeFields({
       );
     });
     const finalWriteItems = automaticItems.filter((item) => {
-      if (belongsToFailedGroup(item)) return false;
+      if (belongsToFailedGroup(item, snapshot, failedGroups)) return false;
       const lookup = snapshot.registry.lookupField(item.candidateId);
       if (lookup.status !== "ready" && lookup.status !== "blocked") {
         return true;
@@ -982,6 +954,8 @@ export function createAnalyzeFields({
             },
           }
         : {}),
+      onSearchFollowUp: (item, controls) =>
+        onSearchFollowUp?.(item, controls, snapshot.registry),
     });
     if (run.controller.signal.aborted) return;
     const greetingDriverResults: ApprovedWriteResult[] = [];
@@ -1080,6 +1054,20 @@ export function createAnalyzeFields({
           });
         }
       }
+    }
+    const pendingFollowUp = searchFollowUp
+      ? takeWrittenSearchFollowUp(searchFollowUp, writeResults)
+      : undefined;
+    if (pendingFollowUp) {
+      await analyzeFields(
+        loadedProfile,
+        ignoreFreshRowDefaults,
+        completedStateDriverKeys,
+        failedGroups,
+        genericPass,
+        { reviewOnly: true, searchFollowUp: pendingFollowUp },
+      );
+      return;
     }
     const deferredResults = deferredItems.map((item): ApprovedWriteResult => {
       const lookup = snapshot.registry.lookupField(item.candidateId);

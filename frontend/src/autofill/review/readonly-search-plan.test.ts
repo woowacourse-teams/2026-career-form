@@ -341,4 +341,68 @@ describe("readonly search collection, response and review contract", () => {
     expect(items[0]?.status).not.toBe("conflict");
     expect(items[0]?.disabled).toBe(false);
   });
+
+  it("attaches immutable local name and grade provenance to a certificate search review", () => {
+    document.body.innerHTML = `<fieldset><legend>자격증·면허증</legend><dl><dt>자격증명</dt><dd>
+      <input type="text" readonly aria-label="자격증명">
+      <button type="button">자격증명 검색</button>
+    </dd></dl></fieldset>`;
+    const snapshot = collectFieldsSnapshot(document);
+    const candidate = snapshot.request.sections.flatMap((entry) => [
+      ...entry.fields,
+      ...(entry.items?.flatMap((item) => item.fields) ?? []),
+    ])[0]!;
+    const profile: Profile = {
+      ...createEmptyProfile(),
+      certifications: [
+        {
+          id: "certificate-1",
+          sectionId: "certificate",
+          values: {
+            name: "synthetic certificate level 2",
+            grade: "level 2",
+          },
+        },
+      ],
+    };
+    const { items } = buildReviewPlan({
+      analysis: {
+        snapshotId: snapshot.request.snapshotId,
+        mode: "GENERIC",
+        analysisStatus: "COMPLETE",
+        fields: [
+          {
+            candidateId: candidate.candidateId,
+            matchType: "MATCH",
+            valueBinding: {
+              type: "DIRECT",
+              profileFieldKey: "certifications.certificate.name",
+            },
+            mappingStatus: "LLM_SUGGESTED",
+            interactionStatus: "READY",
+            autofillPolicy: "CONDITIONAL",
+            writePlan: { command: "SEARCH_SELECTION" },
+          },
+        ],
+      },
+      registry: snapshot.registry,
+      profile,
+    });
+
+    expect(items[0]).toMatchObject({
+      profileEntryId: "certificate-1",
+      searchValuePlan: {
+        originalName: "synthetic certificate level 2",
+        grade: "level 2",
+        forms: [
+          { kind: "original-exact", name: "synthetic certificate level 2" },
+          {
+            kind: "name-and-grade",
+            name: "synthetic certificate",
+            grade: "level 2",
+          },
+        ],
+      },
+    });
+  });
 });

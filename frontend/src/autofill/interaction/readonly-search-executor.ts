@@ -16,6 +16,7 @@ import {
   type TargetIdentity,
 } from "./readonly-search";
 import { SearchFailure, SearchSession } from "./search-session";
+import { debugSearchFailure, debugSearchStep } from "../debug/autofill-debug";
 import { clickVerifiedJsResult } from "./js-result-click-bridge";
 import {
   completeRegionList,
@@ -30,6 +31,11 @@ import {
   submitControls,
 } from "./search-controls";
 import { observeResults, resultBaseline } from "./search-results";
+import {
+  bindSelectionEffects,
+  verifySelectionEffects,
+} from "./search-selection-effects";
+import { captureSearchFollowUp } from "./search-follow-up";
 import { interactive, elements, safeActivation } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
 import {
@@ -37,8 +43,15 @@ import {
   isCjMajorTarget,
   validateCjMajorPreflight,
 } from "./cj-major-contract";
-import { prepareCjMajorClose, prepareCjSchoolClose } from "./cj-major-close-bridge";
-import { isCjSchoolCandidate, isCjSchoolTarget, validateCjSchoolRow } from "./cj-school-contract";
+import {
+  prepareCjMajorClose,
+  prepareCjSchoolClose,
+} from "./cj-major-close-bridge";
+import {
+  isCjSchoolCandidate,
+  isCjSchoolTarget,
+  validateCjSchoolRow,
+} from "./cj-school-contract";
 import { executeCjSchoolSearch } from "./cj-school-search";
 import { executeCjMajorSearch } from "./cj-major-search";
 
@@ -50,6 +63,22 @@ export function acceptedSearchValues(
   return key.endsWith(".schoolRegion")
     ? schoolRegionSearchValues(value)
     : [value];
+}
+
+function searchAttempts(
+  args: ExecuteReadonlySearchArgs,
+  fallback: string,
+): readonly string[] {
+  if (!args.searchValues) return [fallback];
+  if (
+    args.searchValues.length < 1 ||
+    args.searchValues.length > 2 ||
+    normalized(args.searchValues[0] ?? "") !== normalized(args.expectedValue) ||
+    args.searchValues.some((value) => !normalized(value)) ||
+    new Set(args.searchValues.map(normalized)).size !== args.searchValues.length
+  )
+    throw new SearchFailure("stale_target");
+  return args.searchValues;
 }
 function nativeQueryValue(
   input: HTMLInputElement,
@@ -119,11 +148,23 @@ export async function executeReadonlySearch(
       effect: "none",
     };
   activeTransactions.add(document);
+  let step = "시작";
+  const trace = (next: string, detail?: unknown) => {
+    step = next;
+    debugSearchStep(targetCandidateId, next, detail);
+  };
+  trace("시작", {
+    canonicalFieldKey,
+    expectedValue,
+    expectedCurrentValue: args.expectedCurrentValue,
+    searchValues: args.searchValues,
+  });
   const session = new SearchSession(args);
   const outerUrl = document.URL;
   let effect: SearchEffect = "none";
   let identity: TargetIdentity | undefined;
   let surface: SearchSurface | undefined;
+  let followUpObservation: ReturnType<typeof captureSearchFollowUp>;
   try {
     session.check();
     if (
@@ -141,8 +182,13 @@ export async function executeReadonlySearch(
     const target = identity.target;
     const initialValue = target.value;
     const values = acceptedSearchValues(canonicalFieldKey, expectedValue);
+    const attempts = searchAttempts(args, values[0]!);
+    trace("검색 대상 확인", { initialValue, values, attempts, target });
+    const matchingValues = args.searchValues ? attempts : values;
     const matches = (value: string) =>
-      values.some((candidate) => normalized(candidate) === normalized(value));
+      matchingValues.some(
+        (candidate) => normalized(candidate) === normalized(value),
+      );
     const guard = (expected?: string | readonly string[]) => {
       session.check();
       if (document.URL !== outerUrl)
@@ -166,15 +212,25 @@ export async function executeReadonlySearch(
       normalized(initialValue) !== normalized(args.expectedCurrentValue)
     )
       throw new SearchFailure("stale_target");
-    const schoolCandidate = isCjSchoolCandidate(document, canonicalFieldKey, identity);
-    if (schoolCandidate) validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
+    const schoolCandidate = isCjSchoolCandidate(
+      document,
+      canonicalFieldKey,
+      identity,
+    );
+    if (schoolCandidate)
+      validateCjSchoolRow(
+        target,
+        initialValue === expectedValue ? expectedValue : undefined,
+      );
     if (normalized(initialValue) && !schoolCandidate) {
       if (!matches(initialValue))
         throw new SearchFailure("existing_value_conflict");
       await session.prepareMutation();
       guard(values);
+      trace("이미 같은 값이 입력되어 변경 없음");
       return { status: "unchanged", targetCandidateId, identity, effect };
     }
+    trace("검색 버튼 탐색", identity.fieldGroup);
     const [openerRole] = await resolveRoles(session, [
       {
         role: "SEARCH_POPUP_OPENER",
@@ -203,33 +259,51 @@ export async function executeReadonlySearch(
     const cjMajor =
       cjCandidate &&
       isCjMajorTarget(document, canonicalFieldKey, identity, opener);
-    const cjSchool = schoolCandidate && isCjSchoolTarget(document, canonicalFieldKey, identity, opener);
+    const cjSchool =
+      schoolCandidate &&
+      isCjSchoolTarget(document, canonicalFieldKey, identity, opener);
     if ((cjCandidate && !cjMajor) || (schoolCandidate && !cjSchool))
       throw new SearchFailure("unverified_search_form");
     if (cjMajor) validateCjMajorPreflight(identity);
-    if (cjSchool) validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
+    if (cjSchool)
+      validateCjSchoolRow(
+        target,
+        initialValue === expectedValue ? expectedValue : undefined,
+      );
     const cjLease = cjMajor
       ? await prepareCjMajorClose(opener, session)
-      : cjSchool ? await prepareCjSchoolClose(opener, session) : undefined;
+      : cjSchool
+        ? await prepareCjSchoolClose(opener, session)
+        : undefined;
     guard(initialValue);
     if (cjLease) {
       if (
         !openerRole!.current() ||
         !safeSearchOpener(opener) ||
         !interactive(opener) ||
-        !(cjMajor ? isCjMajorTarget(document, canonicalFieldKey, identity, opener) :
-          isCjSchoolTarget(document, canonicalFieldKey, identity, opener))
+        !(cjMajor
+          ? isCjMajorTarget(document, canonicalFieldKey, identity, opener)
+          : isCjSchoolTarget(document, canonicalFieldKey, identity, opener))
       )
         throw new SearchFailure("unverified_search_form");
       if (cjMajor) validateCjMajorPreflight(identity);
-      else validateCjSchoolRow(target, initialValue === expectedValue ? expectedValue : undefined);
+      else
+        validateCjSchoolRow(
+          target,
+          initialValue === expectedValue ? expectedValue : undefined,
+        );
     }
     effect = "interaction-started";
+    trace("검색 버튼 클릭", {
+      opener,
+      flow: cjMajor ? "cj-major" : cjSchool ? "cj-school" : "generic",
+    });
     opener.click();
     surface = await session.wait(
       () => observation.discover(opener),
       "surface_not_found",
     );
+    trace("검색 화면 발견", surface);
     // Capture settled opener metadata once its attributed surface has appeared.
     identity.openerSignature = controlSignature(opener);
     identity.openerSignatures = identity.openers.map(controlSignature);
@@ -244,6 +318,7 @@ export async function executeReadonlySearch(
     };
     surfaceGuard();
     if (cjLease) {
+      trace(cjMajor ? "CJ 전공 검색 실행" : "CJ 학교 검색 실행");
       const runCj = cjMajor ? executeCjMajorSearch : executeCjSchoolSearch;
       const cjResult = await runCj(
         currentSurface,
@@ -252,9 +327,16 @@ export async function executeReadonlySearch(
         expectedValue,
         (allowed) => guard(allowed),
         () => observation.assertOwned(currentSurface),
-        () => { effect = "value-observed"; },
+        () => {
+          effect = "value-observed";
+        },
       );
-      return { status: cjResult === "unchanged" ? "unchanged" : "selected", targetCandidateId, identity, effect };
+      return {
+        status: cjResult === "unchanged" ? "unchanged" : "selected",
+        targetCandidateId,
+        identity,
+        effect,
+      };
     }
     const controls = await session.wait(() => {
       surfaceGuard();
@@ -306,91 +388,187 @@ export async function executeReadonlySearch(
         ? "query-and-submit"
         : "query-only"
       : "existing-options";
-    const searchText = values[0]!;
+    trace("검색 입력/실행 버튼 확인", {
+      mode: currentSurface.mode,
+      queries: queries.length,
+      submits: submits.length,
+      query,
+      submit,
+    });
+    const initialSearchText = attempts[0]!;
     if (
       query &&
       normalized(query.value) &&
-      normalized(query.value) !== normalized(searchText)
+      normalized(query.value) !== normalized(initialSearchText)
     )
       throw new SearchFailure("search_query_conflict");
-    const baseline = resultBaseline(currentSurface);
-    if (baseline.some((entry) => entry.busy === "true"))
-      throw new SearchFailure("result_pending");
-    currentSurface.queryGeneration++;
-    const results = observeResults(
-      currentSurface,
-      session,
-      baseline,
-      query ? searchText : undefined,
-    );
-    if (query) {
-      const queryElement = query;
-      if (submit) searchDestination(currentSurface, queryElement, submit);
-      await session.prepareMutation();
-      surfaceGuard();
-      if (
-        !queryRole!.current() ||
-        !interactive(queryElement) ||
-        queryElement.readOnly
-      )
-        throw new SearchFailure("surface_stale");
-      if (!normalized(queryElement.value))
-        nativeQueryValue(queryElement, searchText, surfaceGuard);
-      if (normalized(queryElement.value) !== normalized(searchText))
-        throw new SearchFailure("search_query_conflict");
-      if (submit) {
+    let nativeFormBinding =
+      query && submit
+        ? searchDestination(currentSurface, query, submit)
+        : undefined;
+    let candidate: { element: HTMLElement; signature: string } | undefined;
+    let selectedResults: ReturnType<typeof observeResults> | undefined;
+    let selectedSearchText = initialSearchText;
+    for (const [attemptIndex, searchText] of attempts.entries()) {
+      const attemptValues = args.searchValues ? [searchText] : values;
+      trace(`검색 시도 ${attemptIndex + 1}/${attempts.length}`, searchText);
+      const baseline = resultBaseline(currentSurface);
+      if (baseline.some((entry) => entry.busy === "true"))
+        throw new SearchFailure("result_pending");
+      currentSurface.queryGeneration++;
+      const results = observeResults(
+        currentSurface,
+        session,
+        baseline,
+        query ? searchText : undefined,
+      );
+      selectedResults = results;
+      if (query) {
+        const queryElement = query;
         await session.prepareMutation();
         surfaceGuard();
         if (
-          !submitRole!.current() ||
           !queryRole!.current() ||
-          normalized(queryElement.value) !== normalized(searchText)
+          !interactive(queryElement) ||
+          queryElement.readOnly
         )
           throw new SearchFailure("surface_stale");
-        const destination = searchDestination(
-          currentSurface,
-          queryElement,
-          submit,
-        );
-        if (destination) {
-          if (!queryElement.name)
-            throw new SearchFailure("unverified_search_form");
-          destination.search = "";
-          destination.searchParams.set(queryElement.name, searchText);
-          currentSurface.expectNavigation(destination);
-        }
-        submit.click();
-        if (destination) {
-          await session.wait(
-            () => currentSurface.settleNavigation() || undefined,
-            "surface_navigation_unsafe",
+        if (normalized(queryElement.value) !== normalized(searchText))
+          nativeQueryValue(queryElement, searchText, surfaceGuard);
+        if (normalized(queryElement.value) !== normalized(searchText))
+          throw new SearchFailure("search_query_conflict");
+        if (submit) {
+          await session.prepareMutation();
+          surfaceGuard();
+          if (
+            !submitRole!.current() ||
+            !queryRole!.current() ||
+            normalized(queryElement.value) !== normalized(searchText)
+          )
+            throw new SearchFailure("surface_stale");
+          if (nativeFormBinding) {
+            if (!nativeFormBinding.current())
+              throw new SearchFailure("surface_stale");
+            const destination = new URL(nativeFormBinding.destination);
+            if (nativeFormBinding.method === "get") {
+              destination.search = "";
+              for (const [name, value] of nativeFormBinding.hiddenValues) {
+                destination.searchParams.append(name, value);
+              }
+              destination.searchParams.append(
+                nativeFormBinding.queryName,
+                searchText,
+              );
+            }
+            currentSurface.expectNavigation(
+              destination,
+              searchText,
+              nativeFormBinding.method,
+            );
+          }
+          trace(
+            "검색 실행 버튼 클릭",
+            nativeFormBinding
+              ? {
+                  method: nativeFormBinding.method,
+                  destination: nativeFormBinding.destination,
+                }
+              : submit,
           );
+          submit.click();
+          if (nativeFormBinding) {
+            await session.wait(
+              () => currentSurface.settleNavigation() || undefined,
+              "surface_navigation_unsafe",
+            );
+          }
         }
       }
+      try {
+        candidate = await session.wait(() => {
+          surfaceGuard();
+          if (
+            query?.isConnected &&
+            normalized(query.value) !== normalized(searchText)
+          )
+            throw new SearchFailure("search_query_conflict");
+          return querylessRegion
+            ? regionListSelection(
+                currentSurface,
+                canonicalFieldKey,
+                attemptValues,
+              )
+            : results.exact(attemptValues);
+        }, "result_pending");
+        selectedSearchText = searchText;
+        trace("일치 결과 발견", candidate?.element);
+        break;
+      } catch (error) {
+        if (
+          error instanceof SearchFailure &&
+          error.reason === "search_results_not_found" &&
+          attemptIndex + 1 < attempts.length &&
+          (nativeFormBinding || query?.isConnected)
+        ) {
+          if (nativeFormBinding) {
+            surfaceGuard();
+            const refreshedQueries = queryControls(currentSurface);
+            const refreshedSubmits = submitControls(currentSurface);
+            if (refreshedQueries.length !== 1 || refreshedSubmits.length !== 1)
+              throw error;
+            [queryRole, submitRole] = await resolveRoles(
+              session,
+              [
+                {
+                  role: "SEARCH_QUERY_INPUT",
+                  collect: () => queryControls(currentSurface),
+                  scope: currentSurface.container,
+                },
+                {
+                  role: "SEARCH_SUBMIT",
+                  collect: () => submitControls(currentSurface),
+                  scope: currentSurface.container,
+                },
+              ],
+              { deterministicRebind: true },
+            );
+            query = queryRole!.binding.element as HTMLInputElement;
+            const reboundSubmit = submitRole!.binding.element as
+              HTMLButtonElement | HTMLInputElement;
+            submit = reboundSubmit;
+            nativeFormBinding = searchDestination(
+              currentSurface,
+              query,
+              reboundSubmit,
+            );
+            if (!nativeFormBinding) throw error;
+          }
+          continue;
+        }
+        throw error;
+      }
     }
-    const candidate = await session.wait(() => {
-      surfaceGuard();
-      if (
-        query?.isConnected &&
-        normalized(query.value) !== normalized(searchText)
-      )
-        throw new SearchFailure("search_query_conflict");
-      return querylessRegion
-        ? regionListSelection(currentSurface, canonicalFieldKey, values)
-        : results.exact(values);
-    }, "result_pending");
+    if (!candidate) throw new SearchFailure("search_results_not_found");
+    const selectedValues = args.searchValues ? [selectedSearchText] : values;
     await session.prepareMutation();
     surfaceGuard();
     const latest = querylessRegion
-      ? regionListSelection(currentSurface, canonicalFieldKey, values)
-      : results.exact(values);
+      ? regionListSelection(currentSurface, canonicalFieldKey, selectedValues)
+      : selectedResults?.exact(selectedValues);
     if (
       !latest ||
       latest.element !== candidate.element ||
       latest.signature !== candidate.signature ||
-      !safeActivation(candidate.element, values)
+      !safeActivation(candidate.element, selectedValues)
     )
       throw new SearchFailure("result_stale");
+    const selectionBinding = canonicalFieldKey.startsWith("certifications.")
+      ? bindSelectionEffects(identity, candidate.element, selectedValues)
+      : undefined;
+    followUpObservation = selectionBinding
+      ? captureSearchFollowUp(selectionBinding.scope, identity.target)
+      : undefined;
+    trace("결과 선택 클릭", candidate.element);
     const resultLink =
       candidate.element.tagName === "A"
         ? (candidate.element as HTMLAnchorElement)
@@ -409,9 +587,12 @@ export async function executeReadonlySearch(
       const reflected = guard();
       observation.assertOwned(currentSurface);
       currentSurface.assertSelectionDocument();
-      const reflectedValue = matches(reflected.value);
+      const reflectedValue = selectedValues.some(
+        (value) => normalized(value) === normalized(reflected.value),
+      );
       if (reflectedValue) effect = "value-observed";
       if (reflectedValue && currentSurface.closure() === "closed") {
+        if (selectionBinding) verifySelectionEffects(selectionBinding);
         retainedSince ??= performance.now();
         if (performance.now() - retainedSince >= 500) return true;
       } else {
@@ -420,18 +601,45 @@ export async function executeReadonlySearch(
       }
       return undefined;
     }, "popup_unresolved");
+    const followUpControls = followUpObservation
+      ? await followUpObservation.wait({
+          signal: args.signal,
+          assertCurrent: () => {
+            session.check();
+            return true;
+          },
+          verify: () => verifySelectionEffects(selectionBinding!),
+        })
+      : [];
     await session.prepareMutation();
-    guard(values);
-    return { status: "selected", targetCandidateId, identity, effect };
+    guard(selectedValues);
+    trace("선택 완료", {
+      selectedSearchText,
+      targetValue: identity.target.value,
+      followUpControls: followUpControls.length,
+    });
+    return {
+      status: "selected",
+      targetCandidateId,
+      identity,
+      effect,
+      ...(args.searchValues ? { selectedValue: selectedSearchText } : {}),
+      ...(followUpControls.length
+        ? { followUp: { controls: followUpControls } }
+        : {}),
+    };
   } catch (error) {
+    const reason =
+      error instanceof SearchFailure ? error.reason : "execution_failed";
+    debugSearchFailure(targetCandidateId, step, reason, effect, error);
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,
       effect,
-      reason:
-        error instanceof SearchFailure ? error.reason : "execution_failed",
+      reason,
     };
   } finally {
+    followUpObservation?.dispose();
     session.stop();
     activeTransactions.delete(document);
   }

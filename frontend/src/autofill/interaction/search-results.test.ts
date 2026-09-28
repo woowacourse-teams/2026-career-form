@@ -160,7 +160,7 @@ describe("native GET completion characterization", () => {
       "/generic-search/search-school?school_query=%EA%B0%80%EC%83%81%EA%B0%92",
       document.URL,
     );
-    surface.expectNavigation(destination);
+    surface.expectNavigation(destination, "가상값", "get");
     expect(observed.exact(["가상값"])).toBeUndefined();
     const destinationFrame = document.createElement("iframe");
     document.body.append(destinationFrame);

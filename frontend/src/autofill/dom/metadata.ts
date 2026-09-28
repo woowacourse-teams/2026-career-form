@@ -119,7 +119,7 @@ export function sectionName(container: Element | null): string | undefined {
     metadata(container.getAttribute("aria-label")) ??
     metadata(
       container.querySelector(
-        ":scope > legend, :scope > h1, :scope > h2, :scope > h3",
+        ":scope > legend, :scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6, :scope > * > h1, :scope > * > h2, :scope > * > h3, :scope > * > h4, :scope > * > h5, :scope > * > h6",
       )?.textContent,
     )
   );

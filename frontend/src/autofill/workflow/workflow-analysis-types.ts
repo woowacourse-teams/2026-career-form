@@ -13,6 +13,7 @@ import type { ProfileRepository } from "../../profile/profile-repository";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { WorkflowActivity } from "./progress-model";
 import type { WriteFailureCode } from "../write/failure";
+import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { Stage } from "./workflow-model";
 import type { GreetingResultTargets } from "./greeting-result-registry";
 
@@ -40,10 +41,37 @@ export interface GreetingStateDriverReceipt {
   identity: string;
 }
 
+export interface GenericSearchFollowUp {
+  item: ReviewPlanItem;
+  target: HTMLInputElement;
+  repeatRow: Element;
+  controls: readonly SearchFollowUpControl[];
+  profileEntryId: string;
+  profileFieldKey: string;
+  profileValue: string;
+  actualValue: string;
+  valid: boolean;
+  reboundCandidateId?: string;
+}
+
+export type SearchFollowUpRef = MutableRefObject<
+  GenericSearchFollowUp | undefined
+>;
+export type CompletedSearchFollowUpsRef = MutableRefObject<
+  readonly GenericSearchFollowUp[]
+>;
+
 export interface WorkflowAnalysisContext {
   onAddressOperation?: (element: Element) => void;
   onActivity?: (activity: WorkflowActivity) => void;
   onWriteResult?: WriteResultListener;
+  onSearchFollowUp?: (
+    item: ReviewPlanItem,
+    controls: readonly SearchFollowUpControl[],
+    registry: CandidateRegistry,
+  ) => void;
+  searchFollowUp?: SearchFollowUpRef;
+  completedSearchFollowUps?: CompletedSearchFollowUpsRef;
   presentField?: (
     registry: CandidateRegistry,
     item: ReviewPlanItem,

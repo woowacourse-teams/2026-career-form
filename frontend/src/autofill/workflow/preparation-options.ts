@@ -79,6 +79,8 @@ export function createPreparationOptions({
         snapshot.isSectionVisible(targetSectionId),
       countRepeatableGroups: (plan) =>
         snapshot.countRepeatableGroups(plan.actionCandidateId),
+      repeatableGroupState: (plan) =>
+        snapshot.repeatableGroupState(plan.actionCandidateId),
     },
     refreshSnapshot: async () => {
       const refreshed = collectPreparationSnapshot(pageDocument, {
@@ -90,6 +92,8 @@ export function createPreparationOptions({
           refreshed.isSectionVisible(targetSectionId),
         countRepeatableGroups: (plan) =>
           refreshed.countRepeatableGroups(plan.actionCandidateId),
+        repeatableGroupState: (plan) =>
+          refreshed.repeatableGroupState(plan.actionCandidateId),
       };
     },
     countRepeatableGroups: (snapshot, plan) =>

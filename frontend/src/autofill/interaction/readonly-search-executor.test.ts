@@ -44,6 +44,305 @@ type Scenario = {
     | "approval";
 };
 
+type NativeFormScenario = {
+  method: "get" | "post";
+  mutateBeforeSubmit?: "action" | "hidden" | "method" | "query-name";
+  firstQueryMiss?: boolean;
+};
+
+function nativeFormFixture(options: NativeFormScenario) {
+  document.body.innerHTML = `
+    <div data-repeater-item><label>전공
+      <input id="target" type="text" readonly aria-label="전공"></label>
+      <button id="opener" type="button">전공 검색</button>
+    </div>`;
+  const target = document.querySelector<HTMLInputElement>("#target")!;
+  const opener = document.querySelector<HTMLButtonElement>("#opener")!;
+  const snapshot = collectFieldsSnapshot(document);
+  const candidate = snapshot.request.sections
+    .flatMap((section) => [
+      ...section.fields,
+      ...(section.items?.flatMap((item) => item.fields) ?? []),
+    ])
+    .find((field) => {
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      return (
+        lookup.status === "blocked" && lookup.handle.elements[0] === target
+      );
+    })!;
+  const actions = { opener: 0, search: 0, result: 0 };
+  opener.addEventListener("click", () => {
+    actions.opener++;
+    const surface = document.createElement("div");
+    surface.setAttribute("role", "dialog");
+    surface.setAttribute("aria-modal", "true");
+    const frame = document.createElement("iframe");
+    frame.srcdoc = "<!doctype html><html><body></body></html>";
+    surface.append(frame);
+    opener.setAttribute(
+      "aria-controls",
+      (surface.id = "native-search-surface"),
+    );
+    document.body.append(surface);
+    let live = frame.contentDocument!;
+    Object.defineProperty(live, "readyState", {
+      configurable: true,
+      value: "complete",
+    });
+    Object.defineProperty(live, "URL", {
+      configurable: true,
+      value: "about:srcdoc",
+    });
+    Object.defineProperty(frame, "contentDocument", {
+      configurable: true,
+      get: () => live,
+    });
+    const responseDocument = (queryText: string) => {
+      const responseFrame = document.createElement("iframe");
+      responseFrame.hidden = true;
+      document.body.append(responseFrame);
+      const response = responseFrame.contentDocument!;
+      const responseUrl = new URL("/search/credentials", document.URL);
+      if (options.method === "get") {
+        responseUrl.searchParams.set("route", "credential");
+        responseUrl.searchParams.set("keyword", queryText);
+      }
+      Object.defineProperty(response, "URL", {
+        configurable: true,
+        value: responseUrl.href,
+      });
+      Object.defineProperty(response, "readyState", {
+        configurable: true,
+        value: "complete",
+      });
+      const firstMiss = options.firstQueryMiss && actions.search === 1;
+      response.body.innerHTML = `
+          ${
+            firstMiss
+              ? `<form method="${options.method}" action="/search/credentials" target="_self">
+            <input id="query" name="keyword" type="text" aria-label="자격 검색어">
+            <input id="route" name="route" type="hidden" value="credential">
+            <button id="submit" type="submit" aria-label="검색">검색</button>
+          </form>`
+              : ""
+          }
+          <ul aria-label="검색 결과" data-result-count="1">
+            <li><button type="button">${firstMiss ? "다른값" : "가상값"}</button></li>
+          </ul>`;
+      response.querySelector("ul button")!.addEventListener("click", () => {
+        actions.result++;
+        target.value = "가상값";
+        surface.remove();
+      });
+      live = response;
+      if (firstMiss) bindForm(response, false);
+    };
+    const bindForm = (popup: Document, allowMutation: boolean) => {
+      const query = popup.querySelector<HTMLInputElement>("#query")!;
+      const form = popup.querySelector<HTMLFormElement>("form")!;
+      query.addEventListener("input", () => {
+        if (!allowMutation) return;
+        switch (options.mutateBeforeSubmit) {
+          case "action":
+            form.action = "/search/other";
+            break;
+          case "hidden":
+            popup.querySelector<HTMLInputElement>("#route")!.value = "other";
+            break;
+          case "method":
+            form.method = options.method === "get" ? "post" : "get";
+            break;
+          case "query-name":
+            query.name = "otherKeyword";
+            break;
+        }
+      });
+      popup
+        .querySelector<HTMLButtonElement>("#submit")!
+        .addEventListener("click", (event) => {
+          event.preventDefault();
+          actions.search++;
+          responseDocument(query.value);
+        });
+    };
+    live.body.innerHTML = `
+      <form method="${options.method}" action="/search/credentials" target="_self">
+        <input id="query" name="keyword" type="text" aria-label="자격 검색어">
+        <input id="route" name="route" type="hidden" value="credential">
+        <button id="submit" type="submit" aria-label="검색">검색</button>
+      </form>`;
+    bindForm(live, true);
+  });
+  return {
+    target,
+    actions,
+    run: async (searchValues?: readonly string[]) => {
+      const pending = executeReadonlySearch({
+        document,
+        registry: snapshot.registry,
+        targetCandidateId: candidate.candidateId,
+        canonicalFieldKey: "education.university.majorName",
+        expectedValue: searchValues?.[0] ?? "가상값",
+        ...(searchValues ? { searchValues } : {}),
+        expectedCurrentValue: "",
+      });
+      await vi.runAllTimersAsync();
+      return pending;
+    },
+  };
+}
+
+type CertificateScenario = {
+  candidateCode?: string;
+  relation?: boolean;
+  followUpGrade?: boolean;
+  followUpInput?: boolean;
+  firstQueryMiss?: boolean;
+  firstResultState?: "incomplete" | "duplicate";
+  selectedValue?: string;
+  mutation?: "other-row" | "peer";
+};
+
+function certificateFixture(options: CertificateScenario = {}) {
+  document.body.innerHTML = `
+    <fieldset><legend>자격 및 면허</legend>
+      <div data-repeater-item>
+        <dl><dt>자격증명</dt><dd>
+          <input id="target" type="text" readonly aria-label="자격증명">
+          ${options.relation === false ? "" : '<input id="code" type="hidden" value="">'}
+          <button id="opener" type="button">자격 검색</button>
+        </dd></dl>
+        <label>등록번호 <input id="registration" type="text" value="기존 등록번호"></label>
+        ${options.followUpInput ? '<label>기관 <input id="follow-up-input" type="text" disabled value=""></label>' : ""}
+        ${options.followUpGrade ? '<select id="grade" disabled><option value="">등급</option></select>' : ""}
+      </div>
+      <div data-repeater-item><label>다른 등록번호
+        <input id="other-row" type="text" value="기존 다른 행"></label></div>
+    </fieldset>`;
+  const target = document.querySelector<HTMLInputElement>("#target")!;
+  const code = document.querySelector<HTMLInputElement>("#code");
+  const registration =
+    document.querySelector<HTMLInputElement>("#registration")!;
+  const grade = document.querySelector<HTMLSelectElement>("#grade");
+  const followUpInput =
+    document.querySelector<HTMLInputElement>("#follow-up-input");
+  const otherRow = document.querySelector<HTMLInputElement>("#other-row")!;
+  const opener = document.querySelector<HTMLButtonElement>("#opener")!;
+  const snapshot = collectFieldsSnapshot(document);
+  const candidate = snapshot.request.sections
+    .flatMap((section) => [
+      ...section.fields,
+      ...(section.items?.flatMap((item) => item.fields) ?? []),
+    ])
+    .find((field) => {
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      return (
+        lookup.status === "blocked" && lookup.handle.elements[0] === target
+      );
+    })!;
+  const actions = { opener: 0, search: 0, result: 0 };
+  let lastResult: HTMLButtonElement | undefined;
+  opener.addEventListener("click", () => {
+    actions.opener++;
+    const surface = document.createElement("div");
+    surface.id = "certificate-search-surface";
+    surface.setAttribute("role", "dialog");
+    surface.setAttribute("aria-modal", "true");
+    opener.setAttribute("aria-controls", surface.id);
+    const frame = document.createElement("iframe");
+    frame.srcdoc = "<!doctype html><html><body></body></html>";
+    surface.append(frame);
+    document.body.append(surface);
+    const popup = frame.contentDocument!;
+    Object.defineProperty(popup, "readyState", {
+      configurable: true,
+      value: "complete",
+    });
+    Object.defineProperty(popup, "URL", {
+      configurable: true,
+      value: "about:srcdoc",
+    });
+    popup.body.innerHTML = `
+      <form><label>자격 검색어 <input id="query" type="text"></label>
+        <button id="submit" type="button">검색</button>
+      </form>
+      <ul aria-label="검색 결과" data-search-complete="true"></ul>`;
+    const query = popup.querySelector<HTMLInputElement>("#query")!;
+    popup
+      .querySelector<HTMLButtonElement>("#submit")!
+      .addEventListener("click", () => {
+        actions.search++;
+        const results = popup.querySelector("ul")!;
+        results.setAttribute("data-search-query", query.value);
+        results.replaceChildren();
+        const firstResponse = actions.search === 1;
+        const duplicate =
+          firstResponse && options.firstResultState === "duplicate";
+        results.setAttribute("data-result-count", duplicate ? "2" : "1");
+        if (firstResponse && options.firstResultState === "incomplete")
+          results.setAttribute("data-has-more", "true");
+        else results.removeAttribute("data-has-more");
+        const result = popup.createElement("button");
+        result.type = "button";
+        if (options.candidateCode !== undefined)
+          result.dataset.code = options.candidateCode;
+        result.textContent =
+          options.firstQueryMiss && actions.search === 1
+            ? "다른값"
+            : (options.selectedValue ?? "가상값");
+        lastResult = result;
+        results.append(result);
+        if (duplicate) results.append(result.cloneNode(true));
+        result.addEventListener("click", () => {
+          actions.result++;
+          target.value = options.selectedValue ?? "가상값";
+          if (code) code.value = options.candidateCode ?? "code-1";
+          if (grade) {
+            grade.disabled = false;
+            grade.append(new Option("기사", "기사"));
+          }
+          if (followUpInput) followUpInput.disabled = false;
+          if (options.mutation === "peer") registration.value = "변경됨";
+          if (options.mutation === "other-row") otherRow.value = "변경됨";
+          surface.remove();
+        });
+      });
+  });
+  return {
+    target,
+    code,
+    registration,
+    grade,
+    followUpInput,
+    otherRow,
+    actions,
+    run: async (
+      searchValues?: readonly string[],
+      beforeMutation?: (result: HTMLButtonElement | undefined) => void,
+    ) => {
+      const pending = executeReadonlySearch({
+        document,
+        registry: snapshot.registry,
+        targetCandidateId: candidate.candidateId,
+        canonicalFieldKey: "certifications.certificate.name",
+        expectedValue: searchValues?.[0] ?? "가상값",
+        ...(searchValues ? { searchValues } : {}),
+        expectedCurrentValue: "",
+        ...(beforeMutation
+          ? {
+              beforeMutation: async () => {
+                beforeMutation(lastResult);
+                return true;
+              },
+            }
+          : {}),
+      });
+      await vi.runAllTimersAsync();
+      return pending;
+    },
+  };
+}
+
 function fixture(options: Scenario = {}) {
   document.body.innerHTML = `${options.existingHighRegion ? `<fieldset><legend>고등학교</legend><dl><dt>학교소재지</dt><dd><input id="high-region" name="zz_state_nm" type="text" readonly placeholder="지역"><button id="high-opener" type="button" title="학교소재지 검색">검색</button></dd></dl></fieldset>` : ""}<fieldset><legend>대학교</legend><div data-repeater-item><dl><dt>${options.legacySchool ? "학교명" : "전공"}</dt><dd>
     <input id="target" type="text" readonly aria-label="${options.legacySchool ? "학교명" : "전공"}"><input id="code" type="hidden" value="initial-code">
@@ -335,6 +634,180 @@ describe("readonly search transaction", () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
     document.body.innerHTML = "";
+  });
+
+  it.each(["get", "post"] as const)(
+    "follows a same-iframe %s form into one query-bound response generation",
+    async (method) => {
+      const test = nativeFormFixture({ method });
+
+      expect(await test.run()).toMatchObject({
+        status: "selected",
+        effect: "value-observed",
+      });
+      expect(test.target.value).toBe("가상값");
+      expect(test.actions).toEqual({ opener: 1, search: 1, result: 1 });
+    },
+  );
+
+  it.each(["get", "post"] as const)(
+    "rebinds a same-iframe %s form only after its complete original query has no exact result",
+    async (method) => {
+      const test = nativeFormFixture({ method, firstQueryMiss: true });
+
+      const result = await test.run(["가상값기사", "가상값"]);
+      expect(result).toMatchObject({
+        status: "selected",
+        selectedValue: "가상값",
+      });
+      expect(test.target.value).toBe("가상값");
+      expect(test.actions).toEqual({ opener: 1, search: 2, result: 1 });
+    },
+  );
+
+  it.each(["action", "hidden", "method", "query-name"] as const)(
+    "does not submit when the initially bound native form changes its %s",
+    async (mutateBeforeSubmit) => {
+      const test = nativeFormFixture({
+        method: "post",
+        mutateBeforeSubmit,
+      });
+
+      expect(await test.run()).toMatchObject({
+        status: "failed",
+        reason: "surface_stale",
+        effect: "interaction-started",
+      });
+      expect(test.target.value).toBe("");
+      expect(test.actions).toEqual({ opener: 1, search: 0, result: 0 });
+    },
+  );
+
+  it.each([
+    ["a missing relation control", { relation: false }],
+    [
+      "a result without an explicit relation value",
+      { candidateCode: undefined },
+    ],
+  ] as const)(
+    "does not click a certificate result with %s",
+    async (_name, options) => {
+      const test = certificateFixture(options);
+
+      expect(await test.run()).toMatchObject({
+        status: "failed",
+        reason: "selection_effect_unverified",
+        effect: "interaction-started",
+      });
+      expect(test.target.value).toBe("");
+      expect(test.actions).toEqual({ opener: 1, search: 1, result: 0 });
+    },
+  );
+
+  it.each(["peer", "other-row"] as const)(
+    "reports a partial certificate selection and stops after an unexpected %s change",
+    async (mutation) => {
+      const test = certificateFixture({ candidateCode: "code-1", mutation });
+
+      expect(await test.run()).toMatchObject({
+        status: "failed",
+        reason: "selection_postcondition_failed",
+        effect: "value-observed",
+      });
+      expect(test.target.value).toBe("가상값");
+      expect(test.code?.value).toBe("code-1");
+      expect(test.actions).toEqual({ opener: 1, search: 1, result: 1 });
+      expect(
+        mutation === "peer" ? test.registration.value : test.otherRow.value,
+      ).toBe("변경됨");
+    },
+  );
+
+  it("returns only a verified same-row grade control for follow-up analysis", async () => {
+    const test = certificateFixture({
+      candidateCode: "code-1",
+      followUpGrade: true,
+    });
+
+    expect(await test.run()).toMatchObject({
+      status: "selected",
+      followUp: { controls: [test.grade] },
+    });
+    expect(test.actions).toEqual({ opener: 1, search: 1, result: 1 });
+  });
+
+  it("allows a search to expose a disabled same-row text control and returns it for review", async () => {
+    const test = certificateFixture({
+      candidateCode: "code-1",
+      followUpInput: true,
+    });
+
+    expect(await test.run()).toMatchObject({
+      status: "selected",
+      followUp: { controls: [test.followUpInput] },
+    });
+    expect(test.followUpInput?.value).toBe("");
+  });
+
+  it("retries one reviewed split search only after a complete original query has no exact result", async () => {
+    const test = certificateFixture({
+      candidateCode: "code-1",
+      firstQueryMiss: true,
+      selectedValue: "가상 자격",
+    });
+
+    expect(await test.run(["가상 자격 기사", "가상 자격"])).toMatchObject({
+      status: "selected",
+      selectedValue: "가상 자격",
+    });
+    expect(test.target.value).toBe("가상 자격");
+    expect(test.actions).toEqual({ opener: 1, search: 2, result: 1 });
+  });
+
+  it.each([
+    ["incomplete", "result_set_incomplete"],
+    ["duplicate", "multiple_matching_results"],
+  ] as const)(
+    "does not retry a split search after a %s first result set",
+    async (firstResultState, reason) => {
+      const test = certificateFixture({
+        candidateCode: "code-1",
+        firstResultState,
+      });
+
+      expect(await test.run(["가상값", "다른값"])).toMatchObject({
+        status: "failed",
+        reason,
+        effect: "interaction-started",
+      });
+      expect(test.actions).toEqual({ opener: 1, search: 1, result: 0 });
+    },
+  );
+
+  it("does not retry a split search after its selected first result becomes stale", async () => {
+    const test = certificateFixture({ candidateCode: "code-1" });
+
+    expect(
+      await test.run(["가상값", "다른값"], (result) => {
+        if (result) result.dataset.code = "changed";
+      }),
+    ).toMatchObject({
+      status: "failed",
+      reason: "result_stale",
+      effect: "interaction-started",
+    });
+    expect(test.actions).toEqual({ opener: 1, search: 1, result: 0 });
+  });
+
+  it("rejects more than two local search forms before opening the search surface", async () => {
+    const test = certificateFixture({ candidateCode: "code-1" });
+
+    expect(await test.run(["가상값", "다른값", "세번째 값"])).toMatchObject({
+      status: "unsupported",
+      reason: "stale_target",
+      effect: "none",
+    });
+    expect(test.actions).toEqual({ opener: 0, search: 0, result: 0 });
   });
 
   it("leaves a prefilled high-school region unchanged and selects only the empty university region", async () => {

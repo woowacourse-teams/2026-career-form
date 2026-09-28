@@ -33,7 +33,13 @@ import {
   collectActionSemanticContext,
 } from "./semantic-context";
 import { metadata, labelOf, sectionName } from "./metadata";
+import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
+import {
+  assignRepeatGroups,
+  formsSingleRepeatGroup,
+  sameRepeatGroupKey,
+} from "./repeat-groups";
 
 const EXPLICIT_ROW_SELECTOR = "[data-repeatable-group], [data-repeater-item]";
 
@@ -51,6 +57,12 @@ export interface CollectedSnapshot<TRequest> {
 export interface PreparationCollectedSnapshot extends CollectedSnapshot<PreparationAnalyzeRequest> {
   isSectionVisible(sectionId: string): boolean;
   countRepeatableGroups(actionCandidateId: string): number | undefined;
+  repeatableGroupState(
+    actionCandidateId: string,
+  ): readonly string[] | undefined;
+  repeatableGroupLimit(
+    actionCandidateId: string,
+  ): number | "ambiguous" | undefined;
 }
 
 function createOpaqueId(prefix: string, index: number): string {
@@ -198,11 +210,13 @@ function groupBySection<T extends Element>(
 ): Map<Element | null, T[]> {
   const groups = new Map<Element | null, T[]>();
   for (const element of elements) {
+    const group = generic ? genericFormGroupFor(element) : undefined;
     const row = generic
       ? genericRowFor(element)
       : element.closest(EXPLICIT_ROW_SELECTOR);
     const section =
       explicitSection?.(element) ??
+      group?.area ??
       row?.parentElement?.closest(selector) ??
       element.closest(selector);
     groups.set(section, [...(groups.get(section) ?? []), element]);
@@ -305,25 +319,31 @@ export function collectFieldsSnapshot(
         ? createOpaqueId("section", sectionIndex)
         : "section-root";
       const fields: FieldCandidate[] = [];
-      const itemGroupIndexes = new Map<string, number>();
-      const repeatableItems = repeatableItemElements(
-        container,
-        adapter,
-        "fields",
-      ).map((element, itemPosition) => {
-        const itemGroupId =
-          adapter.itemGroupId?.(element) ?? repeatableItemGroupId(element);
-        const itemGroupKey = itemGroupId ?? "";
-        const itemIndex = itemGroupIndexes.get(itemGroupKey) ?? 0;
-        itemGroupIndexes.set(itemGroupKey, itemIndex + 1);
-        return {
-          element,
+      const explicitGroupId = (row: Element) =>
+        adapter.itemGroupId?.(row) ?? repeatableItemGroupId(row);
+      // One shared group assignment feeds itemIndex, the semantic repeat
+      // context, registry counts and the pre-execution revalidation below.
+      const currentAssignments = (revalidate = false) =>
+        container
+          ? assignRepeatGroups(
+              container,
+              revalidate && executionAdapterId === "greeting-v1"
+                ? (adapter.repeatableItemCandidates(container) ?? []).filter(
+                    (row) => !isTemplateLike(row),
+                  )
+                : repeatableItemElements(container, adapter, "fields"),
+              explicitGroupId,
+              sectionId,
+            )
+          : [];
+      const repeatableItems = currentAssignments().map(
+        (assignment, itemPosition) => ({
+          ...assignment,
+          element: assignment.row,
           itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
-          itemIndex,
-          itemGroupId,
           fields: [] as FieldCandidate[],
-        };
-      });
+        }),
+      );
       const consumed = new Set<Element>();
 
       for (const element of elements) {
@@ -478,20 +498,20 @@ export function collectFieldsSnapshot(
           const text = semanticText(label);
           if (text) semanticContext.labels = [{ source: "label", text }];
         }
-        if (item) {
-          const rowCount = repeatableItems.filter(
-            (row) => row.itemGroupId === item.itemGroupId,
-          ).length;
-          if (rowCount <= 128) {
-            semanticContext.repeat = {
-              groupId:
-                executionAdapterId === "greeting-v1" && item.itemGroupId
-                  ? item.itemGroupId
-                  : `${sectionId}-group-${Array.from(itemGroupIndexes.keys()).indexOf(item.itemGroupId ?? "") + 1}`,
-              rowIndex: item.itemIndex,
-              rowCount,
-            };
-          }
+        if (
+          item &&
+          item.itemIndex !== undefined &&
+          item.rowCount !== undefined &&
+          item.rowCount <= 128
+        ) {
+          semanticContext.repeat = {
+            groupId:
+              executionAdapterId === "greeting-v1" && item.itemGroupId
+                ? item.itemGroupId
+                : `${sectionId}-group-${item.groupOrdinal}`,
+            rowIndex: item.itemIndex,
+            rowCount: item.rowCount,
+          };
         }
         candidate = { ...candidate, semanticContext };
         if (item) item.fields.push(candidate);
@@ -524,25 +544,25 @@ export function collectFieldsSnapshot(
               ? {
                   itemId: item.itemId,
                   isCurrentContext: () => {
-                    const liveRows =
-                      executionAdapterId === "greeting-v1" && container
-                        ? (
-                            adapter.repeatableItemCandidates(container) ?? []
-                          ).filter((row) => !isTemplateLike(row))
-                        : repeatableItemElements(container, adapter, "fields");
-                    const currentRows = liveRows.filter(
-                      (row) =>
-                        (adapter.itemGroupId?.(row) ??
-                          repeatableItemGroupId(row)) === item.itemGroupId,
+                    if (!grouped.every((field) => item.element.contains(field)))
+                      return false;
+                    const current = currentAssignments(true).find(
+                      ({ row }) => row === item.element,
                     );
+                    if (!current) return false;
+                    // An ambiguous row never becomes indexed later; it only
+                    // has to remain the same unindexed row.
+                    if (item.ambiguous) return current.ambiguous;
                     return (
-                      currentRows.length ===
-                        itemGroupIndexes.get(item.itemGroupId ?? "") &&
-                      currentRows[item.itemIndex] === item.element &&
-                      grouped.every((field) => item.element.contains(field))
+                      !current.ambiguous &&
+                      sameRepeatGroupKey(current.key, item.key) &&
+                      current.rowCount === item.rowCount &&
+                      current.itemIndex === item.itemIndex
                     );
                   },
-                  itemIndex: item.itemIndex,
+                  ...(item.itemIndex !== undefined
+                    ? { itemIndex: item.itemIndex }
+                    : {}),
                   ...(item.itemGroupId
                     ? { itemGroupId: item.itemGroupId }
                     : {}),
@@ -556,12 +576,16 @@ export function collectFieldsSnapshot(
           blockReason(first),
         );
       }
+      // Ambiguous rows carry no group id and no count; review keeps them
+      // unavailable because they have no itemIndex.
       const itemGroups = new Set(
-        repeatableItems.map(({ itemGroupId }) => itemGroupId),
+        repeatableItems
+          .filter(({ ambiguous }) => !ambiguous)
+          .map(({ itemGroupId }) => itemGroupId),
       );
       for (const itemGroupId of itemGroups) {
         const groupItems = repeatableItems.filter(
-          (item) => item.itemGroupId === itemGroupId,
+          (item) => !item.ambiguous && item.itemGroupId === itemGroupId,
         );
         registry.setFieldItemCount(sectionId, groupItems.length, itemGroupId);
         registry.setFieldItemElements(
@@ -717,6 +741,20 @@ function repeatableItemElements(
   );
 }
 
+function repeatableRowState(row: Element): string {
+  return JSON.stringify(
+    Array.from(
+      row.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >("input:not([type='hidden']):not([type='button']), select, textarea"),
+    ).map((control) =>
+      control instanceof HTMLSelectElement
+        ? [control.tagName, control.name, control.value, control.selectedIndex]
+        : [control.tagName, control.name, control.value],
+    ),
+  );
+}
+
 function actionGroupKey(action: Element | undefined): string | undefined {
   if (!action) return undefined;
   const identifiers = [
@@ -738,11 +776,17 @@ function actionGroupKey(action: Element | undefined): string | undefined {
     .sort((left, right) => right.length - left.length)[0];
 }
 
+/**
+ * Rows counted for an add action. Without an action-specific row name the
+ * action's section rows are used only when they form one provable repeated
+ * group; rows of several groups (or an ambiguous boundary) cannot be counted
+ * for a single action, so the count is unknown.
+ */
 function repeatableItemElementsForAction(
   container: Element | null,
   action: Element | undefined,
   adapter: CollectionAdapter,
-): Element[] {
+): Element[] | undefined {
   const allItems = repeatableItemElements(container, adapter, "preparation");
   const greetingAction =
     action instanceof HTMLElement ? adapter.actionDomId(action) : undefined;
@@ -754,8 +798,17 @@ function repeatableItemElementsForAction(
     return allItems.filter(
       (item) => adapter.itemGroupId?.(item) === "educationgraduateschool",
     );
+  const singleGroupItems = () =>
+    !container ||
+    formsSingleRepeatGroup(
+      container,
+      allItems,
+      (row) => adapter.itemGroupId?.(row) ?? repeatableItemGroupId(row),
+    )
+      ? allItems
+      : undefined;
   const groupKey = actionGroupKey(action);
-  if (!groupKey) return allItems;
+  if (!groupKey) return singleGroupItems();
   const matchingItems = allItems.filter((item) => {
     const identifiers = [
       item.id,
@@ -786,7 +839,7 @@ function repeatableItemElementsForAction(
         !/^form-item(?:-group)?$/i.test(identifier),
     );
   });
-  return hasTypedItems ? [] : allItems;
+  return hasTypedItems ? [] : singleGroupItems();
 }
 
 export function collectPreparationSnapshot(
@@ -827,6 +880,11 @@ export function collectPreparationSnapshot(
       ...actionsBySection.keys(),
     ]),
   );
+  if (generic) {
+    for (const group of genericFormGroups(document)) {
+      if (!containers.includes(group.area)) containers.push(group.area);
+    }
+  }
   if (
     (actionsBySection.has(null) || containers.length === 0) &&
     !containers.includes(null)
@@ -949,7 +1007,22 @@ export function collectPreparationSnapshot(
         root,
         actionElements.get(actionCandidateId),
         adapter,
-      ).length;
+      )?.length;
+    },
+    repeatableGroupState(actionCandidateId) {
+      const sectionId = actionSectionIds.get(actionCandidateId);
+      if (!sectionId) return undefined;
+      const root = sectionRoots.get(sectionId);
+      if (root === undefined || (root && !root.isConnected)) return undefined;
+      return repeatableItemElementsForAction(
+        root,
+        actionElements.get(actionCandidateId),
+        adapter,
+      )?.map(repeatableRowState);
+    },
+    repeatableGroupLimit(actionCandidateId) {
+      const action = actionElements.get(actionCandidateId);
+      return action ? genericFormGroupFor(action)?.maximumRows : undefined;
     },
   };
 }

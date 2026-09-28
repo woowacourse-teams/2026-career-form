@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>범용 자격증 검색 합성 fixture</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #172033;
+        background: #f4f6fa;
+      }
+      main {
+        width: min(56rem, calc(100% - 2rem));
+        margin: 2rem auto;
+      }
+      section,
+      .row,
+      [role="dialog"] {
+        margin-block: 1rem;
+        padding: 1rem;
+        border: 1px solid #b7c2d3;
+        border-radius: 0.6rem;
+        background: white;
+      }
+      .row {
+        display: grid;
+        gap: 0.75rem;
+      }
+      label {
+        display: grid;
+        gap: 0.35rem;
+        font-weight: 650;
+      }
+      input,
+      select,
+      button {
+        min-height: 2.6rem;
+        box-sizing: border-box;
+        font: inherit;
+      }
+      input,
+      select {
+        padding: 0.45rem 0.6rem;
+        border: 1px solid #718096;
+        border-radius: 0.35rem;
+      }
+      input[readonly] {
+        background: #eef1f6;
+      }
+      button {
+        padding: 0.45rem 0.75rem;
+        border: 1px solid #405d92;
+        border-radius: 0.35rem;
+        background: #eef3ff;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid #e19b22;
+        outline-offset: 2px;
+      }
+      .search-line {
+        display: flex;
+        gap: 0.5rem;
+        align-items: end;
+      }
+      .search-line label {
+        flex: 1;
+      }
+      iframe {
+        width: 100%;
+        min-height: 22rem;
+        border: 1px solid #b7c2d3;
+        border-radius: 0.4rem;
+        background: white;
+      }
+      .hint,
+      #fixture-status {
+        color: #4a5870;
+        line-height: 1.5;
+      }
+    </style>
+    <script src="./index.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>범용 자격증 검색 합성 fixture</h1>
+      <p class="hint">
+        공개 예시 프로필과 로컬 same-origin iframe만 사용합니다. 저장·제출·외부
+        요청은 수행하지 않습니다.
+      </p>
+      <p id="fixture-status" role="status" aria-live="polite">준비됨</p>
+
+      <form
+        id="certificate-application"
+        action="/synthetic-application"
+        method="post"
+      >
+        <section aria-labelledby="certificate-heading" data-max-items="5">
+          <h2 id="certificate-heading">자격 및 면허</h2>
+          <p class="hint">
+            반복 행은 최대 5개이며, 검색 뒤 드러난 등급·기관·취득일은 새 검토를
+            위한 합성 상태입니다.
+          </p>
+          <div id="certificate-rows"></div>
+          <button id="add-certificate" type="button">자격증 추가</button>
+        </section>
+      </form>
+
+      <section
+        id="certificate-search-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="certificate-search-title"
+        hidden
+      >
+        <h2 id="certificate-search-title">자격증명 검색</h2>
+        <iframe
+          id="certificate-search-frame"
+          title="자격증명 검색 결과"
+          src="./search.html"
+        ></iframe>
+        <button id="close-certificate-search" type="button">검색 취소</button>
+      </section>
+    </main>
+  </body>
+</html>

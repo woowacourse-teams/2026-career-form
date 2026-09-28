@@ -7,6 +7,7 @@ import { browser } from "wxt/browser";
 
 import type { AnalysisResponseEnvelope } from "./messages";
 import { isAnalysisResponseEnvelope } from "./messages";
+import { debugApiMessage } from "../debug/autofill-debug";
 import type {
   AnalysisApiClient,
   ExecutionAdapterId,
@@ -88,23 +89,38 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       type: "AUTOFILL_ANALYZE_FIELDS",
       payload: contextualRequest,
     });
-    const analysis = validateFieldsResponse(contextualRequest, response);
-    if (
-      analysis.analysisStatus !== "BLOCKED" &&
-      analysis.executionAdapterId !== this.executionAdapterId
-    ) {
-      throw new AnalysisContractError();
+    try {
+      const analysis = validateFieldsResponse(contextualRequest, response);
+      if (
+        analysis.analysisStatus !== "BLOCKED" &&
+        analysis.executionAdapterId !== this.executionAdapterId
+      ) {
+        throw new AnalysisContractError();
+      }
+      return analysis;
+    } catch (error) {
+      debugApiMessage(
+        { type: "AUTOFILL_ANALYZE_FIELDS (응답 검증 실패)" },
+        { error },
+      );
+      throw error;
     }
-    return analysis;
   }
 
   private async request(message: unknown): Promise<unknown> {
     let envelope: unknown;
     try {
       envelope = await this.sendMessage(message);
-    } catch {
+    } catch (error) {
+      debugApiMessage(message, { error });
       throw new AnalysisServiceError(errorMessages.NETWORK);
     }
+    debugApiMessage(message, {
+      envelope,
+      ...(isAnalysisResponseEnvelope(envelope) && !envelope.ok
+        ? { error: envelope.code }
+        : {}),
+    });
     if (!isAnalysisResponseEnvelope(envelope)) {
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     }

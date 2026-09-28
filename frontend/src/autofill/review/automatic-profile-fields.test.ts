@@ -170,3 +170,40 @@ it.each([
     disabled: true,
   });
 });
+
+it("blocks repeat preparation before the first click when an explicit page limit is exceeded", () => {
+  const profile = createEmptyProfile();
+  profile.certifications = [
+    { id: "c1", sectionId: "certificate", values: { name: "A" } },
+    { id: "c2", sectionId: "certificate", values: { name: "B" } },
+    { id: "c3", sectionId: "certificate", values: { name: "C" } },
+  ];
+  document.body.innerHTML = `
+    <section data-max-items="2"><h3>자격증</h3>
+      <div ismultirow="true"><input name="name0" /><input name="date0" /></div>
+      <button type="button">항목 추가</button>
+    </section>
+  `;
+  const snapshot = collectPreparationSnapshot(document);
+  const actionCandidateId = snapshot.request.sections.flatMap(
+    (section) => section.actionCandidates,
+  )[0]!.candidateId;
+
+  const item = preparationItem(
+    {
+      command: "ADD_REPEATABLE_GROUP",
+      actionCandidateId,
+      expectedEffect: "GROUP_COUNT_INCREMENT",
+    },
+    snapshot,
+    profile,
+    getWorkflowAdapter("example.test"),
+  );
+
+  expect(item).toMatchObject({
+    runnable: false,
+    unavailableReason: "현재 화면은 최대 2개까지만 추가할 수 있습니다.",
+    currentGroupCount: 1,
+    localItemCount: 3,
+  });
+});

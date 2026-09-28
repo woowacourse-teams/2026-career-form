@@ -102,6 +102,111 @@ describe("generic search controls", () => {
     expect(searchDestination(surface, query, submit)).toBeUndefined();
   });
 
+  it("binds a same-origin iframe POST form with stable hidden routing values", () => {
+    const { surface, container } = surfaceFixture(
+      '<div role="dialog" aria-modal="true"><iframe></iframe></div>',
+    );
+    const frame = container.querySelector("iframe")!;
+    const popup = frame.contentDocument!;
+    popup.body.innerHTML = `
+      <form method="post" action="/lookup/credentials" target="_self">
+        <input id="query" name="keyword" type="text" aria-label="자격 검색어">
+        <input id="route" type="hidden" name="route" value="certificate">
+        <button id="submit" type="submit" aria-label="검색">검색</button>
+      </form>`;
+    const framedSurface = new SearchSurface(
+      "same-origin-iframe",
+      container,
+      popup,
+      surface.opener,
+      surface.target,
+      frame,
+    );
+    const query = popup.querySelector<HTMLInputElement>("#query")!;
+    const submit = popup.querySelector<HTMLButtonElement>("#submit")!;
+    const binding = searchDestination(framedSurface, query, submit);
+
+    expect(binding).toMatchObject({ method: "post", queryName: "keyword" });
+    expect(binding?.current()).toBe(true);
+    const route = popup.querySelector<HTMLInputElement>("#route")!;
+    route.value = "other";
+    expect(binding?.current()).toBe(false);
+    route.value = "certificate";
+    const injected = popup.createElement("input");
+    injected.type = "hidden";
+    injected.name = "page";
+    injected.value = "2";
+    route.form!.append(injected);
+    expect(binding?.current()).toBe(false);
+  });
+
+  it.each(["disabled", "handler", "outside-form"] as const)(
+    "invalidates a native binding when a bound hidden control becomes %s",
+    (mutation) => {
+      const { surface, container } = surfaceFixture(
+        '<div role="dialog" aria-modal="true"><iframe></iframe></div>',
+      );
+      const frame = container.querySelector("iframe")!;
+      const popup = frame.contentDocument!;
+      popup.body.innerHTML = `
+        <form id="lookup" method="post" action="/lookup/credentials" target="_self">
+          <input id="query" name="keyword" type="text" aria-label="자격 검색어">
+          <input id="route" type="hidden" name="route" value="certificate">
+          <button id="submit" type="submit" aria-label="검색">검색</button>
+        </form>`;
+      const framedSurface = new SearchSurface(
+        "same-origin-iframe",
+        container,
+        popup,
+        surface.opener,
+        surface.target,
+        frame,
+      );
+      const query = popup.querySelector<HTMLInputElement>("#query")!;
+      const submit = popup.querySelector<HTMLButtonElement>("#submit")!;
+      const route = popup.querySelector<HTMLInputElement>("#route")!;
+      const binding = searchDestination(framedSurface, query, submit)!;
+
+      if (mutation === "disabled") route.disabled = true;
+      if (mutation === "handler") route.oninput = () => undefined;
+      if (mutation === "outside-form") {
+        route.remove();
+        route.setAttribute("form", "lookup");
+        popup.body.append(route);
+      }
+
+      expect(binding.current()).toBe(false);
+    },
+  );
+
+  it("invalidates a native binding when its submit control stops being the approved submit", () => {
+    const { surface, container } = surfaceFixture(
+      '<div role="dialog" aria-modal="true"><iframe></iframe></div>',
+    );
+    const frame = container.querySelector("iframe")!;
+    const popup = frame.contentDocument!;
+    popup.body.innerHTML = `
+      <form method="get" action="/search/credentials" target="_self">
+        <input id="query" name="keyword" type="text" aria-label="자격 검색어">
+        <button id="submit" type="submit" aria-label="검색">검색</button>
+      </form>`;
+    const framedSurface = new SearchSurface(
+      "same-origin-iframe",
+      container,
+      popup,
+      surface.opener,
+      surface.target,
+      frame,
+    );
+    const query = popup.querySelector<HTMLInputElement>("#query")!;
+    const submit = popup.querySelector<HTMLButtonElement>("#submit")!;
+    const binding = searchDestination(framedSurface, query, submit)!;
+
+    submit.type = "button";
+
+    expect(binding.current()).toBe(false);
+  });
+
   it("fails closed for mismatched controls, unsafe forms, and high-risk actions", () => {
     const { surface, container } = surfaceFixture(`
       <div role="dialog" aria-modal="true">

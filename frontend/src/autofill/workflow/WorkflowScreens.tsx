@@ -239,7 +239,11 @@ export function WorkflowScreens({
       (item) => item.selected && !item.disabled && isCalendar(item),
     ).length;
     const exceptionalItems = reviewItemsForDisplay(reviewItems).filter(
-      (item) => item.status !== "available" || isCalendar(item),
+      (item) =>
+        item.status !== "available" ||
+        isCalendar(item) ||
+        item.searchValuePlan ||
+        !item.selected,
     );
     return (
       <div className={styles.screen}>
@@ -259,7 +263,9 @@ export function WorkflowScreens({
             분석 경고:{" "}
             {warning === "UNRESOLVED_FIELD"
               ? "일부 필드를 연결하지 못했습니다."
-              : "LLM 분석 일부 미완료"}
+              : warning === "검색 후 드러난 급수 항목은 직접 확인해 주세요."
+                ? warning
+                : "LLM 분석 일부 미완료"}
           </aside>
         ))}
         {exceptionalItems.length > 0 && (
@@ -293,6 +299,26 @@ export function WorkflowScreens({
                     )}
                     <span>현재 입력값: {currentPreview(item)}</span>
                     <span>입력 예정값: {item.previewValue}</span>
+                    {item.searchValuePlan?.forms.map((form) => (
+                      <small
+                        key={`${form.kind}:${form.name}:${form.grade ?? ""}`}
+                      >
+                        {form.kind === "original-exact"
+                          ? `검색형: 원본 정확 일치 · ${form.name}`
+                          : `검색형: 이름 ${form.name} · 등급 ${form.grade}`}
+                      </small>
+                    ))}
+                    {item.searchValuePlan?.grade && (
+                      <small>프로필 등급: {item.searchValuePlan.grade}</small>
+                    )}
+                    {item.searchValuePlan && (
+                      <small>
+                        검색 대상 범위: {item.fieldLabel}
+                        {item.itemIndex !== undefined
+                          ? ` / 반복 행 ${item.itemIndex + 1}`
+                          : ""}
+                      </small>
+                    )}
                     <small>{item.reason}</small>
                     {mappingLabel(item) && (
                       <small>매핑 근거: {mappingLabel(item)}</small>
@@ -313,7 +339,9 @@ export function WorkflowScreens({
                       값 보기
                     </button>
                   )}
-                  {(item.status !== "available" || isCalendar(item)) &&
+                  {(item.status !== "available" ||
+                    isCalendar(item) ||
+                    !item.selected) &&
                     !item.disabled &&
                     (item.status !== "sensitive" || item.revealed) && (
                       <button

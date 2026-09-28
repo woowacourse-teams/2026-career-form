@@ -29,6 +29,10 @@ import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import { formatProfileDate } from "../profile/date-format";
+import {
+  buildLocalSearchValuePlan,
+  type LocalSearchValuePlan,
+} from "../profile/search-value-plan";
 import type { DateTargetApproval } from "./date-target-format";
 import {
   resolveDateTargetFormat,
@@ -72,6 +76,8 @@ export interface ReviewPlanItem {
   calendarApproval?: CalendarApproval;
   greetingGpaApproval?: GreetingGpaApproval;
   verifiedFreshDefaultValue?: string;
+  /** Local-only approved search forms; never include these values in API requests. */
+  searchValuePlan?: LocalSearchValuePlan;
 }
 
 export interface ReviewPlan {
@@ -232,6 +238,34 @@ function labelFor(candidateId: string, registry: CandidateRegistry): string {
   return "지원서 필드";
 }
 
+function certificateSearchValuePlan(
+  profile: Profile,
+  profileFieldKey: string,
+  profileEntryId: string | undefined,
+  originalName: string,
+): LocalSearchValuePlan | undefined {
+  if (
+    profileFieldKey !== "certifications.certificate.name" ||
+    !profileEntryId
+  ) {
+    return undefined;
+  }
+  const gradeCandidates = profile.certifications
+    .filter(
+      (entry) =>
+        entry.sectionId === "certificate" && entry.id === profileEntryId,
+    )
+    .map((entry) => ({
+      profileEntryId: entry.id,
+      grade: entry.values.grade ?? "",
+    }));
+  return buildLocalSearchValuePlan({
+    profileEntryId,
+    originalName,
+    gradeCandidates,
+  });
+}
+
 function itemForAnalysis(
   analysis: FieldAnalysis,
   profile: Profile,
@@ -349,12 +383,16 @@ function itemForAnalysis(
     ? profileFieldParts(binding.profileFieldKey)
     : undefined;
   let itemIndex = lookup.handle.itemIndex;
+  // A field inside a repeated row whose group boundary could not be proven
+  // has a row but no index; it must not fall back to the sole profile entry.
+  const unindexedRepeatRow =
+    lookup.handle.itemId !== undefined && lookup.handle.itemIndex === undefined;
   if (parts?.repeatable && !parts.topLevel) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
-    if (profileEntries.length === 1) {
+    if (profileEntries.length === 1 && !unindexedRepeatRow) {
       itemIndex = 0;
     }
     const soleUngroupedProfileEntry =
@@ -508,6 +546,15 @@ function itemForAnalysis(
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
+  const searchValuePlan =
+    searchCommand && binding.type === "DIRECT"
+      ? certificateSearchValuePlan(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
+          resolvedProfileValue.value,
+        )
+      : undefined;
 
   const pageValue = currentValue(lookup.handle);
   const verifiedFreshDefault =
@@ -562,6 +609,7 @@ function itemForAnalysis(
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
   if (hasConflict) {
@@ -586,6 +634,7 @@ function itemForAnalysis(
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
   if (analysis.autofillPolicy === "CONDITIONAL") {
@@ -611,6 +660,7 @@ function itemForAnalysis(
       ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
   return {
@@ -640,6 +690,7 @@ function itemForAnalysis(
     ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
+    ...(searchValuePlan ? { searchValuePlan } : {}),
   };
 }
 

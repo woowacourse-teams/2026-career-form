@@ -6,12 +6,14 @@ import { acquireDocumentRun } from "../interaction/document-run";
 import type { ExecutionAdapterId } from "../api/types";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
+import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { greetingGpaSafe } from "../adapters/greeting/gpa";
 import { greetingSyntheticDomName } from "../adapters/greeting/collection";
 import { matchesResultValue } from "../workflow/result-value-match";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
 import { skipped, type ApprovedWriteResult } from "./write-result";
+import { debugWriteRun } from "../debug/autofill-debug";
 import {
   executeApprovedSearchWrites,
   settledSearchSelectionResult,
@@ -126,6 +128,7 @@ export async function executeApprovedWritesAfterPageSettles({
   calendarOnly = false,
   executionAdapterId,
   settledRegistry,
+  onSearchFollowUp,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
@@ -142,6 +145,10 @@ export async function executeApprovedWritesAfterPageSettles({
   /** Greeting-only readback registry, with the original candidate IDs safely rebound. */
   settledRegistry?: () =>
     CandidateRegistry | undefined | Promise<CandidateRegistry | undefined>;
+  onSearchFollowUp?: (
+    item: ReviewPlanItem,
+    controls: readonly SearchFollowUpControl[],
+  ) => void;
 }): Promise<ApprovedWriteResult[]> {
   const first = items[0] && registry.lookupField(items[0].candidateId);
   const document =
@@ -152,12 +159,18 @@ export async function executeApprovedWritesAfterPageSettles({
       : undefined);
   const release = document ? acquireDocumentRun(document) : undefined;
   if (document && !release)
-    return items.map((item) =>
-      skipped(
-        item.candidateId,
-        "needs-verification",
-        "STALE_TARGET",
-        "이미 자동 기입이 실행 중입니다.",
+    return debugWriteRun(
+      items,
+      approvedCandidateIds,
+      registry,
+      undefined,
+      items.map((item) =>
+        skipped(
+          item.candidateId,
+          "needs-verification",
+          "STALE_TARGET",
+          "이미 자동 기입이 실행 중입니다.",
+        ),
       ),
     );
   const url = document?.URL;
@@ -209,7 +222,13 @@ export async function executeApprovedWritesAfterPageSettles({
         if (runCurrent()) onResult?.(item, result, registry);
         if (effect === "stop") halted = true;
       }
-      return calendarResults;
+      return debugWriteRun(
+        items,
+        approvedCandidateIds,
+        registry,
+        undefined,
+        calendarResults,
+      );
     }
     const initial = executeApprovedWrites({
       items,
@@ -279,8 +298,10 @@ export async function executeApprovedWritesAfterPageSettles({
       },
       onResult: (item, result) => onResult?.(item, result, registry),
       results: initial,
+      onSearchFollowUp,
     });
     await settlePendingEmail();
+    const executedResults = [...initial];
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     let greetingRegistry: CandidateRegistry | undefined = registry;
     if (executionAdapterId === "greeting-v1" && settledRegistry) {
@@ -356,7 +377,13 @@ export async function executeApprovedWritesAfterPageSettles({
         if (approvedCandidateIds.has(result.candidateId))
           onResult?.(items[index]!, result, registry);
       });
-    return finalResults;
+    return debugWriteRun(
+      items,
+      approvedCandidateIds,
+      registry,
+      executedResults,
+      finalResults,
+    );
   } finally {
     release?.();
   }

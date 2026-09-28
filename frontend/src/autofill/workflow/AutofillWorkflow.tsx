@@ -32,7 +32,6 @@ import {
 } from "../dom/collect";
 import { executeApprovedPreparationPlans } from "../preparation/executor";
 import { preparationFailureMessage } from "../preparation/failure-message";
-import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -48,12 +47,18 @@ import {
   type DeferredDriverFailures,
   type CompletedGenericStateDriver,
   type GreetingStateDriverReceipt,
+  type GenericSearchFollowUp,
 } from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
 import { createReviewActions, sensitiveValueApproved } from "./review-actions";
-import { executionItemsForAction } from "./calendar-routing";
 import {
-  adapterProfileValue,
+  createSearchFollowUpRecorder,
+  takeWrittenSearchFollowUp,
+} from "./search-follow-up-state";
+import { completedSearchFollowUpsRefIsCurrent } from "./search-follow-up-analysis";
+import { collectRevealDiagnostics } from "./reveal-diagnostics";
+import { approvedReviewExecution } from "./workflow-write-items";
+import {
   localProfileValue,
   preparationItem,
   reviewProfileFieldKey,
@@ -134,6 +139,8 @@ export function AutofillWorkflow({
   const completedGreetingStateDrivers = useRef<
     Map<string, GreetingStateDriverReceipt>
   >(new Map());
+  const searchFollowUp = useRef<GenericSearchFollowUp | undefined>(undefined);
+  const completedSearchFollowUps = useRef<readonly GenericSearchFollowUp[]>([]);
   const deferredDriverGroups = useRef<ReadonlySet<Element>>(new Set());
   const deferredDriverFailures = useRef<DeferredDriverFailures>(new WeakMap());
   const [revealedPreparationKeys, setRevealedPreparationKeys] = useState<
@@ -162,10 +169,18 @@ export function AutofillWorkflow({
     WorkflowDiagnostic[]
   >([]);
 
+  const onSearchFollowUp = createSearchFollowUpRecorder(
+    pageDocument,
+    searchFollowUp,
+  );
+
   const analyzeFields: ReturnType<typeof createAnalyzeFields> = (...args) =>
     createAnalyzeFields({
       onActivity: setActivity,
       onWriteResult,
+      onSearchFollowUp,
+      searchFollowUp,
+      completedSearchFollowUps,
       onAddressOperation: (element) =>
         recordOperation(element, "연락처와 주소"),
       onAnalysis: setAnalysisSummary,
@@ -410,63 +425,12 @@ export function AutofillWorkflow({
         setStage("analyzing");
         const addedRowsToEmptyForm = adapter.hasFreshRows(runnablePlans);
         setWorkflowDiagnostics(
-          adapter.revealSelections.map((selection) => {
-            const resolved = resolveProfileFieldValue(
-              profile,
-              selection.profileFieldKey,
-              selection.itemIndex,
-            );
-            if (
-              requiresSensitiveConfirmation(
-                selection.profileFieldKey,
-                resolved.sensitive,
-              ) &&
-              !sensitiveValueApproved(
-                approvedSensitiveValues.current,
-                profile,
-                selection.profileFieldKey,
-              )
-            ) {
-              return { code: "PROFILE_NOT_SELECTED" as const, count: 0 };
-            }
-            const controls = [
-              ...pageDocument.querySelectorAll<
-                HTMLInputElement | HTMLSelectElement
-              >("input[type='radio'], select"),
-            ].filter(
-              (element) =>
-                element.name === selection.domName ||
-                element.name.startsWith(`${selection.domName}_`),
-            );
-            const state = (element: HTMLInputElement | HTMLSelectElement) =>
-              element instanceof HTMLInputElement
-                ? element.checked
-                : element.selectedIndex;
-            const before = new Map(
-              controls.map((element) => [element, state(element)]),
-            );
-            const diagnostic = adapter.selectReveal(
-              pageDocument,
-              selection,
-              resolved.status === "resolved"
-                ? adapterProfileValue(
-                    adapter,
-                    selection.profileFieldKey,
-                    resolved.value,
-                  )
-                : undefined,
-            );
-            controls
-              .filter((element) => state(element) !== before.get(element))
-              .forEach((element) =>
-                recordOperation(
-                  element,
-                  progressCategory({
-                    profileFieldKey: selection.profileFieldKey,
-                  } as ReviewPlanItem),
-                ),
-              );
-            return diagnostic;
+          collectRevealDiagnostics({
+            adapter,
+            document: pageDocument,
+            profile,
+            approvedSensitiveValues: approvedSensitiveValues.current,
+            recordOperation,
           }),
         );
         // Newly created school rows can reveal their own major add action.
@@ -630,17 +594,8 @@ export function AutofillWorkflow({
       const retainedCandidateIds = new Set(
         retainedDrivers.results.map((result) => result.candidateId),
       );
-      const executableReviewItems = executionItemsForAction(
-        reviewItems.filter(
-          (item) => !retainedCandidateIds.has(item.candidateId),
-        ),
-        action,
-      );
-      const approvedCandidateIds = new Set(
-        executableReviewItems
-          .filter((item) => item.selected && !item.disabled)
-          .map((item) => item.candidateId),
-      );
+      const { executableReviewItems, approvedCandidateIds } =
+        approvedReviewExecution(reviewItems, retainedCandidateIds, action);
       if (
         profile &&
         JSON.stringify(await repository.load()) !== JSON.stringify(profile)
@@ -648,6 +603,17 @@ export function AutofillWorkflow({
         setExceptionTitle(
           "확인 후 프로필이 변경되었습니다. 다시 시작해 주세요",
         );
+        setStage("exception");
+        return;
+      }
+      if (
+        !completedSearchFollowUpsRefIsCurrent(
+          completedSearchFollowUps,
+          profile!,
+          pageDocument,
+        )
+      ) {
+        setExceptionTitle("검색 후 입력 항목이 변경되어 다시 확인해야 합니다");
         setStage("exception");
         return;
       }
@@ -676,6 +642,8 @@ export function AutofillWorkflow({
           : {}),
         onResult: onWriteResult,
         beforeWrite: (item) => presentField(fieldsSnapshot.registry, item),
+        onSearchFollowUp: (item, controls) =>
+          onSearchFollowUp(item, controls, fieldsSnapshot.registry),
         items: executableReviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
@@ -692,7 +660,12 @@ export function AutofillWorkflow({
         document: pageDocument,
         beforeMutation: async () =>
           mounted.current &&
-          JSON.stringify(await repository.load()) === approvedProfile,
+          JSON.stringify(await repository.load()) === approvedProfile &&
+          completedSearchFollowUpsRefIsCurrent(
+            completedSearchFollowUps,
+            profile!,
+            pageDocument,
+          ),
       });
       if (!mounted.current) return;
       if (settledGreetingRegistry) {
@@ -709,6 +682,32 @@ export function AutofillWorkflow({
             );
         });
         setResultRegistry(settledGreetingRegistry);
+      }
+      const pendingFollowUp = takeWrittenSearchFollowUp(
+        searchFollowUp,
+        nextResults,
+      );
+      if (pendingFollowUp) {
+        if (
+          profile &&
+          JSON.stringify(await repository.load()) !== JSON.stringify(profile)
+        ) {
+          setExceptionTitle(
+            "검색 후 프로필이 변경되었습니다. 다시 시작해 주세요",
+          );
+          setStage("exception");
+          return;
+        }
+        if (!writeController.current.signal.aborted)
+          await analyzeFields(
+            profile!,
+            false,
+            completedDriverKeys.current,
+            deferredDriverGroups.current,
+            0,
+            { reviewOnly: true, searchFollowUp: pendingFollowUp },
+          );
+        return;
       }
       setResults([...retainedDrivers.results, ...nextResults]);
       setStage("result");
