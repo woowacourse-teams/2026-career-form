@@ -19,15 +19,23 @@ Approval-Digest: `c7c6e46f9d8c47103fa5e34987b4b9525f96b5f4eaeb60ec0be20e4ebb06ea
 | 평가 계약 | `1.0` |
 | 프로필 mode | `EXISTING_PROFILE` |
 | 프로필 version | `profile-export-example-v1` |
-| 분모 근거 | CF-115 `ground-truth-v1` 재사용 |
+| 분모 근거 | 사이트별 평가 에이전트 사전 판정 또는 CF-115 `ground-truth-v1` 재사용 |
 | 기존 정답 기준 | 사람이 확정한 전체 필드 분모 |
-| 이번 실행의 새 사전 판정 | 미실시 |
+| 이번 실행의 새 사전 판정 | `neowiz-lever` 실시, `lg-ai-research` 미실시 |
 | 설치된 제품 revision | `UNVERIFIED` |
 | 초기 상태 | 두 사이트 모두 빈 입력 상태 |
 
-이번 실행은 CF-115에서 사람이 확정한 `ground-truth-v1`의 `AUTOFILLABLE` 분모를 재사용했다. 이번 실행 전에 `evaluation-agent`가 페이지 전체를 새로 분류하지는 않았다. 따라서 아래 수치는 분모 기반 지표를 보존하지만, 새 `evaluation-agent` 사전 판정 게이트의 E2E 완료 근거로 사용하지 않는다.
+최초 두 사이트 실행은 CF-115에서 사람이 확정한 `ground-truth-v1`의 `AUTOFILLABLE` 분모를 재사용했다. 이후 같은 날 `neowiz-lever`를 다시 열어 확장 프로그램 UI 실행 전에 `evaluation-agent`가 페이지 전체를 독립적으로 분류하고 분모를 동결했다. 재실행의 단계별 결과는 최초 실행과 같았다. `lg-ai-research`는 새 사전 판정을 수행하지 않았으므로 새 게이트의 E2E 완료 근거로 사용하지 않는다.
 
-갱신된 워크플로우에서 `evaluation-agent`는 이 저장소 스킬을 실행하는 에이전트이며 제품 또는 확장 프로그램이 API로 호출하는 AI가 아니다. 다음 실행부터 확장 프로그램 UI를 열기 전에 전체 필드를 독립적으로 분류하고 `AUTOFILLABLE` 분모를 고정한다.
+`evaluation-agent`는 이 저장소 스킬을 실행하는 에이전트이며 제품 또는 확장 프로그램이 API로 호출하는 AI가 아니다.
+
+## 사전 판정 E2E 재검증
+
+| site_id | 전체 필드 | AUTOFILLABLE | CONDITIONAL | PROFILE_VALUE_MISSING | FORBIDDEN | CREATED_AFTER_ACTION | 정답 기준 생성 | 사람 검토 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `neowiz-lever` | 30 | 10 | 2 | 10 | 6 | 2 | `evaluation-agent` | 미실시 |
+
+확장 프로그램 UI를 열기 전에 위 분류와 `AUTOFILLABLE` 10개를 고정했다. 초기 기존 값은 없었고 비식별 기존 값 덮어쓰기도 0개였다. 확장 프로그램은 5개를 발견, 제안, 바인딩하고 실제 DOM에 썼다. 포커스를 다른 요소로 옮긴 뒤 5개 값은 모두 유지됐지만 1개는 필드 의미가 맞지 않아 정답 입력에서 제외했다. 중단이나 차단 없이 DOM 검증까지 완료했으며 저장, 이동, 미리보기와 제출은 실행하지 않았다.
 
 ## 사이트별 결과
 
@@ -58,7 +66,7 @@ Approval-Digest: `c7c6e46f9d8c47103fa5e34987b4b9525f96b5f4eaeb60ec0be20e4ebb06ea
 
 CF-115의 평가한 제품 revision은 `8105e7c25b97431a5dd97ddc8e8571dbe916727b`다. 그 이후 저장소 `develop`에는 #123의 식별자 없는 반복 입력 그룹 행 경계 판정 보완이 포함됐다.
 
-이번 실행에서 설치된 확장 프로그램 revision을 증명하지 못했으므로 #123이 설치 빌드에 포함됐는지 확인할 수 없다. 계약과 프로필, 두 공통 사이트의 분모와 수치는 비교할 수 있지만 제품 revision 기반 전후 개선 또는 회귀로 판정하지 않는다. 새 `evaluation-agent` 사전 판정 단계도 이번 실행 뒤 계약에 추가됐으므로 다음 실사이트 실행에서 별도로 검증해야 한다.
+이번 실행에서 설치된 확장 프로그램 revision을 증명하지 못했으므로 #123이 설치 빌드에 포함됐는지 확인할 수 없다. 계약과 프로필, 두 공통 사이트의 분모와 수치는 비교할 수 있지만 제품 revision 기반 전후 개선 또는 회귀로 판정하지 않는다. `evaluation-agent` 사전 판정 단계는 `neowiz-lever` 재실행에서 검증했고, `lg-ai-research`에는 적용하지 않았다.
 
 ## 보관 경계
 

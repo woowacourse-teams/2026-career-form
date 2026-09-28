@@ -295,4 +295,4 @@
 - 평가 에이전트가 제품 AI와 독립적으로 전체 필드를 분류하고 `AUTOFILLABLE` 분모를 실행 전에 동결하는 계약을 [CF-124 bundle](../raw/issues/CF-124/manifest.md)에 기록했다.
 - `neowiz-lever`와 `lg-ai-research`의 두 사이트 실행 결과를 [실사이트 평가 워크플로우](topics/live-autofill-evaluation.md)와 [평가 기준선](topics/generic-autofill-evaluation-baselines.md)에 연결했다.
 - 설치된 제품 revision은 `UNVERIFIED`로 기록했다. CF-115 이후 저장소 변경을 설치 빌드의 변경으로 간주하지 않으며 revision 기반 개선 또는 회귀 비교를 보류했다.
-- 이번 두 사이트 실행은 CF-115 `ground-truth-v1` 분모를 재사용했다. 새 평가 에이전트 사전 판정 게이트는 다음 실사이트 실행에서 E2E 검증한다.
+- 최초 두 사이트 실행은 CF-115 `ground-truth-v1` 분모를 재사용했다. 이후 `neowiz-lever` 재실행에서 평가 에이전트가 확장 프로그램 실행 전에 전체 30개 필드를 분류하고 `AUTOFILLABLE` 10개를 동결해 새 사전 판정 게이트를 E2E 검증했다. `lg-ai-research`는 이전 분모를 재사용한 결과로 남는다.
