@@ -2,8 +2,8 @@
 
 > Topic: generic-autofill-evaluation-baselines
 > Status: Current
-> Current: [CF-115 범용 자동 기입 실사이트 기준선](../../raw/issues/CF-115/documents/generic-autofill-evaluation-baseline.md)
-> History: [CF-115 첫 기준선](../../raw/issues/CF-115/documents/generic-autofill-evaluation-baseline.md)
+> Current: [CF-124 2026-09-28 실사이트 자동 입력 평가](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md)
+> History: [CF-115 첫 기준선](../../raw/issues/CF-115/documents/generic-autofill-evaluation-baseline.md); [CF-124 두 사이트 후속 실행](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md)
 > Updated: 2026-09-28
 
 ## 현재 상태
@@ -17,8 +17,11 @@ CF-115는 첫 공통 기준선이다. 실사이트 5개 중 4개를 측정했고
 | Issue | 평가한 제품 revision | 계약 | 프로필 | 실사이트 | 매핑 재현율 | 정답 입력률 | 오입력률 | 근거 |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
 | CF-115 | `8105e7c25b97` | `1.0` | `profile-export-example-v1` | 측정 4, 미확정 1 | 11/31, 35.5% | 8/31, 25.8% | 4/12, 33.3% | [첫 기준선](../../raw/issues/CF-115/documents/generic-autofill-evaluation-baseline.md) |
+| CF-124 | `UNVERIFIED` | `1.0` | `profile-export-example-v1` | 측정 2 | 7/17, 41.2% | 6/17, 35.3% | 2/8, 25.0% | [두 사이트 후속 실행](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md) |
 
 후속 평가 Issue는 이 표에 한 행을 추가하고 해당 Issue의 불변 raw를 History에 연결한다. 계약, 프로필 또는 site 집합이 달라지면 같은 분모의 전후 비교로 표시하지 않는다. 변경된 조건을 함께 적고 공통 대상만 별도 비교한다.
+
+CF-124는 CF-115와 계약, 프로필, 두 공통 사이트의 분모가 같지만 설치된 제품 revision을 확인하지 못했다. 저장소에는 CF-115 이후 #123 변경이 있으나 설치 빌드 포함 여부를 증명할 수 없어 revision 기반 개선 또는 회귀 비교는 보류한다.
 
 ## 보관 역할
 
