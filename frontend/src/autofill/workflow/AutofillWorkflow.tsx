@@ -1,6 +1,17 @@
+import { greetingBasicControls } from "../adapters/greeting/fingerprint";
+import { resolveDocumentCompany } from "../adapters/company";
+import {
+  createPreparationOptions,
+  prepareApprovedPlans,
+  preparationExceptionTitle,
+} from "./preparation-options";
 import { useWriteProgress } from "./use-write-progress";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
+import {
+  captureGreetingResultTargets,
+  recollectGreetingResultRegistry,
+} from "./greeting-result-registry";
 import {
   retainedDriverCandidates,
   retainedDriverReviewResults,
@@ -21,14 +32,8 @@ import {
   collectPreparationSnapshot,
   type CollectedSnapshot,
 } from "../dom/collect";
-import {
-  executeApprovedPreparationPlans,
-  type PreparationExecutionOptions,
-} from "../preparation/executor";
+import { executeApprovedPreparationPlans } from "../preparation/executor";
 import { preparationFailureMessage } from "../preparation/failure-message";
-import { selectNativeProfileOption } from "../preparation/select-profile-option";
-import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
-import { waitForExpectedFields } from "../preparation/wait-for-fields";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -43,6 +48,7 @@ import {
   createAnalyzeFields,
   type DeferredDriverFailures,
   type CompletedGenericStateDriver,
+  type GreetingStateDriverReceipt,
   type GenericSearchFollowUp,
 } from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
@@ -55,15 +61,12 @@ import { completedSearchFollowUpsRefIsCurrent } from "./search-follow-up-analysi
 import { collectRevealDiagnostics } from "./reveal-diagnostics";
 import { approvedReviewExecution } from "./workflow-write-items";
 import {
-  actionLabel,
-  adapterProfileValue,
   localProfileValue,
   preparationItem,
   reviewProfileFieldKey,
   safeErrorTitle,
   type PreparationItem,
   type Stage,
-  pageHost,
   runtimeAddressSearch,
   type WorkflowProps,
 } from "./workflow-model";
@@ -79,7 +82,8 @@ export function AutofillWorkflow({
   onExit,
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
-  const adapter = getWorkflowAdapter(pageHost(pageDocument));
+  const companyId = resolveDocumentCompany(pageDocument);
+  const adapter = getWorkflowAdapter(pageDocument);
   const presentation = useMemo(
     () => createFieldPresentation(pageDocument),
     [pageDocument],
@@ -125,9 +129,13 @@ export function AutofillWorkflow({
   const [reviewItems, setReviewItems] = useState<ReviewPlanItem[]>([]);
   const approvedSensitiveValues = useRef(new Map<string, string>());
   const consideredSensitiveValues = useRef(new Map<string, string>());
+  const freshDefaultControls = useRef(new WeakSet<Element>());
   const completedDriverKeys = useRef<ReadonlySet<string>>(new Set());
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
+  >(new Map());
+  const completedGreetingStateDrivers = useRef<
+    Map<string, GreetingStateDriverReceipt>
   >(new Map());
   const searchFollowUp = useRef<GenericSearchFollowUp | undefined>(undefined);
   const completedSearchFollowUps = useRef<readonly GenericSearchFollowUp[]>([]);
@@ -143,6 +151,7 @@ export function AutofillWorkflow({
     useState<
       CollectedSnapshot<ReturnType<typeof collectFieldsSnapshot>["request"]>
     >();
+  const [resultRegistry, setResultRegistry] = useState<CandidateRegistry>();
   const [partial, setPartial] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [exceptionTitle, setExceptionTitle] =
@@ -163,36 +172,50 @@ export function AutofillWorkflow({
     searchFollowUp,
   );
 
-  const analyzeFields = createAnalyzeFields({
-    onActivity: setActivity,
-    onWriteResult,
-    onSearchFollowUp,
-    searchFollowUp,
-    completedSearchFollowUps,
-    onAddressOperation: (element) => recordOperation(element, "연락처와 주소"),
-    onAnalysis: setAnalysisSummary,
-    adapter,
-    addressRun,
-    addressSearch,
-    apiClient,
-    pageDocument,
-    repository,
-    approvedSensitiveValues,
-    consideredSensitiveValues,
-    completedDriverKeys,
-    completedGenericStateDrivers,
-    deferredDriverGroups,
-    deferredDriverFailures,
-    setAddressResult,
-    setExceptionTitle,
-    setStage,
-    setFieldsSnapshot,
-    setReviewItems,
-    setPartial,
-    setWarnings,
-    setResults,
-    presentField,
-  });
+  const analyzeFields: ReturnType<typeof createAnalyzeFields> = (...args) =>
+    createAnalyzeFields({
+      onActivity: setActivity,
+      onWriteResult,
+      onSearchFollowUp,
+      searchFollowUp,
+      completedSearchFollowUps,
+      onAddressOperation: (element) =>
+        recordOperation(element, "연락처와 주소"),
+      onAnalysis: setAnalysisSummary,
+      adapter: getWorkflowAdapter(pageDocument),
+      addressRun,
+      addressSearch,
+      apiClient,
+      pageDocument,
+      repository,
+      approvedSensitiveValues,
+      consideredSensitiveValues,
+      freshDefaultControls,
+      completedDriverKeys,
+      completedGenericStateDrivers,
+      completedGreetingStateDrivers,
+      deferredDriverGroups,
+      deferredDriverFailures,
+      setAddressResult,
+      setExceptionTitle,
+      setStage,
+      setFieldsSnapshot,
+      setResultRegistry,
+      rebindResultProgress: (items, originalRegistry, currentRegistry) => {
+        items.forEach((item) =>
+          progressTracker.rebindWritten(
+            item,
+            originalRegistry,
+            currentRegistry,
+          ),
+        );
+      },
+      setReviewItems,
+      setPartial,
+      setWarnings,
+      setResults,
+      presentField,
+    })(...args);
 
   useEffect(() => () => presentation.clear(), [presentation]);
   useEffect(() => {
@@ -223,9 +246,18 @@ export function AutofillWorkflow({
         const loadedProfile = await repository.load();
         if (!active) return;
         setProfile(loadedProfile);
+        completedGreetingStateDrivers.current.clear();
         const snapshot = collectPreparationSnapshot(pageDocument);
-
         const analysis = await apiClient.analyzePreparation(snapshot.request);
+        if (
+          companyId === "generic" &&
+          analysis.mode === "ADAPTER" &&
+          greetingBasicControls(pageDocument)
+        )
+          throw new Error("Unverified Greeting page structure");
+        if (companyId === "greeting" && analysis.mode !== "ADAPTER")
+          throw new Error("Unexpected generic response for registered adapter");
+        const adapter = getWorkflowAdapter(pageDocument);
 
         if (!active) return;
         if (analysis.analysisStatus === "BLOCKED") {
@@ -321,33 +353,14 @@ export function AutofillWorkflow({
     if (!profile || !preparationSnapshot || executionPending.current) return;
     executionPending.current = true;
     try {
-      if (stage === "preparation-review") {
-        for (const item of preparationItems) {
-          if (
-            !item.sensitive ||
-            item.plan.command !== "SELECT_OPTION_TO_REVEAL"
-          )
-            continue;
-          const key = item.plan.profileFieldKey;
-          const value = localProfileValue(profile, key);
-          if (value === undefined) continue;
-          consideredSensitiveValues.current.set(key, value);
-          if (item.runnable && selectedPreparationKeys.has(key))
-            approvedSensitiveValues.current.set(key, value);
-        }
-      }
-      const isApprovedPreparation = (item: PreparationItem) =>
-        item.runnable &&
-        (!item.sensitive ||
-          (item.plan.command === "SELECT_OPTION_TO_REVEAL" &&
-            sensitiveValueApproved(
-              approvedSensitiveValues.current,
-              profile,
-              item.plan.profileFieldKey,
-            )));
-      const runnablePlans = preparationItems
-        .filter(isApprovedPreparation)
-        .map((item) => ({ ...item, approved: true }));
+      const { runnablePlans, isApprovedPreparation } = prepareApprovedPlans({
+        stage,
+        profile,
+        preparationItems,
+        selectedPreparationKeys,
+        consideredSensitiveValues: consideredSensitiveValues.current,
+        approvedSensitiveValues: approvedSensitiveValues.current,
+      });
 
       setStage("analyzing");
       setActivity("preparing");
@@ -356,117 +369,15 @@ export function AutofillWorkflow({
         await analyzeFields(profile, addedRowsToEmptyForm);
         return;
       }
-      const preparationOptions = (
-        snapshot: ReturnType<typeof collectPreparationSnapshot>,
-      ): Omit<PreparationExecutionOptions, "approvedPlans"> => ({
-        onAction: (element) => {
-          const hint = adapter.repeatedProfileSectionHint?.(element.id);
-          if (hint)
-            recordOperation(
-              element,
-              progressCategory({
-                profileFieldKey: `${hint.categoryId}.`,
-              } as ReviewPlanItem),
-            );
-        },
-        document: pageDocument,
-        signal: writeController.current.signal,
-        assertCurrent: () =>
-          mounted.current && !writeController.current.signal.aborted,
-        beforeMutation: async () =>
-          mounted.current &&
-          JSON.stringify(await repository.load()) === JSON.stringify(profile),
-        initialSnapshot: {
-          registry: snapshot.registry,
-          isTargetSectionVisible: (targetSectionId) =>
-            snapshot.isSectionVisible(targetSectionId),
-          countRepeatableGroups: (plan) =>
-            snapshot.countRepeatableGroups(plan.actionCandidateId),
-          repeatableGroupState: (plan) =>
-            snapshot.repeatableGroupState(plan.actionCandidateId),
-        },
-        refreshSnapshot: async () => {
-          const refreshed = collectPreparationSnapshot(pageDocument);
-          return {
-            registry: refreshed.registry,
-            isTargetSectionVisible: (targetSectionId) =>
-              refreshed.isSectionVisible(targetSectionId),
-            countRepeatableGroups: (plan) =>
-              refreshed.countRepeatableGroups(plan.actionCandidateId),
-            repeatableGroupState: (plan) =>
-              refreshed.repeatableGroupState(plan.actionCandidateId),
-          };
-        },
-        countRepeatableGroups: (snapshot, plan) =>
-          snapshot.countRepeatableGroups?.(plan) ?? -1,
-        waitForExpectedFields: async (plan) =>
-          waitForExpectedFields(
-            pageDocument,
-            ("expectedFieldNames" in plan ? plan.expectedFieldNames : []) ?? [],
-          ),
-        selectProfileOption: (plan, snapshot) => {
-          const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
-          if (lookup.status !== "ready") {
-            return "action-not-ready";
-          }
-          const value = resolveProfileFieldValue(profile, plan.profileFieldKey);
-          if (value.status !== "resolved") return "profile-value-unavailable";
-          const normalizedValue = adapterProfileValue(
-            adapter,
-            plan.profileFieldKey,
-            value.value,
-          );
-          const adapterAllowsSelection = adapter.canSelectProfileOption?.(
-            lookup.handle,
-            normalizedValue,
-            plan.profileFieldKey,
-          );
-          if (adapterAllowsSelection === false) return "action-not-ready";
-          if (
-            lookup.handle.element instanceof HTMLInputElement &&
-            lookup.handle.element.type === "radio"
-          ) {
-            const label = plan.optionDisplayName ?? normalizedValue;
-            if (lookup.handle.candidate.displayName !== label)
-              return "option-label-mismatch";
-            if (
-              adapterAllowsSelection === true &&
-              lookup.handle.element.checked
-            )
-              return "selected";
-            lookup.handle.element.click();
-            recordOperation(
-              lookup.handle.element,
-              progressCategory({
-                profileFieldKey: plan.profileFieldKey,
-              } as ReviewPlanItem),
-            );
-            return lookup.handle.element.checked &&
-              adapter.canSelectProfileOption?.(
-                lookup.handle,
-                normalizedValue,
-                plan.profileFieldKey,
-              ) !== false
-              ? "selected"
-              : "action-not-ready";
-          }
-          if (!(lookup.handle.element instanceof HTMLSelectElement))
-            return "unsupported-option-action";
-          const before = lookup.handle.element.value;
-          const selected = selectNativeProfileOption(
-            lookup.handle.element,
-            normalizedValue,
-            adapterAllowsSelection,
-          );
-          if (lookup.handle.element.value !== before)
-            recordOperation(
-              lookup.handle.element,
-              progressCategory({
-                profileFieldKey: plan.profileFieldKey,
-              } as ReviewPlanItem),
-            );
-          return selected;
-        },
+      const preparationOptions = createPreparationOptions({
+        adapter,
+        pageDocument,
+        profile,
+        repository,
+        freshDefaultControls,
+        writeController,
+        mounted,
+        recordOperation,
       });
       const result = await executeApprovedPreparationPlans({
         approvedPlans: runnablePlans,
@@ -474,21 +385,8 @@ export function AutofillWorkflow({
       });
 
       if (result.status !== "completed") {
-        const failedPlan =
-          result.status === "failed" && result.failedActionCandidateId
-            ? runnablePlans.find(
-                ({ plan }) =>
-                  plan.actionCandidateId === result.failedActionCandidateId,
-              )?.plan
-            : undefined;
         setExceptionTitle(
-          result.status === "failed"
-            ? `${preparationFailureMessage(result.reason)}${
-                failedPlan
-                  ? ` (${actionLabel(failedPlan, preparationSnapshot)})`
-                  : ""
-              }`
-            : "준비 동작을 안전하게 완료하지 못했습니다",
+          preparationExceptionTitle(result, runnablePlans, preparationSnapshot),
         );
         setStage("exception");
         return;
@@ -505,13 +403,18 @@ export function AutofillWorkflow({
             recordOperation,
           }),
         );
-        // Analyze that newly collected DOM once, but only execute selections:
-        // repeating add plans here could create duplicate rows.
+        // Newly created school rows can reveal their own major add action.
+        // Only an adapter-opted-in action may run here, with its live row count.
         const followUpSnapshot = collectPreparationSnapshot(pageDocument);
         setActivity("matching");
         const followUpAnalysis = await apiClient.analyzePreparation(
           followUpSnapshot.request,
         );
+        if (
+          followUpAnalysis.analysisStatus === "BLOCKED" ||
+          (companyId === "greeting" && followUpAnalysis.mode !== "ADAPTER")
+        )
+          throw new Error("Unexpected adapter response");
 
         if (adapter.diagnosticsTitle) {
           setWorkflowDiagnostics((previous) => [
@@ -524,39 +427,47 @@ export function AutofillWorkflow({
             },
           ]);
         }
-        if (followUpAnalysis.analysisStatus !== "BLOCKED") {
-          const followUpPlans = followUpAnalysis.preparationPlans
-            .filter(
-              (
-                plan,
-              ): plan is Extract<
-                PreparationPlan,
-                { command: "SELECT_OPTION_TO_REVEAL" }
-              > => plan.command === "SELECT_OPTION_TO_REVEAL",
-            )
-            .map((plan) => ({
-              ...preparationItem(plan, followUpSnapshot, profile, adapter),
-              approved: true,
-            }))
-            .filter(isApprovedPreparation);
-          if (followUpPlans.length > 0) {
-            setActivity("preparing");
-            const followUpResult = await executeApprovedPreparationPlans({
-              approvedPlans: followUpPlans,
-              ...preparationOptions(followUpSnapshot),
-            });
+        const followUpPlans = followUpAnalysis.preparationPlans
+          .filter((plan) => {
+            if (plan.command === "SELECT_OPTION_TO_REVEAL") return true;
+            if (plan.command !== "ADD_REPEATABLE_GROUP") return false;
+            const action = followUpSnapshot.registry.lookupAction(
+              plan.actionCandidateId,
+            );
+            return (
+              action.status === "ready" &&
+              adapter.followUpRepeatableAction?.(
+                action.handle.candidate.domId,
+              ) === true
+            );
+          })
+          .map((plan) => ({
+            ...preparationItem(plan, followUpSnapshot, profile, adapter),
+            approved: true,
+          }))
+          .filter(isApprovedPreparation)
+          .filter(
+            (item) =>
+              item.plan.command !== "ADD_REPEATABLE_GROUP" ||
+              (item.requiredAdditions ?? 0) > 0,
+          );
+        if (followUpPlans.length > 0) {
+          setActivity("preparing");
+          const followUpResult = await executeApprovedPreparationPlans({
+            approvedPlans: followUpPlans,
+            ...preparationOptions(followUpSnapshot),
+          });
 
-            if (followUpResult.status !== "completed") {
-              setExceptionTitle(
-                followUpResult.status === "failed"
-                  ? preparationFailureMessage(followUpResult.reason)
-                  : "준비 동작을 안전하게 완료하지 못했습니다",
-              );
-              setStage("exception");
-              return;
-            }
-            await writeRevealedFields(profile, followUpPlans);
+          if (followUpResult.status !== "completed") {
+            setExceptionTitle(
+              followUpResult.status === "failed"
+                ? preparationFailureMessage(followUpResult.reason)
+                : "준비 동작을 안전하게 완료하지 못했습니다",
+            );
+            setStage("exception");
+            return;
           }
+          await writeRevealedFields(profile, followUpPlans);
         }
         await analyzeFields(profile, addedRowsToEmptyForm);
       } catch (error) {
@@ -597,6 +508,7 @@ export function AutofillWorkflow({
   ) => {
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
+    setResultRegistry(undefined);
     try {
       if (profile && reviewItems.some((item) => item.status === "sensitive")) {
         for (const item of reviewItems) {
@@ -665,7 +577,24 @@ export function AutofillWorkflow({
       writeController.current.abort();
       writeController.current = new AbortController();
       const approvedProfile = JSON.stringify(profile);
+      const greetingTargets =
+        companyId === "greeting"
+          ? captureGreetingResultTargets(fieldsSnapshot.registry, reviewItems)
+          : undefined;
+      let settledGreetingRegistry: CandidateRegistry | undefined;
       const nextResults = await executeApprovedWritesAfterPageSettles({
+        ...(greetingTargets
+          ? {
+              settledRegistry: () => {
+                settledGreetingRegistry = recollectGreetingResultRegistry(
+                  pageDocument,
+                  greetingTargets,
+                  reviewItems,
+                );
+                return settledGreetingRegistry;
+              },
+            }
+          : {}),
         onResult: onWriteResult,
         beforeWrite: (item) => presentField(fieldsSnapshot.registry, item),
         onSearchFollowUp: (item, controls) =>
@@ -694,6 +623,21 @@ export function AutofillWorkflow({
           ),
       });
       if (!mounted.current) return;
+      if (settledGreetingRegistry) {
+        [...retainedDrivers.results, ...nextResults].forEach((result) => {
+          if (result.status !== "written") return;
+          const item = reviewItems.find(
+            (candidate) => candidate.candidateId === result.candidateId,
+          );
+          if (item)
+            progressTracker.rebindWritten(
+              item,
+              fieldsSnapshot.registry,
+              settledGreetingRegistry!,
+            );
+        });
+        setResultRegistry(settledGreetingRegistry);
+      }
       const pendingFollowUp = takeWrittenSearchFollowUp(
         searchFollowUp,
         nextResults,
@@ -738,25 +682,29 @@ export function AutofillWorkflow({
     void executePreparation();
   }, [preparationExecutionPending]);
 
+  const visibleRegistry =
+    stage === "result" && companyId === "greeting"
+      ? (resultRegistry ?? fieldsSnapshot?.registry)
+      : fieldsSnapshot?.registry;
+
   return (
     <WorkflowScreens
       progress={progress}
       activity={activity}
       progressStateFor={progressTracker.progressStateFor}
       progressIdFor={(id) =>
-        fieldsSnapshot
-          ? progressTracker.progressIdFor(id, fieldsSnapshot.registry)
+        visibleRegistry
+          ? progressTracker.progressIdFor(id, visibleRegistry)
           : undefined
       }
       wasWritten={(id) =>
-        !!fieldsSnapshot &&
-        progressTracker.wasWritten(id, fieldsSnapshot.registry)
+        !!visibleRegistry && progressTracker.wasWritten(id, visibleRegistry)
       }
       fieldStateFor={(id) =>
-        resultFieldState(fieldsSnapshot?.registry, pageDocument, id)
+        resultFieldState(visibleRegistry, pageDocument, id)
       }
       profile={profile}
-      optionsFor={(id) => resultFieldOptions(fieldsSnapshot?.registry, id)}
+      optionsFor={(id) => resultFieldOptions(visibleRegistry, id)}
       stage={stage}
       preparationItems={preparationItems}
       warnings={warnings}
@@ -782,16 +730,15 @@ export function AutofillWorkflow({
       currentCategory={currentCategory}
       operatedCategories={operatedCategories}
       onLocateSection={(candidateIds, category) =>
-        !!fieldsSnapshot &&
+        !!visibleRegistry &&
         presentation.showSection(
-          fieldsSnapshot.registry,
+          visibleRegistry,
           candidateIds,
           category ? [...(operated.get(category) ?? [])] : [],
         )
       }
       onLocate={(candidateId) =>
-        !!fieldsSnapshot &&
-        presentation.show(fieldsSnapshot.registry, candidateId)
+        !!visibleRegistry && presentation.show(visibleRegistry, candidateId)
       }
     />
   );

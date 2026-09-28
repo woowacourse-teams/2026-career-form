@@ -82,6 +82,54 @@ public final class FieldInteractionPolicy {
         );
     }
 
+    public Decision evaluateGreeting(
+        FieldCandidate candidate,
+        FieldMappingResolver.Result mapping,
+        List<WriteCommand> supportedWriteCommands
+    ) {
+        Decision ordinary = evaluate(candidate, mapping);
+        if (ordinary.interactionStatus() != InteractionStatus.READY
+            || !(mapping instanceof FieldMappingResolver.Match match)
+            || candidate.domName() == null || candidate.element() != FormElement.INPUT) {
+            return ordinary;
+        }
+        String name = candidate.domName();
+        if (candidate.control() == FormControl.TEXT
+            && match.valueBinding() instanceof FieldMappingResolver.DerivedBinding derived
+            && (name.matches("educationalBackground\\.universities\\.[0-9]+\\.majors\\.1")
+                && derived.recipe() == FieldMappingResolver.DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_1_NAME
+                || name.matches("educationalBackground\\.universities\\.[0-9]+\\.majors\\.2")
+                && derived.recipe() == FieldMappingResolver.DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_2_NAME)) {
+            return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SEARCH_SELECTION));
+        }
+        if (!(match.valueBinding() instanceof FieldMappingResolver.DirectBinding direct)) return ordinary;
+        if (candidate.control() == FormControl.BUTTON
+            && SUPPORTED_FIELDS.isDateField(direct.profileFieldKey())
+            && (name.equals("basicInformation.birthdate")
+                || name.equals("militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.startDate")
+                || name.equals("militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.endDate")
+                || name.matches("educationalBackground\\.(universities|graduateSchools)\\.[0-9]+\\.enrollmentPeriod\\.(startDate|endDate)")
+                || name.matches("educationalBackground\\.highSchool\\.enrollmentPeriod\\.(startDate|endDate)")
+                || name.matches("workHistory\\.workExperiences\\.[0-9]+\\.employmentPeriod\\.(startDate|endDate)")
+                || name.matches("languagesCertificationsAndOtherActivity\\.(certifiedLanguageTests|certificatesLicenses)\\.[0-9]+\\.acquisitionDate"))) {
+            if (supportedWriteCommands == null || !supportedWriteCommands.contains(WriteCommand.SELECT_DATE)) {
+                return withoutWrite(InteractionStatus.UNVERIFIED);
+            }
+            return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SELECT_DATE));
+        }
+        if (candidate.control() == FormControl.TEXT
+            && (name.equals("basicInformation.nationalityCode")
+                || name.matches("educationalBackground\\.(universities|graduateSchools)\\.[0-9]+\\.(schoolName|majors\\.0)")
+                || name.matches("educationalBackground\\.graduateSchools\\.[0-9]+\\.majors\\.1")
+                || name.equals("educationalBackground.highSchool.schoolName")
+                || name.matches("workHistory\\.workExperiences\\.[0-9]+\\.companyName")
+                || name.matches("languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.[0-9]+\\.testName")
+                || name.matches("languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.[0-9]+\\.credentials"))) {
+            return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SEARCH_SELECTION));
+        }
+        return ordinary;
+    }
+
     // This authorizes local preflight, never a direct write or an assumed safe popup.
     private static boolean isDateSelection(
         FieldCandidate candidate,

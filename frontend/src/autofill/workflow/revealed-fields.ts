@@ -127,6 +127,7 @@ export function createWriteRevealedFields({
     });
     diagnostics.push({ code: "ELIGIBLE_FIELDS", count: items.length });
     const results = await executeApprovedWritesAfterPageSettles({
+      document: pageDocument,
       onResult: onWriteResult,
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),

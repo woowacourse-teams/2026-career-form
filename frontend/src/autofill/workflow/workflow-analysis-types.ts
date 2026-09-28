@@ -14,6 +14,7 @@ import type { WorkflowActivity } from "./progress-model";
 import type { WriteFailureCode } from "../write/failure";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { Stage } from "./workflow-model";
+import type { GreetingResultTargets } from "./greeting-result-registry";
 
 type FieldsSnapshot = CollectedSnapshot<
   ReturnType<typeof collectFieldsSnapshot>["request"]
@@ -30,6 +31,13 @@ export type DeferredDriverFailures = WeakMap<
 
 export interface CompletedGenericStateDriver {
   profileValue: string;
+}
+
+export interface GreetingStateDriverReceipt {
+  originalItem: ReviewPlanItem;
+  sourceRegistry: CandidateRegistry;
+  captured: GreetingResultTargets;
+  identity: string;
 }
 
 export interface GenericSearchFollowUp {
@@ -81,9 +89,13 @@ export interface WorkflowAnalysisContext {
   repository: Pick<ProfileRepository, "load">;
   approvedSensitiveValues: MutableRefObject<Map<string, string>>;
   consideredSensitiveValues: MutableRefObject<Map<string, string>>;
+  freshDefaultControls: MutableRefObject<WeakSet<Element>>;
   completedDriverKeys: MutableRefObject<ReadonlySet<string>>;
   completedGenericStateDrivers: MutableRefObject<
     ReadonlyMap<string, CompletedGenericStateDriver>
+  >;
+  completedGreetingStateDrivers?: MutableRefObject<
+    Map<string, GreetingStateDriverReceipt>
   >;
   deferredDriverGroups: MutableRefObject<ReadonlySet<Element>>;
   deferredDriverFailures?: MutableRefObject<DeferredDriverFailures>;
@@ -91,6 +103,12 @@ export interface WorkflowAnalysisContext {
   setExceptionTitle: Dispatch<SetStateAction<string>>;
   setStage: Dispatch<SetStateAction<Stage>>;
   setFieldsSnapshot: Dispatch<SetStateAction<FieldsSnapshot | undefined>>;
+  setResultRegistry?: Dispatch<SetStateAction<CandidateRegistry | undefined>>;
+  rebindResultProgress?: (
+    items: readonly ReviewPlanItem[],
+    originalRegistry: CandidateRegistry,
+    resultRegistry: CandidateRegistry,
+  ) => void;
   setReviewItems: Dispatch<SetStateAction<ReviewPlanItem[]>>;
   setPartial: Dispatch<SetStateAction<boolean>>;
   setWarnings: Dispatch<SetStateAction<string[]>>;

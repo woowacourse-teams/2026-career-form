@@ -1,3 +1,5 @@
+import { resolveDocumentCompany } from "../adapters/company";
+import type { CompanyId } from "../adapters/company";
 import type {
   ActionCandidate,
   FieldCandidate,
@@ -7,6 +9,14 @@ import type {
   PreparationAnalyzeRequest,
   PreparationSection,
 } from "../api/types";
+import {
+  greetingCollectionAdapter,
+  greetingFieldElements,
+  greetingFieldLabel,
+  greetingMajorRowsForAction,
+  greetingSectionContainer,
+  greetingSyntheticDomName,
+} from "../adapters/greeting/collection";
 import {
   collectionAdapterForHost,
   type CollectionAdapter,
@@ -21,6 +31,7 @@ import {
 import type { CandidateBlockReason } from "./types";
 import {
   collectSemanticContext,
+  semanticText,
   collectActionSemanticContext,
 } from "./semantic-context";
 import { metadata, labelOf, sectionName } from "./metadata";
@@ -75,11 +86,27 @@ export function hasVisibleFormControl(item: Element): boolean {
 }
 
 function isTemplateLike(element: Element): boolean {
-  return Boolean(
+  if (
     element.closest(
-      "template, [data-template], [id*='template' i], [id*='templete' i], [class*='template' i], [class*='templete' i]",
-    ),
-  );
+      "template, [data-template], [id*='template' i], [id*='templete' i]",
+    )
+  )
+    return true;
+  for (
+    let ancestor: Element | null = element;
+    ancestor;
+    ancestor = ancestor.parentElement
+  ) {
+    if (
+      [...ancestor.classList].some(
+        (token) =>
+          /(?:^|[-_])(?:template|templete)(?:$|[-_])/i.test(token) ||
+          /(?:^|[-_])(?:template|templete)[A-Z]/.test(token),
+      )
+    )
+      return true;
+  }
+  return false;
 }
 
 function repeatableItemGroupId(element: Element): string | undefined {
@@ -181,6 +208,7 @@ function groupBySection<T extends Element>(
   elements: T[],
   selector: string,
   generic = false,
+  explicitSection?: (element: T) => Element | undefined,
 ): Map<Element | null, T[]> {
   const groups = new Map<Element | null, T[]>();
   for (const element of elements) {
@@ -189,6 +217,7 @@ function groupBySection<T extends Element>(
       ? genericRowFor(element)
       : element.closest(EXPLICIT_ROW_SELECTOR);
     const section =
+      explicitSection?.(element) ??
       group?.area ??
       row?.parentElement?.closest(selector) ??
       element.closest(selector);
@@ -214,19 +243,28 @@ function actionDomId(
 }
 
 function baseCandidate(
-  element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+  element: HTMLElement,
   candidateId: string,
+  syntheticDomName?: string,
 ) {
+  const control =
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement ||
+    element instanceof HTMLTextAreaElement;
   return {
     candidateId,
     visibility: visibility(element),
     ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
     ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
-    ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
+    ...((metadata(element.getAttribute("name")) ?? syntheticDomName)
+      ? { domName: metadata(element.getAttribute("name")) ?? syntheticDomName }
+      : {}),
     ...(metadata(element.getAttribute("placeholder"))
       ? { placeholder: metadata(element.getAttribute("placeholder")) }
       : {}),
-    ...(element.disabled ? { disabled: true as const } : {}),
+    ...((control || element instanceof HTMLButtonElement) && element.disabled
+      ? { disabled: true as const }
+      : {}),
     ...("readOnly" in element && element.readOnly
       ? { readonly: true as const }
       : {}),
@@ -234,8 +272,12 @@ function baseCandidate(
   };
 }
 
-function collectFieldElements(document: Document, adapter: CollectionAdapter) {
-  return Array.from(
+function collectFieldElements(
+  document: Document,
+  adapter: CollectionAdapter,
+  companyId?: CompanyId,
+): HTMLElement[] {
+  const native = Array.from(
     document.querySelectorAll<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >("input, select, textarea"),
@@ -249,19 +291,24 @@ function collectFieldElements(document: Document, adapter: CollectionAdapter) {
       element.type,
     );
   });
+  return companyId === "greeting"
+    ? [...native, ...greetingFieldElements(document)]
+    : native;
 }
 
 export function collectFieldsSnapshot(
   document: Document,
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
-  const adapter = collectionAdapterForHost(documentHost(document));
+  const companyId = resolveDocumentCompany(document);
+  const adapter = collectionAdapterForHost(document);
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: FieldsSection[] = [];
   const groups = groupBySection(
-    collectFieldElements(document, adapter),
+    collectFieldElements(document, adapter, companyId),
     sectionSelector(adapter),
     adapter === collectionAdapterForHost(""),
+    companyId === "greeting" ? greetingSectionContainer : undefined,
   );
 
   Array.from(groups.entries()).forEach(
@@ -274,11 +321,15 @@ export function collectFieldsSnapshot(
         adapter.itemGroupId?.(row) ?? repeatableItemGroupId(row);
       // One shared group assignment feeds itemIndex, the semantic repeat
       // context, registry counts and the pre-execution revalidation below.
-      const currentAssignments = () =>
+      const currentAssignments = (revalidate = false) =>
         container
           ? assignRepeatGroups(
               container,
-              repeatableItemElements(container, adapter, "fields"),
+              revalidate && companyId === "greeting"
+                ? (adapter.repeatableItemCandidates(container) ?? []).filter(
+                    (row) => !isTemplateLike(row),
+                  )
+                : repeatableItemElements(container, adapter, "fields"),
               explicitGroupId,
               sectionId,
             )
@@ -295,11 +346,15 @@ export function collectFieldsSnapshot(
 
       for (const element of elements) {
         if (consumed.has(element)) continue;
+        const customRadio =
+          companyId === "greeting" &&
+          element.getAttribute("role") === "radiogroup";
         const isChoice =
-          element instanceof HTMLInputElement &&
-          (element.type === "radio" || element.type === "checkbox");
+          customRadio ||
+          (element instanceof HTMLInputElement &&
+            (element.type === "radio" || element.type === "checkbox"));
         const grouped =
-          isChoice && element.name
+          element instanceof HTMLInputElement && isChoice && element.name
             ? elements.filter(
                 (peer) =>
                   peer instanceof HTMLInputElement &&
@@ -323,22 +378,36 @@ export function collectFieldsSnapshot(
         let candidate: FieldCandidate;
         const optionElements = new Map<string, HTMLElement>();
         if (isChoice) {
-          const options = grouped.map((peer, optionIndex) => {
+          const optionPeers = customRadio
+            ? Array.from(
+                element.querySelectorAll<HTMLElement>(
+                  'button[role="radio"][data-scope="toggle-group"][data-part="item"]',
+                ),
+              )
+            : grouped;
+          const options = optionPeers.map((peer, optionIndex) => {
             const optionId = createOpaqueId(
               `${candidateId}-option`,
               optionIndex,
             );
-            optionElements.set(optionId, peer as HTMLInputElement);
+            optionElements.set(optionId, peer);
             return {
               optionId,
-              displayName:
-                labelOf(peer as HTMLElement) ?? `선택 ${optionIndex + 1}`,
+              displayName: labelOf(peer) ?? `선택 ${optionIndex + 1}`,
             };
           });
           candidate = {
-            ...baseCandidate(first, candidateId),
+            ...baseCandidate(
+              first,
+              candidateId,
+              companyId === "greeting"
+                ? greetingSyntheticDomName(first)
+                : undefined,
+            ),
             element: "input",
-            control: (first as HTMLInputElement).type as "radio" | "checkbox",
+            control: customRadio
+              ? "radio"
+              : ((first as HTMLInputElement).type as "radio" | "checkbox"),
             options,
           };
         } else if (first instanceof HTMLSelectElement) {
@@ -358,16 +427,29 @@ export function collectFieldsSnapshot(
                 Boolean(option),
             );
           candidate = {
-            ...baseCandidate(first, candidateId),
+            ...baseCandidate(
+              first,
+              candidateId,
+              companyId === "greeting"
+                ? greetingSyntheticDomName(first)
+                : undefined,
+            ),
             element: "select",
             control: "select",
             ...(options.length > 0 ? { options } : {}),
           };
         } else {
           const isButton =
-            first instanceof HTMLInputElement && first.type === "button";
+            first instanceof HTMLButtonElement ||
+            (first instanceof HTMLInputElement && first.type === "button");
           candidate = {
-            ...baseCandidate(first, candidateId),
+            ...baseCandidate(
+              first,
+              candidateId,
+              companyId === "greeting"
+                ? greetingSyntheticDomName(first)
+                : undefined,
+            ),
             element:
               first instanceof HTMLTextAreaElement ? "textarea" : "input",
             control:
@@ -379,7 +461,12 @@ export function collectFieldsSnapshot(
           };
         }
 
-        if (first.getAttribute("role") === "combobox") {
+        // Greeting search suggestions can echo the user's typed answer.
+        // Its local workflow resolves options without sending them to analysis.
+        if (
+          companyId !== "greeting" &&
+          first.getAttribute("role") === "combobox"
+        ) {
           const ids =
             first.getAttribute("aria-controls")?.trim().split(/\s+/) ?? [];
           const menu =
@@ -401,6 +488,14 @@ export function collectFieldsSnapshot(
           }
         }
         const semanticContext = collectSemanticContext(first, container);
+        if (companyId === "greeting") {
+          const label = metadata(greetingFieldLabel(first));
+          delete candidate.displayName;
+          if (label) candidate.displayName = label;
+          delete semanticContext.labels;
+          const text = semanticText(label);
+          if (text) semanticContext.labels = [{ source: "label", text }];
+        }
         if (
           item &&
           item.itemIndex !== undefined &&
@@ -408,7 +503,10 @@ export function collectFieldsSnapshot(
           item.rowCount <= 128
         ) {
           semanticContext.repeat = {
-            groupId: `${sectionId}-group-${item.groupOrdinal}`,
+            groupId:
+              companyId === "greeting" && item.itemGroupId
+                ? item.itemGroupId
+                : `${sectionId}-group-${item.groupOrdinal}`,
             rowIndex: item.itemIndex,
             rowCount: item.rowCount,
           };
@@ -416,15 +514,28 @@ export function collectFieldsSnapshot(
         candidate = { ...candidate, semanticContext };
         if (item) item.fields.push(candidate);
         else fields.push(candidate);
-        const elementsForHandle = grouped as Array<
-          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-        >;
+        const elementsForHandle = grouped.filter(
+          (
+            peer,
+          ): peer is
+            HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+            peer instanceof HTMLInputElement ||
+            peer instanceof HTMLSelectElement ||
+            peer instanceof HTMLTextAreaElement,
+        );
+        const customElements = grouped.filter(
+          (peer) =>
+            !(peer instanceof HTMLInputElement) &&
+            !(peer instanceof HTMLSelectElement) &&
+            !(peer instanceof HTMLTextAreaElement),
+        );
         registry.registerField(
           {
             kind: "field",
             candidateId,
             candidate,
             elements: elementsForHandle,
+            ...(customElements.length > 0 ? { customElements } : {}),
             optionElements,
             sectionId,
             ...(item
@@ -433,7 +544,7 @@ export function collectFieldsSnapshot(
                   isCurrentContext: () => {
                     if (!grouped.every((field) => item.element.contains(field)))
                       return false;
-                    const current = currentAssignments().find(
+                    const current = currentAssignments(true).find(
                       ({ row }) => row === item.element,
                     );
                     if (!current) return false;
@@ -455,7 +566,10 @@ export function collectFieldsSnapshot(
                     : {}),
                 }
               : {}),
-            signature: createStructuralSignature(elementsForHandle),
+            signature: createStructuralSignature([
+              ...elementsForHandle,
+              ...customElements,
+            ]),
           },
           blockReason(first),
         );
@@ -557,7 +671,11 @@ function repeatableItemElements(
       (item) =>
         !isTemplateLike(item) &&
         (!adapter.requiresVisibleControl(phase, source) ||
-          hasVisibleFormControl(item)),
+          hasVisibleFormControl(item) ||
+          (adapter === greetingCollectionAdapter &&
+            greetingFieldElements(item.ownerDocument).some(
+              (control) => item.contains(control) && !isHidden(control),
+            ))),
     );
 
   const adapterItems = adapter.repeatableItemCandidates(container);
@@ -672,6 +790,16 @@ function repeatableItemElementsForAction(
   adapter: CollectionAdapter,
 ): Element[] | undefined {
   const allItems = repeatableItemElements(container, adapter, "preparation");
+  const greetingAction =
+    action instanceof HTMLElement ? adapter.actionDomId(action) : undefined;
+  if (greetingAction === "greeting:add:universities")
+    return allItems.filter(
+      (item) => adapter.itemGroupId?.(item) === "educationuniversity",
+    );
+  if (greetingAction === "greeting:add:graduateSchools")
+    return allItems.filter(
+      (item) => adapter.itemGroupId?.(item) === "educationgraduateschool",
+    );
   const singleGroupItems = () =>
     !container ||
     formsSingleRepeatGroup(
@@ -719,18 +847,21 @@ function repeatableItemElementsForAction(
 export function collectPreparationSnapshot(
   document: Document,
 ): PreparationCollectedSnapshot {
-  const adapter = collectionAdapterForHost(documentHost(document));
+  const companyId = resolveDocumentCompany(document);
+  const adapter = collectionAdapterForHost(document);
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
   const sections: PreparationSection[] = [];
   const generic = adapter === collectionAdapterForHost("");
   const actions = [
-    ...collectActionElements(document).filter(
-      (element) =>
-        !generic ||
-        ((element instanceof HTMLButtonElement ||
-          (element instanceof HTMLInputElement && element.type === "button")) &&
-          isGenericPreparationAction(element)),
+    ...collectActionElements(document).filter((element) =>
+      companyId === "greeting"
+        ? Boolean(adapter.actionDomId(element))
+        : !generic ||
+          ((element instanceof HTMLButtonElement ||
+            (element instanceof HTMLInputElement &&
+              element.type === "button")) &&
+            isGenericPreparationAction(element)),
     ),
     ...(adapter.additionalActionElements?.(document) ?? []),
   ];
@@ -739,21 +870,29 @@ export function collectPreparationSnapshot(
     actions,
     selector,
     adapter === collectionAdapterForHost(""),
+    companyId === "greeting" ? greetingSectionContainer : undefined,
   );
   const containers: Array<Element | null> = Array.from(
-    document.querySelectorAll(selector),
+    new Set([
+      ...document.querySelectorAll(selector),
+      ...actionsBySection.keys(),
+    ]),
   );
   if (generic) {
     for (const group of genericFormGroups(document)) {
       if (!containers.includes(group.area)) containers.push(group.area);
     }
   }
-  if (actionsBySection.has(null) || containers.length === 0) {
+  if (
+    (actionsBySection.has(null) || containers.length === 0) &&
+    !containers.includes(null)
+  ) {
     containers.push(null);
   }
   const sectionRoots = new Map<string, Element | null>();
   const actionSectionIds = new Map<string, string>();
   const actionElements = new Map<string, Element>();
+  const majorActionIds = new Map<string, string>();
 
   containers.forEach((container, sectionIndex) => {
     const elements = actionsBySection.get(container) ?? [];
@@ -762,6 +901,7 @@ export function collectPreparationSnapshot(
       : "section-root";
     const actionCandidates: ActionCandidate[] = elements.map((element) => {
       const candidateId = createOpaqueId("action", candidateIndex++);
+      const domId = actionDomId(element, adapter);
       const candidate: ActionCandidate = {
         candidateId,
         element:
@@ -779,9 +919,7 @@ export function collectPreparationSnapshot(
         visibility: visibility(element),
         semanticContext: collectActionSemanticContext(element, container),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
-        ...(actionDomId(element, adapter)
-          ? { domId: actionDomId(element, adapter) }
-          : {}),
+        ...(domId ? { domId } : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),
         ...(element.disabled ? { disabled: true } : {}),
         ...(isInert(element) ? { inert: true } : {}),
@@ -810,6 +948,12 @@ export function collectPreparationSnapshot(
       );
       actionSectionIds.set(candidateId, sectionId);
       actionElements.set(candidateId, element);
+      if (
+        /^greeting:add:(universities|graduateSchools):(0|[1-9]\d*):majors$/.test(
+          domId ?? "",
+        )
+      )
+        majorActionIds.set(candidateId, domId!);
       return candidate;
     });
     // The API only accepts nested items when they contain at least one
@@ -852,6 +996,13 @@ export function collectPreparationSnapshot(
       if (!sectionId) return undefined;
       const root = sectionRoots.get(sectionId);
       if (root === undefined || (root && !root.isConnected)) return undefined;
+      if (majorActionIds.has(actionCandidateId)) {
+        const action = actionElements.get(actionCandidateId);
+        return action instanceof HTMLElement &&
+          adapter.actionDomId(action) === majorActionIds.get(actionCandidateId)
+          ? greetingMajorRowsForAction(action)?.length
+          : undefined;
+      }
       return repeatableItemElementsForAction(
         root,
         actionElements.get(actionCandidateId),
@@ -863,6 +1014,29 @@ export function collectPreparationSnapshot(
       if (!sectionId) return undefined;
       const root = sectionRoots.get(sectionId);
       if (root === undefined || (root && !root.isConnected)) return undefined;
+      if (majorActionIds.has(actionCandidateId)) {
+        const action = actionElements.get(actionCandidateId);
+        if (
+          !(action instanceof HTMLElement) ||
+          adapter.actionDomId(action) !== majorActionIds.get(actionCandidateId)
+        )
+          return undefined;
+        return greetingMajorRowsForAction(action)?.map((input) => {
+          const field = input.closest(
+            '[data-scope="field"][data-part="root"]',
+          )!;
+          const buttons = Array.from(
+            field.querySelectorAll<HTMLButtonElement>("button[name]"),
+          )
+            .filter(
+              (button) =>
+                button.name === `${input.name}.majorClassification` ||
+                button.name === `${input.name}.majorField`,
+            )
+            .map((button) => [button.name, button.textContent?.trim() ?? ""]);
+          return JSON.stringify([input.name, input.value, ...buttons]);
+        });
+      }
       return repeatableItemElementsForAction(
         root,
         actionElements.get(actionCandidateId),

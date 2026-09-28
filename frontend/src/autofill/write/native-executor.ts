@@ -529,7 +529,7 @@ function writeItem(
       return { written: false, reason: STALE, code: "STALE_TARGET" };
   }
   const adapter = getWriteAdapter(
-    handle.elements[0]?.ownerDocument.location?.host ?? "",
+    (handle.elements[0] ?? handle.customElements?.[0])?.ownerDocument ?? "",
   );
   const attempt = adapter.tryWrite(handle, item);
   if (attempt.handled)
@@ -658,7 +658,8 @@ export function executeApprovedWrites({
       lookup = item && registry.lookupField(item.candidateId);
     if (item && lookup?.status === "ready")
       getWriteAdapter(
-        lookup.handle.elements[0]?.ownerDocument.location?.host ?? "",
+        (lookup.handle.elements[0] ?? lookup.handle.customElements?.[0])
+          ?.ownerDocument ?? "",
       ).afterWrite?.(lookup.handle, item);
   });
   return results;

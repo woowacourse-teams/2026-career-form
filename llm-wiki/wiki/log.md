@@ -270,6 +270,12 @@
 - 최소 학교 POST, 학교명·코드·국가·같은 행 소재지 URL 묶음, 기존 `new_country` 보존, 전체 기존 묶음의 재검증, 학교·전공 공유 팝업 lease와 조건부 복구를 기록했다. 일반 POST 허용이나 회사 전체 어댑터 지원으로 확장하지 않는다.
 - 공개 검색과 공개 팝업을 연결한 합성 브라우저에서 두 번의 선택·닫힘·500ms 이상 유지를 확인하고 공개 결과 코드와 독립 대조했다. 설치 확장 전체 패널, 실제 지원서, 저장·제출은 검증하지 않았다.
 
+## [2026-09-27] ingest | CF-94 Greeting 공통 정적 매핑
+
+- Approval-Digest: d36c93eae7d0daa585f8b33f6985c5edde7043a449cf12547daa9b0d6c5a4dbe
+- 승인된 후보 5개와 Issue의 ADR 결정을 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 비식별 기록했다.
+- BE 판정·문맥과 FE 어댑터 실행의 경계, 카카오모빌리티·현대오토에버·무신사·당근서비스·메디퀴터스의 화면별 지원 현황, `이메일주소`/`이메일` 단일 칸 호환을 topic과 지원 현황표에 연결했다.
+- 자동 테스트와 Aside 설치 확장의 입력 관측을 구분했다. 이메일 인증, 파일, 동의, 실제 저장·제출과 다른 Greeting 양식 전체의 호환성은 검증하지 않았다.
 ## [2026-09-26] ingest | CF-114 범용 자격증 검색과 후속 재검토
 
 - Approval-Digest: 90d7fdfda386fb1e7451130ed6401efc3669ea4ee10ab3685e883b7ce3fb752a
@@ -282,3 +288,24 @@
 - 승인된 후보 3개와 5개 사이트의 비식별 기준선을 [CF-115 bundle](../raw/issues/CF-115/manifest.md)에 기록하고 [평가 기준선 topic](topics/generic-autofill-evaluation-baselines.md)을 추가했다.
 - 실사이트 4개 측정과 1개 미확정, 단계별 지표, 실행 사용량과 오입력 구조를 기록했다. 실제 값, HTML, URL query, selector, 요청과 응답 원문, 계정과 세션 정보는 포함하지 않았다.
 - Issue raw는 실행 근거, topic은 revision별 사람용 이력, 하네스 JSON은 기계 판독 정본으로 구분했다. 여러 기준선의 자동 추세 집계는 현재 범위에 포함하지 않았다.
+
+## [2026-09-28] ingest | CF-94 기존 회사별 Greeting 라우팅
+
+- Approval-Digest: e059c7035aacff70bb63053c36bd05ff7370595c5af450788ac836798cb49b8a
+- 승인된 후보 4개를 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 반영했다.
+- FE host 선택·BE 독립 정적 정책, 전용 API 필드/토큰/추가 준비 요청 제거와 명시 등록의 지원 경계를 갱신했다. 이전 설치 확장 결과는 이번 라우팅 변경 이전 증거로 구분했다.
+
+## [2026-09-28] ingest | CF-94 카카오게임즈 자체 도메인
+
+- Approval-Digest: cac312a1d58fd3930f34a3ec7e62130c7a6026aa5654a054f57065b20c650876
+- [CF-94 bundle](../raw/issues/CF-94/manifest.md)의 승인 후보 전체를 갱신해 카카오게임즈 명시 등록과 공개 페이지·CNAME 확인 근거를 추가했다. 런타임 자동 탐지와 전 항목 실화면 입력 검증으로 확대하지 않는다.
+
+## [2026-09-28] ingest | CF-94 Greeting DNS·DOM 공통 판별
+
+- Approval-Digest: c2488a72f8044f14f8edd98d8b975422d669e2a1db3a6b15f0a94760985bc71a
+- 승인된 후보 4개를 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 반영했다.
+- BE CNAME 연결·FE 공통 DOM 어댑터 선택으로 기업별 등록을 대체하고 기존 라우팅 API와 필드 보호 조건을 유지한다. 이전 설치 입력 결과와 이번 DNS/API·합성 검증의 범위를 구분한다.
+
+- 2026-09-28: CF-94 승인 후보에 따라 Greeting 영문이름의 이름→성 정책과 카카오게임즈 프로필/양식 지원 공백을 반영했다. 실제 입력값은 수집하지 않았고 미구현 범주는 조사 결과로 구분했다.
+
+- 2026-09-28: CF-94 승인 후보 `2a2272f6138752170845c9b3a7fb03ae7746ccba332a7f6588da3720ea914b01`로 Greeting 고교·대학 추가전공·경력·어학·자격증 지원 및 이메일·재직 결과 보완을 반영했다. 실제 설치 관측과 최신 수정본의 전체 브라우저 재검증 미완료를 분리했고 다른 회사 raw는 변경하지 않았다.

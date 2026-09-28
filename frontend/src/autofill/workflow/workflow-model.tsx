@@ -1,5 +1,4 @@
 import { browser } from "wxt/browser";
-import { resolveCompany } from "../adapters/company";
 import { createAddressSearch } from "../address/runtime";
 import type {
   AddressSearch,
@@ -225,8 +224,17 @@ export function localItemCount(
     ReturnType<typeof collectPreparationSnapshot>["request"]
   >,
   profile: Profile,
+  adapter?: WorkflowAdapter,
 ): number | undefined {
   if (plan.command !== "ADD_REPEATABLE_GROUP") return undefined;
+  const lookup = snapshot.registry.lookupAction(plan.actionCandidateId);
+  const selectedAdapter =
+    adapter ??
+    getWorkflowAdapter(
+      "handle" in lookup
+        ? lookup.handle.element.ownerDocument
+        : snapshot.request.site.host,
+    );
   const section = snapshot.request.sections.find((candidate) =>
     candidate.actionCandidates.some(
       (action) => action.candidateId === plan.actionCandidateId,
@@ -235,6 +243,11 @@ export function localItemCount(
   const action = section?.actionCandidates.find(
     (candidate) => candidate.candidateId === plan.actionCandidateId,
   );
+  const adapterCount = selectedAdapter.repeatableProfileCount?.(
+    action?.domId,
+    profile,
+  );
+  if (adapterCount !== undefined) return adapterCount ?? undefined;
   const matchLabel = [
     section?.displayName,
     action?.displayName,
@@ -243,7 +256,10 @@ export function localItemCount(
   ]
     .filter(Boolean)
     .join(" ");
-  if (resolveCompany(snapshot.request.site.host) === "generic") {
+  if (
+    selectedAdapter === getWorkflowAdapter("") &&
+    !selectedAdapter.repeatedProfileSectionHint?.(action?.domId)
+  ) {
     const categories = PROFILE_CATEGORIES.filter((category) =>
       matchesProfileCategory(category, matchLabel),
     );
@@ -274,9 +290,9 @@ export function localItemCount(
     }
     return sectionIds.size <= 1 ? entries.length : undefined;
   }
-  const profileSectionHint = getWorkflowAdapter(
-    snapshot.request.site.host,
-  ).repeatedProfileSectionHint?.(action?.domId);
+  const profileSectionHint = selectedAdapter.repeatedProfileSectionHint?.(
+    action?.domId,
+  );
   const category = profileSectionHint
     ? PROFILE_CATEGORIES.find(
         (candidate) => candidate.id === profileSectionHint.categoryId,
@@ -289,9 +305,7 @@ export function localItemCount(
       ? (() => {
           const sectionId = educationProfileSectionId(
             matchLabel,
-            getWorkflowAdapter(
-              snapshot.request.site.host,
-            ).educationSectionHint?.(matchLabel),
+            selectedAdapter.educationSectionHint?.(matchLabel),
           );
           return sectionId
             ? profile.education.filter((entry) => entry.sectionId === sectionId)
@@ -342,7 +356,7 @@ export function preparationItem(
   profile: Profile,
   adapter: WorkflowAdapter,
 ): PreparationItem {
-  const localCount = localItemCount(plan, snapshot, profile);
+  const localCount = localItemCount(plan, snapshot, profile, adapter);
   if (plan.command !== "ADD_REPEATABLE_GROUP") {
     const value =
       plan.command === "SELECT_OPTION_TO_REVEAL"

@@ -13,12 +13,44 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicy.FieldsFi
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.PreparationFingerprint;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
 public final class CompanyFormPolicyFixture {
 
     private CompanyFormPolicyFixture() {
+    }
+
+    public static CompanyFormPolicy greeting() {
+        String name = GreetingFormFingerprint.NAME;
+        String phone = GreetingFormFingerprint.PHONE;
+        return CompanyFormPolicy.create(
+            "greeting", 1,
+            PreparationFingerprint.noActions(),
+            FieldsFingerprint.anySections(List.of(
+                new FieldStructure(name,
+                    FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.TEXT),
+                new FieldStructure(phone,
+                    FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.TEXT)
+            )),
+            List.of(),
+            List.of(
+                new FieldRule(name,
+                    FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.TEXT,
+                    new DerivedBinding(DerivedRecipe.KOREAN_FULL_NAME),
+                    false, name),
+                new FieldRule(phone,
+                    FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.TEXT,
+                    new DirectBinding("contact.contact.phoneNumber"),
+                    false, phone)
+            ),
+            new SupportedProfileFields()::contains
+        );
     }
 
     public static CompanyFormPolicy sk() {

@@ -1,5 +1,9 @@
 package com.careerform.formanalysis.api;
 
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -25,9 +29,14 @@ public final class PreparationAnalysisController {
         @Valid @RequestBody PreparationAnalysisRequest request,
         @RequestHeader(value = "X-Career-Form-Capabilities", required = false) String capabilities
     ) {
-        if ("address-search-v1".equals(capabilities)) {
-            return service.analyze(request, true);
-        }
-        return service.analyze(request);
+        Set<String> supported = capabilities == null
+            ? Set.of()
+            : Arrays.stream(capabilities.split(","))
+                .map(String::trim)
+                .collect(Collectors.toSet());
+        return service.analyze(
+            request,
+            supported.contains("address-search-v1")
+        );
     }
 }

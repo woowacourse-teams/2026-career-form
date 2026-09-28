@@ -15,8 +15,17 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
 
     private final List<FieldRule> constrainedRules;
     private final Map<String, FieldRule> unconstrainedRules;
+    private final boolean exactTopLevelDomName;
 
     public StoredPolicyFieldMappingResolver(CompanyFormPolicy policy) {
+        this(policy, false);
+    }
+
+    public StoredPolicyFieldMappingResolver(
+        CompanyFormPolicy policy,
+        boolean exactTopLevelDomName
+    ) {
+        this.exactTopLevelDomName = exactTopLevelDomName;
         constrainedRules = policy.fieldRules().stream()
             .filter(rule -> rule.requiredDomName() != null
                 || rule.requiredItemGroupId() != null)
@@ -35,11 +44,11 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
         List<Result> results = new ArrayList<>();
         for (FieldsAnalysisRequest.Section section : request.sections()) {
             section.fields().forEach(candidate ->
-                results.add(resolve(candidate, null)));
+                results.add(resolve(candidate, null, false)));
             if (section.items() == null) continue;
             for (FieldsAnalysisRequest.Item item : section.items()) {
                 item.fields().forEach(candidate ->
-                    results.add(resolve(candidate, item.itemGroupId())));
+                    results.add(resolve(candidate, item.itemGroupId(), true)));
             }
         }
         return new Resolution(
@@ -49,7 +58,30 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
         );
     }
 
-    private Result resolve(FieldCandidate candidate, String itemGroupId) {
+    private Result resolve(
+        FieldCandidate candidate,
+        String itemGroupId,
+        boolean insideRepeatableItem
+    ) {
+        if (exactTopLevelDomName) {
+            if (insideRepeatableItem || candidate.domName() == null) {
+                return new NoMatch(candidate.candidateId());
+            }
+            List<FieldRule> exactRules = constrainedRules.stream()
+                .filter(rule -> candidate.domName().equals(rule.structuralName()))
+                .filter(rule -> candidate.domName().equals(rule.requiredDomName()))
+                .filter(rule -> rule.requiredItemGroupId() == null)
+                .toList();
+            if (exactRules.size() != 1) {
+                return new NoMatch(candidate.candidateId());
+            }
+            FieldRule exactRule = exactRules.getFirst();
+            return exactRule.element() == candidate.element()
+                && exactRule.control() == candidate.control()
+                ? new Match(candidate.candidateId(), exactRule.valueBinding(),
+                    exactRule.allowReadonlyWrite())
+                : new NoMatch(candidate.candidateId());
+        }
         FieldRule rule = constrainedRule(candidate, itemGroupId);
         if (rule == null && matchesAnyConstrainedStructuralName(candidate)) {
             return new NoMatch(candidate.candidateId());

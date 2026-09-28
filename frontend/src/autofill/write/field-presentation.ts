@@ -54,12 +54,13 @@ export function createFieldPresentation(document: Document) {
       ["hidden", "inert", "unsupported"].includes(lookup.reason)
     )
       return false;
-    const element = lookup.handle.elements[0];
+    const element =
+      lookup.handle.elements[0] ?? lookup.handle.customElements?.[0];
     if (
       !element ||
       element.ownerDocument !== document ||
       !element.isConnected ||
-      element.type === "hidden"
+      element.getAttribute("type") === "hidden"
     )
       return false;
     const view = document.defaultView;

@@ -3,6 +3,8 @@ package com.careerform.formanalysis.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,8 +15,10 @@ import com.careerform.formanalysis.application.policy.CompanyFormPolicyFixture;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Available;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.NotRegistered;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Unavailable;
+import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -71,6 +75,81 @@ class StoredPolicyRoutingTest {
         assertThat(unavailable.route(fields(
             "sk-fields-current-v2.json"
         )).kind()).isEqualTo(RouteKind.POLICY_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("기존 회사가 먼저 적용되고, Greeting 연결 증거가 없으면 범용으로 유지한다")
+    void preservesCompanyPriorityAndNoEvidenceGenericFallback() throws Exception {
+        FormAnalysisRouter company = new FormAnalysisRouter(
+            (host, path) -> new Available(CompanyFormPolicyFixture.sk()),
+            (host, path) -> { throw new AssertionError("existing company must win"); },
+            () -> { throw new AssertionError("registered company must win"); }
+        );
+        assertThat(company.route(preparation("sk-preparation-current-v2.json")).kind())
+            .isEqualTo(RouteKind.ADAPTER);
+
+        FormAnalysisRouter noEvidence = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.NO_POSITIVE_EVIDENCE,
+            () -> { throw new AssertionError("no positive evidence"); }
+        );
+        assertThat(noEvidence.route(preparation("sk-preparation-current-v2.json")).kind())
+            .isEqualTo(RouteKind.GENERIC);
+    }
+
+    @Test
+    @DisplayName("두 도메인의 Greeting 정책은 action 없이 준비하고 정확한 필드만 정적으로 분류한다")
+    void routesVerifiedGreetingPolicyWithIndependentFieldFingerprint() throws Exception {
+        FormAnalysisRouter router = new FormAnalysisRouter(
+            (host, path) -> new NotRegistered(),
+            (host, path) -> Decision.POSITIVE,
+            () -> new Available(CompanyFormPolicyFixture.greeting())
+        );
+
+        var preparation = preparation("greeting-preparation-current-v2.json");
+        var fixtureFields = fields("greeting-fields-current-v2.json");
+        var fields = new FieldsAnalysisRequest(
+            fixtureFields.schemaVersion(), fixtureFields.snapshotId(),
+            fixtureFields.site(), fixtureFields.sections()
+        );
+        assertThat(router.route(preparation).kind()).isEqualTo(RouteKind.ADAPTER);
+        PreparationAnalysisService preparationService = new PreparationAnalysisService(
+            Optional.empty(), router
+        );
+        var supported = preparationService.analyze(preparation);
+        assertThat(supported.preparationPlans()).isEmpty();
+        assertThat(router.route(fields).kind()).isEqualTo(RouteKind.ADAPTER);
+        assertThat(router.route(fields).resolver().resolve(fields).results())
+            .containsExactly(
+                new FieldMappingResolver.Match("name",
+                    new FieldMappingResolver.DerivedBinding(
+                        FieldMappingResolver.DerivedRecipe.KOREAN_FULL_NAME)),
+                new FieldMappingResolver.Match("phone",
+                    new FieldMappingResolver.DirectBinding("contact.contact.phoneNumber")),
+                new FieldMappingResolver.NoMatch("school-search")
+            );
+
+        var changed = new FieldsAnalysisRequest(
+            fields.schemaVersion(), fields.snapshotId(), fields.site(),
+            java.util.List.of(new FieldsAnalysisRequest.Section(
+                "section-root", null, null,
+                java.util.List.of(fields.sections().getFirst().fields().getFirst()), null
+            ))
+        );
+        assertThat(router.route(changed).kind()).isEqualTo(RouteKind.STRUCTURE_MISMATCH);
+
+        var duplicate = new FieldsAnalysisRequest(
+            fields.schemaVersion(), fields.snapshotId(), fields.site(),
+            java.util.List.of(new FieldsAnalysisRequest.Section(
+                "section-root", null, null,
+                java.util.List.of(
+                    fields.sections().getFirst().fields().getFirst(),
+                    fields.sections().getFirst().fields().getFirst(),
+                    fields.sections().getFirst().fields().get(1)
+                ), null
+            ))
+        );
+        assertThat(router.route(duplicate).kind()).isEqualTo(RouteKind.STRUCTURE_MISMATCH);
     }
 
     private PreparationAnalysisRequest preparation(String name) throws Exception {

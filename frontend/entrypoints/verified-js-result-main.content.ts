@@ -2,6 +2,8 @@ import { defineContentScript } from "wxt/utils/define-content-script";
 import { installVerifiedJsResultClickBridge } from "../src/autofill/interaction/js-result-click-bridge";
 import { installCjMajorCloseBridge } from "../src/autofill/interaction/cj-major-close-bridge";
 
+import { installGreetingEmailCloseBridge } from "../src/autofill/interaction/greeting-email-close-bridge";
+
 export default defineContentScript({
   matches: ["http://*/*", "https://*/*"],
   allFrames: true,
@@ -11,5 +13,6 @@ export default defineContentScript({
   main() {
     installVerifiedJsResultClickBridge(document);
     installCjMajorCloseBridge(document);
+    installGreetingEmailCloseBridge(document);
   },
 });

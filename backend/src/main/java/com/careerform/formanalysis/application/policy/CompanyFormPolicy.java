@@ -60,6 +60,14 @@ public final class CompanyFormPolicy {
             || isSupportedProfileKey == null) {
             invalidPolicy();
         }
+        if ((preparationFingerprint.noActionPreparation()
+                || fieldsFingerprint.anySection())
+            && !"greeting".equals(companyKey)) {
+            invalidPolicy();
+        }
+        if (preparationFingerprint.noActionPreparation() && !actionRules.isEmpty()) {
+            invalidPolicy();
+        }
         requireUniqueActionRules(actionRules);
         requireUniqueFieldRules(fieldRules);
         for (ActionRule rule : actionRules) {
@@ -190,15 +198,18 @@ public final class CompanyFormPolicy {
     public record PreparationFingerprint(
         Set<String> requiredSectionIds,
         List<ActionStructure> requiredActions,
-        List<ActionStructure> optionalActions
+        List<ActionStructure> optionalActions,
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT) boolean noActionPreparation
     ) {
 
         public PreparationFingerprint {
             if (requiredSectionIds == null
-                || requiredSectionIds.isEmpty()
+                || (!noActionPreparation && requiredSectionIds.isEmpty())
                 || requiredActions == null
-                || requiredActions.isEmpty()
+                || (!noActionPreparation && requiredActions.isEmpty())
                 || optionalActions == null
+                || (noActionPreparation && (!requiredSectionIds.isEmpty()
+                    || !requiredActions.isEmpty() || !optionalActions.isEmpty()))
                 || requiredSectionIds.stream().anyMatch(CompanyFormPolicy::isBlank)
                 || requiredActions.stream().anyMatch(Objects::isNull)
                 || optionalActions.stream().anyMatch(Objects::isNull)) {
@@ -217,9 +228,21 @@ public final class CompanyFormPolicy {
 
         public PreparationFingerprint(
             Set<String> requiredSectionIds,
+            List<ActionStructure> requiredActions,
+            List<ActionStructure> optionalActions
+        ) {
+            this(requiredSectionIds, requiredActions, optionalActions, false);
+        }
+
+        public static PreparationFingerprint noActions() {
+            return new PreparationFingerprint(Set.of(), List.of(), List.of(), true);
+        }
+
+        public PreparationFingerprint(
+            Set<String> requiredSectionIds,
             List<ActionStructure> requiredActions
         ) {
-            this(requiredSectionIds, requiredActions, List.of());
+            this(requiredSectionIds, requiredActions, List.of(), false);
         }
 
         public List<ActionStructure> actionStructures() {
@@ -230,12 +253,14 @@ public final class CompanyFormPolicy {
 
     public record FieldsFingerprint(
         Set<String> requiredSectionIds,
-        List<FieldStructure> requiredFields
+        List<FieldStructure> requiredFields,
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT) boolean anySection
     ) {
 
         public FieldsFingerprint {
             if (requiredSectionIds == null
-                || requiredSectionIds.isEmpty()
+                || (!anySection && requiredSectionIds.isEmpty())
+                || (anySection && !requiredSectionIds.isEmpty())
                 || requiredFields == null
                 || requiredFields.isEmpty()
                 || requiredSectionIds.stream().anyMatch(CompanyFormPolicy::isBlank)
@@ -244,6 +269,17 @@ public final class CompanyFormPolicy {
             }
             requiredSectionIds = Set.copyOf(requiredSectionIds);
             requiredFields = List.copyOf(requiredFields);
+        }
+
+        public FieldsFingerprint(
+            Set<String> requiredSectionIds,
+            List<FieldStructure> requiredFields
+        ) {
+            this(requiredSectionIds, requiredFields, false);
+        }
+
+        public static FieldsFingerprint anySections(List<FieldStructure> requiredFields) {
+            return new FieldsFingerprint(Set.of(), requiredFields, true);
         }
     }
 
