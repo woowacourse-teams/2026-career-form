@@ -49,7 +49,7 @@ python3 harness/scripts/ensure-environment.py
   --output harness/fixtures/generic-autofill/baseline-v1.json
 ```
 
-재측정은 새 observations 파일을 입력하고 기존 artifact를 `--compare-to`로 전달한다. 비교 결과는 metric별 numerator, denominator와 rate delta를 보존하고 오입력률, 기존 값 훼손 증가 및 품질 지표 하락을 regression으로 분리한다.
+재측정은 새 observations 파일을 입력하고 기존 artifact를 `--compare-to`로 전달한다. 평가 계약, 합성 프로필 version과 site 집합이 같을 때만 비교하며, 결과는 metric별 numerator, denominator와 rate delta를 보존하고 오입력률, 기존 값 훼손 증가 및 품질 지표 하락을 regression으로 분리한다.
 
 ```bash
 .venv/bin/python harness/scripts/evaluate-generic-autofill.py \

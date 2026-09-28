@@ -414,6 +414,37 @@ class GenericAutofillCliTest(unittest.TestCase):
             result["comparison"]["regressions"],
         )
 
+    def test_rejects_comparison_with_different_profile_version(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            truth_path = self._write(root / "truth.json", ground_truth())
+            runs_path = self._write(root / "runs.json", observations())
+            baseline_path = root / "baseline.json"
+            baseline = self._run(
+                "--ground-truth",
+                str(truth_path),
+                "--observations",
+                str(runs_path),
+                "--output",
+                str(baseline_path),
+            )
+            self.assertEqual(0, baseline.returncode, baseline.stderr)
+            previous = json.loads(baseline_path.read_text(encoding="utf-8"))
+            previous["profile_version"] = "another-profile-version"
+            self._write(baseline_path, previous)
+
+            compared = self._run(
+                "--ground-truth",
+                str(truth_path),
+                "--observations",
+                str(runs_path),
+                "--compare-to",
+                str(baseline_path),
+            )
+
+        self.assertNotEqual(0, compared.returncode)
+        self.assertIn("profile_version", compared.stderr)
+
     def test_rejects_invalid_json_without_a_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

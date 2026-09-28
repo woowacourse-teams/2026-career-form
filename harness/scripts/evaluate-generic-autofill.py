@@ -90,6 +90,8 @@ def _compare(
 ) -> dict[str, object]:
     if current.get("contract_version") != previous.get("contract_version"):
         raise ValueError("비교 artifact의 contract_version이 다릅니다")
+    if current.get("profile_version") != previous.get("profile_version"):
+        raise ValueError("비교 artifact의 profile_version이 다릅니다")
     current_sources = _sources(current)
     previous_sources = _sources(previous)
     if set(current_sources) != set(previous_sources):
