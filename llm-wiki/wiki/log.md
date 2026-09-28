@@ -282,3 +282,9 @@
 - 승인된 후보 3개와 5개 사이트의 비식별 기준선을 [CF-115 bundle](../raw/issues/CF-115/manifest.md)에 기록하고 [평가 기준선 topic](topics/generic-autofill-evaluation-baselines.md)을 추가했다.
 - 실사이트 4개 측정과 1개 미확정, 단계별 지표, 실행 사용량과 오입력 구조를 기록했다. 실제 값, HTML, URL query, selector, 요청과 응답 원문, 계정과 세션 정보는 포함하지 않았다.
 - Issue raw는 실행 근거, topic은 revision별 사람용 이력, 하네스 JSON은 기계 판독 정본으로 구분했다. 여러 기준선의 자동 추세 집계는 현재 범위에 포함하지 않았다.
+
+## [2026-09-28] ingest | CF-124 AI 운영 실사이트 자동 입력 평가 워크플로우
+
+- Approval-Digest: 224fb55347d9c7aa08b770bd022e814bb18f5eece660a368eac595a477c95e20
+- 승인된 후보와 ADR을 [CF-124 bundle](../raw/issues/CF-124/manifest.md)에 기록하고 [실사이트 평가 워크플로우 topic](topics/live-autofill-evaluation.md)을 추가했다.
+- 비민감 기존 값 덮어쓰기, 민감값 보류, Console 원문 비보관과 실제 DOM 재검증 경계를 기록했다. 저장, 이동, 미리보기와 제출은 실행 범위가 아니다.
