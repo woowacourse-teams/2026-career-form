@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PreparationPlan } from "../api/types";
 import { collectPreparationSnapshot } from "../dom/collect";
@@ -328,6 +328,7 @@ describe("approved preparation plan executor", () => {
     const section = document.querySelector("section")!;
     let clicks = 0;
     let refreshes = 0;
+    const verifiedAdditions: Array<[number, number]> = [];
     action.addEventListener("click", () => {
       clicks += 1;
       const group = document.createElement("div");
@@ -351,15 +352,43 @@ describe("approved preparation plan executor", () => {
         return snapshotFor(action);
       },
       countRepeatableGroups: () => countGroups(),
+      onVerifiedAddition: (_action, before, after) =>
+        verifiedAdditions.push([before, after]),
     });
 
     expect(clicks).toBe(2);
     expect(refreshes).toBe(2);
     expect(countGroups()).toBe(3);
+    expect(verifiedAdditions).toEqual([
+      [1, 2],
+      [2, 3],
+    ]);
     expect(result).toMatchObject({
       status: "completed",
       mayCollectFieldsSnapshot: true,
     });
+  });
+
+  it("does not report a fresh row when it appeared before the executor clicked", async () => {
+    document.body.innerHTML = `<section><div data-repeatable-group></div><button id="action-add" type="button">항목 추가</button></section>`;
+    const action = document.querySelector<HTMLButtonElement>("button")!;
+    const initial = snapshotFor(action);
+    const verified = vi.fn();
+    document
+      .querySelector("section")!
+      .insertAdjacentHTML("afterbegin", "<div data-repeatable-group></div>");
+
+    const result = await executeApprovedPreparationPlans({
+      approvedPlans: [{ plan: addPlan, approved: true, localItemCount: 2 }],
+      initialSnapshot: initial,
+      refreshSnapshot: async () => snapshotFor(action),
+      countRepeatableGroups: () =>
+        document.querySelectorAll("[data-repeatable-group]").length,
+      onVerifiedAddition: verified,
+    });
+
+    expect(result).toMatchObject({ status: "completed", executedPlanCount: 0 });
+    expect(verified).not.toHaveBeenCalled();
   });
 
   it("re-identifies the visible add action when a site hides the old button after each click", async () => {

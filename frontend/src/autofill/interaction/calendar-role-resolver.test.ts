@@ -67,7 +67,10 @@ describe("resolveCalendarRole request safety", () => {
 
     expect(requestBody).toContain('"pathPattern":"/"');
     expect(requestBody).toContain('"relationToTarget":"DIALOG_CONTROL"');
-    expect(requestBody).not.toMatch(
+    const serialized = JSON.parse(requestBody) as Record<string, unknown>;
+    expect(serialized.snapshotId).toMatch(/^calendar-[a-f0-9-]{36}$/);
+    delete serialized.snapshotId;
+    expect(JSON.stringify(serialized)).not.toMatch(
       /2026|03|session-id|March|<button|approval|currentValue/,
     );
   });

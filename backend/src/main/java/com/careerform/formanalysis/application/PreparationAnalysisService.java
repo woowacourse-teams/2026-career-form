@@ -41,20 +41,13 @@ public final class PreparationAnalysisService {
     private final Optional<ActionResolver> resolver;
     private final FormAnalysisRouter router;
     private final boolean analysisEnabled;
-
-    public PreparationAnalysisService(
-        Optional<ActionResolver> resolver,
-        FormAnalysisRouter router
-    ) {
+    public PreparationAnalysisService(Optional<ActionResolver> resolver, FormAnalysisRouter router) {
         this(resolver, router, new AnalysisProviderSelection(true, "openai"));
     }
 
     @Autowired
-    public PreparationAnalysisService(
-        Optional<ActionResolver> resolver,
-        FormAnalysisRouter router,
-        AnalysisProviderSelection selection
-    ) {
+    public PreparationAnalysisService(Optional<ActionResolver> resolver, FormAnalysisRouter router,
+        AnalysisProviderSelection selection) {
         this.resolver = resolver;
         this.router = router;
         this.analysisEnabled = selection.enabled();

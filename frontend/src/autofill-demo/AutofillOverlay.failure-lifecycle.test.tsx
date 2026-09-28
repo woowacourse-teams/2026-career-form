@@ -40,6 +40,8 @@ describe("AutofillOverlay failure and lifecycle", () => {
     expect(back[0]!.parentElement!.nextElementSibling).toContainElement(
       screen.getByRole("heading", { name: "분석을 완료하지 못했습니다" }),
     );
+    expect(apiClient.analyzeFields).not.toHaveBeenCalled();
+    expect(pageDocument.querySelector("input")?.value).toBe("");
   });
 
   it("keeps profile values hidden when field analysis reports the page as blocked", async () => {

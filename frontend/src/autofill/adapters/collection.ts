@@ -1,4 +1,5 @@
-import { resolveCompany } from "./company";
+import { greetingCollectionAdapter } from "./greeting/collection";
+import { resolveCompany, resolveDocumentCompany } from "./company";
 import { hyundaiCollectionAdapter } from "./hyundai/collection";
 import { skCollectionAdapter } from "./sk/collection";
 
@@ -26,8 +27,16 @@ const genericCollectionAdapter: CollectionAdapter = {
   requiresVisibleControl: () => false,
 };
 
-export function collectionAdapterForHost(host: string): CollectionAdapter {
-  switch (resolveCompany(host)) {
+export function collectionAdapterForHost(
+  source: string | Document,
+): CollectionAdapter {
+  switch (
+    typeof source === "string"
+      ? resolveCompany(source)
+      : resolveDocumentCompany(source)
+  ) {
+    case "greeting":
+      return greetingCollectionAdapter;
     case "hyundai":
       return hyundaiCollectionAdapter;
     case "sk":

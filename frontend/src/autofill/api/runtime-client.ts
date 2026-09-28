@@ -66,7 +66,8 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       type: "AUTOFILL_ANALYZE_PREPARATION",
       payload: request,
     });
-    return validatePreparationResponse(request, response);
+    const analysis = validatePreparationResponse(request, response);
+    return analysis;
   }
 
   async analyzeFields(

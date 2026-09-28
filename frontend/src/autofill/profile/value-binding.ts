@@ -1,3 +1,4 @@
+import { universityAdditionalMajors } from "./university-additional-majors";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type {
   FieldValues,
@@ -134,6 +135,27 @@ function derivedValue(
   itemIndex?: number,
 ): ValueBindingResolution {
   const recipe = binding.recipe;
+  const majorRecipe =
+    /^UNIVERSITY_ADDITIONAL_MAJOR_([12])_(NAME|CLASSIFICATION)$/.exec(recipe);
+  if (majorRecipe) {
+    const entries = profile.education.filter(
+      (entry) => entry.sectionId === "university",
+    );
+    if (itemIndex === undefined && entries.length > 1)
+      return { status: "ambiguous", sensitive: false };
+    const entry = entries[itemIndex ?? 0];
+    const major =
+      entry &&
+      universityAdditionalMajors(entry.values)?.[Number(majorRecipe[1]) - 1];
+    return major
+      ? {
+          status: "resolved",
+          value: majorRecipe[2] === "NAME" ? major.name : major.classification,
+          sensitive: false,
+          profileEntryId: entry.id,
+        }
+      : { status: "missing", sensitive: false };
+  }
   if (recipe === "BOOLEAN_YN") {
     if (!binding.profileFieldKey)
       return { status: "unknown", sensitive: false };

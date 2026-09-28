@@ -26,6 +26,45 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupB
 class CompanyFormPolicyTest {
 
     @Test
+    @DisplayName("Greeting의 명시적 no-action 준비 정책만 빈 구조를 허용한다")
+    void permitsNoActionPreparationOnlyForGreetingPolicy() {
+        PreparationFingerprint noActions = PreparationFingerprint.noActions();
+
+        assertThat(CompanyFormPolicy.create(
+            "greeting", 1, noActions, fieldsFingerprint(), List.of(),
+            fieldRules(), ignored -> true
+        ).preparationFingerprint().requiredActions()).isEmpty();
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk", 1, noActions, fieldsFingerprint(), List.of(),
+            fieldRules(), ignored -> true
+        )).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PreparationFingerprint(
+            Set.of("section-profile"), List.of()
+        )).isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(CompanyFormPolicy.create(
+            "greeting", 1, noActions,
+            FieldsFingerprint.anySections(List.of(
+                new FieldStructure(
+                    "basicInformation.name",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT
+                )
+            )), List.of(), fieldRules(), ignored -> true
+        ).fieldsFingerprint().requiredSectionIds()).isEmpty();
+        assertThatThrownBy(() -> CompanyFormPolicy.create(
+            "sk", 1, preparationFingerprint(),
+            FieldsFingerprint.anySections(List.of(
+                new FieldStructure(
+                    "basicInformation.name",
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement.INPUT,
+                    com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormControl.TEXT
+                )
+            )), actionRules(), fieldRules(), ignored -> true
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("action 구조는 DOM 식별자와 표시명 alias를 함께 보존한다")
     void preservesActionStructureAliases() {
         ActionStructure structure = new ActionStructure(

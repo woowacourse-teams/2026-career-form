@@ -1,3 +1,5 @@
+import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
+import { resolveCompany } from "../adapters/company";
 import { isAddressSearchAction } from "../adapters/address-contract";
 import type {
   FieldCandidate,
@@ -284,6 +286,7 @@ function validateFieldAnalysis(
   value: unknown,
   candidates: Map<string, FieldCandidate>,
   request: FieldsAnalyzeRequest,
+  greeting = false,
 ): string {
   if (!isRecord(value) || !isNonEmptyString(value.candidateId)) {
     throw new AnalysisContractError();
@@ -294,6 +297,10 @@ function validateFieldAnalysis(
   }
 
   if (value.matchType === "NO_MATCH") {
+    const ordinaryNoMatch =
+      value.interactionStatus === "BLOCKED" &&
+      Array.isArray(value.reasonCodes) &&
+      value.reasonCodes[0] === "NO_MATCH";
     if (
       !hasOnlyKeys(value, [
         "candidateId",
@@ -303,10 +310,9 @@ function validateFieldAnalysis(
         "reasonCodes",
       ]) ||
       !isOneOf(value.mappingStatus, ["ADAPTER_VERIFIED", "LLM_SUGGESTED"]) ||
-      value.interactionStatus !== "BLOCKED" ||
       !Array.isArray(value.reasonCodes) ||
       value.reasonCodes.length !== 1 ||
-      value.reasonCodes[0] !== "NO_MATCH"
+      !ordinaryNoMatch
     ) {
       throw new AnalysisContractError();
     }
@@ -384,6 +390,10 @@ function validateFieldAnalysis(
             "ENGLISH_FULL_NAME_FAMILY_FIRST",
             "BOOLEAN_YN",
             "YEAR_MONTH",
+            "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
+            "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+            "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
+            "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
           ]) ||
           (value.valueBinding.profileFieldKey !== undefined &&
             (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
@@ -433,6 +443,50 @@ function validateFieldAnalysis(
       isRecord(value.valueBinding) && value.valueBinding.type === "DIRECT"
         ? value.valueBinding.profileFieldKey
         : undefined;
+    const greetingReady =
+      greeting &&
+      value.mappingStatus === "ADAPTER_VERIFIED" &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      ((typeof directKey === "string" &&
+        isAutofillProfileFieldKey(directKey)) ||
+        (isRecord(value.valueBinding) &&
+          value.valueBinding.type === "DERIVED" &&
+          /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_NAME$/.test(
+            String(value.valueBinding.recipe),
+          )));
+    const greetingSearch =
+      greetingReady &&
+      candidate.element === "input" &&
+      candidate.control === "text" &&
+      !candidate.readonly &&
+      (/^(?:educationalBackground\.(?:(?:universities|graduateSchools)\.\d+\.(?:schoolName|majors\.\d+)|highSchool\.schoolName)|workHistory\.workExperiences\.\d+\.companyName|languagesCertificationsAndOtherActivity\.(?:certifiedLanguageTests\.\d+\.testName|certificatesLicenses\.\d+\.credentials))$/.test(
+        candidate.domName ?? "",
+      ) ||
+        (candidate.domName === "basicInformation.nationalityCode" &&
+          candidate.displayName === "국적" &&
+          directKey === "personal.personal.nationality"));
+    const greetingDate =
+      request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
+      greetingReady &&
+      candidate.element === "input" &&
+      candidate.control === "button" &&
+      typeof directKey === "string" &&
+      isDateProfileFieldKey(directKey) &&
+      (candidate.domName === "basicInformation.birthdate" ||
+        /^educationalBackground\.(?:(?:universities|graduateSchools)\.\d+|highSchool)\.enrollmentPeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.test(
+          candidate.domName ?? "",
+        ));
     const searchSelection =
       value.mappingStatus === "LLM_SUGGESTED" &&
       candidate.element === "input" &&
@@ -465,16 +519,17 @@ function validateFieldAnalysis(
     ) {
       throw new AnalysisContractError();
     }
-    const expectedCommand = calendarSelection
-      ? "SELECT_DATE"
-      : searchSelection
-        ? "SEARCH_SELECTION"
-        : candidate.element === "input" &&
-            candidate.control === "text" &&
-            isRecord(value.valueBinding) &&
-            value.valueBinding.type === "BUTTON_OPTION"
-          ? "SELECT_BUTTON_OPTION"
-          : writeCommandForControl[candidate.control];
+    const expectedCommand =
+      calendarSelection || greetingDate
+        ? "SELECT_DATE"
+        : searchSelection || greetingSearch
+          ? "SEARCH_SELECTION"
+          : candidate.element === "input" &&
+              candidate.control === "text" &&
+              isRecord(value.valueBinding) &&
+              value.valueBinding.type === "BUTTON_OPTION"
+            ? "SELECT_BUTTON_OPTION"
+            : writeCommandForControl[candidate.control];
     if (
       !isRecord(value.writePlan) ||
       !hasOnlyKeys(value.writePlan, ["command"]) ||
@@ -537,19 +592,27 @@ export function validateFieldsResponse(
   }
 
   const candidates = collectFieldCandidates(request);
+  const greeting =
+    resolveCompany(request.site.host) === "greeting" ||
+    hasGreetingFieldCandidates(candidates.values());
   const seen = new Set<string>();
   for (const field of value.fields) {
     let candidateId: string;
     try {
-      candidateId = validateFieldAnalysis(field, candidates, request);
+      candidateId = validateFieldAnalysis(
+        field,
+        candidates,
+        request,
+        greeting && value.mode === "ADAPTER",
+      );
       if (
         isRecord(field) &&
         isRecord(field.writePlan) &&
         field.writePlan.command === "SEARCH_SELECTION" &&
-        value.mode !== "GENERIC"
-      ) {
+        value.mode !== "GENERIC" &&
+        !greeting
+      )
         throw new AnalysisContractError();
-      }
     } catch (error) {
       if (error instanceof AnalysisContractError) {
         const candidateLabel =

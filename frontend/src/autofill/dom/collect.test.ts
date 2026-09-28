@@ -369,6 +369,17 @@ describe("application form DOM collection", () => {
     ).toEqual(["자격/면허 추가"]);
   });
 
+  it("keeps a root-level preparation action in one unique root section", () => {
+    document.body.innerHTML = `<button type="button">자격/면허 추가</button>`;
+
+    const collected = collectPreparationSnapshot(document);
+
+    expect(
+      collected.request.sections.map((section) => section.sectionId),
+    ).toEqual(["section-root"]);
+    expect(collected.request.sections[0]?.actionCandidates).toHaveLength(1);
+  });
+
   it("caps long field metadata at the analysis API limit", () => {
     document.body.innerHTML = `
       <label for="long-select">${"가".repeat(200)}</label>

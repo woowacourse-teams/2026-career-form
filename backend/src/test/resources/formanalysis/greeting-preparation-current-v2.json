@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "greeting-preparation",
+  "site": {
+    "host": "kakaomobility.career.greetinghr.com",
+    "pathPattern": "/ko/o/*/apply"
+  },
+  "sections": [
+    {
+      "sectionId": "section-root",
+      "actionCandidates": []
+    }
+  ]
+}

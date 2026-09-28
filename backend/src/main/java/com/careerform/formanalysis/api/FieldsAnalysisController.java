@@ -20,9 +20,7 @@ public final class FieldsAnalysisController {
     }
 
     @PostMapping("/api/v1/fields/analyze")
-    public FieldsAnalysisResponse analyze(
-        @Valid @RequestBody FieldsAnalysisRequest request
-    ) {
+    public FieldsAnalysisResponse analyze(@Valid @RequestBody FieldsAnalysisRequest request) {
         return service.analyze(request);
     }
 }

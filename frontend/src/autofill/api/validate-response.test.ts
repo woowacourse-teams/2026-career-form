@@ -153,6 +153,22 @@ const nestedFieldsRequest: FieldsAnalyzeRequest = {
 };
 
 describe("analysis API response validation", () => {
+  it("rejects site-specific metadata in the common response", () => {
+    for (const extra of [
+      { routingContext: "a".repeat(32) },
+      { executionAdapterId: "greeting-v1" },
+    ]) {
+      expect(() =>
+        validatePreparationResponse(preparationRequest, {
+          snapshotId: "snapshot-a",
+          mode: "ADAPTER",
+          analysisStatus: "COMPLETE",
+          preparationPlans: [],
+          ...extra,
+        }),
+      ).toThrow(AnalysisContractError);
+    }
+  });
   it("accepts a preparation plan that targets a candidate from the same snapshot", () => {
     const result = validatePreparationResponse(preparationRequest, {
       snapshotId: "snapshot-a",
@@ -1156,5 +1172,315 @@ describe("SELECT_DATE capability", () => {
         ],
       }).fields[0],
     ).toMatchObject({ writePlan: { command: "SEARCH_SELECTION" } });
+  });
+});
+
+describe("Greeting custom execution contracts", () => {
+  function contract(command: "SEARCH_SELECTION" | "SELECT_DATE") {
+    const date = command === "SELECT_DATE";
+    const request: FieldsAnalyzeRequest = {
+      schemaVersion: 2,
+      snapshotId: "greeting-contract",
+      site: { host: "sample.career.greetinghr.com", pathPattern: "/apply" },
+      supportedWriteCommands: ["SELECT_DATE"],
+      sections: [
+        {
+          sectionId: "s1",
+          fields: [
+            {
+              candidateId: "f1",
+              element: "input",
+              control: date ? "button" : "text",
+              visibility: "visible",
+              domName: date
+                ? "basicInformation.birthdate"
+                : "educationalBackground.universities.0.schoolName",
+            },
+          ],
+        },
+      ],
+    };
+    const response = {
+      snapshotId: request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: [
+        {
+          candidateId: "f1",
+          matchType: "MATCH",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          autofillPolicy: "ALLOWED",
+          valueBinding: {
+            type: "DIRECT",
+            profileFieldKey: date
+              ? "personal.personal.birthDate"
+              : "education.university.schoolName",
+          },
+          writePlan: { command },
+        },
+      ],
+    };
+    return { request, response };
+  }
+  it.each(["SEARCH_SELECTION", "SELECT_DATE"] as const)(
+    "validates %s on an arbitrary custom domain using the existing base candidates",
+    (command) => {
+      const { request, response } = contract(command);
+      const basicFields = [
+        "basicInformation.name",
+        "basicInformation.phoneNumber.nationalNumber",
+      ].map((domName, index) => ({
+        candidateId: `base-${index}`,
+        element: "input" as const,
+        control: "text" as const,
+        visibility: "visible" as const,
+        domName,
+      }));
+      const customRequest = {
+        ...request,
+        site: {
+          host: "jobs.unregistered.example",
+          pathPattern: "/ko/o/*/apply",
+        },
+        sections: [
+          {
+            ...request.sections[0]!,
+            fields: [...request.sections[0]!.fields, ...basicFields],
+          },
+        ],
+      };
+      const customResponse = {
+        ...response,
+        fields: [
+          ...response.fields,
+          ...basicFields.map((field) => ({
+            candidateId: field.candidateId,
+            matchType: "NO_MATCH",
+            mappingStatus: "ADAPTER_VERIFIED",
+            interactionStatus: "BLOCKED",
+            reasonCodes: ["NO_MATCH"],
+          })),
+        ],
+      };
+      expect(
+        validateFieldsResponse(customRequest, customResponse).fields[0],
+      ).toMatchObject({ writePlan: { command } });
+      expect(() =>
+        validateFieldsResponse(
+          {
+            ...customRequest,
+            sections: [
+              {
+                ...customRequest.sections[0],
+                fields: [
+                  ...customRequest.sections[0].fields,
+                  { ...basicFields[0], candidateId: "duplicate-name" },
+                ],
+              },
+            ],
+          },
+          {
+            ...customResponse,
+            fields: [
+              ...customResponse.fields,
+              { ...customResponse.fields[1], candidateId: "duplicate-name" },
+            ],
+          },
+        ),
+      ).toThrow(AnalysisContractError);
+    },
+  );
+  it.each(["SEARCH_SELECTION", "SELECT_DATE"] as const)(
+    "allows %s only with the Greeting designation",
+    (command) => {
+      const { request, response } = contract(command);
+      expect(validateFieldsResponse(request, response).fields[0]).toMatchObject(
+        { writePlan: { command } },
+      );
+      expect(() =>
+        validateFieldsResponse(
+          {
+            ...request,
+            site: { ...request.site, host: "unregistered.example" },
+          },
+          response,
+        ),
+      ).toThrow(AnalysisContractError);
+    },
+  );
+  it.each([
+    [
+      "educationalBackground.highSchool.schoolName",
+      "education.highSchool.schoolName",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "workHistory.workExperiences.0.companyName",
+      "careers.career.companyName",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.testName",
+      "languages.languageTest.testName",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials",
+      "certifications.certificate.name",
+      "SEARCH_SELECTION",
+    ],
+    [
+      "educationalBackground.highSchool.enrollmentPeriod.startDate",
+      "education.highSchool.startDate",
+      "SELECT_DATE",
+    ],
+    [
+      "workHistory.workExperiences.0.employmentPeriod.startDate",
+      "careers.career.startDate",
+      "SELECT_DATE",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.acquisitionDate",
+      "languages.languageTest.acquisitionDate",
+      "SELECT_DATE",
+    ],
+    [
+      "languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate",
+      "certifications.certificate.acquisitionDate",
+      "SELECT_DATE",
+    ],
+  ] as const)(
+    "validates supported dependent field %s",
+    (name, key, command) => {
+      const { request, response } = contract(command);
+      request.sections[0]!.fields[0]!.domName = name;
+      response.fields[0]!.valueBinding.profileFieldKey = key;
+      expect(validateFieldsResponse(request, response).fields[0]).toMatchObject(
+        { writePlan: { command } },
+      );
+    },
+  );
+  it.each([1, 2])(
+    "validates composed additional major slot %s without a new API field",
+    (slot) => {
+      const { request, response } = contract("SEARCH_SELECTION");
+      request.sections[0]!.fields[0]!.domName = `educationalBackground.universities.0.majors.${slot}`;
+      const derived = {
+        ...response,
+        fields: [
+          {
+            ...response.fields[0],
+            valueBinding: {
+              type: "DERIVED",
+              recipe: `UNIVERSITY_ADDITIONAL_MAJOR_${slot}_NAME`,
+            },
+          },
+        ],
+      };
+      expect(validateFieldsResponse(request, derived).fields[0]).toMatchObject({
+        writePlan: { command: "SEARCH_SELECTION" },
+      });
+    },
+  );
+  it("accepts nationality search only for the exact nationality binding", () => {
+    const { request, response } = contract("SEARCH_SELECTION");
+    request.sections[0]!.fields[0]!.domName =
+      "basicInformation.nationalityCode";
+    request.sections[0]!.fields[0]!.displayName = "국적";
+    response.fields[0]!.valueBinding.profileFieldKey =
+      "personal.personal.nationality";
+    expect(validateFieldsResponse(request, response).fields[0]).toMatchObject({
+      writePlan: { command: "SEARCH_SELECTION" },
+    });
+    response.fields[0]!.valueBinding.profileFieldKey =
+      "education.university.schoolName";
+    expect(() => validateFieldsResponse(request, response)).toThrow(
+      AnalysisContractError,
+    );
+  });
+  it("requires the calendar capability even for a designated Greeting date", () => {
+    const { request, response } = contract("SELECT_DATE");
+    expect(() =>
+      validateFieldsResponse(
+        { ...request, supportedWriteCommands: undefined },
+        response,
+      ),
+    ).toThrow(AnalysisContractError);
+  });
+  it("allows a designated Greeting military month date with its date profile key", () => {
+    const { request, response } = contract("SELECT_DATE");
+    request.sections[0]!.fields[0]!.domName =
+      "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.startDate";
+    response.fields[0]!.valueBinding.profileFieldKey =
+      "military.military.serviceStartDate";
+    expect(validateFieldsResponse(request, response).fields[0]).toMatchObject({
+      writePlan: { command: "SELECT_DATE" },
+    });
+  });
+});
+
+describe("Greeting English name manual review", () => {
+  const request: FieldsAnalyzeRequest = {
+    ...fieldsRequest,
+    site: { host: "sample.career.greetinghr.com", pathPattern: "/apply" },
+    sections: [
+      {
+        sectionId: "s1",
+        fields: [
+          {
+            ...fieldsRequest.sections[0]!.fields[0]!,
+            domName: "basicInformation.englishName",
+          },
+        ],
+      },
+    ],
+  };
+  const response = {
+    snapshotId: request.snapshotId,
+    mode: "ADAPTER",
+    analysisStatus: "COMPLETE",
+    fields: [
+      {
+        candidateId: "field-1",
+        matchType: "NO_MATCH",
+        mappingStatus: "ADAPTER_VERIFIED",
+        interactionStatus: "UNVERIFIED",
+        reasonCodes: ["ENGLISH_NAME_ORDER_UNVERIFIED"],
+      },
+    ],
+  };
+  it("rejects the obsolete English name order review response", () => {
+    expect(() => validateFieldsResponse(request, response)).toThrow(
+      AnalysisContractError,
+    );
+  });
+  it.each([
+    { fields: [{ ...response.fields[0], writePlan: { command: "SET_TEXT" } }] },
+    { fields: [{ ...response.fields[0], mappingStatus: "LLM_SUGGESTED" }] },
+  ])("rejects an untrusted or writable manual review contract", (override) => {
+    expect(() =>
+      validateFieldsResponse(request, { ...response, ...override }),
+    ).toThrow(AnalysisContractError);
+  });
+  it.each([
+    { domName: "customQuestion.englishName" },
+    { control: "select" as const },
+    { element: "textarea" as const },
+  ])("rejects the reason on unrelated fields", (override) => {
+    expect(() =>
+      validateFieldsResponse(
+        {
+          ...request,
+          sections: [
+            {
+              sectionId: "s1",
+              fields: [{ ...request.sections[0]!.fields[0]!, ...override }],
+            },
+          ],
+        },
+        response,
+      ),
+    ).toThrow(AnalysisContractError);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { FieldsAnalyzeRequest } from "./types";
+import type { FieldsAnalyzeRequest, PreparationAnalyzeRequest } from "./types";
 import {
   AnalysisServiceError,
   RuntimeAnalysisApiClient,
@@ -27,6 +27,61 @@ const request: FieldsAnalyzeRequest = {
 };
 
 describe("RuntimeAnalysisApiClient", () => {
+  it("sends the existing field request unchanged after Greeting preparation", async () => {
+    const preparation: PreparationAnalyzeRequest = {
+      schemaVersion: 2,
+      snapshotId: "preparation-1",
+      site: {
+        host: "career.hyundai-autoever.com",
+        pathPattern: "/ko/o/*/apply",
+      },
+      sections: [{ sectionId: "section-root", actionCandidates: [] }],
+    };
+    const fieldRequest: FieldsAnalyzeRequest = {
+      ...request,
+      site: preparation.site,
+    };
+    const sendMessage = vi.fn(async (message: unknown) => {
+      const typed = message as { type: string };
+      return typed.type === "AUTOFILL_ANALYZE_PREPARATION"
+        ? {
+            ok: true as const,
+            data: {
+              snapshotId: "preparation-1",
+              mode: "ADAPTER",
+              analysisStatus: "COMPLETE",
+              preparationPlans: [],
+            },
+          }
+        : {
+            ok: true as const,
+            data: {
+              snapshotId: "snapshot-b",
+              mode: "ADAPTER",
+              analysisStatus: "COMPLETE",
+              fields: [
+                {
+                  candidateId: "email",
+                  matchType: "NO_MATCH",
+                  mappingStatus: "ADAPTER_VERIFIED",
+                  interactionStatus: "BLOCKED",
+                  reasonCodes: ["NO_MATCH"],
+                },
+              ],
+            },
+          };
+    });
+    const client = new RuntimeAnalysisApiClient(sendMessage);
+
+    await client.analyzePreparation(preparation);
+    await client.analyzeFields(fieldRequest);
+
+    expect(sendMessage).toHaveBeenNthCalledWith(2, {
+      type: "AUTOFILL_ANALYZE_FIELDS",
+      payload: fieldRequest,
+    });
+  });
+
   it("returns a validated response from the extension background boundary", async () => {
     const sendMessage = vi.fn(async () => ({
       ok: true as const,

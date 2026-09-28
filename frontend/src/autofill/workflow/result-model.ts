@@ -1,3 +1,4 @@
+import type { FieldCandidateHandle } from "../dom/types";
 import type { Profile } from "../../profile/model";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
@@ -18,7 +19,9 @@ export interface ResultModelInput {
   progressStateFor?(progressId: string): boolean;
   fieldStateFor?(
     candidateId: string,
-  ): { visible: boolean; value: string } | undefined;
+  ):
+    | { visible: boolean; value: string; handle?: FieldCandidateHandle }
+    | undefined;
 }
 export interface ResultModel {
   completed: WriteProgress[];
@@ -102,7 +105,8 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
     const live = fieldStateFor?.(id);
     const current = live?.value ?? item.currentValue;
     const matches =
-      saved.length === 1 && matchesResultValue(item, current, saved[0].value);
+      saved.length === 1 &&
+      matchesResultValue(item, current, saved[0].value, live?.handle);
     const recoveredRetry =
       entry?.retryRecovered &&
       written &&

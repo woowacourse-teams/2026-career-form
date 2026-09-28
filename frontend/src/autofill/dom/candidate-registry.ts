@@ -191,7 +191,10 @@ export class CandidateRegistry {
     const elements =
       registered.handle.kind === "action"
         ? [registered.handle.element]
-        : registered.handle.elements;
+        : [
+            ...registered.handle.elements,
+            ...(registered.handle.customElements ?? []),
+          ];
     if (
       elements.some((element) => !element.isConnected) ||
       createStructuralSignature(elements) !== registered.handle.signature

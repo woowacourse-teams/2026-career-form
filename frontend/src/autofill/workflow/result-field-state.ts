@@ -1,3 +1,5 @@
+import { greetingEmploymentStatusValue } from "../adapters/greeting/write";
+import { customFieldValue } from "../dom/custom-field-value";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 
 export function resultFieldState(
@@ -9,7 +11,7 @@ export function resultFieldState(
   if (!lookup || (lookup.status !== "ready" && lookup.status !== "blocked"))
     return undefined;
   const handle = lookup.handle;
-  const element = handle.elements[0];
+  const element = handle.elements[0] ?? handle.customElements?.[0];
   const style = element && pageDocument.defaultView?.getComputedStyle(element);
   const hidden =
     handle.candidate.visibility === "hidden" ||
@@ -19,7 +21,7 @@ export function resultFieldState(
   let value =
     element instanceof HTMLSelectElement
       ? (element.selectedOptions[0]?.textContent ?? "")
-      : (element?.value ?? "");
+      : (handle.elements[0]?.value ?? "");
   if (
     handle.candidate.control === "radio" ||
     handle.candidate.control === "checkbox"
@@ -30,7 +32,14 @@ export function resultFieldState(
     });
     value = selected?.map((option) => option.displayName).join(", ") ?? "";
   }
-  return { visible: !hidden, value };
+  return {
+    visible: !hidden,
+    value:
+      greetingEmploymentStatusValue(handle) ??
+      customFieldValue(handle) ??
+      value,
+    handle,
+  };
 }
 
 export function resultFieldOptions(

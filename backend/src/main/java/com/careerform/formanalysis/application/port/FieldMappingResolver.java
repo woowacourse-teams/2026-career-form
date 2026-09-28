@@ -106,7 +106,11 @@ public interface FieldMappingResolver {
         ENGLISH_FULL_NAME_GIVEN_FIRST,
         ENGLISH_FULL_NAME_FAMILY_FIRST,
         BOOLEAN_YN,
-        YEAR_MONTH
+        YEAR_MONTH,
+        UNIVERSITY_ADDITIONAL_MAJOR_1_NAME,
+        UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION,
+        UNIVERSITY_ADDITIONAL_MAJOR_2_NAME,
+        UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION
     }
 
     Resolution resolve(FieldsAnalysisRequest request);
