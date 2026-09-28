@@ -1,0 +1,210 @@
+{
+  "contract_version": "1.0",
+  "runs": [
+    {
+      "site_id": "naver-cloud",
+      "source": "LIVE_SITE",
+      "status": "INCONCLUSIVE",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EXISTING_VALUES",
+      "inconclusive_reason": "MANUAL_VERIFICATION_UNAVAILABLE",
+      "usage": {"provider_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null, "duration_ms": 0},
+      "candidates": []
+    },
+    {
+      "site_id": "lg-ai-research",
+      "source": "LIVE_SITE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 2, "input_tokens": 4533, "output_tokens": 209, "cost_usd": null, "duration_ms": 6141},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f001", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c002", "field_id": "f002", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c003", "field_id": "f007", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "INCORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "MAPPING_INCORRECT", "existing_value_changed": false},
+        {"candidate_id": "c004", "field_id": "f003", "stages": ["DISCOVERED", "MAPPED"], "mapping_result": "CORRECT", "write_result": null, "terminal_result": "DEFERRED", "reason_code": "BINDING_UNSUPPORTED", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "neowiz-lever",
+      "source": "LIVE_SITE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 2, "input_tokens": 5046, "output_tokens": 244, "cost_usd": null, "duration_ms": 4801},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f002", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c002", "field_id": "f003", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c003", "field_id": "f004", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c004", "field_id": "f006", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c005", "field_id": "f020", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "INCORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "MAPPING_INCORRECT", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "kakao-mobility-greeting",
+      "source": "LIVE_SITE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 3, "input_tokens": 5318, "output_tokens": 340, "cost_usd": null, "duration_ms": 7909},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f001", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c002", "field_id": "f003", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"], "mapping_result": "CORRECT", "write_result": "CORRECT", "terminal_result": null, "reason_code": null, "existing_value_changed": false},
+        {"candidate_id": "c003", "field_id": "f005", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "CORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "WRITE_FAILED", "existing_value_changed": false},
+        {"candidate_id": "c004", "field_id": "f006", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "CORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "WRITE_FAILED", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "megazone",
+      "source": "LIVE_SITE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 1, "input_tokens": 4017, "output_tokens": 44, "cost_usd": null, "duration_ms": 1575},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f001", "stages": ["DISCOVERED"], "mapping_result": null, "write_result": null, "terminal_result": "FAILED", "reason_code": "MAPPING_NO_MATCH", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "naver-cloud",
+      "source": "FIXTURE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "fixture",
+      "model": "deterministic",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EXISTING_VALUES",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null, "duration_ms": 0},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f001", "stages": ["DISCOVERED", "MAPPED"], "mapping_result": "CORRECT", "write_result": null, "terminal_result": "DEFERRED", "reason_code": "EXISTING_VALUE_PROTECTED", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "lg-ai-research",
+      "source": "FIXTURE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "fixture",
+      "model": "deterministic",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null, "duration_ms": 0},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f007", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "INCORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "MAPPING_INCORRECT", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "neowiz-lever",
+      "source": "FIXTURE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "fixture",
+      "model": "deterministic",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null, "duration_ms": 0},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f020", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "INCORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "MAPPING_INCORRECT", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "kakao-mobility-greeting",
+      "source": "FIXTURE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "fixture",
+      "model": "deterministic",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null, "duration_ms": 0},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f005", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "CORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "WRITE_FAILED", "existing_value_changed": false},
+        {"candidate_id": "c002", "field_id": "f006", "stages": ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN"], "mapping_result": "CORRECT", "write_result": "INCORRECT", "terminal_result": "FAILED", "reason_code": "WRITE_FAILED", "existing_value_changed": false}
+      ]
+    },
+    {
+      "site_id": "megazone",
+      "source": "FIXTURE",
+      "status": "MEASURED",
+      "revision": "8105e7c25b97431a5dd97ddc8e8571dbe916727b",
+      "provider": "fixture",
+      "model": "deterministic",
+      "timeout_ms": 30000,
+      "max_output_tokens": 2048,
+      "profile_version": "profile-export-example-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {"provider_calls": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": null, "duration_ms": 0},
+      "candidates": [
+        {"candidate_id": "c001", "field_id": "f001", "stages": ["DISCOVERED"], "mapping_result": null, "write_result": null, "terminal_result": "FAILED", "reason_code": "MAPPING_NO_MATCH", "existing_value_changed": false}
+      ]
+    }
+  ],
+  "follow_up_priorities": [
+    {
+      "item_id": "PVTI_lADOA_44FM4BfMn-zg85LJI",
+      "title": "accessible name과 구조 문맥 보강",
+      "priority": 1,
+      "evidence": [
+        {"site_id": "megazone", "candidate_id": "c001", "field_id": "f001", "reason_code": "MAPPING_NO_MATCH"}
+      ]
+    },
+    {
+      "item_id": "PVTI_lADOA_44FM4BfMn-zg85LLs",
+      "title": "분할 이메일과 생년월일 값 바인딩",
+      "priority": 2,
+      "evidence": [
+        {"site_id": "lg-ai-research", "candidate_id": "c003", "field_id": "f007", "reason_code": "MAPPING_INCORRECT"}
+      ]
+    },
+    {
+      "item_id": "PVTI_lADOA_44FM4BfMn-zg85LOA",
+      "title": "조건부 반복 및 커스텀 컨트롤 실행",
+      "priority": 3,
+      "evidence": [
+        {"site_id": "kakao-mobility-greeting", "candidate_id": "c003", "field_id": "f005", "reason_code": "WRITE_FAILED"}
+      ]
+    }
+  ]
+}

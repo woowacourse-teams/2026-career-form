@@ -1,0 +1,122 @@
+{
+  "contract_version": "1.0",
+  "profile_version": "profile-export-example-v1",
+  "sites": [
+    {
+      "site_id": "naver-cloud",
+      "fields": [
+        {"field_id": "f001", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f002", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f003", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f004", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f005", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f006", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f007", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f008", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f009", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f010", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f011", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f012", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f013", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "CUSTOM"},
+        {"field_id": "f014", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "CUSTOM"},
+        {"field_id": "f015", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "CUSTOM"},
+        {"field_id": "f016", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "TEXT"},
+        {"field_id": "f017", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "CUSTOM"}
+      ]
+    },
+    {
+      "site_id": "lg-ai-research",
+      "fields": [
+        {"field_id": "f001", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f002", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f003", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "SELECT"},
+        {"field_id": "f004", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f005", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f006", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f007", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f008", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f009", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f010", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f011", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f012", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"}
+      ]
+    },
+    {
+      "site_id": "neowiz-lever",
+      "fields": [
+        {"field_id": "f001", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f002", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f003", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f004", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f005", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f006", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f007", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f008", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXTAREA"},
+        {"field_id": "f009", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f010", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXTAREA"},
+        {"field_id": "f011", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f012", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXTAREA"},
+        {"field_id": "f013", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXTAREA"},
+        {"field_id": "f014", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXTAREA"},
+        {"field_id": "f015", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f016", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f017", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f018", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f019", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f020", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "TEXTAREA"},
+        {"field_id": "f021", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f022", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "TEXT"},
+        {"field_id": "f023", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "TEXT"},
+        {"field_id": "f024", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f025", "classification": "CREATED_AFTER_ACTION", "classification_reason": "ACTION_REQUIRED", "control_kind": "FILE"},
+        {"field_id": "f026", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f027", "classification": "CREATED_AFTER_ACTION", "classification_reason": "ACTION_REQUIRED", "control_kind": "FILE"},
+        {"field_id": "f028", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "SELECT"},
+        {"field_id": "f029", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "SELECT"},
+        {"field_id": "f030", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "SELECT"}
+      ]
+    },
+    {
+      "site_id": "kakao-mobility-greeting",
+      "fields": [
+        {"field_id": "f001", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f002", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f003", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f004", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f005", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f006", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f007", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f008", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f009", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f010", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f011", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f012", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"},
+        {"field_id": "f013", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"},
+        {"field_id": "f014", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"},
+        {"field_id": "f015", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"}
+      ]
+    },
+    {
+      "site_id": "megazone",
+      "fields": [
+        {"field_id": "f001", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f002", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f003", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f004", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "TEXT"},
+        {"field_id": "f005", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f006", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "RADIO"},
+        {"field_id": "f007", "classification": "PROFILE_VALUE_MISSING", "classification_reason": "PROFILE_VALUE_UNAVAILABLE", "control_kind": "SELECT"},
+        {"field_id": "f008", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f009", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "FILE"},
+        {"field_id": "f010", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "RADIO"},
+        {"field_id": "f011", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f012", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "CUSTOM"},
+        {"field_id": "f013", "classification": "AUTOFILLABLE", "classification_reason": "PROFILE_VALUE_AVAILABLE", "control_kind": "CUSTOM"},
+        {"field_id": "f014", "classification": "CONDITIONAL", "classification_reason": "CONDITION_NOT_ACTIVE", "control_kind": "CUSTOM"},
+        {"field_id": "f015", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"},
+        {"field_id": "f016", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"},
+        {"field_id": "f017", "classification": "FORBIDDEN", "classification_reason": "SENSITIVE_FIELD", "control_kind": "CHECKBOX"}
+      ]
+    }
+  ]
+}
