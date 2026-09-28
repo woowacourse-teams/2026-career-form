@@ -10,6 +10,7 @@ import {
   retainedDriverReviewResults,
 } from "./retained-drivers";
 import { collectFieldsSnapshot } from "../dom/collect";
+import { debugAnalysis, debugReviewPlan } from "../debug/autofill-debug";
 import {
   buildReviewPlan,
   resolveProfileFieldValue,
@@ -111,6 +112,7 @@ export function createAnalyzeFields({
 
     const analysisStarted = performance.now();
     let analysis = await apiClient.analyzeFields(snapshot.request);
+    debugAnalysis(snapshot, analysis);
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -204,6 +206,7 @@ export function createAnalyzeFields({
       normalizeDirectValue: (key, value) =>
         adapterProfileValue(adapter, key, value),
     });
+    debugReviewPlan(plan);
     if (plan.status === "blocked") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");

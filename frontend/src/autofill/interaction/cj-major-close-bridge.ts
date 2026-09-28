@@ -1,4 +1,5 @@
 import { SearchFailure, type SearchSession } from "./search-session";
+import { claimMainWorldBridge } from "./main-world-bridge-claim";
 import type { SearchSurface } from "./search-surface";
 import {
   CJ_MAJOR_ACK_EVENT,
@@ -39,7 +40,7 @@ function popupContract(doc: Document): Popup | undefined {
   if (
     !popup ||
     !config ||
-    Object.keys(popup.config!).join(',') !== 'default' ||
+    Object.keys(popup.config!).join(",") !== "default" ||
     !reviewedMethod(popup.show, CJ_MAJOR_SHOW_SOURCE) ||
     !reviewedMethod(popup.hide, CJ_MAJOR_HIDE_SOURCE) ||
     Object.keys(config).sort().join(",") !==
@@ -96,9 +97,10 @@ function exactPopup(
     const url = new URL(frame.getAttribute("src") ?? "", doc.URL);
     return (
       url.origin === CJ_MAJOR_ORIGIN &&
-      url.pathname === (validMajorOpener(opener)
-        ? "/recruit/ko/resume/search/search_major.fo"
-        : "/recruit/ko/resume/search/search_university.fo") &&
+      url.pathname ===
+        (validMajorOpener(opener)
+          ? "/recruit/ko/resume/search/search_major.fo"
+          : "/recruit/ko/resume/search/search_university.fo") &&
       url.searchParams.size === 1 &&
       url.searchParams.get("num") === "2_0"
     );
@@ -110,7 +112,12 @@ function exactPopup(
 // MAIN world: requests contain only a nonce and a fixed action, never callbacks,
 // result links, application fields, or profile data.
 export function installCjMajorCloseBridge(doc: Document): void {
-  if (doc.location.origin !== CJ_MAJOR_ORIGIN || installed.has(doc)) return;
+  if (
+    doc.location.origin !== CJ_MAJOR_ORIGIN ||
+    installed.has(doc) ||
+    !claimMainWorldBridge(doc, "cj-major-close")
+  )
+    return;
   installed.add(doc);
   const leases = new Map<
     string,
@@ -156,7 +163,11 @@ export function installCjMajorCloseBridge(doc: Document): void {
           ? marked[0]
           : undefined;
       const popup = popupContract(doc);
-      if (!opener || (!validMajorOpener(opener) && !validSchoolOpener(opener)) || !popup) {
+      if (
+        !opener ||
+        (!validMajorOpener(opener) && !validSchoolOpener(opener)) ||
+        !popup
+      ) {
         respond(nonce, action, false);
         return;
       }

@@ -169,6 +169,13 @@ export class CandidateRegistry {
     return this.lookup(this.fields.get(candidateId));
   }
 
+  /** 개발 진단 로그 전용. 최신성 검사를 거치지 않으므로 기입에 사용하지 않는다. */
+  debugField(
+    candidateId: string,
+  ): Registered<FieldCandidateHandle> | undefined {
+    return this.fields.get(candidateId);
+  }
+
   private lookup<T extends ActionCandidateHandle | FieldCandidateHandle>(
     registered: Registered<T> | undefined,
   ): CandidateLookup<T> {

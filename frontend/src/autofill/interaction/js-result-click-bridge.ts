@@ -1,9 +1,29 @@
 import { safeActivation } from "./search-surface-dom";
 import type { SearchSession } from "./search-session";
+import { claimMainWorldBridge } from "./main-world-bridge-claim";
+import { debugWarn } from "../debug/autofill-debug";
+
+/** Synchronous probe: DOM event dispatch is synchronous across worlds. */
+export function verifiedJsResultBridgePresent(doc: Document): boolean {
+  let present = false;
+  const handlePong = () => {
+    present = true;
+  };
+  doc.addEventListener(JS_RESULT_PONG_EVENT, handlePong);
+  try {
+    doc.dispatchEvent(new Event(JS_RESULT_PING_EVENT));
+  } finally {
+    doc.removeEventListener(JS_RESULT_PONG_EVENT, handlePong);
+  }
+  return present;
+}
 
 export const JS_RESULT_REQUEST_EVENT = "career-form:verified-js-result-request";
 export const JS_RESULT_ACK_EVENT = "career-form:verified-js-result-ack";
 export const JS_RESULT_TARGET_ATTRIBUTE = "data-career-form-verified-js-result";
+/** Presence probe only: carries no data and never triggers a click. */
+export const JS_RESULT_PING_EVENT = "career-form:verified-js-result-ping";
+export const JS_RESULT_PONG_EVENT = "career-form:verified-js-result-pong";
 
 interface ClickRequest {
   nonce: string;
@@ -39,6 +59,10 @@ function parseRequest(event: Event): ClickRequest | undefined {
 // Runs in the page's MAIN world. It clicks only the exact, already-marked link;
 // it never evaluates an href string or invokes a site's function directly.
 export function installVerifiedJsResultClickBridge(doc: Document): void {
+  if (!claimMainWorldBridge(doc, "verified-js-result")) return;
+  doc.addEventListener(JS_RESULT_PING_EVENT, () => {
+    doc.dispatchEvent(new Event(JS_RESULT_PONG_EVENT));
+  });
   const consumed = new Set<string>();
   doc.addEventListener(JS_RESULT_REQUEST_EVENT, (event) => {
     const request = parseRequest(event);
@@ -87,13 +111,26 @@ export async function clickVerifiedJsResult(
   const doc = link.ownerDocument;
   const href = link.getAttribute("href");
   const label = normalize(link.textContent);
-  if (
-    !href ||
-    !/^javascript:/i.test(href) ||
-    !safeActivation(link, [label]) ||
-    link.hasAttribute(JS_RESULT_TARGET_ATTRIBUTE)
-  )
+  const precheck = !href
+    ? "href 없음"
+    : !/^javascript:/i.test(href)
+      ? "javascript: href 아님"
+      : !safeActivation(link, [label])
+        ? "safeActivation 거부"
+        : link.hasAttribute(JS_RESULT_TARGET_ATTRIBUTE)
+          ? "이전 요청 marker가 남아 있음"
+          : undefined;
+  if (precheck || !href) {
+    debugWarn(`결과 클릭 사전 검사 실패: ${precheck}`, { link, href, label });
     return false;
+  }
+  if (!verifiedJsResultBridgePresent(doc)) {
+    debugWarn(
+      "결과 클릭 브리지 없음: 이 문서에 MAIN-world 브리지가 설치되지 않았습니다",
+      { documentUrl: doc.URL, href, label },
+    );
+    return false;
+  }
   const nonce = crypto.randomUUID();
   link.setAttribute(JS_RESULT_TARGET_ATTRIBUTE, nonce);
   try {
@@ -118,7 +155,13 @@ export async function clickVerifiedJsResult(
         }),
       );
     });
-    return await session.race(acknowledged, 1_500);
+    const ok = await session.race(acknowledged, 1_500);
+    if (!ok)
+      debugWarn(
+        "결과 클릭 ack 없음: 브리지는 있지만 MAIN-world 검증에서 거부되었거나 1초 안에 응답하지 않았습니다",
+        { documentUrl: doc.URL, href, label },
+      );
+    return ok;
   } finally {
     if (link.getAttribute(JS_RESULT_TARGET_ATTRIBUTE) === nonce) {
       link.removeAttribute(JS_RESULT_TARGET_ATTRIBUTE);

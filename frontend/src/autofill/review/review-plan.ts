@@ -345,12 +345,16 @@ function itemForAnalysis(
     ? profileFieldParts(binding.profileFieldKey)
     : undefined;
   let itemIndex = lookup.handle.itemIndex;
+  // A field inside a repeated row whose group boundary could not be proven
+  // has a row but no index; it must not fall back to the sole profile entry.
+  const unindexedRepeatRow =
+    lookup.handle.itemId !== undefined && lookup.handle.itemIndex === undefined;
   if (parts?.repeatable && !parts.topLevel) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);
     const formItemCount = registry.fieldItemCount(analysis.candidateId);
-    if (profileEntries.length === 1) {
+    if (profileEntries.length === 1 && !unindexedRepeatRow) {
       itemIndex = 0;
     }
     const soleUngroupedProfileEntry =
