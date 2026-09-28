@@ -57,6 +57,20 @@
       "reason": "읽기와 요약만 요청했으므로 구현 생명주기를 시작하지 않는다."
     },
     {
+      "id": "live-autofill-evaluation-positive",
+      "prompt": "외부 Chrome에 연 평가 탭에서 평가 시작해줘.",
+      "expected_skill": "cf-live-autofill-evaluation",
+      "should_trigger": true,
+      "reason": "명시적으로 열린 외부 Chrome 평가 탭의 실행을 요청했다."
+    },
+    {
+      "id": "live-autofill-evaluation-negative",
+      "prompt": "Console 로그가 무슨 뜻인지 설명해줘.",
+      "expected_skill": "cf-live-autofill-evaluation",
+      "should_trigger": false,
+      "reason": "Console 해석 요청은 외부 Chrome 평가 실행 요청이 아니다."
+    },
+    {
       "id": "code-understanding-positive",
       "prompt": "검증된 현재 변경을 실제 코드와 테스트 기준으로 설명하고 참고 파일을 주면서 가볍게 이해를 확인해줘.",
       "expected_skill": "cf-code-understanding",

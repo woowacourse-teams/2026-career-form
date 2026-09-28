@@ -96,6 +96,23 @@ class SkillInventoryTest(unittest.TestCase):
 
         self.assertTrue(result.is_valid, result.errors)
 
+    def test_accepts_repository_owned_live_autofill_evaluation_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "cf-live-autofill-evaluation"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: cf-live-autofill-evaluation\n"
+                "description: 실사이트 평가를 실행한다.\n"
+                "---\n",
+                encoding="utf-8",
+            )
+
+            result = validate_skill_inventory(root)
+
+        self.assertTrue(result.is_valid, result.errors)
+
     def test_rejects_skill_with_invalid_frontmatter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
