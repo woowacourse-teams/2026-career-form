@@ -308,6 +308,14 @@ export function debugSearchStep(
   else console.debug(`${PREFIX} 검색 ${candidateId}: ${step}`, detail);
 }
 
+export function debugWarn(message: string, detail?: unknown): void {
+  if (!enabled) return;
+  console.warn(
+    `${PREFIX} ${message}`,
+    ...(detail === undefined ? [] : [detail]),
+  );
+}
+
 export function debugSearchFailure(
   candidateId: string,
   lastStep: string,

@@ -4,6 +4,7 @@ import {
   installVerifiedJsResultClickBridge,
   JS_RESULT_REQUEST_EVENT,
   JS_RESULT_TARGET_ATTRIBUTE,
+  verifiedJsResultBridgePresent,
 } from "./js-result-click-bridge";
 import type { SearchSession } from "./search-session";
 
@@ -32,6 +33,34 @@ describe("verified JavaScript result click bridge", () => {
     });
     expect(await clickVerifiedJsResult(anchor, session)).toBe(true);
     expect(clicks).toBe(1);
+    expect(anchor.hasAttribute(JS_RESULT_TARGET_ATTRIBUTE)).toBe(false);
+  });
+
+  it("ignores a second install in the same document so one request clicks once", async () => {
+    installVerifiedJsResultClickBridge(document);
+    const anchor = link();
+    let clicks = 0;
+    anchor.addEventListener("click", (event) => {
+      clicks++;
+      event.preventDefault();
+    });
+    expect(await clickVerifiedJsResult(anchor, session)).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(clicks).toBe(1);
+  });
+
+  it("fails immediately without clicking when the document has no bridge", async () => {
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    const frameDocument = frame.contentDocument!;
+    frameDocument.body.innerHTML = `<a href="javascript:chooseRegion('ST||서울특별시||KOR');">서울특별시</a>`;
+    const anchor = frameDocument.querySelector("a")!;
+    let clicks = 0;
+    anchor.addEventListener("click", () => clicks++);
+    expect(verifiedJsResultBridgePresent(document)).toBe(true);
+    expect(verifiedJsResultBridgePresent(frameDocument)).toBe(false);
+    expect(await clickVerifiedJsResult(anchor, session)).toBe(false);
+    expect(clicks).toBe(0);
     expect(anchor.hasAttribute(JS_RESULT_TARGET_ATTRIBUTE)).toBe(false);
   });
 
