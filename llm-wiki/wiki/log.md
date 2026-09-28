@@ -288,3 +288,24 @@
 - 승인된 후보 3개와 5개 사이트의 비식별 기준선을 [CF-115 bundle](../raw/issues/CF-115/manifest.md)에 기록하고 [평가 기준선 topic](topics/generic-autofill-evaluation-baselines.md)을 추가했다.
 - 실사이트 4개 측정과 1개 미확정, 단계별 지표, 실행 사용량과 오입력 구조를 기록했다. 실제 값, HTML, URL query, selector, 요청과 응답 원문, 계정과 세션 정보는 포함하지 않았다.
 - Issue raw는 실행 근거, topic은 revision별 사람용 이력, 하네스 JSON은 기계 판독 정본으로 구분했다. 여러 기준선의 자동 추세 집계는 현재 범위에 포함하지 않았다.
+
+## [2026-09-28] ingest | CF-94 기존 회사별 Greeting 라우팅
+
+- Approval-Digest: e059c7035aacff70bb63053c36bd05ff7370595c5af450788ac836798cb49b8a
+- 승인된 후보 4개를 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 반영했다.
+- FE host 선택·BE 독립 정적 정책, 전용 API 필드/토큰/추가 준비 요청 제거와 명시 등록의 지원 경계를 갱신했다. 이전 설치 확장 결과는 이번 라우팅 변경 이전 증거로 구분했다.
+
+## [2026-09-28] ingest | CF-94 카카오게임즈 자체 도메인
+
+- Approval-Digest: cac312a1d58fd3930f34a3ec7e62130c7a6026aa5654a054f57065b20c650876
+- [CF-94 bundle](../raw/issues/CF-94/manifest.md)의 승인 후보 전체를 갱신해 카카오게임즈 명시 등록과 공개 페이지·CNAME 확인 근거를 추가했다. 런타임 자동 탐지와 전 항목 실화면 입력 검증으로 확대하지 않는다.
+
+## [2026-09-28] ingest | CF-94 Greeting DNS·DOM 공통 판별
+
+- Approval-Digest: c2488a72f8044f14f8edd98d8b975422d669e2a1db3a6b15f0a94760985bc71a
+- 승인된 후보 4개를 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 반영했다.
+- BE CNAME 연결·FE 공통 DOM 어댑터 선택으로 기업별 등록을 대체하고 기존 라우팅 API와 필드 보호 조건을 유지한다. 이전 설치 입력 결과와 이번 DNS/API·합성 검증의 범위를 구분한다.
+
+- 2026-09-28: CF-94 승인 후보에 따라 Greeting 영문이름의 이름→성 정책과 카카오게임즈 프로필/양식 지원 공백을 반영했다. 실제 입력값은 수집하지 않았고 미구현 범주는 조사 결과로 구분했다.
+
+- 2026-09-28: CF-94 승인 후보 `2a2272f6138752170845c9b3a7fb03ae7746ccba332a7f6588da3720ea914b01`로 Greeting 고교·대학 추가전공·경력·어학·자격증 지원 및 이메일·재직 결과 보완을 반영했다. 실제 설치 관측과 최신 수정본의 전체 브라우저 재검증 미완료를 분리했고 다른 회사 raw는 변경하지 않았다.

@@ -1,13 +1,13 @@
 # CF-94 Knowledge Bundle
 
 > Issue: CF-94
-> Collected: 2026-09-27
-> Approval-Digest: d36c93eae7d0daa585f8b33f6985c5edde7043a449cf12547daa9b0d6c5a4dbe
+> Collected: 2026-09-28
+> Approval-Digest: 2a2272f6138752170845c9b3a7fb03ae7746ccba332a7f6588da3720ea914b01
 > Source-Revision: 3af43c3e27845dac3146b98b3c8eff6986d8fadc
 
 ## greeting-platform-routing
 
-> Payload: [BE 지정 Greeting 정책과 FE 실행 어댑터 결정](documents/adr/94-greeting-platform-routing.md)
+> Payload: [기존 API를 유지하는 Greeting DNS·DOM 공통 판별](documents/adr/94-greeting-platform-routing.md)
 > Supersedes: None
 
 ## adapter-development
