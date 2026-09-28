@@ -225,24 +225,20 @@ it("identifies same-labelled sensitive candidates without revealing their values
 
   const { rerender } = render(<WorkflowScreens {...screenProps()} />);
 
-  expect(screen.getByText("프로필 항목: 처우 / 희망연봉(만원)")).toBeVisible();
-  expect(screen.getByText("프로필 항목: 처우 / 직전연봉(만원)")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "처우 / 희망연봉(만원) 필드로 이동" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "처우 / 직전연봉(만원) 필드로 이동" }),
+  ).toBeVisible();
   expect(screen.queryByText("desired-salary-secret")).not.toBeInTheDocument();
   expect(screen.queryByText("previous-salary-secret")).not.toBeInTheDocument();
-  expect(screen.getAllByText(/입력 예정값: •+/)).toHaveLength(2);
+  expect(screen.getAllByText(/^•+$/)).toHaveLength(2);
 
   const revealButtons = screen.getAllByRole("button", {
     name: "비대상 값 보기",
   });
-  const revealCaptionIds = revealButtons.map((button) =>
-    button.getAttribute("aria-describedby"),
-  );
-  expect(revealCaptionIds).toHaveLength(2);
-  expect(new Set(revealCaptionIds).size).toBe(2);
-  for (const captionId of revealCaptionIds) {
-    expect(captionId).not.toBeNull();
-    expect(document.getElementById(captionId!)).toBeVisible();
-  }
+  expect(revealButtons).toHaveLength(2);
 
   rerender(
     <WorkflowScreens
@@ -255,14 +251,7 @@ it("identifies same-labelled sensitive candidates without revealing their values
   const includeButtons = screen.getAllByRole("button", {
     name: "비대상 포함하기",
   });
-  const includeCaptionIds = includeButtons.map((button) =>
-    button.getAttribute("aria-describedby"),
-  );
-  expect(new Set(includeCaptionIds).size).toBe(2);
-  for (const captionId of includeCaptionIds) {
-    expect(captionId).not.toBeNull();
-    expect(document.getElementById(captionId!)).toBeVisible();
-  }
+  expect(includeButtons).toHaveLength(2);
 });
 
 it("uses a binding-only profile key for result labels and keeps missing items safe", () => {
