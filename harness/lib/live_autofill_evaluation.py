@@ -73,8 +73,8 @@ def advance(
         return _write(state, tab_id, current_run_approved)
     if event == "RESUME":
         return _resume(state, tab_id)
-    if event == "DOM_VERIFIED" and state.phase == "DOM_VERIFY":
-        return EvaluationState("REPORTED", state.written_tab_ids)
+    if event == "DOM_VERIFIED":
+        return _dom_verified(state, tab_id)
     raise EvaluationError("평가 상태 전환이 올바르지 않습니다")
 
 
@@ -96,3 +96,14 @@ def _resume(state: EvaluationState, tab_id: str | None) -> EvaluationState:
     if not tab_id or tab_id not in state.written_tab_ids:
         raise EvaluationError("재개할 쓴 탭이 없습니다")
     return EvaluationState("DOM_VERIFY", state.written_tab_ids)
+
+
+def _dom_verified(
+    state: EvaluationState,
+    tab_id: str | None,
+) -> EvaluationState:
+    if state.phase != "DOM_VERIFY":
+        raise EvaluationError("평가 상태 전환이 올바르지 않습니다")
+    if not tab_id or tab_id not in state.written_tab_ids:
+        raise EvaluationError("DOM을 검증할 쓴 탭이 없습니다")
+    return EvaluationState("REPORTED", state.written_tab_ids)
