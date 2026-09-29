@@ -42,6 +42,11 @@ import {
 import type { CalendarApproval } from "./calendar-approval";
 import { createCalendarApproval } from "./calendar-approval";
 import { calendarSurfaceFor } from "../interaction/calendar-surface";
+import { dayCalendarSurfaceFor } from "../interaction/day-calendar-surface";
+import {
+  createDayCalendarApproval,
+  type DayCalendarApproval,
+} from "./day-calendar-approval";
 import { assignMixedRows } from "../dom/mixed-section-rows";
 
 export type ProfileValueResolution =
@@ -75,6 +80,8 @@ export interface ReviewPlanItem {
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
+  /** Separate approval for readonly year-month-day calendars. */
+  dayCalendarApproval?: DayCalendarApproval;
   greetingGpaApproval?: GreetingGpaApproval;
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
@@ -453,6 +460,7 @@ function itemForAnalysis(
   }
   let dateApproval: DateTargetApproval | undefined;
   let calendarApproval: CalendarApproval | undefined;
+  let dayCalendarApproval: DayCalendarApproval | undefined;
   let finalizedProfileValue = boundProfileValue;
   if (generic && analysis.writePlan.command === "SELECT_DATE") {
     if (
@@ -468,6 +476,52 @@ function itemForAnalysis(
         analysis,
       );
     }
+    const calendarTarget = lookup.handle.elements[0];
+    const repeatRow = {
+      itemId: lookup.handle.itemId,
+      itemGroupId: lookup.handle.itemGroupId,
+      itemIndex,
+    };
+    const daySurface = dayCalendarSurfaceFor(calendarTarget);
+    if (daySurface && calendarSurfaceFor(calendarTarget)) {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "월 달력과 연월일 달력이 함께 연결되어 있어 날짜 단위를 하나로 확인할 수 없습니다.",
+        analysis,
+      );
+    }
+    if (daySurface) {
+      try {
+        dayCalendarApproval = createDayCalendarApproval({
+          target: calendarTarget,
+          originalDate: boundProfileValue.value,
+          profileFieldKey: binding.profileFieldKey,
+          profileEntryId: boundProfileValue.profileEntryId,
+          itemIndex,
+          repeatRow,
+        });
+      } catch {
+        return unavailableItem(
+          analysis.candidateId,
+          fieldLabel,
+          "읽기 전용 연월일 달력의 대상, 날짜 형식 또는 소유권을 확인할 수 없습니다.",
+          analysis,
+        );
+      }
+      finalizedProfileValue = {
+        ...boundProfileValue,
+        value: dayCalendarApproval.displayValue,
+      };
+    }
+  }
+  if (
+    generic &&
+    analysis.writePlan.command === "SELECT_DATE" &&
+    !dayCalendarApproval &&
+    binding.type === "DIRECT" &&
+    lookup.handle.elements[0] instanceof HTMLInputElement
+  ) {
     const source = formatProfileDate(boundProfileValue.value, "YYYY-MM");
     if (source.status !== "resolved") {
       return unavailableItem(
@@ -541,7 +595,10 @@ function itemForAnalysis(
     finalizedProfileValue = { ...boundProfileValue, value: converted.value };
   }
   const profileValue =
-    binding.type === "DIRECT" && normalizeDirectValue && !dateApproval
+    binding.type === "DIRECT" &&
+    normalizeDirectValue &&
+    !dateApproval &&
+    !dayCalendarApproval
       ? {
           ...finalizedProfileValue,
           value: normalizeDirectValue(
@@ -645,6 +702,7 @@ function itemForAnalysis(
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
@@ -670,6 +728,7 @@ function itemForAnalysis(
       analysis,
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
@@ -696,6 +755,7 @@ function itemForAnalysis(
       ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
+      ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
     };
   }
@@ -719,13 +779,18 @@ function itemForAnalysis(
     reason:
       analysis.writePlan.command === "SELECT_DATE"
         ? currentValue(lookup.handle).trim() === finalizedProfileValue.value
-          ? "지원서에 같은 연월이 이미 입력되어 있습니다."
-          : "달력 연월을 확인한 뒤 선택해 주세요."
+          ? dayCalendarApproval
+            ? "지원서에 같은 날짜가 이미 입력되어 있습니다."
+            : "지원서에 같은 연월이 이미 입력되어 있습니다."
+          : dayCalendarApproval
+            ? "달력 날짜를 확인한 뒤 선택해 주세요."
+            : "달력 연월을 확인한 뒤 선택해 주세요."
         : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
     analysis,
     ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
+    ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
   };
 }

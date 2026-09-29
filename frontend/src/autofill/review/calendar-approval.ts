@@ -59,7 +59,10 @@ function validMonth(value: string): boolean {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 }
 
-function elementSignature(element: Element): string {
+export function elementSignature(
+  element: Element,
+  extraIgnored: readonly string[] = [],
+): string {
   const ignored = new Set([
     "aria-expanded",
     "aria-hidden",
@@ -68,6 +71,7 @@ function elementSignature(element: Element): string {
     "data-state",
     "hidden",
     "value",
+    ...extraIgnored,
   ]);
   const attrs = Array.from(element.attributes)
     .filter(({ name }) => !ignored.has(name))
@@ -77,7 +81,7 @@ function elementSignature(element: Element): string {
   return `${element.tagName}:${attrs}`;
 }
 
-function rowIdentity(
+export function rowIdentity(
   target: HTMLInputElement,
 ): CalendarRepeatRowIdentity | undefined {
   const row = target.closest("[data-item-id], [data-item-group-id]");
@@ -92,7 +96,7 @@ function rowIdentity(
   };
 }
 
-function rowSignature(target: HTMLInputElement): string {
+export function rowSignature(target: HTMLInputElement): string {
   const row = target.closest("[data-item-id], [data-item-group-id]");
   return row ? elementSignature(row) : "";
 }

@@ -63,6 +63,6 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 평가 에이전트의 전체 필드 분모, 비민감 입력, DOM 검증과 영속 보고 경계 | 2026-09-28 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행·검색·후속 재검토, 혼합 학력 행·role 없는 레이어 검색과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-09-29 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환·로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
-| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 달력 실행의 안전 경계 | 2026-09-24 |
+| [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월·연월일 달력 실행의 안전 경계 | 2026-09-28 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md) | 독립 웹 빌드와 시뮬레이션 데이터 경계, 페이지 역할 | 2026-09-19 |
