@@ -1,10 +1,10 @@
-const CONTROL_SELECTOR =
+export const CONTROL_SELECTOR =
   "input:not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']), select, textarea";
 const SINGLE_ROW_MARKER =
   "[ismultirow='true' i], [data-multirow='true' i], [data-repeatable-row]";
 const ACTION_SELECTOR = "button, input[type='button']";
-const ADD_LABEL = /추가|add/i;
-const FORBIDDEN_LABEL =
+export const ADD_LABEL = /추가|add/i;
+export const FORBIDDEN_LABEL =
   /저장|제출|완료|다음|이전|삭제|업로드|검색|조회|찾기|submit|save|next|previous|delete|upload|search|find|lookup/i;
 
 export interface GenericFormGroup {
@@ -80,7 +80,7 @@ function rowsShareCommonControlCore(rows: readonly Element[]): boolean {
   return common.length >= 2;
 }
 
-function actionLabel(action: HTMLElement): string {
+export function actionLabel(action: HTMLElement): string {
   return [
     action.textContent,
     action.getAttribute("aria-label"),

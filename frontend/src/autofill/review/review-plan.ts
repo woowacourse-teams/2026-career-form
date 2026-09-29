@@ -42,6 +42,7 @@ import {
 import type { CalendarApproval } from "./calendar-approval";
 import { createCalendarApproval } from "./calendar-approval";
 import { calendarSurfaceFor } from "../interaction/calendar-surface";
+import { assignMixedRows } from "../dom/mixed-section-rows";
 
 export type ProfileValueResolution =
   | {
@@ -382,11 +383,40 @@ function itemForAnalysis(
         ? profileFieldParts(binding.profileFieldKey)
         : undefined;
   let itemIndex = lookup.handle.itemIndex;
+  // A mixed-section row is bound through its local assignment (C8).
+  const mixed = lookup.handle.mixedSectionRow;
+  if (mixed?.isKindSelect) {
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      "학력 구분은 행 준비 단계에서 처리했습니다.",
+      analysis,
+    );
+  }
+  const mixedRow = mixed
+    ? assignMixedRows(profile, mixed.group)[mixed.rowIndex]
+    : undefined;
+  if (mixed) {
+    if (
+      !mixedRow?.optionText ||
+      assignMixedRows(profile, mixed.group).length !== mixed.rowCount ||
+      mixed.selectedKind !== mixedRow.optionText ||
+      parts?.sectionId !== mixedRow.sectionId
+    ) {
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "학력 행의 구분과 저장된 프로필 항목이 일치하지 않아 안전하게 연결할 수 없습니다.",
+        analysis,
+      );
+    }
+    itemIndex = mixedRow.sectionIndex;
+  }
   // A field inside a repeated row whose group boundary could not be proven
   // has a row but no index; it must not fall back to the sole profile entry.
   const unindexedRepeatRow =
     lookup.handle.itemId !== undefined && lookup.handle.itemIndex === undefined;
-  if (parts?.repeatable && !parts.topLevel) {
+  if (!mixedRow && parts?.repeatable && !parts.topLevel) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);

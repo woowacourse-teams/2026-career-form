@@ -228,6 +228,85 @@ describe("generic search controls", () => {
   });
 });
 
+describe("search layer inside an application form", () => {
+  function layerInForm(layerMarkup: string, outside = "") {
+    document.body.innerHTML = `
+      <form id="app" method="post" action="/apply/save" onsubmit="return true;">
+        <input type="hidden" name="token">
+        <textarea name="intro"></textarea>
+        <div class="school-search">
+          <input id="target" readonly>
+          <button id="opener" type="button">검색</button>
+          <div id="layer">${layerMarkup}</div>
+        </div>
+        ${outside}
+        <button type="submit">제출</button>
+      </form>`;
+    const layer = document.querySelector<HTMLElement>("#layer")!;
+    const surface = new SearchSurface(
+      "same-document-layer",
+      layer,
+      layer,
+      document.querySelector<HTMLButtonElement>("#opener")!,
+      document.querySelector<HTMLInputElement>("#target")!,
+    );
+    return {
+      surface,
+      query: document.querySelector<HTMLInputElement>("#query")!,
+      submit: document.querySelector<HTMLButtonElement>("#submit")!,
+    };
+  }
+
+  it("accepts a layer query and type=button search even inside the application form", () => {
+    const { surface, query, submit } = layerInForm(`
+      <input id="query" type="text" onkeydown="return true;">
+      <button id="submit" type="button" onclick="return true;">검색</button>`);
+    expect(query.form).toBe(submit.form);
+    expect(query.form).not.toBeNull();
+    expect(searchDestination(surface, query, submit)).toBeUndefined();
+  });
+
+  it.each([
+    [
+      "type=submit",
+      `<input id="query" type="text"><button id="submit" type="submit">검색</button>`,
+      "",
+    ],
+    [
+      "formaction",
+      `<input id="query" type="text"><button id="submit" type="button" formaction="/apply/save">검색</button>`,
+      "",
+    ],
+    [
+      "button outside the layer",
+      `<input id="query" type="text">`,
+      `<button id="submit" type="button">검색</button>`,
+    ],
+    [
+      "readOnly query",
+      `<input id="query" type="text" readonly><button id="submit" type="button">검색</button>`,
+      "",
+    ],
+  ])("keeps blocking %s", (_name, layerMarkup, outside) => {
+    const { surface, query, submit } = layerInForm(layerMarkup, outside);
+    expect(() => searchDestination(surface, query, submit)).toThrowError(
+      expect.objectContaining({ reason: "unverified_search_form" }),
+    );
+  });
+
+  it("keeps blocking a query and button owned by different forms", () => {
+    const { surface, query, submit } = layerInForm(`
+      <input id="query" type="text">
+      <button id="submit" type="button" form="other">검색</button>`);
+    document.body.append(
+      Object.assign(document.createElement("form"), { id: "other" }),
+    );
+    expect(() => searchDestination(surface, query, submit)).toThrowError(
+      expect.objectContaining({ reason: "unverified_search_form" }),
+    );
+  });
+});
+
 describe("interaction role resolution", () => {
   function createSession(decisionProvider?: (request: any) => Promise<any>) {
     return new SearchSession({

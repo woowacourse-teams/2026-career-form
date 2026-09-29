@@ -5,6 +5,7 @@ import type {
   InteractionDecisionResponse,
   InteractionRole,
 } from "../api/interaction-types";
+import { isTrustedId } from "../dom/trusted-id";
 import { InteractionDecisionBudgetError } from "../api/interaction-decision-session";
 import {
   collectActionSemanticContext,
@@ -184,6 +185,10 @@ function belongsToSurface(element: Element, surface?: Element): boolean {
     (surface.contains(element) ||
       (!!surface.id &&
         element.getRootNode() === surface.getRootNode() &&
+        isTrustedId(
+          surface.getRootNode() as Document | ShadowRoot,
+          surface.id,
+        ) &&
         ["aria-controls", "aria-owns"].some((name) =>
           (element.getAttribute(name) ?? "").split(/\s+/).includes(surface.id),
         )))

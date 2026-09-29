@@ -9,7 +9,10 @@ import {
 } from "./search-surface-dom";
 
 export type SearchSurfaceKind =
-  "same-document-dialog" | "same-origin-iframe" | "inline-listbox";
+  | "same-document-dialog"
+  | "same-document-layer"
+  | "same-origin-iframe"
+  | "inline-listbox";
 export type SearchMode = "existing-options" | "query-only" | "query-and-submit";
 
 function normalizedSearchValue(value: string | undefined): string {

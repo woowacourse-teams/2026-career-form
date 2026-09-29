@@ -80,6 +80,32 @@ function searchAttempts(
     throw new SearchFailure("stale_target");
   return args.searchValues;
 }
+/**
+ * Click a same-document control that may sit inside the application form.
+ * Any submit event the click dispatches is cancelled before page handlers run,
+ * and the search fails closed.
+ */
+function clickWithoutFormSubmit(element: HTMLElement): void {
+  const view = element.ownerDocument.defaultView;
+  if (!element.closest("form") && !(element as HTMLButtonElement).form) {
+    element.click();
+    return;
+  }
+  if (!view) throw new SearchFailure("unverified_search_form");
+  let submitted = false;
+  const block = (event: Event) => {
+    submitted = true;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  view.addEventListener("submit", block, true);
+  try {
+    element.click();
+  } finally {
+    view.removeEventListener("submit", block, true);
+  }
+  if (submitted) throw new SearchFailure("surface_navigation_unsafe");
+}
 function nativeQueryValue(
   input: HTMLInputElement,
   value: string,
@@ -161,6 +187,8 @@ export async function executeReadonlySearch(
   });
   const session = new SearchSession(args);
   const outerUrl = document.URL;
+  // Set just before a fragment result link click: its own fragment URL (C10).
+  let allowedFragmentUrl: string | undefined;
   let effect: SearchEffect = "none";
   let identity: TargetIdentity | undefined;
   let surface: SearchSurface | undefined;
@@ -191,7 +219,7 @@ export async function executeReadonlySearch(
       );
     const guard = (expected?: string | readonly string[]) => {
       session.check();
-      if (document.URL !== outerUrl)
+      if (document.URL !== outerUrl && document.URL !== allowedFragmentUrl)
         throw new SearchFailure("surface_navigation_unsafe");
       const result = targetIsCurrent(
         document,
@@ -475,7 +503,8 @@ export async function executeReadonlySearch(
                 }
               : submit,
           );
-          submit.click();
+          if (!nativeFormBinding) clickWithoutFormSubmit(submit);
+          else submit.click();
           if (nativeFormBinding) {
             await session.wait(
               () => currentSurface.settleNavigation() || undefined,
@@ -550,6 +579,14 @@ export async function executeReadonlySearch(
     }
     if (!candidate) throw new SearchFailure("search_results_not_found");
     const selectedValues = args.searchValues ? [selectedSearchText] : values;
+    const activationScope = () => {
+      const resultRoot = currentSurface
+        .resultRoots()
+        .find((root) => root.contains(candidate.element));
+      return resultRoot
+        ? { resultRoot, surfaceKind: currentSurface.kind }
+        : undefined;
+    };
     await session.prepareMutation();
     surfaceGuard();
     const latest = querylessRegion
@@ -559,7 +596,7 @@ export async function executeReadonlySearch(
       !latest ||
       latest.element !== candidate.element ||
       latest.signature !== candidate.signature ||
-      !safeActivation(candidate.element, selectedValues)
+      !safeActivation(candidate.element, selectedValues, activationScope())
     )
       throw new SearchFailure("result_stale");
     const selectionBinding = canonicalFieldKey.startsWith("certifications.")
@@ -580,7 +617,10 @@ export async function executeReadonlySearch(
       if (!(await clickVerifiedJsResult(resultLink, session)))
         throw new SearchFailure("result_activation_unsafe");
     } else {
-      candidate.element.click();
+      const href = resultLink?.getAttribute("href")?.trim() ?? "";
+      if (resultLink && href.length > 1 && href.startsWith("#"))
+        allowedFragmentUrl = new URL(href, document.URL).href;
+      clickWithoutFormSubmit(candidate.element);
     }
     let retainedSince: number | undefined;
     await session.wait(() => {
