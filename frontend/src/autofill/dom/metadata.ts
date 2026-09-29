@@ -1,3 +1,5 @@
+import { isTrustedId, trustedLabels } from "./trusted-id";
+
 const MAX_METADATA_LENGTH = 120;
 const DEFINITION_LIST_CONTROL_SELECTOR =
   "input:not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']), select, textarea, [contenteditable='true']";
@@ -24,7 +26,7 @@ export function unassociatedLabelOf(
       group.querySelectorAll(
         "input:not([type='hidden']), select, textarea, [contenteditable='true']",
       ),
-    );
+    ).filter((control) => !inExcludedBranch(control, group!, element));
     if (controls.length !== 1 || controls[0] !== element) return undefined;
     const labels = Array.from(
       group.querySelectorAll<HTMLLabelElement>(":scope > label"),
@@ -40,6 +42,31 @@ export function unassociatedLabelOf(
     if (group.matches("form, fieldset, section")) break;
   }
   return undefined;
+}
+
+/**
+ * A control inside a hidden or display:none subtree that does not also hold
+ * the target is an inactive branch, so it does not compete for the label.
+ */
+function inExcludedBranch(
+  control: Element,
+  group: Element,
+  target: Element,
+): boolean {
+  const view = control.ownerDocument.defaultView;
+  for (
+    let node: Element | null = control;
+    node && node !== group;
+    node = node.parentElement
+  ) {
+    if (node.contains(target)) return false;
+    if (
+      node.hasAttribute("hidden") ||
+      view?.getComputedStyle(node).display === "none"
+    )
+      return true;
+  }
+  return false;
 }
 
 function labelBoundary(element: Element): Element | null {
@@ -87,9 +114,11 @@ export function definitionListLabelOf(
 export function labelOf(element: HTMLElement): string | undefined {
   const ariaLabelledBy = metadata(element.getAttribute("aria-labelledby"));
   if (ariaLabelledBy) {
+    const root = element.getRootNode() as Document | ShadowRoot;
     const text = ariaLabelledBy
       .split(/\s+/)
-      .map((id) => element.ownerDocument.getElementById(id)?.textContent ?? "")
+      .filter((id) => isTrustedId(root, id))
+      .map((id) => root.getElementById(id)?.textContent ?? "")
       .join(" ");
     const labelledText = metadata(text);
     if (labelledText) return labelledText;
@@ -102,7 +131,7 @@ export function labelOf(element: HTMLElement): string | undefined {
     element instanceof HTMLTextAreaElement
   ) {
     const labelText = metadata(
-      (element.labels?.[0] ?? unassociatedLabelOf(element))?.textContent,
+      (trustedLabels(element)[0] ?? unassociatedLabelOf(element))?.textContent,
     );
     if (labelText) return labelText;
     const placeholder = metadata(element.getAttribute("placeholder"));
@@ -110,6 +139,11 @@ export function labelOf(element: HTMLElement): string | undefined {
   }
   const definitionListLabel = definitionListLabelOf(element);
   if (definitionListLabel) return definitionListLabel;
+  // A select's text is its option list, never its label.
+  if (element instanceof HTMLSelectElement) {
+    const first = element.options[0];
+    return first?.value === "" ? metadata(first.textContent) : undefined;
+  }
   return metadata(element.textContent);
 }
 

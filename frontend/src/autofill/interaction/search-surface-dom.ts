@@ -1,5 +1,7 @@
 import { HIGH_RISK_ACTION, isVisible, normalized } from "./readonly-search";
 import { SearchFailure } from "./search-session";
+import { isTrustedId } from "../dom/trusted-id";
+import type { SearchSurfaceKind } from "./search-surface";
 
 export type SearchRoot = Document | Element | ShadowRoot;
 export const SURFACE_SELECTOR =
@@ -35,11 +37,58 @@ export function shown(element: Element): boolean {
 export function linked(control: Element, target: Element): boolean {
   if (!target.id || control.getRootNode() !== target.getRootNode())
     return false;
+  if (!isTrustedId(target.getRootNode() as Document | ShadowRoot, target.id))
+    return false;
   return ["aria-controls", "aria-owns", "popovertarget", "commandfor"].some(
     (attribute) =>
       (control.getAttribute(attribute) ?? "").split(/\s+/).includes(target.id),
   );
 }
+const LAYER_TAGS = new Set(["DIV", "SECTION", "ASIDE", "ARTICLE"]);
+
+/**
+ * A container without surface markup that structurally looks like a search
+ * layer: a writable query input, a button and a result list (C9). Visibility
+ * is judged by the caller from its before/after comparison.
+ */
+export function isRolelessLayerCandidate(element: Element): boolean {
+  return (
+    LAYER_TAGS.has(element.tagName) &&
+    !element.matches(SURFACE_SELECTOR) &&
+    Array.from(element.querySelectorAll<HTMLInputElement>("input")).some(
+      (input) => ["text", "search"].includes(input.type) && !input.readOnly,
+    ) &&
+    element.querySelector("button") !== null &&
+    element.querySelector("ul, ol, table, [role='list']") !== null
+  );
+}
+
+/** Subjects a target field and a search surface can explicitly share. */
+export const SEARCH_SUBJECTS = [
+  "학교",
+  "school",
+  "전공",
+  "major",
+  "소재지",
+  "region",
+  "자격증",
+  "certificate",
+] as const;
+
+export function sharesSearchSubject(fieldName: string, surfaceName: string) {
+  const field = fieldName.toLowerCase();
+  const surface = surfaceName.toLowerCase();
+  return SEARCH_SUBJECTS.some(
+    (subject) => field.includes(subject) && surface.includes(subject),
+  );
+}
+
+export function layerHeading(container: Element): string {
+  return (container.querySelector("h1, h2, h3, h4, h5, h6")?.textContent ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function activeModal(document: Document): Element | undefined {
   const modals = elements(
     document,
@@ -112,9 +161,58 @@ function simpleSelectionHref(href: string, labelText: string): boolean {
   );
 }
 
+/** The owned result area a candidate was found in. */
+export interface ActivationScope {
+  readonly resultRoot: Element;
+  readonly surfaceKind: SearchSurfaceKind;
+}
+
+/**
+ * A same-document fragment link with a single onclick handler, inside the
+ * owned result root of a same-document surface (C10). The handler source is
+ * never read, parsed or evaluated.
+ */
+function fragmentResultLink(
+  element: HTMLElement,
+  acceptedValues: readonly string[] | undefined,
+  scope: ActivationScope | undefined,
+): boolean {
+  const href = element.getAttribute("href")?.trim() ?? "";
+  const form = element.closest("form");
+  if (
+    !scope ||
+    !["same-document-dialog", "same-document-layer"].includes(
+      scope.surfaceKind,
+    ) ||
+    !scope.resultRoot.contains(element) ||
+    !href.startsWith("#") ||
+    href.length < 2 ||
+    // An enclosing application form is allowed only around the whole result
+    // root; a form inside the owned result area still fails closed.
+    (form && (form === scope.resultRoot || !form.contains(scope.resultRoot)))
+  )
+    return false;
+  const handlers = Array.from(element.attributes).filter((attribute) =>
+    /^on/i.test(attribute.name),
+  );
+  if (handlers.length !== 1 || handlers[0]!.name.toLowerCase() !== "onclick")
+    return false;
+  const page = new URL(element.ownerDocument.URL);
+  const next = new URL(href, page);
+  return (
+    next.origin === page.origin &&
+    next.pathname === page.pathname &&
+    next.search === page.search &&
+    !!acceptedValues?.some(
+      (value) => normalized(value) === normalized(element.textContent ?? ""),
+    )
+  );
+}
+
 export function safeActivation(
   element: HTMLElement,
   acceptedValues?: readonly string[],
+  scope?: ActivationScope,
 ): boolean {
   if (!interactive(element) || HIGH_RISK_ACTION.test(label(element)))
     return false;
@@ -128,6 +226,7 @@ export function safeActivation(
   if (element.tagName === "A") {
     const href = element.getAttribute("href")?.trim() ?? "";
     if (href === "" || href === "#") return true;
+    if (fragmentResultLink(element, acceptedValues, scope)) return true;
     if (
       !acceptedValues ||
       !acceptedValues.some(

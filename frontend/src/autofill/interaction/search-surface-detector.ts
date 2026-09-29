@@ -1,15 +1,36 @@
+import { genericRowFor } from "../dom/repeatable-rows";
+import { isTrustedId, trustedLabels } from "../dom/trusted-id";
 import type { TargetIdentity } from "./readonly-search";
 import { SearchSurface } from "./search-surface";
 import { SearchFailure, type SearchSession } from "./search-session";
 import {
   accessibleDocument,
   elements,
+  isRolelessLayerCandidate,
   label,
+  layerHeading,
   linked,
   roots,
+  sharesSearchSubject,
   shown,
   SURFACE_SELECTOR,
 } from "./search-surface-dom";
+
+/** Document-wide role-less candidates are skipped on larger pages. */
+const LAYER_SCAN_LIMIT = 2048;
+const LAYER_SELECTOR = "div, section, aside, article";
+
+function rolelessLayers(
+  document: Document,
+  fieldGroup: Element,
+): HTMLElement[] {
+  const primary = Array.from(
+    fieldGroup.querySelectorAll<HTMLElement>(LAYER_SELECTOR),
+  );
+  const all = document.querySelectorAll<HTMLElement>(LAYER_SELECTOR);
+  const auxiliary = all.length > LAYER_SCAN_LIMIT ? [] : Array.from(all);
+  return [...primary, ...auxiliary].filter(isRolelessLayerCandidate);
+}
 
 export function observeSearchSurfaces(
   document: Document,
@@ -17,11 +38,12 @@ export function observeSearchSurfaces(
   session: SearchSession,
 ) {
   const scan = () => [
-    ...new Set(
-      roots(document, identity.target).flatMap((root) =>
+    ...new Set([
+      ...roots(document, identity.target).flatMap((root) =>
         elements<HTMLElement>(root, SURFACE_SELECTOR),
       ),
-    ),
+      ...rolelessLayers(document, identity.fieldGroup),
+    ]),
   ];
   const before = new Map(
     scan().map((element) => [
@@ -61,42 +83,56 @@ export function observeSearchSurfaces(
     document.removeEventListener("load", onLoad, true);
   });
 
+  const fieldName = () =>
+    trustedLabels(identity.target)
+      .map((item) => item.textContent)
+      .join(" ") +
+    " " +
+    label(identity.target);
+
+  function attributedLayer(element: HTMLElement, opener: HTMLElement): boolean {
+    // A layer inside another repeat row never belongs to this target.
+    const row = genericRowFor(element);
+    if (identity.repeatRow && row !== identity.repeatRow) return false;
+    if (linked(opener, element) || linked(identity.target, element))
+      return true;
+    if (identity.fieldGroup.contains(element)) return true;
+    const surfaceName =
+      element.getAttribute("aria-label") ??
+      element.getAttribute("title") ??
+      layerHeading(element);
+    return (
+      sharesSearchSubject(fieldName(), surfaceName) &&
+      /검색|조회|search|lookup/i.test(surfaceName)
+    );
+  }
+
   function attributed(element: HTMLElement, opener: HTMLElement): boolean {
+    if (!element.matches(SURFACE_SELECTOR))
+      return attributedLayer(element, opener);
     if (
       linked(opener, element) ||
       linked(identity.target, element) ||
       identity.fieldGroup.contains(element)
     )
       return true;
-    const targetLabels = Array.from(identity.target.labels ?? []);
     const labelIds = (element.getAttribute("aria-labelledby") ?? "").split(
       /\s+/,
     );
-    if (targetLabels.some((item) => item.id && labelIds.includes(item.id)))
+    const root = identity.target.getRootNode() as Document | ShadowRoot;
+    if (
+      trustedLabels(identity.target).some(
+        (item) =>
+          item.id && isTrustedId(root, item.id) && labelIds.includes(item.id),
+      )
+    )
       return true;
     // Require a shared, explicit accessible subject as well as the before/after change.
-    const subjects = [
-      "학교",
-      "school",
-      "전공",
-      "major",
-      "소재지",
-      "region",
-      "자격증",
-      "certificate",
-    ];
-    const fieldName =
-      targetLabels.map((item) => item.textContent).join(" ") +
-      " " +
-      label(identity.target);
     const surfaceName =
       element.getAttribute("aria-label") ?? element.getAttribute("title") ?? "";
     return (
-      subjects.some(
-        (subject) =>
-          fieldName.toLowerCase().includes(subject) &&
-          surfaceName.toLowerCase().includes(subject),
-      ) && /검색|search|lookup/i.test(surfaceName)
+      sharesSearchSubject(fieldName(), surfaceName) &&
+      /검색|search|lookup/i.test(surfaceName)
     );
   }
 
@@ -151,8 +187,9 @@ export function observeSearchSurfaces(
           frame,
         );
       }
-      const kind =
-        container.getAttribute("role") === "listbox"
+      const kind = !container.matches(SURFACE_SELECTOR)
+        ? "same-document-layer"
+        : container.getAttribute("role") === "listbox"
           ? "inline-listbox"
           : "same-document-dialog";
       if (

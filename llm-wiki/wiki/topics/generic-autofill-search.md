@@ -2,11 +2,13 @@
 
 > Topic: generic-autofill-search
 > Status: Current
-> Current: [CF-114 범용 자격증 검색과 후속 재검토 경계](../../raw/issues/CF-114/documents/generic-certificate-search.md)
-> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md)
-> Updated: 2026-09-26
+> Current: [CF-129 혼합 학력 행과 role 없는 레이어 검색 경계](../../raw/issues/CF-129/documents/generic-autofill-search.md)
+> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md); [CF-129 혼합 학력 행과 레이어 검색](../../raw/issues/CF-129/documents/generic-autofill-search.md)
+> Updated: 2026-09-29
 
 ## 현재 상태
+
+CF-129는 CF-114 경계를 유지한 채 한 섹션에서 행마다 학력 구분을 고르는 혼합 행과 role 없는 같은 문서 레이어 검색의 판정 근거를 추가한다. 식별자 없는 반복 행은 정해진 구조 조합이 있을 때만 탐지한다. 첫 행 안에 추가 버튼이 있는 구조는 보이는 분기 1개와 서명이 다른 숨은 분기로 증명되는 구분별 분기 행만 인정하고, 섹션 요소가 없으면 증명된 반복 그룹 컨테이너를 섹션으로 쓴다. 빈 목록 첫 검색의 append·교체는 MutationObserver로 구분되지 않으므로 명시 신호가 없으면 완료로 보지 않는다. jsdom inline 핸들러 전역과 fragment hash 지연은 테스트 기법 근거다. 지원서 form 안의 소유 레이어는 type=button 검색 클릭과 결과 루트 전체를 감싼 form의 fragment 결과 링크만 허용하고, 클릭 중 form 제출은 취소 후 실패한다. 합성 자동 테스트 결과이며 실제 지원서 성공은 주장하지 않는다. 상세는 Current 문서를 따른다.
 
 CF-114는 회사 중립 반복 행 준비, native form의 현재 query·응답 세대 검증, 최대 두 로컬 검색형과 검색 후 새 필드의 재분석·새 승인을 연결한다. 아래 CF-112까지의 POST/hidden 일괄 거부는 역사적 경계이며, 현재는 검증된 native GET/POST와 기존 hidden routing만 제한적으로 허용한다. inline handler나 불투명 callback은 이 확장에 포함하지 않는다. 기존 CJ 학교·전공의 별도 계약은 유지한다.
 

@@ -38,6 +38,14 @@ import { metadata, labelOf, sectionName } from "./metadata";
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
 import {
+  documentImplicitRepeatGroups,
+  implicitRepeatGroupFor,
+} from "./implicit-repeat-rows";
+import {
+  detectMixedSectionGroup,
+  type MixedSectionGroup,
+} from "./mixed-section-rows";
+import {
   assignRepeatGroups,
   formsSingleRepeatGroup,
   sameRepeatGroupKey,
@@ -65,6 +73,7 @@ export interface PreparationCollectedSnapshot extends CollectedSnapshot<Preparat
   repeatableGroupLimit(
     actionCandidateId: string,
   ): number | "ambiguous" | undefined;
+  mixedSectionGroup?(actionCandidateId: string): MixedSectionGroup | undefined;
 }
 
 function createOpaqueId(prefix: string, index: number): string {
@@ -211,6 +220,11 @@ function groupBySection<T extends Element>(
   explicitSection?: (element: T) => Element | undefined,
 ): Map<Element | null, T[]> {
   const groups = new Map<Element | null, T[]>();
+  const implicitContainers = generic
+    ? documentImplicitRepeatGroups(elements[0]?.ownerDocument ?? document).map(
+        ({ container }) => container,
+      )
+    : [];
   for (const element of elements) {
     const group = generic ? genericFormGroupFor(element) : undefined;
     const row = generic
@@ -220,7 +234,11 @@ function groupBySection<T extends Element>(
       explicitSection?.(element) ??
       group?.area ??
       row?.parentElement?.closest(selector) ??
-      element.closest(selector);
+      element.closest(selector) ??
+      // A proven implicit repeat group (C13) is its own section when no
+      // section element wraps it.
+      implicitContainers.find((container) => container.contains(element)) ??
+      null;
     groups.set(section, [...(groups.get(section) ?? []), element]);
   }
   if (groups.size === 0) groups.set(null, []);
@@ -342,6 +360,35 @@ export function collectFieldsSnapshot(
           fields: [] as FieldCandidate[],
         }),
       );
+      // Mixed-section groups (C5) are detected from the same assignment.
+      const mixedRowOf = new Map<
+        Element,
+        { groupKey: string; rowIndex: number; group: MixedSectionGroup }
+      >();
+      if (container && adapter === collectionAdapterForHost("")) {
+        const byGroup = new Map<number, Element[]>();
+        for (const item of repeatableItems)
+          if (!item.ambiguous)
+            byGroup.set(item.groupOrdinal, [
+              ...(byGroup.get(item.groupOrdinal) ?? []),
+              item.element,
+            ]);
+        for (const [ordinal, rows] of byGroup) {
+          const group = detectMixedSectionGroup(
+            container,
+            rows,
+            explicitGroupId,
+          );
+          if (!group) continue;
+          rows.forEach((row, rowIndex) =>
+            mixedRowOf.set(row, {
+              groupKey: `${sectionId}-group-${ordinal}`,
+              rowIndex,
+              group,
+            }),
+          );
+        }
+      }
       const consumed = new Set<Element>();
 
       for (const element of elements) {
@@ -529,9 +576,26 @@ export function collectFieldsSnapshot(
             !(peer instanceof HTMLSelectElement) &&
             !(peer instanceof HTMLTextAreaElement),
         );
+        const mixed = item ? mixedRowOf.get(item.element) : undefined;
+        const kindSelect = mixed?.group.kindSelects[mixed.rowIndex];
+        const selectedKind = kindSelect?.selectedOptions[0]?.value
+          ? metadata(kindSelect.selectedOptions[0].textContent)
+          : undefined;
         registry.registerField(
           {
             kind: "field",
+            ...(mixed
+              ? {
+                  mixedSectionRow: {
+                    groupKey: mixed.groupKey,
+                    rowIndex: mixed.rowIndex,
+                    rowCount: mixed.group.rows.length,
+                    ...(selectedKind ? { selectedKind } : {}),
+                    isKindSelect: kindSelect === first,
+                    group: mixed.group,
+                  },
+                }
+              : {}),
             candidateId,
             candidate,
             elements: elementsForHandle,
@@ -800,6 +864,22 @@ function repeatableItemElementsForAction(
     return allItems.filter(
       (item) => adapter.itemGroupId?.(item) === "educationgraduateschool",
     );
+  // An identifier-less repeat group (C13) owns exactly the rows it proved.
+  const implicitGroup =
+    adapter === collectionAdapterForHost("") && action
+      ? implicitRepeatGroupFor(action)
+      : undefined;
+  if (implicitGroup && implicitGroup.action === action) {
+    const rows = allItems.filter((item) => implicitGroup.rows.includes(item));
+    return !container ||
+      formsSingleRepeatGroup(
+        container,
+        rows,
+        (row) => adapter.itemGroupId?.(row) ?? repeatableItemGroupId(row),
+      )
+      ? rows
+      : undefined;
+  }
   const singleGroupItems = () =>
     !container ||
     formsSingleRepeatGroup(
@@ -989,6 +1069,24 @@ export function collectPreparationSnapshot(
       return (
         root !== undefined &&
         (!root || (root.isConnected && !isHidden(root as HTMLElement)))
+      );
+    },
+    mixedSectionGroup(actionCandidateId) {
+      if (!generic) return undefined;
+      const sectionId = actionSectionIds.get(actionCandidateId);
+      if (!sectionId) return undefined;
+      const root = sectionRoots.get(sectionId);
+      if (!root || !root.isConnected) return undefined;
+      const action = actionElements.get(actionCandidateId);
+      const rows = repeatableItemElementsForAction(root, action, adapter);
+      if (!rows?.length) return undefined;
+      const container = action
+        ? implicitRepeatGroupFor(action)?.container
+        : undefined;
+      return detectMixedSectionGroup(
+        container ?? root,
+        rows,
+        (row) => adapter.itemGroupId?.(row) ?? repeatableItemGroupId(row),
       );
     },
     countRepeatableGroups(actionCandidateId) {

@@ -1,4 +1,5 @@
 import type { ActionCandidate, FieldCandidate } from "../api/types";
+import type { MixedSectionGroup } from "./mixed-section-rows";
 
 export type CandidateBlockReason =
   "disabled" | "readonly" | "hidden" | "inert" | "unsupported";
@@ -18,8 +19,21 @@ export interface ActionCandidateHandle extends CandidateHandleBase {
   element: HTMLButtonElement | HTMLInputElement | HTMLSelectElement;
 }
 
+/** Position of a field inside a mixed-section repeat group (C5). */
+export interface MixedSectionRowContext {
+  groupKey: string;
+  rowIndex: number;
+  rowCount: number;
+  /** Selected kind-select option text when collected, if any. */
+  selectedKind?: string;
+  isKindSelect: boolean;
+  /** The group the row belonged to when collected. */
+  group: MixedSectionGroup;
+}
+
 export interface FieldCandidateHandle extends CandidateHandleBase {
   kind: "field";
+  mixedSectionRow?: MixedSectionRowContext;
   isCurrentContext?: () => boolean;
   candidate: FieldCandidate;
   elements: Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;

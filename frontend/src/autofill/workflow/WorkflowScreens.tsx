@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useId, useState, type Dispatch, type SetStateAction } from "react";
 import type { AddressResult } from "../address/types";
 import type { WorkflowAdapter, WorkflowDiagnostic } from "../adapters/workflow";
 import {
@@ -8,6 +8,9 @@ import {
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
+import { resultFieldLabel } from "./result-label";
+import resultStyles from "./WorkflowResults.module.css";
+import resultCss from "./WorkflowResults.module.css?inline";
 import { WorkflowLoading, type WriteProgress } from "./WorkflowLoading";
 import type { WorkflowActivity } from "./progress-model";
 import type { Profile } from "../../profile/model";
@@ -22,6 +25,9 @@ import {
   type PreparationItem,
   type Stage,
 } from "./workflow-model";
+
+const DEFAULT_CONDITIONAL_REVIEW_REASON =
+  "지원서 조건을 확인한 뒤 선택해 주세요.";
 
 interface WorkflowScreensProps {
   exitInToolbar?: boolean;
@@ -98,6 +104,10 @@ export function WorkflowScreens({
   operatedCategories,
   currentCategory,
 }: WorkflowScreensProps) {
+  const reviewTabsId = useId();
+  const [reviewTab, setReviewTab] = useState<"planned" | "needs-review">(
+    "needs-review",
+  );
   if (stage === "analyzing" || stage === "writing") {
     return (
       <WorkflowLoading
@@ -128,7 +138,7 @@ export function WorkflowScreens({
     );
     const unavailableCount = preparationItems.length - runnableItems.length;
     return (
-      <div className={styles.screen}>
+      <div className={`${styles.screen} ${resultStyles.results}`}>
         <Header step="1 / 3" title="입력 항목 준비" />
         <p className={styles.lead}>
           필요한 입력칸을 준비한 뒤 자동 기입할 항목만 확인합니다.
@@ -245,14 +255,51 @@ export function WorkflowScreens({
         item.searchValuePlan ||
         !item.selected,
     );
+    const plannedItems = reviewItemsForDisplay(reviewItems).filter(
+      (item) => item.selected && !item.disabled && !exceptionalItems.includes(item),
+    );
     return (
       <div className={styles.screen}>
+        <style>{resultCss}</style>
         <Header step="2 / 3" title="자동 기입 확인" />
-        <p className={styles.lead}>일반 항목은 자동으로 포함되었습니다.</p>
-        <div className={styles.countCard}>
-          <strong>{selectedCount}개 항목</strong>
-          <span>이 버튼을 누르면 선택된 항목만 현재 지원서에 기입합니다.</span>
+        <div className={resultStyles.summary}>
+          <div className={resultStyles.summaryText} role="status" aria-atomic="true">
+            <h3>자동 기입할 항목을 확인해 주세요</h3>
+          </div>
         </div>
+        <div className={resultStyles.counts} role="tablist" aria-label="자동 기입 확인 구분">
+          <button type="button" role="tab" data-state="completed"
+            id={`${reviewTabsId}-planned-tab`} aria-controls={`${reviewTabsId}-planned-panel`}
+            aria-selected={reviewTab === "planned"} onClick={() => setReviewTab("planned")}>
+            자동 기입 예정 <strong>{selectedCount}</strong>
+          </button>
+          <button type="button" role="tab" data-state="pending"
+            id={`${reviewTabsId}-needs-review-tab`} aria-controls={`${reviewTabsId}-needs-review-panel`}
+            aria-selected={reviewTab === "needs-review"} onClick={() => setReviewTab("needs-review")}>
+            확인 필요 <strong>{exceptionalItems.length}</strong>
+          </button>
+        </div>
+        <section role="tabpanel" id={`${reviewTabsId}-planned-panel`} aria-labelledby={`${reviewTabsId}-planned-tab`} hidden={reviewTab !== "planned"} className={resultStyles.review}>
+          {plannedItems.length > 0 ? plannedItems.map((item) => (
+            <article className={resultStyles.row} key={item.candidateId}>
+              <div className={resultStyles.heading} data-has-values="true">
+                <button
+                  type="button"
+                  className={resultStyles.locate}
+                  aria-label={`${resultFieldLabel(item)} 필드로 이동`}
+                  disabled={!onLocate}
+                  onClick={() => onLocate?.(item.candidateId)}
+                >
+                  <span>{resultFieldLabel(item)}</span>
+                  {onLocate && <span aria-hidden="true">↗</span>}
+                </button>
+                <div className={resultStyles.valueGroup}>
+                  <span className={resultStyles.previewValue}>{item.previewValue}</span>
+                </div>
+              </div>
+            </article>
+          )) : <p className={resultStyles.empty}>자동 기입 예정 항목이 없어요.</p>}
+        </section>
         {partial && (
           <aside className={styles.safety}>
             일부 필드는 분석하지 못해 자동 기입 대상에서 제외했습니다.
@@ -268,12 +315,19 @@ export function WorkflowScreens({
                 : "LLM 분석 일부 미완료"}
           </aside>
         ))}
-        {exceptionalItems.length > 0 && (
+        {reviewTab === "needs-review" && exceptionalItems.length > 0 && (
+          <p className={resultStyles.guidance}>
+            자동 기입에서 제외할 항목이 있는지 확인해 주세요.
+          </p>
+        )}
+        {reviewTab === "needs-review" && exceptionalItems.length > 0 && (
           <section
-            className={styles.exceptionList}
+            role="tabpanel"
+            id={`${reviewTabsId}-needs-review-panel`}
+            aria-labelledby={`${reviewTabsId}-needs-review-tab`}
+            className={resultStyles.review}
             aria-label="확인 필요한 항목"
           >
-            <h3>확인 필요한 항목 {exceptionalItems.length}개</h3>
             {exceptionalItems.map((item) => {
               const profileFieldKey = reviewProfileFieldKey(item);
               const sensitiveProfileCaption =
@@ -284,50 +338,43 @@ export function WorkflowScreens({
                     }
                   : undefined;
               return (
-                <article
-                  className={styles.reviewItem}
-                  data-included={item.selected}
-                  data-status={item.status}
-                  key={item.candidateId}
-                >
-                  <span className={styles.reviewCopy}>
-                    <strong>{item.fieldLabel}</strong>
-                    {sensitiveProfileCaption && (
-                      <small id={sensitiveProfileCaption.id}>
-                        프로필 항목: {sensitiveProfileCaption.label}
-                      </small>
-                    )}
-                    <span>현재 입력값: {currentPreview(item)}</span>
-                    <span>입력 예정값: {item.previewValue}</span>
-                    {item.searchValuePlan?.forms.map((form) => (
-                      <small
-                        key={`${form.kind}:${form.name}:${form.grade ?? ""}`}
-                      >
-                        {form.kind === "original-exact"
-                          ? `검색형: 원본 정확 일치 · ${form.name}`
-                          : `검색형: 이름 ${form.name} · 등급 ${form.grade}`}
-                      </small>
-                    ))}
-                    {item.searchValuePlan?.grade && (
-                      <small>프로필 등급: {item.searchValuePlan.grade}</small>
-                    )}
-                    {item.searchValuePlan && (
-                      <small>
-                        검색 대상 범위: {item.fieldLabel}
-                        {item.itemIndex !== undefined
-                          ? ` / 반복 행 ${item.itemIndex + 1}`
-                          : ""}
-                      </small>
-                    )}
-                    <small>{item.reason}</small>
-                    {mappingLabel(item) && (
-                      <small>매핑 근거: {mappingLabel(item)}</small>
-                    )}
-                    {interactionLabel(item) && (
-                      <small>입력 상태: {interactionLabel(item)}</small>
-                    )}
-                  </span>
-                  <em>{statusLabel(item)}</em>
+                <article className={resultStyles.row} key={item.candidateId}>
+                  <div className={resultStyles.heading} data-has-values="true">
+                    <button
+                      type="button"
+                      className={resultStyles.locate}
+                      aria-label={`${resultFieldLabel(item)} 필드로 이동`}
+                      disabled={!onLocate}
+                      onClick={() => onLocate?.(item.candidateId)}
+                    >
+                      <span>{resultFieldLabel(item)}</span>
+                      {onLocate && <span aria-hidden="true">↗</span>}
+                    </button>
+                    <div className={resultStyles.valueGroup}>
+                      <span className={resultStyles.previewValue}>{item.previewValue}</span>
+                      {(item.status !== "available" ||
+                        isCalendar(item) ||
+                        !item.selected) &&
+                        !item.disabled &&
+                        (item.status !== "sensitive" || item.revealed) && (
+                          <button
+                            className={resultStyles.copyButton}
+                            type="button"
+                            aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
+                            aria-describedby={sensitiveProfileCaption?.id}
+                            onClick={() => toggleReviewItem(item.candidateId)}
+                          >
+                            {item.selected ? "제외" : "포함"}
+                          </button>
+                        )}
+                    </div>
+                  </div>
+                  {item.reason !== DEFAULT_CONDITIONAL_REVIEW_REASON && (
+                    <p className={resultStyles.guidance}>{item.reason}</p>
+                  )}
+                  {item.status !== "needs-review" && (
+                    <small className={resultStyles.writtenTag}>{statusLabel(item)}</small>
+                  )}
                   {item.status === "sensitive" && !item.revealed && (
                     <button
                       className={styles.reviewAction}
@@ -339,29 +386,11 @@ export function WorkflowScreens({
                       값 보기
                     </button>
                   )}
-                  {(item.status !== "available" ||
-                    isCalendar(item) ||
-                    !item.selected) &&
-                    !item.disabled &&
-                    (item.status !== "sensitive" || item.revealed) && (
-                      <button
-                        className={styles.reviewAction}
-                        type="button"
-                        aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
-                        aria-describedby={sensitiveProfileCaption?.id}
-                        onClick={() => toggleReviewItem(item.candidateId)}
-                      >
-                        {item.selected ? "제외하기" : "포함하기"}
-                      </button>
-                    )}
                 </article>
               );
             })}
           </section>
         )}
-        <p className={styles.safety}>
-          지원서 저장/이동/제출은 실행하지 않습니다.
-        </p>
         {selectedCalendarCount > 0 && executeCalendarWrites && (
           <button
             className={styles.primary}

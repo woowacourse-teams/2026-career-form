@@ -324,3 +324,15 @@
 
 - 2026-09-28: CF-94 승인 후보 `2a2272f6138752170845c9b3a7fb03ae7746ccba332a7f6588da3720ea914b01`로 Greeting 고교·대학 추가전공·경력·어학·자격증 지원 및 이메일·재직 결과 보완을 반영했다. 실제 설치 관측과 최신 수정본의 전체 브라우저 재검증 미완료를 분리했고 다른 회사 raw는 변경하지 않았다.
 - 2026-09-28: CF-118 승인 후보 `3e40207f5d644edd4f230e4fe7b18dfc3b5175beff2eed764049f03a10e6c5f5` 3개를 [CF-118 bundle](../raw/issues/CF-118/manifest.md)에 반영했다. ui-datepicker 공유 루트 소유권 증명, 0~11 월 select 신뢰 조건, 월·연월일 달력 동시 감지 보류를 기록했고 합성 fixture 검증과 실제 사이트 수동 검증 미완료를 구분했다.
+
+## [2026-09-29] ingest | CF-129 혼합 학력 행과 role 없는 레이어 검색
+
+- Approval-Digest: 244732492bc75aead7f8ca1dfc2e99245e2b6afca3a8b270f1e1f55a885ca494
+- 승인된 후보 4개를 [CF-129 bundle](../raw/issues/CF-129/manifest.md)에 기록하고 [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 갱신했다.
+- 합성 자동 테스트 근거만 기록했고 실제 지원서 입력값과 수동 검증 결과는 수집하지 않았다.
+
+## [2026-09-29] ingest | CF-129 구분별 분기 반복 행
+
+- Approval-Digest: 4370b04c1b54c40ecb2453ee7d1eec1afdc9949ba9a7fdacfdfc25d47dce3952
+- 승인된 후보 6을 [CF-129 bundle](../raw/issues/CF-129/manifest.md)에 추가하고 [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 반복 행 경계를 갱신했다.
+- 합성 자동 테스트와 읽기 전용 구조 관측만 근거로 했고 실제 입력값은 수집하지 않았다.
