@@ -19,17 +19,24 @@ describe("side panel launcher visibility", () => {
     ).toBe(true);
   });
 
+  it.each([
+    "https://example.test/Career/form",
+    "https://example.test/jobs/RECRUIT/123?next=other#section",
+    "https://example.test/company/Greeting/form",
+    "https://recruit.example.test/form/step2",
+  ])("shows when an approved keyword appears in the host or pathname: %s", (value) => {
+    expect(shouldShowSidePanelLauncher(new URL(value))).toBe(true);
+  });
+
   it("hides on pages whose URL does not contain apply", () => {
     expect(
       shouldShowSidePanelLauncher(new URL("https://example.test/jobs/123")),
     ).toBe(false);
     expect(
-      shouldShowSidePanelLauncher(
-        new URL("https://recruit.skhynix.com/job/list"),
-      ),
+      shouldShowSidePanelLauncher(new URL("https://jobs.example.test/list")),
     ).toBe(false);
     expect(
-      shouldShowSidePanelLauncher(new URL("https://www.skcareers.com/Recruit")),
+      shouldShowSidePanelLauncher(new URL("https://www.skexample.com/openings")),
     ).toBe(false);
   });
 });

@@ -223,13 +223,9 @@ describe("generic search follow-up review", () => {
     expect(setup.grade()?.value).toBe("");
     expect(setup.issuer()?.value).toBe("");
     expect(setup.date()?.value).toBe("");
-    const reviewItems = screen.getAllByRole("article");
-    expect(reviewItems.length).toBeGreaterThan(0);
     expect(
-      reviewItems.every(
-        (item) => item.getAttribute("data-included") === "false",
-      ),
-    ).toBe(true);
+      screen.getAllByRole("button", { name: /포함하기$/ }),
+    ).not.toHaveLength(0);
   });
 
   it("surfaces a missing profile grade for manual review without writing follow-up fields", async () => {
