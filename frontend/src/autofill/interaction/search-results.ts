@@ -6,13 +6,26 @@ import {
 import { SearchFailure, type SearchSession } from "./search-session";
 import type { SearchSurface } from "./search-surface";
 import { elements, safeActivation, shown } from "./search-surface-dom";
+import {
+  hasExplicitResultSignal,
+  listItems,
+  LocalMutationRecord,
+  localReadiness,
+  zeroNoticeConsistency,
+} from "./local-result-readiness";
 
-type RootState = { root: HTMLElement; signature: string; busy: string | null };
+type RootState = {
+  root: HTMLElement;
+  signature: string;
+  busy: string | null;
+  items: readonly Element[];
+};
 export function resultBaseline(surface: SearchSurface): RootState[] {
   return surface.resultRoots().map((root) => ({
     root,
     signature: root.textContent ?? "",
     busy: root.getAttribute("aria-busy"),
+    items: listItems(root),
   }));
 }
 export function observeResults(
@@ -23,6 +36,8 @@ export function observeResults(
 ) {
   const generation = surface.queryGeneration;
   let busySeen = false;
+  const mutations = new LocalMutationRecord();
+  const now = () => surface.document.defaultView?.performance.now() ?? 0;
   const observe = () => {
     for (const root of surface.resultRoots()) {
       if (
@@ -35,6 +50,7 @@ export function observeResults(
   const Observer = surface.document.defaultView?.MutationObserver;
   const observer = Observer
     ? new Observer((records) => {
+        for (const record of records) mutations.record(record, now());
         for (const record of records)
           if (
             record.attributeName === "aria-busy" &&
@@ -71,6 +87,28 @@ export function observeResults(
         root.closest("[aria-busy='true']")
       )
         return undefined;
+      const resultActions = () =>
+        elements<HTMLElement>(root, "[role='option'], a, button").filter(
+          (element) =>
+            shown(element) &&
+            !element.querySelector("[role='option'], a, button"),
+        );
+      // Role-less layer without explicit signals: judge by observed list replacement (C12).
+      const localMode =
+        surface.kind === "same-document-layer" &&
+        query !== undefined &&
+        !surface.hasCompletedNavigation(query) &&
+        !hasExplicitResultSignal(surface, root, resultActions(), busySeen);
+      if (
+        localMode &&
+        localReadiness(
+          root,
+          baseline.find((item) => item.root === root),
+          mutations,
+          now(),
+        ) === "pending"
+      )
+        return undefined;
       const previous = baseline.find((item) => item.root === root);
       const changed =
         !previous || previous.signature !== (root.textContent ?? "");
@@ -85,7 +123,7 @@ export function observeResults(
         surface.hasCompletedNavigation(query) ||
         (queryTagged && completeMarker) ||
         (busySeen && changed && root.getAttribute("aria-busy") === "false");
-      if (!ready) return undefined;
+      if (!ready && !localMode) return undefined;
       const paging = elements<HTMLElement>(
         surface.root,
         "[rel='next'], [aria-label*='pagination' i], [aria-label*='페이지'], [data-has-more='true'], [data-virtualized='true'], [data-search-complete='false']",
@@ -101,14 +139,13 @@ export function observeResults(
         )
       )
         throw new SearchFailure("result_set_incomplete");
-      const actions = elements<HTMLElement>(
-        root,
-        "[role='option'], a, button",
-      ).filter(
-        (element) =>
-          shown(element) &&
-          !element.querySelector("[role='option'], a, button"),
-      );
+      const actions = resultActions();
+      if (localMode) {
+        const notice = zeroNoticeConsistency(surface, root, actions);
+        if (notice === "incomplete")
+          throw new SearchFailure("result_set_incomplete");
+        if (notice === "pending") return undefined;
+      }
       const positions = actions.filter((element) =>
         element.hasAttribute("aria-setsize"),
       );
@@ -131,7 +168,12 @@ export function observeResults(
       // Absence of a Next button alone cannot establish a complete result set.
       const allPositionsDeclared =
         actions.length > 0 && positions.length === actions.length;
-      if (!completeMarker && declared === null && !allPositionsDeclared)
+      if (
+        !localMode &&
+        !completeMarker &&
+        declared === null &&
+        !allPositionsDeclared
+      )
         throw new SearchFailure("result_set_incomplete");
       const ordinals = actions.map((element) =>
         element.getAttribute("aria-posinset"),
@@ -158,7 +200,12 @@ export function observeResults(
         throw new SearchFailure("multiple_matching_results");
       if (!matches.length) throw new SearchFailure("search_results_not_found");
       const element = matches[0]!;
-      if (!safeActivation(element, expected))
+      if (
+        !safeActivation(element, expected, {
+          resultRoot: root,
+          surfaceKind: surface.kind,
+        })
+      )
         throw new SearchFailure("result_activation_unsafe");
       return { element, signature: controlSignature(element) };
     },

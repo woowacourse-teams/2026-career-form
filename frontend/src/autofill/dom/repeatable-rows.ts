@@ -1,4 +1,8 @@
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
+import {
+  implicitRepeatGroupFor,
+  documentImplicitRepeatGroups,
+} from "./implicit-repeat-rows";
 
 const MARKERS = "[data-repeatable-group], [data-repeater-item]";
 const CONTROLS =
@@ -66,7 +70,9 @@ export function genericRowFor(element: Element): Element | undefined {
     if (isGenericRepeatableRow(ancestor)) return ancestor;
     ancestor = ancestor.parentElement;
   }
-  return undefined;
+  return implicitRepeatGroupFor(element)?.rows.find(
+    (row) => row === element || row.contains(element),
+  );
 }
 
 export function genericRows(container: Element): Element[] {
@@ -80,7 +86,13 @@ export function genericRows(container: Element): Element[] {
       (group) => group.area === container || container.contains(group.area),
     )
     .flatMap((group) => group.rows);
-  return [...new Set([...candidates, ...groupedRows])].filter(
+  const implicitRows = documentImplicitRepeatGroups(container.ownerDocument)
+    .filter(
+      (group) =>
+        group.container === container || container.contains(group.container),
+    )
+    .flatMap((group) => group.rows);
+  return [...new Set([...candidates, ...groupedRows, ...implicitRows])].filter(
     (row, _, rows) =>
       !rows.some((parent) => parent !== row && parent.contains(row)),
   );

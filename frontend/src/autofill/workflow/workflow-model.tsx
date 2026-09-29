@@ -16,7 +16,9 @@ import type { AnalysisApiClient, PreparationPlan } from "../api/types";
 import {
   collectPreparationSnapshot,
   type CollectedSnapshot,
+  type PreparationCollectedSnapshot,
 } from "../dom/collect";
+import { assignMixedRows } from "../dom/mixed-section-rows";
 import { normalizeProfileOptionValue } from "../profile/standard-profile-option";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import {
@@ -260,6 +262,11 @@ export function localItemCount(
     selectedAdapter === getWorkflowAdapter("") &&
     !selectedAdapter.repeatedProfileSectionHint?.(action?.domId)
   ) {
+    // A mixed-section group needs one row per covered entry (C6).
+    const mixedGroup = (
+      snapshot as Partial<PreparationCollectedSnapshot>
+    ).mixedSectionGroup?.(plan.actionCandidateId);
+    if (mixedGroup) return assignMixedRows(profile, mixedGroup).length;
     const categories = PROFILE_CATEGORIES.filter((category) =>
       matchesProfileCategory(category, matchLabel),
     );

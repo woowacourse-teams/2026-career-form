@@ -70,6 +70,7 @@ import {
   runtimeAddressSearch,
   type WorkflowProps,
 } from "./workflow-model";
+import { prepareMixedSectionRows } from "./mixed-section-preparation";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
@@ -322,6 +323,13 @@ export function AutofillWorkflow({
             plan.command !== "SEARCH_ADDRESS" && !educationPlans.includes(plan),
         );
         if (preparationPlans.length === 0) {
+          await prepareMixedSectionRows({
+            document: pageDocument,
+            profile: loadedProfile,
+            signal: run.controller.signal,
+            recordOperation,
+          });
+          if (!active) return;
           await analyzeFields(loadedProfile);
           return;
         }
@@ -403,6 +411,12 @@ export function AutofillWorkflow({
             recordOperation,
           }),
         );
+        await prepareMixedSectionRows({
+          document: pageDocument,
+          profile,
+          signal: writeController.current.signal,
+          recordOperation,
+        });
         // Newly created school rows can reveal their own major add action.
         // Only an adapter-opted-in action may run here, with its live row count.
         const followUpSnapshot = collectPreparationSnapshot(pageDocument);

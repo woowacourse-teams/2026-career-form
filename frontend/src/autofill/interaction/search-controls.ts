@@ -17,15 +17,55 @@ import { InteractionDecisionBudgetError } from "../api/interaction-decision-sess
 import { validateInteractionDecisionResponse } from "../api/validate-interaction-response";
 import { SearchFailure, type SearchSession } from "./search-session";
 import type { SearchSurface } from "./search-surface";
+import { trustedLabels } from "../dom/trusted-id";
 import {
   elements,
   interactive,
   label,
+  layerHeading,
   linked,
   safeActivation,
+  sharesSearchSubject,
 } from "./search-surface-dom";
 
+/**
+ * A role-less layer often leaves its query input unlabeled. Its heading must
+ * name both a search action and the target's subject, and exactly one
+ * writable text input may be visible (C11).
+ */
+function layerQueryControl(
+  surface: SearchSurface,
+): HTMLInputElement | undefined {
+  if (surface.kind !== "same-document-layer") return undefined;
+  const heading = layerHeading(surface.container);
+  const fieldName =
+    trustedLabels(surface.target)
+      .map((item) => item.textContent)
+      .join(" ") +
+    " " +
+    label(surface.target);
+  if (
+    !/검색|조회|search|lookup/i.test(heading) ||
+    !sharesSearchSubject(fieldName, heading)
+  )
+    return undefined;
+  const inputs = elements<HTMLInputElement>(surface.container, "input").filter(
+    (input) =>
+      ["text", "search"].includes(input.type) &&
+      !input.readOnly &&
+      interactive(input),
+  );
+  return inputs.length === 1 ? inputs[0] : undefined;
+}
+
 export function queryControls(surface: SearchSurface): HTMLInputElement[] {
+  const labelled = labelledQueryControls(surface);
+  if (labelled.length > 0) return labelled;
+  const layerQuery = layerQueryControl(surface);
+  return layerQuery ? [layerQuery] : [];
+}
+
+function labelledQueryControls(surface: SearchSurface): HTMLInputElement[] {
   const roots = [surface.root, ...surface.linkedQueries()];
   return [
     ...new Set(
@@ -104,6 +144,22 @@ export function searchDestination(
       throw new SearchFailure("unverified_search_form");
     return undefined;
   }
+  // A same-document search layer may sit inside the application's own form.
+  // Its query and type=button search stay inside the owned layer; the button
+  // is only clicked (never Enter or submit), and the executor cancels and
+  // fails on any form submission that the click starts.
+  if (
+    !surface.frame &&
+    submit.type === "button" &&
+    safeActivation(submit) &&
+    !["formaction", "formmethod", "formtarget", "formenctype"].some((name) =>
+      submit.hasAttribute(name),
+    ) &&
+    surface.contains(query) &&
+    surface.contains(submit) &&
+    form.contains(surface.container)
+  )
+    return undefined;
   const controls = Array.from(form.elements);
   const hidden = controls.filter(
     (control): control is HTMLInputElement =>
