@@ -3,7 +3,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 320px;
+  min-height: 340px;
   gap: 20px;
   padding: 24px 16px;
   color: var(--color-text-muted);
@@ -21,31 +21,31 @@
 }
 .historyBrand {
   position: absolute;
-  top: 24px;
-  right: 16px;
-  height: 64px;
+  top: 26px;
+  right: 22px;
+  height: 80px;
   display: flex;
   align-items: center;
 }
 .history > section > p,
 .history > section > h2 {
-  padding-right: 64px;
+  padding-right: 70px;
 }
 .history .document {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
 }
 .progressBody .document {
-  width: 124px;
-  height: 124px;
+  width: 132px;
+  height: 132px;
 }
 .minimalBody .document {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
 }
 .progressBody {
-  gap: 16px;
-  padding: 32px 28px;
+  gap: 18px;
+  padding: 36px 28px;
 }
 .body .caption {
   color: var(--color-text-strong);
@@ -53,7 +53,7 @@
   font-size: 16px;
 }
 .body .percentage {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
   letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
@@ -61,8 +61,8 @@
 }
 .track {
   width: 100%;
-  height: 12px;
-  padding: 3px;
+  height: 10px;
+  padding: 2px;
   box-sizing: border-box;
   border-radius: 999px;
   background: var(--color-brand);
@@ -130,4 +130,59 @@
   .document {
     animation: none;
   }
+}
+
+.history > section {
+  padding: 28px 22px;
+  gap: 14px;
+}
+.history > section > p {
+  line-height: 1.65;
+  min-height: 22px;
+}
+.history > section > h2 {
+  font-size: 22px;
+  letter-spacing: -0.6px;
+  line-height: 1.35;
+}
+.history ol {
+  margin-top: 12px;
+}
+.history ol li {
+  padding: 15px 12px;
+  border-bottom: 0;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+.history ol li[data-active="true"] {
+  background: var(--color-surface-muted);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+.history ol li > span {
+  font-variant-numeric: tabular-nums;
+}
+.history ol small {
+  font-size: 11px;
+  padding: 3px 6px;
+  background: var(--color-brand);
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.progressBody {
+  background: radial-gradient(
+    ellipse at 50% 25%,
+    var(--color-surface-muted),
+    transparent 65%
+  );
+}
+.track {
+  max-width: 260px;
+  margin-top: 2px;
+}
+.minimalBody {
+  gap: 22px;
+}
+.minimalStatus {
+  font-size: 14px;
+  line-height: 1.6;
 }
