@@ -47,11 +47,13 @@ it.each(["D"] as const)(
 );
 
 it.each(["A", "B", "D"] as const)(
-  "shows the shared capybara in %s without a separate character trial",
+  "shows the shared writing illustration in %s without a separate character trial",
   (variant) => {
     render(
       <LoadingVariant variant={variant} completed={5} reducedMotion={false} />,
     );
-    expect(screen.getByRole("img", { name: "카피바라" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "지원서 작성 중" }),
+    ).toBeInTheDocument();
   },
 );

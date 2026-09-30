@@ -12,43 +12,96 @@
 .body p {
   margin: 0;
 }
-.mascot {
+.document {
   display: block;
-  object-fit: contain;
-  border-radius: 22%;
+  flex-shrink: 0;
 }
 .historyBrand {
-  padding: 24px 16px 0;
+  padding: 20px 16px 0;
 }
-.history .mascot {
-  width: 36px;
-  height: 36px;
-}
-.progressBody .mascot {
-  width: 80px;
-  height: 80px;
-}
-.minimalBody .mascot {
+.history .document {
   width: 48px;
   height: 48px;
 }
-.body .percentage {
-  font-size: 48px;
-  font-weight: 700;
+.progressBody .document {
+  width: 124px;
+  height: 124px;
+}
+.minimalBody .document {
+  width: 64px;
+  height: 64px;
+}
+.progressBody {
+  gap: 16px;
+  padding: 32px 28px;
+}
+.body .caption {
   color: var(--color-text-strong);
+  font-weight: 600;
+  font-size: 16px;
+}
+.body .percentage {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  color: #3182f6;
 }
 .track {
   width: 100%;
-  height: 10px;
-  border-radius: 8px;
-  background: var(--color-border);
+  height: 12px;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #edf2f9;
   overflow: hidden;
 }
 .track span {
   display: block;
   height: 100%;
-  background: var(--color-action);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #77b5ff, #3182f6);
+  box-shadow: 0 1px 4px #3182f633;
   transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ink path {
+  stroke-dasharray: 1;
+  animation: write 2.4s ease-in-out infinite;
+}
+.ink path:nth-child(2) {
+  animation-delay: 160ms;
+}
+.ink path:nth-child(3) {
+  animation-delay: 320ms;
+}
+.pen {
+  transform-origin: 70px 80px;
+  animation: writing 1.2s ease-in-out infinite;
+}
+@keyframes write {
+  0%,
+  10% {
+    stroke-dashoffset: 1;
+  }
+  55%,
+  85% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes writing {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-4deg);
+  }
+  35% {
+    transform: translate(5px, -3px) rotate(3deg);
+  }
+  70% {
+    transform: translate(-2px, 2px) rotate(-2deg);
+  }
 }
 .minimalStatus {
   display: flex;
@@ -68,12 +121,13 @@
     transform: rotate(360deg);
   }
 }
-.body[data-reduced-motion="true"] * {
+[data-reduced-motion="true"] * {
   animation: none;
   transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .body * {
+  .body *,
+  .history * {
     animation: none;
     transition: none;
   }
