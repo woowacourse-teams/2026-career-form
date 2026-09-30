@@ -3,6 +3,7 @@ import { WorkflowLoading } from "../../src/autofill/workflow/WorkflowLoading";
 import { scenarioFields } from "./scenario";
 import type { Variant } from "./study";
 import styles from "./LoadingVariant.module.css";
+const waitingMessage = "지원서를 채우고 있어요";
 export function LoadingVariant({
   variant,
   completed,
@@ -25,6 +26,7 @@ export function LoadingVariant({
         <div className={styles.historyBrand}>{icon}</div>
         <WorkflowLoading
           writing
+          statusMessage={waitingMessage}
           currentCategory={
             scenarioFields[Math.min(completed, scenarioFields.length - 1)]!
               .category
@@ -46,7 +48,7 @@ export function LoadingVariant({
       {icon}
       {variant === "B" ? (
         <>
-          <p className={styles.caption}>지원서를 채우고 있어요</p>
+          <p className={styles.caption}>{waitingMessage}</p>
           <p className={styles.percentage} role="status">
             {percentage}%
           </p>
@@ -68,7 +70,7 @@ export function LoadingVariant({
             <i />
             <i />
           </span>
-          <p role="status">입력 중이에요</p>
+          <p role="status">{waitingMessage}</p>
         </div>
       )}
     </section>

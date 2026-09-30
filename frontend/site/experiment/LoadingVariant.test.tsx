@@ -39,7 +39,9 @@ it.each(["D"] as const)(
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
     expect(container).not.toHaveTextContent("50%");
-    expect(screen.getByRole("status")).toHaveTextContent("입력 중이에요");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "지원서를 채우고 있어요",
+    );
     expect(
       container.querySelector('[data-reduced-motion="true"]'),
     ).toBeInTheDocument();
@@ -55,5 +57,18 @@ it.each(["A", "B", "D"] as const)(
     expect(
       screen.getByRole("img", { name: "지원서를 쓰는 카피바라" }),
     ).toBeInTheDocument();
+  },
+);
+
+it.each(["A", "B", "D"] as const)(
+  "uses the same waiting message in %s",
+  (variant) => {
+    render(
+      <LoadingVariant variant={variant} completed={5} reducedMotion={false} />,
+    );
+    expect(
+      screen.getAllByText("지원서를 채우고 있어요").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText("입력 중이에요")).not.toBeInTheDocument();
   },
 );
