@@ -81,7 +81,76 @@ export function LoadingVariant({
       {variant === "D" ? (
         <div className={styles.minimalScene}>
           {icon}
-          <span className={styles.sceneShadow} aria-hidden="true" />
+          <svg
+            className={styles.writingDesk}
+            viewBox="0 0 220 110"
+            aria-hidden="true"
+          >
+            <ellipse
+              cx="112"
+              cy="91"
+              rx="87"
+              ry="8"
+              fill="var(--color-brand)"
+            />
+            <path
+              d="M53 39 L157 39 L185 88 L72 88 Z"
+              fill="var(--color-brand)"
+            />
+            <g className={styles.writingPage}>
+              <path
+                d="M53 34 L157 34 L185 83 L72 83 Z"
+                fill="#fff9ee"
+                stroke="var(--color-accent)"
+                strokeWidth="0.7"
+              />
+              <g
+                fill="none"
+                stroke="var(--color-action)"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              >
+                <path
+                  className={styles.inkOne}
+                  pathLength="1"
+                  d="M78 48 q5 -3 9 0 t9 0 t9 0 t9 0 t9 0"
+                />
+                <path
+                  className={styles.inkTwo}
+                  pathLength="1"
+                  d="M82 59 q5 -3 9 0 t9 0 t9 0 t9 0 t9 0 t9 0"
+                />
+                <path
+                  className={styles.inkThree}
+                  pathLength="1"
+                  d="M87 70 q5 -3 9 0 t9 0 t9 0 t9 0"
+                />
+              </g>
+            </g>
+            <g className={styles.writingHand}>
+              <path
+                d="M61 21 Q47 9 37 21 Q29 37 50 43 Q61 43 70 36"
+                fill="#ed8827"
+              />
+              <g transform="rotate(-28 77 37)">
+                <rect
+                  x="74"
+                  y="7"
+                  width="6"
+                  height="35"
+                  rx="2"
+                  fill="var(--color-action-strong)"
+                />
+                <path d="M74 42 L80 42 L77 49 Z" fill="#dfb780" />
+                <path
+                  d="M76 47 L78 47 L77 49 Z"
+                  fill="var(--color-text-strong)"
+                />
+                <rect x="74" y="8" width="6" height="5" rx="1" fill="#f2d3a8" />
+              </g>
+              <ellipse cx="68" cy="30" rx="12" ry="9" fill="#ef902e" />
+            </g>
+          </svg>
         </div>
       ) : (
         icon
@@ -105,9 +174,6 @@ export function LoadingVariant({
         </>
       ) : (
         <div className={styles.minimalStatus}>
-          <span className={styles.activityTrack} aria-hidden="true">
-            <i />
-          </span>
           <p role="status">{waitingMessage}</p>
         </div>
       )}
