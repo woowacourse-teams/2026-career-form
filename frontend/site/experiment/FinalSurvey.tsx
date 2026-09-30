@@ -46,10 +46,12 @@ export function FinalSurvey({
         urls.current.delete(url);
       }, 1000);
       setMessage(
-        "결과 파일 내려받기를 시작했어요. 파일을 실험 진행자에게 전달해 주세요.",
+        "응답을 이 브라우저에 저장했어요. 결과 파일 다운로드도 시작했어요. 수집을 완료하려면 파일을 실험 진행자에게 전달해 주세요.",
       );
     } catch {
-      setMessage("파일을 만들지 못했어요. 다시 내려받기를 눌러 주세요.");
+      setMessage(
+        "응답 파일을 저장하지 못했어요. 응답 저장하기를 다시 눌러 주세요.",
+      );
     }
   };
   return (
@@ -106,8 +108,12 @@ export function FinalSurvey({
           차이 없음
         </label>
       </fieldset>
+      <p>
+        현재 응답은 이 브라우저에 보관되며, 저장 버튼을 누르면 전달용 파일도
+        내려받아요.
+      </p>
       <button type="submit" disabled={!preference}>
-        결과 JSON 내려받기
+        응답 저장하기
       </button>
       {message && <p role="status">{message}</p>}
     </form>

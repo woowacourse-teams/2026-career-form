@@ -122,7 +122,7 @@ it("collects three required ratings in the assigned order and downloads only the
       name: "마지막으로, 어떤 체험이 가장 좋았나요?",
     }),
   ).toBeInTheDocument();
-  const download = screen.getByRole("button", { name: "결과 JSON 내려받기" });
+  const download = screen.getByRole("button", { name: "응답 저장하기" });
   expect(download).toBeDisabled();
   fireEvent.click(screen.getByLabelText("차이 없음"));
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
