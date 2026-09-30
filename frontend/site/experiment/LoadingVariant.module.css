@@ -48,6 +48,7 @@
   display: block;
   height: 100%;
   background: var(--color-action);
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .minimalStatus {
   display: flex;
@@ -69,9 +70,11 @@
 }
 .body[data-reduced-motion="true"] * {
   animation: none;
+  transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .body * {
     animation: none;
+    transition: none;
   }
 }
