@@ -78,7 +78,14 @@ export function LoadingVariant({
       aria-label="자동 기입 작업 영역"
       aria-busy="true"
     >
-      {icon}
+      {variant === "D" ? (
+        <div className={styles.minimalScene}>
+          {icon}
+          <span className={styles.sceneShadow} aria-hidden="true" />
+        </div>
+      ) : (
+        icon
+      )}
       {variant === "B" ? (
         <>
           <p className={styles.caption}>{waitingMessage}</p>
@@ -98,9 +105,7 @@ export function LoadingVariant({
         </>
       ) : (
         <div className={styles.minimalStatus}>
-          <span className={styles.loadingDots} aria-hidden="true">
-            <i />
-            <i />
+          <span className={styles.activityTrack} aria-hidden="true">
             <i />
           </span>
           <p role="status">{waitingMessage}</p>
