@@ -7,12 +7,10 @@ import {
   exportStudy,
 } from "./study";
 it.each([
-  [0, "ABD"],
-  [1 / 6, "ADB"],
-  [2 / 6, "BAD"],
-  [3 / 6, "BDA"],
-  [4 / 6, "DAB"],
-  [5 / 6, "DBA"],
+  [0, "ABDE"],
+  [1 / 4, "BEAD"],
+  [2 / 4, "EDBA"],
+  [3 / 4, "DAEB"],
 ] as const)("assigns a balanced sequence at %s", (random, order) => {
   expect(createStudy(random).order.join("")).toBe(order);
 });
@@ -78,9 +76,9 @@ it("exports complete results using an allowlist and preserves the none preferenc
     "비슷했어요",
   );
   expect(result.preference).toBe("none");
-  expect(result.order).toEqual(["A", "B", "D"]);
+  expect(result.order).toEqual(["A", "B", "D", "E"]);
   expect(JSON.stringify(result)).not.toContain("secret");
-  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D"]);
+  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D", "E"]);
 });
 
 it("restores final preference and strips unknown fields from nested responses", () => {

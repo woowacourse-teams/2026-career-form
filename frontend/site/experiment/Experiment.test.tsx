@@ -100,7 +100,7 @@ it("collects three required ratings in the assigned order and downloads only the
   );
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   await open();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     expect(screen.getByLabelText("성")).toHaveValue("");
     await start();
     act(() => vi.advanceTimersByTime(7015));
@@ -136,13 +136,14 @@ it("collects three required ratings in the assigned order and downloads only the
     reader.readAsText(downloaded!);
   });
   expect(JSON.parse(result)).toMatchObject({
-    order: ["A", "B", "D"],
+    order: ["A", "B", "D", "E"],
     preference: "none",
     reason: "",
     trials: [
       { variant: "A", durationMs: 6615 },
       { variant: "B", durationMs: 6615 },
       { variant: "D", durationMs: 6615 },
+      { variant: "E", durationMs: 6615 },
     ],
   });
   expect(result).not.toContain("career@example.com");
@@ -162,7 +163,7 @@ it("restores evaluated trials without repeating them", async () => {
   );
   await open();
   expect(
-    screen.getByRole("heading", { name: "두 번째 체험 / 3" }),
+    screen.getByRole("heading", { name: "두 번째 체험 / 4" }),
   ).toBeInTheDocument();
   await start();
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");

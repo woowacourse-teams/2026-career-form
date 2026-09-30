@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { LoadingVariant } from "./LoadingVariant";
 import { exportStudy, type Preference, type Study } from "./study";
 import styles from "./Experiment.module.css";
-const ordinals = ["첫 번째", "두 번째", "세 번째"];
+const ordinals = ["첫 번째", "두 번째", "세 번째", "네 번째"];
 export function FinalSurvey({
   study,
   onChange,
