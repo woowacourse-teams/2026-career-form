@@ -30,7 +30,7 @@ it.each([
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   },
 );
-it.each(["C", "D"] as const)(
+it.each(["D"] as const)(
   "keeps counts out of %s and supports a static state",
   (variant) => {
     const { container } = render(
@@ -39,11 +39,19 @@ it.each(["C", "D"] as const)(
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
     expect(container).not.toHaveTextContent("50%");
-    expect(screen.getByRole("status")).toHaveTextContent(
-      variant === "C" ? "지원서를 채우고 있어요" : "입력 중이에요",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("입력 중이에요");
     expect(
       container.querySelector('[data-reduced-motion="true"]'),
     ).toBeInTheDocument();
+  },
+);
+
+it.each(["A", "B", "D"] as const)(
+  "shows the shared capybara in %s without a separate character trial",
+  (variant) => {
+    render(
+      <LoadingVariant variant={variant} completed={5} reducedMotion={false} />,
+    );
+    expect(screen.getByRole("img", { name: "카피바라" })).toBeInTheDocument();
   },
 );

@@ -12,27 +12,32 @@ export function LoadingVariant({
   completed: number;
   reducedMotion: boolean;
 }) {
+  const icon = <img className={styles.mascot} src={logo} alt="카피바라" />;
   if (variant === "A")
     return (
-      <WorkflowLoading
-        writing
-        currentCategory={
-          scenarioFields[Math.min(completed, scenarioFields.length - 1)]!
-            .category
-        }
-        progress={scenarioFields
-          .slice(0, completed)
-          .map((field) => ({ ...field, status: "written" as const }))}
-      />
+      <div className={styles.history} data-reduced-motion={reducedMotion}>
+        <div className={styles.historyBrand}>{icon}</div>
+        <WorkflowLoading
+          writing
+          currentCategory={
+            scenarioFields[Math.min(completed, scenarioFields.length - 1)]!
+              .category
+          }
+          progress={scenarioFields
+            .slice(0, completed)
+            .map((field) => ({ ...field, status: "written" as const }))}
+        />
+      </div>
     );
   const percentage = Math.round((completed / scenarioFields.length) * 100);
   return (
     <section
-      className={styles.body}
+      className={`${styles.body} ${variant === "B" ? styles.progressBody : styles.minimalBody}`}
       data-reduced-motion={reducedMotion}
       aria-label="자동 기입 작업 영역"
       aria-busy="true"
     >
+      {icon}
       {variant === "B" ? (
         <>
           <p className={styles.percentage} role="status">
@@ -49,20 +54,11 @@ export function LoadingVariant({
             <span style={{ width: `${percentage}%` }} />
           </div>
         </>
-      ) : variant === "C" ? (
-        <>
-          <div className={styles.character} aria-hidden="true">
-            <img src={logo} alt="" />
-            <span className={styles.paper} />
-            <span className={styles.keyboard}>▤</span>
-          </div>
-          <p role="status">지원서를 채우고 있어요</p>
-        </>
       ) : (
-        <>
+        <div className={styles.minimalStatus}>
           <span className={styles.spinner} aria-hidden="true" />
           <p role="status">입력 중이에요</p>
-        </>
+        </div>
       )}
     </section>
   );

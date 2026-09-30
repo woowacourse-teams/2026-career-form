@@ -8,13 +8,14 @@ import {
   loadStudy,
   saveStudy,
   recordTrial,
+  VARIANT_COUNT,
   type Ratings,
 } from "./study";
 import { TrialSurvey } from "./TrialSurvey";
 import { FinalSurvey } from "./FinalSurvey";
 import demo from "../demo/Simulation.module.css";
 import styles from "./Experiment.module.css";
-const ordinals = ["첫 번째", "두 번째", "세 번째", "네 번째"];
+const ordinals = ["첫 번째", "두 번째", "세 번째"];
 export function Experiment() {
   const [study, setStudy] = useState(() => loadStudy() ?? createStudy());
   const [stage, setStage] = useState<
@@ -110,7 +111,7 @@ export function Experiment() {
     );
     reset();
   };
-  if (study.trials.length === 4)
+  if (study.trials.length === VARIANT_COUNT)
     return (
       <div className={styles.page}>
         <FinalSurvey
@@ -136,7 +137,8 @@ export function Experiment() {
         <div>
           <p>커리어폼 · 화면 체험</p>
           <h1>
-            {ordinals[study.trials.length]} 체험 <small>/ 4</small>
+            {ordinals[study.trials.length]} 체험{" "}
+            <small>/ {VARIANT_COUNT}</small>
           </h1>
         </div>
         <p>

@@ -1,5 +1,5 @@
 import { SCENARIO_DURATION_MS } from "./scenario";
-export type Variant = "A" | "B" | "C" | "D";
+export type Variant = "A" | "B" | "D";
 export type Ratings = { comfort: number; trust: number; wait: number };
 export type Trial = {
   variant: Variant;
@@ -14,13 +14,16 @@ export type Study = {
   final?: { preference: Preference; reason: string };
 };
 export type Preference = Variant | "none";
-const VERSION = "panel-study-v2";
-const KEY = "career-form-panel-study-v2";
+const VERSION = "panel-study-v3";
+const KEY = "career-form-panel-study-v3";
+export const VARIANT_COUNT = 3;
 const sequences: Variant[][] = [
-  ["A", "B", "D", "C"],
-  ["B", "C", "A", "D"],
-  ["C", "D", "B", "A"],
-  ["D", "A", "C", "B"],
+  ["A", "B", "D"],
+  ["A", "D", "B"],
+  ["B", "A", "D"],
+  ["B", "D", "A"],
+  ["D", "A", "B"],
+  ["D", "B", "A"],
 ];
 type StorageAccess = Pick<Storage, "getItem" | "setItem">;
 export function createStudy(random = Math.random()): Study {
@@ -28,7 +31,7 @@ export function createStudy(random = Math.random()): Study {
     throw Error("Invalid assignment");
   return {
     version: VERSION,
-    order: [...sequences[Math.floor(random * 4)]!],
+    order: [...sequences[Math.floor(random * sequences.length)]!],
     trials: [],
   };
 }
@@ -62,10 +65,11 @@ function cleanStudy(study: Study): Study {
     !Array.isArray(study.order) ||
     !sequences.some(
       (order) =>
-        order.join("") === study.order.join("") && study.order.length === 4,
+        order.join("") === study.order.join("") &&
+        study.order.length === VARIANT_COUNT,
     ) ||
     !Array.isArray(study.trials) ||
-    study.trials.length > 4
+    study.trials.length > VARIANT_COUNT
   )
     throw Error("Invalid study");
   const trials = study.trials.map((trial, index) => {
@@ -76,7 +80,7 @@ function cleanStudy(study: Study): Study {
   const final = study.final;
   if (
     final &&
-    (trials.length !== 4 ||
+    (trials.length !== VARIANT_COUNT ||
       ![...study.order, "none"].includes(final.preference) ||
       typeof final.reason !== "string" ||
       final.reason.length > 2000)
@@ -94,7 +98,7 @@ function cleanStudy(study: Study): Study {
 export function recordTrial(study: Study, trial: Trial): Study {
   const clean = cleanStudy(study);
   if (
-    clean.trials.length >= 4 ||
+    clean.trials.length >= VARIANT_COUNT ||
     trial.variant !== clean.order[clean.trials.length]
   )
     throw Error("Invalid trial order");
@@ -123,7 +127,7 @@ export function exportStudy(
 ) {
   const clean = cleanStudy(study);
   if (
-    clean.trials.length !== 4 ||
+    clean.trials.length !== VARIANT_COUNT ||
     ![...clean.order, "none"].includes(preference) ||
     typeof reason !== "string" ||
     reason.length > 2000

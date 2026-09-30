@@ -12,6 +12,26 @@
 .body p {
   margin: 0;
 }
+.mascot {
+  display: block;
+  object-fit: contain;
+  border-radius: 22%;
+}
+.historyBrand {
+  padding: 24px 16px 0;
+}
+.history .mascot {
+  width: 36px;
+  height: 36px;
+}
+.progressBody .mascot {
+  width: 80px;
+  height: 80px;
+}
+.minimalBody .mascot {
+  width: 48px;
+  height: 48px;
+}
 .body .percentage {
   font-size: 48px;
   font-weight: 700;
@@ -29,57 +49,18 @@
   height: 100%;
   background: var(--color-action);
 }
-.character {
-  position: relative;
-  width: 140px;
-  height: 132px;
-}
-.character img {
-  width: 112px;
-  height: 112px;
-  object-fit: contain;
-  animation: typing 0.8s ease-in-out infinite;
-}
-.keyboard {
-  position: absolute;
-  bottom: 0;
-  left: 20px;
-  width: 92px;
-  background: var(--color-page);
-  border: 2px solid var(--color-border);
-  border-radius: 5px;
-  text-align: center;
-  font-size: 24px;
-}
-.paper {
-  position: absolute;
-  top: 22px;
-  right: 0;
-  width: 28px;
-  height: 38px;
-  background: white;
-  border: 2px solid var(--color-border);
-  border-radius: 3px;
-  transform: rotate(8deg);
-  animation: paper 1.6s ease-in-out infinite;
+.minimalStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .spinner {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: 2px solid var(--color-border);
   border-top-color: var(--color-action);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-}
-@keyframes typing {
-  50% {
-    transform: translateY(3px) rotate(2deg);
-  }
-}
-@keyframes paper {
-  50% {
-    transform: translateY(5px) rotate(-5deg);
-  }
 }
 @keyframes spin {
   to {

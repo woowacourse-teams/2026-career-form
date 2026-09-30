@@ -7,10 +7,12 @@ import {
   exportStudy,
 } from "./study";
 it.each([
-  [0, "ABDC"],
-  [0.25, "BCAD"],
-  [0.5, "CDBA"],
-  [0.75, "DACB"],
+  [0, "ABD"],
+  [1 / 6, "ADB"],
+  [2 / 6, "BAD"],
+  [3 / 6, "BDA"],
+  [4 / 6, "DAB"],
+  [5 / 6, "DBA"],
 ] as const)("assigns a balanced sequence at %s", (random, order) => {
   expect(createStudy(random).order.join("")).toBe(order);
 });
@@ -76,9 +78,9 @@ it("exports complete results using an allowlist and preserves the none preferenc
     "비슷했어요",
   );
   expect(result.preference).toBe("none");
-  expect(result.order).toEqual(["A", "B", "D", "C"]);
+  expect(result.order).toEqual(["A", "B", "D"]);
   expect(JSON.stringify(result)).not.toContain("secret");
-  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D", "C"]);
+  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D"]);
 });
 
 it("restores final preference and strips unknown fields from nested responses", () => {
@@ -90,11 +92,11 @@ it("restores final preference and strips unknown fields from nested responses", 
       durationMs: 12673,
       reducedMotion: false,
     });
-  const final = { preference: "C" as const, reason: "화면", secret: "omit" };
+  const final = { preference: "D" as const, reason: "화면", secret: "omit" };
   saveStudy({ ...study, final }, sessionStorage);
   const restored = loadStudy(sessionStorage)!;
-  expect(restored.final).toEqual({ preference: "C", reason: "화면" });
-  expect(exportStudy(restored, "C", "화면")).not.toHaveProperty("final");
+  expect(restored.final).toEqual({ preference: "D", reason: "화면" });
+  expect(exportStudy(restored, "D", "화면")).not.toHaveProperty("final");
 });
 
 it("does not restore responses from the old slower experiment", () => {
@@ -102,7 +104,7 @@ it("does not restore responses from the old slower experiment", () => {
   saveStudy(createStudy(0), sessionStorage);
   const key = sessionStorage.key(0)!;
   const old = JSON.parse(sessionStorage.getItem(key)!);
-  old.version = "panel-study-v1";
+  old.version = "panel-study-v2";
   sessionStorage.setItem(key, JSON.stringify(old));
   expect(loadStudy(sessionStorage)).toBeNull();
 });

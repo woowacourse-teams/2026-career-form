@@ -78,7 +78,7 @@ it("cancels all writes on unmount", async () => {
   expect(input).toHaveValue("");
 });
 
-it("collects four required ratings in the assigned order and downloads only the result schema", async () => {
+it("collects three required ratings in the assigned order and downloads only the result schema", async () => {
   let downloaded: Blob | undefined;
   vi.stubGlobal(
     "URL",
@@ -92,7 +92,7 @@ it("collects four required ratings in the assigned order and downloads only the 
   );
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   await open();
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     expect(screen.getByLabelText("성")).toHaveValue("");
     await start();
     act(() => vi.advanceTimersByTime(13073));
@@ -130,14 +130,13 @@ it("collects four required ratings in the assigned order and downloads only the 
     reader.readAsText(downloaded!);
   });
   expect(JSON.parse(result)).toMatchObject({
-    order: ["A", "B", "D", "C"],
+    order: ["A", "B", "D"],
     preference: "none",
     reason: "비슷했어요",
     trials: [
       { variant: "A", durationMs: 12673 },
       { variant: "B", durationMs: 12673 },
       { variant: "D", durationMs: 12673 },
-      { variant: "C", durationMs: 12673 },
     ],
   });
   expect(result).not.toContain("career@example.com");
@@ -157,7 +156,7 @@ it("restores evaluated trials without repeating them", async () => {
   );
   await open();
   expect(
-    screen.getByRole("heading", { name: "두 번째 체험 / 4" }),
+    screen.getByRole("heading", { name: "두 번째 체험 / 3" }),
   ).toBeInTheDocument();
   await start();
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
@@ -165,7 +164,7 @@ it("restores evaluated trials without repeating them", async () => {
 
 it("renders 100 percent after the last DOM write before the shared completion transition", async () => {
   const { createStudy, saveStudy } = await import("./study");
-  saveStudy(createStudy(0.25));
+  saveStudy(createStudy(2 / 6));
   await open();
   await start();
   act(() => vi.advanceTimersByTime(12673));
