@@ -241,14 +241,26 @@ export function Experiment() {
                     reducedMotion={reducedMotion}
                   />
                 ) : stage === "complete" ? (
-                  <section className={styles.card}>
+                  <section
+                    className={`${styles.card} ${styles.completionCard}`}
+                  >
+                    <span className={styles.completionIcon} aria-hidden="true">
+                      ✓
+                    </span>
                     <h2 ref={heading} tabIndex={-1}>
                       입력이 완료됐어요
                     </h2>
                     <p>지원서의 입력 결과를 확인한 뒤 체험을 평가해 주세요.</p>
-                    <button type="button" onClick={() => setStage("survey")}>
-                      평가하기
+                    <button
+                      className={styles.evaluateButton}
+                      type="button"
+                      onClick={() => setStage("survey")}
+                    >
+                      평가하기 <span aria-hidden="true">→</span>
                     </button>
+                    <small className={styles.evaluationHint}>
+                      방금 체험에 대한 세 가지 질문이에요
+                    </small>
                   </section>
                 ) : undefined
               }
