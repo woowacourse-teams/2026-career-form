@@ -1,0 +1,96 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: 20px;
+  padding: 24px 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.body p {
+  margin: 0;
+}
+.body .percentage {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+.track {
+  width: 100%;
+  height: 10px;
+  border-radius: 8px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+.track span {
+  display: block;
+  height: 100%;
+  background: var(--color-action);
+}
+.character {
+  position: relative;
+  width: 140px;
+  height: 132px;
+}
+.character img {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  animation: typing 0.8s ease-in-out infinite;
+}
+.keyboard {
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  width: 92px;
+  background: var(--color-page);
+  border: 2px solid var(--color-border);
+  border-radius: 5px;
+  text-align: center;
+  font-size: 24px;
+}
+.paper {
+  position: absolute;
+  top: 22px;
+  right: 0;
+  width: 28px;
+  height: 38px;
+  background: white;
+  border: 2px solid var(--color-border);
+  border-radius: 3px;
+  transform: rotate(8deg);
+  animation: paper 1.6s ease-in-out infinite;
+}
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-action);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes typing {
+  50% {
+    transform: translateY(3px) rotate(2deg);
+  }
+}
+@keyframes paper {
+  50% {
+    transform: translateY(5px) rotate(-5deg);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.body[data-reduced-motion="true"] * {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .body * {
+    animation: none;
+  }
+}

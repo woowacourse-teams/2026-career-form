@@ -1,0 +1,149 @@
+:global(body) {
+  overflow: auto;
+}
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: white;
+}
+.studyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+.studyHeader p {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+.studyHeader h1 {
+  margin: 4px 0 0;
+  font-size: 24px;
+}
+.studyHeader small {
+  color: var(--color-text-muted);
+  font-size: 16px;
+  font-weight: 400;
+}
+.workspace {
+  height: min(760px, calc(100dvh - 125px));
+  min-height: 520px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+.application {
+  overflow: auto;
+  scroll-behavior: auto;
+}
+.application input[data-experiment-filled="true"] {
+  border-color: #d5ac86;
+  background: #fff8ef;
+}
+.sidebar {
+  min-width: 0;
+}
+.card {
+  padding: 24px 16px;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+.card h2 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+.card button,
+.page > button {
+  background: var(--color-action);
+  color: white;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.card button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.notice {
+  padding: 12px 24px;
+  color: var(--color-text-strong);
+  background: var(--color-page);
+}
+.survey {
+  max-width: 860px;
+  margin: 0 auto;
+}
+.survey fieldset {
+  margin: 20px 0;
+  border: 1px solid var(--color-border);
+  padding: 16px;
+  border-radius: 8px;
+}
+.survey legend {
+  font-weight: 600;
+  padding: 0 8px;
+}
+.scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.scale label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.survey textarea {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  margin: 8px 0 20px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+.previews {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.preview {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.preview > label {
+  display: block;
+  padding: 12px;
+  background: var(--color-page);
+  cursor: pointer;
+}
+@media (max-width: 680px) {
+  .studyHeader {
+    padding: 16px;
+  }
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  .application {
+    height: 240px;
+  }
+  .sidebar {
+    height: 560px;
+    border-top: 1px solid var(--color-border);
+    border-left: 0;
+  }
+  .previews {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

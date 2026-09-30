@@ -10,10 +10,12 @@ export function PanelPreview({
   onAutofill = async () => {},
   autofillView,
   onReturn = noop,
+  onClose = noop,
 }: {
   onAutofill?: () => Promise<void>;
   autofillView?: ReactNode;
   onReturn?: () => void;
+  onClose?: () => void;
 }) {
   return (
     <div className={styles.nativePanel} data-demo-panel>
@@ -24,7 +26,7 @@ export function PanelPreview({
         repository={demoRepository}
         logoUrl={logo}
         copyText={async () => {}}
-        closePanel={noop}
+        closePanel={onClose}
         openOptions={noop}
         openAutofill={onAutofill}
       />
