@@ -45,7 +45,7 @@
   font-weight: 700;
   letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
-  color: #3182f6;
+  color: var(--color-action-strong);
 }
 .track {
   width: 100%;
@@ -53,15 +53,15 @@
   padding: 3px;
   box-sizing: border-box;
   border-radius: 999px;
-  background: #edf2f9;
+  background: var(--color-brand);
   overflow: hidden;
 }
 .track span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #77b5ff, #3182f6);
-  box-shadow: 0 1px 4px #3182f633;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-action));
+  box-shadow: 0 1px 4px var(--color-focus);
   transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .ink path {
@@ -75,7 +75,7 @@
   animation-delay: 320ms;
 }
 .pen {
-  transform-origin: 70px 80px;
+  transform-origin: 67px 77px;
   animation: writing 1.2s ease-in-out infinite;
 }
 @keyframes write {
@@ -130,5 +130,27 @@
   .history * {
     animation: none;
     transition: none;
+  }
+}
+
+.capyHead {
+  transform-origin: 50px 65px;
+  animation: nod 2.4s ease-in-out infinite;
+}
+@keyframes nod {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+[data-reduced-motion="true"] .capyHead {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .capyHead {
+    animation: none;
   }
 }

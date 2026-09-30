@@ -53,7 +53,7 @@ it.each(["A", "B", "D"] as const)(
       <LoadingVariant variant={variant} completed={5} reducedMotion={false} />,
     );
     expect(
-      screen.getByRole("img", { name: "지원서 작성 중" }),
+      screen.getByRole("img", { name: "지원서를 쓰는 카피바라" }),
     ).toBeInTheDocument();
   },
 );

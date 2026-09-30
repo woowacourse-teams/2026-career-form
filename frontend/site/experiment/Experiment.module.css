@@ -159,3 +159,26 @@
 .application label::after {
   content: none;
 }
+
+.guide {
+  margin: 16px 24px;
+  padding: 18px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.guide h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  color: var(--color-text-strong);
+}
+.guide p {
+  margin: 6px 0;
+}
+.guide ol {
+  margin: 10px 0;
+  padding-left: 22px;
+}
