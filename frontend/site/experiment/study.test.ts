@@ -7,12 +7,10 @@ import {
   exportStudy,
 } from "./study";
 it.each([
-  [0, "ABD"],
-  [1 / 6, "ADB"],
-  [2 / 6, "BAD"],
-  [3 / 6, "BDA"],
-  [4 / 6, "DAB"],
-  [5 / 6, "DBA"],
+  [0, "AB"],
+  [0.49, "AB"],
+  [0.5, "BA"],
+  [0.99, "BA"],
 ] as const)("assigns a balanced sequence at %s", (random, order) => {
   expect(createStudy(random).order.join("")).toBe(order);
 });
@@ -78,9 +76,9 @@ it("exports complete results using an allowlist and preserves the none preferenc
     "비슷했어요",
   );
   expect(result.preference).toBe("none");
-  expect(result.order).toEqual(["A", "B", "D"]);
+  expect(result.order).toEqual(["A", "B"]);
   expect(JSON.stringify(result)).not.toContain("secret");
-  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D"]);
+  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B"]);
 });
 
 it("restores final preference and strips unknown fields from nested responses", () => {
@@ -92,11 +90,11 @@ it("restores final preference and strips unknown fields from nested responses", 
       durationMs: 6615,
       reducedMotion: false,
     });
-  const final = { preference: "D" as const, reason: "화면", secret: "omit" };
+  const final = { preference: "B" as const, reason: "화면", secret: "omit" };
   saveStudy({ ...study, final }, sessionStorage);
   const restored = loadStudy(sessionStorage)!;
-  expect(restored.final).toEqual({ preference: "D", reason: "화면" });
-  expect(exportStudy(restored, "D", "화면")).not.toHaveProperty("final");
+  expect(restored.final).toEqual({ preference: "B", reason: "화면" });
+  expect(exportStudy(restored, "B", "화면")).not.toHaveProperty("final");
 });
 
 it("does not restore responses from the previous four-condition experiment", () => {

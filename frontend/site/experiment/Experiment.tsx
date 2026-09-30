@@ -16,9 +16,18 @@ import { TrialSurvey } from "./TrialSurvey";
 import { FinalSurvey } from "./FinalSurvey";
 import demo from "../demo/Simulation.module.css";
 import styles from "./Experiment.module.css";
-const ordinals = ["첫 번째", "두 번째", "세 번째"];
+const ordinals = ["첫 번째", "두 번째"];
 export function Experiment() {
-  const [study, setStudy] = useState(() => loadStudy() ?? createStudy());
+  const [study, setStudy] = useState(() => {
+    const assigned = new URLSearchParams(window.location.search).get("order");
+    const saved = loadStudy();
+    if (assigned === "AB" || assigned === "BA") {
+      return saved?.order.join("") === assigned
+        ? saved
+        : createStudy(assigned === "AB" ? 0 : 0.5);
+    }
+    return saved ?? createStudy();
+  });
   const [stage, setStage] = useState<
     "ready" | "running" | "complete" | "survey"
   >("ready");
@@ -125,7 +134,7 @@ export function Experiment() {
           </h1>
           <p>
             자동입력을 기다릴 때 보이는 <strong>패널의 표현 방식</strong>을
-            비교하는 조사예요. 세 가지 화면을 체험하고 느낀 점을 알려주세요.
+            비교하는 조사예요. 두 가지 화면을 체험하고 느낀 점을 알려주세요.
           </p>
           <div className={styles.focusDemo} aria-hidden="true">
             <div>
@@ -158,12 +167,12 @@ export function Experiment() {
             <li>
               <strong>마지막에 하나 선택하기</strong>
               <span>
-                세 화면 중 가장 선호하는 것을 골라주세요. 차이 없어도 괜찮아요.
+                두 화면 중 가장 선호하는 것을 골라주세요. 차이 없어도 괜찮아요.
               </span>
             </li>
           </ol>
           <p className={styles.introNote}>
-            약 2~3분 · 정답 없음 · 예제 정보만 사용 · 실제 지원서 제출 없음
+            약 1~2분 · 정답 없음 · 예제 정보만 사용 · 실제 지원서 제출 없음
           </p>
           <button type="button" onClick={() => setIntroduced(true)}>
             안내를 읽었어요 · 체험 시작

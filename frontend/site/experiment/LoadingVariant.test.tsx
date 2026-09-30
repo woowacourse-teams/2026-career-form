@@ -30,25 +30,7 @@ it.each([
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   },
 );
-it.each(["D"] as const)(
-  "keeps counts out of %s and supports a static state",
-  (variant) => {
-    const { container } = render(
-      <LoadingVariant variant={variant} completed={5} reducedMotion={true} />,
-    );
-    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.queryByRole("list")).not.toBeInTheDocument();
-    expect(container).not.toHaveTextContent("50%");
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "지원서를 채우고 있어요",
-    );
-    expect(
-      container.querySelector('[data-reduced-motion="true"]'),
-    ).toBeInTheDocument();
-  },
-);
-
-it.each(["A", "B", "D"] as const)(
+it.each(["A", "B"] as const)(
   "shows the shared writing illustration in %s without a separate character trial",
   (variant) => {
     render(
@@ -60,7 +42,7 @@ it.each(["A", "B", "D"] as const)(
   },
 );
 
-it.each(["A", "B", "D"] as const)(
+it.each(["A", "B"] as const)(
   "uses the same waiting message in %s",
   (variant) => {
     render(
