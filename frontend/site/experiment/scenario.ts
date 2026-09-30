@@ -1,3 +1,4 @@
+import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 import { exampleFields } from "../demo/fixtures";
 const values = [
   "김",
@@ -11,18 +12,13 @@ const values = [
   "정보처리기사",
   "2025-06-13",
 ];
-export const scenarioFields = exampleFields.map(([id, label], index) => ({
+export const scenarioFields = exampleFields.map(([id, label, key], index) => ({
   id,
   label,
   value: values[index]!,
-  category:
-    index < 2
-      ? "인적사항"
-      : index < 4
-        ? "연락처"
-        : index < 8
-          ? "학력"
-          : "자격증",
+  category: PROFILE_CATEGORIES.find(
+    (category) => category.id === key.split(".")[0],
+  )!.label.replaceAll("·", "/"),
 }));
 export function startScenario({
   root,

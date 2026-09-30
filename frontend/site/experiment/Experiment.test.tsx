@@ -9,6 +9,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 async function open() {
   render(<Experiment />);
@@ -28,7 +29,7 @@ it("starts from the actual panel, writes inputs and gates evaluation until compl
   ).not.toBeInTheDocument();
   act(() => vi.advanceTimersByTime(2000));
   expect(screen.getByLabelText("성")).toHaveValue("김");
-  act(() => vi.advanceTimersByTime(18000));
+  act(() => vi.advanceTimersByTime(18400));
   expect(screen.getByLabelText("취득일")).toHaveValue("2025-06-13");
   expect(screen.getByRole("button", { name: "평가하기" })).toBeEnabled();
 });
@@ -75,4 +76,104 @@ it("cancels all writes on unmount", async () => {
   unmount();
   act(() => vi.advanceTimersByTime(30000));
   expect(input).toHaveValue("");
+});
+
+it("collects four required ratings in the assigned order and downloads only the result schema", async () => {
+  let downloaded: Blob | undefined;
+  vi.stubGlobal(
+    "URL",
+    class extends URL {
+      static createObjectURL(blob: Blob) {
+        downloaded = blob;
+        return "blob:study";
+      }
+      static revokeObjectURL() {}
+    },
+  );
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  await open();
+  for (let i = 0; i < 4; i++) {
+    expect(screen.getByLabelText("성")).toHaveValue("");
+    await start();
+    act(() => vi.advanceTimersByTime(20400));
+    fireEvent.click(screen.getByRole("button", { name: "평가하기" }));
+    const next = screen.getByRole("button", { name: "평가 저장" });
+    expect(next).toBeDisabled();
+    for (const name of ["comfort", "trust", "wait"])
+      fireEvent.click(
+        document.querySelector<HTMLInputElement>(
+          `input[name="${name}"][value="4"]`,
+        )!,
+      );
+    await act(async () => {
+      fireEvent.click(next);
+    });
+  }
+  expect(
+    screen.getByRole("heading", {
+      name: "마지막으로, 어떤 체험이 가장 좋았나요?",
+    }),
+  ).toBeInTheDocument();
+  const download = screen.getByRole("button", { name: "결과 JSON 내려받기" });
+  expect(download).toBeDisabled();
+  fireEvent.click(screen.getByLabelText("차이 없음"));
+  fireEvent.change(screen.getByLabelText("선택 이유 (선택)"), {
+    target: { value: "비슷했어요" },
+  });
+  fireEvent.click(download);
+  expect(downloaded).toBeInstanceOf(Blob);
+  act(() => vi.advanceTimersByTime(1000));
+  vi.useRealTimers();
+  const result = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsText(downloaded!);
+  });
+  expect(JSON.parse(result)).toMatchObject({
+    order: ["A", "B", "D", "C"],
+    preference: "none",
+    reason: "비슷했어요",
+    trials: [
+      { variant: "A", durationMs: 20000 },
+      { variant: "B", durationMs: 20000 },
+      { variant: "D", durationMs: 20000 },
+      { variant: "C", durationMs: 20000 },
+    ],
+  });
+  expect(result).not.toContain("career@example.com");
+  expect(result).not.toContain("<input");
+  vi.unstubAllGlobals();
+});
+
+it("restores evaluated trials without repeating them", async () => {
+  const { createStudy, recordTrial, saveStudy } = await import("./study");
+  saveStudy(
+    recordTrial(createStudy(0), {
+      variant: "A",
+      ratings: { comfort: 3, trust: 4, wait: 2 },
+      durationMs: 20000,
+      reducedMotion: false,
+    }),
+  );
+  await open();
+  expect(
+    screen.getByRole("heading", { name: "두 번째 체험 / 4" }),
+  ).toBeInTheDocument();
+  await start();
+  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+});
+
+it("renders 100 percent after the last DOM write before the shared completion transition", async () => {
+  const { createStudy, saveStudy } = await import("./study");
+  saveStudy(createStudy(0.25));
+  await open();
+  await start();
+  act(() => vi.advanceTimersByTime(20000));
+  expect(screen.getByLabelText("취득일")).toHaveValue("2025-06-13");
+  expect(screen.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "100",
+  );
+  act(() => vi.advanceTimersByTime(400));
+  expect(screen.getByRole("button", { name: "평가하기" })).toBeEnabled();
 });

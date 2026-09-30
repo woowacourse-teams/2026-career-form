@@ -6,7 +6,12 @@ export type Trial = {
   durationMs: number;
   reducedMotion: boolean;
 };
-export type Study = { version: string; order: Variant[]; trials: Trial[] };
+export type Study = {
+  version: string;
+  order: Variant[];
+  trials: Trial[];
+  final?: { preference: Preference; reason: string };
+};
 export type Preference = Variant | "none";
 const VERSION = "panel-study-v1";
 const KEY = "career-form-panel-study-v1";
@@ -67,7 +72,23 @@ function cleanStudy(study: Study): Study {
       throw Error("Invalid trial order");
     return cleanTrial(trial);
   });
-  return { version: VERSION, order: [...study.order], trials };
+  const final = study.final;
+  if (
+    final &&
+    (trials.length !== 4 ||
+      ![...study.order, "none"].includes(final.preference) ||
+      typeof final.reason !== "string" ||
+      final.reason.length > 2000)
+  )
+    throw Error("Invalid final response");
+  return {
+    version: VERSION,
+    order: [...study.order],
+    trials,
+    ...(final
+      ? { final: { preference: final.preference, reason: final.reason } }
+      : {}),
+  };
 }
 export function recordTrial(study: Study, trial: Trial): Study {
   const clean = cleanStudy(study);
@@ -107,5 +128,11 @@ export function exportStudy(
     reason.length > 2000
   )
     throw Error("Incomplete result");
-  return { ...clean, preference, reason: reason.trim() };
+  return {
+    version: clean.version,
+    order: clean.order,
+    trials: clean.trials,
+    preference,
+    reason: reason.trim(),
+  };
 }

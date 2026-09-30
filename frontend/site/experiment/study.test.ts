@@ -80,3 +80,19 @@ it("exports complete results using an allowlist and preserves the none preferenc
   expect(JSON.stringify(result)).not.toContain("secret");
   expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D", "C"]);
 });
+
+it("restores final preference and strips unknown fields from nested responses", () => {
+  let study = createStudy(0);
+  for (const variant of study.order)
+    study = recordTrial(study, {
+      variant,
+      ratings,
+      durationMs: 20000,
+      reducedMotion: false,
+    });
+  const final = { preference: "C" as const, reason: "화면", secret: "omit" };
+  saveStudy({ ...study, final }, sessionStorage);
+  const restored = loadStudy(sessionStorage)!;
+  expect(restored.final).toEqual({ preference: "C", reason: "화면" });
+  expect(exportStudy(restored, "C", "화면")).not.toHaveProperty("final");
+});

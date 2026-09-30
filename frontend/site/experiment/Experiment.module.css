@@ -147,3 +147,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.none {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 16px;
+}
+
+.application label::after {
+  content: none;
+}

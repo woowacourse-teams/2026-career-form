@@ -3,12 +3,20 @@ import { PanelPreview } from "../demo/PanelPreview";
 import { ApplicationForm } from "./ApplicationForm";
 import { LoadingVariant } from "./LoadingVariant";
 import { startScenario } from "./scenario";
-import { createStudy, loadStudy, saveStudy } from "./study";
+import {
+  createStudy,
+  loadStudy,
+  saveStudy,
+  recordTrial,
+  type Ratings,
+} from "./study";
+import { TrialSurvey } from "./TrialSurvey";
+import { FinalSurvey } from "./FinalSurvey";
 import demo from "../demo/Simulation.module.css";
 import styles from "./Experiment.module.css";
 const ordinals = ["첫 번째", "두 번째", "세 번째", "네 번째"];
 export function Experiment() {
-  const [study] = useState(() => loadStudy() ?? createStudy());
+  const [study, setStudy] = useState(() => loadStudy() ?? createStudy());
   const [stage, setStage] = useState<
     "ready" | "running" | "complete" | "survey"
   >("ready");
@@ -22,7 +30,11 @@ export function Experiment() {
   const running = useRef(false);
   const cancel = useRef(() => {});
   const duration = useRef(0);
+  const completionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const reset = () => {
+    clearTimeout(completionTimer.current);
     cancel.current();
     running.current = false;
     duration.current = 0;
@@ -44,6 +56,7 @@ export function Experiment() {
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      clearTimeout(completionTimer.current);
       cancel.current();
       document.removeEventListener("visibilitychange", onVisibility);
     };
@@ -74,8 +87,10 @@ export function Experiment() {
       onProgress: setCompleted,
       onComplete: (ms) => {
         duration.current = ms;
-        running.current = false;
-        setStage("complete");
+        completionTimer.current = setTimeout(() => {
+          running.current = false;
+          setStage("complete");
+        }, 400);
       },
       onError: () => {
         reset();
@@ -83,6 +98,38 @@ export function Experiment() {
       },
     });
   };
+  const rate = (ratings: Ratings) => {
+    if (stage !== "survey" || duration.current < 20000) return;
+    setStudy(
+      recordTrial(study, {
+        variant: study.order[study.trials.length]!,
+        ratings,
+        durationMs: duration.current,
+        reducedMotion,
+      }),
+    );
+    reset();
+  };
+  if (study.trials.length === 4)
+    return (
+      <div className={styles.page}>
+        <FinalSurvey
+          study={study}
+          onChange={(preference, reason) =>
+            setStudy((current) => ({
+              ...current,
+              final: { preference, reason },
+            }))
+          }
+        />
+      </div>
+    );
+  if (stage === "survey")
+    return (
+      <div className={styles.page}>
+        <TrialSurvey onSave={rate} />
+      </div>
+    );
   return (
     <div className={styles.page} ref={root}>
       <header className={styles.studyHeader}>
@@ -134,12 +181,6 @@ export function Experiment() {
                     <button type="button" onClick={() => setStage("survey")}>
                       평가하기
                     </button>
-                  </section>
-                ) : stage === "survey" ? (
-                  <section className={styles.card}>
-                    <h2 ref={heading} tabIndex={-1}>
-                      체험 평가
-                    </h2>
                   </section>
                 ) : undefined
               }
