@@ -63,7 +63,11 @@ export function LoadingVariant({
         </>
       ) : (
         <div className={styles.minimalStatus}>
-          <span className={styles.spinner} aria-hidden="true" />
+          <span className={styles.loadingDots} aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
           <p role="status">입력 중이에요</p>
         </div>
       )}

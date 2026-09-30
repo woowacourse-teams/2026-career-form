@@ -81,19 +81,6 @@
   align-items: center;
   gap: 10px;
 }
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-action);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 [data-reduced-motion="true"] * {
   animation: none;
   transition: none;
@@ -185,4 +172,70 @@
 .minimalStatus {
   font-size: 14px;
   line-height: 1.6;
+}
+
+.minimalBody {
+  min-height: 360px;
+  gap: 26px;
+  padding: 40px 24px;
+  background: radial-gradient(
+    ellipse at 50% 38%,
+    var(--color-surface-muted),
+    transparent 65%
+  );
+}
+.minimalBody .document {
+  width: 112px;
+  height: 112px;
+}
+.minimalStatus {
+  flex-direction: column-reverse;
+  gap: 16px;
+  text-align: center;
+  color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+.loadingDots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 12px;
+}
+.loadingDots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-action);
+  opacity: 0.35;
+  animation: quietPulse 1.5s ease-in-out infinite;
+}
+.loadingDots i:nth-child(2) {
+  animation-delay: 180ms;
+}
+.loadingDots i:nth-child(3) {
+  animation-delay: 360ms;
+}
+@keyframes quietPulse {
+  0%,
+  70%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 0.85;
+    transform: translateY(-2px);
+  }
+}
+[data-reduced-motion="true"] .loadingDots i {
+  animation: none;
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loadingDots i {
+    animation: none;
+    opacity: 0.6;
+  }
 }
