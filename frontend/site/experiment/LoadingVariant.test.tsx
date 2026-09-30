@@ -72,3 +72,24 @@ it.each(["A", "B", "D"] as const)(
     expect(screen.queryByText("입력 중이에요")).not.toBeInTheDocument();
   },
 );
+it("distinguishes completed categories from the active record and finishes all records", () => {
+  const { rerender } = render(
+    <LoadingVariant variant="A" completed={8} reducedMotion={false} />,
+  );
+  expect(screen.getByText("기본 인적사항").closest("li")).toHaveAttribute(
+    "data-state",
+    "done",
+  );
+  expect(screen.getByText("연락처와 주소").closest("li")).toHaveAttribute(
+    "data-state",
+    "active",
+  );
+  rerender(<LoadingVariant variant="A" completed={40} reducedMotion={false} />);
+  expect(screen.queryByText("입력 중")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("listitem")).toHaveLength(6);
+  expect(
+    screen
+      .getAllByRole("listitem")
+      .every((item) => item.dataset.state === "done"),
+  ).toBe(true);
+});

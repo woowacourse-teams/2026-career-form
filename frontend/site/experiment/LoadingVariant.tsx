@@ -1,5 +1,4 @@
 import writingMascot from "./capybara-writing.png";
-import { WorkflowLoading } from "../../src/autofill/workflow/WorkflowLoading";
 import { scenarioFields } from "./scenario";
 import type { Variant } from "./study";
 import styles from "./LoadingVariant.module.css";
@@ -20,23 +19,57 @@ export function LoadingVariant({
       alt="지원서를 쓰는 카피바라"
     />
   );
-  if (variant === "A")
+  if (variant === "A") {
+    const currentCategory = scenarioFields[completed]?.category;
+    const categories = [
+      ...new Set(
+        scenarioFields
+          .slice(0, Math.min(completed + 1, scenarioFields.length))
+          .map((field) => field.category),
+      ),
+    ];
     return (
-      <div className={styles.history} data-reduced-motion={reducedMotion}>
-        <div className={styles.historyBrand}>{icon}</div>
-        <WorkflowLoading
-          writing
-          statusMessage={waitingMessage}
-          currentCategory={
-            scenarioFields[Math.min(completed, scenarioFields.length - 1)]!
-              .category
-          }
-          progress={scenarioFields
-            .slice(0, completed)
-            .map((field) => ({ ...field, status: "written" as const }))}
-        />
-      </div>
+      <section
+        className={styles.history}
+        data-reduced-motion={reducedMotion}
+        aria-label="자동 기입 작업 영역"
+        aria-busy={completed < scenarioFields.length}
+      >
+        <div className={styles.historyHeader}>
+          <div>
+            <p className={styles.historyCaption} role="status">
+              {waitingMessage}
+            </p>
+            <h2 className={styles.historyTotal}>
+              <span>{completed}</span>개 항목 입력
+            </h2>
+          </div>
+          {icon}
+        </div>
+        <p className={styles.historyLabel}>입력 기록</p>
+        <ol className={styles.historyList} aria-label="범주별 입력 현황">
+          {categories.map((category) => {
+            const count = scenarioFields
+              .slice(0, completed)
+              .filter((field) => field.category === category).length;
+            const active = currentCategory === category;
+            return (
+              <li key={category} data-state={active ? "active" : "done"}>
+                <span className={styles.recordIcon} aria-hidden="true">
+                  {active ? <i /> : "✓"}
+                </span>
+                <strong>{category}</strong>
+                <div className={styles.recordStatus}>
+                  <span>{count}개 입력</span>
+                  {active && <small>입력 중</small>}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
     );
+  }
   const percentage = Math.round((completed / scenarioFields.length) * 100);
   return (
     <section
