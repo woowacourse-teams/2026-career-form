@@ -37,49 +37,6 @@ export function LoadingVariant({
         />
       </div>
     );
-  if (variant === "E") {
-    const groups = [
-      { label: "기본정보", categories: ["personal", "contact"] },
-      { label: "학력", categories: ["education"] },
-      { label: "어학·경력", categories: ["languages", "careers"] },
-      { label: "자격증", categories: ["certifications"] },
-    ];
-    return (
-      <section
-        className={`${styles.body} ${styles.stepBody}`}
-        data-reduced-motion={reducedMotion}
-        aria-label="자동 기입 작업 영역"
-        aria-busy="true"
-      >
-        {icon}
-        <p className={styles.caption} role="status">
-          {waitingMessage}
-        </p>
-        <ol className={styles.steps} aria-label="입력 단계">
-          {groups.map((group, index) => {
-            const indices = scenarioFields.flatMap((field, i) =>
-              group.categories.includes(field.categoryId) ? [i] : [],
-            );
-            const done = completed > indices[indices.length - 1]!;
-            const active = !done && completed >= indices[0]!;
-            return (
-              <li
-                key={group.label}
-                data-state={done ? "done" : active ? "active" : "waiting"}
-                aria-current={active ? "step" : undefined}
-              >
-                <span className={styles.stepMarker} aria-hidden="true">
-                  {done ? "✓" : index + 1}
-                </span>
-                <strong>{group.label}</strong>
-                <span>{done ? "완료" : active ? "입력 중" : "대기"}</span>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-    );
-  }
   const percentage = Math.round((completed / scenarioFields.length) * 100);
   return (
     <section

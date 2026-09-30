@@ -7,10 +7,12 @@ import {
   exportStudy,
 } from "./study";
 it.each([
-  [0, "ABDE"],
-  [1 / 4, "BEAD"],
-  [2 / 4, "EDBA"],
-  [3 / 4, "DAEB"],
+  [0, "ABD"],
+  [1 / 6, "ADB"],
+  [2 / 6, "BAD"],
+  [3 / 6, "BDA"],
+  [4 / 6, "DAB"],
+  [5 / 6, "DBA"],
 ] as const)("assigns a balanced sequence at %s", (random, order) => {
   expect(createStudy(random).order.join("")).toBe(order);
 });
@@ -76,9 +78,9 @@ it("exports complete results using an allowlist and preserves the none preferenc
     "비슷했어요",
   );
   expect(result.preference).toBe("none");
-  expect(result.order).toEqual(["A", "B", "D", "E"]);
+  expect(result.order).toEqual(["A", "B", "D"]);
   expect(JSON.stringify(result)).not.toContain("secret");
-  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D", "E"]);
+  expect(result.trials.map((t) => t.variant)).toEqual(["A", "B", "D"]);
 });
 
 it("restores final preference and strips unknown fields from nested responses", () => {
@@ -97,12 +99,12 @@ it("restores final preference and strips unknown fields from nested responses", 
   expect(exportStudy(restored, "D", "화면")).not.toHaveProperty("final");
 });
 
-it("does not restore responses from the old slower experiment", () => {
+it("does not restore responses from the previous four-condition experiment", () => {
   sessionStorage.clear();
   saveStudy(createStudy(0), sessionStorage);
   const key = sessionStorage.key(0)!;
   const old = JSON.parse(sessionStorage.getItem(key)!);
-  old.version = "panel-study-v3";
+  old.version = "panel-study-v10";
   sessionStorage.setItem(key, JSON.stringify(old));
   expect(loadStudy(sessionStorage)).toBeNull();
 });

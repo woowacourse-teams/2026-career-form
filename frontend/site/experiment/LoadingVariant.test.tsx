@@ -72,20 +72,3 @@ it.each(["A", "B", "D"] as const)(
     expect(screen.queryByText("입력 중이에요")).not.toBeInTheDocument();
   },
 );
-
-it("advances steps from actual written fields without displaying percentages", () => {
-  const { rerender } = render(
-    <LoadingVariant variant="E" completed={16} reducedMotion={false} />,
-  );
-  expect(screen.getByText("기본정보").closest("li")).toHaveAttribute(
-    "data-state",
-    "done",
-  );
-  expect(screen.getByText("학력").closest("li")).toHaveAttribute(
-    "aria-current",
-    "step",
-  );
-  expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-  rerender(<LoadingVariant variant="E" completed={40} reducedMotion={false} />);
-  expect(screen.getAllByText("완료")).toHaveLength(4);
-});

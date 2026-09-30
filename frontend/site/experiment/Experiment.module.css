@@ -114,8 +114,11 @@
 }
 .previews {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
   gap: 16px;
+  overflow-x: auto;
+  padding: 3px;
+  scroll-snap-type: x proximity;
 }
 .preview {
   min-width: 0;
@@ -145,9 +148,6 @@
     height: 560px;
     border-top: 1px solid var(--color-border);
     border-left: 0;
-  }
-  .previews {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -374,5 +374,28 @@
   }
   .scale {
     gap: 6px;
+  }
+}
+
+.survey.finalSurvey {
+  max-width: 1200px;
+}
+.finalSurvey fieldset {
+  min-width: 0;
+}
+.preview {
+  scroll-snap-align: start;
+}
+.previews:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 3px;
+}
+.scrollHint {
+  display: none;
+  font-size: 12px;
+}
+@media (max-width: 1020px) {
+  .scrollHint {
+    display: block;
   }
 }

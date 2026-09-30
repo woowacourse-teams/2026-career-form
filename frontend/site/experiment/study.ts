@@ -1,5 +1,5 @@
 import { SCENARIO_DURATION_MS } from "./scenario";
-export type Variant = "A" | "B" | "D" | "E";
+export type Variant = "A" | "B" | "D";
 export type Ratings = { comfort: number; trust: number; wait: number };
 export type Trial = {
   variant: Variant;
@@ -14,14 +14,16 @@ export type Study = {
   final?: { preference: Preference; reason: string };
 };
 export type Preference = Variant | "none";
-const VERSION = "panel-study-v10";
-const KEY = "career-form-panel-study-v10";
-export const VARIANT_COUNT = 4;
+const VERSION = "panel-study-v11";
+const KEY = "career-form-panel-study-v11";
+export const VARIANT_COUNT = 3;
 const sequences: Variant[][] = [
-  ["A", "B", "D", "E"],
-  ["B", "E", "A", "D"],
-  ["E", "D", "B", "A"],
-  ["D", "A", "E", "B"],
+  ["A", "B", "D"],
+  ["A", "D", "B"],
+  ["B", "A", "D"],
+  ["B", "D", "A"],
+  ["D", "A", "B"],
+  ["D", "B", "A"],
 ];
 type StorageAccess = Pick<Storage, "getItem" | "setItem">;
 export function createStudy(random = Math.random()): Study {
