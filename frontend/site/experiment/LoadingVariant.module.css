@@ -16,8 +16,20 @@
   display: block;
   flex-shrink: 0;
 }
+.history {
+  position: relative;
+}
 .historyBrand {
-  padding: 20px 16px 0;
+  position: absolute;
+  top: 24px;
+  right: 16px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+.history > section > p,
+.history > section > h2 {
+  padding-right: 64px;
 }
 .history .document {
   width: 48px;
