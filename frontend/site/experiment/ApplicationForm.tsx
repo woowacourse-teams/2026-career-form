@@ -5,19 +5,35 @@ const sections = [
     id: "basic",
     title: "기본정보",
     note: "지원자의 기본 인적사항과 연락처를 확인해 주세요.",
-    fields: scenarioFields.slice(0, 8),
+    fields: scenarioFields.filter((field) =>
+      ["personal", "contact"].includes(field.categoryId),
+    ),
   },
   {
     id: "education",
     title: "학력정보",
     note: "대학교 학력사항",
-    fields: scenarioFields.slice(8, 16),
+    fields: scenarioFields.filter((field) => field.categoryId === "education"),
+  },
+  {
+    id: "languages",
+    title: "어학정보",
+    note: "공인 외국어 시험",
+    fields: scenarioFields.filter((field) => field.categoryId === "languages"),
+  },
+  {
+    id: "careers",
+    title: "경력사항",
+    note: "근무 이력",
+    fields: scenarioFields.filter((field) => field.categoryId === "careers"),
   },
   {
     id: "qualifications",
     title: "자격 / 면허",
     note: "보유한 자격 및 면허 정보를 입력해 주세요.",
-    fields: scenarioFields.slice(16),
+    fields: scenarioFields.filter(
+      (field) => field.categoryId === "certifications",
+    ),
   },
 ];
 export function ApplicationForm() {

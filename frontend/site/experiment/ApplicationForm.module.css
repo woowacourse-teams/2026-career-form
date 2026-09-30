@@ -116,12 +116,14 @@
   margin: 6px 0 0;
 }
 .sectionNav {
+  flex-wrap: wrap;
   display: flex;
   gap: 24px;
   border-bottom: 1px solid #ddd;
   margin: 28px 0;
 }
 .sectionNav a {
+  white-space: nowrap;
   color: #555;
   text-decoration: none;
   font-size: 13px;
@@ -245,6 +247,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .sectionNav {
+    flex-wrap: wrap;
     gap: 18px;
   }
 }

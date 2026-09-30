@@ -10,9 +10,9 @@ it("shows actual category progress for A", () => {
 });
 it.each([
   [0, 0],
-  [10, 53],
-  [18, 95],
-  [19, 100],
+  [20, 50],
+  [39, 98],
+  [40, 100],
 ])(
   "maps %s written fields to %s percent without categories",
   (completed, percentage) => {

@@ -8,56 +8,52 @@ function form() {
     .join("");
   return root;
 }
-it("writes the nineteen profile fields at 667ms intervals and completes only after the last write", () => {
+it("fills forty fields in quick uneven bursts with short pauses, identically on replay", () => {
   vi.useFakeTimers();
-  const root = form();
-  const counts: number[] = [];
-  let duration: number | undefined;
-  startScenario({
-    root,
-    onProgress: (n) => counts.push(n),
-    onComplete: (ms) => {
-      duration = ms;
-    },
-    onError: () => {
-      throw Error("unexpected");
-    },
-  });
-  vi.advanceTimersByTime(666);
-  expect(root.querySelector("input")!.value).toBe("");
-  vi.advanceTimersByTime(1);
-  expect(root.querySelector("input")!.value).toBe("김");
-  vi.advanceTimersByTime(12005);
-  expect(duration).toBeUndefined();
-  expect(root.querySelector<HTMLInputElement>("#acquired")!.value).toBe("");
-  vi.advanceTimersByTime(1);
-  expect(duration).toBe(12673);
-  expect(counts).toEqual([
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-  ]);
-  expect(
-    Array.from(root.querySelectorAll("input"), (input) => input.value),
-  ).toEqual([
-    "김",
-    "커리어",
-    "KIM",
-    "CAREER",
-    "대한민국",
-    "career@example.com",
-    "01000000000",
-    "대한민국",
-    "학사",
-    "커리어대학교",
-    "컴퓨터공학",
-    "졸업",
-    "2020-03-02",
-    "2026-02-20",
-    "4.0",
-    "4.50",
-    "정보처리기사",
-    "한국산업인력공단",
-    "2025-06-13",
-  ]);
+  const run = () => {
+    const root = form();
+    const times: number[] = [];
+    let duration: number | undefined;
+    const started = performance.now();
+    startScenario({
+      root,
+      onProgress: (n) => {
+        if (n) times.push(performance.now() - started);
+      },
+      onComplete: (ms) => {
+        duration = ms;
+      },
+      onError: () => {
+        throw Error("unexpected");
+      },
+    });
+    vi.advanceTimersByTime(279);
+    expect(root.querySelector("input")!.value).toBe("");
+    vi.advanceTimersByTime(1);
+    expect(root.querySelector("input")!.value).toBe("김");
+    vi.advanceTimersByTime(210);
+    expect(times).toEqual([280, 345, 445, 490]);
+    vi.advanceTimersByTime(419);
+    expect(times).toHaveLength(4);
+    vi.advanceTimersByTime(1);
+    expect(times[4]).toBe(910);
+    vi.advanceTimersByTime(5704);
+    expect(duration).toBeUndefined();
+    expect(root.querySelector<HTMLInputElement>("#acquired")!.value).toBe("");
+    vi.advanceTimersByTime(1);
+    expect(duration).toBe(6615);
+    expect(times).toHaveLength(40);
+    expect(
+      Array.from(root.querySelectorAll("input")).every(
+        (input) => input.value.length > 0,
+      ),
+    ).toBe(true);
+    expect(root.querySelector<HTMLInputElement>("#acquired")!.value).toBe(
+      "2025-06-13",
+    );
+    return times;
+  };
+  expect(run()).toEqual(run());
 });
 it("cancels pending writes", () => {
   vi.useFakeTimers();
@@ -70,7 +66,7 @@ it("cancels pending writes", () => {
     },
     onError: () => {},
   });
-  vi.advanceTimersByTime(667);
+  vi.advanceTimersByTime(280);
   stop();
   vi.advanceTimersByTime(30000);
   expect(root.querySelector<HTMLInputElement>("#given-name")!.value).toBe("");

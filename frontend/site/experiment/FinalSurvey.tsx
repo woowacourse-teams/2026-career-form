@@ -85,7 +85,7 @@ export function FinalSurvey({
               <div aria-hidden="true" inert>
                 <LoadingVariant
                   variant={variant}
-                  completed={10}
+                  completed={20}
                   reducedMotion
                 />
               </div>

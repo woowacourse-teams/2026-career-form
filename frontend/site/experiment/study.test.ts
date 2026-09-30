@@ -21,7 +21,7 @@ it("restores the assigned order and completed ratings", () => {
   const study = recordTrial(createStudy(0), {
     variant: "A",
     ratings,
-    durationMs: 12676,
+    durationMs: 6618,
     reducedMotion: false,
   });
   saveStudy(study, sessionStorage);
@@ -30,7 +30,7 @@ it("restores the assigned order and completed ratings", () => {
     recordTrial(study, {
       variant: "A",
       ratings,
-      durationMs: 12673,
+      durationMs: 6615,
       reducedMotion: false,
     }),
   ).toThrow();
@@ -40,7 +40,7 @@ it.each([0, 6, NaN])("rejects out-of-range ratings %s", (score) => {
     recordTrial(createStudy(0), {
       variant: "A",
       ratings: { ...ratings, comfort: score },
-      durationMs: 12673,
+      durationMs: 6615,
       reducedMotion: false,
     }),
   ).toThrow();
@@ -69,7 +69,7 @@ it("exports complete results using an allowlist and preserves the none preferenc
     study = recordTrial(study, {
       variant,
       ratings,
-      durationMs: 12673,
+      durationMs: 6615,
       reducedMotion: true,
     });
   const result = exportStudy(
@@ -89,7 +89,7 @@ it("restores final preference and strips unknown fields from nested responses", 
     study = recordTrial(study, {
       variant,
       ratings,
-      durationMs: 12673,
+      durationMs: 6615,
       reducedMotion: false,
     });
   const final = { preference: "D" as const, reason: "화면", secret: "omit" };
@@ -104,7 +104,7 @@ it("does not restore responses from the old slower experiment", () => {
   saveStudy(createStudy(0), sessionStorage);
   const key = sessionStorage.key(0)!;
   const old = JSON.parse(sessionStorage.getItem(key)!);
-  old.version = "panel-study-v2";
+  old.version = "panel-study-v3";
   sessionStorage.setItem(key, JSON.stringify(old));
   expect(loadStudy(sessionStorage)).toBeNull();
 });

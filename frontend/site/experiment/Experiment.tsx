@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { PanelPreview } from "../demo/PanelPreview";
+import { experimentRepository } from "./profile";
 import { ApplicationForm } from "./ApplicationForm";
 import { LoadingVariant } from "./LoadingVariant";
 import { startScenario, SCENARIO_DURATION_MS } from "./scenario";
@@ -161,6 +162,7 @@ export function Experiment() {
           <div className={demo.panelLocation}>커리어폼 · 지원서 패널</div>
           {panelOpen ? (
             <PanelPreview
+              repository={experimentRepository}
               onAutofill={start}
               onReturn={reset}
               onClose={() => {
