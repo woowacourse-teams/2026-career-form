@@ -64,45 +64,6 @@
   box-shadow: 0 1px 4px var(--color-focus);
   transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.ink path {
-  stroke-dasharray: 1;
-  animation: write 2.4s ease-in-out infinite;
-}
-.ink path:nth-child(2) {
-  animation-delay: 160ms;
-}
-.ink path:nth-child(3) {
-  animation-delay: 320ms;
-}
-.pen {
-  transform-origin: 67px 77px;
-  animation: writing 1.2s ease-in-out infinite;
-}
-@keyframes write {
-  0%,
-  10% {
-    stroke-dashoffset: 1;
-  }
-  55%,
-  85% {
-    stroke-dashoffset: 0;
-  }
-  100% {
-    stroke-dashoffset: 1;
-  }
-}
-@keyframes writing {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(-4deg);
-  }
-  35% {
-    transform: translate(5px, -3px) rotate(3deg);
-  }
-  70% {
-    transform: translate(-2px, 2px) rotate(-2deg);
-  }
-}
 .minimalStatus {
   display: flex;
   align-items: center;
@@ -133,24 +94,28 @@
   }
 }
 
-.capyHead {
-  transform-origin: 50px 65px;
-  animation: nod 2.4s ease-in-out infinite;
+.document {
+  object-fit: contain;
+  transform-origin: 50% 85%;
+  animation: mascotWriting 1.5s ease-in-out infinite;
 }
-@keyframes nod {
+@keyframes mascotWriting {
   0%,
   100% {
-    transform: rotate(-2deg);
+    transform: rotate(-1deg) translateY(0);
   }
-  50% {
-    transform: rotate(3deg);
+  30% {
+    transform: rotate(1deg) translateY(1px);
+  }
+  60% {
+    transform: rotate(-0.5deg) translateY(0);
   }
 }
-[data-reduced-motion="true"] .capyHead {
+[data-reduced-motion="true"] .document {
   animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .capyHead {
+  .document {
     animation: none;
   }
 }
