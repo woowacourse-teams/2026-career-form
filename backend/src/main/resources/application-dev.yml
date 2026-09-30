@@ -3,6 +3,11 @@ spring:
     activate:
       on-profile: dev
 
+management:
+  metrics:
+    tags:
+      env: dev
+
 springdoc:
   api-docs:
     enabled: true
