@@ -1,0 +1,43 @@
+services:
+  alloy:
+    image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    platform: linux/arm64
+    restart: unless-stopped
+    network_mode: host
+    mem_limit: 128m
+    environment:
+      GOMEMLIMIT: 96MiB
+      HOST_INSTANCE: ${HOST_INSTANCE:?HOST_INSTANCE is required}
+      MONITORING_PRIVATE_IP: ${MONITORING_PRIVATE_IP:?MONITORING_PRIVATE_IP is required}
+    command:
+      - run
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy
+      - /etc/alloy/config.alloy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - type: bind
+        source: ./config.alloy
+        target: /etc/alloy/config.alloy
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ALLOY_DATA_DIR:-/var/lib/career-form/alloy}
+        target: /var/lib/alloy
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ALLOY_SECRETS_DIR:-/etc/career-form-monitoring/secrets}/ingest-password
+        target: /run/secrets/ingest-password
+        read_only: true
+        bind:
+          create_host_path: false
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave

@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+scrape_configs:
+  - job_name: monitoring-prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          instance: career-monitor
+  - job_name: monitoring-loki
+    static_configs:
+      - targets: ["loki:3100"]
+        labels:
+          instance: career-monitor
+  - job_name: monitoring-alloy
+    static_configs:
+      - targets: ["host-metrics:12345"]
+        labels:
+          instance: career-monitor
