@@ -399,3 +399,136 @@
     display: block;
   }
 }
+
+/* Per-trial rating form, independent of the final comparison screen. */
+.survey.trialSurvey {
+  max-width: 720px;
+  padding: 48px 28px;
+}
+.ratingHeader {
+  margin-bottom: 32px;
+}
+.ratingEyebrow {
+  display: inline-block;
+  color: var(--color-action);
+  font-size: 12px;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.ratingHeader h2 {
+  font-size: 28px;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+  color: var(--color-text-strong);
+}
+.ratingHeader p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.trialSurvey .questionCard {
+  min-width: 0;
+  margin: 20px 0;
+  padding: 20px;
+  background: var(--color-surface-muted);
+  border: 0;
+  border-radius: 20px;
+}
+.trialSurvey .questionCard legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.3px;
+}
+.questionNumber {
+  color: var(--color-action);
+  font-size: 12px;
+  margin-right: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.questionCard .scale {
+  clear: both;
+  gap: 8px;
+}
+.questionCard .scale label {
+  flex-direction: column;
+  gap: 5px;
+  min-height: 76px;
+  padding: 10px 2px;
+  border-radius: 13px;
+  transition:
+    background 160ms,
+    border-color 160ms;
+}
+.scoreNumber {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 650;
+}
+.scoreMeaning {
+  font-size: 11px;
+  font-weight: 450;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.questionCard .scale label:has(:checked) {
+  background: var(--color-action);
+  color: white;
+  box-shadow: none;
+}
+.questionCard .scale label:has(:checked) .scoreMeaning {
+  color: white;
+}
+.ratingFooter {
+  margin-top: 28px;
+}
+.ratingFooter p {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0 0 14px;
+}
+.ratingFooter strong {
+  color: var(--color-action);
+}
+.ratingFooter p span {
+  margin-left: auto;
+}
+.ratingFooter button {
+  width: 100%;
+  min-height: 52px;
+}
+@media (max-width: 520px) {
+  .survey.trialSurvey {
+    padding: 28px 16px;
+  }
+  .ratingHeader h2 {
+    font-size: 24px;
+  }
+  .trialSurvey .questionCard {
+    padding: 18px 12px;
+  }
+  .questionCard .scale {
+    gap: 5px;
+  }
+  .scoreMeaning {
+    font-size: 9px;
+  }
+  .ratingFooter p {
+    flex-wrap: wrap;
+  }
+  .ratingFooter p span {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .questionCard .scale label {
+    transition: none;
+  }
+}
