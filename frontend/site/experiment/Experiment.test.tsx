@@ -27,9 +27,9 @@ it("starts from the actual panel, writes inputs and gates evaluation until compl
   expect(
     screen.queryByRole("button", { name: "평가하기" }),
   ).not.toBeInTheDocument();
-  act(() => vi.advanceTimersByTime(2000));
+  act(() => vi.advanceTimersByTime(667));
   expect(screen.getByLabelText("성")).toHaveValue("김");
-  act(() => vi.advanceTimersByTime(18400));
+  act(() => vi.advanceTimersByTime(12406));
   expect(screen.getByLabelText("취득일")).toHaveValue("2025-06-13");
   expect(screen.getByRole("button", { name: "평가하기" })).toBeEnabled();
 });
@@ -38,7 +38,7 @@ it.each(["수동 복사로 돌아가기", "닫기"])(
   async (action) => {
     await open();
     await start();
-    act(() => vi.advanceTimersByTime(2000));
+    act(() => vi.advanceTimersByTime(667));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: action }));
     });
@@ -49,7 +49,7 @@ it.each(["수동 복사로 돌아가기", "닫기"])(
         fireEvent.click(screen.getByRole("button", { name: "패널 다시 열기" }));
       });
     await start();
-    act(() => vi.advanceTimersByTime(2000));
+    act(() => vi.advanceTimersByTime(667));
     expect(
       screen.getByRole("heading", { name: "1개 항목 입력" }),
     ).toBeInTheDocument();
@@ -58,7 +58,7 @@ it.each(["수동 복사로 돌아가기", "닫기"])(
 it("interrupts a hidden tab so throttled runs cannot become responses", async () => {
   await open();
   await start();
-  act(() => vi.advanceTimersByTime(2000));
+  act(() => vi.advanceTimersByTime(667));
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
   fireEvent(document, new Event("visibilitychange"));
   act(() => vi.advanceTimersByTime(30000));
@@ -95,7 +95,7 @@ it("collects four required ratings in the assigned order and downloads only the 
   for (let i = 0; i < 4; i++) {
     expect(screen.getByLabelText("성")).toHaveValue("");
     await start();
-    act(() => vi.advanceTimersByTime(20400));
+    act(() => vi.advanceTimersByTime(13073));
     fireEvent.click(screen.getByRole("button", { name: "평가하기" }));
     const next = screen.getByRole("button", { name: "평가 저장" });
     expect(next).toBeDisabled();
@@ -134,10 +134,10 @@ it("collects four required ratings in the assigned order and downloads only the 
     preference: "none",
     reason: "비슷했어요",
     trials: [
-      { variant: "A", durationMs: 20000 },
-      { variant: "B", durationMs: 20000 },
-      { variant: "D", durationMs: 20000 },
-      { variant: "C", durationMs: 20000 },
+      { variant: "A", durationMs: 12673 },
+      { variant: "B", durationMs: 12673 },
+      { variant: "D", durationMs: 12673 },
+      { variant: "C", durationMs: 12673 },
     ],
   });
   expect(result).not.toContain("career@example.com");
@@ -151,7 +151,7 @@ it("restores evaluated trials without repeating them", async () => {
     recordTrial(createStudy(0), {
       variant: "A",
       ratings: { comfort: 3, trust: 4, wait: 2 },
-      durationMs: 20000,
+      durationMs: 12673,
       reducedMotion: false,
     }),
   );
@@ -168,7 +168,7 @@ it("renders 100 percent after the last DOM write before the shared completion tr
   saveStudy(createStudy(0.25));
   await open();
   await start();
-  act(() => vi.advanceTimersByTime(20000));
+  act(() => vi.advanceTimersByTime(12673));
   expect(screen.getByLabelText("취득일")).toHaveValue("2025-06-13");
   expect(screen.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",

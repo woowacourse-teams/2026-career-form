@@ -8,7 +8,7 @@ function form() {
     .join("");
   return root;
 }
-it("writes the same ten fields at two-second intervals and completes only after the last write", () => {
+it("writes the nineteen profile fields at 667ms intervals and completes only after the last write", () => {
   vi.useFakeTimers();
   const root = form();
   const counts: number[] = [];
@@ -23,28 +23,39 @@ it("writes the same ten fields at two-second intervals and completes only after 
       throw Error("unexpected");
     },
   });
-  vi.advanceTimersByTime(1999);
+  vi.advanceTimersByTime(666);
   expect(root.querySelector("input")!.value).toBe("");
   vi.advanceTimersByTime(1);
   expect(root.querySelector("input")!.value).toBe("김");
-  vi.advanceTimersByTime(17999);
+  vi.advanceTimersByTime(12005);
   expect(duration).toBeUndefined();
   expect(root.querySelector<HTMLInputElement>("#acquired")!.value).toBe("");
   vi.advanceTimersByTime(1);
-  expect(duration).toBe(20000);
-  expect(counts).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  expect(duration).toBe(12673);
+  expect(counts).toEqual([
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+  ]);
   expect(
     Array.from(root.querySelectorAll("input"), (input) => input.value),
   ).toEqual([
     "김",
     "커리어",
+    "KIM",
+    "CAREER",
+    "대한민국",
     "career@example.com",
     "01000000000",
+    "대한민국",
+    "학사",
     "커리어대학교",
     "컴퓨터공학",
+    "졸업",
+    "2020-03-02",
     "2026-02-20",
     "4.0",
+    "4.50",
     "정보처리기사",
+    "한국산업인력공단",
     "2025-06-13",
   ]);
 });
@@ -59,7 +70,7 @@ it("cancels pending writes", () => {
     },
     onError: () => {},
   });
-  vi.advanceTimersByTime(2000);
+  vi.advanceTimersByTime(667);
   stop();
   vi.advanceTimersByTime(30000);
   expect(root.querySelector<HTMLInputElement>("#given-name")!.value).toBe("");

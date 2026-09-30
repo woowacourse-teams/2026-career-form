@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PanelPreview } from "../demo/PanelPreview";
 import { ApplicationForm } from "./ApplicationForm";
 import { LoadingVariant } from "./LoadingVariant";
-import { startScenario } from "./scenario";
+import { startScenario, SCENARIO_DURATION_MS } from "./scenario";
 import {
   createStudy,
   loadStudy,
@@ -99,7 +99,7 @@ export function Experiment() {
     });
   };
   const rate = (ratings: Ratings) => {
-    if (stage !== "survey" || duration.current < 20000) return;
+    if (stage !== "survey" || duration.current < SCENARIO_DURATION_MS) return;
     setStudy(
       recordTrial(study, {
         variant: study.order[study.trials.length]!,

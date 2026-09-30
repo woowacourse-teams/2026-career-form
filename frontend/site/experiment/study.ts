@@ -1,3 +1,4 @@
+import { SCENARIO_DURATION_MS } from "./scenario";
 export type Variant = "A" | "B" | "C" | "D";
 export type Ratings = { comfort: number; trust: number; wait: number };
 export type Trial = {
@@ -13,8 +14,8 @@ export type Study = {
   final?: { preference: Preference; reason: string };
 };
 export type Preference = Variant | "none";
-const VERSION = "panel-study-v1";
-const KEY = "career-form-panel-study-v1";
+const VERSION = "panel-study-v2";
+const KEY = "career-form-panel-study-v2";
 const sequences: Variant[][] = [
   ["A", "B", "D", "C"],
   ["B", "C", "A", "D"],
@@ -39,7 +40,7 @@ function cleanTrial(trial: Trial): Trial {
       (n) => Number.isInteger(n) && n >= 1 && n <= 5,
     ) ||
     !Number.isFinite(trial.durationMs) ||
-    trial.durationMs < 20000 ||
+    trial.durationMs < SCENARIO_DURATION_MS ||
     typeof trial.reducedMotion !== "boolean"
   )
     throw Error("Invalid trial");

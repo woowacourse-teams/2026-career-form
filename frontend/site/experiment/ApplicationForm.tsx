@@ -20,13 +20,13 @@ export function ApplicationForm() {
       </div>
       <h2 className={demo.sectionTitle}>기본 인적사항</h2>
       <div className={demo.fields}>
-        {scenarioFields.map(({ id, label }) => (
+        {scenarioFields.map(({ id, label, type }) => (
           <label key={id} htmlFor={id}>
             <span>{label}</span>
             <input
               id={id}
               name={id}
-              type={id === "graduated" || id === "acquired" ? "date" : "text"}
+              type={type}
               autoComplete="off"
               readOnly
               tabIndex={-1}

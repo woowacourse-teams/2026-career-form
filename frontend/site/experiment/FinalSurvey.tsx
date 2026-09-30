@@ -83,7 +83,11 @@ export function FinalSurvey({
                 {ordinals[index]} 체험
               </label>
               <div aria-hidden="true" inert>
-                <LoadingVariant variant={variant} completed={5} reducedMotion />
+                <LoadingVariant
+                  variant={variant}
+                  completed={10}
+                  reducedMotion
+                />
               </div>
             </div>
           ))}

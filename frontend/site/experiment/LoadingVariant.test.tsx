@@ -5,14 +5,14 @@ it("shows actual category progress for A", () => {
   render(<LoadingVariant variant="A" completed={5} reducedMotion={false} />);
   expect(
     screen.getByRole("list", { name: "범주별 입력 현황" }),
-  ).toHaveTextContent("학력");
+  ).toHaveTextContent("기본 인적사항");
   expect(screen.getByRole("heading")).toHaveTextContent("5개 항목 입력");
 });
 it.each([
   [0, 0],
-  [5, 50],
-  [9, 90],
-  [10, 100],
+  [10, 53],
+  [18, 95],
+  [19, 100],
 ])(
   "maps %s written fields to %s percent without categories",
   (completed, percentage) => {

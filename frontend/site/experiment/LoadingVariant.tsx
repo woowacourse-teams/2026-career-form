@@ -16,7 +16,10 @@ export function LoadingVariant({
     return (
       <WorkflowLoading
         writing
-        currentCategory={scenarioFields[Math.min(completed, 9)]!.category}
+        currentCategory={
+          scenarioFields[Math.min(completed, scenarioFields.length - 1)]!
+            .category
+        }
         progress={scenarioFields
           .slice(0, completed)
           .map((field) => ({ ...field, status: "written" as const }))}

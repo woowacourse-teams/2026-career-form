@@ -19,7 +19,7 @@ it("restores the assigned order and completed ratings", () => {
   const study = recordTrial(createStudy(0), {
     variant: "A",
     ratings,
-    durationMs: 20003,
+    durationMs: 12676,
     reducedMotion: false,
   });
   saveStudy(study, sessionStorage);
@@ -28,7 +28,7 @@ it("restores the assigned order and completed ratings", () => {
     recordTrial(study, {
       variant: "A",
       ratings,
-      durationMs: 20000,
+      durationMs: 12673,
       reducedMotion: false,
     }),
   ).toThrow();
@@ -38,7 +38,7 @@ it.each([0, 6, NaN])("rejects out-of-range ratings %s", (score) => {
     recordTrial(createStudy(0), {
       variant: "A",
       ratings: { ...ratings, comfort: score },
-      durationMs: 20000,
+      durationMs: 12673,
       reducedMotion: false,
     }),
   ).toThrow();
@@ -67,7 +67,7 @@ it("exports complete results using an allowlist and preserves the none preferenc
     study = recordTrial(study, {
       variant,
       ratings,
-      durationMs: 20000,
+      durationMs: 12673,
       reducedMotion: true,
     });
   const result = exportStudy(
@@ -87,7 +87,7 @@ it("restores final preference and strips unknown fields from nested responses", 
     study = recordTrial(study, {
       variant,
       ratings,
-      durationMs: 20000,
+      durationMs: 12673,
       reducedMotion: false,
     });
   const final = { preference: "C" as const, reason: "화면", secret: "omit" };
@@ -95,4 +95,14 @@ it("restores final preference and strips unknown fields from nested responses", 
   const restored = loadStudy(sessionStorage)!;
   expect(restored.final).toEqual({ preference: "C", reason: "화면" });
   expect(exportStudy(restored, "C", "화면")).not.toHaveProperty("final");
+});
+
+it("does not restore responses from the old slower experiment", () => {
+  sessionStorage.clear();
+  saveStudy(createStudy(0), sessionStorage);
+  const key = sessionStorage.key(0)!;
+  const old = JSON.parse(sessionStorage.getItem(key)!);
+  old.version = "panel-study-v1";
+  sessionStorage.setItem(key, JSON.stringify(old));
+  expect(loadStudy(sessionStorage)).toBeNull();
 });
