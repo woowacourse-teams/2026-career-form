@@ -14,8 +14,16 @@ afterEach(() => {
 async function open() {
   render(<Experiment />);
   await act(async () => {});
+  const intro = screen.queryByRole("button", {
+    name: "안내를 읽었어요 · 체험 시작",
+  });
+  if (intro) fireEvent.click(intro);
 }
 async function start() {
+  const intro = screen.queryByRole("button", {
+    name: "안내를 읽었어요 · 체험 시작",
+  });
+  if (intro) fireEvent.click(intro);
   await act(async () => {
     fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
   });
@@ -117,9 +125,7 @@ it("collects three required ratings in the assigned order and downloads only the
   const download = screen.getByRole("button", { name: "결과 JSON 내려받기" });
   expect(download).toBeDisabled();
   fireEvent.click(screen.getByLabelText("차이 없음"));
-  fireEvent.change(screen.getByLabelText("선택 이유 (선택)"), {
-    target: { value: "비슷했어요" },
-  });
+  expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   fireEvent.click(download);
   expect(downloaded).toBeInstanceOf(Blob);
   act(() => vi.advanceTimersByTime(1000));
@@ -132,7 +138,7 @@ it("collects three required ratings in the assigned order and downloads only the
   expect(JSON.parse(result)).toMatchObject({
     order: ["A", "B", "D"],
     preference: "none",
-    reason: "비슷했어요",
+    reason: "",
     trials: [
       { variant: "A", durationMs: 6615 },
       { variant: "B", durationMs: 6615 },
@@ -175,4 +181,16 @@ it("renders 100 percent after the last DOM write before the shared completion tr
   );
   act(() => vi.advanceTimersByTime(400));
   expect(screen.getByRole("button", { name: "평가하기" })).toBeEnabled();
+});
+
+it("introduces the panel study before showing the application", () => {
+  render(<Experiment />);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    "어떤 화면이 편안한가요",
+  );
+  expect(screen.queryByLabelText("성")).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "안내를 읽었어요 · 체험 시작" }),
+  );
+  expect(screen.getByLabelText("성")).toBeInTheDocument();
 });

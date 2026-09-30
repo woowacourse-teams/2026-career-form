@@ -185,3 +185,194 @@
   margin: 10px 0;
   padding-left: 22px;
 }
+.onboarding {
+  max-width: none;
+  padding: 48px 20px;
+  background: var(--color-surface-muted);
+}
+.introCard {
+  max-width: 720px;
+  margin: auto;
+  padding: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 28px;
+  background: white;
+  box-shadow: 0 16px 60px rgb(89 70 55 / 5%);
+  color: var(--color-text);
+  line-height: 1.7;
+}
+.eyebrow {
+  color: var(--color-action);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.introCard h1 {
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.4;
+  letter-spacing: -1px;
+  color: var(--color-text-strong);
+  margin: 14px 0;
+}
+.focusDemo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 28px 0;
+  padding: 16px;
+  background: var(--color-surface-muted);
+  border-radius: 18px;
+}
+.focusDemo > div {
+  padding: 20px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  font-size: 14px;
+}
+.focusDemo > div:first-child {
+  opacity: 0.6;
+}
+.focusDemo > div:last-child {
+  background: white;
+  border: 2px solid var(--color-action);
+}
+.focusDemo span {
+  font-size: 12px;
+}
+.focusDemo i {
+  display: block;
+  height: 5px;
+  width: 70%;
+  background: var(--color-accent);
+  border-radius: 9px;
+  margin-top: 18px;
+}
+.introSteps {
+  padding-left: 22px;
+}
+.introSteps li {
+  padding: 8px 0 8px 6px;
+}
+.introSteps span {
+  display: block;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.introNote {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 24px;
+}
+.introCard button {
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-action);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+}
+.survey {
+  padding: 48px 28px;
+}
+.survey > p {
+  color: var(--color-text-muted);
+}
+.survey fieldset {
+  border-radius: 18px;
+  padding: 24px;
+  margin: 28px 0;
+  background: var(--color-surface-muted);
+}
+.survey legend {
+  font-size: 15px;
+}
+.scale {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.scale label {
+  position: relative;
+  justify-content: center;
+  min-height: 56px;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.scale label:has(:checked),
+.none:has(:checked) {
+  background: var(--color-brand);
+  border-color: var(--color-action);
+  color: var(--color-action-strong);
+  box-shadow: inset 0 0 0 1px var(--color-action);
+}
+.scale input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.scale label:focus-within,
+.preview:focus-within {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.preview {
+  background: white;
+  border-radius: 16px;
+}
+.preview:has(input:checked) {
+  border-color: var(--color-action);
+  box-shadow: 0 0 0 2px var(--color-action);
+}
+.preview > label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+  font-weight: 600;
+}
+.survey input {
+  accent-color: var(--color-action);
+}
+.none {
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+}
+.survey > button {
+  width: 100%;
+}
+@media (max-width: 680px) {
+  .onboarding {
+    padding: 20px 12px;
+  }
+  .introCard {
+    padding: 24px 20px;
+  }
+  .focusDemo {
+    padding: 8px;
+    gap: 8px;
+  }
+  .focusDemo > div {
+    padding: 14px 8px;
+  }
+  .survey {
+    padding: 32px 16px;
+  }
+  .survey fieldset {
+    padding: 18px 12px;
+  }
+  .scale {
+    gap: 6px;
+  }
+}

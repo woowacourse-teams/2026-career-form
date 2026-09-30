@@ -13,7 +13,7 @@ export function FinalSurvey({
   const [preference, setPreference] = useState<Preference | "">(
     study.final?.preference ?? "",
   );
-  const [reason, setReason] = useState(study.final?.reason ?? "");
+  const reason = "";
   const [message, setMessage] = useState("");
   const heading = useRef<HTMLHeadingElement>(null);
   const urls = useRef(new Set<string>());
@@ -106,18 +106,6 @@ export function FinalSurvey({
           차이 없음
         </label>
       </fieldset>
-      <label htmlFor="reason">선택 이유 (선택)</label>
-      <p id="reason-help">이름, 연락처 등 개인정보는 적지 말아 주세요.</p>
-      <textarea
-        id="reason"
-        maxLength={2000}
-        aria-describedby="reason-help"
-        value={reason}
-        onChange={(event) => {
-          setReason(event.target.value);
-          if (preference) onChange(preference, event.target.value);
-        }}
-      />
       <button type="submit" disabled={!preference}>
         결과 JSON 내려받기
       </button>
