@@ -80,6 +80,7 @@ class MonitoringFixture:
             cls.workspace.cleanup()
             raise AssertionError(rendered.stderr)
         config = json.loads(rendered.stdout)
+        config["networks"] = {"default": {"ipam": {"config": [{"subnet": f"172.30.{os.getpid() % 250}.0/24"}]}}}
         config["services"]["grafana"]["extra_hosts"] = ["host.docker.internal:host-gateway"]
         cls.allowlist = cls.root / "ingest-allow.conf"
         cls.allowlist.write_text("allow all;\n", encoding="utf-8")

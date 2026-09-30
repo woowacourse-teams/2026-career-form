@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import subprocess
 import time
 import unittest
 import urllib.error
@@ -37,6 +38,44 @@ class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
         self.assertEqual(404, hidden.exception.code)
         hidden.exception.close()
 
+    def test_ingest_follows_replaced_loki_container_with_changed_private_address(self) -> None:
+        network = f"{self.project}_default"
+        inspected = subprocess.check_output(
+            ("docker", "inspect", f"{self.project}-loki-1", "--format", "{{json .NetworkSettings.Networks}}"), text=True,
+        )
+        old_address = json.loads(inspected)[network]["IPAddress"]
+        self.assertEqual(0, self._compose("stop", "loki").returncode)
+        self.assertEqual(0, self._compose("rm", "-f", "loki").returncode)
+        holder = f"{self.project}-synthetic-address-holder"
+        image = json.loads(self.configuration.read_text())["services"]["ingest"]["image"]
+        try:
+            subprocess.run(("docker", "run", "-d", "--name", holder, "--network", network, "--ip", old_address,
+                            "--entrypoint", "sleep", image, "120"), check=True, capture_output=True)
+            self.assertEqual(0, self._compose("up", "-d", "loki").returncode)
+            token = base64.b64encode(f"synthetic:{self.password}".encode()).decode()
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{self.ports['loki']}/loki/api/v1/push",
+                data=json.dumps({"streams": [{"stream": {"service": "synthetic-dns-recovery"},
+                    "values": [[str(time.time_ns()), "synthetic-dns-recovery"]]}]}).encode(),
+                headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"},
+            )
+            deadline = time.monotonic() + 30
+            code = None
+            while time.monotonic() < deadline:
+                try:
+                    with urllib.request.urlopen(request, timeout=5) as response:
+                        code = response.status
+                except urllib.error.HTTPError as error:
+                    code = error.code
+                    error.close()
+                if code == 204:
+                    break
+                time.sleep(0.5)
+            self.assertEqual(204, code)
+        finally:
+            subprocess.run(("docker", "rm", "-f", holder), capture_output=True, check=False)
+            self._compose("exec", "-T", "ingest", "nginx", "-s", "reload")
+
     def test_logs_remain_separated_by_environment_after_storage_recreation(self) -> None:
         timestamp = str(time.time_ns())
         payload = {"streams": [
@@ -66,7 +105,7 @@ class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
     def test_ingest_rejects_authenticated_but_disallowed_source(self) -> None:
         self.allowlist.write_text("deny all;\n", encoding="utf-8")
         try:
-            reloaded = self._compose("exec", "-T", "ingest", "nginx", "-s", "reload")
+            reloaded = self._compose("restart", "ingest")
             self.assertEqual(0, reloaded.returncode, reloaded.stderr)
             token = base64.b64encode(f"synthetic:{self.password}".encode()).decode()
             request = urllib.request.Request(
@@ -84,13 +123,15 @@ class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
                 except urllib.error.HTTPError as error:
                     code = error.code
                     error.close()
+                except urllib.error.URLError:
+                    code = None
                 if code == 403:
                     break
                 time.sleep(0.2)
             self.assertEqual(403, code)
         finally:
             self.allowlist.write_text("allow all;\n", encoding="utf-8")
-            restored = self._compose("exec", "-T", "ingest", "nginx", "-s", "reload")
+            restored = self._compose("restart", "ingest")
             self.assertEqual(0, restored.returncode, restored.stderr)
             deadline = time.monotonic() + 10
             restored_code = None
@@ -101,6 +142,8 @@ class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
                 except urllib.error.HTTPError as error:
                     restored_code = error.code
                     error.close()
+                except urllib.error.URLError:
+                    restored_code = None
                 if restored_code == 204:
                     break
                 time.sleep(0.2)
