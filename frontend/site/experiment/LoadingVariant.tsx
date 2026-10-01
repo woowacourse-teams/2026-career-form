@@ -89,6 +89,9 @@ export function LoadingVariant({
       >
         <span style={{ width: `${percentage}%` }} />
       </div>
+      <p className={styles.remaining}>
+        남은 작업 {Math.max(0, scenarioFields.length - completed)}개
+      </p>
     </section>
   );
 }

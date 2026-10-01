@@ -265,3 +265,10 @@
   color: var(--color-action-strong);
   font-variant-numeric: tabular-nums;
 }
+
+.remaining {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}

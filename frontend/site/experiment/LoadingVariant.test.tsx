@@ -28,6 +28,9 @@ it.each([
       String(percentage),
     );
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(`남은 작업 ${40 - completed}개`),
+    ).toBeInTheDocument();
   },
 );
 it.each(["A", "B"] as const)(
