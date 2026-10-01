@@ -169,7 +169,8 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
         (uncertain &&
           (!live ||
             !matches ||
-            item.analysis?.mappingStatus !== "ADAPTER_VERIFIED"))
+            (item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" &&
+              item.analysis?.mappingStatus !== "LLM_SUGGESTED")))
       )
         review("입력 결과 확인");
     } else if (matches) {

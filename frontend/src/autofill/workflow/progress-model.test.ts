@@ -413,10 +413,15 @@ it.each([
   {
     status: "available" as const,
     mapping: "LLM_SUGGESTED" as const,
-    verified: false,
+    verified: true,
+  },
+  {
+    status: "needs-review" as const,
+    mapping: "LLM_SUGGESTED" as const,
+    verified: true,
   },
 ])(
-  "does not call an uncertain write verified without adapter evidence ($status $mapping)",
+  "verifies a matching written value with supported mapping evidence ($status $mapping)",
   ({ status, mapping, verified }) => {
     document.body.innerHTML = '<label>이름<input id="name"></label>';
     document.querySelector("input")!.value = "private-value";
