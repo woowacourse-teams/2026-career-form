@@ -1,12 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { LoadingVariant } from "./LoadingVariant";
-it("shows actual category progress for A", () => {
-  render(<LoadingVariant variant="A" completed={5} reducedMotion={false} />);
-  expect(
-    screen.getByRole("list", { name: "범주별 입력 현황" }),
-  ).toHaveTextContent("기본 인적사항");
-  expect(screen.getByRole("heading")).toHaveTextContent("5개 항목 입력");
+it.each([0, 20, 40])("shows only completed count for A at %s", (completed) => {
+  render(
+    <LoadingVariant variant="A" completed={completed} reducedMotion={false} />,
+  );
+  expect(screen.getByText("완료한 작업")).toBeInTheDocument();
+  expect(screen.getByText(String(completed))).toHaveTextContent(
+    `${completed}개`,
+  );
+  expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
 });
 it.each([
   [0, 0],
@@ -55,28 +59,6 @@ it.each(["A", "B", "C"] as const)(
     expect(screen.queryByText("입력 중이에요")).not.toBeInTheDocument();
   },
 );
-it("distinguishes completed categories from the active record and finishes all records", () => {
-  const { rerender } = render(
-    <LoadingVariant variant="A" completed={8} reducedMotion={false} />,
-  );
-  expect(screen.getByText("기본 인적사항").closest("li")).toHaveAttribute(
-    "data-state",
-    "done",
-  );
-  expect(screen.getByText("연락처와 주소").closest("li")).toHaveAttribute(
-    "data-state",
-    "active",
-  );
-  rerender(<LoadingVariant variant="A" completed={40} reducedMotion={false} />);
-  expect(screen.queryByText("입력 중")).not.toBeInTheDocument();
-  expect(screen.getAllByRole("listitem")).toHaveLength(6);
-  expect(
-    screen
-      .getAllByRole("listitem")
-      .every((item) => item.dataset.state === "done"),
-  ).toBe(true);
-});
-
 it.each([0, 20, 40])("shows remaining count only for C at %s", (completed) => {
   render(
     <LoadingVariant variant="C" completed={completed} reducedMotion={false} />,

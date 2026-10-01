@@ -58,9 +58,7 @@ it.each(["수동 복사로 돌아가기", "닫기"])(
       });
     await start();
     act(() => vi.advanceTimersByTime(280));
-    expect(
-      screen.getByRole("heading", { name: "1개 항목 입력" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("1", { exact: true })).toBeInTheDocument();
   },
 );
 it("interrupts a hidden tab so throttled runs cannot become responses", async () => {
