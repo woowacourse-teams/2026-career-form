@@ -275,7 +275,18 @@ export async function executeApprovedWritesAfterPageSettles({
       assertCurrent: () => runCurrent() && !emailSettlementFailed,
       beforeMutation,
       signal,
-      writeOrdinary: (item) => {
+      writeOrdinary: async (item) => {
+        if (item.analysis?.writePlan?.command === "SELECT_DATE") {
+          const { effect, ...result } = await executeApprovedCalendarWrite({
+            item,
+            registry,
+            interactionDecisionProvider,
+            assertCurrent: runCurrent,
+            beforeMutation,
+            signal,
+          });
+          return { result, effect };
+        }
         const result = executeApprovedWrites({
           items: [item],
           approvedCandidateIds,
@@ -288,7 +299,7 @@ export async function executeApprovedWritesAfterPageSettles({
           item.analysis.valueBinding.profileFieldKey === "contact.contact.email"
         )
           pendingEmail = { item, result };
-        return result;
+        return { result, effect: "continue" };
       },
       beforeWrite: async (item) => {
         // Finish email before a subsequent driver can blur or Escape its popup.
@@ -359,6 +370,7 @@ export async function executeApprovedWritesAfterPageSettles({
         );
       if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
         return settledSearchSelectionResult(item, registry, result);
+      if (item.analysis?.writePlan?.command === "SELECT_DATE") return result;
       if (
         companyId === "greeting" &&
         item.analysis?.mappingStatus === "ADAPTER_VERIFIED"

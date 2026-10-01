@@ -14,6 +14,8 @@ import {
   zeroNoticeConsistency,
 } from "./local-result-readiness";
 
+import { interpretResultStructure } from "./search-result-structure";
+
 type RootState = {
   root: HTMLElement;
   signature: string;
@@ -69,83 +71,97 @@ export function observeResults(
   });
   session.addCleanup(() => observer?.disconnect());
 
+  const readyRoot = () => {
+    if (surface.queryGeneration !== generation)
+      throw new SearchFailure("result_stale");
+    if (surface.navigationPending()) return undefined;
+    surface.revalidate();
+    observe();
+    const roots = surface.resultRoots();
+    if (!roots.length) return undefined;
+    if (roots.length !== 1) throw new SearchFailure("surface_ambiguous");
+    const root = roots[0]!;
+    if (
+      root.getAttribute("aria-busy") === "true" ||
+      root.closest("[aria-busy='true']")
+    )
+      return undefined;
+    const resultActions = () =>
+      elements<HTMLElement>(root, "[role='option'], a, button").filter(
+        (element) =>
+          shown(element) &&
+          !element.querySelector("[role='option'], a, button"),
+      );
+    // Role-less layer without explicit signals: judge by observed list replacement (C12).
+    const localMode =
+      surface.kind === "same-document-layer" &&
+      query !== undefined &&
+      !surface.hasCompletedNavigation(query) &&
+      !hasExplicitResultSignal(surface, root, resultActions(), busySeen);
+    if (
+      localMode &&
+      localReadiness(
+        root,
+        baseline.find((item) => item.root === root),
+        mutations,
+        now(),
+      ) === "pending"
+    )
+      return undefined;
+    const previous = baseline.find((item) => item.root === root);
+    const changed =
+      !previous || previous.signature !== (root.textContent ?? "");
+    const queryTagged =
+      query !== undefined &&
+      normalized(root.getAttribute("data-search-query") ?? "") ===
+        normalized(query);
+    const completeMarker = root.getAttribute("data-search-complete") === "true";
+    const ready =
+      query === undefined ||
+      surface.hasCompletedNavigation(query) ||
+      (queryTagged && completeMarker) ||
+      (busySeen && changed && root.getAttribute("aria-busy") === "false");
+    if (!ready && !localMode) return undefined;
+    const paging = elements<HTMLElement>(
+      surface.root,
+      "[rel='next'], [aria-label*='pagination' i], [aria-label*='페이지'], [data-has-more='true'], [data-virtualized='true'], [data-search-complete='false']",
+    );
+    if (paging.some(shown)) throw new SearchFailure("result_set_incomplete");
+    if (
+      elements<HTMLElement>(surface.root, "button, a").some(
+        (control) =>
+          shown(control) &&
+          /^(더\s*보기|다음\s*(페이지|결과)|load more|next page)$/i.test(
+            normalized(control.textContent ?? ""),
+          ),
+      )
+    )
+      throw new SearchFailure("result_set_incomplete");
+    const actions = resultActions();
+    if (localMode) {
+      const notice = zeroNoticeConsistency(surface, root, actions);
+      if (notice === "incomplete")
+        throw new SearchFailure("result_set_incomplete");
+      if (notice === "pending") return undefined;
+    }
+    return { root, localMode, actions };
+  };
   return {
+    async interpret() {
+      const root = readyRoot()?.root;
+      if (!root) throw new SearchFailure("result_pending");
+      return interpretResultStructure(root, session, () => {
+        if (readyRoot()?.root !== root) throw new SearchFailure("result_stale");
+      });
+    },
     exact(
       expected: readonly string[],
     ): { element: SearchResult; signature: string } | undefined {
-      if (surface.queryGeneration !== generation)
-        throw new SearchFailure("result_stale");
-      if (surface.navigationPending()) return undefined;
-      surface.revalidate();
-      observe();
-      const roots = surface.resultRoots();
-      if (!roots.length) return undefined;
-      if (roots.length !== 1) throw new SearchFailure("surface_ambiguous");
-      const root = roots[0]!;
-      if (
-        root.getAttribute("aria-busy") === "true" ||
-        root.closest("[aria-busy='true']")
-      )
-        return undefined;
-      const resultActions = () =>
-        elements<HTMLElement>(root, "[role='option'], a, button").filter(
-          (element) =>
-            shown(element) &&
-            !element.querySelector("[role='option'], a, button"),
-        );
-      // Role-less layer without explicit signals: judge by observed list replacement (C12).
-      const localMode =
-        surface.kind === "same-document-layer" &&
-        query !== undefined &&
-        !surface.hasCompletedNavigation(query) &&
-        !hasExplicitResultSignal(surface, root, resultActions(), busySeen);
-      if (
-        localMode &&
-        localReadiness(
-          root,
-          baseline.find((item) => item.root === root),
-          mutations,
-          now(),
-        ) === "pending"
-      )
-        return undefined;
-      const previous = baseline.find((item) => item.root === root);
-      const changed =
-        !previous || previous.signature !== (root.textContent ?? "");
-      const queryTagged =
-        query !== undefined &&
-        normalized(root.getAttribute("data-search-query") ?? "") ===
-          normalized(query);
+      const ready = readyRoot();
+      if (!ready) return undefined;
+      const { root, localMode, actions } = ready;
       const completeMarker =
         root.getAttribute("data-search-complete") === "true";
-      const ready =
-        query === undefined ||
-        surface.hasCompletedNavigation(query) ||
-        (queryTagged && completeMarker) ||
-        (busySeen && changed && root.getAttribute("aria-busy") === "false");
-      if (!ready && !localMode) return undefined;
-      const paging = elements<HTMLElement>(
-        surface.root,
-        "[rel='next'], [aria-label*='pagination' i], [aria-label*='페이지'], [data-has-more='true'], [data-virtualized='true'], [data-search-complete='false']",
-      );
-      if (paging.some(shown)) throw new SearchFailure("result_set_incomplete");
-      if (
-        elements<HTMLElement>(surface.root, "button, a").some(
-          (control) =>
-            shown(control) &&
-            /^(더\s*보기|다음\s*(페이지|결과)|load more|next page)$/i.test(
-              normalized(control.textContent ?? ""),
-            ),
-        )
-      )
-        throw new SearchFailure("result_set_incomplete");
-      const actions = resultActions();
-      if (localMode) {
-        const notice = zeroNoticeConsistency(surface, root, actions);
-        if (notice === "incomplete")
-          throw new SearchFailure("result_set_incomplete");
-        if (notice === "pending") return undefined;
-      }
       const positions = actions.filter((element) =>
         element.hasAttribute("aria-setsize"),
       );

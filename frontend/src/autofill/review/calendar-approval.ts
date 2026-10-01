@@ -40,6 +40,8 @@ export interface CalendarApproval {
   originalDate: string;
   targetYearMonth: string;
   monthClue: string;
+  /** Deferred roots authorize opening only; execution must confirm the unit. */
+  confirmation: "pending-structure" | "rendered-month-options";
   profileFieldKey?: string;
   profileEntryId?: string;
   itemIndex?: number;
@@ -120,16 +122,19 @@ function domSignature(
   return {
     target: elementSignature(target),
     opener: elementSignature(opener),
-    popup: elementSignature(popup),
+    // Opening a widget changes its inline positioning and visibility.
+    popup: elementSignature(popup, ["style"]),
     relation: relationSignature(target, opener),
     row: rowSignature(target),
   };
 }
 
 function currentMonthClue(
-  popup: HTMLElement,
+  surface: NonNullable<ReturnType<typeof calendarSurfaceFor>>,
   targetYearMonth: string,
 ): string | undefined {
+  if (surface.rendering === "deferred-jquery") return "pending-month-structure";
+  const popup = surface.popup;
   const year = Number(targetYearMonth.slice(0, 4));
   const month = Number(targetYearMonth.slice(5, 7));
   const inspectHidden = { inspectHidden: true };
@@ -167,7 +172,7 @@ export function createCalendarApproval({
   }
   const surface = calendarSurfaceFor(target);
   if (!surface) throw new Error("Calendar surface is not approved.");
-  const monthClue = currentMonthClue(surface.popup, targetYearMonth);
+  const monthClue = currentMonthClue(surface, targetYearMonth);
   if (!monthClue) throw new Error("Calendar month clue is not approved.");
   const identity =
     repeatRow ??
@@ -179,6 +184,10 @@ export function createCalendarApproval({
     originalDate,
     targetYearMonth,
     monthClue,
+    confirmation:
+      surface.rendering === "deferred-jquery"
+        ? "pending-structure"
+        : "rendered-month-options",
     ...(profileFieldKey ? { profileFieldKey } : {}),
     ...(profileEntryId ? { profileEntryId } : {}),
     ...(itemIndex !== undefined ? { itemIndex } : {}),
@@ -250,8 +259,12 @@ export function revalidateCalendarApproval(
     return { status: "invalid", reason: "calendar_surface_changed" };
   }
   if (
-    currentMonthClue(surface.popup, approval.targetYearMonth) !==
-    approval.monthClue
+    currentMonthClue(surface, approval.targetYearMonth) !==
+      approval.monthClue ||
+    approval.confirmation !==
+      (surface.rendering === "deferred-jquery"
+        ? "pending-structure"
+        : "rendered-month-options")
   ) {
     return { status: "invalid", reason: "month_clue_changed" };
   }

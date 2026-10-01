@@ -61,7 +61,9 @@ final class InteractionObservationProjector {
                     .get(candidateIndex);
                 String candidateAlias = "c" + (decisionIndex + 1)
                     + "_" + (candidateIndex + 1);
-                candidates.add(project(candidateAlias, candidate));
+                candidates.add(project(candidateAlias, candidate,
+                    decision.role().name().startsWith("SEARCH_RESULT_"),
+                    decision.role().name().startsWith("CALENDAR_")));
                 candidateIds.put(candidateAlias, candidate.candidateId());
             }
             decisions.add(new InteractionDecisionProvider.Decision(
@@ -86,10 +88,12 @@ final class InteractionObservationProjector {
 
     private InteractionDecisionProvider.Candidate project(
         String candidateAlias,
-        InteractionDecisionRequest.Candidate candidate
+        InteractionDecisionRequest.Candidate candidate,
+        boolean resultRole,
+        boolean calendarRole
     ) {
         List<InteractionDecisionProvider.SemanticLabel> labels = new ArrayList<>();
-        if (candidate.semanticContext() != null
+        if (!resultRole && !calendarRole && candidate.semanticContext() != null
             && candidate.semanticContext().labels() != null) {
             for (InteractionDecisionRequest.SemanticLabel label
                 : candidate.semanticContext().labels()) {
@@ -113,8 +117,10 @@ final class InteractionObservationProjector {
             Boolean.TRUE.equals(candidate.inert()),
             candidate.relationToTarget(),
             labels,
-            candidate.semanticContext() != null
-                && Boolean.TRUE.equals(candidate.semanticContext().required())
+            !resultRole && !calendarRole && candidate.semanticContext() != null
+                && Boolean.TRUE.equals(candidate.semanticContext().required()),
+            resultRole ? candidate.structure() : null,
+            calendarRole ? candidate.calendarStructure() : null
         );
     }
 

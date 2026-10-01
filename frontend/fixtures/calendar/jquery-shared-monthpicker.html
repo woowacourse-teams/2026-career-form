@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Career Form shared jQuery monthpicker fixture</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 2rem;
+      }
+      .ip-calbox {
+        margin: 1rem 0;
+      }
+      .ui-datepicker-trigger {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-left: 0.5rem;
+      }
+      .ui-datepicker {
+        border: 1px solid #777;
+        padding: 1rem;
+      }
+      .blind {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+      }
+      output {
+        display: block;
+        margin-top: 1rem;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Shared deferred jQuery monthpicker</h1>
+    <p>
+      This local fixture imports the production approval and executor modules.
+    </p>
+    <div class="ip-calbox">
+      <label for="schlstaYm0" class="blind">입학년월</label>
+      <input
+        type="text"
+        id="schlstaYm0"
+        name="schoolStaYmd"
+        autocomplete="off"
+        class="input_text cal monthpicker hasDatepicker"
+        placeholder="입학년월"
+        maxlength="7"
+        readonly
+      />
+      <img
+        class="ui-datepicker-trigger"
+        alt="달력 열기"
+        title="달력 열기"
+        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect width='22' height='20' x='1' y='3' fill='white' stroke='black'/%3E%3C/svg%3E"
+      />
+    </div>
+    <button type="button" data-run="schlstaYm0">입학년월 실행</button>
+    <div class="ip-calbox">
+      <label for="schlendYm0" class="blind">졸업년월</label>
+      <input
+        type="text"
+        id="schlendYm0"
+        name="schoolEndYmd"
+        autocomplete="off"
+        class="input_text cal monthpicker hasDatepicker"
+        placeholder="졸업년월"
+        maxlength="7"
+        readonly
+      />
+      <img
+        class="ui-datepicker-trigger"
+        alt="달력 열기"
+        title="달력 열기"
+        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect width='22' height='20' x='1' y='3' fill='white' stroke='black'/%3E%3C/svg%3E"
+      />
+    </div>
+    <button type="button" data-run="schlendYm0">졸업년월 실행</button>
+    <div id="ambiguous" class="ip-calbox">
+      <input type="text" class="monthpicker hasDatepicker" readonly />
+      <img class="ui-datepicker-trigger" alt="모호한 달력 열기" />
+      <input type="text" class="monthpicker hasDatepicker" readonly />
+    </div>
+    <div
+      id="ui-datepicker-div"
+      class="ui-datepicker ui-widget ui-widget-content ui-helper-clearfix ui-corner-all"
+      style="display: none"
+    ></div>
+    <output id="result">실행 대기</output>
+
+    <script type="module">
+      import { executeCalendarSelection } from "/src/autofill/interaction/calendar-executor.ts";
+      import { calendarSurfaceFor } from "/src/autofill/interaction/calendar-surface.ts";
+      import {
+        createCalendarApproval,
+        revalidateCalendarApproval,
+      } from "/src/autofill/review/calendar-approval.ts";
+
+      const popup = document.querySelector("#ui-datepicker-div");
+      const result = document.querySelector("#result");
+      let active;
+      let year = 2026;
+      let month = 0;
+
+      function render() {
+        popup.innerHTML = `<div class="ui-datepicker-header"><div class="ui-datepicker-title"><select class="ui-datepicker-month">${Array.from({ length: 12 }, (_, index) => `<option value="${index}"${index === month ? " selected" : ""}>${index + 1}월</option>`).join("")}</select><select class="ui-datepicker-year">${[2025, 2026, 2027].map((candidate) => `<option value="${candidate}"${candidate === year ? " selected" : ""}>${candidate}</option>`).join("")}</select></div></div><div class="ui-datepicker-buttonpane"><button type="button" class="ui-datepicker-close" data-handler="hide">닫기</button></div>`;
+        popup
+          .querySelector(".ui-datepicker-year")
+          .addEventListener("change", (event) => {
+            year = Number(event.target.value);
+            render();
+          });
+        popup
+          .querySelector(".ui-datepicker-month")
+          .addEventListener("change", (event) => {
+            month = Number(event.target.value);
+            render();
+          });
+        popup
+          .querySelector(".ui-datepicker-close")
+          .addEventListener("click", () => {
+            active.value = `${year}-${String(month + 1).padStart(2, "0")}`;
+            active.dispatchEvent(new Event("change", { bubbles: true }));
+            popup.classList.remove("ui-monthpicker");
+            popup.style.display = "none";
+          });
+      }
+
+      document
+        .querySelectorAll(".ip-calbox:not(#ambiguous)")
+        .forEach((container) => {
+          const input = container.querySelector("input");
+          container
+            .querySelector(".ui-datepicker-trigger")
+            .addEventListener("click", () => {
+              active = input;
+              year = 2026;
+              month = 0;
+              popup.classList.add("ui-monthpicker");
+              popup.style.display = "block";
+              render();
+            });
+        });
+
+      async function run(id, targetYearMonth) {
+        const target = document.querySelector(`#${id}`);
+        const approval = createCalendarApproval({
+          target,
+          originalDate: `${targetYearMonth}-15`,
+          targetYearMonth,
+          profileFieldKey: "fixture.education.month",
+        });
+        const execution = await executeCalendarSelection({
+          target,
+          targetYearMonth,
+        });
+        const payload = {
+          execution,
+          approval: revalidateCalendarApproval(approval),
+          start: document.querySelector("#schlstaYm0").value,
+          end: document.querySelector("#schlendYm0").value,
+          ambiguousRejected: Array.from(
+            document.querySelectorAll("#ambiguous input"),
+          ).every((candidate) => calendarSurfaceFor(candidate) === undefined),
+        };
+        result.value = JSON.stringify(payload, null, 2);
+        return payload;
+      }
+
+      document
+        .querySelector('[data-run="schlstaYm0"]')
+        .addEventListener("click", () => run("schlstaYm0", "2026-03"));
+      document
+        .querySelector('[data-run="schlendYm0"]')
+        .addEventListener("click", () => run("schlendYm0", "2027-04"));
+      window.monthpickerFixture = { run };
+    </script>
+  </body>
+</html>

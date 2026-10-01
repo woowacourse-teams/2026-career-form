@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
@@ -20,14 +22,15 @@ import tools.jackson.databind.MapperFeature;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.careerform.formanalysis.infrastructure.SelectedJev;
+import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.monitoring.ExternalCallMetrics;
 
 @Component
-@Conditional(SelectedJev.class)
+@Conditional(InteractionProviderConditions.JevClient.class)
 public final class JevClient {
     public static final String ABSTAIN = "ABSTAIN";
+    private static final Logger log = LoggerFactory.getLogger(JevClient.class);
     private final HttpClient http;
     private final JsonMapper mapper;
     private final String apiKey;
@@ -120,6 +123,8 @@ public final class JevClient {
                     .allMatch(option -> option.getValue() < probability);
                 selected.put(entry.getKey(), uniqueWinner && answer.confidence() >= minConfidence
                     ? answer.choice() : ABSTAIN);
+                log.info("[JEV] 분류 결과 question={} choice={} confidence={} selected={} probabilities={}", entry.getKey(),
+                    answer.choice(), answer.confidence(), selected.get(entry.getKey()), answer.probabilities());
             }
             recordMetrics(startedAt, null);
             return Map.copyOf(selected);

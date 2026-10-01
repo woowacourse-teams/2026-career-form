@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Import;
 @SpringBootTest(properties = {
     "spring.mongodb.uri=mongodb://localhost/career-form-test",
     "career-form.llm.enabled=true",
+    "career-form.analysis.calendar-provider=openai",
     "spring.ai.openai.api-key=synthetic-test-key",
     "spring.ai.openai.chat.model=gpt-5.6-luna"
 })
@@ -34,6 +35,7 @@ class FormAnalysisDefaultTimeoutBindingTest {
 @SpringBootTest(properties = {
     "spring.mongodb.uri=mongodb://localhost/career-form-test",
     "career-form.llm.enabled=true",
+    "career-form.analysis.calendar-provider=openai",
     "CAREER_FORM_LLM_TIMEOUT=41s",
     "spring.ai.openai.api-key=synthetic-test-key",
     "spring.ai.openai.chat.model=gpt-5.6-luna"

@@ -23,7 +23,7 @@ function target() {
 
 describe("dayCalendarSurfaceFor", () => {
   it("uses the adjacent trigger button as the opener", () => {
-    document.body.innerHTML = `<p><input id="target" class="hasDatepicker" type="text" readonly><button type="button" class="ui-datepicker-trigger">...</button></p>${ROOT}`;
+    document.body.innerHTML = `<p><label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly><button type="button" class="ui-datepicker-trigger">...</button></p>${ROOT}`;
 
     expect(dayCalendarSurfaceFor(target())).toMatchObject({
       target: target(),
@@ -34,7 +34,7 @@ describe("dayCalendarSurfaceFor", () => {
   });
 
   it("uses the target itself when there is no trigger", () => {
-    document.body.innerHTML = `<input id="target" class="hasDatepicker" type="text" readonly>${ROOT}`;
+    document.body.innerHTML = `<label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly>${ROOT}`;
 
     expect(dayCalendarSurfaceFor(target())).toMatchObject({
       opener: target(),
@@ -53,11 +53,15 @@ describe("dayCalendarSurfaceFor", () => {
     ],
     [
       "a hidden target",
-      `<div hidden><input id="target" class="hasDatepicker" type="text" readonly></div>${ROOT}`,
+      `<div hidden><label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly></div>${ROOT}`,
     ],
     [
       "a target not bound to a datepicker",
       `<input id="target" type="text" readonly>${ROOT}`,
+    ],
+    [
+      "a monthpicker target",
+      `<input id="target" class="monthpicker hasDatepicker" type="text" readonly>${ROOT}`,
     ],
     [
       "a native date input",
@@ -65,31 +69,31 @@ describe("dayCalendarSurfaceFor", () => {
     ],
     [
       "no calendar root",
-      `<input id="target" class="hasDatepicker" type="text" readonly>`,
+      `<label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly>`,
     ],
     [
       "several calendar roots",
-      `<input id="target" class="hasDatepicker" type="text" readonly>${ROOT}<div class="ui-datepicker" style="display:none"></div>`,
+      `<label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly>${ROOT}<div class="ui-datepicker" style="display:none"></div>`,
     ],
     [
       "a target inside the calendar root",
-      `<div class="ui-datepicker"><input id="target" class="hasDatepicker" type="text" readonly></div>`,
+      `<div class="ui-datepicker"><label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly></div>`,
     ],
     [
       "triggers on both sides",
-      `<button type="button" class="ui-datepicker-trigger">...</button><input id="target" class="hasDatepicker" type="text" readonly><button type="button" class="ui-datepicker-trigger">...</button>${ROOT}`,
+      `<label for="target">입사일</label><button type="button" class="ui-datepicker-trigger">...</button><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly><button type="button" class="ui-datepicker-trigger">...</button>${ROOT}`,
     ],
     [
       "a submit trigger inside a form",
-      `<form><input id="target" class="hasDatepicker" type="text" readonly><button class="ui-datepicker-trigger">...</button></form>${ROOT}`,
+      `<form><label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly><button class="ui-datepicker-trigger">...</button></form>${ROOT}`,
     ],
     [
       "a disabled trigger",
-      `<input id="target" class="hasDatepicker" type="text" readonly><button type="button" class="ui-datepicker-trigger" disabled>...</button>${ROOT}`,
+      `<label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly><button type="button" class="ui-datepicker-trigger" disabled>...</button>${ROOT}`,
     ],
     [
       "a non-button trigger",
-      `<input id="target" class="hasDatepicker" type="text" readonly><span class="ui-datepicker-trigger">...</span>${ROOT}`,
+      `<label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly><span class="ui-datepicker-trigger">...</span>${ROOT}`,
     ],
   ])("rejects %s", (_, html) => {
     document.body.innerHTML = html;
@@ -98,7 +102,7 @@ describe("dayCalendarSurfaceFor", () => {
   });
 
   it("accepts an image trigger and ignores inline calendars", () => {
-    document.body.innerHTML = `<input id="target" class="hasDatepicker" type="text" readonly><img class="ui-datepicker-trigger" alt="달력">${ROOT}<div class="ui-datepicker ui-datepicker-inline"></div>`;
+    document.body.innerHTML = `<label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" maxlength="10" readonly><img class="ui-datepicker-trigger" alt="달력">${ROOT}<div class="ui-datepicker ui-datepicker-inline"></div>`;
 
     expect(dayCalendarSurfaceFor(target())?.openBy).toBe("trigger");
     expect(dayCalendarRoots(document)).toHaveLength(1);

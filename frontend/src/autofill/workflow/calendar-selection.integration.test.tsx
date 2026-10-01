@@ -18,11 +18,8 @@ const calendarItem = {
   analysis: { writePlan: { command: "SELECT_DATE" } },
 } as ReviewPlanItem;
 
-function renderReview(
-  items: ReviewPlanItem[],
-  onCalendar: () => Promise<void>,
-) {
-  const onOrdinary = vi.fn();
+function renderReview(items: ReviewPlanItem[]) {
+  const executeWrites = vi.fn(async () => undefined);
   render(
     <WorkflowScreens
       stage="review"
@@ -37,10 +34,7 @@ function renderReview(
       partial={false}
       toggleReviewItem={vi.fn()}
       revealSensitiveItem={vi.fn()}
-      executeWrites={async () => {
-        onOrdinary();
-      }}
-      executeCalendarWrites={onCalendar}
+      executeWrites={executeWrites}
       results={[]}
       adapter={{} as WorkflowAdapter}
       workflowDiagnostics={[]}
@@ -48,33 +42,37 @@ function renderReview(
       onExit={vi.fn()}
     />,
   );
-  return onOrdinary;
+  return executeWrites;
 }
 
-describe("calendar-only review action", () => {
-  it("offers no calendar execution before explicit selection", () => {
-    const onCalendar = vi.fn();
-    renderReview([calendarItem], onCalendar);
-    expect(
-      screen.queryByRole("button", { name: "선택한 날짜만 입력" }),
-    ).toBeNull();
+describe("unified calendar review action", () => {
+  it("keeps a date out of execution before explicit selection", () => {
+    renderReview([calendarItem]);
     expect(
       screen.getByRole("button", { name: /입학 연월 포함하기/ }),
     ).toBeTruthy();
-    expect(onCalendar).not.toHaveBeenCalled();
-  });
-
-  it("keeps the ordinary action distinct from selected calendar items", () => {
-    const onCalendar = vi.fn();
-    const onOrdinary = renderReview(
-      [{ ...calendarItem, selected: true }],
-      onCalendar,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "선택한 날짜만 입력" }));
-    expect(onCalendar).toHaveBeenCalledOnce();
-    expect(onOrdinary).not.toHaveBeenCalled();
     expect(
       screen.getByRole("button", { name: "선택하지 않고 계속" }),
     ).toBeTruthy();
+  });
+
+  it("counts a selected date with an ordinary item and executes both once", () => {
+    const ordinaryItem = {
+      ...calendarItem,
+      candidateId: "ordinary-1",
+      fieldLabel: "이름",
+      selected: true,
+      analysis: { writePlan: { command: "SET_TEXT" } },
+    } as ReviewPlanItem;
+    const executeWrites = renderReview([
+      { ...calendarItem, selected: true },
+      ordinaryItem,
+    ]);
+
+    expect(
+      screen.queryByRole("button", { name: "선택한 날짜만 입력" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "2개 항목 기입하기" }));
+    expect(executeWrites).toHaveBeenCalledOnce();
   });
 });

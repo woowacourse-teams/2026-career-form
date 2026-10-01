@@ -35,6 +35,8 @@ career-form:
   analysis:
     enabled: ${CAREER_FORM_ANALYSIS_ENABLED:}
     provider: ${CAREER_FORM_ANALYSIS_PROVIDER:openai}
+    search-provider: ${CAREER_FORM_SEARCH_PROVIDER:}
+    calendar-provider: ${CAREER_FORM_CALENDAR_PROVIDER:jev}
     jev:
       api-key: ${TYPESAFE_API_KEY:}
       model: ${CAREER_FORM_JEV_MODEL:jev-latest}
