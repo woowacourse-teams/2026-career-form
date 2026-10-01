@@ -5,7 +5,7 @@ it.each([0, 20, 40])("shows only completed count for A at %s", (completed) => {
   render(
     <LoadingVariant variant="A" completed={completed} reducedMotion={false} />,
   );
-  expect(screen.getByText("완료한 작업")).toBeInTheDocument();
+  expect(screen.getByText(/완료했어요/)).toBeInTheDocument();
   expect(screen.getByText(String(completed))).toHaveTextContent(
     `${completed}개`,
   );
@@ -57,16 +57,14 @@ it.each(["A", "B", "C"] as const)(
       screen.getAllByText("지원서를 채우고 있어요").length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText("입력 중이에요")).not.toBeInTheDocument();
-    if (variant === "B")
-      expect(screen.getByText("전체 40개 항목")).not.toBeVisible();
-    else expect(screen.getByText("전체 40개 항목")).toBeVisible();
+    expect(screen.queryByText("전체 40개 항목")).not.toBeInTheDocument();
   },
 );
 it.each([0, 20, 40])("shows remaining count only for C at %s", (completed) => {
   render(
     <LoadingVariant variant="C" completed={completed} reducedMotion={false} />,
   );
-  expect(screen.getByText("남은 작업")).toBeInTheDocument();
+  expect(screen.getByText(/남았어요/)).toBeInTheDocument();
   expect(screen.getByText(String(40 - completed))).toHaveTextContent(
     `${40 - completed}개`,
   );

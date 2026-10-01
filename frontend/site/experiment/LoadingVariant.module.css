@@ -91,10 +91,23 @@
   }
 }
 
-.total {
-  margin: 0 0 16px;
+.countSentence {
+  margin: 0;
+  min-height: 93px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
   color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.countSentence strong {
+  color: var(--color-action-strong);
+  font-size: 26px;
   font-variant-numeric: tabular-nums;
+}
+.countSentence small {
+  font-size: 15px;
+  margin-left: 2px;
 }

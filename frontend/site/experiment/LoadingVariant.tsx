@@ -19,8 +19,6 @@ export function LoadingVariant({
       : variant === "B"
         ? percentage
         : Math.max(0, scenarioFields.length - completed);
-  const label =
-    variant === "A" ? "완료한 작업" : variant === "B" ? "진행률" : "남은 작업";
   return (
     <section
       className={styles.body}
@@ -37,18 +35,24 @@ export function LoadingVariant({
         지원서를 채우고 있어요
       </p>
       <div className={styles.metric}>
-        <p
-          className={styles.total}
-          aria-hidden={variant === "B"}
-          style={variant === "B" ? { visibility: "hidden" } : undefined}
-        >
-          전체 {scenarioFields.length}개 항목
-        </p>
-        <p className={styles.label}>{label}</p>
-        <strong className={styles.value}>
-          {value}
-          <small>{variant === "B" ? "%" : "개"}</small>
-        </strong>
+        {variant === "B" ? (
+          <>
+            <p className={styles.label}>진행률</p>
+            <strong className={styles.value}>
+              {value}
+              <small>%</small>
+            </strong>
+          </>
+        ) : (
+          <p className={styles.countSentence}>
+            {scenarioFields.length}개 중{" "}
+            <strong>
+              {value}
+              <small>개</small>
+            </strong>{" "}
+            {variant === "A" ? "완료했어요" : "남았어요"}
+          </p>
+        )}
         <div className={styles.indicatorSlot}>
           {variant === "B" && (
             <div
