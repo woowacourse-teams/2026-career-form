@@ -14,8 +14,8 @@ export type Study = {
   final?: { preference: Preference; reason: string };
 };
 export type Preference = Variant | "none";
-const VERSION = "panel-study-v18";
-const KEY = "career-form-panel-study-v18";
+const VERSION = "panel-study-v19";
+const KEY = "career-form-panel-study-v19";
 export const VARIANT_COUNT = 3;
 export const sequences: Variant[][] = [
   ["A", "B", "C"],

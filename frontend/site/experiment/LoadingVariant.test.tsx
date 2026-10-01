@@ -48,7 +48,7 @@ it.each(["A", "B", "C"] as const)(
 );
 
 it.each(["A", "B", "C"] as const)(
-  "uses the same waiting message in %s",
+  "uses the same waiting message and total in %s",
   (variant) => {
     render(
       <LoadingVariant variant={variant} completed={5} reducedMotion={false} />,
@@ -57,6 +57,9 @@ it.each(["A", "B", "C"] as const)(
       screen.getAllByText("지원서를 채우고 있어요").length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText("입력 중이에요")).not.toBeInTheDocument();
+    if (variant === "B")
+      expect(screen.getByText("전체 40개 항목")).not.toBeVisible();
+    else expect(screen.getByText("전체 40개 항목")).toBeVisible();
   },
 );
 it.each([0, 20, 40])("shows remaining count only for C at %s", (completed) => {

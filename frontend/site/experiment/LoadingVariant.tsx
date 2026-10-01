@@ -37,6 +37,13 @@ export function LoadingVariant({
         지원서를 채우고 있어요
       </p>
       <div className={styles.metric}>
+        <p
+          className={styles.total}
+          aria-hidden={variant === "B"}
+          style={variant === "B" ? { visibility: "hidden" } : undefined}
+        >
+          전체 {scenarioFields.length}개 항목
+        </p>
         <p className={styles.label}>{label}</p>
         <strong className={styles.value}>
           {value}
