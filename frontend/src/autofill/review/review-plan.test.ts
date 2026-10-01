@@ -1239,27 +1239,14 @@ describe("review plan", () => {
 });
 
 describe("calendar review plan", () => {
-  it("keeps SELECT_DATE separately approved and unselected by default", () => {
-    const target = document.createElement("input");
-    target.type = "text";
-    target.readOnly = true;
-    target.id = "calendar-target";
-    const opener = document.createElement("button");
-    opener.setAttribute("aria-labelledby", target.id);
-    opener.setAttribute("aria-controls", "calendar-popup");
-    opener.textContent = "월 선택";
-    const popup = document.createElement("div");
-    popup.id = "calendar-popup";
-    popup.setAttribute("role", "dialog");
-    const year = document.createElement("button");
-    year.textContent = "2026";
-    const months = Array.from({ length: 12 }, (_, index) => {
-      const month = document.createElement("button");
-      month.textContent = `${index + 1}월`;
-      return month;
-    });
-    popup.append(year, ...months);
-    document.body.append(target, opener, popup);
+  it("routes a monthpicker to month approval and keeps it unselected by default", () => {
+    document.body.innerHTML = `<div class="ip-calbox">
+      <label for="schlstaYm0" class="blind">입학년월</label>
+      <input type="text" id="schlstaYm0" name="schoolStaYmd" autocomplete="off" class="input_text cal monthpicker hasDatepicker" placeholder="입학년월" maxlength="7" readonly>
+      <img class="ui-datepicker-trigger" src="../portal/img/recruit/ico_calendar.png" alt="달력 열기" title="달력 열기">
+    </div>
+    <div id="ui-datepicker-div" class="ui-datepicker ui-widget ui-widget-content ui-helper-clearfix ui-corner-all" style="display: none"></div>`;
+    const target = document.querySelector<HTMLInputElement>("#schlstaYm0")!;
 
     const registry = new CandidateRegistry();
     registry.registerField({
@@ -1309,6 +1296,7 @@ describe("calendar review plan", () => {
       },
     });
     expect(item.dateApproval).toBeUndefined();
+    expect(item.dayCalendarApproval).toBeUndefined();
   });
 });
 

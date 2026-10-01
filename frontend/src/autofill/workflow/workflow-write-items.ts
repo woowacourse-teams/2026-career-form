@@ -5,11 +5,9 @@ import { executionItemsForAction } from "./calendar-routing";
 export function approvedReviewExecution(
   items: readonly ReviewPlanItem[],
   retainedCandidateIds: ReadonlySet<string>,
-  action: "ordinary" | "calendar",
 ) {
   const executableReviewItems = executionItemsForAction(
     items.filter((item) => !retainedCandidateIds.has(item.candidateId)),
-    action,
   );
   const approvedCandidateIds = new Set(
     executableReviewItems
