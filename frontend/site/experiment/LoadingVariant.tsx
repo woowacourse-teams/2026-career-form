@@ -45,12 +45,18 @@ export function LoadingVariant({
           </>
         ) : (
           <p className={styles.countSentence}>
-            {scenarioFields.length}개 중{" "}
-            <strong>
-              {value}
-              <small>개</small>
-            </strong>{" "}
-            {variant === "A" ? "완료했어요" : "남았어요"}
+            <span className={styles.countContext}>
+              {scenarioFields.length}개 중
+            </span>
+            <span className={styles.countMain}>
+              <strong>
+                {value}
+                <small>개</small>
+              </strong>{" "}
+              <span className={styles.countEnding}>
+                {variant === "A" ? "완료했어요" : "남았어요"}
+              </span>
+            </span>
           </p>
         )}
         <div className={styles.indicatorSlot}>
