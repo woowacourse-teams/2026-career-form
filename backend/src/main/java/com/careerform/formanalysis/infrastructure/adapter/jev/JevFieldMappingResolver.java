@@ -14,6 +14,11 @@ import com.careerform.formanalysis.infrastructure.SelectedJev;
 @Component
 @Conditional(SelectedJev.class)
 public final class JevFieldMappingResolver implements FieldMappingResolver {
+    static final String ABSTAIN_CRITERION = "No supported unambiguous mapping, or insufficient de-identified meaning.";
+    static String instructions(String id) {
+        return "Map only fields." + id + " using canonicalMeanings and confusionBoundaries. " +
+            "Choose ABSTAIN for absent or ambiguous evidence. Do not split full names or invent values.";
+    }
     private final JevClient client;
     private final SupportedProfileFields fields;
     public JevFieldMappingResolver(JevClient client, SupportedProfileFields fields) {
@@ -49,11 +54,10 @@ public final class JevFieldMappingResolver implements FieldMappingResolver {
         fields.keys().forEach(key -> criteria.put(key, "Direct canonical field: " + key));
         for (String recipe : List.of("KOREAN_FULL_NAME", "ENGLISH_FULL_NAME_GIVEN_FIRST", "ENGLISH_FULL_NAME_FAMILY_FIRST"))
             criteria.put(recipe, "Explicit combined full-name target using this exact order: " + recipe);
-        criteria.put(JevClient.ABSTAIN, "No supported unambiguous mapping, or insufficient de-identified meaning.");
+        criteria.put(JevClient.ABSTAIN, ABSTAIN_CRITERION);
         Map<String, JevClient.Choice> questions = new LinkedHashMap<>();
         candidates.keySet().forEach(id -> questions.put(id, new JevClient.Choice(
-            "Map only fields." + id + " using canonicalMeanings and confusionBoundaries. " +
-            "Choose ABSTAIN for absent or ambiguous evidence. Do not split full names or invent values.", criteria)));
+            instructions(id), criteria)));
         Map<String, String> answers = client.choose(state, questions);
         List<Result> results = new ArrayList<>();
         candidates.forEach((id, candidate) -> {

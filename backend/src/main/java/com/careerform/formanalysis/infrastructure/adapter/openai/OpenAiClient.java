@@ -33,6 +33,7 @@ import org.springframework.ai.util.JacksonUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import org.springframework.stereotype.Component;
@@ -44,6 +45,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.monitoring.ExternalCallMetrics;
+import com.careerform.monitoring.tracing.LangSmithTraceRecorder;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
@@ -66,12 +68,14 @@ public final class OpenAiClient {
     private final ChatClient interactionChatClient;
     private final ObjectMapper objectMapper;
     private final ExternalCallMetrics metrics;
+    private final LangSmithTraceRecorder traces;
+    private final String requestedModel;
 
     public OpenAiClient(
         ChatClient.Builder chatClientBuilder,
         ObjectMapper objectMapper
     ) {
-        this(chatClientBuilder, objectMapper, (ChatClient) null, null);
+        this(chatClientBuilder, objectMapper, (ChatClient) null, null, null, "");
     }
 
     @Autowired
@@ -80,21 +84,27 @@ public final class OpenAiClient {
         ObjectMapper objectMapper,
         @Qualifier(OpenAiInteractionChatClientConfiguration.INTERACTION_CHAT_CLIENT)
         ObjectProvider<ChatClient> interactionChatClient,
-        ObjectProvider<ExternalCallMetrics> metrics
+        ObjectProvider<ExternalCallMetrics> metrics,
+        ObjectProvider<LangSmithTraceRecorder> traces,
+        @Value("${spring.ai.openai.chat.model:}") String requestedModel
     ) {
         this(
             chatClientBuilder,
             objectMapper,
             interactionChatClient.getObject(),
-            metrics.getIfAvailable()
+            metrics.getIfAvailable(),
+            traces.getIfAvailable(),
+            requestedModel
         );
     }
 
-    private OpenAiClient(
+    OpenAiClient(
         ChatClient.Builder chatClientBuilder,
         ObjectMapper objectMapper,
         ChatClient interactionChatClient,
-        ExternalCallMetrics metrics
+        ExternalCallMetrics metrics,
+        LangSmithTraceRecorder traces,
+        String requestedModel
     ) {
         this.chatClient = chatClientBuilder.build();
         this.interactionChatClient = interactionChatClient == null
@@ -102,6 +112,8 @@ public final class OpenAiClient {
             : interactionChatClient;
         this.objectMapper = objectMapper;
         this.metrics = metrics;
+        this.traces = traces;
+        this.requestedModel = requestedModel;
     }
 
     public <O> O generate(
@@ -139,6 +151,17 @@ public final class OpenAiClient {
         String sanitizedJson = objectMapper.writeValueAsString(input);
         String stage = stage(outputType, interaction);
         long startedAt = System.nanoTime();
+        OpenAiTraceProjection projection = null;
+        LangSmithTraceRecorder.Trace trace = null;
+        ChatResponse response = null;
+        if (traces != null) {
+            try {
+                projection = new OpenAiTraceProjection(systemPrompt, input, outputType, sanitizedJson);
+                trace = traces.begin("openai", stage, requestedModel, projection.inputs());
+            } catch (RuntimeException ignored) {
+                log.warn("LANGSMITH_DROPPED reason=projection");
+            }
+        }
         log.info("[LLM:OpenAI] 호출 시작 stage={} outputType={}", stage, outputType.getSimpleName());
         try {
             BeanOutputConverter<O> delegate = new BeanOutputConverter<>(
@@ -152,7 +175,7 @@ public final class OpenAiClient {
             ChatClient selectedChatClient = interaction
                 ? interactionChatClient
                 : chatClient;
-            ChatResponse response = selectedChatClient.prompt()
+            response = selectedChatClient.prompt()
                 .system(systemPrompt)
                 .user(sanitizedJson)
                 .options(interaction
@@ -181,18 +204,39 @@ public final class OpenAiClient {
                 elapsedMillis(startedAt)
             );
             recordMetrics(interaction, startedAt, null);
+            completeTrace(trace, projection, response, null);
             return output;
         }
         catch (ResolverException exception) {
+            completeTrace(trace, projection, response, exception);
             recordMetrics(interaction, startedAt, exception);
             logFailure(stage, outputType, startedAt, exception);
             throw exception;
         }
         catch (RuntimeException exception) {
+            completeTrace(trace, projection, response, exception);
             recordMetrics(interaction, startedAt, exception);
             logFailure(stage, outputType, startedAt, exception);
             throw unavailable();
         }
+    }
+
+    private void completeTrace(LangSmithTraceRecorder.Trace trace, OpenAiTraceProjection projection,
+                               ChatResponse response, RuntimeException failure) {
+        if (trace == null || traces == null) return;
+        Map<String, Object> outputs = Map.of();
+        Map<String, Number> usage = Map.of();
+        try {
+            usage = OpenAiTraceProjection.usage(response);
+            if (failure == null && projection != null) {
+                outputs = projection.output(responseText(response), response, requestedModel);
+            }
+        } catch (RuntimeException ignored) {
+            outputs = Map.of("projection", "OUTPUT_UNAVAILABLE");
+        }
+        Integer status = failure instanceof com.openai.errors.OpenAIServiceException service
+            ? service.statusCode() : null;
+        traces.complete(trace, outputs, usage, failure == null ? null : classifyFailure(failure).name(), status);
     }
 
     private void recordMetrics(boolean interaction, long startedAt, RuntimeException failure) {

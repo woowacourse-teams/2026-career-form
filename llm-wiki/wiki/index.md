@@ -60,6 +60,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비·필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
+| [Jev·OpenAI 호출 추적](topics/provider-call-tracing.md) | LangSmith Java SDK, 비식별 투영과 관측 실패 격리 | 2026-10-01 |
+| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증 | 2026-10-01 |
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 실사이트와 fixture 분리 평가, revision별 기준선 이력과 비교 조건 | 2026-09-28 |
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 평가 에이전트의 전체 필드 분모, 비민감 입력, DOM 검증과 영속 보고 경계 | 2026-09-28 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행·검색·후속 재검토, 혼합 학력 행·role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |

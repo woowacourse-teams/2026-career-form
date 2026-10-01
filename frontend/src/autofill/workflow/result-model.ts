@@ -145,11 +145,11 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
           : "자동 입력 미지원",
       );
     } else if (
-      failureCode &&
+      (failureCode ?? item.failureCode) &&
       !recoveredRetry &&
       !(failureCode === "ROW_SEARCH_UNCONFIRMED" && entry?.unchanged && matches)
     ) {
-      review("입력 못함", failureCode);
+      review("입력 못함", failureCode ?? item.failureCode);
     } else if (entry?.unchanged && matches) {
       skip("기존 값 유지");
     } else if (

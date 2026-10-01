@@ -1,6 +1,8 @@
+import { SPLIT_EMAIL_REASON } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
 
 const guidance: Record<WriteFailureCode, string> = {
+  SPLIT_EMAIL_UNSUPPORTED: SPLIT_EMAIL_REASON,
   SEARCH_NO_RESULTS: "검색 결과가 없어요. 다른 이름으로 찾아 주세요.",
   SEARCH_NO_EXACT_MATCH:
     "등록한 값과 정확히 일치하는 검색 결과가 없어요. 목록에서 다른 이름을 찾아 주세요.",
