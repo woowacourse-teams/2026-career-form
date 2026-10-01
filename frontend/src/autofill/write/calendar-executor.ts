@@ -165,12 +165,20 @@ async function executeApprovedDayCalendarWrite(
       targetDate: approval.targetDate,
       ...(approval.targetFormat ? { targetFormat: approval.targetFormat } : {}),
       signal: args.signal,
+      assertCurrent: () =>
+        current(args) &&
+        item.selected &&
+        !item.disabled &&
+        approvedDayTarget(item, args.registry) === target &&
+        valid(),
+      interactionDecisionProvider: args.interactionDecisionProvider,
+      canonicalFieldKey: approval.profileFieldKey ?? "calendar-day",
     });
     if (execution.status !== "completed")
       return stop(
         item.candidateId,
         "RETAINED_VALUE_UNCONFIRMED",
-        "달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다.",
+        `달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다. (${execution.reason})`,
       );
   } catch {
     return stop(
@@ -244,13 +252,16 @@ export async function executeApprovedCalendarWrite(
         const response = await args.interactionDecisionProvider!(request);
         if (
           !(await mayMutate(args)) ||
-          revalidateCalendarApproval(approval).status !== "valid"
+          revalidateCalendarApproval(approval).status !== "valid" ||
+          !item.selected ||
+          item.disabled ||
+          approvedTarget(item, args.registry) !== target
         ) {
           return {
             schemaVersion: 2 as const,
             snapshotId: request.snapshotId,
             status: "LLM_UNAVAILABLE" as const,
-            mode: null,
+            mode: "GENERIC" as const,
             decisions: [],
           };
         }
@@ -264,13 +275,19 @@ export async function executeApprovedCalendarWrite(
       targetYearMonth: approval.targetYearMonth,
       interactionDecisionProvider: decisionProvider,
       canonicalFieldKey: approval.profileFieldKey ?? "calendar-month",
+      assertCurrent: () =>
+        current(args) &&
+        item.selected &&
+        !item.disabled &&
+        approvedTarget(item, args.registry) === target &&
+        revalidateCalendarApproval(approval).status === "valid",
       signal: args.signal,
     });
     if (execution.status !== "completed")
       return stop(
         item.candidateId,
         "RETAINED_VALUE_UNCONFIRMED",
-        "달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다.",
+        `달력 선택 결과를 확인할 수 없어 후속 자동 기입을 중단했습니다. (${execution.reason})`,
       );
   } catch {
     return stop(

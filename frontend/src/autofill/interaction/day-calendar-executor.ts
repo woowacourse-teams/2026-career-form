@@ -1,3 +1,10 @@
+import type { InteractionDecisionProvider } from "../api/interaction-types";
+import { createCalendarRoleResolver } from "./calendar-role-resolver";
+import { calendarUnitEvidence } from "./calendar-unit";
+import {
+  calendarNavigationCandidates,
+  type CalendarRoleEvidence,
+} from "./calendar-structure";
 import { parseCalendarMonth } from "./calendar-controls";
 import { openCalendarPopups } from "./calendar-surface";
 import {
@@ -45,6 +52,9 @@ export interface ExecuteDayCalendarSelectionArgs {
   now?: () => number;
   signal?: AbortSignal;
   timings?: DayCalendarTimings;
+  interactionDecisionProvider?: InteractionDecisionProvider;
+  canonicalFieldKey?: string;
+  assertCurrent?: () => boolean;
 }
 
 type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
@@ -212,13 +222,38 @@ export async function executeDayCalendarSelection(
   if (!surface) return fail("unverified_calendar_surface");
   const document = args.target.ownerDocument;
   const { target, popup } = surface;
+  const unit = calendarUnitEvidence(target);
+  if (!unit || unit.unit !== "day" || unit.unitEvidence === "unconfirmed")
+    return fail("calendar_unit_unconfirmed");
+  const evidence: CalendarRoleEvidence = {
+    ...unit,
+    ownership:
+      surface.openBy === "target" ? "bound-target" : "adjacent-trigger",
+  };
+  const resolveRole = createCalendarRoleResolver();
+  const parent = target.parentElement;
+  const attrs = [
+    "id",
+    "name",
+    "placeholder",
+    "maxlength",
+    "aria-label",
+    "aria-labelledby",
+  ] as const;
+  const snapshot = attrs.map((name) => target.getAttribute(name));
 
   const targetIsStable = () =>
     target.isConnected &&
     document.contains(target) &&
     target.type === "text" &&
     target.readOnly &&
-    !target.disabled;
+    !target.disabled &&
+    isDisplayed(target) &&
+    target.parentElement === parent &&
+    attrs.every(
+      (name, index) => target.getAttribute(name) === snapshot[index],
+    ) &&
+    args.assertCurrent?.() !== false;
   const budgetLeft = () => now() - started < DAY_CALENDAR_TIMEOUT_MS;
   const interrupted = (fallback: string): DayCalendarExecutionResult =>
     fail(
@@ -274,6 +309,24 @@ export async function executeDayCalendarSelection(
     );
   };
 
+  const stable = () => {
+    const current = dayCalendarSurfaceFor(target);
+    return (
+      running() &&
+      target.value === "" &&
+      othersUnchanged() &&
+      current?.opener === surface.opener &&
+      current.popup === popup
+    );
+  };
+  const decisionContext = {
+    evidence,
+    provider: args.interactionDecisionProvider,
+    canonicalFieldKey: args.canonicalFieldKey ?? "calendar-day",
+    deadline: started + DAY_CALENDAR_TIMEOUT_MS,
+    now,
+    signal: args.signal,
+  };
   let activations = 0;
   const spend = () =>
     running() && ++activations <= DAY_CALENDAR_MAX_ACTIVATIONS;
@@ -289,11 +342,20 @@ export async function executeDayCalendarSelection(
     return false;
   };
 
-  // Open through the same gesture a user would use.
+  // Classification authorizes only this already-owned gesture, never a date.
+  const opener = await resolveRole({
+    ...decisionContext,
+    role: "CALENDAR_OPENER",
+    candidates: [{ candidateId: "calendar-opener-1", element: surface.opener }],
+    revalidate: () =>
+      stable() &&
+      displayedDayCalendarRoots(document).length === 0 &&
+      openCalendarPopups(document).length === 0,
+  });
+  if (!opener || !stable()) return interrupted("calendar_opener_unavailable");
   if (!spend()) return interrupted("calendar_budget_exhausted");
   if (surface.openBy === "target") {
     target.focus();
-    target.click();
   } else {
     surface.opener.click();
   }
@@ -324,6 +386,38 @@ export async function executeDayCalendarSelection(
     const header = readHeader(popup);
     if (!header.ok) return header.reason;
     const select = pick(header.value);
+    const role =
+      select === header.value.year
+        ? "CALENDAR_YEAR_CONTROL"
+        : "CALENDAR_MONTH_CONTROL";
+    const choice = await resolveRole({
+      ...decisionContext,
+      role,
+      navigationCandidates:
+        role === "CALENDAR_YEAR_CONTROL"
+          ? calendarNavigationCandidates(popup)
+          : [],
+      candidates: [
+        {
+          candidateId:
+            role === "CALENDAR_YEAR_CONTROL"
+              ? "calendar-control-year"
+              : "calendar-control-month",
+          element: select,
+        },
+      ],
+      revalidate: () => {
+        const current = readHeader(popup);
+        return (
+          stable() &&
+          displayedDayCalendarRoots(document).length === 1 &&
+          isDisplayed(popup) &&
+          current.ok &&
+          pick(current.value) === select
+        );
+      },
+    });
+    if (!choice || !stable()) return "calendar_role_unavailable";
     if (select.value === value) return undefined;
     const options = Array.from(select.options).filter(
       (option) => option.value === value,
@@ -371,6 +465,26 @@ export async function executeDayCalendarSelection(
     );
   const link = links[0]!;
   if (!safeLink(link)) return fail("unsafe_day_link");
+  const day = await resolveRole({
+    ...decisionContext,
+    role: "CALENDAR_DAY_CONTROL",
+    candidates: [{ candidateId: "calendar-control-day", element: link }],
+    revalidate: () => {
+      const current = readHeader(popup);
+      const fresh = dayLinks(popup, parts.year, parts.month, parts.day);
+      return (
+        stable() &&
+        displayedDayCalendarRoots(document).length === 1 &&
+        current.ok &&
+        current.value.year.value === String(parts.year) &&
+        current.value.month.value === String(parts.month - 1) &&
+        fresh.length === 1 &&
+        fresh[0] === link &&
+        safeLink(link)
+      );
+    },
+  });
+  if (!day || !stable()) return interrupted("calendar_day_unavailable");
   if (!spend()) return interrupted("calendar_budget_exhausted");
   // `href="#"` must never move the page, even if the widget forgets to cancel it.
   const preventNavigation = (event: Event) => event.preventDefault();

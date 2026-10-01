@@ -11,7 +11,7 @@ function item(candidateId: string, command: string, selected = true) {
   } as ReviewPlanItem;
 }
 
-describe("separate calendar execution action", () => {
+describe("unified review execution action", () => {
   const items = [
     item("date-selected", "SELECT_DATE"),
     item("date-unselected", "SELECT_DATE", false),
@@ -19,15 +19,12 @@ describe("separate calendar execution action", () => {
     item("name", "SET_TEXT"),
   ];
 
-  it("does not include date selections in the ordinary action", () => {
-    expect(
-      executionItemsForAction(items, "ordinary").map((x) => x.candidateId),
-    ).toEqual(["school", "name"]);
-  });
-
-  it("never includes searches or ordinary controls in the calendar action", () => {
-    expect(
-      executionItemsForAction(items, "calendar").map((x) => x.candidateId),
-    ).toEqual(["date-selected", "date-unselected"]);
+  it("routes selected dates and ordinary controls through one execution", () => {
+    expect(executionItemsForAction(items).map((x) => x.candidateId)).toEqual([
+      "date-selected",
+      "date-unselected",
+      "school",
+      "name",
+    ]);
   });
 });

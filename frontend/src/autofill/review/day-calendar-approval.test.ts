@@ -12,7 +12,7 @@ afterEach(() => {
 function install(attrs = "") {
   document.body.innerHTML = `
     <div data-item-group-id="careers" data-item-id="row-a">
-      <input id="target" class="hasDatepicker" type="text" readonly ${attrs}><button type="button" class="ui-datepicker-trigger">...</button>
+      <label for="target">입사일</label><input id="target" class="hasDatepicker" type="text" readonly ${attrs} maxlength="10"><button type="button" class="ui-datepicker-trigger">...</button>
     </div>
     <div id="ui-datepicker-div" class="ui-datepicker" style="display:none"></div>`;
   return document.querySelector<HTMLInputElement>("#target")!;

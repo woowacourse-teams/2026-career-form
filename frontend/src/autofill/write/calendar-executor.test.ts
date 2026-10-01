@@ -133,6 +133,14 @@ describe("approved calendar writes", () => {
     });
     expect(request.decisions[0]!.candidates).toEqual([
       {
+        calendarStructure: {
+          tag: "button",
+          activation: "click",
+          ownership: "linked-popup",
+          unit: "month",
+          unitEvidence: "month-options",
+          valueShape: "none",
+        },
         candidateId: "calendar-opener-1",
         element: "button",
         control: "button",
@@ -249,6 +257,118 @@ function approvedItem(
 }
 
 describe("calendar write guards", () => {
+  it.each(["external-control", "opener-link"])(
+    "rejects conflicting deferred ownership before approval: %s",
+    (connection) => {
+      document.body.innerHTML = `<section><label for="month">입학년월</label><input id="month" type="text" readonly maxlength="7" class="hasDatepicker"><img class="ui-datepicker-trigger"></section><div id="ui-datepicker-div" class="ui-datepicker" style="display:none"></div><div id="other-popup" role="dialog" hidden></div>`;
+      const target = document.querySelector<HTMLInputElement>("#month");
+      const opener = document.querySelector("img");
+      if (!target || !opener) throw new Error("Missing calendar fixture");
+      if (connection === "opener-link") {
+        opener.setAttribute("aria-controls", "other-popup");
+      } else {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          '<button type="button" aria-labelledby="month" aria-controls="other-popup">Open</button>',
+        );
+      }
+      const clicked = vi.fn();
+      opener.addEventListener("click", clicked);
+
+      expect(() => approvedItem(target)).toThrow();
+      expect(clicked).not.toHaveBeenCalled();
+      expect(target.value).toBe("");
+    },
+  );
+
+  it("rejects a competing popup introduced during provider await before any gesture", async () => {
+    document.body.innerHTML = `<section><label for="month">입학년월</label><input id="month" type="text" readonly maxlength="7" class="hasDatepicker"><img class="ui-datepicker-trigger"></section><div id="ui-datepicker-div" class="ui-datepicker" style="display:none"></div>`;
+    const target = document.querySelector<HTMLInputElement>("#month");
+    const opener = document.querySelector("img");
+    if (!target || !opener) throw new Error("Missing calendar fixture");
+    const item = approvedItem(target);
+    const clicked = vi.fn();
+    opener.addEventListener("click", clicked);
+
+    const result = await executeApprovedCalendarWrite({
+      item,
+      registry: registryFor(target),
+      interactionDecisionProvider: async (request) => {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          '<button type="button" aria-labelledby="month" aria-controls="other-popup">Open</button><div id="other-popup" role="dialog" hidden></div>',
+        );
+        return {
+          schemaVersion: 2,
+          snapshotId: request.snapshotId,
+          status: "COMPLETE",
+          mode: "GENERIC",
+          decisions: request.decisions.map((decision) => ({
+            decisionId: decision.decisionId,
+            role: decision.role,
+            selection: "SELECTED",
+            candidateId: decision.candidates[0]?.candidateId,
+          })),
+        };
+      },
+    });
+
+    expect(result).toMatchObject({ status: "skipped", effect: "stop" });
+    expect(clicked).not.toHaveBeenCalled();
+    expect(target.value).toBe("");
+  });
+
+  it.each([
+    ["Date", "YYYY-MM"],
+    ["Date", ""],
+    ["Month", "YYYY-MM-DD"],
+  ])(
+    "does not replace contradictory target units with month evidence: %s / %s",
+    (label, placeholder) => {
+      const { target, events } = syntheticCalendar();
+      target.setAttribute("aria-label", label);
+      target.placeholder = placeholder;
+
+      expect(() => approvedItem(target)).toThrow();
+      expect(events.opener).not.toHaveBeenCalled();
+      expect(target.value).toBe("");
+    },
+  );
+
+  it("rejects a contradictory unit introduced during provider await before any gesture", async () => {
+    const { target, events } = syntheticCalendar();
+    const label = document.createElement("label");
+    label.htmlFor = target.id;
+    label.textContent = "Month";
+    target.before(label);
+    target.placeholder = "YYYY-MM";
+    const item = approvedItem(target);
+
+    const result = await executeApprovedCalendarWrite({
+      item,
+      registry: registryFor(target),
+      interactionDecisionProvider: async (request) => {
+        label.textContent = "Date";
+        return {
+          schemaVersion: 2,
+          snapshotId: request.snapshotId,
+          status: "COMPLETE",
+          mode: "GENERIC",
+          decisions: request.decisions.map((decision) => ({
+            decisionId: decision.decisionId,
+            role: decision.role,
+            selection: "SELECTED",
+            candidateId: decision.candidates[0]?.candidateId,
+          })),
+        };
+      },
+    });
+
+    expect(result).toMatchObject({ status: "skipped", effect: "stop" });
+    expect(events.opener).not.toHaveBeenCalled();
+    expect(target.value).toBe("");
+  });
+
   it("does not click when the current value already matches", async () => {
     const { target, events } = syntheticCalendar("2026-03");
     const result = await executeApprovedCalendarWrite({
@@ -413,7 +533,7 @@ describe("calendar write guards", () => {
       effect: "stop",
     });
     expect(events.opener).toHaveBeenCalledTimes(1);
-    expect(events.month).toHaveBeenCalledTimes(1);
+    expect(events.month).not.toHaveBeenCalled();
   });
 });
 
@@ -532,4 +652,31 @@ describe("calendar-only orchestration with field presentation", () => {
     expect(ordinary.value).toBe("");
     expect(events.month).toHaveBeenCalledTimes(1);
   });
+});
+
+it("revalidates approved profile binding after an awaited provider decision", async () => {
+  const { target, events } = syntheticCalendar();
+  const item = approvedItem(target);
+  const result = await executeApprovedCalendarWrite({
+    item,
+    registry: registryFor(target),
+    interactionDecisionProvider: async (request) => {
+      item.profileValue = "2027-04";
+      return {
+        schemaVersion: 2,
+        snapshotId: request.snapshotId,
+        status: "COMPLETE",
+        mode: "GENERIC",
+        decisions: request.decisions.map((decision) => ({
+          decisionId: decision.decisionId,
+          role: decision.role,
+          selection: "SELECTED",
+          candidateId: decision.candidates[0]?.candidateId,
+        })),
+      };
+    },
+  });
+  expect(result).toMatchObject({ status: "skipped", effect: "stop" });
+  expect(events.opener).not.toHaveBeenCalled();
+  expect(target.value).toBe("");
 });
