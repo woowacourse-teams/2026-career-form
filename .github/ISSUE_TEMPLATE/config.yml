@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 하네스 사용 안내
+    url: https://github.com/woowacourse-teams/2026-career-form/blob/main/harness/README.md
+    about: 개발 흐름과 승인 경계를 먼저 확인합니다.

@@ -1,0 +1,636 @@
+import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
+import { resolveCompany } from "../adapters/company";
+import { isAddressSearchAction } from "../adapters/address-contract";
+import type {
+  FieldCandidate,
+  FieldsAnalyzeRequest,
+  FieldsAnalyzeResponse,
+  PreparationAnalyzeRequest,
+  PreparationAnalyzeResponse,
+  WriteCommand,
+} from "./types";
+import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
+import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
+
+export class AnalysisContractError extends Error {
+  constructor(detail?: string) {
+    super(
+      detail
+        ? `지원서 분석 응답 형식이 올바르지 않습니다. (${detail})`
+        : "지원서 분석 응답 형식이 올바르지 않습니다.",
+    );
+    this.name = "AnalysisContractError";
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.length > 0;
+
+function hasValidButtonOptionMap(
+  optionMap: unknown,
+  optionCodeMap: unknown,
+): boolean {
+  if (
+    !isRecord(optionMap) ||
+    !isRecord(optionCodeMap) ||
+    Object.keys(optionMap).length === 0
+  ) {
+    return false;
+  }
+  return Object.entries(optionMap).every(
+    ([source, target]) =>
+      isNonEmptyString(source) &&
+      isNonEmptyString(target) &&
+      isNonEmptyString(optionCodeMap[target]),
+  );
+}
+
+const isOneOf = <T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): value is T => typeof value === "string" && allowed.includes(value as T);
+
+const hasOnlyKeys = (
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+): boolean => Object.keys(value).every((key) => allowed.includes(key));
+
+function assertCommonResponse(
+  value: unknown,
+): asserts value is Record<string, unknown> {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.snapshotId) ||
+    !isOneOf(value.mode, ["ADAPTER", "GENERIC"]) ||
+    !isOneOf(value.analysisStatus, ["COMPLETE", "PARTIAL", "BLOCKED"])
+  ) {
+    throw new AnalysisContractError();
+  }
+}
+
+function collectActionCandidateIds(
+  request: PreparationAnalyzeRequest,
+): Set<string> {
+  return new Set(
+    request.sections.flatMap((section) => [
+      ...section.actionCandidates.map(({ candidateId }) => candidateId),
+      ...(section.items ?? []).flatMap((item) =>
+        item.actionCandidates.map(({ candidateId }) => candidateId),
+      ),
+    ]),
+  );
+}
+
+function collectFieldCandidates(
+  request: FieldsAnalyzeRequest,
+): Map<string, FieldCandidate> {
+  return new Map(
+    request.sections.flatMap((section) => [
+      ...section.fields.map(
+        (candidate) => [candidate.candidateId, candidate] as const,
+      ),
+      ...(section.items ?? []).flatMap((item) =>
+        item.fields.map(
+          (candidate) => [candidate.candidateId, candidate] as const,
+        ),
+      ),
+    ]),
+  );
+}
+
+function validateStringArray(
+  value: unknown,
+  allowed: readonly string[],
+): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.length > 0 &&
+      value.every((item) => isOneOf(item, allowed)))
+  );
+}
+
+export function validatePreparationResponse(
+  request: PreparationAnalyzeRequest,
+  value: unknown,
+): PreparationAnalyzeResponse {
+  assertCommonResponse(value);
+  if (
+    !hasOnlyKeys(value, [
+      "snapshotId",
+      "mode",
+      "analysisStatus",
+      "preparationPlans",
+      "warningCodes",
+      "blockCode",
+    ]) ||
+    value.snapshotId !== request.snapshotId ||
+    !Array.isArray(value.preparationPlans) ||
+    !validateStringArray(value.warningCodes, [
+      "MANUAL_REVEAL_REQUIRED",
+      "LLM_UNAVAILABLE",
+    ])
+  ) {
+    throw new AnalysisContractError();
+  }
+
+  const isBlocked = value.analysisStatus === "BLOCKED";
+  if (
+    (isBlocked &&
+      (!isOneOf(value.blockCode, [
+        "ADAPTER_STRUCTURE_MISMATCH",
+        "ADAPTER_POLICY_UNAVAILABLE",
+        "UNSUPPORTED_SNAPSHOT",
+      ]) ||
+        value.preparationPlans.length > 0)) ||
+    (!isBlocked && value.blockCode !== undefined)
+  ) {
+    throw new AnalysisContractError();
+  }
+
+  const candidateIds = collectActionCandidateIds(request);
+  const sectionIds = new Set(
+    request.sections.map(({ sectionId }) => sectionId),
+  );
+  const seen = new Set<string>();
+  for (const plan of value.preparationPlans) {
+    if (
+      !isRecord(plan) ||
+      !isNonEmptyString(plan.actionCandidateId) ||
+      !candidateIds.has(plan.actionCandidateId) ||
+      seen.has(plan.actionCandidateId)
+    ) {
+      throw new AnalysisContractError();
+    }
+    seen.add(plan.actionCandidateId);
+
+    const validReveal =
+      hasOnlyKeys(plan, [
+        "actionCandidateId",
+        "command",
+        "expectedEffect",
+        "targetSectionId",
+      ]) &&
+      plan.command === "REVEAL_SECTION" &&
+      plan.expectedEffect === "TARGET_VISIBLE" &&
+      isNonEmptyString(plan.targetSectionId) &&
+      sectionIds.has(plan.targetSectionId);
+    const validAddition =
+      hasOnlyKeys(plan, [
+        "actionCandidateId",
+        "command",
+        "expectedEffect",
+        "expectedFieldNames",
+      ]) &&
+      plan.command === "ADD_REPEATABLE_GROUP" &&
+      plan.expectedEffect === "GROUP_COUNT_INCREMENT" &&
+      (plan.expectedFieldNames === undefined ||
+        (Array.isArray(plan.expectedFieldNames) &&
+          plan.expectedFieldNames.length > 0 &&
+          plan.expectedFieldNames.every(isNonEmptyString) &&
+          new Set(plan.expectedFieldNames).size ===
+            plan.expectedFieldNames.length));
+    const validSelection =
+      hasOnlyKeys(plan, [
+        "actionCandidateId",
+        "command",
+        "expectedEffect",
+        "profileFieldKey",
+        "optionDisplayName",
+        "expectedFieldNames",
+        "selectableProfileValues",
+        "revealedFieldBindings",
+        "targetSectionId",
+      ]) &&
+      plan.command === "SELECT_OPTION_TO_REVEAL" &&
+      plan.expectedEffect === "TARGET_FIELDS_VISIBLE" &&
+      isNonEmptyString(plan.profileFieldKey) &&
+      (plan.optionDisplayName === undefined ||
+        isNonEmptyString(plan.optionDisplayName)) &&
+      (plan.expectedFieldNames === undefined ||
+        (Array.isArray(plan.expectedFieldNames) &&
+          plan.expectedFieldNames.length > 0 &&
+          plan.expectedFieldNames.every(isNonEmptyString) &&
+          new Set(plan.expectedFieldNames).size ===
+            plan.expectedFieldNames.length)) &&
+      (plan.selectableProfileValues === undefined ||
+        (Array.isArray(plan.selectableProfileValues) &&
+          plan.selectableProfileValues.length > 0 &&
+          plan.selectableProfileValues.every(isNonEmptyString) &&
+          new Set(plan.selectableProfileValues).size ===
+            plan.selectableProfileValues.length)) &&
+      (plan.revealedFieldBindings === undefined ||
+        (plan.revealedFieldBindings !== null &&
+          typeof plan.revealedFieldBindings === "object" &&
+          !Array.isArray(plan.revealedFieldBindings) &&
+          Object.keys(plan.revealedFieldBindings).length > 0 &&
+          Object.entries(plan.revealedFieldBindings).every(
+            ([name, key]) => isNonEmptyString(name) && isNonEmptyString(key),
+          ))) &&
+      isNonEmptyString(plan.targetSectionId) &&
+      sectionIds.has(plan.targetSectionId);
+    const searchActions = request.sections
+      .flatMap((section) => [
+        ...section.actionCandidates,
+        ...(section.items ?? []).flatMap((item) => item.actionCandidates),
+      ])
+      .filter((action) => isAddressSearchAction(request.site, action));
+    const search = searchActions[0];
+    const validAddress =
+      hasOnlyKeys(plan, ["actionCandidateId", "command", "expectedEffect"]) &&
+      plan.command === "SEARCH_ADDRESS" &&
+      plan.expectedEffect === "ADDRESS_SELECTED" &&
+      value.mode === "ADAPTER" &&
+      searchActions.length === 1 &&
+      search?.candidateId === plan.actionCandidateId;
+    if (!validReveal && !validAddition && !validSelection && !validAddress) {
+      throw new AnalysisContractError();
+    }
+  }
+
+  return value as unknown as PreparationAnalyzeResponse;
+}
+
+function isDateProfileFieldKey(value: string): boolean {
+  const [categoryId, sectionId, fieldId] = value.split(".");
+  return PROFILE_CATEGORIES.some(
+    (category) =>
+      category.id === categoryId &&
+      category.sections.some(
+        (section) =>
+          section.id === sectionId &&
+          section.fields.some(
+            (field) => field.id === fieldId && field.inputType === "date",
+          ),
+      ),
+  );
+}
+
+const writeCommandForControl: Record<
+  FieldCandidate["control"],
+  WriteCommand | undefined
+> = {
+  text: "SET_TEXT",
+  textarea: "SET_TEXT",
+  select: "SELECT_OPTION",
+  button: "SELECT_BUTTON_OPTION",
+  radio: "CHECK_RADIO",
+  checkbox: "CHECK_CHECKBOX",
+  custom: undefined,
+};
+
+function validateFieldAnalysis(
+  value: unknown,
+  candidates: Map<string, FieldCandidate>,
+  request: FieldsAnalyzeRequest,
+  greeting = false,
+): string {
+  if (!isRecord(value) || !isNonEmptyString(value.candidateId)) {
+    throw new AnalysisContractError();
+  }
+  const candidate = candidates.get(value.candidateId);
+  if (!candidate) {
+    throw new AnalysisContractError();
+  }
+
+  if (value.matchType === "NO_MATCH") {
+    const ordinaryNoMatch =
+      value.interactionStatus === "BLOCKED" &&
+      Array.isArray(value.reasonCodes) &&
+      value.reasonCodes[0] === "NO_MATCH";
+    if (
+      !hasOnlyKeys(value, [
+        "candidateId",
+        "matchType",
+        "mappingStatus",
+        "interactionStatus",
+        "reasonCodes",
+      ]) ||
+      !isOneOf(value.mappingStatus, ["ADAPTER_VERIFIED", "LLM_SUGGESTED"]) ||
+      !Array.isArray(value.reasonCodes) ||
+      value.reasonCodes.length !== 1 ||
+      !ordinaryNoMatch
+    ) {
+      throw new AnalysisContractError();
+    }
+    return value.candidateId;
+  }
+
+  if (
+    value.matchType !== "MATCH" ||
+    !hasOnlyKeys(value, [
+      "candidateId",
+      "matchType",
+      "valueBinding",
+      "profileFieldKey",
+      "autofillPolicy",
+      "mappingStatus",
+      "interactionStatus",
+      "writePlan",
+    ]) ||
+    !isOneOf(value.autofillPolicy, [
+      "ALLOWED",
+      "CONDITIONAL",
+      "SENSITIVE_CONFIRMATION",
+    ]) ||
+    !isOneOf(value.mappingStatus, ["ADAPTER_VERIFIED", "LLM_SUGGESTED"]) ||
+    !isOneOf(value.interactionStatus, [
+      "READY",
+      "MANUAL_REVEAL_REQUIRED",
+      "BLOCKED",
+      "SYSTEM_CONTROL",
+      "UNVERIFIED",
+    ])
+  ) {
+    throw new AnalysisContractError();
+  }
+
+  const hasLegacyKey = value.profileFieldKey !== undefined;
+  const hasBinding = value.valueBinding !== undefined;
+  if (hasLegacyKey === hasBinding) {
+    throw new AnalysisContractError();
+  }
+  if (
+    hasLegacyKey &&
+    (!isNonEmptyString(value.profileFieldKey) ||
+      !/^[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*){2}$/.test(
+        value.profileFieldKey,
+      ) ||
+      !isAutofillProfileFieldKey(value.profileFieldKey))
+  ) {
+    throw new AnalysisContractError();
+  }
+  if (hasBinding) {
+    if (
+      !isRecord(value.valueBinding) ||
+      !isOneOf(value.valueBinding.type, [
+        "DIRECT",
+        "DERIVED",
+        "LOOKUP",
+        "BUTTON_OPTION",
+      ]) ||
+      (value.valueBinding.type === "DIRECT" &&
+        (!hasOnlyKeys(value.valueBinding, ["type", "profileFieldKey"]) ||
+          !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+          !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey))) ||
+      (value.valueBinding.type === "DERIVED" &&
+        (!hasOnlyKeys(value.valueBinding, [
+          "type",
+          "recipe",
+          "profileFieldKey",
+          "trueLabel",
+          "falseLabel",
+        ]) ||
+          !isOneOf(value.valueBinding.recipe, [
+            "KOREAN_FULL_NAME",
+            "ENGLISH_FULL_NAME_GIVEN_FIRST",
+            "ENGLISH_FULL_NAME_FAMILY_FIRST",
+            "BOOLEAN_YN",
+            "YEAR_MONTH",
+            "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
+            "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+            "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
+            "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+          ]) ||
+          (value.valueBinding.profileFieldKey !== undefined &&
+            (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
+              !isAutofillProfileFieldKey(
+                value.valueBinding.profileFieldKey,
+              ))) ||
+          (value.valueBinding.trueLabel !== undefined &&
+            !isNonEmptyString(value.valueBinding.trueLabel)) ||
+          (value.valueBinding.falseLabel !== undefined &&
+            !isNonEmptyString(value.valueBinding.falseLabel)) ||
+          (value.valueBinding.trueLabel === undefined) !==
+            (value.valueBinding.falseLabel === undefined))) ||
+      (value.valueBinding.type === "LOOKUP" &&
+        (!hasOnlyKeys(value.valueBinding, [
+          "type",
+          "profileFieldKey",
+          "optionMap",
+        ]) ||
+          !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+          !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
+          !isRecord(value.valueBinding.optionMap) ||
+          Object.keys(value.valueBinding.optionMap).length === 0 ||
+          Object.entries(value.valueBinding.optionMap).some(
+            ([source, target]) =>
+              !isNonEmptyString(source) || !isNonEmptyString(target),
+          ))) ||
+      (value.valueBinding.type === "BUTTON_OPTION" &&
+        (!hasOnlyKeys(value.valueBinding, [
+          "type",
+          "profileFieldKey",
+          "optionMap",
+          "optionCodeMap",
+        ]) ||
+          !isNonEmptyString(value.valueBinding.profileFieldKey) ||
+          !isAutofillProfileFieldKey(value.valueBinding.profileFieldKey) ||
+          !hasValidButtonOptionMap(
+            value.valueBinding.optionMap,
+            value.valueBinding.optionCodeMap,
+          )))
+    ) {
+      throw new AnalysisContractError();
+    }
+  }
+
+  if (value.writePlan !== undefined) {
+    const directKey =
+      isRecord(value.valueBinding) && value.valueBinding.type === "DIRECT"
+        ? value.valueBinding.profileFieldKey
+        : undefined;
+    const greetingReady =
+      greeting &&
+      value.mappingStatus === "ADAPTER_VERIFIED" &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      ((typeof directKey === "string" &&
+        isAutofillProfileFieldKey(directKey)) ||
+        (isRecord(value.valueBinding) &&
+          value.valueBinding.type === "DERIVED" &&
+          /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_NAME$/.test(
+            String(value.valueBinding.recipe),
+          )));
+    const greetingSearch =
+      greetingReady &&
+      candidate.element === "input" &&
+      candidate.control === "text" &&
+      !candidate.readonly &&
+      (/^(?:educationalBackground\.(?:(?:universities|graduateSchools)\.\d+\.(?:schoolName|majors\.\d+)|highSchool\.schoolName)|workHistory\.workExperiences\.\d+\.companyName|languagesCertificationsAndOtherActivity\.(?:certifiedLanguageTests\.\d+\.testName|certificatesLicenses\.\d+\.credentials))$/.test(
+        candidate.domName ?? "",
+      ) ||
+        (candidate.domName === "basicInformation.nationalityCode" &&
+          candidate.displayName === "국적" &&
+          directKey === "personal.personal.nationality"));
+    const greetingDate =
+      request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
+      greetingReady &&
+      candidate.element === "input" &&
+      candidate.control === "button" &&
+      typeof directKey === "string" &&
+      isDateProfileFieldKey(directKey) &&
+      (candidate.domName === "basicInformation.birthdate" ||
+        /^educationalBackground\.(?:(?:universities|graduateSchools)\.\d+|highSchool)\.enrollmentPeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
+        /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.test(
+          candidate.domName ?? "",
+        ));
+    const searchSelection =
+      value.mappingStatus === "LLM_SUGGESTED" &&
+      candidate.element === "input" &&
+      candidate.control === "text" &&
+      candidate.semanticContext?.inputType === "text" &&
+      candidate.readonly === true &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      typeof directKey === "string" &&
+      isAutofillProfileFieldKey(directKey);
+    const calendarSelection =
+      request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
+      isRecord(value.writePlan) &&
+      value.writePlan.command === "SELECT_DATE" &&
+      candidate.element === "input" &&
+      candidate.control === "text" &&
+      candidate.semanticContext?.inputType === "text" &&
+      candidate.readonly === true &&
+      candidate.visibility === "visible" &&
+      !candidate.disabled &&
+      !candidate.inert &&
+      typeof directKey === "string" &&
+      isDateProfileFieldKey(directKey);
+    if (
+      candidate.readonly &&
+      value.mappingStatus === "LLM_SUGGESTED" &&
+      !searchSelection &&
+      !calendarSelection
+    ) {
+      throw new AnalysisContractError();
+    }
+    const expectedCommand =
+      calendarSelection || greetingDate
+        ? "SELECT_DATE"
+        : searchSelection || greetingSearch
+          ? "SEARCH_SELECTION"
+          : candidate.element === "input" &&
+              candidate.control === "text" &&
+              isRecord(value.valueBinding) &&
+              value.valueBinding.type === "BUTTON_OPTION"
+            ? "SELECT_BUTTON_OPTION"
+            : writeCommandForControl[candidate.control];
+    if (
+      !isRecord(value.writePlan) ||
+      !hasOnlyKeys(value.writePlan, ["command"]) ||
+      !isOneOf(value.writePlan.command, [
+        "SEARCH_SELECTION",
+        "SET_TEXT",
+        "SELECT_OPTION",
+        "SELECT_BUTTON_OPTION",
+        "CHECK_RADIO",
+        "CHECK_CHECKBOX",
+        "SELECT_DATE",
+      ]) ||
+      expectedCommand !== value.writePlan.command
+    ) {
+      throw new AnalysisContractError();
+    }
+  }
+
+  if (value.interactionStatus === "READY" && value.writePlan === undefined) {
+    throw new AnalysisContractError();
+  }
+  return value.candidateId;
+}
+
+export function validateFieldsResponse(
+  request: FieldsAnalyzeRequest,
+  value: unknown,
+): FieldsAnalyzeResponse {
+  assertCommonResponse(value);
+  if (
+    !hasOnlyKeys(value, [
+      "snapshotId",
+      "mode",
+      "analysisStatus",
+      "fields",
+      "warningCodes",
+      "blockCode",
+    ]) ||
+    value.snapshotId !== request.snapshotId ||
+    !Array.isArray(value.fields) ||
+    !validateStringArray(value.warningCodes, [
+      "UNRESOLVED_FIELD",
+      "LLM_UNAVAILABLE",
+    ])
+  ) {
+    throw new AnalysisContractError();
+  }
+
+  const isBlocked = value.analysisStatus === "BLOCKED";
+  if (
+    (isBlocked &&
+      (!isOneOf(value.blockCode, [
+        "ADAPTER_STRUCTURE_MISMATCH",
+        "ADAPTER_POLICY_UNAVAILABLE",
+      ]) ||
+        value.fields.length > 0)) ||
+    (!isBlocked && value.blockCode !== undefined)
+  ) {
+    throw new AnalysisContractError();
+  }
+
+  const candidates = collectFieldCandidates(request);
+  const greeting =
+    resolveCompany(request.site.host) === "greeting" ||
+    hasGreetingFieldCandidates(candidates.values());
+  const seen = new Set<string>();
+  for (const field of value.fields) {
+    let candidateId: string;
+    try {
+      candidateId = validateFieldAnalysis(
+        field,
+        candidates,
+        request,
+        greeting && value.mode === "ADAPTER",
+      );
+      if (
+        isRecord(field) &&
+        isRecord(field.writePlan) &&
+        field.writePlan.command === "SEARCH_SELECTION" &&
+        value.mode !== "GENERIC" &&
+        !greeting
+      )
+        throw new AnalysisContractError();
+    } catch (error) {
+      if (error instanceof AnalysisContractError) {
+        const candidateLabel =
+          isRecord(field) && isNonEmptyString(field.candidateId)
+            ? field.candidateId
+            : "식별할 수 없는 후보";
+        throw new AnalysisContractError(`필드 ${candidateLabel}`);
+      }
+      throw error;
+    }
+    if (seen.has(candidateId)) {
+      throw new AnalysisContractError();
+    }
+    seen.add(candidateId);
+  }
+  if (value.analysisStatus === "COMPLETE" && seen.size !== candidates.size) {
+    throw new AnalysisContractError();
+  }
+
+  return value as unknown as FieldsAnalyzeResponse;
+}

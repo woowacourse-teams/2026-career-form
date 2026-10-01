@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>학교명 검색</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 1rem;
+        color: #172033;
+      }
+      form {
+        display: grid;
+        gap: 0.6rem;
+      }
+      label {
+        font-weight: 650;
+      }
+      .search-line {
+        display: flex;
+        gap: 0.6rem;
+      }
+      input,
+      button {
+        min-height: 2.7rem;
+        box-sizing: border-box;
+        font: inherit;
+      }
+      input {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0.5rem 0.6rem;
+        border: 1px solid #8794a8;
+        border-radius: 0.4rem;
+      }
+      button {
+        padding: 0.5rem 0.8rem;
+        border: 1px solid #405d92;
+        border-radius: 0.4rem;
+        background: #eef3ff;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid #e19b22;
+        outline-offset: 2px;
+      }
+      .status {
+        min-height: 1.3rem;
+        color: #4c5a70;
+        font-size: 0.92rem;
+      }
+      ul {
+        display: grid;
+        gap: 0.5rem;
+        margin: 0.8rem 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      li {
+        margin: 0;
+      }
+      a {
+        display: block;
+        padding: 0.7rem;
+        border: 1px solid #aeb9c9;
+        border-radius: 0.4rem;
+        color: #24477f;
+        text-decoration: none;
+      }
+      a:hover,
+      a:focus-visible {
+        background: #e8efff;
+      }
+      .actions {
+        display: flex;
+        gap: 0.6rem;
+        margin-top: 0.8rem;
+      }
+    </style>
+    <script src="./school-search.js" defer></script>
+  </head>
+  <body>
+    <h1>학교명 검색</h1>
+    <form id="school-search-form" action="#results" method="get">
+      <label for="school-query">학교명 입력</label>
+      <div class="search-line">
+        <input
+          id="school-query"
+          name="query"
+          type="text"
+          title="학교명 입력"
+          autocomplete="off"
+        />
+        <button id="school-search-submit" type="button">검색</button>
+      </div>
+      <div id="duplicate-query-inputs"></div>
+    </form>
+    <p id="search-status" class="status" role="status" aria-live="polite">
+      검색어를 입력하세요.
+    </p>
+    <ul id="school-results" aria-label="학교명 검색 결과"></ul>
+    <div class="actions">
+      <button id="school-search-cancel" type="button">취소</button>
+    </div>
+  </body>
+</html>

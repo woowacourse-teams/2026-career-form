@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="900" viewBox="0 0 560 900" role="img" aria-labelledby="title desc"><title id="title">지원서 분석 중</title><desc id="desc">지원서 값을 바꾸지 않고 분석 진행 상태를 보여주는 패널</desc>
+  <style>text { font-family: "Pretendard Variable", Pretendard, Arial, sans-serif; }</style>
+  <rect width="560" height="900" fill="#F6F9FC"/><rect x="42" y="28" width="476" height="844" rx="22" fill="#FFFFFF" stroke="#D6E0E8"/>
+  <text x="74" y="82" fill="#2196F3" font-family="Arial,sans-serif" font-size="11" font-weight="700">1 / 4</text><text x="74" y="120" fill="#0D47A1" font-family="Arial,sans-serif" font-size="26" font-weight="700">지원서 분석 중</text>
+  <rect x="74" y="164" width="412" height="268" rx="22" fill="#E3F2FD"/><circle cx="280" cy="274" r="58" fill="#FFFFFF" stroke="#90CAF9" stroke-width="14"/><path d="M280 216a58 58 0 0 1 55 40" fill="none" stroke="#0D47A1" stroke-width="14" stroke-linecap="round"/><circle cx="280" cy="274" r="13" fill="#2196F3"/><text x="280" y="372" text-anchor="middle" fill="#0D47A1" font-family="Arial,sans-serif" font-size="14" font-weight="700">필드 탐지 · 프로필 연결 · 예정 값 준비</text>
+  <text x="74" y="486" fill="#263442" font-family="Arial,sans-serif" font-size="16" font-weight="700">현재 페이지 구조를 확인하고 있습니다.</text><text x="74" y="516" fill="#526272" font-family="Arial,sans-serif" font-size="13">이 화면은 비식별 목업이며 실제 DOM 분석은 수행하지 않습니다.</text>
+  <rect x="74" y="558" width="412" height="76" rx="12" fill="#E3F2FD" stroke="#90CAF9"/><text x="96" y="590" fill="#0D47A1" font-family="Arial,sans-serif" font-size="13" font-weight="700">안전 안내</text><text x="96" y="614" fill="#526272" font-family="Arial,sans-serif" font-size="12">분석 중에는 지원서 값을 변경하지 않습니다.</text>
+  <rect x="74" y="756" width="412" height="52" rx="10" fill="#0D47A1"/><text x="280" y="789" text-anchor="middle" fill="#FFFFFF" font-family="Arial,sans-serif" font-size="15" font-weight="700">분석 결과 보기</text>
+</svg>

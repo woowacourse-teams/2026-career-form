@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel)
+. "$ROOT/.githooks/python-runtime.sh"
+PYTHON=$(select_python "$ROOT")
+exec "$PYTHON" "$ROOT/harness/scripts/verify.py"

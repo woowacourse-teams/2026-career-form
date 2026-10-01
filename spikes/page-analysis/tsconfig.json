@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "types": ["@playwright/test", "chrome", "node"]
+  },
+  "include": ["src/**/*.ts", "extension/**/*.ts", "tests/**/*.ts", "playwright.config.ts"]
+}

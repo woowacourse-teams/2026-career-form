@@ -1,0 +1,455 @@
+import type { ProfileCategoryId } from "./model";
+import {
+  ATTENDANCE_TYPE_OPTIONS,
+  DISABILITY_STATUS_OPTIONS,
+  MILITARY_BRANCH_OPTIONS,
+  MILITARY_RANK_OPTIONS,
+  MILITARY_STATUS_OPTIONS,
+  SCHOOL_REGION_OPTIONS,
+  VETERAN_STATUS_OPTIONS,
+  type StandardValueOption,
+} from "./standard-values";
+
+export type ProfileInputType =
+  "date" | "email" | "tel" | "text" | "textarea" | "select";
+
+export interface ProfileFieldDefinition {
+  id: string;
+  label: string;
+  placeholder?: string;
+  inputType: ProfileInputType;
+  options?: readonly (string | StandardValueOption)[];
+  optionsFor?: (
+    values: Record<string, string>,
+  ) => readonly StandardValueOption[];
+  visibleWhen?: (values: Record<string, string>) => boolean;
+}
+
+export interface ProfileSectionDefinition {
+  id: string;
+  label: string;
+  fields: readonly ProfileFieldDefinition[];
+}
+
+export interface ProfileCategoryDefinition {
+  id: ProfileCategoryId;
+  label: string;
+  repeatable: boolean;
+  sensitive: boolean;
+  sections: readonly ProfileSectionDefinition[];
+  topLevelFields?: readonly ProfileFieldDefinition[];
+}
+
+const text = (id: string, label: string): ProfileFieldDefinition => ({
+  id,
+  label,
+  inputType: "text",
+});
+const date = (id: string, label: string): ProfileFieldDefinition => ({
+  id,
+  label,
+  inputType: "date",
+});
+const select = (
+  id: string,
+  label: string,
+  options: readonly (string | StandardValueOption)[],
+): ProfileFieldDefinition => ({
+  id,
+  label,
+  inputType: "select",
+  options,
+});
+
+const EDUCATION_STATUS_OPTIONS = [
+  "재학중",
+  "졸업예정",
+  "졸업",
+  "중퇴",
+  "휴학",
+  "수료",
+];
+
+export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
+  {
+    id: "personal",
+    label: "기본 인적사항",
+    repeatable: false,
+    sensitive: false,
+    sections: [
+      {
+        id: "personal",
+        label: "기본 인적사항",
+        fields: [
+          text("koreanFamilyName", "국문 성"),
+          text("koreanGivenName", "국문 이름"),
+          text("hanjaFamilyName", "한자 성"),
+          text("hanjaGivenName", "한자 이름"),
+          text("englishFamilyName", "영문 성"),
+          text("englishGivenName", "영문 이름"),
+          text("gender", "성별"),
+          date("birthDate", "생년월일"),
+          text("nationality", "국적"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "contact",
+    label: "연락처와 주소",
+    repeatable: false,
+    sensitive: false,
+    sections: [
+      {
+        id: "contact",
+        label: "연락처와 주소",
+        fields: [
+          { id: "email", label: "이메일주소", inputType: "email" },
+          { id: "secondaryEmail", label: "보조 이메일", inputType: "email" },
+          {
+            id: "phoneNumber",
+            label: "연락처",
+            placeholder: "숫자만 입력해주세요",
+            inputType: "tel",
+          },
+          {
+            id: "emergencyPhoneNumber",
+            label: "비상연락처",
+            placeholder: "숫자만 입력해주세요",
+            inputType: "tel",
+          },
+          text("residenceCountry", "거주 국가"),
+          text("postalCode", "우편번호"),
+          text("addressLine1", "기본주소"),
+          text("addressLine2", "상세주소"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "education",
+    label: "학력",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "highSchool",
+        label: "고등학교",
+        fields: [
+          select("academicProcess", "학업과정", ["고등학교", "대입 검정고시"]),
+          {
+            ...date("qualificationPassDate", "합격일자"),
+            visibleWhen: (values) => values.academicProcess === "대입 검정고시",
+          },
+          text("schoolName", "학교명"),
+          select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
+          select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
+          date("startDate", "입학일"),
+          date("endDate", "졸업일"),
+        ],
+      },
+      {
+        id: "university",
+        label: "대학교",
+        fields: [
+          {
+            id: "schoolType",
+            label: "학교 유형",
+            inputType: "select",
+            options: ["전문대학", "대학교"],
+          },
+          select("degreeLevel", "학위구분", ["전문학사", "학사"]),
+          text("schoolName", "학교명"),
+          select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
+          date("startDate", "입학일"),
+          date("endDate", "졸업일"),
+          select("completionStatus", "재학 상태", EDUCATION_STATUS_OPTIONS),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
+          text("gpaScore", "평점"),
+          select("gpaScale", "기준평점", ["4.00", "4.30", "4.50", "100.00"]),
+          text("totalCredits", "총 이수학점"),
+          text("majorName", "주전공명"),
+          select("transferStatus", "편입유무", ["비해당", "해당"]),
+          select("doubleMajorStatus", "복수전공유무", ["없음", "있음"]),
+          select("minorStatus", "부전공유무", ["없음", "있음"]),
+          {
+            ...text("additionalMajorName", "복수전공명"),
+            visibleWhen: (values) => values.doubleMajorStatus === "있음",
+          },
+          {
+            ...text("minorName", "부전공명"),
+            visibleWhen: (values) => values.minorStatus === "있음",
+          },
+        ],
+      },
+      {
+        id: "graduateSchool",
+        label: "대학원",
+        fields: [
+          text("degreeLevel", "학위구분"),
+          text("country", "국가"),
+          text("schoolName", "학교명"),
+          select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
+          select("schoolRegion", "학교 소재지", SCHOOL_REGION_OPTIONS),
+          date("startDate", "입학일"),
+          date("endDate", "졸업일"),
+          text("admissionType", "입학구분"),
+          text("completionStatus", "졸업구분"),
+          text("gpaScore", "평점"),
+          text("gpaScale", "만점기준"),
+          text("majorClassification", "주전공 구분"),
+          text("majorField", "주전공 계열"),
+          text("majorName", "주전공명"),
+          text("additionalMajorClassification", "추가 전공 구분"),
+          text("additionalMajorField", "추가 전공 계열"),
+          text("additionalMajorName", "추가 전공명"),
+          text("labName", "LAB실명"),
+          text("labProfessorName", "LAB 담당교수 성명"),
+          text("thesisTitle", "논문명"),
+          { id: "thesisSummary", label: "논문요약", inputType: "textarea" },
+        ],
+      },
+    ],
+    topLevelFields: [
+      select("latestEducationType", "최종학력", [
+        "고등학교",
+        "전문대학(전문학사)",
+        "대학(학사)",
+        "대학원(석사)",
+        "대학원(박사)",
+        "대학원(석박사통합)",
+      ]),
+    ],
+  },
+  {
+    id: "languages",
+    label: "어학",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "languageTest",
+        label: "공인외국어시험",
+        fields: [
+          text("language", "외국어"),
+          text("testName", "시험명"),
+          text("registrationNo", "등록번호"),
+          date("acquisitionDate", "취득일"),
+          text("grade", "등급·점수"),
+          text("evidenceDocumentPath", "증빙 서류 위치"),
+        ],
+      },
+      {
+        id: "languageSkill",
+        label: "외국어활용능력",
+        fields: [
+          text("language", "외국어"),
+          text("conversationalLevel", "회화수준"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "certifications",
+    label: "자격증·면허증",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "certificate",
+        label: "자격증·면허증",
+        fields: [
+          text("name", "자격증명"),
+          text("grade", "등급"),
+          text("registrationNo", "등록번호"),
+          text("issuer", "발급기관"),
+          date("acquisitionDate", "취득일"),
+          text("evidenceDocumentPath", "증빙 서류 위치"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "careers",
+    label: "직장경력",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "career",
+        label: "직장경력",
+        fields: [
+          text("companyName", "직장명"),
+          select("employmentType", "고용형태", [
+            "정규",
+            "계약",
+            "인턴",
+            "파견",
+            "프리랜서",
+            "아르바이트",
+            "개인사업",
+            "병역특례",
+            "기타",
+          ]),
+          date("startDate", "입사일"),
+          date("endDate", "퇴사일"),
+          select("employmentStatus", "재직 여부", ["재직중", "퇴사"]),
+          text("department", "근무부서"),
+          text("position", "최종직위"),
+          { id: "responsibilities", label: "담당업무", inputType: "textarea" },
+          text("terminationReason", "종료사유"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "projects",
+    label: "프로젝트",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "project",
+        label: "프로젝트",
+        fields: [
+          date("startDate", "활동 시작일"),
+          date("endDate", "활동 종료일"),
+          text("projectName", "프로젝트 이름"),
+          text("role", "담당 역할"),
+          {
+            id: "activityDetails",
+            label: "활동 상세내역",
+            inputType: "textarea",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "publications",
+    label: "논문·특허",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "publicationPatent",
+        label: "논문·특허",
+        fields: [
+          select("type", "구분", ["논문", "특허"]),
+          text("title", "제목"),
+          { id: "details", label: "상세설명", inputType: "textarea" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "compensation",
+    label: "처우",
+    repeatable: false,
+    sensitive: true,
+    sections: [
+      {
+        id: "compensation",
+        label: "처우",
+        fields: [
+          text("desiredPosition", "희망직위"),
+          text("desiredSalary", "희망연봉(만원)"),
+          text("previousSalary", "직전연봉(만원)"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "military",
+    label: "병역",
+    repeatable: false,
+    sensitive: true,
+    sections: [
+      {
+        id: "military",
+        label: "병역",
+        fields: [
+          select("militaryStatus", "병역 상태", MILITARY_STATUS_OPTIONS),
+          select("militaryType", "병역구분", [
+            "현역병",
+            "상근예비역",
+            "공익근무요원",
+            "전문연구요원",
+            "산업기능요원",
+          ]),
+          select("militaryBranch", "군별", MILITARY_BRANCH_OPTIONS),
+          text("militarySpecialty", "병과"),
+          select("militaryRank", "계급", MILITARY_RANK_OPTIONS),
+          date("serviceStartDate", "복무 시작일"),
+          date("serviceEndDate", "복무 종료일"),
+          text("dischargeType", "전역구분"),
+          text("exemptionReason", "면제·비대상 사유"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "veteran",
+    label: "보훈",
+    repeatable: false,
+    sensitive: true,
+    sections: [
+      {
+        id: "veteran",
+        label: "보훈",
+        fields: [
+          select("veteranStatus", "보훈 대상 여부", VETERAN_STATUS_OPTIONS),
+          text("veteranType", "보훈구분"),
+          text("veteranRelation", "보훈 대상자와의 관계"),
+          text("veteranNumber", "보훈번호"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "disability",
+    label: "장애",
+    repeatable: false,
+    sensitive: true,
+    sections: [
+      {
+        id: "disability",
+        label: "장애",
+        fields: [
+          select("disabilityStatus", "장애 여부", DISABILITY_STATUS_OPTIONS),
+          text("disabilityType", "장애 유형"),
+          text("disabilityGrade", "장애 정도·등급"),
+          text("disabilityRegistrationNumber", "장애등록번호"),
+          date("disabilityRegistrationDate", "장애 등록일"),
+        ],
+      },
+    ],
+  },
+  {
+    id: "health",
+    label: "건강",
+    repeatable: true,
+    sensitive: false,
+    sections: [
+      {
+        id: "health",
+        label: "건강정보",
+        fields: [
+          text("healthItemName", "건강정보 항목"),
+          text("healthStatusOrValue", "상태·값"),
+          date("healthDate", "진단·확인일"),
+          { id: "healthDetails", label: "상세내용", inputType: "textarea" },
+        ],
+      },
+    ],
+  },
+] as const;
+
+export function getCategoryDefinition(id: ProfileCategoryId) {
+  const category = PROFILE_CATEGORIES.find((candidate) => candidate.id === id);
+  if (!category) {
+    throw new Error(`알 수 없는 프로필 범주: ${id}`);
+  }
+  return category;
+}

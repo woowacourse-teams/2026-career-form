@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Career Form Page Analysis Probe",
+  "version": "0.0.1",
+  "description": "현재 탭의 입력 구조를 읽기 전용으로 비식별 집계합니다.",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

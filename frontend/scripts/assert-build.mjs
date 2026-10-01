@@ -1,0 +1,118 @@
+import { readFile, readdir } from "node:fs/promises";
+import { resolve } from "node:path";
+
+const outputDirectory = resolve(".output/chrome-mv3");
+const manifest = JSON.parse(
+  await readFile(resolve(outputDirectory, "manifest.json"), "utf8"),
+);
+
+if (manifest.manifest_version !== 3) {
+  throw new Error("Chrome Manifest V3 산출물이 필요합니다.");
+}
+
+if (manifest.action?.default_popup) {
+  throw new Error("툴바 아이콘은 팝업 없이 지원서 패널을 직접 열어야 합니다.");
+}
+
+if (
+  manifest.options_ui?.page !== "options.html" ||
+  manifest.options_ui?.open_in_tab !== true
+) {
+  throw new Error("options_ui가 새 탭의 options.html을 가리켜야 합니다.");
+}
+
+if (manifest.side_panel?.default_path !== "sidepanel.html") {
+  throw new Error("side_panel.default_path가 sidepanel.html이어야 합니다.");
+}
+
+const autofillContentScript = manifest.content_scripts?.find((contentScript) =>
+  contentScript.js?.includes("content-scripts/autofill.js"),
+);
+if (
+  !autofillContentScript ||
+  !autofillContentScript.matches?.includes("http://*/*") ||
+  !autofillContentScript.matches?.includes("https://*/*")
+) {
+  throw new Error(
+    "HTTP(S) 지원서 페이지용 autofill content script가 필요합니다.",
+  );
+}
+
+const permissions = new Set(manifest.permissions);
+if (
+  !permissions.has("activeTab") ||
+  !permissions.has("storage") ||
+  !permissions.has("sidePanel") ||
+  !permissions.has("scripting")
+) {
+  throw new Error(
+    "현재 탭, 프로필 저장, side panel, 지원서 패널 주입 권한이 필요합니다.",
+  );
+}
+
+const hostPermissions = manifest.host_permissions ?? [];
+if (
+  hostPermissions.some((permission) =>
+    ["<all_urls>", "http://*/*", "https://*/*"].includes(permission),
+  )
+) {
+  throw new Error(
+    "자동 기입 API에는 넓은 host permission을 포함할 수 없습니다.",
+  );
+}
+
+if (manifest.background?.service_worker !== "background.js") {
+  throw new Error(
+    "자동 기입 API 중계를 위한 background service worker가 필요합니다.",
+  );
+}
+
+await Promise.all(
+  [
+    "background.js",
+    "popup.html",
+    "options.html",
+    "sidepanel.html",
+    "onboarding.html",
+    "onboarding-guide.html",
+    "content-scripts/autofill.js",
+    "content-scripts/autofill.css",
+    // Re-injected by open-in-page-panel.ts for tabs opened before install.
+    "content-scripts/verified-js-result-main.js",
+  ].map((fileName) => readFile(resolve(outputDirectory, fileName))),
+);
+
+const autofillArtifact = await readFile(
+  resolve(outputDirectory, "content-scripts", "autofill.js"),
+  "utf8",
+);
+if (
+  autofillArtifact.includes(
+    "필드 탐지와 프로필 연결을 비식별 목업으로 확인합니다.",
+  )
+) {
+  throw new Error(
+    "프로덕션 자동 기입 산출물에 목업 화면이 포함되어서는 안 됩니다.",
+  );
+}
+
+const assetNames = await readdir(resolve(outputDirectory, "assets"));
+const fontAssets = assetNames.filter((fileName) => fileName.endsWith(".woff2"));
+
+if (fontAssets.length === 0) {
+  throw new Error("Pretendard 로컬 WOFF2 폰트가 빌드에 포함되어야 합니다.");
+}
+
+const styleSheets = await Promise.all(
+  assetNames
+    .filter((fileName) => fileName.endsWith(".css"))
+    .map((fileName) =>
+      readFile(resolve(outputDirectory, "assets", fileName), "utf8"),
+    ),
+);
+
+if (
+  !styleSheets.some((styleSheet) => styleSheet.includes("Pretendard Variable"))
+) {
+  throw new Error("확장 프로그램의 기본 서체가 Pretendard여야 합니다.");
+}

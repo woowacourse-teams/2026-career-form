@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: career-form-backend
+  mongodb:
+    uri: ${SPRING_MONGODB_URI}
+  jackson:
+    datatype:
+      enum:
+        fail-on-numbers-for-enums: true
+    deserialization:
+      accept-float-as-int: false
+      fail-on-unknown-properties: true
+    mapper:
+      allow-coercion-of-scalars: false
+  ai:
+    chat:
+      observations:
+        log-prompt: false
+        log-completion: false
+        include-error-logging: false
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      timeout: ${CAREER_FORM_LLM_TIMEOUT:30s}
+      max-retries: 0
+      chat:
+        model: ${CAREER_FORM_LLM_MODEL:gpt-5.6-luna}
+        reasoning-effort: none
+        max-completion-tokens: ${CAREER_FORM_LLM_MAX_OUTPUT_TOKENS:8192}
+        store: true
+  threads:
+    virtual:
+      enabled: true
+
+career-form:
+  analysis:
+    enabled: ${CAREER_FORM_ANALYSIS_ENABLED:}
+    provider: ${CAREER_FORM_ANALYSIS_PROVIDER:openai}
+    jev:
+      api-key: ${TYPESAFE_API_KEY:}
+      model: ${CAREER_FORM_JEV_MODEL:jev-latest}
+      timeout-ms: ${CAREER_FORM_JEV_TIMEOUT_MS:8000}
+      min-confidence: ${CAREER_FORM_JEV_MIN_CONFIDENCE:0.8}
+      data-policy-reviewed: ${CAREER_FORM_JEV_DATA_POLICY_REVIEWED:false}
+  llm:
+    enabled: ${CAREER_FORM_LLM_ENABLED:}
+
+logging:
+  pattern:
+    level: "%5p [requestId=%X{requestId:-none}]"
+  level:
+    org.springframework.ai.openai.OpenAiChatModel: "OFF"
+
+management:
+  server:
+    port: 9091
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      env: ${CAREER_FORM_ENV:${SPRING_PROFILES_ACTIVE:local}}
+      service: career-form-backend
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 2s,20s
+
+springdoc:
+  api-docs:
+    enabled: false
+    version: OPENAPI_3_0
+  swagger-ui:
+    enabled: false

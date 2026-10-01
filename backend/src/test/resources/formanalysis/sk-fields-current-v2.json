@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 2,
+  "snapshotId": "sk-current-fields-redacted",
+  "site": {
+    "host": "www.skcareers.com",
+    "pathPattern": "/Application/Index/*"
+  },
+  "sections": [
+    {
+      "sectionId": "section-1",
+      "fields": [
+        { "candidateId": "field-korean-name", "element": "input", "control": "text", "visibility": "visible", "domName": "prsApplicantName", "readonly": true },
+        { "candidateId": "field-email", "element": "input", "control": "text", "visibility": "visible", "domName": "prsEmail" },
+        { "candidateId": "field-phone", "element": "input", "control": "text", "visibility": "visible", "domName": "prsPhone" },
+        { "candidateId": "field-postal-code", "element": "input", "control": "text", "visibility": "visible", "domName": "prsZipCode", "readonly": true },
+        { "candidateId": "field-address-line-1", "element": "input", "control": "text", "visibility": "visible", "domName": "prsAddress", "readonly": true },
+        { "candidateId": "field-address-line-2", "element": "input", "control": "text", "visibility": "visible", "domName": "prsAddressDtl" },
+        { "candidateId": "field-military-status", "element": "select", "control": "select", "visibility": "visible", "domName": "prsMilitarySvcStatus", "options": [{ "optionId": "military-status-option", "displayName": "비식별 선택지" }] },
+        { "candidateId": "field-military-branch", "element": "select", "control": "select", "visibility": "hidden", "domName": "prsMilitarySvcCategory", "options": [{ "optionId": "military-branch-option", "displayName": "비식별 선택지" }] },
+        { "candidateId": "field-military-rank", "element": "select", "control": "select", "visibility": "hidden", "domName": "prsMilitarySvcLevel", "options": [{ "optionId": "military-rank-option", "displayName": "비식별 선택지" }] },
+        { "candidateId": "field-military-start", "element": "input", "control": "text", "visibility": "hidden", "domName": "prsMilitarySvcFromDate" },
+        { "candidateId": "field-military-end", "element": "input", "control": "text", "visibility": "hidden", "domName": "prsMilitarySvcToDate" },
+        { "candidateId": "field-military-exemption-reason", "element": "input", "control": "text", "visibility": "hidden", "domName": "prsMilitarySvcTypeReason" }
+      ]
+    },
+    {
+      "sectionId": "section-3",
+      "fields": [
+        { "candidateId": "field-latest-education", "element": "select", "control": "select", "visibility": "visible", "domName": "eduLastestEducationType", "options": [{ "optionId": "education-level-option", "displayName": "비식별 선택지" }] }
+      ],
+      "items": [
+        {
+          "itemId": "university-item-redacted",
+          "fields": [
+            { "candidateId": "field-university-status", "element": "select", "control": "select", "visibility": "visible", "domName": "eduEducationStatus", "options": [{ "optionId": "education-status-option", "displayName": "비식별 선택지" }] },
+            { "candidateId": "field-university-name", "element": "input", "control": "text", "visibility": "visible", "domName": "eduEducationName" }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "section-4",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "certificate-item-redacted",
+          "fields": [
+            { "candidateId": "field-certificate-name", "element": "input", "control": "text", "visibility": "visible", "domName": "cerCertName" },
+            { "candidateId": "field-certificate-issuer", "element": "input", "control": "text", "visibility": "visible", "domName": "cerCertSource" },
+            { "candidateId": "field-certificate-date", "element": "input", "control": "text", "visibility": "visible", "domName": "cerCertDate" },
+            { "candidateId": "field-certificate-number", "element": "input", "control": "text", "visibility": "visible", "domName": "cerCertNumber" }
+          ]
+        }
+      ]
+    }
+  ]
+}

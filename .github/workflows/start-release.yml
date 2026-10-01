@@ -1,0 +1,77 @@
+name: 릴리스 시작
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "release/<MAJOR.MINOR.PATCH>에 사용할 버전"
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: start-release
+  cancel-in-progress: false
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: 버전과 활성 릴리스 확인
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "version은 선행 0 없는 MAJOR.MINOR.PATCH 형식이어야 합니다" >&2
+            exit 1
+          fi
+          if [[ -n "$(git ls-remote --heads origin 'refs/heads/release/*')" ]]; then
+            echo "활성 release 브랜치는 하나만 허용됩니다" >&2
+            exit 1
+          fi
+      - name: 릴리스 브랜치와 Draft PR 생성
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          branch="release/$VERSION"
+          release_sha="$(git rev-parse origin/develop)"
+          git switch --create "$branch" "$release_sha"
+          git push origin "$branch"
+          body="$RUNNER_TEMP/release-pr.md"
+          printf '%s\n' \
+            '## 해결하려는 문제가 무엇인가요?' \
+            "release/$VERSION 후보를 스테이징에서 고정 검증하고 운영에 반영합니다." \
+            '## 왜 해야 하나요?' \
+            '다음 develop 작업과 현재 릴리스 후보 검증을 분리해야 합니다.' \
+            '## 어떻게 해결했나요?' \
+            "develop HEAD에서 release/$VERSION 브랜치와 Draft PR을 생성했습니다." \
+            '## 이 PR의 한계 & 트레이드오프' \
+            '스테이징 E2E, 최종 승인과 병합은 사람이 수행합니다.' \
+            '## 기존 기능에 미치는 영향' \
+            '검증된 release digest만 운영 배포 대상으로 승격됩니다.' \
+            '## Edge Case & 실패 시나리오' \
+            '스테이징 검증 실패 시 원인을 수정하고 release 브랜치에서 다시 검증합니다.' \
+            '## 검토한 대안과 선택 이유' \
+            'develop 직접 승격 대신 고정된 release 브랜치를 선택했습니다.' \
+            '## 리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)' \
+            '🔴 스테이징 digest와 운영 승격 digest가 동일한지 확인합니다.' \
+            > "$body"
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$branch" \
+            --title "[Release] $VERSION 운영 반영" \
+            --body-file "$body"
+          gh workflow run deploy-staging.yml \
+            --ref "$branch"

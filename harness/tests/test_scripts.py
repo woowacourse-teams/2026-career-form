@@ -1,0 +1,1067 @@
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from harness.tests.pr_fixtures import VALID_PR_BODY
+from harness.lib.workflow_checkpoint import (
+    approve_knowledge,
+    begin_stage,
+    complete_stage,
+    initialize_checkpoint,
+    knowledge_digest,
+    save_checkpoint,
+)
+
+
+ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS = ROOT / "harness" / "scripts"
+
+
+class HarnessScriptsTest(unittest.TestCase):
+    def test_commit_message_script_accepts_valid_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            message = Path(directory) / "message.txt"
+            message.write_text("feat: 지원서 필드 자동 입력 지원\n", encoding="utf-8")
+
+            result = self._run("validate-commit-message", str(message))
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_issue_script_reads_github_event_payload(self) -> None:
+        event = {
+            "action": "labeled",
+            "label": {"name": "status:ready"},
+            "issue": {
+                "title": "[Plan] 지원서 필드 구조 결정",
+                "body": self._valid_issue_body(),
+                "labels": [{"name": "status:ready"}],
+            }
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "event.json"
+            payload.write_text(json.dumps(event, ensure_ascii=False), encoding="utf-8")
+
+            result = self._run("validate-issue", str(payload))
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_label_plan_script_prints_selected_labels(self) -> None:
+        result = self._run_with_json(
+            "plan-pr-labels",
+            {
+                "labels": [
+                    {"name": "status:in-progress"},
+                    {"name": "type:technical"},
+                    {"name": "harness-change"},
+                ]
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            {"labels": ["type:technical", "harness-change"]},
+            json.loads(result.stdout),
+        )
+
+    def test_pr_label_validation_script_accepts_matching_remote_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            issue = Path(directory) / "issue.json"
+            pull_request = Path(directory) / "pull-request.json"
+            issue.write_text(
+                json.dumps({"labels": [{"name": "harness-change"}]}),
+                encoding="utf-8",
+            )
+            pull_request.write_text(
+                json.dumps(
+                    {"pull_request": {"labels": [{"name": "harness-change"}]}}
+                ),
+                encoding="utf-8",
+            )
+
+            result = self._run(
+                "validate-pr-labels",
+                str(issue),
+                str(pull_request),
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_label_validation_script_reports_missing_remote_label(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            issue = Path(directory) / "issue.json"
+            pull_request = Path(directory) / "pull-request.json"
+            issue.write_text(
+                json.dumps({"labels": [{"name": "backend-change"}]}),
+                encoding="utf-8",
+            )
+            pull_request.write_text(json.dumps({"labels": []}), encoding="utf-8")
+
+            result = self._run(
+                "validate-pr-labels",
+                str(issue),
+                str(pull_request),
+            )
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("변경 분류 라벨이 없습니다: backend-change", result.stderr)
+
+    def test_pr_label_plan_script_rejects_malformed_labels(self) -> None:
+        result = self._run_with_json(
+            "plan-pr-labels",
+            {"labels": "harness-change"},
+        )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("PR 라벨 입력을 읽을 수 없습니다", result.stderr)
+
+    def test_pr_script_accepts_plan_title(self) -> None:
+        event = {
+            "pull_request": {
+                "title": "[Plan] 지원서 필드 구조 결정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        }
+        linked_issue = {"title": "[Plan] 지원서 필드 구조 결정"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "event.json"
+            issue = Path(directory) / "issue.json"
+            payload.write_text(json.dumps(event, ensure_ascii=False), encoding="utf-8")
+            issue.write_text(json.dumps(linked_issue, ensure_ascii=False), encoding="utf-8")
+
+            result = self._run("validate-pr", str(payload), str(issue))
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_pr_script_rejects_title_different_from_linked_issue(self) -> None:
+        event = {
+            "pull_request": {
+                "title": "[FE] 삼성 채용 사이트 필드 자동 입력",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "CF-123"},
+                "base": {"ref": "develop"},
+            }
+        }
+        linked_issue = {"title": "[FE] CJ 채용 사이트 필드 자동 입력"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "event.json"
+            issue = Path(directory) / "issue.json"
+            payload.write_text(json.dumps(event, ensure_ascii=False), encoding="utf-8")
+            issue.write_text(json.dumps(linked_issue, ensure_ascii=False), encoding="utf-8")
+
+            result = self._run("validate-pr", str(payload), str(issue))
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("PR 제목은 연결 Issue 제목과 같아야 합니다", result.stderr)
+
+    def test_pr_script_accepts_hotfix_issue_branch(self) -> None:
+        event = {
+            "pull_request": {
+                "title": "[Harness] 운영 긴급 수정",
+                "body": VALID_PR_BODY,
+                "head": {"ref": "hotfix/CF-123"},
+                "base": {"ref": "main"},
+            }
+        }
+        linked_issue = {"title": "[Harness] 운영 긴급 수정"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "event.json"
+            issue = Path(directory) / "issue.json"
+            payload.write_text(json.dumps(event, ensure_ascii=False), encoding="utf-8")
+            issue.write_text(json.dumps(linked_issue, ensure_ascii=False), encoding="utf-8")
+
+            result = self._run("validate-pr", str(payload), str(issue))
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_project_issue_script_rejects_string_booleans(self) -> None:
+        for name in (
+            "title_valid",
+            "contract_drafted",
+            "plan_exists",
+            "approved",
+            "contract_published",
+            "contract_valid",
+        ):
+            with self.subTest(name=name):
+                result = self._run_project_issue_plan(
+                    {
+                        "draft_matches": 1,
+                        name: "false",
+                    }
+                )
+
+                self.assertEqual(2, result.returncode)
+                self.assertIn(f"{name}는 boolean이어야 합니다", result.stderr)
+
+    def test_project_issue_script_accepts_missing_boolean_fields(self) -> None:
+        result = self._run_project_issue_plan({"draft_matches": 1})
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue(result.stdout.startswith("promote_draft:"), result.stdout)
+
+    def test_project_issue_script_rejects_invalid_status_label_type(self) -> None:
+        result = self._run_project_issue_plan(
+            {
+                "draft_matches": 0,
+                "issue_number": 1,
+                "issue_status_label": False,
+            }
+        )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("issue_status_label은 문자열이어야 합니다", result.stderr)
+
+    def test_project_issue_script_rejects_invalid_contract_digest_type(self) -> None:
+        for name in ("approved_contract_digest", "latest_contract_digest"):
+            with self.subTest(name=name):
+                result = self._run_project_issue_plan(
+                    {"draft_matches": 0, name: False}
+                )
+
+                self.assertEqual(2, result.returncode)
+                self.assertIn(f"{name}은 문자열이어야 합니다", result.stderr)
+
+    def test_issue_lifecycle_script_selects_ready_issue_delivery(self) -> None:
+        result = self._run_with_json(
+            "plan-issue-lifecycle",
+            {"issue_number": 14, "issue_status": "status:ready"},
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("cf-issue-workflow", json.loads(result.stdout)["skill"])
+
+    def test_issue_lifecycle_script_waits_for_draft_pr_edit(self) -> None:
+        result = self._run_with_json(
+            "plan-issue-lifecycle",
+            {
+                "issue_number": 14,
+                "issue_status": "status:in-progress",
+                "pull_request_state": "OPEN",
+                "pull_request_is_draft": True,
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("await_pr_edit", json.loads(result.stdout)["code"])
+
+    def test_issue_lifecycle_script_reviews_confirmed_draft_pr(self) -> None:
+        result = self._run_with_json(
+            "plan-issue-lifecycle",
+            {
+                "issue_number": 14,
+                "issue_status": "status:in-progress",
+                "pull_request_state": "OPEN",
+                "pull_request_is_draft": True,
+                "pr_edit_confirmed": True,
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("review_draft_pr", json.loads(result.stdout)["code"])
+
+    def test_issue_lifecycle_script_rejects_string_edit_booleans(self) -> None:
+        for name in ("pull_request_is_draft", "pr_edit_confirmed"):
+            with self.subTest(name=name):
+                result = self._run_with_json(
+                    "plan-issue-lifecycle",
+                    {name: "false"},
+                )
+
+                self.assertEqual(2, result.returncode)
+                self.assertIn(f"{name}는 boolean이어야 합니다", result.stderr)
+
+    def test_post_merge_cleanup_script_blocks_unmerged_pr(self) -> None:
+        result = self._run_with_json(
+            "plan-post-merge-cleanup",
+            {
+                "issue_number": 14,
+                "issue_state": "OPEN",
+                "pr_state": "OPEN",
+                "head_branch": "CF-14",
+                "base_branch": "develop",
+                "merge_commit": None,
+                "merge_in_origin_base": False,
+                "local_branch_exists": True,
+                "worktrees": [],
+            },
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("blocked", json.loads(result.stdout)["status"])
+
+    def test_shell_syntax_script_runs_with_selected_shell(self) -> None:
+        result = self._run("validate-shell-syntax")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_shell_syntax_uses_bash_for_infrastructure_scripts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            binary_directory = Path(directory)
+            fake_sh = binary_directory / "sh"
+            fake_sh.write_text(
+                """#!/bin/sh
+case "$2" in
+  */infra/scripts/*)
+    echo 'infrastructure script was checked with sh' >&2
+    exit 42
+    ;;
+esac
+exec /bin/sh "$@"
+""",
+                encoding="utf-8",
+            )
+            fake_sh.chmod(0o755)
+            fake_bash = binary_directory / "bash"
+            fake_bash.write_text(
+                """#!/bin/sh
+exec /bin/bash "$@"
+""",
+                encoding="utf-8",
+            )
+            fake_bash.chmod(0o755)
+            environment = {
+                **os.environ,
+                "PATH": f"{binary_directory}:{os.environ['PATH']}",
+            }
+
+            result = subprocess.run(
+                (sys.executable, str(SCRIPTS / "validate-shell-syntax.py")),
+                cwd=ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_guard_script_denies_destructive_command(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self._init_issue_repository(directory)
+            payload = json.dumps(
+                {
+                    "cwd": directory,
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "rm -rf build"},
+                }
+            )
+
+            result = self._run("guard-tool-use", input_text=payload)
+
+        output = json.loads(result.stdout)
+        decision = output["hookSpecificOutput"]
+        self.assertEqual("deny", decision["permissionDecision"])
+        self.assertIn("삭제 명령", decision["permissionDecisionReason"])
+
+    def test_guard_script_allows_safe_command_without_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self._init_issue_repository(directory)
+            payload = json.dumps(
+                {
+                    "cwd": directory,
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "python3 -m unittest"},
+                }
+            )
+
+            result = self._run("guard-tool-use", input_text=payload)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout)
+
+    def test_guard_script_denies_when_branch_cannot_be_resolved(self) -> None:
+        payload = json.dumps(
+            {
+                "cwd": "/path/that/does/not/exist",
+                "tool_name": "Bash",
+                "tool_input": {"command": "python3 -m unittest"},
+            }
+        )
+
+        result = self._run("guard-tool-use", input_text=payload)
+
+        output = json.loads(result.stdout)
+        decision = output["hookSpecificOutput"]
+        self.assertEqual("deny", decision["permissionDecision"])
+        self.assertIn("브랜치", decision["permissionDecisionReason"])
+
+    def test_guard_script_denies_draft_pr_without_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self._init_issue_repository(directory)
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=directory,
+                env=self._without_local_git_environment(),
+                check=True,
+            )
+            payload = json.dumps(
+                {
+                    "cwd": directory,
+                    "tool_name": "Bash",
+                    "tool_input": {
+                        "command": "gh pr create --draft --body-file /tmp/pr.md"
+                    },
+                }
+            )
+
+            result = self._run("guard-tool-use", input_text=payload)
+
+        output = json.loads(result.stdout)
+        decision = output["hookSpecificOutput"]
+        self.assertEqual("deny", decision["permissionDecision"])
+        self.assertIn("체크포인트", decision["permissionDecisionReason"])
+
+    def test_guard_script_allows_verified_draft_pr(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            self._init_issue_repository(directory)
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=self._without_local_git_environment(),
+                check=True,
+            )
+            head = subprocess.run(
+                ("git", "rev-parse", "HEAD"),
+                cwd=repository,
+                env=self._without_local_git_environment(),
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=123,
+                branch="CF-123",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head=head,
+                evidence={"plan_path": ".git/cf-workflow/plan.md"},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+                evidence={"commit": head},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="knowledge",
+                head=head,
+            )
+            checkpoint = approve_knowledge(
+                checkpoint,
+                knowledge_digest(checkpoint),
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="knowledge",
+                head=head,
+                evidence={
+                    "outcome": "No reusable knowledge",
+                    "approval_digest": knowledge_digest(checkpoint),
+                },
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="verification",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="verification",
+                head=head,
+                evidence={
+                    "command": "harness/scripts/verify.py",
+                    "result": "passed",
+                },
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="understanding",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="understanding",
+                head=head,
+                evidence={
+                    "outcome": "Skipped",
+                    "report_path": ".git/cf-workflow/understanding.md",
+                    "report_digest": "a" * 64,
+                },
+            )
+            save_checkpoint(repository, checkpoint)
+            payload = json.dumps(
+                {
+                    "cwd": directory,
+                    "tool_name": "Bash",
+                    "tool_input": {
+                        "command": "gh pr create --draft --body-file /tmp/pr.md"
+                    },
+                }
+            )
+
+            result = self._run("guard-tool-use", input_text=payload)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout)
+
+    def test_workflow_checkpoint_script_initializes_current_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "repository"
+            repository.mkdir()
+            environment = self._without_local_git_environment()
+            commands = (
+                ("git", "init", "-q", "-b", "CF-34"),
+                ("git", "config", "user.name", "Harness Test"),
+                ("git", "config", "user.email", "harness@example.com"),
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+            )
+            for command in commands:
+                subprocess.run(
+                    command,
+                    cwd=repository,
+                    env=environment,
+                    check=True,
+                )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "manage-workflow-checkpoint.py"),
+                    "--cwd",
+                    str(repository),
+                    "init",
+                    "34",
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(34, payload["issue_number"])
+        self.assertEqual("CF-34", payload["branch"])
+        self.assertEqual("plan", payload["current_stage"])
+
+    def test_workflow_checkpoint_script_replaces_and_approves_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory) / "repository"
+            repository.mkdir()
+            self._init_issue_repository(str(repository))
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=self._without_local_git_environment(),
+                check=True,
+            )
+            script = str(SCRIPTS / "manage-workflow-checkpoint.py")
+            subprocess.run(
+                (sys.executable, script, "--cwd", str(repository), "init", "123"),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            replaced = subprocess.run(
+                (
+                    sys.executable,
+                    script,
+                    "--cwd",
+                    str(repository),
+                    "replace-candidates",
+                    "--candidate",
+                    "raw는 병합 뒤 수정하지 않는다",
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, replaced.returncode, replaced.stderr)
+            digest = json.loads(replaced.stdout)["knowledge_candidate_digest"]
+            approved = subprocess.run(
+                (
+                    sys.executable,
+                    script,
+                    "--cwd",
+                    str(repository),
+                    "approve-knowledge",
+                    digest,
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, approved.returncode, approved.stderr)
+        payload = json.loads(approved.stdout)
+        self.assertEqual(digest, payload["knowledge_approval_digest"])
+
+    def test_issue_delivery_script_selects_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = root / "repository"
+            repository.mkdir()
+            self._init_issue_repository(str(repository))
+            environment = self._without_local_git_environment()
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=environment,
+                check=True,
+            )
+            plan_value = subprocess.run(
+                ("git", "rev-parse", "--git-path", "cf-workflow/plan.md"),
+                cwd=repository,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            plan = Path(plan_value)
+            if not plan.is_absolute():
+                plan = repository / plan
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
+            head = subprocess.run(
+                ("git", "rev-parse", "HEAD"),
+                cwd=repository,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=123,
+                branch="CF-123",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head=head,
+                evidence={"plan_path": str(plan)},
+            )
+            checkpoint = begin_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+                evidence={"commit": head},
+            )
+            save_checkpoint(repository, checkpoint)
+            snapshot = root / "snapshot.json"
+            snapshot.write_text(
+                json.dumps({"issue_number": 123}),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "plan-issue-delivery.py"),
+                    "--cwd",
+                    str(repository),
+                    str(snapshot),
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
+
+    def test_issue_delivery_script_restarts_understanding_for_changed_report(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = root / "repository"
+            repository.mkdir()
+            self._init_issue_repository(str(repository))
+            environment = self._without_local_git_environment()
+            subprocess.run(
+                ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+                cwd=repository,
+                env=environment,
+                check=True,
+            )
+            plan = self._git_metadata_path(repository, environment, "cf-workflow/plan.md")
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
+            report = self._git_metadata_path(
+                repository,
+                environment,
+                "cf-workflow/understanding.md",
+            )
+            report.write_text("# Understanding\n", encoding="utf-8")
+            head = self._git_head(repository, environment)
+            checkpoint = initialize_checkpoint(
+                repository,
+                issue_number=123,
+                branch="CF-123",
+                head=head,
+            )
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="plan",
+                head=head,
+                evidence={"plan_path": str(plan)},
+            )
+            checkpoint = begin_stage(checkpoint, stage="implementation", head=head)
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="implementation",
+                head=head,
+                evidence={"commit": head},
+            )
+            checkpoint = begin_stage(checkpoint, stage="knowledge", head=head)
+            checkpoint = approve_knowledge(checkpoint, knowledge_digest(checkpoint))
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="knowledge",
+                head=head,
+                evidence={
+                    "outcome": "No reusable knowledge",
+                    "approval_digest": knowledge_digest(checkpoint),
+                },
+            )
+            checkpoint = begin_stage(checkpoint, stage="verification", head=head)
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="verification",
+                head=head,
+                evidence={"command": "harness/scripts/verify.py", "result": "passed"},
+            )
+            checkpoint = begin_stage(checkpoint, stage="understanding", head=head)
+            checkpoint = complete_stage(
+                checkpoint,
+                stage="understanding",
+                head=head,
+                evidence={
+                    "outcome": "Skipped",
+                    "report_path": str(report),
+                    "report_digest": "a" * 64,
+                },
+            )
+            save_checkpoint(repository, checkpoint)
+            snapshot = root / "snapshot.json"
+            snapshot.write_text(json.dumps({"issue_number": 123}), encoding="utf-8")
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "plan-issue-delivery.py"),
+                    "--cwd",
+                    str(repository),
+                    str(snapshot),
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("resume_understanding", json.loads(result.stdout)["code"])
+
+    def test_issue_delivery_accepts_linked_worktree_git_metadata_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            linked, environment = self._init_delivery_linked_worktree(root)
+            plan_value = subprocess.run(
+                ("git", "rev-parse", "--git-path", "cf-workflow/plan.md"),
+                cwd=linked,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+            plan = Path(plan_value)
+            plan.parent.mkdir(parents=True)
+            plan.write_text("# Plan\n", encoding="utf-8")
+            self._save_completed_implementation(linked, plan, environment)
+            snapshot = root / "snapshot.json"
+            snapshot.write_text(
+                json.dumps({"issue_number": 123}),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPTS / "plan-issue-delivery.py"),
+                    "--cwd",
+                    str(linked),
+                    str(snapshot),
+                ),
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("resume_knowledge", json.loads(result.stdout)["code"])
+
+    def test_initializes_fixture_repository_without_hook_git_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, linked_git_dir, clean_environment = (
+                self._init_linked_repository(root)
+            )
+            target = root / "target"
+            target.mkdir()
+
+            with patch.dict(os.environ, {"GIT_DIR": linked_git_dir}):
+                initialization = self._init_issue_repository(str(target))
+
+            bare = subprocess.run(
+                (
+                    "git",
+                    "config",
+                    "--file",
+                    str(source / ".git" / "config"),
+                    "--get",
+                    "core.bare",
+                ),
+                env=clean_environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            branch = subprocess.run(
+                ("git", "branch", "--show-current"),
+                cwd=target,
+                env=clean_environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual("false", bare.stdout.strip())
+        self.assertNotIn("re-init", initialization.stderr)
+        self.assertEqual(0, branch.returncode, branch.stderr)
+        self.assertEqual("CF-123", branch.stdout.strip())
+
+    def _init_linked_repository(
+        self, root: Path
+    ) -> tuple[Path, str, dict[str, str]]:
+        source = root / "source"
+        linked = root / "linked"
+        source.mkdir()
+        clean_environment = os.environ.copy()
+        for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE"):
+            clean_environment.pop(name, None)
+        commands = (
+            ("git", "init", "-q", "-b", "develop"),
+            ("git", "config", "user.name", "Harness Test"),
+            ("git", "config", "user.email", "harness@example.com"),
+            ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+            ("git", "worktree", "add", "-q", "-b", "CF-hook", str(linked)),
+        )
+        for command in commands:
+            subprocess.run(
+                command,
+                cwd=source,
+                env=clean_environment,
+                check=True,
+            )
+        linked_git_dir = linked.joinpath(".git").read_text(
+            encoding="utf-8"
+        ).removeprefix("gitdir: ").strip()
+        return source, linked_git_dir, clean_environment
+
+    def _init_delivery_linked_worktree(
+        self, root: Path
+    ) -> tuple[Path, dict[str, str]]:
+        source = root / "source"
+        linked = root / "linked"
+        source.mkdir()
+        environment = self._without_local_git_environment()
+        for command in (
+            ("git", "init", "-q", "-b", "develop"),
+            ("git", "config", "user.name", "Harness Test"),
+            ("git", "config", "user.email", "harness@example.com"),
+            ("git", "commit", "--allow-empty", "-q", "-m", "initial"),
+            ("git", "worktree", "add", "-q", "-b", "CF-123", str(linked)),
+        ):
+            subprocess.run(command, cwd=source, env=environment, check=True)
+        return linked, environment
+
+    def _save_completed_implementation(
+        self,
+        repository: Path,
+        plan: Path,
+        environment: dict[str, str],
+    ) -> None:
+        head = subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            cwd=repository,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        checkpoint = initialize_checkpoint(
+            repository,
+            issue_number=123,
+            branch="CF-123",
+            head=head,
+        )
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="plan",
+            head=head,
+            evidence={"plan_path": str(plan)},
+        )
+        checkpoint = begin_stage(checkpoint, stage="implementation", head=head)
+        checkpoint = complete_stage(
+            checkpoint,
+            stage="implementation",
+            head=head,
+            evidence={"commit": head},
+        )
+        save_checkpoint(repository, checkpoint)
+
+    def _git_metadata_path(
+        self,
+        repository: Path,
+        environment: dict[str, str],
+        value: str,
+    ) -> Path:
+        path = Path(
+            subprocess.run(
+                ("git", "rev-parse", "--git-path", value),
+                cwd=repository,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+        )
+        return path if path.is_absolute() else repository / path
+
+    def _git_head(self, repository: Path, environment: dict[str, str]) -> str:
+        return subprocess.run(
+            ("git", "rev-parse", "HEAD"),
+            cwd=repository,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+
+    def _run(
+        self, script: str, *arguments: str, input_text: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            (sys.executable, str(SCRIPTS / f"{script}.py"), *arguments),
+            cwd=ROOT,
+            input=input_text,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def _init_issue_repository(
+        self, directory: str
+    ) -> subprocess.CompletedProcess[str]:
+        environment = self._without_local_git_environment()
+        initialization = subprocess.run(
+            ("git", "init", "-q", "-b", "CF-123"),
+            cwd=directory,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        for key, value in (
+            ("user.name", "Harness Test"),
+            ("user.email", "harness@example.com"),
+        ):
+            subprocess.run(
+                ("git", "config", key, value),
+                cwd=directory,
+                env=environment,
+                check=True,
+            )
+        return initialization
+
+    def _without_local_git_environment(self) -> dict[str, str]:
+        environment = os.environ.copy()
+        local_variables = subprocess.run(
+            ("git", "rev-parse", "--local-env-vars"),
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+        for name in local_variables:
+            environment.pop(name, None)
+        return environment
+
+    def _run_project_issue_plan(
+        self, payload: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        return self._run_with_json("plan-project-issue", payload)
+
+    def _run_with_json(
+        self, script: str, payload: dict[str, object]
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = Path(directory) / "snapshot.json"
+            snapshot.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            return self._run(script, str(snapshot))
+
+    def _valid_issue_body(self) -> str:
+        return """## 배경
+사이트마다 입력 구조가 다르다.
+## 목표
+필드를 안전하게 입력한다.
+## 포함 범위
+- 필드 매핑
+## 제외 범위
+- 실제 제출
+## 인수 조건
+- [ ] 필드가 한 번 입력된다
+## 자동 검증
+- 단위 테스트
+## 수동 검증
+- 개발 서버 확인
+## 위험 작업
+- 없음
+"""
+
+if __name__ == "__main__":
+    unittest.main()

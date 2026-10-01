@@ -1,0 +1,153 @@
+import { greetingWorkflowAdapter } from "./greeting/workflow";
+import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
+import type { ActionCandidateHandle, FieldCandidateHandle } from "../dom/types";
+import type { ReviewPlanItem } from "../review/review-plan";
+import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
+import { resolveCompany, resolveDocumentCompany } from "./company";
+import { hyundaiWorkflowAdapter } from "./hyundai/workflow";
+import { skWorkflowAdapter } from "./sk/workflow";
+import type { FailureReporter } from "../write/failure";
+
+export interface FreshRowPreparation {
+  plan: PreparationPlan;
+  currentGroupCount?: number;
+  requiredAdditions?: number;
+}
+
+export interface RevealSelection {
+  domName: string;
+  profileFieldKey: string;
+  itemIndex: number;
+}
+
+export interface WorkflowDiagnostic {
+  code:
+    | "PROFILE_UNAVAILABLE"
+    | "PROFILE_NOT_SELECTED"
+    | "TARGET_MISSING"
+    | "SELECTED"
+    | "SELECTION_FAILED"
+    | "FOLLOW_UP_PLANS"
+    | "FOLLOW_UP_BINDINGS"
+    | "ANALYSIS_BLOCKED"
+    | "ELIGIBLE_FIELDS"
+    | "WRITTEN"
+    | "SKIPPED";
+  count: number;
+}
+
+export interface WorkflowAdapter {
+  // Explicit company/field policy only; never a general conflict bypass.
+  prefersProfileValue?(
+    handle: FieldCandidateHandle,
+    analysis: MatchedFieldAnalysis,
+  ): boolean;
+  normalizeProfileValue?(profileFieldKey: string, value: string): string;
+  addressFieldNames?: readonly string[];
+  prepareEducation?(
+    document: Document,
+    profile: import("../../profile/model").Profile,
+    signal: AbortSignal,
+  ): Promise<boolean>;
+  educationPreparationActionId?: string;
+  executeStateDriver?(
+    document: Document,
+    handle: FieldCandidateHandle,
+    item: ReviewPlanItem,
+    signal: AbortSignal,
+    onFailure?: FailureReporter,
+    beforeMutation?: () => Promise<boolean>,
+  ): Promise<boolean | undefined>;
+  canSelectProfileOption?(
+    handle: ActionCandidateHandle,
+    profileValue: string,
+    profileFieldKey?: string,
+  ): boolean | undefined;
+  canWriteProfileOption?(
+    handle: FieldCandidateHandle,
+    item: ReviewPlanItem,
+  ): boolean | undefined;
+
+  runAddress?(
+    options: import("../address/types").AddressExecutionOptions,
+  ): Promise<import("../address/types").AddressResult>;
+  diagnosticsTitle?: string;
+  repeatedProfileSectionHint?(actionDomId: string | undefined):
+    | {
+        categoryId: RepeatedProfileCategoryId;
+        sectionId: string;
+      }
+    | undefined;
+  repeatableProfileCount?(
+    actionDomId: string | undefined,
+    profile: Profile,
+  ): number | null | undefined;
+  followUpRepeatableAction?(actionDomId: string | undefined): boolean;
+  freshDefaultAfterAdd?(handle: ActionCandidateHandle): Element | undefined;
+  educationSectionHint?(
+    matchLabel: string,
+  ): "highSchool" | "university" | "graduateSchool" | undefined;
+  hasFreshRows(items: readonly FreshRowPreparation[]): boolean;
+  isFreshRowDefault(domName: string | undefined): boolean;
+  isStateDriver(item: ReviewPlanItem, domName: string | undefined): boolean;
+  stateDriverStage?(
+    item: ReviewPlanItem,
+    handle: FieldCandidateHandle,
+  ): number | undefined;
+  waitForStateDriverReady?(
+    document: Document,
+    handle: FieldCandidateHandle,
+    onFailure?: FailureReporter,
+  ): Promise<boolean>;
+  settleStateDriver?(
+    document: Document,
+    handle: FieldCandidateHandle,
+    onFailure?: FailureReporter,
+  ): Promise<boolean>;
+  // Opt-in only: a failed search may defer its whole independently bound row.
+  stateDriverFailureGroup?(
+    item: ReviewPlanItem,
+    handle: FieldCandidateHandle,
+  ): Element | undefined;
+  revealSelections: readonly RevealSelection[];
+  selectReveal(
+    document: Document,
+    selection: RevealSelection,
+    profileValue: string | undefined,
+  ): WorkflowDiagnostic;
+  revealedBindings(
+    plans: readonly PreparationPlan[],
+  ): ReadonlyMap<string, string>;
+  revealedProfileFieldKey(
+    field: MatchedFieldAnalysis,
+    domName: string | undefined,
+    bindings: ReadonlyMap<string, string>,
+  ): string | undefined;
+}
+
+const genericWorkflowAdapter: WorkflowAdapter = {
+  hasFreshRows: () => false,
+  isFreshRowDefault: () => false,
+  isStateDriver: () => false,
+  revealSelections: [],
+  selectReveal: () => ({ code: "TARGET_MISSING", count: 0 }),
+  revealedBindings: () => new Map(),
+  revealedProfileFieldKey: () => undefined,
+};
+
+export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
+  switch (
+    typeof source === "string"
+      ? resolveCompany(source)
+      : resolveDocumentCompany(source)
+  ) {
+    case "greeting":
+      return greetingWorkflowAdapter;
+    case "hyundai":
+      return hyundaiWorkflowAdapter;
+    case "sk":
+      return skWorkflowAdapter;
+    case "generic":
+      return genericWorkflowAdapter;
+  }
+}

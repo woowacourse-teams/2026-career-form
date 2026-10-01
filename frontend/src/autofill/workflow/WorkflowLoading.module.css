@@ -1,0 +1,81 @@
+.container {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 24px 16px;
+  text-align: left;
+}
+
+.announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.activityDot {
+  flex: 0 0 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-action);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.total {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-text-strong);
+}
+.progress {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+.progress li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+  color: var(--color-text-strong);
+}
+.progress strong {
+  font-weight: 600;
+}
+.progress li > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+}
+.progress small,
+.progress li[data-active="true"] > span {
+  color: var(--color-action);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activityDot {
+    animation: none;
+  }
+}

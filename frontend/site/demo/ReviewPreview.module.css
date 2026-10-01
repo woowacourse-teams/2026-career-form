@@ -1,0 +1,184 @@
+.preview {
+  position: relative;
+  height: 330px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  font-family: var(--font-ui);
+  color: var(--color-text);
+  background: white;
+}
+.caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 16px;
+}
+.caption span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+.scene {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.form,
+.panel {
+  padding: 24px;
+  min-width: 0;
+}
+.form {
+  background: #faf8f4;
+}
+.panel {
+  border-left: 1px solid var(--color-border);
+}
+.scene h3 {
+  font-size: 16px;
+  margin: 0 0 20px;
+}
+.form label {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.form input {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  color: var(--color-text);
+  background: white;
+  font-size: 16px;
+}
+.feedback {
+  font-size: 12px;
+  margin: 12px 0 0;
+  color: var(--color-text-muted);
+}
+.pending {
+  color: var(--color-review-status);
+  font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--color-border-strong);
+}
+.pending strong {
+  margin-left: 6px;
+}
+.panel article > div:first-child {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.panel article > p {
+  display: none;
+}
+.panel article [title="101동 1001호"] {
+  font-size: 16px;
+  line-height: 26px;
+  padding: 8px;
+}
+.panel article button[aria-label="상세주소 복사"] {
+  font-size: 13px;
+  min-width: 48px;
+}
+.preview:is([data-phase="copied"], [data-phase="paste"], [data-phase="done"])
+  [title="101동 1001호"],
+.form input[data-filled="true"] {
+  background: #fff1d8;
+  color: var(--color-text-strong);
+}
+.preview[data-phase="paste"] .form input {
+  border-color: var(--color-action);
+}
+.playback {
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid var(--color-border);
+}
+.playback p {
+  font-size: 13px;
+  margin: 0;
+}
+.playback button {
+  flex: none;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition:
+    left 800ms ease,
+    top 800ms ease,
+    transform 150ms;
+  filter: drop-shadow(0 2px 3px #59463744);
+}
+.cursor[data-visible="true"] {
+  opacity: 1;
+}
+.cursor[data-pressed="true"] {
+  transform: scale(0.85);
+}
+@media (max-width: 480px) {
+  .preview {
+    height: 360px;
+  }
+  .caption {
+    padding: 14px 12px;
+    font-size: 15px;
+  }
+  .form,
+  .panel {
+    padding: 20px 10px;
+  }
+  .scene h3 {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .form input {
+    font-size: 14px;
+    padding: 8px 5px;
+  }
+  .panel article > div > div:last-child > div {
+    flex-wrap: wrap;
+  }
+  .panel article [title="101동 1001호"] {
+    flex-basis: 100%;
+    font-size: 14px;
+    padding: 8px 5px;
+  }
+  .panel article button[aria-label="상세주소 복사"] {
+    width: 100%;
+    min-height: 32px;
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .playback {
+    padding: 12px;
+    gap: 8px;
+  }
+  .playback p {
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor {
+    transition: none;
+  }
+}

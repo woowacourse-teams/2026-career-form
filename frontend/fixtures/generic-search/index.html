@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Career Form generic search fixture</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #f5f7fb;
+        color: #172033;
+      }
+      main {
+        width: min(58rem, calc(100% - 2rem));
+        margin: 2rem auto;
+      }
+      section,
+      fieldset,
+      details,
+      .popup-card {
+        margin: 1rem 0;
+        padding: 1rem;
+        border: 1px solid #c7cfdd;
+        border-radius: 0.75rem;
+        background: white;
+      }
+      h1,
+      h2,
+      h3,
+      legend {
+        font-weight: 700;
+      }
+      .hint,
+      .status,
+      .scenario-note {
+        color: #4c5a70;
+        font-size: 0.92rem;
+      }
+      .status {
+        min-height: 1.4rem;
+      }
+      .scenario-note {
+        margin: 0.5rem 0 0;
+      }
+      details > summary {
+        cursor: pointer;
+        font-weight: 700;
+      }
+      details:not([open]) > .scenario-controls {
+        display: none;
+      }
+      .tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem 1rem;
+        align-items: center;
+      }
+      .tools label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      input,
+      select,
+      button {
+        min-height: 2.7rem;
+        box-sizing: border-box;
+        font: inherit;
+      }
+      input,
+      select {
+        padding: 0.5rem 0.6rem;
+        border: 1px solid #8794a8;
+        border-radius: 0.4rem;
+      }
+      input[readonly] {
+        background: #f1f3f7;
+        color: #35445d;
+      }
+      button {
+        padding: 0.5rem 0.8rem;
+        border: 1px solid #405d92;
+        border-radius: 0.4rem;
+        background: #eef3ff;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid #e19b22;
+        outline-offset: 2px;
+      }
+      .row {
+        margin: 0.8rem 0;
+        padding: 0.8rem;
+        border: 1px dashed #aeb9c9;
+        border-radius: 0.5rem;
+      }
+      .row h3 {
+        margin: 0 0 0.6rem;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: minmax(7rem, 10rem) 1fr;
+        gap: 0.7rem 1rem;
+        margin: 0;
+      }
+      dt {
+        font-weight: 650;
+      }
+      dd {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin: 0;
+        align-items: center;
+      }
+      dd input,
+      dd select {
+        width: min(22rem, 100%);
+      }
+      .search-field {
+        align-items: stretch;
+      }
+      .search-field input {
+        flex: 1 1 14rem;
+      }
+      .application-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.8rem;
+      }
+      .counter {
+        color: #4c5a70;
+      }
+      .popup[hidden] {
+        display: none;
+      }
+      .popup {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        background: rgb(23 32 51 / 45%);
+      }
+      .popup-card {
+        width: min(36rem, 100%);
+        max-height: min(42rem, calc(100vh - 2rem));
+        overflow: auto;
+        box-shadow: 0 1rem 3rem rgb(23 32 51 / 25%);
+      }
+      .popup-heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: start;
+      }
+      .popup-heading h2 {
+        margin-top: 0;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        min-height: 19rem;
+        border: 1px solid #aeb9c9;
+        border-radius: 0.5rem;
+        background: white;
+      }
+      .close-popup {
+        margin-top: 0.8rem;
+      }
+    </style>
+    <script src="./form.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>범용 검색 선택 합성 fixture</h1>
+      <p class="hint">
+        공개 합성값만 포함한 로컬 DOM fixture입니다. 저장·제출·페이지 이동·외부
+        요청을 수행하지 않습니다.
+      </p>
+      <p id="fixture-status" class="status" role="status" aria-live="polite">
+        준비됨
+      </p>
+
+      <details open>
+        <summary>검증 도구</summary>
+        <div class="scenario-controls">
+          <div class="tools">
+            <label
+              ><input id="duplicate-opener" type="checkbox" /> 같은 행에 검색
+              버튼 두 개</label
+            >
+            <label
+              ><input id="duplicate-results" type="checkbox" /> 같은 검색 결과
+              중복</label
+            >
+            <label
+              ><input id="ambiguous-query" type="checkbox" /> 학교명 입력 후보
+              두 개</label
+            >
+            <label
+              ><input id="cross-origin-frame" type="checkbox" /> 접근 불가
+              iframe</label
+            >
+            <label
+              ><input id="replace-on-open" type="checkbox" /> 열 때 원본 행
+              교체</label
+            >
+          </div>
+          <p class="scenario-note">
+            시나리오를 켠 뒤 검색 버튼을 눌러 관찰·판단·실행 결과를 확인할 수
+            있습니다.
+          </p>
+          <div class="tools">
+            <button id="replace-active-row" type="button">
+              현재 행을 새 DOM으로 교체
+            </button>
+            <button id="restore-frame" type="button">
+              동일 출처 iframe 복원
+            </button>
+            <button id="close-search" type="button">검색 취소</button>
+            <button id="reset-fixture" type="button">가상 양식 초기화</button>
+          </div>
+        </div>
+      </details>
+
+      <form id="application-form" action="/synthetic-application" method="post">
+        <section aria-labelledby="education-heading">
+          <h2 id="education-heading">대학교 학력 반복 행</h2>
+          <p class="hint">
+            학교명은 직접 입력할 수 없고, 같은 행의 제목 버튼으로 검색합니다.
+          </p>
+          <div id="education-list">
+            <article
+              class="row"
+              data-repeater-item
+              data-repeatable-group="education"
+              data-row-index="0"
+            >
+              <h3>대학교 학력 행 1</h3>
+              <dl>
+                <dt>학교 구분</dt>
+                <dd>
+                  <select name="education[0].schoolType">
+                    <option value="대학교" selected>대학교</option>
+                  </select>
+                </dd>
+                <dt>학교명</dt>
+                <dd class="search-field">
+                  <input
+                    id="school-name-0"
+                    name="education[0].schoolName"
+                    type="text"
+                    readonly
+                    value=""
+                  /><button
+                    type="button"
+                    title="학교명 검색"
+                    data-search-field="schoolName"
+                  >
+                    학교명 검색
+                  </button>
+                </dd>
+                <dt>학교소재지</dt>
+                <dd class="search-field">
+                  <input
+                    type="text"
+                    readonly
+                    name="education[0].schoolRegion"
+                  /><input type="hidden" value="" /><button
+                    type="button"
+                    data-search-field="schoolRegion"
+                  >
+                    학교소재지 검색
+                  </button>
+                </dd>
+                <dt>전공</dt>
+                <dd class="search-field">
+                  <input
+                    type="text"
+                    readonly
+                    name="education[0].majorName"
+                  /><input type="hidden" value="" /><button
+                    type="button"
+                    data-search-field="majorName"
+                  >
+                    전공 검색
+                  </button>
+                </dd>
+                <dt>입학일</dt>
+                <dd>
+                  <input
+                    name="education[0].startDate"
+                    type="date"
+                    value="2019-03-01"
+                  />
+                </dd>
+              </dl>
+            </article>
+            <article
+              class="row"
+              data-repeater-item
+              data-repeatable-group="education"
+              data-row-index="1"
+            >
+              <h3>대학교 학력 행 2</h3>
+              <dl>
+                <dt>학교 구분</dt>
+                <dd>
+                  <select name="education[1].schoolType">
+                    <option value="대학교" selected>대학교</option>
+                  </select>
+                </dd>
+                <dt>학교명</dt>
+                <dd class="search-field">
+                  <input
+                    id="school-name-1"
+                    name="education[1].schoolName"
+                    type="text"
+                    readonly
+                    value="공개대학교"
+                  /><button
+                    type="button"
+                    title="학교명 검색"
+                    data-search-field="schoolName"
+                  >
+                    학교명 검색
+                  </button>
+                </dd>
+                <dt>학교소재지</dt>
+                <dd class="search-field">
+                  <input
+                    type="text"
+                    readonly
+                    name="education[1].schoolRegion"
+                  /><input type="hidden" value="" /><button
+                    type="button"
+                    data-search-field="schoolRegion"
+                  >
+                    학교소재지 검색
+                  </button>
+                </dd>
+                <dt>전공</dt>
+                <dd class="search-field">
+                  <input
+                    type="text"
+                    readonly
+                    name="education[1].majorName"
+                  /><input type="hidden" value="" /><button
+                    type="button"
+                    data-search-field="majorName"
+                  >
+                    전공 검색
+                  </button>
+                </dd>
+                <dt>입학일</dt>
+                <dd>
+                  <input
+                    name="education[1].startDate"
+                    type="date"
+                    value="2016-03-01"
+                  />
+                </dd>
+              </dl>
+            </article>
+          </div>
+        </section>
+
+        <section aria-labelledby="submit-heading">
+          <h2 id="submit-heading">지원서 동작 경계</h2>
+          <p class="hint">
+            아래 버튼은 검색용 submit과 별개인 지원서 submit입니다. 클릭 횟수만
+            세고 기본 동작은 막습니다.
+          </p>
+          <div class="application-actions">
+            <button id="application-submit" type="submit">
+              지원서 제출(합성)
+            </button>
+            <span
+              id="application-submit-count"
+              class="counter"
+              aria-live="polite"
+              >제출 클릭 0회</span
+            >
+          </div>
+        </section>
+      </form>
+    </main>
+
+    <div
+      id="search-popup"
+      class="popup"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="search-popup-title"
+      hidden
+    >
+      <div class="popup-card">
+        <div class="popup-heading">
+          <h2 id="search-popup-title">학교명 검색</h2>
+          <button id="popup-close" type="button">닫기</button>
+        </div>
+        <iframe
+          id="school-search-frame"
+          title="학교명 검색 창"
+          src="./school-search.html"
+        ></iframe>
+        <button class="close-popup" id="popup-cancel" type="button">
+          취소
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

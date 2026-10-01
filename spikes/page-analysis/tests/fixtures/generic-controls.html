@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <body>
+    <label>이메일주소<input id="applicant-email" name="emailAddress" type="text" value="private@example.com" required></label>
+    <textarea></textarea>
+    <select><option>Option A</option></select>
+    <input type="radio">
+    <input type="checkbox">
+    <div contenteditable="true"></div>
+
+    <input type="hidden">
+    <label hidden>자격증명<input type="text"></label>
+    <input type="text" disabled>
+    <input type="password">
+    <div style="display: none"><input type="email"></div>
+    <section aria-hidden="true"><input type="number"></section>
+    <fieldset disabled><input type="date"></fieldset>
+
+    <iframe srcdoc="<input type='text'>"></iframe>
+    <iframe sandbox srcdoc="<input type='text'>"></iframe>
+    <open-field></open-field>
+    <closed-picker role="combobox"></closed-picker>
+    <button id="add-license" name="addLicense" type="button">+자격 추가</button>
+    <button type="submit">저장</button>
+
+    <script>
+      customElements.define('open-field', class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' }).innerHTML = '<input type="text">';
+        }
+      });
+      customElements.define('closed-picker', class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'closed' }).innerHTML = '<input type="text">';
+        }
+      });
+      queueMicrotask(() => {
+        const dynamic = document.createElement('input');
+        dynamic.type = 'text';
+        dynamic.dataset.dynamic = 'true';
+        document.body.append(dynamic);
+      });
+    </script>
+  </body>
+</html>

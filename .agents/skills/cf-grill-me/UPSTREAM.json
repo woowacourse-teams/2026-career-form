@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/mattpocock/skills",
+  "path": "skills/productivity/grill-me",
+  "commit": "8b36d4fb2635b3c21998dcd8144439c9e5ba7302",
+  "retrieved_at": "2026-08-06",
+  "license": "MIT",
+  "local_changes": [
+    "disable-model-invocation을 agents/openai.yaml 정책으로 대체"
+  ]
+}

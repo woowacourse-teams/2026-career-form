@@ -1,0 +1,131 @@
+{
+  "cases": [
+    {
+      "id": "llm-wiki-positive",
+      "prompt": "제품 원칙 문서를 LLM Wiki에 비식별 원본과 근거 링크로 수집해줘.",
+      "expected_skill": "cf-karpathy-llm-wiki",
+      "should_trigger": true,
+      "reason": "사용자가 Wiki 수집을 명시적으로 요청했다."
+    },
+    {
+      "id": "llm-wiki-negative",
+      "prompt": "PRODUCT_CONCEPT.md 내용을 이 대화에서만 요약해줘.",
+      "expected_skill": "cf-karpathy-llm-wiki",
+      "should_trigger": false,
+      "reason": "저장이나 Wiki 수집 없이 일회성 요약만 요청했다."
+    },
+    {
+      "id": "llm-wiki-query-positive",
+      "prompt": "우리 프로젝트에서 지원서 기존 값을 보호하기로 한 현재 기준과 이전 결정에서 바뀐 이유를 Wiki 근거로 알려줘.",
+      "expected_skill": "cf-llm-wiki-query",
+      "should_trigger": true,
+      "reason": "프로젝트 고유의 현재 제품 기준과 과거 변경 이유에 따라 답이 달라지는 질문이다."
+    },
+    {
+      "id": "llm-wiki-query-negative",
+      "prompt": "일반적인 Kotlin data class 사용법을 설명해줘.",
+      "expected_skill": "cf-llm-wiki-query",
+      "should_trigger": false,
+      "reason": "프로젝트 Wiki의 결정이나 정책과 무관한 일반 기술 질문이다."
+    },
+    {
+      "id": "planning-positive",
+      "prompt": "Project의 결제 정책 draft를 Issue로 승격하고 요구사항과 계획을 잡아줘.",
+      "expected_skill": "cf-project-issue-planning",
+      "should_trigger": true,
+      "reason": "사람이 만든 draft를 실행 가능한 Issue 계약으로 구체화하는 요청이다."
+    },
+    {
+      "id": "planning-negative",
+      "prompt": "이미 status:ready인 Issue #31 구현을 시작해줘.",
+      "expected_skill": "cf-project-issue-planning",
+      "should_trigger": false,
+      "reason": "기획이 끝난 ready Issue는 구현 단계다."
+    },
+    {
+      "id": "delivery-positive",
+      "prompt": "status:ready인 Issue #31 작업을 시작해서 Draft PR까지 만들어줘.",
+      "expected_skill": "cf-issue-workflow",
+      "should_trigger": true,
+      "reason": "확정된 Issue의 구현과 Draft PR 생성 요청이다."
+    },
+    {
+      "id": "delivery-negative",
+      "prompt": "Issue #31의 현재 본문을 요약만 해줘.",
+      "expected_skill": "cf-issue-workflow",
+      "should_trigger": false,
+      "reason": "읽기와 요약만 요청했으므로 구현 생명주기를 시작하지 않는다."
+    },
+    {
+      "id": "live-autofill-evaluation-positive",
+      "prompt": "외부 Chrome에 연 평가 탭에서 평가 시작해줘.",
+      "expected_skill": "cf-live-autofill-evaluation",
+      "should_trigger": true,
+      "reason": "명시적으로 열린 외부 Chrome 평가 탭의 실행을 요청했다."
+    },
+    {
+      "id": "live-autofill-evaluation-negative",
+      "prompt": "Console 로그가 무슨 뜻인지 설명해줘.",
+      "expected_skill": "cf-live-autofill-evaluation",
+      "should_trigger": false,
+      "reason": "Console 해석 요청은 외부 Chrome 평가 실행 요청이 아니다."
+    },
+    {
+      "id": "code-understanding-positive",
+      "prompt": "검증된 현재 변경을 실제 코드와 테스트 기준으로 설명하고 참고 파일을 주면서 가볍게 이해를 확인해줘.",
+      "expected_skill": "cf-code-understanding",
+      "should_trigger": true,
+      "reason": "최종 변경의 설명과 열린 참고 기반 이해 확인을 함께 요청했다."
+    },
+    {
+      "id": "code-understanding-negative",
+      "prompt": "Issue #31의 본문만 요약해줘.",
+      "expected_skill": "cf-code-understanding",
+      "should_trigger": false,
+      "reason": "검증된 코드나 이해 확인 없이 Issue 산문 요약만 요청했다."
+    },
+    {
+      "id": "grill-positive",
+      "prompt": "인증 저장 정책의 허점을 grill me 방식으로 끝까지 검토해줘.",
+      "expected_skill": "cf-grill-me",
+      "should_trigger": true,
+      "reason": "사용자가 고위험 정책의 압박 검토를 명시했다."
+    },
+    {
+      "id": "grill-negative",
+      "prompt": "README 오타 한 글자만 고쳐줘.",
+      "expected_skill": "cf-grill-me",
+      "should_trigger": false,
+      "reason": "되돌리기 쉬운 작은 수정은 압박 인터뷰 가치가 낮다."
+    },
+    {
+      "id": "lifecycle-duplicate-positive",
+      "prompt": "로컬에 issue-workflow와 superpowers도 있지만 이 Project draft를 CF 원 플로우로 머지 후 정리까지 진행해줘.",
+      "expected_skill": "cf-issue-lifecycle",
+      "should_trigger": true,
+      "reason": "중복 스킬 환경에서도 저장소 접두사와 전체 생명주기 요청이 명시됐다.",
+      "installed_duplicates": ["issue-workflow", "superpowers:executing-plans"]
+    },
+    {
+      "id": "lifecycle-negative",
+      "prompt": "열려 있는 PR 목록만 보여줘.",
+      "expected_skill": "cf-issue-lifecycle",
+      "should_trigger": false,
+      "reason": "GitHub 조회 요청이며 기획부터 정리까지의 실행 요청이 아니다."
+    },
+    {
+      "id": "cleanup-positive",
+      "prompt": "PR #31 머지했어. CF-31 worktree와 브랜치를 안전하게 정리해줘.",
+      "expected_skill": "cf-post-merge-cleanup",
+      "should_trigger": true,
+      "reason": "사람 머지 뒤 CF 작업 자원 정리 요청이다."
+    },
+    {
+      "id": "cleanup-negative",
+      "prompt": "아직 PR 검토 중인데 CF-31 브랜치를 지워줘.",
+      "expected_skill": "cf-post-merge-cleanup",
+      "should_trigger": false,
+      "reason": "머지 증명이 없고 파괴적인 조기 정리 요청이다."
+    }
+  ]
+}

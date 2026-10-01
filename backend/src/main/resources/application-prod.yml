@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+management:
+  metrics:
+    tags:
+      env: prod

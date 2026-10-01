@@ -1,0 +1,145 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="no" />  <!-- 앱 화면 모드 -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />  <!-- 상단바 스타일 default (회색) , black , black-translucent ( 반투명 ) -->
+<title>CJ RECRUIT </title>
+<meta name="description" content="세계를 향해 도약하는 글로벌 생활문화기업 CJ그룹 채용 사이트입니다." />
+<link rel="shortcut icon" href="/recruit/images/favicon.ico" />
+<link rel="apple-touch-icon" href="/recruit/ko/images/common/phone_icon.png" />  <!-- 모바일용 바탕화면 바로가기 아이콘(iOS) 114×114 -->
+<link rel="shortcut icon" href="/recruit/ko/images/common/phone_icon.png" />  <!-- 모바일용 바탕화면 바로가기 아이콘(Android) -->
+<link rel="apple-touch-startup-image" href="/recruit/ko/images/common/phone_icon.png" />  <!-- 스타트업 이미지 640×920(4), 640×1138(5) -->
+
+<link rel="stylesheet" type="text/css" href="https://imgrec.cj.net/recruit/ko/css/sub.css?1790338428965" />
+<link rel="stylesheet" type="text/css" href="https://imgrec.cj.net/recruit/ko/css/cjRecruit.css?1790338428965" />
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/jquery-1.11.3.min.js"></script>
+<script>
+window.jQuery = window.jQuery || {};
+window.jQuery.migrateMute = true;
+console.trace = function() {};
+</script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/default.js?201304181746"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/jquery.easing.1.3.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/util.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/ui.common.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/json2.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/common/js/util.js?201304181746"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/js/jqGrid/frameone.jquery.jqGrid.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/jquery.common.js"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/timer.js?201304181746"></script>
+<script type="text/javascript" src="https://imgrec.cj.net/recruit/ko/js/jquery.ui.datepicker.js"></script>
+<!-- <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-48450551-3', 'auto');
+  ga('send', 'pageview');
+</script> -->
+</head>
+<body class="no_scroll">
+    <script type="text/javascript">
+    function goSearch() {
+      $("#mainForm").submit();
+    }
+
+    function setMajorData(dtl_cd, dtl_cd_long_nm, rating_model) {
+      var majorData = {
+        dtl_cd: dtl_cd,
+        dtl_cd_long_nm: dtl_cd_long_nm,
+        rating_model: rating_model
+      };
+      parent.majorCallback2_0(majorData);
+      parent.needpopHide(); // 레이어 닫기
+    }
+
+    function applyMajorData() {
+      var dtl_cd_long_nm = $("input[name='direct_dtl_nm']").val();
+      setMajorData('', dtl_cd_long_nm, '');
+    }
+
+    $(document).ready(function(){
+      $("input[name='dtl_nm']").focus();
+
+      // input tab 입력시 공백으로 치환
+      $("input").bind('change',function(e){
+        var str = $(this).val();
+        str = str.replace(/\t/g, " ");
+        $(this).val(str);
+      });
+    });
+  </script>
+
+  <form name="mainForm" id="mainForm" action="https://recruit.cj.net/recruit/ko/resume/search/search_major.fo" method="post" onsubmit="return goSearch();">
+  <input type="hidden" name="num" value="2_0" />
+  <div class="container_wrap">
+      <!-- 자격명 찾기 팝업 -->
+      <div id="popupBasic5" class="popup popup_major iframe_opened">
+          <div class="popup_inner">
+              <div class="popup_header">
+                  <div class="mod_title pop_title_type">
+                      <h1 class="title">전공</h1><!-- 전공 -->
+                  </div>
+              </div>
+              <!-- popup_content-->
+              <div class="popup_content">
+                  <div class="sec_top">
+                      <p class="desc desc_pop_top">전공명을 띄어쓰기 없이 입력하시고, [검색]버튼을 클릭하세요</p><!-- 전공명을 띄어쓰기 없이 입력하시고, [검색]버튼을 클릭하세요 -->
+                      <dl class="box_ex">
+                          <dt class="blind">전공명 검색 예시</dt>
+                          <dd class="first">
+                              <ul class="list_ex">
+                              <li><span title="자격명 검색 틀린 예">시디. Visual Communication Design(X)</span><span class="bar_ex">-</span><strong title="자격명 검색 바른 예">시각디자인(O)</strong></li>
+                              </ul>
+                          </dd>
+                      </dl>
+
+                      <!-- area_schForm -->
+                      <div class="area_schForm">
+                      <fieldset>
+                          <legend>전공명 검색</legend>
+                          <div class="box_sch">
+                            <!-- 검색 -->
+                              <span class="iw"><input type="text" class="iText" id="dtl_nm" name="dtl_nm" value="" title="전공명 입력" maxlength="200"></span>
+                              <span class="btn_pack btn_medium btn_type btn_pSch "><input type="submit" value="검색"></span><!-- 검색 -->
+                          </div>
+                      </fieldset>
+                      </div>
+                      <!-- // area_schForm -->
+
+
+            <!-- 초기값 -->
+
+                      <div class="sec_mid scroll-list-wrap">
+                        <div class="iScroll">
+                            <div class="sec_inner">
+                                <p class="msg msg_noSch hide">검색 단어를 입력해주세요</p><!-- 검색 단어를 입력해주세요 -->
+                            </div>
+                          </div>
+                      </div>
+
+            <!-- //초기값 -->
+
+            <!-- 검색결과 출력 -->
+
+            <!-- //검색결과 출력 -->
+
+            <!-- 검색결과 없을때 -->
+
+            <!-- //검색결과 없을때 -->
+
+                  </div>
+              </div>
+              <!-- // popup_content-->
+          </div>
+      </div>
+      <!-- // 자격명 찾기 팝업 -->
+  </div>
+
+</body>
+</html>

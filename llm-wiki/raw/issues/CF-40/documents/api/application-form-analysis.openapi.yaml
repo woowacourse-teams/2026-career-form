@@ -1,0 +1,676 @@
+openapi: 3.1.0
+info:
+  title: Application Form Analysis API
+  version: 3.0.0
+  description: 범용 LLM Resolver로 preparation과 field 분석을 수행하는 schemaVersion 2 계약이다. 인증은 이 명세 범위 밖이다.
+x-current-analysis-routes: [GENERIC_LLM]
+x-reserved-future-values: [ADAPTER, BLOCKED, ADAPTER_STRUCTURE_MISMATCH, ADAPTER_VERIFIED, UNRESOLVED_FIELD, SYSTEM_CONTROL]
+paths:
+  /api/v1/preparation/analyze:
+    post:
+      summary: Snapshot A preparation 후보 분석
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreparationAnalyzeRequest'
+      responses:
+        '200':
+          description: preparation plan 또는 차단 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreparationAnalyzeResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/fields/analyze:
+    post:
+      summary: Snapshot B field mapping 분석
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FieldsAnalyzeRequest'
+      responses:
+        '200':
+          description: field analysis/write plan 또는 차단·partial 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldsAnalyzeResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  responses:
+    InvalidRequest:
+      description: schema, 금지 field, 분석 candidate ID 또는 enum이 올바르지 않은 요청
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: 서버 내부 분석 실패
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalError'
+  schemas:
+    PreparationAnalyzeRequest:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, site, sections]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        site: {$ref: '#/components/schemas/Site'}
+        sections:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/PreparationSection'}
+    FieldsAnalyzeRequest:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, site, sections]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        site: {$ref: '#/components/schemas/Site'}
+        sections:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/FieldsSection'}
+    Site:
+      type: object
+      additionalProperties: false
+      required: [host, pathPattern]
+      properties:
+        host:
+          type: string
+          minLength: 1
+          maxLength: 253
+          pattern: '^(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?::[0-9]{1,5})?$'
+        pathPattern: {type: string, minLength: 1, maxLength: 512, pattern: '^/[^?#]*$'}
+    PreparationSection:
+      type: object
+      additionalProperties: false
+      required: [sectionId, actionCandidates]
+      properties:
+        sectionId: {type: string, minLength: 1, maxLength: 128}
+        parentSectionId: {type: [string, 'null'], minLength: 1, maxLength: 128}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        actionCandidates:
+          type: array
+          items: {$ref: '#/components/schemas/ActionCandidate'}
+        items:
+          type: [array, 'null']
+          minItems: 1
+          items: {$ref: '#/components/schemas/PreparationItem'}
+    PreparationItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, actionCandidates]
+      properties:
+        itemId: {type: string, minLength: 1, maxLength: 128}
+        actionCandidates:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/ActionCandidate'}
+    FieldsSection:
+      type: object
+      additionalProperties: false
+      required: [sectionId, fields]
+      properties:
+        sectionId: {type: string, minLength: 1, maxLength: 128}
+        parentSectionId: {type: [string, 'null'], minLength: 1, maxLength: 128}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        fields:
+          type: array
+          items: {$ref: '#/components/schemas/FieldCandidate'}
+        items:
+          type: [array, 'null']
+          minItems: 1
+          items: {$ref: '#/components/schemas/FieldsItem'}
+    FieldsItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, fields]
+      properties:
+        itemId: {type: string, minLength: 1, maxLength: 128}
+        fields:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/FieldCandidate'}
+    ActionCandidate:
+      type: object
+      additionalProperties: false
+      required: [candidateId, element, control, visibility]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        element: {type: string, enum: [button, input, custom]}
+        control: {type: string, enum: [button, custom]}
+        visibility: {type: string, enum: [visible, hidden]}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domId: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        disabled: {type: [boolean, 'null'], enum: [true, null]}
+        readonly: {type: [boolean, 'null'], enum: [true, null]}
+        inert: {type: [boolean, 'null'], enum: [true, null]}
+    FieldCandidate:
+      type: object
+      additionalProperties: false
+      required: [candidateId, element, control, visibility]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        element: {type: string, enum: [input, select, textarea, custom]}
+        control: {type: string, enum: [text, select, radio, checkbox, textarea, custom]}
+        visibility: {type: string, enum: [visible, hidden]}
+        displayName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domId: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        domName: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        placeholder: {type: [string, 'null'], minLength: 1, maxLength: 120}
+        disabled: {type: [boolean, 'null'], enum: [true, null]}
+        readonly: {type: [boolean, 'null'], enum: [true, null]}
+        inert: {type: [boolean, 'null'], enum: [true, null]}
+        options:
+          type: [array, 'null']
+          minItems: 1
+          items: {$ref: '#/components/schemas/Option'}
+    Option:
+      type: object
+      additionalProperties: false
+      required: [optionId, displayName]
+      properties:
+        optionId: {type: string, minLength: 1, maxLength: 128}
+        displayName: {type: string, minLength: 1, maxLength: 120}
+    PreparationAnalyzeResponse:
+      type: object
+      additionalProperties: false
+      x-current-analysis-routes: [GENERIC_LLM]
+      x-reserved-analysis-routes: [ADAPTER_VERIFIED, ADAPTER_STRUCTURE_MISMATCH]
+      required: [snapshotId, mode, analysisStatus, preparationPlans]
+      properties:
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        mode: {type: string, enum: [ADAPTER, GENERIC]}
+        analysisStatus: {type: string, enum: [COMPLETE, PARTIAL, BLOCKED]}
+        preparationPlans:
+          type: array
+          items: {$ref: '#/components/schemas/PreparationPlan'}
+        warningCodes:
+          type: array
+          minItems: 1
+          items: {type: string, enum: [MANUAL_REVEAL_REQUIRED, LLM_UNAVAILABLE]}
+        blockCode:
+          type: string
+          enum: [ADAPTER_STRUCTURE_MISMATCH, UNSUPPORTED_SNAPSHOT]
+      allOf:
+        - if:
+            required: [analysisStatus]
+            properties:
+              analysisStatus: {const: PARTIAL}
+          then:
+            required: [warningCodes]
+            properties:
+              mode: {const: GENERIC}
+              warningCodes:
+                minItems: 1
+                maxItems: 1
+                items: {type: string, const: LLM_UNAVAILABLE}
+              preparationPlans: {maxItems: 0}
+              blockCode: false
+    FieldsAnalyzeResponse:
+      type: object
+      additionalProperties: false
+      x-current-analysis-routes:
+        GENERIC_LLM:
+          mode: GENERIC
+          analysisStatus: [COMPLETE, PARTIAL]
+          mappingStatus: LLM_SUGGESTED
+          llmInputCandidateSet: ALL
+      x-reserved-analysis-routes:
+        ADAPTER_VERIFIED:
+          mode: ADAPTER
+          analysisStatus: [COMPLETE, PARTIAL]
+          mappingStatus: ADAPTER_VERIFIED
+          sendsFieldsToLlm: false
+        ADAPTER_STRUCTURE_MISMATCH:
+          mode: ADAPTER
+          analysisStatus: [BLOCKED]
+          blockCode: ADAPTER_STRUCTURE_MISMATCH
+          sendsFieldsToLlm: false
+      required: [snapshotId, mode, analysisStatus, fields]
+      properties:
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        mode: {type: string, enum: [ADAPTER, GENERIC]}
+        analysisStatus: {type: string, enum: [COMPLETE, PARTIAL, BLOCKED]}
+        fields:
+          type: array
+          items: {$ref: '#/components/schemas/FieldAnalysis'}
+        warningCodes:
+          type: array
+          minItems: 1
+          items: {type: string, enum: [UNRESOLVED_FIELD, LLM_UNAVAILABLE]}
+        blockCode:
+          type: string
+          const: ADAPTER_STRUCTURE_MISMATCH
+      allOf:
+        - if:
+            required: [analysisStatus]
+            properties:
+              analysisStatus: {const: PARTIAL}
+          then:
+            required: [warningCodes]
+            properties:
+              mode: {const: GENERIC}
+              warningCodes:
+                minItems: 1
+                maxItems: 1
+                items: {type: string, const: LLM_UNAVAILABLE}
+              fields: {maxItems: 0}
+              blockCode: false
+    PreparationPlan:
+      oneOf:
+        - {$ref: '#/components/schemas/RevealSectionPlan'}
+        - {$ref: '#/components/schemas/AddRepeatableGroupPlan'}
+    RevealSectionPlan:
+      type: object
+      additionalProperties: false
+      required: [actionCandidateId, command, expectedEffect, targetSectionId]
+      properties:
+        actionCandidateId: {type: string, minLength: 1, maxLength: 128}
+        command: {type: string, const: REVEAL_SECTION}
+        expectedEffect: {type: string, const: TARGET_VISIBLE}
+        targetSectionId: {type: string, minLength: 1, maxLength: 128}
+    AddRepeatableGroupPlan:
+      type: object
+      additionalProperties: false
+      required: [actionCandidateId, command, expectedEffect]
+      properties:
+        actionCandidateId: {type: string, minLength: 1, maxLength: 128}
+        command: {type: string, const: ADD_REPEATABLE_GROUP}
+        expectedEffect: {type: string, const: GROUP_COUNT_INCREMENT}
+    FieldAnalysis:
+      oneOf:
+        - {$ref: '#/components/schemas/MatchedFieldAnalysis'}
+        - {$ref: '#/components/schemas/NoMatchFieldAnalysis'}
+      discriminator:
+        propertyName: matchType
+        mapping:
+          MATCH: '#/components/schemas/MatchedFieldAnalysis'
+          NO_MATCH: '#/components/schemas/NoMatchFieldAnalysis'
+    MatchedFieldAnalysis:
+      type: object
+      additionalProperties: false
+      required: [candidateId, matchType, profileFieldKey, autofillPolicy, mappingStatus, interactionStatus]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        matchType: {type: string, const: MATCH}
+        profileFieldKey: {$ref: '#/components/schemas/ProfileFieldKey'}
+        autofillPolicy: {type: string, enum: [ALLOWED, CONDITIONAL, SENSITIVE_CONFIRMATION]}
+        mappingStatus: {type: string, enum: [ADAPTER_VERIFIED, LLM_SUGGESTED]}
+        interactionStatus: {type: string, enum: [READY, MANUAL_REVEAL_REQUIRED, BLOCKED, SYSTEM_CONTROL, UNVERIFIED]}
+        writePlan: {$ref: '#/components/schemas/WritePlan'}
+    NoMatchFieldAnalysis:
+      type: object
+      additionalProperties: false
+      required: [candidateId, matchType, mappingStatus, interactionStatus, reasonCodes]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        matchType: {type: string, const: NO_MATCH}
+        mappingStatus: {type: string, enum: [ADAPTER_VERIFIED, LLM_SUGGESTED]}
+        interactionStatus: {type: string, const: BLOCKED}
+        reasonCodes:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items: {type: string, const: NO_MATCH}
+    WritePlan:
+      type: object
+      additionalProperties: false
+      required: [command]
+      properties:
+        command: {type: string, enum: [SET_TEXT, SELECT_OPTION, CHECK_RADIO, CHECK_CHECKBOX]}
+    LlmActionInput:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, sections]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        sections:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmActionSection'}
+    LlmActionSection:
+      type: object
+      additionalProperties: false
+      required: [sectionId, actionCandidates]
+      properties:
+        sectionId: {type: string, minLength: 1, maxLength: 128}
+        parentSectionId: {type: string, minLength: 1, maxLength: 128}
+        displayName: {type: string, minLength: 1, maxLength: 120}
+        actionCandidates:
+          type: array
+          items: {$ref: '#/components/schemas/LlmActionCandidate'}
+        items:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmActionItem'}
+    LlmActionItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, actionCandidates]
+      properties:
+        itemId: {type: string, minLength: 1, maxLength: 128}
+        actionCandidates:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmActionCandidate'}
+    LlmActionCandidate:
+      type: object
+      additionalProperties: false
+      required: [candidateId, element, control, visibility]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        displayName: {type: string, minLength: 1, maxLength: 120}
+        element: {type: string, enum: [button, input, custom]}
+        control: {type: string, enum: [button, custom]}
+        visibility: {type: string, enum: [visible, hidden]}
+        domId: {type: string, minLength: 1, maxLength: 120}
+        domName: {type: string, minLength: 1, maxLength: 120}
+        disabled: {type: boolean, const: true}
+        readonly: {type: boolean, const: true}
+        inert: {type: boolean, const: true}
+    LlmActionOutput:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, revealSections, addRepeatableGroups, noActions]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        revealSections:
+          type: array
+          items: {$ref: '#/components/schemas/LlmRevealSection'}
+        addRepeatableGroups:
+          type: array
+          items: {$ref: '#/components/schemas/LlmAddRepeatableGroup'}
+        noActions:
+          type: array
+          items: {$ref: '#/components/schemas/LlmNoAction'}
+    LlmRevealSection:
+      type: object
+      additionalProperties: false
+      required: [candidateId, targetSectionId]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        targetSectionId: {type: string, minLength: 1, maxLength: 128}
+    LlmAddRepeatableGroup:
+      type: object
+      additionalProperties: false
+      required: [candidateId]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+    LlmNoAction:
+      type: object
+      additionalProperties: false
+      required: [candidateId]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+    LlmMappingInput:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, sections]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        sections:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmMappingSection'}
+    LlmMappingSection:
+      type: object
+      additionalProperties: false
+      required: [sectionId, fields]
+      properties:
+        sectionId: {type: string, minLength: 1, maxLength: 128}
+        parentSectionId: {type: string, minLength: 1, maxLength: 128}
+        displayName: {type: string, minLength: 1, maxLength: 120}
+        fields:
+          type: array
+          items: {$ref: '#/components/schemas/LlmFieldCandidate'}
+        items:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmMappingItem'}
+    LlmMappingItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, fields]
+      properties:
+        itemId: {type: string, minLength: 1, maxLength: 128}
+        fields:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmFieldCandidate'}
+    LlmFieldCandidate:
+      type: object
+      additionalProperties: false
+      required: [candidateId, element, control]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        displayName: {type: string, minLength: 1, maxLength: 120}
+        element: {type: string, enum: [input, select, textarea, custom]}
+        control: {type: string, enum: [text, select, radio, checkbox, textarea, custom]}
+        options:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/LlmOption'}
+    LlmOption:
+      type: object
+      additionalProperties: false
+      required: [displayName]
+      properties:
+        displayName: {type: string, minLength: 1, maxLength: 120}
+    LlmMappingOutput:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, snapshotId, matches, noMatches]
+      properties:
+        schemaVersion: {type: integer, const: 2}
+        snapshotId: {type: string, minLength: 1, maxLength: 128}
+        matches:
+          type: array
+          items: {$ref: '#/components/schemas/LlmMatch'}
+        noMatches:
+          type: array
+          items: {$ref: '#/components/schemas/LlmNoMatch'}
+    LlmMatch:
+      type: object
+      additionalProperties: false
+      required: [candidateId, profileFieldKey]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+        profileFieldKey: {$ref: '#/components/schemas/ProfileFieldKey'}
+    LlmNoMatch:
+      type: object
+      additionalProperties: false
+      required: [candidateId]
+      properties:
+        candidateId: {type: string, minLength: 1, maxLength: 128}
+    ProfileFieldKey:
+      type: string
+      enum:
+        - personal.personal.koreanFamilyName
+        - personal.personal.koreanGivenName
+        - personal.personal.hanjaFamilyName
+        - personal.personal.hanjaGivenName
+        - personal.personal.englishFamilyName
+        - personal.personal.englishGivenName
+        - personal.personal.gender
+        - personal.personal.birthDate
+        - personal.personal.nationality
+        - contact.contact.postalCode
+        - contact.contact.addressLine1
+        - contact.contact.addressLine2
+        - contact.contact.email
+        - contact.contact.phoneNumber
+        - education.highSchool.schoolName
+        - education.highSchool.startDate
+        - education.highSchool.endDate
+        - education.university.degreeLevel
+        - education.university.schoolName
+        - education.university.startDate
+        - education.university.endDate
+        - education.university.completionStatus
+        - education.university.gpaScore
+        - education.university.majorName
+        - education.university.additionalMajorName
+        - education.graduateSchool.degreeLevel
+        - education.graduateSchool.country
+        - education.graduateSchool.schoolName
+        - education.graduateSchool.startDate
+        - education.graduateSchool.endDate
+        - education.graduateSchool.admissionType
+        - education.graduateSchool.completionStatus
+        - education.graduateSchool.gpaScore
+        - education.graduateSchool.gpaScale
+        - education.graduateSchool.majorClassification
+        - education.graduateSchool.majorField
+        - education.graduateSchool.majorName
+        - education.graduateSchool.additionalMajorClassification
+        - education.graduateSchool.additionalMajorField
+        - education.graduateSchool.additionalMajorName
+        - languages.languageTest.language
+        - languages.languageTest.testName
+        - languages.languageTest.registrationNo
+        - languages.languageTest.acquisitionDate
+        - languages.languageTest.grade
+        - languages.languageSkill.language
+        - languages.languageSkill.conversationalLevel
+        - certifications.certificate.name
+        - certifications.certificate.grade
+        - certifications.certificate.registrationNo
+        - certifications.certificate.issuer
+        - certifications.certificate.acquisitionDate
+        - projects.project.startDate
+        - projects.project.endDate
+        - projects.project.projectName
+        - projects.project.role
+        - projects.project.activityDetails
+        - military.military.militaryStatus
+        - military.military.militaryBranch
+        - military.military.militarySpecialty
+        - military.military.militaryRank
+        - military.military.serviceStartDate
+        - military.military.serviceEndDate
+        - military.military.dischargeType
+        - military.military.exemptionReason
+        - veteran.veteran.veteranStatus
+        - veteran.veteran.veteranType
+        - veteran.veteran.veteranRelation
+        - veteran.veteran.veteranNumber
+        - disability.disability.disabilityStatus
+        - disability.disability.disabilityType
+        - disability.disability.disabilityGrade
+        - disability.disability.disabilityRegistrationDate
+        - health.health.healthItemName
+        - health.health.healthStatusOrValue
+        - health.health.healthDate
+        - health.health.healthDetails
+      x-autofill-policies:
+        personal.personal.koreanFamilyName: ALLOWED
+        personal.personal.koreanGivenName: ALLOWED
+        personal.personal.hanjaFamilyName: ALLOWED
+        personal.personal.hanjaGivenName: ALLOWED
+        personal.personal.englishFamilyName: ALLOWED
+        personal.personal.englishGivenName: ALLOWED
+        personal.personal.gender: CONDITIONAL
+        personal.personal.birthDate: ALLOWED
+        personal.personal.nationality: CONDITIONAL
+        contact.contact.postalCode: CONDITIONAL
+        contact.contact.addressLine1: CONDITIONAL
+        contact.contact.addressLine2: ALLOWED
+        contact.contact.email: ALLOWED
+        contact.contact.phoneNumber: ALLOWED
+        education.highSchool.schoolName: CONDITIONAL
+        education.highSchool.startDate: ALLOWED
+        education.highSchool.endDate: ALLOWED
+        education.university.degreeLevel: CONDITIONAL
+        education.university.schoolName: CONDITIONAL
+        education.university.startDate: ALLOWED
+        education.university.endDate: ALLOWED
+        education.university.completionStatus: CONDITIONAL
+        education.university.gpaScore: ALLOWED
+        education.university.majorName: CONDITIONAL
+        education.university.additionalMajorName: CONDITIONAL
+        education.graduateSchool.degreeLevel: CONDITIONAL
+        education.graduateSchool.country: CONDITIONAL
+        education.graduateSchool.schoolName: CONDITIONAL
+        education.graduateSchool.startDate: ALLOWED
+        education.graduateSchool.endDate: ALLOWED
+        education.graduateSchool.admissionType: CONDITIONAL
+        education.graduateSchool.completionStatus: CONDITIONAL
+        education.graduateSchool.gpaScore: ALLOWED
+        education.graduateSchool.gpaScale: CONDITIONAL
+        education.graduateSchool.majorClassification: CONDITIONAL
+        education.graduateSchool.majorField: CONDITIONAL
+        education.graduateSchool.majorName: CONDITIONAL
+        education.graduateSchool.additionalMajorClassification: CONDITIONAL
+        education.graduateSchool.additionalMajorField: CONDITIONAL
+        education.graduateSchool.additionalMajorName: CONDITIONAL
+        languages.languageTest.language: CONDITIONAL
+        languages.languageTest.testName: CONDITIONAL
+        languages.languageTest.registrationNo: ALLOWED
+        languages.languageTest.acquisitionDate: ALLOWED
+        languages.languageTest.grade: ALLOWED
+        languages.languageSkill.language: CONDITIONAL
+        languages.languageSkill.conversationalLevel: CONDITIONAL
+        certifications.certificate.name: CONDITIONAL
+        certifications.certificate.grade: ALLOWED
+        certifications.certificate.registrationNo: ALLOWED
+        certifications.certificate.issuer: CONDITIONAL
+        certifications.certificate.acquisitionDate: ALLOWED
+        projects.project.startDate: ALLOWED
+        projects.project.endDate: ALLOWED
+        projects.project.projectName: ALLOWED
+        projects.project.role: ALLOWED
+        projects.project.activityDetails: ALLOWED
+        military.military.militaryStatus: SENSITIVE_CONFIRMATION
+        military.military.militaryBranch: SENSITIVE_CONFIRMATION
+        military.military.militarySpecialty: SENSITIVE_CONFIRMATION
+        military.military.militaryRank: SENSITIVE_CONFIRMATION
+        military.military.serviceStartDate: SENSITIVE_CONFIRMATION
+        military.military.serviceEndDate: SENSITIVE_CONFIRMATION
+        military.military.dischargeType: SENSITIVE_CONFIRMATION
+        military.military.exemptionReason: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranStatus: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranType: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranRelation: SENSITIVE_CONFIRMATION
+        veteran.veteran.veteranNumber: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityStatus: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityType: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityGrade: SENSITIVE_CONFIRMATION
+        disability.disability.disabilityRegistrationDate: SENSITIVE_CONFIRMATION
+        health.health.healthItemName: SENSITIVE_CONFIRMATION
+        health.health.healthStatusOrValue: SENSITIVE_CONFIRMATION
+        health.health.healthDate: SENSITIVE_CONFIRMATION
+        health.health.healthDetails: SENSITIVE_CONFIRMATION
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: {type: string, const: INVALID_REQUEST}
+        message: {type: string, minLength: 1}
+    InternalError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: {type: string, const: INTERNAL_ERROR}
+        message: {type: string, minLength: 1}

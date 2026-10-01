@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CF-98 검색 표면 합성 예시</title>
+    <style>
+      body {
+        max-width: 52rem;
+        margin: 2rem auto;
+        padding: 1rem;
+        font: 1rem/1.6 system-ui;
+      }
+      fieldset,
+      dialog {
+        padding: 1.5rem;
+        border: 1px solid #8592a3;
+        border-radius: 0.5rem;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: 7rem 1fr;
+        gap: 1rem;
+      }
+      dd {
+        margin: 0;
+      }
+      input,
+      button {
+        font: inherit;
+        padding: 0.4rem;
+      }
+      input[readonly] {
+        background: #f0f3f7;
+      }
+      dialog {
+        width: min(38rem, 85vw);
+      }
+      dialog::backdrop {
+        background: #17203380;
+      }
+      iframe {
+        width: 100%;
+        min-height: 24rem;
+        border: 0;
+      }
+      [role="listbox"] {
+        padding: 0.5rem;
+        border: 1px solid #8592a3;
+      }
+      [role="option"] {
+        display: block;
+        margin: 0.3rem 0;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+    <script src="./surfaces.js" defer></script>
+  </head>
+  <body>
+    <h1>검색 표면 합성 예시</h1>
+    <p>
+      같은 합성 프로필의 첫 대학교 항목을 사용합니다. 학교명은 iframe 검색,
+      소재지는 dialog 목록, 전공은 입력 즉시 갱신되는 listbox입니다.
+    </p>
+    <form>
+      <fieldset>
+        <legend>대학교 학력</legend>
+        <article
+          data-repeater-item
+          data-repeatable-group="education"
+          data-row-index="0"
+        >
+          <dl>
+            <dt>학교 구분</dt>
+            <dd>
+              <select name="education[0].schoolType">
+                <option selected>대학교</option>
+              </select>
+            </dd>
+            <dt><label for="school-name">학교명</label></dt>
+            <dd>
+              <input
+                id="school-name"
+                name="education[0].schoolName"
+                type="text"
+                readonly
+              />
+              <button
+                id="school-open"
+                type="button"
+                aria-controls="school-dialog"
+                aria-haspopup="dialog"
+              >
+                학교명 검색
+              </button>
+            </dd>
+            <dt><label for="school-region">학교소재지</label></dt>
+            <dd>
+              <input
+                id="school-region"
+                name="education[0].schoolRegion"
+                type="text"
+                readonly
+              />
+              <button
+                id="region-open"
+                type="button"
+                aria-controls="region-dialog"
+                aria-haspopup="dialog"
+              >
+                학교소재지 검색
+              </button>
+            </dd>
+            <dt><label for="major-name">전공</label></dt>
+            <dd>
+              <input
+                id="major-name"
+                name="education[0].majorName"
+                type="text"
+                readonly
+              />
+              <button
+                id="major-open"
+                type="button"
+                aria-controls="major-options"
+                aria-haspopup="listbox"
+              >
+                전공 검색
+              </button>
+              <input
+                id="major-query"
+                type="search"
+                aria-label="전공 검색어"
+                aria-controls="major-options"
+                hidden
+              />
+              <div
+                id="major-options"
+                role="listbox"
+                aria-label="전공 검색 결과"
+                hidden
+              ></div>
+            </dd>
+          </dl>
+        </article>
+      </fieldset>
+    </form>
+    <dialog id="school-dialog" aria-label="학교명 검색">
+      <h2>학교명 검색</h2>
+      <iframe id="school-frame" title="학교명 검색"></iframe>
+      <button id="school-close" type="button">닫기</button>
+    </dialog>
+    <dialog id="region-dialog" aria-label="학교소재지 검색">
+      <h2>학교소재지 검색</h2>
+      <div
+        id="region-options"
+        role="listbox"
+        aria-label="학교소재지 검색 결과"
+      ></div>
+      <button id="region-close" type="button">닫기</button>
+    </dialog>
+    <p id="status" role="status">페이지를 새로 열면 빈 값에서 시작합니다.</p>
+  </body>
+</html>

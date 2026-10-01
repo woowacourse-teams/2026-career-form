@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: staging
+
+management:
+  metrics:
+    tags:
+      env: staging

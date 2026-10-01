@@ -1,0 +1,31 @@
+@import "pretendard/dist/web/variable/pretendardvariable.css";
+
+@import "./theme.css";
+
+:root {
+  color: var(--color-text);
+  background: var(--color-page);
+  font-family: var(--font-ui);
+  font-synthesis: none;
+}
+
+body {
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+}

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="760" viewBox="0 0 760 760" role="img" aria-labelledby="title desc">
+  <style>text { font-family: "Pretendard Variable", Pretendard, Arial, sans-serif; }</style>
+  <title id="title">Career Form 팝업 준비 상태</title>
+  <desc id="desc">프로필 준비 개수와 사이드 패널 및 프로필 관리 버튼을 표시하는 컬러 팝업</desc>
+  <defs><filter id="shadow"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#0D47A1" flood-opacity=".14"/></filter></defs>
+  <rect width="760" height="760" fill="#F6F9FC"/>
+  <rect x="180" y="52" width="400" height="656" rx="26" fill="#FFFFFF" filter="url(#shadow)"/>
+  <path d="M180 78a26 26 0 0 1 26-26h348a26 26 0 0 1 26 26v120H180z" fill="#E3F2FD"/>
+  <rect x="214" y="86" width="58" height="58" rx="16" fill="#0D47A1"/><text x="243" y="122" fill="#FFFFFF" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700">CF</text>
+  <text x="290" y="104" fill="#2196F3" font-family="Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="2">CAREER FORM</text>
+  <text x="290" y="136" fill="#0D47A1" font-family="Arial,sans-serif" font-size="22" font-weight="700">지원서 입력을 더 가볍게</text>
+  <rect x="214" y="224" width="332" height="122" rx="18" fill="#E3F2FD" stroke="#90CAF9"/>
+  <text x="238" y="258" fill="#526272" font-family="Arial,sans-serif" font-size="13">프로필 준비 상태</text>
+  <text x="522" y="258" fill="#0D47A1" text-anchor="end" font-family="Arial,sans-serif" font-size="14" font-weight="700">10개 범주 중 N개 준비됨</text>
+  <rect x="238" y="292" width="284" height="10" rx="5" fill="#FFFFFF"/><rect x="238" y="292" width="174" height="10" rx="5" fill="#2196F3"/>
+  <text x="214" y="386" fill="#526272" font-family="Arial,sans-serif" font-size="13">팝업에는 실제 프로필 값을 표시하지 않습니다.</text>
+  <text x="214" y="409" fill="#526272" font-family="Arial,sans-serif" font-size="13">필요한 값은 사이드 패널에서 확인하세요.</text>
+  <rect x="214" y="444" width="332" height="52" rx="10" fill="#0D47A1"/><text x="380" y="477" fill="#FFFFFF" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700">사이드 패널 열기</text>
+  <rect x="214" y="510" width="332" height="52" rx="10" fill="#FFFFFF" stroke="#2196F3"/><text x="380" y="543" fill="#0D47A1" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700">프로필 관리</text>
+  <path d="M180 622h400v60a26 26 0 0 1-26 26H206a26 26 0 0 1-26-26z" fill="#F4F7FA"/>
+  <text x="214" y="654" fill="#526272" font-family="Arial,sans-serif" font-size="11">선택한 항목만 기입하며 저장, 이동, 제출은</text><text x="214" y="674" fill="#526272" font-family="Arial,sans-serif" font-size="11">실행하지 않습니다.</text>
+</svg>

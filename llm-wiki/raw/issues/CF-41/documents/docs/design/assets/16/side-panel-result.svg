@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="920" viewBox="0 0 420 920" role="img" aria-labelledby="title desc">
+  <title id="title">S-06 사이드 패널 자동 기입 결과 요약</title>
+  <desc id="desc">성공, 실패와 직접 입력 필요 항목을 구분하고 지원서 직접 확인을 안내하는 회색조 와이어프레임</desc>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif; fill: #111827; }
+    .frame { fill: #ffffff; stroke: #111827; stroke-width: 2; }
+    .surface { fill: #f3f4f6; stroke: #9ca3af; stroke-width: 1; }
+    .row { fill: #ffffff; stroke: #d1d5db; stroke-width: 1; }
+    .title { font-size: 19px; font-weight: 600; }
+    .heading { font-size: 14px; font-weight: 600; }
+    .body { font-size: 12px; }
+    .small { font-size: 10px; fill: #4b5563; }
+    .primary { fill: #111827; stroke: #111827; }
+    .secondary { fill: #ffffff; stroke: #111827; }
+    .primary-text { fill: #ffffff; font-size: 14px; font-weight: 600; }
+    .button-text { font-size: 14px; font-weight: 600; }
+    .mark { fill: #e5e7eb; stroke: #4b5563; }
+  </style>
+
+  <rect class="frame" x="1" y="1" width="418" height="918"/>
+  <text class="small" x="22" y="27">S-06 , 브라우저 사이드 패널</text>
+  <text class="title" x="22" y="61">자동 기입 결과</text>
+  <text class="body" x="22" y="87">지원서에서 실제 값을 한 번 더 확인하세요.</text>
+
+  <rect class="surface" x="22" y="112" width="376" height="90" rx="7"/>
+  <text class="heading" x="40" y="141">처리 요약</text>
+  <text class="body" x="40" y="172">성공 N개</text>
+  <text class="body" x="160" y="172">실패 N개</text>
+  <text class="body" x="272" y="172">직접 입력 N개</text>
+
+  <text class="heading" x="22" y="238">성공</text>
+  <rect class="row" x="22" y="253" width="376" height="64" rx="5"/>
+  <circle class="mark" cx="50" cy="285" r="12"/>
+  <text x="50" y="290" text-anchor="middle" font-size="12">✓</text>
+  <text class="body" x="76" y="280">이메일주소, 국문 이름 외 N개</text>
+  <text class="small" x="76" y="301">지원서에 기입됨</text>
+
+  <text class="heading" x="22" y="354">실패</text>
+  <rect class="row" x="22" y="369" width="376" height="96" rx="5"/>
+  <circle class="mark" cx="50" cy="401" r="12"/>
+  <text x="50" y="406" text-anchor="middle" font-size="12">!</text>
+  <text class="body" x="76" y="396">학교 검색형 입력란</text>
+  <text class="small" x="76" y="419">페이지 입력 구조가 바뀌어 기입하지 못함</text>
+  <text class="small" x="380" y="449" text-anchor="end">수동 복사로 찾기</text>
+
+  <text class="heading" x="22" y="502">직접 입력 필요</text>
+  <rect class="row" x="22" y="517" width="376" height="96" rx="5"/>
+  <circle class="mark" cx="50" cy="549" r="12"/>
+  <text x="50" y="554" text-anchor="middle" font-size="12">i</text>
+  <text class="body" x="76" y="544">확인 필요 또는 선택하지 않은 항목</text>
+  <text class="small" x="76" y="567">사용자가 지원서에서 직접 확인하고 입력</text>
+  <text class="small" x="380" y="597" text-anchor="end">수동 복사로 찾기</text>
+
+  <rect class="surface" x="22" y="649" width="376" height="114" rx="7"/>
+  <text class="heading" x="40" y="680">자동으로 실행하지 않은 작업</text>
+  <text class="body" x="40" y="708">저장 또는 임시저장</text>
+  <text class="body" x="40" y="735">다음 단계 이동, 미리보기와 최종 제출</text>
+
+  <rect class="secondary" x="22" y="795" width="178" height="50" rx="7"/>
+  <text class="button-text" x="111" y="826" text-anchor="middle">수동 복사 보기</text>
+  <rect class="primary" x="220" y="795" width="178" height="50" rx="7"/>
+  <text class="primary-text" style="fill:#ffffff" x="309" y="826" text-anchor="middle">지원서에서 확인</text>
+  <text class="small" x="210" y="884" text-anchor="middle">성공 표시도 지원서의 실제 값 확인을 대신하지 않음</text>
+</svg>

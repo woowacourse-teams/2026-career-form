@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>합성 자격증명 검색</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #172033;
+      }
+      body {
+        margin: 0;
+        padding: 1rem;
+      }
+      form,
+      .search-line,
+      ul {
+        display: grid;
+        gap: 0.65rem;
+      }
+      .search-line {
+        grid-template-columns: 1fr auto;
+        align-items: end;
+      }
+      input,
+      button {
+        min-height: 2.6rem;
+        box-sizing: border-box;
+        font: inherit;
+      }
+      input {
+        padding: 0.45rem 0.6rem;
+        border: 1px solid #718096;
+        border-radius: 0.35rem;
+      }
+      button {
+        padding: 0.45rem 0.75rem;
+        border: 1px solid #405d92;
+        border-radius: 0.35rem;
+        background: #eef3ff;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid #e19b22;
+        outline-offset: 2px;
+      }
+      ul {
+        padding: 0;
+        list-style: none;
+      }
+      li button {
+        width: 100%;
+        text-align: left;
+      }
+      #search-status {
+        color: #4a5870;
+      }
+    </style>
+    <script src="./search.js" defer></script>
+  </head>
+  <body>
+    <h1>합성 자격증명 검색</h1>
+    <form id="certificate-search-form" action="./search.html" method="get">
+      <input id="target-code" name="targetCode" type="hidden" value="" />
+      <div class="search-line">
+        <label for="certificate-query"
+          >자격증명 입력
+          <input
+            id="certificate-query"
+            name="query"
+            type="text"
+            autocomplete="off"
+          />
+        </label>
+        <button type="submit">검색</button>
+      </div>
+    </form>
+    <p id="search-status" role="status" aria-live="polite">
+      검색어를 입력하세요.
+    </p>
+    <ul
+      id="certificate-results"
+      aria-label="자격증명 검색 결과"
+      data-search-complete="false"
+    ></ul>
+  </body>
+</html>

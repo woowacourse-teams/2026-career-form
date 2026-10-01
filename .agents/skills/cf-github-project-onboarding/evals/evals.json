@@ -1,0 +1,37 @@
+{
+  "skill_name": "cf-github-project-onboarding",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "이 저장소에서 gh project view가 scope 부족으로 실패해. 초기 접근 설정을 도와줘.",
+      "expected_output": "저장소 진단 명령으로 원인을 분류하고 Project scope 갱신은 사용자에게 맡긴 뒤 재진단한다.",
+      "files": [],
+      "expectations": [
+        "harness/scripts/diagnose-project-access.py를 먼저 사용한다",
+        "project scope 부족이면 gh auth refresh -s project를 안내한다",
+        "토큰을 읽거나 원격 Project를 변경하지 않는다"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "GitHub 로그인은 되어 있는데 조직 Project 149가 안 보여. 원인만 확인해줘.",
+      "expected_output": "설정된 Project 좌표를 사용해 접근을 진단하고 설정 불일치 또는 조직 권한 문제를 안전하게 안내한다.",
+      "files": [],
+      "expectations": [
+        "harness/project.json의 owner와 number를 기준으로 진단한다",
+        "인증 오류 원문이나 자격 증명을 노출하지 않는다",
+        "Issue나 Project item을 수정하지 않는다"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "프로젝트 접근이 되는지 확인하고 되면 알려줘. 이슈는 아직 건드리지 마.",
+      "expected_output": "접근 진단만 수행하고 ready 여부를 보고하며 원격 쓰기는 하지 않는다.",
+      "files": [],
+      "expectations": [
+        "진단 결과가 ready인지 확인한다",
+        "Issue 승격, label 변경, Project 상태 변경을 수행하지 않는다"
+      ]
+    }
+  ]
+}

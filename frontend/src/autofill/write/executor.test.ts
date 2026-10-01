@@ -1,0 +1,1735 @@
+import { afterEach, describe, expect, it } from "vitest";
+
+import type { MatchedFieldAnalysis } from "../api/types";
+import {
+  CandidateRegistry,
+  createStructuralSignature,
+} from "../dom/candidate-registry";
+import type { FieldCandidateHandle } from "../dom/types";
+import type { CandidateBlockReason } from "../dom/types";
+import type { ReviewPlanItem } from "../review/review-plan";
+import { resolveDateTargetFormat } from "../review/date-target-format";
+import {
+  executeApprovedWrites,
+  executeApprovedWritesAfterPageSettles,
+} from "./executor";
+
+afterEach(() => {
+  document.body.replaceChildren();
+  setPageUrl("http://localhost:3000");
+});
+
+function setPageUrl(url: string): void {
+  (
+    globalThis as unknown as {
+      jsdom: { reconfigure(options: { url: string }): void };
+    }
+  ).jsdom.reconfigure({ url });
+}
+
+const textAnalysis: MatchedFieldAnalysis = {
+  candidateId: "field-1",
+  matchType: "MATCH",
+  profileFieldKey: "contact.contact.email",
+  autofillPolicy: "ALLOWED",
+  mappingStatus: "LLM_SUGGESTED",
+  interactionStatus: "READY",
+  writePlan: { command: "SET_TEXT" },
+};
+
+const nonWritableCases = [
+  ["not explicitly approved", { selected: true }, new Set<string>()],
+  ["not selectable", { selected: true, disabled: true }, new Set(["field-1"])],
+  ["not selected", { selected: false }, new Set(["field-1"])],
+  [
+    "an unresolved conflict",
+    { status: "conflict", selected: false },
+    new Set(["field-1"]),
+  ],
+  [
+    "an unrevealed sensitive field",
+    { status: "sensitive", selected: false, disabled: true, revealed: false },
+    new Set(["field-1"]),
+  ],
+] satisfies ReadonlyArray<[string, Partial<ReviewPlanItem>, Set<string>]>;
+
+function reviewItem(
+  analysis: MatchedFieldAnalysis,
+  profileValue: string,
+  overrides: Partial<ReviewPlanItem> = {},
+): ReviewPlanItem {
+  return {
+    candidateId: analysis.candidateId,
+    fieldLabel: "지원서 필드",
+    profileFieldKey: analysis.profileFieldKey,
+    currentValue: "",
+    profileValue,
+    previewValue: profileValue,
+    status: "available",
+    selected: true,
+    disabled: false,
+    revealed: true,
+    reason: "테스트",
+    analysis,
+    ...overrides,
+  };
+}
+
+function register(
+  element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+  candidate: FieldCandidateHandle["candidate"],
+  optionElements = new Map<string, HTMLOptionElement | HTMLInputElement>(),
+  blockedReason?: CandidateBlockReason,
+) {
+  document.body.append(element);
+  const registry = new CandidateRegistry();
+  registry.registerField(
+    {
+      kind: "field",
+      candidateId: candidate.candidateId,
+      candidate,
+      elements: [element],
+      optionElements,
+      sectionId: "section-1",
+      signature: createStructuralSignature([element]),
+    },
+    blockedReason,
+  );
+  return registry;
+}
+
+describe("approved native-control writes", () => {
+  it("reports each actual write result and never reports an unapproved field as completed", async () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const events: string[] = [];
+    await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+      beforeWrite: async () => {},
+      onResult: (item, result, sourceRegistry) => {
+        expect(sourceRegistry).toBe(registry);
+        if (result.status === "written") {
+          expect(input.value).toBe("example");
+          events.push(item.fieldLabel);
+        }
+      },
+    });
+    expect(events.length).toBeGreaterThan(0);
+    const skipped: string[] = [];
+    await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "other")],
+      approvedCandidateIds: new Set(),
+      registry,
+      onResult: (_item, result) => {
+        skipped.push(result.status);
+      },
+    });
+    expect(skipped).not.toContain("written");
+  });
+  it("presents each approved field before writing and stops on abort", async () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const controller = new AbortController();
+    let presented = false;
+    await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example@example.com")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+      signal: controller.signal,
+      beforeWrite: async () => {
+        presented = true;
+        expect(input.value).toBe("");
+        controller.abort();
+      },
+    });
+    expect(presented).toBe(true);
+    expect(input.value).toBe("");
+  });
+  it("writes a locally resolved derived binding value", () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-derived",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis: MatchedFieldAnalysis = {
+      candidateId: "field-derived",
+      matchType: "MATCH",
+      valueBinding: {
+        type: "DERIVED",
+        recipe: "KOREAN_FULL_NAME",
+      },
+      autofillPolicy: "ALLOWED",
+      mappingStatus: "LLM_SUGGESTED",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "김민수")],
+      approvedCandidateIds: new Set(["field-derived"]),
+      registry,
+    });
+
+    expect(input.value).toBe("김민수");
+    expect(result).toEqual([
+      {
+        candidateId: "field-derived",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+
+  it("writes selected and explicitly approved text through native events", () => {
+    const input = document.createElement("input");
+    input.type = "email";
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const events: string[] = [];
+    input.addEventListener("input", () => events.push("input"));
+    input.addEventListener("change", () => events.push("change"));
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(textAnalysis, "me@example.test")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.value).toBe("me@example.test");
+    expect(events).toEqual(["input", "change"]);
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+
+  it("writes a readonly text field only for an adapter-verified write plan", () => {
+    const input = document.createElement("input");
+    input.readOnly = true;
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+      readonly: true,
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      mappingStatus: "ADAPTER_VERIFIED",
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "비식별 주소")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.value).toBe("비식별 주소");
+    expect(result).toEqual([{ candidateId: "field-1", status: "written" }]);
+  });
+
+  it("writes the exact values retained by review for repeated profile entries", () => {
+    const first = document.createElement("input");
+    const second = document.createElement("input");
+    document.body.append(first, second);
+    const registry = new CandidateRegistry();
+    for (const [index, element] of [first, second].entries()) {
+      const candidateId = `field-${index + 1}`;
+      registry.registerField({
+        kind: "field",
+        candidateId,
+        candidate: {
+          candidateId,
+          element: "input",
+          control: "text",
+          visibility: "visible",
+        },
+        elements: [element],
+        optionElements: new Map(),
+        sectionId: "section-certificate",
+        itemId: `certificate-item-${index + 1}`,
+        itemIndex: index,
+        signature: createStructuralSignature([element]),
+      });
+    }
+
+    executeApprovedWrites({
+      items: [
+        reviewItem({ ...textAnalysis, candidateId: "field-1" }, "자격증 A", {
+          profileEntryId: "certificate-1",
+        }),
+        reviewItem({ ...textAnalysis, candidateId: "field-2" }, "자격증 B", {
+          profileEntryId: "certificate-2",
+        }),
+      ],
+      approvedCandidateIds: new Set(["field-1", "field-2"]),
+      registry,
+    });
+
+    expect(first.value).toBe("자격증 A");
+    expect(second.value).toBe("자격증 B");
+  });
+
+  it("selects an option only when the local profile value exactly matches its normalized display name", () => {
+    const select = document.createElement("select");
+    const placeholder = new Option("선택", "");
+    const target = new Option("대한   민국", "kr");
+    select.append(placeholder, target);
+    const registry = register(
+      select,
+      {
+        candidateId: "field-1",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: [
+          { optionId: "option-1", displayName: "선택" },
+          { optionId: "option-2", displayName: "대한 민국" },
+        ],
+      },
+      new Map([
+        ["option-1", placeholder],
+        ["option-2", target],
+      ]),
+    );
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      writePlan: { command: "SELECT_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대한 민국")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(select.value).toBe("kr");
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+
+  it("reapplies an adapter-approved select and reports a reset generic value", async () => {
+    const select = document.createElement("select");
+    const professionalCollege = new Option("전문대학(전문학사)", "associate");
+    const university = new Option("대학(학사)", "bachelor");
+    select.append(professionalCollege, university);
+    const schoolName = document.createElement("input");
+    schoolName.addEventListener("change", () => {
+      window.setTimeout(() => {
+        select.value = professionalCollege.value;
+        schoolName.value = "";
+      }, 0);
+    });
+    document.body.append(select, schoolName);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "education-type",
+      candidate: {
+        candidateId: "education-type",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: [
+          { optionId: "associate", displayName: "전문대학(전문학사)" },
+          { optionId: "bachelor", displayName: "대학(학사)" },
+        ],
+      },
+      elements: [select],
+      optionElements: new Map([
+        ["associate", professionalCollege],
+        ["bachelor", university],
+      ]),
+      sectionId: "section-education",
+      signature: createStructuralSignature([select]),
+    });
+    registry.registerField({
+      kind: "field",
+      candidateId: "school-name",
+      candidate: {
+        candidateId: "school-name",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      },
+      elements: [schoolName],
+      optionElements: new Map(),
+      sectionId: "section-education",
+      signature: createStructuralSignature([schoolName]),
+    });
+    const selectAnalysis: MatchedFieldAnalysis = {
+      candidateId: "education-type",
+      matchType: "MATCH",
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "education.university.degreeLevel",
+        optionMap: { 학사: "대학(학사)" },
+      },
+      autofillPolicy: "CONDITIONAL",
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_OPTION" },
+    };
+
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [
+        reviewItem(selectAnalysis, "대학(학사)"),
+        reviewItem({ ...textAnalysis, candidateId: "school-name" }, "대학교"),
+      ],
+      approvedCandidateIds: new Set(["education-type", "school-name"]),
+      registry,
+    });
+
+    expect(select.value).toBe("bachelor");
+    expect(schoolName.value).toBe("");
+    expect(result).toEqual([
+      { candidateId: "education-type", status: "written" },
+      {
+        candidateId: "school-name",
+        status: "skipped",
+        outcome: "needs-verification",
+        code: "RETAINED_VALUE_UNCONFIRMED",
+        reason: "입력 후 값이 유지되지 않아 확인이 필요합니다.",
+      },
+    ]);
+  });
+
+  it("selects the university bachelor option when only its parentheses differ", () => {
+    const select = document.createElement("select");
+    const professionalCollege = new Option("전문대학(학사)", "college");
+    const university = new Option("대학교(학사)", "university");
+    select.append(professionalCollege, university);
+    const registry = register(
+      select,
+      {
+        candidateId: "education-type",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: [
+          { optionId: "college", displayName: "전문대학(학사)" },
+          { optionId: "university", displayName: "대학교(학사)" },
+        ],
+      },
+      new Map([
+        ["college", professionalCollege],
+        ["university", university],
+      ]),
+    );
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "education-type",
+      writePlan: { command: "SELECT_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(analysis, "대학교 학사", {
+          currentValue: "전문대학(학사)",
+        }),
+      ],
+      approvedCandidateIds: new Set(["education-type"]),
+      registry,
+    });
+
+    expect(select.value).toBe("university");
+    expect(result).toEqual([
+      {
+        candidateId: "education-type",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+
+  it("checks a radio by the locally resolved option display name", () => {
+    const first = document.createElement("input");
+    first.type = "radio";
+    first.name = "gender";
+    first.value = "F";
+    const target = document.createElement("input");
+    target.type = "radio";
+    target.name = "gender";
+    target.value = "M";
+    document.body.append(first, target);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "field-1",
+      candidate: {
+        candidateId: "field-1",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [
+          { optionId: "option-1", displayName: "여성" },
+          { optionId: "option-2", displayName: "남성" },
+        ],
+      },
+      elements: [first, target],
+      optionElements: new Map([
+        ["option-1", first],
+        ["option-2", target],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([first, target]),
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      writePlan: { command: "CHECK_RADIO" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "남성")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(first.checked).toBe(false);
+    expect(target.checked).toBe(true);
+    expect(result).toEqual([
+      {
+        candidateId: "field-1",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+
+  it("does not guess different radio labels without a backend-derived value", () => {
+    const no = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "N",
+    });
+    const yes = Object.assign(document.createElement("input"), {
+      type: "radio",
+      value: "Y",
+    });
+    document.body.append(no, yes);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "disability-status",
+      candidate: {
+        candidateId: "disability-status",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [
+          { optionId: "no", displayName: "비대상" },
+          { optionId: "yes", displayName: "대상" },
+        ],
+      },
+      elements: [no, yes],
+      optionElements: new Map([
+        ["no", no],
+        ["yes", yes],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([no, yes]),
+    });
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          {
+            ...textAnalysis,
+            candidateId: "disability-status",
+            writePlan: { command: "CHECK_RADIO" },
+          },
+          "예",
+        ),
+      ],
+      approvedCandidateIds: new Set(["disability-status"]),
+      registry,
+    });
+
+    expect(yes.checked).toBe(false);
+    expect(result).toEqual([
+      {
+        candidateId: "disability-status",
+        status: "skipped",
+        outcome: "unsupported",
+        code: "UNSUPPORTED_CONTROL",
+        reason: "네이티브 컨트롤에 안전하게 입력할 수 없습니다.",
+      },
+    ]);
+  });
+
+  it("checks the matching checkbox without clearing another local choice", () => {
+    const existing = document.createElement("input");
+    existing.type = "checkbox";
+    existing.name = "skills";
+    existing.value = "Java";
+    existing.checked = true;
+    const target = document.createElement("input");
+    target.type = "checkbox";
+    target.name = "skills";
+    target.value = "TypeScript";
+    document.body.append(existing, target);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "field-1",
+      candidate: {
+        candidateId: "field-1",
+        element: "input",
+        control: "checkbox",
+        visibility: "visible",
+        options: [
+          { optionId: "option-1", displayName: "Java" },
+          { optionId: "option-2", displayName: "TypeScript" },
+        ],
+      },
+      elements: [existing, target],
+      optionElements: new Map([
+        ["option-1", existing],
+        ["option-2", target],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([existing, target]),
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      writePlan: { command: "CHECK_CHECKBOX" },
+    };
+
+    executeApprovedWrites({
+      items: [reviewItem(analysis, "TypeScript", { currentValue: "Java" })],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(existing.checked).toBe(true);
+    expect(target.checked).toBe(true);
+  });
+
+  it("writes a revealed sensitive field only after it is selected and approved", () => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const sensitiveAnalysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      autofillPolicy: "SENSITIVE_CONFIRMATION",
+    };
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(sensitiveAnalysis, "복무 완료", {
+          status: "sensitive",
+          selected: true,
+          disabled: false,
+          revealed: true,
+        }),
+      ],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.value).toBe("복무 완료");
+    expect(result[0]?.status).toBe("written");
+  });
+
+  it.each(nonWritableCases)(
+    "does not write %s",
+    (_name, overrides, approvedCandidateIds) => {
+      const input = document.createElement("input");
+      const registry = register(input, {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      });
+
+      const result = executeApprovedWrites({
+        items: [reviewItem(textAnalysis, "me@example.test", overrides)],
+        approvedCandidateIds,
+        registry,
+      });
+
+      expect(input.value).toBe("");
+      expect(result[0]?.status).toBe("skipped");
+    },
+  );
+
+  it.each(["blocked", "stale"] as const)(
+    "does not write a %s candidate",
+    (registryState) => {
+      const input = document.createElement("input");
+      if (registryState === "blocked") input.disabled = true;
+      const registry = register(
+        input,
+        {
+          candidateId: "field-1",
+          element: "input",
+          control: "text",
+          visibility: "visible",
+        },
+        undefined,
+        registryState === "blocked" ? "disabled" : undefined,
+      );
+      if (registryState === "stale") input.id = "changed-after-analysis";
+
+      const result = executeApprovedWrites({
+        items: [reviewItem(textAnalysis, "me@example.test")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+
+      expect(input.value).toBe("");
+      expect(result[0]?.status).toBe("skipped");
+    },
+  );
+
+  it.each([
+    ["disabled", (input: HTMLInputElement) => (input.disabled = true)],
+    ["readonly", (input: HTMLInputElement) => (input.readOnly = true)],
+    ["hidden", (input: HTMLInputElement) => (input.hidden = true)],
+    ["inert", (input: HTMLInputElement) => input.setAttribute("inert", "")],
+  ])(
+    "does not write when the host makes a collected field %s before final approval",
+    (_state, changeHostState) => {
+      const input = document.createElement("input");
+      const registry = register(input, {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      });
+      changeHostState(input);
+
+      const result = executeApprovedWrites({
+        items: [reviewItem(textAnalysis, "me@example.test")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+
+      expect(input.value).toBe("");
+      expect(result[0]).toMatchObject({ status: "skipped" });
+      expect(result[0]).toHaveProperty(
+        "failureCode",
+        _state === "disabled"
+          ? "FIELD_DISABLED"
+          : _state === "readonly"
+            ? "FIELD_READONLY"
+            : "FIELD_CHANGED",
+      );
+    },
+  );
+
+  it("does not select a radio option the host disabled after collection", () => {
+    const first = document.createElement("input");
+    first.type = "radio";
+    first.name = "gender";
+    const target = document.createElement("input");
+    target.type = "radio";
+    target.name = "gender";
+    document.body.append(first, target);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "field-1",
+      candidate: {
+        candidateId: "field-1",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [
+          { optionId: "option-1", displayName: "여성" },
+          { optionId: "option-2", displayName: "남성" },
+        ],
+      },
+      elements: [first, target],
+      optionElements: new Map([
+        ["option-1", first],
+        ["option-2", target],
+      ]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([first, target]),
+    });
+    target.disabled = true;
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          { ...textAnalysis, writePlan: { command: "CHECK_RADIO" } },
+          "남성",
+        ),
+      ],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(target.checked).toBe(false);
+    expect(result[0]).toMatchObject({ status: "skipped" });
+  });
+
+  it("does not write when a control command does not match its native control", () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "custom",
+      visibility: "visible",
+    });
+    const unsupported: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      writePlan: { command: "SET_TEXT" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(unsupported, "ignored")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+
+    expect(input.files).toHaveLength(0);
+    expect(result[0]?.status).toBe("skipped");
+  });
+
+  it("selects a Hyundai-style button menu only when the verified code and label match", () => {
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+    const trigger = document.createElement("input");
+    trigger.type = "button";
+    const selectWrap = document.createElement("div");
+    selectWrap.className = "select-wrap";
+    const hidden = document.createElement("input");
+    hidden.type = "hidden";
+    hidden.className = "js-field";
+    selectWrap.append(hidden, trigger);
+    const option = document.createElement("button");
+    option.dataset.code = "003";
+    option.textContent = "대리";
+    Object.defineProperty(option, "offsetParent", { value: document.body });
+    trigger.addEventListener("click", () => {
+      const menu = document.createElement("div");
+      menu.className = "select-option";
+      menu.append(option);
+      selectWrap.append(menu);
+    });
+    option.addEventListener("click", () => {
+      trigger.value = "대리";
+      hidden.value = "003";
+    });
+    const registry = register(trigger, {
+      candidateId: "career-position",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    document.body.append(selectWrap);
+    selectWrap.prepend(trigger);
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "career-position",
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "careers.career.position",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["career-position"]),
+      registry,
+    });
+
+    expect(trigger.value).toBe("대리");
+    expect(result).toEqual([
+      {
+        candidateId: "career-position",
+        status: "written",
+        outcome: "success",
+        code: "WRITTEN",
+      },
+    ]);
+  });
+
+  it("does not select a matching Hyundai menu option from another repeated row", () => {
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+    const targetWrap = document.createElement("div");
+    targetWrap.className = "select-wrap";
+    const target = document.createElement("input");
+    target.type = "button";
+    targetWrap.append(target);
+    const otherWrap = document.createElement("div");
+    otherWrap.className = "select-wrap";
+    const other = document.createElement("input");
+    other.type = "button";
+    otherWrap.append(other);
+    const otherMenu = document.createElement("div");
+    otherMenu.className = "select-option";
+    const otherChoice = document.createElement("button");
+    otherChoice.dataset.code = "003";
+    otherChoice.textContent = "대리";
+    Object.defineProperty(otherChoice, "offsetParent", {
+      value: document.body,
+    });
+    otherMenu.append(otherChoice);
+    otherWrap.append(otherMenu);
+    let otherSelections = 0;
+    otherChoice.addEventListener("click", () => {
+      otherSelections += 1;
+    });
+    target.addEventListener("click", () => {
+      const targetMenu = document.createElement("div");
+      targetMenu.className = "select-option";
+      const wrongChoice = document.createElement("button");
+      wrongChoice.dataset.code = "different";
+      wrongChoice.textContent = "다른 항목";
+      Object.defineProperty(wrongChoice, "offsetParent", {
+        value: document.body,
+      });
+      targetMenu.append(wrongChoice);
+      targetWrap.append(targetMenu);
+    });
+    const registry = register(target, {
+      candidateId: "language-1",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    document.body.append(targetWrap, otherWrap);
+    targetWrap.prepend(target);
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "language-1",
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "languages.languageTest.language",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["language-1"]),
+      registry,
+    });
+
+    expect(otherSelections).toBe(0);
+    expect(result[0]?.status).toBe("skipped");
+  });
+
+  it("does not open a company button menu on an unsupported host", () => {
+    const trigger = document.createElement("input");
+    trigger.type = "button";
+    let opened = false;
+    trigger.addEventListener("click", () => {
+      opened = true;
+    });
+    const registry = register(trigger, {
+      candidateId: "field-1",
+      element: "input",
+      control: "button",
+      visibility: "visible",
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      valueBinding: {
+        type: "BUTTON_OPTION",
+        profileFieldKey: "careers.career.position",
+        optionMap: { 대리: "대리" },
+        optionCodeMap: { 대리: "003" },
+      },
+      writePlan: { command: "SELECT_BUTTON_OPTION" },
+    };
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "대리")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+    expect(opened).toBe(false);
+    expect(trigger.value).toBe("");
+    expect(result[0]?.status).toBe("skipped");
+  });
+
+  it.each([0, 2])(
+    "does not select or fall back when a company menu has %i matching choices",
+    (count) => {
+      setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+      const trigger = document.createElement("input");
+      trigger.type = "button";
+      trigger.value = "기존 표시";
+      let selected = 0;
+      trigger.addEventListener("click", () => {
+        for (let index = 0; index < count; index += 1) {
+          const option = document.createElement("button");
+          option.dataset.code = "003";
+          option.textContent = "대리";
+          Object.defineProperty(option, "offsetParent", {
+            value: document.body,
+          });
+          option.addEventListener("click", () => {
+            selected += 1;
+          });
+          document.body.append(option);
+        }
+      });
+      const registry = register(trigger, {
+        candidateId: "field-1",
+        element: "input",
+        control: "button",
+        visibility: "visible",
+      });
+      const analysis: MatchedFieldAnalysis = {
+        ...textAnalysis,
+        valueBinding: {
+          type: "BUTTON_OPTION",
+          profileFieldKey: "careers.career.position",
+          optionMap: { 대리: "대리" },
+          optionCodeMap: { 대리: "003" },
+        },
+        writePlan: { command: "SELECT_BUTTON_OPTION" },
+      };
+      const result = executeApprovedWrites({
+        items: [reviewItem(analysis, "대리")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+      expect(result[0]?.status).toBe("skipped");
+      expect(selected).toBe(0);
+      expect(trigger.value).toBe("기존 표시");
+    },
+  );
+
+  it.each(["unapproved", "stale"])(
+    "does not open a company menu for a %s candidate",
+    (state) => {
+      setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
+      const trigger = document.createElement("input");
+      trigger.type = "button";
+      let opened = false;
+      trigger.addEventListener("click", () => {
+        opened = true;
+      });
+      const registry = register(trigger, {
+        candidateId: "field-1",
+        element: "input",
+        control: "button",
+        visibility: "visible",
+      });
+      if (state === "stale") trigger.remove();
+      const analysis: MatchedFieldAnalysis = {
+        ...textAnalysis,
+        valueBinding: {
+          type: "BUTTON_OPTION",
+          profileFieldKey: "careers.career.position",
+          optionMap: { 대리: "대리" },
+          optionCodeMap: { 대리: "003" },
+        },
+        writePlan: { command: "SELECT_BUTTON_OPTION" },
+      };
+      const result = executeApprovedWrites({
+        items: [reviewItem(analysis, "대리")],
+        approvedCandidateIds: new Set(state === "stale" ? ["field-1"] : []),
+        registry,
+      });
+      expect(result[0]?.status).toBe("skipped");
+      expect(opened).toBe(false);
+    },
+  );
+
+  it.each([
+    ["https://talent.hyundai.com/apply/applyWrite.hc", true],
+    ["https://example.test/apply", false],
+  ])(
+    "synchronizes successful text labels only for the owning company: %s",
+    (url, expected) => {
+      setPageUrl(url);
+      const input = document.createElement("input");
+      const registry = register(input, {
+        candidateId: "field-1",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+      });
+      const field = document.createElement("div");
+      field.className = "field";
+      document.body.append(field);
+      field.append(input);
+      const result = executeApprovedWrites({
+        items: [reviewItem(textAnalysis, "fixture")],
+        approvedCandidateIds: new Set(["field-1"]),
+        registry,
+      });
+      expect(result[0]?.status).toBe("written");
+      expect(input.value).toBe("fixture");
+      expect(field.classList.contains("exist")).toBe(expected);
+    },
+  );
+});
+
+describe("generic native write safety boundaries", () => {
+  function writeText(
+    type: string,
+    value: string,
+    configure?: (input: HTMLInputElement) => void,
+    currentValue = "",
+  ) {
+    const input = document.createElement("input");
+    input.type = type;
+    configure?.(input);
+    const registry = register(input, {
+      candidateId: "format-field",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis = { ...textAnalysis, candidateId: "format-field" };
+    return {
+      input,
+      result: executeApprovedWrites({
+        items: [reviewItem(analysis, value, { currentValue })],
+        approvedCandidateIds: new Set(["format-field"]),
+        registry,
+      })[0]!,
+    };
+  }
+
+  it.each([
+    ["date", "2024-02-30", undefined],
+    [
+      "date",
+      "2023-12-31",
+      (input: HTMLInputElement) => (input.min = "2024-01-01"),
+    ],
+    [
+      "date",
+      "2024-01-02",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01-01";
+        input.step = "2";
+      },
+    ],
+    ["month", "2024-13", undefined],
+    [
+      "month",
+      "2024-02",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01";
+        input.step = "2";
+      },
+    ],
+    ["number", "not-a-number", undefined],
+    ["number", "11", (input: HTMLInputElement) => (input.max = "10")],
+    ["number", "1.5", (input: HTMLInputElement) => (input.step = "1")],
+  ])(
+    "rejects unsafe %s values without mutating the control",
+    (type, value, configure) => {
+      const { input, result } = writeText(type, value, configure);
+
+      expect(input.value).toBe("");
+      expect(result).toMatchObject({
+        status: "skipped",
+        outcome: "unsupported",
+        code: "UNSUPPORTED_FORMAT",
+      });
+    },
+  );
+
+  it.each([
+    [
+      "date",
+      "2024-01-03",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01-01";
+        input.step = "2";
+      },
+    ],
+    [
+      "month",
+      "2024-03",
+      (input: HTMLInputElement) => {
+        input.min = "2024-01";
+        input.step = "2";
+      },
+    ],
+    [
+      "number",
+      "1e1",
+      (input: HTMLInputElement) => {
+        input.min = "0";
+        input.max = "10";
+        input.step = "any";
+      },
+    ],
+  ])("writes an in-range stepped %s value", (type, value, configure) => {
+    const { input, result } = writeText(type, value, configure);
+
+    expect(input.value).toBe(value);
+    expect(result).toMatchObject({ status: "written", code: "WRITTEN" });
+  });
+
+  it("preserves an unobserved text value rather than overwriting it", () => {
+    const { input, result } = writeText(
+      "text",
+      "new value",
+      undefined,
+      "old value",
+    );
+    input.value = "someone else";
+    const registry = register(input, {
+      candidateId: "conflict-field",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis = { ...textAnalysis, candidateId: "conflict-field" };
+    const conflict = executeApprovedWrites({
+      items: [reviewItem(analysis, "new value", { currentValue: "old value" })],
+      approvedCandidateIds: new Set(["conflict-field"]),
+      registry,
+    })[0]!;
+
+    expect(result.status).toBe("written");
+    expect(input.value).toBe("someone else");
+    expect(conflict).toMatchObject({
+      outcome: "needs-verification",
+      code: "CONFLICT",
+    });
+  });
+
+  it("refuses an uncaptured radio from a different repeated row", () => {
+    const first = document.createElement("input");
+    const second = document.createElement("input");
+    first.type = second.type = "radio";
+    first.name = second.name = "status";
+    first.value = "yes";
+    second.value = "no";
+    document.body.append(first, second);
+    const registry = new CandidateRegistry();
+    registry.registerField({
+      kind: "field",
+      candidateId: "radio-field",
+      candidate: {
+        candidateId: "radio-field",
+        element: "input",
+        control: "radio",
+        visibility: "visible",
+        options: [{ optionId: "yes", displayName: "yes" }],
+      },
+      elements: [first],
+      optionElements: new Map([["yes", first]]),
+      sectionId: "section-1",
+      signature: createStructuralSignature([first]),
+    });
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "radio-field",
+      writePlan: { command: "CHECK_RADIO" },
+    };
+
+    const result = executeApprovedWrites({
+      items: [reviewItem(analysis, "yes")],
+      approvedCandidateIds: new Set(["radio-field"]),
+      registry,
+    })[0]!;
+
+    expect(first.checked).toBe(false);
+    expect(result).toMatchObject({
+      outcome: "unsupported",
+      code: "UNSUPPORTED_CONTROL",
+    });
+  });
+});
+
+describe("generic writer fail-closed native boundaries", () => {
+  it.each([
+    "file",
+    "hidden",
+    "password",
+    "submit",
+    "reset",
+    "image",
+    "search",
+    "range",
+    "color",
+    "time",
+    "datetime-local",
+    "week",
+  ])("does not mutate unsupported input type %s", (type) => {
+    const input = document.createElement("input");
+    input.type = type;
+    if (type === "hidden") input.value = "preserve";
+    const registry = register(input, {
+      candidateId: `unsafe-${type}`,
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const analysis = { ...textAnalysis, candidateId: `unsafe-${type}` };
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(analysis, "replacement", { currentValue: input.value }),
+      ],
+      approvedCandidateIds: new Set([`unsafe-${type}`]),
+      registry,
+    })[0]!;
+
+    expect(input.value).not.toBe("replacement");
+    expect(result).toMatchObject({
+      status: "skipped",
+      outcome: type === "hidden" ? "needs-verification" : "unsupported",
+      code:
+        type === "hidden"
+          ? "STALE_TARGET"
+          : type === "range" ||
+              type === "color" ||
+              type === "time" ||
+              type === "datetime-local" ||
+              type === "week"
+            ? "UNSUPPORTED_FORMAT"
+            : "UNSUPPORTED_CONTROL",
+    });
+  });
+
+  it("does not write a value that exceeds a native text limit", () => {
+    const input = document.createElement("input");
+    input.maxLength = 3;
+    const registry = register(input, {
+      candidateId: "limited-text",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem({ ...textAnalysis, candidateId: "limited-text" }, "four"),
+      ],
+      approvedCandidateIds: new Set(["limited-text"]),
+      registry,
+    })[0]!;
+
+    expect(input.value).toBe("");
+    expect(result).toMatchObject({ code: "UNSUPPORTED_FORMAT" });
+  });
+
+  it.each([
+    ["search semantic metadata", { inputType: "search" as const }],
+    [
+      "consent label metadata",
+      { labels: [{ source: "label" as const, text: "개인정보 동의" }] },
+    ],
+  ])("refuses unsafe generic metadata: %s", (_name, semanticContext) => {
+    const input = document.createElement("input");
+    const registry = register(input, {
+      candidateId: "unsafe-metadata",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+      semanticContext,
+    });
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          { ...textAnalysis, candidateId: "unsafe-metadata" },
+          "value",
+        ),
+      ],
+      approvedCandidateIds: new Set(["unsafe-metadata"]),
+      registry,
+    })[0]!;
+
+    expect(input.value).toBe("");
+    expect(result).toMatchObject({ code: "UNSUPPORTED_CONTROL" });
+  });
+
+  it.each([
+    ["no matching option", [new Option("다른 값", "other")]],
+    [
+      "ambiguous matching options",
+      [new Option("같은 값", "first"), new Option("같은 값", "second")],
+    ],
+    [
+      "disabled matching option",
+      [Object.assign(new Option("같은 값", "only"), { disabled: true })],
+    ],
+  ])("preserves native select when there is %s", (_name, options) => {
+    const select = document.createElement("select");
+    const mapped = new Map<string, HTMLOptionElement>();
+    options.forEach((option, index) => {
+      select.append(option);
+      mapped.set(`option-${index}`, option);
+    });
+    const registry = register(
+      select,
+      {
+        candidateId: "select-boundary",
+        element: "select",
+        control: "select",
+        visibility: "visible",
+        options: options.map((option, index) => ({
+          optionId: `option-${index}`,
+          displayName: option.text,
+        })),
+      },
+      mapped,
+    );
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          {
+            ...textAnalysis,
+            candidateId: "select-boundary",
+            writePlan: { command: "SELECT_OPTION" },
+          },
+          "같은 값",
+          { currentValue: select.selectedOptions[0]?.textContent ?? "" },
+        ),
+      ],
+      approvedCandidateIds: new Set(["select-boundary"]),
+      registry,
+    })[0]!;
+
+    expect(select.value).not.toBe("second");
+    expect(result).toMatchObject({ code: "UNSUPPORTED_CONTROL" });
+  });
+
+  it("treats a readonly generic target as stale rather than bypassing review", () => {
+    const input = document.createElement("input");
+    input.readOnly = true;
+    const registry = register(
+      input,
+      {
+        candidateId: "readonly-generic",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+        readonly: true,
+      },
+      new Map(),
+      "readonly",
+    );
+
+    const result = executeApprovedWrites({
+      items: [
+        reviewItem(
+          { ...textAnalysis, candidateId: "readonly-generic" },
+          "value",
+        ),
+      ],
+      approvedCandidateIds: new Set(["readonly-generic"]),
+      registry,
+    })[0]!;
+
+    expect(input.value).toBe("");
+    expect(result).toMatchObject({
+      outcome: "needs-verification",
+      code: "STALE_TARGET",
+    });
+  });
+});
+
+describe("approved date-target writes", () => {
+  function setupDate(value = "2024.02.29", type = "text") {
+    const input = document.createElement("input");
+    input.type = type;
+    input.id = "same-target-id";
+    if (type === "text") input.placeholder = "YYYY.MM.DD";
+    document.body.append(input);
+    const registry = register(input, {
+      candidateId: "approved-date",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const lookup = registry.lookupField("approved-date");
+    if (lookup.status !== "ready") throw new Error("test field unavailable");
+    const result = resolveDateTargetFormat(lookup.handle);
+    if (result.status !== "resolved") throw new Error(result.reason);
+    const item = reviewItem(
+      { ...textAnalysis, candidateId: "approved-date" },
+      value,
+      { dateApproval: result.approval },
+    );
+    return { input, registry, item };
+  }
+  function run(registry: CandidateRegistry, item: ReviewPlanItem) {
+    return executeApprovedWrites({
+      items: [item],
+      approvedCandidateIds: new Set([item.candidateId]),
+      registry,
+    });
+  }
+  it("writes the locally approved value and retains it", () => {
+    const { input, registry, item } = setupDate();
+    const events: string[] = [];
+    input.addEventListener("input", () => events.push("input"));
+    input.addEventListener("change", () => events.push("change"));
+    expect(run(registry, item)[0]?.status).toBe("written");
+    expect(input.value).toBe("2024.02.29");
+    expect(events).toEqual(["input", "change"]);
+  });
+  it.each([
+    [
+      "type",
+      (e: HTMLInputElement) => {
+        e.type = "date";
+      },
+    ],
+    [
+      "placeholder",
+      (e: HTMLInputElement) => {
+        e.placeholder = "YYYY.MM";
+      },
+    ],
+    ["minlength", (e: HTMLInputElement) => e.setAttribute("minlength", "40")],
+    ["maxlength", (e: HTMLInputElement) => e.setAttribute("maxlength", "3")],
+    ["pattern", (e: HTMLInputElement) => e.setAttribute("pattern", "[0-9]+")],
+    ["min", (e: HTMLInputElement) => e.setAttribute("min", "2025-01-01")],
+    ["max", (e: HTMLInputElement) => e.setAttribute("max", "2023-01-01")],
+    ["step", (e: HTMLInputElement) => e.setAttribute("step", "2")],
+    ["value", (e: HTMLInputElement) => e.setAttribute("value", "2020-01-01")],
+  ])("rejects changed approved %s before mutation", (_label, change) => {
+    const { input, registry, item } = setupDate();
+    let events = 0;
+    input.addEventListener("input", () => events++);
+    input.addEventListener("change", () => events++);
+    change(input);
+    expect(run(registry, item)[0]).toMatchObject({
+      status: "skipped",
+      code: "STALE_TARGET",
+    });
+    expect(events).toBe(0);
+    if (_label === "value") expect(input.value).toBe("2020-01-01");
+    else expect(input.value).toBe("");
+  });
+  it("rejects a replacement element", () => {
+    const { input, registry, item } = setupDate();
+    const replacement = input.cloneNode() as HTMLInputElement;
+    expect(replacement.id).toBe(input.id);
+    input.replaceWith(replacement);
+    expect(run(registry, item)[0]).toMatchObject({
+      status: "skipped",
+      code: "STALE_TARGET",
+    });
+    expect(replacement.value).toBe("");
+  });
+  it("preserves a value changed by the user since review", () => {
+    const { input, registry, item } = setupDate();
+    input.value = "2020.01.01";
+    expect(run(registry, item)[0]).toMatchObject({
+      status: "skipped",
+      code: "CONFLICT",
+    });
+    expect(input.value).toBe("2020.01.01");
+  });
+  it("does not report success or dispatch change if input handler alters the value", () => {
+    const { input, registry, item } = setupDate();
+    input.addEventListener("input", () => {
+      input.value = "2020.01.01";
+    });
+    let changes = 0;
+    input.addEventListener("change", () => changes++);
+    expect(run(registry, item)[0]?.status).toBe("skipped");
+    expect(input.value).toBe("2020.01.01");
+    expect(changes).toBe(0);
+  });
+  it("does not dispatch events on an equivalent rerun", () => {
+    const { input, registry, item } = setupDate();
+    let events = 0;
+    input.addEventListener("input", () => events++);
+    input.addEventListener("change", () => events++);
+    run(registry, item);
+    expect(
+      run(registry, { ...item, currentValue: "2024.02.29" })[0]?.status,
+    ).toBe("written");
+    expect(events).toBe(2);
+  });
+  it("accepts approved native min/value/epoch-basis fractional-step constraints", () => {
+    const { input, registry, item } = setupDate("1970-01-03", "date");
+    input.min = "1970-01-02";
+    input.setAttribute("value", "1970-01-01");
+    input.step = "0.5";
+    input.maxLength = 1;
+    const lookup = registry.lookupField(item.candidateId);
+    if (lookup.status !== "ready") throw new Error("test field unavailable");
+    const approval = resolveDateTargetFormat(lookup.handle);
+    if (approval.status !== "resolved") throw new Error(approval.reason);
+    expect(
+      run(registry, {
+        ...item,
+        currentValue: "1970-01-01",
+        dateApproval: approval.approval,
+      })[0]?.status,
+    ).toBe("written");
+    expect(input.value).toBe("1970-01-03");
+  });
+  it("leaves legacy paths without date approval unchanged", () => {
+    const input = document.createElement("input");
+    input.type = "date";
+    input.min = "2024-01-01";
+    input.step = "2";
+    const registry = register(input, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const result = executeApprovedWrites({
+      items: [reviewItem(textAnalysis, "2024-01-02")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+    });
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "UNSUPPORTED_FORMAT",
+    });
+    expect(input.value).toBe("");
+  });
+});
+
+describe("calendar isolation from ordinary writes", () => {
+  it("does not accept SELECT_DATE through the ordinary write action", async () => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.readOnly = true;
+    const registry = register(
+      input,
+      {
+        candidateId: "calendar-field",
+        element: "input",
+        control: "text",
+        visibility: "visible",
+        readonly: true,
+      },
+      new Map(),
+      "readonly",
+    );
+    const analysis: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "calendar-field",
+      writePlan: { command: "SELECT_DATE" },
+    };
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(analysis, "2025-02", { selected: true })],
+      approvedCandidateIds: new Set(["calendar-field"]),
+      registry,
+      document,
+    });
+    expect(input.value).toBe("");
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "NOT_APPROVED",
+    });
+  });
+});
+
+describe("mixed ordinary and calendar approvals", () => {
+  it("writes the ordinary field but refuses SELECT_DATE in an ordinary run", async () => {
+    const ordinary = document.createElement("input");
+    const registry = register(ordinary, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const calendar = document.createElement("input");
+    calendar.readOnly = true;
+    document.body.append(calendar);
+    registry.registerField(
+      {
+        kind: "field",
+        candidateId: "calendar-field",
+        sectionId: "section-1",
+        signature: createStructuralSignature([calendar]),
+        candidate: {
+          candidateId: "calendar-field",
+          element: "input",
+          control: "text",
+          visibility: "visible",
+          readonly: true,
+        },
+        elements: [calendar],
+        optionElements: new Map(),
+      },
+      "readonly",
+    );
+    const date: MatchedFieldAnalysis = {
+      ...textAnalysis,
+      candidateId: "calendar-field",
+      writePlan: { command: "SELECT_DATE" },
+    };
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "example"), reviewItem(date, "2026-03")],
+      approvedCandidateIds: new Set(["field-1", "calendar-field"]),
+      registry,
+      document,
+    });
+    expect(ordinary.value).toBe("example");
+    expect(calendar.value).toBe("");
+    expect(result[0]).toMatchObject({ status: "written" });
+    expect(result[1]).toMatchObject({
+      status: "skipped",
+      code: "NOT_APPROVED",
+    });
+  });
+});
+
+describe("calendar-only document run", () => {
+  it("never writes an ordinary field even if its id is included in the approval set", async () => {
+    const ordinary = document.createElement("input");
+    const registry = register(ordinary, {
+      candidateId: "field-1",
+      element: "input",
+      control: "text",
+      visibility: "visible",
+    });
+    const result = await executeApprovedWritesAfterPageSettles({
+      items: [reviewItem(textAnalysis, "new value")],
+      approvedCandidateIds: new Set(["field-1"]),
+      registry,
+      document,
+      calendarOnly: true,
+    });
+    expect(ordinary.value).toBe("");
+    expect(result[0]).toMatchObject({
+      status: "skipped",
+      code: "NOT_APPROVED",
+    });
+  });
+});

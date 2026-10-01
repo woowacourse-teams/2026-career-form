@@ -1,0 +1,262 @@
+package com.careerform.formanalysis.application;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.careerform.formanalysis.application.FormAnalysisRouter.ActionRoute;
+import com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind;
+import com.careerform.formanalysis.application.port.ActionResolver;
+import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
+import com.careerform.formanalysis.dto.PreparationAnalysisRequest.ActionCandidate;
+import com.careerform.formanalysis.dto.PreparationAnalysisRequest.Section;
+import com.careerform.formanalysis.dto.PreparationAnalysisRequest.Visibility;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse.AddRepeatableGroupPlan;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse.Command;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse.ExpectedEffect;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse.Mode;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse.PreparationPlan;
+import com.careerform.formanalysis.dto.PreparationAnalysisResponse.RevealSectionPlan;
+import com.careerform.formanalysis.exception.InvalidSnapshotException;
+import com.careerform.formanalysis.exception.ResolverException;
+import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
+
+@Service
+public final class PreparationAnalysisService {
+
+    private static final int SCHEMA_VERSION = 2;
+    private static final String INVALID_SNAPSHOT_MESSAGE =
+        "지원서 snapshot 관계를 확인할 수 없습니다";
+    private static final String INVALID_RESOLUTION_MESSAGE =
+        "Resolver 출력 계약을 확인할 수 없습니다";
+
+    private final Optional<ActionResolver> resolver;
+    private final FormAnalysisRouter router;
+    private final boolean analysisEnabled;
+    public PreparationAnalysisService(Optional<ActionResolver> resolver, FormAnalysisRouter router) {
+        this(resolver, router, new AnalysisProviderSelection(true, "openai"));
+    }
+
+    @Autowired
+    public PreparationAnalysisService(Optional<ActionResolver> resolver, FormAnalysisRouter router,
+        AnalysisProviderSelection selection) {
+        this.resolver = resolver;
+        this.router = router;
+        this.analysisEnabled = selection.enabled();
+    }
+
+    public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request) {
+        return analyze(request, false);
+    }
+
+    public PreparationAnalysisResponse analyze(PreparationAnalysisRequest request, boolean addressSearch) {
+        validateSnapshot(request);
+        ActionRoute route = router.route(request);
+        if (route.kind() == RouteKind.STRUCTURE_MISMATCH) {
+            return PreparationAnalysisResponse.adapterStructureMismatch(
+                request.snapshotId()
+            );
+        }
+        if (route.kind() == RouteKind.POLICY_UNAVAILABLE) {
+            return PreparationAnalysisResponse.adapterPolicyUnavailable(
+                request.snapshotId()
+            );
+        }
+        Mode mode = route.kind() == RouteKind.ADAPTER
+            ? Mode.ADAPTER
+            : Mode.GENERIC;
+        Optional<ActionResolver> selectedResolver = route.kind() == RouteKind.ADAPTER
+            ? Optional.of(route.resolver())
+            : analysisEnabled ? resolver : Optional.empty();
+        if (selectedResolver.isEmpty()) {
+            return PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
+        }
+        if (request.actionCandidatesInTraversalOrder().isEmpty()) {
+            return PreparationAnalysisResponse.complete(
+                request.snapshotId(),
+                mode,
+                List.of()
+            );
+        }
+        try {
+            ActionResolver.Resolution resolution = selectedResolver.orElseThrow()
+                .resolve(request);
+            validateResolution(request, resolution);
+            return PreparationAnalysisResponse.complete(
+                request.snapshotId(),
+                mode,
+                mapPlansInRequestOrder(
+                    request,
+                    resolution,
+                    addressSearch && mode == Mode.ADAPTER
+                )
+            );
+        }
+        catch (ResolverException exception) {
+            return mode == Mode.ADAPTER
+                ? PreparationAnalysisResponse.adapterStructureMismatch(
+                    request.snapshotId()
+                )
+                : PreparationAnalysisResponse.llmUnavailable(request.snapshotId());
+        }
+    }
+
+    private static void validateSnapshot(PreparationAnalysisRequest request) {
+        if (request == null
+            || request.schemaVersion() != SCHEMA_VERSION
+            || isBlank(request.snapshotId())
+            || request.sections() == null
+            || request.sections().isEmpty()) {
+            invalidSnapshot();
+        }
+
+        Set<String> sectionIds = new HashSet<>();
+        Set<String> candidateIds = new HashSet<>();
+        for (Section section : request.sections()) {
+            if (section == null
+                || isBlank(section.sectionId())
+                || !sectionIds.add(section.sectionId())
+                || section.actionCandidates() == null) {
+                invalidSnapshot();
+            }
+        }
+        for (ActionCandidate candidate : request.actionCandidatesInTraversalOrder()) {
+            if (candidate == null
+                || isBlank(candidate.candidateId())
+                || !candidateIds.add(candidate.candidateId())) {
+                invalidSnapshot();
+            }
+        }
+    }
+
+    private static void validateResolution(
+        PreparationAnalysisRequest request,
+        ActionResolver.Resolution resolution
+    ) {
+        if (resolution == null
+            || resolution.schemaVersion() != SCHEMA_VERSION
+            || !request.snapshotId().equals(resolution.snapshotId())
+            || resolution.results() == null) {
+            invalidResolution();
+        }
+
+        Map<String, ActionCandidate> candidates = new LinkedHashMap<>();
+        for (ActionCandidate candidate : request.actionCandidatesInTraversalOrder()) {
+            candidates.put(candidate.candidateId(), candidate);
+        }
+        Set<String> sectionIds = new HashSet<>();
+        for (Section section : request.sections()) {
+            sectionIds.add(section.sectionId());
+        }
+
+        Set<String> resultIds = new HashSet<>();
+        for (ActionResolver.Result result : resolution.results()) {
+            if (result == null
+                || isBlank(result.candidateId())
+                || !resultIds.add(result.candidateId())) {
+                invalidResolution();
+            }
+            ActionCandidate candidate = candidates.get(result.candidateId());
+            if (candidate == null) {
+                invalidResolution();
+            }
+            validateAction(result, candidate, sectionIds);
+        }
+        if (!resultIds.equals(candidates.keySet())) {
+            invalidResolution();
+        }
+    }
+
+    private static void validateAction(
+        ActionResolver.Result result,
+        ActionCandidate candidate,
+        Set<String> sectionIds
+    ) {
+        if (result instanceof ActionResolver.NoAction) {
+            return;
+        }
+        if (candidate.visibility() != Visibility.VISIBLE
+            || Boolean.TRUE.equals(candidate.disabled())
+            || Boolean.TRUE.equals(candidate.readonly())
+            || Boolean.TRUE.equals(candidate.inert())) {
+            invalidResolution();
+        }
+        if (result instanceof ActionResolver.RevealAction reveal
+            && (isBlank(reveal.targetSectionId())
+                || !sectionIds.contains(reveal.targetSectionId()))) {
+            invalidResolution();
+        }
+        if (result instanceof ActionResolver.SelectOptionAction select
+            && (isBlank(select.profileFieldKey()) || isBlank(select.targetSectionId())
+                || !sectionIds.contains(select.targetSectionId()))) {
+            invalidResolution();
+        }
+    }
+
+    private static List<PreparationPlan> mapPlansInRequestOrder(
+        PreparationAnalysisRequest request,
+        ActionResolver.Resolution resolution,
+        boolean addressSearch
+    ) {
+        Map<String, ActionResolver.Result> byCandidate = new HashMap<>();
+        for (ActionResolver.Result result : resolution.results()) {
+            byCandidate.put(result.candidateId(), result);
+        }
+        return request.actionCandidateIdsInTraversalOrder().stream()
+            .map(byCandidate::get)
+            .filter(result -> !(result instanceof ActionResolver.NoAction))
+            .filter(result -> addressSearch || !(result instanceof ActionResolver.SearchAddressAction))
+            .map(PreparationAnalysisService::toPlan)
+            .toList();
+    }
+
+    private static PreparationPlan toPlan(ActionResolver.Result result) {
+        if (result instanceof ActionResolver.RevealAction reveal) {
+            return new RevealSectionPlan(
+                reveal.candidateId(),
+                Command.REVEAL_SECTION,
+                ExpectedEffect.TARGET_VISIBLE,
+                reveal.targetSectionId()
+            );
+        }
+        if (result instanceof ActionResolver.SelectOptionAction select) {
+            return new PreparationAnalysisResponse.SelectOptionToRevealPlan(
+                select.candidateId(), Command.SELECT_OPTION_TO_REVEAL,
+                ExpectedEffect.TARGET_FIELDS_VISIBLE, select.profileFieldKey(),
+                select.optionDisplayName(),
+                select.targetSectionId(), select.expectedFieldNames(),
+                select.selectableProfileValues(), select.revealedFieldBindings());
+        }
+        if (result instanceof ActionResolver.SearchAddressAction search) {
+            return new PreparationAnalysisResponse.SearchAddressPlan(search.candidateId(),
+                Command.SEARCH_ADDRESS, ExpectedEffect.ADDRESS_SELECTED);
+        }
+        ActionResolver.AddAction add = (ActionResolver.AddAction) result;
+        return new AddRepeatableGroupPlan(
+            add.candidateId(),
+            Command.ADD_REPEATABLE_GROUP,
+            ExpectedEffect.GROUP_COUNT_INCREMENT,
+            add.expectedFieldNames()
+        );
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static void invalidSnapshot() {
+        throw new InvalidSnapshotException(INVALID_SNAPSHOT_MESSAGE);
+    }
+
+    private static void invalidResolution() {
+        throw new ResolverException(INVALID_RESOLUTION_MESSAGE);
+    }
+}

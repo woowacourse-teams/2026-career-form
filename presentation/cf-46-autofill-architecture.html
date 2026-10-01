@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>지원서 자동 기입 구조 개선</title>
+  <style>
+    :root { --ink:#10233f; --blue:#1467d9; --sky:#eaf4ff; --line:#cbd9e8; --muted:#5e718a; --safe:#08775d; --warn:#9a5b00; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#eef3f9; color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { max-width:1160px; margin:0 auto; padding:32px 20px 72px; }
+    .slide { min-height:600px; margin:0 0 28px; padding:56px; border-radius:24px; background:#fff; box-shadow:0 16px 48px #16355a16; position:relative; overflow:hidden; }
+    .slide::after { content:"Career Form · CF-46"; position:absolute; right:36px; bottom:24px; color:#90a0b4; font-size:12px; letter-spacing:.04em; }
+    .eyebrow { color:var(--blue); font-weight:800; letter-spacing:.08em; font-size:13px; }
+    h1 { font-size:48px; line-height:1.16; margin:20px 0; max-width:780px; }
+    h2 { margin:12px 0 28px; font-size:34px; }
+    h3 { margin:0 0 10px; font-size:20px; }
+    p, li { color:var(--muted); font-size:17px; line-height:1.65; }
+    .lead { max-width:760px; font-size:22px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+    .card { border:1px solid var(--line); border-radius:16px; padding:24px; background:#fff; }
+    .old { border-top:5px solid #cc5c5c; } .new { border-top:5px solid var(--safe); }
+    .flow { display:flex; gap:12px; align-items:stretch; margin:34px 0; flex-wrap:wrap; }
+    .node { flex:1 1 160px; padding:20px; border-radius:14px; background:var(--sky); color:#183b69; font-weight:700; text-align:center; }
+    .arrow { align-self:center; color:var(--blue); font-size:28px; }
+    .bad { background:#fff4f2; border:1px solid #ffd2cc; } .good { background:#effbf6; border:1px solid #b6e6d4; }
+    .tag { display:inline-block; padding:4px 10px; border-radius:999px; font-size:13px; font-weight:800; margin-bottom:10px; }
+    .tag.warn { background:#fff3dd; color:var(--warn); } .tag.safe { background:#e4f8ef; color:var(--safe); }
+    .check { padding-left:0; list-style:none; } .check li { padding:8px 0 8px 30px; position:relative; } .check li::before { content:"✓"; position:absolute; left:0; color:var(--safe); font-weight:900; }
+    .quote { margin-top:32px; padding:22px 26px; border-left:5px solid var(--blue); background:#f6faff; color:#294d7a; font-size:19px; line-height:1.6; }
+    @media (max-width:720px) { .slide { min-height:auto; padding:34px 24px 58px; } h1 { font-size:36px; } h2 { font-size:28px; } .grid { grid-template-columns:1fr; } .arrow { transform:rotate(90deg); width:100%; text-align:center; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="slide">
+      <div class="eyebrow">ARCHITECTURE UPDATE</div>
+      <h1>직무별 지원서 변형에도<br>공통 정보를 안전하게 기입하도록 바꿨음</h1>
+      <p class="lead">SK Careers는 같은 회사 안에서도 공고·직무마다 조건부 영역과 필드 구성이 달랐음. 이번 변경에서는 한 조건부 영역이 달라도 전체 자동 기입이 멈추지 않게 바꿨음.</p>
+      <div class="quote">원칙: 구조가 정확히 확인된 공통 정보만 기입했고, 확인되지 않은 조건부 정보는 건너뛰게 했음.</div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">BEFORE</div>
+      <h2>기존 구조: 조건부 한 곳의 불일치가 전체를 차단했음</h2>
+      <div class="flow">
+        <div class="node">지원서 구조 수집</div><div class="arrow">→</div>
+        <div class="node">조건부 영역 준비<br><small>행 추가·라디오 선택</small></div><div class="arrow">→</div>
+        <div class="node bad">예상 필드명 확인 실패</div><div class="arrow">→</div>
+        <div class="node bad">전체 예외 처리</div>
+      </div>
+      <div class="grid">
+        <article class="card old"><span class="tag warn">문제</span><h3>정책이 너무 강하게 결합돼 있었음</h3><p>자격·어학·학력처럼 선택적으로 나타나는 영역에서 정책의 예상 필드명이 실제 직무별 폼과 다르면, 공통 필드까지 기입하지 못했음.</p></article>
+        <article class="card old"><span class="tag warn">사용자 증상</span><h3>첫 클릭은 예외, 두 번째 클릭은 성공했음</h3><p>첫 클릭에서 조건 선택 또는 행 추가는 이미 반영됐지만, 사후 검증 실패로 중단됐음. 두 번째 클릭은 변경된 상태에서 다시 시작해 기입 단계로 넘어갔음.</p></article>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">DIAGNOSIS</div>
+      <h2>문제의 핵심은 지연이 아니라 검증 범위였음</h2>
+      <div class="grid">
+        <article class="card"><h3>검증 대상으로 유지했음</h3><ul><li>버튼·라디오·선택값이 정책과 정확히 일치하는지 확인했음</li><li>실제 선택 또는 행 추가가 수행됐는지 확인했음</li><li>기입하려는 필드가 현재 화면에서 정확히 식별되는지 확인했음</li></ul></article>
+        <article class="card"><h3>전체 실패 사유에서는 뺐음</h3><ul><li>직무별 폼에서 생략된 선택 영역</li><li>동일한 의미지만 다른 세부 필드명으로 구성된 영역</li><li>공통 필드와 독립적인 선택 정보의 미노출</li></ul></article>
+      </div>
+      <div class="quote">“조건부 필드가 없음”을 “지원서 전체를 분석할 수 없음”으로 처리하지 않게 했음.</div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">AFTER</div>
+      <h2>변경 구조: 조건부는 부분 제외하고 공통 정보는 계속 진행했음</h2>
+      <div class="flow">
+        <div class="node">지원서 구조 수집</div><div class="arrow">→</div>
+        <div class="node">조건부 영역 준비</div><div class="arrow">→</div>
+        <div class="node good">불일치 조건부 영역 제외</div><div class="arrow">→</div>
+        <div class="node good">공통 필드 재수집·자동 기입</div>
+      </div>
+      <div class="grid">
+        <article class="card new"><span class="tag safe">변경 1</span><h3>부분 실패를 전체 실패로 올리지 않게 했음</h3><p>조건부 예상 필드가 없으면 해당 영역만 자동 기입 대상에서 제외했고, 이미 검증된 공통 필드 분석은 계속하게 했음.</p></article>
+        <article class="card new"><span class="tag safe">변경 2</span><h3>빠르게 즉시 판정하게 했음</h3><p>조건부 필드가 클릭 직후 보이지 않으면 기다리지 않게 했음. 해당 영역을 제외하고 바로 공통 필드 분석으로 전환했음.</p></article>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">SAFETY &amp; RESULT</div>
+      <h2>기입 대상과 제외 대상을 분리했음</h2>
+      <div class="grid">
+        <article class="card good"><h3>자동 기입 대상으로 유지했음</h3><ul class="check"><li>현재 페이지에서 정확히 식별된 필드</li><li>프로필 값과 행 개수가 안전하게 대응되는 반복 항목</li><li>기존 입력값과 충돌하지 않는 값</li><li>정책이 허용한 텍스트·선택·라디오 입력</li></ul></article>
+        <article class="card bad"><h3>자동 기입 대상에서 제외했음</h3><ul><li>직무별 폼에 없는 조건부 영역</li><li>필드명·컨트롤 구조가 정책과 다른 항목</li><li>기존 값 충돌 또는 민감정보 확인이 필요한 항목</li><li>읽기 전용·시스템 계산 필드</li></ul></article>
+      </div>
+      <div class="quote">결과 UI는 중간 1/3·2/3·3/3 화면 대신 최종 기입 결과만 보여주게 했음. 저장·이동·제출은 자동으로 실행하지 않았음.</div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">VERIFICATION</div>
+      <h2>검증과 운영 기준을 정리했음</h2>
+      <div class="grid">
+        <article class="card"><h3>자동 검증을 추가했음</h3><ul class="check"><li>조건부 예상 필드가 없을 때 공통 흐름을 계속하는 실행기 테스트</li><li>즉시 판정(대기 없음) 테스트</li><li>프런트 전체 테스트, 타입 검사, 확장프로그램 빌드</li></ul></article>
+        <article class="card"><h3>운영 원칙을 유지했음</h3><ul class="check"><li>구조가 다른 필드는 추정 기입하지 않음</li><li>공고별 변형은 정책의 선택 영역으로 격리</li><li>지원서 저장·제출은 사용자만 수행</li></ul></article>
+      </div>
+      <div class="quote">결론: “완벽히 같은 폼일 때만 작동”하던 구조에서, “안전하게 공통인 정보는 기입하고 나머지는 제외”하는 구조로 전환했음.</div>
+    </section>
+  </main>
+</body>
+</html>

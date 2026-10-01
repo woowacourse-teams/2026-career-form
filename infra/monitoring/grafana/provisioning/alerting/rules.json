@@ -1,0 +1,71 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "career-form-monitoring",
+      "folder": "Career Form",
+      "interval": "30s",
+      "rules": [
+        {
+          "uid": "cf-monitoring-disk-full",
+          "title": "[monitoring] 루트 디스크 사용률 80% 이상",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max(100 * (1 - node_filesystem_avail_bytes{job=\"host\",instance=\"career-monitor\",mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"host\",instance=\"career-monitor\",mountpoint=\"/\"}))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 80",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "Alerting",
+          "execErrState": "Alerting",
+          "for": "5m",
+          "annotations": {
+            "summary": "루트 디스크 사용률 80% 이상: >= 80",
+            "description": "환경 monitoring, 조건 루트 디스크 사용률 80% 이상. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "9"
+          },
+          "labels": {
+            "env": "monitoring",
+            "kind": "disk-full",
+            "service": "monitoring",
+            "instance": "career-monitor"
+          },
+          "isPaused": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/devbrother2024/skills",
+  "path": "deep-interview",
+  "commit": "de4998a1ad579d3d8654faf66a9e9a9ae09af894",
+  "retrieved_at": "2026-08-06",
+  "license": "MIT",
+  "local_changes": [
+    "Codex와 호환되지 않는 argument-hint 프론트매터 제거"
+  ]
+}

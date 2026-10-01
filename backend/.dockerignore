@@ -1,0 +1,10 @@
+.gradle/
+build/*
+!build/libs/
+!build/libs/*.jar
+.idea/
+*.iml
+.DS_Store
+.git/
+.env
+.env.*

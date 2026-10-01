@@ -1,0 +1,70 @@
+prefix_rule(
+    pattern = ["rm"],
+    decision = "forbidden",
+    justification = "파일 삭제는 사람이 대상을 확인한 뒤 수행해야 합니다.",
+    match = ["rm file.txt", "rm -rf build"],
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "변경을 폐기하지 말고 사람이 복구 방법을 선택해야 합니다.",
+    match = ["git reset --hard", "git reset --hard HEAD~1"],
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "forbidden",
+    justification = "추적되지 않은 파일 삭제는 사람이 수행해야 합니다.",
+    match = ["git clean -fd", "git clean -xdf"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "-D"],
+    decision = "forbidden",
+    justification = "강제 브랜치 삭제는 사람이 수행해야 합니다.",
+    match = ["git branch -D feature/123-old"],
+)
+
+prefix_rule(
+    pattern = ["gh", "auth", "token"],
+    decision = "forbidden",
+    justification = "인증 토큰 접근은 사람이 수행해야 합니다.",
+    match = ["gh auth token"],
+)
+
+prefix_rule(
+    pattern = ["gh", "secret"],
+    decision = "forbidden",
+    justification = "시크릿 접근과 변경은 사람이 수행해야 합니다.",
+    match = ["gh secret list", "gh secret set API_KEY"],
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", ["merge", "review"]],
+    decision = "forbidden",
+    justification = "PR 최종 승인과 머지는 사람이 수행해야 합니다.",
+    match = ["gh pr merge 123", "gh pr review 123 --approve"],
+    not_match = ["gh pr view 123", "gh pr create --draft"],
+)
+
+prefix_rule(
+    pattern = ["kubectl", "apply"],
+    decision = "forbidden",
+    justification = "배포는 지정된 사람이 별도 CI/CD로 수행해야 합니다.",
+    match = ["kubectl apply -f deployment.yml"],
+)
+
+prefix_rule(
+    pattern = ["terraform", "apply"],
+    decision = "forbidden",
+    justification = "인프라 변경 적용은 지정된 사람이 수행해야 합니다.",
+    match = ["terraform apply", "terraform apply plan.tfplan"],
+)
+
+prefix_rule(
+    pattern = ["gh", "workflow", "run"],
+    decision = "forbidden",
+    justification = "배포성 워크플로우 실행은 지정된 사람이 수행해야 합니다.",
+    match = ["gh workflow run deploy.yml"],
+)

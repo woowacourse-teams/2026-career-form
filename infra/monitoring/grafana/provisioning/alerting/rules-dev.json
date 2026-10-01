@@ -1,0 +1,419 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "career-form-dev",
+      "folder": "Career Form",
+      "interval": "30s",
+      "rules": [
+        {
+          "uid": "cf-dev-backend-down",
+          "title": "[dev] 백엔드 scrape 실패",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(max(up{job=\"backend\",env=\"dev\"}) or vector(1))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A == 0",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "2m",
+          "annotations": {
+            "summary": "백엔드 scrape 실패: == 0",
+            "description": "환경 dev, 조건 백엔드 scrape 실패. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "11"
+          },
+          "labels": {
+            "env": "dev",
+            "kind": "backend-down",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-dev-data-gap",
+          "title": "[dev] 환경 데이터 수집 단절",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "sum(absent_over_time(up{job=\"backend\",env=\"dev\"}[30s])) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 1",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "90s",
+          "annotations": {
+            "summary": "환경 데이터 수집 단절: >= 1",
+            "description": "환경 dev, 조건 환경 데이터 수집 단절. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "11"
+          },
+          "labels": {
+            "env": "dev",
+            "kind": "data-gap",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-dev-http-5xx",
+          "title": "[dev] 최근 5분 HTTP 5xx 3건 이상",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "sum(increase(http_server_requests_seconds_count{env=\"dev\",status=~\"5..\"}[5m])) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 HTTP 5xx 3건 이상: >= 3",
+            "description": "환경 dev, 조건 최근 5분 HTTP 5xx 3건 이상. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "2"
+          },
+          "labels": {
+            "env": "dev",
+            "kind": "http-5xx",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-dev-llm-timeout",
+          "title": "[dev] 최근 5분 LLM timeout",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "sum(increase(career_form_external_timeouts_total{env=\"dev\"}[5m])) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 1",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 LLM timeout: >= 1",
+            "description": "환경 dev, 조건 최근 5분 LLM timeout. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "10"
+          },
+          "labels": {
+            "env": "dev",
+            "kind": "llm-timeout",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-dev-api-slow",
+          "title": "[dev] 최근 5분 일반 API 2초 초과 3건",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(sum(increase(http_server_requests_seconds_count{env=\"dev\",uri!~\"/api/v1/(fields|preparation)/analyze|/actuator/.*\"}[5m])) - sum(increase(http_server_requests_seconds_bucket{env=\"dev\",uri!~\"/api/v1/(fields|preparation)/analyze|/actuator/.*\",le=\"2.0\"}[5m]))) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 일반 API 2초 초과 3건: >= 3",
+            "description": "환경 dev, 조건 최근 5분 일반 API 2초 초과 3건. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "4"
+          },
+          "labels": {
+            "env": "dev",
+            "kind": "api-slow",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-dev-openai-slow",
+          "title": "[dev] 최근 5분 OpenAI 분석 20초 초과 3건",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(sum(increase(career_form_external_call_seconds_count{env=\"dev\",provider=\"openai\",operation=\"analysis\"}[5m])) - sum(increase(career_form_external_call_seconds_bucket{env=\"dev\",provider=\"openai\",operation=\"analysis\",le=\"20.0\"}[5m]))) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 OpenAI 분석 20초 초과 3건: >= 3",
+            "description": "환경 dev, 조건 최근 5분 OpenAI 분석 20초 초과 3건. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "10"
+          },
+          "labels": {
+            "env": "dev",
+            "kind": "openai-slow",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-dev-bounded-call-slow",
+          "title": "[dev] 최근 5분 8초 timeout 외부 호출 5초 초과 3건",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(sum(increase(career_form_external_call_seconds_count{env=\"dev\",provider=\"jev\"}[5m])) or vector(0)) + (sum(increase(career_form_external_call_seconds_count{env=\"dev\",provider=\"openai\",operation=\"interaction\"}[5m])) or vector(0)) - (sum(increase(career_form_external_call_seconds_bucket{env=\"dev\",provider=\"jev\",le=\"5.0\"}[5m])) or vector(0)) - (sum(increase(career_form_external_call_seconds_bucket{env=\"dev\",provider=\"openai\",operation=\"interaction\",le=\"5.0\"}[5m])) or vector(0))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 8초 timeout 외부 호출 5초 초과 3건: >= 3",
+            "description": "환경 dev, 조건 최근 5분 8초 timeout 외부 호출 5초 초과 3건. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "10"
+          },
+          "labels": {
+            "env": "dev",
+            "kind": "bounded-call-slow",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        }
+      ]
+    }
+  ]
+}

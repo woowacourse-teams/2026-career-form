@@ -1,0 +1,73 @@
+name: 기능 개발
+description: 사용자 또는 운영자가 사용할 기능을 제안합니다.
+labels:
+  - status:planning
+  - type:feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        실제 지원서 값, 계정 정보, 브라우저 세션 정보는 기록하지 않습니다. 비식별 처리한 구조와 검증 결과만 작성해 주세요.
+        사람이 계약을 확인한 뒤에만 status:ready 라벨을 붙입니다.
+  - type: textarea
+    id: background
+    attributes:
+      label: 배경
+      description: 현재 문제와 작업이 필요한 맥락만 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 완료 후 달라지는 사용자 동작과 결과만 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: 포함 범위
+      description: 실제로 바꿀 기능과 대상만 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: 제외 범위
+      description: 포함 범위로 오해할 수 있지만 다루지 않을 항목을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 인수 조건
+      description: 관찰 가능한 결과를 체크리스트로 적습니다.
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: automated-validation
+    attributes:
+      label: 자동 검증
+      description: 실행할 단위, 통합, E2E 검증 명령을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: manual-validation
+    attributes:
+      label: 수동 검증
+      description: 자동화할 수 없는 확인과 사람 담당 작업을 적습니다. 없으면 없음을 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: risky-operations
+    attributes:
+      label: 위험 작업
+      description: 실제 위험과 시크릿, 삭제, 마이그레이션, 배포의 사람 담당 경계를 적습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 문서
+      description: 작업 판단에 사용한 기획서, 디자인, 의존 Issue와 draft 후보만 연결합니다.
