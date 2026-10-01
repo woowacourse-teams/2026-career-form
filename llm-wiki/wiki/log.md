@@ -347,3 +347,11 @@
 - Approval-Digest: c4372b8759c34da242143a1bda83d89131652f1d19a6bb4c4f702424ae12c02b
 - 승인한 후보 5개를 [CF-131 bundle](../raw/issues/CF-131/manifest.md)과 [공용 모니터링 시스템](topics/monitoring-system.md)에 기록했다.
 - 로컬 합성 검증과 실제 AWS 배포, Discord 수신 및 장기 보존 미검증을 구분하고 기존 배포 Runbook 근거는 유지했다.
+
+## [2026-10-01] ingest | CF-138 분할 이메일 보호와 공급자 호출 추적
+
+- Approval-Digest: 251cd740a1cb88bba6e71f390215f232002ae888c28ed77a111ad85ee5f8f50a
+- Source-Revision: fac9abf8a0019f508bcdb0a833e671a436d34601
+- 승인한 후보 4개와 ADR·운영 안내를 [CF-138 bundle](../raw/issues/CF-138/manifest.md)에 기록했다.
+- [범용 분할 이메일 보호](topics/generic-split-email-safety.md)와 [Jev·OpenAI 호출 추적](topics/provider-call-tracing.md)을 새 topic으로 연결했다.
+- 합성 실제 패널 및 합성 입력의 실제 공급자·LangSmith 검증 범위를 기록하며 실제 지원 정보, 계정, 세션과 시크릿은 수집하지 않았다.
