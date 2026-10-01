@@ -25,6 +25,7 @@ dependencies {
     implementation(platform("org.springframework.ai:spring-ai-bom:2.0.0"))
     implementation("org.springframework.ai:spring-ai-client-chat")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
+    implementation("com.langchain.smith:langsmith-java:0.1.0-beta.23")
 
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus")

@@ -35,7 +35,7 @@ public final class OpenAiFieldMappingResolver implements FieldMappingResolver {
 
     private static final String INVALID_RESPONSE_MESSAGE =
         "LLM 분석 응답 계약을 확인할 수 없습니다";
-    private static final String SYSTEM_PROMPT = """
+    static final String SYSTEM_PROMPT = """
         Map de-identified application-form field metadata using schemaVersion 2.
         Return only confident canonical mappings in the required matches array.
         Each match contains only candidateId and valueBinding. A DIRECT binding contains

@@ -24,7 +24,7 @@ public final class OpenAiActionResolver implements ActionResolver {
 
     private static final String INVALID_RESPONSE_MESSAGE =
         "LLM 분석 응답 계약을 확인할 수 없습니다";
-    private static final String SYSTEM_PROMPT = """
+    static final String SYSTEM_PROMPT = """
         Analyze de-identified application-form action metadata using schemaVersion 2.
         Return every candidate exactly once across the required revealSections,
         addRepeatableGroups, and noActions arrays. revealSections entries contain only
