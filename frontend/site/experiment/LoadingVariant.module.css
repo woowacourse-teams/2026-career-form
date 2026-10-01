@@ -272,3 +272,28 @@
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
+
+.remainingCount {
+  text-align: center;
+}
+.remainingCount p {
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.remainingCount strong {
+  font-size: 48px;
+  color: var(--color-action-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+.remainingCount small {
+  font-size: 20px;
+  margin-left: 5px;
+}
+.historyList {
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}

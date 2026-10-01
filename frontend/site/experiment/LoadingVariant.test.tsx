@@ -28,12 +28,10 @@ it.each([
       String(percentage),
     );
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
-    expect(
-      screen.getByText(`남은 작업 ${40 - completed}개`),
-    ).toBeInTheDocument();
+    expect(screen.queryByText("남은 작업")).not.toBeInTheDocument();
   },
 );
-it.each(["A", "B"] as const)(
+it.each(["A", "B", "C"] as const)(
   "shows the shared writing illustration in %s without a separate character trial",
   (variant) => {
     render(
@@ -45,7 +43,7 @@ it.each(["A", "B"] as const)(
   },
 );
 
-it.each(["A", "B"] as const)(
+it.each(["A", "B", "C"] as const)(
   "uses the same waiting message in %s",
   (variant) => {
     render(
@@ -77,4 +75,16 @@ it("distinguishes completed categories from the active record and finishes all r
       .getAllByRole("listitem")
       .every((item) => item.dataset.state === "done"),
   ).toBe(true);
+});
+
+it.each([0, 20, 40])("shows remaining count only for C at %s", (completed) => {
+  render(
+    <LoadingVariant variant="C" completed={completed} reducedMotion={false} />,
+  );
+  expect(screen.getByText("남은 작업")).toBeInTheDocument();
+  expect(screen.getByText(String(40 - completed))).toHaveTextContent(
+    `${40 - completed}개`,
+  );
+  expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  expect(screen.queryByRole("list")).not.toBeInTheDocument();
 });

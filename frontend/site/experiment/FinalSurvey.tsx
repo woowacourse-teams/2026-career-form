@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { LoadingVariant } from "./LoadingVariant";
 import { exportStudy, type Preference, type Study } from "./study";
 import styles from "./Experiment.module.css";
-const ordinals = ["첫 번째", "두 번째"];
+const ordinals = ["첫 번째", "두 번째", "세 번째"];
 export function FinalSurvey({
   study,
   onChange,
@@ -66,7 +66,7 @@ export function FinalSurvey({
         마지막으로, 어떤 체험이 가장 좋았나요?
       </h2>
       <p>
-        체험했던 순서대로 두 화면을 나란히 보여드려요. 하나를 선택해 주세요.
+        체험했던 순서대로 세 화면을 나란히 보여드려요. 하나를 선택해 주세요.
       </p>
       <p className={styles.scrollHint}>
         좁은 화면에서는 좌우로 밀어 비교할 수 있어요.

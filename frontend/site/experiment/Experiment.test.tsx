@@ -100,7 +100,7 @@ it("collects three required ratings in the assigned order and downloads only the
   );
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   await open();
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     expect(screen.getByLabelText("성")).toHaveValue("");
     await start();
     act(() => vi.advanceTimersByTime(7015));
@@ -124,8 +124,8 @@ it("collects three required ratings in the assigned order and downloads only the
   ).toBeInTheDocument();
   const download = screen.getByRole("button", { name: "응답 저장하기" });
   expect(download).toBeDisabled();
-  expect(screen.getAllByRole("radio")).toHaveLength(3);
-  expect(screen.queryByLabelText("세 번째 체험")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("radio")).toHaveLength(4);
+  expect(screen.queryByLabelText("네 번째 체험")).not.toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("차이 없음"));
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   fireEvent.click(download);
@@ -138,12 +138,13 @@ it("collects three required ratings in the assigned order and downloads only the
     reader.readAsText(downloaded!);
   });
   expect(JSON.parse(result)).toMatchObject({
-    order: ["A", "B"],
+    order: ["A", "B", "C"],
     preference: "none",
     reason: "",
     trials: [
       { variant: "A", durationMs: 6615 },
       { variant: "B", durationMs: 6615 },
+      { variant: "C", durationMs: 6615 },
     ],
   });
   expect(result).not.toContain("career@example.com");
@@ -163,7 +164,7 @@ it("restores evaluated trials without repeating them", async () => {
   );
   await open();
   expect(
-    screen.getByRole("heading", { name: "두 번째 체험 / 2" }),
+    screen.getByRole("heading", { name: "두 번째 체험 / 3" }),
   ).toBeInTheDocument();
   await start();
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");

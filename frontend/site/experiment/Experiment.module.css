@@ -114,7 +114,7 @@
 }
 .previews {
   display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
   gap: 16px;
   overflow-x: auto;
   padding: 3px;
@@ -378,7 +378,7 @@
 }
 
 .survey.finalSurvey {
-  max-width: 860px;
+  max-width: 1200px;
 }
 .finalSurvey fieldset {
   min-width: 0;
@@ -597,4 +597,10 @@
   .completionCard .evaluateButton {
     transition: none;
   }
+}
+
+.sidebar main[aria-label="지원서 작업 화면"] {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
