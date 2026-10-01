@@ -1,0 +1,107 @@
+discovery.docker "backend" {
+  host = "unix:///var/run/docker.sock"
+  refresh_interval = "15s"
+  filter {
+    name = "label"
+    values = ["career-form.monitoring=true"]
+  }
+}
+
+discovery.relabel "backend" {
+  targets = discovery.docker.backend.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_career_form_env"]
+    regex = "dev|staging|prod"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_docker_port_private"]
+    regex = "9091"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_career_form_env"]
+    target_label = "env"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_career_form_service"]
+    target_label = "service"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "instance"
+    replacement = "$1"
+  }
+  rule {
+    target_label = "job"
+    replacement = "backend"
+  }
+}
+
+loki.source.docker "backend" {
+  host = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.backend.output
+  forward_to = [loki.write.central.receiver]
+}
+
+loki.write "central" {
+  endpoint {
+    url = "http://" + sys.env("MONITORING_PRIVATE_IP") + ":3100/loki/api/v1/push"
+    basic_auth {
+      username = "alloy"
+      password_file = "/run/secrets/ingest-password"
+    }
+  }
+  wal {
+    enabled = true
+  }
+}
+
+prometheus.scrape "backend" {
+  targets = discovery.relabel.backend.output
+  metrics_path = "/actuator/prometheus"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  forward_to = [prometheus.remote_write.central.receiver]
+}
+
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path = "/host/sys"
+  rootfs_path = "/host/root"
+  set_collectors = ["cpu", "meminfo", "filesystem", "loadavg", "uname"]
+}
+
+prometheus.scrape "host" {
+  targets = prometheus.exporter.unix.host.targets
+  scrape_interval = "30s"
+  forward_to = [prometheus.relabel.host.receiver]
+}
+
+prometheus.relabel "host" {
+  forward_to = [prometheus.remote_write.central.receiver]
+  rule {
+    target_label = "job"
+    replacement = "host"
+  }
+  rule {
+    target_label = "instance"
+    replacement = sys.env("HOST_INSTANCE")
+  }
+}
+
+prometheus.remote_write "central" {
+  endpoint {
+    url = "http://" + sys.env("MONITORING_PRIVATE_IP") + ":9090/api/v1/write"
+    basic_auth {
+      username = "alloy"
+      password_file = "/run/secrets/ingest-password"
+    }
+    queue_config {
+      capacity = 1000
+      min_shards = 1
+      max_shards = 1
+    }
+  }
+}

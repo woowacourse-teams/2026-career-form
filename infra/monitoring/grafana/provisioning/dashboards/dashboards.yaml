@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: career-form
+    orgId: 1
+    folder: Career Form
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards

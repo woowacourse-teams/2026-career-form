@@ -10,6 +10,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.StreamReadFeature;
@@ -20,6 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.careerform.formanalysis.infrastructure.SelectedJev;
 import com.careerform.formanalysis.exception.ResolverException;
+import com.careerform.monitoring.ExternalCallMetrics;
 
 @Component
 @Conditional(SelectedJev.class)
@@ -32,13 +35,29 @@ public final class JevClient {
     private final int timeoutMs;
     private final double minConfidence;
     private final boolean dataPolicyReviewed;
+    private final ExternalCallMetrics metrics;
 
+    public JevClient(
+        String apiKey, String model, int timeoutMs, double minConfidence, boolean dataPolicyReviewed
+    ) {
+        this(apiKey, model, timeoutMs, minConfidence, dataPolicyReviewed, (ExternalCallMetrics) null);
+    }
+
+    @Autowired
     public JevClient(
         @Value("${career-form.analysis.jev.api-key:}") String apiKey,
         @Value("${career-form.analysis.jev.model:jev-latest}") String model,
         @Value("${career-form.analysis.jev.timeout-ms:8000}") int timeoutMs,
         @Value("${career-form.analysis.jev.min-confidence:0.8}") double minConfidence,
-        @Value("${career-form.analysis.jev.data-policy-reviewed:false}") boolean dataPolicyReviewed
+        @Value("${career-form.analysis.jev.data-policy-reviewed:false}") boolean dataPolicyReviewed,
+        ObjectProvider<ExternalCallMetrics> metrics
+    ) {
+        this(apiKey, model, timeoutMs, minConfidence, dataPolicyReviewed, metrics.getIfAvailable());
+    }
+
+    private JevClient(
+        String apiKey, String model, int timeoutMs, double minConfidence, boolean dataPolicyReviewed,
+        ExternalCallMetrics metrics
     ) {
         if (apiKey.isBlank() || model.isBlank() || timeoutMs < 1 || timeoutMs > 8000 ||
             !Double.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)
@@ -48,6 +67,7 @@ public final class JevClient {
         this.timeoutMs = timeoutMs;
         this.minConfidence = minConfidence;
         this.dataPolicyReviewed = dataPolicyReviewed;
+        this.metrics = metrics;
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(Math.min(timeoutMs, 4000)))
             .followRedirects(HttpClient.Redirect.NEVER).build();
         this.mapper = JsonMapper.builder(JsonFactory.builder()
@@ -62,6 +82,7 @@ public final class JevClient {
         if (!dataPolicyReviewed || questions.size() > 128 ||
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
             throw unavailable();
+        long startedAt = System.nanoTime();
         try {
             String json = mapper.writeValueAsString(new Request(state, model, questions));
             if (json.getBytes(StandardCharsets.UTF_8).length > 2_000_000) throw unavailable();
@@ -100,10 +121,18 @@ public final class JevClient {
                 selected.put(entry.getKey(), uniqueWinner && answer.confidence() >= minConfidence
                     ? answer.choice() : ABSTAIN);
             }
+            recordMetrics(startedAt, null);
             return Map.copyOf(selected);
         } catch (RuntimeException exception) {
-            // Never include response bodies, transport messages or credentials in diagnostics.
+            recordMetrics(startedAt, exception);
             throw unavailable();
+        }
+    }
+
+    private void recordMetrics(long startedAt, RuntimeException failure) {
+        if (metrics != null) {
+            metrics.record("jev", "analysis", System.nanoTime() - startedAt,
+                failure != null, ExternalCallMetrics.isTimeout(failure));
         }
     }
 

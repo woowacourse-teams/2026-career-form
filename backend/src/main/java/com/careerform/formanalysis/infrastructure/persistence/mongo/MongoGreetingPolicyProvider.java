@@ -1,5 +1,7 @@
 package com.careerform.formanalysis.infrastructure.persistence.mongo;
 
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,8 +39,9 @@ public final class MongoGreetingPolicyProvider implements GreetingPolicyProvider
         if (activeVersion < 1) {
             return new Unavailable();
         }
+        long startedAt = System.nanoTime();
         try {
-            return policies.findByCompanyKeyAndVersion(POLICY_KEY, activeVersion)
+            var result = policies.findByCompanyKeyAndVersion(POLICY_KEY, activeVersion)
                 .filter(document -> POLICY_KEY.equals(document.companyKey())
                     && document.version() == activeVersion)
                 .<LookupResult>map(document -> new Available(CompanyFormPolicy.create(
@@ -51,10 +54,14 @@ public final class MongoGreetingPolicyProvider implements GreetingPolicyProvider
                     supportedProfileFields::contains
                 )))
                 .orElseGet(Unavailable::new);
+            log.info("DB_RESULT operation=greeting-policy-lookup outcome=success durationMs={}",
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt));
+            return result;
         }
         catch (RuntimeException exception) {
-            log.warn("Greeting policy lookup failed failure={}",
-                exception.getClass().getSimpleName());
+            log.warn("DB_RESULT operation=greeting-policy-lookup outcome=failure failure={} durationMs={}",
+                exception.getClass().getSimpleName(),
+                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt));
             return new Unavailable();
         }
     }
