@@ -40,7 +40,7 @@ export function ApplicationForm() {
   return (
     <div className={styles.application} data-form-scroll>
       <header className={styles.header}>
-        <strong className={styles.logo}>SK Careers</strong>
+        <strong className={styles.logo}>커리어폼</strong>
         <div className={styles.menu} aria-hidden="true">
           <span>Jobs</span>
           <span>Areas of Work</span>
@@ -54,7 +54,7 @@ export function ApplicationForm() {
         </p>
         <div className={styles.title}>
           <div>
-            <p>SK · 신입 채용</p>
+            <p>커리어폼 · 신입 채용</p>
             <h1>지원서 작성</h1>
           </div>
           <span className={styles.badge}>예시 공고</span>
@@ -73,8 +73,8 @@ export function ApplicationForm() {
         <div className={styles.information}>
           <strong>지원정보를 작성해 주세요.</strong>
           <p>
-            이 화면은 SK Careers 형식을 참고한 체험용 지원서입니다. 예제 정보만
-            입력되며 실제 지원서로 제출되지 않습니다.
+            이 화면은 커리어폼 체험용 지원서입니다. 예제 정보만 입력되며 실제
+            지원서로 제출되지 않습니다.
           </p>
         </div>
         <nav className={styles.sectionNav} aria-label="지원정보 영역">
@@ -115,7 +115,7 @@ export function ApplicationForm() {
           </section>
         ))}
         <footer className={styles.footer}>
-          <strong>SK Careers</strong>
+          <strong>커리어폼</strong>
           <span>가상 지원서 · 입력 결과 확인용</span>
         </footer>
       </div>

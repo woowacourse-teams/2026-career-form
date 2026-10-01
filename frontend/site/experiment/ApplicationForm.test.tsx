@@ -4,7 +4,7 @@ import { ApplicationForm } from "./ApplicationForm";
 it("places all forty example inputs in the SK-style application sections", () => {
   const { container } = render(<ApplicationForm />);
   expect(
-    within(screen.getByRole("banner")).getByText("SK Careers"),
+    within(screen.getByRole("banner")).getByText("커리어폼"),
   ).toBeInTheDocument();
   expect(
     within(screen.getByRole("region", { name: "기본정보" })).getByLabelText(
