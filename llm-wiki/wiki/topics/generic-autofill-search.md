@@ -2,11 +2,13 @@
 
 > Topic: generic-autofill-search
 > Status: Current
-> Current: [CF-129 혼합 학력 행과 role 없는 레이어 검색 경계](../../raw/issues/CF-129/documents/generic-autofill-search.md)
-> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md); [CF-129 혼합 학력 행과 레이어 검색](../../raw/issues/CF-129/documents/generic-autofill-search.md)
-> Updated: 2026-09-29
+> Current: [CF-117 공급자 중립 검색 결과 구조 해석 경계](../../raw/issues/CF-117/documents/generic-search-result-interpretation.md)
+> History: [CF-98 실행과 실측 경계](../../raw/issues/CF-98/documents/generic-autofill-search.md); [CF-108 진단 보완](../../raw/issues/CF-108/documents/generic-autofill-search.md); [CF-110 제한된 CJ 주전공 계약](../../raw/issues/CF-110/documents/adr/110-verified-major-search.md); [CF-112 첫 대학교 학교명·국가 묶음](../../raw/issues/CF-112/documents/adr/112-verified-school-search.md); [CF-114 범용 자격증 검색](../../raw/issues/CF-114/documents/generic-certificate-search.md); [CF-129 혼합 학력 행과 레이어 검색](../../raw/issues/CF-129/documents/generic-autofill-search.md); [CF-117 공급자 중립 검색 결과 구조 해석](../../raw/issues/CF-117/documents/generic-search-result-interpretation.md)
+> Updated: 2026-10-01
 
 ## 현재 상태
+
+CF-117은 기존 정적·CJ·결정적 검색 뒤에서 결과 구조만 모호한 경우에 OpenAI와 Jev가 공통 계약으로 결과 컨테이너·항목·선택 동작의 유한 역할을 판정하게 한다. 결과 역할에는 semantic label을 허용하지 않으며 프로필 값, 검색어, 결과 문구와 handler 원문은 공급자에 보내지 않고 브라우저에만 둔다. 공급자 후보는 개별 정답 행이 아니라 전체 결과 행에 공통으로 적용할 구조이며, 동일 구조의 행 집합과 전체성 근거, 정확한 단일 일치, 별도 활성화 근거를 로컬에서 재검증한 경우에만 원본 요소를 한 번 클릭한다. 선택 효과는 표시값, 연결 code 또는 선택 상태, 검색 표면 상태, 다른 입력값과 제한된 DOM mutation 및 500ms 유지로 확인하고 예상 밖 변경은 후속 입력 중단으로 처리하며 광역 rollback하지 않는다. 합성 자동 테스트와 계약 테스트 근거이며 실사이트 성공은 주장하지 않는다. 상세는 Current 문서를 따른다.
 
 CF-129는 CF-114 경계를 유지한 채 한 섹션에서 행마다 학력 구분을 고르는 혼합 행과 role 없는 같은 문서 레이어 검색의 판정 근거를 추가한다. 식별자 없는 반복 행은 정해진 구조 조합이 있을 때만 탐지한다. 첫 행 안에 추가 버튼이 있는 구조는 보이는 분기 1개와 서명이 다른 숨은 분기로 증명되는 구분별 분기 행만 인정하고, 섹션 요소가 없으면 증명된 반복 그룹 컨테이너를 섹션으로 쓴다. 빈 목록 첫 검색의 append·교체는 MutationObserver로 구분되지 않으므로 명시 신호가 없으면 완료로 보지 않는다. jsdom inline 핸들러 전역과 fragment hash 지연은 테스트 기법 근거다. 지원서 form 안의 소유 레이어는 type=button 검색 클릭과 결과 루트 전체를 감싼 form의 fragment 결과 링크만 허용하고, 클릭 중 form 제출은 취소 후 실패한다. 합성 자동 테스트 결과이며 실제 지원서 성공은 주장하지 않는다. 상세는 Current 문서를 따른다.
 

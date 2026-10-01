@@ -336,3 +336,9 @@
 - Approval-Digest: 4370b04c1b54c40ecb2453ee7d1eec1afdc9949ba9a7fdacfdfc25d47dce3952
 - 승인된 후보 6을 [CF-129 bundle](../raw/issues/CF-129/manifest.md)에 추가하고 [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 반복 행 경계를 갱신했다.
 - 합성 자동 테스트와 읽기 전용 구조 관측만 근거로 했고 실제 입력값은 수집하지 않았다.
+
+## [2026-10-01] ingest | CF-117 공급자 중립 검색 결과 구조 해석
+
+- Approval-Digest: 10e27f3d552b78401bed61525d7005d7e3eb9be7a07dba87e0baf9addef7cd11
+- 승인된 후보 4개를 [CF-117 bundle](../raw/issues/CF-117/manifest.md)에 기록하고 [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 갱신했다.
+- 합성 자동 테스트와 계약 테스트 근거만 기록했고 실제 지원서 입력값과 수동 검증 결과는 수집하지 않았다.
