@@ -43,6 +43,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
 import com.careerform.formanalysis.exception.ResolverException;
+import com.careerform.monitoring.ExternalCallMetrics;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
@@ -64,12 +65,13 @@ public final class OpenAiClient {
     private final ChatClient chatClient;
     private final ChatClient interactionChatClient;
     private final ObjectMapper objectMapper;
+    private final ExternalCallMetrics metrics;
 
     public OpenAiClient(
         ChatClient.Builder chatClientBuilder,
         ObjectMapper objectMapper
     ) {
-        this(chatClientBuilder, objectMapper, (ChatClient) null);
+        this(chatClientBuilder, objectMapper, (ChatClient) null, null);
     }
 
     @Autowired
@@ -77,25 +79,29 @@ public final class OpenAiClient {
         ChatClient.Builder chatClientBuilder,
         ObjectMapper objectMapper,
         @Qualifier(OpenAiInteractionChatClientConfiguration.INTERACTION_CHAT_CLIENT)
-        ObjectProvider<ChatClient> interactionChatClient
+        ObjectProvider<ChatClient> interactionChatClient,
+        ObjectProvider<ExternalCallMetrics> metrics
     ) {
         this(
             chatClientBuilder,
             objectMapper,
-            interactionChatClient.getObject()
+            interactionChatClient.getObject(),
+            metrics.getIfAvailable()
         );
     }
 
     private OpenAiClient(
         ChatClient.Builder chatClientBuilder,
         ObjectMapper objectMapper,
-        ChatClient interactionChatClient
+        ChatClient interactionChatClient,
+        ExternalCallMetrics metrics
     ) {
         this.chatClient = chatClientBuilder.build();
         this.interactionChatClient = interactionChatClient == null
             ? this.chatClient
             : interactionChatClient;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     public <O> O generate(
@@ -174,15 +180,25 @@ public final class OpenAiClient {
                 outputType.getSimpleName(),
                 elapsedMillis(startedAt)
             );
+            recordMetrics(interaction, startedAt, null);
             return output;
         }
         catch (ResolverException exception) {
+            recordMetrics(interaction, startedAt, exception);
             logFailure(stage, outputType, startedAt, exception);
             throw exception;
         }
         catch (RuntimeException exception) {
+            recordMetrics(interaction, startedAt, exception);
             logFailure(stage, outputType, startedAt, exception);
             throw unavailable();
+        }
+    }
+
+    private void recordMetrics(boolean interaction, long startedAt, RuntimeException failure) {
+        if (metrics != null) {
+            metrics.record("openai", interaction ? "interaction" : "analysis", System.nanoTime() - startedAt,
+                failure != null, ExternalCallMetrics.isTimeout(failure));
         }
     }
 

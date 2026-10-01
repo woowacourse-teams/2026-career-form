@@ -1,0 +1,419 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "career-form-staging",
+      "folder": "Career Form",
+      "interval": "30s",
+      "rules": [
+        {
+          "uid": "cf-staging-backend-down",
+          "title": "[staging] 백엔드 scrape 실패",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(max(up{job=\"backend\",env=\"staging\"}) or vector(1))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A == 0",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "2m",
+          "annotations": {
+            "summary": "백엔드 scrape 실패: == 0",
+            "description": "환경 staging, 조건 백엔드 scrape 실패. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "11"
+          },
+          "labels": {
+            "env": "staging",
+            "kind": "backend-down",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-staging-data-gap",
+          "title": "[staging] 환경 데이터 수집 단절",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "sum(absent_over_time(up{job=\"backend\",env=\"staging\"}[30s])) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 1",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "90s",
+          "annotations": {
+            "summary": "환경 데이터 수집 단절: >= 1",
+            "description": "환경 staging, 조건 환경 데이터 수집 단절. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "11"
+          },
+          "labels": {
+            "env": "staging",
+            "kind": "data-gap",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-staging-http-5xx",
+          "title": "[staging] 최근 5분 HTTP 5xx 3건 이상",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "sum(increase(http_server_requests_seconds_count{env=\"staging\",status=~\"5..\"}[5m])) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 HTTP 5xx 3건 이상: >= 3",
+            "description": "환경 staging, 조건 최근 5분 HTTP 5xx 3건 이상. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "2"
+          },
+          "labels": {
+            "env": "staging",
+            "kind": "http-5xx",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-staging-llm-timeout",
+          "title": "[staging] 최근 5분 LLM timeout",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "sum(increase(career_form_external_timeouts_total{env=\"staging\"}[5m])) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 1",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 LLM timeout: >= 1",
+            "description": "환경 staging, 조건 최근 5분 LLM timeout. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "10"
+          },
+          "labels": {
+            "env": "staging",
+            "kind": "llm-timeout",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-staging-api-slow",
+          "title": "[staging] 최근 5분 일반 API 2초 초과 3건",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(sum(increase(http_server_requests_seconds_count{env=\"staging\",uri!~\"/api/v1/(fields|preparation)/analyze|/actuator/.*\"}[5m])) - sum(increase(http_server_requests_seconds_bucket{env=\"staging\",uri!~\"/api/v1/(fields|preparation)/analyze|/actuator/.*\",le=\"2.0\"}[5m]))) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 일반 API 2초 초과 3건: >= 3",
+            "description": "환경 staging, 조건 최근 5분 일반 API 2초 초과 3건. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "4"
+          },
+          "labels": {
+            "env": "staging",
+            "kind": "api-slow",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-staging-openai-slow",
+          "title": "[staging] 최근 5분 OpenAI 분석 20초 초과 3건",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(sum(increase(career_form_external_call_seconds_count{env=\"staging\",provider=\"openai\",operation=\"analysis\"}[5m])) - sum(increase(career_form_external_call_seconds_bucket{env=\"staging\",provider=\"openai\",operation=\"analysis\",le=\"20.0\"}[5m]))) or vector(0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 OpenAI 분석 20초 초과 3건: >= 3",
+            "description": "환경 staging, 조건 최근 5분 OpenAI 분석 20초 초과 3건. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "10"
+          },
+          "labels": {
+            "env": "staging",
+            "kind": "openai-slow",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-staging-bounded-call-slow",
+          "title": "[staging] 최근 5분 8초 timeout 외부 호출 5초 초과 3건",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "(sum(increase(career_form_external_call_seconds_count{env=\"staging\",provider=\"jev\"}[5m])) or vector(0)) + (sum(increase(career_form_external_call_seconds_count{env=\"staging\",provider=\"openai\",operation=\"interaction\"}[5m])) or vector(0)) - (sum(increase(career_form_external_call_seconds_bucket{env=\"staging\",provider=\"jev\",le=\"5.0\"}[5m])) or vector(0)) - (sum(increase(career_form_external_call_seconds_bucket{env=\"staging\",provider=\"openai\",operation=\"interaction\",le=\"5.0\"}[5m])) or vector(0))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 3",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "OK",
+          "execErrState": "Alerting",
+          "for": "0s",
+          "annotations": {
+            "summary": "최근 5분 8초 timeout 외부 호출 5초 초과 3건: >= 3",
+            "description": "환경 staging, 조건 최근 5분 8초 timeout 외부 호출 5초 초과 3건. 대시보드에서 대상 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "10"
+          },
+          "labels": {
+            "env": "staging",
+            "kind": "bounded-call-slow",
+            "service": "career-form-backend",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        }
+      ]
+    }
+  ]
+}

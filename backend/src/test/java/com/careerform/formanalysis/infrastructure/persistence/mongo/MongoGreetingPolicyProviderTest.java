@@ -8,6 +8,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 
 import com.careerform.formanalysis.application.SupportedProfileFields;
@@ -15,6 +18,7 @@ import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Av
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Unavailable;
 
 @DisplayName("Greeting 공통 정책 조회")
+@ExtendWith(OutputCaptureExtension.class)
 class MongoGreetingPolicyProviderTest {
 
     private final FormAnalysisPolicyMongoRepository policies =
@@ -56,5 +60,16 @@ class MongoGreetingPolicyProviderTest {
     void rejectsInvalidActiveVersion() {
         assertThat(new MongoGreetingPolicyProvider(policies, profileFields, 0).find())
             .isInstanceOf(Unavailable.class);
+    }
+
+    @Test
+    void recordsLookupDurationAndFailureTypeWithoutExceptionDetails(CapturedOutput output) {
+        when(policies.findByCompanyKeyAndVersion("greeting", 1))
+            .thenThrow(new DataAccessResourceFailureException("synthetic-private-db-query"));
+
+        assertThat(new MongoGreetingPolicyProvider(policies, profileFields, 1).find())
+            .isInstanceOf(Unavailable.class);
+        assertThat(output.getAll()).contains("failure=DataAccessResourceFailureException", "durationMs=")
+            .doesNotContain("synthetic-private-db-query");
     }
 }

@@ -342,3 +342,8 @@
 - Approval-Digest: 10e27f3d552b78401bed61525d7005d7e3eb9be7a07dba87e0baf9addef7cd11
 - 승인된 후보 4개를 [CF-117 bundle](../raw/issues/CF-117/manifest.md)에 기록하고 [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 갱신했다.
 - 합성 자동 테스트와 계약 테스트 근거만 기록했고 실제 지원서 입력값과 수동 검증 결과는 수집하지 않았다.
+## [2026-09-30] ingest | CF-131 공용 모니터링
+
+- Approval-Digest: c4372b8759c34da242143a1bda83d89131652f1d19a6bb4c4f702424ae12c02b
+- 승인한 후보 5개를 [CF-131 bundle](../raw/issues/CF-131/manifest.md)과 [공용 모니터링 시스템](topics/monitoring-system.md)에 기록했다.
+- 로컬 합성 검증과 실제 AWS 배포, Discord 수신 및 장기 보존 미검증을 구분하고 기존 배포 Runbook 근거는 유지했다.

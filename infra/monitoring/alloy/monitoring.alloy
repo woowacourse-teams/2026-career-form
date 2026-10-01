@@ -1,0 +1,35 @@
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path = "/host/sys"
+  rootfs_path = "/host/root"
+  set_collectors = ["cpu", "meminfo", "filesystem", "loadavg", "uname"]
+}
+
+prometheus.scrape "host" {
+  targets = prometheus.exporter.unix.host.targets
+  scrape_interval = "30s"
+  forward_to = [prometheus.relabel.host.receiver]
+}
+
+prometheus.relabel "host" {
+  forward_to = [prometheus.remote_write.central.receiver]
+  rule {
+    target_label = "job"
+    replacement = "host"
+  }
+  rule {
+    target_label = "instance"
+    replacement = "career-monitor"
+  }
+}
+
+prometheus.remote_write "central" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+    queue_config {
+      capacity = 1000
+      min_shards = 1
+      max_shards = 1
+    }
+  }
+}

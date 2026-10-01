@@ -74,6 +74,11 @@ class DeployComposeContractTest(unittest.TestCase):
         self.assertEqual("json-file", backend["logging"]["driver"])
         self.assertEqual("10m", backend["logging"]["options"]["max-size"])
         self.assertEqual("3", backend["logging"]["options"]["max-file"])
+        self.assertEqual("staging", backend.get("labels", {}).get("career-form.env"))
+        self.assertEqual("career-form-backend", backend.get("labels", {}).get("career-form.service"))
+        self.assertEqual("true", backend.get("labels", {}).get("career-form.monitoring"))
+        self.assertIn("9091", backend["expose"])
+        self.assertFalse(any(port["target"] == 9091 for port in backend["ports"]))
 
     def test_runtime_image_contains_healthcheck_client(self) -> None:
         dockerfile = (ROOT / "backend" / "Dockerfile").read_text(encoding="utf-8")

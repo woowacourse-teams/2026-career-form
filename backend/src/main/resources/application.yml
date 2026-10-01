@@ -46,20 +46,31 @@ career-form:
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:}
 
-# Spring AI logs the full prompt when the provider returns no choices.
-# OpenAiClient records only allowlisted, non-content diagnostics instead.
 logging:
+  pattern:
+    level: "%5p [requestId=%X{requestId:-none}]"
   level:
     org.springframework.ai.openai.OpenAiChatModel: "OFF"
 
 management:
+  server:
+    port: 9091
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus
   endpoint:
     health:
       show-details: never
+  metrics:
+    tags:
+      env: ${CAREER_FORM_ENV:${SPRING_PROFILES_ACTIVE:local}}
+      service: career-form-backend
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 2s,20s
 
 springdoc:
   api-docs:
