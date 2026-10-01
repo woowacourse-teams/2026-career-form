@@ -1,0 +1,253 @@
+.application {
+  min-width: 0;
+  overflow: auto;
+  color: #222;
+  background: #fff;
+  font-family: var(--font-ui);
+  scroll-behavior: auto;
+}
+.header {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 32px;
+  border-bottom: 1px solid #e9e9e9;
+}
+.logo {
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+}
+.menu {
+  display: flex;
+  gap: 24px;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+.example {
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 7px 12px;
+  font-size: 11px;
+  white-space: nowrap;
+  color: #666;
+}
+.content {
+  max-width: 1000px;
+  margin: auto;
+  padding: 24px 36px 32px;
+}
+.breadcrumb {
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin: 0 0 28px;
+}
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.title p {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 8px;
+}
+.title h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0;
+}
+.badge {
+  color: #b12034;
+  border: 1px solid #edc6cd;
+  border-radius: 4px;
+  padding: 7px 12px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.steps {
+  list-style: none;
+  display: flex;
+  padding: 0;
+  margin: 0 0 28px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.steps li {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 8px;
+  background: #fafafa;
+  color: #999;
+  font-size: 12px;
+}
+.steps li + li {
+  border-left: 1px solid #e5e5e5;
+}
+.steps b {
+  font-size: 11px;
+}
+.steps [aria-current] {
+  background: #c92842;
+  color: #fff;
+}
+.information {
+  background: #f7f7f8;
+  padding: 18px 22px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.information p {
+  color: #777;
+  margin: 6px 0 0;
+}
+.sectionNav {
+  flex-wrap: wrap;
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #ddd;
+  margin: 28px 0;
+}
+.sectionNav a {
+  white-space: nowrap;
+  color: #555;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 12px 0;
+}
+.sectionNav a:first-child {
+  border-bottom: 2px solid #c92842;
+  color: #c92842;
+  font-weight: 700;
+}
+.section {
+  margin: 0 0 36px;
+  scroll-margin-top: 20px;
+}
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 2px solid #333;
+}
+.sectionHeading h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.sectionHeading > span {
+  font-size: 10px;
+  color: #888;
+}
+.sectionNote {
+  font-size: 12px;
+  margin: 16px 0;
+  color: #666;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 20px;
+  padding: 4px 0 24px;
+  border-bottom: 1px solid #e6e6e6;
+}
+.fields label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.fields input {
+  min-width: 0;
+  width: 100%;
+  height: 42px;
+  border: 1px solid #d9d9d9;
+  border-radius: 3px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #333;
+  font: 400 13px var(--font-ui);
+}
+.fields input[data-experiment-filled="true"] {
+  border-color: #ca5264;
+  background: #fff8f9;
+  box-shadow: 0 0 0 1px #ca526414;
+}
+.footer {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  border-top: 1px solid #ddd;
+  padding-top: 24px;
+  font-size: 11px;
+  color: #999;
+}
+.footer strong {
+  color: #666;
+}
+@media (max-width: 1000px) {
+  .menu {
+    display: none;
+  }
+  .example {
+    margin-left: auto;
+  }
+  .content {
+    padding: 20px 24px;
+  }
+}
+@media (max-width: 680px) {
+  .application {
+    height: 310px;
+  }
+  .header {
+    padding: 16px;
+    min-height: 60px;
+  }
+  .content {
+    padding: 20px 16px;
+  }
+  .title h1 {
+    font-size: 27px;
+  }
+  .fields {
+    gap: 16px;
+  }
+  .steps li {
+    gap: 5px;
+    font-size: 11px;
+  }
+  .breadcrumb {
+    gap: 8px;
+  }
+  .sectionHeading > span {
+    display: none;
+  }
+}
+@media (max-width: 380px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sectionNav {
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+}

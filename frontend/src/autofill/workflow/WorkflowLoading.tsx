@@ -4,24 +4,28 @@ export type { WriteProgress } from "./progress-model";
 
 export function WorkflowLoading({
   writing,
+  statusMessage,
   currentCategory,
   activity = "matching",
   progress = [],
 }: {
   writing: boolean;
+  statusMessage?: string;
   currentCategory?: string;
   activity?: WorkflowActivity;
   progress?: readonly WriteProgress[];
 }) {
-  const message = writing
-    ? currentCategory
-      ? `${currentCategory} 정보를 입력하고 있어요`
-      : "지원서에 입력하고 있어요"
-    : {
-        matching: "지원서 항목과 프로필 정보를 맞추고 있어요",
-        preparing: "필요한 입력란을 준비하고 있어요",
-        address: "주소 검색 결과를 확인하고 있어요",
-      }[activity];
+  const message =
+    statusMessage ??
+    (writing
+      ? currentCategory
+        ? `${currentCategory} 정보를 입력하고 있어요`
+        : "지원서에 입력하고 있어요"
+      : {
+          matching: "지원서 항목과 프로필 정보를 맞추고 있어요",
+          preparing: "필요한 입력란을 준비하고 있어요",
+          address: "주소 검색 결과를 확인하고 있어요",
+        }[activity]);
   const categories = [
     ...new Set([
       ...progress.map((entry) => entry.category),

@@ -1,3 +1,4 @@
+import type { ProfileRepository } from "../../src/profile/profile-repository";
 import type { ReactNode } from "react";
 import { ReviewPreview } from "./ReviewPreview";
 import { App } from "../../entrypoints/sidepanel/App";
@@ -10,10 +11,14 @@ export function PanelPreview({
   onAutofill = async () => {},
   autofillView,
   onReturn = noop,
+  onClose = noop,
+  repository = demoRepository,
 }: {
   onAutofill?: () => Promise<void>;
   autofillView?: ReactNode;
   onReturn?: () => void;
+  onClose?: () => void;
+  repository?: ProfileRepository;
 }) {
   return (
     <div className={styles.nativePanel} data-demo-panel>
@@ -21,10 +26,10 @@ export function PanelPreview({
         autofillView={autofillView}
         returnToProfile={onReturn}
         inPage
-        repository={demoRepository}
+        repository={repository}
         logoUrl={logo}
         copyText={async () => {}}
-        closePanel={noop}
+        closePanel={onClose}
         openOptions={noop}
         openAutofill={onAutofill}
       />

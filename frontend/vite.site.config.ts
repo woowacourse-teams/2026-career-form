@@ -17,6 +17,7 @@ export default defineConfig({
         privacy: sitePath("privacy/index.html"),
         terms: sitePath("terms/index.html"),
         demo: sitePath("demo/index.html"),
+        experiment: sitePath("experiment/index.html"),
       },
     },
   },
