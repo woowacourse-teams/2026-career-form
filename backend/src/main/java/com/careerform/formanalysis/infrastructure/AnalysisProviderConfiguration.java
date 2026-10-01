@@ -22,7 +22,9 @@ public class AnalysisProviderConfiguration {
             for (Class<?> port : new Class<?>[] {FieldMappingResolver.class, ActionResolver.class, InteractionDecisionProvider.class}) {
                 var beans = context.getBeansOfType(port);
                 if (beans.size() != 1 ||
-                    beans.values().stream().anyMatch(bean -> !bean.getClass().getPackageName().endsWith(".adapter." + selected.provider())))
+                    beans.values().stream().anyMatch(bean -> port == InteractionDecisionProvider.class && selected.splitInteractions()
+                        ? !(bean instanceof SearchRoutedInteractionDecisionProvider)
+                        : !bean.getClass().getPackageName().endsWith(".adapter." + selected.provider())))
                     throw new IllegalStateException("Incomplete or mixed analysis provider configuration");
             }
         };

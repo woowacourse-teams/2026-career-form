@@ -34,7 +34,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Conditional;
-import com.careerform.formanalysis.infrastructure.SelectedOpenAi;
+import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import org.springframework.stereotype.Component;
 
 import com.openai.errors.OpenAIIoException;
@@ -54,7 +54,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.type.LogicalType;
 
 @Component
-@Conditional(SelectedOpenAi.class)
+@Conditional(InteractionProviderConditions.OpenAiClient.class)
 public final class OpenAiClient {
 
     private static final String INVALID_RESPONSE_MESSAGE =
@@ -133,7 +133,7 @@ public final class OpenAiClient {
         String sanitizedJson = objectMapper.writeValueAsString(input);
         String stage = stage(outputType, interaction);
         long startedAt = System.nanoTime();
-        log.info("LLM 호출 시작 stage={} outputType={}", stage, outputType.getSimpleName());
+        log.info("[LLM:OpenAI] 호출 시작 stage={} outputType={}", stage, outputType.getSimpleName());
         try {
             BeanOutputConverter<O> delegate = new BeanOutputConverter<>(
                 outputType,
@@ -169,7 +169,7 @@ public final class OpenAiClient {
                 throw new InvalidResponseFormatException();
             }
             log.info(
-                "LLM 호출 성공 stage={} outputType={} durationMs={}",
+                "[LLM:OpenAI] 호출 성공 stage={} outputType={} durationMs={}",
                 stage,
                 outputType.getSimpleName(),
                 elapsedMillis(startedAt)
@@ -193,7 +193,7 @@ public final class OpenAiClient {
         RuntimeException exception
     ) {
         log.warn(
-            "LLM 호출 실패 stage={} outputType={} durationMs={} failure={} diagnostic={}",
+            "[LLM:OpenAI] 호출 실패 stage={} outputType={} durationMs={} failure={} diagnostic={}",
             stage,
             outputType.getSimpleName(),
             elapsedMillis(startedAt),
@@ -319,7 +319,7 @@ public final class OpenAiClient {
             : response.getMetadata().getUsage();
         if (usage == null || usage instanceof EmptyUsage) {
             log.info(
-                "LLM 응답 메타데이터 stage={} outputType={} finishReason={}",
+                "[LLM:OpenAI] 응답 메타데이터 stage={} outputType={} finishReason={}",
                 stage,
                 outputType.getSimpleName(),
                 finishReason
@@ -337,7 +337,7 @@ public final class OpenAiClient {
             numericUsage.put("totalTokens", usage.getTotalTokens());
         }
         log.info(
-            "LLM 응답 메타데이터 stage={} outputType={} finishReason={} usage={}",
+            "[LLM:OpenAI] 응답 메타데이터 stage={} outputType={} finishReason={} usage={}",
             stage,
             outputType.getSimpleName(),
             finishReason,

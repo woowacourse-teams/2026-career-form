@@ -32,7 +32,9 @@ public final class InteractionDecisionService {
     private static final int SCHEMA_VERSION = 2;
     private static final int MAX_DECISIONS = 8;
     private static final int MAX_CANDIDATES_PER_DECISION = 24;
+    private static final int MAX_CALENDAR_CANDIDATES_PER_DECISION = 8;
     private static final int MAX_TOTAL_CANDIDATES = 96;
+    private static final int MAX_TOTAL_CALENDAR_CANDIDATES = 32;
     private static final Set<String> CANONICAL_FIELDS = new SupportedProfileFields().keys();
     private static final String INVALID_SNAPSHOT_MESSAGE =
         "동적 관찰 snapshot 관계를 확인할 수 없습니다";
@@ -170,6 +172,7 @@ public final class InteractionDecisionService {
         Set<String> decisionIds = new HashSet<>();
         Set<String> candidateIds = new HashSet<>();
         int candidateCount = 0;
+        int calendarCandidateCount = 0;
         for (Decision decision : request.decisions()) {
             if (decision == null
                 || isBlank(decision.decisionId())
@@ -180,7 +183,9 @@ public final class InteractionDecisionService {
                 || !CANONICAL_FIELDS.contains(decision.canonicalFieldKey())
                 || decision.candidates() == null
                 || decision.candidates().isEmpty()
-                || decision.candidates().size() > MAX_CANDIDATES_PER_DECISION) {
+                || decision.candidates().size() > MAX_CANDIDATES_PER_DECISION
+                || isCalendarRole(decision.role())
+                    && decision.candidates().size() > MAX_CALENDAR_CANDIDATES_PER_DECISION) {
                 invalidSnapshot();
             }
             for (Candidate candidate : decision.candidates()) {
@@ -195,9 +200,26 @@ public final class InteractionDecisionService {
                     invalidSnapshot();
                 }
                 candidateCount++;
+                boolean resultRole = decision.role().name().startsWith("SEARCH_RESULT_");
+                boolean calendarRole = isCalendarRole(decision.role());
+                if (resultRole
+                    && (candidate.semanticContext() != null || !validStructure(candidate.structure()))) {
+                    invalidSnapshot();
+                }
+                if (calendarRole) {
+                    calendarCandidateCount++;
+                    if (candidate.semanticContext() != null || candidate.structure() != null
+                        || !validCalendarCandidate(decision.role(), candidate)) {
+                        invalidSnapshot();
+                    }
+                }
+                else if (candidate.calendarStructure() != null) {
+                    invalidSnapshot();
+                }
             }
         }
-        if (candidateCount > MAX_TOTAL_CANDIDATES) {
+        if (candidateCount > MAX_TOTAL_CANDIDATES
+            || calendarCandidateCount > MAX_TOTAL_CALENDAR_CANDIDATES) {
             invalidSnapshot();
         }
     }
@@ -259,7 +281,16 @@ public final class InteractionDecisionService {
             return false;
         }
         return switch (role) {
-            case SEARCH_POPUP_OPENER, CALENDAR_OPENER -> !Boolean.TRUE.equals(candidate.readonly())
+            case SEARCH_RESULT_CONTAINER, SEARCH_RESULT_ITEM, SEARCH_RESULT_ACTION ->
+                !Boolean.TRUE.equals(candidate.readonly())
+                    && validStructure(candidate.structure())
+                    && candidate.semanticContext() == null
+                    && (candidate.relationToTarget() == InteractionDecisionRequest.RelationToTarget.DIALOG_CONTROL
+                        || candidate.relationToTarget() == InteractionDecisionRequest.RelationToTarget.SAME_CONTAINER)
+                    && (role == Role.SEARCH_RESULT_CONTAINER ? candidate.control() == Control.CONTAINER
+                        : role == Role.SEARCH_RESULT_ITEM ? candidate.control() == Control.ITEM
+                        : candidate.control() == Control.BUTTON && !candidate.structure().activation().equals("none"));
+            case SEARCH_POPUP_OPENER -> !Boolean.TRUE.equals(candidate.readonly())
                 && (candidate.element() == Element.BUTTON
                     || candidate.element() == Element.LINK
                     || candidate.element() == Element.INPUT)
@@ -276,7 +307,7 @@ public final class InteractionDecisionService {
                     == InteractionDecisionRequest.RelationToTarget.DIALOG_CONTROL
                     || candidate.relationToTarget()
                         == InteractionDecisionRequest.RelationToTarget.SAME_CONTAINER);
-            case SEARCH_SUBMIT, CALENDAR_YEAR_TRIGGER, CALENDAR_APPLY -> !Boolean.TRUE.equals(candidate.readonly())
+            case SEARCH_SUBMIT -> !Boolean.TRUE.equals(candidate.readonly())
                 && (candidate.element() == Element.BUTTON
                     || candidate.element() == Element.INPUT
                     || candidate.element() == Element.LINK)
@@ -286,7 +317,21 @@ public final class InteractionDecisionService {
                     == InteractionDecisionRequest.RelationToTarget.DIALOG_CONTROL
                     || candidate.relationToTarget()
                         == InteractionDecisionRequest.RelationToTarget.SAME_CONTAINER);
+            case CALENDAR_OPENER, CALENDAR_YEAR_TRIGGER, CALENDAR_YEAR_CONTROL,
+                CALENDAR_MONTH_CONTROL, CALENDAR_DAY_CONTROL, CALENDAR_NAVIGATION, CALENDAR_APPLY ->
+                    eligibleCalendar(role, candidate);
         };
+    }
+
+    private static boolean eligibleCalendar(Role role, Candidate candidate) {
+        if (Boolean.TRUE.equals(candidate.readonly()) || !validCalendarCandidate(role, candidate)) return false;
+        if (role == Role.CALENDAR_OPENER) {
+            return "bound-target".equals(candidate.calendarStructure().ownership())
+                ? candidate.relationToTarget() == InteractionDecisionRequest.RelationToTarget.TARGET_CONTROL
+                : candidate.relationToTarget() == InteractionDecisionRequest.RelationToTarget.SAME_FIELD_GROUP;
+        }
+        return candidate.relationToTarget() == InteractionDecisionRequest.RelationToTarget.DIALOG_CONTROL
+            || candidate.relationToTarget() == InteractionDecisionRequest.RelationToTarget.SAME_CONTAINER;
     }
 
     private static List<InteractionDecisionResponse.Decision> responseDecisions(
@@ -317,6 +362,55 @@ public final class InteractionDecisionService {
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private static boolean isCalendarRole(Role role) {
+        return role.name().startsWith("CALENDAR_");
+    }
+
+    private static boolean validStructure(InteractionDecisionRequest.ResultStructure structure) {
+        return structure != null && structure.tag() != null
+            && structure.tag().matches("div|li|span|ul|ol|table|tbody|tr|td|button|a|input")
+            && structure.ariaRole() != null && structure.ariaRole().matches("none|list|listbox|row|listitem|option|button")
+            && structure.activation() != null && structure.activation().matches("none|native|inline-click|keyboard")
+            && structure.depth() >= 0 && structure.depth() <= 6
+            && structure.childCount() >= 0 && structure.childCount() <= 24;
+    }
+
+    private static boolean validCalendarStructure(InteractionDecisionRequest.CalendarStructure structure) {
+        return structure != null
+            && structure.tag() != null && structure.tag().matches("input|img|button|select|table|a|div")
+            && structure.activation() != null && structure.activation().matches("click|focus|change|none")
+            && structure.ownership() != null
+            && structure.ownership().matches("linked-popup|single-field|adjacent-trigger|bound-target")
+            && structure.unit() != null && structure.unit().matches("month|day")
+            && structure.unitEvidence() != null
+            && structure.unitEvidence().matches("target-format|target-label|month-options")
+            && (!structure.unitEvidence().equals("month-options") || structure.unit().equals("month"))
+            && structure.valueShape() != null
+            && structure.valueShape().matches("none|year-options|month-options|day-grid|previous|next|apply");
+    }
+
+    private static boolean validCalendarCandidate(Role role, Candidate candidate) {
+        InteractionDecisionRequest.CalendarStructure structure = candidate.calendarStructure();
+        if (!validCalendarStructure(structure)) return false;
+        return switch (role) {
+            case CALENDAR_OPENER -> structure.valueShape().equals("none")
+                && (structure.activation().equals("click") || structure.tag().equals("input")
+                    && structure.activation().equals("focus") && structure.ownership().equals("bound-target"));
+            case CALENDAR_YEAR_TRIGGER -> structure.activation().equals("click")
+                && structure.valueShape().equals("none");
+            case CALENDAR_YEAR_CONTROL -> structure.tag().equals("select")
+                && structure.activation().equals("change") && structure.valueShape().equals("year-options");
+            case CALENDAR_MONTH_CONTROL -> structure.tag().equals("select")
+                && structure.activation().equals("change") && structure.valueShape().equals("month-options");
+            case CALENDAR_DAY_CONTROL -> structure.unit().equals("day") && structure.activation().equals("click")
+                && structure.valueShape().equals("day-grid");
+            case CALENDAR_NAVIGATION -> structure.activation().equals("click")
+                && (structure.valueShape().equals("previous") || structure.valueShape().equals("next"));
+            case CALENDAR_APPLY -> structure.activation().equals("click") && structure.valueShape().equals("apply");
+            default -> false;
+        };
     }
 
     private static boolean isOpaqueId(String value) {

@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
@@ -18,13 +20,14 @@ import tools.jackson.databind.MapperFeature;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.careerform.formanalysis.infrastructure.SelectedJev;
+import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import com.careerform.formanalysis.exception.ResolverException;
 
 @Component
-@Conditional(SelectedJev.class)
+@Conditional(InteractionProviderConditions.JevClient.class)
 public final class JevClient {
     public static final String ABSTAIN = "ABSTAIN";
+    private static final Logger log = LoggerFactory.getLogger(JevClient.class);
     private final HttpClient http;
     private final JsonMapper mapper;
     private final String apiKey;
@@ -62,6 +65,8 @@ public final class JevClient {
         if (!dataPolicyReviewed || questions.size() > 128 ||
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
             throw unavailable();
+        long startedAt = System.nanoTime();
+        log.info("[JEV] 호출 시작 model={} questions={}", model, questions.size());
         try {
             String json = mapper.writeValueAsString(new Request(state, model, questions));
             if (json.getBytes(StandardCharsets.UTF_8).length > 2_000_000) throw unavailable();
@@ -99,14 +104,24 @@ public final class JevClient {
                     .allMatch(option -> option.getValue() < probability);
                 selected.put(entry.getKey(), uniqueWinner && answer.confidence() >= minConfidence
                     ? answer.choice() : ABSTAIN);
+                log.info("[JEV] 분류 결과 question={} choice={} confidence={} selected={} probabilities={}", entry.getKey(),
+                    answer.choice(), answer.confidence(), selected.get(entry.getKey()), answer.probabilities());
             }
+            log.info("[JEV] 호출 성공 model={} questions={} durationMs={} inputTokens={} outputTokens={}",
+                output.model(), questions.size(), elapsedMillis(startedAt), output.usage().inputTokens(),
+                output.usage().outputTokens());
             return Map.copyOf(selected);
         } catch (RuntimeException exception) {
             // Never include response bodies, transport messages or credentials in diagnostics.
+            log.warn("[JEV] 호출 실패 model={} questions={} durationMs={} failure={}", model, questions.size(),
+                elapsedMillis(startedAt), exception.getClass().getSimpleName());
             throw unavailable();
         }
     }
 
+    private static long elapsedMillis(long startedAt) {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+    }
     private static boolean validProbability(double value) {
         return Double.isFinite(value) && value >= 0 && value <= 1;
     }

@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider;
 import com.careerform.formanalysis.application.port.InteractionDecisionProvider;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest;
+import com.careerform.formanalysis.dto.InteractionDecisionRequest.CalendarStructure;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Candidate;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Control;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Decision;
@@ -162,16 +163,20 @@ class InteractionDecisionServiceTest {
     private static InteractionDecisionRequest calendarRequest(boolean readonly) {
         List<Decision> decisions = List.of(
             new Decision("open", Role.CALENDAR_OPENER, "education.university.schoolName",
-                List.of(new Candidate("calendar-opener", Element.BUTTON, Control.BUTTON,
-                    Visibility.VISIBLE, null, readonly, null, RelationToTarget.SAME_FIELD_GROUP, null))),
+                List.of(calendarCandidate("calendar-opener", readonly, RelationToTarget.SAME_FIELD_GROUP, "none"))),
             new Decision("year", Role.CALENDAR_YEAR_TRIGGER, "education.university.schoolName",
-                List.of(new Candidate("calendar-year", Element.BUTTON, Control.BUTTON,
-                    Visibility.VISIBLE, null, readonly, null, RelationToTarget.SAME_CONTAINER, null))),
+                List.of(calendarCandidate("calendar-year", readonly, RelationToTarget.SAME_CONTAINER, "none"))),
             new Decision("apply", Role.CALENDAR_APPLY, "education.university.schoolName",
-                List.of(new Candidate("calendar-apply", Element.BUTTON, Control.BUTTON,
-                    Visibility.VISIBLE, null, readonly, null, RelationToTarget.DIALOG_CONTROL, null)))
+                List.of(calendarCandidate("calendar-apply", readonly, RelationToTarget.DIALOG_CONTROL, "apply")))
         );
         return new InteractionDecisionRequest(2, "calendar-snapshot",
             new InteractionDecisionRequest.Site("example.test", "/application"), decisions);
+    }
+
+    private static Candidate calendarCandidate(String id, boolean readonly, RelationToTarget relation,
+        String valueShape) {
+        return new Candidate(id, Element.BUTTON, Control.BUTTON, Visibility.VISIBLE, null, readonly, null,
+            relation, null, null, new CalendarStructure("button", "click", "linked-popup", "month",
+                "target-format", valueShape));
     }
 }

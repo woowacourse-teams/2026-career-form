@@ -115,6 +115,34 @@ CAREER_FORM_LLM_MODEL=gpt-5.6-luna
 OPENAI_API_KEY=<실행 환경에서만 설정>
 ```
 
+### 검색·달력 상호작용 공급자
+
+준비 동작과 필드 매핑은 OpenAI로 유지하면서 검색과 달력 UI 역할을 독립적으로
+판단할 수 있다. 공통 `application.yml`은 달력 공급자를 Jev로 설정한다.
+
+```dotenv
+CAREER_FORM_ANALYSIS_ENABLED=true
+CAREER_FORM_LLM_ENABLED=true
+CAREER_FORM_ANALYSIS_PROVIDER=openai
+CAREER_FORM_SEARCH_PROVIDER=jev
+CAREER_FORM_CALENDAR_PROVIDER=jev
+CAREER_FORM_JEV_DATA_POLICY_REVIEWED=true
+OPENAI_API_KEY=<실행 환경에서만 설정>
+TYPESAFE_API_KEY=<실행 환경에서만 설정>
+```
+
+`CAREER_FORM_SEARCH_PROVIDER`는 검색 열기 버튼, 검색 입력칸, 검색 실행 버튼과
+결과 컨테이너·항목·선택 동작의 구조 판단에만 적용된다. 설정 속성이 없거나 빈 값이면
+`CAREER_FORM_ANALYSIS_PROVIDER`를 따른다. `CAREER_FORM_CALENDAR_PROVIDER`는 달력
+역할 판단에만 적용되며 배포 기본값은 `jev`다. 준비 동작과 필드 매핑은 두 상호작용
+설정과 관계없이 `CAREER_FORM_ANALYSIS_PROVIDER`를 따른다. 후보가 하나이거나 기존
+어댑터로 처리 가능한 검색은 로컬 처리를 우선한다. 검색어 입력, 결과 문구 비교와 클릭은
+프론트엔드가 수행한다. 상호작용 공급자 장애 시 다른 공급자로 우회하지 않는다.
+
+Jev 키의 설정 이름은 `TYPESAFE_API_KEY`다. 데이터 정책을 확인한 실행 환경에서만
+`CAREER_FORM_JEV_DATA_POLICY_REVIEWED=true`로 설정한다. 환경 파일 변경 후에는
+WSL에서 `python3 scripts/local.py up`을 실행해 컨테이너를 재생성한다.
+
 ### Chat Completion 저장
 
 공통 `application.yml`은 `spring.ai.openai.chat.store=true`를 설정한다. 따라서

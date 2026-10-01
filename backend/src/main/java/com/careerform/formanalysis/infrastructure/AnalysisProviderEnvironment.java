@@ -15,7 +15,7 @@ public final class AnalysisProviderEnvironment implements EnvironmentPostProcess
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         var selected = AnalysisProviderSelection.from(environment);
         Map<String, Object> properties = new LinkedHashMap<>();
-        boolean openai = selected.enabled() && selected.provider().equals("openai");
+        boolean openai = selected.uses("openai");
         if (openai) {
             validateOpenAiTimeout(environment);
         }
