@@ -1,3 +1,5 @@
+import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
+import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
   approveGreetingGpaPairs,
@@ -77,6 +79,7 @@ export interface ReviewPlanItem {
   disabled: boolean;
   revealed: boolean;
   reason: string;
+  failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
@@ -379,6 +382,22 @@ function itemForAnalysis(
       "프로필 값 연결 방식이 없습니다.",
       analysis,
     );
+  }
+  if (
+    generic &&
+    analysis.mappingStatus === "LLM_SUGGESTED" &&
+    binding.profileFieldKey === "contact.contact.email" &&
+    isSplitEmailTarget(lookup.handle)
+  ) {
+    return {
+      ...unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        SPLIT_EMAIL_REASON,
+        analysis,
+      ),
+      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+    };
   }
   const parts =
     binding.type === "DERIVED" &&

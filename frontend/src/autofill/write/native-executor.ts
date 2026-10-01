@@ -1,3 +1,4 @@
+import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import {
   skipped,
   written,
@@ -578,6 +579,23 @@ function resultForItem(
             }
           : {}),
         failureCode,
+      };
+    }
+    if (
+      generic &&
+      item.analysis?.writePlan?.command === "SET_TEXT" &&
+      (item.analysis.valueBinding?.profileFieldKey ??
+        item.analysis.profileFieldKey ??
+        item.profileFieldKey) === "contact.contact.email" &&
+      isSplitEmailTarget(handle)
+    ) {
+      return {
+        candidateId: item.candidateId,
+        status: "skipped",
+        outcome: "unsupported",
+        code: "UNSUPPORTED_CONTROL",
+        reason: SPLIT_EMAIL_REASON,
+        failureCode: "SPLIT_EMAIL_UNSUPPORTED",
       };
     }
     const outcome = writeItem(item, handle);
