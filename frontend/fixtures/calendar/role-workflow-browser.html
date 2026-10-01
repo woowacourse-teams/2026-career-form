@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CF-117 calendar role workflow fixture</title>
+    <style>
+      body {
+        font: 16px/1.5 sans-serif;
+        margin: 1rem;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+        gap: 2rem;
+        max-width: 1000px;
+        margin: auto;
+      }
+      section {
+        margin: 1rem 0;
+      }
+      input {
+        box-sizing: border-box;
+        max-width: 100%;
+        padding: 0.4rem;
+      }
+      .ui-datepicker-trigger {
+        width: 24px;
+        height: 24px;
+        vertical-align: middle;
+        cursor: pointer;
+      }
+      #ui-datepicker-div {
+        padding: 1rem;
+        border: 1px solid #777;
+      }
+      #workflow-root {
+        border: 1px solid #ddd;
+        min-height: 32rem;
+      }
+      output {
+        display: block;
+        overflow-wrap: anywhere;
+        margin-top: 1rem;
+      }
+      @media (max-width: 700px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main data-calendar-role-fixture>
+      <div>
+        <h1>달력 역할 분류 재현</h1>
+        <p id="fixture-provider">
+          합성 데이터와 production workflow를 사용합니다. 모델 응답은 구조 기반
+          테스트 대역이며 실제 JEV 호출이 아닙니다.
+        </p>
+        <section>
+          <label for="fixture-name">이름</label>
+          <input id="fixture-name" name="applicantName" type="text" />
+        </section>
+        <section>
+          <label for="fixture-date">입학년월</label>
+          <input
+            id="fixture-date"
+            name="startMonth"
+            type="text"
+            readonly
+            maxlength="7"
+            class="alternate-calendar-input hasDatepicker"
+            placeholder="입학년월"
+          />
+          <img
+            class="ui-datepicker-trigger"
+            alt="달력 열기"
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Crect x='1' y='3' width='22' height='20' fill='white' stroke='black'/%3E%3C/svg%3E"
+          />
+        </section>
+        <section>
+          <label for="fixture-peer">보존할 기존 항목</label>
+          <input
+            id="fixture-peer"
+            name="unmappedPeer"
+            type="text"
+            value="synthetic-preserved"
+          />
+        </section>
+        <div
+          id="ui-datepicker-div"
+          class="ui-datepicker ui-widget ui-widget-content"
+          style="display: none"
+        ></div>
+        <output id="fixture-result" role="status"
+          >ordinary=empty, date=empty, peer=synthetic-preserved, calls=0</output
+        >
+      </div>
+      <div
+        id="workflow-root"
+        aria-label="Career Form production workflow"
+      ></div>
+    </main>
+    <script type="module" src="./role-workflow-browser.tsx"></script>
+  </body>
+</html>

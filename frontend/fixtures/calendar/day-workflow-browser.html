@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CF-117 synthetic day calendar workflow fixture</title>
+    <style>
+      body {
+        font: 16px/1.5 sans-serif;
+        margin: 1rem;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+        gap: 2rem;
+        max-width: 1100px;
+        margin: auto;
+      }
+      section {
+        margin: 1rem 0;
+      }
+      input {
+        padding: 0.4rem;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      #ui-datepicker-div {
+        position: relative;
+        width: 340px;
+        padding: 1rem;
+        border: 1px solid #777;
+      }
+      .ui-datepicker-header {
+        position: relative;
+        height: 70px;
+      }
+      .ui-datepicker-title {
+        height: 55px;
+      }
+      .ui-datepicker-calendar {
+        width: 100%;
+        text-align: center;
+      }
+      .ui-datepicker-calendar a {
+        display: block;
+        padding: 0.2rem;
+      }
+      #workflow-root {
+        border: 1px solid #ddd;
+        min-height: 32rem;
+      }
+      output {
+        display: block;
+        overflow-wrap: anywhere;
+        margin-top: 1rem;
+      }
+      @media (max-width: 700px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main data-calendar-day-fixture>
+      <div>
+        <h1>합성 일자 달력 재현</h1>
+        <p id="fixture-provider">
+          합성 프로필과 production workflow를 사용합니다. 필드 매핑과 역할
+          판단은 명시적 테스트 대역이며 실제 지원 사이트 재현 결과가 아닙니다.
+        </p>
+        <p>
+          입학일의 포함 버튼으로 승인한 다음 메인 입력 버튼을 사용하세요. 초기
+          달력 화면은 2025-01-01, 목표는 2026-03-15입니다. 달력을 수동으로 열지
+          마세요.
+        </p>
+        <section>
+          <label for="fixture-name">이름</label>
+          <input id="fixture-name" name="applicantName" type="text" />
+        </section>
+        <section>
+          <label for="fixture-date">입학일 (YYYY-MM-DD)</label>
+          <input
+            id="fixture-date"
+            name="startDate"
+            type="text"
+            readonly
+            maxlength="10"
+            class="alternate-calendar-input"
+            placeholder="YYYY-MM-DD"
+          />
+        </section>
+        <section>
+          <label for="fixture-peer">보존할 기존 항목</label>
+          <input
+            id="fixture-peer"
+            name="unmappedPeer"
+            type="text"
+            value="synthetic-preserved"
+          />
+        </section>
+        <output id="fixture-result" role="status"></output>
+      </div>
+      <div
+        id="workflow-root"
+        aria-label="Career Form production workflow"
+      ></div>
+    </main>
+    <script type="module" src="./day-workflow-browser.tsx"></script>
+  </body>
+</html>

@@ -12,7 +12,7 @@ afterEach(() => {
 
 // Fabricated career rows; no employer markup or applicant values.
 function install({
-  placeholder = "",
+  placeholder = 'placeholder="YYYY-MM-DD"',
   endValue = "",
 }: { placeholder?: string; endValue?: string } = {}) {
   const row = (index: number) => `
@@ -136,6 +136,22 @@ const value = (id: string) =>
   document.querySelector<HTMLInputElement>(`#${id}`)!.value;
 
 describe("readonly day calendar review-to-write route", () => {
+  it("holds a closed widget when the date unit lacks independent format evidence", () => {
+    const picker = install({ placeholder: "" });
+    const snapshot = collectFieldsSnapshot(document);
+
+    expect(plan(snapshot).every((item) => item.status === "unavailable")).toBe(
+      true,
+    );
+    expect(picker.isOpen()).toBe(false);
+    expect([
+      value("start-0"),
+      value("end-0"),
+      value("start-1"),
+      value("end-1"),
+    ]).toEqual(["", "", "", ""]);
+  });
+
   it("offers each career row date as a separately approved exact day", () => {
     install();
     const snapshot = collectFieldsSnapshot(document);
@@ -248,6 +264,7 @@ describe("readonly day calendar review-to-write route", () => {
     expect(results[0]).toMatchObject({
       status: "skipped",
       code: "RETAINED_VALUE_UNCONFIRMED",
+      reason: expect.stringContaining("target_value_not_retained"),
     });
     expect(
       results.slice(1).every((result) => result.status === "skipped"),
@@ -312,23 +329,32 @@ describe("readonly day calendar review-to-write route", () => {
     );
   });
 
-  it("holds a target bound to both a month picker and a day calendar", () => {
-    install();
-    const start = document.querySelector<HTMLInputElement>("#start-0")!;
-    start.id = "ambiguous-start";
-    start.insertAdjacentHTML(
-      "afterend",
-      `<button type="button" aria-labelledby="ambiguous-start" aria-controls="month-popup">월 선택</button><div id="month-popup" role="dialog" hidden><button type="button">2020</button>${Array.from({ length: 12 }, (_, i) => `<button type="button">${i + 1}월</button>`).join("")}</div>`,
-    );
-    const snapshot = collectFieldsSnapshot(document);
-    const item = plan(snapshot).find(
-      (entry) =>
-        entry.status === "unavailable" &&
-        entry.reason.includes("월 달력과 연월일 달력"),
-    );
+  it.each([false, true])(
+    "holds conflicting month/day ownership with external popup=%s",
+    (externalPopup) => {
+      install();
+      const start = document.querySelector<HTMLInputElement>("#start-0")!;
+      start.id = "ambiguous-start";
+      start.insertAdjacentHTML(
+        "afterend",
+        `<button type="button" aria-labelledby="ambiguous-start" aria-controls="month-popup">월 선택</button><div id="month-popup" role="dialog" hidden><button type="button">2020</button>${Array.from({ length: 12 }, (_, i) => `<button type="button">${i + 1}월</button>`).join("")}</div>`,
+      );
+      const monthPopup = document.getElementById("month-popup");
+      if (externalPopup && monthPopup && start.nextElementSibling)
+        document.body.append(start.nextElementSibling, monthPopup);
+      const snapshot = collectFieldsSnapshot(document);
+      const candidate = candidates(snapshot).find(
+        (entry) => entry.domId === "ambiguous-start",
+      );
+      const item = plan(snapshot).find(
+        (entry) => entry.candidateId === candidate?.candidateId,
+      );
 
-    expect(item).toBeDefined();
-  });
+      expect(item?.status).toBe("unavailable");
+      expect(item?.calendarApproval).toBeUndefined();
+      expect(item?.dayCalendarApproval).toBeUndefined();
+    },
+  );
 
   it("stops without writing when the approved row is replaced before execution", async () => {
     install();
