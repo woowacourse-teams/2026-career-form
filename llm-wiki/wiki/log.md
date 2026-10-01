@@ -355,3 +355,11 @@
 - 승인한 후보 4개와 ADR·운영 안내를 [CF-138 bundle](../raw/issues/CF-138/manifest.md)에 기록했다.
 - [범용 분할 이메일 보호](topics/generic-split-email-safety.md)와 [Jev·OpenAI 호출 추적](topics/provider-call-tracing.md)을 새 topic으로 연결했다.
 - 합성 실제 패널 및 합성 입력의 실제 공급자·LangSmith 검증 범위를 기록하며 실제 지원 정보, 계정, 세션과 시크릿은 수집하지 않았다.
+
+## [2026-10-01] ingest | CF-140 범용 입력 결과 완료 판정
+
+- Approval-Digest: f613f99c662b07a118bee6e68460f9417d62a0e98246c1c318e9938bd2d78892
+- Source-Revision: b63ee0327d26cd7984f9211c7f583c78eee19ef6
+- 승인한 두 후보를 [CF-140 bundle](../raw/issues/CF-140/manifest.md)에 기록했다.
+- [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md)에 범용 쓰기의 실제 값 기반 완료 기준과 result-model·progress verifier의 연계를 추가했다. 기존 CF-90 raw를 보존했다.
+- 합성 실제 workflow의 정상·불일치·읽기 불가 결과와 데스크톱·모바일 검증 범위를 기록했다. 전체 커버리지의 별도 통합 테스트 실패는 통과로 기록하지 않았다.

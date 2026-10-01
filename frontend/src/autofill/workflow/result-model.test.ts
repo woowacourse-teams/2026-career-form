@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { buildResultModel } from "./result-model";
 
-const item: ReviewPlanItem = {
+const item = {
   candidateId: "field-1",
   fieldLabel: "학위",
   currentValue: "",
@@ -25,7 +25,7 @@ const item: ReviewPlanItem = {
       profileFieldKey: "education.university.degreeLevel",
     },
   },
-};
+} satisfies ReviewPlanItem;
 const entry = {
   id: "stable-1",
   candidateId: "field-1",
@@ -117,14 +117,67 @@ it("moves an uncertain write out of completed even after snapshot IDs change", (
     { id: "field-9", written: true, reason: "입력 결과 확인" },
   ]);
 });
-it("does not call an unverified suggestion complete just because its text matches", () => {
+it.each(["available", "needs-review"] as const)(
+  "counts a generic %s write as completed when the live value matches",
+  (status) => {
+    const result = buildResultModel({
+      reviewItems: [
+        {
+          ...item,
+          status,
+          analysis: { ...item.analysis, mappingStatus: "LLM_SUGGESTED" },
+        },
+      ],
+      results: written,
+      fieldStateFor: () => ({ visible: true, value: "학사" }),
+    });
+    expect(result.completed.map((entry) => entry.candidateId)).toEqual([
+      "field-1",
+    ]);
+    expect(result.pending).toEqual([]);
+  },
+);
+it.each([
+  "mismatch",
+  "empty",
+  "missing value",
+  "missing reader",
+  "failed verifier",
+])("keeps a generic write in review with %s", (scenario) => {
   const result = buildResultModel({
     reviewItems: [
       {
         ...item,
-        analysis: { ...item.analysis!, mappingStatus: "LLM_SUGGESTED" },
+        currentValue: "학사",
+        analysis: { ...item.analysis, mappingStatus: "LLM_SUGGESTED" },
       },
     ],
+    results: written,
+    fieldStateFor:
+      scenario === "missing reader"
+        ? undefined
+        : () =>
+            scenario === "missing value"
+              ? undefined
+              : {
+                  visible: true,
+                  value:
+                    scenario === "mismatch"
+                      ? "석사"
+                      : scenario === "empty"
+                        ? ""
+                        : "학사",
+                },
+    progressStateFor: scenario === "failed verifier" ? () => false : undefined,
+  });
+  expect(result.completed).toEqual([]);
+  expect(result.pending).toMatchObject([
+    { reason: "입력 결과 확인", written: true },
+  ]);
+});
+it("keeps an unverified conditional write in review when mapping evidence is absent", () => {
+  const result = buildResultModel({
+    reviewItems: [{ ...item, analysis: undefined }],
     results: written,
     fieldStateFor: () => ({ visible: true, value: "학사" }),
   });

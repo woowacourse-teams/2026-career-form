@@ -45,9 +45,9 @@ function stillReflected(
   registry: CandidateRegistry,
 ): boolean {
   if (
-    (item.status === "needs-review" ||
-      item.analysis?.mappingStatus === "LLM_SUGGESTED") &&
-    item.analysis?.mappingStatus !== "ADAPTER_VERIFIED"
+    item.status === "needs-review" &&
+    item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" &&
+    item.analysis?.mappingStatus !== "LLM_SUGGESTED"
   )
     return false;
   const lookup = registry.lookupField(item.candidateId);

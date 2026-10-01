@@ -61,6 +61,44 @@ it("keeps an unchanged value out of new-write totals while counting a verified c
   expect(screen.queryByText("기존 값 유지")).not.toBeInTheDocument();
 });
 
+it("counts matching generic text and conditional selection as completed after actual writes", async () => {
+  document.body.innerHTML =
+    '<label>이름<input></label><label>국적<select><option value="">선택</option><option value="KR">대한민국</option></select></label>';
+  const profile = createEmptyProfile();
+  profile.personal.koreanGivenName = "합성";
+  profile.personal.nationality = "대한민국";
+  render(
+    <AutofillWorkflow
+      repository={{ load: async () => profile }}
+      apiClient={{
+        ...client,
+        analyzePreparation: async (request) => ({
+          ...(await client.analyzePreparation(request)),
+          mode: "GENERIC",
+        }),
+        analyzeFields: async (request) => {
+          const response = await client.analyzeFields(request);
+          return {
+            ...response,
+            mode: "GENERIC",
+            fields: response.fields.map((field) => ({
+              ...field,
+              mappingStatus: "LLM_SUGGESTED",
+            })),
+          };
+        },
+      }}
+      pageDocument={document}
+      onExit={() => undefined}
+    />,
+  );
+  await screen.findByRole("heading", { name: "기입 결과" });
+  expect(document.querySelector("input")).toHaveValue("합성");
+  expect(document.querySelector("select")).toHaveValue("KR");
+  expect(screen.getByLabelText("입력 완료 2개")).toBeVisible();
+  expect(screen.getByLabelText("확인 필요 0개")).toBeVisible();
+});
+
 it("replaces the previous category highlights when another category is selected", async () => {
   document.body.innerHTML = `<section><label>이름<input name="name"></label><label>국적<select name="nationality"><option value="">선택</option><option value="KR">대한민국</option></select></label></section><section><label>번호<input name="phone"></label><label>주소<input name="address"></label></section><input name="untouched">`;
   const profile = createEmptyProfile();
