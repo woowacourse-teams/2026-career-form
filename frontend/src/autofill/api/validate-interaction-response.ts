@@ -3,6 +3,7 @@ import type {
   InteractionDecisionResponse,
 } from "./interaction-types";
 import { AnalysisContractError } from "./validate-response";
+import { calendarRequestWithinBounds } from "./calendar-role-contract";
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -12,10 +13,52 @@ function keys(value: Record<string, unknown>, allowed: string[]): boolean {
   return Object.keys(value).every((key) => allowed.includes(key));
 }
 
+function validResultStructure(value: unknown): boolean {
+  return (
+    record(value) &&
+    keys(value, ["tag", "ariaRole", "activation", "depth", "childCount"]) &&
+    [
+      "div",
+      "li",
+      "span",
+      "ul",
+      "ol",
+      "table",
+      "tbody",
+      "tr",
+      "td",
+      "button",
+      "a",
+      "input",
+    ].includes(String(value.tag)) &&
+    ["none", "list", "listbox", "row", "listitem", "option", "button"].includes(
+      String(value.ariaRole),
+    ) &&
+    ["none", "native", "inline-click", "keyboard"].includes(
+      String(value.activation),
+    ) &&
+    typeof value.depth === "number" &&
+    Number.isInteger(value.depth) &&
+    value.depth >= 0 &&
+    value.depth <= 6 &&
+    typeof value.childCount === "number" &&
+    Number.isInteger(value.childCount) &&
+    value.childCount >= 0 &&
+    value.childCount <= 24
+  );
+}
+
 export function validateInteractionDecisionResponse(
   request: InteractionDecisionRequest,
   value: unknown,
 ): InteractionDecisionResponse {
+  if (
+    request.decisions.some((decision) =>
+      decision.role.startsWith("CALENDAR_"),
+    ) &&
+    !calendarRequestWithinBounds(request)
+  )
+    throw new AnalysisContractError();
   if (
     !record(value) ||
     !keys(value, [
@@ -86,7 +129,21 @@ export function validateInteractionDecisionResponse(
       candidate.visibility !== "visible" ||
       candidate.disabled ||
       candidate.readonly ||
-      candidate.inert
+      candidate.inert ||
+      (expected.role.startsWith("SEARCH_RESULT_") &&
+        (!candidate.structure ||
+          !validResultStructure(candidate.structure) ||
+          candidate.semanticContext !== undefined ||
+          !["DIALOG_CONTROL", "SAME_CONTAINER"].includes(
+            candidate.relationToTarget,
+          ) ||
+          (expected.role === "SEARCH_RESULT_ACTION" &&
+            (candidate.structure.activation === "none" ||
+              candidate.control !== "button")) ||
+          (expected.role === "SEARCH_RESULT_CONTAINER" &&
+            candidate.control !== "container") ||
+          (expected.role === "SEARCH_RESULT_ITEM" &&
+            candidate.control !== "item")))
     ) {
       throw new AnalysisContractError();
     }
