@@ -162,10 +162,20 @@ endpoint를 각각 한 번 호출해 수행한다. 성공 여부와 비식별 �
 smoke test 범위에 포함하지 않는다.
 
 원격 `development`, `staging`, `production` 배포는 `.env.local`을 사용하지 않는다.
-세 deploy job만 공용 GitHub Repository Secret `OPENAI_API_KEY`를 프로세스 환경에
-주입하고, `infra/compose.deploy.yaml`이 이를 backend 컨테이너에 전달한다. 원격 Compose는
-LLM을 항상 활성화하며, 별도 모델 환경 변수가 없으면 위 기본 모델을 사용한다. key의 실제
-값은 이미지, 저장소, 문서, Issue·PR, workflow 출력이나 Compose 설정 출력에 기록하지 않는다.
+GitHub 저장소의 Settings → Environments에서 각 환경의 Variables에
+`CAREER_FORM_LLM_ENABLED`를 설정한다. 범용 기입을 사용할 환경에만 `true`를 지정한다.
+세 workflow의 `deploy` job만 `vars.CAREER_FORM_LLM_ENABLED`를 실행 환경에 주입하며,
+`infra/compose.deploy.yaml`은 값이 없거나 비어 있으면 `false`로 전달한다. 명시적인
+`false`도 범용 기입을 비활성화한다. `true`, `false` 외의 값은 백엔드 시작 실패를
+일으킬 수 있으므로 사용하지 않는다. 별도 모델 환경 변수가 없으면 위 기본 모델을 사용한다.
+
+범용 기입을 꺼도 SK, 현대, Greeting의 정적 회사 정책 경로는 유지한다. 환경 변수 설정과
+배포 후 범용 경로의 `LLM_UNAVAILABLE`, 정적 회사 정책 경로의 `ADAPTER` 응답 확인은
+사람이 수행한다.
+
+공용 GitHub Repository Secret `OPENAI_API_KEY`도 세 `deploy` job에서만 주입한다.
+기존 배포 계약에 따라 범용 기입이 비활성화되어도 이 key는 필수다. key의 실제 값은
+이미지, 저장소, 문서, Issue·PR, workflow 출력이나 Compose 설정 출력에 기록하지 않는다.
 
 현재 모델 선택은 세로 단면 데모를 위한 잠정값이다. 후속 평가는 동일한 비식별 사례에서
 Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, 오매핑,
