@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-02] ingest | CF-146 범용 기입 활성 여부 배포 설정
+
+- Disposition: Supersedes CF-62 cicd-setup topic
+- Approval-Digest: 81b34972abbbdbfd75a2094723621262d17ccb2def411ee03370eb59bc11509c
+- Source-Revision: af9dc2f8429c0b13eebb3d6ccccf3c2858fe4dc4
+- Raw: llm-wiki/raw/issues/CF-146/manifest.md
+- Topics: 1
+
 ## [2026-10-02] ingest | CF-147 미지원 안내와 선택적 이용 계측
 
 - Disposition: New
