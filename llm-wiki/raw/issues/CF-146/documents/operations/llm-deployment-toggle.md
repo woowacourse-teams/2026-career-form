@@ -22,7 +22,10 @@
 - GitHub-hosted x86_64 runner의 네이티브 `clean check bootJar` 결과를 ARM64 image build에서
   재사용하고 `backend-arm64` BuildKit cache를 유지한다. production release는 검증된
   staging digest를 재사용한다.
-- 환경별 `BACKEND_PORT`, `SPRING_MONGODB_URI`와 registry credential 주입 경로는 유지한다.
+- Repository Variable `DOCKERHUB_IMAGE`와 Repository Secret `DOCKERHUB_USERNAME`,
+  `DOCKERHUB_TOKEN`은 기존 GitHub-hosted build job의 registry login과 image push에 사용한다.
+- 환경별 `BACKEND_PORT`, `SPRING_MONGODB_URI` 주입 경로는 유지한다. 각 ARM64 self-hosted
+  runner의 registration token은 일회성 값이며 저장소, 문서와 로그에 저장하지 않는다.
 - 실제 시크릿은 이미지, 저장소, 문서, Issue·PR과 실행 로그에 기록하지 않는다.
 
 ## 검증과 운영 책임
