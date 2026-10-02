@@ -363,3 +363,10 @@
 - 승인한 두 후보를 [CF-140 bundle](../raw/issues/CF-140/manifest.md)에 기록했다.
 - [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md)에 범용 쓰기의 실제 값 기반 완료 기준과 result-model·progress verifier의 연계를 추가했다. 기존 CF-90 raw를 보존했다.
 - 합성 실제 workflow의 정상·불일치·읽기 불가 결과와 데스크톱·모바일 검증 범위를 기록했다. 전체 커버리지의 별도 통합 테스트 실패는 통과로 기록하지 않았다.
+
+## [2026-10-02] ingest | CF-144 호스트 루트 디스크 알림
+
+- Approval-Digest: 7e3be48100b9de605c9003b848f9799f83f06d952fabc568c025ee7996026056
+- Source-Revision: b8d419b74e081f1d7b248e477e58287cf1819b80
+- 승인한 두 후보를 [CF-144 bundle](../raw/issues/CF-144/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 CF-131 raw는 보존했다.
+- 호스트별 90%, 5분 지속 조건과 KeepLast의 상태 유지 및 관측 경계를 기록했다. 합성 Grafana와 mock receiver 검증을 실제 서버 반영이나 Discord 수신으로 해석하지 않는다.
