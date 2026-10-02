@@ -364,6 +364,14 @@
 - [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md)에 범용 쓰기의 실제 값 기반 완료 기준과 result-model·progress verifier의 연계를 추가했다. 기존 CF-90 raw를 보존했다.
 - 합성 실제 workflow의 정상·불일치·읽기 불가 결과와 데스크톱·모바일 검증 범위를 기록했다. 전체 커버리지의 별도 통합 테스트 실패는 통과로 기록하지 않았다.
 
+## [2026-10-02] ingest | CF-142 범용 버튼 드롭다운
+
+- Approval-Digest: b1d28af146b567a09987ebfeab7e0ee823bc4be8723710f1f19355b77ac2c7e0
+- Source-Revision: ca54009aa971b283f3149710361dc57c666e67e8
+- 승인한 두 후보를 [CF-142 bundle](../raw/issues/CF-142/manifest.md)에 기록했다.
+- [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md)을 추가하고 [패널 흐름](topics/autofill-panel-workflow.md)에 값 보존·재승인 후 재검증·실제 반영 판정을 연결했다. 기존 raw는 보존했다.
+- 실사이트 DOM 구조 조사와 합성 실제 Chromium의 4개 수집·선택을 구분한다. 실제 지원 정보와 세션은 기록하지 않고 전체 기존 실패·환경 제한도 전체 통과로 표현하지 않는다.
+
 ## [2026-10-02] ingest | CF-144 호스트 루트 디스크 알림
 
 - Approval-Digest: 7e3be48100b9de605c9003b848f9799f83f06d952fabc568c025ee7996026056

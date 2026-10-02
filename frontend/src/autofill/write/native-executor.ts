@@ -13,6 +13,7 @@ import { revalidateDateTarget } from "../review/date-target-format";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
 import { bindingKey, isSelectableApproved } from "./search-executor";
+import { dropdownValue } from "../dom/button-dropdown";
 
 type WriteOutcome =
   | { written: true }
@@ -690,6 +691,11 @@ function retainedGenericValue(
   const command = item.analysis?.writePlan?.command,
     value = item.profileValue;
   if (!command || !value) return false;
+  if (handle.buttonDropdown)
+    return (
+      command === "SELECT_OPTION" &&
+      dropdownValue(handle.buttonDropdown) === value
+    );
   if (command === "SET_TEXT") {
     const input = handle.elements[0];
     return input instanceof HTMLInputElement &&

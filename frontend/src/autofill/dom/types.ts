@@ -1,5 +1,6 @@
 import type { ActionCandidate, FieldCandidate } from "../api/types";
 import type { MixedSectionGroup } from "./mixed-section-rows";
+import type { ButtonDropdown } from "./button-dropdown";
 
 export type CandidateBlockReason =
   "disabled" | "readonly" | "hidden" | "inert" | "unsupported";
@@ -33,6 +34,7 @@ export interface MixedSectionRowContext {
 
 export interface FieldCandidateHandle extends CandidateHandleBase {
   kind: "field";
+  buttonDropdown?: ButtonDropdown;
   mixedSectionRow?: MixedSectionRowContext;
   isCurrentContext?: () => boolean;
   candidate: FieldCandidate;

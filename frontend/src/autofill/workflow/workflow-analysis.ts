@@ -21,7 +21,7 @@ import {
   retainedDriverCandidates,
   retainedDriverReviewResults,
 } from "./retained-drivers";
-import { collectFieldsSnapshot } from "../dom/collect";
+import { collectFieldsSnapshotWithDropdowns } from "../dom/collect";
 import { debugAnalysis, debugReviewPlan } from "../debug/autofill-debug";
 import {
   buildReviewPlan,
@@ -139,7 +139,15 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = collectFieldsSnapshot(pageDocument);
+    const snapshot = await collectFieldsSnapshotWithDropdowns(
+      pageDocument,
+      run.controller.signal,
+    );
+    if (
+      run.controller.signal.aborted ||
+      currentAnalysisGeneration !== analysisGeneration
+    )
+      return;
 
     const analysisStarted = performance.now();
     let analysis = await apiClient.analyzeFields(snapshot.request);
