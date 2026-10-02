@@ -35,6 +35,8 @@ import {
   collectActionSemanticContext,
 } from "./semantic-context";
 import { metadata, labelOf, sectionName } from "./metadata";
+import { collectButtonDropdowns, type ButtonDropdown } from "./button-dropdown";
+import { acquireDocumentRun } from "../interaction/document-run";
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
 import {
@@ -316,6 +318,7 @@ function collectFieldElements(
 
 export function collectFieldsSnapshot(
   document: Document,
+  dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   const companyId = resolveDocumentCompany(document);
   const adapter = collectionAdapterForHost(document);
@@ -323,7 +326,10 @@ export function collectFieldsSnapshot(
   let candidateIndex = 0;
   const sections: FieldsSection[] = [];
   const groups = groupBySection(
-    collectFieldElements(document, adapter, companyId),
+    [
+      ...collectFieldElements(document, adapter, companyId),
+      ...dropdowns.keys(),
+    ],
     sectionSelector(adapter),
     adapter === collectionAdapterForHost(""),
     companyId === "greeting" ? greetingSectionContainer : undefined,
@@ -424,7 +430,20 @@ export function collectFieldsSnapshot(
         const item = matchingItems.length === 1 ? matchingItems[0] : undefined;
         let candidate: FieldCandidate;
         const optionElements = new Map<string, HTMLElement>();
-        if (isChoice) {
+        const buttonDropdown = dropdowns.get(first);
+        if (buttonDropdown) {
+          const options = buttonDropdown.options.map((option, index) => {
+            const optionId = createOpaqueId(`${candidateId}-option`, index);
+            optionElements.set(optionId, option.element);
+            return { optionId, displayName: option.text };
+          });
+          candidate = {
+            ...baseCandidate(first, candidateId),
+            element: "custom",
+            control: "select",
+            options,
+          };
+        } else if (isChoice) {
           const optionPeers = customRadio
             ? Array.from(
                 element.querySelectorAll<HTMLElement>(
@@ -584,6 +603,7 @@ export function collectFieldsSnapshot(
         registry.registerField(
           {
             kind: "field",
+            ...(buttonDropdown ? { buttonDropdown } : {}),
             ...(mixed
               ? {
                   mixedSectionRow: {
@@ -684,6 +704,22 @@ export function collectFieldsSnapshot(
     },
     registry,
   };
+}
+
+export async function collectFieldsSnapshotWithDropdowns(
+  document: Document,
+  signal?: AbortSignal,
+): Promise<CollectedSnapshot<FieldsAnalyzeRequest>> {
+  if (resolveDocumentCompany(document) !== "generic")
+    return collectFieldsSnapshot(document);
+  const release = acquireDocumentRun(document);
+  if (!release) return collectFieldsSnapshot(document);
+  try {
+    const dropdowns = await collectButtonDropdowns(document, signal);
+    return collectFieldsSnapshot(document, dropdowns);
+  } finally {
+    release();
+  }
 }
 
 function collectActionElements(document: Document) {
