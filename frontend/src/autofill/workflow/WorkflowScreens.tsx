@@ -64,6 +64,7 @@ interface WorkflowScreensProps {
   adapter: WorkflowAdapter;
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
+  unsupportedImageUrl?: string;
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
@@ -96,6 +97,7 @@ export function WorkflowScreens({
   results,
   addressResult,
   exceptionTitle,
+  unsupportedImageUrl,
   onExit,
   onLocate,
   onLocateSection,
@@ -460,6 +462,30 @@ export function WorkflowScreens({
           onLocateSection={onLocateSection}
           operatedCategories={operatedCategories}
         />
+        {!exitInToolbar && (
+          <button className={styles.primary} type="button" onClick={onExit}>
+            수동 복사로 돌아가기
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (stage === "unsupported") {
+    return (
+      <div className={`${styles.screen} ${styles.unsupportedScreen}`}>
+        {unsupportedImageUrl && (
+          <img
+            className={styles.unsupportedImage}
+            src={unsupportedImageUrl}
+            alt="안전모를 쓰고 X 표시를 든 카피바라"
+          />
+        )}
+        <h2 className={styles.unsupportedTitle}>아직 지원하지 않아요</h2>
+        <p className={styles.lead}>
+          이 지원서 페이지는 아직 자동 기입을 지원하지 않아요. 수동 복사는 계속
+          사용할 수 있어요.
+        </p>
         {!exitInToolbar && (
           <button className={styles.primary} type="button" onClick={onExit}>
             수동 복사로 돌아가기

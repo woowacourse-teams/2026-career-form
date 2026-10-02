@@ -13,6 +13,7 @@ interface InPageProfilePanelProps {
   closePanel(): void;
   openOptions(): Promise<void> | void;
   logoUrl: string;
+  unsupportedImageUrl?: string;
   pageDocument: Document;
   apiClient?: AnalysisApiClient;
   repository?: ProfileRepository;
@@ -23,6 +24,7 @@ export function InPageProfilePanel({
   closePanel,
   openOptions,
   logoUrl,
+  unsupportedImageUrl,
   pageDocument,
   apiClient: injectedApiClient,
   repository: injectedRepository,
@@ -61,6 +63,7 @@ export function InPageProfilePanel({
             apiClient={apiClient}
             repository={repository}
             pageDocument={pageDocument}
+            unsupportedImageUrl={unsupportedImageUrl}
             onClose={controller.showProfile}
           />
         ) : undefined

@@ -81,6 +81,7 @@ export function AutofillWorkflow({
   repository,
   pageDocument,
   onExit,
+  unsupportedImageUrl,
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const companyId = resolveDocumentCompany(pageDocument);
@@ -261,6 +262,13 @@ export function AutofillWorkflow({
         const adapter = getWorkflowAdapter(pageDocument);
 
         if (!active) return;
+        if (
+          analysis.mode === "GENERIC" &&
+          analysis.warningCodes?.includes("LLM_UNAVAILABLE")
+        ) {
+          setStage("unsupported");
+          return;
+        }
         if (analysis.analysisStatus === "BLOCKED") {
           await analyzeFields(loadedProfile);
           return;
@@ -735,6 +743,7 @@ export function AutofillWorkflow({
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
+      unsupportedImageUrl={unsupportedImageUrl}
       onExit={onExit}
       exitInToolbar={exitInToolbar}
       currentCategory={currentCategory}
