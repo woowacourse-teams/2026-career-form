@@ -4,6 +4,8 @@ import {
   openAutofillOverlay,
   openOptionsPage,
 } from "../../src/extension/navigation";
+import type { TrackEvent } from "../../src/analytics/events";
+import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import type { Profile, ProfileCategoryId } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import {
@@ -16,6 +18,7 @@ import styles from "./App.module.css";
 import panelCss from "./App.module.css?inline";
 
 interface AppProps {
+  track?: TrackEvent;
   repository?: ProfileRepository;
   copyText?: (value: string) => Promise<void>;
   closePanel?: () => void;
@@ -89,6 +92,7 @@ function itemsForGroup(items: readonly ProfileSearchItem[], group: PanelGroup) {
 }
 
 export function App({
+  track = trackExtensionEvent,
   repository: injectedRepository,
   copyText = (value) => navigator.clipboard.writeText(value),
   closePanel = () => window.close(),
@@ -144,7 +148,12 @@ export function App({
     (group) => !hasQuery || itemsForGroup(results, group).length > 0,
   );
 
+  const analyticsProperties = inPage
+    ? { surface: "in_page_panel" as const, page_host: window.location.hostname }
+    : { surface: "side_panel" as const };
+
   const copy = async (id: string, value: string) => {
+    track("profile_copy_clicked", analyticsProperties);
     try {
       setCopyFailed(false);
       await copyText(value);
@@ -164,6 +173,7 @@ export function App({
   };
 
   const openProfileManagement = async () => {
+    track("profile_management_clicked", analyticsProperties);
     try {
       setNavigationFailed(false);
       await openOptions();
@@ -174,6 +184,7 @@ export function App({
 
   const startAutofill = async () => {
     if (startPending.current) return;
+    track("autofill_start_clicked", analyticsProperties);
     startPending.current = true;
     setAutofillPending(true);
     try {

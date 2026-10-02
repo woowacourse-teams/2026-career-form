@@ -23,6 +23,7 @@ export function PanelPreview({
   return (
     <div className={styles.nativePanel} data-demo-panel>
       <App
+        track={noop}
         autofillView={autofillView}
         returnToProfile={onReturn}
         inPage
