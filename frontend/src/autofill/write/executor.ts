@@ -12,6 +12,7 @@ import { greetingGpaSafe } from "../adapters/greeting/gpa";
 import { greetingSyntheticDomName } from "../adapters/greeting/collection";
 import { matchesResultValue } from "../workflow/result-value-match";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
+import { executeButtonDropdownWrite } from "./button-dropdown-executor";
 import { skipped, type ApprovedWriteResult } from "./write-result";
 import { debugWriteRun } from "../debug/autofill-debug";
 import {
@@ -276,6 +277,18 @@ export async function executeApprovedWritesAfterPageSettles({
       beforeMutation,
       signal,
       writeOrdinary: async (item) => {
+        const lookup = registry.lookupField(item.candidateId);
+        if (lookup.status === "ready" && lookup.handle.buttonDropdown)
+          return {
+            result: await executeButtonDropdownWrite({
+              item,
+              registry,
+              assertCurrent: runCurrent,
+              beforeMutation,
+              signal,
+            }),
+            effect: "continue",
+          };
         if (item.analysis?.writePlan?.command === "SELECT_DATE") {
           const { effect, ...result } = await executeApprovedCalendarWrite({
             item,
