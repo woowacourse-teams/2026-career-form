@@ -1,0 +1,127 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "career-form-hosts",
+      "folder": "Career Form",
+      "interval": "30s",
+      "rules": [
+        {
+          "uid": "cf-host-dev-staging-disk-full",
+          "title": "[career-dev-staging] 루트 디스크 사용률 90% 이상",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max(100 * (1 - node_filesystem_avail_bytes{job=\"host\",instance=\"career-dev-staging\",mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"host\",instance=\"career-dev-staging\",mountpoint=\"/\"}))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 90",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "5m",
+          "annotations": {
+            "summary": "career-dev-staging 루트 디스크, 사용률 {{ if $values.A }}{{ printf \"%.0f\" $values.A.Value }}%{{ else }}측정 불가{{ end }}, 임계값 90%",
+            "description": "호스트 career-dev-staging, mountpoint /, 90% 이상 5분 지속 시 장애, 실측 사용률 90% 미만 시 복구. 데이터 누락과 쿼리 오류는 직전 상태 유지. 대시보드에서 수집 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "9"
+          },
+          "labels": {
+            "kind": "disk-full",
+            "service": "host",
+            "instance": "career-dev-staging"
+          },
+          "isPaused": false
+        },
+        {
+          "uid": "cf-host-prod-disk-full",
+          "title": "[career-prod] 루트 디스크 사용률 90% 이상",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "max(100 * (1 - node_filesystem_avail_bytes{job=\"host\",instance=\"career-prod\",mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"host\",instance=\"career-prod\",mountpoint=\"/\"}))",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "math",
+                "expression": "$A >= 90",
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "5m",
+          "annotations": {
+            "summary": "career-prod 루트 디스크, 사용률 {{ if $values.A }}{{ printf \"%.0f\" $values.A.Value }}%{{ else }}측정 불가{{ end }}, 임계값 90%",
+            "description": "호스트 career-prod, mountpoint /, 90% 이상 5분 지속 시 장애, 실측 사용률 90% 미만 시 복구. 데이터 누락과 쿼리 오류는 직전 상태 유지. 대시보드에서 수집 상태를 확인하세요.",
+            "__dashboardUid__": "career-form-monitoring",
+            "__panelId__": "9"
+          },
+          "labels": {
+            "kind": "disk-full",
+            "service": "host",
+            "instance": "career-prod"
+          },
+          "isPaused": false
+        }
+      ]
+    }
+  ]
+}

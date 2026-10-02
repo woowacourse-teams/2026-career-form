@@ -21,7 +21,7 @@ class MonitoringAlertExpressionsTest(unittest.TestCase):
                 rules.extend(group["rules"])
         scenarios = []
         for env in ("dev", "staging", "prod"):
-            selected = {rule["labels"]["kind"]: rule for rule in rules if rule["labels"]["env"] == env}
+            selected = {rule["labels"]["kind"]: rule for rule in rules if rule["labels"].get("env") == env}
             tag = f'env="{env}"'
             for count, expected in ((2, 0), (3, 1), (4, 1)):
                 values = " ".join(["0"] * 6 + [str(count)] * 5)
@@ -53,7 +53,8 @@ class MonitoringAlertExpressionsTest(unittest.TestCase):
             scenarios.append(self._case(selected["data-gap"], [], 1))
             for kind in ("http-5xx", "llm-timeout", "api-slow", "openai-slow", "bounded-call-slow"):
                 scenarios.append(self._case(selected[kind], [], 0))
-        disk = next(rule for rule in rules if rule["labels"]["kind"] == "disk-full")
+        disk = next(rule for rule in rules if rule["labels"]["kind"] == "disk-full"
+                    and rule["labels"]["instance"] == "career-monitor")
         for available, expected in ((21, 0), (20, 1), (19, 1)):
             labels = 'job="host",instance="career-monitor",mountpoint="/"'
             scenarios.append(self._case(disk, [

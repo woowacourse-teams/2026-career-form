@@ -174,7 +174,8 @@ class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
             self.assertEqual({"backend-down", "data-gap", "http-5xx", "llm-timeout",
                               "api-slow", "openai-slow", "bounded-call-slow"},
                              {entry["labels"]["kind"] for entry in selected})
-        disk = next(entry for entry in rules if entry["labels"].get("kind") == "disk-full")
+        disk = next(entry for entry in rules if entry["labels"].get("kind") == "disk-full"
+                    and entry["labels"].get("instance") == "career-monitor")
         self.assertEqual("5m", disk["for"])
         self.assertEqual("career-monitor", disk["labels"]["instance"])
 
