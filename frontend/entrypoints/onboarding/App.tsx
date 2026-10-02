@@ -1,3 +1,4 @@
+import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import { SiteApp } from "../../site/SiteApp";
 import { SiteUrlContext } from "../../site/site-navigation";
 
@@ -14,7 +15,13 @@ export function App() {
     new URLSearchParams(window.location.search).get("page") ?? "/onboarding/";
   return (
     <SiteUrlContext value={extensionSiteUrl}>
-      <SiteApp path={path} installed profileHref="/options.html" />
+      <SiteApp
+        path={path}
+        installed
+        profileHref="/options.html"
+        track={trackExtensionEvent}
+        surface="extension_onboarding"
+      />
     </SiteUrlContext>
   );
 }

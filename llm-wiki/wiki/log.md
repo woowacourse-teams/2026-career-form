@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-02] ingest | CF-147 미지원 안내와 선택적 이용 계측
+
+- Disposition: New
+- Approval-Digest: 6e01ddd1fe145b97cfe572a34fa01dac1efb3844d81c27ffca19eb3354086e65
+- Source-Revision: 02cae24217a2ab02e3b65b5d32492b8a8c3f3421
+- Raw: llm-wiki/raw/issues/CF-147/manifest.md
+- Topics: 2
+
 ## [2026-09-11] ingest | CF-88 검증 이후 코드 이해 체크포인트
 
 - Disposition: Supersedes CF-41 issue-development-workflow topic

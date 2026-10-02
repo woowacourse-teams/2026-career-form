@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { TrackEvent } from "../src/analytics/events";
 import logo from "../public/side-panel-launcher-logo.png";
 import { benefits, faqs, steps, STORE_URL } from "./content";
 import { policies } from "./policies";
@@ -7,11 +8,14 @@ import { ChromeGuide, OpeningGuide, ServiceGuide } from "./Guide";
 import styles from "./Site.module.css";
 import { SiteLink, useSiteUrl } from "./site-navigation";
 
-function InstallLink() {
+const noopTrack: TrackEvent = () => {};
+
+function InstallLink({ onInstall }: { onInstall: () => void }) {
   return (
     <SiteLink
       className={styles.primary}
       href={STORE_URL}
+      onClick={onInstall}
       target="_blank"
       rel="noopener noreferrer"
     >
@@ -19,7 +23,13 @@ function InstallLink() {
     </SiteLink>
   );
 }
-function Header({ landing }: { landing: boolean }) {
+function Header({
+  landing,
+  onInstall,
+}: {
+  landing: boolean;
+  onInstall: () => void;
+}) {
   return (
     <header className={styles.header}>
       <SiteLink className={styles.brand} href="/">
@@ -34,7 +44,7 @@ function Header({ landing }: { landing: boolean }) {
             <SiteLink href="/onboarding/">사용 방법</SiteLink>
             <SiteLink href="#faq">궁금한 점</SiteLink>
           </nav>
-          <InstallLink />
+          <InstallLink onInstall={onInstall} />
         </>
       ) : (
         <SiteLink className={styles.introductionLink} href="/">
@@ -56,7 +66,7 @@ function Footer() {
     </footer>
   );
 }
-function Landing() {
+function Landing({ onInstall }: { onInstall: () => void }) {
   const siteUrl = useSiteUrl();
   return (
     <main id="main">
@@ -77,7 +87,7 @@ function Landing() {
               반복되는 지원서 입력을 줄이세요.
             </p>
             <div className={styles.actions}>
-              <InstallLink />
+              <InstallLink onInstall={onInstall} />
               <SiteLink href="/onboarding/">사용 방법 보기 ↗</SiteLink>
             </div>
             <small>Chrome 확장 프로그램 · 프로필은 내 브라우저에</small>
@@ -127,7 +137,7 @@ function Landing() {
           <br />
           다음 기회에 집중하세요.
         </h2>
-        <InstallLink />
+        <InstallLink onInstall={onInstall} />
         <p>Chrome에 추가하고, 내 정보부터 등록해 보세요.</p>
       </section>
       <section className={styles.faq} id="faq">
@@ -155,9 +165,11 @@ function Landing() {
   );
 }
 function Onboarding({
+  onInstall,
   installed,
   profileHref,
 }: {
+  onInstall: () => void;
   installed: boolean;
   profileHref?: string;
 }) {
@@ -211,7 +223,7 @@ function Onboarding({
               스토어에서 <strong>‘Chrome에 추가’를 누르세요.</strong> 설치가
               끝나면 시작 안내가 열려요. 프로필 등록부터 이어서 진행하세요.
             </p>
-            <InstallLink />
+            <InstallLink onInstall={onInstall} />
           </div>
         )}
         {contentStep === 2 && <OpeningGuide />}
@@ -278,7 +290,7 @@ function Onboarding({
                   내 프로필 확인하기 ↗
                 </a>
               ) : (
-                <InstallLink />
+                <InstallLink onInstall={onInstall} />
               )}
             </div>
           )}
@@ -322,26 +334,43 @@ function Policy({ kind }: { kind: "privacy" | "terms" }) {
   );
 }
 export function SiteApp({
+  track = noopTrack,
+  surface = "site",
   path = window.location.pathname,
   installed = false,
   profileHref,
 }: {
+  track?: TrackEvent;
+  surface?: "site" | "extension_onboarding";
   path?: string;
   installed?: boolean;
   profileHref?: string;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
+  const lastRoute = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (lastRoute.current === normalized) return;
+    lastRoute.current = normalized;
+    if (normalized === "/") track("landing_viewed", { surface });
+    else if (normalized === "/onboarding")
+      track("onboarding_viewed", { surface });
+  }, [normalized, surface, track]);
+  const onInstall = () => track("install_link_clicked", { surface });
   return (
     <div className={styles.site}>
       <SiteLink className={styles.skip} href="#main">
         본문으로 건너뛰기
       </SiteLink>
-      <Header landing={landing} />
+      <Header landing={landing} onInstall={onInstall} />
       {landing ? (
-        <Landing />
+        <Landing onInstall={onInstall} />
       ) : normalized === "/onboarding" ? (
-        <Onboarding installed={installed} profileHref={profileHref} />
+        <Onboarding
+          installed={installed}
+          profileHref={profileHref}
+          onInstall={onInstall}
+        />
       ) : normalized === "/privacy" || normalized === "/terms" ? (
         <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />
       ) : (

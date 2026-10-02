@@ -485,3 +485,22 @@
   margin: 0;
   line-height: 1.6;
 }
+
+.unsupportedScreen {
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.unsupportedImage {
+  width: 168px;
+  height: 168px;
+  object-fit: contain;
+}
+
+.unsupportedTitle {
+  margin: 0;
+  color: var(--color-action-strong);
+  font-size: 18px;
+}
