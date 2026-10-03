@@ -249,6 +249,9 @@ class WorkflowContractTest(unittest.TestCase):
         )
 
         self.assertIn("needs.deploy.result == 'success'", release["if"])
+        step = next(step for step in release["steps"] if "env" in step)
+        self.assertEqual("${{ needs.classify.outputs.head_sha }}", step["env"]["RELEASE_SHA"])
+        self.assertEqual("${{ needs.deploy.result }}", step["env"]["DEPLOY_RESULT"])
         self.assertIn("git tag", release_script)
         self.assertIn("--base develop", release_script)
         self.assertIn("--head", release_script)
@@ -271,8 +274,12 @@ class WorkflowContractTest(unittest.TestCase):
         script = "\n".join(step.get("run", "") for step in cleanup["steps"])
         self.assertIn("pull_request.merged == true", cleanup["if"])
         self.assertIn("release/", cleanup["if"])
-        self.assertIn("--method DELETE", script)
-        self.assertIn("git/refs/heads/release/", script)
+        checkout = next(
+            step for step in cleanup["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertEqual("${{ github.sha }}", checkout["with"]["ref"])
+        self.assertEqual("write", cleanup["permissions"]["contents"])
 
     def test_new_workflows_pin_external_actions_to_full_commit_sha(self) -> None:
         for filename in (
