@@ -9,7 +9,7 @@
 
 모니터링 UI는 Nginx HTTP 80에서 내부 grafana:3000으로 전달하며, 외부 링크와 Live Origin 기준은 필수 MONITORING_PUBLIC_URL로 지정한다. 수집용 3100/9090의 Basic 인증과 IP 제한은 해당 server에만 적용한다.
 
-모니터링 설정은 develop/main 머지로 자동 배포되지 않는다. 운영자는 compose.yaml과 proxy.conf를 백업 후 반영하고 Grafana와 Nginx만 재생성하며, 검프에게 Viewer 계정을 제공한다. 실제 서버 배포와 접속 검증은 사람이 수행한다.
+모니터링 설정은 develop/main 머지로 자동 배포되지 않는다. 운영자는 compose.yaml과 proxy.conf를 백업 후 반영하고 Grafana와 Nginx만 재생성하며, 조회 사용자에게 Viewer 계정을 제공한다. 실제 서버 배포와 접속 검증은 사람이 수행한다.
 
 ## 유지하는 기존 구성
 
@@ -26,4 +26,4 @@ HTTP는 암호화되지 않으며 운영자가 허용 원본 범위를 확인한
 - [로컬 검증 기록](https://github.com/woowacourse-teams/2026-career-form/blob/732932774645a1576264520f3f4c5c4ba6e6d1d3/infra/monitoring/VERIFICATION.md)
 
 로컬 macOS에서 격리한 Linux ARM64 컨테이너로 중앙 스택 통합 시험 15개를 확인했다.
-실제 AWS 배포, 검프 계정 생성·외부 접속과 실제 Discord 수신은 미실행이며 사람이 확인한다.
+실제 AWS 배포, 조회 사용자 계정 생성·외부 접속과 실제 Discord 수신은 미실행이며 사람이 확인한다.
