@@ -394,3 +394,10 @@
 - Source-Revision: b8d419b74e081f1d7b248e477e58287cf1819b80
 - 승인한 두 후보를 [CF-144 bundle](../raw/issues/CF-144/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 CF-131 raw는 보존했다.
 - 호스트별 90%, 5분 지속 조건과 KeepLast의 상태 유지 및 관측 경계를 기록했다. 합성 Grafana와 mock receiver 검증을 실제 서버 반영이나 Discord 수신으로 해석하지 않는다.
+
+## [2026-10-03] ingest | CF-151 dev 호스트 디스크 임계값 95%
+
+- Approval-Digest: 775160facdfcfd37acb841ce7fabf5338b75644155897a0d05e3243b01a98189
+- Source-Revision: 7c81d191c810991aabe856699e680dd75e91df2a
+- 승인한 후보 한 건을 [CF-151 bundle](../raw/issues/CF-151/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 raw는 보존했다.
+- dev/staging 95%와 기존 정책 유지, 남은 공간의 대응 여유 감소, 로컬 합성 검증과 사람 담당 운영 반영의 경계를 기록했다.

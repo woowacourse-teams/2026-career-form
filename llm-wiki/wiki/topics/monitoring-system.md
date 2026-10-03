@@ -2,9 +2,9 @@
 
 > Topic: monitoring-system
 > Status: Current
-> Current: [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md)
-> History: [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md)
-> Updated: 2026-10-02
+> Current: [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md)
+> History: [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md); [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md)
+> Updated: 2026-10-03
 
 ## 현재 상태
 
@@ -18,12 +18,13 @@ t4g.micro의 실제 용량과 메모리 적합성, AWS 배포와 Discord 수신�
 공용 서버 중단은 중앙 조회와 Grafana 알림도 중단시킨다. S3, cron, HA와 외부
 감시는 범위에서 제외한다. 상세 결정과 근거는 Current 문서를 따른다.
 
-`career-dev-staging`과 `career-prod`의 루트 디스크 사용률은 호스트당 한 규칙으로
-90% 이상, 5분 지속 평가한다. host 지표와 규칙은 앱 env와 분리하며
+루트 디스크 사용률은 호스트당 한 규칙으로 `career-dev-staging` 95% 이상,
+`career-prod` 90% 이상이 5분 지속되면 장애로 평가한다. 실측 사용률이 각 임계값
+미만이면 복구한다. dev와 staging은 같은 호스트를 공유한다. host 지표와 규칙은 앱 env와 분리하며
 `career-monitor`의 기존 80% 규칙은 유지한다. 기존 Discord receiver와 10분 반복
 정책을 사용하고 `instance`별로 통지를 분리한다.
 
-새 디스크 규칙은 No Data와 쿼리 오류에 KeepLast를 적용한다. 직전 상태와
+호스트 디스크 규칙은 No Data와 쿼리 오류에 KeepLast를 적용한다. 직전 상태와
 Pending 시작 시각을 유지하며 측정 실패를 디스크 초과나 복구로 취급하지 않는다.
 미측정 메시지는 `측정 불가`로 표시한다. Pending 누락 구간도 경과 시간에 포함되고
 수집 실패 자체의 별도 통지는 없으므로 alert instance 상태 사유와 시계열 최신
@@ -37,3 +38,6 @@ Pending 시작 시각을 유지하며 측정 실패를 디스크 초과나 복�
 DNS 재조회 복구를 승인된 근거로 기록했다. 기존 배포 Runbook은 대체하지 않는다.
 CF-144에서 앱 호스트의 디스크 고갈을 독립적으로 감시하도록 범위를 추가하고,
 측정 실패만으로 잘못된 장애나 복구 통지를 만들지 않는 정책을 기록했다.
+CF-151에서 dev/staging의 기존 규칙 UID를 유지하며 임계값을 95%로 조정했다.
+prod 90%와 monitor 80%, 기존 지속 시간과 통지 정책은 유지한다. 95%는 남은
+공간이 적어 이미지 다운로드와 로그 증가에 대응할 여유가 줄어든다.
