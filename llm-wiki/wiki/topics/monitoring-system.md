@@ -2,16 +2,22 @@
 
 > Topic: monitoring-system
 > Status: Current
-> Current: [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md)
-> History: [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md); [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md)
+> Current: [CF-154 Grafana HTTP 접속과 수동 반영](../../raw/issues/CF-154/documents/monitoring-system.md)
+> History: [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md); [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md); [CF-154 Grafana HTTP 접속과 수동 반영](../../raw/issues/CF-154/documents/monitoring-system.md)
 > Updated: 2026-10-03
 
 ## 현재 상태
 
 호스트별 Alloy가 dev/staging/prod의 로그와 메트릭을 중앙 Loki/Prometheus로
 전송하고 Grafana가 환경별 조회와 Discord 알림을 담당한다. 공용 호스트 자원은
-환경별로 중복 집계하지 않는다. Grafana UI는 SSH 터널, 수집 구간은 IP 제한과
-인증을 사용하며 Docker socket 접근은 높은 권한으로 취급한다.
+환경별로 중복 집계하지 않는다. Grafana UI는 Nginx HTTP 80에서 내부 grafana:3000으로 전달한다. 필수
+MONITORING_PUBLIC_URL이 외부 링크와 Live Origin의 기준이며 Grafana 로그인과
+Viewer 계정으로 조회한다. 수집용 3100/9090에는 별도의 IP 제한과 Basic 인증을
+유지하고 Docker socket 접근은 높은 권한으로 취급한다. HTTP는 암호화되지 않는다.
+
+develop/main 머지만으로 중앙 모니터링 설정이 자동 배포되지는 않는다. 운영자가
+compose.yaml과 proxy.conf를 백업 후 반영하고 Grafana·Nginx를 재생성한다.
+실제 서버 배포와 검프 접속 검증은 사람이 수행한다.
 
 중앙 보존 정책은 Loki 7일과 Prometheus 14일이며 gp3 루트 EBS 16GiB를 사용한다.
 t4g.micro의 실제 용량과 메모리 적합성, AWS 배포와 Discord 수신은 미검증이다.
@@ -41,3 +47,6 @@ CF-144에서 앱 호스트의 디스크 고갈을 독립적으로 감시하도�
 CF-151에서 dev/staging의 기존 규칙 UID를 유지하며 임계값을 95%로 조정했다.
 prod 90%와 monitor 80%, 기존 지속 시간과 통지 정책은 유지한다. 95%는 남은
 공간이 적어 이미지 다운로드와 로그 증가에 대응할 여유가 줄어든다.
+
+CF-154에서 검프의 SSH 없는 조회를 위해 HTTP 진입점을 추가하고, 수집 인증과 UI
+인증 적용 범위를 분리했다. 수동 반영·복구 절차와 로컬 검증 경계를 함께 기록했다.
