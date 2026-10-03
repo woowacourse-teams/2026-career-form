@@ -38,7 +38,8 @@ class MonitoringHostDiskTest(unittest.TestCase):
                 self.assertEqual("KeepLast", rule["execErrState"])
                 self.assertFalse(rule["isPaused"])
                 self.assertEqual("B", rule["condition"])
-                self.assertEqual("$A >= 90", rule["data"][1]["model"]["expression"])
+                threshold = 95 if host == "career-dev-staging" else 90
+                self.assertEqual(f"$A >= {threshold}", rule["data"][1]["model"]["expression"])
 
     def test_host_disk_notifications_are_grouped_by_host_on_existing_receiver(self) -> None:
         policy = json.loads((MONITORING / "grafana/provisioning/alerting/policies.json").read_text())["policies"][0]
@@ -63,7 +64,7 @@ class MonitoringHostDiskExpressionsTest(unittest.TestCase):
             self.assertEqual({"career-monitor", "career-dev-staging", "career-prod"}, set(selected))
             for host, (group, rule) in selected.items():
                 with self.subTest(host=host):
-                    threshold = 80 if host == "career-monitor" else 90
+                    threshold = {"career-monitor": 80, "career-dev-staging": 95, "career-prod": 90}[host]
                     self._verify_rule(root, host, group, rule, threshold)
 
     def _verify_rule(self, root: Path, host: str, group: dict, rule: dict, threshold: int) -> None:
