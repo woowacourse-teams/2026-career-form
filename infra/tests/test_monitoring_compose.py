@@ -16,10 +16,12 @@ class MonitoringComposeTest(unittest.TestCase):
         services = config["services"]
         self.assertEqual("127.0.0.1", services["grafana"]["ports"][0]["host_ip"])
         self.assertEqual("3000", services["grafana"]["ports"][0]["published"])
-        self.assertEqual({"3100", "9090"},
+        self.assertEqual({"80", "3100", "9090"},
                          {port["published"] for port in services["ingest"]["ports"]})
+        ui = next(port for port in services["ingest"]["ports"] if port["target"] == 80)
+        self.assertEqual("0.0.0.0", ui.get("host_ip", "0.0.0.0"))
         self.assertEqual({"10.0.0.72"},
-                         {port["host_ip"] for port in services["ingest"]["ports"]})
+                         {port["host_ip"] for port in services["ingest"]["ports"] if port["target"] != 80})
         for name in ("loki", "prometheus", "host-metrics"):
             self.assertFalse(services[name].get("ports"), name)
 
@@ -62,6 +64,15 @@ class MonitoringComposeTest(unittest.TestCase):
         self.assertEqual("false", grafana["environment"]["GF_AUTH_ANONYMOUS_ENABLED"])
         self.assertEqual("false", grafana["environment"]["GF_USERS_ALLOW_SIGN_UP"])
 
+    def test_external_url_is_required_and_forwarded_to_grafana(self) -> None:
+        missing = self._config({"MONITORING_PUBLIC_URL": ""})
+        self.assertNotEqual(0, missing.returncode)
+        self.assertIn("MONITORING_PUBLIC_URL", missing.stderr)
+        configured = self._config({"MONITORING_PUBLIC_URL": "http://monitor.example.test/"})
+        self.assertEqual(0, configured.returncode, configured.stderr)
+        environment = json.loads(configured.stdout)["services"]["grafana"]["environment"]
+        self.assertEqual("http://monitor.example.test/", environment["GF_SERVER_ROOT_URL"])
+
     def _render(self) -> dict:
         completed = self._config({})
         self.assertEqual(0, completed.returncode, completed.stderr)
@@ -74,6 +85,7 @@ class MonitoringComposeTest(unittest.TestCase):
             environment = {
                 **os.environ,
                 "MONITORING_PRIVATE_IP": "10.0.0.72",
+                "MONITORING_PUBLIC_URL": "http://monitor.example.test/",
                 "MONITORING_DATA_DIR": "/srv/career-form-monitoring",
                 "MONITORING_SECRETS_DIR": directory,
                 **overrides,
