@@ -8,14 +8,16 @@ Jev 및 실제 채용 사이트의 최신 빌드 검증은 남아 있으며, Iss
 
 ## 공급자 선택
 
-서버 시작 시 세 포트 `FieldMappingResolver`, `ActionResolver`,
-`InteractionDecisionProvider`를 동일한 공급자로 구성한다.
+서버 시작 시 `FieldMappingResolver`와 `ActionResolver`는 기본 분석 공급자로 구성한다.
+`InteractionDecisionProvider`는 검색과 달력 역할에 각각 독립 공급자를 사용할 수 있다.
 정적 회사 정책 라우팅은 기존 계약을 따른다. 호출 실패 시 공급자를 자동 전환하지 않는다.
 
 | 설정 | 기본값 | 의미 |
 | --- | --- | --- |
 | `CAREER_FORM_ANALYSIS_ENABLED` | 미지정 | 새 공통 enable 설정 |
-| `CAREER_FORM_ANALYSIS_PROVIDER` | `openai` | `openai` 또는 `jev` |
+| `CAREER_FORM_ANALYSIS_PROVIDER` | `openai` | 준비·필드 매핑과 상호작용 fallback 공급자 |
+| `CAREER_FORM_SEARCH_PROVIDER` | 미지정 | 검색 역할 공급자, 미지정 시 기본 분석 공급자 상속 |
+| `CAREER_FORM_CALENDAR_PROVIDER` | `jev` | 달력 역할 공급자 |
 | `CAREER_FORM_LLM_ENABLED` | 미지정 | 기존 enable 설정 호환 |
 | `OPENAI_API_KEY` | 없음 | OpenAI 선택 시 사람이 준비 |
 | `CAREER_FORM_LLM_MODEL` | 기존 `gpt-5.6-luna` | OpenAI 모델 |
@@ -43,9 +45,19 @@ SDK 재시도는 실행 설정과 무관하게 0회로 유지한다. 검색 상�
 요청 예산과 재시도 0회를 사용한다. Jev도 자동 재시도와 redirect를 사용하지 않는다.
 Jev [공식 API](https://docs.typesafe.ai/api)의 Choice 요청/응답에 맞춰
 후보별 질문을 만들고, 응답 집합·선택지·확률 분포·confidence를 확인한 뒤 공통 결과로 변환한다.
-자유 문장을 실행 명령으로 사용하지 않는다.
+Jev 요청·응답의 2,000,000 byte 제한과 요청당 128개 질문 제한은 정확한 tokenizer 기반
+공급자 한도가 아니라 애플리케이션의 보수적인 로컬 상한이다. 동적 상호작용 API의 달력
+요청은 별도로 wire body 16 KiB, decision당 후보 8개, 요청당 달력 후보 32개로 제한한다.
+실행당 호출 4회 상한은 서버 요청 사이의 실행 identity를 전달하지 않으므로 프론트엔드가
+소유한다. 자유 문장을 실행 명령으로 사용하지 않는다.
 
 ## 브라우저 실행 경계
+
+달력 분류는 `CALENDAR_OPENER`, `CALENDAR_YEAR_TRIGGER`, `CALENDAR_YEAR_CONTROL`,
+`CALENDAR_MONTH_CONTROL`, `CALENDAR_DAY_CONTROL`, `CALENDAR_NAVIGATION`,
+`CALENDAR_APPLY` 역할과 유한한 `calendarStructure`만 사용한다. 구조에는 tag, activation,
+ownership, unit, unitEvidence, valueShape만 포함하며 raw label, 프로필·날짜 값과 handler
+source는 포함하지 않는다.
 
 검색 표면은 동일 문서 dialog/popover, 동일 출처 iframe, 명시적으로 연결된 inline listbox다.
 표면과 검색 방식(existing-options / query-only / query-and-submit)을 별도로 판정한다.

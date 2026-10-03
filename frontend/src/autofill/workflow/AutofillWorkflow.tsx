@@ -81,6 +81,7 @@ export function AutofillWorkflow({
   repository,
   pageDocument,
   onExit,
+  unsupportedImageUrl,
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const companyId = resolveDocumentCompany(pageDocument);
@@ -261,6 +262,13 @@ export function AutofillWorkflow({
         const adapter = getWorkflowAdapter(pageDocument);
 
         if (!active) return;
+        if (
+          analysis.mode === "GENERIC" &&
+          analysis.warningCodes?.includes("LLM_UNAVAILABLE")
+        ) {
+          setStage("unsupported");
+          return;
+        }
         if (analysis.analysisStatus === "BLOCKED") {
           await analyzeFields(loadedProfile);
           return;
@@ -517,9 +525,7 @@ export function AutofillWorkflow({
   const { toggleReviewItem, revealSensitiveItem } =
     createReviewActions(setReviewItems);
 
-  const executeWrites = async (
-    action: "ordinary" | "calendar" = "ordinary",
-  ) => {
+  const executeWrites = async () => {
     if (!fieldsSnapshot || executionPending.current) return;
     executionPending.current = true;
     setResultRegistry(undefined);
@@ -565,7 +571,7 @@ export function AutofillWorkflow({
         retainedDrivers.results.map((result) => result.candidateId),
       );
       const { executableReviewItems, approvedCandidateIds } =
-        approvedReviewExecution(reviewItems, retainedCandidateIds, action);
+        approvedReviewExecution(reviewItems, retainedCandidateIds);
       if (
         profile &&
         JSON.stringify(await repository.load()) !== JSON.stringify(profile)
@@ -616,7 +622,6 @@ export function AutofillWorkflow({
         items: executableReviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
-        calendarOnly: action === "calendar",
         ...(analysisSummary?.mode === "GENERIC" && apiClient.decideInteractions
           ? {
               interactionDecisionProvider:
@@ -731,14 +736,14 @@ export function AutofillWorkflow({
       partial={partial}
       toggleReviewItem={toggleReviewItem}
       revealSensitiveItem={revealSensitiveItem}
-      executeWrites={() => executeWrites("ordinary")}
-      executeCalendarWrites={() => executeWrites("calendar")}
+      executeWrites={executeWrites}
       results={results}
       analysisSummary={analysisSummary}
       addressResult={addressResult}
       adapter={adapter}
       workflowDiagnostics={workflowDiagnostics}
       exceptionTitle={exceptionTitle}
+      unsupportedImageUrl={unsupportedImageUrl}
       onExit={onExit}
       exitInToolbar={exitInToolbar}
       currentCategory={currentCategory}

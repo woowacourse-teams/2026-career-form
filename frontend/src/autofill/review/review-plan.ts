@@ -1,9 +1,12 @@
+import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
+import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
   approveGreetingGpaPairs,
   type GreetingGpaApproval,
 } from "../adapters/greeting/gpa";
 import { customFieldValue } from "../dom/custom-field-value";
+import { normalizeDisplayName } from "../write/display-name";
 import {
   isReadonlySearchEligible,
   observeReadonlySearch,
@@ -77,6 +80,7 @@ export interface ReviewPlanItem {
   disabled: boolean;
   revealed: boolean;
   reason: string;
+  failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
   calendarApproval?: CalendarApproval;
@@ -380,6 +384,22 @@ function itemForAnalysis(
       analysis,
     );
   }
+  if (
+    generic &&
+    analysis.mappingStatus === "LLM_SUGGESTED" &&
+    binding.profileFieldKey === "contact.contact.email" &&
+    isSplitEmailTarget(lookup.handle)
+  ) {
+    return {
+      ...unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        SPLIT_EMAIL_REASON,
+        analysis,
+      ),
+      failureCode: "SPLIT_EMAIL_UNSUPPORTED",
+    };
+  }
   const parts =
     binding.type === "DERIVED" &&
     /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_(NAME|CLASSIFICATION)$/.test(
@@ -628,10 +648,30 @@ function itemForAnalysis(
       analysis,
     );
   }
-  const resolvedProfileValue =
+  let resolvedProfileValue =
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
+  if (generic && lookup.handle.buttonDropdown) {
+    const matches = (lookup.handle.candidate.options ?? []).filter(
+      (option) =>
+        normalizeDisplayName(option.displayName) ===
+        normalizeDisplayName(resolvedProfileValue.value),
+    );
+    if (analysis.writePlan.command !== "SELECT_OPTION" || matches.length !== 1)
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "지원서 드롭다운의 일치 옵션을 하나로 확인할 수 없습니다.",
+        analysis,
+      );
+    const option = matches[0];
+    if (option)
+      resolvedProfileValue = {
+        ...resolvedProfileValue,
+        value: option.displayName,
+      };
+  }
   const searchValuePlan =
     searchCommand && binding.type === "DIRECT"
       ? certificateSearchValuePlan(

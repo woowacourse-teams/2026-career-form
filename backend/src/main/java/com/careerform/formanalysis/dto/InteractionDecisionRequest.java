@@ -58,7 +58,40 @@ public record InteractionDecisionRequest(
         @AssertTrue Boolean readonly,
         @AssertTrue Boolean inert,
         @NotNull RelationToTarget relationToTarget,
-        @Valid SemanticContext semanticContext
+        @Valid SemanticContext semanticContext,
+        @Valid ResultStructure structure,
+        @Valid CalendarStructure calendarStructure
+    ) {
+        public Candidate(String candidateId, Element element, Control control, Visibility visibility,
+            Boolean disabled, Boolean readonly, Boolean inert, RelationToTarget relationToTarget,
+            SemanticContext semanticContext) {
+            this(candidateId, element, control, visibility, disabled, readonly, inert,
+                relationToTarget, semanticContext, null, null);
+        }
+        public Candidate(String candidateId, Element element, Control control, Visibility visibility,
+            Boolean disabled, Boolean readonly, Boolean inert, RelationToTarget relationToTarget,
+            SemanticContext semanticContext, ResultStructure structure) {
+            this(candidateId, element, control, visibility, disabled, readonly, inert,
+                relationToTarget, semanticContext, structure, null);
+        }
+    }
+
+    public record ResultStructure(
+        @NotNull @Pattern(regexp = "div|li|span|ul|ol|table|tbody|tr|td|button|a|input") String tag,
+        @NotNull @Pattern(regexp = "none|list|listbox|row|listitem|option|button") String ariaRole,
+        @NotNull @Pattern(regexp = "none|native|inline-click|keyboard") String activation,
+        @Min(0) @Max(6) int depth,
+        @Min(0) @Max(24) int childCount
+    ) {
+    }
+
+    public record CalendarStructure(
+        @NotNull @Pattern(regexp = "input|img|button|select|table|a|div") String tag,
+        @NotNull @Pattern(regexp = "click|focus|change|none") String activation,
+        @NotNull @Pattern(regexp = "linked-popup|single-field|adjacent-trigger|bound-target") String ownership,
+        @NotNull @Pattern(regexp = "month|day") String unit,
+        @NotNull @Pattern(regexp = "target-format|target-label|month-options") String unitEvidence,
+        @NotNull @Pattern(regexp = "none|year-options|month-options|day-grid|previous|next|apply") String valueShape
     ) {
     }
 
@@ -79,8 +112,15 @@ public record InteractionDecisionRequest(
         SEARCH_POPUP_OPENER,
         SEARCH_QUERY_INPUT,
         SEARCH_SUBMIT,
+        SEARCH_RESULT_CONTAINER,
+        SEARCH_RESULT_ITEM,
+        SEARCH_RESULT_ACTION,
         CALENDAR_OPENER,
         CALENDAR_YEAR_TRIGGER,
+        CALENDAR_YEAR_CONTROL,
+        CALENDAR_MONTH_CONTROL,
+        CALENDAR_DAY_CONTROL,
+        CALENDAR_NAVIGATION,
         CALENDAR_APPLY
     }
 
@@ -103,7 +143,11 @@ public record InteractionDecisionRequest(
         @JsonProperty("button")
         BUTTON,
         @JsonProperty("submit")
-        SUBMIT
+        SUBMIT,
+        @JsonProperty("container")
+        CONTAINER,
+        @JsonProperty("item")
+        ITEM
     }
 
     public enum Visibility {

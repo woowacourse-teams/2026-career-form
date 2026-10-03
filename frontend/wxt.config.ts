@@ -41,7 +41,7 @@ export default defineConfig({
     },
     web_accessible_resources: [
       {
-        resources: ["side-panel-launcher-logo.png"],
+        resources: ["side-panel-launcher-logo.png", "unsupported-capybara.jpg"],
         matches: ["http://*/*", "https://*/*"],
       },
     ],

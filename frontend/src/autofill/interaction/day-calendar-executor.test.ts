@@ -19,7 +19,7 @@ const FAST = { openWaitMs: 200, closeWaitMs: 300, retentionMs: 80 };
 function setup(options: Partial<UiDatepickerOptions> = {}, value = "") {
   document.body.innerHTML = `
     <section aria-label="합성 경력">
-      <label>입사일 <input id="start" type="text" readonly value="${value}"></label>
+      <label>입사일 <input id="start" type="text" readonly placeholder="YYYY-MM-DD" value="${value}"></label>
       <label>메모 <input id="memo" type="text" value="유지"></label>
     </section>`;
   const target = document.querySelector<HTMLInputElement>("#start")!;
@@ -222,7 +222,7 @@ describe("executeDayCalendarSelection", () => {
   });
 
   it("holds when the opener does not open the shared calendar", async () => {
-    document.body.innerHTML = `<input id="start" class="hasDatepicker" type="text" readonly><div class="ui-datepicker" style="display:none"></div>`;
+    document.body.innerHTML = `<label for="start">입사일</label><input id="start" class="hasDatepicker" type="text" maxlength="10" readonly><div class="ui-datepicker" style="display:none"></div>`;
     const target = document.querySelector<HTMLInputElement>("#start")!;
 
     await expect(run(target, "2024-02-29")).resolves.toEqual({

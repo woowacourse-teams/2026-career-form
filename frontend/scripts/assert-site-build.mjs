@@ -10,6 +10,7 @@ const pages = [
   "privacy/index.html",
   "terms/index.html",
   "demo/index.html",
+  "experiment/index.html",
 ];
 for (const page of pages) {
   const html = readFileSync(resolve(output, page), "utf8");

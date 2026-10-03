@@ -59,12 +59,12 @@ interface WorkflowScreensProps {
   toggleReviewItem(candidateId: string): void;
   revealSensitiveItem(candidateId: string): void;
   executeWrites(): Promise<void>;
-  executeCalendarWrites?(): Promise<void>;
   results: readonly ApprovedWriteResult[];
   addressResult?: AddressResult;
   adapter: WorkflowAdapter;
   workflowDiagnostics: readonly WorkflowDiagnostic[];
   exceptionTitle: string;
+  unsupportedImageUrl?: string;
   onLocate?(candidateId: string): boolean;
   operatedCategories?: readonly string[];
   onLocateSection?(candidateIds: readonly string[], category?: string): boolean;
@@ -94,10 +94,10 @@ export function WorkflowScreens({
   toggleReviewItem,
   revealSensitiveItem,
   executeWrites,
-  executeCalendarWrites,
   results,
   addressResult,
   exceptionTitle,
+  unsupportedImageUrl,
   onExit,
   onLocate,
   onLocateSection,
@@ -243,10 +243,7 @@ export function WorkflowScreens({
     const isCalendar = (item: ReviewPlanItem) =>
       item.analysis?.writePlan?.command === "SELECT_DATE";
     const selectedCount = reviewItems.filter(
-      (item) => item.selected && !item.disabled && !isCalendar(item),
-    ).length;
-    const selectedCalendarCount = reviewItems.filter(
-      (item) => item.selected && !item.disabled && isCalendar(item),
+      (item) => item.selected && !item.disabled,
     ).length;
     const exceptionalItems = reviewItemsForDisplay(reviewItems).filter(
       (item) =>
@@ -256,49 +253,82 @@ export function WorkflowScreens({
         !item.selected,
     );
     const plannedItems = reviewItemsForDisplay(reviewItems).filter(
-      (item) => item.selected && !item.disabled && !exceptionalItems.includes(item),
+      (item) =>
+        item.selected && !item.disabled && !exceptionalItems.includes(item),
     );
     return (
       <div className={styles.screen}>
         <style>{resultCss}</style>
         <Header step="2 / 3" title="자동 기입 확인" />
         <div className={resultStyles.summary}>
-          <div className={resultStyles.summaryText} role="status" aria-atomic="true">
+          <div
+            className={resultStyles.summaryText}
+            role="status"
+            aria-atomic="true"
+          >
             <h3>자동 기입할 항목을 확인해 주세요</h3>
           </div>
         </div>
-        <div className={resultStyles.counts} role="tablist" aria-label="자동 기입 확인 구분">
-          <button type="button" role="tab" data-state="completed"
-            id={`${reviewTabsId}-planned-tab`} aria-controls={`${reviewTabsId}-planned-panel`}
-            aria-selected={reviewTab === "planned"} onClick={() => setReviewTab("planned")}>
+        <div
+          className={resultStyles.counts}
+          role="tablist"
+          aria-label="자동 기입 확인 구분"
+        >
+          <button
+            type="button"
+            role="tab"
+            data-state="completed"
+            id={`${reviewTabsId}-planned-tab`}
+            aria-controls={`${reviewTabsId}-planned-panel`}
+            aria-selected={reviewTab === "planned"}
+            onClick={() => setReviewTab("planned")}
+          >
             자동 기입 예정 <strong>{selectedCount}</strong>
           </button>
-          <button type="button" role="tab" data-state="pending"
-            id={`${reviewTabsId}-needs-review-tab`} aria-controls={`${reviewTabsId}-needs-review-panel`}
-            aria-selected={reviewTab === "needs-review"} onClick={() => setReviewTab("needs-review")}>
+          <button
+            type="button"
+            role="tab"
+            data-state="pending"
+            id={`${reviewTabsId}-needs-review-tab`}
+            aria-controls={`${reviewTabsId}-needs-review-panel`}
+            aria-selected={reviewTab === "needs-review"}
+            onClick={() => setReviewTab("needs-review")}
+          >
             확인 필요 <strong>{exceptionalItems.length}</strong>
           </button>
         </div>
-        <section role="tabpanel" id={`${reviewTabsId}-planned-panel`} aria-labelledby={`${reviewTabsId}-planned-tab`} hidden={reviewTab !== "planned"} className={resultStyles.review}>
-          {plannedItems.length > 0 ? plannedItems.map((item) => (
-            <article className={resultStyles.row} key={item.candidateId}>
-              <div className={resultStyles.heading} data-has-values="true">
-                <button
-                  type="button"
-                  className={resultStyles.locate}
-                  aria-label={`${resultFieldLabel(item)} 필드로 이동`}
-                  disabled={!onLocate}
-                  onClick={() => onLocate?.(item.candidateId)}
-                >
-                  <span>{resultFieldLabel(item)}</span>
-                  {onLocate && <span aria-hidden="true">↗</span>}
-                </button>
-                <div className={resultStyles.valueGroup}>
-                  <span className={resultStyles.previewValue}>{item.previewValue}</span>
+        <section
+          role="tabpanel"
+          id={`${reviewTabsId}-planned-panel`}
+          aria-labelledby={`${reviewTabsId}-planned-tab`}
+          hidden={reviewTab !== "planned"}
+          className={resultStyles.review}
+        >
+          {plannedItems.length > 0 ? (
+            plannedItems.map((item) => (
+              <article className={resultStyles.row} key={item.candidateId}>
+                <div className={resultStyles.heading} data-has-values="true">
+                  <button
+                    type="button"
+                    className={resultStyles.locate}
+                    aria-label={`${resultFieldLabel(item)} 필드로 이동`}
+                    disabled={!onLocate}
+                    onClick={() => onLocate?.(item.candidateId)}
+                  >
+                    <span>{resultFieldLabel(item)}</span>
+                    {onLocate && <span aria-hidden="true">↗</span>}
+                  </button>
+                  <div className={resultStyles.valueGroup}>
+                    <span className={resultStyles.previewValue}>
+                      {item.previewValue}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </article>
-          )) : <p className={resultStyles.empty}>자동 기입 예정 항목이 없어요.</p>}
+              </article>
+            ))
+          ) : (
+            <p className={resultStyles.empty}>자동 기입 예정 항목이 없어요.</p>
+          )}
         </section>
         {partial && (
           <aside className={styles.safety}>
@@ -351,7 +381,9 @@ export function WorkflowScreens({
                       {onLocate && <span aria-hidden="true">↗</span>}
                     </button>
                     <div className={resultStyles.valueGroup}>
-                      <span className={resultStyles.previewValue}>{item.previewValue}</span>
+                      <span className={resultStyles.previewValue}>
+                        {item.previewValue}
+                      </span>
                       {(item.status !== "available" ||
                         isCalendar(item) ||
                         !item.selected) &&
@@ -373,7 +405,9 @@ export function WorkflowScreens({
                     <p className={resultStyles.guidance}>{item.reason}</p>
                   )}
                   {item.status !== "needs-review" && (
-                    <small className={resultStyles.writtenTag}>{statusLabel(item)}</small>
+                    <small className={resultStyles.writtenTag}>
+                      {statusLabel(item)}
+                    </small>
                   )}
                   {item.status === "sensitive" && !item.revealed && (
                     <button
@@ -390,15 +424,6 @@ export function WorkflowScreens({
               );
             })}
           </section>
-        )}
-        {selectedCalendarCount > 0 && executeCalendarWrites && (
-          <button
-            className={styles.primary}
-            type="button"
-            onClick={() => void executeCalendarWrites()}
-          >
-            선택한 날짜만 입력
-          </button>
         )}
         <button
           className={styles.primary}
@@ -437,6 +462,30 @@ export function WorkflowScreens({
           onLocateSection={onLocateSection}
           operatedCategories={operatedCategories}
         />
+        {!exitInToolbar && (
+          <button className={styles.primary} type="button" onClick={onExit}>
+            수동 복사로 돌아가기
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (stage === "unsupported") {
+    return (
+      <div className={`${styles.screen} ${styles.unsupportedScreen}`}>
+        {unsupportedImageUrl && (
+          <img
+            className={styles.unsupportedImage}
+            src={unsupportedImageUrl}
+            alt="안전모를 쓰고 X 표시를 든 카피바라"
+          />
+        )}
+        <h2 className={styles.unsupportedTitle}>아직 지원하지 않아요</h2>
+        <p className={styles.lead}>
+          이 지원서 페이지는 아직 자동 기입을 지원하지 않아요. 수동 복사는 계속
+          사용할 수 있어요.
+        </p>
         {!exitInToolbar && (
           <button className={styles.primary} type="button" onClick={onExit}>
             수동 복사로 돌아가기

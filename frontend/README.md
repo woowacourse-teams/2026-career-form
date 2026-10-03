@@ -64,6 +64,23 @@ npm run zip
 
 프로필은 외부 서버로 전송하지 않고 `chrome.storage.local`에 저장합니다. 별도 암호화와 잠금은 없으므로 같은 Chrome 프로필이나 기기에 접근할 수 있는 사람에게 값이 보일 수 있습니다.
 
+## 선택적 이용 계측
+
+`VITE_POSTHOG_KEY`를 지정한 빌드에서만 PostHog 이벤트를 전송합니다. 키가 없거나 공백이면 요청을 보내지 않고 익명 식별자도 만들지 않습니다. `VITE_POSTHOG_HOST` 기본값은 `https://us.i.posthog.com`이며 수집 서버 origin을 지정합니다. 확장과 웹 사이트를 각각 빌드할 때 설정합니다.
+
+```sh
+VITE_POSTHOG_KEY=<project-key> VITE_POSTHOG_HOST=https://us.i.posthog.com npm run build
+VITE_POSTHOG_KEY=<project-key> VITE_POSTHOG_HOST=https://us.i.posthog.com npm run build:site
+```
+
+SDK, 자동 페이지 수집, 세션 녹화, 사용자 프로필 생성은 사용하지 않습니다. 확장은 runtime 메시지를 통해 백그라운드에서 전송하고, 웹 사이트는 직접 전송합니다. 계측용 host permission은 추가하지 않습니다.
+
+전송 항목은 이벤트 이름, `surface`, 무작위 `distinct_id`이며 지원서 안 패널에만 `page_host`(호스트명)를 추가합니다. 프로필 값, 지원서 입력값, 전체 URL, 쿠키와 Referer는 전송하지 않습니다. 익명 식별자 `analyticsDistinctId`는 확장의 `chrome.storage.local` 또는 웹 사이트의 `localStorage`에 저장합니다. 계측 실패는 사용자 작업을 막지 않습니다.
+
+이벤트는 `autofill_start_clicked`, `profile_copy_clicked`, `profile_management_clicked`, `profile_export_clicked`, `profile_import_clicked`, `landing_viewed`, `onboarding_viewed`, `install_link_clicked`입니다. 가져오기는 파일 선택 버튼을 누른 시점이며 실제 가져오기 성공을 뜻하지 않습니다. 복사와 자동 기입도 클릭 수이지 완료 수가 아닙니다.
+
+`site/policies.ts`의 계측 고지는 검토용 초안입니다. 실제 운영 수집 설정, IP 등 접속 정보 처리, 보유 기간과 국외 이전 등은 사람이 검토한 뒤 확정해야 합니다.
+
 ## Web Store 제출 전 준비
 
 1. `npm run zip`으로 `frontend/.output/*-chrome.zip`을 생성합니다.

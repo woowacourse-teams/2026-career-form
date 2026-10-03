@@ -14,6 +14,11 @@ import com.careerform.formanalysis.infrastructure.adapter.ProviderSemanticSaniti
 @Component
 @Conditional(SelectedJev.class)
 public final class JevActionResolver implements ActionResolver {
+    static final String ABSTAIN_CRITERION = "No safe preparation action; search/save/submit/reset/auth/file/selection are not preparation.";
+    static final String ADD_CRITERION = "Explicit add-one-repeatable-entry button with a clear repeat-group relationship.";
+    static String instructions(String id) {
+        return "Classify only actions." + id + ". Use ABSTAIN when evidence or section relationship is ambiguous. Never execute anything.";
+    }
     private final JevClient client;
     public JevActionResolver(JevClient client) { this.client = client; }
     @Override
@@ -25,8 +30,8 @@ public final class JevActionResolver implements ActionResolver {
         request.sections().forEach(section -> aliases.put(section.sectionId(), "section_" + aliases.size()));
         Map<String, Object> sectionObservations = new LinkedHashMap<>();
         Map<String, String> criteria = new LinkedHashMap<>();
-        criteria.put(JevClient.ABSTAIN, "No safe preparation action; search/save/submit/reset/auth/file/selection are not preparation.");
-        criteria.put("ADD", "Explicit add-one-repeatable-entry button with a clear repeat-group relationship.");
+        criteria.put(JevClient.ABSTAIN, ABSTAIN_CRITERION);
+        criteria.put("ADD", ADD_CRITERION);
         for (var section : request.sections()) {
             String alias = aliases.get(section.sectionId());
             sections.put(alias, section.sectionId());
@@ -50,7 +55,7 @@ public final class JevActionResolver implements ActionResolver {
                 action.visibility() == PreparationAnalysisRequest.Visibility.VISIBLE &&
                 !Boolean.TRUE.equals(action.disabled()) && !Boolean.TRUE.equals(action.readonly()) && !Boolean.TRUE.equals(action.inert()))
                 questions.put(id, new JevClient.Choice(
-                    "Classify only actions." + id + ". Use ABSTAIN when evidence or section relationship is ambiguous. Never execute anything.",
+                    instructions(id),
                     criteria));
         });
         var answers = client.choose(Map.of("actions", observations, "sections", sectionObservations), questions);

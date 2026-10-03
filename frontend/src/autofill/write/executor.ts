@@ -12,6 +12,7 @@ import { greetingGpaSafe } from "../adapters/greeting/gpa";
 import { greetingSyntheticDomName } from "../adapters/greeting/collection";
 import { matchesResultValue } from "../workflow/result-value-match";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
+import { executeButtonDropdownWrite } from "./button-dropdown-executor";
 import { skipped, type ApprovedWriteResult } from "./write-result";
 import { debugWriteRun } from "../debug/autofill-debug";
 import {
@@ -275,7 +276,30 @@ export async function executeApprovedWritesAfterPageSettles({
       assertCurrent: () => runCurrent() && !emailSettlementFailed,
       beforeMutation,
       signal,
-      writeOrdinary: (item) => {
+      writeOrdinary: async (item) => {
+        const lookup = registry.lookupField(item.candidateId);
+        if (lookup.status === "ready" && lookup.handle.buttonDropdown)
+          return {
+            result: await executeButtonDropdownWrite({
+              item,
+              registry,
+              assertCurrent: runCurrent,
+              beforeMutation,
+              signal,
+            }),
+            effect: "continue",
+          };
+        if (item.analysis?.writePlan?.command === "SELECT_DATE") {
+          const { effect, ...result } = await executeApprovedCalendarWrite({
+            item,
+            registry,
+            interactionDecisionProvider,
+            assertCurrent: runCurrent,
+            beforeMutation,
+            signal,
+          });
+          return { result, effect };
+        }
         const result = executeApprovedWrites({
           items: [item],
           approvedCandidateIds,
@@ -288,7 +312,7 @@ export async function executeApprovedWritesAfterPageSettles({
           item.analysis.valueBinding.profileFieldKey === "contact.contact.email"
         )
           pendingEmail = { item, result };
-        return result;
+        return { result, effect: "continue" };
       },
       beforeWrite: async (item) => {
         // Finish email before a subsequent driver can blur or Escape its popup.
@@ -359,6 +383,7 @@ export async function executeApprovedWritesAfterPageSettles({
         );
       if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
         return settledSearchSelectionResult(item, registry, result);
+      if (item.analysis?.writePlan?.command === "SELECT_DATE") return result;
       if (
         companyId === "greeting" &&
         item.analysis?.mappingStatus === "ADAPTER_VERIFIED"

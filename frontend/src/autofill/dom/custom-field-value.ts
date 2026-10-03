@@ -1,9 +1,11 @@
 import type { FieldCandidateHandle } from "./types";
+import { dropdownValue } from "./button-dropdown";
 
 /** Reads only custom controls already bound by the collector. */
 export function customFieldValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
+  if (handle.buttonDropdown) return dropdownValue(handle.buttonDropdown);
   const element = handle.customElements?.[0];
   if (!element) return undefined;
   if (

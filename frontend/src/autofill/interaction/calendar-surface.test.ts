@@ -37,6 +37,33 @@ describe("calendar surface ownership", () => {
     expect(openings).toBe(0);
   });
 
+  it("proves a jQuery monthpicker from its bound target, adjacent trigger, and shared root", () => {
+    document.body.innerHTML = `<div class="ip-calbox"><label for="schlstaYm0" class="blind">입학년월</label><input type="text" id="schlstaYm0" class="input_text cal monthpicker hasDatepicker" maxlength="7" readonly><img class="ui-datepicker-trigger" alt="달력 열기"></div><div id="ui-datepicker-div" class="ui-datepicker ui-widget" style="display:none"></div>`;
+    const target = document.querySelector<HTMLInputElement>("#schlstaYm0")!;
+
+    expect(calendarSurfaceFor(target)).toMatchObject({
+      target,
+      opener: document.querySelector(".ui-datepicker-trigger"),
+      popup: document.querySelector("#ui-datepicker-div"),
+      rendering: "deferred-jquery",
+    });
+  });
+
+  it("rejects ambiguous monthpicker ownership across multiple fields", () => {
+    document.body.innerHTML = `<div class="ip-calbox">
+      <input type="text" id="start" class="monthpicker hasDatepicker" readonly>
+      <img class="ui-datepicker-trigger" alt="달력 열기">
+      <input type="text" id="end" class="monthpicker hasDatepicker" readonly>
+    </div><div id="ui-datepicker-div" class="ui-datepicker" style="display:none"></div>`;
+
+    expect(
+      calendarSurfaceFor(document.querySelector<HTMLInputElement>("#start")!),
+    ).toBeUndefined();
+    expect(
+      calendarSurfaceFor(document.querySelector<HTMLInputElement>("#end")!),
+    ).toBeUndefined();
+  });
+
   it("requires a complete unique month set", () => {
     document.body.innerHTML = `<section><input readonly type="text"><button type="button">월 선택</button><div role="dialog"><button>2026</button><button>1월</button></div></section>`;
     expect(

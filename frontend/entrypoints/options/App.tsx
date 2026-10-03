@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import type { TrackEvent } from "../../src/analytics/events";
+import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import type { LayoutPreference } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
 import { ProfileWorkspace } from "./ProfileWorkspace";
@@ -12,6 +14,7 @@ import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
 import styles from "./App.module.css";
 
 interface AppProps {
+  track?: TrackEvent;
   repository?: ProfileRepository;
   confirmDelete?: (message: string) => boolean;
   confirmImport?: (message: string) => boolean;
@@ -37,6 +40,7 @@ function downloadProfile(fileName: string, contents: string) {
 }
 
 export function App({
+  track = trackExtensionEvent,
   repository: injectedRepository,
   confirmDelete = (message) => globalThis.confirm(message),
   confirmImport = (message) => globalThis.confirm(message),
@@ -78,6 +82,7 @@ export function App({
       .catch(() => setLayoutSaveFailed(true));
   };
   const exportProfile = () => {
+    track("profile_export_clicked", { surface: "options" });
     injectedDownloadProfile(
       "career-form-profile-v1.json",
       serializeProfileExport(editor.profile),
@@ -140,7 +145,13 @@ export function App({
             <button type="button" onClick={exportProfile}>
               내보내기
             </button>
-            <button type="button" onClick={() => importInput.current?.click()}>
+            <button
+              type="button"
+              onClick={() => {
+                track("profile_import_clicked", { surface: "options" });
+                importInput.current?.click();
+              }}
+            >
               가져오기
             </button>
             <input

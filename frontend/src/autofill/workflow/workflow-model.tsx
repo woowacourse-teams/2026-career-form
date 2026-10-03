@@ -38,6 +38,7 @@ export type Stage =
   | "preparation-review"
   | "review"
   | "result"
+  | "unsupported"
   | "exception";
 
 export interface PreparationItem {
@@ -127,6 +128,7 @@ export interface WorkflowProps {
   apiClient: AnalysisApiClient;
   repository: Pick<ProfileRepository, "load">;
   pageDocument: Document;
+  unsupportedImageUrl?: string;
   onExit(): void;
 }
 

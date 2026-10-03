@@ -32,9 +32,19 @@ spring:
       enabled: true
 
 career-form:
+  tracing:
+    langsmith:
+      enabled: ${CAREER_FORM_LANGSMITH_ENABLED:false}
+      api-key: ${LANGSMITH_API_KEY:}
+      endpoint: ${LANGSMITH_ENDPOINT:https://api.smith.langchain.com}
+      project: ${LANGSMITH_PROJECT:career-form}
+      timeout-ms: ${CAREER_FORM_LANGSMITH_TIMEOUT_MS:1000}
+      capacity: ${CAREER_FORM_LANGSMITH_CAPACITY:64}
   analysis:
     enabled: ${CAREER_FORM_ANALYSIS_ENABLED:}
     provider: ${CAREER_FORM_ANALYSIS_PROVIDER:openai}
+    search-provider: ${CAREER_FORM_SEARCH_PROVIDER:}
+    calendar-provider: ${CAREER_FORM_CALENDAR_PROVIDER:jev}
     jev:
       api-key: ${TYPESAFE_API_KEY:}
       model: ${CAREER_FORM_JEV_MODEL:jev-latest}

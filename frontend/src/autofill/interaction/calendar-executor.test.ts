@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { executeCalendarSelection } from "./calendar-executor";
+import {
+  createCalendarApproval,
+  revalidateCalendarApproval,
+} from "../review/calendar-approval";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -71,6 +75,79 @@ describe("calendar executor", () => {
 
     expect(clicked).toEqual(new Set(["2026", "3"]));
     expect(popup.hidden).toBe(true);
+  });
+
+  it("selects two jQuery monthpickers through their own triggers and shared deferred popup", async () => {
+    document.body.innerHTML = `<div class="ip-calbox"><label for="start">입학년월</label><input id="start" class="monthpicker hasDatepicker" type="text" maxlength="7" readonly><img class="ui-datepicker-trigger" alt="달력 열기"></div><div class="ip-calbox"><label for="end">졸업년월</label><input id="end" class="monthpicker hasDatepicker" type="text" maxlength="7" readonly><img class="ui-datepicker-trigger" alt="달력 열기"></div><div id="ui-datepicker-div" class="ui-datepicker ui-widget" style="display: none"></div>`;
+    const popup = document.querySelector<HTMLElement>("#ui-datepicker-div")!;
+    let active: HTMLInputElement | undefined;
+    let selectedYear = 2026;
+    let selectedMonth = 0;
+    const render = () => {
+      popup.innerHTML = `<select class="ui-datepicker-month">${Array.from({ length: 12 }, (_, index) => `<option value="${index}"${index === selectedMonth ? " selected" : ""}>${index + 1}월</option>`).join("")}</select><select class="ui-datepicker-year"><option value="2025">2025</option><option value="2026"${selectedYear === 2026 ? " selected" : ""}>2026</option><option value="2027"${selectedYear === 2027 ? " selected" : ""}>2027</option></select><table class="ui-datepicker-calendar" hidden></table><div class="ui-datepicker-buttonpane"><button type="button" class="ui-datepicker-close" data-handler="hide">닫기</button></div>`;
+      popup
+        .querySelector<HTMLSelectElement>(".ui-datepicker-year")!
+        .addEventListener("change", (event) => {
+          selectedYear = Number((event.target as HTMLSelectElement).value);
+          render();
+        });
+      popup
+        .querySelector<HTMLSelectElement>(".ui-datepicker-month")!
+        .addEventListener("change", (event) => {
+          selectedMonth = Number((event.target as HTMLSelectElement).value);
+          render();
+        });
+      popup
+        .querySelector<HTMLButtonElement>(".ui-datepicker-close")!
+        .addEventListener("click", () => {
+          active!.value = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
+          active!.dispatchEvent(new Event("change", { bubbles: true }));
+          popup.classList.remove("ui-monthpicker");
+          popup.style.display = "none";
+        });
+    };
+    document
+      .querySelectorAll<HTMLElement>(".ip-calbox")
+      .forEach((container) => {
+        const target = container.querySelector<HTMLInputElement>("input")!;
+        container
+          .querySelector<HTMLElement>(".ui-datepicker-trigger")!
+          .addEventListener("click", () => {
+            active = target;
+            selectedYear = 2026;
+            selectedMonth = 0;
+            popup.classList.add("ui-monthpicker");
+            popup.style.display = "block";
+            render();
+          });
+      });
+    const start = document.querySelector<HTMLInputElement>("#start")!;
+    const end = document.querySelector<HTMLInputElement>("#end")!;
+    const startApproval = createCalendarApproval({
+      target: start,
+      originalDate: "2026-03-15",
+      targetYearMonth: "2026-03",
+    });
+    const endApproval = createCalendarApproval({
+      target: end,
+      originalDate: "2027-04-15",
+      targetYearMonth: "2027-04",
+    });
+
+    await expect(
+      executeCalendarSelection({ target: start, targetYearMonth: "2026-03" }),
+    ).resolves.toEqual({ status: "completed", targetYearMonth: "2026-03" });
+    await expect(
+      executeCalendarSelection({ target: end, targetYearMonth: "2027-04" }),
+    ).resolves.toEqual({ status: "completed", targetYearMonth: "2027-04" });
+    expect(start.value).toBe("2026-03");
+    expect(end.value).toBe("2027-04");
+    expect(revalidateCalendarApproval(startApproval)).toEqual({
+      status: "valid",
+    });
+    expect(revalidateCalendarApproval(endApproval)).toEqual({
+      status: "valid",
+    });
   });
 
   it("safely stops when target month is absent or another input changes", async () => {

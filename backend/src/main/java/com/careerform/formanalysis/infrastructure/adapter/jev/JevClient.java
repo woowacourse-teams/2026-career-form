@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
@@ -20,14 +22,16 @@ import tools.jackson.databind.MapperFeature;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.careerform.formanalysis.infrastructure.SelectedJev;
+import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.monitoring.ExternalCallMetrics;
+import com.careerform.monitoring.tracing.LangSmithTraceRecorder;
 
 @Component
-@Conditional(SelectedJev.class)
+@Conditional(InteractionProviderConditions.JevClient.class)
 public final class JevClient {
     public static final String ABSTAIN = "ABSTAIN";
+    private static final Logger log = LoggerFactory.getLogger(JevClient.class);
     private final HttpClient http;
     private final JsonMapper mapper;
     private final String apiKey;
@@ -36,11 +40,24 @@ public final class JevClient {
     private final double minConfidence;
     private final boolean dataPolicyReviewed;
     private final ExternalCallMetrics metrics;
+    private final LangSmithTraceRecorder traces;
+    private final boolean tracingEnabled;
 
     public JevClient(
         String apiKey, String model, int timeoutMs, double minConfidence, boolean dataPolicyReviewed
     ) {
-        this(apiKey, model, timeoutMs, minConfidence, dataPolicyReviewed, (ExternalCallMetrics) null);
+        this(apiKey, model, timeoutMs, minConfidence, dataPolicyReviewed, (ExternalCallMetrics) null, null, false);
+    }
+
+    public JevClient(
+        @Value("${career-form.analysis.jev.api-key:}") String apiKey,
+        @Value("${career-form.analysis.jev.model:jev-latest}") String model,
+        @Value("${career-form.analysis.jev.timeout-ms:8000}") int timeoutMs,
+        @Value("${career-form.analysis.jev.min-confidence:0.8}") double minConfidence,
+        @Value("${career-form.analysis.jev.data-policy-reviewed:false}") boolean dataPolicyReviewed,
+        ObjectProvider<ExternalCallMetrics> metrics
+    ) {
+        this(apiKey, model, timeoutMs, minConfidence, dataPolicyReviewed, metrics.getIfAvailable(), null, false);
     }
 
     @Autowired
@@ -50,14 +67,17 @@ public final class JevClient {
         @Value("${career-form.analysis.jev.timeout-ms:8000}") int timeoutMs,
         @Value("${career-form.analysis.jev.min-confidence:0.8}") double minConfidence,
         @Value("${career-form.analysis.jev.data-policy-reviewed:false}") boolean dataPolicyReviewed,
-        ObjectProvider<ExternalCallMetrics> metrics
+        ObjectProvider<ExternalCallMetrics> metrics,
+        ObjectProvider<LangSmithTraceRecorder> traces,
+        @Value("${career-form.tracing.langsmith.enabled:false}") boolean tracingEnabled
     ) {
-        this(apiKey, model, timeoutMs, minConfidence, dataPolicyReviewed, metrics.getIfAvailable());
+        this(apiKey, model, timeoutMs, minConfidence, dataPolicyReviewed,
+            metrics.getIfAvailable(), traces.getIfAvailable(), tracingEnabled);
     }
 
-    private JevClient(
+    JevClient(
         String apiKey, String model, int timeoutMs, double minConfidence, boolean dataPolicyReviewed,
-        ExternalCallMetrics metrics
+        ExternalCallMetrics metrics, LangSmithTraceRecorder traces, boolean tracingEnabled
     ) {
         if (apiKey.isBlank() || model.isBlank() || timeoutMs < 1 || timeoutMs > 8000 ||
             !Double.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)
@@ -68,6 +88,8 @@ public final class JevClient {
         this.minConfidence = minConfidence;
         this.dataPolicyReviewed = dataPolicyReviewed;
         this.metrics = metrics;
+        this.traces = traces;
+        this.tracingEnabled = tracingEnabled;
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(Math.min(timeoutMs, 4000)))
             .followRedirects(HttpClient.Redirect.NEVER).build();
         this.mapper = JsonMapper.builder(JsonFactory.builder()
@@ -83,6 +105,17 @@ public final class JevClient {
             questions.values().stream().anyMatch(q -> q.criteria().size() > 255 || !q.criteria().containsKey(ABSTAIN)))
             throw unavailable();
         long startedAt = System.nanoTime();
+        JevTraceProjection projection = null;
+        LangSmithTraceRecorder.Trace trace = null;
+        if (tracingEnabled && traces != null) {
+            try {
+                projection = JevTraceProjection.create(state, questions);
+                trace = traces.begin("jev", projection.stage(), traceModel(), projection.inputs());
+            } catch (RuntimeException exception) {
+                log.warn("JEV_TRACE_DROPPED reason=input_projection");
+            }
+        }
+        Integer httpStatus = null;
         try {
             String json = mapper.writeValueAsString(new Request(state, model, questions));
             if (json.getBytes(StandardCharsets.UTF_8).length > 2_000_000) throw unavailable();
@@ -97,6 +130,7 @@ public final class JevClient {
             } finally {
                 if (!pending.isDone()) pending.cancel(true);
             }
+            httpStatus = response.statusCode();
             if (response.statusCode() != 200 || response.body().length() > 2_000_000) throw unavailable();
             Response output = mapper.readValue(response.body(), Response.class);
             if (output.model() == null || output.model().isBlank() || output.answers() == null ||
@@ -120,12 +154,46 @@ public final class JevClient {
                     .allMatch(option -> option.getValue() < probability);
                 selected.put(entry.getKey(), uniqueWinner && answer.confidence() >= minConfidence
                     ? answer.choice() : ABSTAIN);
+                log.info("[JEV] 분류 결과 question={} choice={} confidence={} selected={} probabilities={}", entry.getKey(),
+                    answer.choice(), answer.confidence(), selected.get(entry.getKey()), answer.probabilities());
             }
+            completeTrace(trace, projection, output, selected, httpStatus, null);
             recordMetrics(startedAt, null);
             return Map.copyOf(selected);
         } catch (RuntimeException exception) {
+            completeTrace(trace, projection, null, Map.of(), httpStatus, exception);
             recordMetrics(startedAt, exception);
             throw unavailable();
+        }
+    }
+
+    private String traceModel() {
+        return model;
+    }
+
+    private void completeTrace(LangSmithTraceRecorder.Trace trace, JevTraceProjection projection,
+                               Response output, Map<String, String> selected, Integer httpStatus,
+                               RuntimeException failure) {
+        if (trace == null) return;
+        try {
+            if (output == null) {
+                String diagnostic = ExternalCallMetrics.isTimeout(failure) ? "TIMEOUT"
+                    : httpStatus == null ? "CONNECTION_NETWORK"
+                    : httpStatus != 200 ? "HTTP_ERROR" : "INVALID_RESPONSE_DATA";
+                traces.complete(trace, Map.of("outcome", "UNAVAILABLE"), Map.of(), diagnostic, httpStatus);
+                return;
+            }
+            var answers = new java.util.ArrayList<Map<String, Object>>();
+            output.answers().forEach((id, answer) -> answers.add(projection.answer(id, answer.choice(),
+                answer.confidence(), answer.probabilities(), selected.get(id),
+                projection.conflicts(id, selected.get(id)), minConfidence)));
+            traces.complete(trace, Map.of("answers", java.util.List.copyOf(answers),
+                    "model", model.equals(output.model()) ? traceModel() : "UNRECOGNIZED_MODEL"),
+                Map.of("input_tokens", output.usage().inputTokens(), "output_tokens", output.usage().outputTokens()),
+                null, httpStatus);
+        } catch (RuntimeException exception) {
+            traces.complete(trace, Map.of("projection", "OUTPUT_UNAVAILABLE"), Map.of(), null, httpStatus);
+            log.warn("JEV_TRACE_DROPPED reason=output_projection");
         }
     }
 

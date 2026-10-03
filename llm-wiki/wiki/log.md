@@ -1,5 +1,21 @@
 # Wiki Log
 
+## [2026-10-02] ingest | CF-146 범용 기입 활성 여부 배포 설정
+
+- Disposition: Supersedes CF-62 cicd-setup topic
+- Approval-Digest: 81b34972abbbdbfd75a2094723621262d17ccb2def411ee03370eb59bc11509c
+- Source-Revision: af9dc2f8429c0b13eebb3d6ccccf3c2858fe4dc4
+- Raw: llm-wiki/raw/issues/CF-146/manifest.md
+- Topics: 1
+
+## [2026-10-02] ingest | CF-147 미지원 안내와 선택적 이용 계측
+
+- Disposition: New
+- Approval-Digest: 6e01ddd1fe145b97cfe572a34fa01dac1efb3844d81c27ffca19eb3354086e65
+- Source-Revision: 02cae24217a2ab02e3b65b5d32492b8a8c3f3421
+- Raw: llm-wiki/raw/issues/CF-147/manifest.md
+- Topics: 2
+
 ## [2026-09-11] ingest | CF-88 검증 이후 코드 이해 체크포인트
 
 - Disposition: Supersedes CF-41 issue-development-workflow topic
@@ -337,8 +353,44 @@
 - 승인된 후보 6을 [CF-129 bundle](../raw/issues/CF-129/manifest.md)에 추가하고 [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 반복 행 경계를 갱신했다.
 - 합성 자동 테스트와 읽기 전용 구조 관측만 근거로 했고 실제 입력값은 수집하지 않았다.
 
+## [2026-10-01] ingest | CF-117 공급자 중립 검색 결과 구조 해석
+
+- Approval-Digest: 10e27f3d552b78401bed61525d7005d7e3eb9be7a07dba87e0baf9addef7cd11
+- 승인된 후보 4개를 [CF-117 bundle](../raw/issues/CF-117/manifest.md)에 기록하고 [범용 자동 기입 검색 표면](topics/generic-autofill-search.md)의 Current를 갱신했다.
+- 합성 자동 테스트와 계약 테스트 근거만 기록했고 실제 지원서 입력값과 수동 검증 결과는 수집하지 않았다.
 ## [2026-09-30] ingest | CF-131 공용 모니터링
 
 - Approval-Digest: c4372b8759c34da242143a1bda83d89131652f1d19a6bb4c4f702424ae12c02b
 - 승인한 후보 5개를 [CF-131 bundle](../raw/issues/CF-131/manifest.md)과 [공용 모니터링 시스템](topics/monitoring-system.md)에 기록했다.
 - 로컬 합성 검증과 실제 AWS 배포, Discord 수신 및 장기 보존 미검증을 구분하고 기존 배포 Runbook 근거는 유지했다.
+
+## [2026-10-01] ingest | CF-138 분할 이메일 보호와 공급자 호출 추적
+
+- Approval-Digest: 251cd740a1cb88bba6e71f390215f232002ae888c28ed77a111ad85ee5f8f50a
+- Source-Revision: fac9abf8a0019f508bcdb0a833e671a436d34601
+- 승인한 후보 4개와 ADR·운영 안내를 [CF-138 bundle](../raw/issues/CF-138/manifest.md)에 기록했다.
+- [범용 분할 이메일 보호](topics/generic-split-email-safety.md)와 [Jev·OpenAI 호출 추적](topics/provider-call-tracing.md)을 새 topic으로 연결했다.
+- 합성 실제 패널 및 합성 입력의 실제 공급자·LangSmith 검증 범위를 기록하며 실제 지원 정보, 계정, 세션과 시크릿은 수집하지 않았다.
+
+## [2026-10-01] ingest | CF-140 범용 입력 결과 완료 판정
+
+- Approval-Digest: f613f99c662b07a118bee6e68460f9417d62a0e98246c1c318e9938bd2d78892
+- Source-Revision: b63ee0327d26cd7984f9211c7f583c78eee19ef6
+- 승인한 두 후보를 [CF-140 bundle](../raw/issues/CF-140/manifest.md)에 기록했다.
+- [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md)에 범용 쓰기의 실제 값 기반 완료 기준과 result-model·progress verifier의 연계를 추가했다. 기존 CF-90 raw를 보존했다.
+- 합성 실제 workflow의 정상·불일치·읽기 불가 결과와 데스크톱·모바일 검증 범위를 기록했다. 전체 커버리지의 별도 통합 테스트 실패는 통과로 기록하지 않았다.
+
+## [2026-10-02] ingest | CF-142 범용 버튼 드롭다운
+
+- Approval-Digest: b1d28af146b567a09987ebfeab7e0ee823bc4be8723710f1f19355b77ac2c7e0
+- Source-Revision: ca54009aa971b283f3149710361dc57c666e67e8
+- 승인한 두 후보를 [CF-142 bundle](../raw/issues/CF-142/manifest.md)에 기록했다.
+- [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md)을 추가하고 [패널 흐름](topics/autofill-panel-workflow.md)에 값 보존·재승인 후 재검증·실제 반영 판정을 연결했다. 기존 raw는 보존했다.
+- 실사이트 DOM 구조 조사와 합성 실제 Chromium의 4개 수집·선택을 구분한다. 실제 지원 정보와 세션은 기록하지 않고 전체 기존 실패·환경 제한도 전체 통과로 표현하지 않는다.
+
+## [2026-10-02] ingest | CF-144 호스트 루트 디스크 알림
+
+- Approval-Digest: 7e3be48100b9de605c9003b848f9799f83f06d952fabc568c025ee7996026056
+- Source-Revision: b8d419b74e081f1d7b248e477e58287cf1819b80
+- 승인한 두 후보를 [CF-144 bundle](../raw/issues/CF-144/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 CF-131 raw는 보존했다.
+- 호스트별 90%, 5분 지속 조건과 KeepLast의 상태 유지 및 관측 경계를 기록했다. 합성 Grafana와 mock receiver 검증을 실제 서버 반영이나 Discord 수신으로 해석하지 않는다.

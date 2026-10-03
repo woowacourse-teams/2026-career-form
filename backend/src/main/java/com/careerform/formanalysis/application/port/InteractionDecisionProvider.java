@@ -42,8 +42,23 @@ public interface InteractionDecisionProvider {
         boolean inert,
         RelationToTarget relationToTarget,
         List<SemanticLabel> labels,
-        boolean required
+        boolean required,
+        com.careerform.formanalysis.dto.InteractionDecisionRequest.ResultStructure structure,
+        com.careerform.formanalysis.dto.InteractionDecisionRequest.CalendarStructure calendarStructure
     ) {
+        public Candidate(String candidateId, Element element, Control control, Visibility visibility,
+            boolean disabled, boolean readonly, boolean inert, RelationToTarget relationToTarget,
+            List<SemanticLabel> labels, boolean required) {
+            this(candidateId, element, control, visibility, disabled, readonly, inert,
+                relationToTarget, labels, required, null, null);
+        }
+        public Candidate(String candidateId, Element element, Control control, Visibility visibility,
+            boolean disabled, boolean readonly, boolean inert, RelationToTarget relationToTarget,
+            List<SemanticLabel> labels, boolean required,
+            com.careerform.formanalysis.dto.InteractionDecisionRequest.ResultStructure structure) {
+            this(candidateId, element, control, visibility, disabled, readonly, inert,
+                relationToTarget, labels, required, structure, null);
+        }
         public Candidate {
             labels = List.copyOf(labels);
         }

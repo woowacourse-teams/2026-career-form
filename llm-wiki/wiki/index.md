@@ -36,7 +36,10 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업·전체 복원 계약 | 2026-09-07 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
 | [확장 프로그램 프로필·지원서 패널 UI](topics/extension-ui.md) | 프로필·패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
-| [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행·목록 복귀·스피너와 접근성 경계 | 2026-09-12 |
+| [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행·범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
+| [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |
+| [선택적 이용 계측](topics/usage-analytics.md) | 키 없는 비활성화와 PostHog 개인정보 경계 | 2026-10-02 |
+| [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md) | 입력 범위·목록 소유 관계·옵션 분석 전달과 실행 직전 재검증 | 2026-10-02 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
 | [Issue 개발 흐름](topics/issue-development-workflow.md) | Issue, 체크포인트와 사람 승인 경계 | 2026-08-22 |
@@ -45,7 +48,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [확장 프로그램 설계](topics/extension-design.md) | UI 흐름과 검토 자산 | 2026-08-22 |
 | [CI/CD 설정](topics/cicd-setup.md) | 배포 환경 준비 계약 | 2026-08-22 |
 | [배포 Runbook](topics/deployment-runbook.md) | 배포, hotfix와 rollback 절차 | 2026-08-22 |
-| [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림과 검증 경계 | 2026-09-30 |
+| [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [기존 구현 계획](topics/implementation-plans.md) | 계획 이력과 신규 저장 경계 | 2026-08-22 |
 | [페이지 분석 조사](topics/page-analysis-research.md) | 회사 페이지와 DOM 분석 근거 | 2026-08-22 |
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
@@ -60,9 +63,11 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [지원서 분석 API](topics/application-form-analysis-api.md) | schema v2와 검색 역할, OpenAI/Jev 단일 공급자 계약 | 2026-09-23 |
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비·필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
+| [Jev·OpenAI 호출 추적](topics/provider-call-tracing.md) | LangSmith Java SDK, 비식별 투영과 관측 실패 격리 | 2026-10-01 |
+| [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증 | 2026-10-01 |
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 실사이트와 fixture 분리 평가, revision별 기준선 이력과 비교 조건 | 2026-09-28 |
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 평가 에이전트의 전체 필드 분모, 비민감 입력, DOM 검증과 영속 보고 경계 | 2026-09-28 |
-| [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행·검색·후속 재검토, 혼합 학력 행·role 없는 레이어 검색과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-09-29 |
+| [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행·검색·후속 재검토, 혼합 학력 행·role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환·로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월·연월일 달력 실행의 안전 경계 | 2026-09-28 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |

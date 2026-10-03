@@ -5,12 +5,16 @@ import {
   calendarYearTriggers,
 } from "./calendar-controls";
 import { calendarSurfaceFor, openCalendarPopups } from "./calendar-surface";
-import { resolveCalendarRole } from "./calendar-role-resolver";
+import { createCalendarRoleResolver } from "./calendar-role-resolver";
+import { calendarUnitEvidence } from "./calendar-unit";
+import type { CalendarRoleEvidence } from "./calendar-structure";
+import { selectDeferredCalendarMonth } from "./calendar-month-widget";
+import { displayedDayCalendarRoots, isDisplayed } from "./day-calendar-surface";
+export { CALENDAR_MAX_ROLE_REQUESTS } from "../api/calendar-role-contract";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 
 export const CALENDAR_FIELD_TIMEOUT_MS = 15_000;
 export const CALENDAR_MAX_ACTIVATIONS = 8;
-export const CALENDAR_MAX_ROLE_REQUESTS = 2;
 
 export type CalendarExecutionResult =
   | { status: "completed"; targetYearMonth: string }
@@ -24,6 +28,7 @@ export interface ExecuteCalendarSelectionArgs {
   interactionDecisionProvider?: InteractionDecisionProvider;
   canonicalFieldKey?: string;
   signal?: AbortSignal;
+  assertCurrent?: () => boolean;
 }
 
 function targetParts(
@@ -50,25 +55,61 @@ export async function executeCalendarSelection(
       status: "needs-verification",
       reason: "unverified_calendar_surface",
     };
+  const initialParent = args.target.parentElement;
+  const targetAttributes = [
+    "id",
+    "name",
+    "placeholder",
+    "maxlength",
+    "aria-labelledby",
+    "aria-label",
+  ] as const;
+  const targetSnapshot = targetAttributes.map((name) =>
+    args.target.getAttribute(name),
+  );
+  const resolveCalendarRole = createCalendarRoleResolver();
+  const unit = calendarUnitEvidence(args.target);
+  if (unit?.unit === "conflict" || unit?.unit === "day")
+    return { status: "needs-verification", reason: "calendar_unit_conflict" };
+  const evidence: CalendarRoleEvidence = {
+    ...(unit && unit.unitEvidence !== "unconfirmed"
+      ? unit
+      : { unit: "month", unitEvidence: "month-options" }),
+    ownership:
+      surface.rendering === "deferred-jquery"
+        ? "adjacent-trigger"
+        : surface.opener.hasAttribute("aria-controls")
+          ? "linked-popup"
+          : "single-field",
+  };
   const read = args.readTargetValue ?? ((target) => target.value);
   const targetIsStable = () =>
     args.target.isConnected &&
     args.target.ownerDocument.contains(args.target) &&
     args.target.type === "text" &&
     args.target.readOnly &&
-    !args.target.disabled;
+    !args.target.disabled &&
+    isDisplayed(args.target) &&
+    args.target.parentElement === initialParent &&
+    targetAttributes.every(
+      (name, index) => args.target.getAttribute(name) === targetSnapshot[index],
+    ) &&
+    args.assertCurrent?.() !== false;
   if (!targetIsStable())
     return { status: "needs-verification", reason: "stale_target" };
   if (read(args.target))
     return { status: "needs-verification", reason: "existing_value" };
-  if (openCalendarPopups(args.target.ownerDocument).length)
+  if (
+    openCalendarPopups(args.target.ownerDocument).length ||
+    displayedDayCalendarRoots(args.target.ownerDocument).length
+  )
     return { status: "needs-verification", reason: "calendar_already_open" };
   const controls = () =>
     Array.from(
       args.target.ownerDocument.querySelectorAll<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >("input, select, textarea"),
-    );
+    ).filter((control) => !surface.popup.contains(control));
   const stateOf = (
     control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   ) => ({
@@ -82,12 +123,34 @@ export async function executeCalendarSelection(
   const before = new Map(
     controls().map((control) => [control, stateOf(control)]),
   );
+  const othersUnchanged = () =>
+    controls().length === before.size &&
+    controls().every((control) => {
+      const state = before.get(control);
+      return (
+        state !== undefined &&
+        (control === args.target ||
+          (stateOf(control).value === state.value &&
+            stateOf(control).checked === state.checked))
+      );
+    });
+  const stableSurface = () => {
+    const current = calendarSurfaceFor(args.target);
+    return (
+      targetIsStable() &&
+      othersUnchanged() &&
+      current?.opener === surface.opener &&
+      current.popup === surface.popup
+    );
+  };
   let activations = 0;
   const activate = (element: HTMLElement): boolean => {
     if (
       args.signal?.aborted ||
       !targetIsStable() ||
       !element.isConnected ||
+      !isDisplayed(element) ||
+      !othersUnchanged() ||
       (element instanceof HTMLButtonElement &&
         element.form !== null &&
         element.type !== "button") ||
@@ -98,9 +161,44 @@ export async function executeCalendarSelection(
     element.click();
     return targetIsStable();
   };
+  const verifyOutcome = async (): Promise<CalendarExecutionResult> => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
+    if (args.signal?.aborted)
+      return { status: "needs-verification", reason: "calendar_aborted" };
+    if (!targetIsStable())
+      return { status: "needs-verification", reason: "stale_target" };
+    if (
+      controls().length !== before.size ||
+      Array.from(before).some(
+        ([control, state]) =>
+          control !== args.target &&
+          (!control.isConnected ||
+            stateOf(control).value !== state.value ||
+            stateOf(control).checked !== state.checked),
+      )
+    )
+      return { status: "needs-verification", reason: "other_input_changed" };
+    if (read(args.target) !== args.targetYearMonth)
+      return {
+        status: "needs-verification",
+        reason: "target_value_not_retained",
+      };
+    if (
+      surface.popup.isConnected &&
+      openCalendarPopups(args.target.ownerDocument).includes(surface.popup)
+    )
+      return { status: "needs-verification", reason: "popup_not_closed" };
+    return { status: "completed", targetYearMonth: args.targetYearMonth };
+  };
   const deadline = started + CALENDAR_FIELD_TIMEOUT_MS;
   const opener = await resolveCalendarRole({
     role: "CALENDAR_OPENER",
+    evidence,
+    revalidate: () =>
+      stableSurface() &&
+      read(args.target) === "" &&
+      openCalendarPopups(args.target.ownerDocument).length === 0 &&
+      displayedDayCalendarRoots(args.target.ownerDocument).length === 0,
     candidates: [{ candidateId: "calendar-opener-1", element: surface.opener }],
     provider: args.interactionDecisionProvider,
     canonicalFieldKey: args.canonicalFieldKey ?? "calendar-month",
@@ -135,6 +233,44 @@ export async function executeCalendarSelection(
       status: "needs-verification",
       reason: "multiple_calendar_popups_open",
     };
+  if (surface.rendering === "deferred-jquery") {
+    const issue = await selectDeferredCalendarMonth({
+      surface,
+      year: parts.year,
+      month: parts.month,
+      evidence,
+      resolveRole: resolveCalendarRole,
+      provider: args.interactionDecisionProvider,
+      canonicalFieldKey: args.canonicalFieldKey ?? "calendar-month",
+      deadline,
+      now: args.now,
+      signal: args.signal,
+      stable: () =>
+        stableSurface() &&
+        read(args.target) === "" &&
+        openCalendarPopups(args.target.ownerDocument).length === 1 &&
+        isDisplayed(surface.popup),
+      activate,
+      change: (select, value) => {
+        if (
+          args.signal?.aborted ||
+          !stableSurface() ||
+          !surface.popup.contains(select) ||
+          !isDisplayed(select) ||
+          select.disabled ||
+          ++activations > CALENDAR_MAX_ACTIVATIONS ||
+          (args.now ?? Date.now)() >= deadline
+        )
+          return false;
+        select.value = value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        return targetIsStable();
+      },
+    });
+    return issue
+      ? { status: "needs-verification", reason: issue }
+      : verifyOutcome();
+  }
   // Reserve the second role request for Apply if this picker needs it.
   const reserveApplyRole = calendarApplyControls(surface.popup).length === 1;
   const triggerCandidates = calendarYearTriggers(surface.popup).map(
@@ -149,6 +285,11 @@ export async function executeCalendarSelection(
       : undefined
     : await resolveCalendarRole({
         role: "CALENDAR_YEAR_TRIGGER",
+        evidence,
+        revalidate: () =>
+          stableSurface() &&
+          read(args.target) === "" &&
+          isDisplayed(surface.popup),
         candidates: triggerCandidates,
         provider: args.interactionDecisionProvider,
         canonicalFieldKey: args.canonicalFieldKey ?? "calendar-month",
@@ -215,6 +356,12 @@ export async function executeCalendarSelection(
       };
     const selectedApply = await resolveCalendarRole({
       role: "CALENDAR_APPLY",
+      evidence,
+      revalidate: () =>
+        stableSurface() &&
+        (read(args.target) === "" ||
+          read(args.target) === args.targetYearMonth) &&
+        isDisplayed(surface.popup),
       candidates: apply.map((candidate, index) => ({
         ...candidate,
         candidateId: `calendar-apply-${index + 1}`,
@@ -235,31 +382,5 @@ export async function executeCalendarSelection(
             : "stale_target",
       };
   }
-  await new Promise<void>((resolve) => setTimeout(resolve, 25));
-  if (args.signal?.aborted)
-    return { status: "needs-verification", reason: "calendar_aborted" };
-  if (!targetIsStable())
-    return { status: "needs-verification", reason: "stale_target" };
-  if (
-    controls().length !== before.size ||
-    Array.from(before).some(
-      ([control, state]) =>
-        control !== args.target &&
-        (!control.isConnected ||
-          stateOf(control).value !== state.value ||
-          stateOf(control).checked !== state.checked),
-    )
-  )
-    return { status: "needs-verification", reason: "other_input_changed" };
-  if (read(args.target) !== args.targetYearMonth)
-    return {
-      status: "needs-verification",
-      reason: "target_value_not_retained",
-    };
-  if (
-    surface.popup.isConnected &&
-    !surface.popup.matches("[hidden], [aria-hidden='true']")
-  )
-    return { status: "needs-verification", reason: "popup_not_closed" };
-  return { status: "completed", targetYearMonth: args.targetYearMonth };
+  return verifyOutcome();
 }

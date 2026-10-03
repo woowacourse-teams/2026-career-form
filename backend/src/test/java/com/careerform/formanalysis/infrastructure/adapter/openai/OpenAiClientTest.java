@@ -124,8 +124,8 @@ class OpenAiClientTest {
             StrictOutput.class
         );
 
-        assertThat(output).contains("LLM 호출 시작")
-            .contains("LLM 호출 성공")
+        assertThat(output).contains("[LLM:OpenAI] 호출 시작")
+            .contains("[LLM:OpenAI] 호출 성공")
             .doesNotContain("private-system-prompt-marker")
             .doesNotContain("private-input-marker")
             .doesNotContain("private-output-marker");
@@ -146,8 +146,8 @@ class OpenAiClientTest {
         )).isInstanceOf(ResolverException.class)
             .hasMessage(SAFE_FAILURE_MESSAGE)
             .hasMessageNotContaining(privateMarker);
-        assertThat(output).contains("LLM 호출 시작")
-            .contains("LLM 호출 실패")
+        assertThat(output).contains("[LLM:OpenAI] 호출 시작")
+            .contains("[LLM:OpenAI] 호출 실패")
             .doesNotContain(privateMarker);
     }
 

@@ -314,6 +314,14 @@ public final class ProviderSemanticSanitizer {
         return character >= 'a' && character <= 'z';
     }
 
+    /** Checks already projected text without sanitizing it a second time. */
+    public static boolean isSanitized(String value) {
+        if (value == null || value.length() > 512) return false;
+        String[] terms = value.split("; ", -1);
+        return terms.length <= MAX_TERMS && java.util.Arrays.stream(terms).allMatch(term ->
+            PASSTHROUGH_TERMS.contains(term) || TERMS.stream().anyMatch(entry -> entry.canonical().equals(term)));
+    }
+
     public static List<SafeLabel> sanitizeFields(
         List<com.careerform.formanalysis.dto.FieldsAnalysisRequest.SemanticLabel> labels
     ) {

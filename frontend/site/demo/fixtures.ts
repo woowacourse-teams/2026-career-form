@@ -13,50 +13,53 @@ export const exampleFields = [
   ["certificate", "자격증", "certifications.certificate.name"],
   ["acquired", "취득일", "certifications.certificate.acquisitionDate"],
 ] as const;
+export function createDemoProfile() {
+  return {
+    ...createEmptyProfile(),
+    personal: {
+      koreanFamilyName: "김",
+      koreanGivenName: "커리어",
+      englishFamilyName: "KIM",
+      englishGivenName: "CAREER",
+      nationality: "대한민국",
+    },
+    contact: {
+      email: "career@example.com",
+      phoneNumber: "01000000000",
+      residenceCountry: "대한민국",
+    },
+    education: [
+      {
+        id: "example-university",
+        sectionId: "university",
+        values: {
+          degreeLevel: "학사",
+          schoolName: "커리어대학교",
+          majorName: "컴퓨터공학",
+          completionStatus: "졸업",
+          startDate: "2020-03-02",
+          endDate: "2026-02-20",
+          gpaScore: "4.0",
+          gpaScale: "4.50",
+        },
+      },
+    ],
+    certifications: [
+      {
+        id: "example-certificate",
+        sectionId: "certificate",
+        values: {
+          name: "정보처리기사",
+          issuer: "한국산업인력공단",
+          acquisitionDate: "2025-06-13",
+        },
+      },
+    ],
+  };
+}
 export function createDemoRepository(): ProfileRepository {
   return {
-    load: async () => ({
-      ...createEmptyProfile(),
-      personal: {
-        koreanFamilyName: "김",
-        koreanGivenName: "커리어",
-        englishFamilyName: "KIM",
-        englishGivenName: "CAREER",
-        nationality: "대한민국",
-      },
-      contact: {
-        email: "career@example.com",
-        phoneNumber: "01000000000",
-        residenceCountry: "대한민국",
-      },
-      education: [
-        {
-          id: "example-university",
-          sectionId: "university",
-          values: {
-            degreeLevel: "학사",
-            schoolName: "커리어대학교",
-            majorName: "컴퓨터공학",
-            completionStatus: "졸업",
-            startDate: "2020-03-02",
-            endDate: "2026-02-20",
-            gpaScore: "4.0",
-            gpaScale: "4.50",
-          },
-        },
-      ],
-      certifications: [
-        {
-          id: "example-certificate",
-          sectionId: "certificate",
-          values: {
-            name: "정보처리기사",
-            issuer: "한국산업인력공단",
-            acquisitionDate: "2025-06-13",
-          },
-        },
-      ],
-    }),
+    load: async () => createDemoProfile(),
     save: async () => {},
     loadLayout: async () => "a",
     saveLayout: async () => {},

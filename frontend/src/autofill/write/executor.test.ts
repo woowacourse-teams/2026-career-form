@@ -1623,8 +1623,8 @@ describe("approved date-target writes", () => {
   });
 });
 
-describe("calendar isolation from ordinary writes", () => {
-  it("does not accept SELECT_DATE through the ordinary write action", async () => {
+describe("calendar approval in unified writes", () => {
+  it("does not accept SELECT_DATE without separate calendar approval", async () => {
     const input = document.createElement("input");
     input.type = "text";
     input.readOnly = true;
@@ -1660,7 +1660,7 @@ describe("calendar isolation from ordinary writes", () => {
 });
 
 describe("mixed ordinary and calendar approvals", () => {
-  it("writes the ordinary field but refuses SELECT_DATE in an ordinary run", async () => {
+  it("writes the ordinary field but refuses an unapproved SELECT_DATE", async () => {
     const ordinary = document.createElement("input");
     const registry = register(ordinary, {
       candidateId: "field-1",

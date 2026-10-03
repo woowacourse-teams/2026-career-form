@@ -1,5 +1,6 @@
 // Diagnostic codes only: never include profile values or site error text.
 export type WriteFailureCode =
+  | "SPLIT_EMAIL_UNSUPPORTED"
   | "SEARCH_NO_RESULTS"
   | "SEARCH_NO_EXACT_MATCH"
   | "SEARCH_AMBIGUOUS"

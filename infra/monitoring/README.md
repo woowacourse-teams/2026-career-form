@@ -202,6 +202,8 @@ host 선택은 독립이며 dev와 staging의 같은 호스트를 중복 표시�
 | backend scrape 실패 | 2분 지속 |
 | 환경 수집 데이터 소실 | 30초 lookback 후 90초 지속 |
 | 모니터링 루트 디스크 사용량 | 80% 이상 5분 지속 |
+| dev/staging 공용 호스트 루트 디스크 사용량 | 90% 이상 5분 지속 |
+| prod 호스트 루트 디스크 사용량 | 90% 이상 5분 지속 |
 | HTTP 5xx | 최근 5분 증가량 3 이상 |
 | LLM timeout | 최근 5분 증가량 1 이상 |
 | 일반 API 2초 초과 | 최근 5분 증가량 3 이상, 분석 API 제외 |
@@ -219,6 +221,46 @@ timeout도 첫 scrape 전에 발생하면 증가량을 놓칠 수 있다. 전용
 dev에서만 안전한 합성 timeout/5xx 시험을 승인해 수행한다.
 prod는 서비스 중단이나 부하 없이 test notification과 정상 조회만 확인한다.
 공용 모니터링 서버 자체가 죽으면 그 서버의 Grafana도 알림을 보낼 수 없다.
+
+### 호스트 디스크 알림
+
+`rules-hosts.json`은 `career-dev-staging`과 `career-prod`를 각각 고정 쿼리로
+평가한다. `job="host"`, `mountpoint="/"`만 사용하며 호스트 지표와 규칙에
+애플리케이션 `env`를 붙이지 않는다. dev와 staging은 하나의 EC2이므로
+규칙도 하나다. 대시보드의 env, host 선택은 규칙 평가에 영향을 주지 않는다.
+기존 `rules.json`의 `career-monitor` 80% 규칙과 오류 처리 정책은 유지한다.
+
+새 규칙의 평가 간격은 30초다. 사용률 90% 이상이 5분 지속되면 장애,
+실측 사용률이 90% 미만으로 돌아오면 복구한다. `career-discord`를 사용하며
+호스트 route는 `instance`별로 그룹을 분리한다. 첫 통지는 기본 30초 대기,
+그룹 갱신은 1분, 반복 통지는 10분이므로 평가 시점과 수신 시점은 다르다.
+메시지에는 호스트, 사용률, 90% 임계값과 루트 디스크 패널 링크가 포함된다.
+
+두 새 규칙은 No Data와 datasource error를 `KeepLast`로 처리한다.
+측정 실패를 사용률 초과나 복구로 취급하지 않고 직전 Normal, Pending,
+Alerting 상태를 유지한다. Pending의 시작 시각도 유지하므로 데이터가
+돌아온 뒤 임계값 이상이면 누락 구간을 포함한 경과 시간으로 장애가 될 수 있다.
+직전 상태가 장애면 데이터가 없는 동안에도 10분 반복 통지가 이어질 수 있고,
+측정값이 없는 메시지는 사용률을 `측정 불가`로 표시한다. 이 정책은 수집 실패
+자체를 별도 Discord 알림으로 보내지 않는다. Grafana에서 alert instance의
+`NoData, KeepLast`, `Error, KeepLast` 상태 사유와 Prometheus의 호스트 시계열
+최신 시각을 함께 확인해야 한다. rule health가 `ok`여도 상태 사유를 확인한다.
+
+설정 반영과 아래 운영 확인은 사람이 수행한다.
+
+1. 모니터링 서버의 provisioning에 `rules-hosts.json`과 `policies.json`을 반영한 뒤
+   Grafana의 `career-form-hosts` 그룹에서 두 규칙이 각각 90%, Pending 5분인지 확인한다.
+2. dev/staging의 규칙이 하나이고 각 규칙의 `instance`, 루트 mountpoint, 대시보드
+   연결을 확인한다. env와 host 선택을 바꿔도 두 규칙의 대상이 유지되는지 확인한다.
+3. 기존 `career-monitor`의 80%, 5분 조건을 확인하고 실제 host 시계열의 수집 상태,
+   정상 사용률과 alert instance의 No Data/Error 상태 사유를 조회한다.
+4. 승인된 contact point Test로 실제 Discord 수신 경로를 확인한다. 로컬 통합 시험은
+   합성 exporter로 장애와 복구를 검증하므로 실제 서버 디스크를 채우지 않는다.
+   웹훅, 인증값, 실제 세션은 기록하지 않는다.
+
+로컬 시험은 실제 provisioning 쿼리의 89%, 90%, 91%, 5분 미만 초과,
+5분 지속과 복구를 promtool 및 격리된 Grafana로 검증한다. mock receiver로
+호스트별 장애, 복구 메시지와 KeepLast 동작을 확인하며 실제 Discord 검증은 별도다.
 
 ## 보존, 용량과 복구
 
@@ -264,6 +306,7 @@ Docker 로컬 로그는 10MiB 파일 3개로 회전한다. 이 제한은 7일 �
 bash -n infra/scripts/bootstrap-monitoring-host.sh
 COMPOSE_PROJECT_NAME=career-form-tests .venv/bin/python -m unittest discover -s infra/tests -p 'test_*.py'
 RUN_MONITORING_INTEGRATION=1 .venv/bin/python -m unittest infra.tests.test_monitoring_runtime infra.tests.test_monitoring_alert_expressions -v
+RUN_MONITORING_INTEGRATION=1 .venv/bin/python -m unittest infra.tests.test_monitoring_host_disk infra.tests.test_monitoring_disk_runtime -v
 (cd backend && ./gradlew clean check bootJar)
 COMPOSE_PROJECT_NAME=career-form-tests .venv/bin/python harness/scripts/verify.py
 ```

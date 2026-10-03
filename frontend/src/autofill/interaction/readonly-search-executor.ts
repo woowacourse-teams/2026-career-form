@@ -55,6 +55,9 @@ import {
 import { executeCjSchoolSearch } from "./cj-school-search";
 import { executeCjMajorSearch } from "./cj-major-search";
 
+import { resultActivation } from "./search-result-structure";
+import { bindStructuredEffects } from "./search-result-effects";
+
 const activeTransactions = new WeakSet<Document>();
 export function acceptedSearchValues(
   key: string,
@@ -436,6 +439,9 @@ export async function executeReadonlySearch(
         : undefined;
     let candidate: { element: HTMLElement; signature: string } | undefined;
     let selectedResults: ReturnType<typeof observeResults> | undefined;
+    let structuredResults:
+      | Awaited<ReturnType<ReturnType<typeof observeResults>["interpret"]>>
+      | undefined;
     let selectedSearchText = initialSearchText;
     for (const [attemptIndex, searchText] of attempts.entries()) {
       const attemptValues = args.searchValues ? [searchText] : values;
@@ -535,6 +541,35 @@ export async function executeReadonlySearch(
       } catch (error) {
         if (
           error instanceof SearchFailure &&
+          ["search_results_not_found", "result_set_incomplete"].includes(
+            error.reason,
+          ) &&
+          !querylessRegion &&
+          currentSurface
+            .resultRoots()
+            .some(
+              (root) =>
+                elements<HTMLElement>(
+                  root,
+                  "div[onclick], li[onclick], span[onclick], [onkeydown], [onkeyup]",
+                ).length > 0 ||
+                elements<HTMLElement>(root, "button, a, [role='option']").some(
+                  (e) =>
+                    /^(선택|확인|select|choose|confirm)$/i.test(
+                      normalized(e.textContent ?? ""),
+                    ),
+                ),
+            )
+        ) {
+          surfaceGuard();
+          structuredResults = await results.interpret();
+          surfaceGuard();
+          candidate = structuredResults.exact(attemptValues);
+          selectedSearchText = searchText;
+          break;
+        }
+        if (
+          error instanceof SearchFailure &&
           error.reason === "search_results_not_found" &&
           attemptIndex + 1 < attempts.length &&
           (nativeFormBinding || query?.isConnected)
@@ -591,17 +626,32 @@ export async function executeReadonlySearch(
     surfaceGuard();
     const latest = querylessRegion
       ? regionListSelection(currentSurface, canonicalFieldKey, selectedValues)
-      : selectedResults?.exact(selectedValues);
+      : structuredResults
+        ? structuredResults.exact(selectedValues)
+        : selectedResults?.exact(selectedValues);
     if (
       !latest ||
       latest.element !== candidate.element ||
       latest.signature !== candidate.signature ||
-      !safeActivation(candidate.element, selectedValues, activationScope())
+      !(structuredResults
+        ? resultActivation(candidate.element) !== "none"
+        : safeActivation(candidate.element, selectedValues, activationScope()))
     )
       throw new SearchFailure("result_stale");
-    const selectionBinding = canonicalFieldKey.startsWith("certifications.")
-      ? bindSelectionEffects(identity, candidate.element, selectedValues)
+    const structuredMatch = structuredResults?.exact(selectedValues);
+    const structuredEffects = structuredMatch
+      ? bindStructuredEffects(
+          identity,
+          structuredMatch.row,
+          candidate.element,
+          currentSurface,
+          session,
+        )
       : undefined;
+    const selectionBinding =
+      !structuredResults && canonicalFieldKey.startsWith("certifications.")
+        ? bindSelectionEffects(identity, candidate.element, selectedValues)
+        : undefined;
     followUpObservation = selectionBinding
       ? captureSearchFollowUp(selectionBinding.scope, identity.target)
       : undefined;
@@ -631,7 +681,13 @@ export async function executeReadonlySearch(
         (value) => normalized(value) === normalized(reflected.value),
       );
       if (reflectedValue) effect = "value-observed";
-      if (reflectedValue && currentSurface.closure() === "closed") {
+      const effectsVerified = structuredEffects?.verify();
+      if (
+        reflectedValue &&
+        (structuredEffects
+          ? effectsVerified
+          : currentSurface.closure() === "closed")
+      ) {
         if (selectionBinding) verifySelectionEffects(selectionBinding);
         retainedSince ??= performance.now();
         if (performance.now() - retainedSince >= 500) return true;
@@ -653,6 +709,8 @@ export async function executeReadonlySearch(
       : [];
     await session.prepareMutation();
     guard(selectedValues);
+    if (structuredEffects && !structuredEffects.verify())
+      throw new SearchFailure("selection_postcondition_failed");
     trace("선택 완료", {
       selectedSearchText,
       targetValue: identity.target.value,

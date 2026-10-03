@@ -54,7 +54,15 @@ type ExecuteApprovedSearchWritesArgs = {
     item: ReviewPlanItem,
     controls: readonly SearchFollowUpControl[],
   ) => void;
-  writeOrdinary?: (item: ReviewPlanItem) => ApprovedWriteResult;
+  writeOrdinary?: (
+    item: ReviewPlanItem,
+  ) =>
+    | ApprovedWriteResult
+    | { result: ApprovedWriteResult; effect: "continue" | "stop" }
+    | Promise<
+        | ApprovedWriteResult
+        | { result: ApprovedWriteResult; effect: "continue" | "stop" }
+      >;
 };
 
 export function isSelectableApproved(item: ReviewPlanItem): boolean {
@@ -347,8 +355,23 @@ export async function executeApprovedSearchWrites({
     }
     if (item.analysis?.writePlan?.command !== "SEARCH_SELECTION") {
       if (writeOrdinary) {
-        results[index] = writeOrdinary(item);
-        onResult?.(item, results[index]!);
+        const execution = await writeOrdinary(item);
+        const result = "result" in execution ? execution.result : execution;
+        const effect = "result" in execution ? execution.effect : "continue";
+        results[index] = result;
+        onResult?.(item, result);
+        if (effect === "stop") {
+          for (let later = index + 1; later < items.length; later++) {
+            if (!approvedCandidateIds.has(items[later]!.candidateId)) continue;
+            results[later] = skipped(
+              items[later]!.candidateId,
+              "needs-verification",
+              "STALE_TARGET",
+              "이전 입력 결과를 확인할 수 없어 후속 입력을 중단했습니다.",
+            );
+          }
+          return true;
+        }
       }
       continue;
     }

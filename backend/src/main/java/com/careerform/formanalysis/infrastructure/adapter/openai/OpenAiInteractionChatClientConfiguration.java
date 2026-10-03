@@ -17,10 +17,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
-import com.careerform.formanalysis.infrastructure.SelectedOpenAi;
+import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 
 @Configuration(proxyBeanMethods = false)
-@Conditional(SelectedOpenAi.class)
+@Conditional(InteractionProviderConditions.OpenAiClient.class)
 final class OpenAiInteractionChatClientConfiguration {
 
     static final String INTERACTION_CHAT_CLIENT = "interactionChatClient";

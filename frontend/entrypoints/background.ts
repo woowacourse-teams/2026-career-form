@@ -1,6 +1,8 @@
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 
+import { createAnalyticsMessageHandler } from "../src/analytics/background-analytics";
+import { parseAnalyticsMessage } from "../src/analytics/events";
 import { createAddressRelay } from "../src/autofill/address/relay";
 
 import { createAnalysisMessageHandler } from "../src/autofill/api/background-handler";
@@ -31,7 +33,15 @@ export default defineBackground(() => {
   const handleMessage = createAnalysisMessageHandler({
     baseUrl: import.meta.env.VITE_API_BASE_URL,
   });
+  const handleAnalytics = createAnalyticsMessageHandler({
+    key: import.meta.env.VITE_POSTHOG_KEY,
+    host: import.meta.env.VITE_POSTHOG_HOST,
+    storage: browser.storage.local,
+  });
   browser.runtime.onMessage.addListener((message, sender) => {
+    if (parseAnalyticsMessage(message)) {
+      return handleAnalytics(message);
+    }
     if (isOpenOptionsPageMessage(message)) {
       return browser.runtime.openOptionsPage();
     }

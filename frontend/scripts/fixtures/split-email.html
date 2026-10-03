@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CF-138 synthetic split email</title>
+  <style>
+    body {
+      font: 16px system-ui;
+      padding: 24px;
+      background: #f5f7fa;
+    }
+    section {
+      max-width: 540px;
+      padding: 20px;
+      margin-bottom: 16px;
+      background: white;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+    }
+    input,
+    select,
+    button {
+      padding: 8px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .pair {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pair input {
+      min-width: 0;
+      width: 45%;
+    }
+  </style>
+  <h1>합성 이메일 입력 검증</h1>
+  <p>실제 지원 정보와 제출 동작이 없는 테스트 페이지입니다.</p>
+  <section>
+    <label for="email-local">분할 이메일</label>
+    <div class="pair">
+      <input id="email-local" name="email-local" />
+      <span>@</span>
+      <select id="email-domain">
+        <option value="">직접입력</option>
+        <option value="example.test">example.test</option>
+      </select>
+    </div>
+  </section>
+  <section>
+    <label for="email-whole">단일 이메일</label>
+    <input id="email-whole" name="email-whole" type="email" />
+  </section>
+  <button id="start" type="button" disabled>자동 기입 검증 시작</button>
+  <script>
+    if (location.hostname !== "127.0.0.1")
+      throw new Error("This synthetic fixture is local-only");
+    const listeners = [];
+    const profile = {
+      personal: {},
+      contact: { email: "qa@example.test" },
+      education: [],
+      languages: [],
+      certifications: [],
+      careers: [],
+      projects: [],
+      publications: [],
+      compensation: {},
+      military: {},
+      veteran: {},
+      disability: {},
+      health: [],
+    };
+    const errors = [];
+    addEventListener("error", (event) => errors.push(event.message));
+    addEventListener("unhandledrejection", (event) =>
+      errors.push(String(event.reason)),
+    );
+    window.fixture = { errors, listeners };
+    const runtime = {
+      id: "synthetic-cf138",
+      getURL: (path) => `${location.origin}/bundle/${path.replace(/^\//, "")}`,
+      onMessage: {
+        addListener(listener) {
+          listeners.push(listener);
+          document.querySelector("#start").disabled = false;
+        },
+        removeListener(listener) {
+          const index = listeners.indexOf(listener);
+          if (index >= 0) listeners.splice(index, 1);
+        },
+      },
+      async sendMessage(message) {
+        const request = message.payload;
+        const common = {
+          snapshotId: request?.snapshotId,
+          mode: "GENERIC",
+          analysisStatus: "COMPLETE",
+        };
+        if (message.type === "AUTOFILL_ANALYZE_PREPARATION")
+          return { ok: true, data: { ...common, preparationPlans: [] } };
+        if (message.type === "AUTOFILL_ANALYZE_FIELDS")
+          return {
+            ok: true,
+            data: {
+              ...common,
+              fields: request.sections
+                .flatMap((section) => [
+                  ...section.fields,
+                  ...(section.items ?? []).flatMap((item) => item.fields),
+                ])
+                .map((field) =>
+                  /^email-(local|whole)$/.test(field.domId ?? "")
+                    ? {
+                        candidateId: field.candidateId,
+                        matchType: "MATCH",
+                        valueBinding: {
+                          type: "DIRECT",
+                          profileFieldKey: "contact.contact.email",
+                        },
+                        autofillPolicy: "ALLOWED",
+                        mappingStatus: "LLM_SUGGESTED",
+                        interactionStatus: "READY",
+                        writePlan: { command: "SET_TEXT" },
+                      }
+                    : {
+                        candidateId: field.candidateId,
+                        matchType: "NO_MATCH",
+                        mappingStatus: "LLM_SUGGESTED",
+                        interactionStatus: "BLOCKED",
+                        reasonCodes: ["NO_MATCH"],
+                      },
+                ),
+            },
+          };
+        return { ok: false, code: "NOT_CONFIGURED" };
+      },
+    };
+    window.chrome = window.browser = {
+      runtime,
+      storage: {
+        local: {
+          async get() {
+            return { "careerForm.profile": { schemaVersion: 1, profile } };
+          },
+          async set() {},
+        },
+        onChanged: { addListener() {}, removeListener() {} },
+      },
+    };
+    fixture.resolveExtensionImages = () => {
+      const root = document.querySelector(
+        "career-form-profile-panel",
+      )?.shadowRoot;
+      for (const image of root?.querySelectorAll("img") ?? []) {
+        const prefix = `chrome-extension://${runtime.id}/`;
+        if (image.src.startsWith(prefix))
+          image.src = runtime.getURL(image.src.slice(prefix.length));
+      }
+    };
+    document.querySelector("#start").onclick = async () => {
+      for (const listener of listeners)
+        await listener({ type: "career-form:open-autofill-overlay" });
+    };
+  </script>
+  <script src="/bundle/content-scripts/autofill.js"></script>
+</html>

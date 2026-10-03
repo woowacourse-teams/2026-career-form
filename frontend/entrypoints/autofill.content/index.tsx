@@ -53,6 +53,7 @@ export default defineContentScript({
                 controller={controller}
                 pageDocument={document}
                 logoUrl={`chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`}
+                unsupportedImageUrl={`chrome-extension://${browser.runtime.id}/unsupported-capybara.jpg`}
                 closePanel={closeProfilePanel}
                 openOptions={openOptionsPageFromContent}
               />

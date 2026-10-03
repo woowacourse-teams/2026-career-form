@@ -13,14 +13,16 @@ afterEach(() => {
   ).jsdom.reconfigure({ url: "http://localhost:3000" });
 });
 
-it("runs only a checked calendar from the installed workflow screen", async () => {
+it("runs a checked calendar and an ordinary field from the main workflow button", async () => {
   document.body.innerHTML = `
+    <section><label>이름 <input id="name-target" name="applicantName" type="text"></label></section>
     <section><label>입학 연월 <input id="date-target" name="startMonth" readonly type="text"></label>
       <button type="button" aria-labelledby="date-target" aria-controls="date-popup">월 선택</button>
       <div id="date-popup" role="dialog" hidden><button type="button">2026</button>
         ${Array.from({ length: 12 }, (_, index) => `<button type="button">${index + 1}월</button>`).join("")}
       </div></section>
     <section><label>학교 <input name="schoolSearch" type="text" readonly></label><button type="button">학교 검색</button></section>`;
+  const name = document.querySelector<HTMLInputElement>("#name-target")!;
   const date = document.querySelector<HTMLInputElement>("#date-target")!;
   const popup = document.querySelector<HTMLElement>("#date-popup")!;
   const school = document.querySelector<HTMLInputElement>(
@@ -33,7 +35,7 @@ it("runs only a checked calendar from the installed workflow screen", async () =
       popup.hidden = false;
     });
   document
-    .querySelectorAll<HTMLButtonElement>("section:nth-of-type(2) button")
+    .querySelectorAll<HTMLButtonElement>("section:nth-of-type(3) button")
     .forEach((button) =>
       button.addEventListener("click", () => {
         schoolOpened++;
@@ -47,6 +49,7 @@ it("runs only a checked calendar from the installed workflow screen", async () =
       });
   });
   const profile = createEmptyProfile();
+  profile.personal.koreanGivenName = "합성 사용자";
   profile.education = [
     {
       id: "edu-one",
@@ -84,13 +87,26 @@ it("runs only a checked calendar from the installed workflow screen", async () =
                 interactionStatus: "READY" as const,
                 writePlan: { command: "SELECT_DATE" as const },
               }
-            : {
-                candidateId: field.candidateId,
-                matchType: "NO_MATCH" as const,
-                mappingStatus: "LLM_SUGGESTED" as const,
-                interactionStatus: "BLOCKED" as const,
-                reasonCodes: ["NO_MATCH"] as ["NO_MATCH"],
-              },
+            : field.domName === "applicantName"
+              ? {
+                  candidateId: field.candidateId,
+                  matchType: "MATCH" as const,
+                  valueBinding: {
+                    type: "DIRECT" as const,
+                    profileFieldKey: "personal.personal.koreanGivenName",
+                  },
+                  autofillPolicy: "ALLOWED" as const,
+                  mappingStatus: "LLM_SUGGESTED" as const,
+                  interactionStatus: "READY" as const,
+                  writePlan: { command: "SET_TEXT" as const },
+                }
+              : {
+                  candidateId: field.candidateId,
+                  matchType: "NO_MATCH" as const,
+                  mappingStatus: "LLM_SUGGESTED" as const,
+                  interactionStatus: "BLOCKED" as const,
+                  reasonCodes: ["NO_MATCH"] as ["NO_MATCH"],
+                },
         ),
     }),
   };
@@ -109,8 +125,10 @@ it("runs only a checked calendar from the installed workflow screen", async () =
   expect(popup.hidden).toBe(true);
   expect(schoolOpened).toBe(0);
   fireEvent.click(include);
-  fireEvent.click(screen.getByRole("button", { name: "선택한 날짜만 입력" }));
-  await waitFor(() => expect(date.value).toBe("2026-03"));
+  fireEvent.click(screen.getByRole("button", { name: "2개 항목 기입하기" }));
+  await screen.findByRole("heading", { name: "기입 결과" });
+  expect(name.value).toBe("합성 사용자");
+  expect(date.value).toBe("2026-03");
   expect(popup.hidden).toBe(true);
   expect(schoolOpened).toBe(0);
   expect(school.value).toBe("");

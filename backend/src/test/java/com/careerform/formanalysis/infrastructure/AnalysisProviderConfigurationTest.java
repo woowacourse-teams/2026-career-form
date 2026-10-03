@@ -27,6 +27,35 @@ class AnalysisProviderConfigurationTest {
     }
 
     @Test
+    void inheritsInteractionProvidersFromBaseWhenOverridesAreAbsent() {
+        AnalysisProviderSelection selection = AnalysisProviderSelection.from(environment(
+            "career-form.analysis.enabled", "true",
+            "career-form.analysis.provider", "openai"
+        ));
+
+        assertThat(selection.searchProvider()).isEqualTo("openai");
+        assertThat(selection.calendarProvider()).isEqualTo("openai");
+        assertThat(selection.splitInteractions()).isFalse();
+    }
+
+    @Test
+    void selectsCalendarProviderIndependentlyFromBaseAndSearchProviders() {
+        AnalysisProviderSelection selection = AnalysisProviderSelection.from(environment(
+            "career-form.analysis.enabled", "true",
+            "career-form.analysis.provider", "openai",
+            "career-form.analysis.search-provider", "openai",
+            "career-form.analysis.calendar-provider", "jev"
+        ));
+
+        assertThat(selection.provider()).isEqualTo("openai");
+        assertThat(selection.searchProvider()).isEqualTo("openai");
+        assertThat(selection.calendarProvider()).isEqualTo("jev");
+        assertThat(selection.uses("openai")).isTrue();
+        assertThat(selection.uses("jev")).isTrue();
+        assertThat(selection.splitInteractions()).isTrue();
+    }
+
+    @Test
     void rejectsConflictingLegacyAndNewEnableSettings() {
         assertThatThrownBy(() -> AnalysisProviderSelection.from(environment(
             "career-form.analysis.enabled", "true",
@@ -41,6 +70,24 @@ class AnalysisProviderConfigurationTest {
             "career-form.analysis.provider", "other"
         ))).isInstanceOf(IllegalStateException.class)
             .hasMessage("Unsupported analysis provider");
+    }
+
+    @Test
+    void rejectsAnUnknownSearchProviderRatherThanSilentlyUsingTheBaseProvider() {
+        assertThatThrownBy(() -> AnalysisProviderSelection.from(environment(
+            "career-form.analysis.provider", "openai",
+            "career-form.analysis.search-provider", "other"
+        ))).isInstanceOf(IllegalStateException.class)
+            .hasMessage("Unsupported search provider");
+    }
+
+    @Test
+    void rejectsAnUnknownCalendarProviderRatherThanSilentlyUsingTheBaseProvider() {
+        assertThatThrownBy(() -> AnalysisProviderSelection.from(environment(
+            "career-form.analysis.provider", "openai",
+            "career-form.analysis.calendar-provider", "other"
+        ))).isInstanceOf(IllegalStateException.class)
+            .hasMessage("Unsupported calendar provider");
     }
 
     @Test

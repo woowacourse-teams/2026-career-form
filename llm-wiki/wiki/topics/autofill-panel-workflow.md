@@ -2,9 +2,9 @@
 
 > Topic: autofill-panel-workflow
 > Status: Current
-> Current: [CF-90 패널 안 자동 기입 흐름](../../raw/issues/CF-90/documents/extension/autofill-panel-workflow.md)
-> History: [CF-90 패널 안 자동 기입 흐름](../../raw/issues/CF-90/documents/extension/autofill-panel-workflow.md)
-> Updated: 2026-09-12
+> Current: [CF-142 버튼 드롭다운 값 보존과 실제 반영 판정](../../raw/issues/CF-142/documents/button-dropdown-result-completion.md)
+> History: [CF-90 패널 안 자동 기입 흐름](../../raw/issues/CF-90/documents/extension/autofill-panel-workflow.md), [CF-140 범용 입력 결과의 완료 판정](../../raw/issues/CF-140/documents/generic-result-completion.md), [CF-142 버튼 드롭다운 값 보존과 실제 반영 판정](../../raw/issues/CF-142/documents/button-dropdown-result-completion.md)
+> Updated: 2026-10-02
 
 ## 현재 상태
 
@@ -12,6 +12,20 @@
 
 반복 시작과 이전 닫기 콜백을 구분해 새 workflow를 보호한다. 분석/재분석과 실제 쓰기를 다른 상태 문구로 표시하며, 스피너의 reduced-motion 대응과 live region/busy 분리, StrictMode 실행 수명 복원을 유지한다.
 
+## 범용 입력의 완료 판정
+
+범용 `LLM_SUGGESTED` 항목은 승인된 실제 쓰기 성공과 현재 값 일치가 확인되면 완료로 집계한다. 입력 전 `needs-review`였던 항목도 동일하며, 현재 값 불일치·빈 값·읽기 불가와 false verifier는 확인 필요에 남긴다. 입력 전 승인·덮어쓰기 정책과 어댑터 판정은 유지한다.
+
+결과 모델과 progress verifier가 함께 현재 값을 확인한다. 두 경로의 범용 출처 차단을 함께 갱신하며, 매핑 근거 없는 `needs-review`는 미검증으로 유지한다. 모델 단위 테스트와 production workflow의 실제 DOM 값·완료 수 회귀 테스트로 이 연계를 검증한다. [CF-140 근거](../../raw/issues/CF-140/documents/generic-result-completion.md)
+
+## 버튼 드롭다운의 값 보존과 완료
+
+수집·재열기는 다른 필드 값 보존을 검사하고 자체 probe의 부작용은 복구 후 중단한다. 실제 사용자 수정은 덮어쓰지 않으며 취소·지연 복수 메뉴도 정리한다. 비동기 재승인 뒤 현재 값, 원래 메뉴와 옵션을 입력 직전에 다시 확인한다.
+
+선택 후 실제 표시값 반영을 구독하고 기존 결과 모델·progress verifier에 연결한다. click 성공만으로 완료를 집계하지 않는다. [소유 관계와 후보 범위](generic-button-dropdown-safety.md), [CF-142 근거](../../raw/issues/CF-142/documents/button-dropdown-result-completion.md)
+
 ## 변경 이유
 
 분석 중 빈 모달 헤더만 보이던 UI를 제거하고 지원서 패널 안에서 일관된 진행·종료 흐름을 제공한다. 표시 계층 변경으로 기존 매핑·승인·입력 정책을 바꾸지 않는다.
+
+CF-140은 실제 값이 반영된 범용 항목을 출처만으로 확인 필요에 남기던 판정을 변경한다. 완료는 입력값 반영 여부의 확인이며 매핑 의미, 저장 또는 제출 완료의 보증이 아니다.

@@ -115,6 +115,34 @@ CAREER_FORM_LLM_MODEL=gpt-5.6-luna
 OPENAI_API_KEY=<실행 환경에서만 설정>
 ```
 
+### 검색·달력 상호작용 공급자
+
+준비 동작과 필드 매핑은 OpenAI로 유지하면서 검색과 달력 UI 역할을 독립적으로
+판단할 수 있다. 공통 `application.yml`은 달력 공급자를 Jev로 설정한다.
+
+```dotenv
+CAREER_FORM_ANALYSIS_ENABLED=true
+CAREER_FORM_LLM_ENABLED=true
+CAREER_FORM_ANALYSIS_PROVIDER=openai
+CAREER_FORM_SEARCH_PROVIDER=jev
+CAREER_FORM_CALENDAR_PROVIDER=jev
+CAREER_FORM_JEV_DATA_POLICY_REVIEWED=true
+OPENAI_API_KEY=<실행 환경에서만 설정>
+TYPESAFE_API_KEY=<실행 환경에서만 설정>
+```
+
+`CAREER_FORM_SEARCH_PROVIDER`는 검색 열기 버튼, 검색 입력칸, 검색 실행 버튼과
+결과 컨테이너·항목·선택 동작의 구조 판단에만 적용된다. 설정 속성이 없거나 빈 값이면
+`CAREER_FORM_ANALYSIS_PROVIDER`를 따른다. `CAREER_FORM_CALENDAR_PROVIDER`는 달력
+역할 판단에만 적용되며 배포 기본값은 `jev`다. 준비 동작과 필드 매핑은 두 상호작용
+설정과 관계없이 `CAREER_FORM_ANALYSIS_PROVIDER`를 따른다. 후보가 하나이거나 기존
+어댑터로 처리 가능한 검색은 로컬 처리를 우선한다. 검색어 입력, 결과 문구 비교와 클릭은
+프론트엔드가 수행한다. 상호작용 공급자 장애 시 다른 공급자로 우회하지 않는다.
+
+Jev 키의 설정 이름은 `TYPESAFE_API_KEY`다. 데이터 정책을 확인한 실행 환경에서만
+`CAREER_FORM_JEV_DATA_POLICY_REVIEWED=true`로 설정한다. 환경 파일 변경 후에는
+WSL에서 `python3 scripts/local.py up`을 실행해 컨테이너를 재생성한다.
+
 ### Chat Completion 저장
 
 공통 `application.yml`은 `spring.ai.openai.chat.store=true`를 설정한다. 따라서
@@ -134,10 +162,20 @@ endpoint를 각각 한 번 호출해 수행한다. 성공 여부와 비식별 �
 smoke test 범위에 포함하지 않는다.
 
 원격 `development`, `staging`, `production` 배포는 `.env.local`을 사용하지 않는다.
-세 deploy job만 공용 GitHub Repository Secret `OPENAI_API_KEY`를 프로세스 환경에
-주입하고, `infra/compose.deploy.yaml`이 이를 backend 컨테이너에 전달한다. 원격 Compose는
-LLM을 항상 활성화하며, 별도 모델 환경 변수가 없으면 위 기본 모델을 사용한다. key의 실제
-값은 이미지, 저장소, 문서, Issue·PR, workflow 출력이나 Compose 설정 출력에 기록하지 않는다.
+GitHub 저장소의 Settings → Environments에서 각 환경의 Variables에
+`CAREER_FORM_LLM_ENABLED`를 설정한다. 범용 기입을 사용할 환경에만 `true`를 지정한다.
+세 workflow의 `deploy` job만 `vars.CAREER_FORM_LLM_ENABLED`를 실행 환경에 주입하며,
+`infra/compose.deploy.yaml`은 값이 없거나 비어 있으면 `false`로 전달한다. 명시적인
+`false`도 범용 기입을 비활성화한다. `true`, `false` 외의 값은 백엔드 시작 실패를
+일으킬 수 있으므로 사용하지 않는다. 별도 모델 환경 변수가 없으면 위 기본 모델을 사용한다.
+
+범용 기입을 꺼도 SK, 현대, Greeting의 정적 회사 정책 경로는 유지한다. 환경 변수 설정과
+배포 후 범용 경로의 `LLM_UNAVAILABLE`, 정적 회사 정책 경로의 `ADAPTER` 응답 확인은
+사람이 수행한다.
+
+공용 GitHub Repository Secret `OPENAI_API_KEY`도 세 `deploy` job에서만 주입한다.
+기존 배포 계약에 따라 범용 기입이 비활성화되어도 이 key는 필수다. key의 실제 값은
+이미지, 저장소, 문서, Issue·PR, workflow 출력이나 Compose 설정 출력에 기록하지 않는다.
 
 현재 모델 선택은 세로 단면 데모를 위한 잠정값이다. 후속 평가는 동일한 비식별 사례에서
 Mistral Small 4, GPT-5.6 Luna, GPT-5.4 nano, Gemini 3.1 Flash-Lite의 비용, 오매핑,

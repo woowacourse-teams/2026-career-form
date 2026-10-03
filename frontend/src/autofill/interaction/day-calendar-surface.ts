@@ -1,3 +1,6 @@
+import { calendarUnitEvidence } from "./calendar-unit";
+import { hasCalendarOwnershipConflict } from "./calendar-ownership";
+
 /**
  * Detects readonly inputs bound to a ui-datepicker family day calendar.
  *
@@ -74,12 +77,15 @@ function usableTrigger(trigger: HTMLElement): boolean {
 export function dayCalendarSurfaceFor(
   target: HTMLInputElement,
 ): DayCalendarSurface | undefined {
+  const unit = calendarUnitEvidence(target);
   if (
     target.type !== "text" ||
     !target.readOnly ||
     target.disabled ||
     !target.isConnected ||
     target.closest(HIDDEN) ||
+    unit?.unit !== "day" ||
+    unit.unitEvidence === "unconfirmed" ||
     !target.classList.contains("hasDatepicker")
   )
     return undefined;
@@ -89,6 +95,8 @@ export function dayCalendarSurfaceFor(
   if (triggers.length > 1) return undefined;
   const trigger = triggers[0];
   if (trigger && !usableTrigger(trigger)) return undefined;
+  if (hasCalendarOwnershipConflict(target, trigger ?? target, roots[0]!))
+    return undefined;
   return trigger
     ? { target, opener: trigger, popup: roots[0]!, openBy: "trigger" }
     : { target, opener: target, popup: roots[0]!, openBy: "target" };
