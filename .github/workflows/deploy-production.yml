@@ -233,6 +233,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.classify.outputs.version }}
           RELEASE_BRANCH: ${{ needs.classify.outputs.head_ref }}
+          RELEASE_SHA: ${{ needs.classify.outputs.head_sha }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
         run: |
           set -euo pipefail
           tag="v$VERSION"
@@ -246,6 +248,12 @@ jobs:
           else
             git tag --annotate "$tag" --message "Release $VERSION" "$GITHUB_SHA"
             git push origin "$tag"
+          fi
+
+          action="$(python3 infra/scripts/release-sync.py prepare)"
+          if [[ "$action" == "complete" ]]; then
+            echo "develop 반영과 release 정리가 완료되었습니다"
+            exit 0
           fi
 
           existing="$(gh pr list --state open --base develop --head "$RELEASE_BRANCH" --json number --jq '.[0].number // empty')"

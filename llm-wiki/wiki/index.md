@@ -72,3 +72,4 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월·연월일 달력 실행의 안전 경계 | 2026-09-28 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩·온보딩 웹 페이지](topics/landing-onboarding.md) | 독립 웹 빌드와 시뮬레이션 데이터 경계, 페이지 역할 | 2026-09-19 |
+| [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포·동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |

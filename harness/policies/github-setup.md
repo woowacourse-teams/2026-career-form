@@ -8,6 +8,11 @@
 - [x] `develop` 브랜치를 개발 통합 브랜치로 둔다.
 - [x] 기본 브랜치를 `develop`으로 지정한다.
 - [ ] Squash Merge와 일반 Merge를 활성화하고 Rebase Merge 사용 여부를 팀에서 정한다.
+- [ ] **Automatically delete head branches**를 해제해 release 브랜치를 main 병합 후에도 유지한다.
+- [ ] 일반 기능 브랜치도 자동 삭제되지 않으므로 PR 담당자의 수동 정리 절차를 공유한다.
+- [ ] release는 배포 성공 후 develop에 이미 반영됐거나 develop 동기화 PR 병합이 완료되면
+  워크플로가 자동 정리한다. 실제 설정과 정리 권한은 관리자가 확인한다.
+  상세 적용·복구 절차는 [릴리스 운영 절차](../../infra/RELEASE.md)를 따른다.
 
 ## 라벨
 
