@@ -9,11 +9,12 @@ import urllib.parse
 import urllib.request
 
 from infra.tests.monitoring_runtime_fixture import MonitoringFixture
+from infra.tests.monitoring_proxy_checks import MonitoringProxyChecks
 
 
 @unittest.skipUnless(os.environ.get("RUN_MONITORING_INTEGRATION") == "1",
                      "Run explicitly against isolated local Docker with synthetic data")
-class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
+class MonitoringRuntimeTest(MonitoringProxyChecks, MonitoringFixture, unittest.TestCase):
     def test_provisioned_dashboard_and_datasources_are_available(self) -> None:
         sources = self._get("/api/datasources")
         self.assertEqual({"loki", "prometheus"}, {entry["uid"] for entry in sources})
@@ -129,6 +130,8 @@ class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
                     break
                 time.sleep(0.2)
             self.assertEqual(403, code)
+            with urllib.request.urlopen(self.public_url + "login", timeout=5) as response:
+                self.assertEqual(200, response.status)
         finally:
             self.allowlist.write_text("allow all;\n", encoding="utf-8")
             restored = self._compose("restart", "ingest")
@@ -247,6 +250,11 @@ class MonitoringRuntimeTest(MonitoringFixture, unittest.TestCase):
                                           rule["data"][1]]}
             self._request("/api/v1/provisioning/alert-rules/" + rule["uid"], "PUT", recovered)
         self._assert_notifications("resolved")
+        for notification in self.notifications:
+            body = json.dumps(notification)
+            if any(f"synthetic-{env}" in body for env in ("dev", "staging", "prod")):
+                self.assertIn(self.public_url, body)
+                self.assertNotIn("http://localhost:13000/", body)
 
     def _assert_notifications(self, status: str) -> None:
         deadline = time.monotonic() + 120

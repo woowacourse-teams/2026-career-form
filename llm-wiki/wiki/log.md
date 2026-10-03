@@ -403,3 +403,10 @@
 - dev/staging 95%와 기존 정책 유지, 남은 공간의 대응 여유 감소, 로컬 합성 검증과 사람 담당 운영 반영의 경계를 기록했다.
 
 - 2026-10-03: CF-155 승인 후보를 수집해 [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md)를 추가하고 배포 Runbook에 연결했다.
+
+## [2026-10-03] ingest | CF-154 Grafana HTTP 접속
+
+- Approval-Digest: 2668b9f7c5e2968895780831f9e889ad176c65919d2f21bc26fe184e6bd9016b
+- Source-Revision: 732932774645a1576264520f3f4c5c4ba6e6d1d3
+- 승인한 두 후보를 [CF-154 bundle](../raw/issues/CF-154/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 raw는 보존했다.
+- HTTP UI 진입점과 수집 인증 분리, 필수 외부 URL, 사람 담당 수동 반영 절차를 기록했다.

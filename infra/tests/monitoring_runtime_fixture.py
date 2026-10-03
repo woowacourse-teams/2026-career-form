@@ -2,6 +2,7 @@ import base64
 import http.server
 import json
 import os
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -71,6 +72,9 @@ class MonitoringFixture:
 
     @classmethod
     def _central_config(cls) -> dict:
+        cls.ports = {name: cls._port() for name in ("grafana", "loki", "prometheus", "ui")}
+        cls.public_url = f"http://127.0.0.1:{cls.ports['ui']}/"
+        cls.environment["MONITORING_PUBLIC_URL"] = cls.public_url
         rendered = subprocess.run(
             ("docker", "compose", "-p", cls.project, "-f", str(MONITORING / "compose.yaml"),
              "config", "--format", "json"), env=cls.environment,
@@ -80,16 +84,25 @@ class MonitoringFixture:
             cls.workspace.cleanup()
             raise AssertionError(rendered.stderr)
         config = json.loads(rendered.stdout)
+        # Keep mounted configuration inside the isolated fixture directory too.
+        # Docker Desktop may not have access to the checkout's parent directory.
+        monitoring = cls.root / "monitoring"
+        shutil.copytree(MONITORING, monitoring)
+        for service in config["services"].values():
+            for volume in service.get("volumes", []):
+                source = Path(volume["source"])
+                if source.is_relative_to(MONITORING):
+                    volume["source"] = str(monitoring / source.relative_to(MONITORING))
         config["networks"] = {"default": {"ipam": {"config": [{"subnet": f"172.30.{os.getpid() % 250}.0/24"}]}}}
         config["services"]["grafana"]["extra_hosts"] = ["host.docker.internal:host-gateway"]
         cls.allowlist = cls.root / "ingest-allow.conf"
         cls.allowlist.write_text("allow all;\n", encoding="utf-8")
         next(entry for entry in config["services"]["ingest"]["volumes"]
              if entry["target"] == "/etc/nginx/ingest-allow.conf")["source"] = str(cls.allowlist)
-        cls.ports = {name: cls._port() for name in ("grafana", "loki", "prometheus")}
         config["services"]["grafana"]["ports"][0]["published"] = str(cls.ports["grafana"])
-        for port, name in zip(config["services"]["ingest"]["ports"], ("loki", "prometheus")):
-            port["published"] = str(cls.ports[name])
+        for port in config["services"]["ingest"]["ports"]:
+            port["published"] = str(cls.ports[{80: "ui", 3100: "loki", 9090: "prometheus"}[port["target"]]])
+            port["host_ip"] = "127.0.0.1"
         return config
 
     @classmethod

@@ -48,3 +48,31 @@ network와 allowlist 대체는 합성 프로젝트에만 적용한다.
 
 이 상태는 배포 완료나 모든 인수 조건 통과가 아니다. 사람 수동 검증과
 남은 운영 시나리오의 근거를 추가한 뒤 Issue 완료 여부를 판단한다.
+
+## CF-154 HTTP 진입점 검증
+
+2026-10-03 로컬 macOS ARM64에서 수행했다. 실제 Nginx·Grafana·Loki·Prometheus·Alloy는
+격리한 Linux ARM64 Docker 컨테이너로 실행했으며, 임시 포트·데이터·합성 계정을 사용했다.
+공식 WSL/Linux 하네스 실행과 AWS 서버 검증을 대체하지 않는다.
+
+- `.venv/bin/python -m unittest infra.tests.test_monitoring_compose -v`: 7개 통과.
+  변경 전에는 80 포트 미노출과 외부 URL 필수 설정 부재로 신규 검증 2개가 실패했다.
+- `RUN_MONITORING_INTEGRATION=1 .venv/bin/python -m unittest infra.tests.test_monitoring_runtime -v`:
+  최종 15개 통과, 174.908초. 변경 전 UI 포트 부재 실패를 확인했다.
+- `COMPOSE_PROJECT_NAME=career-form-tests .venv/bin/python harness/scripts/verify.py`:
+  하네스 349개, coverage 85%, 인프라 91개 중 71개 통과·opt-in 20개 skip.
+  이 중 중앙 스택 통합 시험 15개는 위 명령으로 별도 실행했다.
+- `git diff --check`, README bash 블록의 `bash -n`: 통과.
+
+HTTP 로그인 화면과 실제 JavaScript 자원, 익명 API 401, Viewer 세션의 대시보드·
+Prometheus 조회, 관리자 API 403, 외부 appUrl과 Live WebSocket 101을 확인했다.
+모의 Discord 수신 내용의 외부 URL도 확인했다. 수집 source IP를 모두 차단한 동안
+인증된 수집 요청은 403이고 Grafana 로그인 화면은 200이었다. 기존 수집 인증,
+Loki DNS 주소 변경 복구, 데이터 영속성과 수집기 재시작 회귀도 통과했다.
+
+Docker가 저장소 경로를 직접 bind mount할 때 생성이 멈추는 로컬 제약을 확인해,
+fixture는 운영 설정을 임시 디렉터리에 복사해 마운트한다. 설정 내용은 바꾸지 않고
+테스트용 포트·데이터 경로·수집 allowlist만 기존 방식대로 격리한다.
+
+실제 서버 배포, 보안 그룹 변경, 조회 사용자 계정 생성·브라우저 접속 및 실제 Discord 링크
+확인은 미실행이다. 운영자는 README의 CF-154 적용·복구 절차로 별도 확인한다.

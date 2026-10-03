@@ -13,8 +13,12 @@ Issue #131의 중앙 스택과 백엔드 계측 구현이다. 서버 기반 준�
 | prod 앱 호스트 | 10.0.0.84 | 기존 backend, 수집 Alloy 하나 |
 
 중앙 서버는 Ubuntu 26.04 ARM64, t4g.micro, project-public-a,
-gp3 루트 EBS 16GiB다. 새 AWS 리소스를 만들거나 공유 보안 그룹을 수정하지 않는다.
-Grafana는 loopback 3000, 수집 proxy는 중앙 private IP의 3100/9090에 bind한다.
+gp3 루트 EBS 16GiB다. 새 AWS 리소스는 필요하지 않다. 공유 보안 그룹은 임의로
+수정하지 않고 운영자가 대상과 영향 범위를 확인한다.
+Nginx는 HTTP 80을 공개하고 Compose 내부의 grafana:3000으로 전달한다.
+Grafana의 호스트 3000은 loopback 진단용으로 유지하며 수집 proxy는 중앙 private IP의
+3100/9090에 bind한다. UI 로그인은 Grafana가 처리하고 수집용 Basic 인증과 IP 제한은
+3100/9090에만 적용한다.
 Loki와 Prometheus의 조회 포트는 호스트에 publish하지 않는다.
 EC2 public IP는 private IP로 매핑되므로 private bind만으로 외부 차단을
 보장하지 않는다. 보안 그룹에 3100/9090의 공개 규칙을 추가하지 않고,
@@ -117,7 +121,12 @@ config.env에는 아래 값을 저장한다. 시크릿은 넣지 않는다.
 
 ```dotenv
 MONITORING_PRIVATE_IP=10.0.0.72
+MONITORING_PUBLIC_URL=http://실제_모니터링_서버_주소/
 ```
+
+MONITORING_PUBLIC_URL은 브라우저에서 사용할 실제 HTTP 주소이며 끝에 `/`를 붙인다.
+서브 경로 없이 서버의 루트 주소를 사용한다. 미지정 또는 빈 값이면 Compose가 시작을
+거부한다. 서버의 공개 주소가 바뀌면 이 값과 공유한 접속 URL을 함께 갱신한다.
 
 ## 중앙 스택 시작과 브라우저 접속
 
@@ -128,16 +137,85 @@ sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monito
 curl --fail --max-time 10 http://127.0.0.1:3000/api/health
 ```
 
-로컬 컴퓨터에서 기존 career-monitor SSH 설정으로 터널을 연다.
+브라우저에서 MONITORING_PUBLIC_URL에 지정한 주소를 연다. 운영자는 초기 관리자
+암호를 서버에서 직접 확인하고 조회 사용자에게는 별도의 일반 사용자 계정을 생성해 조직
+역할을 Viewer로 지정한다. Server Admin 권한은 주지 않는다. 계정과 암호는 승인된
+비공개 경로로 전달하고 저장소, Issue, PR에 기록하지 않는다. 조회 사용자는 해당 계정으로
+로그인해 `career-form-monitoring` 대시보드를 조회한다. 익명 접근과 자체 회원 가입은
+계속 비활성화한다. Viewer도 허용된 데이터 소스를 조회할 수 있으므로 신뢰할 수 있는
+팀 구성원에게만 제공한다.
+
+외부 HTTP는 로그인 정보와 세션을 암호화하지 않는다. 운영자가 허용할 접속 원본
+범위를 결정하고 서버의 80 포트에 적용한다. 공유 보안 그룹이면 다른 인스턴스에 대한
+영향과 변경 권한을 확인한다. 3000, 3100, 9090의 공개 인바운드 규칙은 추가하지 않는다.
+HTTPS와 인증서 도입은 별도 후속 작업이다.
+
+### 기존 모니터링 서버에 CF-154 적용
+
+`develop` 또는 `main` 머지만으로 이 서버가 갱신되지는 않는다. 다음은 운영자가
+실행한다. 머지된 커밋의 설정을 준비하고 현재 서버 파일과 비교한다. 이 변경에는
+`compose.yaml`, `proxy.conf` 두 파일만 복사하여 기존 알림 provisioning을 덮어쓰지 않는다.
+
+서버에서 먼저 80 포트 점유와 현재 스택 상태를 확인하고 백업한다. 아래 명령은 같은
+서버 셸에서 순서대로 실행한다. 백업 경로를 기록해 롤백 때 사용한다.
+
+```bash
+ssh career-monitor
+sudo ss -ltnp 'sport = :80'
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml ps
+monitoring_backup="/opt/career-form/monitoring-backup-$(date +%Y%m%d%H%M%S)"
+sudo install -d -m 0700 "$monitoring_backup"
+sudo cp -a /opt/career-form/monitoring/compose.yaml /opt/career-form/monitoring/proxy.conf /etc/career-form-monitoring/config.env "$monitoring_backup/"
+printf '%s\n' "$monitoring_backup"
+```
+
+80을 다른 서비스가 사용한다면 적용을 중단하고 충돌을 해결한다. 로컬의 머지된
+체크아웃에서 아래 파일을 임시 경로로 전송한다.
+
+```bash
+scp infra/monitoring/compose.yaml career-monitor:~/cf154-compose.yaml
+scp infra/monitoring/proxy.conf career-monitor:~/cf154-proxy.conf
+```
+
+서버에서 config.env의 기존 값을 유지하면서 MONITORING_PUBLIC_URL을 추가한다.
+Nginx 구문 검사 전후까지 외부 80 접근은 제한하고, 검사와 적용이 끝난 후 승인한
+원본만 접근하도록 설정한다.
+
+```bash
+sudo install -m 0644 ~/cf154-compose.yaml /opt/career-form/monitoring/compose.yaml
+sudo install -m 0644 ~/cf154-proxy.conf /opt/career-form/monitoring/proxy.conf
+sudoedit /etc/career-form-monitoring/config.env
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml config --quiet
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml run --rm --no-deps ingest nginx -t
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml up -d --no-deps --force-recreate grafana ingest
+curl --fail --retry 12 --retry-all-errors --retry-delay 2 --max-time 10 http://127.0.0.1/api/health
+```
+
+Grafana와 Nginx 재생성 중 UI·수집·알림 평가가 잠시 중단될 수 있다. Loki, Prometheus,
+Alloy와 영속 데이터 경로는 변경하지 않는다. 전체 Compose config나 환경변수를 출력해
+시크릿을 노출하지 않는다.
+
+SSH 터널을 끈 다른 컴퓨터에서 URL을 열어 로그인, 정적 자원 로딩, 환경별 데이터 조회와
+Grafana Live 연결을 확인한다. Viewer 계정의 관리 기능 접근 제한, 실제 Discord 링크의
+외부 주소, 기존 로그·메트릭 수집도 확인한다.
+
+실패하면 외부 80 접근을 다시 제한하고 기록한 백업 경로로 복구한다.
+
+```bash
+sudo cp -a "$monitoring_backup/compose.yaml" "$monitoring_backup/proxy.conf" /opt/career-form/monitoring/
+sudo cp -a "$monitoring_backup/config.env" /etc/career-form-monitoring/config.env
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml config --quiet
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml up -d --no-deps --force-recreate grafana ingest
+curl --fail --retry 12 --retry-all-errors --retry-delay 2 --max-time 10 http://127.0.0.1:3000/api/health
+```
+
+기존 영속 데이터나 계정을 삭제하지 않는다. 이전 설정으로 복구하면 기존 SSH 터널로
+접속한다. 정상 구성에서도 loopback 3000은 진단용으로 남아 있지만 Live와 링크는
+MONITORING_PUBLIC_URL 기준이므로 외부 URL을 통한 확인이 최종 접속 검증이다.
 
 ```bash
 ssh -N -L 13000:127.0.0.1:3000 career-monitor
 ```
-
-브라우저 http://localhost:13000 에서 admin으로 로그인한다.
-암호는 사람이 중앙 grafana-password 파일에서 확인하고 공유하지 않는다.
-UI는 웹 UI이며 localhost 주소는 SSH 터널의 입구다.
-Discord 메시지의 localhost 대시보드 링크도 각자의 터널이 있어야 열린다.
 
 ## 앱 호스트 수집기 설치
 
