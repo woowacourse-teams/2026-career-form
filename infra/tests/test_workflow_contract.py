@@ -90,6 +90,27 @@ class WorkflowContractTest(unittest.TestCase):
                     if job_name != "deploy":
                         self.assertNotIn("OPENAI_API_KEY", str(job))
 
+    def test_deploy_jobs_inject_llm_enabled_variable_only_at_runtime(self) -> None:
+        for filename in (
+            "deploy-development.yml",
+            "deploy-staging.yml",
+            "deploy-production.yml",
+        ):
+            with self.subTest(filename=filename):
+                workflow = self._workflow(filename)
+                deploy = workflow["jobs"]["deploy"]
+
+                self.assertEqual(
+                    "${{ vars.CAREER_FORM_LLM_ENABLED }}",
+                    deploy["env"].get("CAREER_FORM_LLM_ENABLED"),
+                )
+                self.assertNotIn(
+                    "CAREER_FORM_LLM_ENABLED", workflow.get("env", {})
+                )
+                for job_name, job in workflow["jobs"].items():
+                    if job_name != "deploy":
+                        self.assertNotIn("CAREER_FORM_LLM_ENABLED", str(job))
+
     def test_start_release_creates_one_release_branch_and_draft_pr(self) -> None:
         workflow = self._workflow("start-release.yml")
 
