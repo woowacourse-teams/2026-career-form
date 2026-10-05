@@ -33,6 +33,9 @@ public class ExternalCallMetrics {
         var outcome = timeout ? "timeout" : failed ? "failure" : "success";
         Timer.builder("career.form.external.call")
             .tags("provider", provider, "operation", operation, "outcome", outcome)
+            .publishPercentileHistogram()
+            .minimumExpectedValue(Duration.ofMillis(100))
+            .maximumExpectedValue(Duration.ofSeconds(60))
             .serviceLevelObjectives(Duration.ofSeconds(5), Duration.ofSeconds(20))
             .register(registry)
             .record(Math.max(0, durationNanos), TimeUnit.NANOSECONDS);
