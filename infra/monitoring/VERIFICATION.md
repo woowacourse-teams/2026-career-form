@@ -51,8 +51,8 @@ network와 allowlist 대체는 합성 프로젝트에만 적용한다.
 
 ## CF-154 HTTP 진입점 검증
 
-2026-10-03 로컬 macOS ARM64에서 수행했다. 실제 Nginx·Grafana·Loki·Prometheus·Alloy는
-격리한 Linux ARM64 Docker 컨테이너로 실행했으며, 임시 포트·데이터·합성 계정을 사용했다.
+2026-10-03 로컬 macOS ARM64에서 수행했다. 실제 Nginx, Grafana, Loki, Prometheus, Alloy는
+격리한 Linux ARM64 Docker 컨테이너로 실행했으며, 임시 포트, 데이터, 합성 계정을 사용했다.
 공식 WSL/Linux 하네스 실행과 AWS 서버 검증을 대체하지 않는다.
 
 - `.venv/bin/python -m unittest infra.tests.test_monitoring_compose -v`: 7개 통과.
@@ -60,11 +60,11 @@ network와 allowlist 대체는 합성 프로젝트에만 적용한다.
 - `RUN_MONITORING_INTEGRATION=1 .venv/bin/python -m unittest infra.tests.test_monitoring_runtime -v`:
   최종 15개 통과, 174.908초. 변경 전 UI 포트 부재 실패를 확인했다.
 - `COMPOSE_PROJECT_NAME=career-form-tests .venv/bin/python harness/scripts/verify.py`:
-  하네스 349개, coverage 85%, 인프라 91개 중 71개 통과·opt-in 20개 skip.
+  하네스 349개, coverage 85%, 인프라 91개 중 71개 통과, opt-in 20개 skip.
   이 중 중앙 스택 통합 시험 15개는 위 명령으로 별도 실행했다.
 - `git diff --check`, README bash 블록의 `bash -n`: 통과.
 
-HTTP 로그인 화면과 실제 JavaScript 자원, 익명 API 401, Viewer 세션의 대시보드·
+HTTP 로그인 화면과 실제 JavaScript 자원, 익명 API 401, Viewer 세션의 대시보드,
 Prometheus 조회, 관리자 API 403, 외부 appUrl과 Live WebSocket 101을 확인했다.
 모의 Discord 수신 내용의 외부 URL도 확인했다. 수집 source IP를 모두 차단한 동안
 인증된 수집 요청은 403이고 Grafana 로그인 화면은 200이었다. 기존 수집 인증,
@@ -72,7 +72,40 @@ Loki DNS 주소 변경 복구, 데이터 영속성과 수집기 재시작 회귀
 
 Docker가 저장소 경로를 직접 bind mount할 때 생성이 멈추는 로컬 제약을 확인해,
 fixture는 운영 설정을 임시 디렉터리에 복사해 마운트한다. 설정 내용은 바꾸지 않고
-테스트용 포트·데이터 경로·수집 allowlist만 기존 방식대로 격리한다.
+테스트용 포트, 데이터 경로, 수집 allowlist만 기존 방식대로 격리한다.
 
-실제 서버 배포, 보안 그룹 변경, 조회 사용자 계정 생성·브라우저 접속 및 실제 Discord 링크
-확인은 미실행이다. 운영자는 README의 CF-154 적용·복구 절차로 별도 확인한다.
+실제 서버 배포, 보안 그룹 변경, 조회 사용자 계정 생성, 브라우저 접속 및 실제 Discord 링크
+확인은 미실행이다. 운영자는 README의 CF-154 적용, 복구 절차로 별도 확인한다.
+
+
+## CF-158 장애 분석 대시보드 검증
+
+2026-10-05 로컬 macOS에서 수행했다. 실제 Linux ARM64 Grafana, Loki, Prometheus와
+Alloy는 임시 포트, 데이터와 합성 계정을 사용하는 격리 Docker 스택으로 실행했다.
+공식 WSL/Linux 실행과 실제 AWS 서버 반영을 대체하지 않는다.
+
+- 백엔드 `./gradlew clean check bootJar`: 테스트 441개, 실패 0, LINE coverage 91.01%.
+- 신규 계측 시험은 변경 전 세밀한 latency bucket 부재로 실패했고, histogram 활성화 후
+  통과했다. 기존 5초, 20초 SLO bucket의 실제 Prometheus 누적 계수를 확인했다.
+- `RUN_MONITORING_INTEGRATION=1`의 diagnostics metrics/runtime 시험:
+  Playwright 옵션 포함 9개 통과, 23.568초. 신규 패널 부재로 실패한 뒤 구현 후 통과했다.
+- 실제 Loki에서 5xx, env 분리, 상태 코드 선택과 빈 선택, API별 지연 경계값,
+  Actuator 제외, 외부 failure/timeout, 정상 호출을 포함한 requestId 연결과 시간순,
+  잘못된 requestId, 파싱 실패, 쿼리 오류, 500줄 제한을 확인했다.
+- 실제 Promtool로 dashboard 쿼리의 2xx/Actuator 제외, 공급자별 성공 P95,
+  timeout 제외, 성공 표본 0/19/20건 분류, 실패만 있는 경우, 무호출과 scrape 실패,
+  환경 메트릭 소실을 평가했다.
+- 실제 Chromium으로 provisioned Grafana 로그인과 로그 행 상세 링크를 확인했다.
+  클릭 URL의 환경, from/to, requestId 보존과 상태 코드 필터 초기화를 검증했다.
+  새 탭의 관련 로그에 정상 외부 호출이 포함되고 빈 requestId/상태 코드 입력은
+  No data로 초기화되는 것을 확인했다.
+- `COMPOSE_PROJECT_NAME=career-form-tests .venv/bin/python harness/scripts/verify.py`: 하네스 349개 통과, coverage 85%, 인프라 118개 중 89개 실행과 29개 opt-in skip. 셸 9개, Wiki와 execpolicy 검증 통과.
+- 기존 monitoring runtime과 alert expressions 시험 16개 통과, 163.013초.
+  HTTP 로그인, Viewer 권한, datasource 조회, Live WebSocket, 수집 인증과 IP 제한,
+  Loki 주소 변경 복구, 영속 데이터, 수집 재개와 모의 Discord firing/resolved를 확인했다.
+
+Playwright는 OS 임시 디렉터리에 설치했고, 저장소 의존성에는 추가하지 않았다.
+실제 운영 계정과 Discord webhook은 사용하지 않았다. HTTP 추이의 상태 코드 링크도 합성 counter를 수집한 실제 그래프에서 클릭해
+환경과 시간 범위 보존, requestId 초기화와 해당 500 요청 로그 조회를 확인했다.
+실제 운영 서버 반영, Viewer의 외부 브라우저 조회, 장기 시계열 저장 증가량과
+실제 장애 시나리오는 사람이 README 절차로 확인한다.
