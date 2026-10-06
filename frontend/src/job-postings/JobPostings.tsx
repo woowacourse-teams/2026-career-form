@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { postingClient, type PostingClient } from "./client";
 import type { Posting, PostingInput } from "./model";
 import type { PostingSnapshot } from "./service";
@@ -18,12 +18,46 @@ export function JobPostings({
   const [snapshot, setSnapshot] = useState<PostingSnapshot>();
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(""), 4000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
   const [busy, setBusy] = useState(false);
-  const [completed, setCompleted] = useState(false);
+  const [view, setView] = useState<"planned" | "expired" | "completed">(
+    "planned",
+  );
+  const addButton = useRef<HTMLButtonElement>(null);
+  const returnTo = useRef<string | null>(null);
+  const restoreFocus = useRef(false);
+  const page = useRef<HTMLElement>(null);
   const [form, setForm] = useState<Posting | "new" | null>(
     initialCreate ? "new" : null,
   );
   const [time, setTime] = useState(now);
+  useEffect(() => {
+    if (!form && restoreFocus.current) {
+      const trigger = returnTo.current
+        ? [
+            ...(page.current?.querySelectorAll<HTMLButtonElement>(
+              "button[data-edit-posting]",
+            ) ?? []),
+          ].find((button) => button.dataset.editPosting === returnTo.current)
+        : undefined;
+      (trigger ?? addButton.current)?.focus();
+      restoreFocus.current = false;
+    }
+  }, [form]);
+  const closeForm = () => {
+    restoreFocus.current = true;
+    setForm(null);
+  };
+  const openNew = () => {
+    returnTo.current = null;
+    setForm("new");
+    setError("");
+    setFeedback("");
+  };
   const load = useCallback(async () => {
     try {
       setSnapshot(await client.list());
@@ -68,7 +102,7 @@ export function JobPostings({
   const mutate = async (
     action: () => Promise<PostingSnapshot>,
     message: string,
-    closeForm = false,
+    dismissForm = false,
   ) => {
     setBusy(true);
     setError("");
@@ -76,7 +110,7 @@ export function JobPostings({
     try {
       setSnapshot(await action());
       setFeedback(message);
-      if (closeForm) setForm(null);
+      if (dismissForm) closeForm();
     } catch (e) {
       setError(
         e instanceof Error
@@ -90,7 +124,20 @@ export function JobPostings({
   const save = async (input: PostingInput) => {
     const p = form && form !== "new" ? form : undefined;
     await mutate(
-      () => client.save(input, p?.id, p?.version),
+      async () => {
+        const next = await client.save(input, p?.id, p?.version);
+        const saved = p
+          ? next.postings.find((row) => row.id === p.id)
+          : undefined;
+        setView(
+          saved?.status === "completed"
+            ? "completed"
+            : input.deadline > now()
+              ? "planned"
+              : "expired",
+        );
+        return next;
+      },
       "공고가 저장되었습니다.",
       true,
     );
@@ -98,13 +145,40 @@ export function JobPostings({
   const rows = [...(snapshot?.postings ?? [])].sort(
     (a, b) => a.deadline - b.deadline,
   );
-  const selected = rows.filter((p) => (p.status === "completed") === completed);
+  const groups = {
+    planned: rows.filter((p) => p.status === "planned" && p.deadline > time),
+    expired: rows
+      .filter((p) => p.status === "planned" && p.deadline <= time)
+      .reverse(),
+    completed: rows.filter((p) => p.status === "completed"),
+  };
+  const selected = groups[view];
+  const urgentCount = groups.planned.filter(
+    (p) => p.deadline - time <= 86400000,
+  ).length;
+  const headings = {
+    planned: "다가오는 마감",
+    expired: "지난 마감",
+    completed: "완료한 지원",
+  };
+  const emptyTitles = {
+    planned: "다가오는 마감이 없어요",
+    expired: "지난 마감이 없어요",
+    completed: "아직 완료한 지원이 없어요",
+  };
+  const emptyDescriptions = {
+    planned: "관심 있는 공고를 추가하고 마감 전에 알림을 받아보세요.",
+    expired: "마감이 지난 공고는 이곳에서 따로 확인할 수 있어요.",
+    completed: "지원을 마친 공고를 완료로 표시하면 여기에 모아볼 수 있어요.",
+  };
   const list = (postings: Posting[]) => (
     <PostingList
       postings={postings}
       now={time}
       busy={busy}
       onEdit={(p) => {
+        returnTo.current = p.id;
+        setFeedback("");
         setForm(p);
         setError("");
       }}
@@ -116,34 +190,33 @@ export function JobPostings({
             : "지원 완료로 표시하고 남은 알림을 취소했습니다.",
         )
       }
-      onRemove={(p) => {
-        if (window.confirm("이 공고를 삭제하고 남은 알림을 취소할까요?"))
-          void mutate(
-            () => client.remove(p.id, p.version),
-            "공고를 삭제했습니다.",
-          );
-      }}
+      onRemove={(p) =>
+        void mutate(async () => {
+          const next = await client.remove(p.id, p.version);
+          addButton.current?.focus({ preventScroll: true });
+          return next;
+        }, "공고를 삭제했습니다.")
+      }
     />
   );
   return (
-    <main className={styles.page}>
+    <main className={styles.page} ref={page}>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>CAREER FORM / MY APPLICATIONS</p>
+          <p className={styles.eyebrow}>MY APPLICATIONS</p>
           <h1>지원 공고</h1>
-          <p>지원할 곳을 모으고, 마감 전에 다시 만나요.</p>
+          <p className={styles.subtitle}>
+            관심 있는 공고부터 지원 완료까지, 한곳에서 챙기세요.
+          </p>
         </div>
         {!form && (
           <button
             className={styles.primary}
-            onClick={() => {
-              setForm("new");
-              setError("");
-              setFeedback("");
-            }}
+            ref={addButton}
+            onClick={openNew}
             disabled={!snapshot}
           >
-            공고 추가
+            <span aria-hidden="true">＋</span> 공고 추가
           </button>
         )}
       </header>
@@ -155,7 +228,18 @@ export function JobPostings({
           </button>
         </div>
       )}
-      {feedback && <p role="status">{feedback}</p>}
+      {feedback && (
+        <div className={styles.feedback}>
+          <span role="status">{feedback}</span>
+          <button
+            type="button"
+            aria-label="알림 닫기"
+            onClick={() => setFeedback("")}
+          >
+            ×
+          </button>
+        </div>
+      )}
       {snapshot?.problems.length ? (
         <div className={styles.warning} role="status">
           <p>
@@ -191,43 +275,78 @@ export function JobPostings({
             now={time}
             busy={busy}
             onSave={save}
-            onCancel={() => setForm(null)}
+            onCancel={closeForm}
           />
         ) : (
           <>
-            <nav className={styles.tabs} aria-label="지원 상태">
-              <button
-                aria-pressed={!completed}
-                onClick={() => setCompleted(false)}
-              >
-                지원 예정 ({rows.filter((p) => p.status === "planned").length})
-              </button>
-              <button
-                aria-pressed={completed}
-                onClick={() => setCompleted(true)}
-              >
-                지원 완료 ({rows.filter((p) => p.status === "completed").length}
-                )
-              </button>
-            </nav>
-            {!rows.length ? (
-              <p className={styles.empty}>지원할 공고를 저장해보세요.</p>
-            ) : completed ? (
-              list(selected)
-            ) : (
-              <>
-                <section aria-label="다가오는 마감">
-                  {list(selected.filter((p) => p.deadline > time))}
-                </section>
-                {selected.some((p) => p.deadline <= time) && (
-                  <section aria-label="지난 마감">
-                    <h2>지난 마감</h2>
-                    <p>마감이 지나도 지원 완료로 자동 변경하지 않습니다.</p>
-                    {list(selected.filter((p) => p.deadline <= time))}
-                  </section>
+            <div className={styles.overview}>
+              <span className={styles.localNote}>
+                <span aria-hidden="true">●</span> 이 브라우저에 저장됨
+              </span>
+              <p>
+                {urgentCount > 0 ? (
+                  <>
+                    24시간 안에 마감되는 공고가 <strong>{urgentCount}개</strong>{" "}
+                    있어요.
+                  </>
+                ) : (
+                  "공고를 저장해 두면 설정한 시간에 알려드려요."
                 )}
-              </>
-            )}
+              </p>
+            </div>
+            <nav className={styles.tabs} aria-label="지원 상태">
+              {(["planned", "expired", "completed"] as const).map((key) => (
+                <button
+                  key={key}
+                  aria-pressed={view === key}
+                  onClick={() => {
+                    setView(key);
+                    setFeedback("");
+                  }}
+                >
+                  {
+                    {
+                      planned: "지원 예정",
+                      expired: "마감 지남",
+                      completed: "지원 완료",
+                    }[key]
+                  }{" "}
+                  ({groups[key].length})
+                </button>
+              ))}
+            </nav>
+            <section aria-label={headings[view]} className={styles.results}>
+              <div className={styles.sectionHeading}>
+                <h2>{headings[view]}</h2>
+                <span>{view === "expired" ? "최근 마감순" : "마감일순"}</span>
+              </div>
+              {view === "expired" && selected.length > 0 && (
+                <p className={styles.sectionNote}>
+                  마감이 지나도 지원 완료로 자동 변경하지 않습니다. 지원했다면
+                  완료로 표시해 주세요.
+                </p>
+              )}
+              {selected.length ? (
+                list(selected)
+              ) : (
+                <div className={styles.empty}>
+                  <span className={styles.emptyIcon} aria-hidden="true">
+                    {view === "completed" ? "✓" : "+"}
+                  </span>
+                  <h3>
+                    {!rows.length && view === "planned"
+                      ? "지원할 공고를 저장해보세요."
+                      : emptyTitles[view]}
+                  </h3>
+                  <p>{emptyDescriptions[view]}</p>
+                  {view === "planned" && (
+                    <button className={styles.primary} onClick={openNew}>
+                      공고 저장하기
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
           </>
         ))}
       <details className={styles.notice}>

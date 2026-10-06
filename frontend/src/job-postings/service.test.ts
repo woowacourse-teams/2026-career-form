@@ -69,6 +69,28 @@ function setup() {
   };
 }
 describe("공고 알림 서비스", () => {
+  it.each([1, 90, 1440])(
+    "%i분 전 알림은 짧은 마감 시각과 지원 행동 문구만 표시한다",
+    async (minutes) => {
+      const s = setup();
+      await s.service.save({ ...s.input, minutes: [minutes] });
+      s.advance(30 * 3600000 - minutes * 60000);
+      await s.service.recover();
+      expect(s.sent[0].title).toBe(
+        `${minutes <= 60 ? "🚨" : "⏰"} 예시 (~10/7 21:00)`,
+      );
+      expect(s.sent[0].message).not.toContain("한국 시간");
+      expect(s.sent[0].message).toBe("\n지금 바로 지원하기 →");
+    },
+  );
+  it("다음 해 마감은 짧은 날짜 앞에 연도를 남긴다", async () => {
+    const s = setup();
+    const deadline = Date.parse("2027-01-01T00:30:00+09:00");
+    await s.service.save({ ...s.input, deadline, minutes: [120] });
+    s.advance(deadline - 120 * 60000 - Date.parse("2026-10-06T06:00:00Z"));
+    await s.service.recover();
+    expect(s.sent[0].title).toBe("⏰ 예시 (~2027/1/1 00:30)");
+  });
   it("미래 알림을 예약하고 재시작에서 사라진 예약을 복구한다", async () => {
     const s = setup();
     await s.service.save(s.input);
@@ -84,8 +106,9 @@ describe("공고 알림 서비스", () => {
     await Promise.all([s.service.recover(), s.service.recover()]);
     await new PostingService(s.repository, s.ports).recover();
     expect(s.sent).toHaveLength(1);
-    expect(s.sent[0].message).toContain("2026");
-    expect(s.sent[0].title).toContain("1시간");
+    expect(s.sent[0].message).toBe("\n지금 바로 지원하기 →");
+    expect(s.sent[0].title).toBe("🚨 예시 (~10/7 21:00)");
+    expect(s.sent[0].message).not.toContain("한국 시간");
     expect(s.next).toBeUndefined();
   });
   it("이미 마감됐으면 사전 알림을 보내지 않는다", async () => {

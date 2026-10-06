@@ -24,6 +24,7 @@ export function installPostingBackground() {
           iconUrl: `chrome-extension://${browser.runtime.id}/side-panel-launcher-logo.png`,
           title: delivery.title,
           message: delivery.message,
+          buttons: [{ title: "지원하기" }],
         });
       },
       clearNotification: async (id) => {
@@ -40,7 +41,7 @@ export function installPostingBackground() {
   browser.runtime.onStartup.addListener(recover);
   browser.runtime.onInstalled.addListener(recover);
   browser.notifications.onPermissionLevelChanged.addListener(recover);
-  browser.notifications.onClicked.addListener((id) => {
+  const openPosting = (id: string) => {
     if (!id.startsWith("careerForm.job.")) return;
     void service
       .notificationUrl(id)
@@ -49,6 +50,10 @@ export function installPostingBackground() {
         await browser.notifications.clear(id);
       })
       .catch(() => undefined);
+  };
+  browser.notifications.onClicked.addListener(openPosting);
+  browser.notifications.onButtonClicked.addListener((id, index) => {
+    if (index === 0) openPosting(id);
   });
   // Register listeners synchronously before restoring persisted jobs.
   recover();

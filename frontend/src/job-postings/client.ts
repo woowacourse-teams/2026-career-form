@@ -1,3 +1,4 @@
+import { captureSiteIcon } from "./site-favicon";
 import { browser } from "wxt/browser";
 import type { PostingInput } from "./model";
 import { POSTING_MESSAGE, type PostingCommand } from "./messages";
@@ -48,8 +49,18 @@ async function request(command: PostingCommand): Promise<PostingSnapshot> {
 }
 export const postingClient: PostingClient = {
   list: () => request({ type: POSTING_MESSAGE, action: "list" }),
-  save: (input, id, version) =>
-    request({ type: POSTING_MESSAGE, action: "save", input, id, version }),
+  save: async (input, id, version) => {
+    const icon = captureSiteIcon(input.url);
+    const snapshot = await request({
+      type: POSTING_MESSAGE,
+      action: "save",
+      input,
+      id,
+      version,
+    });
+    await icon;
+    return snapshot;
+  },
   setCompleted: (id, version, completed) =>
     request({
       type: POSTING_MESSAGE,

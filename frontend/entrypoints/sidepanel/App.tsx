@@ -31,6 +31,7 @@ interface AppProps {
   autofillView?: ReactNode;
   returnToProfile?: () => void;
   actionPosition?: "top" | "bottom";
+  showPostings?: boolean;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -106,6 +107,7 @@ export function App({
   autofillView,
   returnToProfile,
   actionPosition = "top",
+  showPostings = true,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
@@ -260,6 +262,19 @@ export function App({
             프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
+        {!autofillActive && showPostings && (
+          <nav className={styles.postingsActions} aria-label="공고 관리">
+            <button
+              type="button"
+              onClick={() => {
+                setPostingsFailed(false);
+                void openPostings(false).catch(() => setPostingsFailed(true));
+              }}
+            >
+              지원 공고 관리 <span aria-hidden="true">↗</span>
+            </button>
+          </nav>
+        )}
         {!autofillActive && actionPosition === "top" && (
           <section className={styles.autofillAction}>
             <button
@@ -279,28 +294,6 @@ export function App({
               </p>
             )}
           </section>
-        )}
-        {!autofillActive && (
-          <nav className={styles.postingsActions} aria-label="공고 관리">
-            <button
-              type="button"
-              onClick={() => {
-                setPostingsFailed(false);
-                void openPostings(true).catch(() => setPostingsFailed(true));
-              }}
-            >
-              공고 저장
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setPostingsFailed(false);
-                void openPostings(false).catch(() => setPostingsFailed(true));
-              }}
-            >
-              저장한 공고 보기
-            </button>
-          </nav>
         )}
         {postingsFailed && (
           <p role="alert">

@@ -313,11 +313,20 @@ describe("side panel App", () => {
   });
 });
 
-it("공고 등록과 목록 진입을 구분한다", async () => {
+it("공고 관리 진입을 하나로 합치고 자동 기입 앞에 배치한다", async () => {
   const openPostings = vi.fn(async () => undefined);
   render(<App repository={createRepository()} openPostings={openPostings} />);
-  fireEvent.click(await screen.findByRole("button", { name: "공고 저장" }));
-  expect(openPostings).toHaveBeenCalledWith(true);
-  fireEvent.click(screen.getByRole("button", { name: "저장한 공고 보기" }));
+  const manage = await screen.findByRole("button", { name: "지원 공고 관리" });
+  expect(
+    screen.queryByRole("button", { name: "공고 저장" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "저장한 공고 보기" }),
+  ).not.toBeInTheDocument();
+  const autofill = screen.getByRole("button", { name: "자동 기입" });
+  expect(
+    manage.compareDocumentPosition(autofill) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  fireEvent.click(manage);
   expect(openPostings).toHaveBeenCalledWith(false);
 });

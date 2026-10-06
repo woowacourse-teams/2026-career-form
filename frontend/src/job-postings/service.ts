@@ -1,9 +1,7 @@
 import {
   createPosting,
   editPosting,
-  formatDeadline,
   pendingReminders,
-  remainingTime,
   type Posting,
   type PostingInput,
 } from "./model";
@@ -176,10 +174,29 @@ export class PostingService {
       if (!expired && !allowed) continue;
       if (!expired) {
         try {
+          const minutes = Math.ceil((posting.deadline - now) / 60000);
+          const parts = (at: number) =>
+            Object.fromEntries(
+              new Intl.DateTimeFormat("ko-KR", {
+                timeZone: posting.timeZone,
+                year: "numeric",
+                month: "numeric",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+              })
+                .formatToParts(at)
+                .map(({ type, value }) => [type, value]),
+            );
+          const end = parts(posting.deadline);
+          const current = parts(now);
+          const date = `${end.year === current.year ? "" : `${end.year}/`}${end.month}/${end.day}`;
+          const deadline = `${date} ${end.hour}:${end.minute}`;
           await this.ports.notify({
             id: notificationId(posting),
-            title: `${posting.company} ${posting.role} 지원 마감 · ${remainingTime(posting.deadline, now)}`,
-            message: `${formatDeadline(posting.deadline, posting.timeZone)} 마감입니다. 클릭하면 공고를 엽니다.`,
+            title: `${minutes <= 60 ? "🚨" : "⏰"} ${posting.company} (~${deadline})`,
+            message: "\n지금 바로 지원하기 →",
           });
         } catch {
           this.problems.add("notification");
