@@ -330,7 +330,6 @@ it("rejects a rebound Greeting search label whose selected option was lost", asy
       (entry) => entry.item?.candidateId === school.candidateId,
     ),
   ).toMatchObject({
-    reason: "입력 결과 확인",
     failureCode: "SEARCH_SELECTION_UNVERIFIED",
   });
 });

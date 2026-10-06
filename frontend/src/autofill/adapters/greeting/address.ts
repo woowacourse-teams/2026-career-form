@@ -151,7 +151,8 @@ export async function runGreetingAddress({
       !(await sameProfile()) ||
       !targets() ||
       greetingAddressTrigger(document) !== button ||
-      !selected()
+      !selected() ||
+      (detail.value !== "" && detail.value !== expected.detail)
     )
       return manual();
     if (detail.value !== expected.detail) setText(detail, expected.detail);
@@ -227,6 +228,21 @@ export async function runGreetingAddress({
       !targets() ||
       zip.value ||
       address.value
+    )
+      return manual();
+    const matches = (resultRows(owner) ?? []).filter(
+      (result) =>
+        result.postalCode === expected.postalCode &&
+        !!result.address &&
+        normalizeAddress(result.address) === normalizeAddress(expected.address),
+    );
+    if (
+      !owner.matches(OPEN_DIALOG) ||
+      !owner.contains(query) ||
+      query.value !== expected.address ||
+      matches.length !== 1 ||
+      matches[0].element !== row ||
+      !greetingUsable(row)
     )
       return manual();
     row.click();

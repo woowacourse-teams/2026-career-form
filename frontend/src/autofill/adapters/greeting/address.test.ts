@@ -161,3 +161,62 @@ it("does not open the search over a different existing address", async () => {
   expect(click).not.toHaveBeenCalled();
   expect(dialog.getAttribute("data-state")).toBe("closed");
 });
+
+it("preserves detail entered during the final profile check", async () => {
+  const { zip, address, detail, button } = fixture([]);
+  zip.value = expected.postalCode;
+  address.value = expected.address;
+  const loadCurrent = vi
+    .fn()
+    .mockResolvedValueOnce(expected)
+    .mockImplementationOnce(async () => {
+      detail.value = "사용자가 입력한 상세주소";
+      detail.dispatchEvent(new Event("input", { bubbles: true }));
+      return expected;
+    });
+
+  await expect(
+    runGreetingAddress({
+      document,
+      button,
+      expected,
+      loadCurrent,
+      signal: new AbortController().signal,
+      search: vi.fn(),
+    }),
+  ).resolves.toMatchObject({ status: "manual" });
+  expect(detail.value).toBe("사용자가 입력한 상세주소");
+});
+
+it("does not select a result that becomes ambiguous during the profile check", async () => {
+  const { zip, address, detail, button, dialog } = fixture([
+    [expected.address, expected.postalCode],
+  ]);
+  const selected = vi.fn();
+  const loadCurrent = vi
+    .fn()
+    .mockResolvedValueOnce(expected)
+    .mockImplementationOnce(async () => {
+      const list = dialog.querySelector('[data-scope="scroll-area"]')!;
+      const row = list.firstElementChild!;
+      row.addEventListener("click", selected);
+      list.append(row.cloneNode(true));
+      return expected;
+    })
+    .mockResolvedValue(expected);
+
+  await expect(
+    runGreetingAddress({
+      document,
+      button,
+      expected,
+      loadCurrent,
+      signal: new AbortController().signal,
+      search: vi.fn(),
+    }),
+  ).resolves.toMatchObject({ status: "manual" });
+  expect(selected).not.toHaveBeenCalled();
+  expect([zip.value, address.value, detail.value]).toEqual(["", "", ""]);
+  expect(dialog.getAttribute("data-state")).toBe("closed");
+  expect(zip.closest('[aria-hidden="true"]')).toBeNull();
+});
