@@ -93,3 +93,12 @@ it("leads with the value of reused information and keeps detailed guidance in on
     3,
   );
 });
+
+it("랜딩에서 공고 저장과 마감 알림 흐름을 소개한다", () => {
+  render(<SiteApp path="/" />);
+  expect(
+    screen.getByRole("heading", { name: /관심 공고는 모아두고/ }),
+  ).toBeVisible();
+  expect(screen.getByText(/프로필 등록 없이/)).toBeVisible();
+  expect(screen.getByText(/지원 완료로 표시하면 남은 알림/)).toBeVisible();
+});

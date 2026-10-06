@@ -1,0 +1,68 @@
+.masthead {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.shell {
+  max-width: 1080px;
+  padding: 16px 32px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-strong);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.brandMark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  font-size: 22px;
+  letter-spacing: -0.1em;
+  object-fit: cover;
+}
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.navigation button {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 10px 16px;
+  min-height: 40px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.navigation button[aria-current="page"] {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  font-weight: 700;
+}
+.navigation button:hover {
+  background: var(--color-surface-muted);
+}
+.navigation button:focus-visible {
+  outline: 3px solid var(--color-action);
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .shell {
+    padding: 14px 18px;
+  }
+}
