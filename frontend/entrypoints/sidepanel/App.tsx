@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   openAutofillOverlay,
   openOptionsPage,
+  openPostingsPage,
 } from "../../src/extension/navigation";
 import type { TrackEvent } from "../../src/analytics/events";
 import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
@@ -23,6 +24,7 @@ interface AppProps {
   copyText?: (value: string) => Promise<void>;
   closePanel?: () => void;
   openOptions?: () => Promise<void> | void;
+  openPostings?: (create: boolean) => Promise<void>;
   openAutofill?: () => Promise<void>;
   inPage?: boolean;
   logoUrl?: string;
@@ -97,6 +99,7 @@ export function App({
   copyText = (value) => navigator.clipboard.writeText(value),
   closePanel = () => window.close(),
   openOptions = openOptionsPage,
+  openPostings = openPostingsPage,
   openAutofill = openAutofillOverlay,
   inPage = false,
   logoUrl = "/side-panel-launcher-logo.png",
@@ -115,6 +118,7 @@ export function App({
   const [copiedId, setCopiedId] = useState<string>();
   const [copyFailed, setCopyFailed] = useState(false);
   const [navigationFailed, setNavigationFailed] = useState(false);
+  const [postingsFailed, setPostingsFailed] = useState(false);
   const [autofillFailed, setAutofillFailed] = useState(false);
   const [autofillPending, setAutofillPending] = useState(false);
   const startPending = useRef(false);
@@ -275,6 +279,33 @@ export function App({
               </p>
             )}
           </section>
+        )}
+        {!autofillActive && (
+          <nav className={styles.postingsActions} aria-label="공고 관리">
+            <button
+              type="button"
+              onClick={() => {
+                setPostingsFailed(false);
+                void openPostings(true).catch(() => setPostingsFailed(true));
+              }}
+            >
+              공고 저장
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPostingsFailed(false);
+                void openPostings(false).catch(() => setPostingsFailed(true));
+              }}
+            >
+              저장한 공고 보기
+            </button>
+          </nav>
+        )}
+        {postingsFailed && (
+          <p role="alert">
+            공고 관리 화면을 열지 못했습니다. 다시 시도해 주세요.
+          </p>
         )}
       </header>
       {autofillActive ? (

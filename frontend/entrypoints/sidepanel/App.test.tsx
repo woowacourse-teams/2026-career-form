@@ -36,7 +36,9 @@ describe("side panel App", () => {
     expect(value.closest("button")).toBeNull();
     fireEvent.click(value);
     expect(screen.queryByRole("form")).toBeNull();
-    expect(screen.queryByRole("button", { name: /수정|저장|취소/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^(수정|저장|취소)$/ }),
+    ).toBeNull();
     expect(screen.queryByText("값을 누르면 바로 수정할 수 있어요.")).toBeNull();
     expect(screen.getByRole("button", { name: "프로필 관리" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "국문 이름 복사" }));
@@ -309,4 +311,13 @@ describe("side panel App", () => {
     );
     expect(screen.getByRole("alert")).not.toHaveTextContent("copy@example.com");
   });
+});
+
+it("공고 등록과 목록 진입을 구분한다", async () => {
+  const openPostings = vi.fn(async () => undefined);
+  render(<App repository={createRepository()} openPostings={openPostings} />);
+  fireEvent.click(await screen.findByRole("button", { name: "공고 저장" }));
+  expect(openPostings).toHaveBeenCalledWith(true);
+  fireEvent.click(screen.getByRole("button", { name: "저장한 공고 보기" }));
+  expect(openPostings).toHaveBeenCalledWith(false);
 });
