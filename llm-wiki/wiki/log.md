@@ -410,3 +410,10 @@
 - Source-Revision: 732932774645a1576264520f3f4c5c4ba6e6d1d3
 - 승인한 두 후보를 [CF-154 bundle](../raw/issues/CF-154/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - HTTP UI 진입점과 수집 인증 분리, 필수 외부 URL, 사람 담당 수동 반영 절차를 기록했다.
+
+## [2026-10-06] ingest | CF-158 장애 분석 로그와 외부 호출 P95
+
+- Approval-Digest: 1cb4110f01da3eb03cd9bd1bd5a5d5ffba56c4dd910990521f61bab3527623cf
+- Source-Revision: 15a5e992a3e291263ecfdf564162ea04930094e0
+- 승인한 네 후보를 [CF-158 bundle](../raw/issues/CF-158/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 raw는 보존했다.
+- 기본 필터 패널, 요청 연결, 외부 성공 P95와 표본, 수집 상태 해석과 사람 담당 반영 경계를 기록했다.

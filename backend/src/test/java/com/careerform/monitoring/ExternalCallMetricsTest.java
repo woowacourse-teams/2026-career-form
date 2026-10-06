@@ -5,11 +5,37 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.concurrent.CompletionException;
+import java.util.regex.Pattern;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 class ExternalCallMetricsTest {
+
+    @Test
+    void exportsFineGrainedLatencyBucketsAndPreservesExistingAlertCounts() {
+        var registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        try {
+            var metrics = new ExternalCallMetrics(registry);
+            metrics.record("openai", "analysis", Duration.ofSeconds(3).toNanos(), false, false);
+            metrics.record("openai", "analysis", Duration.ofSeconds(12).toNanos(), false, false);
+            metrics.record("openai", "analysis", Duration.ofSeconds(25).toNanos(), false, false);
+            var scrape = registry.scrape();
+            var buckets = Pattern.compile("career_form_external_call_seconds_bucket\\{[^\\n]*le=\"([^\"]+)\"[^\\n]*} ([0-9.]+)")
+                .matcher(scrape).results().toList();
+            assertThat(buckets.stream().map(match -> match.group(1))
+                .filter(value -> !value.equals("+Inf")).mapToDouble(Double::parseDouble)
+                .filter(value -> value > 1 && value < 8).count()).isGreaterThan(3);
+            assertThat(buckets.stream().filter(match -> match.group(1).equals("5.0"))
+                .map(match -> Double.parseDouble(match.group(2)))).containsExactly(1.0);
+            assertThat(buckets.stream().filter(match -> match.group(1).equals("20.0"))
+                .map(match -> Double.parseDouble(match.group(2)))).containsExactly(2.0);
+        } finally {
+            registry.close();
+        }
+    }
 
     @Test
     void recordsLatencyAndCountsOnlyTimeoutsSeparately() {

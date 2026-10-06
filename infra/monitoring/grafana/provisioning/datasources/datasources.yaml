@@ -15,3 +15,9 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
+    jsonData:
+      derivedFields:
+        - name: requestId
+          matcherRegex: 'requestId=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\]|\s|$)'
+          url: '/d/career-form-monitoring?var-env=$${env}&from=$${__from}&to=$${__to}&var-requestId=$${__value.raw}&var-status=&viewPanel=20'
+          urlDisplayLabel: '관련 요청 로그'

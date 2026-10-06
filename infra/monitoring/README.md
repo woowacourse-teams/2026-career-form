@@ -191,13 +191,13 @@ sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monito
 curl --fail --retry 12 --retry-all-errors --retry-delay 2 --max-time 10 http://127.0.0.1/api/health
 ```
 
-Grafana와 Nginx 재생성 중 UI·수집·알림 평가가 잠시 중단될 수 있다. Loki, Prometheus,
+Grafana와 Nginx 재생성 중 UI, 수집, 알림 평가가 잠시 중단될 수 있다. Loki, Prometheus,
 Alloy와 영속 데이터 경로는 변경하지 않는다. 전체 Compose config나 환경변수를 출력해
 시크릿을 노출하지 않는다.
 
 SSH 터널을 끈 다른 컴퓨터에서 URL을 열어 로그인, 정적 자원 로딩, 환경별 데이터 조회와
 Grafana Live 연결을 확인한다. Viewer 계정의 관리 기능 접근 제한, 실제 Discord 링크의
-외부 주소, 기존 로그·메트릭 수집도 확인한다.
+외부 주소, 기존 로그, 메트릭 수집도 확인한다.
 
 실패하면 외부 80 접근을 다시 제한하고 기록한 백업 경로로 복구한다.
 
@@ -406,3 +406,95 @@ COMPOSE_PROJECT_NAME=career-form-tests .venv/bin/python harness/scripts/verify.p
 - [Alloy Docker 로그 수집](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.docker/)
 - [Loki 보존 정책](https://grafana.com/docs/loki/latest/operations/storage/retention/)
 - [Nginx proxy_pass와 resolver](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass)
+
+
+## CF-158 장애 분석 조회
+
+기존 일반 로그 패널은 유지한다. 신규 패널은 선택한 env와 시간 범위를 따르며,
+각 시점의 HTTP 건수는 최근 5분, 외부 호출 P95와 건수는 최근 15분 이동 구간이다.
+
+| 패널 | 기준 |
+|---|---|
+| HTTP 상태 코드 추이 | 3xx, 4xx, 5xx 코드별 최근 5분 발생 건수. Actuator 제외 |
+| 서버 오류 요청 | API_RESULT의 5xx |
+| API 지연 기준 초과 | preparation/analyze, fields/analyze 20초, interaction-decisions 5초, 기타 2초 초과. Actuator 제외 |
+| 외부 호출 실패 | EXTERNAL_RESULT의 failure 또는 timeout |
+| 외부 호출 성공 P95 | provider, operation별 성공 호출만 집계 |
+| 외부 호출 결과별 건수 | 성공, 실패, timeout을 각각 집계 |
+| P95 표본 상태 | 성공 0건 데이터 없음, 0건 초과 20건 미만 표본 부족, 20건 이상 표본 기준 충족 |
+| 환경 수집 상태 | 최근 30초 backend up의 최솟값. 실패 또는 소실은 0 |
+| 선택 요청 관련 로그 | 같은 requestId의 전체 로그를 시간순으로 조회 |
+| 선택 상태 코드 로그 | 선택한 3xx, 4xx, 5xx 코드의 API_RESULT |
+| 관측 로그 파싱 실패 | API_RESULT의 파싱 또는 숫자 변환 오류 |
+
+3xx는 리다이렉트이며 장애로 분류하지 않는다. 이 변경에서 기존 알림과
+요청 timeout은 바꾸지 않는다. 지연 기준은 초기 조회 기준으로 운영 데이터에
+따라 별도 Issue에서 조정한다.
+
+### 요청 추적 흐름
+
+1. 환경과 시간 범위를 선택하고 상태 코드 추이 또는 필터 적용 로그 패널을 확인한다.
+2. 상태 코드 그래프의 데이터 링크를 선택하면 해당 코드 로그 패널로 이동한다.
+3. 로그 행을 펼치고 Links의 `관련 요청 로그`를 선택하면 같은 환경과 시간 범위의
+   requestId 관련 로그를 새 탭에서 조회한다.
+4. 관련 로그에는 상태 코드, 지연과 외부 실패 필터를 적용하지 않는다. 정상 외부 호출도
+   포함해 시간순으로 확인한다. 원문 URL, query, body는 새로 기록하지 않는다.
+5. 상단 requestId와 조회 상태 코드 입력을 비우면 해당 조회가 초기화된다.
+   빈 requestId는 전체 로그를 조회하지 않는다. UUID 형식 requestId가 없는 행은
+   요청 연결을 제공하지 않는다.
+
+신규 로그 패널의 최대 조회량은 각각 500줄이다. 최신 요청 패널은 최신 500줄,
+관련 로그 패널은 선택 시간 범위의 처음 500줄이며 전체 건수가 아니다.
+필요하면 시간 범위를 좁힌다. 일반 로그 패널의 기존 조회 설정은 유지한다.
+
+결과 없음은 Grafana의 No data, 쿼리 실패는 패널 오류로 표시된다. 파싱 실패 패널에
+로그가 있으면 필터 패널에서 누락될 수 있으므로 일반 로그 원문을 확인한다.
+환경 수집 상태와 기존 scrape 상태로 backend 메트릭 수집을 확인할 수 있지만,
+이 값이 정상이더라도 Loki 로그 전송이 정상임을 보장하지 않는다.
+
+### P95 해석과 계측
+
+외부 호출 Timer의 percentile histogram은 100ms에서 60초 범위로 구성하고 기존
+5초, 20초 SLO 버킷을 유지한다. 호출 시간 상한을 바꾸는 설정은 아니다.
+범위 밖 지연의 P95 정밀도는 제한되며, 기본 OpenAI 30초와 bounded call 8초를
+고려한 초기 범위다. 런타임 timeout을 크게 바꿀 때는 버킷 범위도 함께 검토한다.
+
+P95는 성공 호출의 추정 분위수이며 실패, timeout을 제외한다. 결과별 건수를
+함께 확인해야 실패가 증가하는 상황을 놓치지 않는다. 성공 호출이 없으면
+0초로 표시하지 않는다. 20건은 통계적 신뢰 보장이 아닌 초기 표본 표시 기준이다.
+건수는 Prometheus counter 증가량 추정값이므로 소수가 될 수 있다. 첫 scrape 이전
+호출과 초기 표본 부족은 기존 관측 한계에 포함된다. 설정 반영 직후에는 기존의
+성긴 버킷과 신규 버킷 구간이 섞일 수 있으므로 15분 구간이 채워진 뒤 해석한다.
+
+### 설정 반영과 복구
+
+서버 반영은 운영자가 수행한다. develop/main 머지로 중앙 설정이 자동 갱신되지 않는다.
+
+1. 현재 `grafana/dashboards/backend.json`과
+   `grafana/provisioning/datasources/datasources.yaml`을 서버에서 백업한다.
+2. 검증한 두 파일을 기존 중앙 모니터링 디렉터리의 같은 상대 경로에 반영한다.
+3. Compose config를 검증하고 Grafana만 재생성해 dashboard와 datasource를 다시 로드한다.
+   Loki, Prometheus, Alloy와 영속 데이터는 변경하지 않는다.
+4. 백엔드의 히스토그램 보강은 기존 앱 배포 절차로 각 환경에 별도 반영한다.
+5. Viewer로 패널, 환경과 시간 보존, 상태 코드 연결, requestId 연결, 빈 선택 초기화,
+   P95 표본 표시, 기존 로그와 알림을 확인한다.
+6. 실패 시 백업한 두 파일을 복구하고 Grafana만 재생성한다. 백엔드 복구가 필요하면
+   기존 앱 배포 복구 절차를 따른다.
+
+### 로컬 재현
+
+격리한 합성 Docker 스택과 Promtool로 조회를 검증한다.
+
+```bash
+RUN_MONITORING_INTEGRATION=1 .venv/bin/python -m unittest infra.tests.test_monitoring_diagnostics_metrics infra.tests.test_monitoring_diagnostics_runtime -v
+```
+
+브라우저 검증은 별도 임시 디렉터리에 설치한 Playwright와 Chromium을 사용한다.
+저장소 의존성을 추가하지 않는다. 아래 경로는 로컬 설치 위치로 지정한다.
+
+```bash
+RUN_MONITORING_INTEGRATION=1 MONITORING_PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright MONITORING_BROWSER_EXECUTABLE=/absolute/path/to/chromium .venv/bin/python -m unittest infra.tests.test_monitoring_diagnostics_runtime.MonitoringDiagnosticsRuntimeTest.test_browser_request_links_preserve_environment_time_and_reset_filters -v
+```
+
+브라우저 옵션을 지정하지 않으면 해당 시험은 skip된다. 로그인은 격리 스택의
+합성 계정만 사용하며 실제 운영 계정, 브라우저 세션과 Discord webhook은 사용하지 않는다.
