@@ -13,17 +13,20 @@ export function PanelPreview({
   onReturn = noop,
   onClose = noop,
   repository = demoRepository,
+  showPostings = true,
 }: {
   onAutofill?: () => Promise<void>;
   autofillView?: ReactNode;
   onReturn?: () => void;
   onClose?: () => void;
   repository?: ProfileRepository;
+  showPostings?: boolean;
 }) {
   return (
     <div className={styles.nativePanel} data-demo-panel>
       <App
         track={noop}
+        showPostings={showPostings}
         autofillView={autofillView}
         returnToProfile={onReturn}
         inPage
@@ -47,7 +50,7 @@ export function PanelGuide({
     <div
       className={`${styles.guide} ${kind === "profile" ? styles.guideProfile : styles.guideAutofill}`}
     >
-      <PanelPreview />
+      <PanelPreview showPostings={false} />
     </div>
   );
 }
