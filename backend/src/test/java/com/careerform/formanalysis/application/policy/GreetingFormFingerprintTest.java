@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
@@ -23,6 +25,28 @@ class GreetingFormFingerprintTest {
     void acceptsUniqueVisibleNativeNameAndPhoneAcrossOpaqueSectionIds() {
         assertThat(fingerprint.matches(request(List.of(name(), phone()), List.of())))
             .isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true,false", "false,true", "true,true"})
+    void acceptsDisabledAccountFieldsAsStructuralEvidence(
+        boolean nameDisabled,
+        boolean phoneDisabled
+    ) {
+        FieldCandidate lockedName = new FieldCandidate(
+            "name", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE,
+            "이름", null, "basicInformation.name", null,
+            nameDisabled ? true : null, null, null, null
+        );
+        FieldCandidate lockedPhone = new FieldCandidate(
+            "phone", FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE,
+            "전화번호", null, "basicInformation.phoneNumber.nationalNumber", null,
+            phoneDisabled ? true : null, null, null, null
+        );
+
+        assertThat(fingerprint.matches(request(
+            List.of(lockedName, lockedPhone), List.of()
+        ))).isTrue();
     }
 
     @Test
