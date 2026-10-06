@@ -41,8 +41,11 @@ export async function runAddressAnalysis({
   onWriteResult?: WriteResultListener;
   setAddressResult: (result: Awaited<NonNullable<AddressRun["task"]>>) => void;
 }): Promise<FieldsAnalyzeResponse | undefined> {
-  if (!run.button || !adapter.runAddress) return analysis;
   const addressNames = adapter.addressFieldNames ?? [];
+  if (!run.button || !adapter.runAddress)
+    return adapter.addressRequiresSearch
+      ? withoutAddressFields(analysis, snapshot, addressNames)
+      : analysis;
   const keys = [
     "contact.contact.postalCode",
     "contact.contact.addressLine1",
@@ -65,7 +68,7 @@ export async function runAddressAnalysis({
         (field) => field.candidateId === candidate.candidateId,
       );
       return (
-        candidate.domId === name &&
+        (candidate.domId ?? candidate.domName) === name &&
         candidate.domName === name &&
         candidate.element === "input" &&
         candidate.control === "text" &&
@@ -81,7 +84,9 @@ export async function runAddressAnalysis({
     });
   const addressTargets = permitted
     ? addressNames.flatMap((name, index) => {
-        const candidate = fields.find((field) => field.domId === name)!;
+        const candidate = fields.find(
+          (field) => (field.domId ?? field.domName) === name,
+        )!;
         const lookup = snapshot.registry.lookupField(candidate.candidateId);
         if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
         const element = lookup.handle.elements[0];
@@ -154,8 +159,20 @@ export async function runAddressAnalysis({
     }
   }
   onActivity?.("matching");
+  return withoutAddressFields(analysis, snapshot, addressNames);
+}
+
+function withoutAddressFields(
+  analysis: FieldsAnalyzeResponse,
+  snapshot: ReturnType<typeof collectFieldsSnapshot>,
+  addressNames: readonly string[],
+): FieldsAnalyzeResponse {
   const ids = new Set(
-    fields
+    snapshot.request.sections
+      .flatMap((section) => [
+        ...section.fields,
+        ...(section.items ?? []).flatMap((item) => item.fields),
+      ])
       .filter(
         (field) =>
           addressNames.includes(field.domId ?? "") ||

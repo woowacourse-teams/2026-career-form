@@ -1,5 +1,6 @@
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
+import type { FailureReporter } from "../../write/failure";
 import { greetingFieldLabel } from "./collection";
 import { greetingText, greetingUsable } from "./write";
 import { currentTrigger, mayMutate, waitFor } from "./workflow-controls";
@@ -49,6 +50,7 @@ export async function search(
   signal: AbortSignal,
   handle: FieldCandidateHandle,
   beforeMutation?: () => Promise<boolean>,
+  report?: FailureReporter,
 ): Promise<boolean> {
   if (
     !(input instanceof HTMLInputElement) ||
@@ -95,10 +97,14 @@ export async function search(
         input.click();
       }
       if (!current() || input.value !== original) return false;
+      let emptyList = false;
       const retained = await waitFor(() => {
         if (!current() || input.value !== original) return false;
         const retainedPopup = retainedSearchPopup(input);
         if (!retainedPopup) return undefined;
+        emptyList = !retainedPopup.popup.querySelector(
+          '[data-scope="combobox"][data-part="item"]',
+        );
         const checked = [
           ...retainedPopup.popup.querySelectorAll<HTMLElement>(
             '[data-scope="combobox"][data-part="item"][role="option"][data-state="checked"]',
@@ -112,6 +118,9 @@ export async function search(
           searchOptionLabel(checked[0]) === item.profileValue
         );
       }, signal);
+      // Some Greeting forms reopen an exact value without rendering options.
+      if (retained === undefined && emptyList && original === item.profileValue)
+        report?.("SEARCH_SELECTION_UNVERIFIED");
       if (
         retained !== true ||
         !(await mayMutate(signal, beforeMutation)) ||

@@ -432,6 +432,29 @@ function greetingSelectedSearchFixture(name: string, value: string) {
   return { ...fixture, root, positioner, inputEvent, keyEvent, reselect };
 }
 
+it("reports an unverifiable selection when Greeting reopens an exact value with an empty list", async () => {
+  const { input, option, handle, item, inputEvent, reselect } =
+    greetingSelectedSearchFixture(
+      "educationalBackground.universities.0.schoolName",
+      "서울대학교",
+    );
+  option.remove();
+  const report = vi.fn();
+
+  expect(
+    await greetingWorkflowAdapter.executeStateDriver!(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+      report,
+    ),
+  ).toBe(false);
+  expect(input.value).toBe("서울대학교");
+  expect(inputEvent).not.toHaveBeenCalled();
+  expect(reselect).not.toHaveBeenCalled();
+  expect(report).toHaveBeenLastCalledWith("SEARCH_SELECTION_UNVERIFIED");
+});
 it.each([
   ["educationalBackground.universities.0.schoolName", "서울대학교"],
   ["educationalBackground.universities.0.majors.0", "컴퓨터공학"],

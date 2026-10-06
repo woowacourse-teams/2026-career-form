@@ -71,6 +71,8 @@ export interface WorkflowAdapter {
   runAddress?(
     options: import("../address/types").AddressExecutionOptions,
   ): Promise<import("../address/types").AddressResult>;
+  // The detail field must never be written without its verified search.
+  addressRequiresSearch?: boolean;
   diagnosticsTitle?: string;
   repeatedProfileSectionHint?(actionDomId: string | undefined):
     | {

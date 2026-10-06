@@ -1350,6 +1350,16 @@ describe("Greeting custom execution contracts", () => {
       "certifications.certificate.acquisitionDate",
       "SELECT_DATE",
     ],
+    [
+      "workHistory.projects.0.projectPeriod.startDate",
+      "projects.project.startDate",
+      "SELECT_DATE",
+    ],
+    [
+      "workHistory.projects.0.projectPeriod.endDate",
+      "projects.project.endDate",
+      "SELECT_DATE",
+    ],
   ] as const)(
     "validates supported dependent field %s",
     (name, key, command) => {

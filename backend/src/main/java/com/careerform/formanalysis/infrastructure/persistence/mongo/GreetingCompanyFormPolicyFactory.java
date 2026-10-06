@@ -50,6 +50,9 @@ final class GreetingCompanyFormPolicyFactory {
         add(rules, "basicInformation.email", FormControl.TEXT, "contact.contact.email", null);
         add(rules, "basicInformation.nationalityCode", FormControl.TEXT, "personal.personal.nationality", null);
         add(rules, "basicInformation.birthdate", FormControl.BUTTON, "personal.personal.birthDate", null);
+        add(rules, "personalInformation.currentAddress.postalCode", FormControl.TEXT, "contact.contact.postalCode", null);
+        add(rules, "personalInformation.currentAddress.address", FormControl.TEXT, "contact.contact.addressLine1", null);
+        add(rules, "personalInformation.currentAddress.detailedAddress", FormControl.TEXT, "contact.contact.addressLine2", null);
         add(rules, "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceStatus",
             FormControl.BUTTON, "military.military.militaryStatus", null);
         add(rules, "militaryServicePreferentialEmploymentStatus.disability.disabilityStatus",
@@ -84,6 +87,15 @@ final class GreetingCompanyFormPolicyFactory {
         add(rules, work + "positionRank", FormControl.TEXT, "careers.career.position", "careerscareer");
         rules.add(new FieldRule(work + "dutiesResponsibility", FormElement.TEXTAREA, FormControl.TEXTAREA,
             new DirectBinding("careers.career.responsibilities"), false, work + "dutiesResponsibility", "careerscareer"));
+        add(rules, work + "reasonForResignation", FormControl.TEXT, "careers.career.terminationReason", "careerscareer");
+
+        String project = "workHistory.projects.*.";
+        add(rules, project + "projectName", FormControl.TEXT, "projects.project.projectName", "projectsproject");
+        add(rules, project + "roleParticipationRole", FormControl.TEXT, "projects.project.role", "projectsproject");
+        add(rules, project + "projectPeriod.startDate", FormControl.BUTTON, "projects.project.startDate", "projectsproject");
+        add(rules, project + "projectPeriod.endDate", FormControl.BUTTON, "projects.project.endDate", "projectsproject");
+        rules.add(new FieldRule(project + "projectDescription", FormElement.TEXTAREA, FormControl.TEXTAREA,
+            new DirectBinding("projects.project.activityDetails"), false, project + "projectDescription", "projectsproject"));
 
         String activities = "languagesCertificationsAndOtherActivity.";
         String test = activities + "certifiedLanguageTests.*.";
@@ -92,6 +104,7 @@ final class GreetingCompanyFormPolicyFactory {
         add(rules, test + "acquisitionDate", FormControl.BUTTON, "languages.languageTest.acquisitionDate", "languageslanguagetest");
         add(rules, test + "grade", FormControl.BUTTON, "languages.languageTest.grade", "languageslanguagetest");
         add(rules, test + "score.score", FormControl.TEXT, "languages.languageTest.grade", "languageslanguagetest");
+        add(rules, test + "registrationNumber", FormControl.TEXT, "languages.languageTest.registrationNo", "languageslanguagetest");
         String skill = activities + "foreignLanguageProficiencies.*.";
         add(rules, skill + "foreignLanguage", FormControl.BUTTON, "languages.languageSkill.language", "languageslanguageskill");
         lookup(rules, skill + "conversationalProficiency", "languages.languageSkill.conversationalLevel", Map.of(
@@ -100,6 +113,8 @@ final class GreetingCompanyFormPolicyFactory {
         add(rules, certificate + "credentials", FormControl.TEXT, "certifications.certificate.name", "certificationscertificate");
         add(rules, certificate + "issuingAgency", FormControl.TEXT, "certifications.certificate.issuer", "certificationscertificate");
         add(rules, certificate + "acquisitionDate", FormControl.BUTTON, "certifications.certificate.acquisitionDate", "certificationscertificate");
+        add(rules, certificate + "rating", FormControl.TEXT, "certifications.certificate.grade", "certificationscertificate");
+        add(rules, certificate + "registrationNumber", FormControl.TEXT, "certifications.certificate.registrationNo", "certificationscertificate");
     }
 
     private static void conditionalDetails(List<FieldRule> rules) {
@@ -129,6 +144,24 @@ final class GreetingCompanyFormPolicyFactory {
                 Map.entry("기타", "기타")));
         add(rules, prefix + "veteranStatus.veteransRegistrationNumber", FormControl.TEXT,
             "veteran.veteran.veteranNumber", null);
+        add(rules, prefix + "militaryService.militaryOccupationalSpecialty", FormControl.TEXT,
+            "military.military.militarySpecialty", null);
+        add(rules, prefix + "disability.disabilityRegistrationNumber", FormControl.TEXT,
+            "disability.disability.disabilityRegistrationNumber", null);
+        lookup(rules, prefix + "militaryService.militaryServiceClassification", "military.military.militaryType", Map.of(
+            "현역병", "현역병", "상근예비역", "상근예비역", "공익근무요원", "공익근무요원",
+            "전문연구요원", "전문연구요원", "산업기능요원", "산업기능요원"));
+        lookup(rules, prefix + "militaryService.dischargeType", "military.military.dischargeType", Map.ofEntries(
+            Map.entry("만기전역", "만기제대"), Map.entry("만기제대", "만기제대"),
+            Map.entry("의가사전역", "의가사제대"), Map.entry("의가사제대", "의가사제대"),
+            Map.entry("의병전역", "의병제대"), Map.entry("의병제대", "의병제대"),
+            Map.entry("상이전역", "상이제대"), Map.entry("상이제대", "상이제대"),
+            Map.entry("소집해제", "소집해제"), Map.entry("불명예제대", "불명예제대")));
+        lookup(rules, prefix + "veteranStatus.veteranRelationship", "veteran.veteran.veteranRelation", Map.ofEntries(
+            Map.entry("부", "부"), Map.entry("모", "모"), Map.entry("조부", "조부"), Map.entry("조모", "조모"),
+            Map.entry("외조부", "외조부"), Map.entry("외조모", "외조모"), Map.entry("형제", "형제"),
+            Map.entry("자매", "자매"), Map.entry("남매", "남매"), Map.entry("배우자", "배우자"),
+            Map.entry("자녀", "자녀"), Map.entry("본인", "본인")));
     }
 
     private static void lookup(List<FieldRule> rules, String name, String key, Map<String, String> options) {
@@ -151,6 +184,14 @@ final class GreetingCompanyFormPolicyFactory {
         add(rules, name + "completionStatus", FormControl.BUTTON, key + "completionStatus", groupId);
         add(rules, name + "attendanceType", FormControl.RADIO, key + "attendanceType", groupId);
         add(rules, name + "gpa.score", FormControl.TEXT, key + "gpaScore", groupId);
+        lookup(rules, name + "schoolLocation", key + "schoolRegion", Map.ofEntries(
+            Map.entry("서울", "서울"), Map.entry("부산", "부산"), Map.entry("대구", "대구"), Map.entry("인천", "인천"),
+            Map.entry("광주", "광주"), Map.entry("대전", "대전"), Map.entry("울산", "울산"), Map.entry("세종", "세종"),
+            Map.entry("경기", "경기"), Map.entry("강원", "강원"), Map.entry("충북", "충북"), Map.entry("충남", "충남"),
+            Map.entry("전북", "전북"), Map.entry("전남", "전남"), Map.entry("경북", "경북"), Map.entry("경남", "경남"),
+            Map.entry("제주", "제주"), Map.entry("해외", "해외")), groupId);
+        if (siteGroup.equals("universities"))
+            add(rules, name + "totalCreditsEarned", FormControl.TEXT, key + "totalCredits", groupId);
         if (siteGroup.equals("universities")) {
             rules.add(new FieldRule(name + "gpa.scoreScale", FormElement.INPUT, FormControl.BUTTON,
                 new LookupBinding(key + "gpaScale", Map.of(
