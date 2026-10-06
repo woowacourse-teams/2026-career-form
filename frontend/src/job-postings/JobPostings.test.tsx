@@ -130,3 +130,25 @@ it("지난 마감과 늦게 전달한 알림 기록을 목록에서 구분한다
   expect(screen.getByText(/놓친 알림을 다시 안내했습니다/)).toBeInTheDocument();
   expect(screen.getByText("마감 지남")).toBeInTheDocument();
 });
+
+it("완료된 공고 수정 폼은 알림을 다시 예약한다고 안내하지 않는다", async () => {
+  const { client } = setup();
+  await client.save({
+    company: "완료 예시",
+    role: "개발",
+    url: "https://example.com",
+    deadline: Date.parse("2026-10-08T18:00Z"),
+    timeZone: "Asia/Seoul",
+    minutes: [1440, 120],
+  });
+  await client.setCompleted("sample", 1, true);
+  render(
+    <JobPostings client={client} now={() => Date.parse("2026-10-06T06:00Z")} />,
+  );
+  await screen.findByRole("button", { name: "지원 완료 (1)" });
+  fireEvent.click(screen.getByRole("button", { name: "지원 완료 (1)" }));
+  fireEvent.click(screen.getByRole("button", { name: "수정" }));
+  expect(
+    screen.queryByText("저장하면 다음 시각에 알림을 예약합니다."),
+  ).not.toBeInTheDocument();
+});

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   createPosting,
+  editPosting,
   deadlineInput,
   formatDeadline,
   parseDeadlineInput,
@@ -45,11 +46,13 @@ export function PostingForm({ posting, busy, now, onSave, onCancel }: Props) {
     timeZone: posting?.timeZone ?? POSTING_TIME_ZONE,
     minutes: slots.filter((s) => s.enabled).map((s) => Number(s.hours) * 60),
   });
+  const preview = (value: PostingInput) =>
+    posting
+      ? editPosting(posting, value, now)
+      : createPosting(value, now, "preview");
   let times: number[] = [];
   try {
-    times = pendingReminders(createPosting(input(), now, "preview")).map(
-      (r) => r.at,
-    );
+    times = pendingReminders(preview(input())).map((r) => r.at);
   } catch {
     /* Incomplete form is expected before submit. */
   }
@@ -61,7 +64,7 @@ export function PostingForm({ posting, busy, now, onSave, onCancel }: Props) {
         setError("");
         try {
           const value = input();
-          createPosting(value, now, "validation");
+          preview(value);
           void onSave(value);
         } catch (e) {
           setError(e instanceof Error ? e.message : "입력값을 확인해 주세요.");

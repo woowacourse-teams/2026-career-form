@@ -69,6 +69,13 @@ export function createPosting(
   id: string,
 ): Posting {
   validateInput(input, now);
+  return assemblePosting(input, now, id);
+}
+function assemblePosting(
+  input: PostingInput,
+  now: number,
+  id: string,
+): Posting {
   return {
     id,
     version: 1,
@@ -92,7 +99,8 @@ export function editPosting(
   input: PostingInput,
   now: number,
 ): Posting {
-  const next = createPosting(input, now, posting.id);
+  validateInput(input, -Infinity);
+  const next = assemblePosting(input, now, posting.id);
   return {
     ...next,
     version: posting.version + 1,

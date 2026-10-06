@@ -73,3 +73,14 @@ describe("공고와 알림 시각", () => {
     },
   );
 });
+
+it("마감이 지난 기존 공고의 정보 수정은 허용하되 알림을 되살리지 않는다", () => {
+  const posting = createPosting(input, now, "job");
+  const edited = editPosting(
+    posting,
+    { ...input, company: "수정한 예시 회사" },
+    input.deadline + 60000,
+  );
+  expect(edited.company).toBe("수정한 예시 회사");
+  expect(pendingReminders(edited)).toEqual([]);
+});
