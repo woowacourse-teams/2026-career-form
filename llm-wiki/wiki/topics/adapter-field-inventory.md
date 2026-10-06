@@ -2,11 +2,13 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [Greeting을 포함한 필드 현황](../../raw/issues/CF-94/documents/adapter-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md)
-> Updated: 2026-09-28
+> Current: [Greeting 추가 필드와 검증 범위](../../raw/issues/CF-160/documents/adapter-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md)
+> Updated: 2026-10-06
 
 ## 현재 상태
+
+CF-160에서 Greeting 현주소, 프로젝트 이름·역할·내용·기간과 행 추가, 어학 등록번호, 자격증 등급·등록번호, 퇴직사유, 대학 총 이수학점, 대학·대학원 소재지, 병과·병역구분·제대구분·장애등록번호·보훈관계를 연결했다. disabled 기본정보는 식별에만 사용하고 쓰기는 차단한다. 대응 키가 없는 필드는 미지원으로 유지한다. [필드별 보호 조건과 검증 범위](../../raw/issues/CF-160/documents/adapter-field-inventory.md)는 코드 지원과 실화면 관측을 구분한다. 아래 다른 회사의 기존 계약과 과거 검증 수치는 유지한다.
 
 현대·SK 프론트의 구현 기능과 자동 검증 범위를 현황표로 관리한다. 현대 로컬 정책은 v7이며 병역·보훈은 별도 조건부 계약으로 기록한다. 개별 필드 연결은 활성 서버 정책과 DOM 검증을 따르며, 실제 페이지 지원을 추정하지 않는다. 현대 취득일의 ID/이름 구분은 비식별 회귀로 검증했고, 최신 설치 smoke는 주소·국적1과 고교·학사 2행을 독립 대조했다. SK 경력·국적·대학 년월·학교·자격증·시험 검색은 승인된 전체 패널 검증 범위와 함께 기록하되, 저장·제출 호환성 및 P1/P3/P4 전체 기능은 미검증·미구현으로 유지한다. LG 학교 검색은 이번 변경에서 미구현이다.
 
