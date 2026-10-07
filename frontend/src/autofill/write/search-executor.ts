@@ -17,6 +17,11 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "./executor";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { WriteFailureCode } from "./failure";
+import { catalogApprovalForItem } from "../profile/catalog-identity";
+import {
+  rememberCatalogSelection,
+  retainedCatalogSelection,
+} from "../profile/catalog-receipt";
 
 const MAX_SEARCHES = 4;
 const STALE = "지원서 필드 상태가 변경되었거나 입력할 수 없습니다.";
@@ -147,7 +152,13 @@ export function settledSearchSelectionResult(
       captured.assertCurrent,
       captured.acceptedValues,
     );
-  return current && typeof current !== "string"
+  const approval = catalogApprovalForItem(item);
+  const retained =
+    approval.status === "legacy" ||
+    (approval.status === "selected" &&
+      captured &&
+      retainedCatalogSelection(item, captured.identity.target) !== undefined);
+  return current && typeof current !== "string" && retained
     ? result
     : skipped(
         item.candidateId,
@@ -390,6 +401,22 @@ export async function executeApprovedSearchWrites({
       );
       continue;
     }
+    const catalogApproval = catalogApprovalForItem(item);
+    if (
+      catalogApproval.status === "invalid" ||
+      (catalogApproval.status === "selected" &&
+        item.profileFieldKey !== direct.profileFieldKey)
+    ) {
+      results[index] = skipped(
+        item.candidateId,
+        "needs-verification",
+        "STALE_TARGET",
+        STALE,
+      );
+      continue;
+    }
+    const catalogMatch =
+      catalogApproval.status === "selected" ? catalogApproval.match : undefined;
     if (searchCount >= MAX_SEARCHES && !normalized(item.currentValue)) {
       results[index] = skipped(
         item.candidateId,
@@ -415,9 +442,11 @@ export async function executeApprovedSearchWrites({
       normalized(input.value) !== normalized(item.currentValue) ||
       (normalized(input.value) &&
         !(
-          direct.profileFieldKey.endsWith(".schoolRegion")
-            ? schoolRegionSearchValues(item.profileValue!)
-            : [item.profileValue!]
+          catalogMatch
+            ? [retainedCatalogSelection(item, input) ?? ""]
+            : direct.profileFieldKey.endsWith(".schoolRegion")
+              ? schoolRegionSearchValues(item.profileValue!)
+              : [item.profileValue!]
         ).some((value) => normalized(input.value) === normalized(value)))
     ) {
       results[index] = skipped(
@@ -428,13 +457,16 @@ export async function executeApprovedSearchWrites({
       );
       continue;
     }
-    const expectedValue = item.profileValue!;
+    const expectedProfileValue = item.profileValue!;
+    const expectedValue = catalogMatch?.query ?? expectedProfileValue;
     const expectedCurrentValue = item.currentValue;
     const expectedKey = direct.profileFieldKey;
     const expectedEntryId = item.profileEntryId;
     const expectedCandidateId = item.candidateId;
     const expectedSearchPlan = JSON.stringify(item.searchValuePlan);
-    const localSearchPlan = item.searchValuePlan;
+    const localSearchPlan = catalogMatch ? undefined : item.searchValuePlan;
+    const expectedCatalogApproval = JSON.stringify(catalogApproval);
+    const expectedSearchIdentity = JSON.stringify(item.searchIdentity);
     if (
       localSearchPlan &&
       (expectedKey !== "certifications.certificate.name" ||
@@ -454,10 +486,13 @@ export async function executeApprovedSearchWrites({
       item.candidateId === expectedCandidateId &&
       item.profileEntryId === expectedEntryId &&
       JSON.stringify(item.searchValuePlan) === expectedSearchPlan &&
+      JSON.stringify(item.searchIdentity) === expectedSearchIdentity &&
+      JSON.stringify(catalogApprovalForItem(item)) ===
+        expectedCatalogApproval &&
       item.analysis?.candidateId === expectedCandidateId &&
       approvedCandidateIds.has(item.candidateId) &&
       isSelectableApproved(item) &&
-      item.profileValue === expectedValue &&
+      item.profileValue === expectedProfileValue &&
       item.currentValue === expectedCurrentValue &&
       item.analysis?.mappingStatus === "LLM_SUGGESTED" &&
       item.analysis.writePlan?.command === "SEARCH_SELECTION" &&
@@ -470,6 +505,7 @@ export async function executeApprovedSearchWrites({
       targetCandidateId: item.candidateId,
       canonicalFieldKey: expectedKey,
       expectedValue,
+      ...(catalogMatch ? { catalogMatch } : {}),
       ...(localSearchPlan
         ? { searchValues: localSearchPlan.forms.map((form) => form.name) }
         : {}),
@@ -479,7 +515,33 @@ export async function executeApprovedSearchWrites({
       beforeMutation,
       signal,
     });
-    if (result.status === "selected" || result.status === "unchanged") {
+    const catalogRetained =
+      !catalogMatch ||
+      (result.status !== "selected" && result.status !== "unchanged") ||
+      (result.catalogSelection !== undefined &&
+        rememberCatalogSelection(item, {
+          element: input,
+          evidence: result.catalogSelection.evidence,
+          verify: () => {
+            const current = targetIsCurrent(
+              input.ownerDocument,
+              registry,
+              item.candidateId,
+              result.identity,
+              currentApproval,
+              [result.catalogSelection!.evidence.label],
+            );
+            return (
+              input.value === result.catalogSelection!.evidence.label &&
+              typeof current !== "string" &&
+              result.catalogSelection!.verify()
+            );
+          },
+        }));
+    if (
+      (result.status === "selected" || result.status === "unchanged") &&
+      catalogRetained
+    ) {
       retainedSearches.set(item, {
         identity: result.identity,
         document: input.ownerDocument,
@@ -496,25 +558,34 @@ export async function executeApprovedSearchWrites({
         >
       | undefined = "reason" in result ? result : undefined;
     results[index] =
-      result.status === "selected"
-        ? written(item.candidateId)
-        : result.status === "unchanged"
-          ? {
-              candidateId: item.candidateId,
-              status: "skipped",
-              outcome: "unchanged",
-              code: "ALREADY_MATCHED",
-              reason: "이미 같은 값이 입력되어 변경하지 않았습니다.",
-            }
-          : skipped(
-              item.candidateId,
-              failedResult?.effect && failedResult.effect !== "none"
-                ? "needs-verification"
-                : failureOutcome(failedResult!.reason),
-              failureCode(failedResult!.reason),
-              searchFailureMessage(failedResult!.reason),
-              searchDiagnosticCode(failedResult!.reason),
-            );
+      !catalogRetained &&
+      (result.status === "selected" || result.status === "unchanged")
+        ? skipped(
+            item.candidateId,
+            "needs-verification",
+            "RETAINED_VALUE_UNCONFIRMED",
+            RETENTION,
+            "VALUE_NOT_RETAINED",
+          )
+        : result.status === "selected"
+          ? written(item.candidateId)
+          : result.status === "unchanged"
+            ? {
+                candidateId: item.candidateId,
+                status: "skipped",
+                outcome: "unchanged",
+                code: "ALREADY_MATCHED",
+                reason: "이미 같은 값이 입력되어 변경하지 않았습니다.",
+              }
+            : skipped(
+                item.candidateId,
+                failedResult?.effect && failedResult.effect !== "none"
+                  ? "needs-verification"
+                  : failureOutcome(failedResult!.reason),
+                failureCode(failedResult!.reason),
+                searchFailureMessage(failedResult!.reason),
+                searchDiagnosticCode(failedResult!.reason),
+              );
     onResult?.(item, results[index]!);
     if (result.status === "selected" && result.followUp?.controls.length) {
       onSearchFollowUp?.(item, result.followUp.controls);
@@ -531,9 +602,10 @@ export async function executeApprovedSearchWrites({
       return true;
     }
     if (
-      result.status !== "selected" &&
-      result.status !== "unchanged" &&
-      result.effect !== "none"
+      !catalogRetained ||
+      (result.status !== "selected" &&
+        result.status !== "unchanged" &&
+        result.effect !== "none")
     ) {
       for (let later = index + 1; later < items.length; later++) {
         if (

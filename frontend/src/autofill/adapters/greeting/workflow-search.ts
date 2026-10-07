@@ -10,6 +10,81 @@ import { greetingFieldLabel } from "./collection";
 import { greetingText, greetingUsable } from "./write";
 import { currentTrigger, mayMutate, waitFor } from "./workflow-controls";
 import { ownedPopup, retainedSearchPopup } from "./workflow-popup";
+import { catalogApprovalForItem } from "../../profile/catalog-identity";
+import {
+  hasCatalogSelection,
+  rememberCatalogSelection,
+  retainedCatalogSelection,
+} from "../../profile/catalog-receipt";
+
+const receiptCleanup = new WeakMap<HTMLInputElement, () => void>();
+
+function rememberGreetingSelection(
+  input: HTMLInputElement,
+  item: ReviewPlanItem,
+  selected: { label: string; code: string; detail?: string },
+): boolean {
+  const popupId = input.getAttribute("aria-controls");
+  const name = input.name;
+  const url = input.ownerDocument.URL;
+  const parent = input.parentElement;
+  receiptCleanup.get(input)?.();
+  let invalidated = false;
+  const invalidate = () => {
+    invalidated = true;
+    input.removeEventListener("input", invalidate);
+    input.removeEventListener("change", invalidate);
+  };
+  input.addEventListener("input", invalidate);
+  input.addEventListener("change", invalidate);
+  receiptCleanup.set(input, invalidate);
+  const remembered = rememberCatalogSelection(item, {
+    element: input,
+    evidence: selected,
+    verify: (target) => {
+      if (
+        !(target instanceof HTMLInputElement) ||
+        invalidated ||
+        !target.isConnected ||
+        target.parentElement !== parent ||
+        target.name !== name ||
+        target.ownerDocument.URL !== url ||
+        target.getAttribute("aria-controls") !== popupId ||
+        target.value !== selected.label
+      )
+        return false;
+      const popups = [
+        ...target.ownerDocument.querySelectorAll<HTMLElement>("[id]"),
+      ].filter((node) => node.id === popupId);
+      // Closed Greeting menus are unmounted. Preserve the last observed code only
+      // while the target is unchanged; reopening must expose that same code.
+      if (!popups.length)
+        return target.getAttribute("aria-expanded") === "false";
+      const checked =
+        popups.length === 1
+          ? [
+              ...popups[0].querySelectorAll<HTMLElement>(
+                '[data-part="item"][role="option"][data-state="checked"]',
+              ),
+            ]
+          : [];
+      const valid =
+        checked.length === 1 &&
+        checked[0].getAttribute("data-value") === selected.code &&
+        searchOptionLabel(checked[0]) === selected.label &&
+        (selected.detail === undefined ||
+          normalizedCatalogLabel(
+            checked[0].querySelector('[data-part="item-description"]')
+              ?.textContent ?? "",
+          ) === normalizedCatalogLabel(selected.detail));
+      if (!valid) invalidate();
+      return valid;
+    },
+  });
+  if (!remembered) invalidate();
+  return remembered;
+}
+
 function nationalitySearch(input: HTMLInputElement): boolean {
   return (
     input.name === "basicInformation.nationalityCode" &&
@@ -69,6 +144,7 @@ export async function search(
       !nationalitySearch(input))
   )
     return false;
+  if (catalogApprovalForItem(item).status === "invalid") return false;
   const selectedIdentity = item.searchIdentity?.status === "selected";
   const catalog = selectedIdentity
     ? verifiedSearchCatalogEntry(
@@ -161,6 +237,7 @@ export async function search(
       }
       if (!current() || input.value !== original) return false;
       let emptyList = false;
+      let retainedCode: string | undefined;
       const retained = await waitFor(() => {
         if (!current() || input.value !== original) return false;
         const retainedPopup = retainedSearchPopup(input);
@@ -175,11 +252,18 @@ export async function search(
         ];
         if (checked.length > 1) return false;
         if (checked.length === 0) return undefined;
-        return (
+        const verified =
           !!checked[0].getAttribute("data-value") &&
           retainedPopup.usable(checked[0]) &&
           searchOptionLabel(checked[0]) === original &&
-          matchesOption(checked[0])
+          matchesOption(checked[0]);
+        if (verified)
+          retainedCode = checked[0].getAttribute("data-value") ?? undefined;
+        return (
+          verified &&
+          (!catalog ||
+            !hasCatalogSelection(input) ||
+            retainedCatalogSelection(item, input) === original)
         );
       }, signal);
       // Some Greeting forms reopen an exact value without rendering options.
@@ -206,6 +290,18 @@ export async function search(
       if (closed !== true) return false;
       input.blur();
       success = current() && input.value === original;
+      if (success && catalog) {
+        success =
+          !!retainedCode &&
+          rememberGreetingSelection(input, item, {
+            label: original,
+            code: retainedCode,
+            ...(catalog.kind === "certificate" ||
+            catalog.kind === "languageTest"
+              ? {}
+              : { detail: catalog.detail }),
+          });
+      }
       return success;
     }
     input.focus();
@@ -395,6 +491,17 @@ export async function search(
       (await key("ArrowDown"))
     ) {
       success = !!(await waitFor(selected, signal, 5000));
+    }
+    if (success && catalog) {
+      success =
+        !!selectedId &&
+        rememberGreetingSelection(input, item, {
+          label: input.value,
+          code: selectedId,
+          ...(catalog.kind === "certificate" || catalog.kind === "languageTest"
+            ? {}
+            : { detail: catalog.detail }),
+        });
     }
     return success;
   } finally {

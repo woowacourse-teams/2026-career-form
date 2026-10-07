@@ -11,6 +11,7 @@ import { buildReviewPlan } from "../../review/review-plan";
 import { greetingWorkflowAdapter } from "./workflow";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { FieldsAnalyzeResponse } from "../../api/types";
+import { matchesResultValue } from "../../workflow/result-value-match";
 
 vi.mock("../../../profile/catalog", () => {
   const entries = [
@@ -131,6 +132,15 @@ async function run(
     ],
   };
   const item = buildReviewPlan({ analysis, registry, profile }).items[0];
+  if (item.status === "unavailable") {
+    expect(item.disabled).toBe(true);
+    expect(item.selected).toBe(false);
+    expect(profile).toEqual(before);
+    expect(document.querySelector<HTMLInputElement>("#unrelated")!.value).toBe(
+      "preserved",
+    );
+    return { success: false, clicked, input, item, handle };
+  }
   expect(item.profileValue).toBe(value);
   expect(item.searchIdentity).toEqual(identity);
   const success = await greetingWorkflowAdapter.executeStateDriver!(
@@ -143,8 +153,39 @@ async function run(
   expect(document.querySelector<HTMLInputElement>("#unrelated")!.value).toBe(
     "preserved",
   );
-  return { success, clicked, input };
+  return { success, clicked, input, item, handle };
 }
+it("does not reuse a Greeting receipt after the chosen label is edited to another alias", async () => {
+  const result = await run(selected(), [{ label: "SQLD" }]);
+  expect(result.success).toBe(true);
+  result.input.value = "SQL 개발자";
+  result.input.dispatchEvent(new Event("input", { bubbles: true }));
+  expect(
+    matchesResultValue(
+      result.item,
+      result.input.value,
+      "SQL 개발자",
+      result.handle,
+    ),
+  ).toBe(false);
+});
+
+it("does not retain a Greeting alias after its checked site code changes", async () => {
+  const result = await run(selected(), [{ label: "SQLD" }]);
+  expect(result.success).toBe(true);
+  document
+    .querySelector('[data-state="checked"]')
+    ?.setAttribute("data-value", "different-code");
+  expect(
+    matchesResultValue(
+      result.item,
+      result.input.value,
+      "SQL 개발자",
+      result.handle,
+    ),
+  ).toBe(false);
+});
+
 it.each(["SQLD", "SQL 개발자(SQLD)", "ＳＱＬＤ"])(
   "carries explicit profile identity through local binding and selects verified %s",
   async (label) => {

@@ -10,6 +10,9 @@ import {
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeReadonlySearch } from "../interaction";
 import type { ApprovedWriteResult } from "./executor";
+import { CATALOG, CATALOG_VERSION } from "../../profile/catalog";
+import { approveCatalogMatch } from "../profile/catalog-identity";
+import { observeReadonlySearch } from "../interaction/readonly-search";
 import {
   executeApprovedSearchWrites,
   settledSearchSelectionResult,
@@ -78,6 +81,103 @@ function setup(count = 1) {
   }));
   return { registry, items, approvedCandidateIds, results };
 }
+
+describe("catalog search approval and receipts", () => {
+  afterEach(() => {
+    vi.mocked(executeReadonlySearch).mockReset();
+    document.body.innerHTML = "";
+  });
+  function catalogSetup() {
+    const test = setup();
+    const item = test.items[0]!;
+    const entry = CATALOG.find((entry) => entry.kind === "certificate")!;
+    const key = "certifications.certificate.name";
+    item.profileFieldKey = key;
+    item.profileValue = entry.name;
+    item.currentValue = "";
+    item.analysis!.valueBinding = { type: "DIRECT", profileFieldKey: key };
+    item.searchIdentity = {
+      status: "selected",
+      catalogId: entry.id,
+      catalogVersion: CATALOG_VERSION,
+      displayName: entry.name,
+      originalText: entry.name,
+    };
+    const approval = approveCatalogMatch(item.searchIdentity, key, entry.name);
+    if (approval.status !== "selected")
+      throw new Error("catalog approval absent");
+    item.catalogMatch = approval.match;
+    const target = document.querySelector<HTMLInputElement>("input")!;
+    target.value = "";
+    vi.mocked(executeReadonlySearch).mockResolvedValue({
+      status: "unsupported",
+      targetCandidateId: item.candidateId,
+      reason: "stale_target",
+      effect: "none",
+    });
+    return { ...test, item, target };
+  }
+  it.each(["malformed", "stale", "wrong-kind"])(
+    "blocks %s identity before dispatch",
+    async (mode) => {
+      const test = catalogSetup();
+      if (mode === "malformed")
+        test.item.catalogMatch = { ...test.item.catalogMatch!, labels: [] };
+      if (mode === "stale" && test.item.searchIdentity?.status === "selected")
+        test.item.searchIdentity = {
+          ...test.item.searchIdentity,
+          catalogVersion: "old",
+        };
+      if (mode === "wrong-kind")
+        test.item.profileFieldKey = "languages.languageTest.testName";
+      await executeApprovedSearchWrites(test);
+      expect(executeReadonlySearch).not.toHaveBeenCalled();
+      expect(test.results[0]).toMatchObject({ status: "skipped" });
+    },
+  );
+  it("passes only one local catalog query and requires exact retained selection evidence", async () => {
+    const test = catalogSetup();
+    const lookup = test.registry.lookupField(test.item.candidateId);
+    if (lookup.status !== "blocked") throw new Error("readonly target absent");
+    const eligibility = observeReadonlySearch(lookup.handle);
+    if (eligibility.status !== "eligible")
+      throw new Error("target not eligible");
+    const label = test.item.catalogMatch!.labels[0]!;
+    test.item.profileValue = "mapped site value";
+    let code = "SITE-CODE";
+    vi.mocked(executeReadonlySearch).mockImplementation(async () => {
+      test.target.value = label;
+      return {
+        status: "selected",
+        targetCandidateId: test.item.candidateId,
+        identity: eligibility.identity,
+        selectedValue: label,
+        catalogSelection: {
+          evidence: { label },
+          verify: () => code === "SITE-CODE" && test.target.value === label,
+        },
+      };
+    });
+    await executeApprovedSearchWrites(test);
+    expect(executeReadonlySearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        catalogMatch: test.item.catalogMatch,
+        expectedValue: test.item.catalogMatch!.query,
+      }),
+    );
+    expect(
+      vi.mocked(executeReadonlySearch).mock.calls[0]![0].searchValues,
+    ).toBeUndefined();
+    expect(test.results[0]).toMatchObject({ status: "written" });
+    expect(
+      settledSearchSelectionResult(test.item, test.registry, test.results[0]!),
+    ).toMatchObject({ status: "written" });
+    code = "EDITED";
+    expect(
+      settledSearchSelectionResult(test.item, test.registry, test.results[0]!),
+    ).toMatchObject({ failureCode: "VALUE_NOT_RETAINED" });
+  });
+});
 
 describe("approved search batch boundaries", () => {
   beforeEach(() => {

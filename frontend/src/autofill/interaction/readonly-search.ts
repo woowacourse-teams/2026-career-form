@@ -87,6 +87,7 @@ export type ReadonlySearchFailureReason =
   | "run_in_progress";
 
 export type SearchEffect = "none" | "interaction-started" | "value-observed";
+
 export type ReadonlySearchExecutionResult = (
   | {
       status: "selected" | "unchanged";
@@ -95,6 +96,10 @@ export type ReadonlySearchExecutionResult = (
       followUp?: { controls: readonly SearchFollowUpControl[] };
       /** Local-only search form retained from the approved review plan. */
       selectedValue?: string;
+      catalogSelection?: {
+        evidence: import("../profile/catalog-match").CatalogEvidence;
+        verify: () => boolean;
+      };
     }
   | {
       status: "skipped" | "unsupported" | "failed";
@@ -161,6 +166,8 @@ export interface ExecuteReadonlySearchArgs {
   expectedCurrentValue?: string;
   /** Local-only exact search forms. The original expected value is always first. */
   searchValues?: readonly string[];
+  /** Local approval only; never serialized in role requests. */
+  catalogMatch?: import("../profile/catalog-match").ApprovedCatalogMatch;
   decisionProvider?: InteractionDecisionProvider;
   /** Lets the workflow invalidate an approved review item before each click/type. */
   assertCurrent?: () => boolean;

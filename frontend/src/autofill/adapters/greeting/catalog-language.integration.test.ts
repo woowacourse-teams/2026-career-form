@@ -111,6 +111,12 @@ async function run(
   }).items[0];
   const execute = greetingWorkflowAdapter.executeStateDriver;
   if (!execute) throw new Error("Missing Greeting state driver");
+  if (item.status === "unavailable") {
+    expect(item.disabled).toBe(true);
+    expect(item.selected).toBe(false);
+    expect(profile).toEqual(before);
+    return { success: false, input, item, handle };
+  }
   expect(item.searchIdentity).toEqual(identity);
   const success = await execute(
     document,

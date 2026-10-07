@@ -11,6 +11,7 @@ useGreetingHost(() => {
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { rememberCatalogSelection } from "../profile/catalog-receipt";
 import { getWorkflowAdapter } from "../adapters/workflow";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -220,6 +221,23 @@ async function run(
             "afterbegin",
             '<input name="ignored">',
           );
+        // This fixture tests workflow reanalysis, not vendor matching. Like the
+        // production driver, it supplies proof of the observed label and code.
+        if (item.catalogMatch) {
+          const value = handle.elements[0].value;
+          const parent = handle.elements[0].parentElement;
+          return rememberCatalogSelection(item, {
+            element: handle.elements[0],
+            evidence: { label: value },
+            verify: (element) =>
+              element instanceof HTMLInputElement &&
+              element.isConnected &&
+              element.parentElement === parent &&
+              element.name === driverName &&
+              element.value === value &&
+              element.getAttribute("data-selected-code") === "school-1",
+          });
+        }
         return true;
       },
     },

@@ -12,6 +12,13 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import { isSelectableApproved } from "./search-executor";
 import { normalizeDisplayName } from "./display-name";
 import { skipped, written, type ApprovedWriteResult } from "./write-result";
+import { catalogApprovalForItem } from "../profile/catalog-identity";
+import { matchesApprovedCatalog } from "../profile/catalog-match";
+import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import {
+  rememberCatalogSelection,
+  retainedCatalogSelection,
+} from "../profile/catalog-receipt";
 
 export async function executeButtonDropdownWrite({
   item,
@@ -44,6 +51,9 @@ export async function executeButtonDropdownWrite({
   if (lookup.status !== "ready") return stale();
   const dropdown = lookup.handle.buttonDropdown;
   const value = item.profileValue;
+  const approval = catalogApprovalForItem(item);
+  if (approval.status === "invalid") return stale();
+  const approvalStamp = JSON.stringify(approval);
   if (
     !dropdown ||
     !value ||
@@ -55,6 +65,9 @@ export async function executeButtonDropdownWrite({
   const current = () =>
     assertCurrent() &&
     !signal?.aborted &&
+    isSelectableApproved(item) &&
+    item.profileValue === value &&
+    JSON.stringify(catalogApprovalForItem(item)) === approvalStamp &&
     registry.lookupField(item.candidateId).status === "ready" &&
     dropdownIsCurrent(dropdown);
   const live = dropdownValue(dropdown);
@@ -66,7 +79,11 @@ export async function executeButtonDropdownWrite({
       "CONFLICT",
       "입력 직전 지원서에 다른 값이 있어 기존 값을 보존했습니다.",
     );
-  if (live === value)
+  if (
+    live === value &&
+    (approval.status === "legacy" ||
+      retainedCatalogSelection(item, dropdown.trigger) === live)
+  )
     return {
       candidateId: item.candidateId,
       status: "skipped",
@@ -82,9 +99,17 @@ export async function executeButtonDropdownWrite({
   try {
     if (!openedWithoutChanges) return stale();
     const options = revalidateDropdown(dropdown, menus);
-    const matches = options?.filter(
-      (option) =>
-        normalizeDisplayName(option.text) === normalizeDisplayName(value),
+    const matches = options?.filter((option) =>
+      approval.status === "selected"
+        ? matchesApprovedCatalog(
+            approval.match,
+            catalogEvidenceForElement(
+              option.element,
+              dropdown.menu,
+              option.text,
+            ),
+          )
+        : normalizeDisplayName(option.text) === normalizeDisplayName(value),
     );
     const option = matches?.length === 1 ? matches[0] : undefined;
     if (
@@ -94,6 +119,16 @@ export async function executeButtonDropdownWrite({
       )
     )
       return unsupported();
+    const chosenValue = option.text;
+    if (approval.status === "selected" && live === chosenValue)
+      return unsupported();
+    const evidence = catalogEvidenceForElement(
+      option.element,
+      dropdown.menu,
+      option.text,
+    );
+    const chosenCode = option.element.getAttribute("data-value");
+    const chosenId = option.element.getAttribute("data-code");
     if (
       !current() ||
       dropdownValue(dropdown) !== live ||
@@ -109,12 +144,33 @@ export async function executeButtonDropdownWrite({
     const reflected = await confirmDropdownSelection(
       dropdown,
       option.element,
-      value,
+      chosenValue,
       current,
       signal,
     );
+    const reflectedCode = dropdown.trigger.getAttribute("data-value");
+    const reflectedId = dropdown.trigger.getAttribute("data-code");
     result =
-      reflected && current() && dropdownValue(dropdown) === value
+      reflected &&
+      current() &&
+      dropdownValue(dropdown) === chosenValue &&
+      (chosenCode === null ||
+        reflectedCode === null ||
+        chosenCode === reflectedCode) &&
+      (chosenId === null || reflectedId === null || chosenId === reflectedId) &&
+      rememberCatalogSelection(item, {
+        element: dropdown.trigger,
+        evidence,
+        verify: () =>
+          current() &&
+          dropdownValue(dropdown) === chosenValue &&
+          option.element.isConnected &&
+          option.element.textContent?.trim() === chosenValue &&
+          option.element.getAttribute("data-value") === chosenCode &&
+          option.element.getAttribute("data-code") === chosenId &&
+          dropdown.trigger.getAttribute("data-value") === reflectedCode &&
+          dropdown.trigger.getAttribute("data-code") === reflectedId,
+      })
         ? written(item.candidateId)
         : skipped(
             item.candidateId,

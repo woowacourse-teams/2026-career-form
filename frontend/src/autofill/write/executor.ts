@@ -340,6 +340,7 @@ export async function executeApprovedWritesAfterPageSettles({
         !halted &&
         runCurrent() &&
         initial[index]?.status === "written" &&
+        !item.catalogMatch &&
         item.analysis?.mappingStatus === "ADAPTER_VERIFIED",
     );
     const retried: ApprovedWriteResult[] = [];
@@ -384,6 +385,13 @@ export async function executeApprovedWritesAfterPageSettles({
       if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
         return settledSearchSelectionResult(item, registry, result);
       if (item.analysis?.writePlan?.command === "SELECT_DATE") return result;
+      if (item.catalogMatch) {
+        const verified = settledGenericResult(
+          item,
+          greetingRegistry ?? registry,
+        );
+        return verified.status === "written" ? result : verified;
+      }
       if (
         companyId === "greeting" &&
         item.analysis?.mappingStatus === "ADAPTER_VERIFIED"

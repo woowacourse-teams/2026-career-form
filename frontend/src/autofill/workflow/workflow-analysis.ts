@@ -6,6 +6,7 @@ import type { CandidateRegistry } from "../dom/candidate-registry";
 import { greetingGpaSafe } from "../adapters/greeting/gpa";
 import { resultFieldState } from "./result-field-state";
 import { matchesResultValue } from "./result-value-match";
+import { rebindCatalogSelection } from "../profile/catalog-receipt";
 import {
   captureGreetingResultTargets,
   recollectGreetingResultRegistry,
@@ -593,23 +594,6 @@ export function createAnalyzeFields({
         );
         return true;
       };
-      const driversReady = await Promise.all(
-        currentStateDriverItems.map(
-          ({ handle, item }) =>
-            adapter.waitForStateDriverReady?.(
-              pageDocument,
-              handle,
-              reportFor(item),
-            ) ?? true,
-        ),
-      );
-      if (!driversReady.every(Boolean)) {
-        if (await deferFailedGroups(driversReady)) return;
-        setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
-        setStage("exception");
-        return;
-      }
-      const stateSelectionResults: ApprovedWriteResult[] = [];
       let profileChanged = false;
       const profileCurrent = async () => {
         if (run.controller.signal.aborted) return false;
@@ -623,6 +607,28 @@ export function createAnalyzeFields({
           pageDocument.URL === snapshotUrl
         );
       };
+      const driversReady = await Promise.all(
+        currentStateDriverItems.map(
+          ({ handle, item }) =>
+            adapter.waitForStateDriverReady?.(
+              pageDocument,
+              handle,
+              reportFor(item),
+              {
+                item,
+                signal: run.controller.signal,
+                beforeMutation: profileCurrent,
+              },
+            ) ?? true,
+        ),
+      );
+      if (!driversReady.every(Boolean)) {
+        if (await deferFailedGroups(driversReady)) return;
+        setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
+        setStage("exception");
+        return;
+      }
+      const stateSelectionResults: ApprovedWriteResult[] = [];
       for (const { item, captured, stage } of currentStateDriverItems) {
         const lookup = snapshot.registry.lookupField(item.candidateId);
         const eligible =
@@ -759,6 +765,11 @@ export function createAnalyzeFields({
                   pageDocument,
                   handle,
                   reportFor(item),
+                  {
+                    item,
+                    signal: run.controller.signal,
+                    beforeMutation: profileCurrent,
+                  },
                 ) ?? true),
           ),
         );
@@ -839,6 +850,11 @@ export function createAnalyzeFields({
                 pageDocument,
                 handle,
                 reportFor(item),
+                {
+                  item,
+                  signal: run.controller.signal,
+                  beforeMutation: profileCurrent,
+                },
               )) ??
                 true),
           ),
@@ -1020,6 +1036,12 @@ export function createAnalyzeFields({
           (current.status === "ready" || current.status === "blocked") &&
           (prior.handle.elements[0] ?? prior.handle.customElements?.[0]) ===
             (current.handle.elements[0] ?? current.handle.customElements?.[0]);
+        if (receipt && sameElement && live?.handle) {
+          const element =
+            live.handle.elements[0] ?? live.handle.customElements?.[0];
+          if (element)
+            rebindCatalogSelection(receipt.originalItem, item, element);
+        }
         if (
           receipt &&
           alias &&

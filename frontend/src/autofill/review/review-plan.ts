@@ -30,7 +30,15 @@ import type {
 } from "../../profile/model";
 import type { ValueBinding } from "../api/types";
 import { resolveValueBinding } from "../profile/value-binding";
-import { bindSearchIdentity } from "../profile/catalog-identity";
+import {
+  approveCatalogMatch,
+  bindSearchIdentity,
+} from "../profile/catalog-identity";
+import {
+  matchesApprovedCatalog,
+  type ApprovedCatalogMatch,
+} from "../profile/catalog-match";
+import { catalogEvidenceForElement } from "../profile/catalog-evidence";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
@@ -94,6 +102,8 @@ export interface ReviewPlanItem {
   searchValuePlan?: LocalSearchValuePlan;
   /** Explicit local profile selection; never serialize to the backend. */
   searchIdentity?: ProfileIdentity;
+  /** Approved local evidence for one catalog entry; never part of API requests. */
+  catalogMatch?: ApprovedCatalogMatch;
 }
 
 export interface ReviewPlan {
@@ -482,6 +492,40 @@ function itemForAnalysis(
         : "입력할 프로필 값이 없습니다.";
     return unavailableItem(analysis.candidateId, fieldLabel, reason, analysis);
   }
+  const catalogSource =
+    binding.type !== "DERIVED"
+      ? resolveValueBinding(
+          profile,
+          { type: "DIRECT", profileFieldKey: binding.profileFieldKey },
+          itemIndex,
+        )
+      : undefined;
+  const searchIdentity =
+    binding.type !== "DERIVED" && catalogSource?.status === "resolved"
+      ? bindSearchIdentity(
+          profile,
+          binding.profileFieldKey,
+          catalogSource.profileEntryId,
+          catalogSource.value,
+        )
+      : undefined;
+  const catalogApproval =
+    binding.type !== "DERIVED" && catalogSource?.status === "resolved"
+      ? approveCatalogMatch(
+          searchIdentity,
+          binding.profileFieldKey,
+          catalogSource.value,
+        )
+      : undefined;
+  if (catalogApproval?.status === "invalid")
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      "선택한 항목의 식별 정보를 확인할 수 없습니다. 프로필에서 다시 선택해 주세요.",
+      analysis,
+    );
+  const catalogMatch =
+    catalogApproval?.status === "selected" ? catalogApproval.match : undefined;
   let dateApproval: DateTargetApproval | undefined;
   let calendarApproval: CalendarApproval | undefined;
   let dayCalendarApproval: DayCalendarApproval | undefined;
@@ -656,7 +700,46 @@ function itemForAnalysis(
     liveOptionMatch?.status === "unique"
       ? { ...profileValue, value: liveOptionMatch.option.displayName }
       : profileValue;
-  if (generic && lookup.handle.buttonDropdown) {
+  const catalogChoices =
+    catalogMatch &&
+    !(lookup.handle.buttonDropdown && catalogMatch.requiredDetail) &&
+    (analysis.writePlan.command === "SELECT_OPTION" ||
+      (analysis.writePlan.command === "SET_TEXT" &&
+        lookup.handle.elements[0]?.getAttribute("role") === "combobox"))
+      ? (lookup.handle.candidate.options ?? []).filter((option) => {
+          const element = lookup.handle.optionElements.get(option.optionId);
+          const evidence = element
+            ? catalogEvidenceForElement(
+                element,
+                element instanceof HTMLOptionElement
+                  ? (element.parentElement?.parentElement ??
+                      element.parentElement ??
+                      element)
+                  : (element.parentElement ?? element),
+                option.displayName,
+              )
+            : { label: option.displayName };
+          return matchesApprovedCatalog(catalogMatch, evidence);
+        })
+      : undefined;
+  if (catalogChoices) {
+    if (catalogChoices.length !== 1)
+      return unavailableItem(
+        analysis.candidateId,
+        fieldLabel,
+        "선택한 항목과 일치하는 지원서 선택지를 하나로 확인할 수 없습니다.",
+        analysis,
+      );
+    resolvedProfileValue = {
+      ...profileValue,
+      value: catalogChoices[0].displayName,
+    };
+  }
+  if (
+    generic &&
+    lookup.handle.buttonDropdown &&
+    !catalogMatch?.requiredDetail
+  ) {
     const matches = (lookup.handle.candidate.options ?? []).filter(
       (option) =>
         normalizeDisplayName(option.displayName) ===
@@ -679,16 +762,6 @@ function itemForAnalysis(
   const searchValuePlan =
     searchCommand && binding.type === "DIRECT"
       ? certificateSearchValuePlan(
-          profile,
-          binding.profileFieldKey,
-          resolvedProfileValue.profileEntryId,
-          resolvedProfileValue.value,
-        )
-      : undefined;
-
-  const searchIdentity =
-    greeting && searchCommand && binding.type === "DIRECT"
-      ? bindSearchIdentity(
           profile,
           binding.profileFieldKey,
           resolvedProfileValue.profileEntryId,
@@ -738,7 +811,8 @@ function itemForAnalysis(
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT"
+      ...(binding.type === "DIRECT" ||
+      (binding.type !== "DERIVED" && catalogMatch)
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
       ...(resolvedProfileValue.profileEntryId
@@ -758,14 +832,17 @@ function itemForAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
-      ...(searchIdentity ? { searchIdentity } : {}),
+      ...(searchIdentity
+        ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
+        : {}),
     };
   }
   if (hasConflict) {
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT"
+      ...(binding.type === "DIRECT" ||
+      (binding.type !== "DERIVED" && catalogMatch)
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
       ...(resolvedProfileValue.profileEntryId
@@ -785,14 +862,17 @@ function itemForAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
-      ...(searchIdentity ? { searchIdentity } : {}),
+      ...(searchIdentity
+        ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
+        : {}),
     };
   }
   if (analysis.autofillPolicy === "CONDITIONAL") {
     return {
       candidateId: analysis.candidateId,
       fieldLabel,
-      ...(binding.type === "DIRECT"
+      ...(binding.type === "DIRECT" ||
+      (binding.type !== "DERIVED" && catalogMatch)
         ? { profileFieldKey: binding.profileFieldKey }
         : {}),
       ...(resolvedProfileValue.profileEntryId
@@ -813,13 +893,16 @@ function itemForAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
-      ...(searchIdentity ? { searchIdentity } : {}),
+      ...(searchIdentity
+        ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
+        : {}),
     };
   }
   return {
     candidateId: analysis.candidateId,
     fieldLabel,
-    ...(binding.type === "DIRECT"
+    ...(binding.type === "DIRECT" ||
+    (binding.type !== "DERIVED" && catalogMatch)
       ? { profileFieldKey: binding.profileFieldKey }
       : {}),
     ...(resolvedProfileValue.profileEntryId
@@ -849,7 +932,9 @@ function itemForAnalysis(
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
-    ...(searchIdentity ? { searchIdentity } : {}),
+    ...(searchIdentity
+      ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
+      : {}),
   };
 }
 

@@ -100,11 +100,13 @@ export interface WorkflowAdapter {
     document: Document,
     handle: FieldCandidateHandle,
     onFailure?: FailureReporter,
+    context?: StateDriverContext,
   ): Promise<boolean>;
   settleStateDriver?(
     document: Document,
     handle: FieldCandidateHandle,
     onFailure?: FailureReporter,
+    context?: StateDriverContext,
   ): Promise<boolean>;
   // Opt-in only: a failed search may defer its whole independently bound row.
   stateDriverFailureGroup?(
@@ -125,6 +127,12 @@ export interface WorkflowAdapter {
     domName: string | undefined,
     bindings: ReadonlyMap<string, string>,
   ): string | undefined;
+}
+
+export interface StateDriverContext {
+  readonly item: ReviewPlanItem;
+  readonly signal: AbortSignal;
+  readonly beforeMutation?: () => Promise<boolean>;
 }
 
 const genericWorkflowAdapter: WorkflowAdapter = {

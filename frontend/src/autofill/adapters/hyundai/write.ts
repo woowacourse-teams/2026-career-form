@@ -2,6 +2,15 @@ import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { normalizeDisplayName } from "../../write/display-name";
 import { matchStandardOption } from "../../profile/standard-option-match";
+import { catalogApprovalForItem } from "../../profile/catalog-identity";
+import {
+  matchesApprovedCatalog,
+  type ApprovedCatalogMatch,
+} from "../../profile/catalog-match";
+import {
+  rememberCatalogSelection,
+  retainedCatalogSelection,
+} from "../../profile/catalog-receipt";
 import type { CompanyWriteAdapter } from "../write";
 import {
   dependentDriverSettled,
@@ -447,12 +456,140 @@ function matchingLiveButtonOption(
   return exact.length === 1 ? exact[0] : undefined;
 }
 
+function visibleCatalogButton(button: HTMLButtonElement): boolean {
+  if (
+    !button.isConnected ||
+    button.offsetParent === null ||
+    button.disabled ||
+    button.matches(":disabled")
+  )
+    return false;
+  const view = button.ownerDocument.defaultView;
+  if (!view) return false;
+  for (let node: HTMLElement | null = button; node; node = node.parentElement) {
+    const style = view.getComputedStyle(node);
+    if (
+      node.matches("[hidden], [aria-hidden='true'], [inert]") ||
+      style.display === "none" ||
+      style.visibility === "hidden"
+    )
+      return false;
+  }
+  return true;
+}
+
+function selectCatalogExam(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  match: ApprovedCatalogMatch,
+): boolean {
+  const trigger = handle.elements[0];
+  const binding = item.analysis?.valueBinding;
+  if (
+    !(trigger instanceof HTMLInputElement) ||
+    binding?.type !== "BUTTON_OPTION" ||
+    match.kind !== "languageTest" ||
+    binding.profileFieldKey !== "languages.languageTest.testName" ||
+    binding.optionMap[match.query] !== item.profileValue ||
+    handle.elements.length !== 1 ||
+    handle.candidate.control !== "button" ||
+    !/^foreExamCd_[1-9][0-9]*$/.test(handle.candidate.domId ?? "") ||
+    trigger.id !== handle.candidate.domId ||
+    trigger.type !== "button" ||
+    !trigger.isConnected ||
+    trigger.disabled ||
+    handle.isCurrentContext?.() === false ||
+    item.candidateId !== handle.candidateId ||
+    item.analysis?.candidateId !== item.candidateId ||
+    item.analysis.mappingStatus !== "ADAPTER_VERIFIED" ||
+    item.analysis.interactionStatus !== "READY" ||
+    !item.selected ||
+    item.disabled
+  )
+    return false;
+  const wrap = trigger.closest<HTMLElement>(".select-wrap");
+  const row = trigger.closest(".field-content");
+  const hidden = wrap?.querySelectorAll<HTMLInputElement>(
+    ":scope > input[type='hidden'].js-field[name='foreExamCd']",
+  );
+  if (
+    !wrap ||
+    !row ||
+    hidden?.length !== 1 ||
+    wrap.querySelectorAll("input[type='button']").length !== 1
+  )
+    return false;
+  const codeField = hidden[0]!;
+  const rowOwner = row.parentElement;
+  const triggerId = trigger.id;
+  if (retainedCatalogSelection(item, trigger) !== undefined) return true;
+  if (
+    normalizeDisplayName(item.currentValue) ||
+    normalizeDisplayName(trigger.value) ||
+    codeField.value.trim()
+  )
+    return false;
+  trigger.click();
+  const choices = Array.from(
+    wrap.querySelectorAll<HTMLButtonElement>(
+      ":scope > .select-option button[data-code]",
+    ),
+  ).filter(
+    (choice) =>
+      choice.closest(".select-wrap") === wrap &&
+      visibleCatalogButton(choice) &&
+      matchesApprovedCatalog(match, { label: choice.textContent ?? "" }),
+  );
+  if (
+    choices.length !== 1 ||
+    !choices[0]!.dataset.code?.trim() ||
+    trigger.value.trim() ||
+    codeField.value.trim() ||
+    handle.isCurrentContext?.() === false
+  )
+    return false;
+  const choice = choices[0]!;
+  const code = choice.dataset.code!;
+  const label = choice.textContent ?? "";
+  choice.click();
+  return rememberCatalogSelection(item, {
+    element: trigger,
+    evidence: { label },
+    verify: () =>
+      trigger.isConnected &&
+      codeField.isConnected &&
+      wrap.isConnected &&
+      row.isConnected &&
+      trigger.id === triggerId &&
+      !trigger.disabled &&
+      row.parentElement === rowOwner &&
+      trigger.closest(".select-wrap") === wrap &&
+      trigger.closest(".field-content") === row &&
+      wrap.querySelectorAll("input[type='button']").length === 1 &&
+      wrap.querySelector("input[type='button']") === trigger &&
+      wrap.querySelectorAll(
+        ":scope > input[type='hidden'].js-field[name='foreExamCd']",
+      ).length === 1 &&
+      wrap.querySelector(
+        ":scope > input[type='hidden'].js-field[name='foreExamCd']",
+      ) === codeField &&
+      codeField.closest(".select-wrap") === wrap &&
+      handle.isCurrentContext?.() !== false &&
+      trigger.value === label &&
+      codeField.value === code,
+  });
+}
+
 function selectButtonOption(
   handle: FieldCandidateHandle,
   item: ReviewPlanItem,
 ): boolean {
   const binding = item.analysis?.valueBinding;
   const displayName = item.profileValue;
+  const approval = catalogApprovalForItem(item);
+  if (approval.status === "invalid") return false;
+  if (approval.status === "selected")
+    return selectCatalogExam(handle, item, approval.match);
   if (binding?.type !== "BUTTON_OPTION" || !displayName) return false;
   const trigger = handle.elements[0];
   if (!(trigger instanceof HTMLInputElement)) return false;
@@ -594,6 +731,31 @@ function selectButtonOption(
 
 export const hyundaiWriteAdapter: CompanyWriteAdapter = {
   tryWrite(handle, item) {
+    if (
+      handle.candidate.domName === "nationLicNm" &&
+      item.searchIdentity?.status === "selected"
+    ) {
+      const approval = catalogApprovalForItem(item);
+      const input = handle.elements[0];
+      const binding = item.analysis?.valueBinding;
+      if (
+        approval.status !== "selected" ||
+        approval.match.kind !== "certificate" ||
+        binding?.type !== "DIRECT" ||
+        binding.profileFieldKey !== "certifications.certificate.name" ||
+        item.analysis?.writePlan?.command !== "SET_TEXT" ||
+        !(input instanceof HTMLInputElement) ||
+        input.type !== "text" ||
+        input.name !== "nationLicNm" ||
+        input.dataset.autoType ||
+        input.closest(".field.search, .select-wrap") ||
+        !matchesApprovedCatalog(approval.match, {
+          label: item.profileValue ?? "",
+        }) ||
+        (input.value.trim() !== "" && input.value !== item.profileValue)
+      )
+        return { handled: true, written: false };
+    }
     if (
       handle.candidate.domName === "nationCd1Nm" ||
       HYUNDAI_EDUCATION_SEARCH_NAMES.has(handle.candidate.domName ?? "")

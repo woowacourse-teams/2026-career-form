@@ -6,6 +6,13 @@ import {
 } from "../../profile/catalog";
 import type { Profile, ProfileIdentity } from "../../profile/model";
 import { catalogLabels } from "../../profile/catalog-search";
+import {
+  isApprovedCatalogMatch,
+  normalizedCatalogLabel,
+  type ApprovedCatalogMatch,
+  type CatalogApproval,
+} from "./catalog-match";
+export { normalizedCatalogLabel } from "./catalog-match";
 
 const kinds: Readonly<Record<string, CatalogEntry["kind"]>> = {
   "certifications.certificate.name": "certificate",
@@ -61,10 +68,6 @@ export function verifiedSearchCatalogEntry(
     : undefined;
 }
 
-export function normalizedCatalogLabel(value: string): string {
-  return value.normalize("NFKC").replace(/\s+/g, "").toLocaleLowerCase("en-US");
-}
-
 const labelEntries = new Map<string, Set<CatalogEntry>>();
 for (const entry of CATALOG) {
   for (const label of catalogLabels(entry)) {
@@ -91,4 +94,50 @@ export function matchesCatalogLabel(
         normalizedCatalogLabel(entry.detail),
   );
   return candidates.length === 1 && candidates[0].id === entry.id;
+}
+
+export function approveCatalogMatch(
+  identity: ProfileIdentity | undefined,
+  fieldKey: string,
+  sourceValue: string,
+): CatalogApproval {
+  if (!identity || identity.status === "manual") return { status: "legacy" };
+  const entry = verifiedSearchCatalogEntry(identity, fieldKey, sourceValue);
+  if (!entry) return { status: "invalid" };
+  const match: ApprovedCatalogMatch = {
+    kind: entry.kind,
+    query: sourceValue,
+    labels: Object.freeze([
+      ...new Set(
+        catalogLabels(entry).filter((label) =>
+          matchesCatalogLabel(entry, label),
+        ),
+      ),
+    ]),
+    ...(entry.kind === "certificate" || entry.kind === "languageTest"
+      ? {}
+      : { requiredDetail: entry.detail }),
+  };
+  return isApprovedCatalogMatch(match)
+    ? { status: "selected", match: Object.freeze(match) }
+    : { status: "invalid" };
+}
+
+/** Recreate approval locally so an edited review item cannot broaden its match. */
+export function catalogApprovalForItem(item: {
+  readonly searchIdentity?: ProfileIdentity;
+  readonly catalogMatch?: ApprovedCatalogMatch;
+  readonly profileFieldKey?: string;
+  readonly profileValue?: string;
+}): CatalogApproval {
+  const approval = approveCatalogMatch(
+    item.searchIdentity,
+    item.profileFieldKey ?? "",
+    item.catalogMatch?.query ?? item.profileValue ?? "",
+  );
+  if (approval.status !== "selected") return approval;
+  return item.catalogMatch &&
+    JSON.stringify(approval.match) === JSON.stringify(item.catalogMatch)
+    ? approval
+    : { status: "invalid" };
 }
