@@ -78,4 +78,19 @@ class QualityDailyBatchTest {
     private QualityDailyBatch batch(QualityDiscord.Sender sender, boolean configured) {
         return new QualityDailyBatch(store, registry, clock, "test", "https://quality.synthetic.test/quality/", configured, sender, 7, 20);
     }
+
+    @Test
+    void largeExistingBacklogStillSendsBoundedReminderWithFullListLink() {
+        for (var index = 0; index < 20; index++) {
+            var candidate = registry.observe(new QualityRecord.Group("test", "site" + index + ".test", "shape", "GENERIC", "v1"));
+            registry.request(candidate.id());
+        }
+        var messages = new java.util.ArrayList<String>();
+        var result = batch(message -> { messages.add(message); return new QualityDiscord.Result(QualityDiscord.Status.SENT, "123"); }, true).dispatch();
+        assertThat(result.entries()).hasSize(5).allMatch(QualityDailyBatch.Entry::existing);
+        assertThat(messages).singleElement().asString().contains("기존 미완료", "전체 미확인 목록");
+        assertThat(messages.getFirst().lines().filter(line -> line.contains("?candidate=")).count()).isEqualTo(5);
+        assertThat(registry.listRecords(null, 0, 100)).hasSize(20)
+            .allMatch(record -> ((QualityRegistry.Candidate) record.payload()).requested());
+    }
 }
