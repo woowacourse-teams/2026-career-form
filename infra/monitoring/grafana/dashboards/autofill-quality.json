@@ -1,0 +1,1243 @@
+{
+  "uid": "career-form-autofill-quality",
+  "title": "Career Form 자동 입력 품질",
+  "schemaVersion": 42,
+  "version": 1,
+  "timezone": "Asia/Seoul",
+  "tags": [
+    "career-form",
+    "quality"
+  ],
+  "editable": false,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "5m",
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "환경",
+        "type": "datasource",
+        "query": "yesoreyeram-infinity-datasource",
+        "regex": "/^Quality (dev|staging|prod)$/",
+        "current": {
+          "text": "Quality prod",
+          "value": "quality-prod"
+        },
+        "refresh": 1
+      },
+      {
+        "name": "site",
+        "label": "사이트",
+        "type": "textbox",
+        "query": "ALL",
+        "current": {
+          "text": "ALL",
+          "value": "ALL"
+        },
+        "description": "ALL은 전체입니다. 사이트는 호스트 또는 사이트 식별자, 버전과 구조는 정확한 식별자로 조회합니다."
+      },
+      {
+        "name": "version",
+        "label": "버전",
+        "type": "textbox",
+        "query": "ALL",
+        "current": {
+          "text": "ALL",
+          "value": "ALL"
+        },
+        "description": "ALL은 전체입니다. 사이트는 호스트 또는 사이트 식별자, 버전과 구조는 정확한 식별자로 조회합니다."
+      },
+      {
+        "name": "structure",
+        "label": "화면 구조",
+        "type": "textbox",
+        "query": "ALL",
+        "current": {
+          "text": "ALL",
+          "value": "ALL"
+        },
+        "description": "ALL은 전체입니다. 사이트는 호스트 또는 사이트 식별자, 버전과 구조는 정확한 식별자로 조회합니다."
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "관측 범위",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "경로마다 사이트와 제어 구성이 다릅니다. 수치 차이는 AI 정확도나 공정한 우열을 뜻하지 않습니다. 사람 확인은 필드 수만 등록한 참고 분모이며 **정확도 미검증**입니다. 결과는 클라이언트 보고이며 유지 확인은 입력 후 **1초**입니다. 비율은 합산 건수로 계산합니다. 0분모와 미관측은 빈 값으로 표시하며, 관측 결과만의 비율은 전체 실행의 성공률로 해석하지 않습니다. 기간은 KST 일별 집계로 반올림하며 최대 90일입니다. 상세 표본은 30일 보관합니다. 500개 그룹 초과 오류는 사이트·구조·버전·기간을 좁혀 확인하세요."
+      }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "1. 처리 경로별 주요 비율",
+      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "dimension.route",
+              "text": "처리 경로",
+              "type": "string"
+            },
+            {
+              "selector": "mappingRate",
+              "text": "매핑률",
+              "type": "number"
+            },
+            {
+              "selector": "bindingRate",
+              "text": "값 준비율",
+              "type": "number"
+            },
+            {
+              "selector": "inputSuccessRate",
+              "text": "입력 성공률",
+              "type": "number"
+            },
+            {
+              "selector": "retentionRate",
+              "text": "1초 유지율",
+              "type": "number"
+            },
+            {
+              "selector": "collectedRetentionRate",
+              "text": "수집 대비 유지율",
+              "type": "number"
+            },
+            {
+              "selector": "collected",
+              "text": "요청 수집 후보",
+              "type": "number"
+            },
+            {
+              "selector": "mapped",
+              "text": "요청 매핑 후보",
+              "type": "number"
+            },
+            {
+              "selector": "reportedMapped",
+              "text": "보고 매핑 칸",
+              "type": "number"
+            },
+            {
+              "selector": "bound",
+              "text": "값 준비 칸",
+              "type": "number"
+            },
+            {
+              "selector": "attempted",
+              "text": "입력 시도 칸",
+              "type": "number"
+            },
+            {
+              "selector": "written",
+              "text": "입력 성공 칸",
+              "type": "number"
+            },
+            {
+              "selector": "retained",
+              "text": "1초 유지 칸",
+              "type": "number"
+            },
+            {
+              "selector": "inputResultObserved",
+              "text": "입력 결과 관측",
+              "type": "number"
+            },
+            {
+              "selector": "inputResultUnobserved",
+              "text": "입력 결과 미관측",
+              "type": "number"
+            },
+            {
+              "selector": "retentionObserved",
+              "text": "유지 결과 관측",
+              "type": "number"
+            },
+            {
+              "selector": "retentionUnobserved",
+              "text": "유지 결과 미관측",
+              "type": "number"
+            },
+            {
+              "selector": "observedInputSuccessRate",
+              "text": "관측 결과만의 성공률",
+              "type": "number"
+            },
+            {
+              "selector": "observedRetentionRate",
+              "text": "관측 결과만의 유지율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "groupBy",
+                "value": "ROUTE"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "미관측 또는 분모 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "매핑률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "값 준비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 성공률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1초 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "수집 대비 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "관측 결과만의 성공률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "관측 결과만의 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "2. 사람 확인 분모와 참고 커버리지",
+      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "dimension.route",
+              "text": "처리 경로",
+              "type": "string"
+            },
+            {
+              "selector": "humanCollectedCoverage",
+              "text": "사람 기준 수집 커버리지",
+              "type": "number"
+            },
+            {
+              "selector": "humanMappedCoverage",
+              "text": "사람 기준 매핑 커버리지",
+              "type": "number"
+            },
+            {
+              "selector": "humanWrittenCoverage",
+              "text": "사람 기준 입력 커버리지",
+              "type": "number"
+            },
+            {
+              "selector": "humanRetainedCoverage",
+              "text": "사람 기준 유지 커버리지",
+              "type": "number"
+            },
+            {
+              "selector": "humanDenominator",
+              "text": "사람 확인 분모 합",
+              "type": "number"
+            },
+            {
+              "selector": "humanExecutions",
+              "text": "참고 커버리지 실행",
+              "type": "number"
+            },
+            {
+              "selector": "unregistered",
+              "text": "분모 미등록 실행",
+              "type": "number"
+            },
+            {
+              "selector": "scopeMismatch",
+              "text": "범위 불일치 실행",
+              "type": "number"
+            },
+            {
+              "selector": "humanLabel",
+              "text": "분모 확인 범위",
+              "type": "string"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "groupBy",
+                "value": "ROUTE"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "미관측 또는 분모 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 기준 수집 커버리지"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 기준 매핑 커버리지"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 기준 입력 커버리지"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 기준 유지 커버리지"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "3. 버전별 주요 비율과 날짜 추이",
+      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "dimension.dateKst",
+              "text": "KST 날짜",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.route",
+              "text": "처리 경로",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.version",
+              "text": "버전",
+              "type": "string"
+            },
+            {
+              "selector": "mappingRate",
+              "text": "매핑률",
+              "type": "number"
+            },
+            {
+              "selector": "inputSuccessRate",
+              "text": "입력 성공률",
+              "type": "number"
+            },
+            {
+              "selector": "retentionRate",
+              "text": "1초 유지율",
+              "type": "number"
+            },
+            {
+              "selector": "collected",
+              "text": "요청 수집 후보",
+              "type": "number"
+            },
+            {
+              "selector": "mapped",
+              "text": "요청 매핑 후보",
+              "type": "number"
+            },
+            {
+              "selector": "attempted",
+              "text": "입력 시도 칸",
+              "type": "number"
+            },
+            {
+              "selector": "written",
+              "text": "입력 성공 칸",
+              "type": "number"
+            },
+            {
+              "selector": "retained",
+              "text": "1초 유지 칸",
+              "type": "number"
+            },
+            {
+              "selector": "executionCount",
+              "text": "고유 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "unobserved",
+              "text": "결과 미관측 실행",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "groupBy",
+                "value": "VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "미관측 또는 분모 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "매핑률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 성공률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1초 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "4. 단계 및 사유와 제어별 실패·보류",
+      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.failures",
+          "columns": [
+            {
+              "selector": "dimension.host",
+              "text": "사이트",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.route",
+              "text": "처리 경로",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.version",
+              "text": "버전",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.structure",
+              "text": "화면 구조",
+              "type": "string"
+            },
+            {
+              "selector": "cohort",
+              "text": "관측 단위",
+              "type": "string"
+            },
+            {
+              "selector": "stage",
+              "text": "단계",
+              "type": "string"
+            },
+            {
+              "selector": "reason",
+              "text": "사유",
+              "type": "string"
+            },
+            {
+              "selector": "control",
+              "text": "제어 종류",
+              "type": "string"
+            },
+            {
+              "selector": "count",
+              "text": "건수",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "groupBy",
+                "value": "FULL"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "미관측 또는 분모 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "5. 사용량과 표본 및 미관측",
+      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "dimension.route",
+              "text": "처리 경로",
+              "type": "string"
+            },
+            {
+              "selector": "analysisRequests",
+              "text": "분석 요청 수",
+              "type": "number"
+            },
+            {
+              "selector": "executionCount",
+              "text": "고유 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "reportedExecutions",
+              "text": "보고 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "reportingRate",
+              "text": "보고율",
+              "type": "number"
+            },
+            {
+              "selector": "pending",
+              "text": "진행 중 실행",
+              "type": "number"
+            },
+            {
+              "selector": "unobserved",
+              "text": "결과 미관측 실행",
+              "type": "number"
+            },
+            {
+              "selector": "cancelled",
+              "text": "취소 실행",
+              "type": "number"
+            },
+            {
+              "selector": "deduplicationUnknown",
+              "text": "중복 제거 미확인 실행",
+              "type": "number"
+            },
+            {
+              "selector": "collected",
+              "text": "요청 수집 후보",
+              "type": "number"
+            },
+            {
+              "selector": "mapped",
+              "text": "요청 매핑 후보",
+              "type": "number"
+            },
+            {
+              "selector": "uniqueCollected",
+              "text": "고유 수집 칸",
+              "type": "number"
+            },
+            {
+              "selector": "uniqueMapped",
+              "text": "고유 매핑 칸",
+              "type": "number"
+            },
+            {
+              "selector": "reportedCollected",
+              "text": "보고 수집 칸",
+              "type": "number"
+            },
+            {
+              "selector": "reportedMapped",
+              "text": "보고 매핑 칸",
+              "type": "number"
+            },
+            {
+              "selector": "bound",
+              "text": "값 준비 칸",
+              "type": "number"
+            },
+            {
+              "selector": "attempted",
+              "text": "입력 시도 칸",
+              "type": "number"
+            },
+            {
+              "selector": "written",
+              "text": "입력 성공 칸",
+              "type": "number"
+            },
+            {
+              "selector": "retained",
+              "text": "1초 유지 칸",
+              "type": "number"
+            },
+            {
+              "selector": "observationLabel",
+              "text": "결과 관측 범위",
+              "type": "string"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "groupBy",
+                "value": "ROUTE"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "미관측 또는 분모 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "보고율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "6. 실제 AI 호출과 실패 및 지연",
+      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "dimension.route",
+              "text": "처리 경로",
+              "type": "string"
+            },
+            {
+              "selector": "aiCalls",
+              "text": "실제 AI 호출 수",
+              "type": "number"
+            },
+            {
+              "selector": "aiFailures",
+              "text": "AI 실패 수",
+              "type": "number"
+            },
+            {
+              "selector": "aiTimeouts",
+              "text": "AI timeout 수",
+              "type": "number"
+            },
+            {
+              "selector": "aiFailureRate",
+              "text": "AI 실패율",
+              "type": "number"
+            },
+            {
+              "selector": "aiTimeoutRate",
+              "text": "AI timeout 비율",
+              "type": "number"
+            },
+            {
+              "selector": "analysisP95Ms",
+              "text": "분석 P95 근사 ms",
+              "type": "number"
+            },
+            {
+              "selector": "analysisSamples",
+              "text": "분석 시간 표본",
+              "type": "number"
+            },
+            {
+              "selector": "analysisOverflow",
+              "text": "분석 상한 초과",
+              "type": "number"
+            },
+            {
+              "selector": "aiP95Ms",
+              "text": "AI P95 근사 ms",
+              "type": "number"
+            },
+            {
+              "selector": "aiSamples",
+              "text": "AI 시간 표본",
+              "type": "number"
+            },
+            {
+              "selector": "aiOverflow",
+              "text": "AI 상한 초과",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "groupBy",
+                "value": "ROUTE"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "미관측 또는 분모 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AI 실패율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AI timeout 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    }
+  ]
+}
