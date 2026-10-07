@@ -17,6 +17,7 @@ REPOSITORY = "team/project"
 
 class ReleaseSyncTest(unittest.TestCase):
     def setUp(self) -> None:
+        self.git_environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
@@ -34,7 +35,7 @@ class ReleaseSyncTest(unittest.TestCase):
         self.release = self._commit("release fix")
         self._git("push", "origin", f"HEAD:refs/heads/{BRANCH}")
         self.env = {
-            **os.environ,
+            **self.git_environment,
             "RELEASE_BRANCH": BRANCH,
             "RELEASE_SHA": self.release,
             "DEPLOY_RESULT": "success",
@@ -268,7 +269,7 @@ class ReleaseSyncTest(unittest.TestCase):
 
     def _git(self, *arguments: str) -> str:
         return subprocess.check_output(
-            ["git", *arguments], cwd=self.repo, text=True, stderr=subprocess.DEVNULL,
+            ["git", *arguments], cwd=self.repo, env=self.git_environment, text=True, stderr=subprocess.DEVNULL,
         ).strip()
 
     def _commit(self, message: str) -> str:
