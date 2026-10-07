@@ -255,6 +255,7 @@ export interface FieldsAnalyzeResponse {
 }
 
 export interface AnalysisApiClient {
+  readonly quality?: import("../quality/observation").QualityObservation;
   decideInteractions?(
     request: InteractionDecisionRequest,
   ): Promise<InteractionDecisionResponse>;

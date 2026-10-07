@@ -79,6 +79,7 @@ describe("RuntimeAnalysisApiClient", () => {
     expect(sendMessage).toHaveBeenNthCalledWith(2, {
       type: "AUTOFILL_ANALYZE_FIELDS",
       payload: fieldRequest,
+      qualityRun: expect.stringMatching(/^[0-9a-f]{32}$/),
     });
   });
 
@@ -111,6 +112,7 @@ describe("RuntimeAnalysisApiClient", () => {
     expect(sendMessage).toHaveBeenCalledWith({
       type: "AUTOFILL_ANALYZE_FIELDS",
       payload: request,
+      qualityRun: expect.stringMatching(/^[0-9a-f]{32}$/),
     });
   });
 

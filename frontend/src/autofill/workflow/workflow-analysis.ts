@@ -1,4 +1,5 @@
 import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
+import { observeQuality } from "../quality/safe-observation";
 import { resolveDocumentCompany } from "../adapters/company";
 import { isGreetingEmailStateDriver } from "../adapters/greeting/workflow";
 import { sensitiveValueApproved } from "./review-actions";
@@ -150,6 +151,18 @@ export function createAnalyzeFields({
       return;
 
     const analysisStarted = performance.now();
+    observeQuality(() =>
+      apiClient.quality?.snapshot(
+        snapshot.request.snapshotId,
+        snapshot.registry,
+        snapshot.request.sections
+          .flatMap((section) => [
+            ...section.fields,
+            ...(section.items ?? []).flatMap((item) => item.fields),
+          ])
+          .map((field) => field.candidateId),
+      ),
+    );
     let analysis = await apiClient.analyzeFields(snapshot.request);
     debugAnalysis(snapshot, analysis);
     if (
@@ -292,6 +305,9 @@ export function createAnalyzeFields({
         adapterProfileValue(adapter, key, value),
     });
     debugReviewPlan(plan);
+    observeQuality(() =>
+      apiClient.quality?.review(snapshot.request.snapshotId, plan.items),
+    );
     if (plan.status === "blocked") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
