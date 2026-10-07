@@ -36,10 +36,10 @@ class QualityRuntimeTest(unittest.TestCase):
         cls.addClassCleanup(cls.log.close)
         environment = dict(os.environ)
         environment.update({"SPRING_MONGODB_URI": f"mongodb://127.0.0.1:{port}/cf164_runtime",
-            "CAREER_FORM_ANALYSIS_ENABLED": "false", "CAREER_FORM_LLM_ENABLED": "false",
+            "SERVER_FORWARD_HEADERS_STRATEGY": "framework", "CAREER_FORM_ANALYSIS_ENABLED": "false", "CAREER_FORM_LLM_ENABLED": "false",
             "CAREER_FORM_LANGSMITH_ENABLED": "false", "OPENAI_API_KEY": "", "TYPESAFE_API_KEY": ""})
         cls.backend = subprocess.Popen(("java", "-jar", str(jar), "--server.address=127.0.0.1",
-            f"--server.port={cls.backend_port}", "--management.server.port=0", "--server.forward-headers-strategy=framework",
+            f"--server.port={cls.backend_port}", "--management.server.port=0",
             "--career-form.quality.enabled=true", "--career-form.quality.password-hash=" + PASSWORD_HASH,
             "--career-form.quality.query-token-hash=618def57c8f930dd7dc165c96665f0caceffdbb24b8e114265d00ba2000a3957",
             "--career-form.quality.version=synthetic", "--management.metrics.tags.env=quality-test"),

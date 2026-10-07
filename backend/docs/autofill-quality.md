@@ -77,6 +77,7 @@ GitHub Environment `development`, `staging`, `production`에서 해당 환경의
 | 종류 | 설정 | 사람이 준비하는 값 |
 |---|---|---|
 | Variable | `CAREER_FORM_QUALITY_ENABLED` | 사용 환경만 true |
+| Variable | `SERVER_FORWARD_HEADERS_STRATEGY` | 신뢰하는 TLS 프록시 뒤의 서비스는 framework, 기본값 none |
 | Secret | `CAREER_FORM_QUALITY_PASSWORD_HASH` | 공용 비밀번호의 PBKDF2 검증 문자열 |
 | Secret | `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH` | Grafana 전용 임의 토큰의 SHA-256 hex |
 | Variable | `CAREER_FORM_QUALITY_MANAGEMENT_URL` | 외부 HTTPS 관리 화면의 `/quality/` 주소 |
@@ -84,6 +85,8 @@ GitHub Environment `development`, `staging`, `production`에서 해당 환경의
 | Secret | `CAREER_FORM_QUALITY_DISCORD_WEBHOOK` | 새 채널의 전용 웹훅 |
 
 `CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT`, `CAREER_FORM_QUALITY_SELECTION_DAYS`, `CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE`은 필요할 때만 Variable로 등록한다. 미등록 시 prod, 7일, 20개를 사용한다.
+
+HTTPS를 프록시에서 종료하고 백엔드에는 HTTP로 전달한다면 백엔드도 원래 HTTPS 요청임을 인식해야 한다. 신뢰하는 프록시가 `Host`, `X-Forwarded-Proto`와 `X-Forwarded-For`를 설정하도록 확인하고 해당 Environment의 `SERVER_FORWARD_HEADERS_STRATEGY=framework`를 사용한다. 이 설정은 품질 API 외 요청에도 적용된다. 직접 노출된 서비스에서 임의의 forwarded 헤더를 신뢰하도록 활성화하지 않는다. 미설정은 none이며 품질 API의 HTTPS 검사를 우회하지 않는다.
 
 배포 버전은 사람이 등록하지 않는다. Compose가 현재 `BACKEND_IMAGE`의 digest 고정 이미지 식별자를 `CAREER_FORM_QUALITY_VERSION`으로 전달한다. 운영에서 스테이징 이미지를 재사용하거나 이전 이미지로 롤백해도 실제 이미지 식별자를 기록한다. GitHub Variable의 수동 품질 버전은 사용하지 않는다.
 

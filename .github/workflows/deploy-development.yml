@@ -58,6 +58,7 @@ jobs:
       DEPLOY_ENVIRONMENT: development
       BACKEND_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}@${{ needs.build.outputs.digest }}
       BACKEND_PORT: ${{ vars.BACKEND_PORT }}
+      SERVER_FORWARD_HEADERS_STRATEGY: ${{ vars.SERVER_FORWARD_HEADERS_STRATEGY }}
       SPRING_PROFILES_ACTIVE: dev
       SPRING_MONGODB_URI: ${{ secrets.SPRING_MONGODB_URI }}
       CAREER_FORM_LLM_ENABLED: ${{ vars.CAREER_FORM_LLM_ENABLED }}

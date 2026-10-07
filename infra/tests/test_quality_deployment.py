@@ -10,6 +10,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE = "registry.example/career-form@sha256:" + "a" * 64
 DEFAULTS = {
+    "SERVER_FORWARD_HEADERS_STRATEGY": "none",
     "CAREER_FORM_QUALITY_ENABLED": "false",
     "CAREER_FORM_QUALITY_PASSWORD_HASH": "",
     "CAREER_FORM_QUALITY_QUERY_TOKEN_HASH": "",
@@ -29,7 +30,7 @@ SECRETS = {
 
 class QualityDeploymentTest(unittest.TestCase):
     def render(self, profile, settings, image=IMAGE):
-        environment = {key: value for key, value in os.environ.items() if not key.startswith("CAREER_FORM_QUALITY_")}
+        environment = {key: value for key, value in os.environ.items() if not key.startswith("CAREER_FORM_QUALITY_") and key not in DEFAULTS}
         environment.update({"BACKEND_IMAGE": image, "BACKEND_PORT": "18081",
             "SPRING_PROFILES_ACTIVE": profile, "SPRING_MONGODB_URI": "mongodb://synthetic.invalid/quality",
             "OPENAI_API_KEY": "synthetic-openai-key", **settings})
@@ -49,7 +50,7 @@ class QualityDeploymentTest(unittest.TestCase):
                         self.assertEqual(value, runtime.get(key), key)
 
     def test_injected_quality_settings_reach_each_runtime_without_altering_existing_settings(self):
-        settings = {"CAREER_FORM_QUALITY_ENABLED": "true",
+        settings = {"CAREER_FORM_QUALITY_ENABLED": "true", "SERVER_FORWARD_HEADERS_STRATEGY": "framework",
             "CAREER_FORM_QUALITY_PASSWORD_HASH": "pbkdf2-sha256$600000$synthetic-salt$synthetic-digest",
             "CAREER_FORM_QUALITY_QUERY_TOKEN_HASH": "b" * 64,
             "CAREER_FORM_QUALITY_MANAGEMENT_URL": "https://synthetic.test/quality/",
@@ -89,7 +90,7 @@ class QualityDeploymentTest(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("RUN_QUALITY_DEPLOYMENT_INTEGRATION") == "1", "Explicit synthetic container environment test")
     def test_password_verifier_is_delivered_literally_to_container(self):
         verifier = "pbkdf2-sha256$600000$synthetic-salt$synthetic-digest"
-        environment = {key: value for key, value in os.environ.items() if not key.startswith("CAREER_FORM_QUALITY_")}
+        environment = {key: value for key, value in os.environ.items() if not key.startswith("CAREER_FORM_QUALITY_") and key not in DEFAULTS}
         environment.update({"BACKEND_IMAGE": os.environ.get("QUALITY_DEPLOYMENT_TEST_IMAGE", "python:3.13-alpine"),
             "BACKEND_PORT": "18081", "SPRING_PROFILES_ACTIVE": "prod",
             "SPRING_MONGODB_URI": "mongodb://synthetic.invalid/quality", "OPENAI_API_KEY": "synthetic-openai-key",
@@ -100,3 +101,10 @@ class QualityDeploymentTest(unittest.TestCase):
             "run", "--rm", "--no-deps", "-T", "--entrypoint", "python3", "backend", "-c", program),
             cwd=ROOT, env=environment, text=True, capture_output=True, check=False, timeout=90)
         self.assertEqual(0, result.returncode, "Synthetic container did not receive the literal verifier")
+
+    def test_proxy_header_strategy_is_opt_in_for_each_runtime(self):
+        for profile in ("dev", "staging", "prod"):
+            for strategy in ("native", "framework"):
+                with self.subTest(profile=profile, strategy=strategy):
+                    runtime = self.render(profile, {"SERVER_FORWARD_HEADERS_STRATEGY": strategy})
+                    self.assertEqual(strategy, runtime.get("SERVER_FORWARD_HEADERS_STRATEGY"))
