@@ -100,9 +100,14 @@ public final class QualityCollectionService {
     }
 
     public QualityRecord.Group group(QualitySite site, String structure, String route, Long policyVersion, String extensionVersion) {
+        return group(site, structure, route, policyVersion, extensionVersion, QualityScope.current().map(QualityScope::calls).orElse(List.of()));
+    }
+
+    public QualityRecord.Group group(QualitySite site, String structure, String route, Long policyVersion, String extensionVersion, List<AiCall> calls) {
         var base = group(site.siteId(), structure, route, policyVersion, extensionVersion);
-        var models = QualityScope.current().map(scope -> scope.calls().stream().map(call -> call.provider() + "." + call.operation() + "=" + call.modelVersion())
-            .distinct().sorted().collect(Collectors.joining(","))).filter(value -> !value.isEmpty()).orElse("NOT_CALLED");
+        var versions = calls.stream().map(call -> call.provider() + "." + call.operation() + "=" + call.modelVersion())
+            .distinct().sorted().collect(Collectors.joining(","));
+        var models = versions.isEmpty() ? "NOT_CALLED" : versions;
         return new QualityRecord.Group(base.environment(), base.site(), base.structure(), base.route(),
             "quality-v1:collector-v1:" + base.version() + ":models=" + models, site.host(), site.status());
     }

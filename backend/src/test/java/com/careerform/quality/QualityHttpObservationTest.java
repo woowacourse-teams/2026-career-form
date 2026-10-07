@@ -67,6 +67,7 @@ class QualityHttpObservationTest {
         var event = (QualityCollectionService.RequestEvent) captured.getValue().payload();
         assertThat(event.counts().discovered()).isEqualTo(1);
         assertThat(event.calls()).containsExactly(new QualityCollectionService.AiCall("openai", "analysis", "success", 50));
+        assertThat(captured.getValue().group().version()).contains("models=openai.analysis=UNKNOWN");
         assertThat(event.resultState()).isEqualTo("COMPLETE");
         assertThat(event.reasons()).containsEntry("MAPPING|NOT_MAPPED|TEXT", 1L);
         assertThat(QualityScope.current()).isEmpty();
@@ -108,5 +109,29 @@ class QualityHttpObservationTest {
         var captured = org.mockito.ArgumentCaptor.forClass(QualityRecord.class);
         verify(store).insert(captured.capture());
         assertThat(((QualityCollectionService.RequestEvent) captured.getValue().payload()).status()).isEqualTo(500);
+    }
+
+    @Test
+    void slowObservationCannotConsumeTheAnalysisResponseDeadline() {
+        org.mockito.Mockito.doAnswer(invocation -> { Thread.sleep(4000); return true; }).when(store).insert(any());
+        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(collector))
+            .addFilters(new QualityObservationFilter(collector)).build();
+        org.junit.jupiter.api.Assertions.assertTimeout(java.time.Duration.ofSeconds(2), () -> {
+            mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isOk()).andExpect(jsonPath("snapshotId").value("sample"));
+        });
+        assertThat(QualityScope.current()).isEmpty();
+    }
+
+    @Test
+    void slowFallbackObservationPreservesRejectedResponseDeadline() {
+        org.mockito.Mockito.doAnswer(invocation -> { Thread.sleep(4000); return true; }).when(store).insert(any());
+        var mvc = MockMvcBuilders.standaloneSetup(new Controller()).setControllerAdvice(new QualityBodyAdvice(collector))
+            .addFilters(new QualityObservationFilter(collector)).build();
+        org.junit.jupiter.api.Assertions.assertTimeout(java.time.Duration.ofSeconds(2), () -> {
+            mvc.perform(post("/api/v1/fields/analyze").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().is4xxClientError());
+        });
+        assertThat(QualityScope.current()).isEmpty();
     }
 }
