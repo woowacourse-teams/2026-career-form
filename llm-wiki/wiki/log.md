@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-07] ingest | CF-162 카탈로그 식별 검색 선택
+
+- Disposition: Adds profile-catalog-identity topic; supersedes CF-160 adapter-greeting topic
+- Approval-Digest: 4bba7d6154fe33711cb12bc5d00772d1c26e81b57827b3678bcc5672130381f3
+- Source-Revision: 8824d14828234a684ee9852a8565231590f63f4e
+- Raw: llm-wiki/raw/issues/CF-162/manifest.md
+- Topics: 2
+
 ## [2026-10-06] ingest | CF-160 Greeting 기본정보·날짜·주소와 추가 필드
 
 - Disposition: Supersedes CF-94 adapter-greeting and adapter-field-inventory topics
