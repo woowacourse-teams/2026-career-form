@@ -27,6 +27,7 @@ async function run(
   labels: string[],
   identity: ProfileIdentity = selected,
   value = "OPIc",
+  rowLanguage?: string,
 ) {
   const profile = createEmptyProfile();
   profile.languages = [
@@ -47,6 +48,7 @@ async function run(
     "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.testName";
   document.body.innerHTML = `
     <input name="${name}" data-scope="combobox" data-part="input" role="combobox" aria-controls="exam-options">
+    ${rowLanguage === undefined ? "" : `<button type="button" name="languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.foreignLanguage" data-scope="select" data-part="trigger">${rowLanguage}</button>`}
     <div id="exam-options" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"></div>
     <div data-scope="field" data-part="root"><label>이름</label><input name="basicInformation.name"></div>
     <div data-scope="field" data-part="root"><label>전화</label><input name="basicInformation.phoneNumber.nationalNumber"></div>`;
@@ -175,6 +177,52 @@ it("does not infer an exam identity for manually entered aliases", async () => {
       originalText: "오픽",
     },
     "오픽",
+  );
+  expect(success).toBe(false);
+  expect(input.value).toBe("");
+}, 8000);
+
+// Observed Greeting exam options (2026-10-07) qualify OPIc by language, e.g.
+// "OPIc(영어)", and render no plain "OPIc" option.
+const observedOpic = ["OPIc(러시아어)", "OPIc(영어)", "OPIc(일본어)"];
+
+it("selects the OPIc option qualified by the row's visible language", async () => {
+  const { success, input, item, handle } = await run(
+    observedOpic,
+    selected,
+    "OPIc",
+    "영어",
+  );
+  expect(success).toBe(true);
+  expect(input.value).toBe("OPIc(영어)");
+  expect(matchesResultValue(item, input.value, "OPIc", handle)).toBe(true);
+});
+
+it.each([
+  { name: "no row language control", rowLanguage: undefined },
+  { name: "an unselected row language", rowLanguage: "선택" },
+  { name: "a language without an option", rowLanguage: "독일어" },
+])(
+  "keeps language-qualified OPIc fail-closed with $name",
+  async ({ rowLanguage }) => {
+    const { success, input } = await run(
+      observedOpic,
+      selected,
+      "OPIc",
+      rowLanguage,
+    );
+    expect(success).toBe(false);
+    expect(input.value).toBe("");
+  },
+  8000,
+);
+
+it("does not treat OPI as OPIc even with a matching row language", async () => {
+  const { success, input } = await run(
+    ["OPI(English)", "OPI(영어)"],
+    selected,
+    "OPIc",
+    "영어",
   );
   expect(success).toBe(false);
   expect(input.value).toBe("");

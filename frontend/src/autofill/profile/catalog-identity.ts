@@ -96,6 +96,60 @@ export function matchesCatalogLabel(
   return candidates.length === 1 && candidates[0].id === entry.id;
 }
 
+/** First detail segment of a KESS high school record: its sido abbreviation. */
+function highSchoolRegion(entry: CatalogEntry): string | undefined {
+  if (entry.kind !== "highSchool") return undefined;
+  const region = entry.detail.split(" · ")[0]?.trim();
+  return region || undefined;
+}
+
+/**
+ * Greeting high-school options expose only the sido abbreviation. Accept it only
+ * when name and sido together identify exactly this catalog entry.
+ */
+export function matchesCatalogHighSchoolRegion(
+  entry: CatalogEntry,
+  label: string,
+  region: string,
+): boolean {
+  const own = highSchoolRegion(entry);
+  if (!own || normalizedCatalogLabel(region) !== normalizedCatalogLabel(own))
+    return false;
+  const candidates = [
+    ...(labelEntries.get(`${entry.kind}:${normalizedCatalogLabel(label)}`) ??
+      []),
+  ].filter((candidate) => highSchoolRegion(candidate) === own);
+  return candidates.length === 1 && candidates[0].id === entry.id;
+}
+
+/** KESS school code shared by every campus record of one institution. */
+function kessSchoolCode(entry: CatalogEntry): string | undefined {
+  const [kind, source, code] = entry.id.split(":");
+  return kind === entry.kind && source === "kess" && code ? code : undefined;
+}
+
+/**
+ * Greeting university options name the institution without campus text. Accept
+ * the name only when every catalog record with that label is the same school.
+ */
+export function matchesCatalogInstitution(
+  entry: CatalogEntry,
+  label: string,
+): boolean {
+  if (entry.kind !== "university" && entry.kind !== "graduateSchool")
+    return false;
+  const code = kessSchoolCode(entry);
+  const candidates = [
+    ...(labelEntries.get(`${entry.kind}:${normalizedCatalogLabel(label)}`) ??
+      []),
+  ];
+  return (
+    !!code &&
+    candidates.some((candidate) => candidate.id === entry.id) &&
+    candidates.every((candidate) => kessSchoolCode(candidate) === code)
+  );
+}
+
 export function approveCatalogMatch(
   identity: ProfileIdentity | undefined,
   fieldKey: string,

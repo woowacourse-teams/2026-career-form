@@ -2,6 +2,8 @@ import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { FailureReporter } from "../../write/failure";
 import {
+  matchesCatalogHighSchoolRegion,
+  matchesCatalogInstitution,
   matchesCatalogLabel,
   normalizedCatalogLabel,
   verifiedSearchCatalogEntry,
@@ -22,7 +24,15 @@ const receiptCleanup = new WeakMap<HTMLInputElement, () => void>();
 function rememberGreetingSelection(
   input: HTMLInputElement,
   item: ReviewPlanItem,
-  selected: { label: string; code: string; detail?: string },
+  selected: {
+    label: string;
+    code: string;
+    detail?: string;
+    /** Visible option description re-checked on reopen; defaults to detail. */
+    description?: string;
+    /** Catalog label proven inside a site label such as "OPIc(영어)". */
+    evidenceLabel?: string;
+  },
 ): boolean {
   const popupId = input.getAttribute("aria-controls");
   const name = input.name;
@@ -40,7 +50,10 @@ function rememberGreetingSelection(
   receiptCleanup.set(input, invalidate);
   const remembered = rememberCatalogSelection(item, {
     element: input,
-    evidence: selected,
+    evidence: {
+      label: selected.evidenceLabel ?? selected.label,
+      ...(selected.detail === undefined ? {} : { detail: selected.detail }),
+    },
     verify: (target) => {
       if (
         !(target instanceof HTMLInputElement) ||
@@ -76,7 +89,8 @@ function rememberGreetingSelection(
           normalizedCatalogLabel(
             checked[0].querySelector('[data-part="item-description"]')
               ?.textContent ?? "",
-          ) === normalizedCatalogLabel(selected.detail));
+          ) ===
+            normalizedCatalogLabel(selected.description ?? selected.detail));
       if (!valid) invalidate();
       return valid;
     },
@@ -104,6 +118,37 @@ function searchOptionLabel(option: HTMLElement): string {
     )
     .forEach((node) => node.remove());
   return greetingText(copy);
+}
+/** Visible language chosen in the same Greeting exam row, if any. */
+function rowLanguage(input: HTMLInputElement): string | undefined {
+  const row =
+    /^(languagesCertificationsAndOtherActivity\.certifiedLanguageTests\.\d+)\.testName$/.exec(
+      input.name,
+    );
+  if (!row) return undefined;
+  const triggers = [
+    ...input.ownerDocument.querySelectorAll<HTMLElement>("[name]"),
+  ].filter((node) => node.getAttribute("name") === `${row[1]}.foreignLanguage`);
+  const trigger = triggers[0];
+  if (
+    triggers.length !== 1 ||
+    !trigger ||
+    !greetingUsable(trigger) ||
+    trigger.hasAttribute("data-placeholder-shown")
+  )
+    return undefined;
+  const text = greetingText(trigger);
+  return text && !text.includes("선택") ? text : undefined;
+}
+/** The single visible description of one option; "" when none is rendered. */
+function optionDescription(option: HTMLElement): string | undefined {
+  const descriptions = option.querySelectorAll<HTMLElement>(
+    '[data-part="item-description"]',
+  );
+  if (descriptions.length === 0) return "";
+  return descriptions.length === 1 && greetingUsable(descriptions[0])
+    ? greetingText(descriptions[0])
+    : undefined;
 }
 function canCreateSearch(input: HTMLInputElement): boolean {
   return /^(?:educationalBackground\.highSchool\.schoolName|workHistory\.workExperiences\.\d+\.companyName|languagesCertificationsAndOtherActivity\.certificatesLicenses\.\d+\.credentials)$/.test(
@@ -177,30 +222,48 @@ export async function search(
                 : undefined;
     if (catalog.kind !== inputKind) return false;
   }
+  const language =
+    catalog?.kind === "languageTest" ? rowLanguage(input) : undefined;
+  // Greeting qualifies some exams by the row's language, e.g. "OPIc(영어)".
+  const catalogLabelOf = (label: string): string | undefined => {
+    if (!catalog) return undefined;
+    if (matchesCatalogLabel(catalog, label)) return label;
+    const suffix = language ? `(${language})` : undefined;
+    if (!suffix || !label.endsWith(suffix)) return undefined;
+    const base = label.slice(0, -suffix.length).trim();
+    return base && matchesCatalogLabel(catalog, base) ? base : undefined;
+  };
   const matchesOption = (option: HTMLElement) => {
     if (!catalog) return matchesSearchOption(input, option, item.profileValue!);
     if (
       option.getAttribute("data-value") === "[[new]]" ||
-      !matchesCatalogLabel(catalog, searchOptionLabel(option))
+      catalogLabelOf(searchOptionLabel(option)) === undefined
     )
       return false;
     if (catalog.kind === "certificate" || catalog.kind === "languageTest")
       return true;
-    const descriptions = option.querySelectorAll<HTMLElement>(
-      '[data-part="item-description"]',
-    );
+    if (
+      !option.querySelector('[data-part="item-description"]') &&
+      matchesCatalogInstitution(catalog, searchOptionLabel(option))
+    )
+      return true;
+    const description = optionDescription(option);
     return (
       !!catalog.detail &&
-      descriptions.length === 1 &&
-      greetingUsable(descriptions[0]) &&
-      normalizedCatalogLabel(greetingText(descriptions[0])) ===
-        normalizedCatalogLabel(catalog.detail)
+      description !== undefined &&
+      (normalizedCatalogLabel(description) ===
+        normalizedCatalogLabel(catalog.detail) ||
+        matchesCatalogHighSchoolRegion(
+          catalog,
+          searchOptionLabel(option),
+          description,
+        ))
     );
   };
   if (
     input.value &&
     input.value !== item.profileValue &&
-    !(catalog && matchesCatalogLabel(catalog, input.value))
+    !(catalog && catalogLabelOf(input.value) !== undefined)
   )
     return false;
   let expectedValue = item.profileValue;
@@ -238,6 +301,7 @@ export async function search(
       if (!current() || input.value !== original) return false;
       let emptyList = false;
       let retainedCode: string | undefined;
+      let retainedDescription: string | undefined;
       const retained = await waitFor(() => {
         if (!current() || input.value !== original) return false;
         const retainedPopup = retainedSearchPopup(input);
@@ -257,8 +321,10 @@ export async function search(
           retainedPopup.usable(checked[0]) &&
           searchOptionLabel(checked[0]) === original &&
           matchesOption(checked[0]);
-        if (verified)
+        if (verified) {
           retainedCode = checked[0].getAttribute("data-value") ?? undefined;
+          retainedDescription = optionDescription(checked[0]);
+        }
         return (
           verified &&
           (!catalog ||
@@ -295,11 +361,15 @@ export async function search(
           !!retainedCode &&
           rememberGreetingSelection(input, item, {
             label: original,
+            evidenceLabel: catalogLabelOf(original),
             code: retainedCode,
             ...(catalog.kind === "certificate" ||
             catalog.kind === "languageTest"
               ? {}
-              : { detail: catalog.detail }),
+              : {
+                  detail: catalog.detail,
+                  description: retainedDescription,
+                }),
           });
       }
       return success;
@@ -497,10 +567,14 @@ export async function search(
         !!selectedId &&
         rememberGreetingSelection(input, item, {
           label: input.value,
+          evidenceLabel: catalogLabelOf(input.value),
           code: selectedId,
           ...(catalog.kind === "certificate" || catalog.kind === "languageTest"
             ? {}
-            : { detail: catalog.detail }),
+            : {
+                detail: catalog.detail,
+                description: optionDescription(option),
+              }),
         });
     }
     return success;
