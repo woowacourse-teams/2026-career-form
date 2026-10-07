@@ -1,6 +1,10 @@
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import {
+  matchesCatalogLabel,
+  verifiedSearchCatalogEntry,
+} from "../profile/catalog-identity";
+import {
   PROFILE_CATEGORIES,
   type ProfileInputType,
 } from "../../profile/field-definitions";
@@ -166,6 +170,34 @@ export function matchesResultValue(
   const right = expected.trim();
   if (!left || !right) return false;
   if (left === right) return true;
+  const input = handle?.elements[0];
+  if (
+    item.searchIdentity?.status === "selected" &&
+    item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
+    item.analysis.writePlan?.command === "SEARCH_SELECTION" &&
+    handle?.candidateId === item.candidateId &&
+    handle.isCurrentContext?.() !== false &&
+    input?.isConnected &&
+    input.matches(
+      '[data-scope="combobox"][data-part="input"][role="combobox"]',
+    ) &&
+    ((item.profileFieldKey === "certifications.certificate.name" &&
+      /^languagesCertificationsAndOtherActivity\.certificatesLicenses\.\d+\.credentials$/.test(
+        input.getAttribute("name") ?? "",
+      )) ||
+      (item.profileFieldKey === "languages.languageTest.testName" &&
+        /^languagesCertificationsAndOtherActivity\.certifiedLanguageTests\.\d+\.testName$/.test(
+          input.getAttribute("name") ?? "",
+        ))) &&
+    input.getAttribute("name") === handle.candidate.domName
+  ) {
+    const entry = verifiedSearchCatalogEntry(
+      item.searchIdentity,
+      item.profileFieldKey,
+      right,
+    );
+    return !!entry && matchesCatalogLabel(entry, left);
+  }
   const greetingDisplayMatch = greetingExactDisplayFormat(
     item,
     left,

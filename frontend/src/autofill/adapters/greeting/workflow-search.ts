@@ -1,6 +1,11 @@
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { FailureReporter } from "../../write/failure";
+import {
+  matchesCatalogLabel,
+  normalizedCatalogLabel,
+  verifiedSearchCatalogEntry,
+} from "../../profile/catalog-identity";
 import { greetingFieldLabel } from "./collection";
 import { greetingText, greetingUsable } from "./write";
 import { currentTrigger, mayMutate, waitFor } from "./workflow-controls";
@@ -64,7 +69,65 @@ export async function search(
       !nationalitySearch(input))
   )
     return false;
-  if (input.value && input.value !== item.profileValue) return false;
+  const selectedIdentity = item.searchIdentity?.status === "selected";
+  const catalog = selectedIdentity
+    ? verifiedSearchCatalogEntry(
+        item.searchIdentity!,
+        item.profileFieldKey,
+        item.profileValue,
+      )
+    : undefined;
+  if (selectedIdentity && !catalog) return false;
+  if (catalog) {
+    const inputKind =
+      /^languagesCertificationsAndOtherActivity\.certificatesLicenses\.\d+\.credentials$/.test(
+        input.name,
+      )
+        ? "certificate"
+        : /^languagesCertificationsAndOtherActivity\.certifiedLanguageTests\.\d+\.testName$/.test(
+              input.name,
+            )
+          ? "languageTest"
+          : input.name === "educationalBackground.highSchool.schoolName"
+            ? "highSchool"
+            : /^educationalBackground\.universities\.\d+\.schoolName$/.test(
+                  input.name,
+                )
+              ? "university"
+              : /^educationalBackground\.graduateSchools\.\d+\.schoolName$/.test(
+                    input.name,
+                  )
+                ? "graduateSchool"
+                : undefined;
+    if (catalog.kind !== inputKind) return false;
+  }
+  const matchesOption = (option: HTMLElement) => {
+    if (!catalog) return matchesSearchOption(input, option, item.profileValue!);
+    if (
+      option.getAttribute("data-value") === "[[new]]" ||
+      !matchesCatalogLabel(catalog, searchOptionLabel(option))
+    )
+      return false;
+    if (catalog.kind === "certificate" || catalog.kind === "languageTest")
+      return true;
+    const descriptions = option.querySelectorAll<HTMLElement>(
+      '[data-part="item-description"]',
+    );
+    return (
+      !!catalog.detail &&
+      descriptions.length === 1 &&
+      greetingUsable(descriptions[0]) &&
+      normalizedCatalogLabel(greetingText(descriptions[0])) ===
+        normalizedCatalogLabel(catalog.detail)
+    );
+  };
+  if (
+    input.value &&
+    input.value !== item.profileValue &&
+    !(catalog && matchesCatalogLabel(catalog, input.value))
+  )
+    return false;
+  let expectedValue = item.profileValue;
   const popupId = input.getAttribute("aria-controls");
   const current = () =>
     currentTrigger(handle, item, input, signal) &&
@@ -115,7 +178,8 @@ export async function search(
         return (
           !!checked[0].getAttribute("data-value") &&
           retainedPopup.usable(checked[0]) &&
-          searchOptionLabel(checked[0]) === item.profileValue
+          searchOptionLabel(checked[0]) === original &&
+          matchesOption(checked[0])
         );
       }, signal);
       // Some Greeting forms reopen an exact value without rendering options.
@@ -198,7 +262,7 @@ export async function search(
           (node) =>
             greetingUsable(node) &&
             !!node.getAttribute("data-value") &&
-            matchesSearchOption(input, node, item.profileValue!),
+            matchesOption(node),
         );
         const canonical = options.filter(
           (node) => node.getAttribute("data-value") !== "[[new]]",
@@ -234,7 +298,7 @@ export async function search(
       if (
         !(await mayMutate(signal, beforeMutation)) ||
         !current() ||
-        input.value !== item.profileValue
+        input.value !== expectedValue
       )
         return false;
       if (value === "Enter") {
@@ -249,7 +313,7 @@ export async function search(
           active.length !== 1 ||
           active[0].id !== option.id ||
           active[0].getAttribute("data-value") !== selectedId ||
-          !matchesSearchOption(input, active[0], item.profileValue!) ||
+          !matchesOption(active[0]) ||
           !greetingUsable(active[0])
         )
           return false;
@@ -293,8 +357,9 @@ export async function search(
     } else {
       option.click();
     }
+    expectedValue = catalog ? searchOptionLabel(option) : item.profileValue;
     const selected = () => {
-      if (!current() || input.value !== item.profileValue) return undefined;
+      if (!current() || input.value !== expectedValue) return undefined;
       const popups = [
         ...input.ownerDocument.querySelectorAll<HTMLElement>("[id]"),
       ].filter(
@@ -315,7 +380,8 @@ export async function search(
           (selectedId === "[[new]]"
             ? `[[new]]-${item.profileValue}`
             : selectedId) &&
-        searchOptionLabel(checked[0]) === item.profileValue
+        searchOptionLabel(checked[0]) === expectedValue &&
+        matchesOption(checked[0])
         ? true
         : undefined;
     };
@@ -324,7 +390,7 @@ export async function search(
       !success &&
       option.id &&
       current() &&
-      input.value === item.profileValue &&
+      input.value === expectedValue &&
       input.getAttribute("aria-expanded") === "false" &&
       (await key("ArrowDown"))
     ) {
@@ -337,7 +403,7 @@ export async function search(
       !success &&
       (await mayMutate(signal, beforeMutation)) &&
       current() &&
-      input.value === item.profileValue
+      (input.value === item.profileValue || input.value === expectedValue)
     ) {
       setter.call(input, original);
       input.dispatchEvent(new Event("input", { bubbles: true }));

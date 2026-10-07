@@ -37,7 +37,9 @@ async function run(
     | "search-selection-lost"
     | "search-selection-retained"
     | "search-selection-profile-changed"
-    | "search-selection-modal",
+    | "search-selection-modal"
+    | "search-selection-catalog"
+    | "search-selection-language-catalog",
 ) {
   document.body.innerHTML =
     '<label>국문 성<input name="driver"></label><label>국문 이름<input name="ordinary"></label>';
@@ -45,20 +47,70 @@ async function run(
   const ordinary =
     document.querySelector<HTMLInputElement>('[name="ordinary"]')!;
   const searchSelection = mode.startsWith("search-selection-");
-  const driverName = searchSelection
-    ? "educationalBackground.universities.0.schoolName"
-    : mode === "normalized-veteran"
-      ? "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber"
-      : "driver";
+  const driverName =
+    mode === "search-selection-language-catalog"
+      ? "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.testName"
+      : mode === "search-selection-catalog"
+        ? "languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials"
+        : searchSelection
+          ? "educationalBackground.universities.0.schoolName"
+          : mode === "normalized-veteran"
+            ? "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber"
+            : "driver";
   driver.name = driverName;
   const driverKey =
-    mode === "normalized-veteran"
-      ? "veteran.veteran.veteranNumber"
-      : "personal.personal.koreanFamilyName";
+    mode === "search-selection-language-catalog"
+      ? "languages.languageTest.testName"
+      : mode === "search-selection-catalog"
+        ? "certifications.certificate.name"
+        : mode === "normalized-veteran"
+          ? "veteran.veteran.veteranNumber"
+          : "personal.personal.koreanFamilyName";
   const profile = createEmptyProfile();
   profile.veteran.veteranNumber = "12-345678";
   profile.personal.koreanFamilyName = "가상";
   profile.personal.koreanGivenName = "사용자";
+  if (mode === "search-selection-catalog") {
+    profile.certifications = [
+      {
+        id: "certificate-1",
+        sectionId: "certificate",
+        values: { name: "SQL 개발자" },
+        identity: {
+          status: "selected",
+          catalogId: "certificate:kdata:sqld",
+          displayName: "SQL 개발자",
+          originalText: "SQLD",
+          catalogVersion: "2026-10-07",
+        },
+      },
+    ];
+  }
+  if (mode === "search-selection-language-catalog") {
+    profile.languages = [
+      {
+        id: "language-1",
+        sectionId: "languageTest",
+        values: { testName: "OPIc", language: "영어", grade: "IH" },
+        identity: {
+          status: "selected",
+          catalogId: "languageTest:opic",
+          displayName: "OPIc",
+          originalText: "오픽",
+          catalogVersion: "2026-10-07",
+        },
+      },
+    ];
+  }
+  if (
+    mode === "search-selection-catalog" ||
+    mode === "search-selection-language-catalog"
+  ) {
+    driver.setAttribute("data-scope", "combobox");
+    driver.setAttribute("data-part", "input");
+    driver.setAttribute("role", "combobox");
+    driver.setAttribute("aria-controls", "certificate-popup");
+  }
   if (mode === "unrecorded") driver.value = "가상";
   ordinary.addEventListener("input", () => {
     queueMicrotask(() => {
@@ -156,9 +208,13 @@ async function run(
         if (searchSelection)
           handle.elements[0].setAttribute("data-selected-code", "school-1");
         handle.elements[0].value =
-          mode === "normalized-veteran"
-            ? item.profileValue!.replace("-", "")
-            : item.profileValue!;
+          mode === "search-selection-language-catalog"
+            ? "오픽"
+            : mode === "search-selection-catalog"
+              ? "SQLD"
+              : mode === "normalized-veteran"
+                ? item.profileValue!.replace("-", "")
+                : item.profileValue!;
         if (mode === "renumber")
           document.body.insertAdjacentHTML(
             "afterbegin",
@@ -257,6 +313,21 @@ async function run(
   });
   return { results, items, model, resultRegistry };
 }
+
+it.each([
+  "search-selection-catalog",
+  "search-selection-language-catalog",
+] as const)(
+  "retains a verified %s alias through reanalysis and final result reporting",
+  async (mode) => {
+    const { model, results } = await run(mode);
+    expect(
+      results.filter((result) => result.status === "written"),
+    ).toHaveLength(2);
+    expect(model.completed).toHaveLength(2);
+    expect(model.pending).toEqual([]);
+  },
+);
 
 it.each(["remount", "renumber"] as const)(
   "keeps driver receipts and final ordinary writes completed after Greeting %s",

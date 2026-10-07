@@ -24,11 +24,13 @@ import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type {
   FieldValues,
   Profile,
+  ProfileIdentity,
   ProfileCategoryId,
   RepeatedProfileCategoryId,
 } from "../../profile/model";
 import type { ValueBinding } from "../api/types";
 import { resolveValueBinding } from "../profile/value-binding";
+import { bindSearchIdentity } from "../profile/catalog-identity";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
 import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
@@ -90,6 +92,8 @@ export interface ReviewPlanItem {
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
   searchValuePlan?: LocalSearchValuePlan;
+  /** Explicit local profile selection; never serialize to the backend. */
+  searchIdentity?: ProfileIdentity;
 }
 
 export interface ReviewPlan {
@@ -682,6 +686,16 @@ function itemForAnalysis(
         )
       : undefined;
 
+  const searchIdentity =
+    greeting && searchCommand && binding.type === "DIRECT"
+      ? bindSearchIdentity(
+          profile,
+          binding.profileFieldKey,
+          resolvedProfileValue.profileEntryId,
+          resolvedProfileValue.value,
+        )
+      : undefined;
+
   const pageValue = currentValue(lookup.handle);
   const verifiedFreshDefault =
     greeting &&
@@ -744,6 +758,7 @@ function itemForAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchIdentity ? { searchIdentity } : {}),
     };
   }
   if (hasConflict) {
@@ -770,6 +785,7 @@ function itemForAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchIdentity ? { searchIdentity } : {}),
     };
   }
   if (analysis.autofillPolicy === "CONDITIONAL") {
@@ -797,6 +813,7 @@ function itemForAnalysis(
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
       ...(searchValuePlan ? { searchValuePlan } : {}),
+      ...(searchIdentity ? { searchIdentity } : {}),
     };
   }
   return {
@@ -832,6 +849,7 @@ function itemForAnalysis(
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
     ...(searchValuePlan ? { searchValuePlan } : {}),
+    ...(searchIdentity ? { searchIdentity } : {}),
   };
 }
 

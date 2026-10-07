@@ -1050,7 +1050,7 @@ export function createAnalyzeFields({
                     !run.controller.signal.aborted &&
                     pageDocument.URL === snapshotUrl &&
                     current.handle.isCurrentContext?.() !== false &&
-                    current.handle.elements[0]?.value === item.profileValue &&
+                    current.handle.elements[0]?.value === live.value &&
                     JSON.stringify(latestProfile) ===
                       JSON.stringify(loadedProfile)
                   );
