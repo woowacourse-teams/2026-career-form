@@ -179,50 +179,50 @@
 
 ## 2026-09-07 현대 반복 행 준비 보완
 
-- 승인 digest `0b3ad344c8d413acd5d691120d2884b4e1b1d3384fd32ae5daba5bc843f50924`의 전체 후보를 CF-46 미병합 raw와 현대·지원 현황 topic에 반영했다.
-- 실제 구조의 추가 동작 식별 누락, 어학 하위 섹션별 개수, 자격증명 매핑과 반복 추가·입력 회귀를 기록했다. 실제 입력값은 기록하지 않았다.
+- 승인 digest `0b3ad344c8d413acd5d691120d2884b4e1b1d3384fd32ae5daba5bc843f50924`의 전체 후보를 CF-46 미병합 raw와 현대,지원 현황 topic에 반영했다.
+- 실제 구조의 추가 동작 식별 누락, 어학 하위 섹션별 개수, 자격증명 매핑과 반복 추가,입력 회귀를 기록했다. 실제 입력값은 기록하지 않았다.
 
 ## 2026-09-07 현대 어학 선택과 첫 실행 회귀
 
-- 승인 digest `2227ce4216e2c2ff5436f16be4451aa39d683491ba015bfed9ab19c0bf021280`의 전체 후보를 CF-46 미병합 근거와 현대·지원 현황 topic에 반영했다.
+- 승인 digest `2227ce4216e2c2ff5436f16be4451aa39d683491ba015bfed9ab19c0bf021280`의 전체 후보를 CF-46 미병합 근거와 현대,지원 현황 topic에 반영했다.
 - 정확한 추가 동작 재탐색, 검증된 어학 매핑, 단계별 정상 직접입력 준비와 같은 메뉴 선택 검증을 기록했다. 실프로필 값은 기록하지 않았다.
 
 ## 2026-09-08 — CF-46 SK 주소 검색 검증 반영
 
 - 승인된 전체 후보18개(digest: 28d877aae8306a494fe2eace6bf4e0baf55bddd0e31b87ffdfacb55c53c74d9f)를 기준으로 [CF-46 bundle](../raw/issues/CF-46/manifest.md)을 갱신했다.
-- SK 후속 반복 버튼/어학 개수 분리, 기존 API capability 협상, 카카오 iframe 검색·정확 선택·최종 반영과 실제 fixture 검증 및 원복을 회사 문서와 지원 현황에 반영했다.
-- 경력·날짜·시험 성적 등 남은 제한과 다른 회사의 미검증 상태를 보존했다.
+- SK 후속 반복 버튼/어학 개수 분리, 기존 API capability 협상, 카카오 iframe 검색,정확 선택,최종 반영과 실제 fixture 검증 및 원복을 회사 문서와 지원 현황에 반영했다.
+- 경력,날짜,시험 성적 등 남은 제한과 다른 회사의 미검증 상태를 보존했다.
 
 ## 2026-09-08 — CF-46 전체 패널 검증과 SK 검색 후속 근거 반영
 
 - 승인된 신규 후보 9개(digest: `964819f79cb6d5cba4ffbffad54f89d49a66e114cfa9f714d8d4e720796362f3`)를 기존 승인18개(digest: `28d877aae8306a494fe2eace6bf4e0baf55bddd0e31b87ffdfacb55c53c74d9f`) 위에 누적해 CF-46 미병합 bundle을 갱신했다.
-- SK 경력 exact DOM·재직상태 후속 분석, `YEAR_MONTH` 날짜·대한민국 국적 lookup, widget 검색의 유일 확정·직렬 처리와 전체 공개 fixture의 실제 popup→사이드 패널→자동 기입 검증을 기록했다.
-- UI writer 집계의 범위, 204개 제어 원복, WXT watcher의 reload 경계와 저장·제출 미검증을 함께 기록했으며 P1/P3/P4 전체 완료로 확대하지 않았다.
+- SK 경력 exact DOM,재직상태 후속 분석, `YEAR_MONTH` 날짜,대한민국 국적 lookup, widget 검색의 유일 확정,직렬 처리와 전체 공개 fixture의 실제 popup→사이드 패널→자동 기입 검증을 기록했다.
+- UI writer 집계의 범위, 204개 제어 원복, WXT watcher의 reload 경계와 저장,제출 미검증을 함께 기록했으며 P1/P3/P4 전체 완료로 확대하지 않았다.
 
-## 2026-09-08 — CF-46 현대 주소·국적·학력 검증 반영
+## 2026-09-08 — CF-46 현대 주소,국적,학력 검증 반영
 
 - 승인 digest `c0e3c1533f98c631846cdd6e7e769b749c3bb7d07a70986e5d1be3f034416df6`의 현대 후보 7개를 기존 CF-46 지식 위에 누적했다.
-- 국내 주소 유일 결과 선택과 실행 소유 modal cleanup, 국적1 대한민국/KR·국적2 불변, 학력 정책 v4의 그룹별 행·필드와 실제 `school`/`basic` auto-type을 기록했다.
-- 설치 production smoke는 고교·학사 2행을 확인하고 주소 3값·readonly, 학교·전공 코드와 기간·GPA·졸업 코드를 독립 대조했다. API 7회는 HTTP 200/ADAPTER/COMPLETE였고 UI 38/0은 전체 성공이 아니다.
-- 실제 대학원·전문학사·박사, 저장·제출, toolbar icon 클릭은 검증하지 않았으며 지원서 1149개 제어와 원래 프로필 키 부재 상태를 복원했다. 개인 입력값·원본 DOM·세션은 기록하지 않았다.
+- 국내 주소 유일 결과 선택과 실행 소유 modal cleanup, 국적1 대한민국/KR,국적2 불변, 학력 정책 v4의 그룹별 행,필드와 실제 `school`/`basic` auto-type을 기록했다.
+- 설치 production smoke는 고교,학사 2행을 확인하고 주소 3값,readonly, 학교,전공 코드와 기간,GPA,졸업 코드를 독립 대조했다. API 7회는 HTTP 200/ADAPTER/COMPLETE였고 UI 38/0은 전체 성공이 아니다.
+- 실제 대학원,전문학사,박사, 저장,제출, toolbar icon 클릭은 검증하지 않았으며 지원서 1149개 제어와 원래 프로필 키 부재 상태를 복원했다. 개인 입력값,원본 DOM,세션은 기록하지 않았다.
 
-## 2026-09-09 — CF-83 SK·현대 자동 기입 보완
+## 2026-09-09 — CF-83 SK,현대 자동 기입 보완
 
 - 승인 digest `8ee710bc2303688173a36b717de467a7f31b20054ecacfb9ade8d74c931bd4dd`의 후보 6개를 [CF-83 bundle](../raw/issues/CF-83/manifest.md)에 기록했다.
-- SK 학력 재식별·병역/보훈 기존 값 보호, 현대 만점기준·추가 전공·라벨 및 소수점 정책 저장 보완을 회사 topic과 현황표에 반영했다.
+- SK 학력 재식별,병역/보훈 기존 값 보호, 현대 만점기준,추가 전공,라벨 및 소수점 정책 저장 보완을 회사 topic과 현황표에 반영했다.
 - CF-46 근거는 보존하고 CF-83 자동 검증과 실제 설치 재기입 미검증을 구분했다.
 
 ## [2026-09-09] revise | CF-83 후속 검증 근거 보완
 
 - 승인 digest `dce8d6f067af9892c4c2a3da6d1957ef6498091e2b1ea16d72b5a3530c01b5e4`의 전체 후보 8개를 CF-83 미병합 bundle에 반영했다.
-- SK `만기전역`→군필 alias의 회사·필드 한정 정규화와 준비·실행·검토 경로, 현대 복수·부전공 검색의 0개 결과 수동 확인·나머지 입력 계속 규칙을 기록했다.
-- Hyundai negative fixture는 40개 입력·2개 수동 확인으로 기록했다. 설치 hash와 구조적 import 일치는 확인했으나 실제 SK alias 재진입, 저장·제출·toolbar icon 및 운영 정책 rollout은 미검증으로 유지했다.
+- SK `만기전역`→군필 alias의 회사,필드 한정 정규화와 준비,실행,검토 경로, 현대 복수,부전공 검색의 0개 결과 수동 확인,나머지 입력 계속 규칙을 기록했다.
+- Hyundai negative fixture는 40개 입력,2개 수동 확인으로 기록했다. 설치 hash와 구조적 import 일치는 확인했으나 실제 SK alias 재진입, 저장,제출,toolbar icon 및 운영 정책 rollout은 미검증으로 유지했다.
 
-## 2026-09-10 CF-86 학력 소재지·주야간 계약 갱신
+## 2026-09-10 CF-86 학력 소재지,주야간 계약 갱신
 
 - 승인 digest `dd275895addeb2568dd3e7b517a5dc8867f83e0fdb03afc39d6a2e2aa2d6dbed`의 후보 전체 4개를 [CF-86 bundle](../raw/issues/CF-86/manifest.md)에 기록했다.
-- SK·현대 회사 문서와 지원 현황표를 함께 갱신하고 CF-83 불변 근거는 보존했다.
-- 표준/기존 값 호환, 정확한 메뉴·hidden 코드, 국가→도시 재분석과 실패 격리를 기록했다. 자동 테스트·실제 설치 대상 필드·미검증 범위를 분리하고 개인정보·세션은 포함하지 않았다.
+- SK,현대 회사 문서와 지원 현황표를 함께 갱신하고 CF-83 불변 근거는 보존했다.
+- 표준/기존 값 호환, 정확한 메뉴,hidden 코드, 국가→도시 재분석과 실패 격리를 기록했다. 자동 테스트,실제 설치 대상 필드,미검증 범위를 분리하고 개인정보,세션은 포함하지 않았다.
 
 ## [2026-09-12] ingest | CF-90 지원서 패널 안 자동 기입 흐름
 
@@ -232,11 +232,11 @@
 - Raw: llm-wiki/raw/issues/CF-90/manifest.md
 - Topics: 1
 
-## [2026-09-19] ingest | CF-96 랜딩·온보딩 웹 페이지
+## [2026-09-19] ingest | CF-96 랜딩,온보딩 웹 페이지
 
 - Approval-Digest: 514b194740c528ad3a9354d2de0f96e4e38719507d2990c34dc0143be4794daa
 - Raw: [CF-96 bundle](../raw/issues/CF-96/manifest.md)
-- 승인된 후보 3개를 기록하고 [랜딩·온보딩 topic](topics/landing-onboarding.md)을 색인에 연결했다.
+- 승인된 후보 3개를 기록하고 [랜딩,온보딩 topic](topics/landing-onboarding.md)을 색인에 연결했다.
 
 ## [2026-09-22] ingest | CF-99 입력 위치 표시와 설치 안내
 
@@ -247,32 +247,32 @@
 ## [2026-09-23] ingest | CF-98 범용 분석과 검색 표면
 
 - 승인 digest `09f47713670f79bb2053d52af823b912cd0b06bc635066c63f9457d7b9f74db3`의 후보 6개와 제안 ADR 전문을 [CF-98 bundle](../raw/issues/CF-98/manifest.md)에 비식별 기록했다.
-- 정적 정책 우선, OpenAI/Jev 단일 공급자 선택, 비식별 의미 문맥, 로컬 검색 링크 1회 클릭과 사후 검증을 분석 API·데이터 경계·검색 표면 topic에 연결했다.
-- 합성 확장과 실제 CJ 화면의 관측 범위를 구분했다. Jev 실호출·보관 정책, Greeting 실제 화면, CJ 항목별 확장 판정과 저장 상태는 미검증으로 유지했다.
+- 정적 정책 우선, OpenAI/Jev 단일 공급자 선택, 비식별 의미 문맥, 로컬 검색 링크 1회 클릭과 사후 검증을 분석 API,데이터 경계,검색 표면 topic에 연결했다.
+- 합성 확장과 실제 CJ 화면의 관측 범위를 구분했다. Jev 실호출,보관 정책, Greeting 실제 화면, CJ 항목별 확장 판정과 저장 상태는 미검증으로 유지했다.
 
 ## [2026-09-24] ingest | CF-102 OpenAI 분석 예산과 안전 진단
 
 - 승인 digest `e350514e46e5143c397314f3209dc2d4295bfdd7b8654d2d61d492b94bd79476`의 후보 3개를 [CF-102 bundle](../raw/issues/CF-102/manifest.md)에 비식별 기록했다.
-- 준비·필드 30초 기본/60초 미만, 상호작용 별도 SDK 8초·무재시도, 구조화된 종료 사유와 안전한 실패 분류를 [topic](topics/openai-analysis-budget-and-diagnostics.md)에 연결했다.
+- 준비,필드 30초 기본/60초 미만, 상호작용 별도 SDK 8초,무재시도, 구조화된 종료 사유와 안전한 실패 분류를 [topic](topics/openai-analysis-budget-and-diagnostics.md)에 연결했다.
 - Docker/실제 공급자/CJ 검증은 환경 및 승인 부재로 미완료로 남겼다.
 
 ## [2026-09-24] ingest | CF-101 범용 날짜 형식 변환과 로컬 승인
 
 - 승인 digest `62463e58e4e9043e334ba50b33b3a8b81140469f775e2b9eb9598763ea975219`의 후보 3개를 [CF-101 bundle](../raw/issues/CF-101/manifest.md)에 비식별 기록했다.
 - 엄격한 날짜 DIRECT 변환, 로컬 DOM 승인 재검증과 원본 fallback 금지를 [topic](topics/generic-date-format.md)에 연결했다.
-- 합성 통합·설치 UI·실사이트 검증을 구분하고 개별 unavailable 이유의 기존 표시 제한을 기록했다.
+- 합성 통합,설치 UI,실사이트 검증을 구분하고 개별 unavailable 이유의 기존 표시 제한을 기록했다.
 
 ## [2026-09-24] ingest | CF-104 DOM 검증 기반 연월 달력 선택
 
 - 승인 digest `0d4d85a28616d32e0e203efbedf10812ee26115f76ab57c44c80f188e5daf030`의 ADR 제안 전문을 [CF-104 bundle](../raw/issues/CF-104/manifest.md)에 기록했다.
-- 모델의 비식별 후보 역할 판별과 브라우저의 개별 승인·DOM 소유권·연월 선택·실제 값 검증을 [topic](topics/generic-calendar-selection.md)에 연결했다.
+- 모델의 비식별 후보 역할 판별과 브라우저의 개별 승인,DOM 소유권,연월 선택,실제 값 검증을 [topic](topics/generic-calendar-selection.md)에 연결했다.
 - 합성 fixture와 설치 확장 UI 자동 검증을 수행했으며, 실제 지원서 입력과 외부 공급자 실호출은 확인하지 않았다.
 
 ## [2026-09-24] ingest | CF-99 최종 입력 결과와 안내 흐름
 
 - Approval-Digest: 20126b48eacbf09b8af7fcaddbaad25843ec829a766fb688ebe465b8363c913b
 - [CF-99 bundle](../raw/issues/CF-99/manifest.md)의 최종 후보 6개를 반영했다.
-- 입력 중 화면 고정, 범주별 결과 검토, 선택적인 접기, 합성 안내 시연과 현대·SK 진단 경계를 관련 topic 및 현황표에 연결했다.
+- 입력 중 화면 고정, 범주별 결과 검토, 선택적인 접기, 합성 안내 시연과 현대,SK 진단 경계를 관련 topic 및 현황표에 연결했다.
 
 ## [2026-09-25] ingest | CF-108 범용 검색 실패 진단과 후속 보류
 
@@ -284,27 +284,27 @@
 
 - Approval-Digest: ad86e9a311c54fb3b9fc132310c2375b1972ebc129c46261fef22aa1d6c0bd19
 - 승인된 후보 3개와 제한된 ADR을 [CF-110 bundle](../raw/issues/CF-110/manifest.md)에 기록하고 [범용 검색 topic](topics/generic-autofill-search.md)에 연결했다.
-- 검색 POST의 정확한 소유권·두 필드, callback 비실행과 응답 내 유일성·표시값/코드/팝업 종료/500ms 유지, 버튼형 input 라벨·실패 보호 경계를 반영했다. 일반 검색 거부와 CF-108 진단은 유지한다.
-- 합성 입력 대상 브라우저 검증과 설치 확장 실제 화면의 읽기 전용 관측을 구분한다. 실제 화면 결과 UI는 확인 필요 및 입력 완료 0개였으며, 전체 패널 성공·서버 저장·제출·CJ 데이터베이스 전체 유일성은 입증되지 않았다.
+- 검색 POST의 정확한 소유권,두 필드, callback 비실행과 응답 내 유일성,표시값/코드/팝업 종료/500ms 유지, 버튼형 input 라벨,실패 보호 경계를 반영했다. 일반 검색 거부와 CF-108 진단은 유지한다.
+- 합성 입력 대상 브라우저 검증과 설치 확장 실제 화면의 읽기 전용 관측을 구분한다. 실제 화면 결과 UI는 확인 필요 및 입력 완료 0개였으며, 전체 패널 성공,서버 저장,제출,CJ 데이터베이스 전체 유일성은 입증되지 않았다.
 
 ## [2026-09-26] ingest | CF-112 CJ 첫 대학교 학교명과 국가 문맥 검색
 
 - Approval-Digest: e78f86f65972ab454f6e92f7fcb1d98e14a4855551975bec8598772c8f021d0e
 - 승인된 후보 2개와 Issue의 결정을 [CF-112 bundle](../raw/issues/CF-112/manifest.md)에 비식별 기록하고 [범용 검색 topic](topics/generic-autofill-search.md)에 연결했다.
-- 최소 학교 POST, 학교명·코드·국가·같은 행 소재지 URL 묶음, 기존 `new_country` 보존, 전체 기존 묶음의 재검증, 학교·전공 공유 팝업 lease와 조건부 복구를 기록했다. 일반 POST 허용이나 회사 전체 어댑터 지원으로 확장하지 않는다.
-- 공개 검색과 공개 팝업을 연결한 합성 브라우저에서 두 번의 선택·닫힘·500ms 이상 유지를 확인하고 공개 결과 코드와 독립 대조했다. 설치 확장 전체 패널, 실제 지원서, 저장·제출은 검증하지 않았다.
+- 최소 학교 POST, 학교명,코드,국가,같은 행 소재지 URL 묶음, 기존 `new_country` 보존, 전체 기존 묶음의 재검증, 학교,전공 공유 팝업 lease와 조건부 복구를 기록했다. 일반 POST 허용이나 회사 전체 어댑터 지원으로 확장하지 않는다.
+- 공개 검색과 공개 팝업을 연결한 합성 브라우저에서 두 번의 선택,닫힘,500ms 이상 유지를 확인하고 공개 결과 코드와 독립 대조했다. 설치 확장 전체 패널, 실제 지원서, 저장,제출은 검증하지 않았다.
 
 ## [2026-09-27] ingest | CF-94 Greeting 공통 정적 매핑
 
 - Approval-Digest: d36c93eae7d0daa585f8b33f6985c5edde7043a449cf12547daa9b0d6c5a4dbe
 - 승인된 후보 5개와 Issue의 ADR 결정을 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 비식별 기록했다.
-- BE 판정·문맥과 FE 어댑터 실행의 경계, 카카오모빌리티·현대오토에버·무신사·당근서비스·메디퀴터스의 화면별 지원 현황, `이메일주소`/`이메일` 단일 칸 호환을 topic과 지원 현황표에 연결했다.
-- 자동 테스트와 Aside 설치 확장의 입력 관측을 구분했다. 이메일 인증, 파일, 동의, 실제 저장·제출과 다른 Greeting 양식 전체의 호환성은 검증하지 않았다.
+- BE 판정,문맥과 FE 어댑터 실행의 경계, 카카오모빌리티,현대오토에버,무신사,당근서비스,메디퀴터스의 화면별 지원 현황, `이메일주소`/`이메일` 단일 칸 호환을 topic과 지원 현황표에 연결했다.
+- 자동 테스트와 Aside 설치 확장의 입력 관측을 구분했다. 이메일 인증, 파일, 동의, 실제 저장,제출과 다른 Greeting 양식 전체의 호환성은 검증하지 않았다.
 ## [2026-09-26] ingest | CF-114 범용 자격증 검색과 후속 재검토
 
 - Approval-Digest: 90d7fdfda386fb1e7451130ed6401efc3669ea4ee10ab3685e883b7ce3fb752a
 - 승인된 후보 5개를 [CF-114 bundle](../raw/issues/CF-114/manifest.md)에 기록하고 [범용 검색 topic](topics/generic-autofill-search.md)과 [지원 현황](topics/adapter-field-inventory.md)에 연결했다.
-- 회사 중립 반복 행·검색·새 승인 경계를 기록했다. 합성 회귀와 설치 빌드 확인을 실제 CJ 또는 다른 회사의 자동 입력 성공으로 확대하지 않는다.
+- 회사 중립 반복 행,검색,새 승인 경계를 기록했다. 합성 회귀와 설치 빌드 확인을 실제 CJ 또는 다른 회사의 자동 입력 성공으로 확대하지 않는다.
 
 ## [2026-09-28] ingest | CF-115 범용 자동 기입 실사이트 평가 기준선
 
@@ -331,23 +331,23 @@
 
 - Approval-Digest: e059c7035aacff70bb63053c36bd05ff7370595c5af450788ac836798cb49b8a
 - 승인된 후보 4개를 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 반영했다.
-- FE host 선택·BE 독립 정적 정책, 전용 API 필드/토큰/추가 준비 요청 제거와 명시 등록의 지원 경계를 갱신했다. 이전 설치 확장 결과는 이번 라우팅 변경 이전 증거로 구분했다.
+- FE host 선택,BE 독립 정적 정책, 전용 API 필드/토큰/추가 준비 요청 제거와 명시 등록의 지원 경계를 갱신했다. 이전 설치 확장 결과는 이번 라우팅 변경 이전 증거로 구분했다.
 
 ## [2026-09-28] ingest | CF-94 카카오게임즈 자체 도메인
 
 - Approval-Digest: cac312a1d58fd3930f34a3ec7e62130c7a6026aa5654a054f57065b20c650876
-- [CF-94 bundle](../raw/issues/CF-94/manifest.md)의 승인 후보 전체를 갱신해 카카오게임즈 명시 등록과 공개 페이지·CNAME 확인 근거를 추가했다. 런타임 자동 탐지와 전 항목 실화면 입력 검증으로 확대하지 않는다.
+- [CF-94 bundle](../raw/issues/CF-94/manifest.md)의 승인 후보 전체를 갱신해 카카오게임즈 명시 등록과 공개 페이지,CNAME 확인 근거를 추가했다. 런타임 자동 탐지와 전 항목 실화면 입력 검증으로 확대하지 않는다.
 
-## [2026-09-28] ingest | CF-94 Greeting DNS·DOM 공통 판별
+## [2026-09-28] ingest | CF-94 Greeting DNS,DOM 공통 판별
 
 - Approval-Digest: c2488a72f8044f14f8edd98d8b975422d669e2a1db3a6b15f0a94760985bc71a
 - 승인된 후보 4개를 [CF-94 bundle](../raw/issues/CF-94/manifest.md)에 반영했다.
-- BE CNAME 연결·FE 공통 DOM 어댑터 선택으로 기업별 등록을 대체하고 기존 라우팅 API와 필드 보호 조건을 유지한다. 이전 설치 입력 결과와 이번 DNS/API·합성 검증의 범위를 구분한다.
+- BE CNAME 연결,FE 공통 DOM 어댑터 선택으로 기업별 등록을 대체하고 기존 라우팅 API와 필드 보호 조건을 유지한다. 이전 설치 입력 결과와 이번 DNS/API,합성 검증의 범위를 구분한다.
 
 - 2026-09-28: CF-94 승인 후보에 따라 Greeting 영문이름의 이름→성 정책과 카카오게임즈 프로필/양식 지원 공백을 반영했다. 실제 입력값은 수집하지 않았고 미구현 범주는 조사 결과로 구분했다.
 
-- 2026-09-28: CF-94 승인 후보 `2a2272f6138752170845c9b3a7fb03ae7746ccba332a7f6588da3720ea914b01`로 Greeting 고교·대학 추가전공·경력·어학·자격증 지원 및 이메일·재직 결과 보완을 반영했다. 실제 설치 관측과 최신 수정본의 전체 브라우저 재검증 미완료를 분리했고 다른 회사 raw는 변경하지 않았다.
-- 2026-09-28: CF-118 승인 후보 `3e40207f5d644edd4f230e4fe7b18dfc3b5175beff2eed764049f03a10e6c5f5` 3개를 [CF-118 bundle](../raw/issues/CF-118/manifest.md)에 반영했다. ui-datepicker 공유 루트 소유권 증명, 0~11 월 select 신뢰 조건, 월·연월일 달력 동시 감지 보류를 기록했고 합성 fixture 검증과 실제 사이트 수동 검증 미완료를 구분했다.
+- 2026-09-28: CF-94 승인 후보 `2a2272f6138752170845c9b3a7fb03ae7746ccba332a7f6588da3720ea914b01`로 Greeting 고교,대학 추가전공,경력,어학,자격증 지원 및 이메일,재직 결과 보완을 반영했다. 실제 설치 관측과 최신 수정본의 전체 브라우저 재검증 미완료를 분리했고 다른 회사 raw는 변경하지 않았다.
+- 2026-09-28: CF-118 승인 후보 `3e40207f5d644edd4f230e4fe7b18dfc3b5175beff2eed764049f03a10e6c5f5` 3개를 [CF-118 bundle](../raw/issues/CF-118/manifest.md)에 반영했다. ui-datepicker 공유 루트 소유권 증명, 0~11 월 select 신뢰 조건, 월,연월일 달력 동시 감지 보류를 기록했고 합성 fixture 검증과 실제 사이트 수동 검증 미완료를 구분했다.
 
 ## [2026-09-29] ingest | CF-129 혼합 학력 행과 role 없는 레이어 검색
 
@@ -376,25 +376,25 @@
 
 - Approval-Digest: 251cd740a1cb88bba6e71f390215f232002ae888c28ed77a111ad85ee5f8f50a
 - Source-Revision: fac9abf8a0019f508bcdb0a833e671a436d34601
-- 승인한 후보 4개와 ADR·운영 안내를 [CF-138 bundle](../raw/issues/CF-138/manifest.md)에 기록했다.
-- [범용 분할 이메일 보호](topics/generic-split-email-safety.md)와 [Jev·OpenAI 호출 추적](topics/provider-call-tracing.md)을 새 topic으로 연결했다.
-- 합성 실제 패널 및 합성 입력의 실제 공급자·LangSmith 검증 범위를 기록하며 실제 지원 정보, 계정, 세션과 시크릿은 수집하지 않았다.
+- 승인한 후보 4개와 ADR,운영 안내를 [CF-138 bundle](../raw/issues/CF-138/manifest.md)에 기록했다.
+- [범용 분할 이메일 보호](topics/generic-split-email-safety.md)와 [Jev,OpenAI 호출 추적](topics/provider-call-tracing.md)을 새 topic으로 연결했다.
+- 합성 실제 패널 및 합성 입력의 실제 공급자,LangSmith 검증 범위를 기록하며 실제 지원 정보, 계정, 세션과 시크릿은 수집하지 않았다.
 
 ## [2026-10-01] ingest | CF-140 범용 입력 결과 완료 판정
 
 - Approval-Digest: f613f99c662b07a118bee6e68460f9417d62a0e98246c1c318e9938bd2d78892
 - Source-Revision: b63ee0327d26cd7984f9211c7f583c78eee19ef6
 - 승인한 두 후보를 [CF-140 bundle](../raw/issues/CF-140/manifest.md)에 기록했다.
-- [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md)에 범용 쓰기의 실제 값 기반 완료 기준과 result-model·progress verifier의 연계를 추가했다. 기존 CF-90 raw를 보존했다.
-- 합성 실제 workflow의 정상·불일치·읽기 불가 결과와 데스크톱·모바일 검증 범위를 기록했다. 전체 커버리지의 별도 통합 테스트 실패는 통과로 기록하지 않았다.
+- [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md)에 범용 쓰기의 실제 값 기반 완료 기준과 result-model,progress verifier의 연계를 추가했다. 기존 CF-90 raw를 보존했다.
+- 합성 실제 workflow의 정상,불일치,읽기 불가 결과와 데스크톱,모바일 검증 범위를 기록했다. 전체 커버리지의 별도 통합 테스트 실패는 통과로 기록하지 않았다.
 
 ## [2026-10-02] ingest | CF-142 범용 버튼 드롭다운
 
 - Approval-Digest: b1d28af146b567a09987ebfeab7e0ee823bc4be8723710f1f19355b77ac2c7e0
 - Source-Revision: ca54009aa971b283f3149710361dc57c666e67e8
 - 승인한 두 후보를 [CF-142 bundle](../raw/issues/CF-142/manifest.md)에 기록했다.
-- [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md)을 추가하고 [패널 흐름](topics/autofill-panel-workflow.md)에 값 보존·재승인 후 재검증·실제 반영 판정을 연결했다. 기존 raw는 보존했다.
-- 실사이트 DOM 구조 조사와 합성 실제 Chromium의 4개 수집·선택을 구분한다. 실제 지원 정보와 세션은 기록하지 않고 전체 기존 실패·환경 제한도 전체 통과로 표현하지 않는다.
+- [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md)을 추가하고 [패널 흐름](topics/autofill-panel-workflow.md)에 값 보존,재승인 후 재검증,실제 반영 판정을 연결했다. 기존 raw는 보존했다.
+- 실사이트 DOM 구조 조사와 합성 실제 Chromium의 4개 수집,선택을 구분한다. 실제 지원 정보와 세션은 기록하지 않고 전체 기존 실패,환경 제한도 전체 통과로 표현하지 않는다.
 
 ## [2026-10-02] ingest | CF-144 호스트 루트 디스크 알림
 
@@ -425,3 +425,10 @@
 - Source-Revision: 15a5e992a3e291263ecfdf564162ea04930094e0
 - 승인한 네 후보를 [CF-158 bundle](../raw/issues/CF-158/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 기본 필터 패널, 요청 연결, 외부 성공 P95와 표본, 수집 상태 해석과 사람 담당 반영 경계를 기록했다.
+
+## [2026-10-07] ingest | CF-164 자동 입력 품질 관측
+
+- Approval-Digest: 86514685359a23e2deeeb4323caf4caeb06c67fbc8a7ef5b488caa55b6a4d2de
+- Source-Revision: 94ba74906887c5635b8cc031c047f0e079f43f85
+- 승인한 후보 9개와 ADR을 [CF-164 bundle](../raw/issues/CF-164/manifest.md)에 기록하고 [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md)을 추가했다.
+- 기존 운영 모니터링 raw와 Current는 보존하고 품질 관측, 사람 참고 분모와 전용 평일 확인 요청을 별도 주제로 연결했다.
