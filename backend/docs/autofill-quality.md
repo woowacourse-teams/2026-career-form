@@ -56,7 +56,7 @@ Asia/Seoul 평일 09:20에 당일 batch를 저장한다. 재시작 시 당일 09
 | 환경변수 | 기본값과 역할 |
 |---|---|
 | `CAREER_FORM_QUALITY_ENABLED` | false, 수집, 관리 기능 활성화 |
-| `CAREER_FORM_QUALITY_VERSION` | UNKNOWN, 배포한 백엔드 버전 |
+| `CAREER_FORM_QUALITY_VERSION` | 직접 실행은 UNKNOWN, 배포 Compose는 실제 `BACKEND_IMAGE` 자동 전달 |
 | `CAREER_FORM_QUALITY_PASSWORD_HASH` | 공용 비밀번호 검증용 PBKDF2 설정 |
 | `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH` | Grafana 전용 조회 토큰의 SHA-256 hex |
 | `CAREER_FORM_QUALITY_MANAGEMENT_URL` | 외부 HTTPS 관리 화면의 `/quality/` 주소 |
@@ -69,6 +69,25 @@ Asia/Seoul 평일 09:20에 당일 batch를 저장한다. 재시작 시 당일 09
 비밀번호 검증 형식은 `pbkdf2-sha256$반복수$base64 salt$base64 digest`다. PBKDF2-HMAC-SHA256, 반복수 600000~2000000, salt 16~64바이트, digest 32바이트를 사용한다. 실제 비밀번호, 검증 설정, 조회 토큰과 웹훅은 저장소와 문서에 적지 않는다. 확장에는 관리 비밀번호나 Grafana 조회 토큰을 넣지 않는다.
 
 확장은 분석 헤더의 `quality-v1` 기능 협상을 사용한다. 서버가 발급한 보고 토큰은 백그라운드의 해당 문서, 실행에만 보관하며 관리 API에 사용할 수 없다. 유효 기간은 24시간이고 원문은 저장하지 않는다. 실행당 200개 이벤트, snapshot당 최대 2000개 후보와 보고당 128KiB를 검사한다. 보고는 여러 칸을 묶어서 보내며 같은 이벤트 재전송은 멱등이다. 구형 서버, 확장과 계측 실패는 기존 입력 흐름을 유지한다. 분석 응답의 품질 저장 대기는 최대 250ms이며 시간 초과나 대기열 포화 시 관측 실패로 처리하고 기존 응답을 반환한다. 관측 작업은 최대 2개 스레드와 64개 대기열로 제한하며 응답 헤더의 보고 토큰은 제한 시간 내 관측이 끝난 경우에만 발급한다.
+
+## 배포 환경 설정 연결
+
+GitHub Environment `development`, `staging`, `production`에서 해당 환경의 설정을 등록한다. 품질 설정은 각 workflow의 `deploy` job에만 전달하며 이미지 빌드와 검증 job에는 전달하지 않는다. 미등록 또는 빈 설정은 Compose의 기본값을 사용하므로 기존 배포는 유지하고 품질 기능은 비활성이다.
+
+| 종류 | 설정 | 사람이 준비하는 값 |
+|---|---|---|
+| Variable | `CAREER_FORM_QUALITY_ENABLED` | 사용 환경만 true |
+| Secret | `CAREER_FORM_QUALITY_PASSWORD_HASH` | 공용 비밀번호의 PBKDF2 검증 문자열 |
+| Secret | `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH` | Grafana 전용 임의 토큰의 SHA-256 hex |
+| Variable | `CAREER_FORM_QUALITY_MANAGEMENT_URL` | 외부 HTTPS 관리 화면의 `/quality/` 주소 |
+| Variable | `CAREER_FORM_QUALITY_DISCORD_ENABLED` | 실제 수신 준비 뒤 true |
+| Secret | `CAREER_FORM_QUALITY_DISCORD_WEBHOOK` | 새 채널의 전용 웹훅 |
+
+`CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT`, `CAREER_FORM_QUALITY_SELECTION_DAYS`, `CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE`은 필요할 때만 Variable로 등록한다. 미등록 시 prod, 7일, 20개를 사용한다.
+
+배포 버전은 사람이 등록하지 않는다. Compose가 현재 `BACKEND_IMAGE`의 digest 고정 이미지 식별자를 `CAREER_FORM_QUALITY_VERSION`으로 전달한다. 운영에서 스테이징 이미지를 재사용하거나 이전 이미지로 롤백해도 실제 이미지 식별자를 기록한다. GitHub Variable의 수동 품질 버전은 사용하지 않는다.
+
+Grafana 서버의 `/etc/career-form-monitoring/secrets/grafana.env`에는 환경별 `QUALITY_*_API_ORIGIN`과 `QUALITY_*_QUERY_TOKEN`을 등록한다. 조회 토큰 원문은 Grafana에만, 동일 토큰의 해시는 해당 백엔드 Environment Secret에 등록한다. 기존 운영 알림의 `DISCORD_WEBHOOK_URL`을 유지하며 품질 확인용 웹훅과 구분한다. 환경 파일 수정 뒤 Grafana 컨테이너를 재생성해야 환경변수가 반영된다.
 
 ## 보존과 집계 조회
 
