@@ -26,7 +26,9 @@ export function belongsToFailedGroup(
   return (
     (lookup.status === "ready" || lookup.status === "blocked") &&
     [...failedGroups].some((group) =>
-      lookup.handle.elements.some((element) => group.contains(element)),
+      [...lookup.handle.elements, ...(lookup.handle.customElements ?? [])].some(
+        (element) => group.contains(element),
+      ),
     )
   );
 }

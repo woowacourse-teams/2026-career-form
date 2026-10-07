@@ -32,6 +32,14 @@ const guidance: Record<WriteFailureCode, string> = {
     "입력 중 지원서의 필드 상태가 바뀌었어요. 해당 항목을 확인한 뒤 직접 입력해 주세요.",
   VALUE_NOT_RETAINED:
     "다른 항목을 입력한 뒤 선택값이 유지되지 않았어요. 목록에서 다시 골라 주세요.",
+  DATE_UNCONFIRMED:
+    "날짜 선택을 확인하지 못했어요. 달력에서 날짜를 직접 골라 주세요.",
+  DATE_ROLLBACK_FAILED:
+    "달력이 다른 날짜를 확정했지만 지우지 못했어요. 날짜를 확인해 직접 고쳐 주세요.",
+  SEARCH_SELECTION_UNVERIFIED:
+    "보이는 값은 프로필과 같지만 사이트가 목록 선택 상태를 보여 주지 않아 확인하지 못했어요. 필요하면 목록에서 다시 골라 주세요.",
+  VALUE_MATCH_UNRECORDED:
+    "보이는 값은 프로필과 같지만 이번 자동 입력 기록과 연결하지 못했어요. 값만 확인해 주세요.",
 };
 
 // Only trusted codes and our own classification labels reach this presentation layer.

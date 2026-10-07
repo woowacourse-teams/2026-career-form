@@ -43,6 +43,13 @@ export const greetingSections = {
     anchor: "foreignLanguage",
     singleton: false,
   },
+  projects: {
+    label: "프로젝트",
+    prefix: "workHistory.projects",
+    group: "projectsproject",
+    anchor: "projectName",
+    singleton: false,
+  },
   certificatesLicenses: {
     label: "자격증/면허증",
     prefix: "languagesCertificationsAndOtherActivity.certificatesLicenses",
