@@ -13,7 +13,10 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest.Visibility;
 public final class GreetingActionResolver implements ActionResolver {
     private static final Set<String> ADD_IDS = Set.of(
         "greeting:add:universities", "greeting:add:graduateSchools", "greeting:add:workExperiences",
-        "greeting:add:certifiedLanguageTests", "greeting:add:foreignLanguageProficiencies", "greeting:add:certificatesLicenses");
+        "greeting:add:certifiedLanguageTests", "greeting:add:foreignLanguageProficiencies", "greeting:add:certificatesLicenses",
+        "greeting:add:projects");
+
+    private static final String ADDRESS_SEARCH_ID = "greeting:search:address";
 
     private static final Pattern MAJOR_ADD = Pattern.compile(
         "^greeting:add:(?:graduateSchools|universities):(0|[1-9][0-9]{0,2}):majors$");
@@ -25,12 +28,15 @@ public final class GreetingActionResolver implements ActionResolver {
             .<Result>map(candidate -> eligible(candidate)
                 && candidates.stream().filter(GreetingActionResolver::eligible)
                     .filter(other -> candidate.domId().equals(other.domId())).count() == 1
-                    ? new AddAction(candidate.candidateId()) : new NoAction(candidate.candidateId()))
+                    ? ADDRESS_SEARCH_ID.equals(candidate.domId())
+                        ? new SearchAddressAction(candidate.candidateId())
+                        : new AddAction(candidate.candidateId())
+                    : new NoAction(candidate.candidateId()))
             .toList());
     }
 
     private static boolean supportedAddId(String domId) {
-        if (ADD_IDS.contains(domId)) return true;
+        if (ADD_IDS.contains(domId) || ADDRESS_SEARCH_ID.equals(domId)) return true;
         var majorAdd = MAJOR_ADD.matcher(domId);
         return majorAdd.matches() && Integer.parseInt(majorAdd.group(1)) <= 127;
     }

@@ -46,6 +46,47 @@ beforeEach(() => {
 });
 
 describe("Greeting collection is enabled only by the server adapter ID", () => {
+  it("keeps locked custom-domain account fields as unwritable structural evidence", () => {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(options: { url: string }): void };
+      }
+    ).jsdom.reconfigure({
+      url: "https://career.hyundai-autoever.com/ko/o/238123/apply",
+    });
+    document.body.innerHTML = `
+      <div data-scope="field" data-part="root">
+        <label>이름<input name="basicInformation.name" disabled></label>
+      </div>
+      <div data-scope="field" data-part="root">
+        <label>연락처<input name="basicInformation.phoneNumber.nationalNumber" disabled></label>
+      </div>
+      <div data-scope="field" data-part="root">
+        <label>이메일<input name="basicInformation.email"></label>
+      </div>`;
+
+    const snapshot = collectFieldsSnapshot(document);
+    const fields = snapshot.request.sections.flatMap(
+      (section) => section.fields,
+    );
+
+    expect(fields.map((field) => field.domName)).toEqual([
+      "basicInformation.name",
+      "basicInformation.phoneNumber.nationalNumber",
+      "basicInformation.email",
+    ]);
+    for (const field of fields.slice(0, 2)) {
+      expect(field.disabled).toBe(true);
+      expect(snapshot.registry.lookupField(field.candidateId)).toMatchObject({
+        status: "blocked",
+        reason: "disabled",
+      });
+    }
+    expect(snapshot.registry.lookupField(fields[2]!.candidateId).status).toBe(
+      "ready",
+    );
+  });
+
   it("emits one root section when a Greeting form has no repeatable actions", () => {
     document.body.innerHTML = `<div data-scope="field" data-part="root"><label>이름</label><input name="basicInformation.name"></div>`;
 

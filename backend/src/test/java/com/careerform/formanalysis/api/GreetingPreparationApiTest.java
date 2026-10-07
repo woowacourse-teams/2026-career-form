@@ -54,6 +54,67 @@ class GreetingPreparationApiTest {
     }
 
     @Test
+    void lockedAccountFieldsDoNotBlockEditableFieldsOrReceiveWriteCommands() throws Exception {
+        String request = """
+            {
+              "schemaVersion": 2,
+              "snapshotId": "greeting-locked-account",
+              "site": {
+                "host": "career.hyundai-autoever.com",
+                "pathPattern": "/ko/o/*/apply"
+              },
+              "sections": [{
+                "sectionId": "section-root",
+                "fields": [
+                  {
+                    "candidateId": "name",
+                    "element": "input",
+                    "control": "text",
+                    "visibility": "visible",
+                    "domName": "basicInformation.name",
+                    "disabled": true
+                  },
+                  {
+                    "candidateId": "phone",
+                    "element": "input",
+                    "control": "text",
+                    "visibility": "visible",
+                    "domName": "basicInformation.phoneNumber.nationalNumber",
+                    "disabled": true
+                  },
+                  {
+                    "candidateId": "email",
+                    "element": "input",
+                    "control": "text",
+                    "visibility": "visible",
+                    "domName": "basicInformation.email"
+                  }
+                ]
+              }]
+            }
+            """;
+
+        mvc(true).perform(post("/api/v1/fields/analyze")
+                .contentType(MediaType.APPLICATION_JSON).content(request))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.mode").value("ADAPTER"))
+            .andExpect(jsonPath("$.analysisStatus").value("COMPLETE"))
+            .andExpect(jsonPath("$.blockCode").doesNotExist())
+            .andExpect(jsonPath("$.fields[0].candidateId").value("name"))
+            .andExpect(jsonPath("$.fields[0].mappingStatus").value("ADAPTER_VERIFIED"))
+            .andExpect(jsonPath("$.fields[0].interactionStatus").value("BLOCKED"))
+            .andExpect(jsonPath("$.fields[0].writePlan").doesNotExist())
+            .andExpect(jsonPath("$.fields[1].candidateId").value("phone"))
+            .andExpect(jsonPath("$.fields[1].interactionStatus").value("BLOCKED"))
+            .andExpect(jsonPath("$.fields[1].writePlan").doesNotExist())
+            .andExpect(jsonPath("$.fields[2].candidateId").value("email"))
+            .andExpect(jsonPath("$.fields[2].valueBinding.profileFieldKey")
+                .value("contact.contact.email"))
+            .andExpect(jsonPath("$.fields[2].interactionStatus").value("READY"))
+            .andExpect(jsonPath("$.fields[2].writePlan.command").value("SET_TEXT"));
+    }
+
+    @Test
     void missingPolicyIsBlockedWithoutNewContract() throws Exception {
         mvc(false).perform(post("/api/v1/preparation/analyze")
                 .contentType(MediaType.APPLICATION_JSON).content(fixture()))

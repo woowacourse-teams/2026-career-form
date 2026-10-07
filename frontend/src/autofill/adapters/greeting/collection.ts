@@ -4,6 +4,7 @@ import {
   type GreetingSectionKind,
 } from "./sections";
 import type { CollectionAdapter } from "../collection";
+import { greetingAddressTrigger } from "./address";
 
 const ROW = '[data-scope="accordion"][data-part="item"]';
 const ACCORDION = '[data-scope="accordion"][data-part="root"]';
@@ -11,7 +12,7 @@ const TOGGLE =
   '[data-scope="toggle-group"][data-part="root"][role="radiogroup"]';
 const FIELD = '[data-scope="field"][data-part="root"]';
 const BUTTON_FIELD =
-  /^(enrollmentPeriod\.(startDate|endDate)|completionStatus|gpa\.scoreScale|majors\.\d+\.(majorClassification|majorField)|degreeLevel)$/;
+  /^(enrollmentPeriod\.(startDate|endDate)|completionStatus|gpa\.scoreScale|majors\.\d+\.(majorClassification|majorField)|degreeLevel|schoolLocation)$/;
 
 export interface GreetingRowIdentity {
   itemGroupId: (typeof greetingSections)[GreetingSectionKind]["group"];
@@ -207,6 +208,12 @@ export function greetingFieldElements(document: Document): HTMLElement[] {
         "군별",
       "militaryServicePreferentialEmploymentStatus.militaryService.rank":
         "계급",
+      "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceClassification":
+        "병역구분",
+      "militaryServicePreferentialEmploymentStatus.militaryService.dischargeType":
+        "제대구분",
+      "militaryServicePreferentialEmploymentStatus.veteranStatus.veteranRelationship":
+        "보훈관계",
       "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.startDate":
         "복무기간",
       "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.endDate":
@@ -246,8 +253,10 @@ export function greetingFieldElements(document: Document): HTMLElement[] {
               ? /^(foreignLanguage|acquisitionDate|grade)$/.test(suffix)
               : identity.itemGroupId === "languageslanguageskill"
                 ? /^(foreignLanguage|conversationalProficiency)$/.test(suffix)
-                : identity.itemGroupId === "certificationscertificate" &&
-                  suffix === "acquisitionDate";
+                : identity.itemGroupId === "projectsproject"
+                  ? /^projectPeriod\.(startDate|endDate)$/.test(suffix)
+                  : identity.itemGroupId === "certificationscertificate" &&
+                    suffix === "acquisitionDate";
     if (!supported) return false;
     return Boolean(
       identity &&
@@ -407,7 +416,11 @@ export const greetingCollectionAdapter: CollectionAdapter = {
   collectsInputButtonFields: false,
   itemGroupId: (element) => greetingRowIdentity(element)?.itemGroupId,
   actionDomId: (element) =>
-    majorAddAction(element) ?? sectionAddAction(element),
+    (element === greetingAddressTrigger(element.ownerDocument)
+      ? "greeting:search:address"
+      : undefined) ??
+    majorAddAction(element) ??
+    sectionAddAction(element),
   repeatableItemCandidates(container) {
     const isAccordion = container.matches(ACCORDION);
     const sectionKind = greetingSectionKind(container);

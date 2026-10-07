@@ -4,6 +4,13 @@ import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 
 afterEach(() => document.body.replaceChildren());
+it("resolves project rows to the profile project section", () => {
+  expect(
+    greetingWorkflowAdapter.repeatedProfileSectionHint?.(
+      "greeting:add:projects",
+    ),
+  ).toEqual({ categoryId: "projects", sectionId: "project" });
+});
 it("resolves university and graduate rows by their exact action IDs", () => {
   expect(
     greetingWorkflowAdapter.repeatedProfileSectionHint?.(
@@ -346,6 +353,224 @@ it("confirms the committed date when Greeting changes data-placeholder to false"
     ),
   ).toBe(true);
   expect(trigger.textContent).toBe("1990.01.02");
+});
+it.each([
+  "languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate",
+  "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.acquisitionDate",
+  "workHistory.projects.0.projectPeriod.startDate",
+  "workHistory.projects.0.projectPeriod.endDate",
+])("preserves the day when %s owns a day calendar", async (name) => {
+  document.body.innerHTML = `<button type="button" name="${name}" data-scope="date-picker" data-part="trigger" aria-controls="calendar" data-placeholder="true">날짜 선택</button><div id="calendar" data-scope="date-picker" data-part="content" role="application" aria-label="calendar" hidden><input data-scope="date-picker" data-part="input"><button type="button" data-scope="date-picker" data-part="table-cell-trigger" data-view="day" data-value="2020-03-04">4</button></div>`;
+  const trigger = document.querySelector<HTMLButtonElement>("button")!;
+  const popup = document.getElementById("calendar")!;
+  const input = popup.querySelector<HTMLInputElement>("input")!;
+  trigger.onclick = () => {
+    popup.hidden = false;
+    trigger.setAttribute("data-state", "open");
+  };
+  popup.querySelector<HTMLButtonElement>('[data-view="day"]')!.onclick = () => {
+    trigger.textContent = "2020.03.04";
+    trigger.setAttribute("data-placeholder", "false");
+    trigger.setAttribute("data-state", "closed");
+    popup.hidden = true;
+  };
+  const handle = {
+    kind: "field",
+    candidateId: "date",
+    candidate: { candidateId: "date", domName: name, control: "button" },
+    elements: [],
+    customElements: [trigger],
+    optionElements: new Map(),
+  } as unknown as FieldCandidateHandle;
+  const item = {
+    candidateId: "date",
+    profileValue: "2020-03-04",
+    selected: true,
+    disabled: false,
+    analysis: {
+      candidateId: "date",
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_DATE" },
+    },
+  } as ReviewPlanItem;
+
+  expect(
+    await greetingWorkflowAdapter.executeStateDriver?.(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+    ),
+  ).toBe(true);
+  expect(input.value).toBe("2020.03.04");
+  expect(trigger.textContent).toBe("2020.03.04");
+});
+function failureDriver(name: string, command: string, control: HTMLElement) {
+  const handle = {
+    kind: "field",
+    candidateId: name,
+    candidate: { candidateId: name, domName: name, control: "button" },
+    elements: control instanceof HTMLInputElement ? [control] : [],
+    customElements: control instanceof HTMLInputElement ? undefined : [control],
+    optionElements: new Map(),
+  } as unknown as FieldCandidateHandle;
+  const item = {
+    candidateId: name,
+    profileValue: "2020-03-04",
+    selected: true,
+    disabled: false,
+    analysis: {
+      candidateId: name,
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command },
+    },
+  } as ReviewPlanItem;
+  return greetingWorkflowAdapter.stateDriverFailureGroup?.(item, handle);
+}
+it("isolates a failed date or search to its own Greeting field", () => {
+  const prefix =
+    "languagesCertificationsAndOtherActivity.certificatesLicenses.0";
+  document.body.innerHTML = `<div><div id="date" data-scope="field" data-part="root" role="group"><div data-scope="date-picker" data-part="root"><button type="button" name="${prefix}.acquisitionDate" data-scope="date-picker" data-part="trigger">날짜 선택</button></div></div><div id="search" data-scope="field" data-part="root" role="group"><input name="${prefix}.credentials" data-scope="combobox" data-part="input"></div><div data-scope="field" data-part="root" role="group"><input name="${prefix}.registrationNumber"></div></div>`;
+  const date = document.querySelector<HTMLElement>("button")!;
+  const search = document.querySelector<HTMLInputElement>(
+    `[name="${prefix}.credentials"]`,
+  )!;
+
+  expect(failureDriver(`${prefix}.acquisitionDate`, "SELECT_DATE", date)).toBe(
+    document.getElementById("date"),
+  );
+  expect(
+    failureDriver(`${prefix}.credentials`, "SEARCH_SELECTION", search),
+  ).toBe(document.getElementById("search"));
+});
+it("keeps aborting failed reveal drivers and shared Greeting fields", () => {
+  document.body.innerHTML = `<div data-scope="field" data-part="root" role="group"><button type="button" name="a.date" data-scope="date-picker" data-part="trigger">날짜 선택</button><input name="a.other"></div><div data-scope="field" data-part="root" role="group"><button type="button" name="b.status">선택</button></div>`;
+  const [shared, status] = document.querySelectorAll<HTMLElement>("button");
+
+  expect(failureDriver("a.date", "SELECT_DATE", shared)).toBeUndefined();
+  expect(
+    failureDriver("b.status", "SELECT_BUTTON_OPTION", status),
+  ).toBeUndefined();
+  expect(failureDriver("b.status", "CHECK_RADIO", status)).toBeUndefined();
+});
+it("reports an unconfirmed date when a Greeting date cannot be selected", async () => {
+  document.body.innerHTML = `<button type="button" name="basicInformation.birthdate" data-scope="date-picker" data-part="trigger" aria-controls="calendar">선택</button>`;
+  const trigger = document.querySelector<HTMLButtonElement>("button")!;
+  const handle = {
+    kind: "field",
+    candidateId: "f1",
+    candidate: {
+      candidateId: "f1",
+      domName: "basicInformation.birthdate",
+      control: "button",
+    },
+    elements: [],
+    customElements: [trigger],
+    optionElements: new Map(),
+  } as unknown as FieldCandidateHandle;
+  const item = {
+    candidateId: "f1",
+    profileValue: "1990-99-99",
+    selected: true,
+    disabled: false,
+    analysis: {
+      candidateId: "f1",
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_DATE" },
+    },
+  } as ReviewPlanItem;
+  const report = vi.fn();
+
+  expect(
+    await greetingWorkflowAdapter.executeStateDriver?.(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+      report,
+    ),
+  ).toBe(false);
+  expect(report).toHaveBeenCalledWith("DATE_UNCONFIRMED");
+});
+function wrongCommitDate(withClear: boolean) {
+  document.body.innerHTML = `<div data-scope="date-picker" data-part="root"><button type="button" name="languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate" data-scope="date-picker" data-part="trigger" aria-controls="calendar" data-placeholder="true">날짜 선택</button>${withClear ? '<span data-scope="date-picker" data-part="clear-trigger"></span>' : ""}</div><div id="calendar" data-scope="date-picker" data-part="content" role="application" aria-label="calendar" hidden><input data-scope="date-picker" data-part="input"><div role="button" data-scope="date-picker" data-part="table-cell-trigger" data-view="day" data-value="2020-01-06">6</div></div>`;
+  const trigger = document.querySelector<HTMLButtonElement>("button")!;
+  const popup = document.getElementById("calendar")!;
+  trigger.onclick = () => {
+    popup.hidden = false;
+    trigger.setAttribute("data-state", "open");
+  };
+  popup.querySelector("input")!.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    trigger.textContent = "2020. 01. 06";
+    trigger.setAttribute("data-placeholder", "false");
+  });
+  document
+    .querySelector<HTMLElement>('[data-part="clear-trigger"]')
+    ?.addEventListener("click", () => {
+      trigger.textContent = "날짜 선택";
+      trigger.setAttribute("data-placeholder", "true");
+    });
+  const handle = {
+    kind: "field",
+    candidateId: "date",
+    candidate: {
+      candidateId: "date",
+      domName: trigger.name,
+      control: "button",
+    },
+    elements: [],
+    customElements: [trigger],
+    optionElements: new Map(),
+  } as unknown as FieldCandidateHandle;
+  const item = {
+    candidateId: "date",
+    profileValue: "2020-03-04",
+    selected: true,
+    disabled: false,
+    analysis: {
+      candidateId: "date",
+      mappingStatus: "ADAPTER_VERIFIED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_DATE" },
+    },
+  } as ReviewPlanItem;
+  return { trigger, handle, item };
+}
+it("clears a different date the Greeting calendar committed", async () => {
+  const { trigger, handle, item } = wrongCommitDate(true);
+  const report = vi.fn();
+
+  expect(
+    await greetingWorkflowAdapter.executeStateDriver?.(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+      report,
+    ),
+  ).toBe(false);
+  expect(trigger.getAttribute("data-placeholder")).toBe("true");
+  expect(report).toHaveBeenLastCalledWith("DATE_UNCONFIRMED");
+});
+it("reports a committed wrong date that cannot be cleared", async () => {
+  const { trigger, handle, item } = wrongCommitDate(false);
+  const report = vi.fn();
+
+  expect(
+    await greetingWorkflowAdapter.executeStateDriver?.(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+      report,
+    ),
+  ).toBe(false);
+  expect(trigger.textContent).toBe("2020. 01. 06");
+  expect(report).toHaveBeenLastCalledWith("DATE_ROLLBACK_FAILED");
 });
 it("rejects malformed dates without opening a calendar", async () => {
   document.body.innerHTML = `<button type="button" data-scope="date-picker" data-part="trigger" aria-controls="calendar">선택</button>`;

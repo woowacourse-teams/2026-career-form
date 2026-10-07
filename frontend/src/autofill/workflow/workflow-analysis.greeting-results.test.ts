@@ -277,8 +277,11 @@ it("does not infer a successful Greeting write from completed state-driver keys 
     (item) => item.profileFieldKey === "personal.personal.koreanFamilyName",
   )!;
   expect(
-    results.find((result) => result.candidateId === driver.candidateId)?.status,
-  ).toBe("skipped");
+    results.find((result) => result.candidateId === driver.candidateId),
+  ).toMatchObject({
+    status: "skipped",
+    failureCode: "VALUE_MATCH_UNRECORDED",
+  });
 });
 
 it.each(["lost-value", "duplicate"] as const)(
@@ -289,9 +292,8 @@ it.each(["lost-value", "duplicate"] as const)(
       (item) => item.profileFieldKey === "personal.personal.koreanFamilyName",
     )!;
     expect(
-      results.find((result) => result.candidateId === driver.candidateId)
-        ?.status,
-    ).toBe("skipped");
+      results.find((result) => result.candidateId === driver.candidateId),
+    ).toMatchObject({ status: "skipped", failureCode: "VALUE_NOT_RETAINED" });
     expect(
       model.completed.filter((entry) => entry.label === "국문 성"),
     ).toEqual([]);
@@ -318,10 +320,18 @@ it("rejects a rebound Greeting search label whose selected option was lost", asy
   ).toMatchObject({
     status: "skipped",
     code: "RETAINED_VALUE_UNCONFIRMED",
+    failureCode: "SEARCH_SELECTION_UNVERIFIED",
   });
   expect(model.completed.filter((entry) => entry.label === "국문 성")).toEqual(
     [],
   );
+  expect(
+    model.pending.find(
+      (entry) => entry.item?.candidateId === school.candidateId,
+    ),
+  ).toMatchObject({
+    failureCode: "SEARCH_SELECTION_UNVERIFIED",
+  });
 });
 
 it("keeps a rebound Greeting search selection when the adapter confirms its code", async () => {

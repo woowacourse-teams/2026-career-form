@@ -16,6 +16,10 @@ export type WriteFailureCode =
   | "FIELD_DISABLED"
   | "FIELD_READONLY"
   | "FIELD_CHANGED"
-  | "VALUE_NOT_RETAINED";
+  | "VALUE_NOT_RETAINED"
+  | "DATE_UNCONFIRMED"
+  | "DATE_ROLLBACK_FAILED"
+  | "SEARCH_SELECTION_UNVERIFIED"
+  | "VALUE_MATCH_UNRECORDED";
 
 export type FailureReporter = (code: WriteFailureCode) => void;

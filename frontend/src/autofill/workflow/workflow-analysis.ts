@@ -1007,6 +1007,7 @@ export function createAnalyzeFields({
             : undefined;
         const prior =
           receipt && alias?.lookupField(receipt.originalItem.candidateId);
+        let searchUnverified = false;
         const current = greetingResultRegistry.lookupField(item.candidateId);
         const live = resultFieldState(
           greetingResultRegistry,
@@ -1039,7 +1040,10 @@ export function createAnalyzeFields({
                 current.handle,
                 item,
                 run.controller.signal,
-                undefined,
+                (code) => {
+                  if (code === "SEARCH_SELECTION_UNVERIFIED")
+                    searchUnverified = true;
+                },
                 async () => {
                   const latestProfile = await repository.load();
                   return (
@@ -1065,12 +1069,25 @@ export function createAnalyzeFields({
           });
         } else {
           if (run.controller.signal.aborted) return;
+          const valueMatches =
+            !!live?.visible &&
+            matchesResultValue(
+              item,
+              live.value,
+              item.profileValue ?? "",
+              live.handle,
+            );
           greetingDriverResults.push({
             candidateId: item.candidateId,
             status: "skipped",
             outcome: "needs-verification",
             code: "RETAINED_VALUE_UNCONFIRMED",
-            failureCode: "VALUE_NOT_RETAINED",
+            failureCode: !valueMatches
+              ? "VALUE_NOT_RETAINED"
+              : searchUnverified ||
+                  item.analysis?.writePlan?.command === "SEARCH_SELECTION"
+                ? "SEARCH_SELECTION_UNVERIFIED"
+                : "VALUE_MATCH_UNRECORDED",
             reason:
               "조건부 선택의 입력 기록과 현재 값을 함께 확인하지 못했습니다.",
           });

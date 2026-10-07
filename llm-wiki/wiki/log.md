@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-06] ingest | CF-160 Greeting 기본정보·날짜·주소와 추가 필드
+
+- Disposition: Supersedes CF-94 adapter-greeting and adapter-field-inventory topics
+- Approval-Digest: 03ed4dab97485d3f52bc4069336d4a0cb5d9b31fba41a083db342596c497ab5b
+- Source-Revision: 6a75891b8806f28d51583f7705304c6205d61e6c
+- Raw: llm-wiki/raw/issues/CF-160/manifest.md
+- Topics: 2
+
 ## [2026-10-02] ingest | CF-146 범용 기입 활성 여부 배포 설정
 
 - Disposition: Supersedes CF-62 cicd-setup topic
