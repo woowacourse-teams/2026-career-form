@@ -32,6 +32,19 @@ spring:
       enabled: true
 
 career-form:
+  quality:
+    enabled: ${CAREER_FORM_QUALITY_ENABLED:false}
+    version: ${CAREER_FORM_QUALITY_VERSION:UNKNOWN}
+    password-hash: ${CAREER_FORM_QUALITY_PASSWORD_HASH:}
+    query-token-hash: ${CAREER_FORM_QUALITY_QUERY_TOKEN_HASH:}
+    management-url: ${CAREER_FORM_QUALITY_MANAGEMENT_URL:}
+    discord:
+      enabled: ${CAREER_FORM_QUALITY_DISCORD_ENABLED:false}
+      environment: ${CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT:prod}
+      webhook: ${CAREER_FORM_QUALITY_DISCORD_WEBHOOK:}
+    selection:
+      days: ${CAREER_FORM_QUALITY_SELECTION_DAYS:7}
+      minimum-sample: ${CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE:20}
   tracing:
     langsmith:
       enabled: ${CAREER_FORM_LANGSMITH_ENABLED:false}

@@ -74,6 +74,11 @@ public final class QualitySelection {
     }
 
     public static Batch select(Instant now, List<Candidate> candidates, Route nextRoute) {
+        return select(now, candidates, nextRoute, MIN_SAMPLE);
+    }
+
+    public static Batch select(Instant now, List<Candidate> candidates, Route nextRoute, long minimumSample) {
+        if (minimumSample < 1) { throw new IllegalArgumentException("Invalid minimum sample"); }
         Objects.requireNonNull(now);
         Objects.requireNonNull(nextRoute);
         var checked = List.copyOf(candidates);
@@ -90,7 +95,7 @@ public final class QualitySelection {
         var aging = pickAging(available, nextRoute, Math.min(capacity, AGING_LIMIT));
         var prioritized = available.stream()
             .filter(candidate -> !contains(aging.newRequests(), candidate.id()))
-            .sorted(priorityOrder()).limit(capacity - aging.newRequests().size()).toList();
+            .sorted(priorityOrder(minimumSample)).limit(capacity - aging.newRequests().size()).toList();
         return new Batch(pending.stream().limit(DAILY_LIMIT).toList(),
             Stream.concat(aging.newRequests().stream(), prioritized.stream()).toList(), aging.nextRoute());
     }
@@ -118,34 +123,34 @@ public final class QualitySelection {
         return candidates.stream().anyMatch(candidate -> candidate.id().equals(id));
     }
 
-    private static Comparator<Candidate> priorityOrder() {
-        return Comparator.comparingInt(QualitySelection::priority)
-            .thenComparingDouble(QualitySelection::rate)
-            .thenComparing(Comparator.comparingLong(QualitySelection::sample).reversed())
+    private static Comparator<Candidate> priorityOrder(long minimumSample) {
+        return Comparator.comparingInt((Candidate candidate) -> priority(candidate, minimumSample))
+            .thenComparingDouble(candidate -> rate(candidate, minimumSample))
+            .thenComparing(Comparator.comparingLong((Candidate candidate) -> sample(candidate, minimumSample)).reversed())
             .thenComparing(OLDEST);
     }
 
-    private static int priority(Candidate candidate) {
+    private static int priority(Candidate candidate, long minimumSample) {
         var counts = candidate.counts();
-        if (counts.attempted() >= MIN_SAMPLE && counts.written() < counts.attempted()) {
+        if (counts.attempted() >= minimumSample && counts.written() < counts.attempted()) {
             return 0;
         }
-        if (counts.discovered() >= MIN_SAMPLE && counts.mapped() < counts.discovered()) {
+        if (counts.discovered() >= minimumSample && counts.mapped() < counts.discovered()) {
             return 1;
         }
         return 2;
     }
 
-    private static double rate(Candidate candidate) {
-        return switch (priority(candidate)) {
+    private static double rate(Candidate candidate, long minimumSample) {
+        return switch (priority(candidate, minimumSample)) {
             case 0 -> (double) candidate.counts().written() / candidate.counts().attempted();
             case 1 -> (double) candidate.counts().mapped() / candidate.counts().discovered();
             default -> 0;
         };
     }
 
-    private static long sample(Candidate candidate) {
-        return switch (priority(candidate)) {
+    private static long sample(Candidate candidate, long minimumSample) {
+        return switch (priority(candidate, minimumSample)) {
             case 0 -> candidate.counts().attempted();
             case 1 -> candidate.counts().discovered();
             default -> candidate.executions();
