@@ -4,6 +4,8 @@ import type {
 } from "./interaction-types";
 import { validateInteractionDecisionResponse } from "./validate-interaction-response";
 import { browser } from "wxt/browser";
+import { QualityObservation } from "../quality/observation";
+import { observeQuality } from "../quality/safe-observation";
 
 import type { AnalysisResponseEnvelope } from "./messages";
 import { isAnalysisResponseEnvelope } from "./messages";
@@ -44,10 +46,18 @@ export class AnalysisServiceError extends Error {
 }
 
 export class RuntimeAnalysisApiClient implements AnalysisApiClient {
+  readonly quality: QualityObservation;
+  private reportingSupported = false;
   constructor(
     private readonly sendMessage: SendMessage = (message) =>
       browser.runtime.sendMessage(message),
-  ) {}
+  ) {
+    this.quality = new QualityObservation((message) =>
+      this.reportingSupported
+        ? this.sendMessage(message)
+        : Promise.resolve(undefined),
+    );
+  }
 
   async decideInteractions(
     request: InteractionDecisionRequest,
@@ -78,7 +88,10 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       payload: request,
     });
     try {
-      return validateFieldsResponse(request, response);
+      const analysis = validateFieldsResponse(request, response);
+      if (this.reportingSupported)
+        observeQuality(() => this.quality.readySnapshot(request.snapshotId));
+      return analysis;
     } catch (error) {
       debugApiMessage(
         { type: "AUTOFILL_ANALYZE_FIELDS (응답 검증 실패)" },
@@ -88,10 +101,16 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     }
   }
 
-  private async request(message: unknown): Promise<unknown> {
+  private async request(message: {
+    type: string;
+    payload: unknown;
+  }): Promise<unknown> {
     let envelope: unknown;
     try {
-      envelope = await this.sendMessage(message);
+      envelope = await this.sendMessage({
+        ...message,
+        qualityRun: this.quality.runKey,
+      });
     } catch (error) {
       debugApiMessage(message, { error });
       throw new AnalysisServiceError(errorMessages.NETWORK);
@@ -108,6 +127,7 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     if (!envelope.ok) {
       throw new AnalysisServiceError(errorMessages[envelope.code]);
     }
+    this.reportingSupported = envelope.quality === true;
     return envelope.data;
   }
 }

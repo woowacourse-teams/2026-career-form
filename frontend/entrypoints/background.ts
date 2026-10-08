@@ -34,6 +34,8 @@ export default defineBackground(() => {
   browser.runtime.onConnect.addListener(createAddressRelay(browser.runtime.id));
   const handleMessage = createAnalysisMessageHandler({
     baseUrl: import.meta.env.VITE_API_BASE_URL,
+    extensionId: browser.runtime.id,
+    extensionVersion: browser.runtime.getManifest().version,
   });
   const handleAnalytics = createAnalyticsMessageHandler({
     key: import.meta.env.VITE_POSTHOG_KEY,
@@ -57,6 +59,6 @@ export default defineBackground(() => {
     if (isOpenInPageProfilePanelMessage(message)) {
       return openInPagePanel();
     }
-    return handleMessage(message);
+    return handleMessage(message, sender);
   });
 });

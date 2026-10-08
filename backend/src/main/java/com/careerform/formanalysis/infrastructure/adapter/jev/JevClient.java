@@ -116,6 +116,8 @@ public final class JevClient {
             }
         }
         Integer httpStatus = null;
+        var called = false;
+        String observedModel = null;
         try {
             String json = mapper.writeValueAsString(new Request(state, model, questions));
             if (json.getBytes(StandardCharsets.UTF_8).length > 2_000_000) throw unavailable();
@@ -123,6 +125,7 @@ public final class JevClient {
                 .timeout(Duration.ofMillis(timeoutMs))
                 .header("Authorization", "Bearer " + apiKey).header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8)).build();
+            called = true;
             var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             HttpResponse<String> response;
             try {
@@ -133,6 +136,7 @@ public final class JevClient {
             httpStatus = response.statusCode();
             if (response.statusCode() != 200 || response.body().length() > 2_000_000) throw unavailable();
             Response output = mapper.readValue(response.body(), Response.class);
+            observedModel = output.model();
             if (output.model() == null || output.model().isBlank() || output.answers() == null ||
                 !output.answers().keySet().equals(questions.keySet()) || output.usage() == null ||
                 output.usage().inputTokens() == null || output.usage().outputTokens() == null ||
@@ -158,11 +162,11 @@ public final class JevClient {
                     answer.choice(), answer.confidence(), selected.get(entry.getKey()), answer.probabilities());
             }
             completeTrace(trace, projection, output, selected, httpStatus, null);
-            recordMetrics(startedAt, null);
+            recordMetrics(startedAt, null, called, observedModel);
             return Map.copyOf(selected);
         } catch (RuntimeException exception) {
             completeTrace(trace, projection, null, Map.of(), httpStatus, exception);
-            recordMetrics(startedAt, exception);
+            recordMetrics(startedAt, exception, called, observedModel);
             throw unavailable();
         }
     }
@@ -197,10 +201,11 @@ public final class JevClient {
         }
     }
 
-    private void recordMetrics(long startedAt, RuntimeException failure) {
+    private void recordMetrics(long startedAt, RuntimeException failure, boolean called, String observedModel) {
         if (metrics != null) {
             metrics.record("jev", "analysis", System.nanoTime() - startedAt,
-                failure != null, ExternalCallMetrics.isTimeout(failure));
+                failure != null, ExternalCallMetrics.isTimeout(failure),
+                new com.careerform.monitoring.ExternalCallObserver.Context(called, ExternalCallMetrics.modelVersion(observedModel)));
         }
     }
 
