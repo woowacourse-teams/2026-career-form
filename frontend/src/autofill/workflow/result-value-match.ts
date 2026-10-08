@@ -1,5 +1,7 @@
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { catalogApprovalForItem } from "../profile/catalog-identity";
+import { retainedCatalogSelection } from "../profile/catalog-receipt";
 import {
   PROFILE_CATEGORIES,
   type ProfileInputType,
@@ -165,6 +167,33 @@ export function matchesResultValue(
   const left = current.trim();
   const right = expected.trim();
   if (!left || !right) return false;
+  const approval = catalogApprovalForItem(item);
+  if (approval.status === "invalid") return false;
+  if (approval.status === "selected") {
+    const element =
+      handle?.buttonDropdown?.trigger ??
+      handle?.elements[0] ??
+      handle?.customElements?.[0];
+    if (
+      !element ||
+      handle?.candidateId !== item.candidateId ||
+      handle.isCurrentContext?.() === false
+    )
+      return false;
+    const retained = retainedCatalogSelection(item, element);
+    if (retained !== undefined)
+      return (
+        current === retained &&
+        (expected === item.profileValue || right === approval.match.query)
+      );
+    return (
+      item.analysis?.writePlan?.command === "SET_TEXT" &&
+      !handle.buttonDropdown &&
+      element.getAttribute("role") !== "combobox" &&
+      left === right &&
+      right === approval.match.query
+    );
+  }
   if (left === right) return true;
   const greetingDisplayMatch = greetingExactDisplayFormat(
     item,

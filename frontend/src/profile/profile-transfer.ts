@@ -6,6 +6,7 @@ import {
   type ProfileEnvelope,
 } from "./model";
 import { sanitizeProfile } from "./profile-repository";
+import { isProfileIdentity } from "./profile-identity";
 
 const SINGLE_CATEGORY_IDS = [
   "personal",
@@ -44,7 +45,8 @@ function isProfileEntry(value: unknown): value is ProfileEntry {
     value.id.length > 0 &&
     typeof value.sectionId === "string" &&
     value.sectionId.length > 0 &&
-    isFieldValues(value.values)
+    isFieldValues(value.values) &&
+    (value.identity === undefined || isProfileIdentity(value.identity))
   );
 }
 

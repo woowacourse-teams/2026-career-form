@@ -15,6 +15,48 @@ function createRepository(): ProfileRepository {
 }
 
 describe("useProfileEditor", () => {
+  it("clears a selected identity when its name is edited without changing related fields", async () => {
+    const profile = createEmptyProfile();
+    profile.certifications = [
+      {
+        id: "certificate-1",
+        sectionId: "certificate",
+        values: {
+          name: "SQL 개발자",
+          registrationNo: "DEMO-1",
+          issuer: "원래 기관",
+        },
+        identity: {
+          status: "selected",
+          catalogId: "certificate:sqld",
+          displayName: "SQL 개발자",
+          originalText: "SQLD",
+          catalogVersion: "2026-10-07",
+        },
+      },
+    ];
+    const repository = createRepository();
+    vi.mocked(repository.load).mockResolvedValue(profile);
+    const { result } = renderHook(() => useProfileEditor(repository));
+    await act(async () => Promise.resolve());
+
+    act(() =>
+      result.current.updateEntry(
+        "certifications",
+        "certificate-1",
+        "name",
+        "SQL",
+      ),
+    );
+
+    expect(result.current.profile.certifications[0]).toEqual({
+      id: "certificate-1",
+      sectionId: "certificate",
+      values: { name: "SQL", registrationNo: "DEMO-1", issuer: "원래 기관" },
+      identity: { status: "manual", originalText: "SQL" },
+    });
+  });
+
   it("autosaves a changed value and exposes saving then saved status", async () => {
     vi.useFakeTimers();
     const repository = createRepository();

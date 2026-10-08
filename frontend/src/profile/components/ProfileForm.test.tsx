@@ -1,11 +1,51 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { PROFILE_CATEGORIES } from "../field-definitions";
+import {
+  PROFILE_CATEGORIES,
+  getCategoryDefinition,
+} from "../field-definitions";
 import { createEmptyProfile } from "../model";
 import { ProfileForm } from "./ProfileForm";
 import styles from "./ProfileForm.module.css";
 
 describe("ProfileForm conditional fields", () => {
+  it.each([
+    ["certifications", "certificate", "name", "자격증명"],
+    ["education", "highSchool", "schoolName", "학교명"],
+    ["education", "university", "schoolName", "학교명"],
+    ["education", "graduateSchool", "schoolName", "학교명"],
+  ] as const)(
+    "offers searchable names without converting legacy %s/%s values",
+    (categoryId, sectionId, fieldId, label) => {
+      const profile = createEmptyProfile();
+      profile[categoryId] = [
+        {
+          id: "legacy-1",
+          sectionId,
+          values: { [fieldId]: "기존 사용자 원문" },
+        },
+      ];
+      const onUpdateEntry = vi.fn();
+
+      render(
+        <ProfileForm
+          category={getCategoryDefinition(categoryId)}
+          profile={profile}
+          onAddEntry={vi.fn()}
+          onRemoveEntry={vi.fn()}
+          onUpdateEntry={onUpdateEntry}
+          onUpdateSingle={vi.fn()}
+          confirmDelete={() => true}
+        />,
+      );
+
+      expect(screen.getByRole("combobox", { name: label })).toHaveValue(
+        "기존 사용자 원문",
+      );
+      expect(onUpdateEntry).not.toHaveBeenCalled();
+    },
+  );
+
   it("stores phone numbers as digits only", () => {
     const category = PROFILE_CATEGORIES.find(
       (candidate) => candidate.id === "contact",

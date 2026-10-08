@@ -2,11 +2,13 @@
 
 > Topic: adapter-greeting
 > Status: Current
-> Current: [잠긴 기본정보와 Greeting 날짜·주소 입력 보완](../../raw/issues/CF-160/documents/adapter-greeting.md)
-> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md)
-> Updated: 2026-10-06
+> Current: [Greeting 카탈로그 식별 검색 선택](../../raw/issues/CF-162/documents/adapter-greeting.md)
+> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md)
+> Updated: 2026-10-07
 
 ## 현재 상태
+
+CF-162부터 학교명·자격증·시험명 검색은 프로필의 카탈로그 식별자를 화면에 보이는 증거로 검증한다. 고교는 보이는 시도와 학교명 조합의 유일성, 대학·대학원은 설명 없는 선택지의 같은 이름 항목이 모두 한 KESS 학교 코드일 때, 시험명은 같은 행 언어로 한정된 `라벨(언어)` 정확 일치일 때만 선택한다. 상세는 [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md)를 따른다.
 
 CF-160은 검증된 disabled 이름·전화를 사이트 식별 근거로 인정하되 필드 쓰기 금지는 유지한다. 날짜의 실제 day 정밀도와 잘못된 확정값 원복, 단일 날짜·검색 필드 실패 격리, 표시값과 선택 증거의 구분을 추가했다. 현주소는 유일한 정확 결과만 선택하고 상세주소 쓰기 직전 사용자 변경을 보호하며, 모달 종료와 배경 입력 상태 복구를 기다린다. 프로젝트 기간은 FE·BE 양쪽의 `SELECT_DATE` 계약을 따른다. 추가 필드와 검증 한계는 [최신 근거](../../raw/issues/CF-160/documents/adapter-greeting.md)를 따른다.
 

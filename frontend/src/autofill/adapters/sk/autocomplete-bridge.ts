@@ -1,17 +1,28 @@
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { FailureReporter, WriteFailureCode } from "../../write/failure";
 
-export const SK_AUTOCOMPLETE_REQUEST_EVENT =
-  "career-form:sk-autocomplete-request";
-export const SK_AUTOCOMPLETE_RESPONSE_EVENT =
-  "career-form:sk-autocomplete-response";
-export const SK_AUTOCOMPLETE_TARGET_ATTRIBUTE =
-  "data-career-form-sk-autocomplete-target";
+import {
+  SK_AUTOCOMPLETE_REQUEST_EVENT,
+  SK_AUTOCOMPLETE_RESPONSE_EVENT,
+  SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+  matchesSkCatalogField,
+  type SkAutocompleteFieldName,
+} from "./autocomplete-protocol";
+export {
+  SK_AUTOCOMPLETE_REQUEST_EVENT,
+  SK_AUTOCOMPLETE_RESPONSE_EVENT,
+  SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+  type SkAutocompleteFieldName,
+} from "./autocomplete-protocol";
+import { catalogApprovalForItem } from "../../profile/catalog-identity";
+import { rememberCatalogSelection } from "../../profile/catalog-receipt";
+import type {
+  ApprovedCatalogMatch,
+  CatalogEvidence,
+} from "../../profile/catalog-match";
+import type { StateDriverContext } from "../workflow";
 
-export type SkAutocompleteFieldName =
-  "eduEducationName" | "cerCertName" | "lngExamName";
-
-type BridgeCommand = "probe" | "confirm";
+type BridgeCommand = "probe" | "confirm" | "verify";
 type BridgeStatus = "ready" | "confirmed" | "rejected";
 
 interface BridgeMessage {
@@ -20,6 +31,10 @@ interface BridgeMessage {
   fieldName?: SkAutocompleteFieldName;
   status?: BridgeStatus;
   selectedValue?: string;
+  selectedLabel?: string;
+  selectedCode?: string;
+  evidence?: CatalogEvidence;
+  catalogMatch?: ApprovedCatalogMatch;
   failureCode?: unknown;
 }
 
@@ -76,16 +91,37 @@ function dispatchMessage(document: Document, message: BridgeMessage): void {
   );
 }
 
-function request(
+async function request(
   document: Document,
   handle: FieldCandidateHandle,
   command: BridgeCommand,
   onFailure?: FailureReporter,
+  context?: StateDriverContext,
 ): Promise<boolean> {
+  if (
+    context?.signal.aborted ||
+    (context?.beforeMutation && !(await context.beforeMutation()))
+  )
+    return false;
+  const approval = context
+    ? catalogApprovalForItem(context.item)
+    : { status: "legacy" as const };
+  if (context?.signal.aborted || approval.status === "invalid") return false;
   const input = targetInput(document, handle);
   if (!input || input.hasAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE)) {
     return Promise.resolve(false);
   }
+  if (
+    approval.status === "selected" &&
+    (!matchesSkCatalogField(
+      input.name as SkAutocompleteFieldName,
+      approval.match,
+    ) ||
+      (command === "probe"
+        ? Boolean(input.value.trim())
+        : input.value !== approval.match.query))
+  )
+    return false;
   const initialValue = input.value;
   if (command === "confirm" && !initialValue.trim()) {
     return Promise.resolve(false);
@@ -106,6 +142,7 @@ function request(
       completed = true;
       view.clearTimeout(timeout);
       document.removeEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, onResponse);
+      context?.signal.removeEventListener("abort", onAbort);
       if (input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) === requestId) {
         input.removeAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE);
       }
@@ -137,8 +174,92 @@ function request(
         response.fieldName === input.name &&
         input.isConnected &&
         input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) === requestId;
+      let receiptValid = true;
+      if (
+        validContext &&
+        command === "confirm" &&
+        response.status === "confirmed" &&
+        approval.status === "selected"
+      ) {
+        const snapshot = response;
+        const row = input.closest(".form-item-group");
+        receiptValid = Boolean(
+          context &&
+          snapshot.evidence &&
+          typeof snapshot.selectedLabel === "string" &&
+          snapshot.evidence.label === snapshot.selectedLabel &&
+          (snapshot.evidence.detail === undefined ||
+            typeof snapshot.evidence.detail === "string") &&
+          typeof snapshot.selectedCode === "string" &&
+          rememberCatalogSelection(context.item, {
+            element: input,
+            evidence: snapshot.evidence,
+            verify: () => {
+              if (
+                !input.isConnected ||
+                input.closest(".form-item-group") !== row ||
+                input.value !== snapshot.selectedValue ||
+                context.signal.aborted
+              )
+                return false;
+              const id = crypto.randomUUID();
+              let verified = false;
+              const listen = (event: Event) => {
+                if (!("detail" in event) || typeof event.detail !== "string")
+                  return;
+                try {
+                  const result = JSON.parse(event.detail) as BridgeMessage;
+                  verified =
+                    result.requestId === id &&
+                    result.command === "verify" &&
+                    result.fieldName === input.name &&
+                    result.status === "confirmed" &&
+                    result.selectedValue === snapshot.selectedValue &&
+                    result.selectedLabel === snapshot.selectedLabel &&
+                    result.selectedCode === snapshot.selectedCode;
+                } catch {
+                  verified = false;
+                }
+              };
+              const previous = input.getAttribute(
+                SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+              );
+              input.setAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE, id);
+              document.addEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, listen);
+              try {
+                dispatchMessage(document, {
+                  requestId: id,
+                  command: "verify",
+                  fieldName: input.name as SkAutocompleteFieldName,
+                  selectedValue: snapshot.selectedValue,
+                  selectedLabel: snapshot.selectedLabel,
+                  selectedCode: snapshot.selectedCode,
+                });
+              } finally {
+                document.removeEventListener(
+                  SK_AUTOCOMPLETE_RESPONSE_EVENT,
+                  listen,
+                );
+                if (
+                  input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) === id
+                ) {
+                  if (previous === null)
+                    input.removeAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE);
+                  else
+                    input.setAttribute(
+                      SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+                      previous,
+                    );
+                }
+              }
+              return verified;
+            },
+          }),
+        );
+      }
       finish(
-        response.status === expectedStatus &&
+        receiptValid &&
+          response.status === expectedStatus &&
           validContext &&
           (command === "probe" ||
             (typeof response.selectedValue === "string" &&
@@ -150,7 +271,9 @@ function request(
           : undefined,
       );
     };
+    const onAbort = () => finish(false);
     document.addEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, onResponse);
+    context?.signal.addEventListener("abort", onAbort, { once: true });
     const timeout = view.setTimeout(
       () =>
         finish(
@@ -164,10 +287,22 @@ function request(
         ),
       RESPONSE_TIMEOUT_MILLISECONDS,
     );
+    if (
+      context?.signal.aborted ||
+      (context &&
+        JSON.stringify(catalogApprovalForItem(context.item)) !==
+          JSON.stringify(approval))
+    ) {
+      finish(false);
+      return;
+    }
     dispatchMessage(document, {
       requestId,
       command,
       fieldName: input.name as SkAutocompleteFieldName,
+      ...(approval.status === "selected"
+        ? { catalogMatch: approval.match }
+        : {}),
     });
   });
 }
@@ -175,19 +310,21 @@ function request(
 export function isSkAutocompleteBridgeReady(
   document: Document,
   handle: FieldCandidateHandle,
+  context?: StateDriverContext,
 ): Promise<boolean> {
-  return request(document, handle, "probe");
+  return request(document, handle, "probe", undefined, context);
 }
 
 export function confirmSkAutocomplete(
   document: Document,
   handle: FieldCandidateHandle,
   onFailure?: FailureReporter,
+  context?: StateDriverContext,
 ): Promise<boolean> {
   const previous = queues.get(document) ?? Promise.resolve();
   const current = previous
     .catch(() => undefined)
-    .then(() => request(document, handle, "confirm", onFailure));
+    .then(() => request(document, handle, "confirm", onFailure, context));
   queues.set(
     document,
     current.then(

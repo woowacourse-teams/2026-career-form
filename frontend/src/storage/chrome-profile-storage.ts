@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { isProfileIdentity } from "../profile/profile-identity";
 
 import {
   createEmptyProfile,
@@ -38,7 +39,8 @@ function isProfileEntry(value: unknown): boolean {
     value.id.length > 0 &&
     typeof value.sectionId === "string" &&
     value.sectionId.length > 0 &&
-    isFieldValues(value.values)
+    isFieldValues(value.values) &&
+    (value.identity === undefined || isProfileIdentity(value.identity))
   );
 }
 
