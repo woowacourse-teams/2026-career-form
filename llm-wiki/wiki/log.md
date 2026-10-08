@@ -440,3 +440,10 @@
 - Source-Revision: 08107e139501224e8f2a71912c8fe40354f3442e
 - 승인한 세 후보를 [CF-168 bundle](../raw/issues/CF-168/manifest.md)에 기록하고 [Greeting 공통 어댑터](topics/adapter-greeting.md), [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 변경 전 실패 판정 기준, Greeting 어학 수준 필드 단위 보류, `OPTION_UNMATCHED` 보고 범위를 기록했다.
+
+## [2026-10-08] ingest | CF-169 현대·SK 어학 상태 드라이버 실패의 행 단위 격리
+
+- Approval-Digest: 334a004a2a7ed47c3557351c9d59635962c10937400d08d3727cc98f980054e2
+- Source-Revision: 3539437b04cb50c42f04b8d4b68a001cefdc173e
+- 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
+- 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.

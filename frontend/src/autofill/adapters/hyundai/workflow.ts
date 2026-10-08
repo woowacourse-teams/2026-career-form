@@ -164,6 +164,47 @@ function additionalMajorFailureGroup(
   return field;
 }
 
+const LANGUAGE_ROW_DRIVERS = new Map([
+  ["foreLang", "languages.languageTest.language"],
+  ["foreExamCd", "languages.languageTest.testName"],
+]);
+
+// A language row is the `.field-group` that owns exactly one language driver
+// and one exam driver. A container that holds more rows, or lacks either
+// driver, is not proven to be a single row, so the run keeps stopping.
+function languageRowFailureGroup(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): HTMLElement | undefined {
+  const base = structuralBase(handle);
+  const profileKey = base ? LANGUAGE_ROW_DRIVERS.get(base) : undefined;
+  const trigger = handle.elements[0];
+  if (
+    !base ||
+    !profileKey ||
+    handle.elements.length !== 1 ||
+    !(trigger instanceof HTMLInputElement) ||
+    trigger.type !== "button" ||
+    !trigger.isConnected ||
+    !new RegExp(`^${base}_[1-9][0-9]*$`).test(trigger.id) ||
+    item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" ||
+    item.analysis.interactionStatus !== "READY" ||
+    item.analysis.writePlan?.command !== "SELECT_BUTTON_OPTION" ||
+    profileFieldKey(item) !== profileKey
+  )
+    return undefined;
+  const group = trigger.closest<HTMLElement>(".field-group");
+  if (!group) return undefined;
+  const owns = (selector: string) =>
+    group.querySelectorAll(selector).length === 1;
+  return owns("input[type='hidden'][name='foreLang']") &&
+    owns("input[type='hidden'][name='foreExamCd']") &&
+    owns("input[type='button'][id^='foreLang_']") &&
+    owns("input[type='button'][id^='foreExamCd_']")
+    ? group
+    : undefined;
+}
+
 function waitFor(
   document: Document,
   condition: () => boolean,
@@ -429,7 +470,8 @@ export const hyundaiWorkflowAdapter: WorkflowAdapter = {
     }
     return (
       educationLocationFailureGroup(item, handle) ??
-      additionalMajorFailureGroup(item, handle)
+      additionalMajorFailureGroup(item, handle) ??
+      languageRowFailureGroup(item, handle)
     );
   },
   revealSelections: [],
