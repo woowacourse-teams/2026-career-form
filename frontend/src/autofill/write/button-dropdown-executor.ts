@@ -12,6 +12,7 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import { isSelectableApproved } from "./search-executor";
 import { normalizeDisplayName } from "./display-name";
 import { skipped, written, type ApprovedWriteResult } from "./write-result";
+import type { WriteFailureCode } from "./failure";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
 import { matchesApprovedCatalog } from "../profile/catalog-match";
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
@@ -33,13 +34,16 @@ export async function executeButtonDropdownWrite({
   beforeMutation?: () => Promise<boolean>;
   signal?: AbortSignal;
 }): Promise<ApprovedWriteResult> {
-  const unsupported = () =>
-    skipped(
-      item.candidateId,
-      "unsupported",
-      "UNSUPPORTED_CONTROL",
-      "드롭다운 소유 관계와 일치 옵션을 확인할 수 없습니다.",
-    );
+  const unsupported = (
+    failureCode?: WriteFailureCode,
+  ): ApprovedWriteResult => ({
+    candidateId: item.candidateId,
+    status: "skipped",
+    outcome: "unsupported",
+    code: "UNSUPPORTED_CONTROL",
+    reason: "드롭다운 소유 관계와 일치 옵션을 확인할 수 없습니다.",
+    ...(failureCode ? { failureCode } : {}),
+  });
   const stale = () =>
     skipped(
       item.candidateId,
@@ -112,6 +116,7 @@ export async function executeButtonDropdownWrite({
         : normalizeDisplayName(option.text) === normalizeDisplayName(value),
     );
     const option = matches?.length === 1 ? matches[0] : undefined;
+    if (matches?.length === 0) return unsupported("OPTION_UNMATCHED");
     if (
       !option ||
       option.element.closest(

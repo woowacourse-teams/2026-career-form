@@ -2,11 +2,13 @@
 
 > Topic: adapter-greeting
 > Status: Current
-> Current: [Greeting 카탈로그 식별 검색 선택](../../raw/issues/CF-162/documents/adapter-greeting.md)
-> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md)
-> Updated: 2026-10-07
+> Current: [Greeting 어학 수준 선택지 불일치의 필드 단위 보류](../../raw/issues/CF-168/documents/adapter-greeting.md)
+> History: [CF-94 근거](../../raw/issues/CF-94/documents/adapter-greeting.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-greeting.md); [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md)
+> Updated: 2026-10-08
 
 ## 현재 상태
+
+CF-168부터 어학 등급과 회화 수준 버튼 선택은 선택지가 프로필 값과 하나도 일치하지 않으면 `OPTION_UNMATCHED`로 해당 필드만 건너뛰고 나머지 입력을 계속한다. 필드 루트의 `[name]`이 정확히 하나일 때만 격리하며, 드러내는 드라이버와 공유 루트는 기존처럼 전체 중단한다. 상세는 [CF-168 근거](../../raw/issues/CF-168/documents/adapter-greeting.md)를 따른다.
 
 CF-162부터 학교명·자격증·시험명 검색은 프로필의 카탈로그 식별자를 화면에 보이는 증거로 검증한다. 고교는 보이는 시도와 학교명 조합의 유일성, 대학·대학원은 설명 없는 선택지의 같은 이름 항목이 모두 한 KESS 학교 코드일 때, 시험명은 같은 행 언어로 한정된 `라벨(언어)` 정확 일치일 때만 선택한다. 상세는 [CF-162 근거](../../raw/issues/CF-162/documents/adapter-greeting.md)를 따른다.
 
