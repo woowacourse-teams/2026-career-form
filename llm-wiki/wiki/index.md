@@ -33,6 +33,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [기존 docs baseline](topics/docs-baseline.md) | 기존 docs 65개와 자산의 CF-41 현재본 | 2026-08-22 |
 | [제품 기준](topics/product-concept.md) | 사용자 통제, 제출 금지와 로컬 우선 | 2026-08-22 |
 | [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약 | 2026-08-22 |
+| [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장 | 2026-10-07 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
@@ -55,7 +56,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
 | [회사 어댑터 개발](topics/adapter-development.md) | 프론트 회사 어댑터와 백엔드 정책 경계 | 2026-09-27 |
 | [Greeting 플랫폼 판정과 실행 어댑터](topics/greeting-platform-routing.md) | BE의 Greeting 판정과 FE 어댑터 지정,문맥 검증 | 2026-09-27 |
-| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위 | 2026-09-27 |
+| [Greeting 공통 어댑터](topics/adapter-greeting.md) | 기업별 화면 차이와 안전한 필드 입력,검증 범위 | 2026-10-07 |
 | [SK,현대 실시간 옵션 선택 보완](topics/adapter-live-option-selection.md) | 현재 회사 화면의 유일 옵션만 선택하는 어학 보완 | 2026-09-09 |
 | [현대 어댑터](topics/adapter-hyundai.md) | 현대 주소,국적,학력 수집,입력과 검증 제한 | 2026-09-08 |
 | [SK 어댑터](topics/adapter-sk.md) | SK 조건부 입력과 검증 제한 | 2026-09-08 |

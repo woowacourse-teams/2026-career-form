@@ -55,7 +55,11 @@ function setup({
     referenceBaseline,
     VALUE,
   );
-  const outcome = (exact: typeof observed.exact) => {
+  const outcome = (
+    exact: (
+      expected: readonly string[],
+    ) => { element: HTMLElement; signature: string } | undefined,
+  ) => {
     try {
       const result = exact([VALUE]);
       return result ? "selected" : "pending";

@@ -3,7 +3,15 @@ import {
   SK_AUTOCOMPLETE_RESPONSE_EVENT,
   SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
   type SkAutocompleteFieldName,
-} from "./autocomplete-bridge";
+  matchesSkCatalogField,
+} from "./autocomplete-protocol";
+import {
+  isApprovedCatalogMatch,
+  matchesApprovedCatalog,
+  type ApprovedCatalogMatch,
+  type CatalogEvidence,
+} from "../../profile/catalog-match";
+import { catalogEvidenceForElement } from "../../profile/catalog-evidence";
 import {
   isStandardValueId,
   standardValueAliases,
@@ -35,8 +43,12 @@ export type SkJQuery = (element: Element) => SkJQueryObject;
 
 interface RequestMessage {
   requestId: string;
-  command: "probe" | "confirm";
+  command: "probe" | "confirm" | "verify";
   fieldName: SkAutocompleteFieldName;
+  catalogMatch?: ApprovedCatalogMatch;
+  selectedValue?: string;
+  selectedLabel?: string;
+  selectedCode?: string;
 }
 
 const ROW_SELECTORS: Record<SkAutocompleteFieldName, string> = {
@@ -105,9 +117,17 @@ function parseRequest(event: Event): RequestMessage | undefined {
     }
     const value = parsed as Partial<RequestMessage>;
     return typeof value.requestId === "string" &&
-      (value.command === "probe" || value.command === "confirm") &&
+      (value.command === "probe" ||
+        value.command === "confirm" ||
+        value.command === "verify") &&
       typeof value.fieldName === "string" &&
-      Object.hasOwn(ROW_SELECTORS, value.fieldName)
+      Object.hasOwn(ROW_SELECTORS, value.fieldName) &&
+      (value.catalogMatch === undefined ||
+        (isApprovedCatalogMatch(value.catalogMatch) &&
+          matchesSkCatalogField(
+            value.fieldName as SkAutocompleteFieldName,
+            value.catalogMatch,
+          )))
       ? (value as RequestMessage)
       : undefined;
   } catch {
@@ -154,7 +174,14 @@ function exactMenuItem(
   fieldName: SkAutocompleteFieldName,
   instance: SkAutocompleteInstance,
   onFailure?: FailureReporter,
-): { element: HTMLElement; item: SkAutocompleteItem } | undefined {
+  catalogMatch?: ApprovedCatalogMatch,
+):
+  | {
+      element: HTMLElement;
+      item: SkAutocompleteItem;
+      evidence: CatalogEvidence;
+    }
+  | undefined {
   const query = normalize(input.value);
   const menu = instance.menu?.element?.[0];
   if (!query || !menu || !visible(menu)) return undefined;
@@ -177,8 +204,20 @@ function exactMenuItem(
     const canonicalExam =
       fieldName === "lngExamName" && matchesSkExamStandardValue(query, item);
     if (!item || !label || !value || !validId) unverifiableCandidate = true;
-    return item && (exact || canonicalExam) && validId
-      ? [{ element, item }]
+    const evidence = catalogEvidenceForElement(
+      element,
+      menu,
+      typeof item?.label === "string" ? item.label : "",
+    );
+    const approved = catalogMatch
+      ? matchesApprovedCatalog(catalogMatch, evidence) &&
+        matchesApprovedCatalog(catalogMatch, {
+          ...evidence,
+          label: typeof item?.value === "string" ? item.value : "",
+        })
+      : exact || canonicalExam;
+    return item && label && value && approved && validId
+      ? [{ element, item: { ...item }, evidence }]
       : [];
   });
   if (matches.length !== 1)
@@ -201,7 +240,14 @@ function waitForExactMenuItem(
   request: RequestMessage,
   query: string,
   onFailure?: FailureReporter,
-): Promise<{ element: HTMLElement; item: SkAutocompleteItem } | undefined> {
+): Promise<
+  | {
+      element: HTMLElement;
+      item: SkAutocompleteItem;
+      evidence: CatalogEvidence;
+    }
+  | undefined
+> {
   const current = () => {
     if (
       !input.isConnected ||
@@ -230,6 +276,7 @@ function waitForExactMenuItem(
       (code) => {
         failureCode = code;
       },
+      request.catalogMatch,
     );
     const menu = instance.menu?.element?.[0];
     return {
@@ -248,7 +295,13 @@ function waitForExactMenuItem(
   return new Promise((resolve) => {
     let completed = false;
     const finish = (
-      match: { element: HTMLElement; item: SkAutocompleteItem } | undefined,
+      match:
+        | {
+            element: HTMLElement;
+            item: SkAutocompleteItem;
+            evidence: CatalogEvidence;
+          }
+        | undefined,
       failureCode?: WriteFailureCode,
     ) => {
       if (completed) return;
@@ -268,7 +321,14 @@ function waitForExactMenuItem(
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["class", "style", "hidden"],
+      attributeFilter: [
+        "class",
+        "style",
+        "hidden",
+        "aria-describedby",
+        "id",
+        SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+      ],
     });
     const interval = view.setInterval(inspect, 25);
     const timeout = view.setTimeout(
@@ -333,12 +393,28 @@ async function confirmSelection(
   jquery: SkJQuery,
   request: RequestMessage,
   onFailure?: FailureReporter,
-): Promise<{ selectedValue: string } | undefined> {
+): Promise<
+  | {
+      selectedValue: string;
+      selectedLabel: string;
+      selectedCode: string;
+      evidence: CatalogEvidence;
+      instance: SkAutocompleteInstance;
+      row: Element;
+    }
+  | undefined
+> {
   const input = markedInput(document, request);
   if (!input || !visible(input)) return undefined;
   const query = input.value;
   const instance = autocompleteInstance(jquery, input);
-  if (!instance) return undefined;
+  const row = input.closest(ROW_SELECTORS[request.fieldName]);
+  if (
+    !instance ||
+    !row ||
+    (request.catalogMatch && input.value !== request.catalogMatch.query)
+  )
+    return undefined;
   try {
     jquery(input).autocomplete("search", query);
   } catch {
@@ -357,10 +433,30 @@ async function confirmSelection(
     !input.isConnected ||
     input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) !==
       request.requestId ||
-    input.value !== query
+    input.value !== query ||
+    input.closest(ROW_SELECTORS[request.fieldName]) !== row ||
+    autocompleteInstance(jquery, input) !== instance ||
+    !instance.menu?.element?.[0]?.contains(match.element) ||
+    !visible(match.element) ||
+    !sameItem(
+      jquery(match.element).data("ui-autocomplete-item") as
+        SkAutocompleteItem | undefined,
+      match.item,
+      true,
+    ) ||
+    (request.catalogMatch &&
+      !matchesApprovedCatalog(
+        request.catalogMatch,
+        catalogEvidenceForElement(
+          match.element,
+          instance.menu.element[0],
+          match.evidence.label,
+        ),
+      ))
   ) {
     return undefined;
   }
+  const chosen = { ...match.item };
   const action =
     match.element.querySelector<HTMLElement>(".ui-menu-item-wrapper") ??
     match.element;
@@ -375,10 +471,22 @@ async function confirmSelection(
     input.getAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE) ===
       request.requestId &&
     jquery(input).data("confirmed") === true &&
-    sameItem(selected, match.item, request.fieldName === "lngExamName");
+    input.closest(ROW_SELECTORS[request.fieldName]) === row &&
+    autocompleteInstance(jquery, input) === instance &&
+    sameItem(selected, chosen, true) &&
+    selected?.label === chosen.label &&
+    selected?.value === chosen.value &&
+    input.value === chosen.value;
   if (selectionConfirmed && !scoreReady) onFailure?.("EXAM_SCORE_NOT_READY");
   return scoreReady && selectionConfirmed
-    ? { selectedValue: input.value }
+    ? {
+        selectedValue: input.value,
+        selectedLabel: match.evidence.label,
+        selectedCode: String(chosen.id ?? ""),
+        evidence: match.evidence,
+        instance,
+        row,
+      }
     : undefined;
 }
 
@@ -388,6 +496,11 @@ function respond(
   status: "ready" | "confirmed" | "rejected",
   selectedValue?: string,
   failureCode?: WriteFailureCode,
+  selection?: {
+    selectedLabel: string;
+    selectedCode: string;
+    evidence: CatalogEvidence;
+  },
 ): void {
   const EventConstructor = document.defaultView?.CustomEvent ?? CustomEvent;
   document.dispatchEvent(
@@ -399,6 +512,13 @@ function respond(
         status,
         ...(selectedValue !== undefined ? { selectedValue } : {}),
         ...(failureCode ? { failureCode } : {}),
+        ...(selection
+          ? {
+              selectedLabel: selection.selectedLabel,
+              selectedCode: selection.selectedCode,
+              evidence: selection.evidence,
+            }
+          : {}),
       }),
     }),
   );
@@ -410,6 +530,17 @@ export function installSkAutocompleteMainBridge(
 ): () => void {
   const view = document.defaultView;
   const valuesBeforeWrite = new WeakMap<HTMLInputElement, string>();
+  const selections = new WeakMap<
+    HTMLInputElement,
+    {
+      selectedValue: string;
+      selectedLabel: string;
+      selectedCode: string;
+      evidence: CatalogEvidence;
+      instance: SkAutocompleteInstance;
+      row: Element;
+    }
+  >();
   const listener = (event: Event) => {
     if (
       !view ||
@@ -425,7 +556,36 @@ export function installSkAutocompleteMainBridge(
       respond(document, request, "rejected");
       return;
     }
+    if (request.command === "verify") {
+      const saved = selections.get(input);
+      const selected = autocompleteInstance(jquery, input)?.selectedItem;
+      const valid =
+        saved &&
+        input.closest(ROW_SELECTORS[request.fieldName]) === saved.row &&
+        autocompleteInstance(jquery, input) === saved.instance &&
+        jquery(input).data("confirmed") === true &&
+        input.value === saved.selectedValue &&
+        request.selectedValue === saved.selectedValue &&
+        request.selectedLabel === saved.selectedLabel &&
+        request.selectedCode === saved.selectedCode &&
+        selected?.label === saved.selectedLabel &&
+        String(selected?.id ?? "") === saved.selectedCode &&
+        selected?.value === saved.selectedValue;
+      respond(
+        document,
+        request,
+        valid ? "confirmed" : "rejected",
+        valid ? input.value : undefined,
+        undefined,
+        valid ? saved : undefined,
+      );
+      return;
+    }
     if (request.command === "probe") {
+      if (request.catalogMatch && input.value.trim()) {
+        respond(document, request, "rejected");
+        return;
+      }
       valuesBeforeWrite.set(input, input.value);
       input.focus();
       respond(
@@ -440,6 +600,8 @@ export function installSkAutocompleteMainBridge(
     void confirmSelection(document, jquery, request, (code) => {
       failureCode = code;
     }).then((confirmed) => {
+      if (confirmed) selections.set(input, confirmed);
+      else selections.delete(input);
       const previousValue = valuesBeforeWrite.get(input);
       valuesBeforeWrite.delete(input);
       if (
@@ -459,6 +621,7 @@ export function installSkAutocompleteMainBridge(
         confirmed ? "confirmed" : "rejected",
         confirmed?.selectedValue,
         confirmed ? undefined : failureCode,
+        confirmed,
       );
     });
   };

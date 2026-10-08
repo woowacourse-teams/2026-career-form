@@ -57,6 +57,10 @@ import { executeCjMajorSearch } from "./cj-major-search";
 
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
+import {
+  isApprovedCatalogMatch,
+  type CatalogEvidence,
+} from "../profile/catalog-match";
 
 const activeTransactions = new WeakSet<Document>();
 export function acceptedSearchValues(
@@ -72,6 +76,7 @@ function searchAttempts(
   args: ExecuteReadonlySearchArgs,
   fallback: string,
 ): readonly string[] {
+  if (args.catalogMatch) return [args.catalogMatch.query];
   if (!args.searchValues) return [fallback];
   if (
     args.searchValues.length < 1 ||
@@ -203,6 +208,23 @@ export async function executeReadonlySearch(
       !normalized(expectedValue)
     )
       throw new SearchFailure("field_not_readonly");
+    const catalogMatch = args.catalogMatch;
+    if (catalogMatch !== undefined) {
+      const kinds: Readonly<Record<string, string>> = {
+        "certifications.certificate.name": "certificate",
+        "languages.languageTest.testName": "languageTest",
+        "education.highSchool.schoolName": "highSchool",
+        "education.university.schoolName": "university",
+        "education.graduateSchool.schoolName": "graduateSchool",
+      };
+      if (
+        !isApprovedCatalogMatch(catalogMatch) ||
+        catalogMatch.kind !== kinds[canonicalFieldKey] ||
+        catalogMatch.query !== expectedValue
+      )
+        throw new SearchFailure("stale_target");
+    }
+    const approvedCatalog = JSON.stringify(catalogMatch);
     const lookup = registry.lookupField(targetCandidateId);
     if (lookup.status !== "blocked" || lookup.reason !== "readonly")
       throw new SearchFailure("stale_target");
@@ -222,6 +244,8 @@ export async function executeReadonlySearch(
       );
     const guard = (expected?: string | readonly string[]) => {
       session.check();
+      if (JSON.stringify(args.catalogMatch) !== approvedCatalog)
+        throw new SearchFailure("stale_target");
       if (document.URL !== outerUrl && document.URL !== allowedFragmentUrl)
         throw new SearchFailure("surface_navigation_unsafe");
       const result = targetIsCurrent(
@@ -248,13 +272,16 @@ export async function executeReadonlySearch(
       canonicalFieldKey,
       identity,
     );
+    // CJ's flat school response cannot prove campus identity. Never open it for catalog selections.
+    if (schoolCandidate && catalogMatch)
+      throw new SearchFailure("selection_effect_unverified");
     if (schoolCandidate)
       validateCjSchoolRow(
         target,
         initialValue === expectedValue ? expectedValue : undefined,
       );
     if (normalized(initialValue) && !schoolCandidate) {
-      if (!matches(initialValue))
+      if (catalogMatch || !matches(initialValue))
         throw new SearchFailure("existing_value_conflict");
       await session.prepareMutation();
       guard(values);
@@ -437,7 +464,9 @@ export async function executeReadonlySearch(
       query && submit
         ? searchDestination(currentSurface, query, submit)
         : undefined;
-    let candidate: { element: HTMLElement; signature: string } | undefined;
+    let candidate:
+      | { element: HTMLElement; signature: string; evidence?: CatalogEvidence }
+      | undefined;
     let selectedResults: ReturnType<typeof observeResults> | undefined;
     let structuredResults:
       | Awaited<ReturnType<ReturnType<typeof observeResults>["interpret"]>>
@@ -533,7 +562,7 @@ export async function executeReadonlySearch(
                 canonicalFieldKey,
                 attemptValues,
               )
-            : results.exact(attemptValues);
+            : results.exact(attemptValues, catalogMatch);
         }, "result_pending");
         selectedSearchText = searchText;
         trace("일치 결과 발견", candidate?.element);
@@ -564,7 +593,7 @@ export async function executeReadonlySearch(
           surfaceGuard();
           structuredResults = await results.interpret();
           surfaceGuard();
-          candidate = structuredResults.exact(attemptValues);
+          candidate = structuredResults.exact(attemptValues, catalogMatch);
           selectedSearchText = searchText;
           break;
         }
@@ -613,7 +642,11 @@ export async function executeReadonlySearch(
       }
     }
     if (!candidate) throw new SearchFailure("search_results_not_found");
-    const selectedValues = args.searchValues ? [selectedSearchText] : values;
+    const selectedValues = catalogMatch
+      ? [candidate.evidence!.label]
+      : args.searchValues
+        ? [selectedSearchText]
+        : values;
     const activationScope = () => {
       const resultRoot = currentSurface
         .resultRoots()
@@ -627,8 +660,8 @@ export async function executeReadonlySearch(
     const latest = querylessRegion
       ? regionListSelection(currentSurface, canonicalFieldKey, selectedValues)
       : structuredResults
-        ? structuredResults.exact(selectedValues)
-        : selectedResults?.exact(selectedValues);
+        ? structuredResults.exact(selectedValues, catalogMatch)
+        : selectedResults?.exact(selectedValues, catalogMatch);
     if (
       !latest ||
       latest.element !== candidate.element ||
@@ -638,7 +671,10 @@ export async function executeReadonlySearch(
         : safeActivation(candidate.element, selectedValues, activationScope()))
     )
       throw new SearchFailure("result_stale");
-    const structuredMatch = structuredResults?.exact(selectedValues);
+    const structuredMatch = structuredResults?.exact(
+      selectedValues,
+      catalogMatch,
+    );
     const structuredEffects = structuredMatch
       ? bindStructuredEffects(
           identity,
@@ -649,8 +685,14 @@ export async function executeReadonlySearch(
         )
       : undefined;
     const selectionBinding =
-      !structuredResults && canonicalFieldKey.startsWith("certifications.")
-        ? bindSelectionEffects(identity, candidate.element, selectedValues)
+      !structuredResults &&
+      (catalogMatch || canonicalFieldKey.startsWith("certifications."))
+        ? bindSelectionEffects(
+            identity,
+            candidate.element,
+            selectedValues,
+            currentSurface,
+          )
         : undefined;
     followUpObservation = selectionBinding
       ? captureSearchFollowUp(selectionBinding.scope, identity.target)
@@ -677,9 +719,11 @@ export async function executeReadonlySearch(
       const reflected = guard();
       observation.assertOwned(currentSurface);
       currentSurface.assertSelectionDocument();
-      const reflectedValue = selectedValues.some(
-        (value) => normalized(value) === normalized(reflected.value),
-      );
+      const reflectedValue = catalogMatch
+        ? reflected.value === selectedValues[0]
+        : selectedValues.some(
+            (value) => normalized(value) === normalized(reflected.value),
+          );
       if (reflectedValue) effect = "value-observed";
       const effectsVerified = structuredEffects?.verify();
       if (
@@ -709,6 +753,9 @@ export async function executeReadonlySearch(
       : [];
     await session.prepareMutation();
     guard(selectedValues);
+    if (selectionBinding) verifySelectionEffects(selectionBinding);
+    if (catalogMatch && identity.target.value !== candidate.evidence!.label)
+      throw new SearchFailure("result_not_reflected");
     if (structuredEffects && !structuredEffects.verify())
       throw new SearchFailure("selection_postcondition_failed");
     trace("선택 완료", {
@@ -721,7 +768,42 @@ export async function executeReadonlySearch(
       targetCandidateId,
       identity,
       effect,
-      ...(args.searchValues ? { selectedValue: selectedSearchText } : {}),
+      ...(catalogMatch
+        ? {
+            selectedValue: candidate.evidence!.label,
+            catalogSelection: {
+              evidence: candidate.evidence!,
+              verify: () => {
+                try {
+                  if (
+                    identity!.target.value !== candidate!.evidence!.label ||
+                    JSON.stringify(args.catalogMatch) !== approvedCatalog
+                  )
+                    return false;
+                  const current = targetIsCurrent(
+                    document,
+                    registry,
+                    targetCandidateId,
+                    identity!,
+                    args.assertCurrent,
+                    selectedValues,
+                  );
+                  if (typeof current === "string") return false;
+                  if (selectionBinding)
+                    verifySelectionEffects(selectionBinding);
+                  return structuredEffects
+                    ? structuredEffects.verify()
+                    : currentSurface.closure() === "closed";
+                } catch (error) {
+                  if (error instanceof SearchFailure) return false;
+                  throw error;
+                }
+              },
+            },
+          }
+        : args.searchValues
+          ? { selectedValue: selectedSearchText }
+          : {}),
       ...(followUpControls.length
         ? { followUp: { controls: followUpControls } }
         : {}),

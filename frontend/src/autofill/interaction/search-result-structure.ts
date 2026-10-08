@@ -15,6 +15,11 @@ import {
 } from "./readonly-search";
 import { SearchFailure, type SearchSession } from "./search-session";
 import { elements, interactive, label, shown } from "./search-surface-dom";
+import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import {
+  matchesApprovedCatalog,
+  type ApprovedCatalogMatch,
+} from "../profile/catalog-match";
 
 const TAGS = new Set([
   "div",
@@ -226,13 +231,28 @@ async function choose(
   }
 }
 
-function dataText(row: HTMLElement, action: HTMLElement): string {
+function dataText(
+  row: HTMLElement,
+  action: HTMLElement,
+  catalog = false,
+  described = false,
+): string {
   // Remove only a generic action label, never a data token or a campus qualifier.
   const clone = row.cloneNode(true) as HTMLElement;
   const original = [row, ...elements<HTMLElement>(row, "*")];
   const copied = [clone, ...elements<HTMLElement>(clone, "*")];
   if (ACTION_LABEL.test(normalized(action.textContent ?? "")))
     copied[original.indexOf(action)]?.remove();
+  if (catalog) {
+    const descriptionId = described
+      ? row.getAttribute("aria-describedby")?.trim()
+      : undefined;
+    original.forEach((element, index) => {
+      if (element !== row && (!shown(element) || element.id === descriptionId))
+        copied[index]?.remove();
+    });
+    return clone.textContent?.trim() ?? "";
+  }
   return normalized(clone.textContent ?? "");
 }
 
@@ -320,14 +340,24 @@ export async function interpretResultStructure(
     current,
   );
   return {
-    exact(expected: readonly string[]) {
+    exact(expected: readonly string[], catalogMatch?: ApprovedCatalogMatch) {
       current();
       const matches = rowShape.elements
-        .map((row, index) => ({ row, element: actionShape.elements[index]! }))
-        .filter(({ row, element }) =>
-          expected.some(
-            (value) => normalized(value) === dataText(row, element),
-          ),
+        .map((row, index) => {
+          const element = actionShape.elements[index]!;
+          const observed = catalogEvidenceForElement(row, root);
+          const evidence = {
+            ...observed,
+            label: dataText(row, element, true, observed.detail !== undefined),
+          };
+          return { row, element, evidence };
+        })
+        .filter(({ row, element, evidence }) =>
+          catalogMatch
+            ? matchesApprovedCatalog(catalogMatch, evidence)
+            : expected.some(
+                (value) => normalized(value) === dataText(row, element),
+              ),
         );
       if (matches.length > 1)
         throw new SearchFailure("multiple_matching_results");
