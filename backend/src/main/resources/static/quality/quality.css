@@ -38,3 +38,5 @@ dialog::backdrop { background: #182a3d66; }
 [hidden] { display: none !important; }
 @media (max-width: 600px) { .workspace { margin: 1.5rem auto; padding: 0 1rem; } .claimant-label { width: 100%; } .candidate { padding: 1rem; } }
  .candidate[data-selected="true"] { outline: 3px solid #4774d9; outline-offset: 3px; }
+
+[hidden] { display: none !important; }

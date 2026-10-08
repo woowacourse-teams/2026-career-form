@@ -19,11 +19,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 public final class QualityAccess {
 
-    private static final Duration SESSION_DURATION = Duration.ofHours(8);
     private static final Duration ATTEMPT_WINDOW = Duration.ofMinutes(10);
     private final Clock clock;
     private final Optional<QualityPassword> password;
-    private final String configurationKey;
     private final String readonlyHash;
     private final SessionStore sessions;
     private final SecureRandom random = new SecureRandom();
@@ -32,7 +30,6 @@ public final class QualityAccess {
     public QualityAccess(Clock clock, String passwordHash, String readonlyHash, SessionStore sessions) {
         this.clock = Objects.requireNonNull(clock);
         this.password = QualityPassword.from(passwordHash);
-        this.configurationKey = QualityProjection.digest(passwordHash == null ? "" : passwordHash);
         this.readonlyHash = readonlyHash == null ? "" : readonlyHash;
         this.sessions = Objects.requireNonNull(sessions);
     }
@@ -44,7 +41,7 @@ public final class QualityAccess {
         NOT_CONFIGURED
     }
 
-    public record Login(LoginStatus status, String sessionToken, String csrfToken) {
+    public record Login(LoginStatus status) {
         @Override
         public String toString() {
             return "Login[status=" + status + "]";
@@ -88,25 +85,9 @@ public final class QualityAccess {
             attempts = replaceAttempt(key, new Attempt(attempt.startedAt, attempt.failures + 1));
             return failed(LoginStatus.INVALID);
         }
-        var token = token();
-        var csrf = token();
-        sessions.save(new Session(QualityProjection.digest(token), QualityProjection.digest(csrf),
-            configurationKey, now.plus(SESSION_DURATION)));
         attempts = attempts.entrySet().stream().filter(entry -> !entry.getKey().equals(key))
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
-        return new Login(LoginStatus.OK, token, csrf);
-    }
-
-    public boolean authorize(String token, String csrf, boolean writing) {
-        if (password.isEmpty() || !validToken(token)) {
-            return false;
-        }
-        return sessions.find(QualityProjection.digest(token))
-            .filter(session -> configurationKey.equals(session.configurationKey)
-                && clock.instant().isBefore(session.expiresAt))
-            .filter(session -> !writing || (validToken(csrf)
-                && equal(session.csrfHash, QualityProjection.digest(csrf))))
-            .isPresent();
+        return new Login(LoginStatus.OK);
     }
 
     public boolean configured() { return password.isPresent(); }
@@ -132,19 +113,13 @@ public final class QualityAccess {
             && equal(readonlyHash, QualityProjection.digest(provided));
     }
 
-    public void logout(String token) {
-        if (validToken(token)) {
-            sessions.delete(QualityProjection.digest(token));
-        }
-    }
-
     private Map<String, Attempt> replaceAttempt(String key, Attempt attempt) {
         return Stream.concat(attempts.entrySet().stream().filter(entry -> !entry.getKey().equals(key)),
             Stream.of(Map.entry(key, attempt))).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private Login failed(LoginStatus status) {
-        return new Login(status, null, null);
+        return new Login(status);
     }
 
     private String token() {

@@ -23,13 +23,12 @@ CF-164는 기존 분석 API의 schemaVersion 2 응답을 유지하면서 요청 
 
 ## 관리 화면
 
-HTTPS의 `/quality/`에서 공용 비밀번호로 로그인한다. 회원가입과 개인 계정은 없다. 담당 별칭은 개인 인증을 뜻하지 않는다. 인증 설정이 없으면 화면을 공개하지 않는다.
+기존 HTTP 백엔드의 `/quality/`에서 고정 공용 비밀번호를 입력한다. 회원가입과 개인 계정은 없다. 관리 API는 요청마다 같은 비밀번호를 Basic 자격으로 확인한다. 비밀번호 설정이 없으면 관리 화면과 관리 API를 공개하지 않는다.
 
-TLS 종료 프록시를 사용하는 경우 운영자가 신뢰할 프록시의 전달 헤더만 백엔드에 도달하도록 구성한다. 백엔드 포트의 직접 외부 접근을 막고 원래 HTTPS 주소와 포트가 전달되는지 확인한다. 프록시 설정과 외부 주소 공개는 이 변경에서 배포하지 않는다.
-
-- 서버 세션은 8시간이며 로그아웃과 비밀번호 검증 설정 변경으로 무효화된다. 인증과 담당 쿠키는 Secure, HttpOnly, SameSite=Strict다. CSRF 쿠키는 새 탭에서도 쓰기 요청을 할 수 있도록 자바스크립트가 읽을 수 있으며 인증에는 사용하지 않는다.
-- 쓰기 요청은 서버 세션과 CSRF를 검사한다. 비밀번호 실패는 출처별 10분 동안 5회까지 허용하며 출처 원문은 저장하지 않는다.
-- 담당 식별자는 서버가 별도로 발급하고 24시간 유지한다. 다른 팀원이 담당 중인 후보는 수정할 수 없다. 만료, 담당 해제와 보류 재개 후 다시 담당할 수 있다.
+- 로그인 세션, 인증 쿠키와 CSRF 토큰을 발급하지 않는다. 비밀번호와 담당 식별자는 페이지 모듈 메모리에만 유지하며 localStorage와 sessionStorage에 저장하지 않는다. 새로고침과 새 탭에서는 다시 로그인한다. 로그아웃은 메모리를 비우고 로그인 화면으로 이동한다.
+- 담당 식별자는 후보의 동시 수정 소유권만 구분하고 관리 API 접근 권한으로 쓰지 않는다. 담당 상태는 24시간 유지되므로 페이지를 새로고침하거나 닫기 전에 맡은 후보를 완료하거나 담당을 해제한다. 새 로그인은 이전 담당 식별자를 복구하지 않는다. 별칭은 개인 인증을 뜻하지 않는다.
+- 잘못된 비밀번호는 출처별 10분 동안 5회까지 허용한다. 읽기와 쓰기에 모두 비밀번호를 요구하며 다른 Origin의 관리 요청을 거부한다. Grafana 읽기 전용 자격은 집계 조회만 허용한다.
+- HTTP는 비밀번호, 실행 보고 자격과 조회 자격을 암호화하지 않는다. HTTPS 설정 없이 기존 HTTP 연결을 사용하는 것은 사용자 확정 운영 정책이다. 실제 비밀번호 원문은 저장소에 넣지 않고 기존 PBKDF2 검증 설정으로 확인한다.
 - 전체 미확인 목록에서 오늘 선정 외 후보도 완료할 수 있다. 완료 목록에는 필드 수, 확인일과 수정 이력이 남는다. Discord의 후보 링크는 목록 페이지 밖의 후보도 직접 연다.
 - 공개 작성 링크를 모르면 사이트 홈을 연다. 작성 링크는 같은 호스트의 HTTPS 주소만 허용하고 query, fragment, 계정 정보와 토큰 형태의 경로는 거부한다.
 
@@ -59,7 +58,7 @@ Asia/Seoul 평일 09:20에 당일 batch를 저장한다. 재시작 시 당일 09
 | `CAREER_FORM_QUALITY_VERSION` | 직접 실행은 UNKNOWN, 배포 Compose는 실제 `BACKEND_IMAGE` 자동 전달 |
 | `CAREER_FORM_QUALITY_PASSWORD_HASH` | 공용 비밀번호 검증용 PBKDF2 설정 |
 | `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH` | Grafana 전용 조회 토큰의 SHA-256 hex |
-| `CAREER_FORM_QUALITY_MANAGEMENT_URL` | 외부 HTTPS 관리 화면의 `/quality/` 주소 |
+| `CAREER_FORM_QUALITY_MANAGEMENT_URL` | 외부 HTTP 관리 화면의 `/quality/` 주소 |
 | `CAREER_FORM_QUALITY_DISCORD_ENABLED` | false, 전용 확인 요청 활성화 |
 | `CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT` | prod, 알림을 보내는 환경 하나 |
 | `CAREER_FORM_QUALITY_DISCORD_WEBHOOK` | 새 채널의 전용 Discord 웹훅 |
@@ -77,16 +76,16 @@ GitHub Environment `development`, `staging`, `production`에서 해당 환경의
 | 종류 | 설정 | 사람이 준비하는 값 |
 |---|---|---|
 | Variable | `CAREER_FORM_QUALITY_ENABLED` | 사용 환경만 true |
-| Variable | `SERVER_FORWARD_HEADERS_STRATEGY` | 신뢰하는 TLS 프록시 뒤의 서비스는 framework, 기본값 none |
+| Variable | `SERVER_FORWARD_HEADERS_STRATEGY` | 기존 서비스의 프록시 전달 헤더 전략, 기본값 none이며 품질 기능의 필수 설정 아님 |
 | Secret | `CAREER_FORM_QUALITY_PASSWORD_HASH` | 공용 비밀번호의 PBKDF2 검증 문자열 |
 | Secret | `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH` | Grafana 전용 임의 토큰의 SHA-256 hex |
-| Variable | `CAREER_FORM_QUALITY_MANAGEMENT_URL` | 외부 HTTPS 관리 화면의 `/quality/` 주소 |
+| Variable | `CAREER_FORM_QUALITY_MANAGEMENT_URL` | 외부 HTTP 관리 화면의 `/quality/` 주소 |
 | Variable | `CAREER_FORM_QUALITY_DISCORD_ENABLED` | 실제 수신 준비 뒤 true |
 | Secret | `CAREER_FORM_QUALITY_DISCORD_WEBHOOK` | 새 채널의 전용 웹훅 |
 
 `CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT`, `CAREER_FORM_QUALITY_SELECTION_DAYS`, `CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE`은 필요할 때만 Variable로 등록한다. 미등록 시 prod, 7일, 20개를 사용한다.
 
-HTTPS를 프록시에서 종료하고 백엔드에는 HTTP로 전달한다면 백엔드도 원래 HTTPS 요청임을 인식해야 한다. 신뢰하는 프록시가 `Host`, `X-Forwarded-Proto`와 `X-Forwarded-For`를 설정하도록 확인하고 해당 Environment의 `SERVER_FORWARD_HEADERS_STRATEGY=framework`를 사용한다. 이 설정은 품질 API 외 요청에도 적용된다. 직접 노출된 서비스에서 임의의 forwarded 헤더를 신뢰하도록 활성화하지 않는다. 미설정은 none이며 품질 API의 HTTPS 검사를 우회하지 않는다.
+운영 주소는 `http://운영IP/quality/`이며 품질 기능을 위해 새 도메인, TLS 인증서와 Nginx HTTPS 구성을 준비하지 않는다. 기존 HTTP 프록시 연결을 유지한다. `SERVER_FORWARD_HEADERS_STRATEGY`는 기존 서비스의 프록시 요구에 따라 설정하고, 품질 기능 활성화만을 위해 framework로 변경하지 않는다. 관리 요청의 Origin 검사에서 실제 HTTP Host와 포트가 일치해야 한다.
 
 배포 버전은 사람이 등록하지 않는다. Compose가 현재 `BACKEND_IMAGE`의 digest 고정 이미지 식별자를 `CAREER_FORM_QUALITY_VERSION`으로 전달한다. 운영에서 스테이징 이미지를 재사용하거나 이전 이미지로 롤백해도 실제 이미지 식별자를 기록한다. GitHub Variable의 수동 품질 버전은 사용하지 않는다.
 
@@ -102,4 +101,4 @@ P95는 고정 버킷의 근사 상한값이다. 버킷은 50, 100, 250, 500, 100
 
 ## 검증 범위
 
-자동 검증은 합성 MongoDB, 합성 페이지, 통제된 시계와 모의 응답을 사용한다. 실제 지원서나 운영 Discord를 호출하지 않는다. 운영 담당자는 HTTPS와 프록시 설정, 새 채널의 메시지 수신, 링크 접근과 없음 안내를 실제 환경에서 별도로 확인한다.
+자동 검증은 합성 MongoDB, 합성 페이지, 통제된 시계와 모의 응답을 사용한다. 실제 지원서나 운영 Discord를 호출하지 않는다. 운영 담당자는 기존 HTTP 연결과 요청별 비밀번호 검사, 새 채널의 메시지 수신, 링크 접근과 없음 안내를 실제 환경에서 별도로 확인한다.

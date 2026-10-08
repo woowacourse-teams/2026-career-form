@@ -39,15 +39,15 @@ class QualityReportingHttpTest {
             {"eventId":"event1","snapshotId":"snapshot","fields":{"field":{"bound":true,"attempted":true,"written":true,"retained":true,"reason":null}},"finished":"COMPLETED"}
             """;
         var endpoint = "/api/v1/quality/executions/" + receipt.runId() + "/report";
-        mvc.perform(post(endpoint).secure(true).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + receipt.token()).content(body))
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + receipt.token()).content(body))
             .andExpect(status().isNoContent());
         var revision = records.get(receipt.runId()).revision();
-        mvc.perform(post(endpoint).secure(true).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + receipt.token()).content(body))
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + receipt.token()).content(body))
             .andExpect(status().isNoContent());
         assertThat(records.get(receipt.runId()).revision()).isEqualTo(revision);
-        mvc.perform(post(endpoint).secure(true).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + receipt.token())
+        mvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).header("Authorization", "Bearer " + receipt.token())
             .content("{\"eventId\":\"foreign\",\"snapshotId\":\"unknown\",\"fields\":{},\"finished\":\"COMPLETED\"}"))
             .andExpect(status().isBadRequest());
-        mvc.perform(get("/api/v1/quality/sites").secure(true).header("Authorization", "Bearer " + receipt.token())).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/quality/sites").header("Authorization", "Bearer " + receipt.token())).andExpect(status().isServiceUnavailable());
     }
 }

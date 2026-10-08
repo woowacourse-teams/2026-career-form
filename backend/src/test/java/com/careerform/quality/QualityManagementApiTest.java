@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.Cookie;
 
 @DisplayName("공용 비밀번호 관리 API의 접근 경계")
 @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
@@ -43,35 +42,13 @@ class QualityManagementApiTest {
     }
 
     @Test
-    @DisplayName("HTTPS 로그인은 안전한 쿠키를 발급하고 세션 없이 목록을 볼 수 없다")
-    void issuesSecureCookieAndProtectsLists() throws Exception {
-        var mvc = MockMvcBuilders.standaloneSetup(new QualityLoginController(access), new Controller())
-            .addFilters(new QualityApiFilter(access)).build();
-        mvc.perform(get("/api/v1/quality/sites").secure(true)).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/v1/quality/login").contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"synthetic-only\"}"))
-            .andExpect(status().isForbidden());
-        var response = mvc.perform(post("/api/v1/quality/login").secure(true).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"password\":\"synthetic-only\"}"))
-            .andExpect(status().isOk()).andReturn().getResponse();
-        assertThat(response.getHeaders("Set-Cookie")).anySatisfy(header -> assertThat(header)
-            .contains("Secure", "HttpOnly", "SameSite=Strict", "Path=/").doesNotContain("Path=/api/v1/quality"));
-        assertThat(response.getContentAsString()).doesNotContain("synthetic-only", "sessionToken");
-        assertThat(response.getHeaders("Set-Cookie")).anySatisfy(header -> assertThat(header)
-            .startsWith("CF_QUALITY_CSRF=").contains("Secure", "SameSite=Strict", "Max-Age=28800").doesNotContain("HttpOnly"));
-    }
-
-    @Test
-    @DisplayName("쓰기에는 CSRF가 필요하고 Grafana 토큰은 집계 읽기만 허용한다")
-    void limitsCsrfAndReadonlyCredentials() throws Exception {
+    void readonlyCredentialsNeverPermitManagementOrWriting() throws Exception {
         var mvc = MockMvcBuilders.standaloneSetup(new Controller()).addFilters(new QualityApiFilter(access)).build();
-        var login = access.login("synthetic-only", "fixture");
-        var cookie = new Cookie("CF_QUALITY_SESSION", login.sessionToken());
-        mvc.perform(post("/api/v1/quality/sites/fixture/claim").secure(true).cookie(cookie)).andExpect(status().isForbidden());
-        mvc.perform(post("/api/v1/quality/sites/fixture/claim").secure(true).cookie(cookie).header("X-Quality-CSRF", login.csrfToken()))
+        mvc.perform(get("/api/v1/quality/stats").header("Authorization", "Bearer synthetic-readonly"))
             .andExpect(status().isOk());
-        mvc.perform(get("/api/v1/quality/stats").secure(true).header("Authorization", "Bearer synthetic-readonly"))
-            .andExpect(status().isOk());
-        mvc.perform(get("/api/v1/quality/sites").secure(true).header("Authorization", "Bearer synthetic-readonly"))
+        mvc.perform(get("/api/v1/quality/sites").header("Authorization", "Bearer synthetic-readonly"))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/quality/sites/fixture/claim").header("Authorization", "Bearer synthetic-readonly"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -86,7 +63,7 @@ class QualityManagementApiTest {
     @Test
     void protectsManagementScreenAndUnconfiguredLogin() throws Exception {
         var mvc = MockMvcBuilders.standaloneSetup(new Controller()).addFilters(new QualityApiFilter(access)).build();
-        mvc.perform(get("/quality/").secure(true)).andExpect(status().isFound());
+        mvc.perform(get("/quality/login.html")).andExpect(status().isNotFound());
         var disabled = new QualityAccess(Clock.systemUTC(), "", "", store);
         var unavailable = MockMvcBuilders.standaloneSetup(new Controller()).addFilters(new QualityApiFilter(disabled)).build();
         unavailable.perform(get("/quality/login.html").secure(true)).andExpect(status().isServiceUnavailable());

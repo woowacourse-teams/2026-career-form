@@ -61,22 +61,22 @@ class QualityDailyBatchTest {
         var messages = new java.util.ArrayList<String>();
         var result = batch(message -> { messages.add(message); return new QualityDiscord.Result(QualityDiscord.Status.SENT, "123"); }, true).dispatch();
         assertThat(result.entries()).isEmpty();
-        assertThat(messages).singleElement().asString().contains("오늘 확인할 사이트가 없습니다.", "보류 1개", "https://quality.synthetic.test/quality/");
+        assertThat(messages).singleElement().asString().contains("오늘 확인할 사이트가 없습니다.", "보류 1개", "http://quality.synthetic.test/quality/");
     }
 
     @Test
     void doesNotCatchUpWeekendOrBeforeNotificationTime() {
         var early = new QualityDailyBatch(store, registry, Clock.fixed(now.minusSeconds(1), ZoneOffset.UTC), "test",
-            "https://quality.synthetic.test/quality/", false, message -> new QualityDiscord.Result(QualityDiscord.Status.SENT, "123"), 7, 20);
+            "http://quality.synthetic.test/quality/", false, message -> new QualityDiscord.Result(QualityDiscord.Status.SENT, "123"), 7, 20);
         assertThat(early.dispatch()).isNull();
         var weekend = new QualityDailyBatch(store, registry, Clock.fixed(Instant.parse("2030-01-05T00:20:00Z"), ZoneOffset.UTC), "test",
-            "https://quality.synthetic.test/quality/", false, message -> new QualityDiscord.Result(QualityDiscord.Status.SENT, "123"), 7, 20);
+            "http://quality.synthetic.test/quality/", false, message -> new QualityDiscord.Result(QualityDiscord.Status.SENT, "123"), 7, 20);
         assertThat(weekend.dispatch()).isNull();
         assertThat(records).isEmpty();
     }
 
     private QualityDailyBatch batch(QualityDiscord.Sender sender, boolean configured) {
-        return new QualityDailyBatch(store, registry, clock, "test", "https://quality.synthetic.test/quality/", configured, sender, 7, 20);
+        return new QualityDailyBatch(store, registry, clock, "test", "http://quality.synthetic.test/quality/", configured, sender, 7, 20);
     }
 
     @Test

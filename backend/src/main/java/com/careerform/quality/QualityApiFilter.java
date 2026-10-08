@@ -3,8 +3,8 @@ package com.careerform.quality;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -38,15 +38,9 @@ public final class QualityApiFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         secureHeaders(response);
         if (access == null) { reject(response, 404); return; }
-        if (!request.isSecure()) { reject(response, 403); return; }
         var path = request.getRequestURI();
         if (path.equals("/quality") || path.startsWith("/quality/")) {
             if (!access.configured()) { reject(response, 503); return; }
-            if (!Set.of("/quality/login.html", "/quality/login.js", "/quality/quality.css").contains(path)
-                && !access.authorize(session(request), null, false)) {
-                response.sendRedirect("/quality/login.html");
-                return;
-            }
             chain.doFilter(request, response);
             return;
         }
@@ -55,11 +49,14 @@ public final class QualityApiFilter extends OncePerRequestFilter {
         var login = path.equals(PREFIX + "/login") && request.getMethod().equals("POST");
         if (!reporting && !sameOrigin(request)) { reject(response, 403); return; }
         if (!reporting && !login) {
-            var token = session(request);
             var query = path.equals(PREFIX + "/stats") && request.getMethod().equals("GET") && access.canQuery(bearer(request));
-            if (!query && !access.authorize(token, request.getHeader("X-Quality-CSRF"), writing)) {
-                reject(response, writing && access.authorize(token, null, false) ? 403 : 401);
-                return;
+            if (!query) {
+                var status = access.login(password(request), request.getRemoteAddr()).status();
+                if (status != QualityAccess.LoginStatus.OK) {
+                    reject(response, status == QualityAccess.LoginStatus.THROTTLED ? 429
+                        : status == QualityAccess.LoginStatus.NOT_CONFIGURED ? 503 : 401);
+                    return;
+                }
             }
         }
         if (writing) {
@@ -72,15 +69,15 @@ public final class QualityApiFilter extends OncePerRequestFilter {
         }
     }
 
-    static String session(HttpServletRequest request) {
-        return cookie(request, "CF_QUALITY_SESSION");
-    }
+    static String claimant(HttpServletRequest request) { return request.getHeader("X-Quality-Claimant"); }
 
-    static String claimant(HttpServletRequest request) { return cookie(request, "CF_QUALITY_CLAIM"); }
-
-    private static String cookie(HttpServletRequest request, String name) {
-        return request.getCookies() == null ? null : Arrays.stream(request.getCookies())
-            .filter(cookie -> cookie.getName().equals(name)).map(jakarta.servlet.http.Cookie::getValue).findFirst().orElse(null);
+    private String password(HttpServletRequest request) {
+        var authorization = request.getHeader("Authorization");
+        if (authorization == null || !authorization.startsWith("Basic ") || authorization.length() > 8192) { return null; }
+        try {
+            var decoded = new String(Base64.getDecoder().decode(authorization.substring(6)), StandardCharsets.UTF_8);
+            return decoded.startsWith("quality:") ? decoded.substring(8) : null;
+        } catch (IllegalArgumentException exception) { return null; }
     }
 
     static String bearer(HttpServletRequest request) {
@@ -93,8 +90,9 @@ public final class QualityApiFilter extends OncePerRequestFilter {
         if (origin == null) { return true; }
         try {
             var uri = URI.create(origin);
-            var port = uri.getPort() < 0 ? 443 : uri.getPort();
-            return "https".equals(uri.getScheme()) && uri.getUserInfo() == null && uri.getRawQuery() == null
+            var scheme = request.isSecure() ? "https" : "http";
+            var port = uri.getPort() < 0 ? (scheme.equals("https") ? 443 : 80) : uri.getPort();
+            return scheme.equals(uri.getScheme()) && uri.getUserInfo() == null && uri.getRawQuery() == null
                 && uri.getRawFragment() == null && (uri.getRawPath() == null || uri.getRawPath().isEmpty())
                 && request.getServerName().equalsIgnoreCase(uri.getHost()) && request.getServerPort() == port;
         } catch (IllegalArgumentException exception) { return false; }

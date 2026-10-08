@@ -1,3 +1,5 @@
+import { accessHeaders, clearAccess } from "./access.js";
+
 const items = document.getElementById("items");
 const message = document.getElementById("message");
 const more = document.getElementById("more");
@@ -9,8 +11,6 @@ let loadGeneration = 0;
 let selectionReasons = new Map();
 const linkedCandidate = new URLSearchParams(location.search).get("candidate");
 const targetCandidate = /^candidate_[0-9a-f]{64}$/.test(linkedCandidate ?? "") ? linkedCandidate : null;
-claimant.value = localStorage.getItem("quality-claimant") ?? "";
-claimant.addEventListener("change", () => localStorage.setItem("quality-claimant", claimant.value));
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -19,15 +19,10 @@ function element(tag, text, className) {
   return node;
 }
 
-function csrf() {
-  return document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("CF_QUALITY_CSRF="))?.slice("CF_QUALITY_CSRF=".length)
-    ?? sessionStorage.getItem("quality-csrf") ?? "";
-}
-
 async function api(path, payload) {
   const response = await fetch("/api/v1/quality" + path, {
-    method: payload === undefined ? "GET" : "POST", credentials: "same-origin",
-    headers: payload === undefined ? {} : { "Content-Type": "application/json", "X-Quality-CSRF": csrf() },
+    method: payload === undefined ? "GET" : "POST", credentials: "omit",
+    headers: { ...accessHeaders(), ...(payload === undefined ? {} : { "Content-Type": "application/json" }) },
     body: payload === undefined ? undefined : JSON.stringify(payload),
   });
   if (response.status === 401) { location.replace("/quality/login.html"); throw new Error("로그인이 만료되었습니다."); }
@@ -173,9 +168,9 @@ for (const [id, status] of [["pending", "PENDING"], ["completed", "COMPLETED"]])
 }
 more.addEventListener("click", () => void load(true));
 document.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
-document.getElementById("logout").addEventListener("click", async () => {
-  try { await api("/logout", {}); sessionStorage.removeItem("quality-csrf"); location.replace("/quality/login.html"); }
-  catch (error) { showError(error.message); }
+document.getElementById("logout").addEventListener("click", () => {
+  clearAccess();
+  location.replace("/quality/login.html");
 });
 document.getElementById("confirm-form").addEventListener("submit", async (event) => {
   event.preventDefault();

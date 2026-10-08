@@ -504,7 +504,7 @@ RUN_MONITORING_INTEGRATION=1 MONITORING_PLAYWRIGHT_MODULE=/absolute/path/to/node
 
 Grafana는 고정 버전 Infinity 4.1.1을 시작 전에 설치한다. 인터넷에서 플러그인을 내려받을 수 있어야 한다. 신규 데이터 소스는 JSONata backend parser로 집계 API를 호출하고 조회 토큰은 `secureJsonData`에 보관한다. 설치와 운영 적용은 사람이 수행한다.
 
-운영 담당자는 `/etc/career-form-monitoring/secrets/grafana.env`에 환경별 `QUALITY_DEV_API_ORIGIN`, `QUALITY_STAGING_API_ORIGIN`, `QUALITY_PROD_API_ORIGIN`과 대응하는 `QUALITY_DEV_QUERY_TOKEN`, `QUALITY_STAGING_QUERY_TOKEN`, `QUALITY_PROD_QUERY_TOKEN`을 설정한다. origin은 백엔드의 HTTPS origin이고 query 토큰은 해당 백엔드의 `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH`와 대응하는 별도 임의 토큰이다. 공용 관리 비밀번호를 사용하지 않는다. 미설정 환경의 조회는 준비된 데이터로 해석하지 않는다.
+운영 담당자는 `/etc/career-form-monitoring/secrets/grafana.env`에 환경별 `QUALITY_DEV_API_ORIGIN`, `QUALITY_STAGING_API_ORIGIN`, `QUALITY_PROD_API_ORIGIN`과 대응하는 `QUALITY_DEV_QUERY_TOKEN`, `QUALITY_STAGING_QUERY_TOKEN`, `QUALITY_PROD_QUERY_TOKEN`을 설정한다. origin은 백엔드의 HTTP origin이고 query 토큰은 해당 백엔드의 `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH`와 대응하는 별도 임의 토큰이다. 공용 관리 비밀번호를 사용하지 않는다. 미설정 환경의 조회는 준비된 데이터로 해석하지 않는다.
 
 기존 운영 알림 웹훅은 그대로 유지한다. 필드 수 확인 요청은 백엔드의 `CAREER_FORM_QUALITY_DISCORD_WEBHOOK`으로 새 채널에 보낸다. 처음에는 `CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT=prod` 한 환경에서만 활성화한다.
 

@@ -72,7 +72,8 @@ public final class QualityRegistryController {
             }
             default -> throw new IllegalArgumentException("Invalid action");
         }
-        return ResponseEntity.noContent().header("Set-Cookie", QualityLoginController.claimCookie(access.renewVerifiedClaimant(owner))).build();
+        access.renewVerifiedClaimant(owner);
+        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler(QualityRegistry.Conflict.class)

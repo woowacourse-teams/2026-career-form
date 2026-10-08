@@ -53,7 +53,7 @@ class QualityDeploymentTest(unittest.TestCase):
         settings = {"CAREER_FORM_QUALITY_ENABLED": "true", "SERVER_FORWARD_HEADERS_STRATEGY": "framework",
             "CAREER_FORM_QUALITY_PASSWORD_HASH": "pbkdf2-sha256$600000$synthetic-salt$synthetic-digest",
             "CAREER_FORM_QUALITY_QUERY_TOKEN_HASH": "b" * 64,
-            "CAREER_FORM_QUALITY_MANAGEMENT_URL": "https://synthetic.test/quality/",
+            "CAREER_FORM_QUALITY_MANAGEMENT_URL": "http://synthetic.test/quality/",
             "CAREER_FORM_QUALITY_DISCORD_ENABLED": "true", "CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT": "staging",
             "CAREER_FORM_QUALITY_DISCORD_WEBHOOK": "https://discord.invalid/synthetic-webhook",
             "CAREER_FORM_QUALITY_SELECTION_DAYS": "14", "CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE": "30"}

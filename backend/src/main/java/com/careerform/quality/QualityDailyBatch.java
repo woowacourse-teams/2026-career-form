@@ -24,7 +24,7 @@ public final class QualityDailyBatch {
     public QualityDailyBatch(QualityStore store, QualityRegistry registry, Clock clock, String environment, String managementUrl,
                              boolean configured, QualityDiscord.Sender sender, int recentDays, long minSample) {
         if (recentDays < 1 || recentDays > 90 || minSample < 1) { throw new IllegalArgumentException("Invalid selection window"); }
-        if (configured && (managementUrl == null || !managementUrl.matches("https://[A-Za-z0-9.-]+(?::[0-9]+)?/quality/")
+        if (configured && (managementUrl == null || !managementUrl.matches("https?://[A-Za-z0-9.-]+(?::[0-9]+)?/quality/")
             || managementUrl.length() > 300)) { throw new IllegalArgumentException("Invalid management URL"); }
         this.store = store; this.registry = registry; this.clock = clock; this.environment = environment;
         this.managementUrl = managementUrl; this.configured = configured; this.sender = sender;

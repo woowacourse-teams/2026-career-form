@@ -1,9 +1,6 @@
-import http.client
-import http.server
 import json
 import os
 import socket
-import ssl
 import subprocess
 import tempfile
 import threading
@@ -36,7 +33,7 @@ class QualityRuntimeTest(unittest.TestCase):
         cls.addClassCleanup(cls.log.close)
         environment = dict(os.environ)
         environment.update({"SPRING_MONGODB_URI": f"mongodb://127.0.0.1:{port}/cf164_runtime",
-            "SERVER_FORWARD_HEADERS_STRATEGY": "framework", "CAREER_FORM_ANALYSIS_ENABLED": "false", "CAREER_FORM_LLM_ENABLED": "false",
+            "SERVER_FORWARD_HEADERS_STRATEGY": "none", "CAREER_FORM_ANALYSIS_ENABLED": "false", "CAREER_FORM_LLM_ENABLED": "false",
             "CAREER_FORM_LANGSMITH_ENABLED": "false", "OPENAI_API_KEY": "", "TYPESAFE_API_KEY": ""})
         cls.backend = subprocess.Popen(("java", "-jar", str(jar), "--server.address=127.0.0.1",
             f"--server.port={cls.backend_port}", "--management.server.port=0",
@@ -46,9 +43,9 @@ class QualityRuntimeTest(unittest.TestCase):
             cwd=ROOT, env=environment, stdout=cls.log, stderr=subprocess.STDOUT)
         cls.addClassCleanup(cls._stop_backend)
         cls._wait_ready()
-        cls._start_proxy()
-        cls.context = ssl._create_unverified_context()
+        cls.url = f"http://127.0.0.1:{cls.backend_port}"
         cls._seed_candidate()
+        cls._warm_reporting()
 
     @classmethod
     def _stop_backend(cls):
@@ -80,59 +77,31 @@ class QualityRuntimeTest(unittest.TestCase):
         raise AssertionError("Synthetic quality backend readiness deadline exceeded")
 
     @classmethod
-    def _start_proxy(cls):
-        certificate = cls.root / "test-certificate.cert"
-        private = cls.root / "test-private.fixture"
-        subprocess.run(("openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(private),
-            "-out", str(certificate), "-days", "1", "-subj", "/CN=localhost"), check=True, capture_output=True)
-
-        class Proxy(http.server.BaseHTTPRequestHandler):
-            def route(self):
-                upstream = http.client.HTTPConnection("127.0.0.1", cls.backend_port, timeout=15)
-                try:
-                    payload = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-                    headers = {name: value for name, value in self.headers.items()
-                        if not name.lower().startswith("x-forwarded-") and name.lower() not in {"forwarded", "connection", "host"}}
-                    headers.update({"Host": f"127.0.0.1:{cls.backend_port}", "X-Forwarded-Proto": "https",
-                        "X-Forwarded-Host": f"127.0.0.1:{cls.proxy.server_port}"})
-                    upstream.request(self.command, self.path, payload or None, headers)
-                    received = upstream.getresponse()
-                    body = received.read()
-                    self.send_response(received.status)
-                    for name, value in received.getheaders():
-                        if name.lower() not in {"transfer-encoding", "connection", "content-length"}:
-                            self.send_header(name, value)
-                    self.send_header("Content-Length", str(len(body)))
-                    self.end_headers()
-                    self.wfile.write(body)
-                finally:
-                    upstream.close()
-
-            do_GET = route
-            do_POST = route
-
-            def log_message(self, format, *args):
-                pass
-
-        cls.proxy = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Proxy)
-        tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        tls.load_cert_chain(certificate, private)
-        cls.proxy.socket = tls.wrap_socket(cls.proxy.socket, server_side=True)
-        cls.addClassCleanup(cls.proxy.server_close)
-        cls.addClassCleanup(cls.proxy.shutdown)
-        threading.Thread(target=cls.proxy.serve_forever, daemon=True).start()
-        cls.url = f"https://127.0.0.1:{cls.proxy.server_port}"
-
-    @classmethod
     def _seed_candidate(cls):
         payload = {"schemaVersion": 2, "snapshotId": "runtime-fixture", "site": {
             "host": "careers.synthetic.test", "pathPattern": "/synthetic-private-route"}, "sections": [{"sectionId": "s1", "fields": [{
             "candidateId": "f1", "element": "input", "control": "text", "visibility": "visible", "displayName": "synthetic-private-label"}]}]}
         request = urllib.request.Request(cls.url + "/api/v1/fields/analyze", data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(request, context=cls.context, timeout=15) as response:
+        with urllib.request.urlopen(request, timeout=15) as response:
             if response.status != 200:
                 raise AssertionError("Synthetic analysis failed")
+
+    @classmethod
+    def _warm_reporting(cls):
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline:
+            payload = {"schemaVersion": 2, "snapshotId": "warmup", "site": {
+                "host": "warmup.synthetic.test", "pathPattern": "/public"}, "sections": [{"sectionId": "warmup", "fields": [{
+                "candidateId": "warmup", "element": "input", "control": "text", "visibility": "visible"}]}]}
+            request = urllib.request.Request(cls.url + "/api/v1/fields/analyze", data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json", "X-Career-Form-Capabilities": "quality-v1"})
+            with urllib.request.urlopen(request, timeout=15) as response:
+                response.read()
+                if response.headers.get("X-Career-Form-Run") and response.headers.get("X-Career-Form-Report-Token"):
+                    return
+            threading.Event().wait(0.2)
+        raise AssertionError("Synthetic reporting readiness deadline exceeded")
 
     @unittest.skipUnless(os.environ.get("QUALITY_PLAYWRIGHT_MODULE"), "Explicit isolated browser dependency")
     def test_management_browser_flow(self):
@@ -155,7 +124,7 @@ class QualityRuntimeTest(unittest.TestCase):
                 "sections": [{"sectionId": "s1", "fields": [{"candidateId": candidate, "element": "input", "control": "text", "visibility": "visible"}]}]}
             request = urllib.request.Request(self.url + "/api/v1/fields/analyze", data=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json", "X-Career-Form-Capabilities": "quality-v1", "X-Career-Form-Version": "0.1.0", **headers})
-            with urllib.request.urlopen(request, context=self.context, timeout=15) as response:
+            with urllib.request.urlopen(request, timeout=15) as response:
                 body = json.load(response)
                 self.assertEqual(snapshot, body["snapshotId"])
                 self.assertNotIn("quality", body)
@@ -166,7 +135,7 @@ class QualityRuntimeTest(unittest.TestCase):
                 candidate: {"bound": False, "attempted": False, "written": False, "retained": False, "reason": "NOT_MAPPED"}}, "finished": finished}
             request = urllib.request.Request(self.url + "/api/v1/quality/executions/" + run + "/report", data=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + token})
-            with urllib.request.urlopen(request, context=self.context, timeout=15) as response:
+            with urllib.request.urlopen(request, timeout=15) as response:
                 self.assertEqual(204, response.status)
 
         run, token = analyze("report-first", "c1", {})
@@ -175,7 +144,7 @@ class QualityRuntimeTest(unittest.TestCase):
         report(run, token, "report-second", "c2", "identity2", "COMPLETED")
         report(run, token, "report-second", "c2", "identity2", "COMPLETED")
         request = urllib.request.Request(self.url + "/api/v1/quality/stats?site=report.synthetic.test&groupBy=ROUTE", headers={"Authorization": "Bearer synthetic-readonly"})
-        with urllib.request.urlopen(request, context=self.context, timeout=15) as response:
+        with urllib.request.urlopen(request, timeout=15) as response:
             row = json.load(response)["rows"][0]
         self.assertEqual(2, row["analysisRequests"])
         self.assertEqual(1, row["executionCount"])
