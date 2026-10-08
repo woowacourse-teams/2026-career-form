@@ -433,3 +433,10 @@
 - Source-Revision: 15a5e992a3e291263ecfdf564162ea04930094e0
 - 승인한 네 후보를 [CF-158 bundle](../raw/issues/CF-158/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 기본 필터 패널, 요청 연결, 외부 성공 P95와 표본, 수집 상태 해석과 사람 담당 반영 경계를 기록했다.
+
+## [2026-10-08] ingest | CF-168 상태 드라이버 실패의 안전 범위 보류
+
+- Approval-Digest: f5b043321be6413904e748fc04484291fde3a9e5fe7378d439566b7bf093ec8b
+- Source-Revision: 08107e139501224e8f2a71912c8fe40354f3442e
+- 승인한 세 후보를 [CF-168 bundle](../raw/issues/CF-168/manifest.md)에 기록하고 [Greeting 공통 어댑터](topics/adapter-greeting.md), [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
+- 변경 전 실패 판정 기준, Greeting 어학 수준 필드 단위 보류, `OPTION_UNMATCHED` 보고 범위를 기록했다.
