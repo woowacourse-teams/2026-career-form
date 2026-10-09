@@ -66,8 +66,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비·필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
 | [Jev·OpenAI 호출 추적](topics/provider-call-tracing.md) | LangSmith Java SDK, 비식별 투영과 관측 실패 격리 | 2026-10-01 |
 | [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증 | 2026-10-01 |
-| [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 실사이트와 fixture 분리 평가, revision별 기준선 이력과 비교 조건 | 2026-09-28 |
-| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 평가 에이전트의 전체 필드 분모, 비민감 입력, DOM 검증과 영속 보고 경계 | 2026-09-28 |
+| [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 계약 1.1 원인별 집계, 설치 revision 근거와 비교 보류 및 과거 기준선 | 2026-10-09 |
+| [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모·DOM 검증, 후보 관측 일치와 설치본 snapshot 기반 보고 | 2026-10-09 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행·검색·후속 재검토, 혼합 학력 행·role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환·로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월·연월일 달력 실행의 안전 경계 | 2026-09-28 |

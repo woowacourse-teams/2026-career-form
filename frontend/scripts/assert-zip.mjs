@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import AdmZip from "adm-zip";
+import { assertBuildInfo } from "./assert-build-info.mjs";
 
 const outputDirectory = resolve(".output");
 const archive = (await readdir(outputDirectory)).find((fileName) =>
@@ -19,6 +20,7 @@ const entryNames = new Set(
 );
 
 for (const requiredEntry of [
+  "build-info.json",
   "manifest.json",
   "popup.html",
   "options.html",
@@ -36,6 +38,10 @@ if (![...entryNames].some((entryName) => entryName.endsWith(".woff2"))) {
 }
 
 const zip = new AdmZip(resolve(outputDirectory, archive));
+assertBuildInfo(
+  zip.readAsText("build-info.json"),
+  zip.readAsText("background.js"),
+);
 const manifest = JSON.parse(zip.readAsText("manifest.json"));
 if (
   manifest.options_ui?.page !== "options.html" ||
