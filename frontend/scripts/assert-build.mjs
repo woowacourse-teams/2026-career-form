@@ -1,9 +1,15 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { assertBuildInfo } from "./assert-build-info.mjs";
 
 const outputDirectory = resolve(".output/chrome-mv3");
 const manifest = JSON.parse(
   await readFile(resolve(outputDirectory, "manifest.json"), "utf8"),
+);
+
+assertBuildInfo(
+  await readFile(resolve(outputDirectory, "build-info.json"), "utf8"),
+  await readFile(resolve(outputDirectory, "background.js"), "utf8"),
 );
 
 if (manifest.manifest_version !== 3) {
