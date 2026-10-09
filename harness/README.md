@@ -44,18 +44,54 @@ python3 harness/scripts/ensure-environment.py
 
 ```bash
 .venv/bin/python harness/scripts/evaluate-generic-autofill.py \
-  --ground-truth harness/fixtures/generic-autofill/ground-truth-v1.json \
-  --observations harness/fixtures/generic-autofill/observations-v1.json \
-  --output harness/fixtures/generic-autofill/baseline-v1.json
+  --ground-truth harness/fixtures/generic-autofill/ground-truth-v1.1.json \
+  --observations harness/fixtures/generic-autofill/observations-v1.1.json \
+  --output /tmp/generic-autofill-baseline.json
 ```
 
-재측정은 새 observations 파일을 입력하고 기존 artifact를 `--compare-to`로 전달한다. 평가 계약, 합성 프로필 version과 site 집합이 같을 때만 비교하며, 결과는 metric별 numerator, denominator와 rate delta를 보존하고 오입력률, 기존 값 훼손 증가 및 품질 지표 하락을 regression으로 분리한다.
+계약 `1.1`의 예제는 `alpha`와 `beta`라는 합성 사이트를 사용한다. 예제의 SHA와
+`LIVE_SITE` 구획은 parser 검증용이며 실제 설치본 검증이나 실사이트 실행 근거가 아니다.
+기존 `*-v1.json`과 병합된 raw는 당시 기록으로 보존한다. 현재 CLI는 이전 계약 입력과
+서로 다른 계약 버전의 비교를 거부하며 과거 기록을 추측으로 변환하지 않는다.
+
+`reason_counts`는 `FAILED`와 `DEFERRED` 각각의 원인별 개수다. 0건 코드도 포함하며
+각 구획의 합은 동일한 종결 결과의 `stage_counts`와 같다. `reason_evidence`는 정렬된
+`site_id`, `candidate_id`, `field_id`, `terminal_result`, `reason_code`만 담는다.
+성공 후보는 원인 집계에 포함하지 않는다. `undiscovered_autofillable_count`는 정답 목록의
+`AUTOFILLABLE` 중 관측되지 않은 필드 수이며 실패 원인으로 추정하지 않는다.
+`MEASURED`인데 후보가 하나도 없으면 전체 분모가 미발견이다. `INCONCLUSIVE` 사이트의
+원인 집계와 미발견 수는 0이 아니라 `null`이며 source 전체는 측정한 사이트만 집계한다.
+
+각 run의 `revision`, `revision_status`, `revision_evidence`는 함께 검증한다.
+설치본에서 조회한 `build-info.json` 스키마는 `schema_version: "1.0"`,
+`revision: 전체 commit SHA 또는 null`, `source_state: CLEAN/DIRTY/UNKNOWN`이다.
+근거의 `metadata_sha256`은 이 세 키 순서의 공백 없는 JSON과 마지막 개행을
+UTF-8로 직렬화한 SHA-256이다. 이는 메타데이터 식별자이지 ZIP 무결성 서명이 아니다.
+
+- `LIVE_SITE`의 확인 방법은 `INSTALLED_BUILD_METADATA`, `FIXTURE`는
+  `FIXTURE_SOURCE_METADATA`이며 서로 대신 사용할 수 없다.
+- CLEAN 메타데이터와 SHA, digest가 일치할 때만 `VERIFIED`이며 해당 SHA를 기록한다.
+- DIRTY/UNKNOWN은 `revision: "UNVERIFIED"` 및 `revision_status: "UNVERIFIED"`로
+  기록하고 `unverified_reason`을 `DIRTY_SOURCE`/`UNKNOWN_SOURCE`로 둔다.
+- 조회할 수 없거나 메타데이터가 누락·손상됐으면 `method: "UNAVAILABLE"`,
+  `metadata: null`, `metadata_sha256: null`과 `INSTALLATION_UNAVAILABLE`,
+  `METADATA_MISSING`, `METADATA_INVALID` 중 실제 사유를 기록한다. 잘못된 원문은 보관하지 않는다.
+- 설치본의 조회 절차는 `cf-live-autofill-evaluation` 스킬을 따른다. HEAD, 버전 문자열,
+  로컬 경로를 설치본 확인 근거로 대체하지 않는다.
+
+재측정은 새 observations 파일을 입력하고 기존 artifact를 `--compare-to`로 전달한다.
+평가 계약, 합성 프로필 version과 site 집합이 같을 때만 비교한다. 수치 차이는
+metric별 numerator, denominator와 rate delta로 유지한다. source의 모든 비교 사이트가
+양쪽 모두 측정됐고 서로 다른 VERIFIED revision일 때만 `revision_comparison.status`가
+`COMPARABLE`이며 오입력률·기존 값 훼손 증가 및 품질 하락을 `regressions`에 분리한다.
+미확인 revision, 같은 revision 재실행 또는 미확정 사이트는 `HELD`와 정형 사유를
+남기고 revision 기반 회귀를 확정하지 않는다. COMPARABLE도 인과관계 증명은 아니다.
 
 ```bash
 .venv/bin/python harness/scripts/evaluate-generic-autofill.py \
-  --ground-truth harness/fixtures/generic-autofill/ground-truth-v1.json \
+  --ground-truth harness/fixtures/generic-autofill/ground-truth-v1.1.json \
   --observations /tmp/generic-autofill-observations.json \
-  --compare-to harness/fixtures/generic-autofill/baseline-v1.json
+  --compare-to /tmp/generic-autofill-baseline.json
 ```
 
 ## Project Issue 기획

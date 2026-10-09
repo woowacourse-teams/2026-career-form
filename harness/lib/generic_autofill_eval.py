@@ -1,8 +1,10 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from harness.lib.evaluation_revision import RevisionEvidence
 
-CONTRACT_VERSION = "1.0"
+
+CONTRACT_VERSION = "1.1"
 SOURCES = ("LIVE_SITE", "FIXTURE")
 RUN_STATUSES = ("MEASURED", "INCONCLUSIVE")
 CLASSIFICATIONS = (
@@ -116,6 +118,8 @@ class RunObservation:
     source: str
     status: str
     revision: str
+    revision_status: str
+    revision_evidence: RevisionEvidence
     provider: str
     model: str
     timeout_ms: int
@@ -242,6 +246,8 @@ def _parse_run(payload: object, truth: GroundTruth) -> RunObservation:
         "source",
         "status",
         "revision",
+        "revision_status",
+        "revision_evidence",
         "provider",
         "model",
         "timeout_ms",
@@ -257,11 +263,18 @@ def _parse_run(payload: object, truth: GroundTruth) -> RunObservation:
     site = truth.by_id.get(site_id)
     if site is None:
         raise EvaluationError(f"알 수 없는 site_id입니다: {site_id}")
+    source = _enum(value.get("source"), SOURCES, "source")
+    evidence = RevisionEvidence.parse(value.get("revision_evidence"), source)
+    evidence.validate_claim(value.get("revision"), value.get("revision_status"))
     run = RunObservation(
         site_id=site_id,
-        source=_enum(value.get("source"), SOURCES, "source"),
+        source=source,
         status=_enum(value.get("status"), RUN_STATUSES, "status"),
         revision=_string(value.get("revision"), "revision"),
+        revision_status=_enum(
+            value.get("revision_status"), ("VERIFIED", "UNVERIFIED"), "revision_status"
+        ),
+        revision_evidence=evidence,
         provider=_string(value.get("provider"), "provider"),
         model=_string(value.get("model"), "model"),
         timeout_ms=_positive_int(value.get("timeout_ms"), "timeout_ms"),
@@ -276,10 +289,7 @@ def _parse_run(payload: object, truth: GroundTruth) -> RunObservation:
             "inconclusive_reason",
         ),
         usage=_parse_usage(value.get("usage")),
-        candidates=tuple(
-            _parse_candidate(item, site)
-            for item in _list(value.get("candidates"), "candidates")
-        ),
+        candidates=parse_site_candidates(value.get("candidates"), site),
     )
     _validate_run(run, truth)
     return run
@@ -353,6 +363,17 @@ def _parse_candidate(payload: object, site: GroundTruthSite) -> CandidateObserva
     return candidate
 
 
+def parse_site_candidates(
+    payload: object, site: GroundTruthSite
+) -> tuple[CandidateObservation, ...]:
+    candidates = tuple(
+        _parse_candidate(item, site) for item in _list(payload, "candidates")
+    )
+    _unique(tuple(candidate.candidate_id for candidate in candidates), "candidate_id")
+    _unique(tuple(candidate.field_id for candidate in candidates), "observed field_id")
+    return candidates
+
+
 def _validate_candidate(candidate: CandidateObservation) -> None:
     if not candidate.stages or candidate.stages != STAGES[: len(candidate.stages)]:
         raise EvaluationError("candidate stages는 순차 prefix여야 합니다")
@@ -380,15 +401,9 @@ def _validate_candidate(candidate: CandidateObservation) -> None:
 def _validate_run(run: RunObservation, truth: GroundTruth) -> None:
     if run.profile_version != truth.profile_version:
         raise EvaluationError("run profile_version이 ground truth와 다릅니다")
-    candidate_ids = tuple(candidate.candidate_id for candidate in run.candidates)
-    field_ids = tuple(candidate.field_id for candidate in run.candidates)
-    _unique(candidate_ids, f"{run.site_id} candidate_id")
-    _unique(field_ids, f"{run.site_id} observed field_id")
     if run.status == "MEASURED":
         if run.inconclusive_reason is not None:
             raise EvaluationError("MEASURED run에는 inconclusive_reason을 쓸 수 없습니다")
-        if not run.candidates:
-            raise EvaluationError("MEASURED run에는 candidate가 필요합니다")
     if run.status == "INCONCLUSIVE":
         if run.inconclusive_reason is None:
             raise EvaluationError("INCONCLUSIVE run에는 사유가 필요합니다")
@@ -504,6 +519,8 @@ def _render_site(run: RunObservation, site: GroundTruthSite) -> dict[str, object
     metadata = {
         "status": run.status,
         "revision": run.revision,
+        "revision_status": run.revision_status,
+        "revision_evidence": run.revision_evidence.render(),
         "provider": run.provider,
         "model": run.model,
         "timeout_ms": run.timeout_ms,
@@ -513,7 +530,11 @@ def _render_site(run: RunObservation, site: GroundTruthSite) -> dict[str, object
         "inconclusive_reason": run.inconclusive_reason,
     }
     if run.status == "INCONCLUSIVE":
-        return {**metadata, "metrics": None, "usage": _render_usage((run,))}
+        return {
+            **metadata, "metrics": None, "usage": _render_usage((run,)),
+            "reason_counts": None, "reason_evidence": None,
+            "undiscovered_autofillable_count": None,
+        }
     return {**metadata, **_render_metrics((run,), GroundTruth("", (site,)))}
 
 
@@ -557,6 +578,44 @@ def _render_metrics(
             for result in TERMINAL_RESULTS
         },
         "usage": _render_usage(runs),
+        **summarize_outcomes({run.site_id: run.candidates for run in runs}, truth),
+    }
+
+
+def summarize_outcomes(
+    observations: Mapping[str, tuple[CandidateObservation, ...]], truth: GroundTruth
+) -> dict[str, object]:
+    candidates = tuple(item for items in observations.values() for item in items)
+    return {
+        "reason_counts": {
+            result: {
+                reason: sum(
+                    candidate.terminal_result == result and candidate.reason_code == reason
+                    for candidate in candidates
+                )
+                for reason in REASON_CODES
+            }
+            for result in TERMINAL_RESULTS
+        } if observations else None,
+        "reason_evidence": [
+            {
+                "site_id": site_id,
+                "candidate_id": candidate.candidate_id,
+                "field_id": candidate.field_id,
+                "terminal_result": candidate.terminal_result,
+                "reason_code": candidate.reason_code,
+            }
+            for site_id, items in sorted(observations.items())
+            for candidate in sorted(items, key=lambda item: item.candidate_id)
+            if candidate.terminal_result is not None
+        ] if observations else None,
+        "undiscovered_autofillable_count": sum(
+            len({
+                field.field_id for field in truth.by_id[site_id].fields
+                if field.classification == "AUTOFILLABLE"
+            } - {candidate.field_id for candidate in items})
+            for site_id, items in observations.items()
+        ) if observations else None,
     }
 
 

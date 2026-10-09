@@ -1,7 +1,13 @@
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
-from harness.lib.generic_autofill_eval import CLASSIFICATIONS, Metric
+from harness.lib.evaluation_revision import RevisionEvidence
+from harness.lib.generic_autofill_eval import (
+    CLASSIFICATIONS, CONTRACT_VERSION, Metric, GroundTruth, GroundTruthField,
+    GroundTruthSite, parse_site_candidates, summarize_outcomes,
+    EvaluationError as ObservationError,
+)
 
 
 CANDIDATE_STATUSES = frozenset(
@@ -95,6 +101,7 @@ class SiteEvaluationResult:
     deferred_count: int
     failed_count: int
     incorrect_write_count: int
+    candidates: tuple[Mapping[str, object], ...]
 
     def __post_init__(self) -> None:
         counts = (
@@ -145,6 +152,7 @@ class ReportMetadata:
     contract_version: str
     profile_mode: str
     profile_version: str
+    revision_evidence: Mapping[str, object]
 
     def __post_init__(self) -> None:
         required = (
@@ -158,6 +166,10 @@ class ReportMetadata:
             raise EvaluationError("제품 revision 검증 상태가 올바르지 않습니다")
         if self.profile_mode not in PROFILE_MODES:
             raise EvaluationError("프로필 mode가 올바르지 않습니다")
+        if self.contract_version != CONTRACT_VERSION:
+            raise EvaluationError(f"contract_version은 {CONTRACT_VERSION}이어야 합니다")
+        evidence = RevisionEvidence.parse(self.revision_evidence, "LIVE_SITE")
+        evidence.validate_claim(self.product_revision, self.product_revision_status)
 
 
 @dataclass(frozen=True)
@@ -190,6 +202,34 @@ def build_site_report(
     result: SiteEvaluationResult,
     metadata: ReportMetadata,
 ) -> dict[str, object]:
+    truth_site = GroundTruthSite(
+        site.site_id,
+        tuple(GroundTruthField(field.field_id, field.classification, "", "")
+              for field in site.fields),
+    )
+    try:
+        candidates = parse_site_candidates(result.candidates, truth_site)
+    except ObservationError as error:
+        raise EvaluationError(str(error)) from error
+    observed_counts = (
+        len(candidates),
+        sum("MAPPED" in item.stages for item in candidates),
+        sum(item.mapping_result == "CORRECT" for item in candidates),
+        sum(item.mapping_result == "CORRECT" and "BOUND" in item.stages for item in candidates),
+        sum("WRITTEN" in item.stages for item in candidates),
+        sum(item.mapping_result == "CORRECT" and "RETAINED" in item.stages for item in candidates),
+        sum(item.terminal_result == "DEFERRED" for item in candidates),
+        sum(item.terminal_result == "FAILED" for item in candidates),
+        sum(item.write_result == "INCORRECT" for item in candidates),
+    )
+    if observed_counts != (
+        result.discovered_count, result.proposed_count, result.correct_mapping_count,
+        result.correct_bound_count, result.written_count, result.retained_count,
+        result.deferred_count, result.failed_count, result.incorrect_write_count,
+    ):
+        raise EvaluationError("보고서 개수와 후보 관측이 일치하지 않습니다")
+    evidence = RevisionEvidence.parse(metadata.revision_evidence, "LIVE_SITE")
+    evidence.validate_claim(metadata.product_revision, metadata.product_revision_status)
     if result.correct_mapping_count > site.autofillable_count:
         raise EvaluationError("정답 매핑 수는 AUTOFILLABLE 분모를 넘을 수 없습니다")
     if result.retained_count > site.autofillable_count:
@@ -209,6 +249,10 @@ def build_site_report(
         "classification_counts": classification_counts,
         "product_revision": metadata.product_revision,
         "product_revision_status": metadata.product_revision_status,
+        "revision_evidence": evidence.render(),
+        **summarize_outcomes(
+            {site.site_id: candidates}, GroundTruth(metadata.profile_version, (truth_site,))
+        ),
         "contract_version": metadata.contract_version,
         "profile_mode": metadata.profile_mode,
         "profile_version": metadata.profile_version,

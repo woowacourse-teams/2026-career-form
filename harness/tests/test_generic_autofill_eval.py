@@ -10,11 +10,12 @@ from harness.lib.generic_autofill_eval import (
     EvaluationError,
     evaluate_generic_autofill,
 )
+from harness.tests.test_evaluation_revision import revision_evidence, unavailable_evidence
 
 
 def ground_truth() -> dict[str, object]:
     return {
-        "contract_version": "1.0",
+        "contract_version": "1.1",
         "profile_version": "synthetic-v1",
         "sites": [
             {
@@ -92,7 +93,9 @@ def measured_run(
         "site_id": site_id,
         "source": source,
         "status": "MEASURED",
-        "revision": "abc123",
+        "revision": "a" * 40,
+        "revision_status": "VERIFIED",
+        "revision_evidence": revision_evidence(source),
         "provider": "provider-a",
         "model": "model-a",
         "timeout_ms": 1000,
@@ -138,7 +141,7 @@ def observations() -> dict[str, object]:
         reason_code="BINDING_UNSUPPORTED",
     )
     return {
-        "contract_version": "1.0",
+        "contract_version": "1.1",
         "runs": [
             measured_run("alpha", "LIVE_SITE", [retained]),
             measured_run("beta", "LIVE_SITE", [failed_mapping]),
@@ -150,6 +153,44 @@ def observations() -> dict[str, object]:
 
 
 class GenericAutofillEvaluationTest(unittest.TestCase):
+    def test_counts_terminal_reasons_separately_from_undiscovered_fields(self) -> None:
+        result = evaluate_generic_autofill(ground_truth(), observations())
+        live = result["sources"]["LIVE_SITE"]
+        fixture = result["sources"]["FIXTURE"]["overall"]
+
+        self.assertEqual(1, live["overall"]["reason_counts"]["FAILED"]["RETENTION_FAILED"])
+        self.assertEqual(0, live["overall"]["reason_counts"]["DEFERRED"]["BINDING_UNSUPPORTED"])
+        self.assertEqual(1, fixture["reason_counts"]["DEFERRED"]["BINDING_UNSUPPORTED"])
+        self.assertEqual(1, sum(live["overall"]["reason_counts"]["FAILED"].values()))
+        self.assertEqual(0, sum(live["overall"]["reason_counts"]["DEFERRED"].values()))
+        self.assertEqual(1, live["sites"]["alpha"]["undiscovered_autofillable_count"])
+        self.assertEqual(1, live["overall"]["undiscovered_autofillable_count"])
+        self.assertEqual(0, fixture["undiscovered_autofillable_count"])
+        self.assertEqual(
+            [{"site_id": "beta", "candidate_id": "c001", "field_id": "f001",
+              "terminal_result": "FAILED", "reason_code": "RETENTION_FAILED"}],
+            live["overall"]["reason_evidence"],
+        )
+
+    def test_marks_inconclusive_accounting_unmeasured(self) -> None:
+        payload = observations()
+        payload["runs"][0].update(
+            status="INCONCLUSIVE", inconclusive_reason="PAGE_UNAVAILABLE", candidates=[]
+        )
+        result = evaluate_generic_autofill(ground_truth(), payload)
+        site = result["sources"]["LIVE_SITE"]["sites"]["alpha"]
+        self.assertIsNone(site["reason_counts"])
+        self.assertIsNone(site["undiscovered_autofillable_count"])
+        self.assertEqual(0, result["sources"]["LIVE_SITE"]["overall"]["undiscovered_autofillable_count"])
+
+    def test_reports_all_autofillable_fields_when_nothing_was_discovered(self) -> None:
+        payload = observations()
+        payload["runs"][0]["candidates"] = []
+        result = evaluate_generic_autofill(ground_truth(), payload)
+        site = result["sources"]["LIVE_SITE"]["sites"]["alpha"]
+        self.assertEqual(2, site["undiscovered_autofillable_count"])
+        self.assertEqual(0, sum(site["reason_counts"]["FAILED"].values()))
+
     def test_aggregates_sources_separately_with_hand_checked_metrics(self) -> None:
         result = evaluate_generic_autofill(ground_truth(), observations())
 
@@ -245,7 +286,6 @@ class GenericAutofillEvaluationTest(unittest.TestCase):
             "unknown-field": self._unknown_field,
             "incomplete-retained-prefix": self._incomplete_retained_prefix,
             "inconclusive-with-candidate": self._inconclusive_with_candidate,
-            "measured-without-candidate": self._measured_without_candidate,
             "tokens-without-provider-call": self._tokens_without_provider_call,
         }
 
@@ -357,6 +397,9 @@ class GenericAutofillCliTest(unittest.TestCase):
             reason_code="MAPPING_INCORRECT",
         )
         current = observations()
+        for run in current["runs"]:
+            run["revision"] = "b" * 40
+            run["revision_evidence"] = revision_evidence(run["source"], "b" * 40)
         current["runs"][0]["candidates"].append(
             candidate(
                 "c002",
@@ -445,6 +488,34 @@ class GenericAutofillCliTest(unittest.TestCase):
         self.assertNotEqual(0, compared.returncode)
         self.assertIn("profile_version", compared.stderr)
 
+    def test_holds_revision_judgment_for_same_or_unverified_installations(self) -> None:
+        for unverified, expected_reason in (
+            (False, "SAME_REVISION"), (True, "UNVERIFIED_REVISION"),
+        ):
+            with self.subTest(unverified=unverified), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                runs = observations()
+                if unverified:
+                    runs["runs"][0].update(
+                        revision="UNVERIFIED", revision_status="UNVERIFIED",
+                        revision_evidence=unavailable_evidence(),
+                    )
+                truth = self._write(root / "truth.json", ground_truth())
+                observed = self._write(root / "runs.json", runs)
+                baseline = root / "baseline.json"
+                first = self._run("--ground-truth", str(truth), "--observations", str(observed),
+                                  "--output", str(baseline))
+                self.assertEqual(0, first.returncode, first.stderr)
+                compared = self._run("--ground-truth", str(truth), "--observations", str(observed),
+                                     "--compare-to", str(baseline))
+                self.assertEqual(0, compared.returncode, compared.stderr)
+                comparison = json.loads(compared.stdout)["comparison"]
+                self.assertEqual([], comparison["regressions"])
+                judgment = comparison["sources"]["LIVE_SITE"]["revision_comparison"]
+                self.assertEqual("HELD", judgment["status"])
+                self.assertIn(expected_reason, judgment["reasons"])
+                self.assertEqual(0, comparison["sources"]["LIVE_SITE"]["correct_input_rate"]["rate_delta"])
+
     def test_rejects_invalid_json_without_a_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -462,6 +533,21 @@ class GenericAutofillCliTest(unittest.TestCase):
         self.assertNotEqual(0, completed.returncode)
         self.assertIn("JSON 입력을 읽을 수 없습니다", completed.stderr)
         self.assertNotIn("Traceback", completed.stderr)
+
+    def test_rejects_old_comparison_artifact_version(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            truth = self._write(root / "truth.json", ground_truth())
+            observed = self._write(root / "runs.json", observations())
+            baseline = evaluate_generic_autofill(ground_truth(), observations())
+            baseline["contract_version"] = "1.0"
+            old = self._write(root / "old.json", baseline)
+            result = self._run(
+                "--ground-truth", str(truth), "--observations", str(observed),
+                "--compare-to", str(old),
+            )
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("contract_version", result.stderr)
 
     @staticmethod
     def _write(path: Path, value: dict[str, object]) -> Path:
@@ -483,7 +569,24 @@ class GenericAutofillFixtureTest(unittest.TestCase):
     FIXTURES = ROOT / "harness" / "fixtures" / "generic-autofill"
     SCRIPT = ROOT / "harness" / "scripts" / "evaluate-generic-autofill.py"
 
-    def test_covers_five_sites_and_reproduces_the_committed_baseline(self) -> None:
+    def test_new_synthetic_fixture_exposes_accounting_and_revision_evidence(self) -> None:
+        completed = subprocess.run(
+            (
+                sys.executable, str(self.SCRIPT),
+                "--ground-truth", str(self.FIXTURES / "ground-truth-v1.1.json"),
+                "--observations", str(self.FIXTURES / "observations-v1.1.json"),
+            ),
+            cwd=self.ROOT, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        result = json.loads(completed.stdout)
+        live = result["sources"]["LIVE_SITE"]
+        self.assertEqual(1, live["overall"]["reason_counts"]["FAILED"]["RETENTION_FAILED"])
+        self.assertEqual(1, live["overall"]["undiscovered_autofillable_count"])
+        self.assertEqual("VERIFIED", live["sites"]["alpha"]["revision_status"])
+        self.assertEqual("UNVERIFIED", live["sites"]["beta"]["revision_status"])
+
+    def test_preserves_historical_fixtures_and_rejects_the_old_contract(self) -> None:
         truth_path = self.FIXTURES / "ground-truth-v1.json"
         runs_path = self.FIXTURES / "observations-v1.json"
         baseline_path = self.FIXTURES / "baseline-v1.json"
@@ -545,11 +648,9 @@ class GenericAutofillFixtureTest(unittest.TestCase):
             check=False,
         )
 
-        self.assertEqual(0, completed.returncode, completed.stderr)
-        self.assertEqual(
-            json.loads(baseline_path.read_text(encoding="utf-8")),
-            json.loads(completed.stdout),
-        )
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn("contract_version", completed.stderr)
+        self.assertEqual("1.0", json.loads(baseline_path.read_text(encoding="utf-8"))["contract_version"])
 
 
 if __name__ == "__main__":
