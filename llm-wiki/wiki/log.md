@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-09] ingest | CF-173 실패 원인 집계와 설치 revision 근거
+
+- Approval-Digest: 13f6d39b24eeee80a26b35b202c456ab067910ad145274757c03802220f336f9
+- Source-Revision: 094e3b43522fa2ec464fb841ba53b8c7b2c9be8c
+- 승인한 네 후보와 설치본 메타데이터 ADR을 [CF-173 bundle](../raw/issues/CF-173/manifest.md)에 기록했다.
+- [평가 기준선](topics/generic-autofill-evaluation-baselines.md)과 [실사이트 평가](topics/live-autofill-evaluation.md)에 계약 1.1의 원인 집계·미발견 분리·설치 snapshot 근거·비교 보류를 연결했다.
+- 과거 v1 artifact와 raw는 변경하지 않았다. 합성 CLI 및 설치본 재로드 검증을 새 실사이트 자동 입력 결과로 기록하지 않는다.
+
 ## [2026-10-07] ingest | CF-162 카탈로그 식별 검색 선택
 
 - Disposition: Adds profile-catalog-identity topic; supersedes CF-160 adapter-greeting topic

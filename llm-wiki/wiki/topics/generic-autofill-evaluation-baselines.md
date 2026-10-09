@@ -2,13 +2,19 @@
 
 > Topic: generic-autofill-evaluation-baselines
 > Status: Current
-> Current: [CF-124 2026-09-28 실사이트 자동 입력 평가](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md)
-> History: [CF-115 첫 기준선](../../raw/issues/CF-115/documents/generic-autofill-evaluation-baseline.md); [CF-124 두 사이트 후속 실행](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md)
-> Updated: 2026-09-28
+> Current: [CF-173 평가 계약 1.1과 설치본 근거](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md)
+> History: [CF-115 첫 기준선](../../raw/issues/CF-115/documents/generic-autofill-evaluation-baseline.md); [CF-124 두 사이트 후속 실행](../../raw/issues/CF-124/documents/reports/2026-09-28-live-autofill-evaluation.md); [CF-173 평가 계약 1.1](../../raw/issues/CF-173/documents/evaluation-contract-1.1.md)
+> Updated: 2026-10-09
 
 ## 현재 상태
 
 범용 자동 기입은 사람이 확정한 전체 필드 분모를 기준으로 발견, 매핑, 바인딩, 쓰기와 유지 단계를 분리해 평가한다. 실사이트와 fixture 결과를 합산하지 않는다. 평가한 제품 revision, 평가 계약 version, 합성 프로필 version, 초기 상태, 공급자와 모델, 예산과 사용량을 함께 기록한다.
+
+현재 계약은 `1.1`이다. 사이트별·source별로 FAILED와 DEFERRED의 원인 개수를 분리하고 익명 후보 근거를 연결한다. 미발견 AUTOFILLABLE은 별도 개수이며 원인을 추측하지 않는다. INCONCLUSIVE의 집계는 0이 아니라 미측정 `null`로 표시한다.
+
+설치본의 불변 build metadata snapshot과 canonical digest를 검증한다. CLEAN과 전체 SHA 및 설치본 확인 근거가 일치해야 VERIFIED이며 나머지는 UNVERIFIED와 사유를 남긴다. 같은 revision 재실행, 미검증 revision 또는 미확정 사이트의 수치 변화는 보존하지만 제품 변경의 개선·회귀 판단은 보류한다.
+
+기존 v1 artifact와 raw는 당시 이력으로 보존한다. 현재 CLI는 계약 1.0 입력 및 서로 다른 계약 버전의 직접 비교를 거부한다. CF-173은 평가 도구 변경이며 새 실사이트 기준선 측정은 아니므로 아래 표에 실행 결과를 추가하지 않는다.
 
 CF-115는 첫 공통 기준선이다. 실사이트 5개 중 4개를 측정했고 1개는 기존 값 보호를 위해 미확정으로 남겼다. 매핑 정확도는 84.6%였지만 매핑 재현율은 35.5%, 정답 입력률은 25.8%였다. 올바르게 바인딩한 필드의 실행 유지율은 80.0%였고 실제 쓰기의 오입력률은 33.3%였다. 기존 값 훼손은 없었다.
 
@@ -33,3 +39,5 @@ CF-124는 CF-115와 계약, 프로필, 두 공통 사이트의 분모가 같지�
 ## 변경 이유
 
 개별 Issue raw만으로도 과거 근거는 보존되지만 여러 revision의 지표를 한눈에 비교하기 어렵다. 불변 raw와 기계 artifact는 그대로 두고 topic에 기준선 이력을 모아 근거 보존과 조회를 분리한다.
+
+CF-173은 후보 원인 코드를 다시 수작업 집계해야 했던 문제와 설치본 revision을 확인하지 못했던 CF-124의 비교 제한을 명시적 기계 계약으로 보완한다.
