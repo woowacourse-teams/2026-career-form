@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { resolveCompany, resolveDocumentCompany } from "./company";
+import {
+  renderHplaceLogin,
+  setHplacePage,
+  resetHplacePage,
+} from "../workflow/test-utils/hplace.fixture";
+
+afterEach(() => {
+  resetHplacePage();
+});
 
 describe("company resolution", () => {
   it.each([
@@ -23,6 +32,40 @@ describe("company resolution", () => {
     ["talent.hyundai.com:443", "generic"],
   ] as const)("resolves the exact host %s as %s", (host, expected) => {
     expect(resolveCompany(host)).toBe(expected);
+  });
+});
+
+describe("Hplace document resolution", () => {
+  it("requires document evidence and retains established identity through a rerender", () => {
+    renderHplaceLogin();
+    expect(resolveCompany("kakaobank.recruiter.co.kr")).toBe("generic");
+    expect(resolveDocumentCompany(document)).toBe("hplace");
+    document.getElementById("overlay-root")!.remove();
+    expect(resolveDocumentCompany(document)).toBe("hplace");
+  });
+
+  it("rechecks delayed roots and navigation on the same document", () => {
+    renderHplaceLogin();
+    const overlay = document.getElementById("overlay-root")!;
+    overlay.remove();
+    expect(resolveDocumentCompany(document)).toBe("generic");
+    document.body.append(overlay);
+    expect(resolveDocumentCompany(document)).toBe("hplace");
+    document.head.replaceChildren();
+    setHplacePage("https://kakaobank.recruiter.co.kr/other");
+    expect(resolveDocumentCompany(document)).toBe("generic");
+    setHplacePage("https://careers.example.test/v1/applicant/my-page/login");
+    expect(resolveDocumentCompany(document)).toBe("generic");
+  });
+
+  it.each([
+    ["www.skcareers.com", "sk"],
+    ["talent.hyundai.com", "hyundai"],
+    ["example.career.greetinghr.com", "greeting"],
+  ])("preserves existing company priority for %s", (host, expected) => {
+    renderHplaceLogin();
+    setHplacePage(`https://${host}/`);
+    expect(resolveDocumentCompany(document)).toBe(expected);
   });
 });
 

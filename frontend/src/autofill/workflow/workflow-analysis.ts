@@ -131,6 +131,10 @@ export function createAnalyzeFields({
     genericPass = 0,
     options: SearchFollowUpAnalysisOptions = {},
   ) => {
+    if (resolveDocumentCompany(pageDocument) === "hplace") {
+      setStage("unsupported");
+      return;
+    }
     const currentAnalysisGeneration = ++analysisGeneration;
     completedDriverKeys.current = completedStateDriverKeys;
     deferredDriverGroups.current = failedGroups;
@@ -164,6 +168,10 @@ export function createAnalyzeFields({
       currentAnalysisGeneration !== analysisGeneration
     )
       return;
+    if (resolveDocumentCompany(pageDocument) === "hplace") {
+      setStage("unsupported");
+      return;
+    }
 
     const analysisStarted = performance.now();
     let analysis = await apiClient.analyzeFields(snapshot.request);
@@ -173,6 +181,10 @@ export function createAnalyzeFields({
       currentAnalysisGeneration !== analysisGeneration
     )
       return;
+    if (resolveDocumentCompany(pageDocument) === "hplace") {
+      setStage("unsupported");
+      return;
+    }
     if (
       options.reviewOnly &&
       JSON.stringify(await repository.load()) !== JSON.stringify(loadedProfile)

@@ -41,6 +41,7 @@ export function collectionAdapterForHost(
       return hyundaiCollectionAdapter;
     case "sk":
       return skCollectionAdapter;
+    case "hplace":
     case "generic":
       return genericCollectionAdapter;
   }

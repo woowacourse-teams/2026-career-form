@@ -1,5 +1,6 @@
 import { greetingBasicControls } from "./greeting/fingerprint";
-export type CompanyId = "sk" | "hyundai" | "generic" | "greeting";
+import { isHplaceDocument } from "./hplace/fingerprint";
+export type CompanyId = "sk" | "hyundai" | "generic" | "greeting" | "hplace";
 
 export function resolveCompany(host: string): CompanyId {
   const normalizedHost = host.toLowerCase();
@@ -22,19 +23,23 @@ export function isHyundaiTalentHost(host: string): boolean {
   return resolveCompany(host) === "hyundai";
 }
 
-const greetingDocuments = new WeakMap<
+const platformDocuments = new WeakMap<
   Document,
-  { url: string; host: string }
+  { url: string; host: string; company: "greeting" | "hplace" }
 >();
 
 export function resolveDocumentCompany(document: Document): CompanyId {
   const company = resolveCompany(document.location?.host ?? "");
   if (company !== "generic") return company;
   const identity = { url: document.URL, host: document.location?.host ?? "" };
-  const established = greetingDocuments.get(document);
+  if (isHplaceDocument(document)) {
+    platformDocuments.set(document, { ...identity, company: "hplace" });
+    return "hplace";
+  }
+  const established = platformDocuments.get(document);
   if (established?.url === identity.url && established.host === identity.host)
-    return "greeting";
-  greetingDocuments.delete(document);
+    return established.company;
+  platformDocuments.delete(document);
   const controls = greetingBasicControls(document);
   if (!controls) return "generic";
   const roots = controls.map((input) => {
@@ -52,6 +57,6 @@ export function resolveDocumentCompany(document: Document): CompanyId {
     controls[0].form !== controls[1].form
   )
     return "generic";
-  greetingDocuments.set(document, identity);
+  platformDocuments.set(document, { ...identity, company: "greeting" });
   return "greeting";
 }

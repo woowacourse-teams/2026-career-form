@@ -157,6 +157,7 @@ export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
       return hyundaiWorkflowAdapter;
     case "sk":
       return skWorkflowAdapter;
+    case "hplace":
     case "generic":
       return genericWorkflowAdapter;
   }

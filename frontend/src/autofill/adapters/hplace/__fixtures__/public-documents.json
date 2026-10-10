@@ -1,0 +1,2637 @@
+[
+  {
+    "label": "ABL생명 listed-home-or-public-login",
+    "url": "https://abl.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:26.312079+00:00",
+    "expected": true,
+    "scripts": [
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://abl.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://abl.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://abl.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://abl.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://abl.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://abl.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://abl.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://abl.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://abl.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://abl.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://abl.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "ABL생명 active-public-notice",
+    "url": "https://abl.recruiter.co.kr/career/jobs/130686",
+    "observedAt": "2026-10-09T17:29:26.312355+00:00",
+    "expected": true,
+    "scripts": [
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://abl.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://abl.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://abl.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://abl.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://abl.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://abl.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://abl.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://abl.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://abl.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://abl.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://abl.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://abl.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "GS건설 listed-home-or-public-login",
+    "url": "https://gsenc.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:26.312464+00:00",
+    "expected": true,
+    "scripts": [
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://gsenc.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "GS건설 active-public-notice",
+    "url": "https://gsenc.recruiter.co.kr/career/jobs/130748",
+    "observedAt": "2026-10-09T17:29:26.312553+00:00",
+    "expected": true,
+    "scripts": [
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://gsenc.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js"
+    ],
+    "styles": [
+      "https://gsenc.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://gsenc.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "GS리테일 listed-home-or-public-login",
+    "url": "https://gsretail.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:26.312621+00:00",
+    "expected": true,
+    "scripts": [
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://gsretail.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "GS리테일 active-public-notice",
+    "url": "https://gsretail.recruiter.co.kr/career/jobs/130561",
+    "observedAt": "2026-10-09T17:29:26.312681+00:00",
+    "expected": true,
+    "scripts": [
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://gsretail.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://gsretail.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://gsretail.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "KPX케미칼 listed-home-or-public-login",
+    "url": "https://kpxchemical.recruiter.im/home",
+    "observedAt": "2026-10-09T17:29:26.495393+00:00",
+    "expected": true,
+    "scripts": [
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/(main)/(jobda)/%5Bpath%5D/page-0d68c53a9699668f.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js"
+    ],
+    "styles": [
+      "https://kpxchemical.recruiter.im/_next/static/css/e55be725e8a28966.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/435c39c502393a00.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/46e6e38a2299ca72.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/bb03030b95157d43.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/73aaab8d428bbf08.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/10c19bca51a33dad.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/101ea2cd5338f720.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/73c6e569ace5c7bc.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/afbfca500b9d8e02.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/5d692e01fc1f3556.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "KPX케미칼 active-public-notice",
+    "url": "https://kpxchemical.recruiter.im/jobs/6340",
+    "observedAt": "2026-10-09T17:29:26.505236+00:00",
+    "expected": true,
+    "scripts": [
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/(main)/(jobda)/jobs/not-found-ef173cedaec453b1.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/(main)/(jobda)/jobs/%5Bid%5D/page-c3178b2dd24bfff6.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://kpxchemical.recruiter.im/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://kpxchemical.recruiter.im/_next/static/css/e55be725e8a28966.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/435c39c502393a00.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/46e6e38a2299ca72.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/bb03030b95157d43.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/101ea2cd5338f720.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/73aaab8d428bbf08.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/10c19bca51a33dad.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/73c6e569ace5c7bc.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/afbfca500b9d8e02.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://kpxchemical.recruiter.im/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "LS ITC listed-home-or-public-login",
+    "url": "https://lsitc.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:26.604712+00:00",
+    "expected": true,
+    "scripts": [
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js"
+    ],
+    "styles": [
+      "https://lsitc.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "LS ITC active-public-notice",
+    "url": "https://lsitc.recruiter.co.kr/career/jobs/15021",
+    "observedAt": "2026-10-09T17:29:26.747209+00:00",
+    "expected": true,
+    "scripts": [
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://lsitc.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://lsitc.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://lsitc.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "LS엠트론 listed-home-or-public-login",
+    "url": "https://lsmtron.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:26.797175+00:00",
+    "expected": true,
+    "scripts": [
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js"
+    ],
+    "styles": [
+      "https://lsmtron.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "LS엠트론 active-public-notice",
+    "url": "https://lsmtron.recruiter.co.kr/career/jobs/34426",
+    "observedAt": "2026-10-09T17:29:26.826658+00:00",
+    "expected": true,
+    "scripts": [
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://lsmtron.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://lsmtron.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://lsmtron.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "VNTG listed-home-or-public-login",
+    "url": "https://vntg.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:26.856717+00:00",
+    "expected": true,
+    "scripts": [
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js"
+    ],
+    "styles": [
+      "https://vntg.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "VNTG active-public-notice",
+    "url": "https://vntg.recruiter.co.kr/career/jobs/126103",
+    "observedAt": "2026-10-09T17:29:26.927680+00:00",
+    "expected": true,
+    "scripts": [
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://vntg.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://vntg.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://vntg.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "넥센타이어 listed-home-or-public-login",
+    "url": "https://nexentire.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.000018+00:00",
+    "expected": true,
+    "scripts": [
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://nexentire.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "넥센타이어 active-public-notice",
+    "url": "https://nexentire.recruiter.co.kr/career/jobs/129352",
+    "observedAt": "2026-10-09T17:29:27.005526+00:00",
+    "expected": true,
+    "scripts": [
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://nexentire.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js"
+    ],
+    "styles": [
+      "https://nexentire.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://nexentire.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "동국제약 listed-home-or-public-login",
+    "url": "https://dkpharm.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.013380+00:00",
+    "expected": true,
+    "scripts": [
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://dkpharm.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "동국제약 active-public-notice",
+    "url": "https://dkpharm.recruiter.co.kr/career/jobs/95579",
+    "observedAt": "2026-10-09T17:29:27.127160+00:00",
+    "expected": true,
+    "scripts": [
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://dkpharm.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js"
+    ],
+    "styles": [
+      "https://dkpharm.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://dkpharm.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "디엔솔루션즈 listed-home-or-public-login",
+    "url": "https://career-dncompany.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.134617+00:00",
+    "expected": true,
+    "scripts": [
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "디엔솔루션즈 active-public-notice",
+    "url": "https://career-dncompany.recruiter.co.kr/career/jobs/130313",
+    "observedAt": "2026-10-09T17:29:27.277188+00:00",
+    "expected": true,
+    "scripts": [
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://career-dncompany.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://career-dncompany.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "메리츠캐피탈 listed-home-or-public-login",
+    "url": "https://meritzcapital.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.279803+00:00",
+    "expected": true,
+    "scripts": [
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "메리츠캐피탈 active-public-notice",
+    "url": "https://meritzcapital.recruiter.co.kr/career/jobs/130377",
+    "observedAt": "2026-10-09T17:29:27.282105+00:00",
+    "expected": true,
+    "scripts": [
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://meritzcapital.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://meritzcapital.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "바바리안 모터스 listed-home-or-public-login",
+    "url": "https://bavarian.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.284309+00:00",
+    "expected": true,
+    "scripts": [
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://bavarian.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "바바리안 모터스 active-public-notice",
+    "url": "https://bavarian.recruiter.co.kr/career/jobs/127582",
+    "observedAt": "2026-10-09T17:29:27.424982+00:00",
+    "expected": true,
+    "scripts": [
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://bavarian.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://bavarian.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://bavarian.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "신한라이프 listed-home-or-public-login",
+    "url": "https://shinhan-life.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.503221+00:00",
+    "expected": true,
+    "scripts": [
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "신한라이프 active-public-notice",
+    "url": "https://shinhan-life.recruiter.co.kr/career/jobs/129985",
+    "observedAt": "2026-10-09T17:29:27.515756+00:00",
+    "expected": true,
+    "scripts": [
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://shinhan-life.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://shinhan-life.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "안랩 listed-home-or-public-login",
+    "url": "https://ahnlab.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.548884+00:00",
+    "expected": true,
+    "scripts": [
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://ahnlab.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "안랩 active-public-notice",
+    "url": "https://ahnlab.recruiter.co.kr/career/jobs/130575",
+    "observedAt": "2026-10-09T17:29:27.553759+00:00",
+    "expected": true,
+    "scripts": [
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://ahnlab.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://ahnlab.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://ahnlab.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "오리온 listed-home-or-public-login",
+    "url": "https://orion.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.639149+00:00",
+    "expected": true,
+    "scripts": [
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://orion.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://orion.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://orion.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://orion.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://orion.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://orion.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://orion.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://orion.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://orion.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://orion.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://orion.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "오리온 active-public-notice",
+    "url": "https://orion.recruiter.co.kr/career/jobs/130791",
+    "observedAt": "2026-10-09T17:29:27.668995+00:00",
+    "expected": true,
+    "scripts": [
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://orion.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://orion.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://orion.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://orion.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://orion.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://orion.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://orion.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://orion.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://orion.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://orion.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://orion.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://orion.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "원익 listed-home-or-public-login",
+    "url": "https://wonik.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.684007+00:00",
+    "expected": true,
+    "scripts": [
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://wonik.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "원익 active-public-notice",
+    "url": "https://wonik.recruiter.co.kr/career/jobs/130852",
+    "observedAt": "2026-10-09T17:29:27.806379+00:00",
+    "expected": true,
+    "scripts": [
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://wonik.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://wonik.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://wonik.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "일지테크 listed-home-or-public-login",
+    "url": "https://ilji.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.869095+00:00",
+    "expected": true,
+    "scripts": [
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://ilji.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "일지테크 active-public-notice",
+    "url": "https://ilji.recruiter.co.kr/career/jobs/130743",
+    "observedAt": "2026-10-09T17:29:27.886565+00:00",
+    "expected": true,
+    "scripts": [
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://ilji.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://ilji.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://ilji.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "제주항공 listed-home-or-public-login",
+    "url": "https://jejuair.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:27.908576+00:00",
+    "expected": true,
+    "scripts": [
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://jejuair.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "제주항공 active-public-notice",
+    "url": "https://jejuair.recruiter.co.kr/career/jobs/130146",
+    "observedAt": "2026-10-09T17:29:27.978202+00:00",
+    "expected": true,
+    "scripts": [
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://jejuair.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://jejuair.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://jejuair.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "태광그룹 listed-home-or-public-login",
+    "url": "https://taekwang.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.066238+00:00",
+    "expected": true,
+    "scripts": [
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js"
+    ],
+    "styles": [
+      "https://taekwang.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "태광그룹 active-public-notice",
+    "url": "https://taekwang.recruiter.co.kr/career/jobs/130720",
+    "observedAt": "2026-10-09T17:29:28.177174+00:00",
+    "expected": true,
+    "scripts": [
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://taekwang.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://taekwang.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://taekwang.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "펑타이코리아 listed-home-or-public-login",
+    "url": "https://ptkorea.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.196896+00:00",
+    "expected": true,
+    "scripts": [
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://ptkorea.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "펑타이코리아 active-public-notice",
+    "url": "https://ptkorea.recruiter.co.kr/career/jobs/130032",
+    "observedAt": "2026-10-09T17:29:28.218228+00:00",
+    "expected": true,
+    "scripts": [
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://ptkorea.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://ptkorea.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://ptkorea.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "한국콜마 listed-home-or-public-login",
+    "url": "https://kolmar.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.325082+00:00",
+    "expected": true,
+    "scripts": [
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://kolmar.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "한국콜마 active-public-notice",
+    "url": "https://kolmar.recruiter.co.kr/career/jobs/130752",
+    "observedAt": "2026-10-09T17:29:28.327489+00:00",
+    "expected": true,
+    "scripts": [
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://kolmar.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://kolmar.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://kolmar.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "한국타이어 listed-home-or-public-login",
+    "url": "https://hankooktire.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.447823+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://hankooktire.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "한국타이어 active-public-notice",
+    "url": "https://hankooktire.recruiter.co.kr/career/jobs/128544",
+    "observedAt": "2026-10-09T17:29:28.543003+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://hankooktire.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://hankooktire.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://hankooktire.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대제철 listed-home-or-public-login",
+    "url": "https://hyundai-steel.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.567913+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js"
+    ],
+    "styles": [
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대제철 active-public-notice",
+    "url": "https://hyundai-steel.recruiter.co.kr/career/jobs/130148",
+    "observedAt": "2026-10-09T17:29:28.637246+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://hyundai-steel.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대카드/커머셜 listed-home-or-public-login",
+    "url": "https://careerhyundai.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.736860+00:00",
+    "expected": true,
+    "scripts": [
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대카드/커머셜 active-public-notice",
+    "url": "https://careerhyundai.recruiter.co.kr/career/jobs/129721",
+    "observedAt": "2026-10-09T17:29:28.847215+00:00",
+    "expected": true,
+    "scripts": [
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://careerhyundai.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://careerhyundai.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대트랜시스 listed-home-or-public-login",
+    "url": "https://hyundai-transys.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.862453+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대트랜시스 active-public-notice",
+    "url": "https://hyundai-transys.recruiter.co.kr/career/jobs/130715",
+    "observedAt": "2026-10-09T17:29:28.877320+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js"
+    ],
+    "styles": [
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://hyundai-transys.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대해상 listed-home-or-public-login",
+    "url": "https://hi.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:28.945419+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js"
+    ],
+    "styles": [
+      "https://hi.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hi.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hi.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hi.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hi.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hi.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hi.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hi.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hi.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hi.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://hi.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "현대해상 active-public-notice",
+    "url": "https://hi.recruiter.co.kr/career/jobs/130428",
+    "observedAt": "2026-10-09T17:29:28.967331+00:00",
+    "expected": true,
+    "scripts": [
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://hi.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://hi.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://hi.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://hi.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://hi.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://hi.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://hi.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://hi.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://hi.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://hi.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://hi.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://hi.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "KT listed-home-or-public-login",
+    "url": "https://kt.recruiter.co.kr/v1/applicant/my-page/login",
+    "observedAt": "2026-10-09T17:29:29.020496+00:00",
+    "expected": true,
+    "scripts": ["https://kt.recruiter.co.kr/v1/applicant/index-C42z6v3P.js"],
+    "styles": [
+      "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css",
+      "https://kt.recruiter.co.kr/v1/applicant/index-ChVeoDCk.css"
+    ],
+    "forms": [],
+    "ids": ["root", "tooltip-root", "overlay-root"]
+  },
+  {
+    "label": "KT active-public-notice",
+    "url": "https://kt.recruiter.co.kr/career/jobs/130814",
+    "observedAt": "2026-10-09T17:29:29.067832+00:00",
+    "expected": true,
+    "scripts": [
+      "https://kt.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://kt.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://kt.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://kt.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://kt.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://kt.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://kt.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://kt.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://kt.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://kt.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://kt.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://kt.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://kt.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://kt.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://kt.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://kt.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://kt.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://kt.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "카카오뱅크 listed-home-or-public-login",
+    "url": "https://kakaobank.recruiter.co.kr/v1/applicant/my-page/login",
+    "observedAt": "2026-10-09T17:29:29.074930+00:00",
+    "expected": true,
+    "scripts": [
+      "https://kakaobank.recruiter.co.kr/v1/applicant/index-C42z6v3P.js"
+    ],
+    "styles": [
+      "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css",
+      "https://kakaobank.recruiter.co.kr/v1/applicant/index-ChVeoDCk.css"
+    ],
+    "forms": [],
+    "ids": ["root", "tooltip-root", "overlay-root"]
+  },
+  {
+    "label": "카카오뱅크 active-public-notice",
+    "url": "https://kakaobank.recruiter.co.kr/app/jobnotice/view?systemKindCode=MRS2&jobnoticeSn=267331",
+    "observedAt": "2026-10-09T17:29:29.109848+00:00",
+    "expected": true,
+    "scripts": [
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/midas.customUI.js",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/jquery.midas.validater.js",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/jquery.midas.linkedForm.js",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/D.js",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/rsaCommon.js",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/jquery.midasit.common.js"
+    ],
+    "styles": [
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/css/appsite/common.css",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/css/appsite/type-B/common.css",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/css/lib/font-awesome/css/font-awesome.min.css",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/js/lib/jquery-ui/1.11.4.custom/jquery-ui.min.css",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/css/appsite/jquery-ui-custom.css",
+      "https://cdn.jsdelivr.net/font-nanum/1.0/nanumbarungothic/nanumbarungothic.css",
+      "https://kakaobank.recruiter.co.kr/resources-2.0.3a/mit-common/css/custom/jquery.midasit.common.css"
+    ],
+    "forms": [
+      {
+        "id": "frm",
+        "method": "post"
+      }
+    ],
+    "ids": [
+      "isBuilder",
+      "isSettingPage",
+      "isManager",
+      "appsiteSn",
+      "settingType",
+      "jobdaDomain",
+      "wrap",
+      "header",
+      "content",
+      "breakcrumb",
+      "saveArea",
+      "depth1Code",
+      "depth2Code",
+      "companyName",
+      "systemKindCode",
+      "jobflex",
+      "applyStartDate",
+      "createDate",
+      "jobnoticeSn",
+      "productStartDate",
+      "writeButtonState",
+      "recruitNoticeResumeType",
+      "jobdaDomain",
+      "jobdaApiDomain",
+      "snsshare",
+      "facebook",
+      "twitter",
+      "naverBand",
+      "mrs2",
+      "viewSmartEditorContent",
+      "mrs1",
+      "ifrmJobnoticeContents",
+      "jobnoticeContents",
+      "frm",
+      "jobnoticeSn"
+    ]
+  },
+  {
+    "label": "현대모비스 listed-home-or-public-login",
+    "url": "https://mobis.recruiter.co.kr/v1/applicant/my-page/login",
+    "observedAt": "2026-10-09T17:29:29.116441+00:00",
+    "expected": true,
+    "scripts": ["https://mobis.recruiter.co.kr/v1/applicant/index-C42z6v3P.js"],
+    "styles": [
+      "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css",
+      "https://mobis.recruiter.co.kr/v1/applicant/index-ChVeoDCk.css"
+    ],
+    "forms": [],
+    "ids": ["root", "tooltip-root", "overlay-root"]
+  },
+  {
+    "label": "현대모비스 active-public-notice",
+    "url": "https://mobis.recruiter.co.kr/career/jobs/130209",
+    "observedAt": "2026-10-09T17:29:29.193351+00:00",
+    "expected": true,
+    "scripts": [
+      "https://mobis.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://mobis.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://mobis.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://mobis.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://mobis.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://mobis.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://mobis.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://mobis.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://mobis.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "테크젠 listed-home-or-public-login",
+    "url": "https://teczen.recruiter.co.kr/career/home",
+    "observedAt": "2026-10-09T17:29:29.236799+00:00",
+    "expected": true,
+    "scripts": [
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/%5Bpath%5D/page-cf854d9213c3a8c5.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/not-found-0efb4cfba7a3f35c.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://teczen.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/5d692e01fc1f3556.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/6b5950b14533d965.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "테크젠 active-public-notice",
+    "url": "https://teczen.recruiter.co.kr/career/jobs/130622",
+    "observedAt": "2026-10-09T17:29:29.261594+00:00",
+    "expected": true,
+    "scripts": [
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/error-d0596f2844cb5bf1.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/not-found-85aaf0aa77367b1f.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/global-error-e1493c28d0d8622f.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/career/jobs/%5Bid%5D/page-437c03cff1d83e67.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/layout-cad7a60e94590316.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/error-36db6f0541b910ce.js",
+      "https://teczen.recruiter.co.kr/_next/static/chunks/app/(main)/(jobflex)/layout-b47be8c80406eeae.js"
+    ],
+    "styles": [
+      "https://teczen.recruiter.co.kr/_next/static/css/e55be725e8a28966.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/435c39c502393a00.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/46e6e38a2299ca72.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/bb03030b95157d43.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/101ea2cd5338f720.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/73aaab8d428bbf08.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/10c19bca51a33dad.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/73c6e569ace5c7bc.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/afbfca500b9d8e02.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/d125ed2ef3b3cbc8.css",
+      "https://teczen.recruiter.co.kr/_next/static/css/510e9b4462162e7e.css"
+    ],
+    "forms": [],
+    "ids": [
+      "structuredData-script",
+      "loading-root",
+      "modal-root",
+      "slate-hovering-toolbar",
+      "tooltip-root",
+      "message-root",
+      "popup-root",
+      "_R_"
+    ]
+  },
+  {
+    "label": "안랩 supplemental-public-legacy-login",
+    "url": "https://ahnlab.recruiter.co.kr/app/applicant/myPage/login",
+    "observedAt": "2026-10-09T17:36:13.351417+00:00",
+    "expected": true,
+    "scripts": [
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/jquery.midas.linkedForm.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/midas.customUI.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/D.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/fileUploadValidater.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/applicantCommon.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/midas.address.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/rsaCommon.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/jquery.midasit.common.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/modalAgreement.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/login/findPassword.js",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/login/loginMyPage.js"
+    ],
+    "styles": [
+      "https://infra1-static.recruiter.co.kr/fonts/Noto-Sans-KR.style.css",
+      "https://infra1-static.recruiter.co.kr/fonts/Noto-Sans-KR.fallback.css",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/css/lib/font-awesome/css/font-awesome.min.css",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/css/applicant/applicant.css",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/css/applicant/skin/skin.css",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mrs2/css/resume/infographic.css",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/mit-common/js/lib/jquery-mCustomScrollbar-3.0.2/jquery.mCustomScrollbar.css",
+      "https://ahnlab.recruiter.co.kr/resources-2.0.3a/release/common/Dates.min.css"
+    ],
+    "forms": [
+      {
+        "id": "frm",
+        "method": "post"
+      }
+    ],
+    "ids": [
+      "wrap",
+      "jobdaDomain",
+      "jobdaApiDomain",
+      "recaptchaSiteKey",
+      "frm",
+      "header",
+      "loginForm",
+      "captchaForm",
+      "tblCaptcha",
+      "wrapSessionArea",
+      "sessionArea",
+      "_settingType",
+      "_appsiteSn"
+    ]
+  },
+  {
+    "label": "현대카드/커머셜 supplemental-public-legacy-login",
+    "url": "https://careerhyundai.recruiter.co.kr/app/applicant/myPage/login",
+    "observedAt": "2026-10-09T17:36:13.478506+00:00",
+    "expected": true,
+    "scripts": [
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/jquery.midas.linkedForm.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/midas.customUI.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/D.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/fileUploadValidater.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/applicantCommon.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/midas.address.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/rsaCommon.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/js/custom/jquery.midasit.common.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/modalAgreement.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/login/findPassword.js",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/release/js/applicant/login/loginMyPage.js"
+    ],
+    "styles": [
+      "https://infra1-static.recruiter.co.kr/fonts/Noto-Sans-KR.style.css",
+      "https://infra1-static.recruiter.co.kr/fonts/Noto-Sans-KR.fallback.css",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/css/lib/font-awesome/css/font-awesome.min.css",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/css/applicant/applicant.css",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/css/applicant/skin/skin.css",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mrs2/css/resume/infographic.css",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/mit-common/js/lib/jquery-mCustomScrollbar-3.0.2/jquery.mCustomScrollbar.css",
+      "https://careerhyundai.recruiter.co.kr/resources-2.0.3a/release/common/Dates.min.css"
+    ],
+    "forms": [
+      {
+        "id": "frm",
+        "method": "post"
+      }
+    ],
+    "ids": [
+      "wrap",
+      "jobdaDomain",
+      "jobdaApiDomain",
+      "recaptchaSiteKey",
+      "frm",
+      "header",
+      "loginForm",
+      "captchaForm",
+      "tblCaptcha",
+      "wrapSessionArea",
+      "sessionArea",
+      "_settingType",
+      "_appsiteSn"
+    ]
+  },
+  {
+    "label": "KT corporate",
+    "url": "https://recruit.kt.com/",
+    "observedAt": "2026-10-09T17:26:51.778469+00:00",
+    "expected": false,
+    "scripts": [
+      "https://recruit.kt.com/js/ie.js",
+      "https://recruit.kt.com/_nuxt/CLG3m2wL.js"
+    ],
+    "styles": ["https://recruit.kt.com/_nuxt/entry.DR4nuySt.css"],
+    "forms": [],
+    "ids": ["__nuxt", "teleports", "__NUXT_DATA__"]
+  },
+  {
+    "label": "KakaoBank corporate",
+    "url": "https://recruit.kakaobank.com/",
+    "observedAt": "2026-10-09T17:26:51.778605+00:00",
+    "expected": false,
+    "scripts": [
+      "https://recruit.kakaobank.com/_next/static/chunks/polyfills-a40ef1678bae11e696dba45124eadd70.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/webpack-e532a33b7d3d49bf3ed7.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/framework-895f067827ebe11ffe45.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/main-138996756fc08ad80559.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/pages/_app-c2ea51bb7a63ac601f66.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/29107295-2648cb5e919f7c78c7cc.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/857-b09ab0ce34c9862ea0de.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/746-2ee4f24862128ecf9363.js",
+      "https://recruit.kakaobank.com/_next/static/chunks/pages/index-b42857d81bfc912f593b.js",
+      "https://recruit.kakaobank.com/_next/static/YN3ZNY8C5-rSP8ocM3swy/_buildManifest.js",
+      "https://recruit.kakaobank.com/_next/static/YN3ZNY8C5-rSP8ocM3swy/_ssgManifest.js"
+    ],
+    "styles": [
+      "https://recruit.kakaobank.com/_next/static/css/b08836dd610618f38ba5.css"
+    ],
+    "forms": [],
+    "ids": [
+      "__next",
+      "skip-nav",
+      "header",
+      "headerWrap",
+      "mobile-nav-menu",
+      "main-content",
+      "main-title",
+      "searchInput",
+      "clearBtn",
+      "searchBtn",
+      "footer",
+      "__NEXT_DATA__"
+    ]
+  },
+  {
+    "label": "Hyundai Mobis corporate",
+    "url": "https://careers.mobis.com/index",
+    "observedAt": "2026-10-09T17:26:51.778666+00:00",
+    "expected": false,
+    "scripts": [
+      "https://www.googletagmanager.com/gtag/js?id=G-5ZFMNSQ2XW",
+      "https://careers.mobis.com/web/js/jquery-3.6.0.min.js",
+      "https://careers.mobis.com/web/js/gsap.min.js",
+      "https://careers.mobis.com/web/js/ScrollTrigger.min.js",
+      "https://careers.mobis.com/web/js/slick.min.js",
+      "https://careers.mobis.com/web/js/lottie.min.js",
+      "https://careers.mobis.com/web/js/common.min.js",
+      "https://careers.mobis.com/web/js/main.min.js"
+    ],
+    "styles": [
+      "https://careers.mobis.com/web/css/slick.css",
+      "https://careers.mobis.com/web/css/common.min.css",
+      "https://use.typekit.net/nnh1yie.css",
+      "https://careers.mobis.com/web/css/main.min.css"
+    ],
+    "forms": [],
+    "ids": [
+      "ogTit",
+      "ogDesc",
+      "ogImg",
+      "header",
+      "introSb",
+      "count",
+      "cnt",
+      "mainFitSb",
+      "mainJob",
+      "jobReflect",
+      "peopleBtn",
+      "moreBtn",
+      "mainStory",
+      "storySec",
+      "frm",
+      "prevUrl",
+      "prevScroll",
+      "footer",
+      "circle",
+      "path",
+      "layerFit",
+      "fitSb1",
+      "nickname",
+      "fitSb2",
+      "divisionArea",
+      "work0",
+      "fitSb3",
+      "businessArea",
+      "dept0",
+      "fitSb4",
+      "dutyArea",
+      "job0000",
+      "fitSb5",
+      "localArea",
+      "local0",
+      "popupJob",
+      "popupJobList",
+      "popupIntervew",
+      "popPeopleList",
+      "resultBtn",
+      "fit-alert01",
+      "choice1",
+      "choice2",
+      "fit-alert02",
+      "searchCnt1",
+      "fit-alert03",
+      "layerEmail"
+    ]
+  },
+  {
+    "label": "H.place marketing",
+    "url": "https://h.place/",
+    "observedAt": "2026-10-09T17:26:51.778745+00:00",
+    "expected": false,
+    "scripts": [
+      "https://h.place/_next/static/chunks/59c6eb5a-54fbfc0083042ef2.js",
+      "https://h.place/_next/static/chunks/1dd3208c-beffc9433c8978da.js",
+      "https://h.place/_next/static/chunks/5997-0dbe2013d21f5dc5.js",
+      "https://h.place/_next/static/chunks/main-app-26e49b54487894d9.js",
+      "https://h.place/_next/static/chunks/3778-a1fee88f7c817006.js",
+      "https://h.place/_next/static/chunks/566-efa962201141117d.js",
+      "https://h.place/_next/static/chunks/9660-9a2feaf545d7ceb8.js",
+      "https://h.place/_next/static/chunks/5068-67c84c4377bf0068.js",
+      "https://h.place/_next/static/chunks/294-ae86cfa991425c47.js",
+      "https://h.place/_next/static/chunks/4045-2c27419cf241cf19.js",
+      "https://h.place/_next/static/chunks/3022-6c13c9a61dbd1832.js",
+      "https://h.place/_next/static/chunks/3805-c9ffc38b6243ee8e.js",
+      "https://h.place/_next/static/chunks/8146-9d152aac4dfb7bd5.js",
+      "https://h.place/_next/static/chunks/4401-1bf28b3107d60837.js",
+      "https://h.place/_next/static/chunks/7703-6db1ca2e3c74875e.js",
+      "https://h.place/_next/static/chunks/5760-1168c880a732ee0b.js",
+      "https://h.place/_next/static/chunks/7070-e03bb59b4d6b73e7.js",
+      "https://h.place/_next/static/chunks/1038-6ebf51e2a6597bec.js",
+      "https://h.place/_next/static/chunks/1495-378947ab373b4c36.js",
+      "https://h.place/_next/static/chunks/7502-1271d055e62e1c6a.js",
+      "https://h.place/_next/static/chunks/3005-e5ba48ec181ea4a3.js",
+      "https://h.place/_next/static/chunks/598-866c1c56b93f5e4e.js",
+      "https://h.place/_next/static/chunks/2080-6fce222c487b1052.js",
+      "https://h.place/_next/static/chunks/4126-974bf8a9b3ad211c.js",
+      "https://h.place/_next/static/chunks/1466-2baec14cef67bbef.js",
+      "https://h.place/_next/static/chunks/7-356b2c35fe9691e5.js",
+      "https://h.place/_next/static/chunks/8000-9f65fa29980217a6.js",
+      "https://h.place/_next/static/chunks/5859-dc9b15deb11c41ef.js",
+      "https://h.place/_next/static/chunks/app/layout-180a513a9378e819.js",
+      "https://h.place/_next/static/chunks/app/global-error-7088aba3dfcec2d4.js",
+      "https://h.place/_next/static/chunks/6520-d4cb7e0ef5b56da4.js",
+      "https://h.place/_next/static/chunks/app/page-1c0e933c827346d0.js",
+      "https://h.place/_next/static/chunks/app/not-found-f036edba25a88e20.js",
+      "https://h.place/_next/static/chunks/polyfills-42372ed130431b0a.js",
+      "https://h.place/_next/static/chunks/webpack-f1c52c7d9a36ac3b.js"
+    ],
+    "styles": [
+      "https://h.place/_next/static/css/db1f20b6ac3f402f.css",
+      "https://h.place/_next/static/css/07a098635536dd3e.css",
+      "https://h.place/_next/static/css/9bc1ffd3896e0178.css",
+      "https://h.place/_next/static/css/bcfed377807b40d5.css"
+    ],
+    "forms": [],
+    "ids": [
+      "antd-cssinjs",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "Chevron--down",
+      "Vector",
+      "cursor.svg-__a",
+      "cursor.svg-__a"
+    ]
+  },
+  {
+    "label": "Dreamus corporate job",
+    "url": "https://recruit.dreamuscompany.com/pages/careers_view.jsp?id=69581",
+    "observedAt": "2026-10-09T17:26:51.836588+00:00",
+    "expected": false,
+    "scripts": [
+      "https://recruit.dreamuscompany.com/resources/js/jquery-3.7.1.min.js?1791566811895",
+      "https://recruit.dreamuscompany.com/resources/js/jquery-ui.min.js?1791566811895",
+      "https://recruit.dreamuscompany.com/resources/js/dreamus.js?1791566811895",
+      "https://recruit.dreamuscompany.com/resources/js/swiper.min.js?1791566811895",
+      "https://www.googletagmanager.com/gtag/js?id=UA-152880140-1"
+    ],
+    "styles": [
+      "https://recruit.dreamuscompany.com/resources/css/common.css",
+      "https://recruit.dreamuscompany.com/resources/css/swiper.min.css",
+      "https://recruit.dreamuscompany.com/resources/css/greeting_content.css"
+    ],
+    "forms": [],
+    "ids": [
+      "category",
+      "viewSubject",
+      "viewClassName",
+      "viewLocation",
+      "viewContent",
+      "shareButton",
+      "icon__fill",
+      "shareTextDiv",
+      "email",
+      "privacy",
+      "privacyTop",
+      "privacyDiv1",
+      "privacyHistoryList1",
+      "privacyDiv2",
+      "privacyHistoryList2",
+      "privacyDiv3",
+      "privacyHistoryList3",
+      "privacyDiv4",
+      "privacyHistoryList4",
+      "privacyDiv5",
+      "privacyHistoryList5",
+      "privacyDiv6",
+      "privacyHistoryList6",
+      "privacyDiv7",
+      "privacyHistoryList7",
+      "privacyDiv8",
+      "privacyHistoryList8",
+      "privacyDiv9",
+      "privacyHistoryList9",
+      "listContents"
+    ]
+  }
+]

@@ -245,12 +245,25 @@ export function AutofillWorkflow({
     addressRun.current = run;
     const start = async () => {
       try {
+        if (resolveDocumentCompany(pageDocument) === "hplace") {
+          setStage("unsupported");
+          return;
+        }
         const loadedProfile = await repository.load();
         if (!active) return;
+        if (resolveDocumentCompany(pageDocument) === "hplace") {
+          setStage("unsupported");
+          return;
+        }
         setProfile(loadedProfile);
         completedGreetingStateDrivers.current.clear();
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
+        if (!active) return;
+        if (resolveDocumentCompany(pageDocument) === "hplace") {
+          setStage("unsupported");
+          return;
+        }
         if (
           companyId === "generic" &&
           analysis.mode === "ADAPTER" &&
@@ -367,6 +380,10 @@ export function AutofillWorkflow({
 
   const executePreparation = async () => {
     if (!profile || !preparationSnapshot || executionPending.current) return;
+    if (resolveDocumentCompany(pageDocument) === "hplace") {
+      setStage("unsupported");
+      return;
+    }
     executionPending.current = true;
     try {
       const { runnablePlans, isApprovedPreparation } = prepareApprovedPlans({

@@ -177,7 +177,10 @@ export async function executeApprovedWritesAfterPageSettles({
     );
   const url = document?.URL;
   const runCurrent = () =>
-    !signal?.aborted && assertCurrent?.() !== false && document?.URL === url;
+    !signal?.aborted &&
+    assertCurrent?.() !== false &&
+    document?.URL === url &&
+    (!document || resolveDocumentCompany(document) !== "hplace");
   try {
     if (calendarOnly) {
       const calendarResults: ApprovedWriteResult[] = [];

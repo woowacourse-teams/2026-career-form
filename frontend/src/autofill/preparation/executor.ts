@@ -1,4 +1,5 @@
 import { acquireDocumentRun } from "../interaction/document-run";
+import { resolveDocumentCompany } from "../adapters/company";
 import type { PreparationPlan } from "../api/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ActionCandidateHandle } from "../dom/types";
@@ -222,7 +223,8 @@ export async function executeApprovedPreparationPlans(
       assertCurrent: () =>
         !options.signal?.aborted &&
         options.assertCurrent?.() !== false &&
-        document?.URL === url,
+        document?.URL === url &&
+        (!document || resolveDocumentCompany(document) !== "hplace"),
     });
   } finally {
     release?.();
