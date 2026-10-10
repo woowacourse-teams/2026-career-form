@@ -94,6 +94,18 @@ metric별 numerator, denominator와 rate delta로 유지한다. source의 모든
   --compare-to /tmp/generic-autofill-baseline.json
 ```
 
+## 실패 페이지 DOM 픽스처 수집
+
+[비식별 DOM 스냅샷 수집 정책](policies/dom-snapshot-fixtures.md)은 사람이 지정한
+실패 영역의 구조를 첫 출력 전에 정제하고, 공통 양식 텍스트 검토와 오프라인
+재현을 거쳐 테스트 자산으로 등록하는 절차다. [검토 양식](templates/dom-snapshot-review.md)에
+출처, 설치 revision 확인 여부, 제거·치환 종류, 구조 보존, 사람 검토와 재현 한계를 기록한다.
+
+실사이트 평가 요청은 수집 승인이 아니다. 원본 DOM·실제 값·세션 정보는 임시
+파일에도 보관하지 않는다. 실제 수집 자료와 합성 재현물을 구분하고, 샘플의
+통과를 실사이트 성공률로 합산하지 않는다. 이 절차와 빈 양식 자체는 실제
+샘플 수집 완료나 개인정보 검토 완료의 근거가 아니다.
+
 ## Project Issue 기획
 
 `cf-project-issue-planning` 스킬은 사람이 만든 Project draft 하나의 제목을 `[영역] 작업명`으로 보정하고 repository Issue로 승격한 뒤 `status:planning`과 같은 item의 `In Progress`를 함께 적용한다. `[AI]`는 제품의 LLM, 모델, 프롬프트, 에이전트 기능 작업에 사용하고 `[Harness]`는 개발 하네스와 워크플로우 변경에 사용한다. `[Plan]`은 조사, 요구사항 정리, 문서 기획처럼 구현에 선행하는 작업에 사용한다. 기본값은 기획 산출물만 다루는 것이지만 처음 승인한 범위에 구현이 명시되어 있으면 같은 Issue에서 함께 진행할 수 있다. draft가 없으면 AI가 만들지 않고 사람 생성에서 멈춘다.

@@ -17,6 +17,13 @@ REPOSITORY = "team/project"
 
 class ReleaseSyncTest(unittest.TestCase):
     def setUp(self) -> None:
+        local_git_variables = subprocess.check_output(
+            ["git", "rev-parse", "--local-env-vars"], text=True,
+        ).splitlines()
+        self.env = {
+            key: value for key, value in os.environ.items()
+            if key not in local_git_variables
+        }
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
@@ -34,7 +41,7 @@ class ReleaseSyncTest(unittest.TestCase):
         self.release = self._commit("release fix")
         self._git("push", "origin", f"HEAD:refs/heads/{BRANCH}")
         self.env = {
-            **os.environ,
+            **self.env,
             "RELEASE_BRANCH": BRANCH,
             "RELEASE_SHA": self.release,
             "DEPLOY_RESULT": "success",
@@ -268,7 +275,8 @@ class ReleaseSyncTest(unittest.TestCase):
 
     def _git(self, *arguments: str) -> str:
         return subprocess.check_output(
-            ["git", *arguments], cwd=self.repo, text=True, stderr=subprocess.DEVNULL,
+            ["git", *arguments], cwd=self.repo, env=self.env,
+            text=True, stderr=subprocess.DEVNULL,
         ).strip()
 
     def _commit(self, message: str) -> str:
@@ -283,6 +291,51 @@ class ReleaseSyncTest(unittest.TestCase):
     def _remote_sha(self) -> str:
         value = self._git("ls-remote", "--heads", "origin", f"refs/heads/{BRANCH}")
         return value.split()[0] if value else ""
+
+
+class ReleaseSyncEnvironmentTest(unittest.TestCase):
+    def test_hook_environment_does_not_change_calling_repository(self) -> None:
+        clean_environment = {
+            key: value for key, value in os.environ.items()
+            if not key.startswith("GIT_")
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            caller = Path(directory) / "caller"
+            subprocess.run(
+                ["git", "init", str(caller)], env=clean_environment,
+                check=True, capture_output=True,
+            )
+            subprocess.run(
+                ["git", "remote", "add", "origin", "https://example.invalid/caller"],
+                cwd=caller, env=clean_environment, check=True, capture_output=True,
+            )
+            config = caller / ".git/config"
+            original_config = config.read_bytes()
+            result = subprocess.run(
+                [
+                    sys.executable, "-m", "unittest",
+                    "infra.tests.test_release_sync.ReleaseSyncTest."
+                    "test_unmerged_release_requests_pr_and_preserves_branch",
+                    "infra.tests.test_release_sync.ReleaseSyncTest."
+                    "test_production_step_creates_pr_once_and_preserves_unmerged_release",
+                ],
+                cwd=ROOT, text=True, capture_output=True,
+                env={
+                    **clean_environment,
+                    "GIT_DIR": str(caller / ".git"),
+                    "GIT_WORK_TREE": str(caller),
+                    "GIT_COMMON_DIR": str(caller / ".git"),
+                    "GIT_INDEX_FILE": str(caller / ".git/index"),
+                    "GIT_CONFIG_COUNT": "1",
+                    "GIT_CONFIG_KEY_0": "user.name",
+                    "GIT_CONFIG_VALUE_0": "Calling hook",
+                },
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual(original_config, config.read_bytes())
+            self.assertFalse((caller / ".git/index").exists())
+            self.assertEqual([], list((caller / ".git/refs/heads").iterdir()))
 
 
 if __name__ == "__main__":
