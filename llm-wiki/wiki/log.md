@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-11] ingest | CF-178 브라우저 테스트 계층과 CI 경계
+
+- Approval-Digest: a44d4319a65cb6f0fc17934d216e915b38e1c1fec8acb5c1d1839957fa6b7013
+- Source-Revision: 2bed14247592b4710bdfa3b2fcd5e4f217576d32
+- 승인한 ADR 전문과 구현 경계 두 후보를 [CF-178 bundle](../raw/issues/CF-178/manifest.md)에 기록했다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)에 unit/browser 프로젝트, 합성 fixture 검증, 80% 커버리지와 CI 경계를 연결했다.
+- 설치 확장 E2E와 실사이트 R1 기준선을 이번 브라우저 테스트 결과로 대체하지 않는다.
+
 ## [2026-10-09] ingest | CF-173 실패 원인 집계와 설치 revision 근거
 
 - Approval-Digest: 13f6d39b24eeee80a26b35b202c456ab067910ad145274757c03802220f336f9
