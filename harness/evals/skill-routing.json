@@ -71,6 +71,27 @@
       "reason": "Console 해석 요청은 외부 Chrome 평가 실행 요청이 아니다."
     },
     {
+      "id": "dom-snapshot-collection-positive",
+      "prompt": "열어 둔 지원서의 자격증 취득일 실패 영역만 DOM 스냅샷으로 비식별 수집하고 오프라인 재현 픽스처로 남겨줘.",
+      "expected_skill": "cf-dom-snapshot-collection",
+      "should_trigger": true,
+      "reason": "실패 영역과 비식별 테스트 자산 수집을 명시적으로 요청했다."
+    },
+    {
+      "id": "dom-snapshot-collection-negative",
+      "prompt": "외부 Chrome에 연 평가 탭에서 평가 시작해줘.",
+      "expected_skill": "cf-dom-snapshot-collection",
+      "should_trigger": false,
+      "reason": "자동 입력 평가 승인은 DOM 스냅샷 수집 승인이 아니다."
+    },
+    {
+      "id": "dom-snapshot-collection-usage-only",
+      "prompt": "DOM 스냅샷 수집은 나중에 할 거니 지금은 사용법만 알려줘.",
+      "expected_skill": "cf-dom-snapshot-collection",
+      "should_trigger": false,
+      "reason": "사용법 설명만 요청했으므로 실제 수집을 시작하지 않는다."
+    },
+    {
       "id": "code-understanding-positive",
       "prompt": "검증된 현재 변경을 실제 코드와 테스트 기준으로 설명하고 참고 파일을 주면서 가볍게 이해를 확인해줘.",
       "expected_skill": "cf-code-understanding",

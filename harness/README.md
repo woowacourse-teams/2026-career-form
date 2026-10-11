@@ -96,6 +96,11 @@ metric별 numerator, denominator와 rate delta로 유지한다. source의 모든
 
 ## 실패 페이지 DOM 픽스처 수집
 
+전용 [`cf-dom-snapshot-collection`](../.agents/skills/cf-dom-snapshot-collection/SKILL.md)
+스킬로 시작한다. 예: `cf-dom-snapshot-collection으로 네이버 지원서의 자격증
+취득일 실패 영역을 비식별 픽스처로 수집해줘.` 사람이 준비한 페이지와 지정한
+최소 영역만 대상으로 하며, 실제 값이나 지원서 URL을 요청에 붙이지 않는다.
+
 [비식별 DOM 스냅샷 수집 정책](policies/dom-snapshot-fixtures.md)은 사람이 지정한
 실패 영역의 구조를 첫 출력 전에 정제하고, 공통 양식 텍스트 검토와 오프라인
 재현을 거쳐 테스트 자산으로 등록하는 절차다. [검토 양식](templates/dom-snapshot-review.md)에
