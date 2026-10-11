@@ -17,12 +17,9 @@ REPOSITORY = "team/project"
 
 class ReleaseSyncTest(unittest.TestCase):
     def setUp(self) -> None:
-        local_git_variables = subprocess.check_output(
-            ["git", "rev-parse", "--local-env-vars"], text=True,
-        ).splitlines()
         self.env = {
             key: value for key, value in os.environ.items()
-            if key not in local_git_variables
+            if not key.startswith("GIT_")
         }
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
