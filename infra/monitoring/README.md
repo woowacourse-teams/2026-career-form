@@ -106,7 +106,7 @@ sudo test -e /etc/career-form-monitoring/secrets/grafana.env || sudo install -m 
 sudoedit /etc/career-form-monitoring/secrets/grafana.env
 ```
 
-grafana.env에는 DISCORD_WEBHOOK_URL=실제_웹훅_URL 한 줄만 넣는다.
+grafana.env에는 기존 운영 알림의 DISCORD_WEBHOOK_URL=실제_웹훅_URL을 유지하고, 품질 집계를 사용하면 마지막 자동 입력 품질 절의 환경별 조회 설정을 함께 넣는다.
 Grafana 암호와 htpasswd는 개별 read-only bind 파일을 비-root 프로세스가
 읽을 수 있도록 0644로 두되 부모 secrets 디렉터리는 root 0700이다.
 ingest-password와 grafana.env는 0600을 유지한다.
@@ -498,3 +498,14 @@ RUN_MONITORING_INTEGRATION=1 MONITORING_PLAYWRIGHT_MODULE=/absolute/path/to/node
 
 브라우저 옵션을 지정하지 않으면 해당 시험은 skip된다. 로그인은 격리 스택의
 합성 계정만 사용하며 실제 운영 계정, 브라우저 세션과 Discord webhook은 사용하지 않는다.
+## 자동 입력 품질 대시보드
+
+`Career Form 자동 입력 품질`은 기존 운영 대시보드와 별도로 제공된다. 경로별 주요 비율, 사람 참고 커버리지, 버전별 추이, 실패, 보류, 표본, 미관측, AI 호출, 지연 순서다. 환경은 전용 데이터 소스로 선택하며 기간, 사이트, 버전과 화면 구조로 좁힐 수 있다. 빈 값은 0%가 아니고, 사람의 필드 수 등록은 정확도 검증이 아니다.
+
+Grafana는 고정 버전 Infinity 4.1.1을 시작 전에 설치한다. 인터넷에서 플러그인을 내려받을 수 있어야 한다. 신규 데이터 소스는 JSONata backend parser로 집계 API를 호출하고 조회 토큰은 `secureJsonData`에 보관한다. 설치와 운영 적용은 사람이 수행한다.
+
+운영 담당자는 `/etc/career-form-monitoring/secrets/grafana.env`에 환경별 `QUALITY_DEV_API_ORIGIN`, `QUALITY_STAGING_API_ORIGIN`, `QUALITY_PROD_API_ORIGIN`과 대응하는 `QUALITY_DEV_QUERY_TOKEN`, `QUALITY_STAGING_QUERY_TOKEN`, `QUALITY_PROD_QUERY_TOKEN`을 설정한다. origin은 백엔드의 HTTP origin이고 query 토큰은 해당 백엔드의 `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH`와 대응하는 별도 임의 토큰이다. 공용 관리 비밀번호를 사용하지 않는다. 미설정 환경의 조회는 준비된 데이터로 해석하지 않는다.
+
+기존 운영 알림 웹훅은 그대로 유지한다. 필드 수 확인 요청은 백엔드의 `CAREER_FORM_QUALITY_DISCORD_WEBHOOK`으로 새 채널에 보낸다. 처음에는 `CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT=prod` 한 환경에서만 활성화한다.
+
+설정과 분모, 보존, 발송 기준은 [자동 입력 품질 운영 문서](../../backend/docs/autofill-quality.md)를 참고한다. 합성 환경 검증은 `RUN_QUALITY_INTEGRATION=1`과 `RUN_QUALITY_DASHBOARD_INTEGRATION=1`로 각각 실행한다. 관리 화면 브라우저 검증은 `QUALITY_PLAYWRIGHT_MODULE`에 격리된 Playwright 경로를 지정한다. 실제 운영 적용과 실제 수신 확인은 자동 검증과 별개다.
