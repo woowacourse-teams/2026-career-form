@@ -60,9 +60,11 @@ public final class CompanyFormPolicy {
             || isSupportedProfileKey == null) {
             invalidPolicy();
         }
-        if ((preparationFingerprint.noActionPreparation()
-                || fieldsFingerprint.anySection())
-            && !"greeting".equals(companyKey)) {
+        if (preparationFingerprint.noActionPreparation()
+            && !"greeting".equals(companyKey) && !"hplace".equals(companyKey)) {
+            invalidPolicy();
+        }
+        if (fieldsFingerprint.anySection() && !"greeting".equals(companyKey)) {
             invalidPolicy();
         }
         if (preparationFingerprint.noActionPreparation() && !actionRules.isEmpty()) {

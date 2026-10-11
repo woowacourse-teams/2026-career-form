@@ -1,5 +1,7 @@
 package com.careerform.formanalysis.application;
 
+import java.util.regex.Pattern;
+
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -9,6 +11,8 @@ import com.careerform.formanalysis.application.policy.StoredPolicyActionResolver
 import com.careerform.formanalysis.application.policy.StoredPolicyFieldMappingResolver;
 import com.careerform.formanalysis.application.policy.StoredPolicyFingerprint;
 import com.careerform.formanalysis.application.policy.GreetingFormFingerprint;
+import com.careerform.formanalysis.application.policy.HplaceFormFingerprint;
+import com.careerform.formanalysis.application.port.HplacePolicyProvider;
 import com.careerform.formanalysis.application.policy.GreetingFieldMappingResolver;
 import com.careerform.formanalysis.application.policy.GreetingActionResolver;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider;
@@ -23,6 +27,12 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 @Component
 public final class FormAnalysisRouter {
 
+    private static final Pattern HPLACE_HOST = Pattern.compile(
+        "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.(?:recruiter\\.co\\.kr|recruiter\\.im)$",
+        Pattern.CASE_INSENSITIVE
+    );
+    private final HplacePolicyProvider hplacePolicyProvider;
+    private final HplaceFormFingerprint hplaceFingerprint = new HplaceFormFingerprint();
     private final CompanyFormPolicyProvider policyProvider;
     private final GreetingPolicyProvider greetingPolicyProvider;
     private final GreetingDomainEvidence greetingDomainEvidence;
@@ -34,9 +44,17 @@ public final class FormAnalysisRouter {
             CompanyFormPolicyProvider.Unavailable::new);
     }
 
-    @Autowired
     public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider,
         GreetingDomainEvidence greetingDomainEvidence, GreetingPolicyProvider greetingPolicyProvider) {
+        this(policyProvider, greetingDomainEvidence, greetingPolicyProvider,
+            CompanyFormPolicyProvider.Unavailable::new);
+    }
+
+    @Autowired
+    public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider,
+        GreetingDomainEvidence greetingDomainEvidence, GreetingPolicyProvider greetingPolicyProvider,
+        HplacePolicyProvider hplacePolicyProvider) {
+        this.hplacePolicyProvider = hplacePolicyProvider;
         this.policyProvider = policyProvider;
         this.greetingDomainEvidence = greetingDomainEvidence;
         this.greetingPolicyProvider = greetingPolicyProvider;
@@ -49,17 +67,18 @@ public final class FormAnalysisRouter {
         );
         boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
-            lookup = greetingLookup(request.site().host(), request.site().pathPattern());
+            lookup = sharedLookup(request.site().host(), request.site().pathPattern());
             if (lookup instanceof NotRegistered) {
                 return new ActionRoute(RouteKind.GENERIC, null);
             }
-            greetingCandidate = true;
+            greetingCandidate = !isHplaceApplicant(request.site().host(), request.site().pathPattern());
         }
         if (!(lookup instanceof Available available)) {
             return new ActionRoute(RouteKind.POLICY_UNAVAILABLE, null, greetingCandidate);
         }
         CompanyFormPolicy policy = available.policy();
-        if (!fingerprint.matches(policy, request)) {
+        if (!("hplace".equals(policy.companyKey())
+            ? hplaceFingerprint.matches(request) : fingerprint.matches(policy, request))) {
             return new ActionRoute(RouteKind.STRUCTURE_MISMATCH, null, greetingCandidate);
         }
         return new ActionRoute(
@@ -76,7 +95,7 @@ public final class FormAnalysisRouter {
             request.site().pathPattern()
         );
         if (lookup instanceof NotRegistered) {
-            lookup = greetingLookup(request.site().host(), request.site().pathPattern());
+            lookup = sharedLookup(request.site().host(), request.site().pathPattern());
             if (lookup instanceof NotRegistered) {
                 return new FieldRoute(RouteKind.GENERIC, null);
             }
@@ -87,7 +106,8 @@ public final class FormAnalysisRouter {
         }
         CompanyFormPolicy policy = available.policy();
         boolean greeting = "greeting".equals(policy.companyKey());
-        if (!(greeting
+        boolean hplace = "hplace".equals(policy.companyKey());
+        if (!(hplace ? hplaceFingerprint.matches(request) : greeting
             ? greetingFingerprint.matches(request)
             : fingerprint.matches(policy, request))) {
             return new FieldRoute(RouteKind.STRUCTURE_MISMATCH, null);
@@ -95,7 +115,7 @@ public final class FormAnalysisRouter {
         return new FieldRoute(
             RouteKind.ADAPTER,
             greeting ? new GreetingFieldMappingResolver(policy)
-                : new StoredPolicyFieldMappingResolver(policy), greeting
+                : new StoredPolicyFieldMappingResolver(policy, hplace), greeting
         );
     }
 
@@ -105,7 +125,7 @@ public final class FormAnalysisRouter {
             pathPattern
         );
         if (lookup instanceof NotRegistered) {
-            lookup = greetingLookup(host, pathPattern);
+            lookup = sharedLookup(host, pathPattern);
         }
         if (lookup instanceof NotRegistered) {
             return GenericRouteKind.GENERIC;
@@ -114,6 +134,23 @@ public final class FormAnalysisRouter {
             return GenericRouteKind.STATIC_POLICY_PRESENT;
         }
         return GenericRouteKind.POLICY_UNAVAILABLE;
+    }
+
+    private CompanyFormPolicyProvider.LookupResult sharedLookup(String host, String pathPattern) {
+        if (isHplaceApplicant(host, pathPattern)) {
+            if (!"/app/applicant/registResume".equals(pathPattern)) {
+                return new CompanyFormPolicyProvider.Unavailable();
+            }
+            var lookup = hplacePolicyProvider.find();
+            return lookup instanceof Available ? lookup : new CompanyFormPolicyProvider.Unavailable();
+        }
+        return greetingLookup(host, pathPattern);
+    }
+
+    private static boolean isHplaceApplicant(String host, String pathPattern) {
+        return host != null && HPLACE_HOST.matcher(host).matches() && pathPattern != null
+            && (pathPattern.startsWith("/app/applicant/") || pathPattern.equals("/app/applicant")
+                || pathPattern.startsWith("/v1/applicant/") || pathPattern.equals("/v1/applicant"));
     }
 
     private CompanyFormPolicyProvider.LookupResult greetingLookup(

@@ -1,5 +1,8 @@
 import { greetingBasicControls } from "../adapters/greeting/fingerprint";
-import { resolveDocumentCompany } from "../adapters/company";
+import {
+  resolveDocumentCompany,
+  isUnsupportedHplace,
+} from "../adapters/company";
 import {
   createPreparationOptions,
   prepareApprovedPlans,
@@ -245,13 +248,13 @@ export function AutofillWorkflow({
     addressRun.current = run;
     const start = async () => {
       try {
-        if (resolveDocumentCompany(pageDocument) === "hplace") {
+        if (isUnsupportedHplace(pageDocument)) {
           setStage("unsupported");
           return;
         }
         const loadedProfile = await repository.load();
         if (!active) return;
-        if (resolveDocumentCompany(pageDocument) === "hplace") {
+        if (isUnsupportedHplace(pageDocument)) {
           setStage("unsupported");
           return;
         }
@@ -260,7 +263,7 @@ export function AutofillWorkflow({
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
         if (!active) return;
-        if (resolveDocumentCompany(pageDocument) === "hplace") {
+        if (isUnsupportedHplace(pageDocument)) {
           setStage("unsupported");
           return;
         }
@@ -270,8 +273,19 @@ export function AutofillWorkflow({
           greetingBasicControls(pageDocument)
         )
           throw new Error("Unverified Greeting page structure");
-        if (companyId === "greeting" && analysis.mode !== "ADAPTER")
+        if (
+          (companyId === "greeting" ||
+            resolveDocumentCompany(pageDocument) === "hplace") &&
+          analysis.mode !== "ADAPTER"
+        )
           throw new Error("Unexpected generic response for registered adapter");
+        if (
+          resolveDocumentCompany(pageDocument) === "hplace" &&
+          analysis.preparationPlans.length > 0
+        )
+          throw new Error(
+            "Unexpected preparation action for Hplace registration",
+          );
         const adapter = getWorkflowAdapter(pageDocument);
 
         if (!active) return;
@@ -380,7 +394,7 @@ export function AutofillWorkflow({
 
   const executePreparation = async () => {
     if (!profile || !preparationSnapshot || executionPending.current) return;
-    if (resolveDocumentCompany(pageDocument) === "hplace") {
+    if (isUnsupportedHplace(pageDocument)) {
       setStage("unsupported");
       return;
     }

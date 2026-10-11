@@ -1,5 +1,6 @@
 import { greetingBasicControls } from "./greeting/fingerprint";
 import { isHplaceDocument } from "./hplace/fingerprint";
+import { registrationControls } from "./hplace/registration";
 export type CompanyId = "sk" | "hyundai" | "generic" | "greeting" | "hplace";
 
 export function resolveCompany(host: string): CompanyId {
@@ -21,6 +22,13 @@ export function isSkCareersHost(host: string): boolean {
 
 export function isHyundaiTalentHost(host: string): boolean {
   return resolveCompany(host) === "hyundai";
+}
+
+export function isUnsupportedHplace(document: Document): boolean {
+  return (
+    resolveDocumentCompany(document) === "hplace" &&
+    !registrationControls(document)
+  );
 }
 
 const platformDocuments = new WeakMap<

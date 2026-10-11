@@ -1,4 +1,5 @@
 import { greetingWorkflowAdapter } from "./greeting/workflow";
+import { isRegistrationItem, writeRegistration } from "./hplace/write";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
 import type { ActionCandidateHandle, FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -145,6 +146,12 @@ const genericWorkflowAdapter: WorkflowAdapter = {
   revealedProfileFieldKey: () => undefined,
 };
 
+const hplaceWorkflowAdapter: WorkflowAdapter = {
+  ...genericWorkflowAdapter,
+  isStateDriver: isRegistrationItem,
+  executeStateDriver: writeRegistration,
+};
+
 export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
   switch (
     typeof source === "string"
@@ -158,6 +165,7 @@ export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
     case "sk":
       return skWorkflowAdapter;
     case "hplace":
+      return hplaceWorkflowAdapter;
     case "generic":
       return genericWorkflowAdapter;
   }

@@ -22,6 +22,21 @@ export function isHplaceDocument(document: Document): boolean {
 
   if (
     scripts.some((path) =>
+      path.endsWith("/mrs2/release/js/applicant/applicantCommon.js"),
+    ) &&
+    scripts.some((path) =>
+      path.endsWith("/mrs2/release/js/applicant/login/registResume.js"),
+    ) &&
+    styles.some((path) => path.endsWith("/mrs2/css/applicant/applicant.css")) &&
+    Array.from(document.querySelectorAll("section.writeResume")).some(
+      (section) =>
+        section.id === "loginForm" && section.closest("form")?.id === "frm",
+    )
+  )
+    return true;
+
+  if (
+    scripts.some((path) =>
       /^\/_next\/static\/chunks\/app\/\(main\)\/(?:\(jobflex\)\/career|\(jobda\))\/.+\/page-[\w-]+\.js$/.test(
         path,
       ),

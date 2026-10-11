@@ -84,7 +84,10 @@ it.each(["before-execution", "before-mutation"] as const)(
 
 it("does not fall back to a native writer on an identified Hplace screen", () => {
   renderHplaceLogin();
+  const assets = document.head.innerHTML;
+  document.head.replaceChildren();
   const snapshot = collectFieldsSnapshot(document);
+  document.head.innerHTML = assets;
   const field = snapshot.request.sections.flatMap(
     (section) => section.fields,
   )[0];

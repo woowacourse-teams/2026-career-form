@@ -1,4 +1,8 @@
 import { resolveDocumentCompany } from "../adapters/company";
+import {
+  collectHplaceFields,
+  collectHplacePreparation,
+} from "../adapters/hplace/collection";
 import type { CompanyId } from "../adapters/company";
 import type {
   ActionCandidate,
@@ -321,6 +325,12 @@ export function collectFieldsSnapshot(
   dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   const companyId = resolveDocumentCompany(document);
+  if (companyId === "hplace")
+    return collectHplaceFields(
+      document,
+      createSnapshotId("fields"),
+      siteOf(document),
+    );
   const adapter = collectionAdapterForHost(document);
   const registry = new CandidateRegistry();
   let candidateIndex = 0;
@@ -964,6 +974,12 @@ export function collectPreparationSnapshot(
   document: Document,
 ): PreparationCollectedSnapshot {
   const companyId = resolveDocumentCompany(document);
+  if (companyId === "hplace")
+    return collectHplacePreparation(
+      document,
+      createSnapshotId("preparation"),
+      siteOf(document),
+    );
   const adapter = collectionAdapterForHost(document);
   const registry = new CandidateRegistry();
   let candidateIndex = 0;

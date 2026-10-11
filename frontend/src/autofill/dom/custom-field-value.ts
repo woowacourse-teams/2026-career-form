@@ -1,10 +1,13 @@
 import type { FieldCandidateHandle } from "./types";
 import { dropdownValue } from "./button-dropdown";
+import { registrationValue } from "../adapters/hplace/registration";
 
 /** Reads only custom controls already bound by the collector. */
 export function customFieldValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
+  const registration = registrationValue(handle);
+  if (registration !== undefined) return registration;
   if (handle.buttonDropdown) return dropdownValue(handle.buttonDropdown);
   const element = handle.customElements?.[0];
   if (!element) return undefined;

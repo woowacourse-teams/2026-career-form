@@ -1,5 +1,8 @@
 import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
-import { resolveDocumentCompany } from "../adapters/company";
+import {
+  resolveDocumentCompany,
+  isUnsupportedHplace,
+} from "../adapters/company";
 import { isGreetingEmailStateDriver } from "../adapters/greeting/workflow";
 import { sensitiveValueApproved } from "./review-actions";
 import type { CandidateRegistry } from "../dom/candidate-registry";
@@ -131,7 +134,7 @@ export function createAnalyzeFields({
     genericPass = 0,
     options: SearchFollowUpAnalysisOptions = {},
   ) => {
-    if (resolveDocumentCompany(pageDocument) === "hplace") {
+    if (isUnsupportedHplace(pageDocument)) {
       setStage("unsupported");
       return;
     }
@@ -168,7 +171,7 @@ export function createAnalyzeFields({
       currentAnalysisGeneration !== analysisGeneration
     )
       return;
-    if (resolveDocumentCompany(pageDocument) === "hplace") {
+    if (isUnsupportedHplace(pageDocument)) {
       setStage("unsupported");
       return;
     }
@@ -181,7 +184,7 @@ export function createAnalyzeFields({
       currentAnalysisGeneration !== analysisGeneration
     )
       return;
-    if (resolveDocumentCompany(pageDocument) === "hplace") {
+    if (isUnsupportedHplace(pageDocument)) {
       setStage("unsupported");
       return;
     }
@@ -215,7 +218,8 @@ export function createAnalyzeFields({
       return;
     }
     if (
-      companyId === "greeting" &&
+      (companyId === "greeting" ||
+        resolveDocumentCompany(pageDocument) === "hplace") &&
       (analysis.mode !== "ADAPTER" ||
         analysis.fields.some(
           (field) => field.mappingStatus !== "ADAPTER_VERIFIED",
