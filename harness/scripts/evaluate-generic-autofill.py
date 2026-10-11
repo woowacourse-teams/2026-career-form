@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from harness.lib.cli import read_json
+from harness.lib.evaluation_comparison import revision_comparison
 from harness.lib.generic_autofill_eval import evaluate_generic_autofill
 
 
@@ -103,8 +104,13 @@ def _compare(
         previous_source = _source(previous_sources[source], source)
         _validate_site_set(current_source, previous_source, source)
         comparison = _compare_source(current_source, previous_source)
-        comparisons[source] = comparison
-        regressions.extend(_regressions(source, comparison))
+        judgment = revision_comparison(current_source, previous_source, source)
+        comparisons[source] = {
+            **comparison,
+            "revision_comparison": judgment,
+        }
+        if judgment["status"] == "COMPARABLE":
+            regressions.extend(_regressions(source, comparison))
     return {"sources": comparisons, "regressions": regressions}
 
 

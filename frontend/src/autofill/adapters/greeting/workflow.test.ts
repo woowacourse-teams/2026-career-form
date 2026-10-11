@@ -455,6 +455,26 @@ it("keeps aborting failed reveal drivers and shared Greeting fields", () => {
   ).toBeUndefined();
   expect(failureDriver("b.status", "CHECK_RADIO", status)).toBeUndefined();
 });
+it("isolates a failed language level button to its own Greeting field", () => {
+  const prefix =
+    "languagesCertificationsAndOtherActivity.foreignLanguageProficiencies.0";
+  document.body.innerHTML = `<div><div id="grade" data-scope="field" data-part="root" role="group"><button type="button" name="${prefix}.grade">선택</button></div><div id="shared" data-scope="field" data-part="root" role="group"><button type="button" name="${prefix}.conversationalProficiency">선택</button><input name="${prefix}.other"></div></div>`;
+  const [grade, shared] = document.querySelectorAll<HTMLElement>("button");
+
+  expect(failureDriver(`${prefix}.grade`, "SELECT_BUTTON_OPTION", grade)).toBe(
+    document.getElementById("grade"),
+  );
+  expect(
+    failureDriver(
+      `${prefix}.conversationalProficiency`,
+      "SELECT_BUTTON_OPTION",
+      shared,
+    ),
+  ).toBeUndefined();
+  expect(
+    failureDriver(`${prefix}.grade`, "CHECK_RADIO", grade),
+  ).toBeUndefined();
+});
 it("reports an unconfirmed date when a Greeting date cannot be selected", async () => {
   document.body.innerHTML = `<button type="button" name="basicInformation.birthdate" data-scope="date-picker" data-part="trigger" aria-controls="calendar">선택</button>`;
   const trigger = document.querySelector<HTMLButtonElement>("button")!;

@@ -2,9 +2,9 @@
 
 > Topic: adapter-sk
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-86/documents/adapter-sk.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-sk.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-sk.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-sk.md)
-> Updated: 2026-09-10
+> Current: [SK 어학 상태 드라이버 실패의 행 단위 격리](../../raw/issues/CF-169/documents/adapter-sk.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-sk.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-sk.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-sk.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-sk.md)
+> Updated: 2026-10-08
 
 ## 현재 상태
 
@@ -15,6 +15,8 @@ CF-82는 표준 ID가 전달된 어학 선택에서 현재 보이는 nonzero ID 
 이번 후속 매핑은 로컬 정책 v22에 반영된 범위에서 확인했으며 production 정책 배포 완료를 뜻하지 않는다.
 
 학교·자격증·시험 검색은 같은 입력의 jQuery UI widget에서 새 검색 완료와 유일한 label/value를 확인하고, 시험은 nonzero id만 자동 확정한다. 행·검색 종류별 쓰기와 확정은 직렬 처리하며 시험 언어 선택 뒤 하나의 text 또는 select 성적란이 확인될 때만 후속 분석한다. 실제 패널에서 전체 fixture의 시험 2행, 자격증 3행, 대학 1행 선택과 프로필 일치를 확인했고, UI 집계 23개 기입 성공·0개 직접 확인은 전체 항목 성공을 뜻하지 않는다. 미일치 주소 미입력과 공개 주소의 선택·반영, 원래 프로필 복원과 시험 입력 정리를 확인했다. 실제 저장 호환성, 이번 fixture에 포함되지 않은 다른 필드와 전체 취소 UX는 별도 제한으로 남아 있다.
+
+CF-169는 어학 언어 선택의 실패를 `.form-item-group.langExam-Item`이 select를 정확히 하나만 소유하는 같은 시험 행으로 격리한다. 증명할 수 없는 컨테이너와 우대 여부 드라이버는 기존처럼 전체를 중단한다. 상세는 [CF-169 근거](../../raw/issues/CF-169/documents/adapter-sk.md)를 따른다.
 
 ## 변경 이유
 

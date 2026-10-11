@@ -1,5 +1,13 @@
 import { defineConfig } from "wxt";
 import { loadEnv } from "vite";
+import {
+  generateBuildInfo,
+  installedBuildScript,
+  serializeBuildInfo,
+} from "./scripts/build-info";
+import type { BuildInfo } from "./scripts/build-info";
+
+let buildInfo: BuildInfo;
 
 const fileEnv = loadEnv("production", ".", "");
 const configuredApiBaseUrl =
@@ -27,6 +35,32 @@ function apiHostPermissions(apiBaseUrl: string | undefined): string[] {
 
 export default defineConfig({
   hooks: {
+    "build:before": (wxt) => {
+      buildInfo = generateBuildInfo(wxt.config.root);
+    },
+    "build:publicAssets": (_wxt, files) => {
+      files.push({
+        relativeDest: "build-info.json",
+        contents: serializeBuildInfo(buildInfo),
+      });
+    },
+    "vite:build:extendConfig": (entrypoints, config) => {
+      if (!entrypoints.some((entrypoint) => entrypoint.type === "background"))
+        return;
+      config.plugins ??= [];
+      config.plugins.push({
+        name: "career-form-installed-build",
+        generateBundle: {
+          order: "post",
+          handler(_options, bundle) {
+            for (const output of Object.values(bundle)) {
+              if (output.type === "chunk" && output.isEntry)
+                output.code = installedBuildScript(buildInfo) + output.code;
+            }
+          },
+        },
+      });
+    },
     "build:manifestGenerated": (_wxt, manifest) => {
       if (manifest.action) delete manifest.action.default_popup;
     },

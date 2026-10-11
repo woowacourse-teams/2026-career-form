@@ -20,6 +20,7 @@ export type WriteFailureCode =
   | "DATE_UNCONFIRMED"
   | "DATE_ROLLBACK_FAILED"
   | "SEARCH_SELECTION_UNVERIFIED"
-  | "VALUE_MATCH_UNRECORDED";
+  | "VALUE_MATCH_UNRECORDED"
+  | "OPTION_UNMATCHED";
 
 export type FailureReporter = (code: WriteFailureCode) => void;

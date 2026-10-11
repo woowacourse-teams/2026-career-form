@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-09] ingest | CF-173 실패 원인 집계와 설치 revision 근거
+
+- Approval-Digest: 13f6d39b24eeee80a26b35b202c456ab067910ad145274757c03802220f336f9
+- Source-Revision: 094e3b43522fa2ec464fb841ba53b8c7b2c9be8c
+- 승인한 네 후보와 설치본 메타데이터 ADR을 [CF-173 bundle](../raw/issues/CF-173/manifest.md)에 기록했다.
+- [평가 기준선](topics/generic-autofill-evaluation-baselines.md)과 [실사이트 평가](topics/live-autofill-evaluation.md)에 계약 1.1의 원인 집계·미발견 분리·설치 snapshot 근거·비교 보류를 연결했다.
+- 과거 v1 artifact와 raw는 변경하지 않았다. 합성 CLI 및 설치본 재로드 검증을 새 실사이트 자동 입력 결과로 기록하지 않는다.
+
 ## [2026-10-07] ingest | CF-162 카탈로그 식별 검색 선택
 
 - Disposition: Adds profile-catalog-identity topic; supersedes CF-160 adapter-greeting topic
@@ -440,3 +448,17 @@
 - Source-Revision: 94ba74906887c5635b8cc031c047f0e079f43f85
 - 승인한 후보 9개와 ADR을 [CF-164 bundle](../raw/issues/CF-164/manifest.md)에 기록하고 [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md)을 추가했다.
 - 기존 운영 모니터링 raw와 Current는 보존하고 품질 관측, 사람 참고 분모와 전용 평일 확인 요청을 별도 주제로 연결했다.
+
+## [2026-10-08] ingest | CF-168 상태 드라이버 실패의 안전 범위 보류
+
+- Approval-Digest: f5b043321be6413904e748fc04484291fde3a9e5fe7378d439566b7bf093ec8b
+- Source-Revision: 08107e139501224e8f2a71912c8fe40354f3442e
+- 승인한 세 후보를 [CF-168 bundle](../raw/issues/CF-168/manifest.md)에 기록하고 [Greeting 공통 어댑터](topics/adapter-greeting.md), [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
+- 변경 전 실패 판정 기준, Greeting 어학 수준 필드 단위 보류, `OPTION_UNMATCHED` 보고 범위를 기록했다.
+
+## [2026-10-08] ingest | CF-169 현대·SK 어학 상태 드라이버 실패의 행 단위 격리
+
+- Approval-Digest: 334a004a2a7ed47c3557351c9d59635962c10937400d08d3727cc98f980054e2
+- Source-Revision: 3539437b04cb50c42f04b8d4b68a001cefdc173e
+- 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
+- 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.

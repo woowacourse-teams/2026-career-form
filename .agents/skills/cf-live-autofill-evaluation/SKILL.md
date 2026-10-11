@@ -26,6 +26,35 @@ Console 설명, 기존 보고서 요약, 코드 조사 요청은 실행 요청�
 3. 확장 프로그램이 설치되어 있고 설치된 빌드의 제품 revision과 백엔드 준비 상태를 확인한다. 설치된 빌드에서 revision을 증명할 수 없으면 작업 디렉터리의 HEAD를 대신 기록하지 않고 `UNVERIFIED`로 표시한다.
 4. 확장 프로그램 프로필이 비어 있으면 `frontend/fixtures/profile-export.example.json`을 기존 가져오기 UI로 불러온다. 프로필이 있으면 실제 값을 읽거나 출력하지 않고 그대로 사용한다. 가져오기는 프로필이 비어 있을 때만 수행한다.
 
+### 설치본 revision 조회
+
+평가 계약 `1.1`은 설치본의 background service worker 내부 컨텍스트에서
+`globalThis.__careerFormBuildInfo()`를 조회한다. 이것은 실제 지원서 값이나 DOM을
+읽는 Console 진단과 다르며 빌드 시 삽입된 비식별 메타데이터만 반환한다.
+웹 페이지 컨텍스트에서 실행하지 않는다. 반환값은 `schema_version`, `revision`,
+`source_state` 세 필드이며 로컬 HEAD, manifest version 또는 경로로 대체하지 않는다.
+
+빌드 산출물의 `build-info.json`은 같은 메타데이터를 담지만 unpacked 파일을
+재빌드로 덮어쓴 뒤 파일만 읽으면 아직 실행 중인 구버전과 혼동할 수 있다.
+평가에는 현재 실행 컨텍스트의 snapshot을 사용한다. 새 빌드를 평가하려면 사람이
+확장 프로그램을 재로드한 뒤 새 컨텍스트에서 조회한다.
+
+근거는 다음 형태로 기록한다.
+
+- `method`: `INSTALLED_BUILD_METADATA`
+- `metadata`: 조회한 세 필드만 포함한 객체
+- `metadata_sha256`: `JSON.stringify({schema_version, revision, source_state}) + "\n"`의
+  UTF-8 SHA-256. 키 순서는 위와 같으며 ZIP 전체의 무결성 서명이 아니다.
+- `unverified_reason`: CLEAN이면 `null`, DIRTY이면 `DIRTY_SOURCE`, UNKNOWN이면
+  `UNKNOWN_SOURCE`
+
+CLEAN이고 전체 commit SHA와 digest가 유효할 때만 `revision_status: VERIFIED`와
+해당 revision을 기록한다. DIRTY/UNKNOWN은 revision과 상태 모두 `UNVERIFIED`로 둔다.
+메타데이터가 없거나 잘못됐거나 조회할 수 없으면 원문을 보관하지 않고
+`method: UNAVAILABLE`, `metadata: null`, `metadata_sha256: null`과 각각
+`METADATA_MISSING`, `METADATA_INVALID`, `INSTALLATION_UNAVAILABLE` 사유를 남긴다.
+fixture 코드 근거는 `FIXTURE_SOURCE_METADATA`로 구분하며 설치본 근거로 대신 쓰지 않는다.
+
 ## 실행 상태
 
 평가마다 값 원문 없이 `EvaluationState`를 유지한다.
@@ -105,6 +134,15 @@ Console에는 페이지와 프로필 값 원문, 요청과 응답 객체가 보�
 
 확장 프로그램이 5개를 제안해 4개가 맞아도 사전 판정 `AUTOFILLABLE`이 10개라면 매핑 정확도는 80%, 매핑 재현율은 40%다.
 
+후보별 익명 `candidate_id`, `field_id`, 순차 stages, mapping/write 결과,
+`terminal_result`와 `reason_code`, 기존 값 훼손 여부를 기록한다.
+`SiteEvaluationResult.candidates`와 개수 요약을 함께 전달하면 `build_site_report()`가
+관측에서 재계산한 개수와 요약의 일치를 검사한다. 원인 코드는
+`harness/lib/generic_autofill_eval.py`의 `REASON_CODES`만 사용한다.
+`FAILED`와 `DEFERRED`는 별도 원인 집계이며 후보 하나를 여러 원인에 중복 집계하지 않는다.
+미발견 AUTOFILLABLE은 `undiscovered_autofillable_count`로 분리하고 원인을 추정하지 않는다.
+INCONCLUSIVE는 범용 평가 run에 사유와 빈 candidates를 기록하며 실패 0건으로 보고하지 않는다.
+
 ## 보고서 영속화와 Wiki
 
 CLI 또는 대화 표만 출력하고 평가를 끝내지 않는다. DOM 검증 뒤 `REPORTING`에서 비식별 보고서 초안을 만들고 다음 정보를 포함한다.
@@ -118,6 +156,8 @@ CLI 또는 대화 표만 출력하고 평가를 끝내지 않는다. DOM 검증 
 - 비식별 기존 값 덮어쓰기 결과 개수
 - 정답 기준 생성 주체와 사람 검토 여부
 - 중단, 차단, 재개 상태와 비식별 사유
+- FAILED/DEFERRED 각각의 원인별 개수, 익명 관측 근거와 미발견 AUTOFILLABLE 수
+- 설치본 revision의 확인 방법, 메타데이터 digest와 미확인 사유
 
 실제 값, 필드 라벨, 선택지, URL, 공고 제목, 계정, 세션, DOM 원문, CSS 선택자, Console 원문과 스크린샷은 보고서와 Wiki에 기록하지 않는다.
 
@@ -126,3 +166,7 @@ CLI 또는 대화 표만 출력하고 평가를 끝내지 않는다. DOM 검증 
 보고서 파일과 topic Wiki 구조 검증이 통과한 뒤 `REPORT_RECORDED`로 `REPORTED`에 전환한다.
 
 프로필 mode 또는 분모가 다른 실행 결과를 같은 전후 비교로 합치지 않는다.
+CLI 비교의 수치 차이는 관측 차이이며, 미검증 revision·같은 revision 재실행·미확정
+사이트가 있으면 `revision_comparison`의 `HELD`와 사유를 보고한다. 이를 특정 코드
+변경의 개선·회귀로 판정하지 않는다. 계약 1.0 자료를 1.1과 직접 비교하거나 근거 없이
+과거 원인과 설치 revision을 보충하지 않는다.

@@ -22,6 +22,7 @@ import {
 import { customFieldValue } from "../../dom/custom-field-value";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
+import type { FailureReporter } from "../../write/failure";
 import {
   greetingApproved,
   greetingEmploymentWrite,
@@ -30,6 +31,7 @@ import {
   greetingUsable,
 } from "./write";
 
+const LANGUAGE_LEVEL_FIELD = /\.(grade|conversationalProficiency)$/;
 const education =
   /^educationalBackground\.(?:(universities|graduateSchools)\.(0|[1-9]\d*)|highSchool)\./;
 async function selectButton(
@@ -38,6 +40,7 @@ async function selectButton(
   signal: AbortSignal,
   handle: FieldCandidateHandle,
   beforeMutation?: () => Promise<boolean>,
+  report?: FailureReporter,
 ): Promise<boolean> {
   if (!trigger.matches("button[aria-controls]")) return false;
   const freshDefault =
@@ -101,8 +104,11 @@ async function selectButton(
       (option) =>
         greetingUsable(option) && greetingText(option) === item.profileValue,
     );
-    if (options.length !== 1 || !current() || !canReplace(liveValue()))
+    if (options.length !== 1 || !current() || !canReplace(liveValue())) {
+      if (options.length === 0 && current() && canReplace(liveValue()))
+        report?.("OPTION_UNMATCHED");
       return false;
+    }
     if (
       !(await mayMutate(signal, beforeMutation)) ||
       !current() ||
@@ -388,10 +394,7 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
     const name = handle.candidate.domName;
     if (!name || !greetingApproved(handle, item)) return undefined;
     const command = item.analysis?.writePlan?.command;
-    if (
-      /\.(grade|conversationalProficiency)$/.test(name) &&
-      command === "SELECT_BUTTON_OPTION"
-    )
+    if (LANGUAGE_LEVEL_FIELD.test(name) && command === "SELECT_BUTTON_OPTION")
       return 3;
     if (
       command === "CHECK_RADIO" ||
@@ -452,7 +455,14 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
       ));
     }
     if (command === "SELECT_BUTTON_OPTION")
-      return selectButton(element, item, signal, handle, beforeMutation);
+      return selectButton(
+        element,
+        item,
+        signal,
+        handle,
+        beforeMutation,
+        report,
+      );
     if (command === "SELECT_DATE") {
       const liveDate = () =>
         (customFieldValue(handle) ?? greetingText(element)).replace(
@@ -512,10 +522,19 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
     }
     return undefined;
   },
-  // Dates and searches reveal nothing, so a failure defers only its own field.
+  // Dates, searches and language levels reveal nothing, so a failure defers only its own field.
   stateDriverFailureGroup: (item, handle) => {
     const command = item.analysis?.writePlan?.command;
-    if (command !== "SELECT_DATE" && command !== "SEARCH_SELECTION")
+    const name = handle.candidate.domName;
+    const languageLevel =
+      command === "SELECT_BUTTON_OPTION" &&
+      !!name &&
+      LANGUAGE_LEVEL_FIELD.test(name);
+    if (
+      command !== "SELECT_DATE" &&
+      command !== "SEARCH_SELECTION" &&
+      !languageLevel
+    )
       return undefined;
     const field = control(handle)?.closest<HTMLElement>(
       '[data-scope="field"][data-part="root"][role="group"]',

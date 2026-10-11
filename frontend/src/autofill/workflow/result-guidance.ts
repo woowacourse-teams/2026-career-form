@@ -40,6 +40,8 @@ const guidance: Record<WriteFailureCode, string> = {
     "보이는 값은 프로필과 같지만 사이트가 목록 선택 상태를 보여 주지 않아 확인하지 못했어요. 필요하면 목록에서 다시 골라 주세요.",
   VALUE_MATCH_UNRECORDED:
     "보이는 값은 프로필과 같지만 이번 자동 입력 기록과 연결하지 못했어요. 값만 확인해 주세요.",
+  OPTION_UNMATCHED:
+    "지원서 선택지에서 프로필 값과 일치하는 항목을 찾지 못했어요. 프로필 값을 확인해 주세요.",
 };
 
 // Only trusted codes and our own classification labels reach this presentation layer.

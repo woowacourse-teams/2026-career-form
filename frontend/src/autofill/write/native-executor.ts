@@ -12,6 +12,7 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import { revalidateDateTarget } from "../review/date-target-format";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
+import type { WriteFailureCode } from "./failure";
 import { bindingKey, isSelectableApproved } from "./search-executor";
 import { dropdownValue } from "../dom/button-dropdown";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
@@ -31,6 +32,7 @@ type WriteOutcome =
       written: false;
       reason: string;
       code?: Extract<ApprovedWriteResult, { status: "skipped" }>["code"];
+      failureCode?: WriteFailureCode;
     };
 
 const UNSAFE = "네이티브 컨트롤에 안전하게 입력할 수 없습니다.";
@@ -77,11 +79,11 @@ function setNativeChecked(element: HTMLInputElement): boolean {
   return element.checked;
 }
 
-function profileOption(
+function profileOptions(
   handle: FieldCandidateHandle,
   profileValue: string,
   match?: ApprovedCatalogMatch,
-): HTMLElement | undefined {
+): HTMLElement[] {
   const desired = normalizeDisplayName(profileValue);
   const matches = (handle.candidate.options ?? [])
     .filter((option) => normalizeDisplayName(option.displayName) === desired)
@@ -102,6 +104,15 @@ function profileOption(
           ),
         ),
     );
+  return matches;
+}
+
+function profileOption(
+  handle: FieldCandidateHandle,
+  profileValue: string,
+  match?: ApprovedCatalogMatch,
+): HTMLElement | undefined {
+  const matches = profileOptions(handle, profileValue, match);
   return matches.length === 1 && matches[0]!.isConnected
     ? matches[0]
     : undefined;
@@ -525,7 +536,19 @@ function writeGeneric(
         approval.status === "selected" ? approval.match : undefined,
       );
     if (!(select instanceof HTMLSelectElement) || !option)
-      return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
+      return {
+        written: false,
+        reason: UNSAFE,
+        code: "UNSUPPORTED_CONTROL",
+        ...(select instanceof HTMLSelectElement &&
+        profileOptions(
+          handle,
+          value,
+          approval.status === "selected" ? approval.match : undefined,
+        ).length === 0
+          ? { failureCode: "OPTION_UNMATCHED" as const }
+          : {}),
+      };
     if (
       !setNativeValue(select, option.value) ||
       select.selectedOptions[0] !== option
@@ -739,12 +762,17 @@ function resultForItem(
         ? written(item.candidateId)
         : { candidateId: item.candidateId, status: "written" }
       : generic
-        ? skipped(
-            item.candidateId,
-            outcomeForWriteCode(outcome.code ?? "UNSUPPORTED_CONTROL"),
-            outcome.code ?? "UNSUPPORTED_CONTROL",
-            outcome.reason,
-          )
+        ? {
+            ...skipped(
+              item.candidateId,
+              outcomeForWriteCode(outcome.code ?? "UNSUPPORTED_CONTROL"),
+              outcome.code ?? "UNSUPPORTED_CONTROL",
+              outcome.reason,
+            ),
+            ...(outcome.failureCode
+              ? { failureCode: outcome.failureCode }
+              : {}),
+          }
         : {
             candidateId: item.candidateId,
             status: "skipped",
