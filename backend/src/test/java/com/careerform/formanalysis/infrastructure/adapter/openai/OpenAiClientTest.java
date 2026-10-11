@@ -230,6 +230,26 @@ class OpenAiClientTest {
     }
 
     @Test
+    @DisplayName("입력 크기 상한을 넘으면 공급자를 호출하지 않고 실패한다")
+    void rejectsOversizedInputBeforeCallingProvider(CapturedOutput output) {
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        OpenAiClient client = client(prompt -> {
+            calls.incrementAndGet();
+            return response("{}");
+        });
+        String withinLimit = "a".repeat(OpenAiClient.MAX_INPUT_BYTES - "{\"safe\":\"\"}".length());
+        String overLimit = "가".repeat(OpenAiClient.MAX_INPUT_BYTES / 3 + 1);
+
+        assertThatThrownBy(() -> client.generate("synthetic", new Input(withinLimit), StrictOutput.class))
+            .isInstanceOf(ResolverException.class);
+        assertThat(calls).hasValue(1);
+        assertThatThrownBy(() -> client.generate("synthetic", new Input(overLimit), StrictOutput.class))
+            .isInstanceOf(ResolverException.class);
+        assertThat(calls).hasValue(1);
+        assertThat(output).contains("diagnostic=INPUT_SIZE_LIMIT").doesNotContain("가가가");
+    }
+
+    @Test
     @DisplayName("SDK IO 오류와 중첩된 타임아웃을 타입으로 분류한다")
     void classifiesTypedIoFailuresWithTimeoutPrecedence(CapturedOutput output) {
         OpenAiClient ioClient = client(prompt -> {

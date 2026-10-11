@@ -63,6 +63,7 @@ public final class OpenAiClient {
     private static final String INVALID_RESPONSE_MESSAGE =
         "LLM 분석 응답 계약을 확인할 수 없습니다";
     private static final Logger log = LoggerFactory.getLogger(OpenAiClient.class);
+    static final int MAX_INPUT_BYTES = 512 * 1024;
 
     private final ChatClient chatClient;
     private final ChatClient interactionChatClient;
@@ -149,6 +150,7 @@ public final class OpenAiClient {
         boolean interaction
     ) {
         String sanitizedJson = objectMapper.writeValueAsString(input);
+        int inputBytes = sanitizedJson.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
         String stage = stage(outputType, interaction);
         long startedAt = System.nanoTime();
         OpenAiTraceProjection projection = null;
@@ -163,8 +165,12 @@ public final class OpenAiClient {
                 log.warn("LANGSMITH_DROPPED reason=projection");
             }
         }
-        log.info("[LLM:OpenAI] 호출 시작 stage={} outputType={}", stage, outputType.getSimpleName());
+        log.info("[LLM:OpenAI] 호출 시작 stage={} outputType={} inputBytes={}",
+            stage, outputType.getSimpleName(), inputBytes);
         try {
+            if (inputBytes > MAX_INPUT_BYTES) {
+                throw new InputSizeLimitException();
+            }
             BeanOutputConverter<O> delegate = new BeanOutputConverter<>(
                 outputType,
                 strictMapper()
@@ -278,6 +284,9 @@ public final class OpenAiClient {
         ) {
             if (current instanceof OutputLengthLimitException) {
                 return FailureDiagnostic.OUTPUT_LENGTH_LIMIT;
+            }
+            if (current instanceof InputSizeLimitException) {
+                return FailureDiagnostic.INPUT_SIZE_LIMIT;
             }
             if (current instanceof SocketTimeoutException
                 || current instanceof HttpTimeoutException
@@ -474,6 +483,9 @@ public final class OpenAiClient {
     private static final class OutputLengthLimitException extends RuntimeException {
     }
 
+    private static final class InputSizeLimitException extends RuntimeException {
+    }
+
     private static final class InvalidResponseFormatException extends RuntimeException {
     }
 
@@ -487,6 +499,7 @@ public final class OpenAiClient {
         TIMEOUT,
         CONNECTION_NETWORK,
         OUTPUT_LENGTH_LIMIT,
+        INPUT_SIZE_LIMIT,
         INVALID_RESPONSE_DATA,
         UNCLASSIFIED
     }
