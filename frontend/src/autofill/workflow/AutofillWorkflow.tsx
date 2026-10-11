@@ -42,8 +42,10 @@ import {
 import {
   executeApprovedWritesAfterPageSettles,
   type ApprovedWriteResult,
+  type WriteResultListener,
 } from "../write/executor";
 import { WorkflowScreens } from "./WorkflowScreens";
+import { observeQuality } from "../quality/safe-observation";
 import {
   createAnalyzeFields,
   type DeferredDriverFailures,
@@ -94,11 +96,19 @@ export function AutofillWorkflow({
   const [activity, setActivity] = useState<WorkflowActivity>("matching");
   const { operated, operatedCategories, recordOperation } =
     useOperatedFields(pageDocument);
-  const { progressTracker, progress, onWriteResult } = useWriteProgress(
+  const {
+    progressTracker,
+    progress,
+    onWriteResult: recordWriteResult,
+  } = useWriteProgress(
     pageDocument,
     () => mounted.current && !addressRun.current.controller.signal.aborted,
     recordOperation,
   );
+  const onWriteResult: WriteResultListener = (item, result, registry) => {
+    recordWriteResult(item, result, registry);
+    observeQuality(() => apiClient.quality?.write(item, result, registry));
+  };
   const presentField = async (
     registry: CandidateRegistry,
     item: ReviewPlanItem,
@@ -237,6 +247,7 @@ export function AutofillWorkflow({
 
   useEffect(() => {
     let active = true;
+    observeQuality(() => apiClient.quality?.begin());
     const run: {
       controller: AbortController;
       button?: Element;
@@ -362,8 +373,14 @@ export function AutofillWorkflow({
     return () => {
       active = false;
       run.controller.abort();
+      observeQuality(() => apiClient.quality?.finish("CANCELLED"));
     };
   }, [apiClient, pageDocument, repository]);
+
+  useEffect(() => {
+    if (stage === "result" || stage === "exception" || stage === "unsupported")
+      observeQuality(() => apiClient.quality?.finish("COMPLETED"));
+  }, [apiClient, stage]);
 
   const executePreparation = async () => {
     if (!profile || !preparationSnapshot || executionPending.current) return;
