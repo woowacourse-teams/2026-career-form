@@ -56,6 +56,9 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "jsdom",
+          // Some integrations perform two independently bounded 5s workflows.
+          // Allow both to finish under coverage without changing their limits.
+          testTimeout: 15_000,
           setupFiles: ["./src/test/setup.ts"],
           exclude: [...configDefaults.exclude, "**/*.browser.test.{ts,tsx}"],
         },

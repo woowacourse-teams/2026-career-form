@@ -25,6 +25,10 @@ npm run coverage
   specifications. Do not override reporters in the CI coverage command.
 - An absent browser installation is an error, not a skipped test.
 - One worker bounds memory and CPU contention for instrumented DOM tests.
+- The unit runner allows 15 seconds for integrations containing two
+  independently bounded five-second workflows. Existing result waits,
+  production timeouts and assertions are unchanged. The browser project
+  keeps Vitest's default test timeout.
 - Coverage includes the same product sources and keeps all four 80%
   thresholds. `reportOnFailure` prints coverage even when a test fails; it
   does not change the failing exit status.
