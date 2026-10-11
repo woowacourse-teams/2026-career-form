@@ -100,3 +100,18 @@ run당 검색 4개/역할 provider 호출 4회, transaction당 30초/호출 2회
 `LLM_UNAVAILABLE`로 끝나야 한다. 정적 회사 정책의 adapter 경로는 이 조건과 별개로
 기존처럼 유지한다. 따라서 조건부 provider bean이 없는 기본 구성뿐 아니라 테스트나 배포
 구성의 custom resolver/provider 주입도 외부 공급자 호출을 허용해서는 안 된다.
+
+
+## 공급자 양식 텍스트 전송 (CF-181)
+
+범용 준비·필드 분석은 OpenAI와 Jev에 같은 양식 텍스트 투영(`ProviderFormText`)을 사용한다.
+섹션명, 후보 라벨, placeholder, 선택지와 FE가 보낸 의미 문맥 라벨은 NFKC 정규화, 제어·서식 문자
+제거, 공백 축약을 거친 뒤 이메일(`[EMAIL]`), URL·도메인(`[URL]`), 전화번호(`[PHONE]`),
+주민등록번호 형식(`[ID_NUMBER]`), 6자리 이상 숫자(`[NUMBER_<자릿수>]`)를 가리고 120 code point로
+자른다. `element=custom` 후보의 라벨은 현재 선택값이 섞일 수 있어 기존 사전 정제를 유지한다.
+이름처럼 패턴으로 찾을 수 없는 개인화 문구는 가리지 못하며 FE 프로필 값 대조 마스킹은 후속 작업이다.
+
+사전(`ProviderSemanticSanitizer`)은 주소·미지원 활동 충돌 가드와 LangSmith trace 투영의 판정에만 쓴다.
+trace는 사전 밖 원문을 `UNRECOGNIZED_TEXT`로 남긴다. 직렬화한 OpenAI 입력이 512 KiB를 넘으면 호출하지
+않고 `INPUT_SIZE_LIMIT`으로 실패한다. 이 값은 초기값이며 호출 시작 로그의 `inputBytes` 실측으로 조정한다.
+검색·달력 상호작용 결정의 투영은 이 규칙을 따르지 않는다.
