@@ -26,8 +26,8 @@ npm run coverage
 - An absent browser installation is an error, not a skipped test.
 - One worker bounds memory and CPU contention for instrumented DOM tests.
 - The unit runner allows 15 seconds for integrations containing two
-  independently bounded five-second workflows. Existing result waits,
-  production timeouts and assertions are unchanged. The browser project
+  independently bounded five-second workflows. Production timeouts and
+  assertions are unchanged. The browser project
   keeps Vitest's default test timeout.
 - Coverage includes the same product sources and keeps all four 80%
   thresholds. `reportOnFailure` prints coverage even when a test fails; it
@@ -69,9 +69,16 @@ Paths below are relative to `frontend/`.
   POST, alternate queries, relation effects and the broader safety matrix
   stay in jsdom. No existing failing test was removed or weakened.
 
-The browser files cover eight selected scenarios. Existing test files are
-unchanged because the browser cases add distinct runtime evidence rather
-than reproduce the entire unit safety matrix.
+The browser files cover eight selected scenarios and retain the existing
+unit safety matrix. The user also approved stabilizing
+`src/autofill/adapters/hyundai/workflow-military-veteran.integration.test.tsx`
+after its wall-clock result wait failed in CI. Its 22 cases run the actual
+workflow with virtual timers inside React `act`, then check the same
+results and field values. The cancellation case subscribes to the driver
+click before starting, unmounts at that event and drains scheduled work
+instead of sleeping. Cleanup drains canceled work before restoring real
+timers. No product timeout, assertion, test count or coverage threshold
+was relaxed.
 
 ## Fixture boundaries
 
