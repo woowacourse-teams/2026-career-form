@@ -20,7 +20,8 @@ class ReleaseSyncEnvironmentTest(unittest.TestCase):
             git("config", "core.hooksPath", "keep-parent-hooks")
             git("remote", "add", "origin", "https://synthetic.invalid/parent.git")
             polluted = {"GIT_DIR": str(parent / ".git"), "GIT_WORK_TREE": str(parent),
-                "GIT_COMMON_DIR": str(parent / ".git"), "GIT_INDEX_FILE": str(parent / ".git/index"), "GIT_PREFIX": "parent/"}
+                "GIT_COMMON_DIR": str(parent / ".git"), "GIT_INDEX_FILE": str(parent / ".git/index"),
+                "GIT_PREFIX": "parent/", "GIT_EXEC_PATH": git("--exec-path")}
             fixture = fixtures.ReleaseSyncTest("test_unmerged_release_requests_pr_and_preserves_branch")
             try:
                 with patch.dict(os.environ, polluted):
