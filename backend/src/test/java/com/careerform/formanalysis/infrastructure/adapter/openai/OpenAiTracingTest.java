@@ -51,6 +51,25 @@ class OpenAiTracingTest {
     }
 
     @Test
+    void rawFormTextSentToProviderIsMaskedInTraceInputs() {
+        var recorder = recorder();
+        var field = new FieldsAnalysisRequest.FieldCandidate("field-raw", FieldsAnalysisRequest.FormElement.INPUT,
+            FieldsAnalysisRequest.FormControl.TEXT, FieldsAnalysisRequest.Visibility.VISIBLE, "희망근무지 선택",
+            null, null, "수신 주소 예시", null, null, null, null);
+        var request = new FieldsAnalysisRequest(2, "snapshot-raw", new FieldsAnalysisRequest.Site("example.test", "/"),
+            List.of(new FieldsAnalysisRequest.Section("section-raw", null, "지원 분야 안내", List.of(field), null)));
+        client(prompt -> response("{\"schemaVersion\":2,\"snapshotId\":\"snapshot-raw\",\"matches\":[]}"), recorder)
+            .generate(OpenAiFieldMappingResolver.SYSTEM_PROMPT.formatted(
+                new SupportedProfileFields().promptCatalog(), new SupportedProfileFields().promptGuidance()),
+                OpenAiFieldMappingResolver.FieldInput.from(request), OpenAiFieldMappingResolver.FieldOutput.class);
+
+        var inputs = mapCaptor();
+        verify(recorder).begin(eq("openai"), eq("FIELD"), eq("approved-model"), inputs.capture());
+        String wire = JsonMapper.builder().build().writeValueAsString(inputs.getValue());
+        assertThat(wire).contains("UNRECOGNIZED_TEXT").doesNotContain("희망근무지", "수신 주소", "지원 분야");
+    }
+
+    @Test
     void arbitraryPromptOrUnknownInputIsMetadataOnly() {
         var recorder = recorder();
         client(prompt -> response("{\"schemaVersion\":2,\"snapshotId\":\"x\",\"matches\":[]}"), recorder)
