@@ -40,3 +40,7 @@ dialog::backdrop { background: #182a3d66; }
  .candidate[data-selected="true"] { outline: 3px solid #4774d9; outline-offset: 3px; }
 
 [hidden] { display: none !important; }
+
+.candidate-scope { border-top: 1px solid var(--border, #e7d8c5); margin-top: 18px; padding-top: 14px; }
+.application-links { padding-left: 20px; }
+.application-links li { margin: 12px 0; overflow-wrap: anywhere; }
