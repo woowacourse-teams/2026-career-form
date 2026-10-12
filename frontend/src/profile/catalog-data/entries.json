@@ -60,18 +60,14 @@
     "kind": "certificate",
     "name": "SQL 개발자",
     "detail": "한국데이터산업진흥원",
-    "aliases": [
-      "SQLD"
-    ]
+    "aliases": ["SQLD"]
   },
   {
     "id": "certificate:kdata:sqlp",
     "kind": "certificate",
     "name": "SQL 전문가",
     "detail": "한국데이터산업진흥원",
-    "aliases": [
-      "SQLP"
-    ]
+    "aliases": ["SQLP"]
   },
   {
     "id": "certificate:hrdk:b729cc0b7e491efd",

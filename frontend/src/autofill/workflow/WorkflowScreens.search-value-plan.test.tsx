@@ -102,16 +102,19 @@ describe("certificate search review provenance", () => {
     expect(
       screen.queryByText("지원서 조건을 확인한 뒤 선택해 주세요."),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: "확인 필요 1" }),
-    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "확인 필요 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     expect(
       screen.queryByText("확인 필요", { selector: "small" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByText("현재 입력값: 입력된 값 없음"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/검색형: 원본 정확 일치/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/검색형: 원본 정확 일치/),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText("지원서 저장/이동/제출은 실행하지 않습니다."),
     ).not.toBeInTheDocument();
@@ -123,10 +126,12 @@ describe("certificate search review provenance", () => {
     expect(
       screen.getByRole("button", { name: "자격증명 포함하기" }),
     ).toHaveClass(/copyButton/);
-    expect(screen.getByRole("button", { name: "자격증명 포함하기" })).toHaveTextContent(
-      "포함",
+    expect(
+      screen.getByRole("button", { name: "자격증명 포함하기" }),
+    ).toHaveTextContent("포함");
+    fireEvent.click(
+      screen.getByRole("button", { name: "자격증명 필드로 이동" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "자격증명 필드로 이동" }));
     expect(onLocate).toHaveBeenCalledWith("certificate-name-1");
   });
 
@@ -141,7 +146,9 @@ describe("certificate search review provenance", () => {
         setRevealedPreparationKeys={vi.fn()}
         setSelectedPreparationKeys={vi.fn()}
         executePreparation={vi.fn()}
-        reviewItems={[{ ...certificateItem, selected: true, status: "available" }]}
+        reviewItems={[
+          { ...certificateItem, selected: true, status: "available" },
+        ]}
         partial={false}
         toggleReviewItem={vi.fn()}
         revealSensitiveItem={vi.fn()}
@@ -156,6 +163,8 @@ describe("certificate search review provenance", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "자동 기입 예정 1" }));
 
-    expect(screen.queryByText("자동 기입 예정 항목입니다.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("자동 기입 예정 항목입니다."),
+    ).not.toBeInTheDocument();
   });
 });

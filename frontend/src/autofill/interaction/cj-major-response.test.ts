@@ -8,7 +8,7 @@ export const response = (rows: string, query = "합성전공", num = "2_0") =>
   template
     .replace('name="num" value="2_0"', `name="num" value="${num}"`)
     .replace(
-      'id="dtl_nm" name="dtl_nm" value=""',
+      /id="dtl_nm"\s+name="dtl_nm"\s+value=""/,
       `id="dtl_nm" name="dtl_nm" value="${query}"`,
     )
     .replace(
