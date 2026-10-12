@@ -462,3 +462,9 @@
 - Source-Revision: 3539437b04cb50c42f04b8d4b68a001cefdc173e
 - 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.
+
+## [2026-10-12] ingest | CF-183 확장 품질 보고 fetch 호출 문맥
+
+- Approval-Digest: a0023aa706b1b4fd3c776de453075b9a7718c3ff09d069f63780963d8836fc13
+- Source-Revision: f2e0634ff9f81c216211aa47fe1280ecaea613a1
+- 승인한 후보 하나를 [CF-183 bundle](../raw/issues/CF-183/manifest.md)에 기록하고 [fetch 호출 문맥](topics/extension-fetch-context.md)을 추가했다. 기존 raw는 보존했다.
