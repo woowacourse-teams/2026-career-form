@@ -1,0 +1,108 @@
+{
+  "fixture_id": "lg-ai-research-birth-split-email",
+  "site_id": "lg-ai-research",
+  "issue_number": 187,
+  "collected_on": "2026-10-12",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "UNAVAILABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "INSTALLATION_UNAVAILABLE"
+  },
+  "scope": {
+    "description": "지원서 폼 전체(페이지의 두 폼 중 컨트롤이 가장 많은 폼). 실패 관찰 당시 상태로 사용자가 다시 연 화면",
+    "controls": {
+      "text": 3,
+      "tel": 1,
+      "select": 5,
+      "file": 2,
+      "checkbox": 1,
+      "submit": 1
+    },
+    "control_total": 13,
+    "hidden_controls": 3,
+    "options": 151,
+    "labels": 9,
+    "excluded": [
+      "type=hidden 입력란 1개",
+      "숨긴 입력란 1개만 있는 다른 폼",
+      "헤더, 내비게이션, 푸터"
+    ]
+  },
+  "failure": {
+    "stage": "MAPPING_AND_WRITE",
+    "expected": "생년월일과 이메일이 프로필 값으로 입력된다",
+    "actual": "이름과 전화번호만 입력되고 생년월일과 이메일은 입력되지 않았다",
+    "conditions": [
+      "생년월일 label의 for가 존재하지 않는 id를 가리켜 select 3개와 연결되지 않는다",
+      "이메일 label의 for도 존재하지 않는 id를 가리키고, 이메일이 아이디 입력란 + @ + 도메인 select로 분리되어 있다"
+    ]
+  },
+  "sanitization": {
+    "removed": [
+      "입력값",
+      "선택·체크 상태",
+      "type=hidden 입력란",
+      "style",
+      "svg 2개",
+      "URL",
+      "5자리 이상 숫자열",
+      "이메일 형태 문자열"
+    ],
+    "replaced": [
+      "코드 식별자 형태가 아닌 id 1개를 익명 값으로 치환하고 참조도 함께 치환",
+      "option value 3개를 합성 코드로 치환",
+      "80자 초과 또는 URL·도메인 패턴 텍스트 12곳을 [TEXT]로 치환(이메일 도메인 선택지 표시명 포함)"
+    ],
+    "preserved": [
+      "코드 식별자 형태의 id 6개와 class 토큰 35개(name 속성은 원본에 없음)",
+      "20자 이하 선택지 코드 148개",
+      "submit 입력란의 버튼 문구",
+      "라벨, 안내 문구, 옵션 텍스트, placeholder 원문"
+    ],
+    "preserved_common_text": "사용자가 개인정보 검토를 통과로 확인했다",
+    "redacted_text_count": 12,
+    "dropped_references": 0,
+    "broken_references_in_original": 4
+  },
+  "synthetic_behavior": [
+    "원본에서 CSS로 숨겨진 가장 바깥 요소 9곳에 hidden 속성을 합성했다. 숨김 컨트롤 수는 원본 3개, 정제 3개로 같다"
+  ],
+  "recollection": {
+    "replaced_fixture": "초기 규칙(id·name·class 제거, 영역 표시 data-region 추가)으로 만든 7개 컨트롤 샘플",
+    "changes": [
+      "생년월일 select 3개: 이전에는 표시 이름과 라벨 문맥이 모두 없었다. 재수집본에서는 표시 이름이 첫 선택지(년, 월, 일)로 잡히고 생년월일 라벨 문맥은 여전히 없다",
+      "원인 가설: for 없는 형제 라벨이 아니라 존재하지 않는 id를 가리키는 for 때문에 연결이 끊긴다",
+      "분리 이메일: 이전에는 SPLIT_EMAIL_UNSUPPORTED로 막혔다. 재수집본에서는 아이디 입력란이 표시 이름 '이메일 아이디'로 수집되고 이메일 DIRECT 매핑이 available이 된다"
+    ]
+  },
+  "limitations": [
+    "이메일 도메인 선택지의 표시명은 도메인 패턴 때문에 [TEXT]로 바뀌었고 value 코드만 남았다",
+    "직접입력 선택 시 나타나는 입력란은 정적 샘플에 없다",
+    "페이지 스크립트가 만드는 연결이나 이벤트는 재현하지 않는다",
+    "설치 확장 revision과 실사이트 성공률의 근거가 아니다"
+  ],
+  "review": {
+    "privacy": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-12"
+    },
+    "structure": {
+      "result": "PARTIAL",
+      "human_reviewed": false,
+      "note": "브라우저 안 자동 대조(컨트롤·옵션·라벨·숨김 컨트롤 수, 끊긴 참조 수)는 일치했다. 사람 구조 검토는 미실시"
+    }
+  },
+  "reproduction": {
+    "command": "cd frontend && npx vitest run --project unit src/autofill/workflow/dom-snapshot.lg-ai-research.test.ts",
+    "product_revision": "584a9fe727d9a1872cf4f74188e02d95cf19bd8c",
+    "observed": [
+      "범용 수집기로 후보 10개가 수집되고 생년월일 select 3개는 표시 이름 년·월·일, 라벨 문맥 없음이다",
+      "이메일 아이디 입력란에 이메일 DIRECT 매핑을 주면 SPLIT_EMAIL_UNSUPPORTED가 아니라 available이다"
+    ],
+    "mutation_check": "생년월일 label의 for 대상 id를 연도 select에 부여하면 연도 select에 생년월일 라벨 문맥이 생김을 테스트에서 확인한다"
+  }
+}
