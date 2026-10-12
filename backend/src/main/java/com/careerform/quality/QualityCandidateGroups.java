@@ -11,7 +11,7 @@ public final class QualityCandidateGroups {
     public record Site(String id, List<QualityRecord> candidates) {
         public Site { candidates = List.copyOf(candidates); }
         public boolean completed(Instant now) {
-            return candidates.stream().allMatch(record -> candidate(record).statusAt(now) == QualityRegistry.Status.COMPLETED);
+            return actionable(candidates).stream().allMatch(record -> candidate(record).statusAt(now) == QualityRegistry.Status.COMPLETED);
         }
         public Instant firstSeen() { return candidates.stream().map(record -> candidate(record).firstSeen()).min(Instant::compareTo).orElseThrow(); }
     }
@@ -29,16 +29,21 @@ public final class QualityCandidateGroups {
     }
 
     public static List<Site> all(QualityRegistry registry) {
-        var records = registry.listRecords(null, 0, 10001);
+        var records = registry.workRecords();
         if (records.size() > 10000) { throw new IllegalArgumentException("Candidate grouping capacity exceeded"); }
         return group(records);
     }
 
     public static List<QualityRecord> selection(List<QualityRecord> records, Instant now) {
-        return group(records).stream().flatMap(site -> site.candidates().stream()
+        return group(records).stream().flatMap(site -> actionable(site.candidates()).stream()
             .filter(record -> candidate(record).statusAt(now) != QualityRegistry.Status.COMPLETED)
             .sorted(Comparator.comparingInt((QualityRecord record) -> priority(candidate(record), now))
                 .thenComparing(record -> candidate(record).firstSeen()).thenComparing(QualityRecord::id)).limit(1)).toList();
+    }
+
+    private static List<QualityRecord> actionable(List<QualityRecord> records) {
+        var postings = records.stream().filter(record -> record.kind() == QualityRecord.Kind.POSTING).toList();
+        return postings.isEmpty() ? records : postings;
     }
 
     private static int priority(QualityRegistry.Candidate candidate, Instant now) {

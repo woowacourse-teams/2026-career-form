@@ -34,4 +34,32 @@ class QualityCandidateConversionTest {
         converter.write(next, updated);
         assertThat(converter.read(QualityRegistry.Candidate.class, updated)).isEqualTo(next);
     }
+    @Test
+    void readsLegacyConfirmationAndSnapshotAndRoundTripsPosting() throws Exception {
+        var context = new MongoMappingContext();
+        context.setSimpleTypeHolder(org.springframework.data.mongodb.core.convert.MongoCustomConversions.create(adapter -> {}).getSimpleTypeHolder());
+        context.afterPropertiesSet();
+        var converter = new MappingMongoConverter(NoOpDbRefResolver.INSTANCE, context);
+        converter.afterPropertiesSet();
+        var at = Instant.parse("2030-01-01T00:00:00Z");
+        var confirmation = new QualityRegistry.Confirmation(52, at, null);
+        var old = new Document();
+        converter.write(confirmation, old);
+        old.remove("confirmedBy");
+        assertThat(converter.read(QualityRegistry.Confirmation.class, old)).isEqualTo(confirmation);
+        var group = new QualityRecord.Group("test", "fixture.career.greetinghr.com", "shape", "GREETING", "fixture");
+        var snapshot = new QualityCollectionService.SnapshotLink(group, java.util.Map.of(), java.util.Map.of(), false);
+        var legacy = new Document();
+        converter.write(snapshot, legacy);
+        legacy.remove("postingId");
+        legacy.remove("baseline");
+        assertThat(converter.read(QualityCollectionService.SnapshotLink.class, legacy)).isEqualTo(snapshot);
+        var candidate = new QualityRegistry.Candidate("fixture", "https://fixture.test/", null, at, at, QualityRegistry.Status.COMPLETED,
+            false, false, null, null, null, null, null, List.of(new QualityRegistry.Confirmation(52, at, null, "합성 별칭")));
+        var record = new QualityRecord("fixture", QualityRecord.Kind.POSTING, group, 0, at, null, candidate);
+        var document = new Document();
+        converter.write(record, document);
+        assertThat(converter.read(QualityRecord.class, document)).isEqualTo(record);
+    }
+
 }

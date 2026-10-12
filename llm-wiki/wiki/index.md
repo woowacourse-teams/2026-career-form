@@ -77,4 +77,4 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
 | [확장 품질 보고의 fetch 호출 문맥](topics/extension-fetch-context.md) | 브라우저 전역 수신자, 보고 요청 계약과 검증 경계 | 2026-10-12 |
 | [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md) | PR, 로컬 작업과 pre-push의 기준 ref 선택 및 raw 보호 | 2026-10-12 |
-| [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 사이트 중복 표시, 공개 링크 관측과 사람 분모 범위 | 2026-10-12 |
+| [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 공고별 단일 확인, 공개 링크와 실행 분모 경계 | 2026-10-12 |

@@ -29,7 +29,7 @@ public final class QualityRegistryController {
 
     public record Row(String id, String site, String structure, String route, String version, String homepage, String publicLink,
                       Instant firstSeen, Instant lastSeen, QualityRegistry.Status status, QualitySite.Status identity, boolean recheck, boolean mine, String claimant,
-                      Instant claimExpiresAt, QualityRegistry.DeferReason deferReason, Instant deferredUntil, List<QualityRegistry.Confirmation> history, List<QualityPublicLinks.Link> links, boolean linksOverflow) {
+                      Instant claimExpiresAt, QualityRegistry.DeferReason deferReason, Instant deferredUntil, List<QualityRegistry.Confirmation> history, List<QualityPublicLinks.Link> links, boolean linksOverflow, boolean posting) {
         public Row { history = List.copyOf(history); links = List.copyOf(links); }
     }
 
@@ -38,8 +38,8 @@ public final class QualityRegistryController {
     }
 
     public record SiteRow(String id, String site, String company, String homepage, List<Row> candidates,
-                          List<QualityPublicLinks.Link> links, boolean linksOverflow) {
-        public SiteRow { candidates = List.copyOf(candidates); links = List.copyOf(links); }
+                          List<QualityPublicLinks.Link> links, boolean linksOverflow, List<Row> observations) {
+        public SiteRow { candidates = List.copyOf(candidates); links = List.copyOf(links); observations = List.copyOf(observations); }
     }
     public record SitePage(List<SiteRow> items, boolean hasMore, long nextOffset) {
         public SitePage { items = List.copyOf(items); }
@@ -68,7 +68,10 @@ public final class QualityRegistryController {
             candidates.stream().anyMatch(Row::linksOverflow));
         var group = site.candidates().getFirst().group();
         var company = group.identity() == QualitySite.Status.POLICY ? group.site().substring(group.site().indexOf("|company=") + 9) : null;
-        return new SiteRow(site.id(), candidates.getFirst().site(), company, candidates.getFirst().homepage(), candidates, links.links(), links.overflow());
+        var observations = registry.listRecords(null, 0, 10001).stream()
+            .filter(record -> QualityCandidateGroups.groupKey(record).equals(QualityCandidateGroups.groupKey(site.candidates().getFirst())))
+            .filter(record -> !QualityPostings.urls(record).isEmpty()).map(record -> row(record, request)).toList();
+        return new SiteRow(site.id(), candidates.getFirst().site(), company, candidates.getFirst().homepage(), candidates, links.links(), links.overflow(), observations);
     }
 
     @GetMapping("/api/v1/quality/sites")
@@ -98,7 +101,7 @@ public final class QualityRegistryController {
             case "reopen" -> registry.reopen(id, owner);
             case "confirm" -> {
                 if (change == null || change.fieldCount() == null) { throw new IllegalArgumentException("Missing count"); }
-                registry.confirm(id, owner, change.fieldCount(), change.publicLink(), Boolean.TRUE.equals(change.dedicatedHost()));
+                registry.confirm(id, owner, change.fieldCount(), change.publicLink(), Boolean.TRUE.equals(change.dedicatedHost()), change.claimant());
             }
             case "defer" -> {
                 if (change == null) { throw new IllegalArgumentException("Missing reason"); }
@@ -124,6 +127,6 @@ public final class QualityRegistryController {
             candidate.homepage(), candidate.publicLink(), candidate.firstSeen(), candidate.lastSeen(), candidate.statusAt(now), record.group().identity(), candidate.recheck(),
             session != null && candidate.claimedAt(now) && access.validClaimant(session) && QualityProjection.digest(session).equals(candidate.claimOwner()),
             candidate.claimedAt(now) ? candidate.claimant() : null, candidate.claimExpiresAt(),
-            candidate.deferReason(), candidate.deferredUntil(), candidate.history(), candidate.links(), candidate.linksOverflow());
+            candidate.deferReason(), candidate.deferredUntil(), candidate.history(), candidate.links(), candidate.linksOverflow(), record.kind() == QualityRecord.Kind.POSTING);
     }
 }
