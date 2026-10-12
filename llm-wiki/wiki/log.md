@@ -474,3 +474,9 @@
 - Approval-Digest: 465066ab4d30dd20534d671736989ccaafc3fda9ae84604459ab37a2b8b066c5
 - Source-Revision: 0ca328ce84497e30fa10d300141967ca2116693a
 - 승인한 후보를 [CF-185 bundle](../raw/issues/CF-185/manifest.md)에 기록하고 [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md)를 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-190 품질 확인 사이트와 공개 지원서 링크
+
+- Approval-Digest: 8a3b7d0be9741e604a6593e6c683295587c16cb5ad0910c1beb820b07187d79e
+- Source-Revision: 7e8b704cc8023a109affd75ec30118ff74597f28
+- 승인한 네 후보를 [CF-190 bundle](../raw/issues/CF-190/manifest.md)에 기록하고 [품질 확인 사이트와 링크](topics/quality-site-links.md)를 추가했다. 기존 raw는 보존했다.
