@@ -470,3 +470,9 @@
 - Source-Revision: 3539437b04cb50c42f04b8d4b68a001cefdc173e
 - 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.
+
+## [2026-10-11] ingest | CF-181 범용 분석 공급자 요청의 양식 원문 전송
+
+- Approval-Digest: 88bdeb34113f9c7986b81893fbd76658ed079211af63b9a74fd62ec611418513
+- Source-Revision: 1fe52d5423d8bbac943ded758081ddd19a69fcdb
+- 승인한 두 후보를 [CF-181 bundle](../raw/issues/CF-181/manifest.md)에 기록하고 [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md)의 Current를 갱신했다. 기존 raw는 보존했다.

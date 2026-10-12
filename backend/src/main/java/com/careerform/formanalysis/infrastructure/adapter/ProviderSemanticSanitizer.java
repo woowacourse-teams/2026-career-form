@@ -338,22 +338,6 @@ public final class ProviderSemanticSanitizer {
         return safe.isEmpty() ? null : List.copyOf(safe);
     }
 
-    public static List<SafeLabel> sanitizeActions(
-        List<com.careerform.formanalysis.dto.PreparationAnalysisRequest.SemanticLabel> labels
-    ) {
-        if (labels == null) {
-            return null;
-        }
-        List<SafeLabel> safe = new ArrayList<>();
-        for (var label : labels) {
-            String text = sanitize(label.text());
-            if (text != null) {
-                safe.add(new SafeLabel(source(label.source().name()), text));
-            }
-        }
-        return safe.isEmpty() ? null : List.copyOf(safe);
-    }
-
     private static String source(String enumName) {
         return enumName.toLowerCase(Locale.ROOT).replace('_', '-');
     }

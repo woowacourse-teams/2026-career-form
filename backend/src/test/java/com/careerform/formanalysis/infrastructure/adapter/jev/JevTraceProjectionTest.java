@@ -85,4 +85,19 @@ class JevTraceProjectionTest {
             .containsEntry("resolverOutcome", "NO_ACTION");
         assertThat(projection.inputs().toString() + output).doesNotContain(SECRET);
     }
+
+    @Test
+    void rawSectionLabelsKeepRevealReferencesWithoutExportingText() {
+        String rawLabel = "희망 근무 조건";
+        var state = Map.of("actions", Map.of(SECRET, Map.of("label", "add", "sectionId", SECRET)),
+            "sections", Map.of(SECRET, Map.of("label", rawLabel)));
+        String reveal = "REVEAL_" + SECRET;
+        var questions = Map.of(SECRET, new JevClient.Choice(JevActionResolver.instructions(SECRET),
+            Map.of("ABSTAIN", JevActionResolver.ABSTAIN_CRITERION,
+                reveal, "Reveal existing section " + SECRET + ": " + rawLabel)));
+        var projection = JevTraceProjection.create(state, questions);
+        var output = projection.answer(SECRET, reveal, 0.9, Map.of(reveal, 0.9, "ABSTAIN", 0.1), reveal, false, 0.8);
+        assertThat(output).containsEntry("providerChoice", "REVEAL_section_0");
+        assertThat(projection.inputs().toString() + output).doesNotContain(SECRET, rawLabel);
+    }
 }

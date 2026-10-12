@@ -107,8 +107,8 @@ final class JevTraceProjection {
                 String section = option.substring(7);
                 JsonNode context = tree.get("sections").get(section);
                 if (context != null && context.has("label")) {
-                    String label = ProviderTraceProjection.semantic(context.get("label").asString());
-                    if (!label.equals("UNRECOGNIZED_TEXT") && criterion.equals("Reveal existing section " + section + ": " + label))
+                    String label = context.get("label").asString();
+                    if (criterion.equals("Reveal existing section " + section + ": " + label))
                         return "REVEAL_" + values.reference("sectionId", section);
                 }
             }
