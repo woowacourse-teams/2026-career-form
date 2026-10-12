@@ -175,6 +175,40 @@ it("보고 네트워크 실패만 같은 이벤트로 한 번 재시도하고 �
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
 
+it("보고 응답이 없으면 8초 뒤 취소하고 재시도도 8초 뒤 종료한다", async () => {
+  vi.useFakeTimers();
+  let aborted = 0;
+  const fetcher: typeof fetch = function (this: unknown, _input, init) {
+    if (this !== globalThis) throw new TypeError("Illegal invocation");
+    return new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        aborted += 1;
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    });
+  };
+  const reporting = new BackgroundQualityReporting(
+    "https://api.synthetic.test",
+    fetcher,
+    "extension",
+  );
+  reporting.capture(reporting.owner(run, source), receipt());
+  const result = reporting.report(
+    { type: "AUTOFILL_QUALITY_REPORT", qualityRun: run, payload },
+    source,
+  );
+
+  await vi.advanceTimersByTimeAsync(7_999);
+  expect(aborted).toBe(0);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(aborted).toBe(1);
+  await vi.advanceTimersByTimeAsync(7_999);
+  expect(aborted).toBe(1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(aborted).toBe(2);
+  await expect(result).resolves.toEqual({ ok: false });
+});
+
 it("계약 크기가 한도를 넘거나 endpoint가 없으면 전송하지 않는다", async () => {
   const fetcher = vi.fn();
   for (const url of ["", "https://api.synthetic.test"]) {
