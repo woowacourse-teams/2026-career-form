@@ -2,11 +2,13 @@
 
 > Topic: usage-analytics
 > Status: Current
-> Current: [CF-147 선택적 이용 계측과 개인정보 경계](../../raw/issues/CF-147/documents/usage-analytics.md)
-> History: [CF-147 선택적 이용 계측과 개인정보 경계](../../raw/issues/CF-147/documents/usage-analytics.md)
-> Updated: 2026-10-02
+> Current: [CF-193 첫 자동 기입 클릭률 계측](../../raw/issues/CF-193/documents/usage-analytics.md)
+> History: [CF-147 선택적 이용 계측과 개인정보 경계](../../raw/issues/CF-147/documents/usage-analytics.md), [CF-193 첫 자동 기입 클릭률 계측](../../raw/issues/CF-193/documents/usage-analytics.md)
+> Updated: 2026-10-12
 
 ## 현재 상태
+
+핵심 지표는 확장 온보딩 최초 진입 후 24시간 이내 익명 사용자별 자동 기입 클릭률이며 7일 클릭률은 보조 지표다. 시작 목적과 클릭·열기 결과를 구분한다. 첫 저장은 간단 등록과 전체 편집 양쪽의 실제 비어 있지 않은 저장 성공 스냅샷에서 기록하고, 최초 진입·첫 저장은 백그라운드가 로컬 익명 ID별로 중복 방지하며 재전송 시 최초 발생 시각을 보존한다. 프로필 값·지원서 입력값·전체 URL은 계측하지 않는다.
 
 PostHog는 명시 이벤트, 화면 구분과 로컬 익명 식별자를 사용한다. 지원서 안 패널에만
 호스트명을 포함하고 프로필 값, 지원서 입력값과 전체 URL은 제외한다. 키 없는 빌드는

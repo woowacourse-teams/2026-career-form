@@ -39,7 +39,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |
 | [미지원 지원서 페이지 안내](topics/unsupported-application-pages.md) | 미지원 준비 분석의 중단과 수동 복사 유지 | 2026-10-02 |
-| [선택적 이용 계측](topics/usage-analytics.md) | 키 없는 비활성화와 PostHog 개인정보 경계 | 2026-10-02 |
+| [선택적 이용 계측](topics/usage-analytics.md) | 24시간 첫 클릭률, 최초 저장 중복 방지와 개인정보 경계 | 2026-10-12 |
 | [범용 버튼 드롭다운 안전성](topics/generic-button-dropdown-safety.md) | 입력 범위,목록 소유 관계,옵션 분석 전달과 실행 직전 재검증 | 2026-10-02 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
@@ -74,5 +74,5 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 날짜 형식 변환과 로컬 승인](topics/generic-date-format.md) | 날짜 DIRECT 변환·로컬 승인 재검증과 자동/실사이트 검증 구분 | 2026-09-24 |
 | [범용 연월 달력 선택과 로컬 실행 경계](topics/generic-calendar-selection.md) | DOM 소유권, 개별 승인, 역할 판별과 연월·연월일 달력 실행의 안전 경계 | 2026-09-28 |
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
-| [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 독립 웹 빌드와 시뮬레이션 데이터 경계, 페이지 역할 | 2026-09-19 |
+| [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 선택 연락 정보로 시작하는 확장 온보딩과 웹 경계 | 2026-10-12 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |

@@ -470,3 +470,10 @@
 - Source-Revision: 3539437b04cb50c42f04b8d4b68a001cefdc173e
 - 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.
+
+## [2026-10-12] ingest | CF-193 간단 프로필 등록과 첫 클릭률
+
+- Approval-Digest: eea777b397530073223f8dde4d136056a3edb99391d3a4c5bf27968b0b414859
+- Source-Revision: a1494f67fb6eaa7b47f328254c1747045670dbae
+- 승인한 두 후보를 [CF-193 bundle](../raw/issues/CF-193/manifest.md)에 기록했다.
+- [랜딩·온보딩](topics/landing-onboarding.md)과 [이용 계측](topics/usage-analytics.md)의 Current를 갱신하고 이전 raw와 개인정보 경계를 보존했다.
