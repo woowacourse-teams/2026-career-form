@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import subprocess
 import sys
 from pathlib import Path
@@ -8,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from harness.lib.python_runtime import select_python
+from harness.lib.verification_base import VerificationBaseError, resolve_verification_base
 
 
 PYTHON = str(select_python(ROOT))
@@ -19,6 +21,15 @@ def run(command: tuple[str, ...]) -> int:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-ref")
+    arguments = parser.parse_args()
+    try:
+        base_ref = resolve_verification_base(ROOT, explicit=arguments.base_ref)
+    except VerificationBaseError as error:
+        print(error, file=sys.stderr)
+        return 2
+    print(f"Wiki raw 검증 기준: {base_ref}", flush=True)
     commands = (
         (PYTHON, "-m", "compileall", "-q", "harness"),
         (
@@ -53,7 +64,7 @@ def main() -> int:
             PYTHON,
             str(ROOT / "harness" / "scripts" / "validate-llm-wiki.py"),
             "--base-ref",
-            "origin/develop",
+            base_ref,
         ),
         (
             PYTHON,
