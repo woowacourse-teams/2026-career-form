@@ -21,16 +21,17 @@ it("설치 후 자동 기입을 선택하면 설치 안내 없이 기본 정보�
   const repository = createRepository();
   render(<App repository={repository} />);
   fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  expect(await screen.findByLabelText("이메일")).toBeVisible();
-  expect(screen.getByLabelText("국문 성")).toBeVisible();
+  expect(await screen.findByLabelText("국문 성")).toBeVisible();
   expect(screen.getByLabelText("국문 이름")).toBeVisible();
-  expect(screen.getByLabelText("전화번호")).toBeVisible();
+  expect(screen.queryByLabelText("이메일")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  await screen.findByLabelText("이메일");
   expect(screen.queryByRole("link", { name: /Chrome에 추가/ })).toBeNull();
   fireEvent.change(screen.getByLabelText("이메일"), {
     target: { value: "learner@example.test" },
   });
   fireEvent.click(
-    screen.getByRole("button", { name: "저장하고 사용 방법 보기" }),
+    screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
   );
   await screen.findByRole("heading", {
     name: "지원서에서 자동 기입을 시작하세요",
@@ -96,5 +97,5 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   expect(screen.getByText("02 / 03")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
   fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  expect(await screen.findByLabelText("이메일")).toBeVisible();
+  expect(await screen.findByLabelText("국문 성")).toBeVisible();
 });
