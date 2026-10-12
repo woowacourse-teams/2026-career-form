@@ -80,3 +80,4 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md) | PR, 로컬 작업과 pre-push의 기준 ref 선택 및 raw 보호 | 2026-10-12 |
 | [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 공고별 단일 확인, 공개 링크와 실행 분모 경계 | 2026-10-12 |
 | [시스템 PR 공유 파일 검사와 릴리스 본문 계약](topics/release-pr-contract.md) | 중앙 시스템 PR 분류, 일반 및 hotfix 보호와 릴리스 생성 본문 검증 | 2026-10-12 |
+| [품질 관측 호출의 인터럽트 처리](topics/quality-observation-interruption.md) | 제출 전 인터럽트 검사, 상태 보존과 실행 중 취소 회귀 | 2026-10-13 |
