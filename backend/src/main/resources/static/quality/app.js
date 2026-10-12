@@ -1,4 +1,5 @@
 import { accessHeaders, clearAccess } from "./access.js";
+import { siteCard, scopePostings } from "./site-card.js";
 
 const items = document.getElementById("items");
 const message = document.getElementById("message");
@@ -59,7 +60,7 @@ function showConfirmation(row) {
   state = { ...state, selected: row };
   const form = document.getElementById("confirm-form");
   form.reset();
-  form.elements.publicLink.value = row.publicLink ?? "";
+  form.elements.publicLink.value = row.links?.[0]?.url ?? (row.publicLink !== row.homepage ? row.publicLink : "") ?? "";
   document.getElementById("scope-context").textContent = `${row.site}, 화면 기준 ${row.structure.slice(0, 12)}`;
   document.getElementById("dedicated-label").hidden = row.identity !== "UNVERIFIED";
   document.getElementById("confirm-dialog").showModal();
@@ -83,12 +84,12 @@ function showHistory(row) {
   document.getElementById("history-dialog").showModal();
 }
 
-function card(row) {
-  const card = element("article", undefined, "candidate");
+function card(row, ordinal) {
+  const card = element("section", undefined, "candidate-scope");
   card.dataset.candidateId = row.id;
   if (row.id === targetCandidate) card.dataset.selected = "true";
   const header = element("div", undefined, "candidate-header");
-  header.append(element("h2", row.site), element("span", statusNames[row.status] ?? row.status, "badge"));
+  header.append(element("h3", `화면 범위 ${ordinal}`), element("span", statusNames[row.status] ?? row.status, "badge"));
   const meta = element("div", undefined, "meta");
   meta.append(element("span", routeNames[row.route] ?? row.route), element("span", `첫 대기 ${date(row.firstSeen)}`),
     element("span", `화면 ${row.structure.slice(0, 12)}`));
@@ -96,11 +97,7 @@ function card(row) {
   if (row.recheck) meta.append(element("span", "재확인 대상"));
   if (row.identity === "UNVERIFIED") meta.append(element("span", "기업 소속 미확인"));
   if (row.deferredUntil && row.status === "DEFERRED") meta.append(element("span", `재확인 ${date(row.deferredUntil)}`));
-  const link = element("a", row.publicLink ? "작성 화면 열기" : "사이트 홈 열기, 작성 링크 미등록");
-  link.href = row.publicLink ?? row.homepage;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  card.append(header, meta, link);
+  card.append(header, meta, element("p", scopePostings(row), "hint"));
   const selection = element("p", selectionReasons.get(row.id) ?? "오늘 선정 목록 외에도 확인할 수 있습니다.", "hint");
   selection.dataset.selectionReason = row.id;
   card.append(selection);
@@ -128,15 +125,16 @@ async function load(append) {
   const generation = ++loadGeneration;
   state = { ...state, loading: true, offset: append ? state.offset : 0 };
   try {
-    const page = await api(`/sites?status=${state.status}&offset=${state.offset}&limit=50`);
+    const page = await api(`/site-groups?status=${state.status}&offset=${state.offset}&limit=50`);
     if (generation !== loadGeneration) return;
     if (!append) items.replaceChildren();
-    items.append(...page.items.map(card));
+    const existing = new Set(Array.from(items.querySelectorAll("[data-site-id]"), node => node.dataset.siteId));
+    items.append(...page.items.filter(site => !existing.has(site.id)).map(site => siteCard(site, card)));
     if (!append && targetCandidate) {
-      if (!page.items.some(row => row.id === targetCandidate)) {
-        const selected = await api(`/sites/${targetCandidate}/details`);
+      if (!page.items.some(site => site.candidates.some(row => row.id === targetCandidate))) {
+        const selected = await api(`/site-groups/${targetCandidate}`);
         if (generation !== loadGeneration) return;
-        items.prepend(card(selected));
+        items.prepend(siteCard(selected, card));
       }
       items.querySelector('[data-selected="true"]')?.scrollIntoView({ block: "nearest" });
     }

@@ -114,8 +114,13 @@ public final class QualityCollectionService {
 
     public Receipt observe(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
                            String runId, String token, boolean reportingCapable) {
+        return observe(group, event, snapshot, runId, token, reportingCapable, null);
+    }
+
+    public Receipt observe(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
+                           String runId, String token, boolean reportingCapable, String publicLink) {
         try {
-            return observeLinked(group, event, snapshot, runId, token, reportingCapable);
+            return observeLinked(group, event, snapshot, runId, token, reportingCapable, publicLink);
         } catch (IllegalArgumentException exception) {
             var now = clock.instant();
             insert(new QualityRecord("request_" + UUID.randomUUID(), QualityRecord.Kind.REQUEST, group, 0, now,
@@ -125,7 +130,7 @@ public final class QualityCollectionService {
     }
 
     private Receipt observeLinked(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
-                                  String runId, String token, boolean reportingCapable) {
+                                  String runId, String token, boolean reportingCapable, String publicLink) {
         var now = clock.instant();
         if (reportingCapable && runId != null) {
             var previous = owned(runId, token);
@@ -134,6 +139,9 @@ public final class QualityCollectionService {
                 group = group.withSite(previous.group().site());
             } else if (!previous.group().site().equals(group.site()) && !((Run) previous.payload()).snapshots().isEmpty()
                 && !((Run) previous.payload()).snapshots().values().stream().map(link -> link.group().site()).toList().contains(group.site())) { throw unavailable(); }
+        }
+        if (registry != null && snapshot != null && QualityPublicLinks.validate(group.host(), publicLink) != null) {
+            registry.observe(group, now, publicLink);
         }
         if (!reportingCapable) {
             insert(new QualityRecord("request_" + UUID.randomUUID(), QualityRecord.Kind.REQUEST, group, 0, now,

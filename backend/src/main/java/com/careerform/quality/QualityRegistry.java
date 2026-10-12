@@ -37,8 +37,18 @@ public final class QualityRegistry {
 
     public record Candidate(String id, String homepage, String publicLink, Instant firstSeen, Instant lastSeen,
                             Status status, boolean requested, boolean recheck, String claimOwner, String claimant, Instant claimExpiresAt,
-                            DeferReason deferReason, Instant deferredUntil, List<Confirmation> history) {
-        public Candidate { history = List.copyOf(history); }
+                            DeferReason deferReason, Instant deferredUntil, List<Confirmation> history, List<QualityPublicLinks.Link> links, Boolean linksOverflow) {
+        public Candidate {
+            history = List.copyOf(history);
+            links = links == null ? List.of() : List.copyOf(links);
+            linksOverflow = Boolean.TRUE.equals(linksOverflow);
+        }
+        public Candidate(String id, String homepage, String publicLink, Instant firstSeen, Instant lastSeen,
+                         Status status, boolean requested, boolean recheck, String claimOwner, String claimant, Instant claimExpiresAt,
+                         DeferReason deferReason, Instant deferredUntil, List<Confirmation> history) {
+            this(id, homepage, publicLink, firstSeen, lastSeen, status, requested, recheck, claimOwner, claimant,
+                claimExpiresAt, deferReason, deferredUntil, history, List.of(), false);
+        }
 
         public boolean claimedAt(Instant now) { return claimOwner != null && claimExpiresAt != null && now.isBefore(claimExpiresAt); }
 
@@ -71,7 +81,18 @@ public final class QualityRegistry {
         return update(id, candidate -> new Candidate(candidate.id(), candidate.homepage(), candidate.publicLink(),
             candidate.firstSeen().isBefore(observedAt) ? candidate.firstSeen() : observedAt, candidate.lastSeen().isAfter(observedAt) ? candidate.lastSeen() : observedAt,
             candidate.status(), candidate.requested(), candidate.recheck(), candidate.claimOwner(), candidate.claimant(), candidate.claimExpiresAt(), candidate.deferReason(),
-            candidate.deferredUntil(), candidate.history()));
+            candidate.deferredUntil(), candidate.history(), candidate.links(), candidate.linksOverflow()));
+    }
+
+    public Candidate observe(QualityRecord.Group group, Instant observedAt, String publicLink) {
+        var observed = observe(group, observedAt);
+        if (QualityPublicLinks.validate(group.host(), publicLink) == null) { return observed; }
+        return update(observed.id(), candidate -> {
+            var links = QualityPublicLinks.observe(candidate.links(), candidate.linksOverflow(), group.host(), publicLink, observedAt);
+            return new Candidate(candidate.id(), candidate.homepage(), candidate.publicLink(), candidate.firstSeen(), candidate.lastSeen(),
+                candidate.status(), candidate.requested(), candidate.recheck(), candidate.claimOwner(), candidate.claimant(), candidate.claimExpiresAt(),
+                candidate.deferReason(), candidate.deferredUntil(), candidate.history(), links.links(), links.overflow());
+        });
     }
 
     public Candidate claim(String id, String owner) {
@@ -86,7 +107,7 @@ public final class QualityRegistry {
             if (candidate.status() == Status.COMPLETED) { throw new Conflict(); }
             var next = copy(candidate, Status.CLAIMED, ownerHash(owner), clock.instant().plusSeconds(86400), null, null, candidate.history(), candidate.publicLink());
             return new Candidate(next.id(), next.homepage(), next.publicLink(), next.firstSeen(), next.lastSeen(), next.status(), next.requested(), next.recheck(),
-                next.claimOwner(), claimant, next.claimExpiresAt(), next.deferReason(), next.deferredUntil(), next.history());
+                next.claimOwner(), claimant, next.claimExpiresAt(), next.deferReason(), next.deferredUntil(), next.history(), next.links(), next.linksOverflow());
         });
     }
 
@@ -150,8 +171,15 @@ public final class QualityRegistry {
                 .filter(item -> !item.confirmedAt().isAfter(at)).reduce((first, next) -> first.confirmedAt().isAfter(next.confirmedAt()) ? first : next).map(Confirmation::fieldCount));
         }
         return store.find(id(group), clock.instant()).map(record -> (Candidate) record.payload())
-            .flatMap(candidate -> candidate.history().stream().filter(item -> !item.confirmedAt().isAfter(at))
+            .filter(candidate -> !candidate.linksOverflow() && candidate.links().stream().filter(link -> !link.firstSeen().isAfter(at)).count() <= 1)
+            .flatMap(candidate -> candidate.history().stream().filter(item -> !item.confirmedAt().isAfter(at) && matchesObservedLink(candidate, item, at))
                 .reduce((first, next) -> first.confirmedAt().isAfter(next.confirmedAt()) ? first : next).map(Confirmation::fieldCount));
+    }
+
+    private boolean matchesObservedLink(Candidate candidate, Confirmation confirmation, Instant at) {
+        var observed = candidate.links().stream().filter(link -> !link.firstSeen().isAfter(at)).findFirst();
+        return observed.map(link -> confirmation.publicLink() != null ? confirmation.publicLink().equals(link.url())
+            : !link.firstSeen().isAfter(confirmation.confirmedAt())).orElse(true);
     }
 
     public List<QualityRecord> listRecords(String site, long offset, int limit) {
@@ -221,7 +249,7 @@ public final class QualityRegistry {
                            List<Confirmation> history, String publicLink) {
         return new Candidate(source.id(), source.homepage(), publicLink, source.firstSeen(), source.lastSeen(), status,
             status == Status.REQUESTED || (status == Status.CLAIMED || status == Status.WAITING) && source.requested(),
-            source.recheck(), owner, status == Status.CLAIMED ? source.claimant() : null, claimExpiresAt, reason, until, history);
+            source.recheck(), owner, status == Status.CLAIMED ? source.claimant() : null, claimExpiresAt, reason, until, history, source.links(), source.linksOverflow());
     }
 
     private String safeLink(String host, String link) {
