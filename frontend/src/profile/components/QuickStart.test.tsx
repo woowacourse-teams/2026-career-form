@@ -54,6 +54,38 @@ async function renderForm(initial?: Profile) {
 }
 
 describe("QuickStart", () => {
+  it("focuses each new question without stealing focus while editing", async () => {
+    await renderForm();
+    expect(screen.getByLabelText("국문 성")).toHaveFocus();
+    screen.getByLabelText("국문 이름").focus();
+    fireEvent.change(screen.getByLabelText("국문 이름"), {
+      target: { value: "시연" },
+    });
+    expect(screen.getByLabelText("국문 이름")).toHaveFocus();
+    await next();
+    expect(screen.getByLabelText("이메일")).toHaveFocus();
+    await next();
+    expect(screen.getByLabelText("전화번호")).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "이전" }));
+    await waitFor(() => expect(screen.getByLabelText("이메일")).toHaveFocus());
+    await next();
+    await next();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "학력 추가하기" }));
+    expect(screen.getByRole("button", { name: "고등학교" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "대학교" }));
+    expect(screen.getByRole("combobox")).toHaveFocus();
+    fireEvent.click(
+      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: "지원서에서 자동 기입을 시작하세요",
+        }),
+      ).toHaveFocus(),
+    );
+  });
   it("starts with only optional name fields and allows leaving immediately", async () => {
     const { track } = await renderForm();
     expect(screen.getAllByRole("textbox")).toHaveLength(2);

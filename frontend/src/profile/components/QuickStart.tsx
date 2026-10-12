@@ -70,6 +70,8 @@ export function QuickStart({
   });
   const createdIds = useRef(new Set<string>());
   const heading = useRef<HTMLHeadingElement>(null);
+  const question = useRef<HTMLFieldSetElement>(null);
+  const focusedScreen = useRef<string | null>(null);
   const viewSent = useRef(false);
   const transition = useRef(false);
   const entry = editor.profile[selection.chapter].find(
@@ -125,8 +127,18 @@ export function QuickStart({
     }
   }, [track]);
   useEffect(() => {
-    if (editor.loadStatus === "ready") heading.current?.focus();
-  }, [step, guide, editor.loadStatus]);
+    if (editor.loadStatus !== "ready" || pending) return;
+    const screen = guide ? "guide" : step;
+    if (focusedScreen.current === screen) return;
+    const target =
+      !guide && !summary
+        ? question.current?.querySelector<HTMLElement>(
+            "input:not(:disabled), textarea:not(:disabled), button:not(:disabled)",
+          )
+        : null;
+    (target ?? heading.current)?.focus();
+    focusedScreen.current = screen;
+  }, [step, guide, summary, pending, editor.loadStatus]);
   function move(next: Step) {
     setHistory((current) => [...current, { step, selection }]);
     setStep(next);
@@ -306,6 +318,7 @@ export function QuickStart({
                 시작하세요.
               </p>
               <fieldset
+                ref={question}
                 disabled={pending}
                 className={`${styles.question} ${step === "school" ? styles.schoolQuestion : ""}`}
                 key={step}
