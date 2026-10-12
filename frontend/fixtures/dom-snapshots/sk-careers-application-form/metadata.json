@@ -1,0 +1,101 @@
+{
+  "fixture_id": "sk-careers-application-form",
+  "site_id": "sk-careers",
+  "issue_number": 187,
+  "collected_on": "2026-10-12",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "UNAVAILABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "INSTALLATION_UNAVAILABLE"
+  },
+  "scope": {
+    "description": "지원서 폼 하나(document.forms[0]) 전체. 사용자가 반복 행과 조건부 영역을 종류별로 한 번씩 연 상태",
+    "controls": {
+      "text": 28,
+      "tel": 6,
+      "file": 3,
+      "radio": 7,
+      "select": 13,
+      "textarea": 1,
+      "checkbox": 1
+    },
+    "control_total": 59,
+    "hidden_controls": 28,
+    "options": 64,
+    "labels": 45,
+    "excluded": [
+      "type=hidden 입력란 21개",
+      "폼 밖에 있는 숨김 컨트롤 162개(추가 버튼이 쓰는 행 템플릿으로 추정)",
+      "헤더, 내비게이션, 푸터"
+    ]
+  },
+  "failure": {
+    "stage": "UNSPECIFIED",
+    "expected": "전체 지원서 폼의 수집 구조를 오프라인 기준선으로 고정한다",
+    "actual": "특정 실패 관찰과 연결하지 않았다. 사용자 지시로 실패 영역이 아닌 전체 폼을 수집했다",
+    "conditions": []
+  },
+  "sanitization": {
+    "removed": [
+      "입력값",
+      "선택·체크 상태",
+      "type=hidden 입력란",
+      "style",
+      "script 21개",
+      "img 3개",
+      "URL",
+      "5자리 이상 숫자열",
+      "이메일 형태 문자열",
+      "코드 식별자 형태가 아닌 class 토큰 15개"
+    ],
+    "replaced": [
+      "코드 식별자 형태가 아닌 id 4개를 익명 값으로 치환하고 참조도 함께 치환",
+      "option value 48개를 합성 코드로 치환",
+      "현재 입력값과 같은 텍스트 2곳과 길이·패턴 기준에 걸린 텍스트 2곳을 [TEXT]로 치환"
+    ],
+    "preserved": [
+      "SK 어댑터가 읽는 코드 식별자 형태의 id 69개, name 58개, class 토큰",
+      "20자 이하 선택지 코드(radio·checkbox 8개, option 16개)",
+      "라벨, 안내 문구, 옵션 텍스트, placeholder 원문"
+    ],
+    "preserved_common_text": "사용자가 개인정보 검토를 통과로 승인했다",
+    "redacted_text_count": 4,
+    "dropped_references": 0,
+    "broken_references_in_original": 2
+  },
+  "synthetic_behavior": [
+    "원본에서 CSS로 숨겨진 가장 바깥 요소 53곳에 hidden 속성을 합성했다. 숨김 컨트롤 수는 원본 28개, 정제 28개로 같다"
+  ],
+  "limitations": [
+    "폼 밖 행 템플릿을 제외해 추가 버튼으로 행이 생기는 동작은 재현하지 않는다",
+    "주소 검색 레이어 등 폼 밖 팝업은 포함하지 않는다",
+    "수집 시점에 보이는 컨트롤은 31개였고 모든 조건부 영역이 열렸는지는 확인하지 못했다",
+    "페이지 CSS와 레이아웃은 없고 숨김 여부는 합성 hidden 속성으로만 표현한다",
+    "페이지 스크립트가 만드는 연결이나 이벤트는 재현하지 않는다",
+    "설치 확장 revision과 실사이트 성공률의 근거가 아니다"
+  ],
+  "review": {
+    "privacy": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-12"
+    },
+    "structure": {
+      "result": "PARTIAL",
+      "human_reviewed": false,
+      "note": "브라우저 안 자동 대조(컨트롤·옵션·라벨·숨김 컨트롤 수, 끊긴 참조 수)는 일치했다. 사람 구조 검토는 미실시"
+    }
+  },
+  "reproduction": {
+    "command": "cd frontend && npx vitest run --project unit src/autofill/workflow/dom-snapshot.sk-careers.test.ts",
+    "product_revision": "a2abd62c2271acb0de7796655b254c88aa60bfdc",
+    "observed": [
+      "SK 어댑터로 수집하면 6개 섹션에 후보 49개(28, 19, 1, 1, 0, 0)가 나온다",
+      "후보 종류는 text 33, radio 3, select 13이고 보이는 후보 22개, 숨김 후보 27개, 라벨 문맥이 있는 후보 28개다"
+    ],
+    "mutation_check": "합성 hidden 속성을 지우면 숨김 후보가 사라지고, class를 지우면 SK 섹션 구성이 달라짐을 테스트에서 확인한다"
+  }
+}

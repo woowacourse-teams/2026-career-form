@@ -1,0 +1,1814 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>sk-careers-application-form</title>
+  </head>
+  <body>
+    <form id="form1">
+      <div class="apply-form-container">
+        <div id="applyContentUserInfo" class="apply-form-box personal-root">
+          <div class="form-title"><h2 class="title yellow">인적 사항</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="input-cover float disable-active">
+                        <div class="cover-inner">
+                          <label class="form-label" for="prsApplicantName"
+                            >성명
+                            <span class="required"
+                              >*<strong class="blind"></strong></span></label
+                          ><input
+                            id="prsApplicantName"
+                            name="prsApplicantName"
+                            class="form-input input-active appRequired checkDisplay"
+                            type="text"
+                            readonly=""
+                            title="성명"
+                            autocomplete="off"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float active">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsEmail"
+                          >이메일
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsEmail"
+                          name="prsEmail"
+                          class="form-input input-active appRequired checkDisplay"
+                          type="text"
+                          title="이메일"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error" hidden=""></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-btn-with-container medium">
+                      <div class="input-cover float active">
+                        <div class="cover-inner">
+                          <label class="form-label" for="prsPhone"
+                            >휴대폰 번호
+                            <span class="required"
+                              >*<strong class="blind"></strong></span></label
+                          ><input
+                            id="prsPhone"
+                            name="prsPhone"
+                            class="form-input input-active appRequired checkDisplay"
+                            type="tel"
+                            title="휴대폰 번호"
+                            maxlength="20"
+                          /><span class="etc-right"
+                            ><span class="icon-error" hidden=""></span
+                          ></span>
+                        </div>
+                      </div>
+                      <button
+                        id="btnSendAuthNumber"
+                        class="btn medium dark disabled"
+                        type="button"
+                      >
+                        인증완료
+                      </button>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column authNumberDiv" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-btn-with-container medium">
+                      <div class="input-cover float">
+                        <div class="cover-inner">
+                          <label class="form-label" for="phoneAuthNumber"
+                            >인증번호</label
+                          ><input
+                            id="AuthNumber"
+                            name="AuthNumber"
+                            class="form-input input-active"
+                            type="tel"
+                            title="인증번호"
+                            maxlength="6"
+                          /><span class="etc-right"
+                            ><span class="icon-error"></span
+                          ></span>
+                        </div>
+                      </div>
+                      <button
+                        id="btnCheckAuthNumber"
+                        class="btn medium dark"
+                        type="button"
+                      >
+                        인증번호 등록
+                      </button>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float disable-active">
+                      <div class="cover-inner">
+                        <label class="form-label" for="birth"
+                          >생년월일
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          class="form-input input-active appRequired checkDisplay"
+                          type="text"
+                          readonly=""
+                          title="생년월일"
+                          autocomplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="input-cover float disable-active">
+                        <div class="cover-inner">
+                          <label class="form-label" for="prsApplicantGender"
+                            >성별
+                            <span class="required"
+                              >*<strong class="blind"></strong></span></label
+                          ><input
+                            id="prsApplicantGender"
+                            name="prsApplicantGender"
+                            class="form-input input-active appRequired checkDisplay"
+                            type="text"
+                            readonly=""
+                            title="성별"
+                            autocomplete="off"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsEngFirstName"
+                          >(영문 이름) Gildong
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsEngFirstName"
+                          name="prsEngFirstName"
+                          class="form-input input-active error appRequired checkDisplay"
+                          type="text"
+                          title="(영문 이름) Gildong"
+                          maxlength="30"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error" hidden=""></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsEngLastName"
+                          >(영문 성) Hong
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsEngLastName"
+                          name="prsEngLastName"
+                          class="form-input input-active appRequired checkDisplay"
+                          type="text"
+                          title="(영문 성) Hong"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error" hidden=""></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsEmailSub"
+                          >보조 이메일 </label
+                        ><input
+                          id="prsEmailSub"
+                          name="prsEmailSub"
+                          class="form-input input-active"
+                          type="text"
+                          title="보조 이메일"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error" hidden=""></span
+                        ></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float file-upload-container">
+                      <label class="form-label" for="prsPhotoName"
+                        >사진
+                        <span class="required"
+                          >*<strong class="blind"></strong></span
+                      ></label>
+                      <div class="file-wrapper">
+                        <input
+                          id="prsPhotoName"
+                          name="prsPhotoName"
+                          class="form-input input-active result-file-input"
+                          type="text"
+                          readonly=""
+                          autocomplete="off"
+                        /><input
+                          id="prsPhoto"
+                          name="prsPhoto"
+                          class="file-input"
+                          type="file"
+                          title="파일 업로드"
+                        /><label class="btn medium dark-grey" for="prsPhoto"
+                          >파일 업로드</label
+                        >
+                      </div>
+                      <div class="form-guide-text font info">
+                        ※ 본인의 증명사진 또는 얼굴 위주로 편집 된 사진을
+                        첨부하세요.
+                      </div>
+                      <div class="form-guide-text font info">
+                        ※ 5MB 이하, 파일 형식은 png, jpeg, jpg 고정입니다.
+                      </div>
+                      <div class="form-guide-text font info">
+                        ※ 비율은 3:4, 권장 사이즈는 124px * 세로 160px 입니다.
+                      </div>
+                    </div>
+                    <div class="file-attach-thumbnail" hidden="">
+                      <div class="list-item">
+                        <div class="thumbnail"></div>
+                        <div class="common-select-container">
+                          <div class="common-select-item">
+                            <span class="fileInfo-name"></span
+                            ><button
+                              class="btn-delete btnPhotoDel"
+                              type="button"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column end">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-btn-with-container medium">
+                      <div class="input-cover float medium">
+                        <div class="cover-inner">
+                          <label class="form-label" for="prsZipCode"
+                            >주소
+                            <span class="required"
+                              >*<strong class="blind"></strong></span></label
+                          ><input
+                            id="prsZipCode"
+                            name="prsZipCode"
+                            class="form-input input-active appRequired checkDisplay"
+                            type="text"
+                            readonly=""
+                            placeholder="주소"
+                            title="주소"
+                            autocomplete="off"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        id="btnSearchAddress"
+                        class="btn medium dark-grey"
+                        type="button"
+                        title="레이어팝업열림"
+                      >
+                        우편번호 찾기
+                      </button>
+                    </div>
+                  </div>
+                  <div class="form-item address">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsAddress"
+                          >기본주소
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsAddress"
+                          name="prsAddress"
+                          class="form-input input-active appRequired checkDisplay"
+                          type="text"
+                          readonly=""
+                          placeholder="기본주소"
+                          title="기본주소"
+                          autocomplete="off"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsAddressDtl"
+                          >상세주소
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsAddressDtl"
+                          name="prsAddressDtl"
+                          class="form-input input-active appRequired checkDisplay"
+                          type="text"
+                          title="상세주소"
+                          maxlength="100"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error" hidden=""></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+                <div id="wrap" hidden=""></div>
+                <div id="layer" hidden=""></div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column label-space">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="btn-selector-container prsVeteran-container">
+                      <div class="form-label">보훈 정보</div>
+                      <div
+                        class="btn-selector-wrapper horizontal checker-box checkDisplay"
+                      >
+                        <label class="form-btn-selector medium veteran"
+                          ><input
+                            name="prsVeteranBenefitYN"
+                            class="radioVeteran"
+                            type="radio"
+                            value="0"
+                          /><span class="label">비대상</span></label
+                        ><label class="form-btn-selector medium veteran"
+                          ><input
+                            name="prsVeteranBenefitYN"
+                            class="radioVeteran"
+                            type="radio"
+                            value="1"
+                          /><span class="label">대상</span></label
+                        >
+                      </div>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-item-wrap column veteran-data" hidden="">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsVeteranBenefitNumber"
+                          >보훈 번호 </label
+                        ><input
+                          id="prsVeteranBenefitNumber"
+                          name="prsVeteranBenefitNumber"
+                          class="form-input input-active"
+                          type="text"
+                          title="보훈 번호"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label
+                          class="form-label"
+                          for="prsVeteranBenefitRelation"
+                          >본인과의 관계 </label
+                        ><input
+                          id="prsVeteranBenefitRelation"
+                          name="prsVeteranBenefitRelation"
+                          class="form-input input-active"
+                          type="text"
+                          title="본인과의 관계"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column label-space">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="btn-selector-container prsmilitary-container">
+                      <div class="form-label">
+                        병역 사항
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <div
+                        class="btn-selector-wrapper horizontal checker-box appRequired checkDisplay"
+                      >
+                        <label class="form-btn-selector medium military"
+                          ><input
+                            name="prsMilitarySvcYN"
+                            class="radioMilitary"
+                            type="radio"
+                            value="0"
+                          /><span class="label">비대상</span></label
+                        ><label class="form-btn-selector medium military"
+                          ><input
+                            name="prsMilitarySvcYN"
+                            class="radioMilitary"
+                            type="radio"
+                            value="1"
+                          /><span class="label">대상</span></label
+                        >
+                      </div>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-item-wrap military-data" hidden="">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        대상 분류
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        id="prsMilitarySvcStatus"
+                        name="prsMilitarySvcStatus"
+                        class="selectric medium float form-select"
+                        title="대상 분류"
+                      >
+                        <option value="">
+                          대상 분류
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="opt-1">군필</option>
+                        <option value="opt-2">미필</option>
+                        <option value="opt-3">면제</option>
+                        <option value="opt-4">복무중</option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column military-detailData" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        병역구분
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        id="prsMilitarySvcType"
+                        name="prsMilitarySvcType"
+                        class="selectric medium float form-select"
+                        title="병역구분"
+                      >
+                        <option value="">
+                          병역구분
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="opt-5">현역병</option>
+                        <option value="opt-6">상근예비역</option>
+                        <option value="opt-7">공익근무요원</option>
+                        <option value="opt-8">전문연구요원</option>
+                        <option value="opt-9">산업기능요원</option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        군별
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        id="prsMilitarySvcCategory"
+                        name="prsMilitarySvcCategory"
+                        class="selectric medium float form-select"
+                        title="군별"
+                      >
+                        <option value="">
+                          군별
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="opt-10">육군</option>
+                        <option value="opt-11">해군</option>
+                        <option value="opt-12">공군</option>
+                        <option value="opt-13">해병대</option>
+                        <option value="opt-14">전투경찰</option>
+                        <option value="opt-15">해양경찰</option>
+                        <option value="opt-16">의무경찰</option>
+                        <option value="opt-17">의무소방</option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column military-detailData" hidden="">
+                <div class="form-item-wrap column">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsMilitarySvcEtcReason"
+                          >기타 상세 내용
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsMilitarySvcEtcReason"
+                          name="prsMilitarySvcEtcReason"
+                          class="form-input input-active"
+                          type="text"
+                          title="기타 상세 내용"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap column">
+                  <div class="form-item">
+                    <div class="datepicker-container">
+                      <div class="input-cover float">
+                        <label class="form-label" for="prsMilitarySvcFromDate"
+                          >입대일
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsMilitarySvcFromDate"
+                          name="prsMilitarySvcFromDate"
+                          class="form-input input-active"
+                          type="tel"
+                          placeholder="YYYY-MM"
+                          maxlength="6"
+                          min="1900-01-01"
+                          max="2099-12-31"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                  <div class="form-item">
+                    <div class="datepicker-container">
+                      <div class="input-cover float">
+                        <label class="form-label" for="prsMilitarySvcToDate"
+                          >제대일(제대예정일)
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsMilitarySvcToDate"
+                          name="prsMilitarySvcToDate"
+                          class="form-input input-active"
+                          type="tel"
+                          placeholder="YYYY-MM"
+                          maxlength="6"
+                          min="1900-01-01"
+                          max="2099-12-31"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column wide military-detailData" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label
+                          class="form-label"
+                          for="prsMilitarySvcUnfinishReason"
+                          >미필사유
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsMilitarySvcUnfinishReason"
+                          name="prsMilitarySvcUnfinishReason"
+                          class="form-input input-active"
+                          type="text"
+                          title="미필사유"
+                          maxlength="50"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column wide military-detailData" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="prsMilitarySvcTypeReason"
+                          >면제사유
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="prsMilitarySvcTypeReason"
+                          name="prsMilitarySvcTypeReason"
+                          class="form-input input-active"
+                          type="text"
+                          title="면제사유"
+                          maxlength="50"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column label-space">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="btn-selector-container prsdisabled-container">
+                      <div class="form-label">장애정보</div>
+                      <div
+                        class="btn-selector-wrapper horizontal checker-box checkDisplay"
+                      >
+                        <label class="form-btn-selector medium disabled"
+                          ><input
+                            name="prsDisabledYN"
+                            class="radioDisabled"
+                            type="radio"
+                            value="0"
+                          /><span class="label">비대상</span></label
+                        ><label class="form-btn-selector medium disabled"
+                          ><input
+                            name="prsDisabledYN"
+                            class="radioDisabled"
+                            type="radio"
+                            value="1"
+                          /><span class="label">대상</span></label
+                        >
+                      </div>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-item-wrap disabled-data" hidden="">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">장애구분</div>
+                      <select
+                        id="prsDisabledType"
+                        name="prsDisabledType"
+                        class="selectric medium float form-select"
+                        title="장애구분"
+                      >
+                        <option value="">장애구분</option>
+                        <option value="opt-18">중증(기존1급~3급)</option>
+                        <option value="opt-19">경증(기존4급~6급)</option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column disabled-detailData" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">세부구분</div>
+                      <select
+                        id="prsDisabledTypeDtl"
+                        name="prsDisabledTypeDtl"
+                        class="selectric medium float form-select"
+                        title="세부구분"
+                      >
+                        <option value="">세부구분</option>
+                        <option value="opt-20">지체장애</option>
+                        <option value="opt-21">뇌병변장애</option>
+                        <option value="opt-22">시각장애</option>
+                        <option value="opt-23">청각장애</option>
+                        <option value="opt-24">언어장애</option>
+                        <option value="opt-25">지적장애</option>
+                        <option value="opt-26">자폐성장애</option>
+                        <option value="opt-27">정신장애</option>
+                        <option value="opt-28">신장장애</option>
+                        <option value="opt-29">심장장애</option>
+                        <option value="opt-30">호흡기장애</option>
+                        <option value="opt-31">간장애</option>
+                        <option value="opt-32">안면장애</option>
+                        <option value="opt-33">장루·요루장애</option>
+                        <option value="opt-34">뇌전증장애</option>
+                        <option value="opt-35">췌장장애</option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column disabled-detailData" hidden=""></div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentApplyInfo" class="apply-form-box apply-root">
+          <div class="form-title"><h2 class="title purple">지원 정보</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-guide-text">
+                최대 1지망까지 선택 가능합니다.
+              </div>
+              <div class="form-item-column appJobRoleBox">
+                <div class="form-item-wrap appJobRoleLevel1Box">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        지원 직무
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        name="appJobRoleLevel1"
+                        class="selectric medium float required appRequired checkDisplay form-select appJobRoleLevel"
+                        title="지원 직무(1지망)"
+                      >
+                        <option value="">
+                          최대 1지망까지 선택 가능합니다.
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="152">정보보안</option>
+                      </select>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-item-wrap appJobRoleLevel2Box" hidden="">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        상세 직무
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        name="appJobRoleLevel2"
+                        class="selectric medium float required form-select"
+                        title="1지망 상세 직무"
+                      >
+                        <option value="">
+                          상세 직무
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-guide-text">
+                최대 1지망까지 선택 가능합니다.
+              </div>
+              <div class="form-item-column appWorkingRegionAreaBox">
+                <div class="form-item-wrap appWorkingRegionBox">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        근무 지역
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        name="appWorkingRegion"
+                        class="selectric medium float required appRequired checkDisplay form-select appWorkingRegion"
+                        title="근무 지역(1지망)"
+                      >
+                        <option value="">
+                          근무 지역
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="opt-36">충청</option>
+                      </select>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-item-wrap appWorkingAreaBox" hidden="">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        근무지
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        name="appWorkingArea"
+                        class="selectric medium float required form-select"
+                        title="1지망 근무 지역"
+                      >
+                        <option value="">
+                          근무지
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        고용형태
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        id="appWorkingType"
+                        name="appWorkingType"
+                        class="selectric medium float required appRequired checkDisplay form-select"
+                        title="고용형태"
+                      >
+                        <option value="">
+                          고용형태
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="opt-37">정규</option>
+                      </select>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        지원 경로
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        id="appApplyPath"
+                        name="appApplyPath"
+                        class="selectric medium float required form-select appRequired checkDisplay"
+                        title="지원 경로"
+                      >
+                        <option value="">
+                          지원 경로
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="opt-38">채용공고 지원</option>
+                        <option value="opt-39">SK구성원추천</option>
+                        <option value="opt-40">에이전시(헤드헌팅)</option>
+                        <option value="opt-41">에이전시(파견)</option>
+                        <option value="opt-42">기타</option>
+                      </select>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-item-wrap apply-path" hidden="">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appApplyPathPersonName"
+                          >추천인 이름
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathPersonName"
+                          name="appApplyPathPersonName"
+                          class="form-input input-active"
+                          type="text"
+                          title="추천인 이름"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap apply-path" hidden="">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appApplyPathEtcDesc"
+                          >기타 상세 내용
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathEtcDesc"
+                          name="appApplyPathEtcDesc"
+                          class="form-input input-active"
+                          type="text"
+                          title="기타 상세 내용"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap apply-path" hidden="">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appApplyPathChannel"
+                          >채널명
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathChannel"
+                          name="appApplyPathChannel"
+                          class="form-input input-active"
+                          type="text"
+                          title="채널명"
+                          maxlength="50"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column apply-path" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float right-space">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appApplyPathPersonEmail"
+                          >추천인 이메일</label
+                        ><input
+                          id="appApplyPathPersonEmail"
+                          name="appApplyPathPersonEmail"
+                          class="form-input input-active"
+                          type="text"
+                          title="추천인 이메일"
+                          maxlength="50"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                          ><span class="mode-text">[TEXT]</span></span
+                        >
+                      </div>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                    <div class="form-guide-text font info">[TEXT]</div>
+                  </div>
+                </div>
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appApplyPathPersonPhone"
+                          >추천인 연락처
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathPersonPhone"
+                          name="appApplyPathPersonPhone"
+                          class="form-input input-active"
+                          type="tel"
+                          title="추천인 연락처"
+                          maxlength="13"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                  <div class="form-guide-text font info">
+                    ※ 휴대폰 번호만 등록 가능합니다.
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column apply-path" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label
+                          class="form-label"
+                          for="appApplyPathPersonContactPath"
+                          >추천인을 알게된 경로
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathPersonContactPath"
+                          name="appApplyPathPersonContactPath"
+                          class="form-input input-active"
+                          type="text"
+                          title="추천인을 알게된 경로"
+                          maxlength="30"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="selectric-container active">
+                      <div class="select-label">
+                        추천인의 지원 회사 재직 여부
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        id="appApplyPathPersonWorkingYN"
+                        name="appApplyPathPersonWorkingYN"
+                        class="selectric medium float required form-select"
+                        title="추천인의 지원 회사 재직 여부"
+                      >
+                        <option value="">추천인의 지원 회사 재직 여부</option>
+                        <option value="1">네 재직 중입니다.</option>
+                        <option value="0">
+                          아니요. 현재 재직하고있지 않습니다.
+                        </option>
+                      </select>
+                      <div class="form-guide-text font danger"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column apply-path" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appApplyPathCompany"
+                          >추천 회사명
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathCompany"
+                          name="appApplyPathCompany"
+                          class="form-input input-active"
+                          type="text"
+                          title="추천 회사명"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label
+                          class="form-label"
+                          for="appApplyPathCompanyManagerName"
+                          >담당자 이름
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathCompanyManagerName"
+                          name="appApplyPathCompanyManagerName"
+                          class="form-input input-active"
+                          type="text"
+                          title="담당자 이름"
+                          maxlength="20"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-item-column apply-path" hidden="">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label
+                          class="form-label"
+                          for="appApplyPathCompanyManagerPhone"
+                          >담당자 연락처
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathCompanyManagerPhone"
+                          name="appApplyPathCompanyManagerPhone"
+                          class="form-input input-active"
+                          type="tel"
+                          title="담당자 연락처"
+                          maxlength="13"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float">
+                      <div class="cover-inner">
+                        <label
+                          class="form-label"
+                          for="appApplyPathCompanyManagerEmail"
+                          >담당자 이메일
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appApplyPathCompanyManagerEmail"
+                          name="appApplyPathCompanyManagerEmail"
+                          class="form-input input-active"
+                          type="text"
+                          title="담당자 이메일"
+                          maxlength="50"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error"></span
+                        ></span>
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float right-space small">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appDesiredSalary"
+                          >희망연봉(만원)
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appDesiredSalary"
+                          name="appDesiredSalary"
+                          class="form-input input-active appRequired"
+                          type="text"
+                          title="희망연봉(만원)"
+                          maxlength="6"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error" hidden=""></span
+                          ><span class="mode-text">만원</span></span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="input-cover float right-space small">
+                      <div class="cover-inner">
+                        <label class="form-label" for="appBeforeSalary"
+                          >직전연봉(만원)
+                          <span class="required"
+                            >*<strong class="blind"></strong></span></label
+                        ><input
+                          id="appBeforeSalary"
+                          name="appBeforeSalary"
+                          class="form-input input-active appRequired checkDisplay"
+                          type="text"
+                          title="직전연봉(만원)"
+                          maxlength="6"
+                          autocomplete="off"
+                        /><span class="etc-right"
+                          ><span class="icon-error" hidden=""></span
+                          ><span class="mode-text">만원</span></span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-guide-text font danger" hidden=""></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentAcademic" class="apply-form-box education-root">
+          <div class="form-title"><h2 class="title blue">학력</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="selectric-container">
+                      <div class="select-label">
+                        최종 학력
+                        <span class="required"
+                          >*<strong class="blind"></strong
+                        ></span>
+                      </div>
+                      <select
+                        id="eduLastestEducationType"
+                        name="eduLastestEducationType"
+                        class="selectric medium float form-select appRequired checkDisplay"
+                        title="최종 학력"
+                      >
+                        <option value="">
+                          최종 학력
+                          <span class="required"
+                            >*<strong class="blind"></strong
+                          ></span>
+                        </option>
+                        <option value="opt-43">[TEXT]</option>
+                        <option value="opt-44">전문대학(전문학사)</option>
+                        <option value="opt-45">대학(학사)</option>
+                        <option value="opt-46">대학원(석사)</option>
+                        <option value="opt-47">대학원(박사)</option>
+                        <option value="opt-48">대학원(석박사통합)</option>
+                      </select>
+                      <div class="form-guide-text font danger" hidden=""></div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="form-guide-text font danger edulastestmsg"
+                  hidden=""
+                ></div>
+                <div class="form-guide-text font info">
+                  ※ 졸업/졸업예정인 상태의 경우에만 최종학력으로 인식됩니다.
+                </div>
+                <div class="form-guide-text font info">
+                  ※ 재학중/휴학/중퇴/수료의 경우 이전 학력을 최종학력으로 선택해
+                  주시기 바랍니다.
+                </div>
+                <div class="form-guide-text font info">
+                  ※ 대학원 학력 정보 입력 시 대학(학사) 정보는 필수로 입력해
+                  주시기 바랍니다.
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddEducationHigh"
+                        class="btn medium btn-dashed btnAddEducationHigh"
+                        type="button"
+                      >
+                        [TEXT]<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddEducationUniv"
+                        class="btn medium btn-dashed btnAddEducationUniv"
+                        type="button"
+                      >
+                        대학 학력 정보 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddEducationGrad"
+                        class="btn medium btn-dashed btnAddEducationGrad"
+                        type="button"
+                      >
+                        대학원 학력 정보 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentCareer" class="apply-form-box career-root">
+          <div class="form-title"><h2 class="title orange">경력</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddCareer"
+                        class="btn medium btn-dashed btnAddCareer"
+                        type="button"
+                      >
+                        경력 사항 추가 <span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentExperience" class="apply-form-box experience-root">
+          <div class="form-title"><h2 class="title green">경험/특허</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddExperience"
+                        class="btn medium btn-dashed btnAddExperience"
+                        type="button"
+                      >
+                        경험 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddPatent"
+                        class="btn medium btn-dashed btnAddPatent"
+                        type="button"
+                      >
+                        특허 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentAward" class="apply-form-box award-root">
+          <div class="form-title"><h2 class="title green">수상</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddAward"
+                        class="btn medium btn-dashed btnAddAward"
+                        type="button"
+                      >
+                        수상내역 / 공모전 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentLicense" class="apply-form-box cert-root">
+          <div class="form-title"><h2 class="title green">자격/면허</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddCert"
+                        class="btn medium btn-dashed btnAddCert"
+                        type="button"
+                      >
+                        자격/면허 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentLinguistics" class="apply-form-box langExam-root">
+          <div class="form-title"><h2 class="title green">어학</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddLangExam"
+                        class="btn medium btn-dashed btnAddLangExam"
+                        type="button"
+                      >
+                        공인 외국어 시험 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentLanguage" class="apply-form-box langAbility-root">
+          <div class="form-title"><h2 class="title green">외국어 능력</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-column">
+                <div class="form-item-wrap">
+                  <div class="form-item">
+                    <div class="form-add-control">
+                      <button
+                        id="btnAddLangAbility"
+                        class="btn medium btn-dashed btnAddLangAbility"
+                        type="button"
+                      >
+                        외국어 능력 추가<span class="icon"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentIntro" class="apply-form-box self-intro-root">
+          <div class="form-title"><h2 class="title green">자기소개서</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-sub-title">경력기술서</div>
+              <div class="form-custom-container">
+                <div class="form-custom-item">
+                  <div class="form-label">
+                    본인의 경력 사항에 대해 상세히 기술하여 주세요.
+                    <span class="required"
+                      >*<strong class="blind"></strong
+                    ></span>
+                  </div>
+                  <div class="length-check-cover">
+                    <textarea
+                      name="sfiAnsDesc_26"
+                      class="form-textarea full length-check-item custom appRequired checkDisplay"
+                      title="자기소개서 질문 1"
+                    ></textarea>
+                    <div class="count-area">
+                      <div class="count">0/2,000</div>
+                    </div>
+                  </div>
+                  <div class="form-guide-text font danger" hidden=""></div>
+                </div>
+                <div class="form-custom-item self-custom-item label-space">
+                  <div class="btn-selector-container">
+                    <div class="form-label">
+                      경력기술서
+                      <span class="required"
+                        >*<strong class="blind"></strong
+                      ></span>
+                    </div>
+                    <div
+                      class="btn-selector-wrapper horizontal checker-box appRequired checkDisplay"
+                    >
+                      <label class="form-btn-selector medium selfattachType"
+                        ><input
+                          name="sfiAttachType_26"
+                          class="selfAttachRdo"
+                          type="radio"
+                          value="F"
+                        /><span class="label">파일로 등록</span></label
+                      >
+                    </div>
+                  </div>
+                  <div class="form-guide-text font danger" hidden=""></div>
+                </div>
+                <div class="form-custom-item attachFile" hidden="">
+                  <div class="form-item-column">
+                    <div class="form-item-wrap">
+                      <div class="form-item">
+                        <div class="input-cover float file-upload-container">
+                          <label
+                            class="form-label sfiAttachName"
+                            for="anon-id-1"
+                            >첨부파일
+                            <span class="required"
+                              >*<strong class="blind"></strong></span
+                          ></label>
+                          <div class="file-wrapper">
+                            <input
+                              id="anon-id-1"
+                              name="sfiAttachName_26"
+                              class="form-input input-active result-file-input"
+                              type="text"
+                              readonly=""
+                              autocomplete="off"
+                            /><input
+                              id="anon-id-2"
+                              name="sfiAttachFile_26"
+                              class="file-input"
+                              type="file"
+                              title="파일 업로드"
+                            /><label
+                              class="btn medium dark-grey sfiAttachFile"
+                              for="anon-id-2"
+                              >파일 업로드</label
+                            >
+                          </div>
+                          <div class="form-guide-text font info">
+                            ※ 5MB 이하, 파일 형식은 pdf, doc, docx, pptx, ppt,
+                            zip 고정입니다.
+                          </div>
+                        </div>
+                        <div class="form-guide-text font danger"></div>
+                        <div class="common-select-container">
+                          <div class="common-select-item">
+                            <span class="fileInfo-name"></span
+                            ><button
+                              class="btn-delete btnFileDel"
+                              type="button"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="applyContentData" class="apply-form-box attachData-root">
+          <div class="form-title"><h2 class="title green">추가자료</h2></div>
+          <div class="form-body">
+            <div class="form-item-group">
+              <div class="form-item-sub-title">포트폴리오</div>
+              <div class="form-custom-container">
+                <div class="form-custom-item attachFile">
+                  <div class="form-item-column">
+                    <div class="form-item-wrap">
+                      <div class="form-item">
+                        <div class="input-cover float file-upload-container">
+                          <label
+                            class="form-label portfolioFileName"
+                            for="anon-id-3"
+                            >첨부파일
+                          </label>
+                          <div class="file-wrapper">
+                            <input
+                              id="anon-id-3"
+                              name="portfolioFileName_1"
+                              class="form-input input-active result-file-input"
+                              type="text"
+                              readonly=""
+                              autocomplete="off"
+                            /><input
+                              id="anon-id-4"
+                              name="addDataAttachFile_1"
+                              class="file-input"
+                              type="file"
+                              title="파일 업로드"
+                            /><label
+                              class="btn medium dark-grey addDataAttachFile"
+                              for="anon-id-4"
+                              >파일 업로드</label
+                            >
+                          </div>
+                          <div class="form-guide-text font info">
+                            ※ 20MB 이하, 파일 형식은 pdf, doc, docx, pptx, ppt,
+                            zip 고정입니다.
+                          </div>
+                        </div>
+                        <div
+                          class="form-guide-text font danger"
+                          hidden=""
+                        ></div>
+                        <div class="common-select-container" hidden="">
+                          <div class="common-select-item">
+                            <span class="fileInfo-name">-</span
+                            ><button
+                              class="btn-delete btnFileDel"
+                              type="button"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="apply-form-box submit">
+          <div class="submit-agree">
+            <div class="submit-agree-item">
+              <div class="selector-cover checkbox circle-large">
+                <label class="label"
+                  ><input
+                    id="checkSaveMyResume"
+                    name="checkSaveMyResume"
+                    type="checkbox"
+                    value="1"
+                  /><span class="label-text"
+                    ><span class="selector"></span
+                    ><strong class="title"
+                      >작성한 지원서를 ‘나의 이력서'로 저장해둡니다.</strong
+                    ><span class="text"
+                      >‘나의 이력서’로 등록하면 지원서 작성시 작성된
+                      정보(인적사항, 학력사항, 경력사항)를 자동으로 불러올 수
+                      있습니다.</span
+                    ></span
+                  ></label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="apply-form-btn">
+        <a class="btnTempSave btn large dark" title="임시저장 팝업">임시 저장</a
+        ><a class="btnFinalSave btn large primary">최종 제출</a>
+      </div>
+    </form>
+  </body>
+</html>
