@@ -32,6 +32,43 @@ const state = {
 
 afterEach(() => vi.useRealTimers());
 
+it("브라우저 전역 문맥을 요구하는 fetch로 품질 보고를 전송한다", async () => {
+  let received: Request | undefined;
+  const fetcher: typeof fetch = async function (this: unknown, input, init) {
+    if (this !== globalThis) throw new TypeError("Illegal invocation");
+    received = new Request(input, init);
+    return new Response(null, { status: 204 });
+  };
+  const reporting = new BackgroundQualityReporting(
+    "https://api.synthetic.test",
+    fetcher,
+    "extension",
+  );
+  reporting.capture(reporting.owner(run, source), receipt());
+  const report = {
+    ...payload,
+    fields: { candidate: state },
+    identities: { candidate: "e1" },
+  };
+
+  expect(
+    await reporting.report(
+      { type: "AUTOFILL_QUALITY_REPORT", qualityRun: run, payload: report },
+      source,
+    ),
+  ).toEqual({ ok: true });
+  expect(received?.url).toBe(
+    `https://api.synthetic.test/api/v1/quality/executions/${"b".repeat(32)}/report`,
+  );
+  expect(received?.method).toBe("POST");
+  expect(received?.headers.get("Content-Type")).toBe("application/json");
+  expect(received?.headers.get("Authorization")).toBe(
+    `Bearer ${"c".repeat(64)}`,
+  );
+  expect(await received?.json()).toEqual(report);
+  expect(received?.signal.aborted).toBe(false);
+});
+
 it.each([
   null,
   { ...payload, privateValue: "synthetic" },
@@ -136,6 +173,40 @@ it("보고 네트워크 실패만 같은 이벤트로 한 번 재시도하고 �
   fetcher.mockReset().mockRejectedValue(new Error("offline"));
   expect(await reporting.report(message, source)).toEqual({ ok: false });
   expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("보고 응답이 없으면 8초 뒤 취소하고 재시도도 8초 뒤 종료한다", async () => {
+  vi.useFakeTimers();
+  let aborted = 0;
+  const fetcher: typeof fetch = function (this: unknown, _input, init) {
+    if (this !== globalThis) throw new TypeError("Illegal invocation");
+    return new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        aborted += 1;
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    });
+  };
+  const reporting = new BackgroundQualityReporting(
+    "https://api.synthetic.test",
+    fetcher,
+    "extension",
+  );
+  reporting.capture(reporting.owner(run, source), receipt());
+  const result = reporting.report(
+    { type: "AUTOFILL_QUALITY_REPORT", qualityRun: run, payload },
+    source,
+  );
+
+  await vi.advanceTimersByTimeAsync(7_999);
+  expect(aborted).toBe(0);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(aborted).toBe(1);
+  await vi.advanceTimersByTimeAsync(7_999);
+  expect(aborted).toBe(1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(aborted).toBe(2);
+  await expect(result).resolves.toEqual({ ok: false });
 });
 
 it("계약 크기가 한도를 넘거나 endpoint가 없으면 전송하지 않는다", async () => {
