@@ -32,6 +32,43 @@ const state = {
 
 afterEach(() => vi.useRealTimers());
 
+it("브라우저 전역 문맥을 요구하는 fetch로 품질 보고를 전송한다", async () => {
+  let received: Request | undefined;
+  const fetcher: typeof fetch = async function (this: unknown, input, init) {
+    if (this !== globalThis) throw new TypeError("Illegal invocation");
+    received = new Request(input, init);
+    return new Response(null, { status: 204 });
+  };
+  const reporting = new BackgroundQualityReporting(
+    "https://api.synthetic.test",
+    fetcher,
+    "extension",
+  );
+  reporting.capture(reporting.owner(run, source), receipt());
+  const report = {
+    ...payload,
+    fields: { candidate: state },
+    identities: { candidate: "e1" },
+  };
+
+  expect(
+    await reporting.report(
+      { type: "AUTOFILL_QUALITY_REPORT", qualityRun: run, payload: report },
+      source,
+    ),
+  ).toEqual({ ok: true });
+  expect(received?.url).toBe(
+    `https://api.synthetic.test/api/v1/quality/executions/${"b".repeat(32)}/report`,
+  );
+  expect(received?.method).toBe("POST");
+  expect(received?.headers.get("Content-Type")).toBe("application/json");
+  expect(received?.headers.get("Authorization")).toBe(
+    `Bearer ${"c".repeat(64)}`,
+  );
+  expect(await received?.json()).toEqual(report);
+  expect(received?.signal.aborted).toBe(false);
+});
+
 it.each([
   null,
   { ...payload, privateValue: "synthetic" },
