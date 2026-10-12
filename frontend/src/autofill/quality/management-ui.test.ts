@@ -106,3 +106,67 @@ it("does not present a legacy homepage as an exact application link", async () =
   expect(rendered.querySelectorAll("a")).toHaveLength(1);
   expect(rendered.querySelector("a")?.href).toBe(homepage);
 });
+
+it("offers one posting confirmation and folds old screen states into read-only history", async () => {
+  document.documentElement.innerHTML = readFileSync(
+    new URL(root + "index.html", import.meta.url),
+    "utf8",
+  );
+  const posting = {
+    ...row("posting", "COMPLETED"),
+    posting: true,
+    publicLink: first,
+  };
+  const observations = [
+    row("shape-one", "WAITING"),
+    row("shape-two", "WAITING"),
+  ];
+  vi.stubGlobal(
+    "fetch",
+    async (input: string) =>
+      new Response(
+        JSON.stringify(
+          input.endsWith("/notifications")
+            ? { message: "fixture", entries: [] }
+            : {
+                items: [
+                  {
+                    id: "site_fixture",
+                    site: host,
+                    homepage: `https://${host}/`,
+                    candidates: [posting],
+                    observations,
+                    links: [link(first)],
+                    linksOverflow: false,
+                  },
+                ],
+                hasMore: false,
+                nextOffset: 50,
+              },
+        ),
+      ),
+  );
+  const access =
+    await import("../../../../backend/src/main/resources/static/quality/access.js");
+  access.setAccess("synthetic", "fixture");
+  await import("../../../../backend/src/main/resources/static/quality/app.js");
+  await waitFor(() =>
+    expect(document.querySelectorAll("[data-candidate-id]")).toHaveLength(1),
+  );
+  expect(document.querySelector(".candidate-scope h3")?.textContent).toContain(
+    "공고 238112",
+  );
+  const history = document.querySelector(
+    "[data-observation-history]",
+  ) as HTMLDetailsElement;
+  expect(history).not.toBeNull();
+  expect(history.open).toBe(false);
+  expect(history.textContent).toContain("과거 관측");
+  expect(history.querySelectorAll("button")).toHaveLength(0);
+  expect(
+    Array.from(
+      document.querySelectorAll("button"),
+      (button) => button.textContent,
+    ),
+  ).not.toContain("담당하기");
+});
