@@ -480,3 +480,9 @@
 - Approval-Digest: 8a3b7d0be9741e604a6593e6c683295587c16cb5ad0910c1beb820b07187d79e
 - Source-Revision: 7e8b704cc8023a109affd75ec30118ff74597f28
 - 승인한 네 후보를 [CF-190 bundle](../raw/issues/CF-190/manifest.md)에 기록하고 [품질 확인 사이트와 링크](topics/quality-site-links.md)를 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-195 공고 단위 품질 확인
+
+- Approval-Digest: 638fd7c699ebcece0e16268c71ab4779bde8f1f9a9fbd46757444b88a4ac2d47
+- Source-Revision: 6783d4d0b2c9db9717c696196bc63ad9e45b3de1
+- 승인한 네 구현 기준과 ADR 195를 [CF-195 bundle](../raw/issues/CF-195/manifest.md)에 기록하고 [품질 확인 사이트와 링크](topics/quality-site-links.md)를 갱신했다. 기존 raw는 보존했다.
