@@ -70,9 +70,9 @@ fixture에서의 **읽기 및 후보 생성은 진행 가능**하다. 사용자 
 - 연구 모듈 한정 커버리지: 라인 92.85%, 분기 89.88%, 함수 100%.
 - `npm run typecheck`, 변경 파일 Prettier, `npm run build`, `git diff --check`: 통과.
 - `npm run lint`: 명령 통과. 현재 ESLint 설정은 TypeScript를 제외하므로 신규 TS의 lint 검증으로 표현하지 않는다.
-- `npm test`: 3,369개 통과, 6개 실패, 19개 건너뜀. 처음에는 Chromium 런타임 누락으로 브라우저 테스트도 실행되지 않았다. 런타임 준비 후 `npm run test:browser`의 8개는 통과했다.
-- 위 6개 실패는 `profile-fixtures.test.ts`가 `fixtures/**/*.json`에서 DOM 구조 snapshot 3개도 프로필로 읽기 때문이다. 변경 전 기준 커밋 `3daae64805e6d4a622fc13e624eacbbe52ff7c89`를 별도 임시 디렉터리에 추출한 뒤 해당 테스트만 실행해 동일한 6개 실패와 41개 통과를 재현했다. #192 범위 밖으로 두며 전체 테스트 통과를 주장하지 않는다.
+- 최종 `npm test`: 단위·브라우저 합계 3,377개 통과, 19개 건너뜀, 실패 없음(310개 파일 통과, 1개 건너뜀). Chromium 런타임을 준비한 환경에서 실행했다. 초기 실행의 프로필 fixture 6개 실패는 아래 수정으로 해소했다.
+- 위 6개 실패는 `profile-fixtures.test.ts`가 `fixtures/**/*.json`에서 DOM 구조 snapshot 3개도 프로필로 읽기 때문이다. 변경 전 기준 커밋 `3daae64805e6d4a622fc13e624eacbbe52ff7c89`를 별도 임시 디렉터리에 추출한 뒤 해당 테스트만 실행해 동일한 6개 실패와 41개 통과를 재현했다. 사용자 승인으로 #192 범위에 포함해 탐색 대상을 `**/profile-export*.json`으로 한정했다. 루트와 하위 디렉터리의 프로필 export는 계속 검증하고 DOM snapshot 메타데이터는 제외한다. 수정 전 41개 통과·6개 실패를 다시 확인한 후 수정했고, 기존 프로필 41개 및 import 33개가 모두 통과했다. 전체 실행에서도 실패가 없다.
 - `.venv/bin/python harness/scripts/verify.py`: 통과. 하네스 366개, infra 134개 중 36개 건너뜀, 하네스 커버리지 85%.
 - 독립 코드·보고서 리뷰: 수정이 필요한 Standards 및 Spec 결함 없음.
 
-이름 없는 이메일 combobox, 국제전화, 실제 Greeting 사이트, Chrome 확장 UI에서의 import는 이번 합성 fixture 검증에 포함되지 않는다. 독립 후속 작업으로 프로필 fixture glob을 프로필 형식 JSON에 한정해 기존 6개 실패를 해결할 필요가 있다.
+이름 없는 이메일 combobox, 국제전화, 실제 Greeting 사이트, Chrome 확장 UI에서의 import는 이번 합성 fixture 검증에 포함되지 않는다.
