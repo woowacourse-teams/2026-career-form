@@ -126,4 +126,59 @@ class QualityRegistryTest {
         var verified = new QualityRecord.Group("test", group.host(), group.structure(), "GENERIC", "build", group.host(), QualitySite.Status.MANUAL);
         assertThat(registry.reference(verified, now)).contains(20L);
     }
+
+    @Test
+    void keepsObservedPostingLinksAndExistingConfirmation() {
+        var host = "fixture.career.greetinghr.com";
+        var greeting = new QualityRecord.Group("test", host, "shape", "GREETING", "build", host, QualitySite.Status.TENANT);
+        var original = registry.observe(greeting);
+        registry.confirm(original.id(), "session", 7, null);
+        var first = "https://" + host + "/ko/o/238112/apply";
+        var second = "https://" + host + "/ko/o/238113/apply";
+        registry.observe(greeting, now, first);
+        registry.observe(greeting, now.plusSeconds(2), second);
+        var updated = registry.observe(greeting, now.plusSeconds(3), first);
+        assertThat(updated.links()).extracting(QualityPublicLinks.Link::url).containsExactly(first, second);
+        assertThat(updated.links().getFirst().lastSeen()).isEqualTo(now.plusSeconds(3));
+        assertThat(updated.history()).hasSize(1);
+        assertThat(updated.status()).isEqualTo(QualityRegistry.Status.COMPLETED);
+        assertThat(registry.reference(greeting, now)).contains(7L);
+        assertThat(registry.reference(greeting, now.plusSeconds(4))).isEmpty();
+        assertThat(registry.reference(new QualityRecord.Group("test", host, "different", "GREETING", "build", host, QualitySite.Status.TENANT), now)).isEmpty();
+    }
+
+    @Test
+    void boundsObservedLinksAndPreservesThemAcrossClaimAndDeferral() {
+        var host = "fixture.career.greetinghr.com";
+        var greeting = new QualityRecord.Group("test", host, "shape", "GREETING", "build", host, QualitySite.Status.TENANT);
+        for (var index = 1; index <= 21; index++) {
+            registry.observe(greeting, now.plusSeconds(index), "https://" + host + "/ko/o/" + index + "/apply");
+        }
+        var candidate = registry.observe(greeting);
+        assertThat(candidate.links()).hasSize(20).noneMatch(link -> link.url().endsWith("/1/apply"));
+        assertThat(candidate.linksOverflow()).isTrue();
+        registry.claim(candidate.id(), "session");
+        registry.defer(candidate.id(), "session", QualityRegistry.DeferReason.LINK_UNAVAILABLE, null);
+        assertThat(registry.candidate(candidate.id()).links()).isEqualTo(candidate.links());
+        assertThat(registry.candidate(candidate.id()).status()).isEqualTo(QualityRegistry.Status.DEFERRED);
+    }
+
+    @Test
+    void unsafeObservedUrlsAreIgnoredWithoutBreakingLegacyObservation() {
+        var host = "fixture.career.greetinghr.com";
+        var greeting = new QualityRecord.Group("test", host, "shape", "GREETING", "build", host, QualitySite.Status.TENANT);
+        for (var url : List.of("https://" + host + "/ko/o/1/apply?token=synthetic", "https://foreign.test/ko/o/1/apply", "https://" + host + "/user/synthetic/apply")) {
+            assertThat(registry.observe(greeting, now, url).links()).isEmpty();
+        }
+    }
+
+    @Test
+    void doesNotApplyAnEarlierConfirmedPostingToANewPosting() {
+        var host = "fixture.career.greetinghr.com";
+        var greeting = new QualityRecord.Group("test", host, "shape", "GREETING", "build", host, QualitySite.Status.TENANT);
+        var candidate = registry.observe(greeting);
+        registry.confirm(candidate.id(), "owner", 7, "https://" + host + "/ko/o/238112/apply");
+        registry.observe(greeting, now.plusSeconds(1), "https://" + host + "/ko/o/238113/apply");
+        assertThat(registry.reference(greeting, now.plusSeconds(2))).isEmpty();
+    }
 }

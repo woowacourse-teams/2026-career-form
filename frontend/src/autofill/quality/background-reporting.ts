@@ -1,6 +1,7 @@
 import type { QualityReport } from "./observation";
 
 export interface QualitySource {
+  url?: string;
   id?: string;
   tab?: { id?: number };
   frameId?: number;
