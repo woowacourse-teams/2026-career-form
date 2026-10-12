@@ -1,4 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { ProfileWriteConflictError } from "../profile/profile-repository";
+import { saveImportSelection } from "../profile/page-import/merge";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { createProfileWriteHandler } from "./profile-write-handler";
+
+const runtime = vi.hoisted(() => ({
+  sendMessage: vi.fn(),
+  get: vi.fn(),
+  set: vi.fn(),
+}));
+vi.mock("wxt/browser", () => ({
+  browser: {
+    runtime: { sendMessage: runtime.sendMessage },
+    storage: { local: { get: runtime.get, set: runtime.set } },
+  },
+}));
 
 import { createEmptyProfile, PROFILE_SCHEMA_VERSION } from "../profile/model";
 import {
@@ -93,4 +109,82 @@ describe("ChromeProfileStorage", () => {
     expect(storage.set).toHaveBeenCalledWith({ [LAYOUT_STORAGE_KEY]: "b" });
     await expect(repository.loadLayout()).resolves.toBe("b");
   });
+});
+
+describe("production profile writes", () => {
+  beforeEach(() => {
+    const storage = createStorage();
+    runtime.get.mockImplementation(storage.get);
+    runtime.set.mockImplementation(storage.set);
+    const handle = createProfileWriteHandler(storage, "extension-id");
+    runtime.sendMessage.mockImplementation((message) =>
+      handle(message, { id: "extension-id" }),
+    );
+  });
+  it("rejects a delayed options write after another context saves an import", async () => {
+    const options = new ChromeProfileStorage();
+    const importer = new ChromeProfileStorage();
+    const draft = await options.load();
+    const baseline = await importer.load();
+    draft.contact.phoneNumber = "01012345678";
+    await saveImportSelection(importer, baseline, {
+      contact: { email: "import@example.invalid" },
+      education: [],
+    });
+    await expect(options.save(draft)).rejects.toBeInstanceOf(
+      ProfileWriteConflictError,
+    );
+    expect((await importer.load()).contact).toEqual({
+      email: "import@example.invalid",
+    });
+  });
+  it("queues same-instance saves and advances baseline only after success", async () => {
+    const repository = new ChromeProfileStorage();
+    const first = await repository.load();
+    first.contact.email = "first@example.invalid";
+    const next = structuredClone(first);
+    next.contact.phoneNumber = "01012345678";
+    await Promise.all([repository.save(first), repository.save(next)]);
+    expect((await repository.load()).contact).toEqual(next.contact);
+  });
+  it("allows initial empty-profile save without an earlier load", async () => {
+    const profile = createEmptyProfile();
+    profile.contact.email = "initial@example.invalid";
+    const repository = new ChromeProfileStorage();
+    await repository.save(profile);
+    expect((await repository.load()).contact.email).toBe(
+      "initial@example.invalid",
+    );
+  });
+});
+
+it("refuses a new context's uninitialized save over an existing profile", async () => {
+  const storage = createStorage();
+  runtime.get.mockImplementation(storage.get);
+  const handler = createProfileWriteHandler(storage, "extension-id");
+  runtime.sendMessage.mockImplementation((message) =>
+    handler(message, { id: "extension-id" }),
+  );
+  const first = new ChromeProfileStorage();
+  const profile = createEmptyProfile();
+  profile.contact.email = "first@example.invalid";
+  await first.save(profile);
+  const other = new ChromeProfileStorage();
+  await expect(other.save(createEmptyProfile())).rejects.toThrow();
+  expect((await first.load()).contact.email).toBe("first@example.invalid");
+});
+
+it("recovers the instance queue after a failed atomic write", async () => {
+  const storage = createStorage();
+  const repository = new ChromeProfileStorage(storage);
+  const baseline = await repository.load();
+  const next = createEmptyProfile();
+  next.contact.email = "recovered@example.invalid";
+  storage.set.mockRejectedValueOnce(new Error("synthetic failure"));
+  await expect(repository.saveIfUnchanged(baseline, next)).rejects.toThrow();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(await repository.saveIfUnchanged(baseline, next)).toBe(true);
+  expect((await repository.load()).contact.email).toBe(
+    "recovered@example.invalid",
+  );
 });

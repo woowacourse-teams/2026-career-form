@@ -1,3 +1,4 @@
+import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
@@ -18,6 +19,10 @@ import { openToolbarPanel } from "../src/extension/toolbar-panel";
 
 export default defineBackground(() => {
   const handlePostings = installPostingBackground();
+  const handleProfileWrite = createProfileWriteHandler(
+    browser.storage.local,
+    browser.runtime.id,
+  );
   browser.action.onClicked.addListener((tab) => {
     void openToolbarPanel(tab, {
       openPanel: (tabId) => openInPagePanel(undefined, tabId),
@@ -43,6 +48,8 @@ export default defineBackground(() => {
     storage: browser.storage.local,
   });
   browser.runtime.onMessage.addListener((message, sender) => {
+    const profileResponse = handleProfileWrite(message, sender);
+    if (profileResponse !== undefined) return profileResponse;
     const postingResponse = handlePostings(message, sender);
     if (postingResponse !== undefined) return postingResponse;
     if (parseAnalyticsMessage(message)) {

@@ -11,6 +11,7 @@ import {
 export interface ProfileRepository {
   load(): Promise<Profile>;
   save(profile: Profile): Promise<void>;
+  saveIfUnchanged?(expected: Profile, next: Profile): Promise<boolean>;
   loadLayout(): Promise<LayoutPreference>;
   saveLayout(layout: LayoutPreference): Promise<void>;
 }
@@ -72,4 +73,32 @@ export function countCompletedCategories(profile: Profile): number {
 
 export function cloneProfile(profile: Profile): Profile {
   return structuredClone(profile);
+}
+
+export function profilesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (
+    !a ||
+    !b ||
+    typeof a !== "object" ||
+    typeof b !== "object" ||
+    Array.isArray(a) !== Array.isArray(b)
+  )
+    return false;
+  const left = Object.entries(a);
+  const right = b as Record<string, unknown>;
+  return (
+    left.length === Object.keys(b).length &&
+    left.every(
+      ([key, value]) =>
+        Object.hasOwn(right, key) && profilesEqual(value, right[key]),
+    )
+  );
+}
+
+export class ProfileWriteConflictError extends Error {
+  constructor() {
+    super("프로필이 변경되었습니다. 최신 프로필을 다시 불러와 주세요.");
+    this.name = "ProfileWriteConflictError";
+  }
 }

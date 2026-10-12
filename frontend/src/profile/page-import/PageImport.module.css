@@ -1,0 +1,96 @@
+.importer {
+  color: #202735;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.importer h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+.importer p {
+  margin: 8px 0 16px;
+}
+.fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.fields > legend {
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.group {
+  border: 1px solid #dce2e9;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 16px 0;
+  min-width: 0;
+}
+.group > legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+.field {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f5f7fa;
+}
+.importer label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.importer input:not([type="checkbox"]),
+.importer select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #aeb8c6;
+  border-radius: 6px;
+  background: white;
+  color: #202735;
+  padding: 8px;
+  font: inherit;
+}
+.importer input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #365eaf;
+}
+.importer button {
+  border: 1px solid #bcc8da;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font: inherit;
+  cursor: pointer;
+  color: #203b6a;
+  background: #eef3fc;
+}
+.importer button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.importer :focus-visible {
+  outline: 2px solid #365eaf;
+  outline-offset: 3px;
+}
+.hint,
+.importer small {
+  color: #566274;
+  font-size: 12px;
+}
+.error {
+  color: #ab2934;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

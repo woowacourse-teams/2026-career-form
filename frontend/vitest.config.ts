@@ -66,6 +66,14 @@ export default defineConfig({
       {
         extends: true,
         plugins: [searchFixtureServer()],
+        optimizeDeps: {
+          include: [
+            "react",
+            "react-dom/client",
+            "react/jsx-dev-runtime",
+            "@testing-library/dom",
+          ],
+        },
         test: {
           name: "browser",
           include: ["**/*.browser.test.{ts,tsx}"],

@@ -404,3 +404,27 @@
   font-size: 12px;
   cursor: pointer;
 }
+
+.importAction {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #dce2ed;
+  border-radius: 12px;
+  background: #f4f7fc;
+}
+.importAction button {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #bcc8da;
+  border-radius: 8px;
+  color: #203b6a;
+  background: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.importAction p {
+  margin: 8px 0 0;
+  color: #566274;
+  font-size: 12px;
+}
