@@ -114,6 +114,23 @@ class QualityObservationTest {
         assertThat(QualityProjection.fields(split, FieldsAnalysisResponse.llmUnavailable("s")).structureKey()).isNotEqualTo(original.structureKey());
         assertThat(QualityProjection.fields(renamed, FieldsAnalysisResponse.llmUnavailable("s")).structureKey()).isEqualTo(original.structureKey());
         assertThat(mapper.writeValueAsString(original)).doesNotContain("private-group");
+        assertThat(original.baseline()).isEqualTo(new QualityProjection.Baseline(2, false));
+    }
+
+    @Test
+    void recordsOnlyScopeEvidenceAndRejectsHiddenDisabledAndRepeatedBaseline() throws Exception {
+        var json = """
+            {"schemaVersion":2,"snapshotId":"s","site":{"host":"example.test","pathPattern":"/"},"sections":[{"sectionId":"s1","fields":[
+            {"candidateId":"c1","element":"input","control":"text","visibility":"visible","semanticContext":{"repeat":{"groupId":"synthetic","rowIndex":0,"rowCount":1}}}]}]}
+            """;
+        var request = mapper.readValue(json, FieldsAnalysisRequest.class);
+        assertThat(QualityProjection.fields(request, FieldsAnalysisResponse.llmUnavailable("s")).baseline())
+            .isEqualTo(new QualityProjection.Baseline(1, true));
+        for (var changed : List.of(json.replace("visible", "hidden"), json.replace("\"rowCount\":1", "\"rowCount\":2"),
+            json.replace("\"control\":\"text\"", "\"control\":\"text\",\"disabled\":true"))) {
+            var other = mapper.readValue(changed, FieldsAnalysisRequest.class);
+            assertThat(QualityProjection.fields(other, FieldsAnalysisResponse.llmUnavailable("s")).baseline().compatible()).isFalse();
+        }
     }
 
     private FieldsAnalysisResponse matched(String snapshot, String candidate) {
