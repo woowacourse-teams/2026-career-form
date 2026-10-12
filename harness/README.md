@@ -170,5 +170,7 @@ git rev-parse --git-path cf-workflow/plan.md
 - 선택한 Python으로 `harness/scripts/doctor.py`를 실행해 필수 명령, 파일, Git 훅 경로를 확인한다.
 - 선택한 Python으로 `harness/scripts/diagnose-project-access.py`를 실행해 GitHub CLI 인증과 Project 접근을 안전하게 진단한다. Project 좌표는 `harness/project.json`에서 관리한다.
 - Codex 훅이 실행되지 않으면 프로젝트를 신뢰했는지 확인하고 `/hooks`에서 훅을 검토한다.
-- 공유 하네스 파일을 바꾸는 PR에는 `harness-change` 라벨과 다른 팀원 리뷰가 필요하다.
+- 일반 작업과 hotfix에서 공유 하네스 파일을 바꾸면 PR의 `harness-change` 라벨과 같은 라벨을 가진 연결 Issue, 다른 팀원 리뷰가 필요하다.
+- 브랜치 계약이 허용하는 릴리스, main 동기화, revert 시스템 PR은 공유 파일 검사에서 Issue 연결을 요구하지 않는다. 실제 head/base 정보가 없거나 브랜치 흐름이 잘못되면 검사를 통과할 수 없다.
+- 릴리스 생성 본문도 현재 PR 템플릿의 여섯 섹션과 접힌 검증 기록을 따른다. 시스템 PR에는 Issue 종료 참조를 넣지 않고, 아직 수행하지 않은 검증은 미완료로 기록한다.
 - 서버 설정은 `policies/github-setup.md`와 `policies/github-ruleset.md`의 체크리스트를 따른다.

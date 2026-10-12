@@ -486,3 +486,9 @@
 - Approval-Digest: 638fd7c699ebcece0e16268c71ab4779bde8f1f9a9fbd46757444b88a4ac2d47
 - Source-Revision: 6783d4d0b2c9db9717c696196bc63ad9e45b3de1
 - 승인한 네 구현 기준과 ADR 195를 [CF-195 bundle](../raw/issues/CF-195/manifest.md)에 기록하고 [품질 확인 사이트와 링크](topics/quality-site-links.md)를 갱신했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-197 시스템 PR 계약
+
+- Approval-Digest: 179ef852f0c27dfbb2cc374949e8b18360c58d912b79a13648622ae02d0c6fc7
+- Source-Revision: c2f545f5c1349b1da28feb5203bbbe9ffaf4b525
+- 승인한 두 항목을 [CF-197 bundle](../raw/issues/CF-197/manifest.md)에 기록하고 [시스템 PR 계약](topics/release-pr-contract.md)을 추가했다. 기존 raw는 보존했다.

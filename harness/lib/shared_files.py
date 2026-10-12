@@ -1,6 +1,7 @@
 import re
 from collections.abc import Sequence
 
+from harness.lib.branching import is_system_pr, validate_branch_flow
 from harness.lib.result import ValidationResult
 
 
@@ -22,7 +23,18 @@ def validate_shared_file_change(
     paths: Sequence[str],
     labels: Sequence[str],
     linked_issue_labels: Sequence[str] = (),
+    *,
+    head: str | None = None,
+    base: str | None = None,
 ) -> ValidationResult:
+    if head is not None or base is not None:
+        if not head or not base:
+            return ValidationResult(("공유 파일 검사에는 PR head/base가 필요합니다",))
+        flow = validate_branch_flow(head, base)
+        if not flow.is_valid:
+            return flow
+        if is_system_pr(head, base):
+            return ValidationResult()
     shared_changed = any(_is_protected(path) for path in paths)
     errors: list[str] = []
     if shared_changed and "harness-change" not in labels:
