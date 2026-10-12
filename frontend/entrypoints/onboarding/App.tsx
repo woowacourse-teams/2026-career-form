@@ -19,6 +19,7 @@ export function App() {
         path={path}
         installed
         profileHref="/options.html"
+        postingsHref="/options.html#postings/new"
         track={trackExtensionEvent}
         surface="extension_onboarding"
       />

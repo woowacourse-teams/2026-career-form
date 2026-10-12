@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type {
   Profile,
   ProfileEntry,
+  ProfileIdentity,
   RepeatedProfileCategoryId,
   SingleProfileCategoryId,
 } from "../model";
@@ -11,6 +12,8 @@ import type {
   ProfileSectionDefinition,
 } from "../field-definitions";
 import styles from "./ProfileForm.module.css";
+import { CatalogNameInput } from "./CatalogNameInput";
+import { catalogKindForField } from "../catalog-search";
 import {
   editorFieldGroups,
   entrySummary,
@@ -28,6 +31,7 @@ interface ProfileFormProps {
     entryId: string,
     fieldId: string,
     value: string,
+    identity?: ProfileIdentity,
   ): void;
   onUpdateSingle(
     categoryId: SingleProfileCategoryId,
@@ -41,7 +45,8 @@ interface FieldsProps {
   section: ProfileSectionDefinition;
   values: Record<string, string>;
   idPrefix: string;
-  onChange(fieldId: string, value: string): void;
+  identity?: ProfileIdentity;
+  onChange(fieldId: string, value: string, identity?: ProfileIdentity): void;
 }
 
 function optionsForField(
@@ -60,7 +65,13 @@ function fieldValue(field: ProfileFieldDefinition, value: string): string {
     : value;
 }
 
-function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
+function Fields({
+  section,
+  values,
+  idPrefix,
+  identity,
+  onChange,
+}: FieldsProps) {
   return (
     <div className={styles.fieldGroups}>
       {editorFieldGroups(section).map((group) => (
@@ -75,6 +86,26 @@ function Fields({ section, values, idPrefix, onChange }: FieldsProps) {
                 const id = `${idPrefix}-${field.id}`;
                 const options = optionsForField(field, values);
                 const value = values[field.id] ?? "";
+                const catalogKind = catalogKindForField(section.id, field.id);
+                if (catalogKind) {
+                  return (
+                    <div className={styles.field} key={field.id}>
+                      <label className={styles.fieldLabel} htmlFor={id}>
+                        {field.label}
+                      </label>
+                      <CatalogNameInput
+                        id={id}
+                        label={field.label}
+                        kind={catalogKind}
+                        value={value}
+                        identity={identity}
+                        onChange={(name, selection) =>
+                          onChange(field.id, name, selection)
+                        }
+                      />
+                    </div>
+                  );
+                }
                 const hasLegacyValue =
                   value.length > 0 &&
                   !options.some((option) => option.value === value);
@@ -174,7 +205,7 @@ function EntryCard({
   title: string;
   entry: ProfileEntry;
   section: ProfileSectionDefinition;
-  onChange(fieldId: string, value: string): void;
+  onChange(fieldId: string, value: string, identity?: ProfileIdentity): void;
   onDelete(): void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -214,6 +245,7 @@ function EntryCard({
           section={section}
           values={entry.values}
           idPrefix={`${categoryId}-entry-${entry.id}`}
+          identity={entry.identity}
           onChange={onChange}
         />
       </div>
@@ -316,8 +348,10 @@ export function ProfileForm({
             title={title}
             entry={entry}
             section={section}
-            onChange={(fieldId, value) =>
-              onUpdateEntry(categoryId, entry.id, fieldId, value)
+            onChange={(fieldId, value, identity) =>
+              identity
+                ? onUpdateEntry(categoryId, entry.id, fieldId, value, identity)
+                : onUpdateEntry(categoryId, entry.id, fieldId, value)
             }
             onDelete={() => {
               if (confirmDelete(`${title}을(를) 삭제할까요?`))

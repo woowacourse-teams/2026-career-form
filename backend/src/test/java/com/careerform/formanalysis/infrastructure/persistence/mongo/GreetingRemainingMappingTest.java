@@ -38,7 +38,17 @@ class GreetingRemainingMappingTest {
             "languagesCertificationsAndOtherActivity.foreignLanguageProficiencies.0.foreignLanguage|BUTTON|languageslanguageskill|languages.languageSkill.language|SELECT_BUTTON_OPTION",
             "languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials|TEXT|certificationscertificate|certifications.certificate.name|SEARCH_SELECTION",
             "languagesCertificationsAndOtherActivity.certificatesLicenses.0.issuingAgency|TEXT|certificationscertificate|certifications.certificate.issuer|SET_TEXT",
-            "languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate|BUTTON|certificationscertificate|certifications.certificate.acquisitionDate|SELECT_DATE"
+            "languagesCertificationsAndOtherActivity.certificatesLicenses.0.acquisitionDate|BUTTON|certificationscertificate|certifications.certificate.acquisitionDate|SELECT_DATE",
+            "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.registrationNumber|TEXT|languageslanguagetest|languages.languageTest.registrationNo|SET_TEXT",
+            "languagesCertificationsAndOtherActivity.certificatesLicenses.0.rating|TEXT|certificationscertificate|certifications.certificate.grade|SET_TEXT",
+            "languagesCertificationsAndOtherActivity.certificatesLicenses.0.registrationNumber|TEXT|certificationscertificate|certifications.certificate.registrationNo|SET_TEXT",
+            "workHistory.workExperiences.0.reasonForResignation|TEXT|careerscareer|careers.career.terminationReason|SET_TEXT",
+            "educationalBackground.universities.0.totalCreditsEarned|TEXT|educationuniversity|education.university.totalCredits|SET_TEXT",
+            "workHistory.projects.0.projectName|TEXT|projectsproject|projects.project.projectName|SET_TEXT",
+            "workHistory.projects.0.roleParticipationRole|TEXT|projectsproject|projects.project.role|SET_TEXT",
+            "workHistory.projects.0.projectDescription|TEXTAREA|projectsproject|projects.project.activityDetails|SET_TEXT",
+            "workHistory.projects.0.projectPeriod.startDate|BUTTON|projectsproject|projects.project.startDate|SELECT_DATE",
+            "workHistory.projects.0.projectPeriod.endDate|BUTTON|projectsproject|projects.project.endDate|SELECT_DATE"
         ).map(value -> {
             var parts = value.split("\\|");
             var control = FormControl.valueOf(parts[1]);
@@ -75,6 +85,48 @@ class GreetingRemainingMappingTest {
             .containsEntry("정규", "정규직").containsEntry("계약", "계약직").containsEntry("파견", "파견직");
         assertThat(lookup("languagesCertificationsAndOtherActivity.foreignLanguageProficiencies.0.conversationalProficiency", "languageslanguageskill").optionMap())
             .containsEntry("일상 대화 가능", "일상 대화 가능").containsEntry("일상 대화", "일상 대화 가능").doesNotContainKeys("상", "중", "하");
+    }
+    @Test
+    void mapsTopLevelDetailTextAndVerifiedOptionLabels() {
+        var prefix = "militaryServicePreferentialEmploymentStatus.";
+        for (var pair : List.of(
+            List.of(prefix + "militaryService.militaryOccupationalSpecialty", "military.military.militarySpecialty"),
+            List.of(prefix + "disability.disabilityRegistrationNumber", "disability.disability.disabilityRegistrationNumber"))) {
+            var example = new Example(pair.get(0), FormElement.INPUT, FormControl.TEXT, null, pair.get(1), WriteCommand.SET_TEXT);
+            var candidate = field(example, null);
+            var result = resolve(candidate, null);
+            assertThat(result).isEqualTo(new Match("target", pair.get(1)));
+            assertThat(new FieldInteractionPolicy().evaluateGreeting(candidate, result, List.of()).writePlan().command())
+                .isEqualTo(WriteCommand.SET_TEXT);
+        }
+        var address = "personalInformation.currentAddress.";
+        for (var pair : List.of(List.of("postalCode", "contact.contact.postalCode"),
+            List.of("address", "contact.contact.addressLine1"), List.of("detailedAddress", "contact.contact.addressLine2"))) {
+            var example = new Example(address + pair.get(0), FormElement.INPUT, FormControl.TEXT, null, pair.get(1), WriteCommand.SET_TEXT);
+            assertThat(resolve(field(example, null), null)).isEqualTo(new Match("target", pair.get(1)));
+        }
+        var classification = lookup(prefix + "militaryService.militaryServiceClassification", null);
+        assertThat(classification.profileFieldKey()).isEqualTo("military.military.militaryType");
+        assertThat(classification.optionMap()).containsEntry("현역병", "현역병").containsEntry("산업기능요원", "산업기능요원");
+        var discharge = lookup(prefix + "militaryService.dischargeType", null);
+        assertThat(discharge.profileFieldKey()).isEqualTo("military.military.dischargeType");
+        assertThat(discharge.optionMap()).containsEntry("만기전역", "만기제대").containsEntry("만기제대", "만기제대")
+            .doesNotContainKeys("기타");
+        var relation = lookup(prefix + "veteranStatus.veteranRelationship", null);
+        assertThat(relation.profileFieldKey()).isEqualTo("veteran.veteran.veteranRelation");
+        assertThat(relation.optionMap()).containsEntry("본인", "본인").containsEntry("배우자", "배우자");
+        for (var group : List.of("universities|educationuniversity|university", "graduateSchools|educationgraduateschool|graduateSchool")) {
+            var parts = group.split("\\|");
+            var region = lookup("educationalBackground." + parts[0] + ".0.schoolLocation", parts[1]);
+            assertThat(region.profileFieldKey()).isEqualTo("education." + parts[2] + ".schoolRegion");
+            assertThat(region.optionMap()).containsEntry("서울", "서울").containsEntry("해외", "해외").hasSize(18);
+        }
+        for (var name : List.of("client", "placeOfEmployment", "contribution")) {
+            var unmatched = new Example("workHistory.projects.0." + name, FormElement.INPUT, FormControl.TEXT, "projectsproject", "unused", WriteCommand.SET_TEXT);
+            assertThat(resolve(field(unmatched, new RepeatContext("projectsproject", 0, 1)), "projectsproject")).isEqualTo(new NoMatch("target"));
+        }
+        var rating = new Example(prefix + "veteranStatus.veteranBenefitRating", FormElement.INPUT, FormControl.BUTTON, null, "unused", WriteCommand.SELECT_BUTTON_OPTION);
+        assertThat(resolve(field(rating, null), null)).isEqualTo(new NoMatch("target"));
     }
     @Test
     void rejectsDuplicateNamesAndUnsupportedCounterparts() {

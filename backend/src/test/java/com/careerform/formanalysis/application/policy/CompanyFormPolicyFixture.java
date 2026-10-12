@@ -47,7 +47,12 @@ public final class CompanyFormPolicyFixture {
                     FieldsAnalysisRequest.FormElement.INPUT,
                     FieldsAnalysisRequest.FormControl.TEXT,
                     new DirectBinding("contact.contact.phoneNumber"),
-                    false, phone)
+                    false, phone),
+                new FieldRule("basicInformation.email",
+                    FieldsAnalysisRequest.FormElement.INPUT,
+                    FieldsAnalysisRequest.FormControl.TEXT,
+                    new DirectBinding("contact.contact.email"),
+                    false, "basicInformation.email")
             ),
             new SupportedProfileFields()::contains
         );

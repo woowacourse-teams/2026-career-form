@@ -1,4 +1,5 @@
 import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
+import { observeQuality } from "../quality/safe-observation";
 import { resolveDocumentCompany } from "../adapters/company";
 import { isGreetingEmailStateDriver } from "../adapters/greeting/workflow";
 import { sensitiveValueApproved } from "./review-actions";
@@ -6,6 +7,7 @@ import type { CandidateRegistry } from "../dom/candidate-registry";
 import { greetingGpaSafe } from "../adapters/greeting/gpa";
 import { resultFieldState } from "./result-field-state";
 import { matchesResultValue } from "./result-value-match";
+import { rebindCatalogSelection } from "../profile/catalog-receipt";
 import {
   captureGreetingResultTargets,
   recollectGreetingResultRegistry,
@@ -45,6 +47,7 @@ import {
 import { takeWrittenSearchFollowUp } from "./search-follow-up-state";
 import { runAddressAnalysis } from "./address-analysis";
 import { belongsToFailedGroup } from "./workflow-write-items";
+import { isPreMutationFailure } from "./driver-failure-scope";
 
 import {
   isGenericStateDriver,
@@ -69,6 +72,20 @@ function greetingReceiptIdentity(item: ReviewPlanItem): string {
     item.analysis?.valueBinding,
     item.analysis?.writePlan,
   ]);
+}
+
+const OPTION_UNMATCHED_REASON =
+  "지원서 선택지에서 프로필 값과 일치하는 항목을 찾지 못해 이 항목만 건너뛰었습니다. 프로필 값을 확인해 주세요.";
+const GENERIC_DEFERRED_REASON =
+  "조건부 선택을 적용하지 못해 이 선택과 연결된 입력란을 건너뛰었습니다.";
+
+function deferredDriverReason(
+  code: WriteFailureCode | undefined,
+  generic: boolean,
+  fallback: string,
+): string {
+  if (code === "OPTION_UNMATCHED") return OPTION_UNMATCHED_REASON;
+  return generic ? GENERIC_DEFERRED_REASON : fallback;
 }
 
 export function createAnalyzeFields({
@@ -150,6 +167,18 @@ export function createAnalyzeFields({
       return;
 
     const analysisStarted = performance.now();
+    observeQuality(() =>
+      apiClient.quality?.snapshot(
+        snapshot.request.snapshotId,
+        snapshot.registry,
+        snapshot.request.sections
+          .flatMap((section) => [
+            ...section.fields,
+            ...(section.items ?? []).flatMap((item) => item.fields),
+          ])
+          .map((field) => field.candidateId),
+      ),
+    );
     let analysis = await apiClient.analyzeFields(snapshot.request);
     debugAnalysis(snapshot, analysis);
     if (
@@ -292,6 +321,9 @@ export function createAnalyzeFields({
         adapterProfileValue(adapter, key, value),
     });
     debugReviewPlan(plan);
+    observeQuality(() =>
+      apiClient.quality?.review(snapshot.request.snapshotId, plan.items),
+    );
     if (plan.status === "blocked") {
       setExceptionTitle("이 페이지에서는 자동 기입을 진행할 수 없습니다");
       setStage("exception");
@@ -524,12 +556,31 @@ export function createAnalyzeFields({
       const deferFailedGroups = async (
         successful: readonly boolean[],
         writesVerified = false,
+        genericFailures = false,
       ) => {
         const nextGroups = new Set(failedGroups);
         const nextCompleted = new Set(completedStateDriverKeys);
         for (const [index, driver] of currentStateDriverItems.entries()) {
           if (successful[index]) {
             nextCompleted.add(driver.key);
+            continue;
+          }
+          if (genericFailures) {
+            // A generic driver defers its own controls and the region it controls.
+            const scope = [
+              ...driver.handle.elements,
+              ...(driver.handle.customElements ?? []),
+              ...driver.genericTargets,
+            ];
+            if (
+              scope.length === 0 ||
+              !scope.every(
+                (element) =>
+                  element.isConnected && element.ownerDocument === pageDocument,
+              )
+            )
+              return false;
+            scope.forEach((element) => nextGroups.add(element));
             continue;
           }
           const group = adapter.stateDriverFailureGroup?.(
@@ -551,12 +602,13 @@ export function createAnalyzeFields({
         currentStateDriverItems.forEach((driver, index) => {
           const element =
             driver.handle.elements[0] ?? driver.handle.customElements?.[0];
-          if (!successful[index] && element)
+          const failureCode =
+            failureCodes.get(driver.item.candidateId) ??
+            (analysis.mode === "GENERIC" ? undefined : "SEARCH_UNCONFIRMED");
+          if (!successful[index] && element && failureCode)
             deferredDriverFailures.current.set(element, {
               key: driver.key,
-              code:
-                failureCodes.get(driver.item.candidateId) ??
-                "SEARCH_UNCONFIRMED",
+              code: failureCode,
             });
           if (!successful[index])
             onWriteResult?.(
@@ -564,10 +616,12 @@ export function createAnalyzeFields({
               {
                 candidateId: driver.item.candidateId,
                 status: "skipped",
-                reason: "조건부 선택을 확인하지 못했습니다.",
-                failureCode:
-                  failureCodes.get(driver.item.candidateId) ??
-                  "SEARCH_UNCONFIRMED",
+                reason: deferredDriverReason(
+                  failureCode,
+                  analysis.mode === "GENERIC",
+                  "조건부 선택을 확인하지 못했습니다.",
+                ),
+                ...(failureCode ? { failureCode } : {}),
               },
               snapshot.registry,
             );
@@ -590,26 +644,10 @@ export function createAnalyzeFields({
           ignoreFreshRowDefaults,
           nextCompleted,
           nextGroups,
+          genericPass + (analysis.mode === "GENERIC" ? 1 : 0),
         );
         return true;
       };
-      const driversReady = await Promise.all(
-        currentStateDriverItems.map(
-          ({ handle, item }) =>
-            adapter.waitForStateDriverReady?.(
-              pageDocument,
-              handle,
-              reportFor(item),
-            ) ?? true,
-        ),
-      );
-      if (!driversReady.every(Boolean)) {
-        if (await deferFailedGroups(driversReady)) return;
-        setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
-        setStage("exception");
-        return;
-      }
-      const stateSelectionResults: ApprovedWriteResult[] = [];
       let profileChanged = false;
       const profileCurrent = async () => {
         if (run.controller.signal.aborted) return false;
@@ -623,6 +661,28 @@ export function createAnalyzeFields({
           pageDocument.URL === snapshotUrl
         );
       };
+      const driversReady = await Promise.all(
+        currentStateDriverItems.map(
+          ({ handle, item }) =>
+            adapter.waitForStateDriverReady?.(
+              pageDocument,
+              handle,
+              reportFor(item),
+              {
+                item,
+                signal: run.controller.signal,
+                beforeMutation: profileCurrent,
+              },
+            ) ?? true,
+        ),
+      );
+      if (!driversReady.every(Boolean)) {
+        if (await deferFailedGroups(driversReady)) return;
+        setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
+        setStage("exception");
+        return;
+      }
+      const stateSelectionResults: ApprovedWriteResult[] = [];
       for (const { item, captured, stage } of currentStateDriverItems) {
         const lookup = snapshot.registry.lookupField(item.candidateId);
         const eligible =
@@ -759,6 +819,11 @@ export function createAnalyzeFields({
                   pageDocument,
                   handle,
                   reportFor(item),
+                  {
+                    item,
+                    signal: run.controller.signal,
+                    beforeMutation: profileCurrent,
+                  },
                 ) ?? true),
           ),
         );
@@ -839,6 +904,11 @@ export function createAnalyzeFields({
                 pageDocument,
                 handle,
                 reportFor(item),
+                {
+                  item,
+                  signal: run.controller.signal,
+                  beforeMutation: profileCurrent,
+                },
               )) ??
                 true),
           ),
@@ -858,6 +928,47 @@ export function createAnalyzeFields({
         return;
       }
       if (analysis.mode === "GENERIC") {
+        // Only failures that provably left the page untouched may be deferred.
+        if (
+          stateSelectionResults.length === currentStateDriverItems.length &&
+          stateSelectionResults.every(
+            (result) =>
+              result.status === "written" || isPreMutationFailure(result),
+          )
+        ) {
+          const settled = await Promise.all(
+            currentStateDriverItems.map(({ genericTargets }, index) =>
+              stateSelectionResults[index]?.status !== "written"
+                ? true
+                : waitForGenericEffect(genericTargets, run.controller.signal),
+            ),
+          );
+          if (settled.every(Boolean)) {
+            const nextCompletedGenericDrivers = new Map(
+              completedGenericStateDrivers.current,
+            );
+            currentStateDriverItems.forEach((driver, index) => {
+              if (
+                stateSelectionResults[index]?.status === "written" &&
+                driver.item.profileValue
+              )
+                nextCompletedGenericDrivers.set(driver.key, {
+                  profileValue: driver.item.profileValue,
+                });
+            });
+            completedGenericStateDrivers.current = nextCompletedGenericDrivers;
+            if (
+              await deferFailedGroups(
+                stateSelectionResults.map(
+                  (result) => result.status === "written",
+                ),
+                true,
+                true,
+              )
+            )
+              return;
+          }
+        }
         setResults(stateSelectionResults);
         setStage("result");
         return;
@@ -1007,6 +1118,7 @@ export function createAnalyzeFields({
             : undefined;
         const prior =
           receipt && alias?.lookupField(receipt.originalItem.candidateId);
+        let searchUnverified = false;
         const current = greetingResultRegistry.lookupField(item.candidateId);
         const live = resultFieldState(
           greetingResultRegistry,
@@ -1019,6 +1131,12 @@ export function createAnalyzeFields({
           (current.status === "ready" || current.status === "blocked") &&
           (prior.handle.elements[0] ?? prior.handle.customElements?.[0]) ===
             (current.handle.elements[0] ?? current.handle.customElements?.[0]);
+        if (receipt && sameElement && live?.handle) {
+          const element =
+            live.handle.elements[0] ?? live.handle.customElements?.[0];
+          if (element)
+            rebindCatalogSelection(receipt.originalItem, item, element);
+        }
         if (
           receipt &&
           alias &&
@@ -1039,14 +1157,17 @@ export function createAnalyzeFields({
                 current.handle,
                 item,
                 run.controller.signal,
-                undefined,
+                (code) => {
+                  if (code === "SEARCH_SELECTION_UNVERIFIED")
+                    searchUnverified = true;
+                },
                 async () => {
                   const latestProfile = await repository.load();
                   return (
                     !run.controller.signal.aborted &&
                     pageDocument.URL === snapshotUrl &&
                     current.handle.isCurrentContext?.() !== false &&
-                    current.handle.elements[0]?.value === item.profileValue &&
+                    current.handle.elements[0]?.value === live.value &&
                     JSON.stringify(latestProfile) ===
                       JSON.stringify(loadedProfile)
                   );
@@ -1065,12 +1186,25 @@ export function createAnalyzeFields({
           });
         } else {
           if (run.controller.signal.aborted) return;
+          const valueMatches =
+            !!live?.visible &&
+            matchesResultValue(
+              item,
+              live.value,
+              item.profileValue ?? "",
+              live.handle,
+            );
           greetingDriverResults.push({
             candidateId: item.candidateId,
             status: "skipped",
             outcome: "needs-verification",
             code: "RETAINED_VALUE_UNCONFIRMED",
-            failureCode: "VALUE_NOT_RETAINED",
+            failureCode: !valueMatches
+              ? "VALUE_NOT_RETAINED"
+              : searchUnverified ||
+                  item.analysis?.writePlan?.command === "SEARCH_SELECTION"
+                ? "SEARCH_SELECTION_UNVERIFIED"
+                : "VALUE_MATCH_UNRECORDED",
             reason:
               "조건부 선택의 입력 기록과 현재 값을 함께 확인하지 못했습니다.",
           });
@@ -1108,15 +1242,16 @@ export function createAnalyzeFields({
           handle.candidate.domName ?? handle.candidate.domId,
           handle.itemIndex,
         );
+      const ownFailure = failure && failure.key === key ? failure : undefined;
       const result: ApprovedWriteResult = {
         candidateId: item.candidateId,
         status: "skipped",
-        reason:
+        reason: deferredDriverReason(
+          ownFailure?.code,
+          analysis.mode === "GENERIC",
           "검색 결과를 확정하지 못해 이 행의 입력을 보류했습니다. 검색 항목과 같은 행의 정보를 직접 확인해 주세요.",
-        failureCode:
-          failure && failure.key === key
-            ? failure.code
-            : "ROW_SEARCH_UNCONFIRMED",
+        ),
+        failureCode: ownFailure?.code ?? "ROW_SEARCH_UNCONFIRMED",
       };
       return result;
     });

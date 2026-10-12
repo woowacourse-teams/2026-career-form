@@ -130,9 +130,19 @@ jobs:
       DEPLOY_ENVIRONMENT: production
       BACKEND_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}@${{ needs.image.outputs.digest }}
       BACKEND_PORT: ${{ vars.BACKEND_PORT }}
+      SERVER_FORWARD_HEADERS_STRATEGY: ${{ vars.SERVER_FORWARD_HEADERS_STRATEGY }}
       SPRING_PROFILES_ACTIVE: prod
       SPRING_MONGODB_URI: ${{ secrets.SPRING_MONGODB_URI }}
       CAREER_FORM_LLM_ENABLED: ${{ vars.CAREER_FORM_LLM_ENABLED }}
+      CAREER_FORM_QUALITY_ENABLED: ${{ vars.CAREER_FORM_QUALITY_ENABLED }}
+      CAREER_FORM_QUALITY_PASSWORD_HASH: ${{ secrets.CAREER_FORM_QUALITY_PASSWORD_HASH }}
+      CAREER_FORM_QUALITY_QUERY_TOKEN_HASH: ${{ secrets.CAREER_FORM_QUALITY_QUERY_TOKEN_HASH }}
+      CAREER_FORM_QUALITY_MANAGEMENT_URL: ${{ vars.CAREER_FORM_QUALITY_MANAGEMENT_URL }}
+      CAREER_FORM_QUALITY_DISCORD_ENABLED: ${{ vars.CAREER_FORM_QUALITY_DISCORD_ENABLED }}
+      CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT: ${{ vars.CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT }}
+      CAREER_FORM_QUALITY_DISCORD_WEBHOOK: ${{ secrets.CAREER_FORM_QUALITY_DISCORD_WEBHOOK }}
+      CAREER_FORM_QUALITY_SELECTION_DAYS: ${{ vars.CAREER_FORM_QUALITY_SELECTION_DAYS }}
+      CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE: ${{ vars.CAREER_FORM_QUALITY_SELECTION_MINIMUM_SAMPLE }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -233,6 +243,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.classify.outputs.version }}
           RELEASE_BRANCH: ${{ needs.classify.outputs.head_ref }}
+          RELEASE_SHA: ${{ needs.classify.outputs.head_sha }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
         run: |
           set -euo pipefail
           tag="v$VERSION"
@@ -246,6 +258,12 @@ jobs:
           else
             git tag --annotate "$tag" --message "Release $VERSION" "$GITHUB_SHA"
             git push origin "$tag"
+          fi
+
+          action="$(python3 infra/scripts/release-sync.py prepare)"
+          if [[ "$action" == "complete" ]]; then
+            echo "develop 반영과 release 정리가 완료되었습니다"
+            exit 0
           fi
 
           existing="$(gh pr list --state open --base develop --head "$RELEASE_BRANCH" --json number --jq '.[0].number // empty')"

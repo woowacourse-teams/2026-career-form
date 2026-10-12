@@ -17,7 +17,52 @@ import {
 import { skWorkflowAdapter } from "./workflow";
 import type { WriteFailureCode } from "../../write/failure";
 
+import { CATALOG, CATALOG_VERSION } from "../../../profile/catalog";
+import { approveCatalogMatch } from "../../profile/catalog-identity";
+import { retainedCatalogSelection } from "../../profile/catalog-receipt";
+import type { ReviewPlanItem } from "../../review/review-plan";
+import type { StateDriverContext } from "../workflow";
+
 const bridgeCleanups: Array<() => void> = [];
+
+function catalogContext(
+  kind: "certificate" | "languageTest" | "university",
+): StateDriverContext {
+  const entry = CATALOG.find(
+    (entry) =>
+      entry.kind === kind &&
+      (kind === "university" || entry.aliases.length > 0),
+  )!;
+  const profileFieldKey =
+    kind === "certificate"
+      ? "certifications.certificate.name"
+      : kind === "languageTest"
+        ? "languages.languageTest.testName"
+        : "education.university.schoolName";
+  const searchIdentity = {
+    status: "selected" as const,
+    catalogId: entry.id,
+    displayName: entry.name,
+    originalText: entry.name,
+    catalogVersion: CATALOG_VERSION,
+  };
+  const approval = approveCatalogMatch(
+    searchIdentity,
+    profileFieldKey,
+    entry.name,
+  );
+  if (approval.status !== "selected")
+    throw new Error("fixture approval failed");
+  return {
+    item: {
+      profileFieldKey,
+      profileValue: entry.name,
+      searchIdentity,
+      catalogMatch: approval.match,
+    } as ReviewPlanItem,
+    signal: new AbortController().signal,
+  };
+}
 
 afterEach(() => {
   bridgeCleanups.splice(0).forEach((cleanup) => cleanup());
@@ -413,11 +458,18 @@ it.each([
       isSkAutocompleteBridgeReady(document, fieldHandle(fixture.input)),
     ).resolves.toBe(true);
     fixture.input.value = "Written query";
+    const dispatched = new Promise<void>((resolve) =>
+      document.addEventListener(
+        SK_AUTOCOMPLETE_REQUEST_EVENT,
+        () => resolve(),
+        { once: true },
+      ),
+    );
     const confirmation = confirmSkAutocomplete(
       document,
       fieldHandle(fixture.input),
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await dispatched;
     interrupt(fixture.input);
 
     await expect(confirmation).resolves.toBe(false);
@@ -529,3 +581,228 @@ it("rejects an allowlisted name outside its verified row without leaving a marke
   ).toBe(false);
   fixture.removeBridge();
 });
+
+it.each(["certificate", "languageTest"] as const)(
+  "approves %s aliases and retains the exact selected code",
+  async (kind) => {
+    const context = catalogContext(kind);
+    const match = context.item.catalogMatch!;
+    const label = match.labels.find((label) => label !== match.query)!;
+    const fixture = setupAutocomplete({
+      name: kind === "certificate" ? "cerCertName" : "lngExamName",
+      rowClass: kind === "certificate" ? "cert-Item" : "langExam-Item",
+      query: match.query,
+      items: [{ id: "88", label, value: label }],
+      scoreControl: "input",
+    });
+    expect(
+      await skWorkflowAdapter.settleStateDriver!(
+        document,
+        fieldHandle(fixture.input),
+        undefined,
+        context,
+      ),
+    ).toBe(true);
+    expect(retainedCatalogSelection(context.item, fixture.input)).toBe(label);
+    fixture.input.value = match.query;
+    expect(
+      retainedCatalogSelection(context.item, fixture.input),
+    ).toBeUndefined();
+  },
+);
+
+it.each(["valid", "missing", "hidden", "shared", "mismatch"])(
+  "requires exclusively owned visible school detail: %s",
+  async (mode) => {
+    const context = catalogContext("university");
+    const match = context.item.catalogMatch!;
+    const fixture = setupAutocomplete({
+      name: "eduEducationName",
+      rowClass: "educationUniv-item",
+      query: match.query,
+      items: [{ id: "88", label: match.query, value: match.query }],
+    });
+    const option = fixture.menu.firstElementChild!;
+    if (mode !== "missing") {
+      const detail = document.createElement("span");
+      detail.id = "school-detail";
+      detail.textContent =
+        mode === "mismatch" ? "other campus" : match.requiredDetail!;
+      detail.hidden = mode === "hidden";
+      fixture.menu.append(detail);
+      option.setAttribute("aria-describedby", detail.id);
+      if (mode === "shared") {
+        const other = document.createElement("li");
+        other.setAttribute("aria-describedby", detail.id);
+        fixture.menu.append(other);
+      }
+    }
+    expect(
+      await skWorkflowAdapter.settleStateDriver!(
+        document,
+        fieldHandle(fixture.input),
+        undefined,
+        context,
+      ),
+    ).toBe(mode === "valid");
+  },
+);
+
+it.each([
+  "stale",
+  "wrongkind",
+  "malformed",
+  "duplicate",
+  "protected",
+  "cancelled",
+])("rejects %s approval without selection", async (mode) => {
+  const context = catalogContext("certificate");
+  const match = context.item.catalogMatch!;
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: match.query,
+    items: [
+      { id: "1", label: match.query, value: match.query },
+      ...(mode === "duplicate"
+        ? [{ id: "2", label: match.query, value: match.query }]
+        : []),
+    ],
+  });
+  let clicks = 0;
+  fixture.menu.addEventListener("click", () => clicks++);
+  if (mode === "stale")
+    context.item.searchIdentity = {
+      ...context.item.searchIdentity!,
+      catalogVersion: "old",
+    } as typeof context.item.searchIdentity;
+  if (mode === "wrongkind")
+    context.item.catalogMatch = { ...match, kind: "languageTest" };
+  if (mode === "malformed")
+    context.item.catalogMatch = { ...match, labels: [] };
+  if (mode === "protected") {
+    expect(
+      await skWorkflowAdapter.waitForStateDriverReady!(
+        document,
+        fieldHandle(fixture.input),
+        undefined,
+        context,
+      ),
+    ).toBe(false);
+    return;
+  }
+  const actual =
+    mode === "cancelled"
+      ? { ...context, signal: AbortSignal.abort() }
+      : context;
+  expect(
+    await skWorkflowAdapter.settleStateDriver!(
+      document,
+      fieldHandle(fixture.input),
+      undefined,
+      actual,
+    ),
+  ).toBe(false);
+  expect(clicks).toBe(0);
+  expect(fixture.input.hasAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE)).toBe(
+    false,
+  );
+});
+
+it("invalidates an in-flight request on cancellation before any late result can select", async () => {
+  const context = catalogContext("certificate");
+  const controller = new AbortController();
+  const fixture = setupAutocomplete({
+    name: "cerCertName",
+    rowClass: "cert-Item",
+    query: context.item.catalogMatch!.query,
+    items: [],
+    leavesSearchPending: true,
+  });
+  const dispatched = new Promise<void>((resolve) =>
+    document.addEventListener(SK_AUTOCOMPLETE_REQUEST_EVENT, () => resolve(), {
+      once: true,
+    }),
+  );
+  const confirmation = skWorkflowAdapter.settleStateDriver!(
+    document,
+    fieldHandle(fixture.input),
+    undefined,
+    { ...context, signal: controller.signal },
+  );
+  await dispatched;
+  controller.abort();
+  expect(await confirmation).toBe(false);
+  expect(fixture.input.hasAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE)).toBe(
+    false,
+  );
+  expect(fixture.input.value).toBe(context.item.catalogMatch!.query);
+});
+
+it.each(["rejected", "stale"])(
+  "rechecks the live profile before dispatch: %s",
+  async (mode) => {
+    const context = catalogContext("certificate");
+    const query = context.item.catalogMatch!.query;
+    const fixture = setupAutocomplete({
+      name: "cerCertName",
+      rowClass: "cert-Item",
+      query,
+      items: [{ id: "88", label: query, value: query }],
+    });
+    expect(
+      await skWorkflowAdapter.settleStateDriver!(
+        document,
+        fieldHandle(fixture.input),
+        undefined,
+        {
+          ...context,
+          beforeMutation: async () => {
+            if (mode === "stale")
+              context.item.searchIdentity = {
+                ...context.item.searchIdentity!,
+                catalogVersion: "old",
+              } as typeof context.item.searchIdentity;
+            return mode !== "rejected";
+          },
+        },
+      ),
+    ).toBe(false);
+    expect(fixture.searches()).toBe(0);
+  },
+);
+
+it.each(["wrongkind", "malformed", "oversized"])(
+  "MAIN rejects unapproved wire match: %s",
+  (mode) => {
+    const context = catalogContext("certificate");
+    const match = context.item.catalogMatch!;
+    const fixture = setupAutocomplete({
+      name: "cerCertName",
+      rowClass: "cert-Item",
+      query: match.query,
+      items: [{ id: "88", label: match.query, value: match.query }],
+    });
+    fixture.input.setAttribute(
+      SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+      "wire-request",
+    );
+    const catalogMatch =
+      mode === "wrongkind"
+        ? { ...match, kind: "languageTest" }
+        : mode === "malformed"
+          ? { ...match, labels: [] }
+          : { ...match, query: "x".repeat(513) };
+    document.dispatchEvent(
+      new CustomEvent(SK_AUTOCOMPLETE_REQUEST_EVENT, {
+        detail: JSON.stringify({
+          requestId: "wire-request",
+          command: "confirm",
+          fieldName: "cerCertName",
+          catalogMatch,
+        }),
+      }),
+    );
+    expect(fixture.searches()).toBe(0);
+  },
+);

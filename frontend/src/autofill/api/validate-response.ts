@@ -484,6 +484,9 @@ function validateFieldAnalysis(
         /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.test(
           candidate.domName ?? "",
         ) ||
+        /^workHistory\.projects\.\d+\.projectPeriod\.(startDate|endDate)$/.test(
+          candidate.domName ?? "",
+        ) ||
         /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.test(
           candidate.domName ?? "",
         ));

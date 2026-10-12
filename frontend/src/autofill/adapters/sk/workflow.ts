@@ -260,6 +260,36 @@ function isVerifiedSearchDriver(
   );
 }
 
+// A language row is the exam row that owns exactly one language select. A
+// container with several selects is not proven to be one row, so the run keeps
+// stopping.
+function languageRowFailureGroup(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): Element | undefined {
+  const select = handle.elements[0];
+  const binding = item.analysis?.valueBinding;
+  if (
+    handle.elements.length !== 1 ||
+    !(select instanceof HTMLSelectElement) ||
+    !select.isConnected ||
+    select.name !== "lngLanguageType" ||
+    handle.candidate.domName !== "lngLanguageType" ||
+    item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" ||
+    item.analysis.interactionStatus !== "READY" ||
+    item.analysis.writePlan?.command !== "SELECT_OPTION" ||
+    binding?.type !== "DIRECT" ||
+    binding.profileFieldKey !== "languages.languageTest.language"
+  )
+    return undefined;
+  const group = select.closest(".form-item-group.langExam-Item");
+  return group &&
+    select.closest(".form-item-group") === group &&
+    group.querySelectorAll("[name='lngLanguageType']").length === 1
+    ? group
+    : undefined;
+}
+
 export const skWorkflowAdapter: WorkflowAdapter = {
   prefersProfileValue: (handle, analysis) => {
     const name = handle.candidate.domName;
@@ -449,19 +479,21 @@ export const skWorkflowAdapter: WorkflowAdapter = {
       ? undefined
       : 2 + (handle.itemIndex ?? 0) * 3 + offset;
   },
-  waitForStateDriverReady: (document, handle) =>
+  waitForStateDriverReady: (document, handle, _onFailure, context) =>
     handle.candidate.domName &&
     SEARCH_FIELD_BINDINGS.has(handle.candidate.domName)
-      ? isSkAutocompleteBridgeReady(document, handle)
+      ? isSkAutocompleteBridgeReady(document, handle, context)
       : Promise.resolve(true),
-  settleStateDriver: (document, handle, onFailure) =>
+  settleStateDriver: (document, handle, onFailure, context) =>
     isProfilePriorityStatus(handle.candidate.domName)
       ? settleProfilePriorityStatus(document, handle)
       : handle.candidate.domName &&
           SEARCH_FIELD_BINDINGS.has(handle.candidate.domName)
-        ? confirmSkAutocomplete(document, handle, onFailure)
+        ? confirmSkAutocomplete(document, handle, onFailure, context)
         : Promise.resolve(true),
   stateDriverFailureGroup: (item, handle) => {
+    const languageRow = languageRowFailureGroup(item, handle);
+    if (languageRow) return languageRow;
     if (!isVerifiedSearchDriver(item, handle) || handle.elements.length !== 1)
       return undefined;
     const input = handle.elements[0];

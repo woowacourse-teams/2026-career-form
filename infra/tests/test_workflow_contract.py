@@ -1,8 +1,13 @@
+import os
 import re
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
 import yaml
+
+from harness.lib.pr_contract import validate_pr
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -138,17 +143,37 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertIn("gh workflow run deploy-staging.yml", script)
         self.assertIn('--ref "$branch"', script)
         self.assertNotIn("commit_sha", script)
-        for section in (
-            "해결하려는 문제가 무엇인가요?",
-            "왜 해야 하나요?",
-            "어떻게 해결했나요?",
-            "이 PR의 한계 & 트레이드오프",
-            "기존 기능에 미치는 영향",
-            "Edge Case & 실패 시나리오",
-            "검토한 대안과 선택 이유",
-            "리뷰 포인트 (파일/영역별 Risk 🔴🟡🟢)",
-        ):
-            self.assertIn(section, script)
+
+    def test_generated_release_body_passes_current_pr_contract(self) -> None:
+        workflow = self._workflow("start-release.yml")
+        step = next(
+            step for step in workflow["jobs"]["start"]["steps"]
+            if "gh pr create" in step.get("run", "")
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("git", "gh"):
+                executable = root / name
+                executable.write_text(
+                    "#!/bin/sh\nprintf '%s\\n' "
+                    "0123456789012345678901234567890123456789\n",
+                    encoding="utf-8",
+                )
+                executable.chmod(0o700)
+            result = subprocess.run(
+                ["bash", "-c", step["run"]], check=False, capture_output=True, text=True,
+                env={
+                    **os.environ, "VERSION": "1.2.0", "RUNNER_TEMP": directory,
+                    "PATH": f"{directory}:{os.environ['PATH']}",
+                },
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            body = (root / "release-pr.md").read_text(encoding="utf-8")
+        validation = validate_pr({
+            "title": "[Release] 1.2.0 운영 반영", "body": body,
+            "head": {"ref": "release/1.2.0"}, "base": {"ref": "main"},
+        })
+        self.assertTrue(validation.is_valid, validation.errors)
 
     def test_dispatched_staging_deploy_uses_the_dispatched_release_ref_sha(self) -> None:
         workflow = self._workflow("deploy-staging.yml")
@@ -249,6 +274,9 @@ class WorkflowContractTest(unittest.TestCase):
         )
 
         self.assertIn("needs.deploy.result == 'success'", release["if"])
+        step = next(step for step in release["steps"] if "env" in step)
+        self.assertEqual("${{ needs.classify.outputs.head_sha }}", step["env"]["RELEASE_SHA"])
+        self.assertEqual("${{ needs.deploy.result }}", step["env"]["DEPLOY_RESULT"])
         self.assertIn("git tag", release_script)
         self.assertIn("--base develop", release_script)
         self.assertIn("--head", release_script)
@@ -271,8 +299,12 @@ class WorkflowContractTest(unittest.TestCase):
         script = "\n".join(step.get("run", "") for step in cleanup["steps"])
         self.assertIn("pull_request.merged == true", cleanup["if"])
         self.assertIn("release/", cleanup["if"])
-        self.assertIn("--method DELETE", script)
-        self.assertIn("git/refs/heads/release/", script)
+        checkout = next(
+            step for step in cleanup["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        self.assertEqual("${{ github.sha }}", checkout["with"]["ref"])
+        self.assertEqual("write", cleanup["permissions"]["contents"])
 
     def test_new_workflows_pin_external_actions_to_full_commit_sha(self) -> None:
         for filename in (

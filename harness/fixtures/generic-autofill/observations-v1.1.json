@@ -1,0 +1,210 @@
+{
+  "contract_version": "1.1",
+  "runs": [
+    {
+      "site_id": "alpha",
+      "source": "LIVE_SITE",
+      "status": "MEASURED",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "revision_status": "VERIFIED",
+      "revision_evidence": {
+        "method": "INSTALLED_BUILD_METADATA",
+        "metadata": {
+          "schema_version": "1.0",
+          "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_state": "CLEAN"
+        },
+        "metadata_sha256": "bc3827e608ae52787d0161e6b95529fe6a8229fbb169d4a2d04fade88139cbc1",
+        "unverified_reason": null
+      },
+      "provider": "provider-a",
+      "model": "model-a",
+      "timeout_ms": 1000,
+      "max_output_tokens": 100,
+      "profile_version": "synthetic-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {
+        "provider_calls": 1,
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "cost_usd": null,
+        "duration_ms": 200
+      },
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "field_id": "f001",
+          "stages": [
+            "DISCOVERED",
+            "MAPPED",
+            "BOUND",
+            "WRITTEN",
+            "RETAINED"
+          ],
+          "mapping_result": "CORRECT",
+          "write_result": "CORRECT",
+          "terminal_result": null,
+          "reason_code": null,
+          "existing_value_changed": false
+        }
+      ]
+    },
+    {
+      "site_id": "beta",
+      "source": "LIVE_SITE",
+      "status": "MEASURED",
+      "revision": "UNVERIFIED",
+      "revision_status": "UNVERIFIED",
+      "revision_evidence": {
+        "method": "UNAVAILABLE",
+        "metadata": null,
+        "metadata_sha256": null,
+        "unverified_reason": "INSTALLATION_UNAVAILABLE"
+      },
+      "provider": "provider-a",
+      "model": "model-a",
+      "timeout_ms": 1000,
+      "max_output_tokens": 100,
+      "profile_version": "synthetic-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {
+        "provider_calls": 1,
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "cost_usd": null,
+        "duration_ms": 200
+      },
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "field_id": "f001",
+          "stages": [
+            "DISCOVERED",
+            "MAPPED",
+            "BOUND",
+            "WRITTEN"
+          ],
+          "mapping_result": "INCORRECT",
+          "write_result": "INCORRECT",
+          "terminal_result": "FAILED",
+          "reason_code": "RETENTION_FAILED",
+          "existing_value_changed": true
+        }
+      ]
+    },
+    {
+      "site_id": "alpha",
+      "source": "FIXTURE",
+      "status": "MEASURED",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "revision_status": "VERIFIED",
+      "revision_evidence": {
+        "method": "FIXTURE_SOURCE_METADATA",
+        "metadata": {
+          "schema_version": "1.0",
+          "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_state": "CLEAN"
+        },
+        "metadata_sha256": "bc3827e608ae52787d0161e6b95529fe6a8229fbb169d4a2d04fade88139cbc1",
+        "unverified_reason": null
+      },
+      "provider": "provider-a",
+      "model": "model-a",
+      "timeout_ms": 1000,
+      "max_output_tokens": 100,
+      "profile_version": "synthetic-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {
+        "provider_calls": 1,
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "cost_usd": null,
+        "duration_ms": 200
+      },
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "field_id": "f001",
+          "stages": [
+            "DISCOVERED",
+            "MAPPED",
+            "BOUND",
+            "WRITTEN",
+            "RETAINED"
+          ],
+          "mapping_result": "CORRECT",
+          "write_result": "CORRECT",
+          "terminal_result": null,
+          "reason_code": null,
+          "existing_value_changed": false
+        },
+        {
+          "candidate_id": "c002",
+          "field_id": "f002",
+          "stages": [
+            "DISCOVERED",
+            "MAPPED"
+          ],
+          "mapping_result": "CORRECT",
+          "write_result": null,
+          "terminal_result": "DEFERRED",
+          "reason_code": "BINDING_UNSUPPORTED",
+          "existing_value_changed": false
+        }
+      ]
+    },
+    {
+      "site_id": "beta",
+      "source": "FIXTURE",
+      "status": "MEASURED",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "revision_status": "VERIFIED",
+      "revision_evidence": {
+        "method": "FIXTURE_SOURCE_METADATA",
+        "metadata": {
+          "schema_version": "1.0",
+          "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_state": "CLEAN"
+        },
+        "metadata_sha256": "bc3827e608ae52787d0161e6b95529fe6a8229fbb169d4a2d04fade88139cbc1",
+        "unverified_reason": null
+      },
+      "provider": "provider-a",
+      "model": "model-a",
+      "timeout_ms": 1000,
+      "max_output_tokens": 100,
+      "profile_version": "synthetic-v1",
+      "initial_state": "EMPTY",
+      "inconclusive_reason": null,
+      "usage": {
+        "provider_calls": 1,
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "cost_usd": null,
+        "duration_ms": 200
+      },
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "field_id": "f001",
+          "stages": [
+            "DISCOVERED",
+            "MAPPED",
+            "BOUND",
+            "WRITTEN",
+            "RETAINED"
+          ],
+          "mapping_result": "CORRECT",
+          "write_result": "CORRECT",
+          "terminal_result": null,
+          "reason_code": null,
+          "existing_value_changed": false
+        }
+      ]
+    }
+  ],
+  "follow_up_priorities": []
+}

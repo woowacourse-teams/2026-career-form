@@ -154,6 +154,7 @@ public final class OpenAiClient {
         OpenAiTraceProjection projection = null;
         LangSmithTraceRecorder.Trace trace = null;
         ChatResponse response = null;
+        var called = false;
         if (traces != null) {
             try {
                 projection = new OpenAiTraceProjection(systemPrompt, input, outputType, sanitizedJson);
@@ -175,7 +176,7 @@ public final class OpenAiClient {
             ChatClient selectedChatClient = interaction
                 ? interactionChatClient
                 : chatClient;
-            response = selectedChatClient.prompt()
+            var request = selectedChatClient.prompt()
                 .system(systemPrompt)
                 .user(sanitizedJson)
                 .options(interaction
@@ -186,9 +187,9 @@ public final class OpenAiClient {
                         .maxRetries(0)
                     : OpenAiChatOptions.builder()
                         .store(true)
-                        .responseFormat(responseFormat(converter)))
-                .call()
-                .chatResponse();
+                        .responseFormat(responseFormat(converter)));
+            called = true;
+            response = request.call().chatResponse();
             logResponseMetadata(stage, outputType, response);
             if (response != null && response.hasFinishReasons(Set.of("length"))) {
                 throw outputLengthLimit();
@@ -203,19 +204,19 @@ public final class OpenAiClient {
                 outputType.getSimpleName(),
                 elapsedMillis(startedAt)
             );
-            recordMetrics(interaction, startedAt, null);
+            recordMetrics(interaction, startedAt, null, called, response);
             completeTrace(trace, projection, response, null);
             return output;
         }
         catch (ResolverException exception) {
             completeTrace(trace, projection, response, exception);
-            recordMetrics(interaction, startedAt, exception);
+            recordMetrics(interaction, startedAt, exception, called, response);
             logFailure(stage, outputType, startedAt, exception);
             throw exception;
         }
         catch (RuntimeException exception) {
             completeTrace(trace, projection, response, exception);
-            recordMetrics(interaction, startedAt, exception);
+            recordMetrics(interaction, startedAt, exception, called, response);
             logFailure(stage, outputType, startedAt, exception);
             throw unavailable();
         }
@@ -239,10 +240,12 @@ public final class OpenAiClient {
         traces.complete(trace, outputs, usage, failure == null ? null : classifyFailure(failure).name(), status);
     }
 
-    private void recordMetrics(boolean interaction, long startedAt, RuntimeException failure) {
+    private void recordMetrics(boolean interaction, long startedAt, RuntimeException failure, boolean called, ChatResponse response) {
         if (metrics != null) {
+            var model = response == null || response.getMetadata() == null ? null : response.getMetadata().getModel();
             metrics.record("openai", interaction ? "interaction" : "analysis", System.nanoTime() - startedAt,
-                failure != null, ExternalCallMetrics.isTimeout(failure));
+                failure != null, ExternalCallMetrics.isTimeout(failure),
+                new com.careerform.monitoring.ExternalCallObserver.Context(called, ExternalCallMetrics.modelVersion(model)));
         }
     }
 

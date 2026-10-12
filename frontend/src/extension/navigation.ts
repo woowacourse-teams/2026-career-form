@@ -74,3 +74,18 @@ export async function openInPageProfilePanel(
 ): Promise<void> {
   await runtime.sendMessage(OPEN_IN_PAGE_PROFILE_PANEL_MESSAGE);
 }
+
+export async function openPostingsPage(create = false): Promise<void> {
+  const response: unknown = await browser.runtime.sendMessage({
+    type: "careerForm.openPostings",
+    create,
+  });
+  if (
+    !response ||
+    typeof response !== "object" ||
+    !("ok" in response) ||
+    response.ok !== true
+  ) {
+    throw new Error("공고 관리 화면을 열지 못했습니다.");
+  }
+}

@@ -9,7 +9,7 @@
       "rules": [
         {
           "uid": "cf-host-dev-staging-disk-full",
-          "title": "[career-dev-staging] 루트 디스크 사용률 90% 이상",
+          "title": "[career-dev-staging] 루트 디스크 사용률 95% 이상",
           "condition": "B",
           "data": [
             {
@@ -38,7 +38,7 @@
               "model": {
                 "refId": "B",
                 "type": "math",
-                "expression": "$A >= 90",
+                "expression": "$A >= 95",
                 "datasource": {
                   "type": "__expr__",
                   "uid": "__expr__"
@@ -52,8 +52,8 @@
           "execErrState": "KeepLast",
           "for": "5m",
           "annotations": {
-            "summary": "career-dev-staging 루트 디스크, 사용률 {{ if $values.A }}{{ printf \"%.0f\" $values.A.Value }}%{{ else }}측정 불가{{ end }}, 임계값 90%",
-            "description": "호스트 career-dev-staging, mountpoint /, 90% 이상 5분 지속 시 장애, 실측 사용률 90% 미만 시 복구. 데이터 누락과 쿼리 오류는 직전 상태 유지. 대시보드에서 수집 상태를 확인하세요.",
+            "summary": "career-dev-staging 루트 디스크, 사용률 {{ if $values.A }}{{ printf \"%.0f\" $values.A.Value }}%{{ else }}측정 불가{{ end }}, 임계값 95%",
+            "description": "호스트 career-dev-staging, mountpoint /, 95% 이상 5분 지속 시 장애, 실측 사용률 95% 미만 시 복구. 데이터 누락과 쿼리 오류는 직전 상태 유지. 대시보드에서 수집 상태를 확인하세요.",
             "__dashboardUid__": "career-form-monitoring",
             "__panelId__": "9"
           },

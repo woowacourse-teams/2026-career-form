@@ -12,8 +12,19 @@ import type { ReviewPlanItem } from "../review/review-plan";
 import { revalidateDateTarget } from "../review/date-target-format";
 import { getWriteAdapter } from "../adapters/write";
 import { normalizeDisplayName } from "./display-name";
+import type { WriteFailureCode } from "./failure";
 import { bindingKey, isSelectableApproved } from "./search-executor";
 import { dropdownValue } from "../dom/button-dropdown";
+import { catalogApprovalForItem } from "../profile/catalog-identity";
+import {
+  matchesApprovedCatalog,
+  type ApprovedCatalogMatch,
+} from "../profile/catalog-match";
+import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import {
+  rememberCatalogSelection,
+  retainedCatalogSelection,
+} from "../profile/catalog-receipt";
 
 type WriteOutcome =
   | { written: true }
@@ -21,6 +32,7 @@ type WriteOutcome =
       written: false;
       reason: string;
       code?: Extract<ApprovedWriteResult, { status: "skipped" }>["code"];
+      failureCode?: WriteFailureCode;
     };
 
 const UNSAFE = "네이티브 컨트롤에 안전하게 입력할 수 없습니다.";
@@ -67,15 +79,40 @@ function setNativeChecked(element: HTMLInputElement): boolean {
   return element.checked;
 }
 
-function profileOption(
+function profileOptions(
   handle: FieldCandidateHandle,
   profileValue: string,
-): HTMLElement | undefined {
+  match?: ApprovedCatalogMatch,
+): HTMLElement[] {
   const desired = normalizeDisplayName(profileValue);
   const matches = (handle.candidate.options ?? [])
     .filter((option) => normalizeDisplayName(option.displayName) === desired)
     .map((option) => handle.optionElements.get(option.optionId))
-    .filter((option): option is HTMLElement => Boolean(option));
+    .filter((option): option is HTMLElement => Boolean(option))
+    .filter(
+      (option) =>
+        !match ||
+        matchesApprovedCatalog(
+          match,
+          catalogEvidenceForElement(
+            option,
+            option instanceof HTMLOptionElement
+              ? (option.parentElement?.parentElement ??
+                  option.parentElement ??
+                  option)
+              : (option.parentElement ?? option),
+          ),
+        ),
+    );
+  return matches;
+}
+
+function profileOption(
+  handle: FieldCandidateHandle,
+  profileValue: string,
+  match?: ApprovedCatalogMatch,
+): HTMLElement | undefined {
+  const matches = profileOptions(handle, profileValue, match);
   return matches.length === 1 && matches[0]!.isConnected
     ? matches[0]
     : undefined;
@@ -346,18 +383,25 @@ function retainedComboboxValue(
 function nativeSelectOption(
   handle: FieldCandidateHandle,
   value: string,
+  match?: ApprovedCatalogMatch,
 ): HTMLOptionElement | undefined {
   const select = handle.elements[0],
-    option = profileOption(handle, value);
+    option = profileOption(handle, value, match);
   if (
     !(select instanceof HTMLSelectElement) ||
     !(option instanceof HTMLOptionElement)
   )
     return undefined;
-  const matches = Array.from(select.options).filter(
-    (entry) =>
-      normalizeDisplayName(entry.textContent ?? "") ===
-      normalizeDisplayName(value),
+  const matches = Array.from(select.options).filter((entry) =>
+    match
+      ? !entry.disabled &&
+        entry.value !== "" &&
+        matchesApprovedCatalog(
+          match,
+          catalogEvidenceForElement(entry, select.parentElement ?? select),
+        )
+      : normalizeDisplayName(entry.textContent ?? "") ===
+        normalizeDisplayName(value),
   );
   return matches.length === 1 && matches[0] === option && !option.disabled
     ? option
@@ -484,10 +528,27 @@ function writeGeneric(
     return { written: true };
   }
   if (command === "SELECT_OPTION") {
+    const approval = catalogApprovalForItem(item);
     const select = handle.elements[0],
-      option = nativeSelectOption(handle, value);
+      option = nativeSelectOption(
+        handle,
+        value,
+        approval.status === "selected" ? approval.match : undefined,
+      );
     if (!(select instanceof HTMLSelectElement) || !option)
-      return { written: false, reason: UNSAFE, code: "UNSUPPORTED_CONTROL" };
+      return {
+        written: false,
+        reason: UNSAFE,
+        code: "UNSUPPORTED_CONTROL",
+        ...(select instanceof HTMLSelectElement &&
+        profileOptions(
+          handle,
+          value,
+          approval.status === "selected" ? approval.match : undefined,
+        ).length === 0
+          ? { failureCode: "OPTION_UNMATCHED" as const }
+          : {}),
+      };
     if (
       !setNativeValue(select, option.value) ||
       select.selectedOptions[0] !== option
@@ -517,10 +578,99 @@ function writeGeneric(
   return { written: true };
 }
 
+function catalogChoiceIsCurrent(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): boolean {
+  const approval = catalogApprovalForItem(item);
+  if (approval.status === "invalid") return false;
+  if (approval.status === "legacy") return true;
+  const select = handle.elements[0];
+  if (select instanceof HTMLSelectElement) {
+    const matches = [...select.options].filter(
+      (option) =>
+        !option.disabled &&
+        option.value !== "" &&
+        matchesApprovedCatalog(
+          approval.match,
+          catalogEvidenceForElement(option, select.parentElement ?? select),
+        ),
+    );
+    return (
+      matches.length === 1 &&
+      normalizeDisplayName(matches[0].textContent ?? "") ===
+        normalizeDisplayName(item.profileValue ?? "")
+    );
+  }
+  if (
+    select?.getAttribute("role") === "combobox" &&
+    handle.optionElements.size
+  ) {
+    const matches = [...handle.optionElements.values()].filter(
+      (option) =>
+        option.isConnected &&
+        matchesApprovedCatalog(
+          approval.match,
+          catalogEvidenceForElement(option, option.parentElement ?? option),
+        ),
+    );
+    return (
+      matches.length === 1 &&
+      normalizeDisplayName(matches[0].textContent ?? "") ===
+        normalizeDisplayName(item.profileValue ?? "")
+    );
+  }
+  return (
+    item.analysis?.writePlan?.command !== "SET_TEXT" ||
+    item.profileValue === approval.match.query
+  );
+}
+
+function rememberNativeCatalogChoice(
+  item: ReviewPlanItem,
+  handle: FieldCandidateHandle,
+): boolean {
+  const approval = catalogApprovalForItem(item);
+  if (approval.status !== "selected") return approval.status !== "invalid";
+  const element = handle.elements[0];
+  const option =
+    element instanceof HTMLSelectElement
+      ? element.selectedOptions[0]
+      : element?.getAttribute("role") === "combobox"
+        ? profileOption(handle, item.profileValue ?? "")
+        : undefined;
+  if (!option || !element) return true;
+  const label = option.textContent?.trim() ?? "";
+  const code =
+    option instanceof HTMLOptionElement
+      ? option.value
+      : option.getAttribute("data-value");
+  return rememberCatalogSelection(item, {
+    element,
+    evidence: catalogEvidenceForElement(
+      option,
+      element.parentElement ?? option.parentElement ?? option,
+      label,
+    ),
+    verify: () =>
+      element.isConnected &&
+      option.isConnected &&
+      handle.isCurrentContext?.() !== false &&
+      option.textContent?.trim() === label &&
+      catalogChoiceIsCurrent(item, handle) &&
+      (element instanceof HTMLSelectElement
+        ? element.selectedOptions[0] === option && element.value === code
+        : option.getAttribute("data-value") === code &&
+          retainedComboboxValue(handle, label)),
+  });
+}
+
 function writeItem(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
 ): WriteOutcome {
+  if (!catalogChoiceIsCurrent(item, handle))
+    return { written: false, reason: STALE, code: "STALE_TARGET" };
   if (item.dateApproval) {
     const validation = revalidateDateTarget(
       handle,
@@ -600,17 +750,29 @@ function resultForItem(
       };
     }
     const outcome = writeItem(item, handle);
+    if (outcome.written && !rememberNativeCatalogChoice(item, handle))
+      return skipped(
+        item.candidateId,
+        "needs-verification",
+        "RETAINED_VALUE_UNCONFIRMED",
+        RETENTION,
+      );
     return outcome.written
       ? generic
         ? written(item.candidateId)
         : { candidateId: item.candidateId, status: "written" }
       : generic
-        ? skipped(
-            item.candidateId,
-            outcomeForWriteCode(outcome.code ?? "UNSUPPORTED_CONTROL"),
-            outcome.code ?? "UNSUPPORTED_CONTROL",
-            outcome.reason,
-          )
+        ? {
+            ...skipped(
+              item.candidateId,
+              outcomeForWriteCode(outcome.code ?? "UNSUPPORTED_CONTROL"),
+              outcome.code ?? "UNSUPPORTED_CONTROL",
+              outcome.reason,
+            ),
+            ...(outcome.failureCode
+              ? { failureCode: outcome.failureCode }
+              : {}),
+          }
         : {
             candidateId: item.candidateId,
             status: "skipped",
@@ -688,9 +850,27 @@ function retainedGenericValue(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
 ): boolean {
+  if (!catalogChoiceIsCurrent(item, handle)) return false;
   const command = item.analysis?.writePlan?.command,
     value = item.profileValue;
   if (!command || !value) return false;
+  const approval = catalogApprovalForItem(item);
+  const element = handle.buttonDropdown?.trigger ?? handle.elements[0];
+  if (
+    approval.status === "selected" &&
+    element &&
+    retainedCatalogSelection(item, element) !== undefined
+  )
+    return true;
+  if (
+    approval.status === "selected" &&
+    element &&
+    (handle.buttonDropdown ||
+      element instanceof HTMLSelectElement ||
+      element.getAttribute("role") === "combobox" ||
+      command === "SELECT_BUTTON_OPTION")
+  )
+    return false;
   if (handle.buttonDropdown)
     return (
       command === "SELECT_OPTION" &&

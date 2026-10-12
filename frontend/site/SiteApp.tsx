@@ -6,6 +6,11 @@ import { policies } from "./policies";
 import { Icon } from "./Icons";
 import { ChromeGuide, OpeningGuide, ServiceGuide } from "./Guide";
 import styles from "./Site.module.css";
+import {
+  PostingGuide,
+  PostingNotificationGuide,
+  postingSteps,
+} from "./PostingGuide";
 import { SiteLink, useSiteUrl } from "./site-navigation";
 
 const noopTrack: TrackEvent = () => {};
@@ -57,7 +62,7 @@ function Header({
 function Footer() {
   return (
     <footer className={styles.footer}>
-      <span>careerform. · 채용 지원서 자동 입력</span>
+      <span>careerform. · 공고 저장부터 지원서 자동 입력까지</span>
       <nav aria-label="정책 안내">
         <SiteLink href="/privacy/">개인정보처리방침</SiteLink>
         <SiteLink href="/terms/">이용약관</SiteLink>
@@ -130,6 +135,70 @@ function Landing({ onInstall }: { onInstall: () => void }) {
           ))}
         </div>
       </section>
+      <section
+        className={styles.postingsFeature}
+        id="saved-jobs"
+        aria-labelledby="postings-title"
+      >
+        <div>
+          <p className={styles.eyebrow}>공고 저장 · 마감 알림</p>
+          <h2 id="postings-title">
+            관심 공고는 모아두고,
+            <br />
+            마감 전에 다시 만나요.
+          </h2>
+          <p>
+            회사명, 직무, 링크와 마감 시각을 저장하세요.
+            <br />
+            프로필 등록 없이 공고 저장부터 시작할 수 있어요.
+          </p>
+          <ol className={styles.postingSteps}>
+            <li>
+              <strong>01 · 공고 저장</strong>
+              <span>공고에서 확인한 마감 날짜와 시간을 직접 등록해요.</span>
+            </li>
+            <li>
+              <strong>02 · 마감 알림</strong>
+              <span>
+                기본 하루 전·2시간 전, 원하는 시간으로 바꿀 수 있어요.
+              </span>
+            </li>
+            <li>
+              <strong>03 · 지원 완료</strong>
+              <span>지원 완료로 표시하면 남은 알림을 취소해요.</span>
+            </li>
+          </ol>
+          <SiteLink href="/onboarding/">공고 저장부터 시작하는 방법 ↗</SiteLink>
+        </div>
+        <div
+          className={styles.postingsExample}
+          aria-label="저장한 공고와 알림 예시"
+        >
+          <p className={styles.exampleLabel}>
+            이렇게 챙겨드려요 · 가상 공고 예시
+          </p>
+          <div className={styles.exampleJob}>
+            <span className={styles.exampleCompany}>가</span>
+            <div>
+              <strong>가온테크</strong>
+              <p>백엔드 개발자</p>
+            </div>
+            <b>마감 임박</b>
+          </div>
+          <div className={styles.exampleDeadline}>
+            <span>마감</span>
+            <strong>10월 15일 · 18:00</strong>
+          </div>
+          <div className={styles.exampleNotification}>
+            <span aria-hidden="true">⏰</span>
+            <div>
+              <strong>가온테크 (~10/15 18:00)</strong>
+              <p>지금 바로 지원하기 →</p>
+            </div>
+          </div>
+          <p className={styles.exampleLabel}>공고는 내 브라우저에 저장돼요.</p>
+        </div>
+      </section>
       <section className={styles.conversion} aria-labelledby="start-title">
         <p className={styles.eyebrow}>다음 지원부터, 커리어폼</p>
         <h2 id="start-title">
@@ -138,7 +207,7 @@ function Landing({ onInstall }: { onInstall: () => void }) {
           다음 기회에 집중하세요.
         </h2>
         <InstallLink onInstall={onInstall} />
-        <p>Chrome에 추가하고, 내 정보부터 등록해 보세요.</p>
+        <p>Chrome에 추가하고, 공고 저장 또는 자동 기입부터 시작하세요.</p>
       </section>
       <section className={styles.faq} id="faq">
         <div>
@@ -166,34 +235,106 @@ function Landing({ onInstall }: { onInstall: () => void }) {
 }
 function Onboarding({
   onInstall,
-  installed,
-  profileHref,
+  installed: extensionInstalled,
+  profileHref: extensionProfileHref,
+  postingsHref,
 }: {
   onInstall: () => void;
   installed: boolean;
   profileHref?: string;
+  postingsHref?: string;
 }) {
   const [step, setStep] = useState(0);
+  const [postingFlow, setPostingFlow] = useState(false);
+  const [choosing, setChoosing] = useState(
+    Boolean(extensionInstalled && postingsHref),
+  );
+  const installed = extensionInstalled && !postingsHref;
+  const profileHref = postingsHref ? undefined : extensionProfileHref;
   const heading = useRef<HTMLHeadingElement>(null);
   const moved = useRef(false);
-  const visibleSteps = installed ? steps.slice(1) : steps;
+  const visibleSteps = postingFlow
+    ? postingSteps
+    : installed
+      ? steps.slice(1)
+      : steps;
   const current = visibleSteps[step];
-  const contentStep = step + (installed ? 1 : 0);
+  const contentStep = postingFlow ? -1 : step + (installed ? 1 : 0);
   useEffect(() => {
     if (moved.current) heading.current?.focus({ preventScroll: true });
-  }, [step]);
+  }, [step, choosing]);
   function go(next: number) {
     moved.current = true;
     setStep(next);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
+  if (choosing)
+    return (
+      <main id="main" className={styles.startChoice}>
+        <p className={styles.eyebrow}>설치 완료 · CAREER FORM</p>
+        <h1 ref={heading} tabIndex={-1}>
+          무엇부터 시작할까요?
+        </h1>
+        <p className={styles.choiceDescription}>
+          필요한 기능부터 가볍게 시작하세요. 나중에 언제든 함께 사용할 수
+          있어요.
+        </p>
+        <div className={styles.choiceGrid}>
+          <section className={styles.choiceCard}>
+            <span className={styles.choiceBadge}>프로필 없이 바로 시작</span>
+            <h2>관심 공고, 놓치지 않게</h2>
+            <p>
+              공고 링크와 마감을 저장하고 원하는 시간에 알림을 받으세요. 프로필
+              등록 없이 바로 사용할 수 있어요.
+            </p>
+            <button
+              className={styles.choiceAction}
+              onClick={() => {
+                setPostingFlow(true);
+                setChoosing(false);
+                go(0);
+              }}
+            >
+              공고 저장부터 시작하기 <Icon name="arrow" />
+            </button>
+            <small>패널에서 시작 → 정보 입력 → 지원 완료</small>
+          </section>
+          <section className={styles.choiceCard}>
+            <span className={styles.choiceBadge}>반복 입력 줄이기</span>
+            <h2>내 정보는 한 번만</h2>
+            <p>
+              프로필을 등록한 뒤 지원서에서 자동 기입을 사용하세요. 입력된
+              내용은 직접 확인할 수 있어요.
+            </p>
+            <button
+              className={styles.choiceAction}
+              onClick={() => {
+                moved.current = true;
+                setChoosing(false);
+                setPostingFlow(false);
+                go(0);
+              }}
+            >
+              자동 기입 준비하기 <Icon name="arrow" />
+            </button>
+            <small>프로필 등록 → 자동 기입 → 결과 확인</small>
+          </section>
+        </div>
+        <p className={styles.choiceNote}>
+          Chrome이 완전히 종료된 동안에는 알림이 뜨지 않으며, 절전·방해금지
+          설정에 따라 늦거나 차단될 수 있어요. 공고와 프로필은 현재 브라우저에
+          저장됩니다.
+        </p>
+      </main>
+    );
   return (
     <main id="main" className={styles.onboarding}>
       <aside>
         <p className={styles.eyebrow}>시작 안내</p>
         <h2>
-          {installed ? "설치 완료!" : "커리어폼과 함께,"}
-          <br />첫 지원을 준비하세요.
+          {postingFlow || installed ? "설치 완료!" : "커리어폼과 함께,"}
+          <br />
+          {postingFlow ? "마감을 놓치지 마세요." : "첫 지원을 준비하세요."}
         </h2>
         <ol>
           {visibleSteps.map((item, i) => (
@@ -206,6 +347,17 @@ function Onboarding({
         <img src={logo} alt="" />
       </aside>
       <section className={styles.guideContent}>
+        {postingFlow && postingsHref && (
+          <button
+            className={styles.backChoice}
+            onClick={() => {
+              moved.current = true;
+              setChoosing(true);
+            }}
+          >
+            ← 시작 방법 다시 선택
+          </button>
+        )}
         <div className={styles.stepCount}>
           시작 안내{" "}
           <span>
@@ -216,7 +368,7 @@ function Onboarding({
           {current.title}
         </h1>
         <p className={styles.description}>{current.description}</p>
-        {step === 0 && !installed && (
+        {contentStep === 0 && (
           <div className={styles.notice}>
             <strong>Chrome 웹 스토어에서 설치</strong>
             <p>
@@ -226,9 +378,12 @@ function Onboarding({
             <InstallLink onInstall={onInstall} />
           </div>
         )}
-        {contentStep === 2 && <OpeningGuide />}
-        <div className={styles.guideLayout}>
+        {(contentStep === 2 || (postingFlow && step === 0)) && <OpeningGuide />}
+        <div
+          className={`${styles.guideLayout} ${postingFlow ? (step === 0 ? styles.postingPanelLayout : styles.postingScreenshotLayout) : ""}`}
+        >
           <div className={styles.guideVisual}>
+            {postingFlow && <PostingGuide step={step} />}
             {contentStep === 0 && <ChromeGuide />}
             {contentStep === 1 && <ServiceGuide kind="profile" />}
             {contentStep === 3 && <ServiceGuide kind="results" />}
@@ -268,19 +423,33 @@ function Onboarding({
             ))}
           </ol>
         </div>
+        {postingFlow && step === 1 && <PostingNotificationGuide />}
         <div className={styles.stepActions}>
           {step > 0 && (
             <button onClick={() => go(step - 1)}>← 이전 안내</button>
           )}
           {step < visibleSteps.length - 1 ? (
             <button className={styles.primary} onClick={() => go(step + 1)}>
-              {contentStep === 0
-                ? "프로필 등록 알아보기"
-                : contentStep === 1
-                  ? "지원서에서 사용하기"
-                  : "결과 확인 알아보기"}{" "}
+              {postingFlow
+                ? step === 0
+                  ? "공고 정보 입력하기"
+                  : "지원 완료 알아보기"
+                : contentStep === 0
+                  ? "프로필 등록 알아보기"
+                  : contentStep === 1
+                    ? "지원서에서 사용하기"
+                    : "결과 확인 알아보기"}{" "}
               <Icon name="arrow" />
             </button>
+          ) : postingFlow ? (
+            <a
+              className={`${styles.primary} ${styles.postingFinishAction}`}
+              href={postingsHref}
+              target="_blank"
+              rel="noreferrer"
+            >
+              공고 추가하기 <Icon name="arrow" />
+            </a>
           ) : (
             <div className={styles.ready}>
               <strong>이제 지원서에서 시작해 보세요.</strong>
@@ -339,12 +508,14 @@ export function SiteApp({
   path = window.location.pathname,
   installed = false,
   profileHref,
+  postingsHref,
 }: {
   track?: TrackEvent;
   surface?: "site" | "extension_onboarding";
   path?: string;
   installed?: boolean;
   profileHref?: string;
+  postingsHref?: string;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
@@ -369,6 +540,7 @@ export function SiteApp({
         <Onboarding
           installed={installed}
           profileHref={profileHref}
+          postingsHref={postingsHref}
           onInstall={onInstall}
         />
       ) : normalized === "/privacy" || normalized === "/terms" ? (

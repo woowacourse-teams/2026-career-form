@@ -13,3 +13,7 @@
 ## 변경 이유
 
 배포 Runbook을 stable topic 경로로 옮겼다.
+
+## 관련 지식
+
+- [릴리스 브랜치 유지와 정리](release-branch-lifecycle.md)

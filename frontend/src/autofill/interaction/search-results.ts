@@ -15,6 +15,12 @@ import {
 } from "./local-result-readiness";
 
 import { interpretResultStructure } from "./search-result-structure";
+import { catalogEvidenceForElement } from "../profile/catalog-evidence";
+import {
+  matchesApprovedCatalog,
+  type ApprovedCatalogMatch,
+  type CatalogEvidence,
+} from "../profile/catalog-match";
 
 type RootState = {
   root: HTMLElement;
@@ -156,7 +162,10 @@ export function observeResults(
     },
     exact(
       expected: readonly string[],
-    ): { element: SearchResult; signature: string } | undefined {
+      catalogMatch?: ApprovedCatalogMatch,
+    ):
+      | { element: SearchResult; signature: string; evidence: CatalogEvidence }
+      | undefined {
       const ready = readyRoot();
       if (!ready) return undefined;
       const { root, localMode, actions } = ready;
@@ -206,24 +215,29 @@ export function observeResults(
           new Set(ordinals).size !== actions.length)
       )
         throw new SearchFailure("result_set_incomplete");
+      const evidenceFor = (element: HTMLElement) =>
+        catalogEvidenceForElement(element, root);
       const matches = actions.filter((element) =>
-        expected.some(
-          (value) =>
-            normalized(value) === normalized(element.textContent ?? ""),
-        ),
+        catalogMatch
+          ? matchesApprovedCatalog(catalogMatch, evidenceFor(element))
+          : expected.some(
+              (value) =>
+                normalized(value) === normalized(element.textContent ?? ""),
+            ),
       );
       if (matches.length > 1)
         throw new SearchFailure("multiple_matching_results");
       if (!matches.length) throw new SearchFailure("search_results_not_found");
       const element = matches[0]!;
+      const evidence = evidenceFor(element);
       if (
-        !safeActivation(element, expected, {
+        !safeActivation(element, catalogMatch ? [evidence.label] : expected, {
           resultRoot: root,
           surfaceKind: surface.kind,
         })
       )
         throw new SearchFailure("result_activation_unsafe");
-      return { element, signature: controlSignature(element) };
+      return { element, signature: controlSignature(element), evidence };
     },
   };
 }

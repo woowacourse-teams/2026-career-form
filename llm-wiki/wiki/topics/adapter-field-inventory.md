@@ -2,17 +2,21 @@
 
 > Topic: adapter-field-inventory
 > Status: Current
-> Current: [Greeting을 포함한 필드 현황](../../raw/issues/CF-94/documents/adapter-field-inventory.md)
-> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md)
-> Updated: 2026-09-28
+> Current: [현대·SK 어학 상태 드라이버 격리 현황](../../raw/issues/CF-169/documents/adapter-field-inventory.md)
+> History: [근거 1](../../raw/issues/CF-41/documents/indexes/location-dependent-policies.md); [근거 2](../../raw/issues/CF-46/documents/adapter-field-inventory.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-field-inventory.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-field-inventory.md); [CF-94 근거](../../raw/issues/CF-94/documents/adapter-field-inventory.md); [CF-160 근거](../../raw/issues/CF-160/documents/adapter-field-inventory.md); [CF-168 근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md)
+> Updated: 2026-10-08
 
 ## 현재 상태
+
+CF-160에서 Greeting 현주소, 프로젝트 이름·역할·내용·기간과 행 추가, 어학 등록번호, 자격증 등급·등록번호, 퇴직사유, 대학 총 이수학점, 대학·대학원 소재지, 병과·병역구분·제대구분·장애등록번호·보훈관계를 연결했다. disabled 기본정보는 식별에만 사용하고 쓰기는 차단한다. 대응 키가 없는 필드는 미지원으로 유지한다. [필드별 보호 조건과 검증 범위](../../raw/issues/CF-160/documents/adapter-field-inventory.md)는 코드 지원과 실화면 관측을 구분한다. CF-168은 Greeting 어학 등급·회화 수준의 선택지 불일치를 해당 필드만 건너뛰는 `OPTION_UNMATCHED`로 처리한다([근거](../../raw/issues/CF-168/documents/adapter-field-inventory.md)). 아래 다른 회사의 기존 계약과 과거 검증 수치는 유지한다.
 
 현대·SK 프론트의 구현 기능과 자동 검증 범위를 현황표로 관리한다. 현대 로컬 정책은 v7이며 병역·보훈은 별도 조건부 계약으로 기록한다. 개별 필드 연결은 활성 서버 정책과 DOM 검증을 따르며, 실제 페이지 지원을 추정하지 않는다. 현대 취득일의 ID/이름 구분은 비식별 회귀로 검증했고, 최신 설치 smoke는 주소·국적1과 고교·학사 2행을 독립 대조했다. SK 경력·국적·대학 년월·학교·자격증·시험 검색은 승인된 전체 패널 검증 범위와 함께 기록하되, 저장·제출 호환성 및 P1/P3/P4 전체 기능은 미검증·미구현으로 유지한다. LG 학교 검색은 이번 변경에서 미구현이다.
 
 SK 검색은 입력별 widget의 새 검색 완료와 유일한 label/value를 확인하며 시험은 nonzero id만 자동 선택한다. 행·검색 종류별 쓰기와 확정은 직렬 처리하고, 시험 언어 선택 뒤 text 또는 select 성적란이 하나만 나타날 때 후속 분석한다. 전체 fixture를 실제 popup→사이드 패널→자동 기입 경로로 실행한 결과 준비 2회와 필드 분석 8회가 모두 HTTP 200/ADAPTER/COMPLETE였으며, UI 집계 23개 기입 성공·0개 직접 확인은 선행 선택·미지원·미선택 항목 전체 성공을 의미하지 않는다. 테스트 후 프로필 키 미존재와 지원서 204개 제어 상태를 복원했다.
 
 CF-82는 표준 ID 어학 값을 현재 페이지의 정확히 하나인 메뉴 후보에만 연결한다. 현대는 visible `data-code` 버튼과 선택 뒤 hidden code를, SK는 visible nonzero autocomplete ID와 명시적 별칭을 사용한다. 0개·복수 후보와 자유 텍스트는 자동 선택하지 않는다. 상세 근거는 [CF-82 보완](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)을 따른다.
+
+CF-169는 현대 어학 언어·시험과 SK 어학 언어 상태 드라이버의 실패를 같은 행으로 격리하고 현대 국적과 SK 우대 여부 드라이버는 근거가 없어 제외한다([근거](../../raw/issues/CF-169/documents/adapter-field-inventory.md)).
 
 ## 변경 이유
 

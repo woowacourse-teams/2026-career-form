@@ -2,7 +2,7 @@
   "uid": "career-form-monitoring",
   "title": "Career Form 운영 모니터링",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": false,
   "refresh": "30s",
   "timezone": "browser",
@@ -69,6 +69,26 @@
         ],
         "multi": false,
         "includeAll": false
+      },
+      {
+        "name": "status",
+        "label": "조회 상태 코드 (빈 값: 미선택)",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      },
+      {
+        "name": "requestId",
+        "label": "관련 로그 requestId (빈 값: 미선택)",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        }
       }
     ]
   },
@@ -472,6 +492,280 @@
         "sortOrder": "Descending",
         "wrapLogMessage": true
       }
+    },
+    {
+      "id": 13,
+      "title": "HTTP 상태 코드별 추이 (2xx 제외, 최근 5분)",
+      "type": "timeseries",
+      "description": "3xx는 리다이렉트이며 오류로 분류하지 않습니다. 상태 코드 링크로 요청 로그를 조회합니다. 신규 알림은 없습니다.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 48, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "sum by (status) (increase(http_server_requests_seconds_count{env=\"$env\",status=~\"[345][0-9]{2}\",uri!~\"/actuator(/.*)?\"}[5m]))", "legendFormat": "{{status}}"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "links": [
+            {"title": "해당 코드 요청 로그", "url": "/d/career-form-monitoring?var-env=${env}&from=${__from}&to=${__to}&var-status=${__field.labels.status}&var-requestId=&viewPanel=21"}
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byRegexp", "options": "^3[0-9]{2}$"},
+            "properties": [
+              {
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "blue"}
+              }
+            ]
+          },
+          {
+            "matcher": {"id": "byRegexp", "options": "^4[0-9]{2}$"},
+            "properties": [
+              {
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "orange"}
+              }
+            ]
+          },
+          {
+            "matcher": {"id": "byRegexp", "options": "^5[0-9]{2}$"},
+            "properties": [
+              {
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "red"}
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 14,
+      "title": "서버 오류 요청 (5xx)",
+      "type": "logs",
+      "description": "환경, 시간 범위를 따릅니다. 최대 500줄이며 전체 로그 건수가 아닙니다. requestId 링크로 관련 로그를 확인하세요.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"x": 0, "y": 72, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "{env=\"$env\",service=\"career-form-backend\"} |= \"API_RESULT \" | regexp \"API_RESULT (?P<event>.*)\" | line_format \"{{.event}}\" | logfmt --strict | status=~\"5[0-9]{2}\" | __error__=\"\"", "maxLines": 500, "queryType": "range", "direction": "backward"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "maxDataPoints": 500,
+      "options": {"showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true, "showCommonLabels": false}
+    },
+    {
+      "id": 15,
+      "title": "API 지연 기준 초과 요청",
+      "type": "logs",
+      "description": "환경, 시간 범위를 따릅니다. 최대 500줄이며 전체 로그 건수가 아닙니다. requestId 링크로 관련 로그를 확인하세요. 분석 API 20초, interaction 5초, 기타 2초 초과. Actuator 제외.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"x": 12, "y": 72, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "{env=\"$env\",service=\"career-form-backend\"} |= \"API_RESULT \" | regexp \"API_RESULT (?P<event>.*)\" | line_format \"{{.event}}\" | logfmt --strict | route!~\"/actuator(/.*)?\" | ((route=~\"/api/v1/(preparation|fields)/analyze\" and durationMs > 20000) or (route=\"/api/v1/generic/interaction-decisions\" and durationMs > 5000) or (route!~\"/api/v1/(preparation|fields)/analyze|/api/v1/generic/interaction-decisions\" and durationMs > 2000)) | __error__=\"\"", "maxLines": 500, "queryType": "range", "direction": "backward"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "maxDataPoints": 500,
+      "options": {"showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true, "showCommonLabels": false}
+    },
+    {
+      "id": 16,
+      "title": "외부 호출 실패와 timeout",
+      "type": "logs",
+      "description": "환경, 시간 범위를 따릅니다. 최대 500줄이며 전체 로그 건수가 아닙니다. requestId 링크로 관련 로그를 확인하세요.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"x": 0, "y": 80, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "{env=\"$env\",service=\"career-form-backend\"} |= \"EXTERNAL_RESULT \" | regexp \"EXTERNAL_RESULT (?P<event>.*)\" | line_format \"{{.event}}\" | logfmt --strict | outcome=~\"failure|timeout\" | __error__=\"\"", "maxLines": 500, "queryType": "range", "direction": "backward"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "maxDataPoints": 500,
+      "options": {"showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true, "showCommonLabels": false}
+    },
+    {
+      "id": 17,
+      "title": "외부 호출 성공 P95 (최근 15분 이동)",
+      "type": "timeseries",
+      "description": "성공 호출만 집계합니다. 호출 수와 표본 상태를 함께 확인하세요. 호출이 없으면 데이터 없음이며 0초가 아닙니다.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 48, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "histogram_quantile(0.95, sum by (le,provider,operation) (rate(career_form_external_call_seconds_bucket{env=\"$env\",outcome=\"success\"}[15m]))) and on (provider,operation) (sum by (provider,operation) (increase(career_form_external_call_seconds_count{env=\"$env\",outcome=\"success\"}[15m])) > 0)", "legendFormat": "{{provider}} {{operation}}"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "s"},
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 18,
+      "title": "외부 호출 결과별 건수 (최근 15분)",
+      "type": "timeseries",
+      "description": "success, failure, timeout을 구분합니다. counter 증가량의 추정값입니다.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 56, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "sum by (provider,operation,outcome) (increase(career_form_external_call_seconds_count{env=\"$env\"}[15m]))", "legendFormat": "{{provider}} {{operation}} {{outcome}}"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 19,
+      "title": "외부 호출 성공 P95 표본 상태 (최근 15분)",
+      "type": "stat",
+      "description": "20건은 통계적 신뢰를 보장하지 않는 초기 표시 기준입니다. 관측 건수는 counter 증가량 추정값입니다.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 56, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "((sum by (provider,operation) (increase(career_form_external_call_seconds_count{env=\"$env\",outcome=\"success\"}[15m])) or (0 * sum by (provider,operation) (increase(career_form_external_call_seconds_count{env=\"$env\"}[15m])))) > bool 0) + ((sum by (provider,operation) (increase(career_form_external_call_seconds_count{env=\"$env\",outcome=\"success\"}[15m])) or (0 * sum by (provider,operation) (increase(career_form_external_call_seconds_count{env=\"$env\"}[15m])))) >= bool 20)", "legendFormat": "{{provider}} {{operation}}", "instant": true}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {"text": "데이터 없음", "color": "gray"},
+                "1": {"text": "표본 부족", "color": "orange"},
+                "2": {"text": "표본 기준 충족", "color": "green"}
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 20,
+      "title": "선택 요청의 관련 로그 (시간순)",
+      "type": "logs",
+      "description": "환경, 시간 범위를 따릅니다. 최대 500줄이며 전체 로그 건수가 아닙니다. requestId 링크로 관련 로그를 확인하세요. requestId 미선택 시 조회하지 않습니다. 오류, 지연, 상태 코드 조건을 적용하지 않습니다.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"x": 0, "y": 96, "w": 24, "h": 10},
+      "targets": [
+        {"refId": "A", "expr": "{env=\"$env\",service=\"career-form-backend\"} | regexp \"requestId=(?P<requestId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\\\\]|\\\\s|$)\" | requestId!=\"\" | requestId=~\"^${requestId:regex}$\"", "maxLines": 500, "queryType": "range", "direction": "forward"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "maxDataPoints": 500,
+      "options": {"showTime": true, "sortOrder": "Ascending", "wrapLogMessage": true, "enableLogDetails": true, "showCommonLabels": false}
+    },
+    {
+      "id": 21,
+      "title": "선택 HTTP 상태 코드 요청 로그",
+      "type": "logs",
+      "description": "환경, 시간 범위를 따릅니다. 최대 500줄이며 전체 로그 건수가 아닙니다. requestId 링크로 관련 로그를 확인하세요. 상태 코드 미선택 시 조회하지 않습니다.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"x": 12, "y": 80, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "{env=\"$env\",service=\"career-form-backend\"} |= \"API_RESULT \" | regexp \"API_RESULT (?P<event>.*)\" | line_format \"{{.event}}\" | logfmt --strict | status=~\"[345][0-9]{2}\" | status=~\"^${status:regex}$\" | __error__=\"\"", "maxLines": 500, "queryType": "range", "direction": "backward"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "maxDataPoints": 500,
+      "options": {"showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true, "showCommonLabels": false}
+    },
+    {
+      "id": 22,
+      "title": "환경 수집 상태 (최근 30초)",
+      "type": "stat",
+      "description": "0: scrape 실패 또는 환경 수집 데이터 소실. 기존 scrape 패널과 함께 확인합니다. Loki 로그 전송 상태를 보장하는 지표는 아닙니다.",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 64, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "min(last_over_time(up{job=\"backend\",env=\"$env\"}[30s])) or vector(0)", "legendFormat": "{{provider}} {{operation}}", "instant": true}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {"text": "수집 이상 또는 데이터 소실", "color": "red"},
+                "1": {"text": "scrape 정상", "color": "green"}
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 24,
+      "title": "관측 로그 파싱 실패",
+      "type": "logs",
+      "description": "숫자 변환 또는 파싱 실패 로그. 환경, 시간 범위를 따릅니다. 최대 500줄이며 전체 로그 건수가 아닙니다. requestId 링크로 관련 로그를 확인하세요.",
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"x": 12, "y": 88, "w": 12, "h": 8},
+      "targets": [
+        {"refId": "A", "expr": "{env=\"$env\",service=\"career-form-backend\"} |= \"API_RESULT \" | regexp \"API_RESULT (?P<event>.*)\" | line_format \"{{.event}}\" | logfmt --strict | status >= 0 | durationMs >= 0 | __error__!=\"\"", "maxLines": 500, "queryType": "range", "direction": "backward"}
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": []
+      },
+      "maxDataPoints": 500,
+      "options": {"showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true, "showCommonLabels": false}
+    },
+    {
+      "id": 23,
+      "title": "로그 조회 안내",
+      "type": "text",
+      "gridPos": {"x": 12, "y": 64, "w": 12, "h": 8},
+      "options": {"mode": "markdown", "content": "requestId 미선택: 요청을 선택하세요. 상태 코드 미선택: 그래프의 코드 링크 또는 상단 입력을 사용하세요.\n\n환경과 시간 범위를 유지해 관련 로그를 조회합니다. 로그 상세의 **관련 요청 로그** 링크를 선택하세요. 입력을 비우면 조회가 초기화됩니다.\n\n각 로그 패널은 **최대 500줄**을 조회합니다. 결과가 없으면 **No data**, 쿼리 실패는 패널 오류로 표시됩니다. 수집 이상은 환경 수집 상태와 기존 scrape 상태를 확인하세요.\n\n파싱 실패 패널에 로그가 있으면 필터 목록에서 누락될 수 있습니다. 일반 로그에서 원문을 확인하세요."}
     }
   ]
 }

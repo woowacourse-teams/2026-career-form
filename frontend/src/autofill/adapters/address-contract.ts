@@ -15,7 +15,9 @@ export function isAddressSearchAction(
         ? action.domId === "hyundai:search:address" &&
           action.domName === "postCd" &&
           action.element === "input"
-        : false;
+        : action.domId === "greeting:search:address" &&
+          !action.domName &&
+          action.element === "button";
   return (
     identity &&
     action.control === "button" &&

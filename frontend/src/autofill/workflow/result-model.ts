@@ -145,6 +145,12 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
           : "자동 입력 미지원",
       );
     } else if (
+      matches &&
+      (failureCode === "SEARCH_SELECTION_UNVERIFIED" ||
+        failureCode === "VALUE_MATCH_UNRECORDED")
+    ) {
+      review("입력 결과 확인", failureCode);
+    } else if (
       (failureCode ?? item.failureCode) &&
       !recoveredRetry &&
       !(failureCode === "ROW_SEARCH_UNCONFIRMED" && entry?.unchanged && matches)

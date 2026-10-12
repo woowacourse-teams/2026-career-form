@@ -1,3 +1,4 @@
+import { installPostingBackground } from "../src/job-postings/background";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 
@@ -16,6 +17,7 @@ import { openInstalledOnboarding } from "../src/extension/install-onboarding";
 import { openToolbarPanel } from "../src/extension/toolbar-panel";
 
 export default defineBackground(() => {
+  const handlePostings = installPostingBackground();
   browser.action.onClicked.addListener((tab) => {
     void openToolbarPanel(tab, {
       openPanel: (tabId) => openInPagePanel(undefined, tabId),
@@ -32,6 +34,8 @@ export default defineBackground(() => {
   browser.runtime.onConnect.addListener(createAddressRelay(browser.runtime.id));
   const handleMessage = createAnalysisMessageHandler({
     baseUrl: import.meta.env.VITE_API_BASE_URL,
+    extensionId: browser.runtime.id,
+    extensionVersion: browser.runtime.getManifest().version,
   });
   const handleAnalytics = createAnalyticsMessageHandler({
     key: import.meta.env.VITE_POSTHOG_KEY,
@@ -39,6 +43,8 @@ export default defineBackground(() => {
     storage: browser.storage.local,
   });
   browser.runtime.onMessage.addListener((message, sender) => {
+    const postingResponse = handlePostings(message, sender);
+    if (postingResponse !== undefined) return postingResponse;
     if (parseAnalyticsMessage(message)) {
       return handleAnalytics(message);
     }
@@ -53,6 +59,6 @@ export default defineBackground(() => {
     if (isOpenInPageProfilePanelMessage(message)) {
       return openInPagePanel();
     }
-    return handleMessage(message);
+    return handleMessage(message, sender);
   });
 });

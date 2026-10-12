@@ -99,6 +99,14 @@ it.each([
     "certificatesLicenses",
     "acquisitionDate",
   ],
+  [
+    "프로젝트",
+    "workHistory.projects",
+    "projectName",
+    "projectsproject",
+    "projects",
+    "projectPeriod.startDate",
+  ],
 ])(
   "collects bounded %s rows, buttons and add counts; rejects duplicate identities",
   (label, prefix, anchor, group, action, button) => {
@@ -128,6 +136,41 @@ it.each([
   },
 );
 
+it("collects military and veteran detail selects only under their exact owned labels", () => {
+  const prefix = "militaryServicePreferentialEmploymentStatus.";
+  const fields = [
+    ["militaryService.militaryServiceClassification", "병역구분"],
+    ["militaryService.dischargeType", "제대구분"],
+    ["veteranStatus.veteranRelationship", "보훈관계"],
+  ];
+  document.body.innerHTML = fields
+    .map(
+      ([name, label]) =>
+        `<div data-scope="field" data-part="root"><label>${label}*</label><button name="${prefix}${name}">선택</button></div>`,
+    )
+    .join("");
+  expect(
+    greetingFieldElements(document).map((element) =>
+      element.getAttribute("name"),
+    ),
+  ).toEqual(fields.map(([name]) => `${prefix}${name}`));
+  document.querySelectorAll("label").forEach((label) => {
+    label.textContent = "보훈비율";
+  });
+  expect(greetingFieldElements(document)).toEqual([]);
+});
+it.each(["universities", "graduateSchools"])(
+  "collects the %s school location select inside its own row",
+  (group) => {
+    const prefix = `educationalBackground.${group}.0`;
+    document.body.innerHTML = `<div data-scope="accordion" data-part="item"><input name="${prefix}.schoolName"><button name="${prefix}.schoolLocation">선택</button></div>`;
+    expect(
+      greetingFieldElements(document).map((element) =>
+        element.getAttribute("name"),
+      ),
+    ).toEqual([`${prefix}.schoolLocation`]);
+  },
+);
 it("collects gender only under a unique owned gender label", () => {
   document.body.innerHTML =
     '<div data-scope="field" data-part="root"><label>성별*</label><button name="basicInformation.gender">선택</button></div>';

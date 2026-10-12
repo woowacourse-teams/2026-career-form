@@ -16,7 +16,10 @@ import {
   type SkJQuery,
 } from "./autocomplete-main";
 
+const widgetCleanups: Array<() => void> = [];
+
 afterEach(() => {
+  widgetCleanups.splice(0).forEach((cleanup) => cleanup());
   document.body.replaceChildren();
   (
     globalThis as unknown as {
@@ -132,7 +135,7 @@ function installWidgets(widgets: readonly Widget[]): () => void {
     widget.input.addEventListener("input", () => {
       instance.term = widget.input.value;
       instance.pending = 1;
-      setTimeout(() => {
+      queueMicrotask(() => {
         const widgetItems = widget.items ?? (widget.item ? [widget.item] : []);
         if (widgetItems.length === 0) {
           instance.pending = 0;
@@ -155,7 +158,7 @@ function installWidgets(widgets: readonly Widget[]): () => void {
           widget.menu.append(result);
         });
         instance.pending = 0;
-      }, 0);
+      });
     });
   });
   const jquery: SkJQuery = (element) => ({
@@ -165,7 +168,9 @@ function installWidgets(widgets: readonly Widget[]): () => void {
         : data.get(element)?.get(key),
     autocomplete: () => data.get(element)?.get("ui-autocomplete") as never,
   });
-  return installSkAutocompleteMainBridge(document, jquery);
+  const cleanup = installSkAutocompleteMainBridge(document, jquery);
+  widgetCleanups.push(cleanup);
+  return cleanup;
 }
 
 function examRow(id: string, score: "input" | "select"): HTMLDivElement {
@@ -268,6 +273,21 @@ it("maps two delayed widget-local exam results and retains both names through th
       return response(request);
     },
   };
+  // Subscribe before rendering starts the workflow. Await the actual result
+  // controls rather than testing-library's short polling deadline under load.
+  const completed = new Promise<void>((resolve, reject) => {
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector('[role="tablist"]')) return;
+      observer.disconnect();
+      clearTimeout(timeout);
+      resolve();
+    });
+    const timeout = setTimeout(() => {
+      observer.disconnect();
+      reject(new Error("SK workflow result did not render"));
+    }, 4_000);
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
   render(
     createElement(AutofillWorkflow, {
       apiClient,
@@ -276,11 +296,9 @@ it("maps two delayed widget-local exam results and retains both names through th
       onExit: () => undefined,
     }),
   );
-  await waitFor(() => {
-    expect(document.body.textContent).toContain("기입 결과");
-    expect(firstScore.value).toBe("830");
-    expect(secondScore.value).toBe("advanced");
-  });
+  await completed;
+  expect(firstScore.value).toBe("830");
+  expect(secondScore.value).toBe("advanced");
   expect(firstExam.value).toBe("Exam Alpha");
   expect(secondExam.value).toBe("Exam Beta");
   expect(

@@ -2,15 +2,17 @@
 
 > Topic: adapter-hyundai
 > Status: Current
-> Current: [현재 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md)
-> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md)
-> Updated: 2026-09-10
+> Current: [현대 어학 상태 드라이버 실패의 행 단위 격리](../../raw/issues/CF-169/documents/adapter-hyundai.md)
+> History: [근거 1](../../raw/issues/CF-46/documents/adapter-hyundai.md); [CF-83 근거](../../raw/issues/CF-83/documents/adapter-hyundai.md); [CF-86 근거](../../raw/issues/CF-86/documents/adapter-hyundai.md); [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)
+> Updated: 2026-10-08
 
 ## 현재 상태
 
 현대 전용 수집·반복 행·버튼 선택·라벨 보정을 프론트 회사 모듈에서 관리한다. 로컬 정책 v3은 어학·자격증 취득일을 정확한 ID/이름과 제어 타입으로 구분한다. 정책 v4는 국내 주소, 국적1 대한민국, 학력 그룹별 행과 필드를 조건부로 매핑하고, 이전 로컬 정책 v6은 현대 병역·보훈의 명시적 선택·날짜·번호 계약을 추가한다.
 
 CF-82는 열린 버튼 메뉴의 현재 visible `data-code` 옵션을 수집해 표준 ID 별칭과 정확히 하나로 일치할 때만 클릭하도록 보완한다. 정적 코드 사전과 첫 후보 추측은 사용하지 않고, 클릭 뒤 표시 라벨과 hidden code를 확인한다. 상세 제한은 [CF-82 근거](../../raw/issues/CF-82/documents/adapter/live-option-selection.md)를 따른다.
+
+CF-169는 어학 언어와 시험 상태 드라이버의 실패를 `.field-group`이 두 드라이버를 각각 하나씩 소유하는 같은 행으로 격리한다. 컨테이너가 여러 행을 포함하거나 드라이버가 밖이면 기존처럼 전체를 중단하며 국적은 근거가 없어 제외한다. 상세는 [CF-169 근거](../../raw/issues/CF-169/documents/adapter-hyundai.md)를 따른다.
 
 ## 변경 이유
 

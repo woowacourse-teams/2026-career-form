@@ -2,9 +2,9 @@
 
 > Topic: autofill-panel-workflow
 > Status: Current
-> Current: [CF-142 버튼 드롭다운 값 보존과 실제 반영 판정](../../raw/issues/CF-142/documents/button-dropdown-result-completion.md)
-> History: [CF-90 패널 안 자동 기입 흐름](../../raw/issues/CF-90/documents/extension/autofill-panel-workflow.md), [CF-140 범용 입력 결과의 완료 판정](../../raw/issues/CF-140/documents/generic-result-completion.md), [CF-142 버튼 드롭다운 값 보존과 실제 반영 판정](../../raw/issues/CF-142/documents/button-dropdown-result-completion.md)
-> Updated: 2026-10-02
+> Current: [상태 드라이버 실패의 안전 범위 보류](../../raw/issues/CF-168/documents/autofill-panel-workflow.md)
+> History: [CF-90 패널 안 자동 기입 흐름](../../raw/issues/CF-90/documents/extension/autofill-panel-workflow.md), [CF-140 범용 입력 결과의 완료 판정](../../raw/issues/CF-140/documents/generic-result-completion.md), [CF-142 버튼 드롭다운 값 보존과 실제 반영 판정](../../raw/issues/CF-142/documents/button-dropdown-result-completion.md), [CF-168 상태 드라이버 실패의 안전 범위 보류](../../raw/issues/CF-168/documents/autofill-panel-workflow.md)
+> Updated: 2026-10-08
 
 ## 현재 상태
 
@@ -23,6 +23,10 @@
 수집·재열기는 다른 필드 값 보존을 검사하고 자체 probe의 부작용은 복구 후 중단한다. 실제 사용자 수정은 덮어쓰지 않으며 취소·지연 복수 메뉴도 정리한다. 비동기 재승인 뒤 현재 값, 원래 메뉴와 옵션을 입력 직전에 다시 확인한다.
 
 선택 후 실제 표시값 반영을 구독하고 기존 결과 모델·progress verifier에 연결한다. click 성공만으로 완료를 집계하지 않는다. [소유 관계와 후보 범위](generic-button-dropdown-safety.md), [CF-142 근거](../../raw/issues/CF-142/documents/button-dropdown-result-completion.md)
+
+## 상태 드라이버 실패의 안전 범위 보류
+
+다른 입력란을 드러내거나 바꾸는 상태 드라이버가 실패해도, 어댑터가 실패 범위를 주거나 범용 드라이버가 DOM 변경 전에 실패했음이 증명되면 그 범위만 보류하고 나머지를 계속 입력한다. 변경 후이거나 불확실한 실패와 범위가 없는 어댑터 실패는 기존처럼 멈춘다. 실패 코드 `OPTION_UNMATCHED`와 원인별 보류 사유를 사용하며 프로필 값은 사유에 넣지 않는다. [CF-168 근거](../../raw/issues/CF-168/documents/autofill-panel-workflow.md)
 
 ## 변경 이유
 

@@ -35,7 +35,6 @@ public final class GreetingFormFingerprint {
             && candidate.element() == FormElement.INPUT
             && candidate.control() == FormControl.TEXT
             && candidate.visibility() == Visibility.VISIBLE
-            && !Boolean.TRUE.equals(candidate.disabled())
             && !Boolean.TRUE.equals(candidate.readonly())
             && !Boolean.TRUE.equals(candidate.inert());
     }

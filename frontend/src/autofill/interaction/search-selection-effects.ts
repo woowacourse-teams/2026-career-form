@@ -1,5 +1,6 @@
 import { normalized, type TargetIdentity } from "./readonly-search";
 import { SearchFailure } from "./search-session";
+import type { SearchSurface } from "./search-surface";
 
 const CONTROL_SELECTOR = "input, select, textarea";
 
@@ -117,6 +118,7 @@ export function bindSelectionEffects(
   identity: TargetIdentity,
   candidate: HTMLElement,
   expectedNames: readonly string[],
+  surface?: SearchSurface,
 ): SelectionEffectBinding {
   const scope = identity.repeatRow ?? identity.fieldGroup;
   if (!scope.isConnected || !scope.contains(identity.target)) {
@@ -132,14 +134,17 @@ export function bindSelectionEffects(
       (control) =>
         control !== identity.target &&
         control !== relation &&
-        !dormantFollowUp(control),
+        !dormantFollowUp(control) &&
+        !surface?.contains(control),
     )
     .map((element) => peerSnapshot(element, true));
   const externalContainer =
     identity.target.form ?? identity.repeatRow?.parentElement;
   const externalPeers = externalContainer
     ? controls(externalContainer)
-        .filter((control) => !scope.contains(control))
+        .filter(
+          (control) => !scope.contains(control) && !surface?.contains(control),
+        )
         .map((element) => peerSnapshot(element, false))
     : [];
   return {

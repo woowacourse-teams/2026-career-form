@@ -13,8 +13,12 @@ Issue #131의 중앙 스택과 백엔드 계측 구현이다. 서버 기반 준�
 | prod 앱 호스트 | 10.0.0.84 | 기존 backend, 수집 Alloy 하나 |
 
 중앙 서버는 Ubuntu 26.04 ARM64, t4g.micro, project-public-a,
-gp3 루트 EBS 16GiB다. 새 AWS 리소스를 만들거나 공유 보안 그룹을 수정하지 않는다.
-Grafana는 loopback 3000, 수집 proxy는 중앙 private IP의 3100/9090에 bind한다.
+gp3 루트 EBS 16GiB다. 새 AWS 리소스는 필요하지 않다. 공유 보안 그룹은 임의로
+수정하지 않고 운영자가 대상과 영향 범위를 확인한다.
+Nginx는 HTTP 80을 공개하고 Compose 내부의 grafana:3000으로 전달한다.
+Grafana의 호스트 3000은 loopback 진단용으로 유지하며 수집 proxy는 중앙 private IP의
+3100/9090에 bind한다. UI 로그인은 Grafana가 처리하고 수집용 Basic 인증과 IP 제한은
+3100/9090에만 적용한다.
 Loki와 Prometheus의 조회 포트는 호스트에 publish하지 않는다.
 EC2 public IP는 private IP로 매핑되므로 private bind만으로 외부 차단을
 보장하지 않는다. 보안 그룹에 3100/9090의 공개 규칙을 추가하지 않고,
@@ -102,7 +106,7 @@ sudo test -e /etc/career-form-monitoring/secrets/grafana.env || sudo install -m 
 sudoedit /etc/career-form-monitoring/secrets/grafana.env
 ```
 
-grafana.env에는 DISCORD_WEBHOOK_URL=실제_웹훅_URL 한 줄만 넣는다.
+grafana.env에는 기존 운영 알림의 DISCORD_WEBHOOK_URL=실제_웹훅_URL을 유지하고, 품질 집계를 사용하면 마지막 자동 입력 품질 절의 환경별 조회 설정을 함께 넣는다.
 Grafana 암호와 htpasswd는 개별 read-only bind 파일을 비-root 프로세스가
 읽을 수 있도록 0644로 두되 부모 secrets 디렉터리는 root 0700이다.
 ingest-password와 grafana.env는 0600을 유지한다.
@@ -117,7 +121,12 @@ config.env에는 아래 값을 저장한다. 시크릿은 넣지 않는다.
 
 ```dotenv
 MONITORING_PRIVATE_IP=10.0.0.72
+MONITORING_PUBLIC_URL=http://실제_모니터링_서버_주소/
 ```
+
+MONITORING_PUBLIC_URL은 브라우저에서 사용할 실제 HTTP 주소이며 끝에 `/`를 붙인다.
+서브 경로 없이 서버의 루트 주소를 사용한다. 미지정 또는 빈 값이면 Compose가 시작을
+거부한다. 서버의 공개 주소가 바뀌면 이 값과 공유한 접속 URL을 함께 갱신한다.
 
 ## 중앙 스택 시작과 브라우저 접속
 
@@ -128,16 +137,85 @@ sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monito
 curl --fail --max-time 10 http://127.0.0.1:3000/api/health
 ```
 
-로컬 컴퓨터에서 기존 career-monitor SSH 설정으로 터널을 연다.
+브라우저에서 MONITORING_PUBLIC_URL에 지정한 주소를 연다. 운영자는 초기 관리자
+암호를 서버에서 직접 확인하고 조회 사용자에게는 별도의 일반 사용자 계정을 생성해 조직
+역할을 Viewer로 지정한다. Server Admin 권한은 주지 않는다. 계정과 암호는 승인된
+비공개 경로로 전달하고 저장소, Issue, PR에 기록하지 않는다. 조회 사용자는 해당 계정으로
+로그인해 `career-form-monitoring` 대시보드를 조회한다. 익명 접근과 자체 회원 가입은
+계속 비활성화한다. Viewer도 허용된 데이터 소스를 조회할 수 있으므로 신뢰할 수 있는
+팀 구성원에게만 제공한다.
+
+외부 HTTP는 로그인 정보와 세션을 암호화하지 않는다. 운영자가 허용할 접속 원본
+범위를 결정하고 서버의 80 포트에 적용한다. 공유 보안 그룹이면 다른 인스턴스에 대한
+영향과 변경 권한을 확인한다. 3000, 3100, 9090의 공개 인바운드 규칙은 추가하지 않는다.
+HTTPS와 인증서 도입은 별도 후속 작업이다.
+
+### 기존 모니터링 서버에 CF-154 적용
+
+`develop` 또는 `main` 머지만으로 이 서버가 갱신되지는 않는다. 다음은 운영자가
+실행한다. 머지된 커밋의 설정을 준비하고 현재 서버 파일과 비교한다. 이 변경에는
+`compose.yaml`, `proxy.conf` 두 파일만 복사하여 기존 알림 provisioning을 덮어쓰지 않는다.
+
+서버에서 먼저 80 포트 점유와 현재 스택 상태를 확인하고 백업한다. 아래 명령은 같은
+서버 셸에서 순서대로 실행한다. 백업 경로를 기록해 롤백 때 사용한다.
+
+```bash
+ssh career-monitor
+sudo ss -ltnp 'sport = :80'
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml ps
+monitoring_backup="/opt/career-form/monitoring-backup-$(date +%Y%m%d%H%M%S)"
+sudo install -d -m 0700 "$monitoring_backup"
+sudo cp -a /opt/career-form/monitoring/compose.yaml /opt/career-form/monitoring/proxy.conf /etc/career-form-monitoring/config.env "$monitoring_backup/"
+printf '%s\n' "$monitoring_backup"
+```
+
+80을 다른 서비스가 사용한다면 적용을 중단하고 충돌을 해결한다. 로컬의 머지된
+체크아웃에서 아래 파일을 임시 경로로 전송한다.
+
+```bash
+scp infra/monitoring/compose.yaml career-monitor:~/cf154-compose.yaml
+scp infra/monitoring/proxy.conf career-monitor:~/cf154-proxy.conf
+```
+
+서버에서 config.env의 기존 값을 유지하면서 MONITORING_PUBLIC_URL을 추가한다.
+Nginx 구문 검사 전후까지 외부 80 접근은 제한하고, 검사와 적용이 끝난 후 승인한
+원본만 접근하도록 설정한다.
+
+```bash
+sudo install -m 0644 ~/cf154-compose.yaml /opt/career-form/monitoring/compose.yaml
+sudo install -m 0644 ~/cf154-proxy.conf /opt/career-form/monitoring/proxy.conf
+sudoedit /etc/career-form-monitoring/config.env
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml config --quiet
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml run --rm --no-deps ingest nginx -t
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml up -d --no-deps --force-recreate grafana ingest
+curl --fail --retry 12 --retry-all-errors --retry-delay 2 --max-time 10 http://127.0.0.1/api/health
+```
+
+Grafana와 Nginx 재생성 중 UI, 수집, 알림 평가가 잠시 중단될 수 있다. Loki, Prometheus,
+Alloy와 영속 데이터 경로는 변경하지 않는다. 전체 Compose config나 환경변수를 출력해
+시크릿을 노출하지 않는다.
+
+SSH 터널을 끈 다른 컴퓨터에서 URL을 열어 로그인, 정적 자원 로딩, 환경별 데이터 조회와
+Grafana Live 연결을 확인한다. Viewer 계정의 관리 기능 접근 제한, 실제 Discord 링크의
+외부 주소, 기존 로그, 메트릭 수집도 확인한다.
+
+실패하면 외부 80 접근을 다시 제한하고 기록한 백업 경로로 복구한다.
+
+```bash
+sudo cp -a "$monitoring_backup/compose.yaml" "$monitoring_backup/proxy.conf" /opt/career-form/monitoring/
+sudo cp -a "$monitoring_backup/config.env" /etc/career-form-monitoring/config.env
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml config --quiet
+sudo docker compose -p career-form-monitoring --env-file /etc/career-form-monitoring/config.env -f /opt/career-form/monitoring/compose.yaml up -d --no-deps --force-recreate grafana ingest
+curl --fail --retry 12 --retry-all-errors --retry-delay 2 --max-time 10 http://127.0.0.1:3000/api/health
+```
+
+기존 영속 데이터나 계정을 삭제하지 않는다. 이전 설정으로 복구하면 기존 SSH 터널로
+접속한다. 정상 구성에서도 loopback 3000은 진단용으로 남아 있지만 Live와 링크는
+MONITORING_PUBLIC_URL 기준이므로 외부 URL을 통한 확인이 최종 접속 검증이다.
 
 ```bash
 ssh -N -L 13000:127.0.0.1:3000 career-monitor
 ```
-
-브라우저 http://localhost:13000 에서 admin으로 로그인한다.
-암호는 사람이 중앙 grafana-password 파일에서 확인하고 공유하지 않는다.
-UI는 웹 UI이며 localhost 주소는 SSH 터널의 입구다.
-Discord 메시지의 localhost 대시보드 링크도 각자의 터널이 있어야 열린다.
 
 ## 앱 호스트 수집기 설치
 
@@ -202,7 +280,7 @@ host 선택은 독립이며 dev와 staging의 같은 호스트를 중복 표시�
 | backend scrape 실패 | 2분 지속 |
 | 환경 수집 데이터 소실 | 30초 lookback 후 90초 지속 |
 | 모니터링 루트 디스크 사용량 | 80% 이상 5분 지속 |
-| dev/staging 공용 호스트 루트 디스크 사용량 | 90% 이상 5분 지속 |
+| dev/staging 공용 호스트 루트 디스크 사용량 | 95% 이상 5분 지속 |
 | prod 호스트 루트 디스크 사용량 | 90% 이상 5분 지속 |
 | HTTP 5xx | 최근 5분 증가량 3 이상 |
 | LLM timeout | 최근 5분 증가량 1 이상 |
@@ -230,13 +308,17 @@ prod는 서비스 중단이나 부하 없이 test notification과 정상 조회�
 규칙도 하나다. 대시보드의 env, host 선택은 규칙 평가에 영향을 주지 않는다.
 기존 `rules.json`의 `career-monitor` 80% 규칙과 오류 처리 정책은 유지한다.
 
-새 규칙의 평가 간격은 30초다. 사용률 90% 이상이 5분 지속되면 장애,
-실측 사용률이 90% 미만으로 돌아오면 복구한다. `career-discord`를 사용하며
+두 호스트 규칙의 평가 간격은 30초다. dev/staging은 사용률 95% 이상,
+prod는 90% 이상이 5분 지속되면 장애다. 실측 사용률이 각 호스트의
+임계값 미만으로 돌아오면 복구한다. `career-discord`를 사용하며
 호스트 route는 `instance`별로 그룹을 분리한다. 첫 통지는 기본 30초 대기,
 그룹 갱신은 1분, 반복 통지는 10분이므로 평가 시점과 수신 시점은 다르다.
-메시지에는 호스트, 사용률, 90% 임계값과 루트 디스크 패널 링크가 포함된다.
+메시지에는 호스트, 사용률, 호스트별 임계값과 루트 디스크 패널 링크가 포함된다.
+dev/staging은 기존 90% 규칙의 UID를 유지해 95%로 조정하므로 중복 규칙을
+추가하지 않는다. 95% 알림은 남은 공간이 적어 이미지 다운로드와 로그 증가에
+대응할 여유가 줄어든다.
 
-두 새 규칙은 No Data와 datasource error를 `KeepLast`로 처리한다.
+두 호스트 규칙은 No Data와 datasource error를 `KeepLast`로 처리한다.
 측정 실패를 사용률 초과나 복구로 취급하지 않고 직전 Normal, Pending,
 Alerting 상태를 유지한다. Pending의 시작 시각도 유지하므로 데이터가
 돌아온 뒤 임계값 이상이면 누락 구간을 포함한 경과 시간으로 장애가 될 수 있다.
@@ -249,7 +331,8 @@ Alerting 상태를 유지한다. Pending의 시작 시각도 유지하므로 데
 설정 반영과 아래 운영 확인은 사람이 수행한다.
 
 1. 모니터링 서버의 provisioning에 `rules-hosts.json`과 `policies.json`을 반영한 뒤
-   Grafana의 `career-form-hosts` 그룹에서 두 규칙이 각각 90%, Pending 5분인지 확인한다.
+   Grafana의 `career-form-hosts` 그룹에서 dev/staging은 95%, prod는 90%이고
+   두 규칙 모두 Pending 5분인지 확인한다.
 2. dev/staging의 규칙이 하나이고 각 규칙의 `instance`, 루트 mountpoint, 대시보드
    연결을 확인한다. env와 host 선택을 바꿔도 두 규칙의 대상이 유지되는지 확인한다.
 3. 기존 `career-monitor`의 80%, 5분 조건을 확인하고 실제 host 시계열의 수집 상태,
@@ -258,8 +341,9 @@ Alerting 상태를 유지한다. Pending의 시작 시각도 유지하므로 데
    합성 exporter로 장애와 복구를 검증하므로 실제 서버 디스크를 채우지 않는다.
    웹훅, 인증값, 실제 세션은 기록하지 않는다.
 
-로컬 시험은 실제 provisioning 쿼리의 89%, 90%, 91%, 5분 미만 초과,
-5분 지속과 복구를 promtool 및 격리된 Grafana로 검증한다. mock receiver로
+로컬 시험은 실제 provisioning 쿼리의 dev/staging 94%, 95%, 96%, prod 89%,
+90%, 91%, 모니터링 서버 79%, 80%, 81%와 5분 미만 초과, 5분 지속,
+복구를 promtool로 검증한다. 격리된 Grafana와 mock receiver로
 호스트별 장애, 복구 메시지와 KeepLast 동작을 확인하며 실제 Discord 검증은 별도다.
 
 ## 보존, 용량과 복구
@@ -322,3 +406,106 @@ COMPOSE_PROJECT_NAME=career-form-tests .venv/bin/python harness/scripts/verify.p
 - [Alloy Docker 로그 수집](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.docker/)
 - [Loki 보존 정책](https://grafana.com/docs/loki/latest/operations/storage/retention/)
 - [Nginx proxy_pass와 resolver](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass)
+
+
+## CF-158 장애 분석 조회
+
+기존 일반 로그 패널은 유지한다. 신규 패널은 선택한 env와 시간 범위를 따르며,
+각 시점의 HTTP 건수는 최근 5분, 외부 호출 P95와 건수는 최근 15분 이동 구간이다.
+
+| 패널 | 기준 |
+|---|---|
+| HTTP 상태 코드 추이 | 3xx, 4xx, 5xx 코드별 최근 5분 발생 건수. Actuator 제외 |
+| 서버 오류 요청 | API_RESULT의 5xx |
+| API 지연 기준 초과 | preparation/analyze, fields/analyze 20초, interaction-decisions 5초, 기타 2초 초과. Actuator 제외 |
+| 외부 호출 실패 | EXTERNAL_RESULT의 failure 또는 timeout |
+| 외부 호출 성공 P95 | provider, operation별 성공 호출만 집계 |
+| 외부 호출 결과별 건수 | 성공, 실패, timeout을 각각 집계 |
+| P95 표본 상태 | 성공 0건 데이터 없음, 0건 초과 20건 미만 표본 부족, 20건 이상 표본 기준 충족 |
+| 환경 수집 상태 | 최근 30초 backend up의 최솟값. 실패 또는 소실은 0 |
+| 선택 요청 관련 로그 | 같은 requestId의 전체 로그를 시간순으로 조회 |
+| 선택 상태 코드 로그 | 선택한 3xx, 4xx, 5xx 코드의 API_RESULT |
+| 관측 로그 파싱 실패 | API_RESULT의 파싱 또는 숫자 변환 오류 |
+
+3xx는 리다이렉트이며 장애로 분류하지 않는다. 이 변경에서 기존 알림과
+요청 timeout은 바꾸지 않는다. 지연 기준은 초기 조회 기준으로 운영 데이터에
+따라 별도 Issue에서 조정한다.
+
+### 요청 추적 흐름
+
+1. 환경과 시간 범위를 선택하고 상태 코드 추이 또는 필터 적용 로그 패널을 확인한다.
+2. 상태 코드 그래프의 데이터 링크를 선택하면 해당 코드 로그 패널로 이동한다.
+3. 로그 행을 펼치고 Links의 `관련 요청 로그`를 선택하면 같은 환경과 시간 범위의
+   requestId 관련 로그를 새 탭에서 조회한다.
+4. 관련 로그에는 상태 코드, 지연과 외부 실패 필터를 적용하지 않는다. 정상 외부 호출도
+   포함해 시간순으로 확인한다. 원문 URL, query, body는 새로 기록하지 않는다.
+5. 상단 requestId와 조회 상태 코드 입력을 비우면 해당 조회가 초기화된다.
+   빈 requestId는 전체 로그를 조회하지 않는다. UUID 형식 requestId가 없는 행은
+   요청 연결을 제공하지 않는다.
+
+신규 로그 패널의 최대 조회량은 각각 500줄이다. 최신 요청 패널은 최신 500줄,
+관련 로그 패널은 선택 시간 범위의 처음 500줄이며 전체 건수가 아니다.
+필요하면 시간 범위를 좁힌다. 일반 로그 패널의 기존 조회 설정은 유지한다.
+
+결과 없음은 Grafana의 No data, 쿼리 실패는 패널 오류로 표시된다. 파싱 실패 패널에
+로그가 있으면 필터 패널에서 누락될 수 있으므로 일반 로그 원문을 확인한다.
+환경 수집 상태와 기존 scrape 상태로 backend 메트릭 수집을 확인할 수 있지만,
+이 값이 정상이더라도 Loki 로그 전송이 정상임을 보장하지 않는다.
+
+### P95 해석과 계측
+
+외부 호출 Timer의 percentile histogram은 100ms에서 60초 범위로 구성하고 기존
+5초, 20초 SLO 버킷을 유지한다. 호출 시간 상한을 바꾸는 설정은 아니다.
+범위 밖 지연의 P95 정밀도는 제한되며, 기본 OpenAI 30초와 bounded call 8초를
+고려한 초기 범위다. 런타임 timeout을 크게 바꿀 때는 버킷 범위도 함께 검토한다.
+
+P95는 성공 호출의 추정 분위수이며 실패, timeout을 제외한다. 결과별 건수를
+함께 확인해야 실패가 증가하는 상황을 놓치지 않는다. 성공 호출이 없으면
+0초로 표시하지 않는다. 20건은 통계적 신뢰 보장이 아닌 초기 표본 표시 기준이다.
+건수는 Prometheus counter 증가량 추정값이므로 소수가 될 수 있다. 첫 scrape 이전
+호출과 초기 표본 부족은 기존 관측 한계에 포함된다. 설정 반영 직후에는 기존의
+성긴 버킷과 신규 버킷 구간이 섞일 수 있으므로 15분 구간이 채워진 뒤 해석한다.
+
+### 설정 반영과 복구
+
+서버 반영은 운영자가 수행한다. develop/main 머지로 중앙 설정이 자동 갱신되지 않는다.
+
+1. 현재 `grafana/dashboards/backend.json`과
+   `grafana/provisioning/datasources/datasources.yaml`을 서버에서 백업한다.
+2. 검증한 두 파일을 기존 중앙 모니터링 디렉터리의 같은 상대 경로에 반영한다.
+3. Compose config를 검증하고 Grafana만 재생성해 dashboard와 datasource를 다시 로드한다.
+   Loki, Prometheus, Alloy와 영속 데이터는 변경하지 않는다.
+4. 백엔드의 히스토그램 보강은 기존 앱 배포 절차로 각 환경에 별도 반영한다.
+5. Viewer로 패널, 환경과 시간 보존, 상태 코드 연결, requestId 연결, 빈 선택 초기화,
+   P95 표본 표시, 기존 로그와 알림을 확인한다.
+6. 실패 시 백업한 두 파일을 복구하고 Grafana만 재생성한다. 백엔드 복구가 필요하면
+   기존 앱 배포 복구 절차를 따른다.
+
+### 로컬 재현
+
+격리한 합성 Docker 스택과 Promtool로 조회를 검증한다.
+
+```bash
+RUN_MONITORING_INTEGRATION=1 .venv/bin/python -m unittest infra.tests.test_monitoring_diagnostics_metrics infra.tests.test_monitoring_diagnostics_runtime -v
+```
+
+브라우저 검증은 별도 임시 디렉터리에 설치한 Playwright와 Chromium을 사용한다.
+저장소 의존성을 추가하지 않는다. 아래 경로는 로컬 설치 위치로 지정한다.
+
+```bash
+RUN_MONITORING_INTEGRATION=1 MONITORING_PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright MONITORING_BROWSER_EXECUTABLE=/absolute/path/to/chromium .venv/bin/python -m unittest infra.tests.test_monitoring_diagnostics_runtime.MonitoringDiagnosticsRuntimeTest.test_browser_request_links_preserve_environment_time_and_reset_filters -v
+```
+
+브라우저 옵션을 지정하지 않으면 해당 시험은 skip된다. 로그인은 격리 스택의
+합성 계정만 사용하며 실제 운영 계정, 브라우저 세션과 Discord webhook은 사용하지 않는다.
+## 자동 입력 품질 대시보드
+
+`Career Form 자동 입력 품질`은 기존 운영 대시보드와 별도로 제공된다. 경로별 주요 비율, 사람 참고 커버리지, 버전별 추이, 실패, 보류, 표본, 미관측, AI 호출, 지연 순서다. 환경은 전용 데이터 소스로 선택하며 기간, 사이트, 버전과 화면 구조로 좁힐 수 있다. 빈 값은 0%가 아니고, 사람의 필드 수 등록은 정확도 검증이 아니다.
+
+Grafana는 고정 버전 Infinity 4.1.1을 시작 전에 설치한다. 인터넷에서 플러그인을 내려받을 수 있어야 한다. 신규 데이터 소스는 JSONata backend parser로 집계 API를 호출하고 조회 토큰은 `secureJsonData`에 보관한다. 설치와 운영 적용은 사람이 수행한다.
+
+운영 담당자는 `/etc/career-form-monitoring/secrets/grafana.env`에 환경별 `QUALITY_DEV_API_ORIGIN`, `QUALITY_STAGING_API_ORIGIN`, `QUALITY_PROD_API_ORIGIN`과 대응하는 `QUALITY_DEV_QUERY_TOKEN`, `QUALITY_STAGING_QUERY_TOKEN`, `QUALITY_PROD_QUERY_TOKEN`을 설정한다. origin은 백엔드의 HTTP origin이고 query 토큰은 해당 백엔드의 `CAREER_FORM_QUALITY_QUERY_TOKEN_HASH`와 대응하는 별도 임의 토큰이다. 공용 관리 비밀번호를 사용하지 않는다. 미설정 환경의 조회는 준비된 데이터로 해석하지 않는다.
+
+기존 운영 알림 웹훅은 그대로 유지한다. 필드 수 확인 요청은 백엔드의 `CAREER_FORM_QUALITY_DISCORD_WEBHOOK`으로 새 채널에 보낸다. 처음에는 `CAREER_FORM_QUALITY_DISCORD_ENVIRONMENT=prod` 한 환경에서만 활성화한다.
+
+설정과 분모, 보존, 발송 기준은 [자동 입력 품질 운영 문서](../../backend/docs/autofill-quality.md)를 참고한다. 합성 환경 검증은 `RUN_QUALITY_INTEGRATION=1`과 `RUN_QUALITY_DASHBOARD_INTEGRATION=1`로 각각 실행한다. 관리 화면 브라우저 검증은 `QUALITY_PLAYWRIGHT_MODULE`에 격리된 Playwright 경로를 지정한다. 실제 운영 적용과 실제 수신 확인은 자동 검증과 별개다.

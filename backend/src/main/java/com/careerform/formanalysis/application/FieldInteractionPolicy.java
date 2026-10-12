@@ -111,6 +111,7 @@ public final class FieldInteractionPolicy {
                 || name.matches("educationalBackground\\.(universities|graduateSchools)\\.[0-9]+\\.enrollmentPeriod\\.(startDate|endDate)")
                 || name.matches("educationalBackground\\.highSchool\\.enrollmentPeriod\\.(startDate|endDate)")
                 || name.matches("workHistory\\.workExperiences\\.[0-9]+\\.employmentPeriod\\.(startDate|endDate)")
+                || name.matches("workHistory\\.projects\\.[0-9]+\\.projectPeriod\\.(startDate|endDate)")
                 || name.matches("languagesCertificationsAndOtherActivity\\.(certifiedLanguageTests|certificatesLicenses)\\.[0-9]+\\.acquisitionDate"))) {
             if (supportedWriteCommands == null || !supportedWriteCommands.contains(WriteCommand.SELECT_DATE)) {
                 return withoutWrite(InteractionStatus.UNVERIFIED);

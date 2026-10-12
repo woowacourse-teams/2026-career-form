@@ -36,7 +36,9 @@ describe("side panel App", () => {
     expect(value.closest("button")).toBeNull();
     fireEvent.click(value);
     expect(screen.queryByRole("form")).toBeNull();
-    expect(screen.queryByRole("button", { name: /수정|저장|취소/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^(수정|저장|취소)$/ }),
+    ).toBeNull();
     expect(screen.queryByText("값을 누르면 바로 수정할 수 있어요.")).toBeNull();
     expect(screen.getByRole("button", { name: "프로필 관리" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "국문 이름 복사" }));
@@ -309,4 +311,22 @@ describe("side panel App", () => {
     );
     expect(screen.getByRole("alert")).not.toHaveTextContent("copy@example.com");
   });
+});
+
+it("공고 관리 진입을 하나로 합치고 자동 기입 앞에 배치한다", async () => {
+  const openPostings = vi.fn(async () => undefined);
+  render(<App repository={createRepository()} openPostings={openPostings} />);
+  const manage = await screen.findByRole("button", { name: "지원 공고 관리" });
+  expect(
+    screen.queryByRole("button", { name: "공고 저장" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "저장한 공고 보기" }),
+  ).not.toBeInTheDocument();
+  const autofill = screen.getByRole("button", { name: "자동 기입" });
+  expect(
+    manage.compareDocumentPosition(autofill) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  fireEvent.click(manage);
+  expect(openPostings).toHaveBeenCalledWith(false);
 });

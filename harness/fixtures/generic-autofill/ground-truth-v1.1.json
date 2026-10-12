@@ -1,0 +1,40 @@
+{
+  "contract_version": "1.1",
+  "profile_version": "synthetic-v1",
+  "sites": [
+    {
+      "site_id": "alpha",
+      "fields": [
+        {
+          "field_id": "f001",
+          "classification": "AUTOFILLABLE",
+          "classification_reason": "PROFILE_VALUE_AVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f002",
+          "classification": "AUTOFILLABLE",
+          "classification_reason": "PROFILE_VALUE_AVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f003",
+          "classification": "FORBIDDEN",
+          "classification_reason": "SENSITIVE_FIELD",
+          "control_kind": "TEXT"
+        }
+      ]
+    },
+    {
+      "site_id": "beta",
+      "fields": [
+        {
+          "field_id": "f001",
+          "classification": "AUTOFILLABLE",
+          "classification_reason": "PROFILE_VALUE_AVAILABLE",
+          "control_kind": "TEXT"
+        }
+      ]
+    }
+  ]
+}

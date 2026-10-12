@@ -143,6 +143,8 @@ it("wires the installed extension onboarding entrypoint to extension telemetry",
     .mockImplementation(() => {});
   const { App } = await import("../entrypoints/onboarding/App");
   const { rerender } = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
+  fireEvent.click(screen.getByRole("button", { name: /프로필 등록 알아보기/ }));
   fireEvent.click(screen.getByRole("button", { name: /지원서에서 사용하기/ }));
   rerender(<App />);
   expect(track.mock.calls).toEqual([

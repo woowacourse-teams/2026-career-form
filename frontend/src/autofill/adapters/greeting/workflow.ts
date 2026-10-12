@@ -5,6 +5,7 @@ import {
   waitFor,
 } from "./workflow-controls";
 import { search } from "./workflow-search";
+import { greetingAddressNames, runGreetingAddress } from "./address";
 import {
   educationMajorAdd,
   graduateMajorProfileCount,
@@ -21,6 +22,7 @@ import {
 import { customFieldValue } from "../../dom/custom-field-value";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
+import type { FailureReporter } from "../../write/failure";
 import {
   greetingApproved,
   greetingEmploymentWrite,
@@ -29,6 +31,7 @@ import {
   greetingUsable,
 } from "./write";
 
+const LANGUAGE_LEVEL_FIELD = /\.(grade|conversationalProficiency)$/;
 const education =
   /^educationalBackground\.(?:(universities|graduateSchools)\.(0|[1-9]\d*)|highSchool)\./;
 async function selectButton(
@@ -37,6 +40,7 @@ async function selectButton(
   signal: AbortSignal,
   handle: FieldCandidateHandle,
   beforeMutation?: () => Promise<boolean>,
+  report?: FailureReporter,
 ): Promise<boolean> {
   if (!trigger.matches("button[aria-controls]")) return false;
   const freshDefault =
@@ -100,8 +104,11 @@ async function selectButton(
       (option) =>
         greetingUsable(option) && greetingText(option) === item.profileValue,
     );
-    if (options.length !== 1 || !current() || !canReplace(liveValue()))
+    if (options.length !== 1 || !current() || !canReplace(liveValue())) {
+      if (options.length === 0 && current() && canReplace(liveValue()))
+        report?.("OPTION_UNMATCHED");
       return false;
+    }
     if (
       !(await mayMutate(signal, beforeMutation)) ||
       !current() ||
@@ -135,7 +142,7 @@ async function selectDate(
   beforeMutation?: () => Promise<boolean>,
 ): Promise<boolean> {
   const source = item.profileValue!;
-  const monthOnly =
+  let monthOnly =
     /^educationalBackground\.(?:(?:universities|graduateSchools)\.\d+|highSchool)\.enrollmentPeriod\.(startDate|endDate)$/.test(
       trigger.getAttribute("name") ?? "",
     ) ||
@@ -143,6 +150,9 @@ async function selectDate(
       trigger.getAttribute("name") ?? "",
     ) ||
     /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.test(
+      trigger.getAttribute("name") ?? "",
+    ) ||
+    /^workHistory\.projects\.\d+\.projectPeriod\.(startDate|endDate)$/.test(
       trigger.getAttribute("name") ?? "",
     ) ||
     /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.test(
@@ -162,7 +172,7 @@ async function selectDate(
     )
   )
     return false;
-  const value = monthOnly ? source.slice(0, 7) : source;
+  let value = monthOnly ? source.slice(0, 7) : source;
   if (
     item.currentValue &&
     item.currentValue.replace(/[^0-9]/g, "") !== value.replaceAll("-", "")
@@ -198,6 +208,20 @@ async function selectDate(
     );
     if (inputs.length !== 1 || !greetingUsable(inputs[0]) || inputs[0].readOnly)
       return false;
+    const views = new Set(
+      [
+        ...popup.querySelectorAll<HTMLElement>(
+          '[data-scope="date-picker"][data-part="table-cell-trigger"][data-view]',
+        ),
+      ]
+        .filter(greetingUsable)
+        .map((cell) => cell.getAttribute("data-view")),
+    );
+    if (monthOnly && views.size === 1 && views.has("day")) {
+      if (!validFullDate) return false;
+      monthOnly = false;
+      value = source;
+    }
     const input = inputs[0];
     const setter = Object.getOwnPropertyDescriptor(
       HTMLInputElement.prototype,
@@ -370,10 +394,7 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
     const name = handle.candidate.domName;
     if (!name || !greetingApproved(handle, item)) return undefined;
     const command = item.analysis?.writePlan?.command;
-    if (
-      /\.(grade|conversationalProficiency)$/.test(name) &&
-      command === "SELECT_BUTTON_OPTION"
-    )
+    if (LANGUAGE_LEVEL_FIELD.test(name) && command === "SELECT_BUTTON_OPTION")
       return 3;
     if (
       command === "CHECK_RADIO" ||
@@ -434,22 +455,97 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
       ));
     }
     if (command === "SELECT_BUTTON_OPTION")
-      return selectButton(element, item, signal, handle, beforeMutation);
-    if (command === "SELECT_DATE")
-      return selectDate(element, item, signal, handle, beforeMutation);
-    if (command === "SEARCH_SELECTION") {
-      const written = await search(
+      return selectButton(
+        element,
+        item,
+        signal,
+        handle,
+        beforeMutation,
+        report,
+      );
+    if (command === "SELECT_DATE") {
+      const liveDate = () =>
+        (customFieldValue(handle) ?? greetingText(element)).replace(
+          /[^0-9]/g,
+          "",
+        );
+      const wasEmpty = !liveDate();
+      const written = await selectDate(
         element,
         item,
         signal,
         handle,
         beforeMutation,
       );
-      if (!written) report?.("SEARCH_UNCONFIRMED");
+      if (written) return true;
+      const committed = liveDate();
+      // An unparsed calendar input commits the focused day; never leave it.
+      if (
+        wasEmpty &&
+        committed &&
+        !item.profileValue!.replace(/[^0-9]/g, "").startsWith(committed)
+      ) {
+        const clears = [
+          ...(element
+            .closest('[data-scope="date-picker"][data-part="root"]')
+            ?.querySelectorAll<HTMLElement>(
+              '[data-scope="date-picker"][data-part="clear-trigger"]',
+            ) ?? []),
+        ].filter(greetingUsable);
+        if (clears.length === 1 && (await mayMutate(signal, beforeMutation)))
+          clears[0].click();
+        const cleared = await waitFor(
+          () => (liveDate() ? undefined : true),
+          signal,
+        );
+        report?.(cleared ? "DATE_UNCONFIRMED" : "DATE_ROLLBACK_FAILED");
+        return false;
+      }
+      report?.("DATE_UNCONFIRMED");
+      return false;
+    }
+    if (command === "SEARCH_SELECTION") {
+      let reported = false;
+      const written = await search(
+        element,
+        item,
+        signal,
+        handle,
+        beforeMutation,
+        (code) => {
+          reported = true;
+          report?.(code);
+        },
+      );
+      if (!written && !reported) report?.("SEARCH_UNCONFIRMED");
       return written;
     }
     return undefined;
   },
+  // Dates, searches and language levels reveal nothing, so a failure defers only its own field.
+  stateDriverFailureGroup: (item, handle) => {
+    const command = item.analysis?.writePlan?.command;
+    const name = handle.candidate.domName;
+    const languageLevel =
+      command === "SELECT_BUTTON_OPTION" &&
+      !!name &&
+      LANGUAGE_LEVEL_FIELD.test(name);
+    if (
+      command !== "SELECT_DATE" &&
+      command !== "SEARCH_SELECTION" &&
+      !languageLevel
+    )
+      return undefined;
+    const field = control(handle)?.closest<HTMLElement>(
+      '[data-scope="field"][data-part="root"][role="group"]',
+    );
+    return field?.isConnected && field.querySelectorAll("[name]").length === 1
+      ? field
+      : undefined;
+  },
+  runAddress: runGreetingAddress,
+  addressFieldNames: greetingAddressNames,
+  addressRequiresSearch: true,
   repeatedProfileSectionHint: (action) =>
     action === "greeting:add:universities"
       ? { categoryId: "education", sectionId: "university" }
@@ -463,7 +559,9 @@ export const greetingWorkflowAdapter: WorkflowAdapter = {
               ? { categoryId: "languages", sectionId: "languageSkill" }
               : action === "greeting:add:certificatesLicenses"
                 ? { categoryId: "certifications", sectionId: "certificate" }
-                : undefined,
+                : action === "greeting:add:projects"
+                  ? { categoryId: "projects", sectionId: "project" }
+                  : undefined,
   educationSectionHint: (label) =>
     label.includes("greeting:add:graduateSchools")
       ? "graduateSchool"

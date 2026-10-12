@@ -33,10 +33,24 @@ export type SingleProfileCategoryId = Exclude<
 
 export type FieldValues = Record<string, string>;
 
+export type ProfileIdentity =
+  | {
+      readonly status: "selected";
+      readonly catalogId: string;
+      readonly displayName: string;
+      readonly originalText: string;
+      readonly catalogVersion: string;
+    }
+  | {
+      readonly status: "manual";
+      readonly originalText: string;
+    };
+
 export interface ProfileEntry {
   id: string;
   sectionId: string;
   values: FieldValues;
+  identity?: ProfileIdentity;
 }
 
 export interface Profile {

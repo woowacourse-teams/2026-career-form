@@ -20,7 +20,8 @@ public final class GreetingFieldMappingResolver implements FieldMappingResolver 
         "workHistory.workExperiences", "careerscareer",
         "languagesCertificationsAndOtherActivity.certifiedLanguageTests", "languageslanguagetest",
         "languagesCertificationsAndOtherActivity.foreignLanguageProficiencies", "languageslanguageskill",
-        "languagesCertificationsAndOtherActivity.certificatesLicenses", "certificationscertificate");
+        "languagesCertificationsAndOtherActivity.certificatesLicenses", "certificationscertificate",
+        "workHistory.projects", "projectsproject");
     private static final Pattern REPEATED_NAME = Pattern.compile(
         "^(" + REPEATED_GROUPS.keySet().stream().map(Pattern::quote).collect(java.util.stream.Collectors.joining("|"))
             + ")\\.(0|[1-9][0-9]{0,2})\\.(.+)$");

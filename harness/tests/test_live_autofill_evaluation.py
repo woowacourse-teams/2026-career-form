@@ -1,4 +1,8 @@
 import unittest
+from dataclasses import replace
+
+from harness.tests.test_generic_autofill_eval import candidate
+from harness.tests.test_evaluation_revision import unavailable_evidence
 
 from harness.lib.live_autofill_evaluation import (
     CandidateState,
@@ -232,7 +236,7 @@ class LiveAutofillEvaluationTest(unittest.TestCase):
             human_reviewed=False,
         )
         result = SiteEvaluationResult(
-            discovered_count=5,
+            discovered_count=6,
             proposed_count=5,
             correct_mapping_count=4,
             correct_bound_count=4,
@@ -241,13 +245,29 @@ class LiveAutofillEvaluationTest(unittest.TestCase):
             deferred_count=1,
             failed_count=1,
             incorrect_write_count=0,
+            candidates=tuple(
+                candidate(
+                    f"candidate-{index}", f"field-{index}",
+                    ["DISCOVERED", "MAPPED", "BOUND", "WRITTEN", "RETAINED"],
+                    mapping_result="CORRECT", write_result="CORRECT",
+                )
+                for index in range(1, 5)
+            ) + (
+                candidate("candidate-5", "field-5", ["DISCOVERED", "MAPPED"],
+                          mapping_result="INCORRECT", terminal_result="FAILED",
+                          reason_code="MAPPING_INCORRECT"),
+                candidate("candidate-6", "field-6", ["DISCOVERED"],
+                          mapping_result=None, terminal_result="DEFERRED",
+                          reason_code="USER_NOT_APPROVED"),
+            ),
         )
         metadata = ReportMetadata(
-            product_revision="unknown-installed-build",
+            product_revision="UNVERIFIED",
             product_revision_status="UNVERIFIED",
-            contract_version="1.0",
+            contract_version="1.1",
             profile_mode="EXISTING_PROFILE",
             profile_version="profile-export-example-v1",
+            revision_evidence=unavailable_evidence(),
         )
 
         report = build_site_report(site, result, metadata)
@@ -276,10 +296,19 @@ class LiveAutofillEvaluationTest(unittest.TestCase):
             },
             report["classification_counts"],
         )
-        self.assertEqual(5, report["stage_counts"]["DISCOVERED"])
+        self.assertEqual(6, report["stage_counts"]["DISCOVERED"])
         self.assertEqual(1, report["stage_counts"]["DEFERRED"])
         self.assertEqual(1, report["stage_counts"]["FAILED"])
         self.assertNotIn("fields", report)
+        self.assertEqual(4, report["undiscovered_autofillable_count"])
+        self.assertEqual(1, report["reason_counts"]["FAILED"]["MAPPING_INCORRECT"])
+        self.assertEqual(1, report["reason_counts"]["DEFERRED"]["USER_NOT_APPROVED"])
+        self.assertEqual(unavailable_evidence(), report["revision_evidence"])
+
+        with self.assertRaisesRegex(EvaluationError, "관측"):
+            build_site_report(site, replace(result, discovered_count=5), metadata)
+        with self.assertRaises(EvaluationError):
+            build_site_report(site, replace(result, candidates=result.candidates * 2), metadata)
 
     @staticmethod
     def _pregraded_site() -> PregradedSite:

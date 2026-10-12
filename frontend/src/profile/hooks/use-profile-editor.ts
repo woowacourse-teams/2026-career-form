@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createEmptyProfile,
   type Profile,
+  type ProfileIdentity,
   type RepeatedProfileCategoryId,
   type SingleProfileCategoryId,
 } from "../model";
@@ -110,12 +111,28 @@ export function useProfileEditor(
       entryId: string,
       fieldId: string,
       value: string,
+      identity?: ProfileIdentity,
     ) => {
       changeProfile((current) => ({
         ...current,
         [categoryId]: current[categoryId].map((entry) =>
           entry.id === entryId
-            ? { ...entry, values: { ...entry.values, [fieldId]: value } }
+            ? {
+                ...entry,
+                values: { ...entry.values, [fieldId]: value },
+                ...((categoryId === "certifications" && fieldId === "name") ||
+                (categoryId === "languages" &&
+                  entry.sectionId === "languageTest" &&
+                  fieldId === "testName") ||
+                (categoryId === "education" && fieldId === "schoolName")
+                  ? {
+                      identity: identity ?? {
+                        status: "manual" as const,
+                        originalText: value,
+                      },
+                    }
+                  : {}),
+              }
             : entry,
         ),
       }));

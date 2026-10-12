@@ -1,0 +1,35 @@
+{
+  "apiVersion": 1,
+  "datasources": [
+    {
+      "name": "Quality dev",
+      "uid": "quality-dev",
+      "type": "yesoreyeram-infinity-datasource",
+      "access": "proxy",
+      "url": "${QUALITY_DEV_API_ORIGIN}",
+      "editable": false,
+      "jsonData": { "auth_method": "bearerToken", "allowedHosts": ["${QUALITY_DEV_API_ORIGIN}"] },
+      "secureJsonData": { "bearerToken": "${QUALITY_DEV_QUERY_TOKEN}" }
+    },
+    {
+      "name": "Quality staging",
+      "uid": "quality-staging",
+      "type": "yesoreyeram-infinity-datasource",
+      "access": "proxy",
+      "url": "${QUALITY_STAGING_API_ORIGIN}",
+      "editable": false,
+      "jsonData": { "auth_method": "bearerToken", "allowedHosts": ["${QUALITY_STAGING_API_ORIGIN}"] },
+      "secureJsonData": { "bearerToken": "${QUALITY_STAGING_QUERY_TOKEN}" }
+    },
+    {
+      "name": "Quality prod",
+      "uid": "quality-prod",
+      "type": "yesoreyeram-infinity-datasource",
+      "access": "proxy",
+      "url": "${QUALITY_PROD_API_ORIGIN}",
+      "editable": false,
+      "jsonData": { "auth_method": "bearerToken", "allowedHosts": ["${QUALITY_PROD_API_ORIGIN}"] },
+      "secureJsonData": { "bearerToken": "${QUALITY_PROD_QUERY_TOKEN}" }
+    }
+  ]
+}

@@ -65,8 +65,11 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
-      GF_PLUGINS_PREINSTALL_DISABLED: "true"
-      GF_SERVER_ROOT_URL: http://localhost:13000/
+      GF_PLUGINS_PREINSTALL_DISABLED: "false"
+      GF_PLUGINS_PREINSTALL: ""
+      GF_PLUGINS_PREINSTALL_SYNC: "yesoreyeram-infinity-datasource@4.1.1"
+      GF_PLUGINS_PREINSTALL_AUTO_UPDATE: "false"
+      GF_SERVER_ROOT_URL: ${MONITORING_PUBLIC_URL:?MONITORING_PUBLIC_URL is required}
     env_file:
       - ${MONITORING_SECRETS_DIR:-/etc/career-form-monitoring/secrets}/grafana.env
     ports:
@@ -105,6 +108,7 @@ services:
     ports:
       - "${MONITORING_PRIVATE_IP:?MONITORING_PRIVATE_IP is required}:3100:3100"
       - "${MONITORING_PRIVATE_IP:?MONITORING_PRIVATE_IP is required}:9090:9090"
+      - "80:80"
     volumes:
       - type: bind
         source: ./proxy.conf

@@ -1,6 +1,17 @@
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import type { FailureReporter } from "../../write/failure";
+import { catalogApprovalForItem } from "../../profile/catalog-identity";
+import {
+  matchesApprovedCatalog,
+  type CatalogApproval,
+  type CatalogEvidence,
+} from "../../profile/catalog-match";
+import { catalogEvidenceForElement } from "../../profile/catalog-evidence";
+import {
+  rememberCatalogSelection,
+  retainedCatalogSelection,
+} from "../../profile/catalog-receipt";
 
 const SEARCH_TIMEOUT_MILLISECONDS = 3_000;
 
@@ -325,11 +336,19 @@ function isVisibleAction(button: HTMLButtonElement): boolean {
   return true;
 }
 
+interface SearchResult {
+  button: HTMLButtonElement;
+  code: string;
+  label: string;
+  evidence: CatalogEvidence;
+}
+
 function exactResult(
   results: HTMLElement,
   query: string,
+  approval: CatalogApproval,
   onFailure?: FailureReporter,
-): { button: HTMLButtonElement; code: string } | undefined {
+): SearchResult | undefined {
   const visibleResults = Array.from(
     results.querySelectorAll<HTMLButtonElement>(
       "li button.auto_result[type='button']",
@@ -342,7 +361,14 @@ function exactResult(
   const matches = visibleResults.filter(
     (button) =>
       normalize(button.dataset.search) === query &&
-      normalize(button.dataset.result) === query,
+      (approval.status === "selected"
+        ? normalize(button.dataset.result) ===
+            normalize(catalogEvidenceForElement(button, results).label) &&
+          matchesApprovedCatalog(
+            approval.match,
+            catalogEvidenceForElement(button, results),
+          )
+        : normalize(button.dataset.result) === query),
   );
   if (matches.length !== 1) {
     onFailure?.(
@@ -365,25 +391,29 @@ function exactResult(
     onFailure?.("SEARCH_UNCONFIRMED");
     return undefined;
   }
-  return { button, code };
+  return {
+    button,
+    code,
+    label: button.dataset.result!,
+    evidence: catalogEvidenceForElement(button, results),
+  };
 }
 
 function waitForFreshExactResult(
   document: Document,
   field: SearchField,
   query: string,
+  approval: CatalogApproval,
   signal?: AbortSignal,
   onFailure?: FailureReporter,
-): Promise<{ button: HTMLButtonElement; code: string } | undefined> {
+): Promise<SearchResult | undefined> {
   const view = document.defaultView;
   if (!view || signal?.aborted) return Promise.resolve(undefined);
   return new Promise((resolve) => {
     const before = currentState(field);
     let finished = false;
     let changed = false;
-    const finish = (
-      result: { button: HTMLButtonElement; code: string } | undefined,
-    ) => {
+    const finish = (result: SearchResult | undefined) => {
       if (finished) return;
       finished = true;
       observer.disconnect();
@@ -404,7 +434,7 @@ function waitForFreshExactResult(
         return;
       }
       if (!changed || field.results.childElementCount === 0) return;
-      finish(exactResult(field.results, query, onFailure));
+      finish(exactResult(field.results, query, approval, onFailure));
     };
     const observer = new view.MutationObserver(() => {
       changed = true;
@@ -448,10 +478,27 @@ export async function runHyundaiEducationSearch(
   if (signal?.aborted) return false;
   const spec = searchSpec(handle);
   if (!spec || !verifiedItem(item, handle, spec)) return false;
+  const approval = catalogApprovalForItem(item);
+  if (
+    approval.status === "invalid" ||
+    (approval.status === "selected" &&
+      (spec.autoType !== "school" ||
+        `education.${approval.match.kind}.schoolName` !== spec.profileFieldKey))
+  )
+    return false;
   const field = verifiedField(document, handle, spec);
   if (!field) return false;
-  const query = normalize(item.profileValue);
-  if (isConfirmed(field, query)) {
+  const owner = field.display.closest(".field.search");
+  const row = field.display.closest(".field-content");
+  const rowOwner = row?.parentElement;
+  const query = normalize(
+    approval.status === "selected" ? approval.match.query : item.profileValue,
+  );
+  if (
+    approval.status === "selected"
+      ? retainedCatalogSelection(item, field.display) !== undefined
+      : isConfirmed(field, query)
+  ) {
     markConfirmed(field);
     return true;
   }
@@ -467,6 +514,7 @@ export async function runHyundaiEducationSearch(
     document,
     field,
     query,
+    approval,
     signal,
     onFailure,
   );
@@ -488,16 +536,63 @@ export async function runHyundaiEducationSearch(
     return false;
   }
 
+  const verifiedBeforeClick = verifiedField(document, handle, spec);
+  if (
+    approval.status === "selected" &&
+    (verifiedBeforeClick?.display !== field.display ||
+      verifiedBeforeClick.hidden !== field.hidden ||
+      verifiedBeforeClick.results !== field.results ||
+      field.display.closest(".field.search") !== owner ||
+      field.display.closest(".field-content") !== row ||
+      row?.parentElement !== rowOwner ||
+      result.button.dataset.code !== result.code ||
+      result.button.dataset.result !== result.label ||
+      normalize(result.button.dataset.search) !== query ||
+      !isVisibleAction(result.button) ||
+      !matchesApprovedCatalog(
+        approval.match,
+        catalogEvidenceForElement(result.button, field.results),
+      ))
+  ) {
+    restoreIfUnchanged(field, query, before);
+    onFailure?.("SEARCH_UNCONFIRMED");
+    return false;
+  }
   result.button.click();
   const verifiedAfterClick = verifiedField(document, handle, spec);
   if (
     verifiedAfterClick?.display !== field.display ||
     verifiedAfterClick.hidden !== field.hidden ||
     verifiedAfterClick.results !== field.results ||
-    !isConfirmed(field, query) ||
+    !isConfirmed(field, normalize(result.label)) ||
     field.hidden.value !== result.code
   ) {
-    restoreOwnedSelectionIfUnchanged(field, query, result.code, before);
+    restoreOwnedSelectionIfUnchanged(field, result.label, result.code, before);
+    onFailure?.("SEARCH_UNCONFIRMED");
+    return false;
+  }
+  if (
+    approval.status === "selected" &&
+    !rememberCatalogSelection(item, {
+      element: field.display,
+      evidence: result.evidence,
+      verify: () => {
+        const current = verifiedField(document, handle, spec);
+        return (
+          current?.display === field.display &&
+          current.hidden === field.hidden &&
+          current.results === field.results &&
+          field.display.closest(".field.search") === owner &&
+          field.display.closest(".field-content") === row &&
+          row?.parentElement === rowOwner &&
+          field.display.value === result.label &&
+          field.display.dataset.searchResult === result.label &&
+          field.hidden.value === result.code
+        );
+      },
+    })
+  ) {
+    restoreOwnedSelectionIfUnchanged(field, result.label, result.code, before);
     onFailure?.("SEARCH_UNCONFIRMED");
     return false;
   }

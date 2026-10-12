@@ -3,6 +3,7 @@ import { SearchSession } from "./search-session";
 import { resultBaseline, observeResults } from "./search-results";
 import { SearchSurface } from "./search-surface";
 import type { InteractionDecisionRequest } from "../api/interaction-types";
+import type { ApprovedCatalogMatch } from "../profile/catalog-match";
 
 function setup(rootMarkup: string) {
   document.body.innerHTML = `<button id="opener" type="button">검색</button><input id="target" readonly><div id="surface" role="dialog" aria-modal="true">${rootMarkup}</div>`;
@@ -36,6 +37,102 @@ function resultRoot(extra = "") {
 
 afterEach(() => {
   document.body.innerHTML = "";
+});
+
+describe("catalog result identity", () => {
+  const school: ApprovedCatalogMatch = {
+    kind: "university",
+    query: "Canonical",
+    labels: ["Site alias"],
+    requiredDetail: "Campus A",
+  };
+  it("selects an alias only with explicit exclusive visible campus evidence", () => {
+    const { surface, session } = setup(
+      `<ul data-search-results data-search-complete="true" data-result-count="1"><li><button type="button" aria-describedby="campus">Site alias</button><span id="campus">Campus A</span></li></ul>`,
+    );
+    expect(
+      observeResults(surface, session, [], undefined).exact(
+        [school.query],
+        school,
+      ),
+    ).toMatchObject({ evidence: { label: "Site alias", detail: "Campus A" } });
+    session.stop();
+  });
+  it.each(["missing", "hidden", "shared", "wrong", "duplicate-id"])(
+    "rejects %s campus evidence",
+    (mode) => {
+      const { surface, session } = setup(
+        `<ul data-search-results data-search-complete="true" data-result-count="1"><li><button type="button" ${mode === "missing" ? "" : 'aria-describedby="campus"'}>Site alias</button><span id="campus" ${mode === "hidden" ? "hidden" : ""}>${mode === "wrong" ? "Campus B" : "Campus A"}</span>${mode === "shared" ? '<span aria-describedby="campus"></span>' : ""}${mode === "duplicate-id" ? '<span id="campus">Campus A</span>' : ""}</li></ul>`,
+      );
+      expect(() =>
+        observeResults(surface, session, [], undefined).exact(
+          [school.query],
+          school,
+        ),
+      ).toThrow();
+      session.stop();
+    },
+  );
+  it.each(["certificate", "languageTest"] as const)(
+    "matches local %s aliases and rejects duplicates",
+    (kind) => {
+      const match = { kind, query: "Canonical", labels: ["Site alias"] };
+      const { surface, session, root } = setup(
+        `<ul data-search-results data-search-complete="true" data-result-count="1"><li><button type="button">Site alias</button></li></ul>`,
+      );
+      expect(
+        observeResults(surface, session, [], undefined).exact(
+          [match.query],
+          match,
+        ),
+      ).toMatchObject({ evidence: { label: "Site alias" } });
+      root.append(root.firstElementChild!.cloneNode(true));
+      root.setAttribute("data-result-count", "2");
+      expect(() =>
+        observeResults(surface, session, [], undefined).exact(
+          [match.query],
+          match,
+        ),
+      ).toThrow();
+      session.stop();
+    },
+  );
+  it("matches structured school identity only with explicit row-owned campus detail", async () => {
+    const { surface, session, root } = setup(
+      `<ul data-search-results data-search-complete="true" data-result-count="1"><li aria-describedby="campus"><span>Site alias</span><button type="button">선택</button><span id="campus">Campus A</span></li></ul>`,
+    );
+    const results = await observeResults(
+      surface,
+      session,
+      [],
+      undefined,
+    ).interpret();
+    expect(results.exact([school.query], school)).toMatchObject({
+      evidence: { label: "Site alias", detail: "Campus A" },
+    });
+    root.querySelector("#campus")!.textContent = "Campus B";
+    expect(() => results.exact([school.query], school)).toThrow();
+    session.stop();
+  });
+  it("matches structured aliases without using the action label as selected text", async () => {
+    const { surface, session } = setup(
+      `<ul data-search-results data-search-complete="true" data-result-count="1"><li aria-describedby="campus"><span>Site alias</span><button type="button">선택</button><span id="campus" hidden>Campus A</span></li></ul>`,
+    );
+    const results = await observeResults(
+      surface,
+      session,
+      [],
+      undefined,
+    ).interpret();
+    expect(
+      results.exact(["Canonical"], {
+        kind: "certificate",
+        query: "Canonical",
+        labels: ["Site alias"],
+      }),
+    ).toMatchObject({ evidence: { label: "Site alias" } });
+    session.stop();
+  });
 });
 
 describe("search result completeness and exactness", () => {
