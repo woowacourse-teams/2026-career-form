@@ -275,6 +275,8 @@ class RepositoryContractTest(unittest.TestCase):
 
         self.assertIn("gh pr view", workflow)
         self.assertIn("current-pr.json", workflow)
+        self.assertIn("--json body,labels,headRefName,baseRefName", workflow)
+        self.assertIn("head:{ref:.headRefName},base:{ref:.baseRefName}", workflow)
 
     def test_pr_contract_collects_linked_issue_title_without_label_events(self) -> None:
         workflow = self._yaml(ROOT / ".github" / "workflows" / "pr-contract.yml")

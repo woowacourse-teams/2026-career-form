@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from harness.lib.branching import is_system_pr, validate_branch_flow
 from harness.lib.cli import labels_from_payload, nested_payload, print_result, read_json
 from harness.lib.shared_files import closing_issue_numbers, validate_shared_file_change
 
@@ -53,12 +54,26 @@ def main() -> int:
             if path
         )
         payload = read_json(sys.argv[2])
+        pull_request = nested_payload(payload, "pull_request")
+        branches = tuple(pull_request.get(key) for key in ("head", "base"))
+        refs = tuple(
+            value.get("ref") if isinstance(value, Mapping) else None
+            for value in branches
+        )
+        if not all(isinstance(ref, str) and ref for ref in refs):
+            raise ValueError("PR head/base 정보가 필요합니다")
+        head, base = refs
+        flow = validate_branch_flow(head, base)
+        if not flow.is_valid:
+            return print_result(flow)
         labels = labels_from_payload(payload)
-        issue_labels = linked_issue_labels(payload)
+        issue_labels = () if is_system_pr(head, base) else linked_issue_labels(payload)
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"공유 파일 검사 입력을 읽을 수 없습니다: {error}", file=sys.stderr)
         return 2
-    return print_result(validate_shared_file_change(paths, labels, issue_labels))
+    return print_result(
+        validate_shared_file_change(paths, labels, issue_labels, head=head, base=base)
+    )
 
 
 if __name__ == "__main__":

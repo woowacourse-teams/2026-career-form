@@ -68,8 +68,11 @@ public final class QualityCollectionService {
         public String toString() { return "Receipt[redacted]"; }
     }
 
-    public record SnapshotLink(QualityRecord.Group group, Map<String, String> aliases, Map<String, String> controls, boolean identityVerified) {
-        public SnapshotLink(QualityRecord.Group group, Map<String, String> aliases, Map<String, String> controls) { this(group, aliases, controls, false); }
+    public record SnapshotLink(QualityRecord.Group group, Map<String, String> aliases, Map<String, String> controls, boolean identityVerified, String postingId, QualityProjection.Baseline baseline) {
+        public SnapshotLink(QualityRecord.Group group, Map<String, String> aliases, Map<String, String> controls) { this(group, aliases, controls, false, null, null); }
+        public SnapshotLink(QualityRecord.Group group, Map<String, String> aliases, Map<String, String> controls, boolean identityVerified) {
+            this(group, aliases, controls, identityVerified, null, null);
+        }
         public SnapshotLink {
             aliases = Map.copyOf(aliases);
             controls = Map.copyOf(controls);
@@ -114,8 +117,13 @@ public final class QualityCollectionService {
 
     public Receipt observe(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
                            String runId, String token, boolean reportingCapable) {
+        return observe(group, event, snapshot, runId, token, reportingCapable, null);
+    }
+
+    public Receipt observe(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
+                           String runId, String token, boolean reportingCapable, String publicLink) {
         try {
-            return observeLinked(group, event, snapshot, runId, token, reportingCapable);
+            return observeLinked(group, event, snapshot, runId, token, reportingCapable, publicLink);
         } catch (IllegalArgumentException exception) {
             var now = clock.instant();
             insert(new QualityRecord("request_" + UUID.randomUUID(), QualityRecord.Kind.REQUEST, group, 0, now,
@@ -125,7 +133,7 @@ public final class QualityCollectionService {
     }
 
     private Receipt observeLinked(QualityRecord.Group group, RequestEvent event, QualityProjection.Snapshot snapshot,
-                                  String runId, String token, boolean reportingCapable) {
+                                  String runId, String token, boolean reportingCapable, String publicLink) {
         var now = clock.instant();
         if (reportingCapable && runId != null) {
             var previous = owned(runId, token);
@@ -134,6 +142,9 @@ public final class QualityCollectionService {
                 group = group.withSite(previous.group().site());
             } else if (!previous.group().site().equals(group.site()) && !((Run) previous.payload()).snapshots().isEmpty()
                 && !((Run) previous.payload()).snapshots().values().stream().map(link -> link.group().site()).toList().contains(group.site())) { throw unavailable(); }
+        }
+        if (registry != null && snapshot != null && QualityPublicLinks.validate(group.host(), publicLink) != null) {
+            registry.observe(group, now, publicLink);
         }
         if (!reportingCapable) {
             insert(new QualityRecord("request_" + UUID.randomUUID(), QualityRecord.Kind.REQUEST, group, 0, now,
@@ -144,7 +155,7 @@ public final class QualityCollectionService {
             var bytes = new byte[32];
             random.nextBytes(bytes);
             var receipt = new Receipt(UUID.randomUUID().toString().replace("-", ""), HexFormat.of().formatHex(bytes));
-            var run = attach(new Run(QualityProjection.digest(receipt.token()), QualityExecution.start(now, Map.of()), Map.of(), false), snapshot, group);
+            var run = attach(new Run(QualityProjection.digest(receipt.token()), QualityExecution.start(now, Map.of()), Map.of(), false), snapshot, group, publicLink);
             if (!insert(new QualityRecord(receipt.runId(), QualityRecord.Kind.EXECUTION, group, 0, now,
                 now.plusSeconds(30L * 86400), run))) {
                 throw unavailable();
@@ -158,7 +169,7 @@ public final class QualityCollectionService {
             if (!previous.group().host().equals(group.host())) {
                 throw unavailable();
             }
-            var next = attach((Run) previous.payload(), snapshot, group);
+            var next = attach((Run) previous.payload(), snapshot, group, publicLink);
             var changed = previous.withPayload(next);
             if (store.replace(previous, changed)) {
                 maintain(changed);
@@ -214,7 +225,7 @@ public final class QualityCollectionService {
         return record;
     }
 
-    private Run attach(Run run, QualityProjection.Snapshot snapshot, QualityRecord.Group group) {
+    private Run attach(Run run, QualityProjection.Snapshot snapshot, QualityRecord.Group group, String publicLink) {
         if (snapshot == null) {
             return run;
         }
@@ -232,7 +243,8 @@ public final class QualityCollectionService {
         var aliases = snapshot.fields().stream().collect(Collectors.toUnmodifiableMap(QualityProjection.Field::key,
             field -> prefix + field.position()));
         var controls = snapshot.fields().stream().collect(Collectors.toUnmodifiableMap(field -> prefix + field.position(), QualityProjection.Field::control));
-        var link = new SnapshotLink(group, aliases, controls);
+        var safe = QualityPublicLinks.validate(group.host(), publicLink);
+        var link = new SnapshotLink(group, aliases, controls, false, safe == null ? null : QualityPostings.id(group, safe), snapshot.baseline());
         var existing = run.snapshots().get(snapshot.snapshotKey());
         if (existing != null && !existing.equals(link)) {
             throw unavailable();

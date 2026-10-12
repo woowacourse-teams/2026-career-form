@@ -31,7 +31,7 @@ public final class QualityCorrespondence {
             var existing = run.execution().fields().get(entry.getValue());
             return existing == null ? source : merge(existing, source);
         }));
-        var link = new QualityCollectionService.SnapshotLink(original.group(), aliases, controls, true);
+        var link = new QualityCollectionService.SnapshotLink(original.group(), aliases, controls, true, original.postingId(), original.baseline());
         var snapshots = Stream.concat(run.snapshots().entrySet().stream().filter(entry -> !entry.getKey().equals(snapshot)), Stream.of(Map.entry(snapshot, link)))
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
         var referenced = snapshots.values().stream().flatMap(value -> value.aliases().values().stream()).collect(Collectors.toUnmodifiableSet());
