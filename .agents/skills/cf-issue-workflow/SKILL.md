@@ -42,6 +42,7 @@ Issue 본문을 작업 계약의 정본으로 유지하고 하나의 Issue, 하�
 3. 실제 작업할 clone 또는 worktree에 들어간다.
 4. 파일 수정과 원격 상태 변경 전에 현재 Python으로 `harness/scripts/ensure-environment.py`를 실행한다. 이 진입점은 `doctor.py`로 현재 상태를 확인하고, 필요한 경우에만 `bootstrap.py`를 실행한 뒤 `doctor.py`로 다시 검증한다.
 5. 자동 구성에 실패하면 파일을 수정하거나 Issue와 Project 상태를 바꾸지 않고 실패 원인을 보고한다. 사용자에게 기본 절차로 `bootstrap` 수동 실행을 요구하지 않는다.
+   자동 구성 뒤 확정된 계약의 기준 브랜치를 `git config branch.<작업 브랜치>.career-form-base origin/<기준 브랜치>`로 기록한다. 일반 개발은 develop, 릴리스 수정은 명시된 release, 운영 hotfix는 main이다. 전체 검증과 pre-push는 이 설정을 함께 사용하며 원격 ref를 다른 SHA로 바꾸지 않는다.
 6. `CF-<Issue 번호>` 또는 `hotfix/CF-<Issue 번호>`의 브랜치 번호, Issue 번호, 구현 계획 번호가 모두 같은지 확인한다.
 7. 새 `status:ready` 작업이면 파일 수정 전에 선택한 Python으로 `harness/scripts/manage-workflow-checkpoint.py --cwd . init <Issue 번호>`를 실행해 `plan` 단계와 시작 HEAD를 먼저 저장한다.
 8. `status:in-progress` 재개인데 같은 worktree의 체크포인트가 없거나 손상됐으면 진행 지점을 추측하지 않고 중단한다.

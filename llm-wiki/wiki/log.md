@@ -468,3 +468,9 @@
 - Approval-Digest: a0023aa706b1b4fd3c776de453075b9a7718c3ff09d069f63780963d8836fc13
 - Source-Revision: f2e0634ff9f81c216211aa47fe1280ecaea613a1
 - 승인한 후보 하나를 [CF-183 bundle](../raw/issues/CF-183/manifest.md)에 기록하고 [fetch 호출 문맥](topics/extension-fetch-context.md)을 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-185 Wiki 검증 기준 브랜치
+
+- Approval-Digest: 465066ab4d30dd20534d671736989ccaafc3fda9ae84604459ab37a2b8b066c5
+- Source-Revision: 0ca328ce84497e30fa10d300141967ca2116693a
+- 승인한 후보를 [CF-185 bundle](../raw/issues/CF-185/manifest.md)에 기록하고 [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md)를 추가했다. 기존 raw는 보존했다.
