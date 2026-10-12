@@ -500,3 +500,9 @@
 - Approval-Digest: 179ef852f0c27dfbb2cc374949e8b18360c58d912b79a13648622ae02d0c6fc7
 - Source-Revision: c2f545f5c1349b1da28feb5203bbbe9ffaf4b525
 - 승인한 두 항목을 [CF-197 bundle](../raw/issues/CF-197/manifest.md)에 기록하고 [시스템 PR 계약](topics/release-pr-contract.md)을 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-13] ingest | CF-201 품질 관측 인터럽트 처리
+
+- Approval-Digest: 8e6c08112dd8956d9e9e3b96c057d46cb46125a296ac59b397cb4dbfb21fe226
+- Source-Revision: 149244d91f4108c183a9b09e22136bbf8a90e6b3
+- 승인한 후보를 [CF-201 bundle](../raw/issues/CF-201/manifest.md)에 기록하고 [품질 관측 인터럽트 처리](topics/quality-observation-interruption.md)를 추가했다. 기존 raw는 보존했다.
