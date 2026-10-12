@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
+import { createAnalyticsMessageHandler } from "../../src/analytics/background-analytics";
 import { createEmptyProfile } from "../../src/profile/model";
 import { App } from "./App";
 
@@ -44,5 +45,55 @@ it.each([false, true])(
     expect(copyText).toHaveBeenCalledWith(profile.contact.email);
     expect(openOptions).toHaveBeenCalledOnce();
     expect(openAutofill).toHaveBeenCalledOnce();
+  },
+);
+
+it.each([true, false])(
+  "records the actual autofill opening result (success=%s)",
+  async (success) => {
+    const payloads: { event: string; properties: Record<string, unknown> }[] =
+      [];
+    const values: Record<string, unknown> = {};
+    const handle = createAnalyticsMessageHandler({
+      key: "test-project",
+      storage: {
+        get: async () => ({ ...values }),
+        set: async (items) => {
+          Object.assign(values, items);
+        },
+      },
+      fetch: async (_input, init) => {
+        payloads.push(JSON.parse(String(init?.body)));
+        return new Response("1");
+      },
+    });
+    render(
+      <App
+        repository={{
+          load: async () => createEmptyProfile(),
+          save: async () => {},
+          loadLayout: async () => "a",
+          saveLayout: async () => {},
+        }}
+        track={(event, properties) => {
+          void handle({ type: "ANALYTICS_TRACK", event, properties });
+        }}
+        openAutofill={async () => {
+          if (!success) throw new Error("unavailable");
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "자동 기입" }));
+    await waitFor(() =>
+      expect(payloads.map((payload) => payload.event)).toEqual([
+        "autofill_start_clicked",
+        success ? "autofill_open_succeeded" : "autofill_open_failed",
+      ]),
+    );
+    expect(payloads.map((payload) => payload.properties)).toEqual([
+      { surface: "side_panel", $process_person_profile: false },
+      { surface: "side_panel", $process_person_profile: false },
+    ]);
+    if (!success) expect(screen.getByRole("alert")).toBeInTheDocument();
   },
 );

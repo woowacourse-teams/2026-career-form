@@ -43,6 +43,7 @@ describe("PostHog capture", () => {
       api_key: "test-project",
       event: "autofill_start_clicked",
       distinct_id: "anonymous",
+      timestamp: expect.any(String),
       properties: {
         surface: "in_page_panel",
         page_host: "apply.example.test",
@@ -60,8 +61,8 @@ describe("PostHog capture", () => {
       },
     });
 
-    await expect(
-      capture("landing_viewed", { surface: "site" }),
-    ).resolves.toBeUndefined();
+    await expect(capture("landing_viewed", { surface: "site" })).resolves.toBe(
+      false,
+    );
   });
 });

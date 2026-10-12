@@ -1,0 +1,211 @@
+.page {
+  min-height: 100vh;
+  padding: 32px 20px 48px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  line-height: 1.6;
+  font-family: SitePretendard, var(--font-ui);
+  box-sizing: border-box;
+}
+.page * {
+  box-sizing: border-box;
+}
+.page input,
+.page button {
+  font-family: inherit;
+}
+.page button:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+}
+.shell {
+  max-width: 820px;
+  margin: 0 auto;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+.brand img {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+.brand span {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.steps {
+  display: flex;
+  gap: 28px;
+  padding: 0;
+  margin: 32px 0 20px;
+  list-style: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.steps span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+.steps [aria-current] {
+  color: var(--color-action-strong);
+  font-weight: 700;
+}
+.steps [aria-current] span {
+  background: var(--color-action);
+  color: var(--color-on-action);
+  border-color: var(--color-action);
+}
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: clamp(22px, 5vw, 44px);
+}
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-action);
+}
+.card h1 {
+  margin: 0;
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.4;
+  letter-spacing: -0.04em;
+  color: var(--color-text-strong);
+}
+.card h1:focus {
+  outline: none;
+}
+.description {
+  margin: 12px 0 28px;
+  color: var(--color-text-muted);
+}
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.field:nth-child(n + 3) {
+  grid-column: 1 / -1;
+}
+.field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+}
+.field input:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+}
+.card button {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.card button.primary {
+  background: var(--color-action);
+  color: var(--color-on-action);
+  border-color: var(--color-action);
+}
+.card button:hover {
+  border-color: var(--color-action);
+}
+.card button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.note {
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.error {
+  color: var(--color-danger);
+  font-size: 14px;
+}
+.footer {
+  margin: 20px 12px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.instructions {
+  padding-left: 24px;
+  margin: 26px 0;
+}
+.instructions li {
+  padding: 0 0 16px 6px;
+}
+.instructions strong,
+.instructions span {
+  display: block;
+}
+.instructions span {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+@media (max-width: 480px) {
+  .page {
+    padding: 20px 12px 32px;
+  }
+  .brand span {
+    display: none;
+  }
+  .steps {
+    gap: 18px;
+    font-size: 13px;
+  }
+  .fields {
+    gap: 16px 12px;
+  }
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .card {
+    border-radius: 14px;
+  }
+}

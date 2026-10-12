@@ -1,5 +1,13 @@
 const analyticsEvents = [
   "autofill_start_clicked",
+  "onboarding_first_viewed",
+  "onboarding_autofill_selected",
+  "onboarding_postings_selected",
+  "quick_profile_viewed",
+  "profile_first_saved",
+  "quick_profile_skipped",
+  "autofill_open_succeeded",
+  "autofill_open_failed",
   "profile_copy_clicked",
   "profile_management_clicked",
   "profile_export_clicked",
