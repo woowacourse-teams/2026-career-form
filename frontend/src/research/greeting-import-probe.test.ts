@@ -69,6 +69,36 @@ describe("Greeting import research", () => {
     ]);
   });
 
+  it("reads the live Greeting unnamed email combobox without confirming or mutating it", () => {
+    control(email).closest(
+      '[data-scope="field"][data-part="root"]',
+    )!.outerHTML = `
+      <div data-scope="field" data-part="root" role="group">
+        <label for="field-email">이메일주소<span>*</span></label>
+        <div data-scope="combobox" data-part="root">
+          <div data-scope="combobox" data-part="control">
+            <div data-scope="combobox" data-part="trigger">
+              <input id="combobox:dynamic:input" type="text" role="combobox"
+                data-scope="combobox" data-part="input" value="live-structure@example.invalid">
+            </div>
+          </div>
+        </div>
+        <button type="button">이메일 확인</button>
+      </div>`;
+    const before = document.body.innerHTML;
+    const clicks: Event[] = [];
+    document
+      .querySelector("button")!
+      .addEventListener("click", (event) => clicks.push(event));
+    expect(candidate(email)).toMatchObject({
+      status: "available",
+      value: "live-structure@example.invalid",
+      profileFieldKey: "contact.contact.email",
+    });
+    expect(document.body.innerHTML).toBe(before);
+    expect(clicks).toEqual([]);
+  });
+
   it("does not guess name components or missing days", () => {
     expect(candidate("basicInformation.name")).toEqual({
       source: "basicInformation.name",
@@ -171,7 +201,7 @@ describe("Greeting import research", () => {
     "orphan",
     "two-roots",
   ])(
-    "rejects an ambiguous university group (%s) without returning its values",
+    "isolates malformed university fields or rows (%s) and preserves unambiguous values",
     (kind) => {
       const root = document.querySelector(accordion)!;
       if (kind === "gap") root.innerHTML = universityRow(0) + universityRow(2);
@@ -200,13 +230,44 @@ describe("Greeting import research", () => {
       const rows = probeGreetingImport(document).filter((item) =>
         item.source.startsWith(universityPrefix),
       );
-      expect(rows).toEqual([
-        {
-          source: universityPrefix,
-          status: "unsupported",
-          reason: "invalid_rows",
-        },
-      ]);
+      const sourceRow = (index: number) =>
+        rows.filter((item) => item.rowIndex === index);
+      if (kind === "duplicate-row") {
+        expect(
+          rows.every(
+            (item) => item.status === "unsupported" && item.value === undefined,
+          ),
+        ).toBe(true);
+      } else if (kind === "mixed-prefix" || kind === "two-roots") {
+        expect(
+          sourceRow(0).every(
+            (item) => item.status === "unsupported" && item.value === undefined,
+          ),
+        ).toBe(true);
+        expect(sourceRow(1).some((item) => item.value === "합성대학교B")).toBe(
+          true,
+        );
+      } else if (kind === "duplicate-field" || kind === "missing-anchor") {
+        expect(candidate(`${universityPrefix}.0.schoolName`)?.status).toBe(
+          "unsupported",
+        );
+        expect(candidate(start)?.value).toBe("2020-03");
+        expect(sourceRow(1).some((item) => item.value === "합성대학교B")).toBe(
+          true,
+        );
+      } else if (kind === "orphan") {
+        expect(
+          sourceRow(2).every(
+            (item) => item.status === "unsupported" && item.value === undefined,
+          ),
+        ).toBe(true);
+        expect(candidate(start)?.value).toBe("2020-03");
+      } else {
+        expect(sourceRow(2).some((item) => item.value === "합성대학교B")).toBe(
+          true,
+        );
+        expect(candidate(start)?.value).toBe("2020-03");
+      }
       expect(candidate(email)?.status).toBe("available");
     },
   );
@@ -257,7 +318,12 @@ describe("Greeting import research", () => {
     const save = vi.spyOn(Storage.prototype, "setItem");
     try {
       const result = probeGreetingImport(document);
-      expect(result).toHaveLength(9);
+      expect(
+        result.filter((item) => item.status !== "unsupported"),
+      ).toHaveLength(9);
+      expect(
+        result.filter((item) => item.reason === "no_profile_mapping"),
+      ).toHaveLength(2);
       expect(
         result.some((item) => item.value === "current@example.invalid"),
       ).toBe(true);

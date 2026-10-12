@@ -18,9 +18,12 @@ afterEach(() => {
   }
 });
 
-async function mountImport() {
+async function mountImport(extra = "") {
   const fixture = document.createElement("div");
-  fixture.innerHTML = greetingImportFixture();
+  fixture.innerHTML = greetingImportFixture().replace(
+    "</form>",
+    extra + "</form>",
+  );
   document.body.append(fixture);
   const email = fixture.querySelector<HTMLInputElement>(
     '[name="basicInformation.email"]',
@@ -140,5 +143,54 @@ it("cancels an actual Greeting review without profile writes or source-page even
   expect(state.saves()).toBe(0);
   expect(state.saved()).toBeUndefined();
   expect(state.stored()).toEqual(state.baseline);
+  state.expectSourceUnchanged();
+});
+
+it("imports multiple section types around unknown and malformed fields in Chromium", async () => {
+  const state = await mountImport(`
+    <input name="basicInformation.gender" value="남성">
+    <div data-scope="accordion" data-part="root">
+      <div data-scope="accordion" data-part="item">
+        <input name="workHistory.workExperiences.4.companyName" value="합성회사">
+        <textarea name="workHistory.workExperiences.4.dutiesResponsibility">합성 업무</textarea>
+        <input name="custom.companyQuestion" value="제외할 추가 질문">
+        <button type="button" name="workHistory.workExperiences.4.employmentPeriod.startDate">날짜 오류</button>
+      </div>
+      <div data-scope="accordion" data-part="item">
+        <input name="languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials" value="합성자격증">
+        <input name="languagesCertificationsAndOtherActivity.certificatesLicenses.0.registrationNumber" value="SYNTHETIC-001">
+      </div>
+    </div>`);
+  for (const name of [
+    "성별 가져오기",
+    "직장경력 5 직장명 가져오기",
+    "직장경력 5 담당업무 가져오기",
+    "자격증·면허증 1 자격증명 가져오기",
+    "자격증·면허증 1 등록번호 가져오기",
+  ]) {
+    await userEvent.click(state.ui.getByRole("checkbox", { name }));
+  }
+  for (const name of ["직장경력 5 저장 대상", "자격증·면허증 1 저장 대상"]) {
+    const select = state.ui.getByLabelText(name) as HTMLSelectElement;
+    select.value = "new";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  expect(
+    state.ui.queryByRole("checkbox", { name: "직장경력 5 입사일 가져오기" }),
+  ).toBeNull();
+  await userEvent.click(
+    state.ui.getByRole("button", { name: "선택한 정보 저장" }),
+  );
+  await expect.poll(() => state.saved()).toBeDefined();
+  expect(state.stored().personal).toEqual({ gender: "남성" });
+  expect(state.stored().careers[0].values).toEqual({
+    companyName: "합성회사",
+    responsibilities: "합성 업무",
+  });
+  expect(state.stored().certifications[0].values).toEqual({
+    name: "합성자격증",
+    registrationNo: "SYNTHETIC-001",
+  });
+  expect(state.stored().education).toEqual([]);
   state.expectSourceUnchanged();
 });

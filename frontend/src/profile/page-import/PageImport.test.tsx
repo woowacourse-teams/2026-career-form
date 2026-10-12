@@ -293,3 +293,131 @@ it("recovers from a read failure without displaying its payload", async () => {
   );
   expect(await screen.findByText(/가져올 정보가 없습니다/)).toBeVisible();
 });
+
+it("selects recognized fields across categories, keeps row destinations separate and skips custom questions", async () => {
+  let stored = createEmptyProfile();
+  stored.contact.addressLine1 = "보존할 주소";
+  const repository: ProfileRepository = {
+    load: async () => structuredClone(stored),
+    save: async (profile) => {
+      stored = structuredClone(profile);
+    },
+    loadLayout: async () => "a",
+    saveLayout: async () => {},
+  };
+  const onSaved = vi.fn();
+  render(
+    <PageImport
+      repository={repository}
+      onSaved={onSaved}
+      onClose={() => {}}
+      readCandidates={async () => [
+        {
+          source: "basicInformation.gender",
+          profileFieldKey: "personal.personal.gender",
+          status: "available",
+          reason: "direct",
+          value: "남성",
+        },
+        {
+          source: "workHistory.workExperiences.0.companyName",
+          rowIndex: 0,
+          profileFieldKey: "careers.career.companyName",
+          status: "review",
+          reason: "catalog_unverified",
+          value: "합성회사",
+        },
+        {
+          source: "workHistory.workExperiences.0.dutiesResponsibility",
+          rowIndex: 0,
+          profileFieldKey: "careers.career.responsibilities",
+          status: "available",
+          reason: "direct",
+          value: "합성 업무",
+        },
+        {
+          source:
+            "languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials",
+          rowIndex: 0,
+          profileFieldKey: "certifications.certificate.name",
+          status: "review",
+          reason: "catalog_unverified",
+          value: "합성자격",
+        },
+        {
+          source: "question.custom",
+          status: "unsupported",
+          reason: "no_profile_mapping",
+        },
+      ]}
+    />,
+  );
+  await screen.findByRole("checkbox", { name: "직장경력 1 직장명 가져오기" });
+  expect(screen.getByText(/대응하는 프로필 항목이 없/)).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "전체 선택" }));
+  fireEvent.change(screen.getByLabelText("직장경력 1 저장 대상"), {
+    target: { value: "new" },
+  });
+  fireEvent.change(screen.getByLabelText("자격증·면허증 1 저장 대상"), {
+    target: { value: "new" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "선택한 정보 저장" }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+  expect(stored.personal).toEqual({ gender: "남성" });
+  expect(stored.careers[0]).toMatchObject({
+    sectionId: "career",
+    values: { companyName: "합성회사", responsibilities: "합성 업무" },
+  });
+  expect(stored.certifications[0]).toMatchObject({
+    sectionId: "certificate",
+    values: { name: "합성자격" },
+  });
+  expect(stored.contact.addressLine1).toBe("보존할 주소");
+});
+
+it("requires explicit English name components and leaves sensitive fields unselected until requested", async () => {
+  let stored = createEmptyProfile();
+  const repository: ProfileRepository = {
+    load: async () => structuredClone(stored),
+    save: async (p) => {
+      stored = p;
+    },
+    loadLayout: async () => "a",
+    saveLayout: async () => {},
+  };
+  const onSaved = vi.fn();
+  render(
+    <PageImport
+      repository={repository}
+      onSaved={onSaved}
+      onClose={() => {}}
+      readCandidates={async () => [
+        {
+          source: "basicInformation.englishName",
+          status: "review",
+          reason: "name_unsplittable",
+          value: "Synthetic Applicant",
+        },
+        {
+          source: "military.status",
+          profileFieldKey: "military.military.militaryStatus",
+          status: "available",
+          reason: "direct",
+          value: "not_applicable",
+        },
+      ]}
+    />,
+  );
+  expect(await screen.findByLabelText("영문 성")).toHaveValue("");
+  expect(
+    screen.getByRole("checkbox", { name: "병역 상태 가져오기" }),
+  ).not.toBeChecked();
+  fireEvent.change(screen.getByLabelText("영문 성"), {
+    target: { value: "Applicant" },
+  });
+  fireEvent.click(screen.getByRole("checkbox", { name: "영문 성 가져오기" }));
+  fireEvent.click(screen.getByRole("button", { name: "선택한 정보 저장" }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+  expect(stored.personal).toEqual({ englishFamilyName: "Applicant" });
+  expect(stored.military).toEqual({});
+});
