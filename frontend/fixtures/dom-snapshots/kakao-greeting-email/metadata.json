@@ -69,7 +69,7 @@
   "recollection": {
     "replaced_fixture": "초기 규칙으로 Kakao Mobility Greeting에서 발췌한 2개 컨트롤 샘플",
     "changes": [
-      "초기 샘플은 Greeting으로 판정되지 않아 범용 경로로 수집됐다(후보 2개). 재수집본은 greeting으로 판정되고 후보 45개, 섹션 32개가 수집된다",
+      "초기 샘플은 Greeting으로 판정되지 않아 범용 경로로 수집됐다(후보 2개). 재수집본은 greeting으로 판정되고 섹션 32개에 일반 후보 45개와 반복 묶음 4개의 후보 44개, 모두 89개가 수집된다",
       "초기 샘플의 '정적 구조에서는 이메일이 written'은 Greeting 어댑터를 거치지 않은 결과였다",
       "재수집본에서도 Greeting 워크플로 전체를 오프라인 실행하면 이메일주소는 written이고 예외가 없다"
     ]
@@ -96,7 +96,7 @@
     "command": "스크래치 테스트(삭제함): 재수집본 + greetingWorkflowAdapter + createAnalyzeFields, 이메일주소만 MATCH",
     "product_revision": "584a9fe727d9a1872cf4f74188e02d95cf19bd8c",
     "observed": [
-      "회사 판정 greeting, 후보 45개, 이메일주소는 basicInformation.email로 수집된다",
+      "회사 판정 greeting, 후보 89개(반복 묶음 4개 포함), 이메일주소는 basicInformation.email로 수집된다",
       "이메일주소 입력란은 type=text, role=combobox, data-scope=combobox, data-part=input이고 같은 필드 루트에 버튼 1개가 있다",
       "검토 계획 available, 쓰기 결과 written, 예외 없음"
     ],

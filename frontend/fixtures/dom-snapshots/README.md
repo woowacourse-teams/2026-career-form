@@ -8,7 +8,7 @@
 
 | 픽스처                                                                         | 판정        | 재현       | 요약                                                                                                                              |
 | ------------------------------------------------------------------------------ | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [sk-careers-application-form](sk-careers-application-form/review.md)           | 조건부 등록 | 해당 없음  | 전체 폼 구조 기준선. SK 어댑터로 후보 49개, 숨김 27개. 특정 실패 재현이 아님                                                      |
+| [sk-careers-application-form](sk-careers-application-form/review.md)           | 조건부 등록 | 해당 없음  | 전체 폼 구조 기준선. 반복 행 종류별 1개 포함, SK 어댑터로 후보 134개(숨김 36개). 특정 실패 재현이 아님                            |
 | [lg-ai-research-birth-split-email](lg-ai-research-birth-split-email/review.md) | 조건부 등록 | 재현됨     | 생년월일 label의 for가 없는 id를 가리켜 select 3개에 생년월일 문맥이 없음. 분리 이메일은 막히지 않고 아이디 칸이 이메일 후보가 됨 |
 | [kakao-greeting-email](kakao-greeting-email/review.md)                         | 보류        | 재현 안 됨 | 같은 사이트·Greeting 경로에서도 이메일이 written. 원인은 페이지 동작 등 정적 구조 밖으로 추정                                     |
 | [naver-panel-loss](naver-panel-loss/review.md)                                 | 수집 중단   | 해당 없음  | 필드 구조가 아니라 패널 생명주기 현상                                                                                             |

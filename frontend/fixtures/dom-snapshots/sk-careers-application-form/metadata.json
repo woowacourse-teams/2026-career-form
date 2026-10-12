@@ -12,23 +12,23 @@
     "unverified_reason": "INSTALLATION_UNAVAILABLE"
   },
   "scope": {
-    "description": "지원서 폼 하나(document.forms[0]) 전체. 사용자가 반복 행과 조건부 영역을 종류별로 한 번씩 연 상태",
+    "description": "지원서 폼 하나(document.forms[0]) 전체. 사용자가 학력(고등학교·대학·대학원), 경력, 경험, 수상, 자격, 어학 반복 행을 종류별로 하나씩 추가한 상태",
     "controls": {
-      "text": 28,
-      "tel": 6,
-      "file": 3,
-      "radio": 7,
-      "select": 13,
-      "textarea": 1,
+      "text": 67,
+      "tel": 19,
+      "file": 5,
+      "radio": 15,
+      "select": 34,
+      "textarea": 5,
       "checkbox": 1
     },
-    "control_total": 59,
-    "hidden_controls": 28,
-    "options": 64,
-    "labels": 45,
+    "control_total": 146,
+    "hidden_controls": 37,
+    "options": 336,
+    "labels": 111,
     "excluded": [
-      "type=hidden 입력란 21개",
-      "폼 밖에 있는 숨김 컨트롤 162개(추가 버튼이 쓰는 행 템플릿으로 추정)",
+      "type=hidden 입력란 44개",
+      "폼 밖에 있는 숨김 행 템플릿",
       "헤더, 내비게이션, 푸터"
     ]
   },
@@ -49,30 +49,38 @@
       "URL",
       "5자리 이상 숫자열",
       "이메일 형태 문자열",
-      "코드 식별자 형태가 아닌 class 토큰 15개"
+      "코드 식별자 형태가 아닌 class 토큰 20개"
     ],
     "replaced": [
-      "코드 식별자 형태가 아닌 id 4개를 익명 값으로 치환하고 참조도 함께 치환",
-      "option value 48개를 합성 코드로 치환",
-      "현재 입력값과 같은 텍스트 2곳과 길이·패턴 기준에 걸린 텍스트 2곳을 [TEXT]로 치환"
+      "코드 식별자 형태가 아닌 id 34개와 name 4개를 익명 값으로 치환하고 참조도 함께 치환",
+      "option value 277개를 합성 코드로 치환",
+      "현재 입력값과 같은 텍스트 16곳과 길이·패턴 기준에 걸린 텍스트 2곳을 [TEXT]로 치환"
     ],
     "preserved": [
-      "SK 어댑터가 읽는 코드 식별자 형태의 id 69개, name 58개, class 토큰",
-      "20자 이하 선택지 코드(radio·checkbox 8개, option 16개)",
+      "SK 어댑터가 읽는 코드 식별자 형태의 id 109개, name 141개, class 토큰",
+      "20자 이하 선택지 코드(radio·checkbox 16개, option 58개)",
       "라벨, 안내 문구, 옵션 텍스트, placeholder 원문"
     ],
-    "preserved_common_text": "사용자가 개인정보 검토를 통과로 승인했다",
-    "redacted_text_count": 4,
+    "preserved_common_text": "사용자가 개인정보 검토를 통과로 확인했다",
+    "redacted_text_count": 18,
     "dropped_references": 0,
-    "broken_references_in_original": 2
+    "broken_references_in_original": 2,
+    "duplicate_ids_in_original": 9
   },
   "synthetic_behavior": [
-    "원본에서 CSS로 숨겨진 가장 바깥 요소 53곳에 hidden 속성을 합성했다. 숨김 컨트롤 수는 원본 28개, 정제 28개로 같다"
+    "원본에서 CSS로 숨겨진 가장 바깥 요소 177곳에 hidden 속성을 합성했다. 숨김 컨트롤 수는 원본 37개, 정제 37개로 같다"
   ],
+  "recollection": {
+    "replaced_fixture": "반복 행을 추가하지 않은 상태(컨트롤 59개)에서 만든 첫 SK 샘플",
+    "changes": [
+      "첫 샘플은 학력·경력 등 반복 행이 하나도 없어 추가 버튼만 있었다",
+      "재수집본은 반복 묶음 14개에 후보 85개가 추가로 수집된다"
+    ]
+  },
   "limitations": [
     "폼 밖 행 템플릿을 제외해 추가 버튼으로 행이 생기는 동작은 재현하지 않는다",
     "주소 검색 레이어 등 폼 밖 팝업은 포함하지 않는다",
-    "수집 시점에 보이는 컨트롤은 31개였고 모든 조건부 영역이 열렸는지는 확인하지 못했다",
+    "각 반복 행은 하나씩만 있어 여러 행일 때의 순서·개수 동작은 재현하지 않는다",
     "페이지 CSS와 레이아웃은 없고 숨김 여부는 합성 hidden 속성으로만 표현한다",
     "페이지 스크립트가 만드는 연결이나 이벤트는 재현하지 않는다",
     "설치 확장 revision과 실사이트 성공률의 근거가 아니다"
@@ -86,16 +94,16 @@
     "structure": {
       "result": "PARTIAL",
       "human_reviewed": false,
-      "note": "브라우저 안 자동 대조(컨트롤·옵션·라벨·숨김 컨트롤 수, 끊긴 참조 수)는 일치했다. 사람 구조 검토는 미실시"
+      "note": "브라우저 안 자동 대조(컨트롤·옵션·라벨·숨김 컨트롤 수, 끊긴 참조 수, 중복 id 수)는 일치했다. 사람 구조 검토는 미실시"
     }
   },
   "reproduction": {
     "command": "cd frontend && npx vitest run --project unit src/autofill/workflow/dom-snapshot.sk-careers.test.ts",
-    "product_revision": "a2abd62c2271acb0de7796655b254c88aa60bfdc",
+    "product_revision": "584a9fe727d9a1872cf4f74188e02d95cf19bd8c",
     "observed": [
-      "SK 어댑터로 수집하면 6개 섹션에 후보 49개(28, 19, 1, 1, 0, 0)가 나온다",
-      "후보 종류는 text 33, radio 3, select 13이고 보이는 후보 22개, 숨김 후보 27개, 라벨 문맥이 있는 후보 28개다"
+      "SK 어댑터로 수집하면 섹션 12개에 일반 후보 49개와 반복 묶음 14개의 후보 85개, 모두 134개가 나온다",
+      "후보 종류는 text 86, radio 8, select 34, textarea 5, checkbox 1이고 보이는 후보 98개, 숨김 후보 36개, 라벨 문맥 94개, 반복 문맥 85개다"
     ],
-    "mutation_check": "합성 hidden 속성을 지우면 숨김 후보가 사라지고, class를 지우면 SK 섹션 구성이 달라짐을 테스트에서 확인한다"
+    "mutation_check": "합성 hidden 속성을 지우면 134개 모두 보임이 되고, class를 지우면 섹션과 반복 묶음이 사라져 한 섹션에 134개가 모임을 테스트에서 확인한다"
   }
 }
