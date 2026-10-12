@@ -78,7 +78,7 @@ class VerificationBaseTest(unittest.TestCase):
 
     def test_pr_base_is_used_on_detached_checkout(self) -> None:
         self.git("switch", "--detach", "-q")
-        self.environment["GITHUB_BASE_REF"] = "release/1.2.0"
+        self.environment = {**self.environment, "GITHUB_BASE_REF": "release/1.2.0"}
         self.assertEqual(0, self.verify())
 
     def test_develop_default_still_protects_existing_raw(self) -> None:
@@ -89,7 +89,9 @@ class VerificationBaseTest(unittest.TestCase):
 
     def test_main_push_metadata_is_used_on_detached_checkout(self) -> None:
         self.git("switch", "--detach", "-q")
-        self.environment.update(GITHUB_EVENT_NAME="push", GITHUB_REF_NAME="main")
+        self.environment = {
+            **self.environment, "GITHUB_EVENT_NAME": "push", "GITHUB_REF_NAME": "main",
+        }
         self.assertEqual(0, self.verify())
 
     def test_release_existing_raw_changes_are_rejected(self) -> None:
@@ -117,7 +119,7 @@ class VerificationBaseTest(unittest.TestCase):
         self.assertEqual(2, self.verify("--base-ref", "origin/release/1.2.0"))
 
     def test_pr_base_cannot_be_overridden_by_cli(self) -> None:
-        self.environment["GITHUB_BASE_REF"] = "develop"
+        self.environment = {**self.environment, "GITHUB_BASE_REF": "develop"}
         self.assertEqual(2, self.verify("--base-ref", "origin/release/1.2.0"))
 
     def test_work_branch_cannot_select_main_as_base(self) -> None:
@@ -129,7 +131,7 @@ class VerificationBaseTest(unittest.TestCase):
 
     def test_pr_without_base_does_not_guess_from_checkout(self) -> None:
         self.git("switch", "-q", "develop")
-        self.environment["GITHUB_EVENT_NAME"] = "pull_request"
+        self.environment = {**self.environment, "GITHUB_EVENT_NAME": "pull_request"}
         self.assertEqual(2, self.verify())
 
     def test_pre_push_uses_branch_base_and_blocks_existing_raw_change(self) -> None:
