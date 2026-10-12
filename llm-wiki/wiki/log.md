@@ -484,3 +484,5 @@
 - Source-Revision: aa33c040f7f183a3fce454c89db4dc33f5bda415
 - 새로 승인한 네 후보로 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)과 [가져오기 topic](topics/greeting-profile-import.md)을 제품 구현 상태에 맞춰 갱신했다. 기준 브랜치의 raw는 변경하지 않았다.
 - 선택 병합·저장, 이름·날짜·학력 확인, 공통 저장 큐의 충돌 보호와 복구, 합성 fixture 검증의 한계를 기록했다.
+
+- 2026-10-12: CF-192 승인된 전체 필드 가져오기·부분 실패 격리·Aside LF/HLB 검증 근거로 병합 전 raw와 topic을 갱신했다.
