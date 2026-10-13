@@ -94,6 +94,54 @@ metric별 numerator, denominator와 rate delta로 유지한다. source의 모든
   --compare-to /tmp/generic-autofill-baseline.json
 ```
 
+## 필드 매핑 공급자 벤치마크
+
+`harness/fixtures/field-mapping-benchmark/`는 범용 fields 분석 공급자(OpenAI, Jev)를 같은 입력과 같은 정답으로 비교한다.
+
+- `requests/`: 네 사이트 지원서의 fields 분석 요청 비식별 사본이다. host와 path, snapshotId, section·item·candidate ID, DOM id와 name을 별칭으로 바꿨다. 라벨, placeholder, 선택지 문구는 매핑 근거라서 유지한다.
+- `labels-v1.json`: 후보마다 `DIRECT:<프로필 키>`, `DERIVED:<recipe>`, `NO_MATCH` 중 하나의 기대값과 검수 상태를 둔다. 현재 `label_status`는 `DRAFT`이며 `NEEDS_REVIEW` 후보는 사람이 확정해야 한다.
+- `profile-keys-v1.json`: 기대값이 쓸 수 있는 백엔드 프로필 키 목록이다.
+- `results/`: 같은 요청으로 수집한 기준 결과다. Jev 결과에는 후보별 기준 적용 전 1순위, confidence와 상위 확률이 있다. 수집 조건은 각 파일의 `collected_with`에 있다.
+
+새 캡처 요청은 별칭 대응표를 저장소 밖에 두고 비식별 사본을 만든다.
+
+```bash
+.venv/bin/python harness/scripts/deidentify-field-request.py \
+  --input /tmp/captured-fields-request.json --site-id example \
+  --output harness/fixtures/field-mapping-benchmark/requests/example.json \
+  --alias-map /tmp/example-aliases.json
+```
+
+실행 중인 백엔드로 요청을 다시 보내 결과 파일을 만든다. 공급자 키는 사람이 백엔드 환경에 준비한다. Jev 판단은 백엔드 로그의 `[JEV]` 줄에서 읽으므로 로그 명령을 함께 준다.
+
+```bash
+.venv/bin/python harness/scripts/replay-field-mapping.py \
+  --labels harness/fixtures/field-mapping-benchmark/labels-v1.json \
+  --base-url http://127.0.0.1:18082 --provider jev --model jev-latest \
+  --collected-with "<백엔드 버전과 설정>" --output /tmp/jev.json \
+  --jev-log-command "docker logs --since {since} --until {until} <Jev 백엔드 컨테이너>"
+```
+
+라벨로 채점한다. `--thresholds`는 Jev의 기준 적용 전 1순위를 confidence 기준값별로 다시 채점한다. 이 재채점은 백엔드의 충돌 검사를 거치지 않은 값이다.
+
+```bash
+.venv/bin/python harness/scripts/evaluate-field-mapping.py \
+  --labels harness/fixtures/field-mapping-benchmark/labels-v1.json \
+  --results harness/fixtures/field-mapping-benchmark/results/openai-v1.json \
+            harness/fixtures/field-mapping-benchmark/results/jev-v1.json \
+  --thresholds 0.5,0.6,0.7,0.8,0.9
+```
+
+정확도(precision)는 맞은 매핑 / 매핑한 후보, 재현율(recall)은 맞은 매핑 / 기대값이 매핑인 후보, `wrong_rate`는 틀린 매핑 / 전체 후보다. 기대값이 `NO_MATCH`인 후보에 매핑하면 틀린 매핑이다. 응답이 `LLM_UNAVAILABLE`이면 후보를 `ERROR`로 기록하고 매핑으로 세지 않는다.
+
+초안 라벨 기준 결과(221개 후보, 검수 필요 78개)는 다음과 같다. 라벨 확정 전 수치라서 공급자 우열의 결론으로 쓰지 않는다.
+
+| 공급자 | 매핑 | 맞음 | 틀림 | 정확도 | 재현율 |
+| --- | --- | --- | --- | --- | --- |
+| OpenAI | 85 | 60 | 25 | 0.71 | 0.51 |
+| Jev, 기준 0.8 | 41 | 32 | 9 | 0.78 | 0.27 |
+| Jev, 기준 0.5 재채점 | 66 | 50 | 16 | 0.76 | 0.43 |
+
 ## 실패 페이지 DOM 픽스처 수집
 
 전용 [`cf-dom-snapshot-collection`](../.agents/skills/cf-dom-snapshot-collection/SKILL.md)
