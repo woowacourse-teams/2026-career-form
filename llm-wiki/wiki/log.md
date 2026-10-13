@@ -473,6 +473,6 @@
 
 ## [2026-10-13] ingest | CF-206 필드 매핑 공급자 벤치마크
 
-- Approval-Digest: a9a01459b73f906d1d16563fd8c566c8603c51f57681623df764e91964943808
-- Source-Revision: b5ee3a85b51fa328897eb001dfd1b1e527204b6a
+- Approval-Digest: 5ee6bf070b5742523da7c39fa14812a9ced44bd4344ca53c5b5e5e2419bfda28
+- Source-Revision: 62691529476335940df2b4aa3f584b04e8135174
 - 승인한 다섯 후보를 [CF-206 bundle](../raw/issues/CF-206/manifest.md)에 기록하고 [필드 매핑 공급자 벤치마크](topics/field-mapping-benchmark.md), [Jev fields 요청 한도와 응답 검증](topics/jev-field-request-limits.md) topic을 새로 만들었다. 기존 raw는 보존했다.

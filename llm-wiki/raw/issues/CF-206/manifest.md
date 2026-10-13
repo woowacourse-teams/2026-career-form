@@ -2,8 +2,8 @@
 
 > Issue: CF-206
 > Collected: 2026-10-13
-> Approval-Digest: a9a01459b73f906d1d16563fd8c566c8603c51f57681623df764e91964943808
-> Source-Revision: b5ee3a85b51fa328897eb001dfd1b1e527204b6a
+> Approval-Digest: 5ee6bf070b5742523da7c39fa14812a9ced44bd4344ca53c5b5e5e2419bfda28
+> Source-Revision: 62691529476335940df2b4aa3f584b04e8135174
 
 ## field-mapping-benchmark
 
