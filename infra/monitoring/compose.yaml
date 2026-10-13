@@ -48,6 +48,12 @@ services:
         bind:
           create_host_path: false
       - type: bind
+        source: ./mongodb-metrics.yaml
+        target: /etc/prometheus/mongodb-metrics.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
         source: ${MONITORING_DATA_DIR:-/srv/career-form-monitoring}/prometheus
         target: /prometheus
         bind:

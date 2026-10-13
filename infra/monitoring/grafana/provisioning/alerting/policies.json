@@ -14,11 +14,40 @@
       "repeat_interval": "10m",
       "routes": [
         {
+          "receiver": "career-db-discord",
+          "object_matchers": [
+            [
+              "service",
+              "=",
+              "mongodb-observation"
+            ]
+          ],
+          "group_by": [
+            "grafana_folder",
+            "kind",
+            "env",
+            "instance",
+            "pool",
+            "command"
+          ],
+          "group_wait": "30s",
+          "group_interval": "1m",
+          "repeat_interval": "10m"
+        },
+        {
           "receiver": "career-discord",
           "object_matchers": [
-            ["service", "=", "host"]
+            [
+              "service",
+              "=",
+              "host"
+            ]
           ],
-          "group_by": ["grafana_folder", "alertname", "instance"]
+          "group_by": [
+            "grafana_folder",
+            "alertname",
+            "instance"
+          ]
         }
       ]
     }
