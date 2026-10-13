@@ -1,3 +1,5 @@
+import { ownedDetailControl } from "../adapters/hplace/detail";
+import { detailTargetValue } from "../adapters/hplace/detail-write";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
@@ -207,6 +209,19 @@ export function matchesResultValue(
     return false;
   if (binding?.type === "DERIVED" && binding.recipe !== "YEAR_MONTH")
     return false;
+  if (
+    handle &&
+    ownedDetailControl(handle)?.key === "birthday" &&
+    handle.candidateId === item.candidateId &&
+    item.analysis?.candidateId === item.candidateId &&
+    item.analysis.mappingStatus === "ADAPTER_VERIFIED" &&
+    item.analysis.writePlan?.command === "SET_TEXT" &&
+    binding?.type === "DIRECT" &&
+    binding.profileFieldKey === "personal.personal.birthDate"
+  ) {
+    const target = detailTargetValue("birthday", right);
+    return target !== undefined && left === target;
+  }
   const key = binding?.profileFieldKey ?? item.profileFieldKey;
   const kind = key ? fieldTypes.get(key) : undefined;
   const precision = greetingDatePrecision(item, key, handle);

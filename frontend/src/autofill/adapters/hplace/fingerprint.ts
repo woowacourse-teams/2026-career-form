@@ -21,6 +21,22 @@ export function isHplaceDocument(document: Document): boolean {
     ids.every((id) => document.getElementById(id) !== null);
 
   if (
+    location.pathname === "/mrs2/applicant/resume/writeResume" &&
+    ["writeResume.js", "writeResumeTemplate.js"].every((name) =>
+      scripts.some((path) =>
+        path.endsWith(`/mrs2/release/js/applicant/writeResume/${name}`),
+      ),
+    ) &&
+    document.querySelector(
+      'form#frm section.writeResume[data-code="11"] input#englishName[name="englishName"]',
+    ) &&
+    document.querySelector(
+      'form#frm section.writeResume[data-code="13"] input[name="currentAddress.detailAddress"]',
+    )
+  )
+    return true;
+
+  if (
     scripts.some((path) =>
       path.endsWith("/mrs2/release/js/applicant/applicantCommon.js"),
     ) &&

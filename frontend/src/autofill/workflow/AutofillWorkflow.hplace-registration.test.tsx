@@ -29,21 +29,24 @@ it("fills three logical fields and six owned inputs, then leaves them unchanged 
     onExit: () => undefined,
     repository: { load: async () => profile },
     apiClient: {
-      analyzePreparation: async (
-        request: import("../api/types").PreparationAnalyzeRequest,
-      ) => ({
-        snapshotId: request.snapshotId,
-        mode: "ADAPTER" as const,
-        analysisStatus: "COMPLETE" as const,
-        preparationPlans: [],
-      }),
-      analyzeFields: async (
-        request: import("../api/types").FieldsAnalyzeRequest,
-      ) => registrationAnalysis(request),
+      analyzePreparation: vi.fn(
+        async (request: import("../api/types").PreparationAnalyzeRequest) => ({
+          snapshotId: request.snapshotId,
+          mode: "ADAPTER" as const,
+          analysisStatus: "COMPLETE" as const,
+          preparationPlans: [],
+        }),
+      ),
+      analyzeFields: vi.fn(
+        async (request: import("../api/types").FieldsAnalyzeRequest) =>
+          registrationAnalysis(request),
+      ),
     },
   };
   const view = render(<AutofillWorkflow {...props} />);
   expect(await screen.findByLabelText("입력 완료 3개")).toBeVisible();
+  expect(props.apiClient.analyzePreparation).toHaveBeenCalledTimes(1);
+  expect(props.apiClient.analyzeFields).toHaveBeenCalledTimes(2);
   const values = () =>
     ["name", "mobile1", "mobile2", "mobile3", "email", "emailConfirm"].map(
       (id) => (document.getElementById(id) as HTMLInputElement).value,
@@ -72,6 +75,8 @@ it("fills three logical fields and six owned inputs, then leaves them unchanged 
   expect(await screen.findByText("기입 결과")).toBeVisible();
   expect(screen.getByLabelText("확인 필요 0개")).toBeVisible();
   expect(validation.inputEvents()).toBe(count);
+  expect(props.apiClient.analyzePreparation).toHaveBeenCalledTimes(2);
+  expect(props.apiClient.analyzeFields).toHaveBeenCalledTimes(4);
   expect(values()).toEqual([
     "테스트사용자",
     "010",

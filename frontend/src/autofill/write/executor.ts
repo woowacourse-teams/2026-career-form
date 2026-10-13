@@ -1,3 +1,9 @@
+import {
+  detailAddressMatches,
+  writeDetail,
+} from "../adapters/hplace/detail-write";
+import { ownedDetailControl } from "../adapters/hplace/detail";
+import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
   closeGreetingEmailPopup,
@@ -13,7 +19,7 @@ import { greetingSyntheticDomName } from "../adapters/greeting/collection";
 import { matchesResultValue } from "../workflow/result-value-match";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
 import { executeButtonDropdownWrite } from "./button-dropdown-executor";
-import { skipped, type ApprovedWriteResult } from "./write-result";
+import { skipped, written, type ApprovedWriteResult } from "./write-result";
 import { debugWriteRun } from "../debug/autofill-debug";
 import {
   executeApprovedSearchWrites,
@@ -129,6 +135,7 @@ export async function executeApprovedWritesAfterPageSettles({
   calendarOnly = false,
   settledRegistry,
   onSearchFollowUp,
+  hplaceAddress,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
@@ -141,6 +148,8 @@ export async function executeApprovedWritesAfterPageSettles({
   signal?: AbortSignal;
   document?: Document;
   calendarOnly?: boolean;
+  /** Local profile identity only; never included in analysis requests. */
+  hplaceAddress?: AddressIdentity;
   /** Greeting-only readback registry, with the original candidate IDs safely rebound. */
   settledRegistry?: () =>
     CandidateRegistry | undefined | Promise<CandidateRegistry | undefined>;
@@ -182,6 +191,70 @@ export async function executeApprovedWritesAfterPageSettles({
     document?.URL === url &&
     (!document || resolveDocumentCompany(document) !== "hplace");
   try {
+    if (companyId === "hplace" && !calendarOnly) {
+      const results: ApprovedWriteResult[] = [];
+      const initialValues = items.map((item) => item.profileValue);
+      const seen = new Set<string>();
+      const current = () =>
+        !signal?.aborted &&
+        assertCurrent?.() !== false &&
+        document?.URL === url &&
+        resolveDocumentCompany(document!) === "hplace";
+      for (const item of items) {
+        if (beforeWrite) await beforeWrite(item);
+        const lookup = registry.lookupField(item.candidateId);
+        const success =
+          approvedCandidateIds.has(item.candidateId) &&
+          !seen.has(item.candidateId) &&
+          lookup.status === "ready" &&
+          (await writeDetail(
+            lookup.handle,
+            item,
+            current,
+            beforeMutation,
+            hplaceAddress,
+          ));
+        seen.add(item.candidateId);
+        const result = success
+          ? written(item.candidateId)
+          : skipped(
+              item.candidateId,
+              "needs-verification",
+              "REVIEW_UNAVAILABLE",
+              "검증된 상세 지원서 필드만 입력할 수 있습니다.",
+            );
+        results.push(result);
+      }
+      const profileRetained = beforeMutation ? await beforeMutation() : true;
+      return results.map((result, index) => {
+        const item = items[index];
+        const lookup = registry.lookupField(item.candidateId);
+        const retained =
+          profileRetained &&
+          current() &&
+          lookup.status === "ready" &&
+          (ownedDetailControl(lookup.handle)?.key !== "detailAddress" ||
+            detailAddressMatches(lookup.handle, hplaceAddress)) &&
+          item.profileValue === initialValues[index] &&
+          matchesResultValue(
+            item,
+            lookup.handle.elements[0]?.value ?? "",
+            item.profileValue ?? "",
+            lookup.handle,
+          );
+        const finalResult =
+          result.status === "written" && !retained
+            ? skipped(
+                item.candidateId,
+                "needs-verification",
+                "RETAINED_VALUE_UNCONFIRMED",
+                "입력한 값이 유지되는지 확인하지 못했습니다.",
+              )
+            : result;
+        if (current()) onResult?.(item, finalResult, registry);
+        return finalResult;
+      });
+    }
     if (calendarOnly) {
       const calendarResults: ApprovedWriteResult[] = [];
       let halted = false;

@@ -52,8 +52,8 @@ class HplacePolicyTest {
         var document = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalHplaceFormPolicySeeder(policies).run(null);
         verify(policies).save(document.capture());
-        when(policies.findByCompanyKeyAndVersion("hplace", 1)).thenReturn(Optional.of(document.getValue()));
-        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 1);
+        when(policies.findByCompanyKeyAndVersion("hplace", 2)).thenReturn(Optional.of(document.getValue()));
+        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 2);
         var router = new FormAnalysisRouter((host, path) -> new NotRegistered(),
             (host, path) -> Decision.NO_POSITIVE_EVIDENCE, Unavailable::new, provider);
         var prep = new PreparationAnalysisService(Optional.empty(), router).analyze(
@@ -78,15 +78,15 @@ class HplacePolicyTest {
     @Test
     void missingInvalidOrFailedPolicyCannotFallBackToGeneric() {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
-        when(policies.findByCompanyKeyAndVersion("hplace", 1)).thenReturn(Optional.empty())
+        when(policies.findByCompanyKeyAndVersion("hplace", 2)).thenReturn(Optional.empty())
             .thenThrow(new IllegalStateException("synthetic-private-error"));
-        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 1);
+        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 2);
         assertThat(provider.find()).isInstanceOf(Unavailable.class);
         assertThat(provider.find()).isInstanceOf(Unavailable.class);
         assertThat(new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 0).find())
             .isInstanceOf(Unavailable.class);
-        when(policies.findByCompanyKeyAndVersion("hplace", 2)).thenReturn(Optional.of(HplaceCompanyFormPolicyFactory.create()));
-        assertThat(new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 2).find())
+        when(policies.findByCompanyKeyAndVersion("hplace", 1)).thenReturn(Optional.of(HplaceCompanyFormPolicyFactory.create()));
+        assertThat(new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 1).find())
             .isInstanceOf(Unavailable.class);
     }
 
@@ -137,6 +137,95 @@ class HplacePolicyTest {
             List.of(new Section("other", null, null, request.sections().getFirst().fields(), null)));
         assertThat(router(new Available(policy())).route(invalid).kind())
             .isEqualTo(FormAnalysisRouter.RouteKind.STRUCTURE_MISMATCH);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void detailedBasicPolicyMapsOnlyVerifiedTextFields(boolean emergency) {
+        var router = router(new Available(policy()));
+        var response = new FieldsAnalysisService(Optional.empty(), router,
+            new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(detailRequest(emergency));
+        assertThat(response.mode()).isEqualTo(FieldsAnalysisResponse.Mode.ADAPTER);
+        assertThat(response.analysisStatus()).isEqualTo(FieldsAnalysisResponse.AnalysisStatus.COMPLETE);
+        var expected = new java.util.ArrayList<FieldsAnalysisResponse.FieldAnalysis>(List.of(
+            new FieldsAnalysisResponse.NoMatchFieldAnalysis("englishName", MatchType.NO_MATCH,
+                MappingStatus.ADAPTER_VERIFIED, InteractionStatus.BLOCKED, List.of(FieldsAnalysisResponse.ReasonCode.NO_MATCH)),
+            new MatchedFieldAnalysis("birthday", MatchType.MATCH, new DirectBinding("personal.personal.birthDate"),
+                AutofillPolicy.ALLOWED, MappingStatus.ADAPTER_VERIFIED, InteractionStatus.READY, new WritePlan(WriteCommand.SET_TEXT)),
+            new MatchedFieldAnalysis("detailAddress", MatchType.MATCH, new DirectBinding("contact.contact.addressLine2"),
+                AutofillPolicy.ALLOWED, MappingStatus.ADAPTER_VERIFIED, InteractionStatus.READY, new WritePlan(WriteCommand.SET_TEXT))));
+        if (emergency) expected.add(new MatchedFieldAnalysis("emergencyPhone", MatchType.MATCH,
+            new DirectBinding("contact.contact.emergencyPhoneNumber"), AutofillPolicy.CONDITIONAL,
+            MappingStatus.ADAPTER_VERIFIED, InteractionStatus.READY, new WritePlan(WriteCommand.SET_TEXT)));
+        assertThat(response.fields()).containsExactlyElementsOf(expected);
+        assertThat(HplaceCompanyFormPolicyFactory.create().fieldRules()).hasSize(6);
+        var prep = new PreparationAnalysisService(Optional.empty(), router).analyze(
+            new PreparationAnalysisRequest(2, "prep", new PreparationAnalysisRequest.Site(
+                "hi.recruiter.co.kr", "/mrs2/applicant/resume/writeResume"), List.of(
+                    new PreparationAnalysisRequest.Section("hplace-detail-basic", null, null, List.of(), null))));
+        assertThat(prep.mode()).isEqualTo(PreparationAnalysisResponse.Mode.ADAPTER);
+        assertThat(prep.preparationPlans()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/mrs2/applicant/resume", "/mrs2/applicant/resume/", "/mrs2/applicant/resume/other", "/mrs2/applicant/resume/writeResume/extra"})
+    void unverifiedDetailedRoutesNeverUseGenericAnalysis(String path) {
+        var router = router(new Available(policy()));
+        var request = detailRequest(false);
+        assertThat(router.route(new FieldsAnalysisRequest(2, "fields", new Site("hi.recruiter.co.kr", path), request.sections())).kind())
+            .isEqualTo(FormAnalysisRouter.RouteKind.POLICY_UNAVAILABLE);
+        assertThat(router.routeGeneric("hi.recruiter.co.kr", path))
+            .isEqualTo(FormAnalysisRouter.GenericRouteKind.POLICY_UNAVAILABLE);
+        assertThat(router.route(new PreparationAnalysisRequest(2, "prep", new PreparationAnalysisRequest.Site(
+            "hi.recruiter.co.kr", path), List.of(new PreparationAnalysisRequest.Section(
+                "hplace-detail-basic", null, null, List.of(), null)))).kind())
+            .isEqualTo(FormAnalysisRouter.RouteKind.POLICY_UNAVAILABLE);
+    }
+
+    @Test
+    void detailedRouteRejectsRegistrationShapeAndUnavailablePolicy() {
+        var detail = detailRequest(false);
+        var router = router(new Available(policy()));
+        assertThat(router.route(new FieldsAnalysisRequest(2, "fields", detail.site(), request().sections())).kind())
+            .isEqualTo(FormAnalysisRouter.RouteKind.STRUCTURE_MISMATCH);
+        assertThat(router.route(new FieldsAnalysisRequest(2, "fields", request().site(), detail.sections())).kind())
+            .isEqualTo(FormAnalysisRouter.RouteKind.STRUCTURE_MISMATCH);
+        assertThat(router(new Unavailable()).route(detail).kind()).isEqualTo(FormAnalysisRouter.RouteKind.POLICY_UNAVAILABLE);
+        assertThat(router.routeGeneric("hi.recruiter.co.kr", detail.site().pathPattern()))
+            .isEqualTo(FormAnalysisRouter.GenericRouteKind.STATIC_POLICY_PRESENT);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"hi.recruiter.co.kr.attacker.test", "recruiter.co.kr", "nested.hi.recruiter.co.kr", "hi-recruiter.co.kr"})
+    void similarHostsDoNotReceiveHplaceStaticBindings(String host) {
+        var detail = detailRequest(false);
+        assertThat(router(new Available(policy())).route(new FieldsAnalysisRequest(2, "fields",
+            new Site(host, detail.site().pathPattern()), detail.sections())).kind())
+            .isEqualTo(FormAnalysisRouter.RouteKind.GENERIC);
+    }
+
+    @Test
+    void detailedPreparationNeverAuthorizesAnAction() {
+        var action = new PreparationAnalysisRequest.ActionCandidate("save", PreparationAnalysisRequest.FormElement.BUTTON,
+            PreparationAnalysisRequest.FormControl.BUTTON, PreparationAnalysisRequest.Visibility.VISIBLE,
+            null, null, null, null, null, null);
+        var request = new PreparationAnalysisRequest(2, "prep", new PreparationAnalysisRequest.Site(
+            "hi.recruiter.co.kr", "/mrs2/applicant/resume/writeResume"), List.of(
+                new PreparationAnalysisRequest.Section("hplace-detail-basic", null, null, List.of(action), null)));
+        assertThat(router(new Available(policy())).route(request).kind())
+            .isEqualTo(FormAnalysisRouter.RouteKind.STRUCTURE_MISMATCH);
+    }
+
+    private static FieldsAnalysisRequest detailRequest(boolean emergency) {
+        var fields = new java.util.ArrayList<>(List.of(detailField("englishName"), detailField("birthday"), detailField("detailAddress")));
+        if (emergency) fields.add(detailField("emergencyPhone"));
+        return new FieldsAnalysisRequest(2, "fields", new Site("hi.recruiter.co.kr", "/mrs2/applicant/resume/writeResume"),
+            List.of(new Section("hplace-detail-basic", null, null, fields, null)));
+    }
+
+    private static FieldCandidate detailField(String key) {
+        return new FieldCandidate(key, FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE,
+            null, "hplace.detail." + key, "hplace.detail." + key, null, null, null, null, null);
     }
 
     private static FormAnalysisRouter router(LookupResult lookup) {

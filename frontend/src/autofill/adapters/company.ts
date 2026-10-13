@@ -1,3 +1,4 @@
+import { detailControls } from "./hplace/detail";
 import { greetingBasicControls } from "./greeting/fingerprint";
 import { isHplaceDocument } from "./hplace/fingerprint";
 import { registrationControls } from "./hplace/registration";
@@ -27,7 +28,8 @@ export function isHyundaiTalentHost(host: string): boolean {
 export function isUnsupportedHplace(document: Document): boolean {
   return (
     resolveDocumentCompany(document) === "hplace" &&
-    !registrationControls(document)
+    !registrationControls(document) &&
+    !detailControls(document)
   );
 }
 

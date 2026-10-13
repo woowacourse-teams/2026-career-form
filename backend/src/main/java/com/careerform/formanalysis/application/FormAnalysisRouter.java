@@ -166,7 +166,8 @@ public final class FormAnalysisRouter {
 
     private CompanyFormPolicyProvider.LookupResult sharedLookup(String host, String pathPattern) {
         if (isHplaceApplicant(host, pathPattern)) {
-            if (!"/app/applicant/registResume".equals(pathPattern)) {
+            if (!"/app/applicant/registResume".equals(pathPattern)
+                && !"/mrs2/applicant/resume/writeResume".equals(pathPattern)) {
                 return new CompanyFormPolicyProvider.Unavailable();
             }
             var lookup = hplacePolicyProvider.find();
@@ -178,6 +179,7 @@ public final class FormAnalysisRouter {
     private static boolean isHplaceApplicant(String host, String pathPattern) {
         return host != null && HPLACE_HOST.matcher(host).matches() && pathPattern != null
             && (pathPattern.startsWith("/app/applicant/") || pathPattern.equals("/app/applicant")
+                || pathPattern.startsWith("/mrs2/applicant/resume/") || pathPattern.equals("/mrs2/applicant/resume")
                 || pathPattern.startsWith("/v1/applicant/") || pathPattern.equals("/v1/applicant"));
     }
 

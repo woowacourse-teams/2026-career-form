@@ -64,6 +64,41 @@ class HplaceFormFingerprintTest {
             new PreparationAnalysisRequest.Section("hplace-registration", null, null, List.of(action), null))))).isFalse();
     }
 
+    @Test
+    void detailedShapeRejectsMissingDuplicateMixedOrNestedFields() {
+        var fields = List.of(detailField("englishName"), detailField("birthday"), detailField("detailAddress"));
+        assertThat(fingerprint.matches(detailRequest(fields, null))).isTrue();
+        assertThat(fingerprint.matches(detailRequest(fields.subList(0, 2), null))).isFalse();
+        assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(1), fields.get(1)), null))).isFalse();
+        assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(1), field("email")), null))).isFalse();
+        assertThat(fingerprint.matches(detailRequest(fields, List.of(new Item("row", List.of(detailField("emergencyPhone"))))))).isFalse();
+        assertThat(fingerprint.matches(detailRequest(List.of(fields.get(0), fields.get(1), fields.get(2), detailField("password")), null))).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"id", "name", "missing-name", "element", "control", "hidden", "disabled", "readonly", "inert", "duplicate-candidate"})
+    void detailedShapeRejectsUnsafeOrSpoofedControls(String change) {
+        String name = "hplace.detail.englishName";
+        var changed = new FieldCandidate(change.equals("duplicate-candidate") ? "birthday" : "englishName",
+            change.equals("element") ? FormElement.BUTTON : FormElement.INPUT,
+            change.equals("control") ? FormControl.BUTTON : FormControl.TEXT,
+            change.equals("hidden") ? Visibility.HIDDEN : Visibility.VISIBLE,
+            null, change.equals("id") ? "other" : name, change.equals("missing-name") ? null : change.equals("name") ? "other" : name,
+            null, change.equals("disabled") ? true : null, change.equals("readonly") ? true : null,
+            change.equals("inert") ? true : null, null);
+        assertThat(fingerprint.matches(detailRequest(List.of(changed, detailField("birthday"), detailField("detailAddress")), null))).isFalse();
+    }
+
+    private static FieldsAnalysisRequest detailRequest(List<FieldCandidate> fields, List<Item> items) {
+        return new FieldsAnalysisRequest(2, "fields", new Site("hi.recruiter.co.kr", "/mrs2/applicant/resume/writeResume"),
+            List.of(new Section("hplace-detail-basic", null, null, fields, items)));
+    }
+
+    private static FieldCandidate detailField(String key) {
+        return new FieldCandidate(key, FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE, null,
+            "hplace.detail." + key, "hplace.detail." + key, null, null, null, null, null);
+    }
+
     private static List<FieldCandidate> fields() { return List.of(field("name"), field("mobile"), field("email")); }
     private static FieldCandidate field(String key) {
         return new FieldCandidate(key, FormElement.INPUT, FormControl.TEXT, Visibility.VISIBLE, null,

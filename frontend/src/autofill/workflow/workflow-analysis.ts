@@ -178,6 +178,18 @@ export function createAnalyzeFields({
     }
 
     const analysisStarted = performance.now();
+    // Share the budget across factories in this workflow run. Hplace basic
+    // fields batch together; unexpected dependency chains must fail closed.
+    if (companyId === "hplace") {
+      if ((run.hplaceFieldsRequests ?? 0) >= 3) {
+        setExceptionTitle(
+          "에이치닷 입력 분석 한도에 도달했습니다. 남은 항목을 직접 확인해 주세요",
+        );
+        setStage("exception");
+        return;
+      }
+      run.hplaceFieldsRequests = (run.hplaceFieldsRequests ?? 0) + 1;
+    }
     observeQuality(() =>
       apiClient.quality?.snapshot(
         snapshot.request.snapshotId,
@@ -1091,6 +1103,24 @@ export function createAnalyzeFields({
         ? (item) => presentField(snapshot.registry, item)
         : undefined,
       signal: run.controller.signal,
+      ...(companyId === "hplace"
+        ? {
+            hplaceAddress: {
+              address: loadedProfile.contact.addressLine1 ?? "",
+              postalCode: loadedProfile.contact.postalCode ?? "",
+            },
+            assertCurrent: () =>
+              currentAnalysisGeneration === analysisGeneration &&
+              addressRun.current === run,
+            beforeMutation: async () =>
+              !run.controller.signal.aborted &&
+              pageDocument.URL === snapshotUrl &&
+              currentAnalysisGeneration === analysisGeneration &&
+              addressRun.current === run &&
+              JSON.stringify(await repository.load()) ===
+                JSON.stringify(loadedProfile),
+          }
+        : {}),
       ...(greetingTargets
         ? {
             settledRegistry: () => {

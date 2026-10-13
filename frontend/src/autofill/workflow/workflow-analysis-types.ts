@@ -21,6 +21,7 @@ type FieldsSnapshot = CollectedSnapshot<
 >;
 type AddressRun = {
   controller: AbortController;
+  hplaceFieldsRequests?: number;
   button?: Element;
   task?: Promise<AddressResult>;
 };

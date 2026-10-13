@@ -1,3 +1,9 @@
+import {
+  detailControls,
+  detailNames,
+  detailSectionId,
+  type DetailKey,
+} from "./detail";
 import type {
   FieldsAnalyzeRequest,
   SiteDescriptor,
@@ -24,6 +30,8 @@ export function collectHplaceFields(
   snapshotId: string,
   site: SiteDescriptor,
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
+  if (detailControls(document))
+    return collectDetailFields(document, snapshotId, site);
   const registry = new CandidateRegistry();
   const controls = registrationControls(document);
   const fields = controls
@@ -88,16 +96,73 @@ export function collectHplacePreparation(
     schemaVersion: 2,
     snapshotId,
     site,
-    sections: registrationControls(document)
-      ? [{ sectionId: registrationSectionId, actionCandidates: [] }]
-      : [],
+    sections: detailControls(document)
+      ? [{ sectionId: detailSectionId, actionCandidates: [] }]
+      : registrationControls(document)
+        ? [{ sectionId: registrationSectionId, actionCandidates: [] }]
+        : [],
   };
   return {
     request,
     registry: new CandidateRegistry(),
-    isSectionVisible: () => Boolean(registrationControls(document)),
+    isSectionVisible: () =>
+      Boolean(registrationControls(document) || detailControls(document)),
     countRepeatableGroups: () => undefined,
     repeatableGroupState: () => undefined,
     repeatableGroupLimit: () => undefined,
+  };
+}
+
+function collectDetailFields(
+  document: Document,
+  snapshotId: string,
+  site: SiteDescriptor,
+): CollectedSnapshot<FieldsAnalyzeRequest> {
+  const registry = new CandidateRegistry();
+  const controls = detailControls(document)!;
+  const fields = (Object.keys(controls) as DetailKey[]).map((key, index) => {
+    const input = controls[key]!;
+    const reason = registrationBlockReason([input]);
+    const candidate = {
+      candidateId: `field-${index + 1}`,
+      domId: detailNames[key],
+      domName: detailNames[key],
+      element: "input" as const,
+      control: "text" as const,
+      displayName: {
+        englishName: "영문이름",
+        birthday: "생년월일",
+        detailAddress: "상세주소",
+        emergencyPhone: "비상연락처",
+      }[key],
+      visibility:
+        reason === "hidden" ? ("hidden" as const) : ("visible" as const),
+      ...(reason === "readonly" ? { readonly: true as const } : {}),
+      ...(reason === "disabled" ? { disabled: true as const } : {}),
+      ...(reason === "inert" ? { inert: true as const } : {}),
+    };
+    registry.registerField(
+      {
+        kind: "field",
+        candidateId: candidate.candidateId,
+        candidate,
+        sectionId: detailSectionId,
+        elements: [input],
+        optionElements: new Map(),
+        signature: createStructuralSignature([input]),
+        isCurrentContext: () => detailControls(document)?.[key] === input,
+      },
+      reason,
+    );
+    return candidate;
+  });
+  return {
+    registry,
+    request: {
+      schemaVersion: 2,
+      snapshotId,
+      site,
+      sections: [{ sectionId: detailSectionId, fields }],
+    },
   };
 }
