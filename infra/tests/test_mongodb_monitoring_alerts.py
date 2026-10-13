@@ -120,6 +120,18 @@ class MongoDBMonitoringExpressionsTest(unittest.TestCase):
             {"series": 'mongodb_ss_connections{job="mongodb",instance="career-db",conn_type="current"}', "values": "25"},
             {"series": 'mongodb_up{job="mongodb",instance="career-db"}', "values": "1+0x5"}])
 
+    def test_no_recent_calls_cannot_provide_failure_or_timeout_recovery(self):
+        series = [{"series": f'{metric}{{job="backend",env="prod",instance="app",{dimension}}}', "values": "0+0x15"}
+                  for metric, dimension in [
+                      ("career_form_mongo_operation_seconds_count", 'operation="find",outcome="failure"'),
+                      ("career_form_mongo_operation_seconds_count", 'operation="find",outcome="success"'),
+                      ("career_form_mongo_checkout_timeouts_total", 'pool="1"'),
+                      ("career_form_mongo_checkout_seconds_count", 'pool="1",outcome="success"')]]
+        self.run_promtool([
+            {"expr": "career:mongodb:operation_failure_ratio", "eval_time": "5m", "exp_samples": []},
+            {"expr": "career:mongodb:checkout_timeouts", "eval_time": "5m", "exp_samples": []},
+        ], series)
+
     def test_all_provisioned_alert_queries_parse_in_actual_prometheus(self):
         expressions = [rule["data"][0]["model"]["expr"]
                        for path in (MONITORING / "grafana/provisioning/alerting").glob("rules-mongodb*.json")

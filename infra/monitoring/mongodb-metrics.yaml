@@ -39,6 +39,7 @@ groups:
         expr: >-
           100 * career:mongodb:command_failures /
           sum by(env,instance) (increase(career_form_mongo_command_seconds_count{job="backend"}[5m]))
+          and on(env,instance) (sum by(env,instance) (increase(career_form_mongo_command_seconds_count{job="backend"}[5m])) > 0)
       - record: career:mongodb:operation_failures
         expr: >-
           sum by(env,instance) (increase(career_form_mongo_operation_seconds_count{job="backend",outcome="failure"}[5m]))
@@ -47,10 +48,12 @@ groups:
         expr: >-
           100 * career:mongodb:operation_failures /
           sum by(env,instance) (increase(career_form_mongo_operation_seconds_count{job="backend"}[5m]))
+          and on(env,instance) (sum by(env,instance) (increase(career_form_mongo_operation_seconds_count{job="backend"}[5m])) > 0)
       - record: career:mongodb:checkout_timeouts
         expr: >-
           sum by(env,instance,pool) (increase(career_form_mongo_checkout_timeouts_total{job="backend"}[5m]))
           and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_checkout_timeouts_total{job="backend"})) < 90)
+          and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job="backend"}[5m])) > 0)
       - record: career:mongodb:cpu_usage
         expr: >-
           100 * (1 - avg by(instance) (rate(node_cpu_seconds_total{job="mongodb-host",mode="idle"}[5m])))
