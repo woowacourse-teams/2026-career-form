@@ -127,6 +127,17 @@ export function createAnalyzeFields({
 }: WorkflowAnalysisContext) {
   let analysisGeneration = 0;
   const companyId = resolveDocumentCompany(pageDocument);
+  const rejectChangedHplaceContext = () => {
+    const currentCompany = resolveDocumentCompany(pageDocument);
+    if (
+      currentCompany === companyId ||
+      (companyId !== "hplace" && currentCompany !== "hplace")
+    )
+      return false;
+    setExceptionTitle("페이지 실행 방식이 변경되었습니다. 다시 시작해 주세요");
+    setStage("exception");
+    return true;
+  };
   const analyzeFields = async (
     loadedProfile: Profile,
     ignoreFreshRowDefaults = false,
@@ -139,6 +150,7 @@ export function createAnalyzeFields({
       setStage("unsupported");
       return;
     }
+    if (rejectChangedHplaceContext()) return;
     const currentAnalysisGeneration = ++analysisGeneration;
     completedDriverKeys.current = completedStateDriverKeys;
     deferredDriverGroups.current = failedGroups;
@@ -177,6 +189,7 @@ export function createAnalyzeFields({
       return;
     }
 
+    if (rejectChangedHplaceContext()) return;
     const analysisStarted = performance.now();
     // Share the budget across factories in this workflow run. Hplace basic
     // fields batch together; unexpected dependency chains must fail closed.
@@ -221,6 +234,7 @@ export function createAnalyzeFields({
       setStage("exception");
       return;
     }
+    if (rejectChangedHplaceContext()) return;
     if (pageDocument.URL !== snapshotUrl) {
       setExceptionTitle(
         "분석 후 지원서 페이지가 변경되었습니다. 다시 시작해 주세요",
@@ -1072,6 +1086,7 @@ export function createAnalyzeFields({
       return;
     }
     if (run.controller.signal.aborted) return;
+    if (rejectChangedHplaceContext()) return;
     setStage("writing");
     const greetingTargets =
       companyId === "greeting"

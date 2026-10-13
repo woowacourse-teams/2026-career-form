@@ -13,6 +13,10 @@ import {
   registrationAnalysis,
   installRegistrationValidation,
 } from "../adapters/hplace/registration.test-fixtures";
+import {
+  mountDetail,
+  detailAnalysis,
+} from "../adapters/hplace/detail.test-fixtures";
 
 afterEach(() => {
   resetHplacePage();
@@ -174,4 +178,52 @@ it("shares the Hplace request limit across analysis factories in the same workfl
   await createAnalyzeFields(context)(profile);
   expect(fields).toHaveBeenCalledTimes(4);
   expect(stage).toHaveBeenLastCalledWith("result");
+});
+
+it("stops when delayed Hplace evidence changes the adapter during collection", async () => {
+  mountDetail();
+  const assets = document.head.innerHTML;
+  document.head.replaceChildren();
+  const profile = createEmptyProfile();
+  profile.personal.birthDate = "2000-02-29";
+  const fields = vi.fn<AnalysisApiClient["analyzeFields"]>(async (request) =>
+    detailAnalysis(request),
+  );
+  const stage = vi.fn();
+  const analyze = createAnalyzeFields({
+    adapter: getWorkflowAdapter(document),
+    addressRun: { current: { controller: new AbortController() } },
+    addressSearch: async () => false,
+    apiClient: {
+      analyzePreparation: async () => {
+        throw new Error("Unexpected preparation");
+      },
+      analyzeFields: fields,
+    },
+    pageDocument: document,
+    repository: { load: async () => profile },
+    approvedSensitiveValues: { current: new Map() },
+    consideredSensitiveValues: { current: new Map() },
+    freshDefaultControls: { current: new WeakSet() },
+    completedDriverKeys: { current: new Set() },
+    completedGenericStateDrivers: { current: new Map() },
+    deferredDriverGroups: { current: new Set() },
+    setAddressResult: () => undefined,
+    setExceptionTitle: () => undefined,
+    setStage: stage,
+    setFieldsSnapshot: () => undefined,
+    setReviewItems: () => undefined,
+    setPartial: () => undefined,
+    setWarnings: () => undefined,
+    setResults: () => undefined,
+  });
+  queueMicrotask(() => {
+    document.head.innerHTML = assets;
+  });
+  await analyze(profile);
+  expect(fields).not.toHaveBeenCalled();
+  expect(stage).toHaveBeenLastCalledWith("exception");
+  expect((document.getElementById("birthday") as HTMLInputElement).value).toBe(
+    "",
+  );
 });
