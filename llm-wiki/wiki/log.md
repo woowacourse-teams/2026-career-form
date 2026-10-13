@@ -512,3 +512,9 @@
 - Approval-Digest: c77035f9272a13a0c57efcb4397b53809a4cc8f2e4d79b61eb72bafe0e8cc0f3
 - Source-Revision: d0ab0303e2b9514b40a32b316f5b88d434d56693
 - 승인한 후보를 [CF-204 bundle](../raw/issues/CF-204/manifest.md)에 기록하고 [품질 report 전송 시점](topics/quality-report-lifecycle.md)을 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-13] ingest | CF-207 공용 MongoDB 관측
+
+- Approval-Digest: a6f687d3bd725214fa37de4509a5f0ba195e8fb80ffe2272f2a4381f9acffa2b
+- Source-Revision: cbd283762b4b30a485f1ce8be1f48680d00c65cb
+- 승인한 세 후보를 [CF-207 bundle](../raw/issues/CF-207/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)을 갱신했다. 기존 raw는 보존했다.

@@ -1,0 +1,333 @@
+groups:
+  - name: career-mongodb
+    interval: 30s
+    rules:
+      - record: career:mongodb:expected_start_timestamp_seconds
+        expr: career:mongodb:expected_start_timestamp_seconds or vector(time())
+      - record: career:mongodb:connection_usage
+        expr: >-
+          100 * sum by (instance) (mongodb_ss_connections{job="mongodb",conn_type="current"}) /
+          sum by (instance) (mongodb_ss_connections{job="mongodb",conn_type=~"current|available"})
+          and on(instance) (mongodb_up{job="mongodb"} == 1)
+          and on(instance) (max by(instance) (time() - timestamp(mongodb_ss_connections{job="mongodb"})) < 90)
+      - record: career:mongodb:pool_usage
+        expr: >-
+          100 * max by(env,instance,pool) (career_form_mongo_pool_in_use{job="backend"}) /
+          max by(env,instance,pool) (career_form_mongo_pool_max{job="backend"})
+          and on(env,instance,pool) (max by(env,instance,pool) (career_form_mongo_pool_available{job="backend"}) == 1)
+          and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_pool_available{job="backend"})) < 90)
+      - record: career:mongodb:checkout_p95
+        expr: >-
+          histogram_quantile(0.95, sum by(env,instance,pool,le) (rate(career_form_mongo_checkout_seconds_bucket{job="backend"}[5m])))
+          and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job="backend"}[5m])) >= 20)
+          and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_checkout_seconds_count{job="backend"})) < 90)
+      - record: career:mongodb:command_p95
+        expr: >-
+          histogram_quantile(0.95, sum by(env,instance,command,le) (rate(career_form_mongo_command_seconds_bucket{job="backend"}[5m])))
+          and on(env,instance,command) (sum by(env,instance,command) (increase(career_form_mongo_command_seconds_count{job="backend"}[5m])) >= 20)
+          and on(env,instance,command) (max by(env,instance,command) (time() - timestamp(career_form_mongo_command_seconds_count{job="backend"})) < 90)
+      - record: career:mongodb:operation_p95
+        expr: >-
+          histogram_quantile(0.95, sum by(env,instance,operation,le) (rate(career_form_mongo_operation_seconds_bucket{job="backend"}[5m])))
+          and on(env,instance,operation) (sum by(env,instance,operation) (increase(career_form_mongo_operation_seconds_count{job="backend"}[5m])) >= 20)
+          and on(env,instance,operation) (max by(env,instance,operation) (time() - timestamp(career_form_mongo_operation_seconds_count{job="backend"})) < 90)
+      - record: career:mongodb:command_failures
+        expr: >-
+          sum by(env,instance) (increase(career_form_mongo_command_seconds_count{job="backend",outcome=~"failure|timeout"}[5m]))
+          and on(env,instance) (max by(env,instance) (time() - timestamp(career_form_mongo_command_seconds_count{job="backend"})) < 90)
+      - record: career:mongodb:command_failure_ratio
+        expr: >-
+          100 * career:mongodb:command_failures /
+          sum by(env,instance) (increase(career_form_mongo_command_seconds_count{job="backend"}[5m]))
+          and on(env,instance) (sum by(env,instance) (increase(career_form_mongo_command_seconds_count{job="backend"}[5m])) > 0)
+      - record: career:mongodb:operation_failures
+        expr: >-
+          sum by(env,instance) (increase(career_form_mongo_operation_seconds_count{job="backend",outcome="failure"}[5m]))
+          and on(env,instance) (max by(env,instance) (time() - timestamp(career_form_mongo_operation_seconds_count{job="backend"})) < 90)
+      - record: career:mongodb:operation_failure_ratio
+        expr: >-
+          100 * career:mongodb:operation_failures /
+          sum by(env,instance) (increase(career_form_mongo_operation_seconds_count{job="backend"}[5m]))
+          and on(env,instance) (sum by(env,instance) (increase(career_form_mongo_operation_seconds_count{job="backend"}[5m])) > 0)
+      - record: career:mongodb:checkout_timeouts
+        expr: >-
+          sum by(env,instance,pool) (increase(career_form_mongo_checkout_timeouts_total{job="backend"}[5m]))
+          and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_checkout_timeouts_total{job="backend"})) < 90)
+          and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job="backend"}[5m])) > 0)
+      - record: career:mongodb:cpu_usage
+        expr: >-
+          100 * (1 - avg by(instance) (rate(node_cpu_seconds_total{job="mongodb-host",mode="idle"}[5m])))
+          and on(instance) (max by(instance) (time() - timestamp(node_cpu_seconds_total{job="mongodb-host"})) < 90)
+      - record: career:mongodb:memory_available
+        expr: >-
+          100 * node_memory_MemAvailable_bytes{job="mongodb-host"} / node_memory_MemTotal_bytes{job="mongodb-host"}
+          and on(instance) (time() - timestamp(node_memory_MemAvailable_bytes{job="mongodb-host"}) < 90)
+      - record: career:mongodb:data_usage
+        expr: >-
+          100 * (1 - career_mongo_data_available_bytes{job="mongodb-host"} / career_mongo_data_size_bytes{job="mongodb-host"})
+          and on(instance) (career_mongo_host_state_success{job="mongodb-host"} == 1)
+          and on(instance) (time() - career_mongo_host_state_timestamp_seconds{job="mongodb-host"} < 60)
+      - record: career:mongodb:io_read_seconds
+        expr: rate(node_disk_read_time_seconds_total{job="mongodb-host"}[5m]) / rate(node_disk_reads_completed_total{job="mongodb-host"}[5m]) and on(instance,device) (time() - timestamp(node_disk_read_time_seconds_total{job="mongodb-host"}) < 90)
+      - record: career:mongodb:io_write_seconds
+        expr: rate(node_disk_write_time_seconds_total{job="mongodb-host"}[5m]) / rate(node_disk_writes_completed_total{job="mongodb-host"}[5m]) and on(instance,device) (time() - timestamp(node_disk_write_time_seconds_total{job="mongodb-host"}) < 90)
+  - name: career-mongodb-incidents
+    interval: 30s
+    rules:
+    - record: career:mongodb:incident_dev_db_pool_use_warning_observed
+      expr: career:mongodb:pool_usage{env="dev"}
+    - record: career:mongodb:incident_dev_db_pool_use_warning_bad_since
+      expr: (career:mongodb:incident_dev_db_pool_use_warning_bad_since and (time() -
+        timestamp(career:mongodb:incident_dev_db_pool_use_warning_bad_since) < 45) and
+        (career:mongodb:incident_dev_db_pool_use_warning_observed >= 80)) or ((career:mongodb:incident_dev_db_pool_use_warning_observed
+        >= 80) * 0 + time())
+    - record: career:mongodb:incident_dev_db_pool_use_warning_healthy_since
+      expr: (career:mongodb:incident_dev_db_pool_use_warning_healthy_since and (time()
+        - timestamp(career:mongodb:incident_dev_db_pool_use_warning_healthy_since) <
+        45) and (career:mongodb:incident_dev_db_pool_use_warning_observed <= 75)) or
+        ((career:mongodb:incident_dev_db_pool_use_warning_observed <= 75) * 0 + time())
+    - record: career:mongodb:incident_dev_db_pool_use_warning
+      expr: ((time() - career:mongodb:incident_dev_db_pool_use_warning_bad_since >=
+        300) * 0 + 1) or ((career:mongodb:incident_dev_db_pool_use_warning == 1) unless
+        (time() - career:mongodb:incident_dev_db_pool_use_warning_healthy_since >= 300))
+        or (career:mongodb:incident_dev_db_pool_use_warning_observed * 0)
+    - record: career:mongodb:incident_dev_db_pool_use_critical_observed
+      expr: career:mongodb:pool_usage{env="dev"} * on(env,instance,pool) (career:mongodb:checkout_p95{env="dev"}
+        > bool 0.1)
+    - record: career:mongodb:incident_dev_db_pool_use_critical_bad_since
+      expr: (career:mongodb:incident_dev_db_pool_use_critical_bad_since and (time()
+        - timestamp(career:mongodb:incident_dev_db_pool_use_critical_bad_since) < 45)
+        and (career:mongodb:incident_dev_db_pool_use_critical_observed >= 95)) or ((career:mongodb:incident_dev_db_pool_use_critical_observed
+        >= 95) * 0 + time())
+    - record: career:mongodb:incident_dev_db_pool_use_critical_healthy_since
+      expr: (career:mongodb:incident_dev_db_pool_use_critical_healthy_since and (time()
+        - timestamp(career:mongodb:incident_dev_db_pool_use_critical_healthy_since)
+        < 45) and (career:mongodb:incident_dev_db_pool_use_critical_observed <= 90))
+        or ((career:mongodb:incident_dev_db_pool_use_critical_observed <= 90) * 0 +
+        time())
+    - record: career:mongodb:incident_dev_db_pool_use_critical
+      expr: ((time() - career:mongodb:incident_dev_db_pool_use_critical_bad_since >=
+        300) * 0 + 1) or ((career:mongodb:incident_dev_db_pool_use_critical == 1) unless
+        (time() - career:mongodb:incident_dev_db_pool_use_critical_healthy_since >=
+        300)) or (career:mongodb:incident_dev_db_pool_use_critical_observed * 0)
+    - record: career:mongodb:incident_shared_db_disk_warning_observed
+      expr: max(career:mongodb:data_usage{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_disk_warning_bad_since
+      expr: (career:mongodb:incident_shared_db_disk_warning_bad_since and (time() -
+        timestamp(career:mongodb:incident_shared_db_disk_warning_bad_since) < 45) and
+        (career:mongodb:incident_shared_db_disk_warning_observed >= 80)) or ((career:mongodb:incident_shared_db_disk_warning_observed
+        >= 80) * 0 + time())
+    - record: career:mongodb:incident_shared_db_disk_warning_healthy_since
+      expr: (career:mongodb:incident_shared_db_disk_warning_healthy_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_disk_warning_healthy_since) <
+        45) and (career:mongodb:incident_shared_db_disk_warning_observed <= 75)) or
+        ((career:mongodb:incident_shared_db_disk_warning_observed <= 75) * 0 + time())
+    - record: career:mongodb:incident_shared_db_disk_warning
+      expr: ((time() - career:mongodb:incident_shared_db_disk_warning_bad_since >= 600)
+        * 0 + 1) or ((career:mongodb:incident_shared_db_disk_warning == 1) unless (time()
+        - career:mongodb:incident_shared_db_disk_warning_healthy_since >= 300)) or (career:mongodb:incident_shared_db_disk_warning_observed
+        * 0)
+    - record: career:mongodb:incident_shared_db_disk_critical_observed
+      expr: max(career:mongodb:data_usage{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_disk_critical_bad_since
+      expr: (career:mongodb:incident_shared_db_disk_critical_bad_since and (time() -
+        timestamp(career:mongodb:incident_shared_db_disk_critical_bad_since) < 45) and
+        (career:mongodb:incident_shared_db_disk_critical_observed >= 90)) or ((career:mongodb:incident_shared_db_disk_critical_observed
+        >= 90) * 0 + time())
+    - record: career:mongodb:incident_shared_db_disk_critical_healthy_since
+      expr: (career:mongodb:incident_shared_db_disk_critical_healthy_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_disk_critical_healthy_since) <
+        45) and (career:mongodb:incident_shared_db_disk_critical_observed <= 85)) or
+        ((career:mongodb:incident_shared_db_disk_critical_observed <= 85) * 0 + time())
+    - record: career:mongodb:incident_shared_db_disk_critical
+      expr: ((time() - career:mongodb:incident_shared_db_disk_critical_bad_since >=
+        300) * 0 + 1) or ((career:mongodb:incident_shared_db_disk_critical == 1) unless
+        (time() - career:mongodb:incident_shared_db_disk_critical_healthy_since >= 300))
+        or (career:mongodb:incident_shared_db_disk_critical_observed * 0)
+    - record: career:mongodb:incident_shared_db_cpu_warning_observed
+      expr: max(career:mongodb:cpu_usage{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_cpu_warning_bad_since
+      expr: (career:mongodb:incident_shared_db_cpu_warning_bad_since and (time() - timestamp(career:mongodb:incident_shared_db_cpu_warning_bad_since)
+        < 45) and (career:mongodb:incident_shared_db_cpu_warning_observed >= 80)) or
+        ((career:mongodb:incident_shared_db_cpu_warning_observed >= 80) * 0 + time())
+    - record: career:mongodb:incident_shared_db_cpu_warning_healthy_since
+      expr: (career:mongodb:incident_shared_db_cpu_warning_healthy_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_cpu_warning_healthy_since) < 45)
+        and (career:mongodb:incident_shared_db_cpu_warning_observed <= 75)) or ((career:mongodb:incident_shared_db_cpu_warning_observed
+        <= 75) * 0 + time())
+    - record: career:mongodb:incident_shared_db_cpu_warning
+      expr: ((time() - career:mongodb:incident_shared_db_cpu_warning_bad_since >= 600)
+        * 0 + 1) or ((career:mongodb:incident_shared_db_cpu_warning == 1) unless (time()
+        - career:mongodb:incident_shared_db_cpu_warning_healthy_since >= 300)) or (career:mongodb:incident_shared_db_cpu_warning_observed
+        * 0)
+    - record: career:mongodb:incident_shared_db_cpu_critical_observed
+      expr: max(career:mongodb:cpu_usage{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_cpu_critical_bad_since
+      expr: (career:mongodb:incident_shared_db_cpu_critical_bad_since and (time() -
+        timestamp(career:mongodb:incident_shared_db_cpu_critical_bad_since) < 45) and
+        (career:mongodb:incident_shared_db_cpu_critical_observed >= 95)) or ((career:mongodb:incident_shared_db_cpu_critical_observed
+        >= 95) * 0 + time())
+    - record: career:mongodb:incident_shared_db_cpu_critical_healthy_since
+      expr: (career:mongodb:incident_shared_db_cpu_critical_healthy_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_cpu_critical_healthy_since) <
+        45) and (career:mongodb:incident_shared_db_cpu_critical_observed <= 90)) or
+        ((career:mongodb:incident_shared_db_cpu_critical_observed <= 90) * 0 + time())
+    - record: career:mongodb:incident_shared_db_cpu_critical
+      expr: ((time() - career:mongodb:incident_shared_db_cpu_critical_bad_since >= 300)
+        * 0 + 1) or ((career:mongodb:incident_shared_db_cpu_critical == 1) unless (time()
+        - career:mongodb:incident_shared_db_cpu_critical_healthy_since >= 300)) or (career:mongodb:incident_shared_db_cpu_critical_observed
+        * 0)
+    - record: career:mongodb:incident_shared_db_memory_warning_observed
+      expr: max(career:mongodb:memory_available{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_memory_warning_bad_since
+      expr: (career:mongodb:incident_shared_db_memory_warning_bad_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_memory_warning_bad_since) < 45)
+        and (career:mongodb:incident_shared_db_memory_warning_observed < 15)) or ((career:mongodb:incident_shared_db_memory_warning_observed
+        < 15) * 0 + time())
+    - record: career:mongodb:incident_shared_db_memory_warning_healthy_since
+      expr: (career:mongodb:incident_shared_db_memory_warning_healthy_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_memory_warning_healthy_since)
+        < 45) and (career:mongodb:incident_shared_db_memory_warning_observed >= 20))
+        or ((career:mongodb:incident_shared_db_memory_warning_observed >= 20) * 0 +
+        time())
+    - record: career:mongodb:incident_shared_db_memory_warning
+      expr: ((time() - career:mongodb:incident_shared_db_memory_warning_bad_since >=
+        600) * 0 + 1) or ((career:mongodb:incident_shared_db_memory_warning == 1) unless
+        (time() - career:mongodb:incident_shared_db_memory_warning_healthy_since >=
+        300)) or (career:mongodb:incident_shared_db_memory_warning_observed * 0)
+    - record: career:mongodb:incident_shared_db_memory_critical_observed
+      expr: max(career:mongodb:memory_available{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_memory_critical_bad_since
+      expr: (career:mongodb:incident_shared_db_memory_critical_bad_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_memory_critical_bad_since) < 45)
+        and (career:mongodb:incident_shared_db_memory_critical_observed < 5)) or ((career:mongodb:incident_shared_db_memory_critical_observed
+        < 5) * 0 + time())
+    - record: career:mongodb:incident_shared_db_memory_critical_healthy_since
+      expr: (career:mongodb:incident_shared_db_memory_critical_healthy_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_memory_critical_healthy_since)
+        < 45) and (career:mongodb:incident_shared_db_memory_critical_observed >= 10))
+        or ((career:mongodb:incident_shared_db_memory_critical_observed >= 10) * 0 +
+        time())
+    - record: career:mongodb:incident_shared_db_memory_critical
+      expr: ((time() - career:mongodb:incident_shared_db_memory_critical_bad_since >=
+        300) * 0 + 1) or ((career:mongodb:incident_shared_db_memory_critical == 1) unless
+        (time() - career:mongodb:incident_shared_db_memory_critical_healthy_since >=
+        300)) or (career:mongodb:incident_shared_db_memory_critical_observed * 0)
+    - record: career:mongodb:incident_shared_db_connections_warning_observed
+      expr: max(career:mongodb:connection_usage{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_connections_warning_bad_since
+      expr: (career:mongodb:incident_shared_db_connections_warning_bad_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_connections_warning_bad_since)
+        < 45) and (career:mongodb:incident_shared_db_connections_warning_observed >=
+        80)) or ((career:mongodb:incident_shared_db_connections_warning_observed >=
+        80) * 0 + time())
+    - record: career:mongodb:incident_shared_db_connections_warning_healthy_since
+      expr: (career:mongodb:incident_shared_db_connections_warning_healthy_since and
+        (time() - timestamp(career:mongodb:incident_shared_db_connections_warning_healthy_since)
+        < 45) and (career:mongodb:incident_shared_db_connections_warning_observed <=
+        75)) or ((career:mongodb:incident_shared_db_connections_warning_observed <=
+        75) * 0 + time())
+    - record: career:mongodb:incident_shared_db_connections_warning
+      expr: ((time() - career:mongodb:incident_shared_db_connections_warning_bad_since
+        >= 600) * 0 + 1) or ((career:mongodb:incident_shared_db_connections_warning
+        == 1) unless (time() - career:mongodb:incident_shared_db_connections_warning_healthy_since
+        >= 300)) or (career:mongodb:incident_shared_db_connections_warning_observed
+        * 0)
+    - record: career:mongodb:incident_shared_db_connections_critical_observed
+      expr: max(career:mongodb:connection_usage{instance="career-db"})
+    - record: career:mongodb:incident_shared_db_connections_critical_bad_since
+      expr: (career:mongodb:incident_shared_db_connections_critical_bad_since and (time()
+        - timestamp(career:mongodb:incident_shared_db_connections_critical_bad_since)
+        < 45) and (career:mongodb:incident_shared_db_connections_critical_observed >=
+        95)) or ((career:mongodb:incident_shared_db_connections_critical_observed >=
+        95) * 0 + time())
+    - record: career:mongodb:incident_shared_db_connections_critical_healthy_since
+      expr: (career:mongodb:incident_shared_db_connections_critical_healthy_since and
+        (time() - timestamp(career:mongodb:incident_shared_db_connections_critical_healthy_since)
+        < 45) and (career:mongodb:incident_shared_db_connections_critical_observed <=
+        90)) or ((career:mongodb:incident_shared_db_connections_critical_observed <=
+        90) * 0 + time())
+    - record: career:mongodb:incident_shared_db_connections_critical
+      expr: ((time() - career:mongodb:incident_shared_db_connections_critical_bad_since
+        >= 300) * 0 + 1) or ((career:mongodb:incident_shared_db_connections_critical
+        == 1) unless (time() - career:mongodb:incident_shared_db_connections_critical_healthy_since
+        >= 300)) or (career:mongodb:incident_shared_db_connections_critical_observed
+        * 0)
+    - record: career:mongodb:incident_prod_db_pool_use_warning_observed
+      expr: career:mongodb:pool_usage{env="prod"}
+    - record: career:mongodb:incident_prod_db_pool_use_warning_bad_since
+      expr: (career:mongodb:incident_prod_db_pool_use_warning_bad_since and (time()
+        - timestamp(career:mongodb:incident_prod_db_pool_use_warning_bad_since) < 45)
+        and (career:mongodb:incident_prod_db_pool_use_warning_observed >= 80)) or ((career:mongodb:incident_prod_db_pool_use_warning_observed
+        >= 80) * 0 + time())
+    - record: career:mongodb:incident_prod_db_pool_use_warning_healthy_since
+      expr: (career:mongodb:incident_prod_db_pool_use_warning_healthy_since and (time()
+        - timestamp(career:mongodb:incident_prod_db_pool_use_warning_healthy_since)
+        < 45) and (career:mongodb:incident_prod_db_pool_use_warning_observed <= 75))
+        or ((career:mongodb:incident_prod_db_pool_use_warning_observed <= 75) * 0 +
+        time())
+    - record: career:mongodb:incident_prod_db_pool_use_warning
+      expr: ((time() - career:mongodb:incident_prod_db_pool_use_warning_bad_since >=
+        300) * 0 + 1) or ((career:mongodb:incident_prod_db_pool_use_warning == 1) unless
+        (time() - career:mongodb:incident_prod_db_pool_use_warning_healthy_since >=
+        300)) or (career:mongodb:incident_prod_db_pool_use_warning_observed * 0)
+    - record: career:mongodb:incident_prod_db_pool_use_critical_observed
+      expr: career:mongodb:pool_usage{env="prod"} * on(env,instance,pool) (career:mongodb:checkout_p95{env="prod"}
+        > bool 0.1)
+    - record: career:mongodb:incident_prod_db_pool_use_critical_bad_since
+      expr: (career:mongodb:incident_prod_db_pool_use_critical_bad_since and (time()
+        - timestamp(career:mongodb:incident_prod_db_pool_use_critical_bad_since) < 45)
+        and (career:mongodb:incident_prod_db_pool_use_critical_observed >= 95)) or ((career:mongodb:incident_prod_db_pool_use_critical_observed
+        >= 95) * 0 + time())
+    - record: career:mongodb:incident_prod_db_pool_use_critical_healthy_since
+      expr: (career:mongodb:incident_prod_db_pool_use_critical_healthy_since and (time()
+        - timestamp(career:mongodb:incident_prod_db_pool_use_critical_healthy_since)
+        < 45) and (career:mongodb:incident_prod_db_pool_use_critical_observed <= 90))
+        or ((career:mongodb:incident_prod_db_pool_use_critical_observed <= 90) * 0 +
+        time())
+    - record: career:mongodb:incident_prod_db_pool_use_critical
+      expr: ((time() - career:mongodb:incident_prod_db_pool_use_critical_bad_since >=
+        300) * 0 + 1) or ((career:mongodb:incident_prod_db_pool_use_critical == 1) unless
+        (time() - career:mongodb:incident_prod_db_pool_use_critical_healthy_since >=
+        300)) or (career:mongodb:incident_prod_db_pool_use_critical_observed * 0)
+    - record: career:mongodb:incident_staging_db_pool_use_warning_observed
+      expr: career:mongodb:pool_usage{env="staging"}
+    - record: career:mongodb:incident_staging_db_pool_use_warning_bad_since
+      expr: (career:mongodb:incident_staging_db_pool_use_warning_bad_since and (time()
+        - timestamp(career:mongodb:incident_staging_db_pool_use_warning_bad_since) <
+        45) and (career:mongodb:incident_staging_db_pool_use_warning_observed >= 80))
+        or ((career:mongodb:incident_staging_db_pool_use_warning_observed >= 80) * 0
+        + time())
+    - record: career:mongodb:incident_staging_db_pool_use_warning_healthy_since
+      expr: (career:mongodb:incident_staging_db_pool_use_warning_healthy_since and (time()
+        - timestamp(career:mongodb:incident_staging_db_pool_use_warning_healthy_since)
+        < 45) and (career:mongodb:incident_staging_db_pool_use_warning_observed <= 75))
+        or ((career:mongodb:incident_staging_db_pool_use_warning_observed <= 75) * 0
+        + time())
+    - record: career:mongodb:incident_staging_db_pool_use_warning
+      expr: ((time() - career:mongodb:incident_staging_db_pool_use_warning_bad_since
+        >= 300) * 0 + 1) or ((career:mongodb:incident_staging_db_pool_use_warning ==
+        1) unless (time() - career:mongodb:incident_staging_db_pool_use_warning_healthy_since
+        >= 300)) or (career:mongodb:incident_staging_db_pool_use_warning_observed *
+        0)
+    - record: career:mongodb:incident_staging_db_pool_use_critical_observed
+      expr: career:mongodb:pool_usage{env="staging"} * on(env,instance,pool) (career:mongodb:checkout_p95{env="staging"}
+        > bool 0.1)
+    - record: career:mongodb:incident_staging_db_pool_use_critical_bad_since
+      expr: (career:mongodb:incident_staging_db_pool_use_critical_bad_since and (time()
+        - timestamp(career:mongodb:incident_staging_db_pool_use_critical_bad_since)
+        < 45) and (career:mongodb:incident_staging_db_pool_use_critical_observed >=
+        95)) or ((career:mongodb:incident_staging_db_pool_use_critical_observed >= 95)
+        * 0 + time())
+    - record: career:mongodb:incident_staging_db_pool_use_critical_healthy_since
+      expr: (career:mongodb:incident_staging_db_pool_use_critical_healthy_since and
+        (time() - timestamp(career:mongodb:incident_staging_db_pool_use_critical_healthy_since)
+        < 45) and (career:mongodb:incident_staging_db_pool_use_critical_observed <=
+        90)) or ((career:mongodb:incident_staging_db_pool_use_critical_observed <= 90)
+        * 0 + time())
+    - record: career:mongodb:incident_staging_db_pool_use_critical
+      expr: ((time() - career:mongodb:incident_staging_db_pool_use_critical_bad_since
+        >= 300) * 0 + 1) or ((career:mongodb:incident_staging_db_pool_use_critical ==
+        1) unless (time() - career:mongodb:incident_staging_db_pool_use_critical_healthy_since
+        >= 300)) or (career:mongodb:incident_staging_db_pool_use_critical_observed *
+        0)
