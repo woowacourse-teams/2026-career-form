@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import tempfile
 import unittest
@@ -17,6 +16,7 @@ class MongoDBMonitoringExpressionsTest(unittest.TestCase):
     def run_promtool(self, queries, series, rules=None):
         with tempfile.TemporaryDirectory(prefix="cf207-promql-") as directory:
             root = Path(directory)
+            root.chmod(0o755)
             selected = MONITORING / "mongodb-metrics.yaml"
             if rules is not None:
                 selected = root / "rules.yaml"
