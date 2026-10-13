@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>커리어폼 · 첫 시작 시연</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          "Pretendard Variable",
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        --page: #fffaf4;
+        --surface: #fff;
+        --brand: #eee2d2;
+        --action: #a65f2d;
+        --action-strong: #754522;
+        --text: #594637;
+        --strong: #39291d;
+        --muted: #786453;
+        --border: #e7d8c5;
+        --field: #cbb79d;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        line-height: 1.65;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid var(--action);
+        outline-offset: 3px;
+      }
+      .shell {
+        width: min(100% - 40px, 960px);
+        margin: 0 auto;
+        padding: 30px 0 70px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 52px;
+        color: var(--strong);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+        background: var(--action);
+        color: white;
+        font-weight: 800;
+      }
+      .brand small {
+        margin-left: auto;
+        color: var(--muted);
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+      .demo-note {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: white;
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 22px;
+      }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--action-strong);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      h1:focus-visible {
+        outline: 2px solid var(--action);
+        outline-offset: 5px;
+      }
+      h1,
+      h2 {
+        color: var(--strong);
+        line-height: 1.35;
+        letter-spacing: -0.04em;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(28px, 4vw, 38px);
+      }
+      h2 {
+        margin: 12px 0;
+        font-size: 24px;
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 30px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+      }
+      .choice {
+        display: flex;
+        flex-direction: column;
+        padding: 30px;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: white;
+        min-height: 290px;
+      }
+      .badge {
+        color: #895511;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .choice p {
+        margin: 0 0 24px;
+        color: var(--muted);
+      }
+      .choice small {
+        color: var(--muted);
+        margin-top: 14px;
+        font-size: 12px;
+      }
+      .button {
+        border: 0;
+        border-radius: 11px;
+        background: var(--brand);
+        color: var(--text);
+        padding: 13px 20px;
+        min-height: 48px;
+        font-weight: 650;
+      }
+      .button:hover {
+        filter: brightness(0.97);
+      }
+      .button.primary {
+        background: var(--action);
+        color: white;
+      }
+      .choice .button {
+        margin-top: auto;
+        width: 100%;
+      }
+      .footnote {
+        margin-top: 24px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .card {
+        max-width: 760px;
+        margin: 0 auto;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: white;
+        padding: 36px 44px;
+      }
+      .topline {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      progress {
+        display: block;
+        width: 100%;
+        height: 5px;
+        margin: 14px 0 28px;
+        accent-color: var(--action);
+      }
+      .card h1 {
+        font-size: 30px;
+      }
+      .description {
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .fields {
+        display: grid;
+        gap: 16px;
+        min-height: 145px;
+        align-content: start;
+      }
+      .fields.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      input {
+        width: 100%;
+        min-width: 0;
+        border: 1px solid var(--field);
+        border-radius: 12px;
+        background: var(--page);
+        color: var(--strong);
+        padding: 15px 16px;
+        font-size: 20px;
+      }
+      input::placeholder {
+        color: #a08d78;
+        font-weight: 400;
+      }
+      .chips,
+      .suggestions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--page);
+        color: var(--text);
+        padding: 9px 15px;
+      }
+      .chip[aria-pressed="true"] {
+        border-color: var(--action);
+        background: var(--brand);
+        color: var(--action-strong);
+        font-weight: 700;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 6px 0 0;
+      }
+      .error {
+        min-height: 22px;
+        color: #923d31;
+        font-size: 13px;
+        margin: 6px 0;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .actions .button {
+        flex: 1;
+      }
+      .text-button {
+        display: block;
+        border: 0;
+        padding: 10px;
+        margin: 10px auto 0;
+        background: none;
+        color: var(--muted);
+        text-decoration: underline;
+      }
+      .exit {
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+        margin-top: 20px;
+        text-align: center;
+      }
+      .exit .button {
+        width: 100%;
+        background: var(--page);
+        color: var(--action-strong);
+      }
+      .exit small {
+        display: block;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .summary {
+        margin: 0 0 24px;
+        border-top: 1px solid var(--border);
+      }
+      .summary-row {
+        display: grid;
+        grid-template-columns: 145px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .summary-row dt {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .summary-row dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .small-button {
+        border: 0;
+        background: none;
+        color: var(--action-strong);
+        font-weight: 650;
+        padding: 5px;
+      }
+      .secondary {
+        margin-top: 18px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--page);
+      }
+      .secondary h2 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      .secondary p {
+        margin: 0 0 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .secondary .button {
+        margin: 4px 6px 4px 0;
+      }
+      .steps {
+        padding-left: 23px;
+      }
+      .steps li {
+        margin-bottom: 12px;
+      }
+      @media (max-width: 680px) {
+        .shell {
+          width: min(100% - 28px, 960px);
+          padding-top: 18px;
+        }
+        .brand {
+          margin-bottom: 28px;
+        }
+        .brand small {
+          font-size: 10px;
+        }
+        .grid,
+        .fields.two {
+          grid-template-columns: 1fr;
+        }
+        .choice,
+        .card {
+          padding: 24px;
+        }
+        .choice {
+          min-height: 0;
+        }
+        .card h1 {
+          font-size: 26px;
+        }
+        .summary-row {
+          grid-template-columns: 90px 1fr auto;
+          gap: 6px;
+        }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .card,
+        .choice {
+          animation: arrive 0.2s ease-out;
+        }
+        @keyframes arrive {
+          from {
+            opacity: 0.6;
+            transform: translateY(5px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="brand">
+        <span class="brand-mark" aria-hidden="true">c</span>careerform.<small
+          >CF-193 · 첫 사용 흐름 시연</small
+        >
+      </header>
+      <div class="demo-note">
+        팀 검토용 시연 화면입니다. 확장 기능·실제 자동 기입과 연결되지 않으며,
+        입력값은 저장되지 않고 새로고침하면 사라집니다. 가상 정보만 입력해
+        주세요.
+      </div>
+      <main id="app"></main>
+    </div>
+    <script>
+      (() => {
+        const app = document.getElementById("app");
+        const questions = [
+          [
+            "name",
+            "어떤 이름으로 불러드릴까요?",
+            "지원서에 사용할 이름이에요.",
+          ],
+          [
+            "email",
+            "연락받을 이메일을 알려주세요",
+            "아이디를 입력한 뒤 이메일 주소를 골라 완성할 수 있어요.",
+          ],
+          [
+            "phone",
+            "전화번호도 함께 준비해 볼까요?",
+            "하이픈 없이 입력해도 괜찮아요.",
+          ],
+          [
+            "gender",
+            "성별은 어떻게 적을까요?",
+            "자주 쓰는 표기를 고르거나 직접 적어 주세요.",
+          ],
+          [
+            "birthDate",
+            "생년월일을 알려주세요",
+            "숫자 8자리로 입력하거나 달력에서 고를 수 있어요.",
+          ],
+        ];
+        const values = {
+          familyName: "",
+          givenName: "",
+          email: "",
+          phone: "",
+          gender: "",
+          birthDate: "",
+          englishFamilyName: "",
+          englishGivenName: "",
+          nationality: "",
+        };
+        let view = "choice";
+        let step = 0;
+        let editing = false;
+        let supplement = "";
+        let savedBirthDate = "";
+        const escapeHtml = (value) =>
+          String(value).replace(
+            /[&<>"']/g,
+            (character) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[character],
+          );
+        const field = (label, key, type = "text", placeholder = "") =>
+          `<label>${label}<input data-key="${key}" type="${type}" value="${escapeHtml(values[key])}" placeholder="${placeholder}" autocomplete="off"></label>`;
+        const button = (label, action, kind = "", extra = "") =>
+          `<button type="button" class="button ${kind}" data-action="${action}" ${extra}>${label}</button>`;
+        const summaryRow = (label, value, action) =>
+          `<div class="summary-row"><dt>${label}</dt><dd>${escapeHtml(value || "아직 입력하지 않았어요")}</dd><button type="button" class="small-button" data-action="${action}">수정</button></div>`;
+        function normalizedDate(raw) {
+          if (!raw.trim()) return "";
+          const compact = raw.replace(/-/g, "");
+          if (!/^\d{8}$/.test(compact)) return null;
+          const year = Number(compact.slice(0, 4));
+          const month = Number(compact.slice(4, 6));
+          const day = Number(compact.slice(6, 8));
+          const date = new Date(Date.UTC(year, month - 1, day));
+          if (
+            date.getUTCFullYear() !== year ||
+            date.getUTCMonth() + 1 !== month ||
+            date.getUTCDate() !== day
+          )
+            return null;
+          return `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}`;
+        }
+        function renderChoice() {
+          return `<p class="eyebrow">설치 완료 · CAREER FORM</p><h1 tabindex="-1">무엇부터 시작할까요?</h1><p class="lead">필요한 기능부터 가볍게 시작하세요. 나중에 언제든 함께 사용할 수 있어요.</p>
+            <div class="grid">
+              <section class="choice"><span class="badge">반복 입력 줄이기</span><h2>내 정보는 한 번만</h2><p>이름과 연락처부터 등록하고 지원서에서 자동 기입을 사용하세요. 나머지는 필요할 때 추가할 수 있어요.</p>${button("자동 기입 준비하기 →", "start", "")}<small>프로필 등록 → 자동 기입 → 결과 확인</small></section>
+              <section class="choice"><span class="badge">프로필 없이 바로 시작</span><h2>관심 공고, 놓치지 않게</h2><p>공고 링크와 마감을 저장하고 원하는 시간에 알림을 받으세요. 프로필 등록 없이 바로 사용할 수 있어요.</p>${button("공고 저장부터 시작하기 →", "posting", "")}<small>패널에서 시작 → 정보 입력 → 지원 완료</small></section>
+            </div><p class="footnote">실제 확장에서는 공고와 프로필이 현재 브라우저에 저장됩니다. 이 시연 파일은 아무것도 저장하지 않습니다.</p>`;
+        }
+        function fieldsFor(key) {
+          if (key === "name")
+            return `<div class="fields two">${field("국문 성", "familyName", "text", "김")}${field("국문 이름", "givenName", "text", "이름")}</div>`;
+          if (key === "email")
+            return `<div class="fields">${field("이메일", "email", "email", "name@example.com")}<div class="suggestions" id="suggestions"></div></div>`;
+          if (key === "phone")
+            return `<div class="fields">${field("전화번호", "phone", "tel", "01012345678")}<p class="hint">하이픈 없이 입력해도 괜찮아요.</p></div>`;
+          if (key === "gender")
+            return `<div class="fields"><div role="group" aria-label="성별"><p>성별</p><div class="chips">${["남성", "여성"].map((value) => `<button type="button" class="chip" data-action="gender" data-value="${value}" aria-pressed="${values.gender === value}">${value}</button>`).join("")}</div></div>${field("성별 직접 입력", "gender", "text", "지원서에 사용할 표기")}</div>`;
+          return `<div class="fields">${field("생년월일", "birthDate", "text", "YYYYMMDD 또는 YYYY-MM-DD")}<label>달력에서 선택<input data-key="calendar" type="date" value="${escapeHtml(normalizedDate(values.birthDate) || "")}"></label></div>`;
+        }
+        function renderQuestion() {
+          const [key, title, description] = questions[step];
+          return `<section class="card"><div class="topline"><span>기본 정보 · ${step + 1} / ${questions.length}</span><span>언제든 건너뛸 수 있어요</span></div><progress max="${questions.length}" value="${step + 1}"></progress><h1 tabindex="-1">${title}</h1><p class="description">${description}</p>${fieldsFor(key)}<p class="error" role="alert" id="error"></p><div class="actions">${button("이전", "previous")}${button(editing ? "확인하고 돌아가기" : "다음", "next", "primary")}</div><button type="button" class="text-button" data-action="skip">이 질문 건너뛰기</button><div class="exit">${button("지금 자동 기입 사용하기", "guide")}<small>이 시연에서는 실제 지원서로 이동하지 않아요.</small></div></section>`;
+        }
+        function renderSummary() {
+          return `<section class="card"><p class="eyebrow">기본 정보 · 요약</p><h1 tabindex="-1">기본 정보가 준비됐어요</h1><p class="description">입력한 내용을 확인해 보세요. 학력과 경험은 나중에 채워도 좋아요.</p>
+            <dl class="summary">${summaryRow("국문 이름", [values.familyName, values.givenName].filter(Boolean).join(" "), "edit-name")}${summaryRow("이메일", values.email, "edit-email")}${summaryRow("전화번호", values.phone, "edit-phone")}${summaryRow("성별", values.gender, "edit-gender")}${summaryRow("생년월일", values.birthDate, "edit-birthDate")}${summaryRow("영문 이름", [values.englishFamilyName, values.englishGivenName].filter(Boolean).join(" "), "supplement-englishName")}${summaryRow("국적", values.nationality, "supplement-nationality")}</dl>
+            ${button("지금 자동 기입 사용하기", "guide", "primary")}
+            <div class="secondary"><h2>필요할 때 더 채워요</h2><p>영문 이름과 국적은 선택해서 추가할 수 있어요.</p>${button("영문 이름 입력", "supplement-englishName")}${button("국적 입력", "supplement-nationality")}</div>
+            <p class="footnote">실제 확장에서는 이 다음에 학력·경력·프로젝트도 선택해 보충할 수 있어요.</p>${button("시작 화면으로", "choice")}</section>`;
+        }
+        function renderSupplement() {
+          const english = supplement === "englishName";
+          return `<section class="card"><p class="eyebrow">선택 정보</p><h1 tabindex="-1">${english ? "영문 이름도 준비할까요?" : "국적을 알려주세요"}</h1><p class="description">${english ? "지원서에 사용할 표기 그대로 적어 주세요." : "지원서에 사용할 국적 표기를 적어 주세요."}</p><div class="fields ${english ? "two" : ""}">${english ? field("영문 성", "englishFamilyName", "text", "Kim") + field("영문 이름", "englishGivenName", "text", "Gildong") : field("국적", "nationality", "text", "대한민국")}</div><div class="actions">${button("요약으로", "summary")}${button("확인하고 돌아가기", "summary", "primary")}</div><div class="exit">${button("지금 자동 기입 사용하기", "guide")}</div></section>`;
+        }
+        function renderGuide() {
+          return `<section class="card"><p class="eyebrow">자동 기입 사용 안내</p><h1 tabindex="-1">지원서에서 자동 기입을 시작하세요</h1><p class="description">여기서 멈춰도 괜찮아요. 실제 확장에서는 저장된 정보만 사용합니다.</p><ol class="steps"><li>지원하려는 채용 페이지를 엽니다.</li><li>커리어폼 확장 프로그램을 엽니다.</li><li>자동 기입 버튼을 누르고 결과를 확인합니다.</li></ol><p class="footnote">이 시연 파일은 지원서를 열거나 입력하지 않습니다.</p>${button("입력 요약으로 돌아가기", "summary", "primary")}</section>`;
+        }
+        function renderPosting() {
+          return `<section class="card"><p class="eyebrow">공고 저장 안내</p><h1 tabindex="-1">관심 공고를 모아보세요</h1><p class="description">실제 확장에서는 공고 링크와 마감 시간을 저장해 알림을 설정할 수 있어요.</p><ol class="steps"><li>커리어폼 사이드패널을 엽니다.</li><li>공고 링크와 마감 시간을 입력합니다.</li><li>지원했다면 완료로 표시합니다.</li></ol><p class="footnote">이 파일에서는 공고를 저장하거나 알림을 보내지 않습니다.</p>${button("시작 방법 다시 선택", "choice", "primary")}</section>`;
+        }
+        function render(focus = true) {
+          app.innerHTML =
+            view === "choice"
+              ? renderChoice()
+              : view === "question"
+                ? renderQuestion()
+                : view === "summary"
+                  ? renderSummary()
+                  : view === "supplement"
+                    ? renderSupplement()
+                    : view === "posting"
+                      ? renderPosting()
+                      : renderGuide();
+          if (view === "question" && questions[step][0] === "email")
+            updateSuggestions();
+          if (focus)
+            requestAnimationFrame(() => {
+              const first =
+                view === "question" && questions[step][0] === "gender"
+                  ? app.querySelector(".chip")
+                  : app.querySelector('input:not([type="date"])');
+              (first || app.querySelector("h1")).focus();
+            });
+        }
+        function updateSuggestions() {
+          const box = document.getElementById("suggestions");
+          if (!box) return;
+          const match = values.email.match(/^([^\s@]+)@?([^\s@]*)$/);
+          const options = match
+            ? ["naver.com", "gmail.com", "daum.net"]
+                .filter((domain) => domain.startsWith(match[2].toLowerCase()))
+                .map((domain) => `${match[1]}@${domain}`)
+                .filter((value) => value !== values.email)
+            : [];
+          box.innerHTML = options
+            .map(
+              (value) =>
+                `<button type="button" class="chip" data-action="email-suggestion" data-value="${escapeHtml(value)}">${escapeHtml(value)}</button>`,
+            )
+            .join("");
+        }
+        function finishCurrentDate(skip = false) {
+          if (view !== "question" || questions[step][0] !== "birthDate")
+            return true;
+          const valid = normalizedDate(values.birthDate);
+          if (valid === null && !skip) {
+            document.getElementById("error").textContent =
+              "날짜를 8자리로 완성하거나 비운 뒤 이동해 주세요.";
+            return false;
+          }
+          values.birthDate = valid === null ? savedBirthDate : valid;
+          if (valid !== null) savedBirthDate = valid;
+          return true;
+        }
+        function advance(skip = false) {
+          if (!finishCurrentDate(skip)) return;
+          if (editing || step === questions.length - 1) {
+            editing = false;
+            view = "summary";
+          } else step += 1;
+          render();
+        }
+        app.addEventListener("input", (event) => {
+          const key = event.target.dataset.key;
+          if (!key) return;
+          if (key === "calendar") {
+            values.birthDate = event.target.value;
+            app.querySelector('[data-key="birthDate"]').value =
+              values.birthDate;
+          } else {
+            values[key] = event.target.value;
+            if (key === "birthDate")
+              app.querySelector('[data-key="calendar"]').value =
+                normalizedDate(values.birthDate) || "";
+          }
+          if (key === "email") updateSuggestions();
+          if (key === "gender")
+            app
+              .querySelectorAll('.chip[data-action="gender"]')
+              .forEach((chip) =>
+                chip.setAttribute(
+                  "aria-pressed",
+                  String(chip.dataset.value === values.gender),
+                ),
+              );
+          if (key === "birthDate" || key === "calendar")
+            document.getElementById("error").textContent = "";
+        });
+        app.addEventListener("click", (event) => {
+          const target = event.target.closest("[data-action]");
+          if (!target) return;
+          const action = target.dataset.action;
+          if (
+            action === "choice" ||
+            action === "summary" ||
+            action === "guide" ||
+            action === "posting"
+          ) {
+            if (action === "guide" && !finishCurrentDate()) return;
+            view = action;
+            render();
+            return;
+          }
+          if (action === "start") {
+            view = "question";
+            step = 0;
+            editing = false;
+            render();
+            return;
+          }
+          if (action === "next") {
+            advance();
+            return;
+          }
+          if (action === "skip") {
+            advance(true);
+            return;
+          }
+          if (action === "previous") {
+            if (!finishCurrentDate()) return;
+            if (editing) {
+              editing = false;
+              view = "summary";
+            } else if (step === 0) view = "choice";
+            else step -= 1;
+            render();
+            return;
+          }
+          if (action === "gender") {
+            values.gender =
+              values.gender === target.dataset.value
+                ? ""
+                : target.dataset.value;
+            render();
+            return;
+          }
+          if (action === "email-suggestion") {
+            values.email = target.dataset.value;
+            const input = app.querySelector('[data-key="email"]');
+            input.value = values.email;
+            input.focus();
+            updateSuggestions();
+            return;
+          }
+          if (action.startsWith("edit-")) {
+            step = questions.findIndex(
+              (question) => question[0] === action.slice(5),
+            );
+            editing = true;
+            view = "question";
+            render();
+            return;
+          }
+          if (action.startsWith("supplement-")) {
+            supplement = action.slice(11);
+            view = "supplement";
+            render();
+          }
+        });
+        app.addEventListener("keydown", (event) => {
+          if (
+            event.key !== "Enter" ||
+            event.isComposing ||
+            view !== "question" ||
+            event.target.tagName !== "INPUT"
+          )
+            return;
+          event.preventDefault();
+          const current = [...app.querySelectorAll('input:not([type="date"])')];
+          const next = current[current.indexOf(event.target) + 1];
+          if (next) next.focus();
+          else advance();
+        });
+        render(false);
+      })();
+    </script>
+  </body>
+</html>
