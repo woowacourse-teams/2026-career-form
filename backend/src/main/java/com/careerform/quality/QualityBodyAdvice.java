@@ -69,6 +69,7 @@ public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements
             var decision = scope.decision().orElse(null);
             var route = decision == null ? "UNKNOWN" : decision.kind() == RouteKind.GENERIC ? "GENERIC" : decision.greeting() ? "GREETING"
                 : decision.companyKey() != null ? "STATIC" : "UNKNOWN";
+            var publicLink = snapshot == null ? null : QualityPublicLinks.validate(host, request.getHeaders().getFirst("X-Career-Form-Public-Application"));
             var run = request.getHeaders().getFirst("X-Career-Form-Run");
             var token = request.getHeaders().getFirst("X-Career-Form-Report-Token");
             var extension = request.getHeaders().getFirst("X-Career-Form-Version");
@@ -87,7 +88,7 @@ public final class QualityBodyAdvice extends RequestBodyAdviceAdapter implements
                 var group = identity == null ? collector.group("UNKNOWN", "UNKNOWN", "UNKNOWN", null, null)
                     : collector.group(identity, snapshot == null ? "UNKNOWN" : snapshot.structureKey(), route,
                         decision == null ? null : decision.policyVersion(), extension, event.calls());
-                return collector.observe(group, event, snapshot, run, token, capable);
+                return collector.observe(group, event, snapshot, run, token, capable, publicLink);
             });
             if (receipt != null) {
                 response.getHeaders().set("X-Career-Form-Run", receipt.runId());

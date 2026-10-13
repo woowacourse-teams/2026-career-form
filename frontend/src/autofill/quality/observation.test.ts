@@ -260,8 +260,9 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
       ),
     );
     await vi.advanceTimersByTimeAsync(1000);
+    expect(messages).toHaveLength(0);
     await quality.finish("COMPLETED");
-    expect(messages.length).toBeLessThanOrEqual(3);
+    expect(messages).toHaveLength(1);
     expect(messages).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -292,5 +293,136 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
     await quality.finish("COMPLETED");
     expect(JSON.stringify(messages)).toContain("RETENTION_UNOBSERVED");
     expect(JSON.stringify(messages)).not.toContain('"retained":true');
+  });
+
+  it("완료 후 반복 종료와 화면 취소가 추가 report를 만들지 않는다", async () => {
+    const send = vi.fn(async () => ({ ok: true }));
+    const quality = new QualityObservation(send);
+    quality.begin();
+    await quality.finish("COMPLETED");
+    await quality.finish("COMPLETED");
+    await quality.finish("CANCELLED");
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({ finished: "COMPLETED" }),
+      }),
+    );
+  });
+
+  it("정상 완료는 유지 관측이 끝나기 전에는 보내지 않는다", async () => {
+    vi.useFakeTimers();
+    const send = vi.fn(async () => ({ ok: true }));
+    const quality = new QualityObservation(send);
+    const input = document.createElement("input");
+    document.body.append(input);
+    const registry = fixture(input);
+    quality.snapshot("snapshot", registry, ["c1"]);
+    quality.write(item, { candidateId: "c1", status: "written" }, registry);
+    const finished = quality.finish("COMPLETED");
+    await vi.advanceTimersByTimeAsync(999);
+    expect(send).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    await finished;
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          fields: { c1: expect.objectContaining({ retained: true }) },
+          finished: "COMPLETED",
+        }),
+      }),
+    );
+  });
+
+  it("종료 호출 없이 새 실행을 시작해도 이전 관측을 취소 결과로 정리한다", async () => {
+    vi.useFakeTimers();
+    const send = vi.fn(async () => ({ ok: true }));
+    const quality = new QualityObservation(send);
+    const input = document.createElement("input");
+    document.body.append(input);
+    const registry = fixture(input);
+    quality.snapshot("previous", registry, ["c1"]);
+    quality.write(item, { candidateId: "c1", status: "written" }, registry);
+    const oldRun = quality.runKey;
+    quality.begin();
+    await quality.finish("COMPLETED");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls.map(([message]) => message)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          qualityRun: oldRun,
+          payload: expect.objectContaining({ finished: "CANCELLED" }),
+        }),
+        expect.objectContaining({
+          qualityRun: quality.runKey,
+          payload: expect.objectContaining({
+            finished: "COMPLETED",
+            fields: {},
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("완료 관측 대기 중 취소는 유지 관측을 중단하고 취소 결과 하나만 보낸다", async () => {
+    vi.useFakeTimers();
+    const send = vi.fn(async () => ({ ok: true }));
+    const quality = new QualityObservation(send);
+    const input = document.createElement("input");
+    document.body.append(input);
+    const registry = fixture(input);
+    quality.snapshot("snapshot", registry, ["c1"]);
+    quality.write(item, { candidateId: "c1", status: "written" }, registry);
+    const completed = quality.finish("COMPLETED");
+    await Promise.all([completed, quality.finish("CANCELLED")]);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          fields: {
+            c1: expect.objectContaining({
+              retained: false,
+              reason: "RETENTION_UNOBSERVED",
+            }),
+          },
+          finished: "CANCELLED",
+        }),
+      }),
+    );
+  });
+
+  it("종료 대기 중 새 실행은 이전 실행을 취소하고 각 실행을 분리해 보낸다", async () => {
+    vi.useFakeTimers();
+    const messages: {
+      qualityRun: string;
+      payload: { finished: string; fields: unknown };
+    }[] = [];
+    const quality = new QualityObservation(async (message) => {
+      messages.push(message as (typeof messages)[number]);
+    });
+    const input = document.createElement("input");
+    document.body.append(input);
+    const registry = fixture(input);
+    quality.snapshot("old", registry, ["c1"]);
+    quality.write(item, { candidateId: "c1", status: "written" }, registry);
+    const oldRun = quality.runKey;
+    const previous = quality.finish("COMPLETED");
+    quality.begin();
+    const newRun = quality.runKey;
+    quality.snapshot("new", registry, ["c1"]);
+    quality.review("new", [item]);
+    await previous;
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      qualityRun: oldRun,
+      payload: { finished: "CANCELLED" },
+    });
+    await quality.finish("COMPLETED");
+    expect(messages).toHaveLength(2);
+    expect(messages[1]).toMatchObject({
+      qualityRun: newRun,
+      payload: { finished: "COMPLETED", fields: { c1: { written: false } } },
+    });
   });
 });

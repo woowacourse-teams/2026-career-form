@@ -23,7 +23,10 @@ public final class QualityProjection {
     public record Field(String key, String position, String control, boolean mapped, boolean eligible) {
     }
 
-    public record Snapshot(String snapshotKey, String host, String structureKey, List<Field> fields) {
+    public record Snapshot(String snapshotKey, String host, String structureKey, List<Field> fields, Baseline baseline) {
+        public Snapshot(String snapshotKey, String host, String structureKey, List<Field> fields) {
+            this(snapshotKey, host, structureKey, fields, null);
+        }
         public Snapshot {
             fields = List.copyOf(fields);
         }
@@ -33,6 +36,8 @@ public final class QualityProjection {
                 0, 0, 0, 0);
         }
     }
+
+    public record Baseline(long fieldCount, boolean compatible) { }
 
     public static Snapshot fields(FieldsAnalysisRequest request, FieldsAnalysisResponse response) {
         if (!request.snapshotId().equals(response.snapshotId())) {
@@ -54,7 +59,10 @@ public final class QualityProjection {
                 Integer.toString(index), field.control().name(), matched.containsKey(field.candidateId()), eligible(field, matched.get(field.candidateId())));
         }).toList();
         return new Snapshot(digest(request.snapshotId()), request.site().host().toLowerCase(Locale.ROOT),
-            structure, projected);
+            structure, projected, new Baseline(source.size(), source.stream().allMatch(field ->
+                field.visibility() == FieldsAnalysisRequest.Visibility.VISIBLE && !Boolean.TRUE.equals(field.inert())
+                    && !Boolean.TRUE.equals(field.disabled())
+                    && (field.semanticContext() == null || field.semanticContext().repeat() == null || field.semanticContext().repeat().rowCount() == 1))));
     }
 
     private static List<String> shapes(FieldsAnalysisRequest request) {

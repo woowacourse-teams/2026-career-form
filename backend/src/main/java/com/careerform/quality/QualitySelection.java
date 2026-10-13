@@ -78,6 +78,11 @@ public final class QualitySelection {
     }
 
     public static Batch select(Instant now, List<Candidate> candidates, Route nextRoute, long minimumSample) {
+        return select(now, candidates, nextRoute, minimumSample, 0);
+    }
+
+    public static Batch select(Instant now, List<Candidate> candidates, Route nextRoute, long minimumSample, int existingAssignments) {
+        if (existingAssignments < 0) { throw new IllegalArgumentException("Invalid existing assignments"); }
         if (minimumSample < 1) { throw new IllegalArgumentException("Invalid minimum sample"); }
         Objects.requireNonNull(now);
         Objects.requireNonNull(nextRoute);
@@ -91,7 +96,7 @@ public final class QualitySelection {
         var eligible = checked.stream().filter(candidate -> candidate.eligibleAt(now)).toList();
         var pending = eligible.stream().filter(Candidate::pending).sorted(OLDEST).toList();
         var available = eligible.stream().filter(candidate -> !candidate.pending()).toList();
-        var capacity = Math.max(0, DAILY_LIMIT - pending.size());
+        var capacity = Math.max(0, DAILY_LIMIT - Math.max(pending.size(), existingAssignments));
         var aging = pickAging(available, nextRoute, Math.min(capacity, AGING_LIMIT));
         var prioritized = available.stream()
             .filter(candidate -> !contains(aging.newRequests(), candidate.id()))

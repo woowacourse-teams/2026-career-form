@@ -83,13 +83,14 @@ public final class QualityDailyBatch {
     }
 
     private Batch select(String date, Instant now) {
-        var candidates = registry.listRecords(null, 0, 10001);
+        var candidates = registry.workRecords();
         if (candidates.size() > 10000) { throw new IllegalArgumentException("Candidate selection needs a narrower window"); }
         var statistics = statistics(now);
-        var options = candidates.stream().filter(record -> ((QualityRegistry.Candidate) record.payload()).statusAt(now) != QualityRegistry.Status.COMPLETED)
+        var options = QualityCandidateGroups.selection(candidates, now).stream()
             .map(record -> option(record, statistics, now)).toList();
         var previous = latest();
-        var selected = QualitySelection.select(now, options, previous == null ? QualitySelection.Route.STATIC : previous.nextRoute(), minSample);
+        var assigned = registry.assignedCount();
+        var selected = QualitySelection.select(now, options, previous == null ? QualitySelection.Route.STATIC : previous.nextRoute(), minSample, assigned);
         var byId = candidates.stream().collect(Collectors.toUnmodifiableMap(QualityRecord::id, record -> record));
         var entries = Stream.concat(selected.active().stream().map(candidate -> entry(candidate, byId, "기존 미완료", true)),
             selected.newRequests().stream().map(candidate -> entry(candidate, byId,

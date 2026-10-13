@@ -44,6 +44,44 @@ class SharedFilesTest(unittest.TestCase):
             result.errors,
         )
 
+    def test_allows_valid_system_pr_without_harness_issue(self) -> None:
+        for head, base in (
+            ("release/1.2.0", "main"), ("release/1.2.0", "develop"),
+            ("main", "develop"), ("main", "release/1.2.0"),
+            ("revert/abcdef1", "main"),
+        ):
+            with self.subTest(head=head, base=base):
+                result = validate_shared_file_change(
+                    ("harness/scripts/verify.py",), (), head=head, base=base,
+                )
+                self.assertTrue(result.is_valid, result.errors)
+
+    def test_preserves_harness_protection_for_work_and_hotfix(self) -> None:
+        for head, base in (
+            ("CF-197", "release/1.2.0"), ("CF-197", "develop"),
+            ("hotfix/CF-197", "main"),
+        ):
+            with self.subTest(head=head, base=base):
+                self.assertFalse(validate_shared_file_change(
+                    ("harness/test.py",), (), head=head, base=base,
+                ).is_valid)
+                self.assertTrue(validate_shared_file_change(
+                    ("harness/test.py",), ("harness-change",), ("harness-change",),
+                    head=head, base=base,
+                ).is_valid)
+
+    def test_rejects_invalid_branch_flow_even_with_harness_labels(self) -> None:
+        for head, base in (
+            ("release/fake", "main"), ("release/1.2.0", "CF-197"),
+            ("develop", "main"), ("main", "main"), ("", "main"),
+            ("release/1.2.0", ""),
+        ):
+            with self.subTest(head=head, base=base):
+                self.assertFalse(validate_shared_file_change(
+                    ("harness/test.py",), ("harness-change",), ("harness-change",),
+                    head=head, base=base,
+                ).is_valid)
+
     def test_extracts_closing_issue_numbers(self) -> None:
         numbers = closing_issue_numbers("Closes #12\nFixes #34\n참고 #56")
 

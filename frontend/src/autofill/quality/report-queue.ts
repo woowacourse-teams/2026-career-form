@@ -11,7 +11,6 @@ interface BufferedReport {
 export class QualityReportQueue {
   private buffered: ReadonlyMap<string, BufferedReport> = new Map();
   private sending: Promise<void> = Promise.resolve();
-  private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly sendMessage: (message: unknown) => Promise<unknown>,
@@ -24,17 +23,6 @@ export class QualityReportQueue {
     identities: Record<string, string>,
     finished: QualityReport["finished"],
   ): void {
-    if (finished) {
-      this.flush();
-      this.send(run, {
-        eventId: this.eventId(),
-        snapshotId,
-        fields,
-        identities,
-        finished,
-      });
-      return;
-    }
     const id = `${run}|${snapshotId}`;
     const previous = this.buffered.get(id);
     const merged = Object.fromEntries(
@@ -49,21 +37,35 @@ export class QualityReportQueue {
       fields: { ...previous?.fields, ...merged },
       identities: { ...previous?.identities, ...identities },
     };
-    this.buffered = new Map([...this.buffered, [id, report]]);
-    this.timer ??= globalThis.setTimeout(() => this.flush(), 100);
+    if (
+      !finished ||
+      previous ||
+      Object.keys(fields).length ||
+      Object.keys(identities).length
+    )
+      this.buffered = new Map([...this.buffered, [id, report]]);
+    if (finished) this.flush(run, snapshotId, finished);
   }
 
   async drain(): Promise<void> {
-    this.flush();
     await this.sending;
   }
 
-  private flush(): void {
-    if (this.timer !== undefined) globalThis.clearTimeout(this.timer);
-    this.timer = undefined;
-    const reports = this.buffered;
-    this.buffered = new Map();
-    for (const report of reports.values()) {
+  private flush(
+    run: string,
+    snapshotId: string | null,
+    finished: NonNullable<QualityReport["finished"]>,
+  ): void {
+    const buffered = [...this.buffered.values()].filter(
+      (report) => report.run === run,
+    );
+    this.buffered = new Map(
+      [...this.buffered].filter(([, report]) => report.run !== run),
+    );
+    const reports = buffered.length
+      ? buffered
+      : [{ run, snapshotId, fields: {}, identities: {} }];
+    for (const [index, report] of reports.entries()) {
       const fields = Object.entries(report.fields);
       for (let offset = 0; offset < Math.max(1, fields.length); offset += 300) {
         this.send(report.run, {
@@ -71,7 +73,10 @@ export class QualityReportQueue {
           snapshotId: report.snapshotId,
           fields: Object.fromEntries(fields.slice(offset, offset + 300)),
           identities: offset === 0 ? report.identities : {},
-          finished: null,
+          finished:
+            index === reports.length - 1 && offset + 300 >= fields.length
+              ? finished
+              : null,
         });
       }
     }

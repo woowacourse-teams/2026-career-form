@@ -27,7 +27,7 @@ description: 사용자가 LLM Wiki에 정본 문서를 수집, 갱신하거나 �
 
 ## 검증
 
-`.venv/bin/python harness/scripts/validate-llm-wiki.py --base-ref origin/develop`로 manifest, payload, 내부 자산, topic 상태, 대체 순환, 양방향 색인과 raw 불변성을 검사한다. 전체 변경은 `.venv/bin/python harness/scripts/verify.py`로 확인한다.
+확정한 Issue의 기준 ref를 브랜치별 `career-form-base` Git 설정 또는 CI의 PR base에서 확인한다. `.venv/bin/python harness/scripts/validate-llm-wiki.py --base-ref <확인한 기준 ref>`로 manifest, payload, 내부 자산, topic 상태, 대체 순환, 양방향 색인과 raw 불변성을 검사한다. 릴리스 수정을 develop으로 비교하지 않는다. 전체 변경은 같은 기준을 사용하는 `.venv/bin/python harness/scripts/verify.py`로 확인한다.
 
 ## Upstream
 

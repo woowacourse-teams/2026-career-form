@@ -1,14 +1,28 @@
 package com.careerform.quality;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 
 class QualityObservationExecutorTest {
+    @BeforeAll
+    static void initializeSharedExecutorBeforeMockingConstruction() {
+        new QualityObservationExecutor().close();
+    }
+
     @Test
     void returnsCompletedObservationWithoutMovingRequestScope() {
         try (var observer = new QualityObservationExecutor(); var scope = QualityScope.open()) {
@@ -40,13 +54,45 @@ class QualityObservationExecutorTest {
     }
 
     @Test
-    void preservesCallerInterruptionWithoutThrowing() {
-        try (var observer = new QualityObservationExecutor()) {
+    void alreadyInterruptedCallerDoesNotSubmitEvenAnImmediatelyCompletedObservation() {
+        try (var workers = mockConstruction(ThreadPoolExecutor.class, (worker, context) ->
+                when(worker.submit(ArgumentMatchers.<Callable<String>>any()))
+                    .thenReturn(CompletableFuture.completedFuture("unused")));
+             var observer = new QualityObservationExecutor()) {
             Thread.currentThread().interrupt();
             assertThat(observer.observe(() -> "unused")).isNull();
             assertThat(Thread.currentThread().isInterrupted()).isTrue();
+            verify(workers.constructed().getFirst(), never()).submit(ArgumentMatchers.<Callable<String>>any());
         } finally {
             Thread.interrupted();
+        }
+    }
+
+    @Test
+    void interruptionAfterSubmissionPreservesCallerFlagAndCancelsUnfinishedObservation() throws Exception {
+        var caller = Thread.currentThread();
+        var cancelled = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        try (var observer = new QualityObservationExecutor()) {
+            try {
+                assertThat(observer.observe(() -> {
+                    caller.interrupt();
+                    try {
+                        release.await();
+                    } catch (InterruptedException exception) {
+                        cancelled.countDown();
+                        throw exception;
+                    }
+                    return "unreachable";
+                })).isNull();
+                assertThat(caller.isInterrupted()).isTrue();
+            } finally {
+                Thread.interrupted();
+            }
+            assertThat(cancelled.await(1, TimeUnit.SECONDS)).isTrue();
+            assertThat(observer.observe(() -> "next")).isEqualTo("next");
+        } finally {
+            release.countDown();
         }
     }
 

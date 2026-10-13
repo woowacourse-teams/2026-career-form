@@ -476,3 +476,44 @@
 - Approval-Digest: 5ee6bf070b5742523da7c39fa14812a9ced44bd4344ca53c5b5e5e2419bfda28
 - Source-Revision: 62691529476335940df2b4aa3f584b04e8135174
 - 승인한 다섯 후보를 [CF-206 bundle](../raw/issues/CF-206/manifest.md)에 기록하고 [필드 매핑 공급자 벤치마크](topics/field-mapping-benchmark.md), [Jev fields 요청 한도와 응답 검증](topics/jev-field-request-limits.md) topic을 새로 만들었다. 기존 raw는 보존했다.
+## [2026-10-12] ingest | CF-183 확장 품질 보고 fetch 호출 문맥
+
+- Approval-Digest: a0023aa706b1b4fd3c776de453075b9a7718c3ff09d069f63780963d8836fc13
+- Source-Revision: f2e0634ff9f81c216211aa47fe1280ecaea613a1
+- 승인한 후보 하나를 [CF-183 bundle](../raw/issues/CF-183/manifest.md)에 기록하고 [fetch 호출 문맥](topics/extension-fetch-context.md)을 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-185 Wiki 검증 기준 브랜치
+
+- Approval-Digest: 465066ab4d30dd20534d671736989ccaafc3fda9ae84604459ab37a2b8b066c5
+- Source-Revision: 0ca328ce84497e30fa10d300141967ca2116693a
+- 승인한 후보를 [CF-185 bundle](../raw/issues/CF-185/manifest.md)에 기록하고 [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md)를 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-190 품질 확인 사이트와 공개 지원서 링크
+
+- Approval-Digest: 8a3b7d0be9741e604a6593e6c683295587c16cb5ad0910c1beb820b07187d79e
+- Source-Revision: 7e8b704cc8023a109affd75ec30118ff74597f28
+- 승인한 네 후보를 [CF-190 bundle](../raw/issues/CF-190/manifest.md)에 기록하고 [품질 확인 사이트와 링크](topics/quality-site-links.md)를 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-195 공고 단위 품질 확인
+
+- Approval-Digest: 638fd7c699ebcece0e16268c71ab4779bde8f1f9a9fbd46757444b88a4ac2d47
+- Source-Revision: 6783d4d0b2c9db9717c696196bc63ad9e45b3de1
+- 승인한 네 구현 기준과 ADR 195를 [CF-195 bundle](../raw/issues/CF-195/manifest.md)에 기록하고 [품질 확인 사이트와 링크](topics/quality-site-links.md)를 갱신했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-197 시스템 PR 계약
+
+- Approval-Digest: 179ef852f0c27dfbb2cc374949e8b18360c58d912b79a13648622ae02d0c6fc7
+- Source-Revision: c2f545f5c1349b1da28feb5203bbbe9ffaf4b525
+- 승인한 두 항목을 [CF-197 bundle](../raw/issues/CF-197/manifest.md)에 기록하고 [시스템 PR 계약](topics/release-pr-contract.md)을 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-13] ingest | CF-201 품질 관측 인터럽트 처리
+
+- Approval-Digest: 8e6c08112dd8956d9e9e3b96c057d46cb46125a296ac59b397cb4dbfb21fe226
+- Source-Revision: 149244d91f4108c183a9b09e22136bbf8a90e6b3
+- 승인한 후보를 [CF-201 bundle](../raw/issues/CF-201/manifest.md)에 기록하고 [품질 관측 인터럽트 처리](topics/quality-observation-interruption.md)를 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-13] ingest | CF-204 품질 report 종료 전송
+
+- Approval-Digest: c77035f9272a13a0c57efcb4397b53809a4cc8f2e4d79b61eb72bafe0e8cc0f3
+- Source-Revision: d0ab0303e2b9514b40a32b316f5b88d434d56693
+- 승인한 후보를 [CF-204 bundle](../raw/issues/CF-204/manifest.md)에 기록하고 [품질 report 전송 시점](topics/quality-report-lifecycle.md)을 추가했다. 기존 raw는 보존했다.
