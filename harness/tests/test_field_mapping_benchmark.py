@@ -41,7 +41,10 @@ def captured_request() -> dict[str, object]:
                 "sectionId": "section-1",
                 "displayName": "기본정보",
                 "fields": [
-                    field("field-email", "이메일", domId="userEmail", domName="email"),
+                    field(
+                        "field-email", "이메일", domId="userEmail", domName="email",
+                        options=[{"optionId": "field-email-option-1", "displayName": "gmail.com"}],
+                    ),
                     field("field-phone", "연락처", domId="tel"),
                 ],
             },
@@ -133,9 +136,14 @@ class DeidentifyTest(unittest.TestCase):
         self.assertEqual(item["fields"][0]["semanticContext"]["repeat"]["groupId"], "g01")
         self.assertEqual(aliases["candidates"]["field-company"], "c003")
         rendered = json.dumps(request, ensure_ascii=False)
-        for secret in ("recruit.example.com", "step2", "userEmail", "fields-7c1f", "row-a", "group-x"):
+        for secret in ("recruit.example.com", "step2", "userEmail", "fields-7c1f", "row-a", "group-x", "field-"):
             self.assertNotIn(secret, rendered)
         self.assertIn("회사명", rendered)
+
+    def test_aliases_option_identifiers(self) -> None:
+        request, _ = deidentify_request(captured_request(), "alpha")
+        option = request["sections"][0]["fields"][0]["options"][0]
+        self.assertEqual(option, {"optionId": "o001", "displayName": "gmail.com"})
 
     def test_rejects_requests_without_sections(self) -> None:
         with self.assertRaises(BenchmarkError):
@@ -222,6 +230,19 @@ class EvaluateTest(unittest.TestCase):
         self.assertEqual((sweep["0.8"]["correct"], sweep["0.8"]["wrong"]), (1, 0))
         self.assertEqual((sweep["0.5"]["correct"], sweep["0.5"]["wrong"]), (2, 1))
 
+    def test_derived_raw_choices_are_rescored_as_recipes(self) -> None:
+        value = labels(sites=[{"site_id": "alpha", "labels": [
+            {"candidate_id": "c001", "expected": "DERIVED:KOREAN_FULL_NAME", "review": "CONFIRMED"},
+            *labels()["sites"][0]["labels"][1:],
+        ]}])
+        jev = results("jev", [
+            {"candidate_id": "c001", "result": "NO_MATCH", "jev": jev_answer("KOREAN_FULL_NAME", 0.6)},
+            {"candidate_id": "c002", "result": "NO_MATCH", "jev": jev_answer("ABSTAIN", 0.9)},
+            {"candidate_id": "c003", "result": "NO_MATCH", "jev": jev_answer("ABSTAIN", 0.9)},
+        ])
+        sweep = evaluate_benchmark(value, self.requests(), [jev], thresholds=[0.5])["providers"]["jev"]["thresholds"]
+        self.assertEqual(sweep["0.5"]["correct"], 1)
+
     def test_errors_are_counted_and_not_treated_as_predictions(self) -> None:
         failed = results("jev", [
             {"candidate_id": cid, "result": "ERROR"} for cid in ("c001", "c002", "c003")
@@ -239,6 +260,9 @@ class EvaluateTest(unittest.TestCase):
             labels(sites=[{"site_id": "alpha", "labels": [{**labels()["sites"][0]["labels"][0], "review": "MAYBE"}] + labels()["sites"][0]["labels"][1:]}]),
             labels(contract_version="0.9"),
             labels(sites=[{"site_id": "beta", "labels": []}]),
+            labels(label_status="CONFIRMED"),
+            labels(sites=[7]),
+            labels(sites=[{"site_id": "alpha", "labels": ["c001"]}]),
         ]
         for value in broken:
             with self.subTest(value=value), self.assertRaises(BenchmarkError):
@@ -247,7 +271,25 @@ class EvaluateTest(unittest.TestCase):
     def test_rejects_results_that_do_not_cover_the_request(self) -> None:
         partial = results("openai", [{"candidate_id": "c001", "result": "NO_MATCH"}])
         malformed = results("openai", [{"candidate_id": cid, "result": "maybe"} for cid in ("c001", "c002", "c003")])
-        for value in (partial, malformed, {**partial, "provider": ""}):
+
+        def with_jev(judgment: object) -> dict[str, object]:
+            return results("jev", [
+                {"candidate_id": "c001", "result": "NO_MATCH", "jev": judgment},
+                {"candidate_id": "c002", "result": "NO_MATCH"},
+                {"candidate_id": "c003", "result": "NO_MATCH"},
+            ])
+
+        invalid = (
+            partial, malformed, {**partial, "provider": ""},
+            results("openai", [7, 8, 9]),
+            with_jev({"raw_choice": "ABSTAIN", "top_probabilities": {}}),
+            with_jev({"raw_choice": "ABSTAIN", "confidence": None, "top_probabilities": {}}),
+            with_jev({"raw_choice": "unknown.key", "confidence": 0.9, "top_probabilities": {}}),
+            with_jev({"raw_choice": "ABSTAIN", "confidence": 1.5, "top_probabilities": {}}),
+            with_jev({"raw_choice": "ABSTAIN", "confidence": 0.9, "top_probabilities": {"ABSTAIN": "high"}}),
+            with_jev("ABSTAIN"),
+        )
+        for value in invalid:
             with self.subTest(value=value), self.assertRaises(BenchmarkError):
                 evaluate_benchmark(labels(), self.requests(), [value], thresholds=[])
 

@@ -7,7 +7,7 @@
     {
       "site_id": "naver",
       "analysis_status": "COMPLETE",
-      "latency_ms": 9536,
+      "latency_ms": 4656,
       "candidates": [
         {
           "candidate_id": "c001",
@@ -15,11 +15,11 @@
         },
         {
           "candidate_id": "c002",
-          "result": "DIRECT:education.graduateSchool.schoolRegion"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c003",
-          "result": "DIRECT:education.graduateSchool.schoolName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c004",
@@ -31,11 +31,11 @@
         },
         {
           "candidate_id": "c006",
-          "result": "DIRECT:education.graduateSchool.startDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c007",
-          "result": "DIRECT:education.graduateSchool.endDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c008",
@@ -59,7 +59,7 @@
         },
         {
           "candidate_id": "c013",
-          "result": "DIRECT:education.graduateSchool.majorName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c014",
@@ -71,11 +71,11 @@
         },
         {
           "candidate_id": "c016",
-          "result": "DIRECT:education.graduateSchool.additionalMajorName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c017",
-          "result": "DIRECT:education.university.minorName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c018",
@@ -83,11 +83,11 @@
         },
         {
           "candidate_id": "c019",
-          "result": "DIRECT:education.graduateSchool.gpaScore"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c020",
-          "result": "DIRECT:education.graduateSchool.gpaScale"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c021",
@@ -99,7 +99,7 @@
         },
         {
           "candidate_id": "c023",
-          "result": "DIRECT:education.graduateSchool.completionStatus"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c024",
@@ -107,11 +107,11 @@
         },
         {
           "candidate_id": "c025",
-          "result": "DIRECT:education.university.schoolRegion"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c026",
-          "result": "DIRECT:education.university.schoolName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c027",
@@ -123,11 +123,11 @@
         },
         {
           "candidate_id": "c029",
-          "result": "DIRECT:education.university.startDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c030",
-          "result": "DIRECT:education.university.endDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c031",
@@ -151,7 +151,7 @@
         },
         {
           "candidate_id": "c036",
-          "result": "DIRECT:education.university.majorName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c037",
@@ -163,11 +163,11 @@
         },
         {
           "candidate_id": "c039",
-          "result": "DIRECT:education.university.additionalMajorName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c040",
-          "result": "DIRECT:education.university.minorName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c041",
@@ -175,11 +175,11 @@
         },
         {
           "candidate_id": "c042",
-          "result": "DIRECT:education.university.gpaScore"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c043",
-          "result": "DIRECT:education.university.gpaScale"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c044",
@@ -191,7 +191,7 @@
         },
         {
           "candidate_id": "c046",
-          "result": "DIRECT:education.university.completionStatus"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c047",
@@ -199,7 +199,7 @@
         },
         {
           "candidate_id": "c048",
-          "result": "DIRECT:careers.career.companyName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c049",
@@ -211,19 +211,19 @@
         },
         {
           "candidate_id": "c051",
-          "result": "DIRECT:careers.career.department"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c052",
-          "result": "DIRECT:careers.career.startDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c053",
-          "result": "DIRECT:careers.career.endDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c054",
-          "result": "DIRECT:careers.career.position"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c055",
@@ -243,19 +243,19 @@
         },
         {
           "candidate_id": "c059",
-          "result": "DIRECT:certifications.certificate.grade"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c060",
-          "result": "DIRECT:certifications.certificate.acquisitionDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c061",
-          "result": "DIRECT:certifications.certificate.issuer"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c062",
-          "result": "DIRECT:languages.languageTest.language"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c063",
@@ -271,26 +271,26 @@
         },
         {
           "candidate_id": "c066",
-          "result": "DIRECT:languages.languageTest.grade"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c067",
-          "result": "DIRECT:languages.languageTest.registrationNo"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c068",
-          "result": "DIRECT:languages.languageTest.acquisitionDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c069",
-          "result": "DIRECT:languages.languageTest.testName"
+          "result": "NO_MATCH"
         }
       ]
     },
     {
       "site_id": "lg-ai-research",
       "analysis_status": "COMPLETE",
-      "latency_ms": 2186,
+      "latency_ms": 2655,
       "candidates": [
         {
           "candidate_id": "c001",
@@ -306,7 +306,7 @@
         },
         {
           "candidate_id": "c004",
-          "result": "DIRECT:personal.personal.koreanGivenName"
+          "result": "DERIVED:KOREAN_FULL_NAME"
         },
         {
           "candidate_id": "c005",
@@ -349,7 +349,7 @@
     {
       "site_id": "ahnlab",
       "analysis_status": "COMPLETE",
-      "latency_ms": 3965,
+      "latency_ms": 5196,
       "candidates": [
         {
           "candidate_id": "c001",
@@ -437,11 +437,11 @@
         },
         {
           "candidate_id": "c022",
-          "result": "NO_MATCH"
+          "result": "DIRECT:disability.disability.disabilityType"
         },
         {
           "candidate_id": "c023",
-          "result": "NO_MATCH"
+          "result": "DIRECT:disability.disability.disabilityGrade"
         },
         {
           "candidate_id": "c024",
@@ -457,7 +457,7 @@
         },
         {
           "candidate_id": "c027",
-          "result": "NO_MATCH"
+          "result": "DIRECT:veteran.veteran.veteranType"
         },
         {
           "candidate_id": "c028",
@@ -489,7 +489,7 @@
         },
         {
           "candidate_id": "c035",
-          "result": "DIRECT:military.military.militaryType"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c036",
@@ -504,7 +504,7 @@
     {
       "site_id": "krafton",
       "analysis_status": "COMPLETE",
-      "latency_ms": 5676,
+      "latency_ms": 6435,
       "candidates": [
         {
           "candidate_id": "c001",
@@ -572,7 +572,7 @@
         },
         {
           "candidate_id": "c017",
-          "result": "DIRECT:education.university.schoolName"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c018",
@@ -592,7 +592,7 @@
         },
         {
           "candidate_id": "c022",
-          "result": "DIRECT:education.university.startDate"
+          "result": "NO_MATCH"
         },
         {
           "candidate_id": "c023",
@@ -656,7 +656,7 @@
         },
         {
           "candidate_id": "c038",
-          "result": "NO_MATCH"
+          "result": "DIRECT:languages.languageTest.registrationNo"
         },
         {
           "candidate_id": "c039",
@@ -744,7 +744,7 @@
         },
         {
           "candidate_id": "c060",
-          "result": "NO_MATCH"
+          "result": "DIRECT:careers.career.responsibilities"
         },
         {
           "candidate_id": "c061",
@@ -776,7 +776,7 @@
         },
         {
           "candidate_id": "c068",
-          "result": "NO_MATCH"
+          "result": "DIRECT:projects.project.activityDetails"
         },
         {
           "candidate_id": "c069",

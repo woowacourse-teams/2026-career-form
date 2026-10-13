@@ -43,11 +43,11 @@
           "control": "radio",
           "options": [
             {
-              "optionId": "field-2-option-1",
+              "optionId": "o001",
               "displayName": "성별"
             },
             {
-              "optionId": "field-2-option-2",
+              "optionId": "o002",
               "displayName": "여"
             }
           ],
@@ -89,19 +89,19 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-4-option-1",
+              "optionId": "o003",
               "displayName": "신입/경력"
             },
             {
-              "optionId": "field-4-option-2",
+              "optionId": "o004",
               "displayName": "-------------------------"
             },
             {
-              "optionId": "field-4-option-3",
+              "optionId": "o005",
               "displayName": "신입"
             },
             {
-              "optionId": "field-4-option-4",
+              "optionId": "o006",
               "displayName": "경력"
             }
           ],
@@ -118,11 +118,11 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-5-option-1",
+              "optionId": "o007",
               "displayName": "직무"
             },
             {
-              "optionId": "field-5-option-2",
+              "optionId": "o008",
               "displayName": "-------------------------"
             }
           ],
@@ -139,11 +139,11 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-6-option-1",
+              "optionId": "o009",
               "displayName": "지역"
             },
             {
-              "optionId": "field-6-option-2",
+              "optionId": "o010",
               "displayName": "-------------------------"
             }
           ],
@@ -265,43 +265,43 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-14-option-1",
+              "optionId": "o011",
               "displayName": "지원경로를 선택하세요."
             },
             {
-              "optionId": "field-14-option-2",
+              "optionId": "o012",
               "displayName": "사람인"
             },
             {
-              "optionId": "field-14-option-3",
+              "optionId": "o013",
               "displayName": "잡코리아"
             },
             {
-              "optionId": "field-14-option-4",
+              "optionId": "o014",
               "displayName": "자소설닷컴"
             },
             {
-              "optionId": "field-14-option-5",
+              "optionId": "o015",
               "displayName": "인크루트"
             },
             {
-              "optionId": "field-14-option-6",
+              "optionId": "o016",
               "displayName": "취업카페"
             },
             {
-              "optionId": "field-14-option-7",
+              "optionId": "o017",
               "displayName": "헤드헌팅"
             },
             {
-              "optionId": "field-14-option-8",
+              "optionId": "o018",
               "displayName": "워크넷"
             },
             {
-              "optionId": "field-14-option-9",
+              "optionId": "o019",
               "displayName": "지인소개"
             },
             {
-              "optionId": "field-14-option-10",
+              "optionId": "o020",
               "displayName": "기타경로"
             }
           ],
@@ -351,987 +351,987 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-17-option-1",
+              "optionId": "o021",
               "displayName": "국가를 선택하세요."
             },
             {
-              "optionId": "field-17-option-2",
+              "optionId": "o022",
               "displayName": "가나"
             },
             {
-              "optionId": "field-17-option-3",
+              "optionId": "o023",
               "displayName": "가봉"
             },
             {
-              "optionId": "field-17-option-4",
+              "optionId": "o024",
               "displayName": "가이아나"
             },
             {
-              "optionId": "field-17-option-5",
+              "optionId": "o025",
               "displayName": "감비아"
             },
             {
-              "optionId": "field-17-option-6",
+              "optionId": "o026",
               "displayName": "과들루프"
             },
             {
-              "optionId": "field-17-option-7",
+              "optionId": "o027",
               "displayName": "과테말라"
             },
             {
-              "optionId": "field-17-option-8",
+              "optionId": "o028",
               "displayName": "괌"
             },
             {
-              "optionId": "field-17-option-9",
+              "optionId": "o029",
               "displayName": "그레나다"
             },
             {
-              "optionId": "field-17-option-10",
+              "optionId": "o030",
               "displayName": "그리스"
             },
             {
-              "optionId": "field-17-option-11",
+              "optionId": "o031",
               "displayName": "그린란드"
             },
             {
-              "optionId": "field-17-option-12",
+              "optionId": "o032",
               "displayName": "기니"
             },
             {
-              "optionId": "field-17-option-13",
+              "optionId": "o033",
               "displayName": "기니비사우"
             },
             {
-              "optionId": "field-17-option-14",
+              "optionId": "o034",
               "displayName": "나미비아"
             },
             {
-              "optionId": "field-17-option-15",
+              "optionId": "o035",
               "displayName": "나우루"
             },
             {
-              "optionId": "field-17-option-16",
+              "optionId": "o036",
               "displayName": "나이지리아"
             },
             {
-              "optionId": "field-17-option-17",
+              "optionId": "o037",
               "displayName": "남극"
             },
             {
-              "optionId": "field-17-option-18",
+              "optionId": "o038",
               "displayName": "남수단공화국"
             },
             {
-              "optionId": "field-17-option-19",
+              "optionId": "o039",
               "displayName": "남아공"
             },
             {
-              "optionId": "field-17-option-20",
+              "optionId": "o040",
               "displayName": "네덜란드"
             },
             {
-              "optionId": "field-17-option-21",
+              "optionId": "o041",
               "displayName": "네덜란드령 안틸레스"
             },
             {
-              "optionId": "field-17-option-22",
+              "optionId": "o042",
               "displayName": "네팔"
             },
             {
-              "optionId": "field-17-option-23",
+              "optionId": "o043",
               "displayName": "노르웨이"
             },
             {
-              "optionId": "field-17-option-24",
+              "optionId": "o044",
               "displayName": "노퍽 섬"
             },
             {
-              "optionId": "field-17-option-25",
+              "optionId": "o045",
               "displayName": "누벨칼레도니"
             },
             {
-              "optionId": "field-17-option-26",
+              "optionId": "o046",
               "displayName": "뉴질랜드"
             },
             {
-              "optionId": "field-17-option-27",
+              "optionId": "o047",
               "displayName": "니우에"
             },
             {
-              "optionId": "field-17-option-28",
+              "optionId": "o048",
               "displayName": "니제르"
             },
             {
-              "optionId": "field-17-option-29",
+              "optionId": "o049",
               "displayName": "니카라과"
             },
             {
-              "optionId": "field-17-option-30",
+              "optionId": "o050",
               "displayName": "대만"
             },
             {
-              "optionId": "field-17-option-31",
+              "optionId": "o051",
               "displayName": "대한민국"
             },
             {
-              "optionId": "field-17-option-32",
+              "optionId": "o052",
               "displayName": "덴마크"
             },
             {
-              "optionId": "field-17-option-33",
+              "optionId": "o053",
               "displayName": "도미니카 공화국"
             },
             {
-              "optionId": "field-17-option-34",
+              "optionId": "o054",
               "displayName": "도미니카 연방"
             },
             {
-              "optionId": "field-17-option-35",
+              "optionId": "o055",
               "displayName": "독일"
             },
             {
-              "optionId": "field-17-option-36",
+              "optionId": "o056",
               "displayName": "동티모르"
             },
             {
-              "optionId": "field-17-option-37",
+              "optionId": "o057",
               "displayName": "라오스"
             },
             {
-              "optionId": "field-17-option-38",
+              "optionId": "o058",
               "displayName": "라이베리아"
             },
             {
-              "optionId": "field-17-option-39",
+              "optionId": "o059",
               "displayName": "라트비아"
             },
             {
-              "optionId": "field-17-option-40",
+              "optionId": "o060",
               "displayName": "러시아"
             },
             {
-              "optionId": "field-17-option-41",
+              "optionId": "o061",
               "displayName": "레바논"
             },
             {
-              "optionId": "field-17-option-42",
+              "optionId": "o062",
               "displayName": "레소토"
             },
             {
-              "optionId": "field-17-option-43",
+              "optionId": "o063",
               "displayName": "레위니옹"
             },
             {
-              "optionId": "field-17-option-44",
+              "optionId": "o064",
               "displayName": "루마니아"
             },
             {
-              "optionId": "field-17-option-45",
+              "optionId": "o065",
               "displayName": "룩셈부르크"
             },
             {
-              "optionId": "field-17-option-46",
+              "optionId": "o066",
               "displayName": "르완다"
             },
             {
-              "optionId": "field-17-option-47",
+              "optionId": "o067",
               "displayName": "리비아"
             },
             {
-              "optionId": "field-17-option-48",
+              "optionId": "o068",
               "displayName": "리투아니아"
             },
             {
-              "optionId": "field-17-option-49",
+              "optionId": "o069",
               "displayName": "리히텐슈타인"
             },
             {
-              "optionId": "field-17-option-50",
+              "optionId": "o070",
               "displayName": "마다가스카르"
             },
             {
-              "optionId": "field-17-option-51",
+              "optionId": "o071",
               "displayName": "마르티니크"
             },
             {
-              "optionId": "field-17-option-52",
+              "optionId": "o072",
               "displayName": "마셜 제도"
             },
             {
-              "optionId": "field-17-option-53",
+              "optionId": "o073",
               "displayName": "마요트"
             },
             {
-              "optionId": "field-17-option-54",
+              "optionId": "o074",
               "displayName": "마카오"
             },
             {
-              "optionId": "field-17-option-55",
+              "optionId": "o075",
               "displayName": "마케도니아 공화국"
             },
             {
-              "optionId": "field-17-option-56",
+              "optionId": "o076",
               "displayName": "말라위"
             },
             {
-              "optionId": "field-17-option-57",
+              "optionId": "o077",
               "displayName": "말레이시아"
             },
             {
-              "optionId": "field-17-option-58",
+              "optionId": "o078",
               "displayName": "말리"
             },
             {
-              "optionId": "field-17-option-59",
+              "optionId": "o079",
               "displayName": "맨 섬"
             },
             {
-              "optionId": "field-17-option-60",
+              "optionId": "o080",
               "displayName": "멕시코"
             },
             {
-              "optionId": "field-17-option-61",
+              "optionId": "o081",
               "displayName": "모나코"
             },
             {
-              "optionId": "field-17-option-62",
+              "optionId": "o082",
               "displayName": "모로코"
             },
             {
-              "optionId": "field-17-option-63",
+              "optionId": "o083",
               "displayName": "모리셔스"
             },
             {
-              "optionId": "field-17-option-64",
+              "optionId": "o084",
               "displayName": "모리타니"
             },
             {
-              "optionId": "field-17-option-65",
+              "optionId": "o085",
               "displayName": "모잠비크"
             },
             {
-              "optionId": "field-17-option-66",
+              "optionId": "o086",
               "displayName": "몬테네그로"
             },
             {
-              "optionId": "field-17-option-67",
+              "optionId": "o087",
               "displayName": "몬트세랫"
             },
             {
-              "optionId": "field-17-option-68",
+              "optionId": "o088",
               "displayName": "몰도바"
             },
             {
-              "optionId": "field-17-option-69",
+              "optionId": "o089",
               "displayName": "몰디브"
             },
             {
-              "optionId": "field-17-option-70",
+              "optionId": "o090",
               "displayName": "몰타"
             },
             {
-              "optionId": "field-17-option-71",
+              "optionId": "o091",
               "displayName": "몽골"
             },
             {
-              "optionId": "field-17-option-72",
+              "optionId": "o092",
               "displayName": "미국"
             },
             {
-              "optionId": "field-17-option-73",
+              "optionId": "o093",
               "displayName": "미국령 군소 제도"
             },
             {
-              "optionId": "field-17-option-74",
+              "optionId": "o094",
               "displayName": "미국령 버진아일랜드"
             },
             {
-              "optionId": "field-17-option-75",
+              "optionId": "o095",
               "displayName": "미얀마"
             },
             {
-              "optionId": "field-17-option-76",
+              "optionId": "o096",
               "displayName": "미크로네시아 연방"
             },
             {
-              "optionId": "field-17-option-77",
+              "optionId": "o097",
               "displayName": "바누아투"
             },
             {
-              "optionId": "field-17-option-78",
+              "optionId": "o098",
               "displayName": "바레인"
             },
             {
-              "optionId": "field-17-option-79",
+              "optionId": "o099",
               "displayName": "바베이도스"
             },
             {
-              "optionId": "field-17-option-80",
+              "optionId": "o100",
               "displayName": "바티칸 시국"
             },
             {
-              "optionId": "field-17-option-81",
+              "optionId": "o101",
               "displayName": "바하마"
             },
             {
-              "optionId": "field-17-option-82",
+              "optionId": "o102",
               "displayName": "방글라데시"
             },
             {
-              "optionId": "field-17-option-83",
+              "optionId": "o103",
               "displayName": "버뮤다"
             },
             {
-              "optionId": "field-17-option-84",
+              "optionId": "o104",
               "displayName": "베냉"
             },
             {
-              "optionId": "field-17-option-85",
+              "optionId": "o105",
               "displayName": "베네수엘라"
             },
             {
-              "optionId": "field-17-option-86",
+              "optionId": "o106",
               "displayName": "베트남"
             },
             {
-              "optionId": "field-17-option-87",
+              "optionId": "o107",
               "displayName": "벨기에"
             },
             {
-              "optionId": "field-17-option-88",
+              "optionId": "o108",
               "displayName": "벨라루스"
             },
             {
-              "optionId": "field-17-option-89",
+              "optionId": "o109",
               "displayName": "벨리즈"
             },
             {
-              "optionId": "field-17-option-90",
+              "optionId": "o110",
               "displayName": "보스니아 헤르체고비나"
             },
             {
-              "optionId": "field-17-option-91",
+              "optionId": "o111",
               "displayName": "보츠와나"
             },
             {
-              "optionId": "field-17-option-92",
+              "optionId": "o112",
               "displayName": "볼리비아"
             },
             {
-              "optionId": "field-17-option-93",
+              "optionId": "o113",
               "displayName": "부룬디"
             },
             {
-              "optionId": "field-17-option-94",
+              "optionId": "o114",
               "displayName": "부르키나파소"
             },
             {
-              "optionId": "field-17-option-95",
+              "optionId": "o115",
               "displayName": "부베 섬"
             },
             {
-              "optionId": "field-17-option-96",
+              "optionId": "o116",
               "displayName": "부탄"
             },
             {
-              "optionId": "field-17-option-97",
+              "optionId": "o117",
               "displayName": "북마리아나 제도"
             },
             {
-              "optionId": "field-17-option-98",
+              "optionId": "o118",
               "displayName": "불가리아"
             },
             {
-              "optionId": "field-17-option-99",
+              "optionId": "o119",
               "displayName": "브라질"
             },
             {
-              "optionId": "field-17-option-100",
+              "optionId": "o120",
               "displayName": "브루나이"
             },
             {
-              "optionId": "field-17-option-101",
+              "optionId": "o121",
               "displayName": "사모아"
             },
             {
-              "optionId": "field-17-option-102",
+              "optionId": "o122",
               "displayName": "사우디아라비아"
             },
             {
-              "optionId": "field-17-option-103",
+              "optionId": "o123",
               "displayName": "사우스조지아 사우스샌드위치 제도"
             },
             {
-              "optionId": "field-17-option-104",
+              "optionId": "o124",
               "displayName": "산마리노"
             },
             {
-              "optionId": "field-17-option-105",
+              "optionId": "o125",
               "displayName": "상투메 프린시페"
             },
             {
-              "optionId": "field-17-option-106",
+              "optionId": "o126",
               "displayName": "생피에르 미클롱"
             },
             {
-              "optionId": "field-17-option-107",
+              "optionId": "o127",
               "displayName": "서사하라"
             },
             {
-              "optionId": "field-17-option-108",
+              "optionId": "o128",
               "displayName": "세네갈"
             },
             {
-              "optionId": "field-17-option-109",
+              "optionId": "o129",
               "displayName": "세르비아"
             },
             {
-              "optionId": "field-17-option-110",
+              "optionId": "o130",
               "displayName": "세이셸"
             },
             {
-              "optionId": "field-17-option-111",
+              "optionId": "o131",
               "displayName": "세인트루시아"
             },
             {
-              "optionId": "field-17-option-112",
+              "optionId": "o132",
               "displayName": "세인트빈센트 그레나딘"
             },
             {
-              "optionId": "field-17-option-113",
+              "optionId": "o133",
               "displayName": "세인트키츠 네비스"
             },
             {
-              "optionId": "field-17-option-114",
+              "optionId": "o134",
               "displayName": "세인트헬레나"
             },
             {
-              "optionId": "field-17-option-115",
+              "optionId": "o135",
               "displayName": "소말리아"
             },
             {
-              "optionId": "field-17-option-116",
+              "optionId": "o136",
               "displayName": "솔로몬 제도"
             },
             {
-              "optionId": "field-17-option-117",
+              "optionId": "o137",
               "displayName": "수단"
             },
             {
-              "optionId": "field-17-option-118",
+              "optionId": "o138",
               "displayName": "수리남"
             },
             {
-              "optionId": "field-17-option-119",
+              "optionId": "o139",
               "displayName": "스리랑카"
             },
             {
-              "optionId": "field-17-option-120",
+              "optionId": "o140",
               "displayName": "스발바르 얀마옌"
             },
             {
-              "optionId": "field-17-option-121",
+              "optionId": "o141",
               "displayName": "스와질란드"
             },
             {
-              "optionId": "field-17-option-122",
+              "optionId": "o142",
               "displayName": "스웨덴"
             },
             {
-              "optionId": "field-17-option-123",
+              "optionId": "o143",
               "displayName": "스위스"
             },
             {
-              "optionId": "field-17-option-124",
+              "optionId": "o144",
               "displayName": "스페인"
             },
             {
-              "optionId": "field-17-option-125",
+              "optionId": "o145",
               "displayName": "슬로바키아"
             },
             {
-              "optionId": "field-17-option-126",
+              "optionId": "o146",
               "displayName": "슬로베니아"
             },
             {
-              "optionId": "field-17-option-127",
+              "optionId": "o147",
               "displayName": "시리아"
             },
             {
-              "optionId": "field-17-option-128",
+              "optionId": "o148",
               "displayName": "시에라리온"
             },
             {
-              "optionId": "field-17-option-129",
+              "optionId": "o149",
               "displayName": "싱가포르"
             },
             {
-              "optionId": "field-17-option-130",
+              "optionId": "o150",
               "displayName": "아랍에미리트"
             },
             {
-              "optionId": "field-17-option-131",
+              "optionId": "o151",
               "displayName": "아루바"
             },
             {
-              "optionId": "field-17-option-132",
+              "optionId": "o152",
               "displayName": "아르메니아"
             },
             {
-              "optionId": "field-17-option-133",
+              "optionId": "o153",
               "displayName": "아르헨티나"
             },
             {
-              "optionId": "field-17-option-134",
+              "optionId": "o154",
               "displayName": "아메리칸사모아"
             },
             {
-              "optionId": "field-17-option-135",
+              "optionId": "o155",
               "displayName": "아이슬란드"
             },
             {
-              "optionId": "field-17-option-136",
+              "optionId": "o156",
               "displayName": "아이티"
             },
             {
-              "optionId": "field-17-option-137",
+              "optionId": "o157",
               "displayName": "아일랜드"
             },
             {
-              "optionId": "field-17-option-138",
+              "optionId": "o158",
               "displayName": "아제르바이잔"
             },
             {
-              "optionId": "field-17-option-139",
+              "optionId": "o159",
               "displayName": "아프가니스탄"
             },
             {
-              "optionId": "field-17-option-140",
+              "optionId": "o160",
               "displayName": "안도라"
             },
             {
-              "optionId": "field-17-option-141",
+              "optionId": "o161",
               "displayName": "알바니아"
             },
             {
-              "optionId": "field-17-option-142",
+              "optionId": "o162",
               "displayName": "알제리"
             },
             {
-              "optionId": "field-17-option-143",
+              "optionId": "o163",
               "displayName": "앙골라"
             },
             {
-              "optionId": "field-17-option-144",
+              "optionId": "o164",
               "displayName": "앤티가 바부다"
             },
             {
-              "optionId": "field-17-option-145",
+              "optionId": "o165",
               "displayName": "앵귈라"
             },
             {
-              "optionId": "field-17-option-146",
+              "optionId": "o166",
               "displayName": "에리트레아"
             },
             {
-              "optionId": "field-17-option-147",
+              "optionId": "o167",
               "displayName": "에스토니아"
             },
             {
-              "optionId": "field-17-option-148",
+              "optionId": "o168",
               "displayName": "에콰도르"
             },
             {
-              "optionId": "field-17-option-149",
+              "optionId": "o169",
               "displayName": "에티오피아"
             },
             {
-              "optionId": "field-17-option-150",
+              "optionId": "o170",
               "displayName": "엘살바도르"
             },
             {
-              "optionId": "field-17-option-151",
+              "optionId": "o171",
               "displayName": "영국"
             },
             {
-              "optionId": "field-17-option-152",
+              "optionId": "o172",
               "displayName": "영국령 버진아일랜드"
             },
             {
-              "optionId": "field-17-option-153",
+              "optionId": "o173",
               "displayName": "영국령 인도양 지역"
             },
             {
-              "optionId": "field-17-option-154",
+              "optionId": "o174",
               "displayName": "예멘"
             },
             {
-              "optionId": "field-17-option-155",
+              "optionId": "o175",
               "displayName": "오만"
             },
             {
-              "optionId": "field-17-option-156",
+              "optionId": "o176",
               "displayName": "오스트리아"
             },
             {
-              "optionId": "field-17-option-157",
+              "optionId": "o177",
               "displayName": "온두라스"
             },
             {
-              "optionId": "field-17-option-158",
+              "optionId": "o178",
               "displayName": "올란드 제도"
             },
             {
-              "optionId": "field-17-option-159",
+              "optionId": "o179",
               "displayName": "왈리스 퓌튀나"
             },
             {
-              "optionId": "field-17-option-160",
+              "optionId": "o180",
               "displayName": "요르단"
             },
             {
-              "optionId": "field-17-option-161",
+              "optionId": "o181",
               "displayName": "우간다"
             },
             {
-              "optionId": "field-17-option-162",
+              "optionId": "o182",
               "displayName": "우루과이"
             },
             {
-              "optionId": "field-17-option-163",
+              "optionId": "o183",
               "displayName": "우즈베키스탄"
             },
             {
-              "optionId": "field-17-option-164",
+              "optionId": "o184",
               "displayName": "우크라이나"
             },
             {
-              "optionId": "field-17-option-165",
+              "optionId": "o185",
               "displayName": "유럽연합"
             },
             {
-              "optionId": "field-17-option-166",
+              "optionId": "o186",
               "displayName": "이라크"
             },
             {
-              "optionId": "field-17-option-167",
+              "optionId": "o187",
               "displayName": "이란"
             },
             {
-              "optionId": "field-17-option-168",
+              "optionId": "o188",
               "displayName": "이스라엘"
             },
             {
-              "optionId": "field-17-option-169",
+              "optionId": "o189",
               "displayName": "이집트"
             },
             {
-              "optionId": "field-17-option-170",
+              "optionId": "o190",
               "displayName": "이탈리아"
             },
             {
-              "optionId": "field-17-option-171",
+              "optionId": "o191",
               "displayName": "인도"
             },
             {
-              "optionId": "field-17-option-172",
+              "optionId": "o192",
               "displayName": "인도네시아"
             },
             {
-              "optionId": "field-17-option-173",
+              "optionId": "o193",
               "displayName": "일본"
             },
             {
-              "optionId": "field-17-option-174",
+              "optionId": "o194",
               "displayName": "자메이카"
             },
             {
-              "optionId": "field-17-option-175",
+              "optionId": "o195",
               "displayName": "잠비아"
             },
             {
-              "optionId": "field-17-option-176",
+              "optionId": "o196",
               "displayName": "저지 섬"
             },
             {
-              "optionId": "field-17-option-177",
+              "optionId": "o197",
               "displayName": "적도 기니"
             },
             {
-              "optionId": "field-17-option-178",
+              "optionId": "o198",
               "displayName": "조선민주주의인민공화국"
             },
             {
-              "optionId": "field-17-option-179",
+              "optionId": "o199",
               "displayName": "조지아"
             },
             {
-              "optionId": "field-17-option-180",
+              "optionId": "o200",
               "displayName": "중국"
             },
             {
-              "optionId": "field-17-option-181",
+              "optionId": "o201",
               "displayName": "중앙아프리카 공화국"
             },
             {
-              "optionId": "field-17-option-182",
+              "optionId": "o202",
               "displayName": "지부티"
             },
             {
-              "optionId": "field-17-option-183",
+              "optionId": "o203",
               "displayName": "지브롤터"
             },
             {
-              "optionId": "field-17-option-184",
+              "optionId": "o204",
               "displayName": "짐바브웨"
             },
             {
-              "optionId": "field-17-option-185",
+              "optionId": "o205",
               "displayName": "차드"
             },
             {
-              "optionId": "field-17-option-186",
+              "optionId": "o206",
               "displayName": "체코"
             },
             {
-              "optionId": "field-17-option-187",
+              "optionId": "o207",
               "displayName": "칠레"
             },
             {
-              "optionId": "field-17-option-188",
+              "optionId": "o208",
               "displayName": "카메룬"
             },
             {
-              "optionId": "field-17-option-189",
+              "optionId": "o209",
               "displayName": "카보베르데"
             },
             {
-              "optionId": "field-17-option-190",
+              "optionId": "o210",
               "displayName": "카자흐스탄"
             },
             {
-              "optionId": "field-17-option-191",
+              "optionId": "o211",
               "displayName": "카타르"
             },
             {
-              "optionId": "field-17-option-192",
+              "optionId": "o212",
               "displayName": "캄보디아"
             },
             {
-              "optionId": "field-17-option-193",
+              "optionId": "o213",
               "displayName": "캐나다"
             },
             {
-              "optionId": "field-17-option-194",
+              "optionId": "o214",
               "displayName": "케냐"
             },
             {
-              "optionId": "field-17-option-195",
+              "optionId": "o215",
               "displayName": "케이맨 제도"
             },
             {
-              "optionId": "field-17-option-196",
+              "optionId": "o216",
               "displayName": "코모로"
             },
             {
-              "optionId": "field-17-option-197",
+              "optionId": "o217",
               "displayName": "코스타리카"
             },
             {
-              "optionId": "field-17-option-198",
+              "optionId": "o218",
               "displayName": "코코스 제도"
             },
             {
-              "optionId": "field-17-option-199",
+              "optionId": "o219",
               "displayName": "코트디부아르"
             },
             {
-              "optionId": "field-17-option-200",
+              "optionId": "o220",
               "displayName": "콜롬비아"
             },
             {
-              "optionId": "field-17-option-201",
+              "optionId": "o221",
               "displayName": "콩고 공화국"
             },
             {
-              "optionId": "field-17-option-202",
+              "optionId": "o222",
               "displayName": "콩고 민주 공화국"
             },
             {
-              "optionId": "field-17-option-203",
+              "optionId": "o223",
               "displayName": "쿠바"
             },
             {
-              "optionId": "field-17-option-204",
+              "optionId": "o224",
               "displayName": "쿠웨이트"
             },
             {
-              "optionId": "field-17-option-205",
+              "optionId": "o225",
               "displayName": "쿡 제도"
             },
             {
-              "optionId": "field-17-option-206",
+              "optionId": "o226",
               "displayName": "크로아티아"
             },
             {
-              "optionId": "field-17-option-207",
+              "optionId": "o227",
               "displayName": "크리스마스 섬"
             },
             {
-              "optionId": "field-17-option-208",
+              "optionId": "o228",
               "displayName": "키르기스스탄"
             },
             {
-              "optionId": "field-17-option-209",
+              "optionId": "o229",
               "displayName": "키리바시"
             },
             {
-              "optionId": "field-17-option-210",
+              "optionId": "o230",
               "displayName": "키프로스"
             },
             {
-              "optionId": "field-17-option-211",
+              "optionId": "o231",
               "displayName": "타이"
             },
             {
-              "optionId": "field-17-option-212",
+              "optionId": "o232",
               "displayName": "타지키스탄"
             },
             {
-              "optionId": "field-17-option-213",
+              "optionId": "o233",
               "displayName": "탄자니아"
             },
             {
-              "optionId": "field-17-option-214",
+              "optionId": "o234",
               "displayName": "터크스 케이커스 제도"
             },
             {
-              "optionId": "field-17-option-215",
+              "optionId": "o235",
               "displayName": "터키"
             },
             {
-              "optionId": "field-17-option-216",
+              "optionId": "o236",
               "displayName": "토고"
             },
             {
-              "optionId": "field-17-option-217",
+              "optionId": "o237",
               "displayName": "토켈라우"
             },
             {
-              "optionId": "field-17-option-218",
+              "optionId": "o238",
               "displayName": "통가"
             },
             {
-              "optionId": "field-17-option-219",
+              "optionId": "o239",
               "displayName": "투르크메니스탄"
             },
             {
-              "optionId": "field-17-option-220",
+              "optionId": "o240",
               "displayName": "투발루"
             },
             {
-              "optionId": "field-17-option-221",
+              "optionId": "o241",
               "displayName": "튀니지"
             },
             {
-              "optionId": "field-17-option-222",
+              "optionId": "o242",
               "displayName": "트리니다드 토바고"
             },
             {
-              "optionId": "field-17-option-223",
+              "optionId": "o243",
               "displayName": "파나마"
             },
             {
-              "optionId": "field-17-option-224",
+              "optionId": "o244",
               "displayName": "파라과이"
             },
             {
-              "optionId": "field-17-option-225",
+              "optionId": "o245",
               "displayName": "파키스탄"
             },
             {
-              "optionId": "field-17-option-226",
+              "optionId": "o246",
               "displayName": "파푸아 뉴기니"
             },
             {
-              "optionId": "field-17-option-227",
+              "optionId": "o247",
               "displayName": "팔라우"
             },
             {
-              "optionId": "field-17-option-228",
+              "optionId": "o248",
               "displayName": "팔레스타인"
             },
             {
-              "optionId": "field-17-option-229",
+              "optionId": "o249",
               "displayName": "페로 제도"
             },
             {
-              "optionId": "field-17-option-230",
+              "optionId": "o250",
               "displayName": "페루"
             },
             {
-              "optionId": "field-17-option-231",
+              "optionId": "o251",
               "displayName": "포르투갈"
             },
             {
-              "optionId": "field-17-option-232",
+              "optionId": "o252",
               "displayName": "포클랜드 제도"
             },
             {
-              "optionId": "field-17-option-233",
+              "optionId": "o253",
               "displayName": "폴란드"
             },
             {
-              "optionId": "field-17-option-234",
+              "optionId": "o254",
               "displayName": "푸에르토리코"
             },
             {
-              "optionId": "field-17-option-235",
+              "optionId": "o255",
               "displayName": "프랑스"
             },
             {
-              "optionId": "field-17-option-236",
+              "optionId": "o256",
               "displayName": "프랑스령 기아나"
             },
             {
-              "optionId": "field-17-option-237",
+              "optionId": "o257",
               "displayName": "프랑스령 남부와 남극 지역"
             },
             {
-              "optionId": "field-17-option-238",
+              "optionId": "o258",
               "displayName": "프랑스령 폴리네시아"
             },
             {
-              "optionId": "field-17-option-239",
+              "optionId": "o259",
               "displayName": "피지"
             },
             {
-              "optionId": "field-17-option-240",
+              "optionId": "o260",
               "displayName": "핀란드"
             },
             {
-              "optionId": "field-17-option-241",
+              "optionId": "o261",
               "displayName": "필리핀"
             },
             {
-              "optionId": "field-17-option-242",
+              "optionId": "o262",
               "displayName": "핏케언 제도"
             },
             {
-              "optionId": "field-17-option-243",
+              "optionId": "o263",
               "displayName": "허드 맥도널드 제도"
             },
             {
-              "optionId": "field-17-option-244",
+              "optionId": "o264",
               "displayName": "헝가리"
             },
             {
-              "optionId": "field-17-option-245",
+              "optionId": "o265",
               "displayName": "호주"
             },
             {
-              "optionId": "field-17-option-246",
+              "optionId": "o266",
               "displayName": "홍콩"
             }
           ],
@@ -1409,11 +1409,11 @@
           "control": "radio",
           "options": [
             {
-              "optionId": "field-21-option-1",
+              "optionId": "o267",
               "displayName": "비대상"
             },
             {
-              "optionId": "field-21-option-2",
+              "optionId": "o268",
               "displayName": "대상"
             }
           ],
@@ -1440,15 +1440,15 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-22-option-1",
+              "optionId": "o269",
               "displayName": "장애정도"
             },
             {
-              "optionId": "field-22-option-2",
+              "optionId": "o270",
               "displayName": "심한 장애인"
             },
             {
-              "optionId": "field-22-option-3",
+              "optionId": "o271",
               "displayName": "심하지 않은 장애인"
             }
           ],
@@ -1471,75 +1471,75 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-23-option-1",
+              "optionId": "o272",
               "displayName": "내용"
             },
             {
-              "optionId": "field-23-option-2",
+              "optionId": "o273",
               "displayName": "간장애"
             },
             {
-              "optionId": "field-23-option-3",
+              "optionId": "o274",
               "displayName": "뇌전증장애(간질장애)"
             },
             {
-              "optionId": "field-23-option-4",
+              "optionId": "o275",
               "displayName": "뇌병변장애"
             },
             {
-              "optionId": "field-23-option-5",
+              "optionId": "o276",
               "displayName": "시각장애"
             },
             {
-              "optionId": "field-23-option-6",
+              "optionId": "o277",
               "displayName": "신장장애"
             },
             {
-              "optionId": "field-23-option-7",
+              "optionId": "o278",
               "displayName": "심장장애"
             },
             {
-              "optionId": "field-23-option-8",
+              "optionId": "o279",
               "displayName": "안면변형장애"
             },
             {
-              "optionId": "field-23-option-9",
+              "optionId": "o280",
               "displayName": "장루/요루장애"
             },
             {
-              "optionId": "field-23-option-10",
+              "optionId": "o281",
               "displayName": "정신장애"
             },
             {
-              "optionId": "field-23-option-11",
+              "optionId": "o282",
               "displayName": "청각장애"
             },
             {
-              "optionId": "field-23-option-12",
+              "optionId": "o283",
               "displayName": "호흡기장애"
             },
             {
-              "optionId": "field-23-option-13",
+              "optionId": "o284",
               "displayName": "지체장애"
             },
             {
-              "optionId": "field-23-option-14",
+              "optionId": "o285",
               "displayName": "언어장애"
             },
             {
-              "optionId": "field-23-option-15",
+              "optionId": "o286",
               "displayName": "지적장애(정신박약/정신지체)"
             },
             {
-              "optionId": "field-23-option-16",
+              "optionId": "o287",
               "displayName": "자폐성장애(발달장애)"
             },
             {
-              "optionId": "field-23-option-17",
+              "optionId": "o288",
               "displayName": "췌장장애"
             },
             {
-              "optionId": "field-23-option-18",
+              "optionId": "o289",
               "displayName": "기타장애"
             }
           ],
@@ -1561,11 +1561,11 @@
           "control": "radio",
           "options": [
             {
-              "optionId": "field-24-option-1",
+              "optionId": "o290",
               "displayName": "비대상"
             },
             {
-              "optionId": "field-24-option-2",
+              "optionId": "o291",
               "displayName": "대상"
             }
           ],
@@ -1636,19 +1636,19 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-27-option-1",
+              "optionId": "o292",
               "displayName": "보훈비율"
             },
             {
-              "optionId": "field-27-option-2",
+              "optionId": "o293",
               "displayName": "0%"
             },
             {
-              "optionId": "field-27-option-3",
+              "optionId": "o294",
               "displayName": "5%"
             },
             {
-              "optionId": "field-27-option-4",
+              "optionId": "o295",
               "displayName": "10%"
             }
           ],
@@ -1671,23 +1671,23 @@
           "control": "radio",
           "options": [
             {
-              "optionId": "field-28-option-1",
+              "optionId": "o296",
               "displayName": "비대상"
             },
             {
-              "optionId": "field-28-option-2",
+              "optionId": "o297",
               "displayName": "군필"
             },
             {
-              "optionId": "field-28-option-3",
+              "optionId": "o298",
               "displayName": "미필"
             },
             {
-              "optionId": "field-28-option-4",
+              "optionId": "o299",
               "displayName": "면제"
             },
             {
-              "optionId": "field-28-option-5",
+              "optionId": "o300",
               "displayName": "복무중"
             }
           ],
@@ -1740,55 +1740,55 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-30-option-1",
+              "optionId": "o301",
               "displayName": "군별을 선택하세요."
             },
             {
-              "optionId": "field-30-option-2",
+              "optionId": "o302",
               "displayName": "육군"
             },
             {
-              "optionId": "field-30-option-3",
+              "optionId": "o303",
               "displayName": "해군"
             },
             {
-              "optionId": "field-30-option-4",
+              "optionId": "o304",
               "displayName": "공군"
             },
             {
-              "optionId": "field-30-option-5",
+              "optionId": "o305",
               "displayName": "해병"
             },
             {
-              "optionId": "field-30-option-6",
+              "optionId": "o306",
               "displayName": "전경"
             },
             {
-              "optionId": "field-30-option-7",
+              "optionId": "o307",
               "displayName": "의경"
             },
             {
-              "optionId": "field-30-option-8",
+              "optionId": "o308",
               "displayName": "해경"
             },
             {
-              "optionId": "field-30-option-9",
+              "optionId": "o309",
               "displayName": "공익"
             },
             {
-              "optionId": "field-30-option-10",
+              "optionId": "o310",
               "displayName": "병역특례"
             },
             {
-              "optionId": "field-30-option-11",
+              "optionId": "o311",
               "displayName": "카투사"
             },
             {
-              "optionId": "field-30-option-12",
+              "optionId": "o312",
               "displayName": "의무소방"
             },
             {
-              "optionId": "field-30-option-13",
+              "optionId": "o313",
               "displayName": "기타"
             }
           ],
@@ -1844,91 +1844,91 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-32-option-1",
+              "optionId": "o314",
               "displayName": "계급을 선택하세요."
             },
             {
-              "optionId": "field-32-option-2",
+              "optionId": "o315",
               "displayName": "이병"
             },
             {
-              "optionId": "field-32-option-3",
+              "optionId": "o316",
               "displayName": "일병"
             },
             {
-              "optionId": "field-32-option-4",
+              "optionId": "o317",
               "displayName": "상병"
             },
             {
-              "optionId": "field-32-option-5",
+              "optionId": "o318",
               "displayName": "병장"
             },
             {
-              "optionId": "field-32-option-6",
+              "optionId": "o319",
               "displayName": "하사"
             },
             {
-              "optionId": "field-32-option-7",
+              "optionId": "o320",
               "displayName": "중사"
             },
             {
-              "optionId": "field-32-option-8",
+              "optionId": "o321",
               "displayName": "상사"
             },
             {
-              "optionId": "field-32-option-9",
+              "optionId": "o322",
               "displayName": "원사"
             },
             {
-              "optionId": "field-32-option-10",
+              "optionId": "o323",
               "displayName": "준위"
             },
             {
-              "optionId": "field-32-option-11",
+              "optionId": "o324",
               "displayName": "소위"
             },
             {
-              "optionId": "field-32-option-12",
+              "optionId": "o325",
               "displayName": "중위"
             },
             {
-              "optionId": "field-32-option-13",
+              "optionId": "o326",
               "displayName": "대위"
             },
             {
-              "optionId": "field-32-option-14",
+              "optionId": "o327",
               "displayName": "소령"
             },
             {
-              "optionId": "field-32-option-15",
+              "optionId": "o328",
               "displayName": "중령"
             },
             {
-              "optionId": "field-32-option-16",
+              "optionId": "o329",
               "displayName": "대령"
             },
             {
-              "optionId": "field-32-option-17",
+              "optionId": "o330",
               "displayName": "준장"
             },
             {
-              "optionId": "field-32-option-18",
+              "optionId": "o331",
               "displayName": "소장"
             },
             {
-              "optionId": "field-32-option-19",
+              "optionId": "o332",
               "displayName": "중장"
             },
             {
-              "optionId": "field-32-option-20",
+              "optionId": "o333",
               "displayName": "대장"
             },
             {
-              "optionId": "field-32-option-21",
+              "optionId": "o334",
               "displayName": "원수"
             },
             {
-              "optionId": "field-32-option-22",
+              "optionId": "o335",
               "displayName": "기타"
             }
           ],
@@ -1988,35 +1988,35 @@
           "control": "select",
           "options": [
             {
-              "optionId": "field-35-option-1",
+              "optionId": "o336",
               "displayName": "제대구분을 선택하세요."
             },
             {
-              "optionId": "field-35-option-2",
+              "optionId": "o337",
               "displayName": "만기제대"
             },
             {
-              "optionId": "field-35-option-3",
+              "optionId": "o338",
               "displayName": "소집해제"
             },
             {
-              "optionId": "field-35-option-4",
+              "optionId": "o339",
               "displayName": "의가사제대"
             },
             {
-              "optionId": "field-35-option-5",
+              "optionId": "o340",
               "displayName": "의병제대"
             },
             {
-              "optionId": "field-35-option-6",
+              "optionId": "o341",
               "displayName": "불명예제대"
             },
             {
-              "optionId": "field-35-option-7",
+              "optionId": "o342",
               "displayName": "상이제대"
             },
             {
-              "optionId": "field-35-option-8",
+              "optionId": "o343",
               "displayName": "직접입력"
             }
           ],

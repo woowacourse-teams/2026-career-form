@@ -27,27 +27,27 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-1-option-1",
+                  "optionId": "o001",
                   "displayName": "구분"
                 },
                 {
-                  "optionId": "field-1-option-2",
+                  "optionId": "o002",
                   "displayName": "고등학교"
                 },
                 {
-                  "optionId": "field-1-option-3",
+                  "optionId": "o003",
                   "displayName": "전문대학"
                 },
                 {
-                  "optionId": "field-1-option-4",
+                  "optionId": "o004",
                   "displayName": "대학교"
                 },
                 {
-                  "optionId": "field-1-option-5",
+                  "optionId": "o005",
                   "displayName": "대학원(석사)"
                 },
                 {
-                  "optionId": "field-1-option-6",
+                  "optionId": "o006",
                   "displayName": "대학원(박사)"
                 }
               ],
@@ -69,79 +69,79 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-2-option-1",
+                  "optionId": "o007",
                   "displayName": "소재지"
                 },
                 {
-                  "optionId": "field-2-option-2",
+                  "optionId": "o008",
                   "displayName": "서울"
                 },
                 {
-                  "optionId": "field-2-option-3",
+                  "optionId": "o009",
                   "displayName": "경기"
                 },
                 {
-                  "optionId": "field-2-option-4",
+                  "optionId": "o010",
                   "displayName": "인천"
                 },
                 {
-                  "optionId": "field-2-option-5",
+                  "optionId": "o011",
                   "displayName": "강원"
                 },
                 {
-                  "optionId": "field-2-option-6",
+                  "optionId": "o012",
                   "displayName": "충북"
                 },
                 {
-                  "optionId": "field-2-option-7",
+                  "optionId": "o013",
                   "displayName": "충남"
                 },
                 {
-                  "optionId": "field-2-option-8",
+                  "optionId": "o014",
                   "displayName": "대전"
                 },
                 {
-                  "optionId": "field-2-option-9",
+                  "optionId": "o015",
                   "displayName": "세종"
                 },
                 {
-                  "optionId": "field-2-option-10",
+                  "optionId": "o016",
                   "displayName": "부산"
                 },
                 {
-                  "optionId": "field-2-option-11",
+                  "optionId": "o017",
                   "displayName": "울산"
                 },
                 {
-                  "optionId": "field-2-option-12",
+                  "optionId": "o018",
                   "displayName": "대구"
                 },
                 {
-                  "optionId": "field-2-option-13",
+                  "optionId": "o019",
                   "displayName": "경북"
                 },
                 {
-                  "optionId": "field-2-option-14",
+                  "optionId": "o020",
                   "displayName": "경남"
                 },
                 {
-                  "optionId": "field-2-option-15",
+                  "optionId": "o021",
                   "displayName": "전북"
                 },
                 {
-                  "optionId": "field-2-option-16",
+                  "optionId": "o022",
                   "displayName": "전남"
                 },
                 {
-                  "optionId": "field-2-option-17",
+                  "optionId": "o023",
                   "displayName": "광주"
                 },
                 {
-                  "optionId": "field-2-option-18",
+                  "optionId": "o024",
                   "displayName": "제주"
                 },
                 {
-                  "optionId": "field-2-option-19",
+                  "optionId": "o025",
                   "displayName": "해외"
                 }
               ],
@@ -322,27 +322,27 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-8-option-1",
+                  "optionId": "o026",
                   "displayName": "구분"
                 },
                 {
-                  "optionId": "field-8-option-2",
+                  "optionId": "o027",
                   "displayName": "고등학교"
                 },
                 {
-                  "optionId": "field-8-option-3",
+                  "optionId": "o028",
                   "displayName": "전문대학"
                 },
                 {
-                  "optionId": "field-8-option-4",
+                  "optionId": "o029",
                   "displayName": "대학교"
                 },
                 {
-                  "optionId": "field-8-option-5",
+                  "optionId": "o030",
                   "displayName": "대학원(석사)"
                 },
                 {
-                  "optionId": "field-8-option-6",
+                  "optionId": "o031",
                   "displayName": "대학원(박사)"
                 }
               ],
@@ -364,79 +364,79 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-9-option-1",
+                  "optionId": "o032",
                   "displayName": "소재지"
                 },
                 {
-                  "optionId": "field-9-option-2",
+                  "optionId": "o033",
                   "displayName": "서울"
                 },
                 {
-                  "optionId": "field-9-option-3",
+                  "optionId": "o034",
                   "displayName": "경기"
                 },
                 {
-                  "optionId": "field-9-option-4",
+                  "optionId": "o035",
                   "displayName": "인천"
                 },
                 {
-                  "optionId": "field-9-option-5",
+                  "optionId": "o036",
                   "displayName": "강원"
                 },
                 {
-                  "optionId": "field-9-option-6",
+                  "optionId": "o037",
                   "displayName": "충북"
                 },
                 {
-                  "optionId": "field-9-option-7",
+                  "optionId": "o038",
                   "displayName": "충남"
                 },
                 {
-                  "optionId": "field-9-option-8",
+                  "optionId": "o039",
                   "displayName": "대전"
                 },
                 {
-                  "optionId": "field-9-option-9",
+                  "optionId": "o040",
                   "displayName": "세종"
                 },
                 {
-                  "optionId": "field-9-option-10",
+                  "optionId": "o041",
                   "displayName": "부산"
                 },
                 {
-                  "optionId": "field-9-option-11",
+                  "optionId": "o042",
                   "displayName": "울산"
                 },
                 {
-                  "optionId": "field-9-option-12",
+                  "optionId": "o043",
                   "displayName": "대구"
                 },
                 {
-                  "optionId": "field-9-option-13",
+                  "optionId": "o044",
                   "displayName": "경북"
                 },
                 {
-                  "optionId": "field-9-option-14",
+                  "optionId": "o045",
                   "displayName": "경남"
                 },
                 {
-                  "optionId": "field-9-option-15",
+                  "optionId": "o046",
                   "displayName": "전북"
                 },
                 {
-                  "optionId": "field-9-option-16",
+                  "optionId": "o047",
                   "displayName": "전남"
                 },
                 {
-                  "optionId": "field-9-option-17",
+                  "optionId": "o048",
                   "displayName": "광주"
                 },
                 {
-                  "optionId": "field-9-option-18",
+                  "optionId": "o049",
                   "displayName": "제주"
                 },
                 {
-                  "optionId": "field-9-option-19",
+                  "optionId": "o050",
                   "displayName": "해외"
                 }
               ],
@@ -751,31 +751,31 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-20-option-1",
+                  "optionId": "o051",
                   "displayName": "기준학점"
                 },
                 {
-                  "optionId": "field-20-option-2",
+                  "optionId": "o052",
                   "displayName": "4.0"
                 },
                 {
-                  "optionId": "field-20-option-3",
+                  "optionId": "o053",
                   "displayName": "4.3"
                 },
                 {
-                  "optionId": "field-20-option-4",
+                  "optionId": "o054",
                   "displayName": "4.5"
                 },
                 {
-                  "optionId": "field-20-option-5",
+                  "optionId": "o055",
                   "displayName": "5.0"
                 },
                 {
-                  "optionId": "field-20-option-6",
+                  "optionId": "o056",
                   "displayName": "7.0"
                 },
                 {
-                  "optionId": "field-20-option-7",
+                  "optionId": "o057",
                   "displayName": "100"
                 }
               ],
@@ -859,39 +859,39 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-23-option-1",
+                  "optionId": "o058",
                   "displayName": "졸업구분"
                 },
                 {
-                  "optionId": "field-23-option-2",
+                  "optionId": "o059",
                   "displayName": "졸업"
                 },
                 {
-                  "optionId": "field-23-option-3",
+                  "optionId": "o060",
                   "displayName": "졸업예정"
                 },
                 {
-                  "optionId": "field-23-option-4",
+                  "optionId": "o061",
                   "displayName": "휴학"
                 },
                 {
-                  "optionId": "field-23-option-5",
+                  "optionId": "o062",
                   "displayName": "재학"
                 },
                 {
-                  "optionId": "field-23-option-6",
+                  "optionId": "o063",
                   "displayName": "수료"
                 },
                 {
-                  "optionId": "field-23-option-7",
+                  "optionId": "o064",
                   "displayName": "편입"
                 },
                 {
-                  "optionId": "field-23-option-8",
+                  "optionId": "o065",
                   "displayName": "중퇴/자퇴"
                 },
                 {
-                  "optionId": "field-23-option-9",
+                  "optionId": "o066",
                   "displayName": "기타"
                 }
               ],
@@ -919,27 +919,27 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-24-option-1",
+                  "optionId": "o067",
                   "displayName": "구분"
                 },
                 {
-                  "optionId": "field-24-option-2",
+                  "optionId": "o068",
                   "displayName": "고등학교"
                 },
                 {
-                  "optionId": "field-24-option-3",
+                  "optionId": "o069",
                   "displayName": "전문대학"
                 },
                 {
-                  "optionId": "field-24-option-4",
+                  "optionId": "o070",
                   "displayName": "대학교"
                 },
                 {
-                  "optionId": "field-24-option-5",
+                  "optionId": "o071",
                   "displayName": "대학원(석사)"
                 },
                 {
-                  "optionId": "field-24-option-6",
+                  "optionId": "o072",
                   "displayName": "대학원(박사)"
                 }
               ],
@@ -961,79 +961,79 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-25-option-1",
+                  "optionId": "o073",
                   "displayName": "소재지"
                 },
                 {
-                  "optionId": "field-25-option-2",
+                  "optionId": "o074",
                   "displayName": "서울"
                 },
                 {
-                  "optionId": "field-25-option-3",
+                  "optionId": "o075",
                   "displayName": "경기"
                 },
                 {
-                  "optionId": "field-25-option-4",
+                  "optionId": "o076",
                   "displayName": "인천"
                 },
                 {
-                  "optionId": "field-25-option-5",
+                  "optionId": "o077",
                   "displayName": "강원"
                 },
                 {
-                  "optionId": "field-25-option-6",
+                  "optionId": "o078",
                   "displayName": "충북"
                 },
                 {
-                  "optionId": "field-25-option-7",
+                  "optionId": "o079",
                   "displayName": "충남"
                 },
                 {
-                  "optionId": "field-25-option-8",
+                  "optionId": "o080",
                   "displayName": "대전"
                 },
                 {
-                  "optionId": "field-25-option-9",
+                  "optionId": "o081",
                   "displayName": "세종"
                 },
                 {
-                  "optionId": "field-25-option-10",
+                  "optionId": "o082",
                   "displayName": "부산"
                 },
                 {
-                  "optionId": "field-25-option-11",
+                  "optionId": "o083",
                   "displayName": "울산"
                 },
                 {
-                  "optionId": "field-25-option-12",
+                  "optionId": "o084",
                   "displayName": "대구"
                 },
                 {
-                  "optionId": "field-25-option-13",
+                  "optionId": "o085",
                   "displayName": "경북"
                 },
                 {
-                  "optionId": "field-25-option-14",
+                  "optionId": "o086",
                   "displayName": "경남"
                 },
                 {
-                  "optionId": "field-25-option-15",
+                  "optionId": "o087",
                   "displayName": "전북"
                 },
                 {
-                  "optionId": "field-25-option-16",
+                  "optionId": "o088",
                   "displayName": "전남"
                 },
                 {
-                  "optionId": "field-25-option-17",
+                  "optionId": "o089",
                   "displayName": "광주"
                 },
                 {
-                  "optionId": "field-25-option-18",
+                  "optionId": "o090",
                   "displayName": "제주"
                 },
                 {
-                  "optionId": "field-25-option-19",
+                  "optionId": "o091",
                   "displayName": "해외"
                 }
               ],
@@ -1214,27 +1214,27 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-31-option-1",
+                  "optionId": "o092",
                   "displayName": "구분"
                 },
                 {
-                  "optionId": "field-31-option-2",
+                  "optionId": "o093",
                   "displayName": "고등학교"
                 },
                 {
-                  "optionId": "field-31-option-3",
+                  "optionId": "o094",
                   "displayName": "전문대학"
                 },
                 {
-                  "optionId": "field-31-option-4",
+                  "optionId": "o095",
                   "displayName": "대학교"
                 },
                 {
-                  "optionId": "field-31-option-5",
+                  "optionId": "o096",
                   "displayName": "대학원(석사)"
                 },
                 {
-                  "optionId": "field-31-option-6",
+                  "optionId": "o097",
                   "displayName": "대학원(박사)"
                 }
               ],
@@ -1256,79 +1256,79 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-32-option-1",
+                  "optionId": "o098",
                   "displayName": "소재지"
                 },
                 {
-                  "optionId": "field-32-option-2",
+                  "optionId": "o099",
                   "displayName": "서울"
                 },
                 {
-                  "optionId": "field-32-option-3",
+                  "optionId": "o100",
                   "displayName": "경기"
                 },
                 {
-                  "optionId": "field-32-option-4",
+                  "optionId": "o101",
                   "displayName": "인천"
                 },
                 {
-                  "optionId": "field-32-option-5",
+                  "optionId": "o102",
                   "displayName": "강원"
                 },
                 {
-                  "optionId": "field-32-option-6",
+                  "optionId": "o103",
                   "displayName": "충북"
                 },
                 {
-                  "optionId": "field-32-option-7",
+                  "optionId": "o104",
                   "displayName": "충남"
                 },
                 {
-                  "optionId": "field-32-option-8",
+                  "optionId": "o105",
                   "displayName": "대전"
                 },
                 {
-                  "optionId": "field-32-option-9",
+                  "optionId": "o106",
                   "displayName": "세종"
                 },
                 {
-                  "optionId": "field-32-option-10",
+                  "optionId": "o107",
                   "displayName": "부산"
                 },
                 {
-                  "optionId": "field-32-option-11",
+                  "optionId": "o108",
                   "displayName": "울산"
                 },
                 {
-                  "optionId": "field-32-option-12",
+                  "optionId": "o109",
                   "displayName": "대구"
                 },
                 {
-                  "optionId": "field-32-option-13",
+                  "optionId": "o110",
                   "displayName": "경북"
                 },
                 {
-                  "optionId": "field-32-option-14",
+                  "optionId": "o111",
                   "displayName": "경남"
                 },
                 {
-                  "optionId": "field-32-option-15",
+                  "optionId": "o112",
                   "displayName": "전북"
                 },
                 {
-                  "optionId": "field-32-option-16",
+                  "optionId": "o113",
                   "displayName": "전남"
                 },
                 {
-                  "optionId": "field-32-option-17",
+                  "optionId": "o114",
                   "displayName": "광주"
                 },
                 {
-                  "optionId": "field-32-option-18",
+                  "optionId": "o115",
                   "displayName": "제주"
                 },
                 {
-                  "optionId": "field-32-option-19",
+                  "optionId": "o116",
                   "displayName": "해외"
                 }
               ],
@@ -1671,31 +1671,31 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-43-option-1",
+                  "optionId": "o117",
                   "displayName": "기준학점"
                 },
                 {
-                  "optionId": "field-43-option-2",
+                  "optionId": "o118",
                   "displayName": "4.0"
                 },
                 {
-                  "optionId": "field-43-option-3",
+                  "optionId": "o119",
                   "displayName": "4.3"
                 },
                 {
-                  "optionId": "field-43-option-4",
+                  "optionId": "o120",
                   "displayName": "4.5"
                 },
                 {
-                  "optionId": "field-43-option-5",
+                  "optionId": "o121",
                   "displayName": "5.0"
                 },
                 {
-                  "optionId": "field-43-option-6",
+                  "optionId": "o122",
                   "displayName": "7.0"
                 },
                 {
-                  "optionId": "field-43-option-7",
+                  "optionId": "o123",
                   "displayName": "100"
                 }
               ],
@@ -1779,39 +1779,39 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-46-option-1",
+                  "optionId": "o124",
                   "displayName": "졸업구분"
                 },
                 {
-                  "optionId": "field-46-option-2",
+                  "optionId": "o125",
                   "displayName": "졸업"
                 },
                 {
-                  "optionId": "field-46-option-3",
+                  "optionId": "o126",
                   "displayName": "졸업예정"
                 },
                 {
-                  "optionId": "field-46-option-4",
+                  "optionId": "o127",
                   "displayName": "휴학"
                 },
                 {
-                  "optionId": "field-46-option-5",
+                  "optionId": "o128",
                   "displayName": "재학"
                 },
                 {
-                  "optionId": "field-46-option-6",
+                  "optionId": "o129",
                   "displayName": "수료"
                 },
                 {
-                  "optionId": "field-46-option-7",
+                  "optionId": "o130",
                   "displayName": "편입"
                 },
                 {
-                  "optionId": "field-46-option-8",
+                  "optionId": "o131",
                   "displayName": "중퇴/자퇴"
                 },
                 {
-                  "optionId": "field-46-option-9",
+                  "optionId": "o132",
                   "displayName": "기타"
                 }
               ],
@@ -1845,31 +1845,31 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-47-option-1",
+                  "optionId": "o133",
                   "displayName": "고용형태"
                 },
                 {
-                  "optionId": "field-47-option-2",
+                  "optionId": "o134",
                   "displayName": "정규"
                 },
                 {
-                  "optionId": "field-47-option-3",
+                  "optionId": "o135",
                   "displayName": "계약"
                 },
                 {
-                  "optionId": "field-47-option-4",
+                  "optionId": "o136",
                   "displayName": "인턴"
                 },
                 {
-                  "optionId": "field-47-option-5",
+                  "optionId": "o137",
                   "displayName": "파견직"
                 },
                 {
-                  "optionId": "field-47-option-6",
+                  "optionId": "o138",
                   "displayName": "프리랜서"
                 },
                 {
-                  "optionId": "field-47-option-7",
+                  "optionId": "o139",
                   "displayName": "아르바이트"
                 }
               ],
@@ -2199,51 +2199,51 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-59-option-1",
+                  "optionId": "o140",
                   "displayName": "등급"
                 },
                 {
-                  "optionId": "field-59-option-2",
+                  "optionId": "o141",
                   "displayName": "1급"
                 },
                 {
-                  "optionId": "field-59-option-3",
+                  "optionId": "o142",
                   "displayName": "2급"
                 },
                 {
-                  "optionId": "field-59-option-4",
+                  "optionId": "o143",
                   "displayName": "3급"
                 },
                 {
-                  "optionId": "field-59-option-5",
+                  "optionId": "o144",
                   "displayName": "2+급"
                 },
                 {
-                  "optionId": "field-59-option-6",
+                  "optionId": "o145",
                   "displayName": "2-급"
                 },
                 {
-                  "optionId": "field-59-option-7",
+                  "optionId": "o146",
                   "displayName": "3+급"
                 },
                 {
-                  "optionId": "field-59-option-8",
+                  "optionId": "o147",
                   "displayName": "3-급"
                 },
                 {
-                  "optionId": "field-59-option-9",
+                  "optionId": "o148",
                   "displayName": "4+급"
                 },
                 {
-                  "optionId": "field-59-option-10",
+                  "optionId": "o149",
                   "displayName": "A등급"
                 },
                 {
-                  "optionId": "field-59-option-11",
+                  "optionId": "o150",
                   "displayName": "B등급"
                 },
                 {
-                  "optionId": "field-59-option-12",
+                  "optionId": "o151",
                   "displayName": "기타"
                 }
               ],
@@ -2338,35 +2338,35 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-62-option-1",
+                  "optionId": "o152",
                   "displayName": "언어"
                 },
                 {
-                  "optionId": "field-62-option-2",
+                  "optionId": "o153",
                   "displayName": "영어"
                 },
                 {
-                  "optionId": "field-62-option-3",
+                  "optionId": "o154",
                   "displayName": "일어"
                 },
                 {
-                  "optionId": "field-62-option-4",
+                  "optionId": "o155",
                   "displayName": "중국어"
                 },
                 {
-                  "optionId": "field-62-option-5",
+                  "optionId": "o156",
                   "displayName": "스페인어"
                 },
                 {
-                  "optionId": "field-62-option-6",
+                  "optionId": "o157",
                   "displayName": "기타"
                 },
                 {
-                  "optionId": "field-62-option-7",
+                  "optionId": "o158",
                   "displayName": "프랑스어"
                 },
                 {
-                  "optionId": "field-62-option-8",
+                  "optionId": "o159",
                   "displayName": "독일어"
                 }
               ],
@@ -2462,239 +2462,239 @@
               "control": "select",
               "options": [
                 {
-                  "optionId": "field-66-option-1",
+                  "optionId": "o160",
                   "displayName": "등급"
                 },
                 {
-                  "optionId": "field-66-option-2",
+                  "optionId": "o161",
                   "displayName": "없음"
                 },
                 {
-                  "optionId": "field-66-option-3",
+                  "optionId": "o162",
                   "displayName": "A"
                 },
                 {
-                  "optionId": "field-66-option-4",
+                  "optionId": "o163",
                   "displayName": "B"
                 },
                 {
-                  "optionId": "field-66-option-5",
+                  "optionId": "o164",
                   "displayName": "C"
                 },
                 {
-                  "optionId": "field-66-option-6",
+                  "optionId": "o165",
                   "displayName": "D"
                 },
                 {
-                  "optionId": "field-66-option-7",
+                  "optionId": "o166",
                   "displayName": "E"
                 },
                 {
-                  "optionId": "field-66-option-8",
+                  "optionId": "o167",
                   "displayName": "F"
                 },
                 {
-                  "optionId": "field-66-option-9",
+                  "optionId": "o168",
                   "displayName": "1급"
                 },
                 {
-                  "optionId": "field-66-option-10",
+                  "optionId": "o169",
                   "displayName": "2급"
                 },
                 {
-                  "optionId": "field-66-option-11",
+                  "optionId": "o170",
                   "displayName": "3급"
                 },
                 {
-                  "optionId": "field-66-option-12",
+                  "optionId": "o171",
                   "displayName": "4급"
                 },
                 {
-                  "optionId": "field-66-option-13",
+                  "optionId": "o172",
                   "displayName": "5급"
                 },
                 {
-                  "optionId": "field-66-option-14",
+                  "optionId": "o173",
                   "displayName": "6급"
                 },
                 {
-                  "optionId": "field-66-option-15",
+                  "optionId": "o174",
                   "displayName": "7급"
                 },
                 {
-                  "optionId": "field-66-option-16",
+                  "optionId": "o175",
                   "displayName": "8급"
                 },
                 {
-                  "optionId": "field-66-option-17",
+                  "optionId": "o176",
                   "displayName": "9급"
                 },
                 {
-                  "optionId": "field-66-option-18",
+                  "optionId": "o177",
                   "displayName": "10급"
                 },
                 {
-                  "optionId": "field-66-option-19",
+                  "optionId": "o178",
                   "displayName": "11급"
                 },
                 {
-                  "optionId": "field-66-option-20",
+                  "optionId": "o179",
                   "displayName": "AL"
                 },
                 {
-                  "optionId": "field-66-option-21",
+                  "optionId": "o180",
                   "displayName": "IH"
                 },
                 {
-                  "optionId": "field-66-option-22",
+                  "optionId": "o181",
                   "displayName": "IM1"
                 },
                 {
-                  "optionId": "field-66-option-23",
+                  "optionId": "o182",
                   "displayName": "IM2"
                 },
                 {
-                  "optionId": "field-66-option-24",
+                  "optionId": "o183",
                   "displayName": "IM3"
                 },
                 {
-                  "optionId": "field-66-option-25",
+                  "optionId": "o184",
                   "displayName": "IL"
                 },
                 {
-                  "optionId": "field-66-option-26",
+                  "optionId": "o185",
                   "displayName": "NH"
                 },
                 {
-                  "optionId": "field-66-option-27",
+                  "optionId": "o186",
                   "displayName": "IL"
                 },
                 {
-                  "optionId": "field-66-option-28",
+                  "optionId": "o187",
                   "displayName": "NM"
                 },
                 {
-                  "optionId": "field-66-option-29",
+                  "optionId": "o188",
                   "displayName": "NL"
                 },
                 {
-                  "optionId": "field-66-option-30",
+                  "optionId": "o189",
                   "displayName": "N1"
                 },
                 {
-                  "optionId": "field-66-option-31",
+                  "optionId": "o190",
                   "displayName": "N2"
                 },
                 {
-                  "optionId": "field-66-option-32",
+                  "optionId": "o191",
                   "displayName": "N3"
                 },
                 {
-                  "optionId": "field-66-option-33",
+                  "optionId": "o192",
                   "displayName": "N4"
                 },
                 {
-                  "optionId": "field-66-option-34",
+                  "optionId": "o193",
                   "displayName": "N5"
                 },
                 {
-                  "optionId": "field-66-option-35",
+                  "optionId": "o194",
                   "displayName": "Level 1"
                 },
                 {
-                  "optionId": "field-66-option-36",
+                  "optionId": "o195",
                   "displayName": "Level 2"
                 },
                 {
-                  "optionId": "field-66-option-37",
+                  "optionId": "o196",
                   "displayName": "Level 3"
                 },
                 {
-                  "optionId": "field-66-option-38",
+                  "optionId": "o197",
                   "displayName": "Level 4"
                 },
                 {
-                  "optionId": "field-66-option-39",
+                  "optionId": "o198",
                   "displayName": "Level 5"
                 },
                 {
-                  "optionId": "field-66-option-40",
+                  "optionId": "o199",
                   "displayName": "Level 6"
                 },
                 {
-                  "optionId": "field-66-option-41",
+                  "optionId": "o200",
                   "displayName": "Level 7"
                 },
                 {
-                  "optionId": "field-66-option-42",
+                  "optionId": "o201",
                   "displayName": "Level 8"
                 },
                 {
-                  "optionId": "field-66-option-43",
+                  "optionId": "o202",
                   "displayName": "A1"
                 },
                 {
-                  "optionId": "field-66-option-44",
+                  "optionId": "o203",
                   "displayName": "A2"
                 },
                 {
-                  "optionId": "field-66-option-45",
+                  "optionId": "o204",
                   "displayName": "B1"
                 },
                 {
-                  "optionId": "field-66-option-46",
+                  "optionId": "o205",
                   "displayName": "B2"
                 },
                 {
-                  "optionId": "field-66-option-47",
+                  "optionId": "o206",
                   "displayName": "C1"
                 },
                 {
-                  "optionId": "field-66-option-48",
+                  "optionId": "o207",
                   "displayName": "C2"
                 },
                 {
-                  "optionId": "field-66-option-49",
+                  "optionId": "o208",
                   "displayName": "Advanced High"
                 },
                 {
-                  "optionId": "field-66-option-50",
+                  "optionId": "o209",
                   "displayName": "Advanced Mid"
                 },
                 {
-                  "optionId": "field-66-option-51",
+                  "optionId": "o210",
                   "displayName": "Advanced Low"
                 },
                 {
-                  "optionId": "field-66-option-52",
+                  "optionId": "o211",
                   "displayName": "Intermediate High"
                 },
                 {
-                  "optionId": "field-66-option-53",
+                  "optionId": "o212",
                   "displayName": "Intermediate Mid 3"
                 },
                 {
-                  "optionId": "field-66-option-54",
+                  "optionId": "o213",
                   "displayName": "Intermediate Mid 2"
                 },
                 {
-                  "optionId": "field-66-option-55",
+                  "optionId": "o214",
                   "displayName": "Intermediate Mid 1"
                 },
                 {
-                  "optionId": "field-66-option-56",
+                  "optionId": "o215",
                   "displayName": "Intermediate Low"
                 },
                 {
-                  "optionId": "field-66-option-57",
+                  "optionId": "o216",
                   "displayName": "Novice High"
                 },
                 {
-                  "optionId": "field-66-option-58",
+                  "optionId": "o217",
                   "displayName": "Novice Mid/Low"
                 },
                 {
-                  "optionId": "field-66-option-59",
+                  "optionId": "o218",
                   "displayName": "기타"
                 }
               ],

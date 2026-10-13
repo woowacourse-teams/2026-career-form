@@ -49,6 +49,7 @@ def deidentify_request(
     result = copy.deepcopy(dict(request))
     aliases: dict[str, dict[str, str]] = {
         "sections": {}, "items": {}, "groups": {}, "candidates": {}, "dom_ids": {}, "dom_names": {},
+        "options": {},
     }
 
     def alias(kind: str, prefix: str, width: int, value: object) -> str:
@@ -64,6 +65,9 @@ def deidentify_request(
             field["domId"] = alias("dom_ids", "d", 3, field["domId"])
         if "domName" in field:
             field["domName"] = alias("dom_names", "n", 3, field["domName"])
+        for option in field.get("options") or []:
+            if "optionId" in option:
+                option["optionId"] = alias("options", "o", 3, option["optionId"])
         context = field.get("semanticContext")
         if isinstance(context, dict) and isinstance(context.get("repeat"), dict):
             context["repeat"]["groupId"] = alias("groups", "g", 2, context["repeat"]["groupId"])
@@ -153,12 +157,13 @@ def evaluate_benchmark(
     thresholds: Sequence[float],
 ) -> dict[str, object]:
     expected = _validate_labels(labels, requests)
+    choices = frozenset(labels["profile_keys"]) | frozenset(RECIPES) | {ABSTAIN}
     providers: dict[str, object] = {}
     for run in results:
         provider = run.get("provider")
         if not isinstance(provider, str) or not provider or provider in providers:
             raise BenchmarkError("결과의 provider는 비어 있지 않은 고유 이름이어야 합니다")
-        answers = _validate_results(run, expected)
+        answers = _validate_results(run, expected, choices)
         providers[provider] = _provider_report(run, expected, answers, thresholds)
     reviews = [entry["review"] for site in labels["sites"] for entry in site["labels"]]
     return {
@@ -182,17 +187,19 @@ def _validate_labels(
     keys = frozenset(_list(labels.get("profile_keys"), "profile_keys"))
     expected: dict[str, dict[str, str]] = {}
     for site in _list(labels.get("sites"), "sites"):
-        site_id = site.get("site_id")
+        site_id = _mapping(site, "라벨 사이트").get("site_id")
         if site_id not in requests or site_id in expected:
             raise BenchmarkError(f"알 수 없거나 중복된 사이트입니다: {site_id}")
         candidate_ids = [str(c.get("candidateId")) for c in candidates_in_order(requests[site_id])]
         entries: dict[str, str] = {}
         for entry in _list(site.get("labels"), "labels"):
-            candidate_id = entry.get("candidate_id")
+            candidate_id = _mapping(entry, f"{site_id} 라벨").get("candidate_id")
             if candidate_id not in candidate_ids or candidate_id in entries:
                 raise BenchmarkError(f"{site_id}: 알 수 없거나 중복된 후보입니다: {candidate_id}")
             if entry.get("review") not in REVIEW_STATES:
                 raise BenchmarkError(f"{site_id}/{candidate_id}: review 상태가 올바르지 않습니다")
+            if labels["label_status"] == "CONFIRMED" and entry["review"] != "CONFIRMED":
+                raise BenchmarkError(f"{site_id}/{candidate_id}: 확정 라벨에 검수 필요 후보가 남아 있습니다")
             entries[candidate_id] = _expected(entry.get("expected"), keys, f"{site_id}/{candidate_id}")
         missing = [candidate_id for candidate_id in candidate_ids if candidate_id not in entries]
         if missing:
@@ -213,22 +220,24 @@ def _expected(value: object, keys: frozenset[str], where: str) -> str:
 
 
 def _validate_results(
-    run: Mapping[str, object], expected: Mapping[str, Mapping[str, str]]
+    run: Mapping[str, object], expected: Mapping[str, Mapping[str, str]], choices: frozenset[str]
 ) -> dict[str, dict[str, Mapping[str, object]]]:
     if run.get("contract_version") != CONTRACT_VERSION:
         raise BenchmarkError(f"결과 contract_version은 {CONTRACT_VERSION}이어야 합니다")
     answers: dict[str, dict[str, Mapping[str, object]]] = {}
     for site in _list(run.get("sites"), "sites"):
-        site_id = site.get("site_id")
+        site_id = _mapping(site, "결과 사이트").get("site_id")
         if site_id not in expected or site_id in answers:
             raise BenchmarkError(f"결과에 알 수 없거나 중복된 사이트가 있습니다: {site_id}")
         entries: dict[str, Mapping[str, object]] = {}
         for entry in _list(site.get("candidates"), "candidates"):
-            candidate_id = entry.get("candidate_id")
+            candidate_id = _mapping(entry, f"{site_id} 결과 후보").get("candidate_id")
             if candidate_id not in expected[site_id] or candidate_id in entries:
                 raise BenchmarkError(f"{site_id}: 결과에 알 수 없거나 중복된 후보가 있습니다: {candidate_id}")
             if not isinstance(entry.get("result"), str) or not RESULT_PATTERN.match(entry["result"]):
                 raise BenchmarkError(f"{site_id}/{candidate_id}: 결과 형식이 올바르지 않습니다")
+            if "jev" in entry:
+                _validate_judgment(entry["jev"], choices, f"{site_id}/{candidate_id}")
             entries[str(candidate_id)] = entry
         if set(entries) != set(expected[site_id]):
             raise BenchmarkError(f"{site_id}: 결과가 모든 후보를 포함하지 않습니다")
@@ -268,12 +277,30 @@ def _provider_report(
     return report
 
 
+def _validate_judgment(judgment: object, choices: frozenset[str], where: str) -> None:
+    if (
+        not isinstance(judgment, Mapping)
+        or judgment.get("raw_choice") not in choices
+        or not _probability(judgment.get("confidence"))
+        or not isinstance(judgment.get("top_probabilities"), Mapping)
+        or not all(
+            isinstance(key, str) and _probability(value)
+            for key, value in judgment["top_probabilities"].items()
+        )
+    ):
+        raise BenchmarkError(f"{where}: Jev 판단 형식이 올바르지 않습니다")
+
+
+def _probability(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= 1
+
+
 def _thresholded(entry: Mapping[str, object], threshold: float) -> str:
     judgment = entry.get("jev")
     if not isinstance(judgment, Mapping):
         return ERROR if entry["result"] == ERROR else NO_MATCH
     choice = judgment.get("raw_choice")
-    if choice == ABSTAIN or float(judgment.get("confidence", 0)) < threshold:
+    if choice == ABSTAIN or float(judgment["confidence"]) < threshold:
         return NO_MATCH
     return f"DERIVED:{choice}" if choice in RECIPES else f"DIRECT:{choice}"
 
@@ -316,6 +343,12 @@ def _probabilities(text: str) -> dict[str, float]:
         if separator:
             values[key.strip()] = float(value)
     return values
+
+
+def _mapping(value: object, name: str) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise BenchmarkError(f"{name}는 객체여야 합니다")
+    return value
 
 
 def _list(value: object, name: str) -> list:
