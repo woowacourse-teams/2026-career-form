@@ -52,6 +52,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [배포 Runbook](topics/deployment-runbook.md) | 배포, hotfix와 rollback 절차 | 2026-08-22 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
+| [자동 기입 품질 report의 전송 시점](topics/quality-report-lifecycle.md) | 실행 중 누적, 종료 시 전송과 중복 방지 | 2026-10-13 |
 | [기존 구현 계획](topics/implementation-plans.md) | 계획 이력과 신규 저장 경계 | 2026-08-22 |
 | [페이지 분석 조사](topics/page-analysis-research.md) | 회사 페이지와 DOM 분석 근거 | 2026-08-22 |
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |

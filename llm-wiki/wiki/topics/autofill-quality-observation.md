@@ -26,3 +26,4 @@
 
 - [공용 모니터링 시스템](monitoring-system.md)
 - [실사이트 자동 입력 평가](live-autofill-evaluation.md)
+- [자동 기입 품질 report의 전송 시점](quality-report-lifecycle.md)
