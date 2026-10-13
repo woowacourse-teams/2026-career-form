@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,6 +27,7 @@ import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.Un
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedBinding;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.application.port.FieldMappingResolver.DirectBinding;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.LookupBinding;
 import com.careerform.formanalysis.application.port.GreetingDomainEvidence.Decision;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FieldCandidate;
@@ -52,8 +54,8 @@ class HplacePolicyTest {
         var document = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalHplaceFormPolicySeeder(policies).run(null);
         verify(policies).save(document.capture());
-        when(policies.findByCompanyKeyAndVersion("hplace", 2)).thenReturn(Optional.of(document.getValue()));
-        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 2);
+        when(policies.findByCompanyKeyAndVersion("hplace", 3)).thenReturn(Optional.of(document.getValue()));
+        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 3);
         var router = new FormAnalysisRouter((host, path) -> new NotRegistered(),
             (host, path) -> Decision.NO_POSITIVE_EVIDENCE, Unavailable::new, provider);
         var prep = new PreparationAnalysisService(Optional.empty(), router).analyze(
@@ -78,9 +80,9 @@ class HplacePolicyTest {
     @Test
     void missingInvalidOrFailedPolicyCannotFallBackToGeneric() {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
-        when(policies.findByCompanyKeyAndVersion("hplace", 2)).thenReturn(Optional.empty())
+        when(policies.findByCompanyKeyAndVersion("hplace", 3)).thenReturn(Optional.empty())
             .thenThrow(new IllegalStateException("synthetic-private-error"));
-        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 2);
+        var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 3);
         assertThat(provider.find()).isInstanceOf(Unavailable.class);
         assertThat(provider.find()).isInstanceOf(Unavailable.class);
         assertThat(new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 0).find())
@@ -158,7 +160,7 @@ class HplacePolicyTest {
             new DirectBinding("contact.contact.emergencyPhoneNumber"), AutofillPolicy.CONDITIONAL,
             MappingStatus.ADAPTER_VERIFIED, InteractionStatus.READY, new WritePlan(WriteCommand.SET_TEXT)));
         assertThat(response.fields()).containsExactlyElementsOf(expected);
-        assertThat(HplaceCompanyFormPolicyFactory.create().fieldRules()).hasSize(6);
+        assertThat(HplaceCompanyFormPolicyFactory.create().fieldRules()).hasSize(20);
         var prep = new PreparationAnalysisService(Optional.empty(), router).analyze(
             new PreparationAnalysisRequest(2, "prep", new PreparationAnalysisRequest.Site(
                 "hi.recruiter.co.kr", "/mrs2/applicant/resume/writeResume"), List.of(
@@ -214,6 +216,55 @@ class HplacePolicyTest {
                 new PreparationAnalysisRequest.Section("hplace-detail-basic", null, null, List.of(action), null)));
         assertThat(router(new Available(policy())).route(request).kind())
             .isEqualTo(FormAnalysisRouter.RouteKind.STRUCTURE_MISMATCH);
+    }
+
+    @Test
+    void detailedChoicesAndConditionalTextUseVerifiedBindingsAndCommands() {
+        var fields = new java.util.ArrayList<>(detailRequest(false).sections().getFirst().fields());
+        String[] radios = {"gender", "veteranStatus", "disabilityStatus", "militaryStatus"};
+        String[] selects = {"nationality", "disabilityGrade", "disabilityType", "militaryRank", "dischargeType"};
+        String[] texts = {"veteranNumber", "veteranRelation", "serviceStartDate", "serviceEndDate", "exemptionReason"};
+        for (String key : radios) fields.add(detailControl(key, FormElement.INPUT, FormControl.RADIO));
+        for (String key : selects) fields.add(detailControl(key, FormElement.SELECT, FormControl.SELECT));
+        for (String key : texts) fields.add(detailField(key));
+        var request = new FieldsAnalysisRequest(2, "fields", detailRequest(false).site(),
+            List.of(new Section("hplace-detail-basic", null, null, fields, null)));
+        var response = new FieldsAnalysisService(Optional.empty(), router(new Available(policy())),
+            new FieldInteractionPolicy(), new SupportedProfileFields()).analyze(request);
+        assertThat(response.analysisStatus()).isEqualTo(FieldsAnalysisResponse.AnalysisStatus.COMPLETE);
+        var mapped = response.fields().stream().filter(MatchedFieldAnalysis.class::isInstance)
+            .map(MatchedFieldAnalysis.class::cast).collect(java.util.stream.Collectors.toMap(MatchedFieldAnalysis::candidateId, x -> x));
+        assertThat(mapped).hasSize(16);
+        assertThat(mapped.get("gender").valueBinding()).isEqualTo(new LookupBinding("personal.personal.gender", Map.of("남성", "남", "여성", "여")));
+        assertThat(mapped.get("nationality").valueBinding()).isEqualTo(new LookupBinding("personal.personal.nationality", Map.of("대한민국", "대한민국")));
+        for (String category : List.of("veteran", "disability")) {
+            assertThat(mapped.get(category + "Status").valueBinding()).isEqualTo(
+                new DerivedBinding(DerivedRecipe.BOOLEAN_YN, category + "." + category + "." + category + "Status", "대상", "비대상"));
+        }
+        assertThat(mapped.get("militaryStatus").valueBinding()).isEqualTo(new LookupBinding("military.military.militaryStatus",
+            Map.of("군필", "군필", "미필", "미필", "면제", "면제", "복무중", "복무중", "비대상", "비대상")));
+        assertThat(((LookupBinding) mapped.get("disabilityGrade").valueBinding()).optionMap())
+            .containsEntry("중증", "심한 장애인").containsEntry("경증", "심하지 않은 장애인");
+        assertThat(((LookupBinding) mapped.get("disabilityType").valueBinding()).optionMap())
+            .containsEntry("안면장애", "안면변형장애").containsEntry("장루・요루장애", "장루/요루장애");
+        assertThat(((LookupBinding) mapped.get("militaryRank").valueBinding()).optionMap()).containsEntry("병장", "병장");
+        assertThat(((LookupBinding) mapped.get("dischargeType").valueBinding()).optionMap())
+            .containsEntry("만기제대", "만기제대").doesNotContainKey("직접입력").doesNotContainKey("기타");
+        for (String key : radios) assertThat(mapped.get(key).writePlan().command()).isEqualTo(WriteCommand.CHECK_RADIO);
+        for (String key : selects) assertThat(mapped.get(key).writePlan().command()).isEqualTo(WriteCommand.SELECT_OPTION);
+        for (String key : texts) {
+            String category = key.startsWith("veteran") ? "veteran" : "military";
+            assertThat(mapped.get(key).valueBinding()).isEqualTo(new DirectBinding(category + "." + category + "." + key));
+            assertThat(mapped.get(key).writePlan().command()).isEqualTo(WriteCommand.SET_TEXT);
+        }
+        assertThat(mapped.values()).allMatch(field -> field.autofillPolicy() == (List.of("gender", "nationality").contains(field.candidateId())
+                ? AutofillPolicy.CONDITIONAL : AutofillPolicy.ALLOWED)
+            && field.mappingStatus() == MappingStatus.ADAPTER_VERIFIED && field.interactionStatus() == InteractionStatus.READY);
+    }
+
+    private static FieldCandidate detailControl(String key, FormElement element, FormControl control) {
+        return new FieldCandidate(key, element, control, Visibility.VISIBLE, null,
+            "hplace.detail." + key, "hplace.detail." + key, null, null, null, null, null);
     }
 
     private static FieldsAnalysisRequest detailRequest(boolean emergency) {

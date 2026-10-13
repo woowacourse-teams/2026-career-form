@@ -1,3 +1,9 @@
+import {
+  isBasicStateDriver,
+  writeBasic,
+  settleBasicStateDriver,
+} from "./hplace/basic-write";
+import { ownedBasicControl } from "./hplace/basic-controls";
 import { greetingWorkflowAdapter } from "./greeting/workflow";
 import { isRegistrationItem, writeRegistration } from "./hplace/write";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
@@ -148,8 +154,42 @@ const genericWorkflowAdapter: WorkflowAdapter = {
 
 const hplaceWorkflowAdapter: WorkflowAdapter = {
   ...genericWorkflowAdapter,
-  isStateDriver: isRegistrationItem,
-  executeStateDriver: writeRegistration,
+  isStateDriver: (item, name) =>
+    isRegistrationItem(item, name) || isBasicStateDriver(item, name),
+  stateDriverStage: (item, handle) =>
+    ownedBasicControl(handle) &&
+    isBasicStateDriver(item, handle.candidate.domName)
+      ? 1
+      : undefined,
+  settleStateDriver: (_document, handle, _report, context) =>
+    handle.candidate.domName?.startsWith("hplace.detail.")
+      ? settleBasicStateDriver(handle, context?.signal, context?.item)
+      : Promise.resolve(
+          !!context &&
+            isRegistrationItem(context.item, handle.candidate.domName),
+        ),
+  stateDriverFailureGroup: (item, handle) =>
+    isBasicStateDriver(item, handle.candidate.domName)
+      ? (handle.elements[0]?.closest(".subject") ?? undefined)
+      : undefined,
+  executeStateDriver: (
+    document,
+    handle,
+    item,
+    signal,
+    report,
+    beforeMutation,
+  ) =>
+    ownedBasicControl(handle)
+      ? writeBasic(handle, item, () => !signal.aborted, beforeMutation)
+      : writeRegistration(
+          document,
+          handle,
+          item,
+          signal,
+          report,
+          beforeMutation,
+        ),
 };
 
 export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {

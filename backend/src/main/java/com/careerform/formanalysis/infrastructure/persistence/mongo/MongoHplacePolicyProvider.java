@@ -27,7 +27,7 @@ public final class MongoHplacePolicyProvider implements HplacePolicyProvider {
     public MongoHplacePolicyProvider(
         FormAnalysisPolicyMongoRepository policies,
         SupportedProfileFields supportedProfileFields,
-        @Value("${careerform.hplace.active-policy-version:2}") long activeVersion
+        @Value("${careerform.hplace.active-policy-version:3}") long activeVersion
     ) {
         this.policies = policies;
         this.supportedProfileFields = supportedProfileFields;

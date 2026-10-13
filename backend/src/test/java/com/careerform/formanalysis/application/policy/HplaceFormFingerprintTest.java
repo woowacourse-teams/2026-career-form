@@ -89,6 +89,33 @@ class HplaceFormFingerprintTest {
         assertThat(fingerprint.matches(detailRequest(List.of(changed, detailField("birthday"), detailField("detailAddress")), null))).isFalse();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"gender", "nationality", "veteranStatus", "veteranNumber", "veteranRelation", "disabilityStatus", "disabilityGrade", "disabilityType", "militaryStatus", "militaryRank", "serviceStartDate", "serviceEndDate", "dischargeType", "exemptionReason"})
+    void optionalDetailedFieldsRequireExactControlIdentity(String key) {
+        boolean radio = List.of("gender", "veteranStatus", "disabilityStatus", "militaryStatus").contains(key);
+        boolean select = List.of("nationality", "disabilityGrade", "disabilityType", "militaryRank", "dischargeType").contains(key);
+        var fields = new java.util.ArrayList<>(List.of(detailField("englishName"), detailField("birthday"), detailField("detailAddress")));
+        String name = "hplace.detail." + key;
+        var element = select ? FormElement.SELECT : FormElement.INPUT;
+        var control = select ? FormControl.SELECT : radio ? FormControl.RADIO : FormControl.TEXT;
+        fields.add(new FieldCandidate(key, element, control, Visibility.VISIBLE, null, name, name, null, null, null, null, null));
+        assertThat(fingerprint.matches(detailRequest(fields, null))).isTrue();
+        fields.add(fields.getLast());
+        assertThat(fingerprint.matches(detailRequest(fields, null))).isFalse();
+        fields.removeLast();
+        fields.set(3, new FieldCandidate(key, element, FormControl.BUTTON, Visibility.VISIBLE, null, name, name, null, null, null, null, null));
+        assertThat(fingerprint.matches(detailRequest(fields, null))).isFalse();
+        fields.set(3, new FieldCandidate(key, FormElement.BUTTON, control, Visibility.VISIBLE, null, name, name, null, null, null, null, null));
+        assertThat(fingerprint.matches(detailRequest(fields, null))).isFalse();
+        for (String unsafe : List.of("disabled", "readonly", "inert", "hidden", "id", "duplicate-id")) {
+            fields.set(3, new FieldCandidate(unsafe.equals("duplicate-id") ? "birthday" : key, element, control,
+                unsafe.equals("hidden") ? Visibility.HIDDEN : Visibility.VISIBLE, null,
+                unsafe.equals("id") ? "unverified" : name, name, null,
+                unsafe.equals("disabled"), unsafe.equals("readonly"), unsafe.equals("inert"), null));
+            assertThat(fingerprint.matches(detailRequest(fields, null))).isFalse();
+        }
+    }
+
     private static FieldsAnalysisRequest detailRequest(List<FieldCandidate> fields, List<Item> items) {
         return new FieldsAnalysisRequest(2, "fields", new Site("hi.recruiter.co.kr", "/mrs2/applicant/resume/writeResume"),
             List.of(new Section("hplace-detail-basic", null, null, fields, items)));

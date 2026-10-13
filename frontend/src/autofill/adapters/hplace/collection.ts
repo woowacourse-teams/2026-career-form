@@ -1,4 +1,10 @@
 import {
+  basicControls,
+  basicName,
+  basicSpecs,
+  ownedBasicControl,
+} from "./basic-controls";
+import {
   detailControls,
   detailNames,
   detailSectionId,
@@ -120,7 +126,9 @@ function collectDetailFields(
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   const registry = new CandidateRegistry();
   const controls = detailControls(document)!;
-  const fields = (Object.keys(controls) as DetailKey[]).map((key, index) => {
+  const fields: import("../../api/types").FieldCandidate[] = (
+    Object.keys(controls) as DetailKey[]
+  ).map((key, index) => {
     const input = controls[key]!;
     const reason = registrationBlockReason([input]);
     const candidate = {
@@ -156,6 +164,41 @@ function collectDetailFields(
     );
     return candidate;
   });
+  for (const control of basicControls(document)) {
+    const spec = basicSpecs[control.key];
+    const candidate = {
+      candidateId: `field-${fields.length + 1}`,
+      domId: basicName(control.key),
+      domName: basicName(control.key),
+      element:
+        spec.kind === "select" ? ("select" as const) : ("input" as const),
+      control: spec.kind,
+      displayName: spec.label,
+      visibility: "visible" as const,
+      options:
+        spec.kind === "text"
+          ? undefined
+          : [...control.options].map(([optionId, e]) => ({
+              optionId,
+              displayName:
+                e instanceof HTMLOptionElement
+                  ? e.textContent!.trim()
+                  : (e as HTMLInputElement).labels![0].textContent!.trim(),
+            })),
+    };
+    const handle = {
+      kind: "field" as const,
+      candidateId: candidate.candidateId,
+      candidate,
+      sectionId: detailSectionId,
+      elements: control.elements,
+      optionElements: control.options,
+      signature: createStructuralSignature(control.elements),
+      isCurrentContext: () => ownedBasicControl(handle) !== undefined,
+    };
+    registry.registerField(handle);
+    fields.push(candidate);
+  }
   return {
     registry,
     request: {

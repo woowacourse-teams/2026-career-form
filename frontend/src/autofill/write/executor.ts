@@ -1,3 +1,10 @@
+import { ownedBasicControl } from "../adapters/hplace/basic-controls";
+import {
+  writeBasic,
+  basicValue,
+  basicTarget,
+  basicDateOrder,
+} from "../adapters/hplace/basic-write";
 import {
   detailAddressMatches,
   writeDetail,
@@ -207,13 +214,15 @@ export async function executeApprovedWritesAfterPageSettles({
           approvedCandidateIds.has(item.candidateId) &&
           !seen.has(item.candidateId) &&
           lookup.status === "ready" &&
-          (await writeDetail(
-            lookup.handle,
-            item,
-            current,
-            beforeMutation,
-            hplaceAddress,
-          ));
+          (ownedBasicControl(lookup.handle)
+            ? await writeBasic(lookup.handle, item, current, beforeMutation)
+            : await writeDetail(
+                lookup.handle,
+                item,
+                current,
+                beforeMutation,
+                hplaceAddress,
+              ));
         seen.add(item.candidateId);
         const result = success
           ? written(item.candidateId)
@@ -236,12 +245,25 @@ export async function executeApprovedWritesAfterPageSettles({
           (ownedDetailControl(lookup.handle)?.key !== "detailAddress" ||
             detailAddressMatches(lookup.handle, hplaceAddress)) &&
           item.profileValue === initialValues[index] &&
-          matchesResultValue(
-            item,
-            lookup.handle.elements[0]?.value ?? "",
-            item.profileValue ?? "",
-            lookup.handle,
-          );
+          (ownedBasicControl(lookup.handle)
+            ? basicDateOrder(
+                lookup.handle,
+                basicTarget(
+                  ownedBasicControl(lookup.handle)!.key,
+                  item.profileValue ?? "",
+                ) ?? "",
+              ) &&
+              basicValue(lookup.handle) ===
+                basicTarget(
+                  ownedBasicControl(lookup.handle)!.key,
+                  item.profileValue ?? "",
+                )
+            : matchesResultValue(
+                item,
+                lookup.handle.elements[0]?.value ?? "",
+                item.profileValue ?? "",
+                lookup.handle,
+              ));
         const finalResult =
           result.status === "written" && !retained
             ? skipped(

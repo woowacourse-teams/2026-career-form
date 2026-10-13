@@ -1,3 +1,8 @@
+import {
+  ownedBasicControl,
+  basicSpecs,
+} from "../adapters/hplace/basic-controls";
+import { basicTarget } from "../adapters/hplace/basic-write";
 import { ownedDetailControl } from "../adapters/hplace/detail";
 import { detailTargetValue } from "../adapters/hplace/detail-write";
 import type { FieldCandidateHandle } from "../dom/types";
@@ -205,6 +210,19 @@ export function matchesResultValue(
   );
   if (greetingDisplayMatch !== undefined) return greetingDisplayMatch;
   const binding = item.analysis?.valueBinding;
+  const basic = handle && ownedBasicControl(handle);
+  if (
+    basic &&
+    (basic.key === "serviceStartDate" || basic.key === "serviceEndDate") &&
+    handle?.candidateId === item.candidateId &&
+    item.analysis?.candidateId === item.candidateId &&
+    item.analysis.mappingStatus === "ADAPTER_VERIFIED" &&
+    item.analysis.writePlan?.command === "SET_TEXT" &&
+    binding?.type === "DIRECT" &&
+    binding.profileFieldKey === basicSpecs[basic.key].profile
+  ) {
+    return basicTarget(basic.key, right) === left;
+  }
   if (binding?.type === "LOOKUP" || binding?.type === "BUTTON_OPTION")
     return false;
   if (binding?.type === "DERIVED" && binding.recipe !== "YEAR_MONTH")

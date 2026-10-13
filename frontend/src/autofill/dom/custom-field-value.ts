@@ -1,3 +1,4 @@
+import { basicValue } from "../adapters/hplace/basic-write";
 import type { FieldCandidateHandle } from "./types";
 import { dropdownValue } from "./button-dropdown";
 import { registrationValue } from "../adapters/hplace/registration";
@@ -6,6 +7,8 @@ import { registrationValue } from "../adapters/hplace/registration";
 export function customFieldValue(
   handle: FieldCandidateHandle,
 ): string | undefined {
+  const basic = basicValue(handle);
+  if (basic !== undefined) return basic;
   const registration = registrationValue(handle);
   if (registration !== undefined) return registration;
   if (handle.buttonDropdown) return dropdownValue(handle.buttonDropdown);

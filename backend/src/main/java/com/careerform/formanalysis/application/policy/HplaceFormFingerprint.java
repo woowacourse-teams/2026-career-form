@@ -22,7 +22,16 @@ public final class HplaceFormFingerprint {
     public static final String DETAIL_ADDRESS = "hplace.detail.detailAddress";
     public static final String EMERGENCY_PHONE = "hplace.detail.emergencyPhone";
     private static final Set<String> DETAIL_REQUIRED = Set.of(ENGLISH_NAME, BIRTHDAY, DETAIL_ADDRESS);
-    private static final Set<String> DETAIL_FIELDS = Set.of(ENGLISH_NAME, BIRTHDAY, DETAIL_ADDRESS, EMERGENCY_PHONE);
+    private static final Set<String> DETAIL_RADIOS = Set.of(
+        "hplace.detail.gender", "hplace.detail.veteranStatus", "hplace.detail.disabilityStatus", "hplace.detail.militaryStatus");
+    private static final Set<String> DETAIL_SELECTS = Set.of(
+        "hplace.detail.nationality", "hplace.detail.disabilityGrade", "hplace.detail.disabilityType",
+        "hplace.detail.militaryRank", "hplace.detail.dischargeType");
+    private static final Set<String> DETAIL_TEXTS = Set.of(ENGLISH_NAME, BIRTHDAY, DETAIL_ADDRESS, EMERGENCY_PHONE,
+        "hplace.detail.veteranNumber", "hplace.detail.veteranRelation", "hplace.detail.serviceStartDate",
+        "hplace.detail.serviceEndDate", "hplace.detail.exemptionReason");
+    private static final Set<String> DETAIL_FIELDS = java.util.stream.Stream.of(DETAIL_TEXTS, DETAIL_RADIOS, DETAIL_SELECTS)
+        .flatMap(Set::stream).collect(java.util.stream.Collectors.toUnmodifiableSet());
     private static final Set<String> FIELD_NAMES = Set.of(NAME, MOBILE, EMAIL);
 
     public boolean matches(PreparationAnalysisRequest request) {
@@ -46,10 +55,16 @@ public final class HplaceFormFingerprint {
         return section.fields().stream().allMatch(field -> field.domName() != null && allowed.contains(field.domName())
             && names.add(field.domName()) && ids.add(field.candidateId())
             && field.domName().equals(field.domId())
-            && field.element() == FormElement.INPUT && field.control() == FormControl.TEXT
+            && matchesControl(field.domName(), field.element(), field.control())
             && field.visibility() == Visibility.VISIBLE
             && !Boolean.TRUE.equals(field.disabled()) && !Boolean.TRUE.equals(field.readonly())
             && !Boolean.TRUE.equals(field.inert())) && names.containsAll(required);
+    }
+
+    private static boolean matchesControl(String name, FormElement element, FormControl control) {
+        if (DETAIL_SELECTS.contains(name)) return element == FormElement.SELECT && control == FormControl.SELECT;
+        if (DETAIL_RADIOS.contains(name)) return element == FormElement.INPUT && control == FormControl.RADIO;
+        return element == FormElement.INPUT && control == FormControl.TEXT;
     }
 
     private static boolean matchesSection(String path, String section) {
