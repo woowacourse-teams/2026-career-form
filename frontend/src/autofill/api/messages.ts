@@ -23,7 +23,8 @@ export type AnalysisErrorCode =
   | "INVALID_RESPONSE";
 
 export type AnalysisResponseEnvelope =
-  { ok: true; data: unknown } | { ok: false; code: AnalysisErrorCode };
+  | { ok: true; data: unknown; quality?: boolean }
+  | { ok: false; code: AnalysisErrorCode };
 
 export function isAnalysisRequestMessage(
   value: unknown,

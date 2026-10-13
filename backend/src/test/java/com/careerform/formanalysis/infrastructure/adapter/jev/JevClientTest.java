@@ -161,6 +161,24 @@ class JevClientTest {
         return result;
     }
 
+    @Test
+    void observesActualCallAndModelWithoutCountingOversizedUnsentPayload() throws Exception {
+        var metrics = new com.careerform.monitoring.ExternalCallMetrics(new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+            Optional.of(new com.careerform.quality.QualityAiObserver()));
+        var client = new JevClient("synthetic-key", "jev-test", 8000, 0.8, true, metrics, null, false);
+        setHttp(client, new FixedResponseHttpClient(response("decision", 0.9, Map.of(FIELD, 0.9, "ABSTAIN", 0.1)).replace(SECRET, "jev-test")));
+        var questions = Map.of("decision", new JevClient.Choice("synthetic", Map.of(FIELD, "synthetic", "ABSTAIN", "synthetic")));
+        try (var scope = com.careerform.quality.QualityScope.open()) {
+            assertThat(client.choose(Map.of(), questions)).containsEntry("decision", FIELD);
+            assertThat(scope.calls()).hasSize(1);
+            assertThat(scope.calls().getFirst().modelVersion()).matches("[0-9a-f]{64}");
+        }
+        try (var scope = com.careerform.quality.QualityScope.open()) {
+            assertThatThrownBy(() -> client.choose("x".repeat(2_000_001), questions)).isInstanceOf(ResolverException.class);
+            assertThat(scope.calls()).isEmpty();
+        }
+    }
+
     private static LangSmithTraceRecorder recorder() {
         var recorder = mock(LangSmithTraceRecorder.class);
         when(recorder.begin(any(), any(), any(), any())).thenReturn(new LangSmithTraceRecorder.Trace(

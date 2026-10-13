@@ -4,6 +4,9 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.Optional;
 
 import com.careerform.formanalysis.application.port.ActionResolver;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy;
@@ -21,12 +24,15 @@ import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider.No
 import com.careerform.formanalysis.application.port.FieldMappingResolver;
 import com.careerform.formanalysis.application.port.GreetingDomainEvidence;
 import com.careerform.formanalysis.application.port.GreetingPolicyProvider;
+import com.careerform.formanalysis.application.port.AnalysisRouteObserver;
+import com.careerform.formanalysis.application.port.AnalysisRouteObserver.Operation;
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
 @Component
 public final class FormAnalysisRouter {
 
+    private static final Logger log = LoggerFactory.getLogger(FormAnalysisRouter.class);
     private static final Pattern HPLACE_HOST = Pattern.compile(
         "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.(?:recruiter\\.co\\.kr|recruiter\\.im)$",
         Pattern.CASE_INSENSITIVE
@@ -36,6 +42,7 @@ public final class FormAnalysisRouter {
     private final CompanyFormPolicyProvider policyProvider;
     private final GreetingPolicyProvider greetingPolicyProvider;
     private final GreetingDomainEvidence greetingDomainEvidence;
+    private final Optional<AnalysisRouteObserver> observer;
     private final StoredPolicyFingerprint fingerprint = new StoredPolicyFingerprint();
     private final GreetingFormFingerprint greetingFingerprint = new GreetingFormFingerprint();
 
@@ -47,17 +54,31 @@ public final class FormAnalysisRouter {
     public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider,
         GreetingDomainEvidence greetingDomainEvidence, GreetingPolicyProvider greetingPolicyProvider) {
         this(policyProvider, greetingDomainEvidence, greetingPolicyProvider,
-            CompanyFormPolicyProvider.Unavailable::new);
+            CompanyFormPolicyProvider.Unavailable::new, Optional.empty());
+    }
+
+    public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider,
+        GreetingDomainEvidence greetingDomainEvidence, GreetingPolicyProvider greetingPolicyProvider,
+        HplacePolicyProvider hplacePolicyProvider) {
+        this(policyProvider, greetingDomainEvidence, greetingPolicyProvider, hplacePolicyProvider, Optional.empty());
+    }
+
+    public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider,
+        GreetingDomainEvidence greetingDomainEvidence, GreetingPolicyProvider greetingPolicyProvider,
+        Optional<AnalysisRouteObserver> observer) {
+        this(policyProvider, greetingDomainEvidence, greetingPolicyProvider,
+            CompanyFormPolicyProvider.Unavailable::new, observer);
     }
 
     @Autowired
     public FormAnalysisRouter(CompanyFormPolicyProvider policyProvider,
         GreetingDomainEvidence greetingDomainEvidence, GreetingPolicyProvider greetingPolicyProvider,
-        HplacePolicyProvider hplacePolicyProvider) {
+        HplacePolicyProvider hplacePolicyProvider, Optional<AnalysisRouteObserver> observer) {
         this.hplacePolicyProvider = hplacePolicyProvider;
         this.policyProvider = policyProvider;
         this.greetingDomainEvidence = greetingDomainEvidence;
         this.greetingPolicyProvider = greetingPolicyProvider;
+        this.observer = observer;
     }
 
     public ActionRoute route(PreparationAnalysisRequest request) {
@@ -69,24 +90,24 @@ public final class FormAnalysisRouter {
         if (lookup instanceof NotRegistered) {
             lookup = sharedLookup(request.site().host(), request.site().pathPattern());
             if (lookup instanceof NotRegistered) {
-                return new ActionRoute(RouteKind.GENERIC, null);
+                return observed(new ActionRoute(RouteKind.GENERIC, null), null);
             }
             greetingCandidate = !isHplaceApplicant(request.site().host(), request.site().pathPattern());
         }
         if (!(lookup instanceof Available available)) {
-            return new ActionRoute(RouteKind.POLICY_UNAVAILABLE, null, greetingCandidate);
+            return observed(new ActionRoute(RouteKind.POLICY_UNAVAILABLE, null, greetingCandidate), null);
         }
         CompanyFormPolicy policy = available.policy();
         if (!("hplace".equals(policy.companyKey())
             ? hplaceFingerprint.matches(request) : fingerprint.matches(policy, request))) {
-            return new ActionRoute(RouteKind.STRUCTURE_MISMATCH, null, greetingCandidate);
+            return observed(new ActionRoute(RouteKind.STRUCTURE_MISMATCH, null, greetingCandidate), policy);
         }
-        return new ActionRoute(
+        return observed(new ActionRoute(
             RouteKind.ADAPTER,
             "greeting".equals(policy.companyKey()) ? new GreetingActionResolver()
                 : new StoredPolicyActionResolver(policy),
             "greeting".equals(policy.companyKey())
-        );
+        ), policy);
     }
 
     public FieldRoute route(FieldsAnalysisRequest request) {
@@ -94,15 +115,16 @@ public final class FormAnalysisRouter {
             request.site().host(),
             request.site().pathPattern()
         );
+        boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
             lookup = sharedLookup(request.site().host(), request.site().pathPattern());
             if (lookup instanceof NotRegistered) {
-                return new FieldRoute(RouteKind.GENERIC, null);
+                return observed(new FieldRoute(RouteKind.GENERIC, null), null, false);
             }
-
+            greetingCandidate = !isHplaceApplicant(request.site().host(), request.site().pathPattern());
         }
         if (!(lookup instanceof Available available)) {
-            return new FieldRoute(RouteKind.POLICY_UNAVAILABLE, null);
+            return observed(new FieldRoute(RouteKind.POLICY_UNAVAILABLE, null), null, greetingCandidate);
         }
         CompanyFormPolicy policy = available.policy();
         boolean greeting = "greeting".equals(policy.companyKey());
@@ -110,13 +132,13 @@ public final class FormAnalysisRouter {
         if (!(hplace ? hplaceFingerprint.matches(request) : greeting
             ? greetingFingerprint.matches(request)
             : fingerprint.matches(policy, request))) {
-            return new FieldRoute(RouteKind.STRUCTURE_MISMATCH, null);
+            return observed(new FieldRoute(RouteKind.STRUCTURE_MISMATCH, null), policy, greeting);
         }
-        return new FieldRoute(
+        return observed(new FieldRoute(
             RouteKind.ADAPTER,
             greeting ? new GreetingFieldMappingResolver(policy)
                 : new StoredPolicyFieldMappingResolver(policy, hplace), greeting
-        );
+        ), policy, greeting);
     }
 
     public GenericRouteKind routeGeneric(String host, String pathPattern) {
@@ -124,15 +146,21 @@ public final class FormAnalysisRouter {
             host,
             pathPattern
         );
+        var greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
             lookup = sharedLookup(host, pathPattern);
+            greetingCandidate = !(lookup instanceof NotRegistered) && !isHplaceApplicant(host, pathPattern);
         }
         if (lookup instanceof NotRegistered) {
+            observe(Operation.INTERACTION, RouteKind.GENERIC, false, null);
             return GenericRouteKind.GENERIC;
         }
-        if (lookup instanceof Available) {
+        if (lookup instanceof Available available) {
+            observe(Operation.INTERACTION, RouteKind.ADAPTER,
+                "greeting".equals(available.policy().companyKey()), available.policy());
             return GenericRouteKind.STATIC_POLICY_PRESENT;
         }
+        observe(Operation.INTERACTION, RouteKind.POLICY_UNAVAILABLE, greetingCandidate, null);
         return GenericRouteKind.POLICY_UNAVAILABLE;
     }
 
@@ -151,6 +179,27 @@ public final class FormAnalysisRouter {
         return host != null && HPLACE_HOST.matcher(host).matches() && pathPattern != null
             && (pathPattern.startsWith("/app/applicant/") || pathPattern.equals("/app/applicant")
                 || pathPattern.startsWith("/v1/applicant/") || pathPattern.equals("/v1/applicant"));
+    }
+
+    private ActionRoute observed(ActionRoute route, CompanyFormPolicy policy) {
+        observe(Operation.PREPARATION, route.kind(), route.greeting()
+            || (policy != null && "greeting".equals(policy.companyKey())), policy);
+        return route;
+    }
+
+    private FieldRoute observed(FieldRoute route, CompanyFormPolicy policy, boolean greeting) {
+        observe(Operation.FIELDS, route.kind(), greeting, policy);
+        return route;
+    }
+
+    private void observe(Operation operation, RouteKind kind, boolean greeting, CompanyFormPolicy policy) {
+        try {
+            observer.ifPresent(value -> value.selected(new AnalysisRouteObserver.Decision(
+                operation, kind, greeting, policy == null ? null : policy.companyKey(),
+                policy == null ? null : policy.version())));
+        } catch (RuntimeException exception) {
+            log.warn("QUALITY_ROUTE_OBSERVATION_UNAVAILABLE operation={}", operation);
+        }
     }
 
     private CompanyFormPolicyProvider.LookupResult greetingLookup(
