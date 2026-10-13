@@ -11,6 +11,7 @@ import {
   Summary,
   entrySummary,
   titles,
+  descriptions,
   type Chapter,
   type Step,
 } from "./QuickStartFields";
@@ -143,8 +144,19 @@ export function QuickStart({
     setHistory((current) => [...current, { step, selection }]);
     setStep(next);
   }
-  async function proceed(destination: Step | "guide" | "profile" | "retry") {
+  async function proceed(
+    destination: Step | "guide" | "profile" | "retry",
+    skipIncompleteDates = false,
+  ) {
     if (transition.current) return false;
+    const invalidDate = question.current?.querySelector<HTMLInputElement>(
+      "input[data-date-input]:invalid",
+    );
+    if (invalidDate && !skipIncompleteDates) {
+      invalidDate.focus();
+      invalidDate.reportValidity();
+      return false;
+    }
     transition.current = true;
     setPending(true);
     setNavigationFailed(false);
@@ -168,9 +180,9 @@ export function QuickStart({
       setPending(false);
     }
   }
-  function next() {
+  function next(skipIncompleteDates = false) {
     const following = steps[steps.indexOf(step) + 1];
-    if (following) void proceed(following);
+    if (following) void proceed(following, skipIncompleteDates);
   }
   function selectEntry(
     chapter: Chapter,
@@ -236,6 +248,19 @@ export function QuickStart({
         </p>
       </main>
     );
+  const autofillExit = (
+    <div className={`${styles.exit} ${summary ? styles.summaryExit : ""}`}>
+      <button
+        className={summary ? styles.primary : undefined}
+        type="button"
+        disabled={pending}
+        onClick={() => void proceed("guide")}
+      >
+        지금 자동 기입 사용하기 <span aria-hidden="true">↗</span>
+      </button>
+      <span>지원서에서 사용하는 방법을 안내해 드려요</span>
+    </div>
+  );
   return (
     <main className={styles.page} id="main">
       <div className={styles.shell}>
@@ -310,19 +335,29 @@ export function QuickStart({
                 )
                   return;
                 event.preventDefault();
-                next();
+                const inputs = Array.from(
+                  question.current?.querySelectorAll<HTMLInputElement>(
+                    'input:not(:disabled):not([aria-hidden="true"])',
+                  ) ?? [],
+                );
+                const following =
+                  inputs[inputs.indexOf(target as HTMLInputElement) + 1];
+                if (following) following.focus();
+                else next();
               }}
             >
-              <p className={styles.description}>
-                모든 항목은 선택이에요. 필요한 만큼만 입력하고 언제든
-                시작하세요.
-              </p>
+              <p className={styles.description}>{descriptions[step]}</p>
               <fieldset
                 ref={question}
                 disabled={pending}
                 className={`${styles.question} ${step === "school" ? styles.schoolQuestion : ""}`}
                 key={step}
               >
+                {!summary && (
+                  <p className={styles.optional}>
+                    선택 입력 · 건너뛰어도 괜찮아요
+                  </p>
+                )}
                 {choosing ? (
                   <QuickStartPicker
                     education={step === "educationType"}
@@ -337,8 +372,9 @@ export function QuickStart({
                       </div>
                     )}
                     <Summary values={summaryValues} />
-                    <p className={styles.note}>
-                      여기서 자동 기입을 시작해도 좋아요. 조금 더 준비해 볼까요?
+                    {autofillExit}
+                    <p className={styles.continueLabel}>
+                      조금 더 준비하고 싶다면 <span>선택</span>
                     </p>
                     <div className={styles.chapterChoices}>
                       {step !== "educationSummary" && (
@@ -409,7 +445,7 @@ export function QuickStart({
                     type="button"
                     className={styles.primary}
                     disabled={pending}
-                    onClick={next}
+                    onClick={() => next()}
                   >
                     다음
                   </button>
@@ -422,7 +458,7 @@ export function QuickStart({
                   disabled={pending}
                   onClick={async () => {
                     if (!choosing) {
-                      next();
+                      next(true);
                       return;
                     }
                     if (step === "educationType") {
@@ -439,16 +475,7 @@ export function QuickStart({
                   {choosing ? "이 묶음 건너뛰기" : "이 질문 건너뛰기"}
                 </button>
               )}
-              <div className={styles.exit}>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => void proceed("guide")}
-                >
-                  지금 자동 기입 사용하기 <span aria-hidden="true">↗</span>
-                </button>
-                <span>나머지는 나중에 채워도 괜찮아요</span>
-              </div>
+              {!summary && autofillExit}
             </form>
           )}
           {navigationFailed && (

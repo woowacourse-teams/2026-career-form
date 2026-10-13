@@ -1,6 +1,7 @@
-import type { InputHTMLAttributes } from "react";
+import { useRef, type InputHTMLAttributes } from "react";
 import { PROFILE_CATEGORIES } from "../field-definitions";
 import type { Profile, ProfileEntry, ProfileIdentity } from "../model";
+import { QuickStartDateInput } from "./QuickStartDateInput";
 import { CatalogNameInput } from "./CatalogNameInput";
 import styles from "./QuickStart.module.css";
 
@@ -40,6 +41,45 @@ export const titles: Record<Step, string> = {
   experienceDetails: "어떤 일을 했는지 적어주세요",
   experienceSummary: "경험까지 차곡차곡 준비됐어요",
 };
+export const descriptions: Record<Step, string> = {
+  name: "지원서에 사용할 이름이에요. Enter를 누르면 다음 칸으로 이동해요.",
+  email:
+    "아이디를 입력한 뒤 이메일 주소를 골라 완성할 수 있어요. 직접 입력해도 좋아요.",
+  phone: "평소 연락받는 번호를 입력해 주세요. 하이픈 없이 입력해도 괜찮아요.",
+  basics:
+    "여기까지 입력한 내용을 확인해 보세요. 학력과 경험은 나중에 채워도 좋아요.",
+  educationType:
+    "먼저 학력 하나만 골라볼까요? 필요한 항목은 나중에 더 추가할 수 있어요.",
+  school:
+    "학교 이름을 검색하거나 직접 입력해 주세요. 검색 결과는 방향키와 Enter로 고를 수 있어요.",
+  major: "지원서에 사용할 전공 이름을 적어 주세요.",
+  completion: "지금 상태를 골라 주세요. 선택한 항목을 다시 누르면 해제돼요.",
+  educationDates:
+    "기억나는 날짜만 입력해도 괜찮아요. 건너뛰면 미완성 날짜는 저장하지 않아요.",
+  educationSummary:
+    "입력한 학력을 확인해 보세요. 지금 자동 기입을 시작해도 좋아요.",
+  experienceType:
+    "소개하고 싶은 경험 하나부터 시작해요. 직장경력이 없어도 괜찮아요.",
+  experienceName: "지원서에 적을 회사 또는 프로젝트 이름을 입력해 주세요.",
+  experienceRole:
+    "맡았던 역할이나 근무 형태를 알려주세요. 필요한 항목만 선택해도 좋아요.",
+  experienceDates:
+    "재직 중이라면 퇴사일은 필요 없어요. 건너뛰면 미완성 날짜는 저장하지 않아요.",
+  experienceDetails:
+    "맡은 일과 결과를 한두 문장으로 적어 보세요. 자세한 내용은 나중에 다듬어도 좋아요.",
+  experienceSummary:
+    "입력한 경험을 확인해 보세요. 준비한 정보로 자동 기입을 시작할 수 있어요.",
+};
+
+function emailSuggestions(value: string) {
+  if (!/^[^\s@]+(?:@[^\s@]*)?$/.test(value)) return [];
+  const [name, prefix = ""] = value.split("@");
+  return ["naver.com", "gmail.com", "daum.net"]
+    .filter((domain) => domain.startsWith(prefix.toLowerCase()))
+    .map((domain) => `${name}@${domain}`)
+    .filter((suggestion) => suggestion !== value);
+}
+
 export function phoneHint(value: string) {
   const digits = value.replace(/[ -]/g, "");
   return /^01\d{9}$/.test(digits)
@@ -116,16 +156,26 @@ export function QuickStartFields({
     identity?: ProfileIdentity,
   ) => void;
 }) {
+  const emailInput = useRef<HTMLInputElement>(null);
+  const suggestions = emailSuggestions(profile.contact.email ?? "");
   const values = entry.values;
-  const field = (id: string, label: string, type = "text") => (
-    <Input
-      key={id}
-      label={label}
-      type={type}
-      value={values[id] ?? ""}
-      onChange={(event) => updateEntry(id, event.target.value)}
-    />
-  );
+  const field = (id: string, label: string, type = "text") =>
+    type === "date" ? (
+      <QuickStartDateInput
+        key={id}
+        label={label}
+        value={values[id] ?? ""}
+        onChange={(value) => updateEntry(id, value)}
+      />
+    ) : (
+      <Input
+        key={id}
+        label={label}
+        type={type}
+        value={values[id] ?? ""}
+        onChange={(event) => updateEntry(id, event.target.value)}
+      />
+    );
   const choice = (id: string, label: string, choices: readonly string[]) => (
     <Choices
       label={label}
@@ -160,15 +210,40 @@ export function QuickStartFields({
       );
     case "email":
       return (
-        <Input
-          label="이메일"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          placeholder="name@example.com"
-          value={profile.contact.email ?? ""}
-          onChange={(e) => updateSingle("contact", "email", e.target.value)}
-        />
+        <>
+          <label className={styles.field}>
+            이메일
+            <input
+              ref={emailInput}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              value={profile.contact.email ?? ""}
+              onChange={(e) => updateSingle("contact", "email", e.target.value)}
+            />
+          </label>
+          {suggestions.length > 0 && (
+            <div
+              className={styles.emailSuggestions}
+              role="group"
+              aria-label="이메일 빠른 완성"
+            >
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    updateSingle("contact", "email", suggestion);
+                    emailInput.current?.focus();
+                  }}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       );
     case "phone":
       return (
@@ -217,7 +292,7 @@ export function QuickStartFields({
       );
     case "educationDates":
       return (
-        <div className={styles.nameFields}>
+        <div className={styles.dateFields}>
           {field("startDate", "입학일", "date")}
           {field("endDate", "졸업일", "date")}
         </div>
@@ -245,7 +320,7 @@ export function QuickStartFields({
       );
     case "experienceDates":
       return (
-        <div className={styles.nameFields}>
+        <div className={styles.dateFields}>
           {field(
             "startDate",
             chapter === "careers" ? "입사일" : "활동 시작일",

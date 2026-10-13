@@ -54,6 +54,138 @@ async function renderForm(initial?: Profile) {
 }
 
 describe("QuickStart", () => {
+  it("accepts typed date digits and blocks leaving with an incomplete or impossible date", async () => {
+    const { repository } = await renderForm();
+    await next();
+    await next();
+    await next();
+    fireEvent.click(screen.getByRole("button", { name: "학력 추가하기" }));
+    fireEvent.click(screen.getByRole("button", { name: "대학교" }));
+    await next();
+    await next();
+    await next();
+    const start = screen.getByLabelText("입학일");
+    fireEvent.change(start, { target: { value: "20240229" } });
+    expect(start).toHaveValue("2024-02-29");
+    fireEvent.keyDown(start, { key: "Enter" });
+    const end = screen.getByLabelText("졸업일");
+    expect(end).toHaveFocus();
+    fireEvent.change(end, { target: { value: "20230229" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
+    );
+    expect(end).toHaveFocus();
+    expect(screen.getByRole("alert")).toBeVisible();
+    await waitFor(async () =>
+      expect((await repository.load()).education[0]?.values.startDate).toBe(
+        "2024-02-29",
+      ),
+    );
+    expect(
+      (await repository.load()).education[0].values.endDate,
+    ).toBeUndefined();
+    fireEvent.change(end, { target: { value: "2024" } });
+    await next();
+    expect(end).toHaveValue("2024");
+    fireEvent.change(end, { target: { value: "20250302" } });
+    await next();
+    expect((await repository.load()).education[0].values).toMatchObject({
+      startDate: "2024-02-29",
+      endDate: "2025-03-02",
+    });
+  });
+  it("can skip an incomplete date without replacing a previously saved date", async () => {
+    const initial = createEmptyProfile();
+    initial.education = [
+      {
+        id: "school-date",
+        sectionId: "university",
+        values: { schoolName: "합성대학교", startDate: "2020-03-02" },
+      },
+    ];
+    const { repository } = await renderForm(initial);
+    await next();
+    await next();
+    await next();
+    fireEvent.click(screen.getByRole("button", { name: "학력 추가하기" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "기존 항목 수정: 합성대학교" }),
+    );
+    await next();
+    await next();
+    await next();
+    fireEvent.change(screen.getByLabelText("입학일"), {
+      target: { value: "2024" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
+    await screen.findByRole("heading", { name: "학력도 준비됐어요" });
+    expect((await repository.load()).education[0].values.startDate).toBe(
+      "2020-03-02",
+    );
+  });
+  it("moves Enter through both name fields before leaving the question", async () => {
+    await renderForm();
+    fireEvent.keyDown(screen.getByLabelText("국문 성"), { key: "Enter" });
+    expect(screen.getByLabelText("국문 이름")).toHaveFocus();
+    expect(screen.queryByLabelText("이메일")).toBeNull();
+    fireEvent.keyDown(screen.getByLabelText("국문 이름"), { key: "Enter" });
+    await waitFor(() => expect(screen.getByLabelText("이메일")).toHaveFocus());
+  });
+  it("completes only a chosen email domain and saves it without advancing", async () => {
+    const { repository } = await renderForm();
+    await next();
+    const email = screen.getByLabelText("이메일");
+    fireEvent.change(email, { target: { value: "learner@g" } });
+    expect(
+      screen.queryByRole("button", { name: "learner@naver.com" }),
+    ).toBeNull();
+    expect(email).toHaveValue("learner@g");
+    fireEvent.click(screen.getByRole("button", { name: "learner@gmail.com" }));
+    expect(email).toHaveValue("learner@gmail.com");
+    expect(email).toHaveFocus();
+    expect(screen.queryByLabelText("전화번호")).toBeNull();
+    await next();
+    expect((await repository.load()).contact.email).toBe("learner@gmail.com");
+  });
+  it.each(["", "@g", "a@@g", "a b@g", "learner@company.test"])(
+    "preserves manually entered email %s without offering unrelated domains",
+    async (value) => {
+      const { repository } = await renderForm();
+      await next();
+      fireEvent.change(screen.getByLabelText("이메일"), { target: { value } });
+      expect(
+        screen.queryByRole("group", { name: "이메일 빠른 완성" }),
+      ).toBeNull();
+      await next();
+      expect((await repository.load()).contact.email ?? "").toBe(value);
+    },
+  );
+  it("puts the autofill exit before optional chapters and stays on save failure", async () => {
+    const { fail } = await renderForm();
+    fireEvent.change(screen.getByLabelText("국문 이름"), {
+      target: { value: "시연" },
+    });
+    await next();
+    await next();
+    await next();
+    const exit = screen.getByRole("button", {
+      name: "지금 자동 기입 사용하기",
+    });
+    const education = screen.getByRole("button", { name: "학력 추가하기" });
+    expect(
+      exit.compareDocumentPosition(education) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fail(true);
+    fireEvent.click(exit);
+    await screen.findByRole("alert");
+    expect(education).toBeVisible();
+    fail(false);
+    fireEvent.click(exit);
+    await screen.findByRole("heading", {
+      name: "지원서에서 자동 기입을 시작하세요",
+    });
+  });
   it("focuses each new question without stealing focus while editing", async () => {
     await renderForm();
     expect(screen.getByLabelText("국문 성")).toHaveFocus();
@@ -63,9 +195,11 @@ describe("QuickStart", () => {
     });
     expect(screen.getByLabelText("국문 이름")).toHaveFocus();
     await next();
-    expect(screen.getByLabelText("이메일")).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText("이메일")).toHaveFocus());
     await next();
-    expect(screen.getByLabelText("전화번호")).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByLabelText("전화번호")).toHaveFocus(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "이전" }));
     await waitFor(() => expect(screen.getByLabelText("이메일")).toHaveFocus());
     await next();

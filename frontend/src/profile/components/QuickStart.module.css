@@ -482,3 +482,81 @@
 .schoolQuestion [role="listbox"] {
   max-height: 180px;
 }
+
+.optional {
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  margin: 0 0 18px;
+}
+.emailSuggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.emailSuggestions button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-action-strong);
+  padding: 8px 12px;
+  font-size: 13px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.summaryExit {
+  border: 0;
+  margin: 0 0 30px;
+  padding: 0;
+}
+.continueLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+.continueLabel span {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.dateFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.dateControl {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dateControl input {
+  font-size: 16px;
+  padding: 16px 10px;
+}
+.dateControl button {
+  flex-shrink: 0;
+  padding: 14px 10px;
+}
+.dateControl .calendarInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  right: 0;
+  bottom: 0;
+}
+@media (max-width: 600px) {
+  .dateFields {
+    grid-template-columns: 1fr;
+  }
+}
