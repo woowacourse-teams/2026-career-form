@@ -26,7 +26,14 @@ const saveLabels = {
   saved: "이 브라우저에 저장했어요.",
   error: "저장하지 못했어요. 입력한 내용은 유지되니 다시 시도해 주세요.",
 };
-const basicSteps: Step[] = ["name", "email", "phone", "basics"];
+const basicSteps: Step[] = [
+  "name",
+  "email",
+  "phone",
+  "gender",
+  "birthDate",
+  "basics",
+];
 const educationSteps: Step[] = [
   "educationType",
   "school",
@@ -97,13 +104,16 @@ export function QuickStart({
         )
       : Object.values(value).some((v) => typeof v === "string" && v.trim()),
   );
-  const chapter = basicSteps.includes(step)
-    ? 0
-    : educationSteps.includes(step) ||
-        step === "educationDates" ||
-        step === "educationDetails"
-      ? 1
-      : 2;
+  const chapter =
+    basicSteps.includes(step) ||
+    step === "englishName" ||
+    step === "nationality"
+      ? 0
+      : educationSteps.includes(step) ||
+          step === "educationDates" ||
+          step === "educationDetails"
+        ? 1
+        : 2;
   const steps =
     chapter === 0
       ? basicSteps
@@ -125,7 +135,10 @@ export function QuickStart({
       : summaryValues.some(([, value]) => value.trim());
   const missingFields: SummaryValue[] =
     step === "basics"
-      ? basicSummary(editor.profile)
+      ? basicSummary(editor.profile).filter(
+          ([, , target]) =>
+            target !== "englishName" && target !== "nationality",
+        )
       : step === "educationSummary"
         ? [
             ["학교명", entry.values.schoolName ?? "", "school"],
@@ -534,6 +547,27 @@ export function QuickStart({
                         </>
                       )}
                     </div>
+                    {step === "basics" && (
+                      <div className={styles.supplementActions}>
+                        {summaryValues
+                          .filter(
+                            ([, value, target]) =>
+                              (target === "englishName" ||
+                                target === "nationality") &&
+                              !value.trim(),
+                          )
+                          .map(([label, , target]) => (
+                            <button
+                              key={label}
+                              type="button"
+                              aria-label={`${label} 수정`}
+                              onClick={() => target && editQuestion(target)}
+                            >
+                              {label} 추가
+                            </button>
+                          ))}
+                      </div>
+                    )}
                     <div className={styles.chapterChoices}>
                       <button
                         type="button"

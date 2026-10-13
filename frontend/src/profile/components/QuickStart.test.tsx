@@ -31,6 +31,10 @@ async function next() {
   );
 }
 
+async function goToBasicSummary() {
+  for (let question = 0; question < 5; question++) await next();
+}
+
 function memoryRepository(initial = createEmptyProfile()) {
   let stored = structuredClone(initial);
   let failing = false;
@@ -71,9 +75,7 @@ async function renderForm(initial?: Profile) {
 describe("QuickStart", () => {
   it("accepts typed date digits and blocks leaving with an incomplete or impossible date", async () => {
     const { repository } = await renderForm();
-    await next();
-    await next();
-    await next();
+    await goToBasicSummary();
     await click(screen.getByRole("button", { name: "학력 추가하기" }));
     await click(screen.getByRole("button", { name: "대학교" }));
     await next();
@@ -176,9 +178,7 @@ describe("QuickStart", () => {
     fireEvent.change(screen.getByLabelText("국문 이름"), {
       target: { value: "시연" },
     });
-    await next();
-    await next();
-    await next();
+    await goToBasicSummary();
     const exit = screen.getByRole("button", {
       name: "지금 자동 기입 사용하기",
     });
@@ -213,6 +213,8 @@ describe("QuickStart", () => {
     );
     await click(screen.getByRole("button", { name: "이전" }));
     await waitFor(() => expect(screen.getByLabelText("이메일")).toHaveFocus());
+    await next();
+    await next();
     await next();
     await next();
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
@@ -511,9 +513,7 @@ it("moves one question at a time, keeps previous answers and ignores composition
 
 it("does not create empty repeated entries when skipping chapters", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "학력 추가하기" }));
   await click(screen.getByRole("button", { name: "대학교" }));
   await screen.findByRole("combobox", { name: "학교명" });
@@ -576,9 +576,7 @@ it("adds university details without replacing an existing school and preserves m
 
 it("saves a current career without asking an end date and keeps multiline Enter", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "경력·활동 추가하기" }));
   await click(screen.getByRole("button", { name: "직장경력" }));
   fireEvent.change(await screen.findByLabelText("직장명"), {
@@ -631,9 +629,7 @@ it("previous stays on failed save and retries successfully", async () => {
 });
 it("restores the selected school when returning from the career chapter", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "학력 추가하기" }));
   await click(screen.getByRole("button", { name: "고등학교" }));
   fireEvent.change(await screen.findByRole("combobox", { name: "학교명" }), {
@@ -658,9 +654,7 @@ it("restores the selected school when returning from the career chapter", async 
 });
 it("skipping all information does not claim a saved profile", async () => {
   await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   expect(screen.queryByText("✓ 여기까지 저장했어요")).toBeNull();
   await click(screen.getByRole("button", { name: "경력·활동 추가하기" }));
   await click(screen.getByRole("button", { name: "이 묶음 건너뛰기" }));
@@ -721,9 +715,7 @@ it("explicitly edits an existing project without replacing its id or extra value
 });
 it("clearing the only new school field removes the empty new row", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "학력 추가하기" }));
   await click(screen.getByRole("button", { name: "대학교" }));
   const school = await screen.findByRole("combobox", { name: "학교명" });
@@ -737,9 +729,7 @@ it("clearing the only new school field removes the empty new row", async () => {
 });
 it("selects a catalog school with Enter without advancing and preserves identity", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "학력 추가하기" }));
   await click(screen.getByRole("button", { name: "대학교" }));
   const school = await screen.findByRole("combobox", { name: "학교명" });
@@ -776,9 +766,7 @@ it("flushes latest repeated input behind a pending initial save without duplicat
     <QuickStart repository={memory.repository} onOpenProfile={() => {}} />,
   );
   await screen.findByLabelText("국문 성");
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "학력 추가하기" }));
   await click(screen.getByRole("button", { name: "대학교" }));
   const school = await screen.findByRole("combobox", { name: "학교명" });
@@ -819,9 +807,7 @@ it("keeps composition submit on the question and preserves international phone i
 
 it("does not resurrect a cleared new project from navigation history", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "경력·활동 추가하기" }));
   await click(screen.getByRole("button", { name: "프로젝트" }));
   fireEvent.change(screen.getByLabelText("프로젝트 이름"), {
@@ -878,9 +864,7 @@ it("reopens saved information at an overview and returns directly after editing 
 
 it("finishes the short education flow before asking optional dates", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "학력 추가하기" }));
   await click(screen.getByRole("button", { name: "대학교" }));
   fireEvent.change(screen.getByRole("combobox", { name: "학교명" }), {
@@ -1014,9 +998,7 @@ it("ignores empty saved rows when deciding the initial question", async () => {
 
 it("finishes a project after its name and role and adds details only on request", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "경력·활동 추가하기" }));
   await click(screen.getByRole("button", { name: "프로젝트" }));
   fireEvent.change(screen.getByLabelText("프로젝트 이름"), {
@@ -1050,9 +1032,7 @@ it("edits a basic summary answer and returns without repeating later questions",
   fireEvent.change(screen.getByLabelText("국문 이름"), {
     target: { value: "시연" },
   });
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "이름 수정" }));
   fireEvent.change(screen.getByLabelText("국문 이름"), {
     target: { value: "수정" },
@@ -1099,9 +1079,7 @@ it("offers missing basics from a partial summary without repeating the wizard", 
   fireEvent.change(screen.getByLabelText("국문 이름"), {
     target: { value: "시연" },
   });
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   const email = screen.getByRole("button", { name: "이메일 수정" });
   expect(email).toHaveTextContent("이메일 추가");
   expect(
@@ -1147,9 +1125,7 @@ it("offers missing school basics on a partial saved school's summary", async () 
 
 it("creates valid distinct project ids when adding information after skipping a chapter", async () => {
   const { repository } = await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   for (const projectName of ["첫 프로젝트", "둘째 프로젝트"]) {
     await click(screen.getByRole("button", { name: "경력·활동 추가하기" }));
     await click(screen.getByRole("button", { name: "이 묶음 건너뛰기" }));
@@ -1216,9 +1192,7 @@ it.each(["직장명 수정", "기간 추가", "학력 추가하기", "저장한 
 
 it("does not revisit a completed direct edit when going back from its summary", async () => {
   await renderForm();
-  await next();
-  await next();
-  await next();
+  await goToBasicSummary();
   await click(screen.getByRole("button", { name: "이메일 수정" }));
   fireEvent.change(screen.getByLabelText("이메일"), {
     target: { value: "history@example.test" },
@@ -1226,6 +1200,120 @@ it("does not revisit a completed direct edit when going back from its summary", 
   await next();
   await screen.findByRole("heading", { name: "기본 정보가 준비됐어요" });
   await click(screen.getByRole("button", { name: "이전" }));
-  expect(await screen.findByLabelText("전화번호")).toBeVisible();
+  expect(
+    await screen.findByLabelText("생년월일", { exact: true }),
+  ).toBeVisible();
   expect(screen.queryByLabelText("이메일")).toBeNull();
+});
+
+it("collects five common basics before showing the summary", async () => {
+  const { repository } = await renderForm();
+  await next();
+  await next();
+  await next();
+  expect(screen.getByRole("group", { name: "성별" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "남성" })).toHaveFocus();
+  await click(screen.getByRole("button", { name: "남성" }));
+  await next();
+  const birthDate = screen.getByLabelText("생년월일", { exact: true });
+  expect(birthDate).toHaveFocus();
+  fireEvent.change(birthDate, { target: { value: "20000102" } });
+  expect(birthDate).toHaveValue("2000-01-02");
+  await next();
+  expect(
+    screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
+  ).toBeVisible();
+  expect(screen.getByText("남성")).toBeVisible();
+  expect(screen.getByText("2000-01-02")).toBeVisible();
+  expect((await repository.load()).personal).toMatchObject({
+    gender: "남성",
+    birthDate: "2000-01-02",
+  });
+});
+
+it("accepts a custom gender and protects an incomplete birth date", async () => {
+  const { repository } = await renderForm();
+  await next();
+  await next();
+  await next();
+  fireEvent.change(screen.getByLabelText("성별 직접 입력"), {
+    target: { value: "직접 선택한 표현" },
+  });
+  await next();
+  const birthDate = screen.getByLabelText("생년월일", { exact: true });
+  fireEvent.change(birthDate, { target: { value: "2000-02" } });
+  await click(screen.getByRole("button", { name: "다음" }));
+  expect(birthDate).toHaveValue("2000-02");
+  expect(screen.getByRole("alert")).toBeVisible();
+  await click(screen.getByRole("button", { name: "지금 자동 기입 사용하기" }));
+  expect(birthDate).toBeVisible();
+  await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
+  expect(
+    screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
+  ).toBeVisible();
+  expect((await repository.load()).personal).toMatchObject({
+    gender: "직접 선택한 표현",
+  });
+  expect((await repository.load()).personal.birthDate).toBeUndefined();
+});
+
+it("edits saved gender and birth date from the overview without discarding other fields", async () => {
+  const initial = createEmptyProfile();
+  initial.personal = {
+    gender: "기존 표기",
+    birthDate: "1999-03-02",
+    nationality: "대한민국",
+  };
+  initial.contact.email = "saved@example.test";
+  const { repository } = await renderForm(initial);
+  expect(screen.getByText("기존 표기")).toBeVisible();
+  expect(screen.getByText("1999-03-02")).toBeVisible();
+  await click(screen.getByRole("button", { name: "생년월일 수정" }));
+  const birthDate = screen.getByLabelText("생년월일", { exact: true });
+  fireEvent.change(birthDate, { target: { value: "2000-02" } });
+  await click(screen.getByRole("button", { name: "이 질문 건너뛰기" }));
+  expect(screen.getByText("1999-03-02")).toBeVisible();
+  await click(screen.getByRole("button", { name: "성별 수정" }));
+  fireEvent.change(screen.getByLabelText("성별 직접 입력"), {
+    target: { value: "다른 표기" },
+  });
+  await next();
+  expect(screen.getByText("다른 표기")).toBeVisible();
+  expect((await repository.load()).personal).toMatchObject({
+    gender: "다른 표기",
+    birthDate: "1999-03-02",
+    nationality: "대한민국",
+  });
+});
+
+it("adds English name and nationality from the basic summary and returns there", async () => {
+  const { repository } = await renderForm();
+  await next();
+  await next();
+  await next();
+  await next();
+  await next();
+  await click(screen.getByRole("button", { name: "영문 이름 수정" }));
+  fireEvent.change(screen.getByLabelText("영문 성"), {
+    target: { value: "Kim" },
+  });
+  fireEvent.change(screen.getByLabelText("영문 이름"), {
+    target: { value: "Test" },
+  });
+  await next();
+  expect(
+    screen.getByRole("heading", { name: "기본 정보가 준비됐어요" }),
+  ).toBeVisible();
+  expect(screen.getByText("Kim Test")).toBeVisible();
+  await click(screen.getByRole("button", { name: "국적 수정" }));
+  fireEvent.change(screen.getByLabelText("국적"), {
+    target: { value: "대한민국" },
+  });
+  await next();
+  expect(screen.getByText("대한민국")).toBeVisible();
+  expect((await repository.load()).personal).toMatchObject({
+    englishFamilyName: "Kim",
+    englishGivenName: "Test",
+    nationality: "대한민국",
+  });
 });

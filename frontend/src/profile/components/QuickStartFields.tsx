@@ -12,6 +12,10 @@ export type Step =
   | "name"
   | "email"
   | "phone"
+  | "gender"
+  | "birthDate"
+  | "englishName"
+  | "nationality"
   | "basics"
   | "educationType"
   | "school"
@@ -31,6 +35,10 @@ export const titles: Record<Step, string> = {
   name: "어떤 이름으로 불러드릴까요?",
   email: "연락받을 이메일을 알려주세요",
   phone: "전화번호도 함께 준비해 볼까요?",
+  gender: "성별은 어떻게 적을까요?",
+  birthDate: "생년월일을 알려주세요",
+  englishName: "영문 이름도 준비할까요?",
+  nationality: "국적을 알려주세요",
   basics: "기본 정보가 준비됐어요",
   educationType: "어떤 학력을 추가할까요?",
   school: "다닌 학교를 알려주세요",
@@ -54,6 +62,12 @@ export const descriptions: Record<Step, string> = {
   email:
     "아이디를 입력한 뒤 이메일 주소를 골라 완성할 수 있어요. 직접 입력해도 좋아요.",
   phone: "평소 연락받는 번호를 입력해 주세요. 하이픈 없이 입력해도 괜찮아요.",
+  gender:
+    "지원서마다 선택지가 달라요. 자주 쓰는 표기를 고르거나 직접 적어 주세요.",
+  birthDate:
+    "숫자 8자리로 입력하거나 달력에서 고를 수 있어요. 모르면 건너뛰세요.",
+  englishName: "영문 성과 이름은 지원서에 사용할 표기 그대로 입력해 주세요.",
+  nationality: "지원서에 사용할 국적 표기를 적어 주세요.",
   basics:
     "여기까지 입력한 내용을 확인해 보세요. 학력과 경험은 나중에 채워도 좋아요.",
   educationType:
@@ -284,6 +298,65 @@ export function QuickStartFields({
           </p>
         </>
       );
+    case "gender":
+      return (
+        <>
+          <Choices
+            label="성별"
+            values={["남성", "여성"]}
+            value={profile.personal.gender ?? ""}
+            onChange={(value) => updateSingle("personal", "gender", value)}
+          />
+          <Input
+            label="성별 직접 입력"
+            placeholder="지원서에 사용할 표기"
+            value={profile.personal.gender ?? ""}
+            onChange={(event) =>
+              updateSingle("personal", "gender", event.target.value)
+            }
+          />
+        </>
+      );
+    case "birthDate":
+      return (
+        <QuickStartDateInput
+          label="생년월일"
+          value={profile.personal.birthDate ?? ""}
+          onChange={(value) => updateSingle("personal", "birthDate", value)}
+        />
+      );
+    case "englishName":
+      return (
+        <div className={styles.nameFields}>
+          <Input
+            label="영문 성"
+            placeholder="Kim"
+            value={profile.personal.englishFamilyName ?? ""}
+            onChange={(event) =>
+              updateSingle("personal", "englishFamilyName", event.target.value)
+            }
+          />
+          <Input
+            label="영문 이름"
+            placeholder="Gildong"
+            value={profile.personal.englishGivenName ?? ""}
+            onChange={(event) =>
+              updateSingle("personal", "englishGivenName", event.target.value)
+            }
+          />
+        </div>
+      );
+    case "nationality":
+      return (
+        <Input
+          label="국적"
+          placeholder="예: 대한민국"
+          value={profile.personal.nationality ?? ""}
+          onChange={(event) =>
+            updateSingle("personal", "nationality", event.target.value)
+          }
+        />
+      );
     case "school":
       return (
         <div className={styles.field}>
@@ -409,6 +482,12 @@ export function QuickStartFields({
 }
 export type SummaryValue = [string, string, Step?];
 export function basicSummary(profile: Profile): SummaryValue[] {
+  const englishName = [
+    profile.personal.englishFamilyName?.trim(),
+    profile.personal.englishGivenName?.trim(),
+  ]
+    .filter(Boolean)
+    .join(" ");
   return [
     [
       "이름",
@@ -417,6 +496,10 @@ export function basicSummary(profile: Profile): SummaryValue[] {
     ],
     ["이메일", profile.contact.email ?? "", "email"],
     ["전화번호", profile.contact.phoneNumber ?? "", "phone"],
+    ["성별", profile.personal.gender ?? "", "gender"],
+    ["생년월일", profile.personal.birthDate ?? "", "birthDate"],
+    ["영문 이름", englishName, "englishName"],
+    ["국적", profile.personal.nationality ?? "", "nationality"],
   ];
 }
 export function Summary({

@@ -54,5 +54,26 @@ it("lets people add missing basics and resume only nonempty saved entries", () =
   );
   expect(action).toBe("projects:project");
   expect(screen.queryByText("이름 없는 항목")).not.toBeInTheDocument();
-  expect(screen.queryByText("1990-01-01")).not.toBeInTheDocument();
+  expect(screen.getByText("1990-01-01")).toBeInTheDocument();
+});
+
+it("reveals optional English name and nationality only when requested", () => {
+  const profile = createEmptyProfile();
+  profile.contact.email = "saved@example.test";
+  let selected = "";
+  render(
+    <QuickStartOverview
+      profile={profile}
+      onEditBasic={(step) => {
+        selected = step;
+      }}
+      onSelectEntry={() => {}}
+    />,
+  );
+  const disclosure = screen.getByText("영문 이름·국적도 준비하기");
+  expect(disclosure.closest("details")).not.toHaveAttribute("open");
+  fireEvent.click(disclosure);
+  expect(disclosure.closest("details")).toHaveAttribute("open");
+  fireEvent.click(screen.getByRole("button", { name: "영문 이름 수정" }));
+  expect(selected).toBe("englishName");
 });

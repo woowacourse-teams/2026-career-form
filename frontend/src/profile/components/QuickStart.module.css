@@ -625,3 +625,13 @@
     flex: 1 1 140px;
   }
 }
+
+.optionalDetails {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--color-action-strong);
+}
+.optionalDetails > summary {
+  cursor: pointer;
+  font-weight: 600;
+}

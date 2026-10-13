@@ -24,7 +24,12 @@ export function QuickStartOverview({
         <Summary values={basics} onEdit={onEditBasic} />
         <div className={styles.supplementActions}>
           {basics
-            .filter(([, value]) => !value.trim())
+            .filter(
+              ([, value, step]) =>
+                !value.trim() &&
+                step !== "englishName" &&
+                step !== "nationality",
+            )
             .map(([label, , step]) => (
               <button
                 key={label}
@@ -36,6 +41,32 @@ export function QuickStartOverview({
               </button>
             ))}
         </div>
+        {basics.some(
+          ([, value, step]) =>
+            (step === "englishName" || step === "nationality") && !value.trim(),
+        ) && (
+          <details className={styles.optionalDetails}>
+            <summary>영문 이름·국적도 준비하기</summary>
+            <div className={styles.supplementActions}>
+              {basics
+                .filter(
+                  ([, value, step]) =>
+                    (step === "englishName" || step === "nationality") &&
+                    !value.trim(),
+                )
+                .map(([label, , step]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-label={`${label} 수정`}
+                    onClick={() => step && onEditBasic(step)}
+                  >
+                    {label} 추가
+                  </button>
+                ))}
+            </div>
+          </details>
+        )}
       </section>
       {(
         [
