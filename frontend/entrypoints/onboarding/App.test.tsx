@@ -99,3 +99,19 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
   expect(await screen.findByLabelText("국문 성")).toBeVisible();
 });
+
+it("저장한 프로필이 있으면 다시 질문하지 않고 보충할 정보를 고른다", async () => {
+  const repository = createRepository();
+  const profile = createEmptyProfile();
+  profile.contact.email = "saved@example.test";
+  await repository.save(profile);
+  render(<App repository={repository} />);
+  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
+  await screen.findByRole("heading", {
+    name: "저장한 정보부터 이어서 준비해요",
+  });
+  expect(screen.queryByLabelText("국문 성")).toBeNull();
+  expect(screen.getByText("saved@example.test")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "이메일 수정" }));
+  expect(screen.getByLabelText("이메일")).toHaveValue("saved@example.test");
+});

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { QuickStartGuide, QuickStartPicker } from "./QuickStartSections";
+import { QuickStartOverview } from "./QuickStartOverview";
 import type { TrackEvent } from "../../analytics/events";
 import { useProfileSaveTracking } from "../../analytics/use-profile-save-tracking";
 import { trackExtensionEvent } from "../../analytics/extension-tracker";
@@ -10,6 +11,8 @@ import {
   QuickStartFields,
   Summary,
   entrySummary,
+  basicSummary,
+  type SummaryValue,
   titles,
   descriptions,
   type Chapter,
@@ -29,15 +32,12 @@ const educationSteps: Step[] = [
   "school",
   "major",
   "completion",
-  "educationDates",
   "educationSummary",
 ];
 const experienceSteps: Step[] = [
   "experienceType",
   "experienceName",
   "experienceRole",
-  "experienceDates",
-  "experienceDetails",
   "experienceSummary",
 ];
 export function QuickStart({
@@ -56,8 +56,14 @@ export function QuickStart({
   );
   const editor = useProfileEditor(trackedRepository);
   const [step, setStep] = useState<Step>("name");
+  const [initialized, setInitialized] = useState(false);
+  const [returnTo, setReturnTo] = useState<Step | null>(null);
   const [history, setHistory] = useState<
-    { step: Step; selection: { chapter: Chapter; entry: ProfileEntry } }[]
+    {
+      step: Step;
+      selection: { chapter: Chapter; entry: ProfileEntry };
+      returnTo: Step | null;
+    }[]
   >([]);
   const [guide, setGuide] = useState(false);
   const [pending, setPending] = useState(false);
@@ -93,7 +99,9 @@ export function QuickStart({
   );
   const chapter = basicSteps.includes(step)
     ? 0
-    : educationSteps.includes(step)
+    : educationSteps.includes(step) ||
+        step === "educationDates" ||
+        step === "educationDetails"
       ? 1
       : 2;
   const steps =
@@ -105,22 +113,73 @@ export function QuickStart({
           )
         : experienceSteps;
   const summary =
+    step === "overview" ||
     step === "basics" ||
     step === "educationSummary" ||
     step === "experienceSummary";
-  const summaryValues: [string, string][] =
+  const summaryValues: SummaryValue[] =
+    step === "basics" ? basicSummary(editor.profile) : entrySummary(entry);
+  const summaryHasValues =
+    step === "overview"
+      ? hasValues
+      : summaryValues.some(([, value]) => value.trim());
+  const missingFields: SummaryValue[] =
     step === "basics"
-      ? [
-          [
-            "이름",
-            `${editor.profile.personal.koreanFamilyName ?? ""}${editor.profile.personal.koreanGivenName ?? ""}`,
-          ],
-          ["이메일", editor.profile.contact.email ?? ""],
-          ["전화번호", editor.profile.contact.phoneNumber ?? ""],
-        ]
-      : entrySummary(entry);
-  const summaryHasValues = summaryValues.some(([, value]) => value.trim());
+      ? basicSummary(editor.profile)
+      : step === "educationSummary"
+        ? [
+            ["학교명", entry.values.schoolName ?? "", "school"],
+            ...(entry.sectionId !== "highSchool"
+              ? [
+                  [
+                    "주전공명",
+                    entry.values.majorName ?? "",
+                    "major",
+                  ] as SummaryValue,
+                ]
+              : []),
+            ["재학 상태", entry.values.completionStatus ?? "", "completion"],
+          ]
+        : step === "experienceSummary"
+          ? selection.chapter === "careers"
+            ? [
+                ["직장명", entry.values.companyName ?? "", "experienceName"],
+                [
+                  "고용형태",
+                  entry.values.employmentType ?? "",
+                  "experienceRole",
+                ],
+                [
+                  "재직 여부",
+                  entry.values.employmentStatus ?? "",
+                  "experienceRole",
+                ],
+              ]
+            : [
+                [
+                  "프로젝트 이름",
+                  entry.values.projectName ?? "",
+                  "experienceName",
+                ],
+                ["담당 역할", entry.values.role ?? "", "experienceRole"],
+              ]
+          : [];
+  const staleCareerDate =
+    step === "experienceSummary" &&
+    selection.chapter === "careers" &&
+    entry.values.employmentStatus === "재직중" &&
+    !!entry.values.endDate?.trim();
+  const staleEducationDate =
+    step === "educationSummary" &&
+    ["재학중", "휴학"].includes(entry.values.completionStatus ?? "") &&
+    !!entry.values.endDate?.trim();
   const choosing = step === "educationType" || step === "experienceType";
+  useEffect(() => {
+    if (editor.loadStatus === "ready" && !initialized) {
+      setStep(hasValues ? "overview" : "name");
+      setInitialized(true);
+    }
+  }, [editor.loadStatus, initialized, hasValues]);
   useEffect(() => {
     if (!viewSent.current) {
       viewSent.current = true;
@@ -128,7 +187,7 @@ export function QuickStart({
     }
   }, [track]);
   useEffect(() => {
-    if (editor.loadStatus !== "ready" || pending) return;
+    if (editor.loadStatus !== "ready" || !initialized || pending) return;
     const screen = guide ? "guide" : step;
     if (focusedScreen.current === screen) return;
     const target =
@@ -139,14 +198,19 @@ export function QuickStart({
         : null;
     (target ?? heading.current)?.focus();
     focusedScreen.current = screen;
-  }, [step, guide, summary, pending, editor.loadStatus]);
-  function move(next: Step) {
-    setHistory((current) => [...current, { step, selection }]);
+  }, [step, guide, summary, pending, editor.loadStatus, initialized]);
+  function move(next: Step, origin: Step | null = null) {
+    setHistory((current) => [...current, { step, selection, returnTo }]);
     setStep(next);
+    setReturnTo(origin);
+  }
+  function editQuestion(target: Step) {
+    void proceed(target, false, step);
   }
   async function proceed(
     destination: Step | "guide" | "profile" | "retry",
     skipIncompleteDates = false,
+    origin: Step | null = null,
   ) {
     if (transition.current) return false;
     const invalidDate = question.current?.querySelector<HTMLInputElement>(
@@ -170,7 +234,11 @@ export function QuickStart({
       else if (destination === "guide") {
         if (!hasValues) track("quick_profile_skipped", properties);
         setGuide(true);
-      } else if (destination !== "retry") move(destination);
+      } else if (destination === returnTo) {
+        setStep(destination);
+        setReturnTo(null);
+        setHistory((current) => current.slice(0, -1));
+      } else if (destination !== "retry") move(destination, origin);
       return true;
     } catch {
       setNavigationFailed(true);
@@ -181,20 +249,28 @@ export function QuickStart({
     }
   }
   function next(skipIncompleteDates = false) {
-    const following = steps[steps.indexOf(step) + 1];
+    const following = returnTo ?? steps[steps.indexOf(step) + 1];
     if (following) void proceed(following, skipIncompleteDates);
   }
-  function selectEntry(
+  async function selectEntry(
     chapter: Chapter,
     sectionId: string,
     existing?: ProfileEntry,
   ) {
+    const destination = existing
+      ? chapter === "education"
+        ? "educationSummary"
+        : "experienceSummary"
+      : chapter === "education"
+        ? "school"
+        : "experienceName";
+    if (!(await proceed(destination))) return;
     setSelection({
       chapter,
       entry: existing ?? { id: crypto.randomUUID(), sectionId, values: {} },
     });
-    move(chapter === "education" ? "school" : "experienceName");
   }
+
   function updateEntry(
     field: string,
     value: string,
@@ -238,7 +314,7 @@ export function QuickStart({
       [selection.chapter]: [...editor.profile[selection.chapter], newEntry],
     });
   }
-  if (editor.loadStatus !== "ready")
+  if (editor.loadStatus !== "ready" || !initialized)
     return (
       <main className={styles.page}>
         <p role={editor.loadStatus === "error" ? "alert" : "status"}>
@@ -272,7 +348,11 @@ export function QuickStart({
           {["기본 정보", "학력", "경력·활동"].map((label, index) => (
             <li
               key={label}
-              aria-current={!guide && index === chapter ? "step" : undefined}
+              aria-current={
+                !guide && step !== "overview" && index === chapter
+                  ? "step"
+                  : undefined
+              }
             >
               <span>{index + 1}</span>
               {label}
@@ -285,7 +365,11 @@ export function QuickStart({
             <p className={styles.eyebrow}>
               {guide
                 ? "다음은 실제 지원서에서"
-                : `${["나를 소개하는 첫걸음", "학교에서 쌓은 시간", "나만의 경험"][chapter]} · ${steps.indexOf(step) + 1} / ${steps.length}`}
+                : step === "overview"
+                  ? "내가 준비한 정보"
+                  : returnTo
+                    ? "필요한 정보만 보충해요"
+                    : `${["나를 소개하는 첫걸음", "학교에서 쌓은 시간", "나만의 경험"][chapter]} · ${steps.indexOf(step) + 1} / ${steps.length}`}
             </p>
             {!guide && (
               <button
@@ -298,7 +382,7 @@ export function QuickStart({
               </button>
             )}
           </div>
-          {!guide && (
+          {!guide && step !== "overview" && !returnTo && (
             <progress
               aria-label="현재 묶음 진행"
               value={steps.indexOf(step) + 1}
@@ -308,7 +392,7 @@ export function QuickStart({
           <h1 ref={heading} tabIndex={-1}>
             {guide
               ? "지원서에서 자동 기입을 시작하세요"
-              : summary && !summaryHasValues
+              : summary && step !== "overview" && !summaryHasValues
                 ? "필요한 정보는 나중에 채워도 좋아요"
                 : titles[step]}
           </h1>
@@ -366,36 +450,117 @@ export function QuickStart({
                   />
                 ) : summary ? (
                   <>
-                    {summaryHasValues && (
-                      <div className={styles.savedBadge}>
-                        ✓ 여기까지 저장했어요
+                    {summaryHasValues &&
+                      (editor.saveStatus === "idle" ||
+                        editor.saveStatus === "saved") && (
+                        <div className={styles.savedBadge}>
+                          ✓ 여기까지 저장했어요
+                        </div>
+                      )}
+                    {step === "overview" && autofillExit}
+                    {step === "overview" ? (
+                      <QuickStartOverview
+                        profile={editor.profile}
+                        onEditBasic={editQuestion}
+                        onSelectEntry={(chapter, row) =>
+                          selectEntry(chapter, row.sectionId, row)
+                        }
+                      />
+                    ) : (
+                      <Summary values={summaryValues} onEdit={editQuestion} />
+                    )}
+                    {(staleCareerDate || staleEducationDate) && (
+                      <div className={styles.note}>
+                        <p>
+                          {staleCareerDate
+                            ? "재직중인데 이전 퇴사일이 남아 있어요."
+                            : "현재 재학 상태와 함께 이전 졸업일이 남아 있어요."}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => updateEntry("endDate", "")}
+                        >
+                          {staleCareerDate ? "퇴사일 지우기" : "졸업일 지우기"}
+                        </button>
                       </div>
                     )}
-                    <Summary values={summaryValues} />
-                    {autofillExit}
+                    {step !== "overview" && autofillExit}
                     <p className={styles.continueLabel}>
                       조금 더 준비하고 싶다면 <span>선택</span>
                     </p>
-                    <div className={styles.chapterChoices}>
-                      {step !== "educationSummary" && (
-                        <button
-                          type="button"
-                          aria-label="학력 추가하기"
-                          onClick={() => move("educationType")}
-                        >
-                          <strong>학력 추가하기</strong>
-                          <span>학교·전공·재학 상태 →</span>
-                        </button>
+                    <div className={styles.supplementActions}>
+                      {missingFields
+                        .filter(([, value]) => !value.trim())
+                        .map(([label, , target]) => (
+                          <button
+                            key={label}
+                            type="button"
+                            aria-label={`${label} 수정`}
+                            onClick={() => target && editQuestion(target)}
+                          >
+                            {label} 추가
+                          </button>
+                        ))}
+                      {step === "educationSummary" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => editQuestion("educationDates")}
+                          >
+                            입학·졸업일 추가
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => editQuestion("educationDetails")}
+                          >
+                            학위·학교 정보 추가
+                          </button>
+                        </>
                       )}
+                      {step === "experienceSummary" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => editQuestion("experienceDates")}
+                          >
+                            기간 추가
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => editQuestion("experienceDetails")}
+                          >
+                            활동 내용 추가
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    <div className={styles.chapterChoices}>
+                      <button
+                        type="button"
+                        aria-label="학력 추가하기"
+                        onClick={() => void proceed("educationType")}
+                      >
+                        <strong>학력 추가하기</strong>
+                        <span>학교·전공·재학 상태 →</span>
+                      </button>
                       <button
                         type="button"
                         aria-label="경력·활동 추가하기"
-                        onClick={() => move("experienceType")}
+                        onClick={() => void proceed("experienceType")}
                       >
                         <strong>경력·활동 추가하기</strong>
                         <span>직장경력 또는 프로젝트 →</span>
                       </button>
                     </div>
+                    {step !== "overview" && (
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        onClick={() => void proceed("overview")}
+                      >
+                        저장한 정보 보기
+                      </button>
+                    )}
                   </>
                 ) : (
                   <QuickStartFields
@@ -434,6 +599,7 @@ export function QuickStart({
                       if (!(await proceed("retry"))) return;
                       setStep(history[history.length - 1].step);
                       setSelection(history[history.length - 1].selection);
+                      setReturnTo(history[history.length - 1].returnTo);
                       setHistory(history.slice(0, -1));
                     }}
                   >
@@ -447,7 +613,7 @@ export function QuickStart({
                     disabled={pending}
                     onClick={() => next()}
                   >
-                    다음
+                    {returnTo ? "확인하고 돌아가기" : "다음"}
                   </button>
                 )}
               </div>
@@ -468,7 +634,11 @@ export function QuickStart({
                     if (await proceed("experienceSummary"))
                       setSelection({
                         chapter: "projects",
-                        entry: { id: "", sectionId: "project", values: {} },
+                        entry: {
+                          id: crypto.randomUUID(),
+                          sectionId: "project",
+                          values: {},
+                        },
                       });
                   }}
                 >

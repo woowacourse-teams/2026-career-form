@@ -64,6 +64,28 @@ export function QuickStartPicker({
 }) {
   return (
     <>
+      {(education ? ["education"] : ["careers", "projects"]).map((category) =>
+        profile[category as Chapter]
+          .filter((row) =>
+            Object.values(row.values).some((value) => value.trim()),
+          )
+          .map((row) => (
+            <button
+              className={styles.existing}
+              key={row.id}
+              type="button"
+              onClick={() =>
+                selectEntry(category as Chapter, row.sectionId, row)
+              }
+            >
+              기존 항목 수정:{" "}
+              {row.values.schoolName ||
+                row.values.companyName ||
+                row.values.projectName ||
+                "이름 없는 항목"}
+            </button>
+          )),
+      )}
       <div className={styles.chapterChoices}>
         {(education
           ? [
@@ -87,22 +109,6 @@ export function QuickStartPicker({
           </button>
         ))}
       </div>
-      {(education ? ["education"] : ["careers", "projects"]).map((category) =>
-        profile[category as Chapter].map((row) => (
-          <button
-            className={styles.existing}
-            key={row.id}
-            type="button"
-            onClick={() => selectEntry(category as Chapter, row.sectionId, row)}
-          >
-            기존 항목 수정:{" "}
-            {row.values.schoolName ||
-              row.values.companyName ||
-              row.values.projectName ||
-              "이름 없는 항목"}
-          </button>
-        )),
-      )}
     </>
   );
 }

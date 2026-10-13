@@ -7,6 +7,8 @@ import styles from "./QuickStart.module.css";
 
 export type Chapter = "education" | "careers" | "projects";
 export type Step =
+  | "overview"
+  | "educationDetails"
   | "name"
   | "email"
   | "phone"
@@ -24,6 +26,8 @@ export type Step =
   | "experienceDetails"
   | "experienceSummary";
 export const titles: Record<Step, string> = {
+  overview: "저장한 정보부터 이어서 준비해요",
+  educationDetails: "학력을 조금 더 채워볼까요?",
   name: "어떤 이름으로 불러드릴까요?",
   email: "연락받을 이메일을 알려주세요",
   phone: "전화번호도 함께 준비해 볼까요?",
@@ -42,6 +46,10 @@ export const titles: Record<Step, string> = {
   experienceSummary: "경험까지 차곡차곡 준비됐어요",
 };
 export const descriptions: Record<Step, string> = {
+  overview:
+    "이미 준비한 정보로 자동 기입을 시작하거나, 원하는 항목만 보충해 보세요.",
+  educationDetails:
+    "바로 떠오르는 정보만 골라 주세요. 나머지는 나중에 채워도 괜찮아요.",
   name: "지원서에 사용할 이름이에요. Enter를 누르면 다음 칸으로 이동해요.",
   email:
     "아이디를 입력한 뒤 이메일 주소를 골라 완성할 수 있어요. 직접 입력해도 좋아요.",
@@ -57,7 +65,7 @@ export const descriptions: Record<Step, string> = {
   educationDates:
     "기억나는 날짜만 입력해도 괜찮아요. 건너뛰면 미완성 날짜는 저장하지 않아요.",
   educationSummary:
-    "입력한 학력을 확인해 보세요. 지금 자동 기입을 시작해도 좋아요.",
+    "학력 하나가 준비됐어요. 날짜와 자세한 정보는 원할 때만 더 채워요.",
   experienceType:
     "소개하고 싶은 경험 하나부터 시작해요. 직장경력이 없어도 괜찮아요.",
   experienceName: "지원서에 적을 회사 또는 프로젝트 이름을 입력해 주세요.",
@@ -68,7 +76,7 @@ export const descriptions: Record<Step, string> = {
   experienceDetails:
     "맡은 일과 결과를 한두 문장으로 적어 보세요. 자세한 내용은 나중에 다듬어도 좋아요.",
   experienceSummary:
-    "입력한 경험을 확인해 보세요. 준비한 정보로 자동 기입을 시작할 수 있어요.",
+    "경험 하나가 준비됐어요. 기간과 설명은 원할 때만 더 채워요.",
 };
 
 function emailSuggestions(value: string) {
@@ -97,6 +105,7 @@ function Input({
     </label>
   );
 }
+type ChoiceOption = string | { value: string; label: string };
 function Choices({
   label,
   values,
@@ -104,7 +113,7 @@ function Choices({
   onChange,
 }: {
   label: string;
-  values: readonly string[];
+  values: readonly ChoiceOption[];
   value: string;
   onChange: (value: string) => void;
 }) {
@@ -112,16 +121,23 @@ function Choices({
     <div className={styles.choiceGroup} role="group" aria-label={label}>
       <p>{label}</p>
       <div className={styles.choices}>
-        {values.map((option) => (
-          <button
-            type="button"
-            key={option}
-            aria-pressed={value === option}
-            onClick={() => onChange(value === option ? "" : option)}
-          >
-            {option}
-          </button>
-        ))}
+        {values.map((option) => {
+          const selectedValue =
+            typeof option === "string" ? option : option.value;
+          const label = typeof option === "string" ? option : option.label;
+          return (
+            <button
+              type="button"
+              key={selectedValue}
+              aria-pressed={value === selectedValue}
+              onClick={() =>
+                onChange(value === selectedValue ? "" : selectedValue)
+              }
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -131,7 +147,7 @@ function options(category: string, section: string, field: string) {
     PROFILE_CATEGORIES.find((item) => item.id === category)
       ?.sections.find((item) => item.id === section)
       ?.fields.find((item) => item.id === field)?.options ?? []
-  ).map((item) => (typeof item === "string" ? item : item.value));
+  );
 }
 export function QuickStartFields({
   step,
@@ -176,7 +192,11 @@ export function QuickStartFields({
         onChange={(event) => updateEntry(id, event.target.value)}
       />
     );
-  const choice = (id: string, label: string, choices: readonly string[]) => (
+  const choice = (
+    id: string,
+    label: string,
+    choices: readonly ChoiceOption[],
+  ) => (
     <Choices
       label={label}
       values={choices}
@@ -290,11 +310,46 @@ export function QuickStartFields({
         "재학 상태",
         options("education", "university", "completionStatus"),
       );
+    case "educationDetails":
+      return (
+        <>
+          {entry.sectionId === "university" && (
+            <>
+              {choice(
+                "schoolType",
+                "학교 유형",
+                options("education", "university", "schoolType"),
+              )}
+              {choice(
+                "degreeLevel",
+                "학위구분",
+                options("education", "university", "degreeLevel"),
+              )}
+            </>
+          )}
+          {entry.sectionId === "graduateSchool" &&
+            field("degreeLevel", "학위구분")}
+          {choice(
+            "attendanceType",
+            "주·야간",
+            options("education", entry.sectionId, "attendanceType"),
+          )}
+        </>
+      );
     case "educationDates":
       return (
         <div className={styles.dateFields}>
           {field("startDate", "입학일", "date")}
-          {field("endDate", "졸업일", "date")}
+          {!["재학중", "휴학"].includes(values.completionStatus ?? "") &&
+            field(
+              "endDate",
+              values.completionStatus === "졸업예정"
+                ? "졸업 예정일"
+                : values.completionStatus === "중퇴"
+                  ? "학업 종료일"
+                  : "졸업일",
+              "date",
+            )}
         </div>
       );
     case "experienceName":
@@ -352,14 +407,44 @@ export function QuickStartFields({
       return null;
   }
 }
-export function Summary({ values }: { values: [string, string][] }) {
+export type SummaryValue = [string, string, Step?];
+export function basicSummary(profile: Profile): SummaryValue[] {
+  return [
+    [
+      "이름",
+      `${profile.personal.koreanFamilyName ?? ""}${profile.personal.koreanGivenName ?? ""}`,
+      "name",
+    ],
+    ["이메일", profile.contact.email ?? "", "email"],
+    ["전화번호", profile.contact.phoneNumber ?? "", "phone"],
+  ];
+}
+export function Summary({
+  values,
+  onEdit,
+}: {
+  values: SummaryValue[];
+  onEdit?: (step: Step) => void;
+}) {
   const filled = values.filter(([, value]) => value.trim());
   return filled.length ? (
     <dl className={styles.summary}>
-      {filled.map(([label, value]) => (
+      {filled.map(([label, value, step]) => (
         <div key={label}>
           <dt>{label}</dt>
-          <dd>{value}</dd>
+          <dd>
+            {value}
+            {step && onEdit && (
+              <button
+                className={styles.summaryEdit}
+                type="button"
+                aria-label={`${label} 수정`}
+                onClick={() => onEdit(step)}
+              >
+                수정
+              </button>
+            )}
+          </dd>
         </div>
       ))}
     </dl>
@@ -369,13 +454,40 @@ export function Summary({ values }: { values: [string, string][] }) {
     </p>
   );
 }
-export function entrySummary(entry: ProfileEntry): [string, string][] {
+export function entrySummary(entry: ProfileEntry): SummaryValue[] {
+  const schooling = ["highSchool", "university", "graduateSchool"].includes(
+    entry.sectionId,
+  );
+  const editSteps: Record<string, Step> = {
+    schoolName: "school",
+    majorName: "major",
+    completionStatus: "completion",
+    schoolType: "educationDetails",
+    degreeLevel: "educationDetails",
+    attendanceType: "educationDetails",
+    startDate: schooling ? "educationDates" : "experienceDates",
+    endDate: schooling ? "educationDates" : "experienceDates",
+    companyName: "experienceName",
+    projectName: "experienceName",
+    employmentType: "experienceRole",
+    employmentStatus: "experienceRole",
+    role: "experienceRole",
+    responsibilities: "experienceDetails",
+    activityDetails: "experienceDetails",
+  };
   const fields =
     PROFILE_CATEGORIES.flatMap((category) => category.sections).find(
       (section) => section.id === entry.sectionId,
     )?.fields ?? [];
-  return Object.entries(entry.values).map(([id, value]) => [
-    fields.find((field) => field.id === id)?.label ?? id,
-    value,
-  ]);
+  return Object.entries(entry.values).map(([id, value]) => {
+    const field = fields.find((field) => field.id === id);
+    const option = field?.options?.find(
+      (option) => typeof option !== "string" && option.value === value,
+    );
+    return [
+      field?.label ?? id,
+      typeof option === "object" ? option.label : value,
+      editSteps[id],
+    ];
+  });
 }
