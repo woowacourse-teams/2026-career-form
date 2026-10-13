@@ -1,0 +1,884 @@
+{
+  "schemaVersion": 2,
+  "supportedWriteCommands": [
+    "SELECT_DATE"
+  ],
+  "snapshotId": "benchmark-lg-ai-research-fields",
+  "site": {
+    "host": "lg-ai-research.benchmark.invalid",
+    "pathPattern": "/apply"
+  },
+  "sections": [
+    {
+      "sectionId": "s01",
+      "fields": [
+        {
+          "candidateId": "c001",
+          "visibility": "hidden",
+          "displayName": "Find Keywords",
+          "domId": "d001",
+          "domName": "n001",
+          "placeholder": "Find Keywords",
+          "element": "input",
+          "control": "text",
+          "semanticContext": {
+            "inputType": "text"
+          }
+        },
+        {
+          "candidateId": "c002",
+          "visibility": "hidden",
+          "displayName": "위 필수 개인정보의 수집 및 이용에 동의합니다.",
+          "domId": "d002",
+          "element": "input",
+          "control": "checkbox",
+          "options": [
+            {
+              "optionId": "field-2-option-1",
+              "displayName": "위 필수 개인정보의 수집 및 이용에 동의합니다."
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "필수 동의"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "c003",
+          "visibility": "hidden",
+          "displayName": "위 선택 개인정보의 수집 및 이용에 동의합니다.",
+          "domId": "d003",
+          "element": "input",
+          "control": "checkbox",
+          "options": [
+            {
+              "optionId": "field-3-option-1",
+              "displayName": "위 선택 개인정보의 수집 및 이용에 동의합니다."
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "선택 동의"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "s02",
+      "fields": [
+        {
+          "candidateId": "c004",
+          "visibility": "visible",
+          "displayName": "이름 *",
+          "domId": "d004",
+          "element": "input",
+          "control": "text",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "이름"
+              },
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ],
+            "inputType": "text"
+          }
+        },
+        {
+          "candidateId": "c005",
+          "visibility": "visible",
+          "displayName": "전화번호 *",
+          "domId": "d005",
+          "element": "input",
+          "control": "text",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "전화번호"
+              },
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ],
+            "inputType": "tel",
+            "maxLength": 13
+          }
+        },
+        {
+          "candidateId": "c006",
+          "visibility": "visible",
+          "displayName": "성별 *",
+          "domId": "d006",
+          "element": "select",
+          "control": "select",
+          "options": [
+            {
+              "optionId": "field-6-option-1",
+              "displayName": "선택하세요."
+            },
+            {
+              "optionId": "field-6-option-2",
+              "displayName": "논바이너리"
+            },
+            {
+              "optionId": "field-6-option-3",
+              "displayName": "여성"
+            },
+            {
+              "optionId": "field-6-option-4",
+              "displayName": "남성"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "성별"
+              },
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "c007",
+          "visibility": "visible",
+          "displayName": "년",
+          "element": "select",
+          "control": "select",
+          "options": [
+            {
+              "optionId": "field-7-option-1",
+              "displayName": "년"
+            },
+            {
+              "optionId": "field-7-option-2",
+              "displayName": "2008"
+            },
+            {
+              "optionId": "field-7-option-3",
+              "displayName": "2007"
+            },
+            {
+              "optionId": "field-7-option-4",
+              "displayName": "2006"
+            },
+            {
+              "optionId": "field-7-option-5",
+              "displayName": "2005"
+            },
+            {
+              "optionId": "field-7-option-6",
+              "displayName": "2004"
+            },
+            {
+              "optionId": "field-7-option-7",
+              "displayName": "2003"
+            },
+            {
+              "optionId": "field-7-option-8",
+              "displayName": "2002"
+            },
+            {
+              "optionId": "field-7-option-9",
+              "displayName": "2001"
+            },
+            {
+              "optionId": "field-7-option-10",
+              "displayName": "2000"
+            },
+            {
+              "optionId": "field-7-option-11",
+              "displayName": "1999"
+            },
+            {
+              "optionId": "field-7-option-12",
+              "displayName": "1998"
+            },
+            {
+              "optionId": "field-7-option-13",
+              "displayName": "1997"
+            },
+            {
+              "optionId": "field-7-option-14",
+              "displayName": "1996"
+            },
+            {
+              "optionId": "field-7-option-15",
+              "displayName": "1995"
+            },
+            {
+              "optionId": "field-7-option-16",
+              "displayName": "1994"
+            },
+            {
+              "optionId": "field-7-option-17",
+              "displayName": "1993"
+            },
+            {
+              "optionId": "field-7-option-18",
+              "displayName": "1992"
+            },
+            {
+              "optionId": "field-7-option-19",
+              "displayName": "1991"
+            },
+            {
+              "optionId": "field-7-option-20",
+              "displayName": "1990"
+            },
+            {
+              "optionId": "field-7-option-21",
+              "displayName": "1989"
+            },
+            {
+              "optionId": "field-7-option-22",
+              "displayName": "1988"
+            },
+            {
+              "optionId": "field-7-option-23",
+              "displayName": "1987"
+            },
+            {
+              "optionId": "field-7-option-24",
+              "displayName": "1986"
+            },
+            {
+              "optionId": "field-7-option-25",
+              "displayName": "1985"
+            },
+            {
+              "optionId": "field-7-option-26",
+              "displayName": "1984"
+            },
+            {
+              "optionId": "field-7-option-27",
+              "displayName": "1983"
+            },
+            {
+              "optionId": "field-7-option-28",
+              "displayName": "1982"
+            },
+            {
+              "optionId": "field-7-option-29",
+              "displayName": "1981"
+            },
+            {
+              "optionId": "field-7-option-30",
+              "displayName": "1980"
+            },
+            {
+              "optionId": "field-7-option-31",
+              "displayName": "1979"
+            },
+            {
+              "optionId": "field-7-option-32",
+              "displayName": "1978"
+            },
+            {
+              "optionId": "field-7-option-33",
+              "displayName": "1977"
+            },
+            {
+              "optionId": "field-7-option-34",
+              "displayName": "1976"
+            },
+            {
+              "optionId": "field-7-option-35",
+              "displayName": "1975"
+            },
+            {
+              "optionId": "field-7-option-36",
+              "displayName": "1974"
+            },
+            {
+              "optionId": "field-7-option-37",
+              "displayName": "1973"
+            },
+            {
+              "optionId": "field-7-option-38",
+              "displayName": "1972"
+            },
+            {
+              "optionId": "field-7-option-39",
+              "displayName": "1971"
+            },
+            {
+              "optionId": "field-7-option-40",
+              "displayName": "1970"
+            },
+            {
+              "optionId": "field-7-option-41",
+              "displayName": "1969"
+            },
+            {
+              "optionId": "field-7-option-42",
+              "displayName": "1968"
+            },
+            {
+              "optionId": "field-7-option-43",
+              "displayName": "1967"
+            },
+            {
+              "optionId": "field-7-option-44",
+              "displayName": "1966"
+            },
+            {
+              "optionId": "field-7-option-45",
+              "displayName": "1965"
+            },
+            {
+              "optionId": "field-7-option-46",
+              "displayName": "1964"
+            },
+            {
+              "optionId": "field-7-option-47",
+              "displayName": "1963"
+            },
+            {
+              "optionId": "field-7-option-48",
+              "displayName": "1962"
+            },
+            {
+              "optionId": "field-7-option-49",
+              "displayName": "1961"
+            },
+            {
+              "optionId": "field-7-option-50",
+              "displayName": "1960"
+            },
+            {
+              "optionId": "field-7-option-51",
+              "displayName": "1959"
+            },
+            {
+              "optionId": "field-7-option-52",
+              "displayName": "1958"
+            },
+            {
+              "optionId": "field-7-option-53",
+              "displayName": "1957"
+            },
+            {
+              "optionId": "field-7-option-54",
+              "displayName": "1956"
+            },
+            {
+              "optionId": "field-7-option-55",
+              "displayName": "1955"
+            },
+            {
+              "optionId": "field-7-option-56",
+              "displayName": "1954"
+            },
+            {
+              "optionId": "field-7-option-57",
+              "displayName": "1953"
+            },
+            {
+              "optionId": "field-7-option-58",
+              "displayName": "1952"
+            },
+            {
+              "optionId": "field-7-option-59",
+              "displayName": "1951"
+            },
+            {
+              "optionId": "field-7-option-60",
+              "displayName": "1950"
+            },
+            {
+              "optionId": "field-7-option-61",
+              "displayName": "1949"
+            },
+            {
+              "optionId": "field-7-option-62",
+              "displayName": "1948"
+            },
+            {
+              "optionId": "field-7-option-63",
+              "displayName": "1947"
+            },
+            {
+              "optionId": "field-7-option-64",
+              "displayName": "1946"
+            },
+            {
+              "optionId": "field-7-option-65",
+              "displayName": "1945"
+            },
+            {
+              "optionId": "field-7-option-66",
+              "displayName": "1944"
+            },
+            {
+              "optionId": "field-7-option-67",
+              "displayName": "1943"
+            },
+            {
+              "optionId": "field-7-option-68",
+              "displayName": "1942"
+            },
+            {
+              "optionId": "field-7-option-69",
+              "displayName": "1941"
+            },
+            {
+              "optionId": "field-7-option-70",
+              "displayName": "1940"
+            },
+            {
+              "optionId": "field-7-option-71",
+              "displayName": "1939"
+            },
+            {
+              "optionId": "field-7-option-72",
+              "displayName": "1938"
+            },
+            {
+              "optionId": "field-7-option-73",
+              "displayName": "1937"
+            },
+            {
+              "optionId": "field-7-option-74",
+              "displayName": "1936"
+            },
+            {
+              "optionId": "field-7-option-75",
+              "displayName": "1935"
+            },
+            {
+              "optionId": "field-7-option-76",
+              "displayName": "1934"
+            },
+            {
+              "optionId": "field-7-option-77",
+              "displayName": "1933"
+            },
+            {
+              "optionId": "field-7-option-78",
+              "displayName": "1932"
+            },
+            {
+              "optionId": "field-7-option-79",
+              "displayName": "1931"
+            },
+            {
+              "optionId": "field-7-option-80",
+              "displayName": "1930"
+            },
+            {
+              "optionId": "field-7-option-81",
+              "displayName": "1929"
+            },
+            {
+              "optionId": "field-7-option-82",
+              "displayName": "1928"
+            },
+            {
+              "optionId": "field-7-option-83",
+              "displayName": "1927"
+            },
+            {
+              "optionId": "field-7-option-84",
+              "displayName": "1926"
+            },
+            {
+              "optionId": "field-7-option-85",
+              "displayName": "1925"
+            },
+            {
+              "optionId": "field-7-option-86",
+              "displayName": "1924"
+            },
+            {
+              "optionId": "field-7-option-87",
+              "displayName": "1923"
+            },
+            {
+              "optionId": "field-7-option-88",
+              "displayName": "1922"
+            },
+            {
+              "optionId": "field-7-option-89",
+              "displayName": "1921"
+            },
+            {
+              "optionId": "field-7-option-90",
+              "displayName": "1920"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "c008",
+          "visibility": "visible",
+          "displayName": "월",
+          "element": "select",
+          "control": "select",
+          "options": [
+            {
+              "optionId": "field-8-option-1",
+              "displayName": "월"
+            },
+            {
+              "optionId": "field-8-option-2",
+              "displayName": "1"
+            },
+            {
+              "optionId": "field-8-option-3",
+              "displayName": "2"
+            },
+            {
+              "optionId": "field-8-option-4",
+              "displayName": "3"
+            },
+            {
+              "optionId": "field-8-option-5",
+              "displayName": "4"
+            },
+            {
+              "optionId": "field-8-option-6",
+              "displayName": "5"
+            },
+            {
+              "optionId": "field-8-option-7",
+              "displayName": "6"
+            },
+            {
+              "optionId": "field-8-option-8",
+              "displayName": "7"
+            },
+            {
+              "optionId": "field-8-option-9",
+              "displayName": "8"
+            },
+            {
+              "optionId": "field-8-option-10",
+              "displayName": "9"
+            },
+            {
+              "optionId": "field-8-option-11",
+              "displayName": "10"
+            },
+            {
+              "optionId": "field-8-option-12",
+              "displayName": "11"
+            },
+            {
+              "optionId": "field-8-option-13",
+              "displayName": "12"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "c009",
+          "visibility": "visible",
+          "displayName": "일",
+          "element": "select",
+          "control": "select",
+          "options": [
+            {
+              "optionId": "field-9-option-1",
+              "displayName": "일"
+            },
+            {
+              "optionId": "field-9-option-2",
+              "displayName": "1"
+            },
+            {
+              "optionId": "field-9-option-3",
+              "displayName": "2"
+            },
+            {
+              "optionId": "field-9-option-4",
+              "displayName": "3"
+            },
+            {
+              "optionId": "field-9-option-5",
+              "displayName": "4"
+            },
+            {
+              "optionId": "field-9-option-6",
+              "displayName": "5"
+            },
+            {
+              "optionId": "field-9-option-7",
+              "displayName": "6"
+            },
+            {
+              "optionId": "field-9-option-8",
+              "displayName": "7"
+            },
+            {
+              "optionId": "field-9-option-9",
+              "displayName": "8"
+            },
+            {
+              "optionId": "field-9-option-10",
+              "displayName": "9"
+            },
+            {
+              "optionId": "field-9-option-11",
+              "displayName": "10"
+            },
+            {
+              "optionId": "field-9-option-12",
+              "displayName": "11"
+            },
+            {
+              "optionId": "field-9-option-13",
+              "displayName": "12"
+            },
+            {
+              "optionId": "field-9-option-14",
+              "displayName": "13"
+            },
+            {
+              "optionId": "field-9-option-15",
+              "displayName": "14"
+            },
+            {
+              "optionId": "field-9-option-16",
+              "displayName": "15"
+            },
+            {
+              "optionId": "field-9-option-17",
+              "displayName": "16"
+            },
+            {
+              "optionId": "field-9-option-18",
+              "displayName": "17"
+            },
+            {
+              "optionId": "field-9-option-19",
+              "displayName": "18"
+            },
+            {
+              "optionId": "field-9-option-20",
+              "displayName": "19"
+            },
+            {
+              "optionId": "field-9-option-21",
+              "displayName": "20"
+            },
+            {
+              "optionId": "field-9-option-22",
+              "displayName": "21"
+            },
+            {
+              "optionId": "field-9-option-23",
+              "displayName": "22"
+            },
+            {
+              "optionId": "field-9-option-24",
+              "displayName": "23"
+            },
+            {
+              "optionId": "field-9-option-25",
+              "displayName": "24"
+            },
+            {
+              "optionId": "field-9-option-26",
+              "displayName": "25"
+            },
+            {
+              "optionId": "field-9-option-27",
+              "displayName": "26"
+            },
+            {
+              "optionId": "field-9-option-28",
+              "displayName": "27"
+            },
+            {
+              "optionId": "field-9-option-29",
+              "displayName": "28"
+            },
+            {
+              "optionId": "field-9-option-30",
+              "displayName": "29"
+            },
+            {
+              "optionId": "field-9-option-31",
+              "displayName": "30"
+            },
+            {
+              "optionId": "field-9-option-32",
+              "displayName": "31"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "c010",
+          "visibility": "visible",
+          "displayName": "이메일 아이디",
+          "domId": "d007",
+          "placeholder": "이메일 아이디",
+          "element": "input",
+          "control": "text",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "placeholder",
+                "text": "이메일"
+              },
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ],
+            "inputType": "text"
+          }
+        },
+        {
+          "candidateId": "c011",
+          "visibility": "visible",
+          "displayName": "선택하세요.",
+          "element": "select",
+          "control": "select",
+          "options": [
+            {
+              "optionId": "field-11-option-1",
+              "displayName": "선택하세요."
+            },
+            {
+              "optionId": "field-11-option-2",
+              "displayName": "gmail.com"
+            },
+            {
+              "optionId": "field-11-option-3",
+              "displayName": "naver.com"
+            },
+            {
+              "optionId": "field-11-option-4",
+              "displayName": "daum.net"
+            },
+            {
+              "optionId": "field-11-option-5",
+              "displayName": "kakao.com"
+            },
+            {
+              "optionId": "field-11-option-6",
+              "displayName": "hanmail.net"
+            },
+            {
+              "optionId": "field-11-option-7",
+              "displayName": "nate.com"
+            },
+            {
+              "optionId": "field-11-option-8",
+              "displayName": "outlook.com"
+            },
+            {
+              "optionId": "field-11-option-9",
+              "displayName": "hotmail.com"
+            },
+            {
+              "optionId": "field-11-option-10",
+              "displayName": "yahoo.com"
+            },
+            {
+              "optionId": "field-11-option-11",
+              "displayName": "icloud.com"
+            },
+            {
+              "optionId": "field-11-option-12",
+              "displayName": "직접입력"
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ]
+          }
+        },
+        {
+          "candidateId": "c012",
+          "visibility": "visible",
+          "displayName": "링크",
+          "domId": "d008",
+          "placeholder": "https://",
+          "element": "input",
+          "control": "text",
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ],
+            "inputType": "text"
+          }
+        },
+        {
+          "candidateId": "c013",
+          "visibility": "hidden",
+          "displayName": "개인정보 수집 및 이용 에 동의 합니다.",
+          "domId": "d009",
+          "disabled": true,
+          "element": "input",
+          "control": "checkbox",
+          "options": [
+            {
+              "optionId": "field-13-option-1",
+              "displayName": "개인정보 수집 및 이용 에 동의 합니다."
+            }
+          ],
+          "semanticContext": {
+            "labels": [
+              {
+                "source": "label",
+                "text": "동의"
+              },
+              {
+                "source": "section-heading",
+                "text": "성"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

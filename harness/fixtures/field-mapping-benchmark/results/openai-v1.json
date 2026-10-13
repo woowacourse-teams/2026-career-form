@@ -1,0 +1,920 @@
+{
+  "contract_version": "1.0",
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "collected_with": "develop 3daae64 백엔드, 2026-10-13",
+  "sites": [
+    {
+      "site_id": "naver",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 9536,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c002",
+          "result": "DIRECT:education.graduateSchool.schoolRegion"
+        },
+        {
+          "candidate_id": "c003",
+          "result": "DIRECT:education.graduateSchool.schoolName"
+        },
+        {
+          "candidate_id": "c004",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c005",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c006",
+          "result": "DIRECT:education.graduateSchool.startDate"
+        },
+        {
+          "candidate_id": "c007",
+          "result": "DIRECT:education.graduateSchool.endDate"
+        },
+        {
+          "candidate_id": "c008",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c009",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c010",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c011",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c012",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c013",
+          "result": "DIRECT:education.graduateSchool.majorName"
+        },
+        {
+          "candidate_id": "c014",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c015",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c016",
+          "result": "DIRECT:education.graduateSchool.additionalMajorName"
+        },
+        {
+          "candidate_id": "c017",
+          "result": "DIRECT:education.university.minorName"
+        },
+        {
+          "candidate_id": "c018",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c019",
+          "result": "DIRECT:education.graduateSchool.gpaScore"
+        },
+        {
+          "candidate_id": "c020",
+          "result": "DIRECT:education.graduateSchool.gpaScale"
+        },
+        {
+          "candidate_id": "c021",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c022",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c023",
+          "result": "DIRECT:education.graduateSchool.completionStatus"
+        },
+        {
+          "candidate_id": "c024",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c025",
+          "result": "DIRECT:education.university.schoolRegion"
+        },
+        {
+          "candidate_id": "c026",
+          "result": "DIRECT:education.university.schoolName"
+        },
+        {
+          "candidate_id": "c027",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c028",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c029",
+          "result": "DIRECT:education.university.startDate"
+        },
+        {
+          "candidate_id": "c030",
+          "result": "DIRECT:education.university.endDate"
+        },
+        {
+          "candidate_id": "c031",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c032",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c033",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c034",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c035",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c036",
+          "result": "DIRECT:education.university.majorName"
+        },
+        {
+          "candidate_id": "c037",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c038",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c039",
+          "result": "DIRECT:education.university.additionalMajorName"
+        },
+        {
+          "candidate_id": "c040",
+          "result": "DIRECT:education.university.minorName"
+        },
+        {
+          "candidate_id": "c041",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c042",
+          "result": "DIRECT:education.university.gpaScore"
+        },
+        {
+          "candidate_id": "c043",
+          "result": "DIRECT:education.university.gpaScale"
+        },
+        {
+          "candidate_id": "c044",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c045",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c046",
+          "result": "DIRECT:education.university.completionStatus"
+        },
+        {
+          "candidate_id": "c047",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c048",
+          "result": "DIRECT:careers.career.companyName"
+        },
+        {
+          "candidate_id": "c049",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c050",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c051",
+          "result": "DIRECT:careers.career.department"
+        },
+        {
+          "candidate_id": "c052",
+          "result": "DIRECT:careers.career.startDate"
+        },
+        {
+          "candidate_id": "c053",
+          "result": "DIRECT:careers.career.endDate"
+        },
+        {
+          "candidate_id": "c054",
+          "result": "DIRECT:careers.career.position"
+        },
+        {
+          "candidate_id": "c055",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c056",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c057",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c058",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c059",
+          "result": "DIRECT:certifications.certificate.grade"
+        },
+        {
+          "candidate_id": "c060",
+          "result": "DIRECT:certifications.certificate.acquisitionDate"
+        },
+        {
+          "candidate_id": "c061",
+          "result": "DIRECT:certifications.certificate.issuer"
+        },
+        {
+          "candidate_id": "c062",
+          "result": "DIRECT:languages.languageTest.language"
+        },
+        {
+          "candidate_id": "c063",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c064",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c065",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c066",
+          "result": "DIRECT:languages.languageTest.grade"
+        },
+        {
+          "candidate_id": "c067",
+          "result": "DIRECT:languages.languageTest.registrationNo"
+        },
+        {
+          "candidate_id": "c068",
+          "result": "DIRECT:languages.languageTest.acquisitionDate"
+        },
+        {
+          "candidate_id": "c069",
+          "result": "DIRECT:languages.languageTest.testName"
+        }
+      ]
+    },
+    {
+      "site_id": "lg-ai-research",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 2186,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c002",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c003",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c004",
+          "result": "DIRECT:personal.personal.koreanGivenName"
+        },
+        {
+          "candidate_id": "c005",
+          "result": "DIRECT:contact.contact.phoneNumber"
+        },
+        {
+          "candidate_id": "c006",
+          "result": "DIRECT:personal.personal.gender"
+        },
+        {
+          "candidate_id": "c007",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c008",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c009",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c010",
+          "result": "DIRECT:contact.contact.email"
+        },
+        {
+          "candidate_id": "c011",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c012",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c013",
+          "result": "NO_MATCH"
+        }
+      ]
+    },
+    {
+      "site_id": "ahnlab",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 3965,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "DIRECT:personal.personal.englishGivenName"
+        },
+        {
+          "candidate_id": "c002",
+          "result": "DIRECT:personal.personal.gender"
+        },
+        {
+          "candidate_id": "c003",
+          "result": "DIRECT:personal.personal.birthDate"
+        },
+        {
+          "candidate_id": "c004",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c005",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c006",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c007",
+          "result": "DIRECT:compensation.compensation.desiredSalary"
+        },
+        {
+          "candidate_id": "c008",
+          "result": "DIRECT:compensation.compensation.previousSalary"
+        },
+        {
+          "candidate_id": "c009",
+          "result": "DERIVED:KOREAN_FULL_NAME"
+        },
+        {
+          "candidate_id": "c010",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c011",
+          "result": "DIRECT:contact.contact.phoneNumber"
+        },
+        {
+          "candidate_id": "c012",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c013",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c014",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c015",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c016",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c017",
+          "result": "DIRECT:personal.personal.nationality"
+        },
+        {
+          "candidate_id": "c018",
+          "result": "DIRECT:contact.contact.addressLine1"
+        },
+        {
+          "candidate_id": "c019",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c020",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c021",
+          "result": "DIRECT:disability.disability.disabilityStatus"
+        },
+        {
+          "candidate_id": "c022",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c023",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c024",
+          "result": "DIRECT:veteran.veteran.veteranStatus"
+        },
+        {
+          "candidate_id": "c025",
+          "result": "DIRECT:veteran.veteran.veteranNumber"
+        },
+        {
+          "candidate_id": "c026",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c027",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c028",
+          "result": "DIRECT:military.military.militaryStatus"
+        },
+        {
+          "candidate_id": "c029",
+          "result": "DIRECT:military.military.exemptionReason"
+        },
+        {
+          "candidate_id": "c030",
+          "result": "DIRECT:military.military.militaryBranch"
+        },
+        {
+          "candidate_id": "c031",
+          "result": "DIRECT:military.military.militarySpecialty"
+        },
+        {
+          "candidate_id": "c032",
+          "result": "DIRECT:military.military.militaryRank"
+        },
+        {
+          "candidate_id": "c033",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c034",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c035",
+          "result": "DIRECT:military.military.militaryType"
+        },
+        {
+          "candidate_id": "c036",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c037",
+          "result": "NO_MATCH"
+        }
+      ]
+    },
+    {
+      "site_id": "krafton",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 5676,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "DIRECT:personal.personal.koreanFamilyName"
+        },
+        {
+          "candidate_id": "c002",
+          "result": "DIRECT:personal.personal.koreanGivenName"
+        },
+        {
+          "candidate_id": "c003",
+          "result": "DIRECT:contact.contact.email"
+        },
+        {
+          "candidate_id": "c004",
+          "result": "DIRECT:personal.personal.nationality"
+        },
+        {
+          "candidate_id": "c005",
+          "result": "DIRECT:contact.contact.phoneNumber"
+        },
+        {
+          "candidate_id": "c006",
+          "result": "DIRECT:personal.personal.birthDate"
+        },
+        {
+          "candidate_id": "c007",
+          "result": "DIRECT:veteran.veteran.veteranStatus"
+        },
+        {
+          "candidate_id": "c008",
+          "result": "DIRECT:disability.disability.disabilityStatus"
+        },
+        {
+          "candidate_id": "c009",
+          "result": "DIRECT:military.military.militaryStatus"
+        },
+        {
+          "candidate_id": "c010",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c011",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c012",
+          "result": "DIRECT:education.university.completionStatus"
+        },
+        {
+          "candidate_id": "c013",
+          "result": "DIRECT:education.university.degreeLevel"
+        },
+        {
+          "candidate_id": "c014",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c015",
+          "result": "DIRECT:education.university.schoolRegion"
+        },
+        {
+          "candidate_id": "c016",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c017",
+          "result": "DIRECT:education.university.schoolName"
+        },
+        {
+          "candidate_id": "c018",
+          "result": "DIRECT:education.university.schoolName"
+        },
+        {
+          "candidate_id": "c019",
+          "result": "DIRECT:education.university.majorName"
+        },
+        {
+          "candidate_id": "c020",
+          "result": "DIRECT:education.university.additionalMajorName"
+        },
+        {
+          "candidate_id": "c021",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c022",
+          "result": "DIRECT:education.university.startDate"
+        },
+        {
+          "candidate_id": "c023",
+          "result": "DIRECT:education.university.completionStatus"
+        },
+        {
+          "candidate_id": "c024",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c025",
+          "result": "DIRECT:education.university.endDate"
+        },
+        {
+          "candidate_id": "c026",
+          "result": "DIRECT:education.university.gpaScore"
+        },
+        {
+          "candidate_id": "c027",
+          "result": "DIRECT:education.university.gpaScale"
+        },
+        {
+          "candidate_id": "c028",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c029",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c030",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c031",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c032",
+          "result": "DIRECT:languages.languageTest.language"
+        },
+        {
+          "candidate_id": "c033",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c034",
+          "result": "DIRECT:languages.languageTest.testName"
+        },
+        {
+          "candidate_id": "c035",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c036",
+          "result": "DIRECT:languages.languageTest.grade"
+        },
+        {
+          "candidate_id": "c037",
+          "result": "DIRECT:languages.languageTest.acquisitionDate"
+        },
+        {
+          "candidate_id": "c038",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c039",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c040",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c041",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c042",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c043",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c044",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c045",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c046",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c047",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c048",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c049",
+          "result": "DIRECT:careers.career.companyName"
+        },
+        {
+          "candidate_id": "c050",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c051",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c052",
+          "result": "DIRECT:careers.career.department"
+        },
+        {
+          "candidate_id": "c053",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c054",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c055",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c056",
+          "result": "DIRECT:careers.career.position"
+        },
+        {
+          "candidate_id": "c057",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c058",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c059",
+          "result": "DIRECT:careers.career.employmentStatus"
+        },
+        {
+          "candidate_id": "c060",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c061",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c062",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c063",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c064",
+          "result": "DIRECT:projects.project.projectName"
+        },
+        {
+          "candidate_id": "c065",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c066",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c067",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c068",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c069",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c070",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c071",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c072",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c073",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c074",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c075",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c076",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c077",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c078",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c079",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c080",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c081",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c082",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c083",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c084",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c085",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c086",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c087",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c088",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c089",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c090",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c091",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c092",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c093",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c094",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c095",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c096",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c097",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c098",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c099",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c100",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c101",
+          "result": "NO_MATCH"
+        },
+        {
+          "candidate_id": "c102",
+          "result": "NO_MATCH"
+        }
+      ]
+    }
+  ]
+}

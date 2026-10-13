@@ -1,0 +1,2805 @@
+{
+  "schemaVersion": 2,
+  "supportedWriteCommands": [
+    "SELECT_DATE"
+  ],
+  "snapshotId": "benchmark-naver-fields",
+  "site": {
+    "host": "naver.benchmark.invalid",
+    "pathPattern": "/apply"
+  },
+  "sections": [
+    {
+      "sectionId": "s01",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "i01",
+          "itemGroupId": "g01",
+          "fields": [
+            {
+              "candidateId": "c001",
+              "visibility": "visible",
+              "displayName": "구분",
+              "domId": "d001",
+              "domName": "n001",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-1-option-1",
+                  "displayName": "구분"
+                },
+                {
+                  "optionId": "field-1-option-2",
+                  "displayName": "고등학교"
+                },
+                {
+                  "optionId": "field-1-option-3",
+                  "displayName": "전문대학"
+                },
+                {
+                  "optionId": "field-1-option-4",
+                  "displayName": "대학교"
+                },
+                {
+                  "optionId": "field-1-option-5",
+                  "displayName": "대학원(석사)"
+                },
+                {
+                  "optionId": "field-1-option-6",
+                  "displayName": "대학원(박사)"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c002",
+              "visibility": "visible",
+              "displayName": "소재지",
+              "domId": "d002",
+              "domName": "n002",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-2-option-1",
+                  "displayName": "소재지"
+                },
+                {
+                  "optionId": "field-2-option-2",
+                  "displayName": "서울"
+                },
+                {
+                  "optionId": "field-2-option-3",
+                  "displayName": "경기"
+                },
+                {
+                  "optionId": "field-2-option-4",
+                  "displayName": "인천"
+                },
+                {
+                  "optionId": "field-2-option-5",
+                  "displayName": "강원"
+                },
+                {
+                  "optionId": "field-2-option-6",
+                  "displayName": "충북"
+                },
+                {
+                  "optionId": "field-2-option-7",
+                  "displayName": "충남"
+                },
+                {
+                  "optionId": "field-2-option-8",
+                  "displayName": "대전"
+                },
+                {
+                  "optionId": "field-2-option-9",
+                  "displayName": "세종"
+                },
+                {
+                  "optionId": "field-2-option-10",
+                  "displayName": "부산"
+                },
+                {
+                  "optionId": "field-2-option-11",
+                  "displayName": "울산"
+                },
+                {
+                  "optionId": "field-2-option-12",
+                  "displayName": "대구"
+                },
+                {
+                  "optionId": "field-2-option-13",
+                  "displayName": "경북"
+                },
+                {
+                  "optionId": "field-2-option-14",
+                  "displayName": "경남"
+                },
+                {
+                  "optionId": "field-2-option-15",
+                  "displayName": "전북"
+                },
+                {
+                  "optionId": "field-2-option-16",
+                  "displayName": "전남"
+                },
+                {
+                  "optionId": "field-2-option-17",
+                  "displayName": "광주"
+                },
+                {
+                  "optionId": "field-2-option-18",
+                  "displayName": "제주"
+                },
+                {
+                  "optionId": "field-2-option-19",
+                  "displayName": "해외"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c003",
+              "visibility": "visible",
+              "displayName": "학교명",
+              "domId": "d003",
+              "domName": "n003",
+              "placeholder": "학교명",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c004",
+              "visibility": "hidden",
+              "displayName": "학교명",
+              "domId": "d004",
+              "placeholder": "학교명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "학교명 전공 부전공명 회사명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c005",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d005",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c006",
+              "visibility": "visible",
+              "displayName": "입학년월",
+              "domId": "d006",
+              "domName": "n004",
+              "placeholder": "입학년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "입학"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "입학"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c007",
+              "visibility": "visible",
+              "displayName": "졸업년월",
+              "domId": "d007",
+              "domName": "n005",
+              "placeholder": "졸업년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "졸업"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "졸업"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c008",
+              "visibility": "hidden",
+              "displayName": "구분",
+              "domId": "d001",
+              "domName": "n001",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-8-option-1",
+                  "displayName": "구분"
+                },
+                {
+                  "optionId": "field-8-option-2",
+                  "displayName": "고등학교"
+                },
+                {
+                  "optionId": "field-8-option-3",
+                  "displayName": "전문대학"
+                },
+                {
+                  "optionId": "field-8-option-4",
+                  "displayName": "대학교"
+                },
+                {
+                  "optionId": "field-8-option-5",
+                  "displayName": "대학원(석사)"
+                },
+                {
+                  "optionId": "field-8-option-6",
+                  "displayName": "대학원(박사)"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c009",
+              "visibility": "hidden",
+              "displayName": "소재지",
+              "domId": "d002",
+              "domName": "n002",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-9-option-1",
+                  "displayName": "소재지"
+                },
+                {
+                  "optionId": "field-9-option-2",
+                  "displayName": "서울"
+                },
+                {
+                  "optionId": "field-9-option-3",
+                  "displayName": "경기"
+                },
+                {
+                  "optionId": "field-9-option-4",
+                  "displayName": "인천"
+                },
+                {
+                  "optionId": "field-9-option-5",
+                  "displayName": "강원"
+                },
+                {
+                  "optionId": "field-9-option-6",
+                  "displayName": "충북"
+                },
+                {
+                  "optionId": "field-9-option-7",
+                  "displayName": "충남"
+                },
+                {
+                  "optionId": "field-9-option-8",
+                  "displayName": "대전"
+                },
+                {
+                  "optionId": "field-9-option-9",
+                  "displayName": "세종"
+                },
+                {
+                  "optionId": "field-9-option-10",
+                  "displayName": "부산"
+                },
+                {
+                  "optionId": "field-9-option-11",
+                  "displayName": "울산"
+                },
+                {
+                  "optionId": "field-9-option-12",
+                  "displayName": "대구"
+                },
+                {
+                  "optionId": "field-9-option-13",
+                  "displayName": "경북"
+                },
+                {
+                  "optionId": "field-9-option-14",
+                  "displayName": "경남"
+                },
+                {
+                  "optionId": "field-9-option-15",
+                  "displayName": "전북"
+                },
+                {
+                  "optionId": "field-9-option-16",
+                  "displayName": "전남"
+                },
+                {
+                  "optionId": "field-9-option-17",
+                  "displayName": "광주"
+                },
+                {
+                  "optionId": "field-9-option-18",
+                  "displayName": "제주"
+                },
+                {
+                  "optionId": "field-9-option-19",
+                  "displayName": "해외"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c010",
+              "visibility": "hidden",
+              "displayName": "학교명",
+              "domId": "d003",
+              "domName": "n003",
+              "placeholder": "학교명",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c011",
+              "visibility": "hidden",
+              "displayName": "학교명",
+              "domId": "d004",
+              "placeholder": "학교명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c012",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d005",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c013",
+              "visibility": "hidden",
+              "displayName": "전공",
+              "domId": "d008",
+              "domName": "n006",
+              "placeholder": "전공",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "전공"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c014",
+              "visibility": "hidden",
+              "displayName": "전공명",
+              "domId": "d004",
+              "placeholder": "전공명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "전공"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c015",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d005",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c016",
+              "visibility": "hidden",
+              "displayName": "부전공",
+              "domId": "d009",
+              "domName": "n007",
+              "placeholder": "부전공",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "부전공"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "부전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c017",
+              "visibility": "hidden",
+              "displayName": "부전공명",
+              "domId": "d004",
+              "placeholder": "부전공명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "부전공명"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "부전공명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c018",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d005",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "부전공명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c019",
+              "visibility": "hidden",
+              "displayName": "평점",
+              "domId": "d010",
+              "domName": "n008",
+              "placeholder": "평점",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "평점"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "평점"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 4,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c020",
+              "visibility": "hidden",
+              "displayName": "기준학점",
+              "domId": "d011",
+              "domName": "n009",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-20-option-1",
+                  "displayName": "기준학점"
+                },
+                {
+                  "optionId": "field-20-option-2",
+                  "displayName": "4.0"
+                },
+                {
+                  "optionId": "field-20-option-3",
+                  "displayName": "4.3"
+                },
+                {
+                  "optionId": "field-20-option-4",
+                  "displayName": "4.5"
+                },
+                {
+                  "optionId": "field-20-option-5",
+                  "displayName": "5.0"
+                },
+                {
+                  "optionId": "field-20-option-6",
+                  "displayName": "7.0"
+                },
+                {
+                  "optionId": "field-20-option-7",
+                  "displayName": "100"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c021",
+              "visibility": "hidden",
+              "displayName": "입학년월",
+              "domId": "d012",
+              "domName": "n004",
+              "placeholder": "입학년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "입학"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "입학"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c022",
+              "visibility": "hidden",
+              "displayName": "졸업년월",
+              "domId": "d013",
+              "domName": "n005",
+              "placeholder": "졸업년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "졸업"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "졸업"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c023",
+              "visibility": "hidden",
+              "displayName": "졸업구분",
+              "domId": "d014",
+              "domName": "n010",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-23-option-1",
+                  "displayName": "졸업구분"
+                },
+                {
+                  "optionId": "field-23-option-2",
+                  "displayName": "졸업"
+                },
+                {
+                  "optionId": "field-23-option-3",
+                  "displayName": "졸업예정"
+                },
+                {
+                  "optionId": "field-23-option-4",
+                  "displayName": "휴학"
+                },
+                {
+                  "optionId": "field-23-option-5",
+                  "displayName": "재학"
+                },
+                {
+                  "optionId": "field-23-option-6",
+                  "displayName": "수료"
+                },
+                {
+                  "optionId": "field-23-option-7",
+                  "displayName": "편입"
+                },
+                {
+                  "optionId": "field-23-option-8",
+                  "displayName": "중퇴/자퇴"
+                },
+                {
+                  "optionId": "field-23-option-9",
+                  "displayName": "기타"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 0,
+                  "rowCount": 2
+                }
+              }
+            }
+          ]
+        },
+        {
+          "itemId": "i02",
+          "itemGroupId": "g01",
+          "fields": [
+            {
+              "candidateId": "c024",
+              "visibility": "hidden",
+              "displayName": "구분",
+              "domId": "d015",
+              "domName": "n001",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-24-option-1",
+                  "displayName": "구분"
+                },
+                {
+                  "optionId": "field-24-option-2",
+                  "displayName": "고등학교"
+                },
+                {
+                  "optionId": "field-24-option-3",
+                  "displayName": "전문대학"
+                },
+                {
+                  "optionId": "field-24-option-4",
+                  "displayName": "대학교"
+                },
+                {
+                  "optionId": "field-24-option-5",
+                  "displayName": "대학원(석사)"
+                },
+                {
+                  "optionId": "field-24-option-6",
+                  "displayName": "대학원(박사)"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c025",
+              "visibility": "hidden",
+              "displayName": "소재지",
+              "domId": "d016",
+              "domName": "n002",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-25-option-1",
+                  "displayName": "소재지"
+                },
+                {
+                  "optionId": "field-25-option-2",
+                  "displayName": "서울"
+                },
+                {
+                  "optionId": "field-25-option-3",
+                  "displayName": "경기"
+                },
+                {
+                  "optionId": "field-25-option-4",
+                  "displayName": "인천"
+                },
+                {
+                  "optionId": "field-25-option-5",
+                  "displayName": "강원"
+                },
+                {
+                  "optionId": "field-25-option-6",
+                  "displayName": "충북"
+                },
+                {
+                  "optionId": "field-25-option-7",
+                  "displayName": "충남"
+                },
+                {
+                  "optionId": "field-25-option-8",
+                  "displayName": "대전"
+                },
+                {
+                  "optionId": "field-25-option-9",
+                  "displayName": "세종"
+                },
+                {
+                  "optionId": "field-25-option-10",
+                  "displayName": "부산"
+                },
+                {
+                  "optionId": "field-25-option-11",
+                  "displayName": "울산"
+                },
+                {
+                  "optionId": "field-25-option-12",
+                  "displayName": "대구"
+                },
+                {
+                  "optionId": "field-25-option-13",
+                  "displayName": "경북"
+                },
+                {
+                  "optionId": "field-25-option-14",
+                  "displayName": "경남"
+                },
+                {
+                  "optionId": "field-25-option-15",
+                  "displayName": "전북"
+                },
+                {
+                  "optionId": "field-25-option-16",
+                  "displayName": "전남"
+                },
+                {
+                  "optionId": "field-25-option-17",
+                  "displayName": "광주"
+                },
+                {
+                  "optionId": "field-25-option-18",
+                  "displayName": "제주"
+                },
+                {
+                  "optionId": "field-25-option-19",
+                  "displayName": "해외"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c026",
+              "visibility": "hidden",
+              "displayName": "학교명",
+              "domId": "d017",
+              "domName": "n003",
+              "placeholder": "학교명",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c027",
+              "visibility": "hidden",
+              "displayName": "학교명",
+              "domId": "d018",
+              "placeholder": "학교명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c028",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d018",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c029",
+              "visibility": "hidden",
+              "displayName": "입학년월",
+              "domId": "d019",
+              "domName": "n004",
+              "placeholder": "입학년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "입학"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "입학"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c030",
+              "visibility": "hidden",
+              "displayName": "졸업년월",
+              "domId": "d020",
+              "domName": "n005",
+              "placeholder": "졸업년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "졸업"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "졸업"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c031",
+              "visibility": "visible",
+              "displayName": "구분",
+              "domId": "d015",
+              "domName": "n001",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-31-option-1",
+                  "displayName": "구분"
+                },
+                {
+                  "optionId": "field-31-option-2",
+                  "displayName": "고등학교"
+                },
+                {
+                  "optionId": "field-31-option-3",
+                  "displayName": "전문대학"
+                },
+                {
+                  "optionId": "field-31-option-4",
+                  "displayName": "대학교"
+                },
+                {
+                  "optionId": "field-31-option-5",
+                  "displayName": "대학원(석사)"
+                },
+                {
+                  "optionId": "field-31-option-6",
+                  "displayName": "대학원(박사)"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c032",
+              "visibility": "visible",
+              "displayName": "소재지",
+              "domId": "d016",
+              "domName": "n002",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-32-option-1",
+                  "displayName": "소재지"
+                },
+                {
+                  "optionId": "field-32-option-2",
+                  "displayName": "서울"
+                },
+                {
+                  "optionId": "field-32-option-3",
+                  "displayName": "경기"
+                },
+                {
+                  "optionId": "field-32-option-4",
+                  "displayName": "인천"
+                },
+                {
+                  "optionId": "field-32-option-5",
+                  "displayName": "강원"
+                },
+                {
+                  "optionId": "field-32-option-6",
+                  "displayName": "충북"
+                },
+                {
+                  "optionId": "field-32-option-7",
+                  "displayName": "충남"
+                },
+                {
+                  "optionId": "field-32-option-8",
+                  "displayName": "대전"
+                },
+                {
+                  "optionId": "field-32-option-9",
+                  "displayName": "세종"
+                },
+                {
+                  "optionId": "field-32-option-10",
+                  "displayName": "부산"
+                },
+                {
+                  "optionId": "field-32-option-11",
+                  "displayName": "울산"
+                },
+                {
+                  "optionId": "field-32-option-12",
+                  "displayName": "대구"
+                },
+                {
+                  "optionId": "field-32-option-13",
+                  "displayName": "경북"
+                },
+                {
+                  "optionId": "field-32-option-14",
+                  "displayName": "경남"
+                },
+                {
+                  "optionId": "field-32-option-15",
+                  "displayName": "전북"
+                },
+                {
+                  "optionId": "field-32-option-16",
+                  "displayName": "전남"
+                },
+                {
+                  "optionId": "field-32-option-17",
+                  "displayName": "광주"
+                },
+                {
+                  "optionId": "field-32-option-18",
+                  "displayName": "제주"
+                },
+                {
+                  "optionId": "field-32-option-19",
+                  "displayName": "해외"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c033",
+              "visibility": "visible",
+              "displayName": "학교명",
+              "domId": "d017",
+              "domName": "n003",
+              "placeholder": "학교명",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c034",
+              "visibility": "hidden",
+              "displayName": "학교명",
+              "domId": "d018",
+              "placeholder": "학교명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "학교명"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c035",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d018",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "학교명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c036",
+              "visibility": "visible",
+              "displayName": "전공",
+              "domId": "d021",
+              "domName": "n006",
+              "placeholder": "전공",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "전공"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c037",
+              "visibility": "hidden",
+              "displayName": "전공명",
+              "domId": "d018",
+              "placeholder": "전공명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "전공"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "전공"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c038",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d018",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c039",
+              "visibility": "visible",
+              "displayName": "부전공",
+              "domId": "d022",
+              "domName": "n007",
+              "placeholder": "부전공",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "부전공"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "부전공"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c040",
+              "visibility": "hidden",
+              "displayName": "부전공명",
+              "domId": "d018",
+              "placeholder": "부전공명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "부전공명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "부전공명"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "부전공명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c041",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d018",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "부전공명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c042",
+              "visibility": "visible",
+              "displayName": "평점",
+              "domId": "d023",
+              "domName": "n008",
+              "placeholder": "평점",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "평점"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "평점"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 4,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c043",
+              "visibility": "visible",
+              "displayName": "기준학점",
+              "domId": "d024",
+              "domName": "n009",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-43-option-1",
+                  "displayName": "기준학점"
+                },
+                {
+                  "optionId": "field-43-option-2",
+                  "displayName": "4.0"
+                },
+                {
+                  "optionId": "field-43-option-3",
+                  "displayName": "4.3"
+                },
+                {
+                  "optionId": "field-43-option-4",
+                  "displayName": "4.5"
+                },
+                {
+                  "optionId": "field-43-option-5",
+                  "displayName": "5.0"
+                },
+                {
+                  "optionId": "field-43-option-6",
+                  "displayName": "7.0"
+                },
+                {
+                  "optionId": "field-43-option-7",
+                  "displayName": "100"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c044",
+              "visibility": "visible",
+              "displayName": "입학년월",
+              "domId": "d025",
+              "domName": "n004",
+              "placeholder": "입학년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "입학"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "입학"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c045",
+              "visibility": "visible",
+              "displayName": "졸업년월",
+              "domId": "d026",
+              "domName": "n005",
+              "placeholder": "졸업년월",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "졸업"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "졸업"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 7,
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            },
+            {
+              "candidateId": "c046",
+              "visibility": "visible",
+              "displayName": "졸업구분",
+              "domId": "d027",
+              "domName": "n010",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-46-option-1",
+                  "displayName": "졸업구분"
+                },
+                {
+                  "optionId": "field-46-option-2",
+                  "displayName": "졸업"
+                },
+                {
+                  "optionId": "field-46-option-3",
+                  "displayName": "졸업예정"
+                },
+                {
+                  "optionId": "field-46-option-4",
+                  "displayName": "휴학"
+                },
+                {
+                  "optionId": "field-46-option-5",
+                  "displayName": "재학"
+                },
+                {
+                  "optionId": "field-46-option-6",
+                  "displayName": "수료"
+                },
+                {
+                  "optionId": "field-46-option-7",
+                  "displayName": "편입"
+                },
+                {
+                  "optionId": "field-46-option-8",
+                  "displayName": "중퇴/자퇴"
+                },
+                {
+                  "optionId": "field-46-option-9",
+                  "displayName": "기타"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g02",
+                  "rowIndex": 1,
+                  "rowCount": 2
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "s02",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "i03",
+          "itemGroupId": "g03",
+          "fields": [
+            {
+              "candidateId": "c047",
+              "visibility": "visible",
+              "displayName": "고용형태",
+              "domId": "d028",
+              "domName": "n011",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-47-option-1",
+                  "displayName": "고용형태"
+                },
+                {
+                  "optionId": "field-47-option-2",
+                  "displayName": "정규"
+                },
+                {
+                  "optionId": "field-47-option-3",
+                  "displayName": "계약"
+                },
+                {
+                  "optionId": "field-47-option-4",
+                  "displayName": "인턴"
+                },
+                {
+                  "optionId": "field-47-option-5",
+                  "displayName": "파견직"
+                },
+                {
+                  "optionId": "field-47-option-6",
+                  "displayName": "프리랜서"
+                },
+                {
+                  "optionId": "field-47-option-7",
+                  "displayName": "아르바이트"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c048",
+              "visibility": "visible",
+              "displayName": "회사명",
+              "domId": "d029",
+              "domName": "n012",
+              "placeholder": "회사명",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "회사명"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "회사명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c049",
+              "visibility": "hidden",
+              "displayName": "회사명",
+              "domId": "d004",
+              "placeholder": "회사명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "회사명"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "회사명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c050",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d005",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "회사명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c051",
+              "visibility": "visible",
+              "displayName": "부서명",
+              "domId": "d030",
+              "domName": "n013",
+              "placeholder": "부서명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "부서"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "부서"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c052",
+              "visibility": "visible",
+              "displayName": "입사일",
+              "domId": "d031",
+              "domName": "n014",
+              "placeholder": "입사일",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "입사일"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "입사일"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 10,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c053",
+              "visibility": "visible",
+              "displayName": "퇴사일",
+              "domId": "d032",
+              "domName": "n015",
+              "placeholder": "퇴사일",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "퇴사일"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "퇴사일"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 10,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c054",
+              "visibility": "visible",
+              "displayName": "직책",
+              "domId": "d033",
+              "domName": "n016",
+              "placeholder": "직책",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "직책"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "직책"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c055",
+              "visibility": "visible",
+              "displayName": "업무내용(요약)",
+              "domId": "d034",
+              "domName": "n017",
+              "placeholder": "업무내용(요약)",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 30,
+                "repeat": {
+                  "groupId": "g04",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "s03",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "i04",
+          "itemGroupId": "g05",
+          "fields": [
+            {
+              "candidateId": "c056",
+              "visibility": "visible",
+              "displayName": "자격/면허종류",
+              "domId": "d035",
+              "domName": "n018",
+              "placeholder": "자격/면허종류",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g06",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c057",
+              "visibility": "hidden",
+              "displayName": "자격/면허종류명",
+              "domId": "d004",
+              "placeholder": "자격/면허종류명",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g06",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c058",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d005",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g06",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c059",
+              "visibility": "visible",
+              "displayName": "등급",
+              "domId": "d036",
+              "domName": "n019",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-59-option-1",
+                  "displayName": "등급"
+                },
+                {
+                  "optionId": "field-59-option-2",
+                  "displayName": "1급"
+                },
+                {
+                  "optionId": "field-59-option-3",
+                  "displayName": "2급"
+                },
+                {
+                  "optionId": "field-59-option-4",
+                  "displayName": "3급"
+                },
+                {
+                  "optionId": "field-59-option-5",
+                  "displayName": "2+급"
+                },
+                {
+                  "optionId": "field-59-option-6",
+                  "displayName": "2-급"
+                },
+                {
+                  "optionId": "field-59-option-7",
+                  "displayName": "3+급"
+                },
+                {
+                  "optionId": "field-59-option-8",
+                  "displayName": "3-급"
+                },
+                {
+                  "optionId": "field-59-option-9",
+                  "displayName": "4+급"
+                },
+                {
+                  "optionId": "field-59-option-10",
+                  "displayName": "A등급"
+                },
+                {
+                  "optionId": "field-59-option-11",
+                  "displayName": "B등급"
+                },
+                {
+                  "optionId": "field-59-option-12",
+                  "displayName": "기타"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g06",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c060",
+              "visibility": "visible",
+              "displayName": "취득/응시일",
+              "domId": "d037",
+              "domName": "n020",
+              "placeholder": "취득/응시일",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "응시일"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "응시일"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 10,
+                "repeat": {
+                  "groupId": "g06",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c061",
+              "visibility": "visible",
+              "displayName": "발급기관",
+              "domId": "d038",
+              "domName": "n021",
+              "placeholder": "발급기관",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "발급기관"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "발급기관"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 100,
+                "repeat": {
+                  "groupId": "g06",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "s04",
+      "fields": [],
+      "items": [
+        {
+          "itemId": "i05",
+          "itemGroupId": "g07",
+          "fields": [
+            {
+              "candidateId": "c062",
+              "visibility": "visible",
+              "displayName": "언어",
+              "domId": "d039",
+              "domName": "n022",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-62-option-1",
+                  "displayName": "언어"
+                },
+                {
+                  "optionId": "field-62-option-2",
+                  "displayName": "영어"
+                },
+                {
+                  "optionId": "field-62-option-3",
+                  "displayName": "일어"
+                },
+                {
+                  "optionId": "field-62-option-4",
+                  "displayName": "중국어"
+                },
+                {
+                  "optionId": "field-62-option-5",
+                  "displayName": "스페인어"
+                },
+                {
+                  "optionId": "field-62-option-6",
+                  "displayName": "기타"
+                },
+                {
+                  "optionId": "field-62-option-7",
+                  "displayName": "프랑스어"
+                },
+                {
+                  "optionId": "field-62-option-8",
+                  "displayName": "독일어"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c063",
+              "visibility": "visible",
+              "displayName": "시험",
+              "domId": "d040",
+              "domName": "n023",
+              "placeholder": "시험",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c064",
+              "visibility": "hidden",
+              "displayName": "시험",
+              "placeholder": "시험",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "section-heading",
+                    "text": "어학 시험명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c065",
+              "visibility": "hidden",
+              "displayName": "직접입력",
+              "domId": "d005",
+              "placeholder": "직접입력",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "placeholder",
+                    "text": "직접입력"
+                  },
+                  {
+                    "source": "section-heading",
+                    "text": "어학 시험명"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c066",
+              "visibility": "visible",
+              "displayName": "등급",
+              "domId": "d041",
+              "domName": "n024",
+              "element": "select",
+              "control": "select",
+              "options": [
+                {
+                  "optionId": "field-66-option-1",
+                  "displayName": "등급"
+                },
+                {
+                  "optionId": "field-66-option-2",
+                  "displayName": "없음"
+                },
+                {
+                  "optionId": "field-66-option-3",
+                  "displayName": "A"
+                },
+                {
+                  "optionId": "field-66-option-4",
+                  "displayName": "B"
+                },
+                {
+                  "optionId": "field-66-option-5",
+                  "displayName": "C"
+                },
+                {
+                  "optionId": "field-66-option-6",
+                  "displayName": "D"
+                },
+                {
+                  "optionId": "field-66-option-7",
+                  "displayName": "E"
+                },
+                {
+                  "optionId": "field-66-option-8",
+                  "displayName": "F"
+                },
+                {
+                  "optionId": "field-66-option-9",
+                  "displayName": "1급"
+                },
+                {
+                  "optionId": "field-66-option-10",
+                  "displayName": "2급"
+                },
+                {
+                  "optionId": "field-66-option-11",
+                  "displayName": "3급"
+                },
+                {
+                  "optionId": "field-66-option-12",
+                  "displayName": "4급"
+                },
+                {
+                  "optionId": "field-66-option-13",
+                  "displayName": "5급"
+                },
+                {
+                  "optionId": "field-66-option-14",
+                  "displayName": "6급"
+                },
+                {
+                  "optionId": "field-66-option-15",
+                  "displayName": "7급"
+                },
+                {
+                  "optionId": "field-66-option-16",
+                  "displayName": "8급"
+                },
+                {
+                  "optionId": "field-66-option-17",
+                  "displayName": "9급"
+                },
+                {
+                  "optionId": "field-66-option-18",
+                  "displayName": "10급"
+                },
+                {
+                  "optionId": "field-66-option-19",
+                  "displayName": "11급"
+                },
+                {
+                  "optionId": "field-66-option-20",
+                  "displayName": "AL"
+                },
+                {
+                  "optionId": "field-66-option-21",
+                  "displayName": "IH"
+                },
+                {
+                  "optionId": "field-66-option-22",
+                  "displayName": "IM1"
+                },
+                {
+                  "optionId": "field-66-option-23",
+                  "displayName": "IM2"
+                },
+                {
+                  "optionId": "field-66-option-24",
+                  "displayName": "IM3"
+                },
+                {
+                  "optionId": "field-66-option-25",
+                  "displayName": "IL"
+                },
+                {
+                  "optionId": "field-66-option-26",
+                  "displayName": "NH"
+                },
+                {
+                  "optionId": "field-66-option-27",
+                  "displayName": "IL"
+                },
+                {
+                  "optionId": "field-66-option-28",
+                  "displayName": "NM"
+                },
+                {
+                  "optionId": "field-66-option-29",
+                  "displayName": "NL"
+                },
+                {
+                  "optionId": "field-66-option-30",
+                  "displayName": "N1"
+                },
+                {
+                  "optionId": "field-66-option-31",
+                  "displayName": "N2"
+                },
+                {
+                  "optionId": "field-66-option-32",
+                  "displayName": "N3"
+                },
+                {
+                  "optionId": "field-66-option-33",
+                  "displayName": "N4"
+                },
+                {
+                  "optionId": "field-66-option-34",
+                  "displayName": "N5"
+                },
+                {
+                  "optionId": "field-66-option-35",
+                  "displayName": "Level 1"
+                },
+                {
+                  "optionId": "field-66-option-36",
+                  "displayName": "Level 2"
+                },
+                {
+                  "optionId": "field-66-option-37",
+                  "displayName": "Level 3"
+                },
+                {
+                  "optionId": "field-66-option-38",
+                  "displayName": "Level 4"
+                },
+                {
+                  "optionId": "field-66-option-39",
+                  "displayName": "Level 5"
+                },
+                {
+                  "optionId": "field-66-option-40",
+                  "displayName": "Level 6"
+                },
+                {
+                  "optionId": "field-66-option-41",
+                  "displayName": "Level 7"
+                },
+                {
+                  "optionId": "field-66-option-42",
+                  "displayName": "Level 8"
+                },
+                {
+                  "optionId": "field-66-option-43",
+                  "displayName": "A1"
+                },
+                {
+                  "optionId": "field-66-option-44",
+                  "displayName": "A2"
+                },
+                {
+                  "optionId": "field-66-option-45",
+                  "displayName": "B1"
+                },
+                {
+                  "optionId": "field-66-option-46",
+                  "displayName": "B2"
+                },
+                {
+                  "optionId": "field-66-option-47",
+                  "displayName": "C1"
+                },
+                {
+                  "optionId": "field-66-option-48",
+                  "displayName": "C2"
+                },
+                {
+                  "optionId": "field-66-option-49",
+                  "displayName": "Advanced High"
+                },
+                {
+                  "optionId": "field-66-option-50",
+                  "displayName": "Advanced Mid"
+                },
+                {
+                  "optionId": "field-66-option-51",
+                  "displayName": "Advanced Low"
+                },
+                {
+                  "optionId": "field-66-option-52",
+                  "displayName": "Intermediate High"
+                },
+                {
+                  "optionId": "field-66-option-53",
+                  "displayName": "Intermediate Mid 3"
+                },
+                {
+                  "optionId": "field-66-option-54",
+                  "displayName": "Intermediate Mid 2"
+                },
+                {
+                  "optionId": "field-66-option-55",
+                  "displayName": "Intermediate Mid 1"
+                },
+                {
+                  "optionId": "field-66-option-56",
+                  "displayName": "Intermediate Low"
+                },
+                {
+                  "optionId": "field-66-option-57",
+                  "displayName": "Novice High"
+                },
+                {
+                  "optionId": "field-66-option-58",
+                  "displayName": "Novice Mid/Low"
+                },
+                {
+                  "optionId": "field-66-option-59",
+                  "displayName": "기타"
+                }
+              ],
+              "semanticContext": {
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c067",
+              "visibility": "visible",
+              "displayName": "점수",
+              "domId": "d042",
+              "domName": "n025",
+              "placeholder": "점수",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "점수"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "점수"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 5,
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c068",
+              "visibility": "visible",
+              "displayName": "취득/응시일",
+              "domId": "d043",
+              "domName": "n026",
+              "placeholder": "취득/응시일",
+              "readonly": true,
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "응시일"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "응시일"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 10,
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            },
+            {
+              "candidateId": "c069",
+              "visibility": "visible",
+              "displayName": "발급기관",
+              "domId": "d044",
+              "domName": "n027",
+              "placeholder": "발급기관",
+              "element": "input",
+              "control": "text",
+              "semanticContext": {
+                "labels": [
+                  {
+                    "source": "label",
+                    "text": "발급기관"
+                  },
+                  {
+                    "source": "placeholder",
+                    "text": "발급기관"
+                  }
+                ],
+                "inputType": "text",
+                "autocomplete": "off",
+                "maxLength": 50,
+                "repeat": {
+                  "groupId": "g08",
+                  "rowIndex": 0,
+                  "rowCount": 1
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3351 @@
+{
+  "contract_version": "1.0",
+  "provider": "jev",
+  "model": "jev-latest",
+  "collected_with": "develop 3daae64 + 미병합 Jev 질문 묶음 전송(5개)과 확률 합 허용 오차 0.05, 기준 0.8, 2026-10-13",
+  "sites": [
+    {
+      "site_id": "naver",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 7184,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.82,
+            "top_probabilities": {
+              "ABSTAIN": 0.8200000000000001,
+              "education.university.latestEducationType": 0.08,
+              "education.university.degreeLevel": 0.06,
+              "education.graduateSchool.degreeLevel": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c002",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.81,
+            "top_probabilities": {
+              "ABSTAIN": 0.81,
+              "education.university.schoolRegion": 0.09999999999999999,
+              "contact.contact.residenceCountry": 0.05,
+              "education.graduateSchool.schoolRegion": 0.02,
+              "education.highSchool.schoolRegion": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c003",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.87,
+            "top_probabilities": {
+              "ABSTAIN": 0.87,
+              "education.university.schoolName": 0.09,
+              "education.graduateSchool.schoolName": 0.02,
+              "education.highSchool.schoolName": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c004",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.82,
+            "top_probabilities": {
+              "ABSTAIN": 0.8200000000000001,
+              "education.university.schoolName": 0.14,
+              "education.graduateSchool.schoolName": 0.01,
+              "education.university.additionalMajorName": 0.01,
+              "education.university.minorName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c005",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.95,
+            "top_probabilities": {
+              "ABSTAIN": 0.95,
+              "education.graduateSchool.schoolName": 0.02,
+              "education.university.schoolName": 0.02,
+              "careers.career.companyName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c006",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.82,
+            "top_probabilities": {
+              "ABSTAIN": 0.8200000000000001,
+              "education.graduateSchool.admissionType": 0.09,
+              "education.university.startDate": 0.04,
+              "education.graduateSchool.startDate": 0.03,
+              "education.highSchool.startDate": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c007",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "education.university.completionStatus": 0.09999999999999999,
+              "education.graduateSchool.completionStatus": 0.05,
+              "education.university.endDate": 0.03,
+              "education.graduateSchool.endDate": 0.02
+            }
+          }
+        },
+        {
+          "candidate_id": "c008",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.81,
+            "top_probabilities": {
+              "ABSTAIN": 0.81,
+              "education.graduateSchool.degreeLevel": 0.09,
+              "education.university.latestEducationType": 0.05,
+              "education.university.degreeLevel": 0.04,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c009",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.85,
+            "top_probabilities": {
+              "ABSTAIN": 0.85,
+              "education.university.schoolRegion": 0.09,
+              "education.graduateSchool.schoolRegion": 0.04,
+              "contact.contact.residenceCountry": 0.01,
+              "education.highSchool.schoolRegion": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c010",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.81,
+            "top_probabilities": {
+              "ABSTAIN": 0.81,
+              "education.university.schoolName": 0.12,
+              "education.graduateSchool.schoolName": 0.05,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c011",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.68,
+            "top_probabilities": {
+              "ABSTAIN": 0.68,
+              "education.university.schoolName": 0.28,
+              "education.graduateSchool.schoolName": 0.02,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c012",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.92,
+            "top_probabilities": {
+              "ABSTAIN": 0.92,
+              "education.university.schoolName": 0.05,
+              "education.graduateSchool.schoolName": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c013",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.49,
+            "top_probabilities": {
+              "ABSTAIN": 0.49,
+              "education.university.majorName": 0.33,
+              "education.graduateSchool.majorName": 0.13,
+              "education.graduateSchool.majorField": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c014",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.63,
+            "top_probabilities": {
+              "ABSTAIN": 0.63,
+              "education.university.majorName": 0.25,
+              "education.graduateSchool.majorField": 0.06999999999999999,
+              "education.graduateSchool.majorName": 0.04,
+              "veteran.veteran.veteranType": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c015",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.88,
+            "top_probabilities": {
+              "ABSTAIN": 0.88,
+              "education.university.majorName": 0.06999999999999999,
+              "education.graduateSchool.majorName": 0.03,
+              "education.graduateSchool.majorField": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c016",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.54,
+            "top_probabilities": {
+              "ABSTAIN": 0.54,
+              "education.university.majorName": 0.3,
+              "education.graduateSchool.majorName": 0.12,
+              "education.graduateSchool.majorField": 0.04,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c017",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.minorName",
+            "confidence": 0.71,
+            "top_probabilities": {
+              "education.university.minorName": 0.71,
+              "ABSTAIN": 0.25,
+              "education.university.additionalMajorName": 0.03,
+              "education.graduateSchool.additionalMajorName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c018",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.67,
+            "top_probabilities": {
+              "ABSTAIN": 0.67,
+              "education.university.minorName": 0.3,
+              "education.university.additionalMajorName": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c019",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.56,
+            "top_probabilities": {
+              "ABSTAIN": 0.56,
+              "education.university.gpaScore": 0.32,
+              "education.graduateSchool.gpaScore": 0.12,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c020",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.4,
+            "top_probabilities": {
+              "ABSTAIN": 0.41000000000000003,
+              "education.university.gpaScale": 0.36,
+              "education.graduateSchool.gpaScale": 0.18000000000000002,
+              "education.university.gpaScore": 0.03,
+              "education.graduateSchool.gpaScore": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c021",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.81,
+            "top_probabilities": {
+              "ABSTAIN": 0.81,
+              "education.graduateSchool.admissionType": 0.08,
+              "education.graduateSchool.startDate": 0.06,
+              "education.university.startDate": 0.03,
+              "education.highSchool.startDate": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c022",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.76,
+            "top_probabilities": {
+              "ABSTAIN": 0.76,
+              "education.university.completionStatus": 0.09999999999999999,
+              "education.graduateSchool.completionStatus": 0.09,
+              "education.graduateSchool.endDate": 0.04,
+              "education.university.endDate": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c023",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.65,
+            "top_probabilities": {
+              "ABSTAIN": 0.65,
+              "education.graduateSchool.completionStatus": 0.21000000000000002,
+              "education.university.completionStatus": 0.14,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c024",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.81,
+            "top_probabilities": {
+              "ABSTAIN": 0.81,
+              "education.graduateSchool.degreeLevel": 0.07,
+              "education.university.latestEducationType": 0.06,
+              "education.university.degreeLevel": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c025",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.76,
+            "top_probabilities": {
+              "ABSTAIN": 0.76,
+              "education.university.schoolRegion": 0.17,
+              "education.graduateSchool.schoolRegion": 0.05,
+              "contact.contact.residenceCountry": 0.01,
+              "education.highSchool.schoolRegion": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c026",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.86,
+            "top_probabilities": {
+              "ABSTAIN": 0.86,
+              "education.university.schoolName": 0.08,
+              "education.graduateSchool.schoolName": 0.05,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c027",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.75,
+            "top_probabilities": {
+              "ABSTAIN": 0.75,
+              "education.university.schoolName": 0.22,
+              "education.graduateSchool.schoolName": 0.02,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c028",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.64,
+            "top_probabilities": {
+              "ABSTAIN": 0.64,
+              "careers.career.companyName": 0.23,
+              "education.graduateSchool.schoolName": 0.060000000000000005,
+              "education.university.schoolName": 0.05,
+              "education.highSchool.schoolName": 0.02
+            }
+          }
+        },
+        {
+          "candidate_id": "c029",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.86,
+            "top_probabilities": {
+              "ABSTAIN": 0.86,
+              "education.graduateSchool.startDate": 0.07,
+              "education.graduateSchool.admissionType": 0.03,
+              "education.university.startDate": 0.03,
+              "education.highSchool.startDate": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c030",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.78,
+            "top_probabilities": {
+              "ABSTAIN": 0.78,
+              "education.university.completionStatus": 0.09,
+              "education.graduateSchool.completionStatus": 0.060000000000000005,
+              "education.university.endDate": 0.04,
+              "education.graduateSchool.endDate": 0.03
+            }
+          }
+        },
+        {
+          "candidate_id": "c031",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.71,
+            "top_probabilities": {
+              "ABSTAIN": 0.71,
+              "education.university.latestEducationType": 0.14,
+              "education.university.degreeLevel": 0.09999999999999999,
+              "education.graduateSchool.degreeLevel": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c032",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.67,
+            "top_probabilities": {
+              "ABSTAIN": 0.67,
+              "education.university.schoolRegion": 0.28,
+              "education.graduateSchool.schoolRegion": 0.02,
+              "contact.contact.residenceCountry": 0.01,
+              "education.highSchool.schoolRegion": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c033",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.57,
+            "top_probabilities": {
+              "ABSTAIN": 0.57,
+              "education.university.schoolName": 0.4,
+              "education.graduateSchool.schoolName": 0.02,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c034",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "education.university.schoolName": 0.19,
+              "education.graduateSchool.schoolName": 0.01,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c035",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "education.university.schoolName": 0.12,
+              "education.graduateSchool.schoolName": 0.07,
+              "careers.career.companyName": 0.01,
+              "education.highSchool.schoolName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c036",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.majorName",
+            "confidence": 0.5,
+            "top_probabilities": {
+              "education.university.majorName": 0.5,
+              "ABSTAIN": 0.41000000000000003,
+              "education.graduateSchool.majorName": 0.060000000000000005,
+              "education.graduateSchool.majorField": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c037",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.52,
+            "top_probabilities": {
+              "ABSTAIN": 0.52,
+              "education.university.majorName": 0.33,
+              "education.graduateSchool.majorField": 0.08,
+              "education.graduateSchool.majorName": 0.060000000000000005,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c038",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.81,
+            "top_probabilities": {
+              "ABSTAIN": 0.81,
+              "education.university.majorName": 0.12,
+              "education.graduateSchool.majorName": 0.04,
+              "education.graduateSchool.majorField": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c039",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.45,
+            "top_probabilities": {
+              "ABSTAIN": 0.45,
+              "education.university.majorName": 0.41000000000000003,
+              "education.graduateSchool.majorName": 0.09,
+              "education.graduateSchool.majorField": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c040",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.minorName",
+            "confidence": 0.75,
+            "top_probabilities": {
+              "education.university.minorName": 0.75,
+              "ABSTAIN": 0.22,
+              "education.university.additionalMajorName": 0.02,
+              "education.graduateSchool.additionalMajorName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c041",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.54,
+            "top_probabilities": {
+              "ABSTAIN": 0.54,
+              "education.university.minorName": 0.42,
+              "education.university.additionalMajorName": 0.04,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c042",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.gpaScore",
+            "confidence": 0.67,
+            "top_probabilities": {
+              "education.university.gpaScore": 0.67,
+              "ABSTAIN": 0.3,
+              "education.graduateSchool.gpaScore": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c043",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.gpaScale",
+            "confidence": 0.66,
+            "top_probabilities": {
+              "education.university.gpaScale": 0.66,
+              "ABSTAIN": 0.21000000000000002,
+              "education.graduateSchool.gpaScale": 0.09999999999999999,
+              "education.university.gpaScore": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c044",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.76,
+            "top_probabilities": {
+              "ABSTAIN": 0.76,
+              "education.university.startDate": 0.13,
+              "education.graduateSchool.startDate": 0.05,
+              "education.graduateSchool.admissionType": 0.02,
+              "education.university.endDate": 0.02
+            }
+          }
+        },
+        {
+          "candidate_id": "c045",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.66,
+            "top_probabilities": {
+              "ABSTAIN": 0.66,
+              "education.university.completionStatus": 0.25,
+              "education.graduateSchool.completionStatus": 0.05,
+              "education.graduateSchool.endDate": 0.02,
+              "education.university.endDate": 0.02
+            }
+          }
+        },
+        {
+          "candidate_id": "c046",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.66,
+            "top_probabilities": {
+              "ABSTAIN": 0.66,
+              "education.university.completionStatus": 0.25,
+              "education.graduateSchool.completionStatus": 0.09,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c047",
+          "result": "DIRECT:careers.career.employmentType",
+          "jev": {
+            "raw_choice": "careers.career.employmentType",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "careers.career.employmentType": 1.0,
+              "ABSTAIN": 0.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c048",
+          "result": "DIRECT:careers.career.companyName",
+          "jev": {
+            "raw_choice": "careers.career.companyName",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "careers.career.companyName": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c049",
+          "result": "DIRECT:careers.career.companyName",
+          "jev": {
+            "raw_choice": "careers.career.companyName",
+            "confidence": 0.95,
+            "top_probabilities": {
+              "careers.career.companyName": 0.95,
+              "ABSTAIN": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c050",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.75,
+            "top_probabilities": {
+              "ABSTAIN": 0.75,
+              "careers.career.companyName": 0.25,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c051",
+          "result": "DIRECT:careers.career.department",
+          "jev": {
+            "raw_choice": "careers.career.department",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "careers.career.department": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c052",
+          "result": "DIRECT:careers.career.startDate",
+          "jev": {
+            "raw_choice": "careers.career.startDate",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "careers.career.startDate": 0.97,
+              "ABSTAIN": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c053",
+          "result": "DIRECT:careers.career.endDate",
+          "jev": {
+            "raw_choice": "careers.career.endDate",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "careers.career.endDate": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c054",
+          "result": "DIRECT:careers.career.position",
+          "jev": {
+            "raw_choice": "careers.career.position",
+            "confidence": 0.95,
+            "top_probabilities": {
+              "careers.career.position": 0.95,
+              "ABSTAIN": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c055",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "careers.career.responsibilities": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c056",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.96,
+            "top_probabilities": {
+              "ABSTAIN": 0.96,
+              "certifications.certificate.acquisitionDate": 0.02,
+              "certifications.certificate.registrationNo": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c057",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.98,
+            "top_probabilities": {
+              "ABSTAIN": 0.98,
+              "certifications.certificate.registrationNo": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c058",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.98,
+            "top_probabilities": {
+              "ABSTAIN": 0.98,
+              "certifications.certificate.grade": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c059",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "certifications.certificate.grade",
+            "confidence": 0.77,
+            "top_probabilities": {
+              "certifications.certificate.grade": 0.77,
+              "ABSTAIN": 0.19,
+              "languages.languageTest.grade": 0.04,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c060",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "certifications.certificate.acquisitionDate",
+            "confidence": 0.54,
+            "top_probabilities": {
+              "certifications.certificate.acquisitionDate": 0.54,
+              "ABSTAIN": 0.29000000000000004,
+              "languages.languageTest.acquisitionDate": 0.16,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c061",
+          "result": "DIRECT:certifications.certificate.issuer",
+          "jev": {
+            "raw_choice": "certifications.certificate.issuer",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "certifications.certificate.issuer": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c062",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "languages.languageSkill.language",
+            "confidence": 0.65,
+            "top_probabilities": {
+              "languages.languageSkill.language": 0.65,
+              "languages.languageTest.language": 0.26,
+              "ABSTAIN": 0.09,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c063",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.82,
+            "top_probabilities": {
+              "ABSTAIN": 0.8200000000000001,
+              "languages.languageTest.testName": 0.14,
+              "languages.languageSkill.language": 0.02,
+              "languages.languageTest.language": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c064",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "languages.languageTest.testName",
+            "confidence": 0.7,
+            "top_probabilities": {
+              "languages.languageTest.testName": 0.7,
+              "ABSTAIN": 0.3,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c065",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.56,
+            "top_probabilities": {
+              "ABSTAIN": 0.56,
+              "languages.languageTest.testName": 0.43,
+              "languages.languageTest.language": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c066",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "languages.languageTest.grade",
+            "confidence": 0.74,
+            "top_probabilities": {
+              "languages.languageTest.grade": 0.74,
+              "ABSTAIN": 0.2,
+              "certifications.certificate.grade": 0.06,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c067",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "languages.languageTest.grade",
+            "confidence": 0.55,
+            "top_probabilities": {
+              "languages.languageTest.grade": 0.55,
+              "ABSTAIN": 0.42,
+              "certifications.certificate.grade": 0.02,
+              "education.university.gpaScore": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c068",
+          "result": "DIRECT:languages.languageTest.acquisitionDate",
+          "jev": {
+            "raw_choice": "languages.languageTest.acquisitionDate",
+            "confidence": 0.92,
+            "top_probabilities": {
+              "languages.languageTest.acquisitionDate": 0.92,
+              "ABSTAIN": 0.07,
+              "certifications.certificate.acquisitionDate": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c069",
+          "result": "DIRECT:certifications.certificate.issuer",
+          "jev": {
+            "raw_choice": "certifications.certificate.issuer",
+            "confidence": 0.89,
+            "top_probabilities": {
+              "certifications.certificate.issuer": 0.89,
+              "ABSTAIN": 0.11,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "site_id": "lg-ai-research",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 914,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c002",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c003",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "personal.personal.gender": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c004",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "personal.personal.koreanGivenName",
+            "confidence": 0.48,
+            "top_probabilities": {
+              "personal.personal.koreanGivenName": 0.48,
+              "ABSTAIN": 0.36,
+              "personal.personal.koreanFamilyName": 0.12,
+              "personal.personal.englishGivenName": 0.03,
+              "KOREAN_FULL_NAME": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c005",
+          "result": "DIRECT:contact.contact.phoneNumber",
+          "jev": {
+            "raw_choice": "contact.contact.phoneNumber",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "contact.contact.phoneNumber": 0.97,
+              "ABSTAIN": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c006",
+          "result": "DIRECT:personal.personal.gender",
+          "jev": {
+            "raw_choice": "personal.personal.gender",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "personal.personal.gender": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c007",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.98,
+            "top_probabilities": {
+              "ABSTAIN": 0.98,
+              "personal.personal.gender": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c008",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "personal.personal.gender": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c009",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "personal.personal.gender": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c010",
+          "result": "DIRECT:contact.contact.email",
+          "jev": {
+            "raw_choice": "contact.contact.email",
+            "confidence": 0.9,
+            "top_probabilities": {
+              "contact.contact.email": 0.9,
+              "ABSTAIN": 0.1,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c011",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.98,
+            "top_probabilities": {
+              "ABSTAIN": 0.98,
+              "personal.personal.gender": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c012",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "personal.personal.koreanGivenName": 0.02,
+              "personal.personal.koreanFamilyName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c013",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "site_id": "ahnlab",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 2714,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "DIRECT:personal.personal.englishGivenName",
+          "jev": {
+            "raw_choice": "personal.personal.englishGivenName",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "personal.personal.englishGivenName": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c002",
+          "result": "DIRECT:personal.personal.gender",
+          "jev": {
+            "raw_choice": "personal.personal.gender",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "personal.personal.gender": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c003",
+          "result": "DIRECT:personal.personal.birthDate",
+          "jev": {
+            "raw_choice": "personal.personal.birthDate",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "personal.personal.birthDate": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c004",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.93,
+            "top_probabilities": {
+              "ABSTAIN": 0.93,
+              "careers.career.position": 0.03,
+              "careers.career.employmentStatus": 0.02,
+              "careers.career.companyName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c005",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "careers.career.companyName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c006",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c007",
+          "result": "DIRECT:compensation.compensation.desiredSalary",
+          "jev": {
+            "raw_choice": "compensation.compensation.desiredSalary",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "compensation.compensation.desiredSalary": 1.0,
+              "ABSTAIN": 0.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c008",
+          "result": "DIRECT:compensation.compensation.previousSalary",
+          "jev": {
+            "raw_choice": "compensation.compensation.previousSalary",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "compensation.compensation.previousSalary": 1.0,
+              "ABSTAIN": 0.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c009",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "KOREAN_FULL_NAME",
+            "confidence": 0.62,
+            "top_probabilities": {
+              "KOREAN_FULL_NAME": 0.62,
+              "ABSTAIN": 0.36,
+              "personal.personal.koreanFamilyName": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c010",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.91,
+            "top_probabilities": {
+              "ABSTAIN": 0.91,
+              "KOREAN_FULL_NAME": 0.03,
+              "personal.personal.englishFamilyName": 0.02,
+              "personal.personal.koreanFamilyName": 0.02,
+              "contact.contact.phoneNumber": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c011",
+          "result": "DIRECT:contact.contact.phoneNumber",
+          "jev": {
+            "raw_choice": "contact.contact.phoneNumber",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "contact.contact.phoneNumber": 1.0,
+              "ABSTAIN": 0.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c012",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "contact.contact.postalCode": 0.11,
+              "contact.contact.emergencyPhoneNumber": 0.04,
+              "contact.contact.email": 0.02,
+              "contact.contact.secondaryEmail": 0.02
+            }
+          }
+        },
+        {
+          "candidate_id": "c013",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.9,
+            "top_probabilities": {
+              "ABSTAIN": 0.9,
+              "contact.contact.postalCode": 0.060000000000000005,
+              "contact.contact.secondaryEmail": 0.02,
+              "contact.contact.email": 0.01,
+              "contact.contact.emergencyPhoneNumber": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c014",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c015",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c016",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "contact.contact.email": 0.02,
+              "contact.contact.secondaryEmail": 0.01,
+              "personal.personal.englishFamilyName": 0.01,
+              "personal.personal.englishGivenName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c017",
+          "result": "DIRECT:personal.personal.nationality",
+          "jev": {
+            "raw_choice": "personal.personal.nationality",
+            "confidence": 0.88,
+            "top_probabilities": {
+              "personal.personal.nationality": 0.88,
+              "ABSTAIN": 0.06,
+              "contact.contact.residenceCountry": 0.06,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c018",
+          "result": "DIRECT:contact.contact.addressLine1",
+          "jev": {
+            "raw_choice": "contact.contact.addressLine1",
+            "confidence": 0.93,
+            "top_probabilities": {
+              "contact.contact.addressLine1": 0.93,
+              "ABSTAIN": 0.07,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c019",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "contact.contact.addressLine1",
+            "confidence": 0.38,
+            "top_probabilities": {
+              "contact.contact.addressLine1": 0.39,
+              "ABSTAIN": 0.31,
+              "contact.contact.addressLine2": 0.29000000000000004,
+              "veteran.veteran.veteranType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c020",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "contact.contact.addressLine1",
+            "confidence": 0.46,
+            "top_probabilities": {
+              "contact.contact.addressLine1": 0.46,
+              "ABSTAIN": 0.27,
+              "contact.contact.addressLine2": 0.26,
+              "veteran.veteran.veteranType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c021",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "disability.disability.disabilityStatus",
+            "confidence": 0.47,
+            "top_probabilities": {
+              "disability.disability.disabilityStatus": 0.47000000000000003,
+              "ABSTAIN": 0.45,
+              "disability.disability.disabilityType": 0.060000000000000005,
+              "veteran.veteran.veteranType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c022",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.51,
+            "top_probabilities": {
+              "ABSTAIN": 0.51,
+              "disability.disability.disabilityType": 0.38,
+              "disability.disability.disabilityStatus": 0.06999999999999999,
+              "disability.disability.disabilityGrade": 0.03,
+              "veteran.veteran.veteranType": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c023",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.7,
+            "top_probabilities": {
+              "ABSTAIN": 0.7,
+              "disability.disability.disabilityType": 0.25,
+              "disability.disability.disabilityStatus": 0.02,
+              "veteran.veteran.veteranRelation": 0.01,
+              "veteran.veteran.veteranStatus": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c024",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "veteran.veteran.veteranStatus",
+            "confidence": 0.46,
+            "top_probabilities": {
+              "veteran.veteran.veteranStatus": 0.46,
+              "ABSTAIN": 0.45,
+              "veteran.veteran.veteranType": 0.08,
+              "veteran.veteran.veteranRelation": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c025",
+          "result": "DIRECT:veteran.veteran.veteranNumber",
+          "jev": {
+            "raw_choice": "veteran.veteran.veteranNumber",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "veteran.veteran.veteranNumber": 1.0,
+              "ABSTAIN": 0.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c026",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.78,
+            "top_probabilities": {
+              "ABSTAIN": 0.78,
+              "veteran.veteran.veteranStatus": 0.13,
+              "veteran.veteran.veteranNumber": 0.07,
+              "veteran.veteran.veteranRelation": 0.01,
+              "veteran.veteran.veteranType": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c027",
+          "result": "DIRECT:veteran.veteran.veteranStatus",
+          "jev": {
+            "raw_choice": "veteran.veteran.veteranStatus",
+            "confidence": 0.81,
+            "top_probabilities": {
+              "veteran.veteran.veteranStatus": 0.81,
+              "ABSTAIN": 0.15,
+              "veteran.veteran.veteranType": 0.02,
+              "military.military.militaryStatus": 0.01,
+              "veteran.veteran.veteranNumber": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c028",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "military.military.militaryStatus",
+            "confidence": 0.51,
+            "top_probabilities": {
+              "military.military.militaryStatus": 0.51,
+              "military.military.militaryType": 0.32,
+              "ABSTAIN": 0.17,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c029",
+          "result": "DIRECT:military.military.exemptionReason",
+          "jev": {
+            "raw_choice": "military.military.exemptionReason",
+            "confidence": 0.9,
+            "top_probabilities": {
+              "military.military.exemptionReason": 0.9,
+              "ABSTAIN": 0.1,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c030",
+          "result": "DIRECT:military.military.militaryBranch",
+          "jev": {
+            "raw_choice": "military.military.militaryBranch",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "military.military.militaryBranch": 0.97,
+              "ABSTAIN": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c031",
+          "result": "DIRECT:military.military.militarySpecialty",
+          "jev": {
+            "raw_choice": "military.military.militarySpecialty",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "military.military.militarySpecialty": 1.0,
+              "ABSTAIN": 0.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c032",
+          "result": "DIRECT:military.military.militaryRank",
+          "jev": {
+            "raw_choice": "military.military.militaryRank",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "military.military.militaryRank": 0.94,
+              "ABSTAIN": 0.06,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c033",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "military.military.serviceEndDate": 0.09,
+              "military.military.serviceStartDate": 0.06,
+              "military.military.militaryStatus": 0.02,
+              "military.military.militaryBranch": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c034",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.76,
+            "top_probabilities": {
+              "ABSTAIN": 0.76,
+              "military.military.serviceEndDate": 0.09999999999999999,
+              "military.military.serviceStartDate": 0.09,
+              "military.military.militaryBranch": 0.03,
+              "military.military.militaryRank": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c035",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.92,
+            "top_probabilities": {
+              "ABSTAIN": 0.92,
+              "military.military.militaryType": 0.03,
+              "military.military.dischargeType": 0.01,
+              "military.military.exemptionReason": 0.01,
+              "military.military.militaryBranch": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c036",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.96,
+            "top_probabilities": {
+              "ABSTAIN": 0.96,
+              "military.military.militaryType": 0.02,
+              "military.military.exemptionReason": 0.01,
+              "military.military.militaryStatus": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c037",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "health.health.healthDetails": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "site_id": "krafton",
+      "analysis_status": "COMPLETE",
+      "latency_ms": 8701,
+      "candidates": [
+        {
+          "candidate_id": "c001",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "personal.personal.koreanFamilyName",
+            "confidence": 0.65,
+            "top_probabilities": {
+              "personal.personal.koreanFamilyName": 0.65,
+              "ABSTAIN": 0.34,
+              "personal.personal.englishFamilyName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c002",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "personal.personal.koreanGivenName",
+            "confidence": 0.56,
+            "top_probabilities": {
+              "personal.personal.koreanGivenName": 0.56,
+              "ABSTAIN": 0.3,
+              "personal.personal.englishGivenName": 0.12,
+              "personal.personal.hanjaGivenName": 0.01,
+              "personal.personal.koreanFamilyName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c003",
+          "result": "DIRECT:contact.contact.email",
+          "jev": {
+            "raw_choice": "contact.contact.email",
+            "confidence": 0.92,
+            "top_probabilities": {
+              "contact.contact.email": 0.92,
+              "ABSTAIN": 0.08,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c004",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "personal.personal.nationality",
+            "confidence": 0.71,
+            "top_probabilities": {
+              "personal.personal.nationality": 0.71,
+              "ABSTAIN": 0.18,
+              "contact.contact.residenceCountry": 0.08,
+              "personal.personal.koreanFamilyName": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c005",
+          "result": "DIRECT:contact.contact.phoneNumber",
+          "jev": {
+            "raw_choice": "contact.contact.phoneNumber",
+            "confidence": 0.93,
+            "top_probabilities": {
+              "contact.contact.phoneNumber": 0.93,
+              "ABSTAIN": 0.07,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c006",
+          "result": "DIRECT:personal.personal.birthDate",
+          "jev": {
+            "raw_choice": "personal.personal.birthDate",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "personal.personal.birthDate": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c007",
+          "result": "DIRECT:veteran.veteran.veteranStatus",
+          "jev": {
+            "raw_choice": "veteran.veteran.veteranStatus",
+            "confidence": 0.95,
+            "top_probabilities": {
+              "veteran.veteran.veteranStatus": 0.95,
+              "ABSTAIN": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c008",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "disability.disability.disabilityStatus",
+            "confidence": 0.63,
+            "top_probabilities": {
+              "disability.disability.disabilityStatus": 0.63,
+              "ABSTAIN": 0.24000000000000002,
+              "disability.disability.disabilityType": 0.11,
+              "disability.disability.disabilityGrade": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c009",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "military.military.militaryStatus",
+            "confidence": 0.4,
+            "top_probabilities": {
+              "military.military.militaryStatus": 0.41000000000000003,
+              "ABSTAIN": 0.32,
+              "military.military.militaryType": 0.24000000000000002,
+              "military.military.militaryBranch": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c010",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.91,
+            "top_probabilities": {
+              "ABSTAIN": 0.91,
+              "education.university.latestEducationType": 0.09,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c011",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "education.university.latestEducationType": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c012",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.7,
+            "top_probabilities": {
+              "ABSTAIN": 0.7,
+              "education.university.completionStatus": 0.26,
+              "education.graduateSchool.completionStatus": 0.03,
+              "education.university.attendanceType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c013",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.degreeLevel",
+            "confidence": 0.57,
+            "top_probabilities": {
+              "education.university.degreeLevel": 0.5700000000000001,
+              "ABSTAIN": 0.37,
+              "education.graduateSchool.degreeLevel": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c014",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.degreeLevel",
+            "confidence": 0.52,
+            "top_probabilities": {
+              "education.university.degreeLevel": 0.52,
+              "ABSTAIN": 0.38,
+              "education.graduateSchool.degreeLevel": 0.09999999999999999,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c015",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.55,
+            "top_probabilities": {
+              "ABSTAIN": 0.55,
+              "education.graduateSchool.country": 0.37,
+              "education.university.schoolRegion": 0.04,
+              "personal.personal.nationality": 0.02,
+              "contact.contact.residenceCountry": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c016",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.56,
+            "top_probabilities": {
+              "ABSTAIN": 0.56,
+              "education.graduateSchool.country": 0.35000000000000003,
+              "personal.personal.nationality": 0.03,
+              "education.university.schoolRegion": 0.02,
+              "contact.contact.residenceCountry": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c017",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.65,
+            "top_probabilities": {
+              "ABSTAIN": 0.65,
+              "education.university.schoolName": 0.3,
+              "education.graduateSchool.schoolName": 0.04,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c018",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.54,
+            "top_probabilities": {
+              "ABSTAIN": 0.54,
+              "education.university.schoolName": 0.4,
+              "education.graduateSchool.schoolName": 0.04,
+              "education.highSchool.schoolName": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c019",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.majorName",
+            "confidence": 0.57,
+            "top_probabilities": {
+              "education.university.majorName": 0.5700000000000001,
+              "ABSTAIN": 0.39,
+              "education.graduateSchool.majorName": 0.02,
+              "education.graduateSchool.majorField": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c020",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.7,
+            "top_probabilities": {
+              "ABSTAIN": 0.7,
+              "education.graduateSchool.admissionType": 0.19,
+              "education.university.startDate": 0.06999999999999999,
+              "education.graduateSchool.startDate": 0.02,
+              "education.university.attendanceType": 0.02
+            }
+          }
+        },
+        {
+          "candidate_id": "c021",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "education.university.startDate": 0.14,
+              "education.graduateSchool.admissionType": 0.05,
+              "education.graduateSchool.startDate": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c022",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.75,
+            "top_probabilities": {
+              "ABSTAIN": 0.75,
+              "education.university.startDate": 0.19,
+              "education.graduateSchool.admissionType": 0.03,
+              "education.graduateSchool.startDate": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c023",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.51,
+            "top_probabilities": {
+              "ABSTAIN": 0.51,
+              "education.university.completionStatus": 0.47000000000000003,
+              "education.graduateSchool.completionStatus": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c024",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.63,
+            "top_probabilities": {
+              "ABSTAIN": 0.63,
+              "education.university.completionStatus": 0.34,
+              "education.graduateSchool.completionStatus": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c025",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.7,
+            "top_probabilities": {
+              "ABSTAIN": 0.7,
+              "education.university.completionStatus": 0.29000000000000004,
+              "education.graduateSchool.completionStatus": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c026",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.gpaScore",
+            "confidence": 0.63,
+            "top_probabilities": {
+              "education.university.gpaScore": 0.63,
+              "ABSTAIN": 0.35000000000000003,
+              "education.graduateSchool.gpaScore": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c027",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.gpaScale",
+            "confidence": 0.68,
+            "top_probabilities": {
+              "education.university.gpaScale": 0.68,
+              "ABSTAIN": 0.18000000000000002,
+              "education.graduateSchool.gpaScale": 0.12,
+              "education.university.gpaScore": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c028",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "education.university.gpaScale",
+            "confidence": 0.53,
+            "top_probabilities": {
+              "education.university.gpaScale": 0.53,
+              "ABSTAIN": 0.28,
+              "education.graduateSchool.gpaScale": 0.15000000000000002,
+              "education.university.gpaScore": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c029",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.87,
+            "top_probabilities": {
+              "ABSTAIN": 0.87,
+              "education.university.gpaScore": 0.06999999999999999,
+              "education.university.gpaScale": 0.03,
+              "education.graduateSchool.gpaScale": 0.01,
+              "personal.personal.gender": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c030",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.98,
+            "top_probabilities": {
+              "ABSTAIN": 0.98,
+              "personal.personal.koreanFamilyName": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c031",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.96,
+            "top_probabilities": {
+              "ABSTAIN": 0.96,
+              "personal.personal.gender": 0.02,
+              "languages.languageSkill.conversationalLevel": 0.01,
+              "languages.languageSkill.language": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c032",
+          "result": "DIRECT:languages.languageSkill.language",
+          "jev": {
+            "raw_choice": "languages.languageSkill.language",
+            "confidence": 0.9,
+            "top_probabilities": {
+              "languages.languageSkill.language": 0.9,
+              "ABSTAIN": 0.07,
+              "languages.languageTest.language": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c033",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "languages.languageSkill.language",
+            "confidence": 0.75,
+            "top_probabilities": {
+              "languages.languageSkill.language": 0.75,
+              "languages.languageTest.language": 0.14,
+              "ABSTAIN": 0.11,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c034",
+          "result": "DIRECT:languages.languageTest.testName",
+          "jev": {
+            "raw_choice": "languages.languageTest.testName",
+            "confidence": 0.93,
+            "top_probabilities": {
+              "languages.languageTest.testName": 0.93,
+              "ABSTAIN": 0.07,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c035",
+          "result": "DIRECT:languages.languageTest.testName",
+          "jev": {
+            "raw_choice": "languages.languageTest.testName",
+            "confidence": 0.95,
+            "top_probabilities": {
+              "languages.languageTest.testName": 0.95,
+              "ABSTAIN": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c036",
+          "result": "DIRECT:languages.languageTest.grade",
+          "jev": {
+            "raw_choice": "languages.languageTest.grade",
+            "confidence": 0.89,
+            "top_probabilities": {
+              "languages.languageTest.grade": 0.89,
+              "ABSTAIN": 0.09,
+              "certifications.certificate.grade": 0.01,
+              "education.university.gpaScore": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c037",
+          "result": "DIRECT:languages.languageTest.acquisitionDate",
+          "jev": {
+            "raw_choice": "languages.languageTest.acquisitionDate",
+            "confidence": 0.87,
+            "top_probabilities": {
+              "languages.languageTest.acquisitionDate": 0.87,
+              "ABSTAIN": 0.13,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c038",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "languages.languageTest.acquisitionDate": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c039",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "languages.languageTest.acquisitionDate": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c040",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "education.university.latestEducationType": 0.03,
+              "education.university.completionStatus": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c041",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.72,
+            "top_probabilities": {
+              "ABSTAIN": 0.72,
+              "education.university.completionStatus": 0.25,
+              "education.graduateSchool.completionStatus": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c042",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "education.university.completionStatus": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c043",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.68,
+            "top_probabilities": {
+              "ABSTAIN": 0.68,
+              "education.graduateSchool.country": 0.21000000000000002,
+              "personal.personal.nationality": 0.06999999999999999,
+              "education.university.schoolRegion": 0.02,
+              "contact.contact.residenceCountry": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c044",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.75,
+            "top_probabilities": {
+              "ABSTAIN": 0.75,
+              "education.graduateSchool.admissionType": 0.18000000000000002,
+              "education.university.startDate": 0.04,
+              "education.graduateSchool.startDate": 0.02,
+              "veteran.veteran.veteranType": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c045",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.64,
+            "top_probabilities": {
+              "ABSTAIN": 0.64,
+              "education.university.completionStatus": 0.33,
+              "education.graduateSchool.completionStatus": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c046",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.48,
+            "top_probabilities": {
+              "ABSTAIN": 0.48,
+              "education.university.gpaScale": 0.43,
+              "education.graduateSchool.gpaScale": 0.08,
+              "education.university.gpaScore": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c047",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "languages.languageSkill.language",
+            "confidence": 0.68,
+            "top_probabilities": {
+              "languages.languageSkill.language": 0.68,
+              "ABSTAIN": 0.26,
+              "languages.languageTest.language": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c048",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.83,
+            "top_probabilities": {
+              "ABSTAIN": 0.83,
+              "careers.career.employmentStatus": 0.15000000000000002,
+              "veteran.veteran.veteranStatus": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c049",
+          "result": "DIRECT:careers.career.companyName",
+          "jev": {
+            "raw_choice": "careers.career.companyName",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "careers.career.companyName": 0.99,
+              "ABSTAIN": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c050",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.53,
+            "top_probabilities": {
+              "ABSTAIN": 0.53,
+              "contact.contact.residenceCountry": 0.22,
+              "personal.personal.nationality": 0.14,
+              "education.graduateSchool.country": 0.08,
+              "careers.career.companyName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c051",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.53,
+            "top_probabilities": {
+              "ABSTAIN": 0.53,
+              "contact.contact.residenceCountry": 0.23,
+              "personal.personal.nationality": 0.18000000000000002,
+              "education.graduateSchool.country": 0.04,
+              "careers.career.companyName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c052",
+          "result": "DIRECT:careers.career.department",
+          "jev": {
+            "raw_choice": "careers.career.department",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "careers.career.department": 0.97,
+              "ABSTAIN": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c053",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.92,
+            "top_probabilities": {
+              "ABSTAIN": 0.92,
+              "careers.career.employmentStatus": 0.060000000000000005,
+              "careers.career.department": 0.01,
+              "careers.career.employmentType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c054",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.95,
+            "top_probabilities": {
+              "ABSTAIN": 0.95,
+              "careers.career.startDate": 0.03,
+              "careers.career.position": 0.01,
+              "careers.career.responsibilities": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c055",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.93,
+            "top_probabilities": {
+              "ABSTAIN": 0.93,
+              "careers.career.startDate": 0.04,
+              "careers.career.endDate": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c056",
+          "result": "DIRECT:projects.project.role",
+          "jev": {
+            "raw_choice": "projects.project.role",
+            "confidence": 0.91,
+            "top_probabilities": {
+              "projects.project.role": 0.91,
+              "ABSTAIN": 0.08,
+              "careers.career.position": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c057",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.96,
+            "top_probabilities": {
+              "ABSTAIN": 0.96,
+              "projects.project.role": 0.02,
+              "careers.career.responsibilities": 0.01,
+              "careers.career.startDate": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c058",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "careers.career.startDate": 0.02,
+              "careers.career.endDate": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c059",
+          "result": "DIRECT:careers.career.employmentStatus",
+          "jev": {
+            "raw_choice": "careers.career.employmentStatus",
+            "confidence": 0.91,
+            "top_probabilities": {
+              "careers.career.employmentStatus": 0.91,
+              "ABSTAIN": 0.09,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c060",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.78,
+            "top_probabilities": {
+              "ABSTAIN": 0.78,
+              "careers.career.responsibilities": 0.09999999999999999,
+              "personal.personal.koreanFamilyName": 0.08,
+              "projects.project.activityDetails": 0.02,
+              "KOREAN_FULL_NAME": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c061",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "projects.project.projectName": 0.02,
+              "veteran.veteran.veteranType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c062",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.93,
+            "top_probabilities": {
+              "ABSTAIN": 0.93,
+              "projects.project.projectName": 0.06,
+              "projects.project.role": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c063",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.9,
+            "top_probabilities": {
+              "ABSTAIN": 0.9,
+              "projects.project.projectName": 0.08,
+              "projects.project.activityDetails": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c064",
+          "result": "DIRECT:projects.project.projectName",
+          "jev": {
+            "raw_choice": "projects.project.projectName",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "projects.project.projectName": 0.9400000000000001,
+              "ABSTAIN": 0.06,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c065",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "projects.project.startDate": 0.02,
+              "projects.project.activityDetails": 0.01,
+              "projects.project.endDate": 0.01,
+              "projects.project.projectName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c066",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.93,
+            "top_probabilities": {
+              "ABSTAIN": 0.93,
+              "projects.project.endDate": 0.02,
+              "projects.project.startDate": 0.02,
+              "projects.project.activityDetails": 0.01,
+              "projects.project.projectName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c067",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "projects.project.startDate": 0.02,
+              "projects.project.activityDetails": 0.01,
+              "projects.project.endDate": 0.01,
+              "projects.project.projectName": 0.01
+            }
+          }
+        },
+        {
+          "candidate_id": "c068",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.59,
+            "top_probabilities": {
+              "ABSTAIN": 0.59,
+              "projects.project.activityDetails": 0.35000000000000003,
+              "KOREAN_FULL_NAME": 0.02,
+              "education.graduateSchool.thesisSummary": 0.02,
+              "personal.personal.koreanFamilyName": 0.02
+            }
+          }
+        },
+        {
+          "candidate_id": "c069",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c070",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.88,
+            "top_probabilities": {
+              "ABSTAIN": 0.88,
+              "languages.languageSkill.language": 0.06999999999999999,
+              "languages.languageTest.language": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c071",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "languages.languageSkill.language": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c072",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.65,
+            "top_probabilities": {
+              "ABSTAIN": 0.65,
+              "contact.contact.residenceCountry": 0.19,
+              "personal.personal.nationality": 0.14,
+              "education.graduateSchool.country": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c073",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.64,
+            "top_probabilities": {
+              "ABSTAIN": 0.64,
+              "contact.contact.residenceCountry": 0.22,
+              "personal.personal.nationality": 0.13,
+              "education.graduateSchool.country": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c074",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "languages.languageSkill.language",
+            "confidence": 0.46,
+            "top_probabilities": {
+              "languages.languageSkill.language": 0.46,
+              "languages.languageTest.language": 0.28,
+              "ABSTAIN": 0.26,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c075",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.45,
+            "top_probabilities": {
+              "ABSTAIN": 0.45,
+              "languages.languageTest.language": 0.32,
+              "languages.languageSkill.language": 0.23,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c076",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c077",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c078",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.84,
+            "top_probabilities": {
+              "ABSTAIN": 0.84,
+              "certifications.certificate.issuer": 0.14,
+              "careers.career.companyName": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c079",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.95,
+            "top_probabilities": {
+              "ABSTAIN": 0.95,
+              "publications.publicationPatent.details": 0.03,
+              "health.health.healthDetails": 0.01,
+              "projects.project.activityDetails": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c080",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c081",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "publications.publicationPatent.type": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c082",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "certifications.certificate.name": 0.02,
+              "veteran.veteran.veteranType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c083",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.53,
+            "top_probabilities": {
+              "ABSTAIN": 0.53,
+              "education.graduateSchool.thesisTitle": 0.46,
+              "publications.publicationPatent.title": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c084",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "certifications.certificate.issuer": 0.19,
+              "education.graduateSchool.schoolName": 0.02,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c085",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "veteran.veteran.veteranType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c086",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.53,
+            "top_probabilities": {
+              "ABSTAIN": 0.53,
+              "certifications.certificate.grade": 0.44,
+              "languages.languageTest.grade": 0.02,
+              "education.university.gpaScore": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c087",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c088",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.79,
+            "top_probabilities": {
+              "ABSTAIN": 0.79,
+              "education.university.completionStatus": 0.2,
+              "education.graduateSchool.completionStatus": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c089",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.94,
+            "top_probabilities": {
+              "ABSTAIN": 0.9400000000000001,
+              "education.university.completionStatus": 0.05,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c090",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.69,
+            "top_probabilities": {
+              "ABSTAIN": 0.6900000000000001,
+              "education.university.completionStatus": 0.27,
+              "education.graduateSchool.completionStatus": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c091",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "personal.personal.koreanFamilyName": 0.03,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c092",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "personal.personal.koreanFamilyName": 0.02,
+              "veteran.veteran.veteranType": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c093",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c094",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c095",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c096",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "certifications.certificate.registrationNo": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c097",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c098",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.99,
+            "top_probabilities": {
+              "ABSTAIN": 0.99,
+              "personal.personal.gender": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c099",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.65,
+            "top_probabilities": {
+              "ABSTAIN": 0.65,
+              "languages.languageTest.registrationNo": 0.2,
+              "certifications.certificate.registrationNo": 0.14,
+              "disability.disability.disabilityRegistrationNumber": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c100",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 0.97,
+            "top_probabilities": {
+              "ABSTAIN": 0.97,
+              "languages.languageTest.registrationNo": 0.02,
+              "certifications.certificate.registrationNo": 0.01,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c101",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        },
+        {
+          "candidate_id": "c102",
+          "result": "NO_MATCH",
+          "jev": {
+            "raw_choice": "ABSTAIN",
+            "confidence": 1.0,
+            "top_probabilities": {
+              "ABSTAIN": 1.0,
+              "ENGLISH_FULL_NAME_FAMILY_FIRST": 0.0,
+              "ENGLISH_FULL_NAME_GIVEN_FIRST": 0.0,
+              "KOREAN_FULL_NAME": 0.0,
+              "careers.career.companyName": 0.0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

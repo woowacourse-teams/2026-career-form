@@ -1,0 +1,1230 @@
+{
+  "contract_version": "1.0",
+  "label_status": "DRAFT",
+  "profile_keys": "profile-keys-v1.json",
+  "sites": [
+    {
+      "site_id": "naver",
+      "request": "requests/naver.json",
+      "labels": [
+        {
+          "candidate_id": "c001",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "학력 단계 선택. 대응 키 없음"
+        },
+        {
+          "candidate_id": "c002",
+          "expected": "DIRECT:education.highSchool.schoolRegion",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c003",
+          "expected": "DIRECT:education.highSchool.schoolName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c004",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c005",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c006",
+          "expected": "DIRECT:education.highSchool.startDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c007",
+          "expected": "DIRECT:education.highSchool.endDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c008",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "학력 단계 선택. 대응 키 없음"
+        },
+        {
+          "candidate_id": "c009",
+          "expected": "DIRECT:education.university.schoolRegion",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c010",
+          "expected": "DIRECT:education.university.schoolName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c011",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c012",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c013",
+          "expected": "DIRECT:education.university.majorName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c014",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c015",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c016",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "부전공 여부나 구분으로 보임. minorStatus 후보"
+        },
+        {
+          "candidate_id": "c017",
+          "expected": "DIRECT:education.university.minorName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c018",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c019",
+          "expected": "DIRECT:education.university.gpaScore",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c020",
+          "expected": "DIRECT:education.university.gpaScale",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c021",
+          "expected": "DIRECT:education.university.startDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c022",
+          "expected": "DIRECT:education.university.endDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c023",
+          "expected": "DIRECT:education.university.completionStatus",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c024",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "학력 단계 선택. 대응 키 없음"
+        },
+        {
+          "candidate_id": "c025",
+          "expected": "DIRECT:education.highSchool.schoolRegion",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c026",
+          "expected": "DIRECT:education.highSchool.schoolName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c027",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c028",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c029",
+          "expected": "DIRECT:education.highSchool.startDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c030",
+          "expected": "DIRECT:education.highSchool.endDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 고등학교일 때 보이는 묶음으로 판단. 구분 값에 따라 단계가 바뀔 수 있음"
+        },
+        {
+          "candidate_id": "c031",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "학력 단계 선택. 대응 키 없음"
+        },
+        {
+          "candidate_id": "c032",
+          "expected": "DIRECT:education.university.schoolRegion",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c033",
+          "expected": "DIRECT:education.university.schoolName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c034",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c035",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c036",
+          "expected": "DIRECT:education.university.majorName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c037",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c038",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c039",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "부전공 여부나 구분으로 보임. minorStatus 후보"
+        },
+        {
+          "candidate_id": "c040",
+          "expected": "DIRECT:education.university.minorName",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c041",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c042",
+          "expected": "DIRECT:education.university.gpaScore",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c043",
+          "expected": "DIRECT:education.university.gpaScale",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c044",
+          "expected": "DIRECT:education.university.startDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c045",
+          "expected": "DIRECT:education.university.endDate",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c046",
+          "expected": "DIRECT:education.university.completionStatus",
+          "review": "NEEDS_REVIEW",
+          "note": "행의 구분 선택이 대학 계열일 때 보이는 묶음으로 판단. 대학원을 고르면 graduateSchool 키가 맞음"
+        },
+        {
+          "candidate_id": "c047",
+          "expected": "DIRECT:careers.career.employmentType",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c048",
+          "expected": "DIRECT:careers.career.companyName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c049",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c050",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c051",
+          "expected": "DIRECT:careers.career.department",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c052",
+          "expected": "DIRECT:careers.career.startDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c053",
+          "expected": "DIRECT:careers.career.endDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c054",
+          "expected": "DIRECT:careers.career.position",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c055",
+          "expected": "DIRECT:careers.career.responsibilities",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c056",
+          "expected": "DIRECT:certifications.certificate.name",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c057",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c058",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c059",
+          "expected": "DIRECT:certifications.certificate.grade",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c060",
+          "expected": "DIRECT:certifications.certificate.acquisitionDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c061",
+          "expected": "DIRECT:certifications.certificate.issuer",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c062",
+          "expected": "DIRECT:languages.languageTest.language",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c063",
+          "expected": "DIRECT:languages.languageTest.testName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c064",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 숨김 보조 입력으로 보임"
+        },
+        {
+          "candidate_id": "c065",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c066",
+          "expected": "DIRECT:languages.languageTest.grade",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c067",
+          "expected": "DIRECT:languages.languageTest.grade",
+          "review": "NEEDS_REVIEW",
+          "note": "점수와 등급이 같은 키"
+        },
+        {
+          "candidate_id": "c068",
+          "expected": "DIRECT:languages.languageTest.acquisitionDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c069",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "어학 시험 발급기관 키 없음. 자격증 issuer는 다른 기록 유형"
+        }
+      ]
+    },
+    {
+      "site_id": "lg-ai-research",
+      "request": "requests/lg-ai-research.json",
+      "labels": [
+        {
+          "candidate_id": "c001",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c002",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c003",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c004",
+          "expected": "DERIVED:KOREAN_FULL_NAME",
+          "review": "NEEDS_REVIEW",
+          "note": "성 칸이 따로 없어 전체 이름 칸으로 판단"
+        },
+        {
+          "candidate_id": "c005",
+          "expected": "DIRECT:contact.contact.phoneNumber",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c006",
+          "expected": "DIRECT:personal.personal.gender",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c007",
+          "expected": "DIRECT:personal.personal.birthDate",
+          "review": "NEEDS_REVIEW",
+          "note": "생년월일 년·월·일 분할 선택"
+        },
+        {
+          "candidate_id": "c008",
+          "expected": "DIRECT:personal.personal.birthDate",
+          "review": "NEEDS_REVIEW",
+          "note": "생년월일 년·월·일 분할 선택"
+        },
+        {
+          "candidate_id": "c009",
+          "expected": "DIRECT:personal.personal.birthDate",
+          "review": "NEEDS_REVIEW",
+          "note": "생년월일 년·월·일 분할 선택"
+        },
+        {
+          "candidate_id": "c010",
+          "expected": "DIRECT:contact.contact.email",
+          "review": "NEEDS_REVIEW",
+          "note": "이메일 아이디 분할 입력"
+        },
+        {
+          "candidate_id": "c011",
+          "expected": "DIRECT:contact.contact.email",
+          "review": "NEEDS_REVIEW",
+          "note": "이메일 도메인 분할 선택"
+        },
+        {
+          "candidate_id": "c012",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c013",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        }
+      ]
+    },
+    {
+      "site_id": "ahnlab",
+      "request": "requests/ahnlab.json",
+      "labels": [
+        {
+          "candidate_id": "c001",
+          "expected": "DERIVED:ENGLISH_FULL_NAME_GIVEN_FIRST",
+          "review": "NEEDS_REVIEW",
+          "note": "영문 성 칸이 따로 없어 전체 영문 이름으로 판단. 순서 확인 필요"
+        },
+        {
+          "candidate_id": "c002",
+          "expected": "DIRECT:personal.personal.gender",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c003",
+          "expected": "DIRECT:personal.personal.birthDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c004",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c005",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c006",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c007",
+          "expected": "DIRECT:compensation.compensation.desiredSalary",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c008",
+          "expected": "DIRECT:compensation.compensation.previousSalary",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c009",
+          "expected": "DERIVED:KOREAN_FULL_NAME",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c010",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c011",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "추천인 연락처는 지원자 연락처가 아님"
+        },
+        {
+          "candidate_id": "c012",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c013",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c014",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c015",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c016",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "라벨 없는 입력"
+        },
+        {
+          "candidate_id": "c017",
+          "expected": "DIRECT:personal.personal.nationality",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c018",
+          "expected": "DIRECT:contact.contact.postalCode",
+          "review": "NEEDS_REVIEW",
+          "note": "주소 칸 3개 중 첫째. 우편번호로 판단"
+        },
+        {
+          "candidate_id": "c019",
+          "expected": "DIRECT:contact.contact.addressLine1",
+          "review": "NEEDS_REVIEW",
+          "note": "주소 칸 3개 중 둘째"
+        },
+        {
+          "candidate_id": "c020",
+          "expected": "DIRECT:contact.contact.addressLine2",
+          "review": "NEEDS_REVIEW",
+          "note": "주소 칸 3개 중 셋째"
+        },
+        {
+          "candidate_id": "c021",
+          "expected": "DIRECT:disability.disability.disabilityStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c022",
+          "expected": "DIRECT:disability.disability.disabilityGrade",
+          "review": "CONFIRMED",
+          "note": "장애 정도(심한/심하지 않은)"
+        },
+        {
+          "candidate_id": "c023",
+          "expected": "DIRECT:disability.disability.disabilityType",
+          "review": "CONFIRMED",
+          "note": "장애 유형 목록"
+        },
+        {
+          "candidate_id": "c024",
+          "expected": "DIRECT:veteran.veteran.veteranStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c025",
+          "expected": "DIRECT:veteran.veteran.veteranNumber",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c026",
+          "expected": "DIRECT:veteran.veteran.veteranRelation",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c027",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "보훈 비율 키 없음"
+        },
+        {
+          "candidate_id": "c028",
+          "expected": "DIRECT:military.military.militaryStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c029",
+          "expected": "DIRECT:military.military.exemptionReason",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c030",
+          "expected": "DIRECT:military.military.militaryBranch",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c031",
+          "expected": "DIRECT:military.military.militarySpecialty",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c032",
+          "expected": "DIRECT:military.military.militaryRank",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c033",
+          "expected": "DIRECT:military.military.serviceStartDate",
+          "review": "NEEDS_REVIEW",
+          "note": "병역 라벨 없는 입력 2개 중 첫째. 복무 기간으로 판단"
+        },
+        {
+          "candidate_id": "c034",
+          "expected": "DIRECT:military.military.serviceEndDate",
+          "review": "NEEDS_REVIEW",
+          "note": "병역 라벨 없는 입력 2개 중 둘째"
+        },
+        {
+          "candidate_id": "c035",
+          "expected": "DIRECT:military.military.dischargeType",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c036",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "제대구분 기타 직접입력"
+        },
+        {
+          "candidate_id": "c037",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        }
+      ]
+    },
+    {
+      "site_id": "krafton",
+      "request": "requests/krafton.json",
+      "labels": [
+        {
+          "candidate_id": "c001",
+          "expected": "DIRECT:personal.personal.koreanFamilyName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c002",
+          "expected": "DIRECT:personal.personal.koreanGivenName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c003",
+          "expected": "DIRECT:contact.contact.email",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c004",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "전화 국가번호는 국적이 아님"
+        },
+        {
+          "candidate_id": "c005",
+          "expected": "DIRECT:contact.contact.phoneNumber",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c006",
+          "expected": "DIRECT:personal.personal.birthDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c007",
+          "expected": "DIRECT:veteran.veteran.veteranStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c008",
+          "expected": "DIRECT:disability.disability.disabilityStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c009",
+          "expected": "DIRECT:military.military.militaryStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c010",
+          "expected": "DIRECT:education.university.latestEducationType",
+          "review": "NEEDS_REVIEW",
+          "note": "최종 학력 선택"
+        },
+        {
+          "candidate_id": "c011",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c012",
+          "expected": "DIRECT:education.university.completionStatus",
+          "review": "NEEDS_REVIEW",
+          "note": "학적 상태와 졸업 상태가 같은 키"
+        },
+        {
+          "candidate_id": "c013",
+          "expected": "DIRECT:education.university.degreeLevel",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c014",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c015",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "학교 국가 선택. university 국가 키 없음"
+        },
+        {
+          "candidate_id": "c016",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c017",
+          "expected": "DIRECT:education.university.schoolName",
+          "review": "NEEDS_REVIEW",
+          "note": "학교명 검색 입력"
+        },
+        {
+          "candidate_id": "c018",
+          "expected": "DIRECT:education.university.schoolName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c019",
+          "expected": "DIRECT:education.university.majorName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c020",
+          "expected": "DIRECT:education.university.transferStatus",
+          "review": "NEEDS_REVIEW",
+          "note": "신입학/편입학 구분"
+        },
+        {
+          "candidate_id": "c021",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c022",
+          "expected": "DIRECT:education.university.startDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c023",
+          "expected": "DIRECT:education.university.completionStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c024",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c025",
+          "expected": "DIRECT:education.university.endDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c026",
+          "expected": "DIRECT:education.university.gpaScore",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c027",
+          "expected": "DIRECT:education.university.gpaScale",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c028",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c029",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c030",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c031",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c032",
+          "expected": "DIRECT:languages.languageTest.language",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c033",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c034",
+          "expected": "DIRECT:languages.languageTest.testName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c035",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "시험명 기타 직접입력"
+        },
+        {
+          "candidate_id": "c036",
+          "expected": "DIRECT:languages.languageTest.grade",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c037",
+          "expected": "DIRECT:languages.languageTest.acquisitionDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c038",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c039",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c040",
+          "expected": "DIRECT:education.university.latestEducationType",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c041",
+          "expected": "DIRECT:education.university.completionStatus",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c042",
+          "expected": "DIRECT:education.university.degreeLevel",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c043",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c044",
+          "expected": "DIRECT:education.university.transferStatus",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c045",
+          "expected": "DIRECT:education.university.completionStatus",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c046",
+          "expected": "DIRECT:education.university.gpaScale",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c047",
+          "expected": "DIRECT:languages.languageTest.language",
+          "review": "NEEDS_REVIEW",
+          "note": "같은 항목의 커스텀 선택 UI로 보임"
+        },
+        {
+          "candidate_id": "c048",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c049",
+          "expected": "DIRECT:careers.career.companyName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c050",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "근무 국가 키 없음"
+        },
+        {
+          "candidate_id": "c051",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c052",
+          "expected": "DIRECT:careers.career.department",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c053",
+          "expected": "DIRECT:careers.career.employmentType",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c054",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c055",
+          "expected": "DIRECT:careers.career.position",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c056",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "경력의 담당 역할. 프로젝트 role은 다른 기록 유형, responsibilities 후보"
+        },
+        {
+          "candidate_id": "c057",
+          "expected": "DIRECT:careers.career.startDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c058",
+          "expected": "DIRECT:careers.career.endDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c059",
+          "expected": "DIRECT:careers.career.employmentStatus",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c060",
+          "expected": "DIRECT:careers.career.responsibilities",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c061",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c062",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c063",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c064",
+          "expected": "DIRECT:projects.project.projectName",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c065",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c066",
+          "expected": "DIRECT:projects.project.startDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c067",
+          "expected": "DIRECT:projects.project.endDate",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c068",
+          "expected": "DIRECT:projects.project.activityDetails",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c069",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c070",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c071",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c072",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c073",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c074",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c075",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c076",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c077",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c078",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c079",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED",
+          "note": "해외 경험은 지원하지 않는 범주"
+        },
+        {
+          "candidate_id": "c080",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c081",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "수상·논문·특허·자격 분류. publications 후보"
+        },
+        {
+          "candidate_id": "c082",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c083",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "분류에 따라 publication title 또는 certificate name 후보"
+        },
+        {
+          "candidate_id": "c084",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "분류에 따라 certificate issuer 후보"
+        },
+        {
+          "candidate_id": "c085",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "분류에 따라 certificate acquisitionDate 후보"
+        },
+        {
+          "candidate_id": "c086",
+          "expected": "NO_MATCH",
+          "review": "NEEDS_REVIEW",
+          "note": "분류에 따라 certificate grade 후보"
+        },
+        {
+          "candidate_id": "c087",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c088",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c089",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c090",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c091",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c092",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c093",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c094",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c095",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c096",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c097",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c098",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c099",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c100",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c101",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        },
+        {
+          "candidate_id": "c102",
+          "expected": "NO_MATCH",
+          "review": "CONFIRMED"
+        }
+      ]
+    }
+  ]
+}
