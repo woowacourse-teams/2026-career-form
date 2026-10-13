@@ -67,6 +67,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [지원서 분석 데이터 경계](topics/application-form-analysis-data-boundary.md) | 비식별 공급자 투영과 로컬 DOM 실행 경계 | 2026-09-23 |
 | [OpenAI 분석 예산과 안전 진단](topics/openai-analysis-budget-and-diagnostics.md) | 준비,필드/상호작용 시간 예산 분리와 비식별 실패 분류 | 2026-09-24 |
 | [Jev,OpenAI 호출 추적](topics/provider-call-tracing.md) | LangSmith Java SDK, 비식별 투영과 관측 실패 격리 | 2026-10-01 |
+| [필드 매핑 공급자 벤치마크](topics/field-mapping-benchmark.md) | 고정 비식별 요청, 칸별 정답 라벨 초안과 공급자별 지표 | 2026-10-13 |
+| [Jev fields 요청 한도와 응답 검증](topics/jev-field-request-limits.md) | 질문 수 토큰 한도와 확률 합 검증 거부 | 2026-10-13 |
 | [범용 분할 이메일 보호](topics/generic-split-email-safety.md) | 아이디 칸의 전체 주소 입력 차단과 쓰기 직전 재검증 | 2026-10-01 |
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 계약 1.1 원인별 집계, 설치 revision 근거와 비교 보류 및 과거 기준선 | 2026-10-09 |
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모·DOM 검증, 후보 관측 일치와 설치본 snapshot 기반 보고 | 2026-10-09 |

@@ -470,3 +470,9 @@
 - Source-Revision: 3539437b04cb50c42f04b8d4b68a001cefdc173e
 - 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.
+
+## [2026-10-13] ingest | CF-206 필드 매핑 공급자 벤치마크
+
+- Approval-Digest: a9a01459b73f906d1d16563fd8c566c8603c51f57681623df764e91964943808
+- Source-Revision: b5ee3a85b51fa328897eb001dfd1b1e527204b6a
+- 승인한 다섯 후보를 [CF-206 bundle](../raw/issues/CF-206/manifest.md)에 기록하고 [필드 매핑 공급자 벤치마크](topics/field-mapping-benchmark.md), [Jev fields 요청 한도와 응답 검증](topics/jev-field-request-limits.md) topic을 새로 만들었다. 기존 raw는 보존했다.
