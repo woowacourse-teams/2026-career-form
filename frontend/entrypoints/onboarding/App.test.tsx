@@ -17,6 +17,15 @@ function createRepository(): ProfileRepository {
 beforeEach(() => vi.spyOn(window, "scrollTo").mockImplementation(() => {}));
 afterEach(() => vi.restoreAllMocks());
 
+it("첫 설치 선택 화면에서는 자동 기입 준비가 공고 저장보다 먼저 나온다", () => {
+  render(<App repository={createRepository()} />);
+  const choices = screen.getAllByRole("heading", { level: 2 });
+  expect(choices.map((heading) => heading.textContent)).toEqual([
+    "내 정보는 한 번만",
+    "관심 공고, 놓치지 않게",
+  ]);
+});
+
 it("설치 후 자동 기입을 선택하면 설치 안내 없이 기본 정보만 등록한다", async () => {
   const repository = createRepository();
   render(<App repository={repository} />);

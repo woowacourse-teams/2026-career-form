@@ -287,26 +287,6 @@ function Onboarding({
         </p>
         <div className={styles.choiceGrid}>
           <section className={styles.choiceCard}>
-            <span className={styles.choiceBadge}>프로필 없이 바로 시작</span>
-            <h2>관심 공고, 놓치지 않게</h2>
-            <p>
-              공고 링크와 마감을 저장하고 원하는 시간에 알림을 받으세요. 프로필
-              등록 없이 바로 사용할 수 있어요.
-            </p>
-            <button
-              className={styles.choiceAction}
-              onClick={() => {
-                track("onboarding_postings_selected", { surface });
-                setPostingFlow(true);
-                setChoosing(false);
-                go(0);
-              }}
-            >
-              공고 저장부터 시작하기 <Icon name="arrow" />
-            </button>
-            <small>패널에서 시작 → 정보 입력 → 지원 완료</small>
-          </section>
-          <section className={styles.choiceCard}>
             <span className={styles.choiceBadge}>반복 입력 줄이기</span>
             <h2>내 정보는 한 번만</h2>
             <p>
@@ -330,6 +310,26 @@ function Onboarding({
               자동 기입 준비하기 <Icon name="arrow" />
             </button>
             <small>프로필 등록 → 자동 기입 → 결과 확인</small>
+          </section>
+          <section className={styles.choiceCard}>
+            <span className={styles.choiceBadge}>프로필 없이 바로 시작</span>
+            <h2>관심 공고, 놓치지 않게</h2>
+            <p>
+              공고 링크와 마감을 저장하고 원하는 시간에 알림을 받으세요. 프로필
+              등록 없이 바로 사용할 수 있어요.
+            </p>
+            <button
+              className={styles.choiceAction}
+              onClick={() => {
+                track("onboarding_postings_selected", { surface });
+                setPostingFlow(true);
+                setChoosing(false);
+                go(0);
+              }}
+            >
+              공고 저장부터 시작하기 <Icon name="arrow" />
+            </button>
+            <small>패널에서 시작 → 정보 입력 → 지원 완료</small>
           </section>
         </div>
         <p className={styles.choiceNote}>
