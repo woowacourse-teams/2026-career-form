@@ -43,9 +43,9 @@ class MongoCommandMetricsTest {
             listener.commandFailed(new CommandFailedEvent(null, 2, 11, connection,
                 "private-db", "find", 80_000_000, new IllegalStateException("private-error")));
 
-            assertThat(registry.get("career.form.mongo.command").tag("outcome", "success").timer()
+            assertThat(registry.get("career.form.mongo.command").tags("command", "find", "outcome", "success").timer()
                 .totalTime(TimeUnit.MILLISECONDS)).isEqualTo(50);
-            assertThat(registry.get("career.form.mongo.command").tag("outcome", "failure").timer().count()).isEqualTo(1);
+            assertThat(registry.get("career.form.mongo.command").tags("command", "find", "outcome", "failure").timer().count()).isEqualTo(1);
             assertThat(appender.list).extracting(event -> event.getFormattedMessage())
                 .anySatisfy(message -> assertThat(message).contains("requestId=00000000-0000-0000-0000-000000000001"))
                 .anySatisfy(message -> assertThat(message).contains("requestId=00000000-0000-0000-0000-000000000002"))

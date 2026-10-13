@@ -35,13 +35,19 @@ public final class MongoCommandMetrics implements CommandListener {
         this.metrics = metrics;
         this.environment = Set.of("dev", "staging", "prod", "local").contains(environment) ? environment : "UNKNOWN";
         this.database = database;
+        for (var command : COMMANDS) {
+            metrics.initialize("command", "command", command, "success", "failure", "timeout");
+        }
+        metrics.initialize("command", "command", "OTHER", "success", "failure", "timeout");
     }
 
     @Override
     public void commandStarted(CommandStartedEvent event) {
         var requestId = MDC.get("requestId");
         var safeId = requestId != null && requestId.matches("[0-9a-fA-F-]{36}") ? requestId : "none";
-        pending.put(key(event), new Context(safeId, command(event), event.getOperationId()));
+        var operation = MDC.get("dbOperation");
+        var safeOperation = operation == null ? "none" : MongoOperationObservation.operationName(operation);
+        pending.put(key(event), new Context(safeId, command(event), event.getOperationId(), safeOperation));
     }
 
     @Override
@@ -59,12 +65,13 @@ public final class MongoCommandMetrics implements CommandListener {
 
     private void complete(CommandEvent event, String outcome, long nanos, String failure) {
         var previous = pending.remove(key(event));
-        var context = previous == null ? new Context("none", command(event), event.getOperationId()) : previous;
+        var context = previous == null ? new Context("none", command(event), event.getOperationId(), "none") : previous;
         metrics.record("command", "command", context.command(), outcome, nanos);
-        log.info("DB_COMMAND env={} db={} command={} outcome={} durationMs={} failure={} requestId={} mongoRequestId={} mongoOperationId={}",
+        log.info("DB_COMMAND env={} db={} command={} outcome={} durationMs={} failure={} requestId={} mongoRequestId={} mongoOperationId={} operation={} mongoServerConnectionId={}",
             environment, database != null && database.equals(event.getDatabaseName()) ? environment : "shared",
             context.command(), outcome, TimeUnit.NANOSECONDS.toMillis(nanos), failure,
-            context.requestId(), event.getRequestId(), context.operationId());
+            context.requestId(), event.getRequestId(), context.operationId(), context.operation(),
+            event.getConnectionDescription().getConnectionId().getServerValue());
     }
 
     private static Key key(CommandEvent event) {
@@ -78,6 +85,6 @@ public final class MongoCommandMetrics implements CommandListener {
     private record Key(ConnectionId connection, int request) {
     }
 
-    private record Context(String requestId, String command, long operationId) {
+    private record Context(String requestId, String command, long operationId, String operation) {
     }
 }

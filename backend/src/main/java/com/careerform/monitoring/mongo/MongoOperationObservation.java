@@ -15,7 +15,7 @@ public final class MongoOperationObservation {
     private static final Logger log = LoggerFactory.getLogger(MongoOperationObservation.class);
     private static final Set<String> OPERATIONS = Set.of("find", "findOne", "findAll", "findById", "save", "insert",
         "insertAll", "remove", "updateFirst", "updateMulti", "upsert", "findAndModify", "findAndRemove",
-        "findAllAndRemove", "aggregate", "aggregateStream", "count", "exactCount", "estimatedCount", "exists", "findDistinct");
+        "findAllAndRemove", "findAndReplace", "aggregate", "aggregateStream", "count", "exactCount", "estimatedCount", "exists", "findDistinct");
     private final MongoMetrics metrics;
     private final String environment;
     private final ThreadLocal<Boolean> observing = new ThreadLocal<>();
@@ -23,6 +23,10 @@ public final class MongoOperationObservation {
     public MongoOperationObservation(MongoMetrics metrics, String environment) {
         this.metrics = metrics;
         this.environment = Set.of("dev", "staging", "prod", "local").contains(environment) ? environment : "UNKNOWN";
+        for (var operation : OPERATIONS) {
+            metrics.initialize("operation", "operation", operation, "success", "failure");
+        }
+        metrics.initialize("operation", "operation", "OTHER", "success", "failure");
     }
 
     public Object proxy(MongoTemplate template) {
@@ -39,7 +43,9 @@ public final class MongoOperationObservation {
         if (Boolean.TRUE.equals(observing.get())) {
             return invocation.proceed();
         }
-        var safeOperation = OPERATIONS.contains(operation) ? operation : "OTHER";
+        var safeOperation = operationName(operation);
+        var previousOperation = MDC.get("dbOperation");
+        MDC.put("dbOperation", safeOperation);
         observing.set(true);
         var started = System.nanoTime();
         var outcome = "success";
@@ -52,6 +58,11 @@ public final class MongoOperationObservation {
             throw exception;
         } finally {
             observing.remove();
+            if (previousOperation == null) {
+                MDC.remove("dbOperation");
+            } else {
+                MDC.put("dbOperation", previousOperation);
+            }
             var nanos = System.nanoTime() - started;
             metrics.record("operation", "operation", safeOperation, outcome, nanos);
             var requestId = MDC.get("requestId");
@@ -64,5 +75,9 @@ public final class MongoOperationObservation {
     @FunctionalInterface
     public interface Invocation {
         Object proceed() throws Throwable;
+    }
+
+    static String operationName(String operation) {
+        return operation != null && OPERATIONS.contains(operation) ? operation : "OTHER";
     }
 }
