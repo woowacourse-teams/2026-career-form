@@ -1,13 +1,13 @@
 # CF-193 Knowledge Bundle
 
 > Issue: CF-193
-> Collected: 2026-10-12
-> Approval-Digest: eea777b397530073223f8dde4d136056a3edb99391d3a4c5bf27968b0b414859
-> Source-Revision: a1494f67fb6eaa7b47f328254c1747045670dbae
+> Collected: 2026-10-13
+> Approval-Digest: 8ff319811d59ad9d3db60a1b14a87bdf53acb34f44e6755289f0226655a7edf1
+> Source-Revision: 070b6c55185da237903ec915b2798a8ace7cf47e
 
 ## landing-onboarding
 
-> Payload: [간단 프로필 등록 온보딩](documents/landing-onboarding.md)
+> Payload: [단계형 프로필 등록 온보딩](documents/landing-onboarding.md)
 > Supersedes: [CF-96 랜딩·온보딩](../CF-96/documents/landing-onboarding.md)
 
 ## usage-analytics
