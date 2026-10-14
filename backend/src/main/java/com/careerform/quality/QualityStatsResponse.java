@@ -22,7 +22,7 @@ public record QualityStatsResponse(Instant from, Instant to, List<Row> rows, Lis
                       Double humanCollectedCoverage, Double humanMappedCoverage, Double humanWrittenCoverage, Double humanRetainedCoverage,
                       String humanLabel, String observationLabel, long aiCalls, long aiFailures, long aiTimeouts,
                       Double aiFailureRate, Double aiTimeoutRate, Long analysisP95Ms, long analysisSamples, long analysisOverflow,
-                      Long aiP95Ms, long aiSamples, long aiOverflow, Map<String, Long> reasons) {
+                      Long aiP95Ms, long aiSamples, long aiOverflow, Map<String, Long> reasons, QualityObservedStats observed) {
         public Row { reasons = Map.copyOf(reasons); }
     }
 

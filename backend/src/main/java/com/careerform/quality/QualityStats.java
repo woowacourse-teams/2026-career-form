@@ -105,7 +105,8 @@ public final class QualityStats {
             human.discovered(), human.mapped(), inputCoverageMissing ? null : human.written(), retentionCoverageMissing ? null : human.retained(),
             "사람 확인 분모, 정확도 미검증", "클라이언트 보고, 입력 후 1초 확인",
             calls, failures, timeouts, ratio(failures, calls), ratio(timeouts, calls), analysisTime.p95(), analysisTime.samples(), analysisTime.overflow(),
-            aiTime.p95(), aiTime.samples(), aiTime.overflow(), reasons);
+            aiTime.p95(), aiTime.samples(), aiTime.overflow(), reasons,
+            QualityObservedStats.from(sources.stream().map(source -> new QualityObservedStats.Sample(source.id(), source.value())).toList()));
     }
 
     private QualityMetrics.Counts counts(List<Source> sources, Function<QualityDailyAggregate.Contribution, QualityMetrics.Counts> choose) {
