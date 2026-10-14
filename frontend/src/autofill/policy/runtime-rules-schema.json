@@ -1,0 +1,327 @@
+{
+  "$object": {
+    "sectionSelector": "string",
+    "presentationSelector": "string",
+    "placeholderAttributes": {
+      "$array": "string"
+    },
+    "placeholderValues": {
+      "$array": "string"
+    },
+    "autocomplete": {
+      "$object": {
+        "confirmationDataKey": "string",
+        "confirmationValue": "boolean",
+        "invalidResultIds": {
+          "$array": "string"
+        },
+        "readyCount": "number"
+      },
+      "$required": [
+        "confirmationDataKey",
+        "confirmationValue",
+        "invalidResultIds",
+        "readyCount"
+      ]
+    },
+    "hiddenCode": {
+      "$object": {
+        "rowSelector": "string",
+        "rowRelation": {
+          "$enum": ["DIRECT_CHILD", "DESCENDANT"]
+        },
+        "overwriteSelections": "boolean",
+        "schoolMatch": {
+          "$object": {
+            "mode": {
+              "$enum": ["NAME_ONLY", "NAME_AND_DETAIL"]
+            },
+            "splitPosition": {
+              "$enum": ["FIRST", "LAST"]
+            },
+            "requireDetail": "boolean",
+            "unspecifiedRegion": {
+              "$enum": ["REJECT", "UNIQUE_CATALOG"]
+            },
+            "requireUniqueCampus": "boolean"
+          },
+          "$required": [
+            "mode",
+            "splitPosition",
+            "requireDetail",
+            "unspecifiedRegion",
+            "requireUniqueCampus"
+          ]
+        },
+        "protectCatalogText": "boolean"
+      },
+      "$required": [
+        "rowSelector",
+        "rowRelation",
+        "overwriteSelections",
+        "schoolMatch",
+        "protectCatalogText"
+      ]
+    },
+    "components": {
+      "$object": {
+        "employment": {
+          "$object": {
+            "checkedValue": "string",
+            "uncheckedValue": "string",
+            "allowUncheck": "boolean"
+          },
+          "$required": ["checkedValue", "uncheckedValue", "allowUncheck"]
+        },
+        "radio": {
+          "$object": {
+            "optionSelector": "string",
+            "overwrite": "boolean"
+          },
+          "$required": ["optionSelector", "overwrite"]
+        },
+        "gpa": {
+          "$object": {
+            "requirePair": "boolean",
+            "scaleBeforeScore": "boolean",
+            "scoreSelector": "string",
+            "scaleSelector": "string"
+          },
+          "$required": [
+            "requirePair",
+            "scaleBeforeScore",
+            "scoreSelector",
+            "scaleSelector"
+          ]
+        },
+        "row": {
+          "$object": {
+            "separator": "string",
+            "indexPattern": "string",
+            "singletonIndex": "number",
+            "maxIndex": "number",
+            "requireContiguous": "boolean"
+          },
+          "$required": [
+            "separator",
+            "indexPattern",
+            "singletonIndex",
+            "maxIndex",
+            "requireContiguous"
+          ]
+        },
+        "major": {
+          "$object": {
+            "nameSelector": "string",
+            "classificationSelector": "string",
+            "fieldSelector": "string",
+            "baseCount": "number",
+            "newRowPosition": {
+              "$enum": ["FIRST", "LAST"]
+            },
+            "sourceCategory": {
+              "$enum": [
+                "education",
+                "careers",
+                "languages",
+                "projects",
+                "certifications"
+              ]
+            },
+            "requiredParts": {
+              "$array": {
+                "$enum": ["name", "classification", "field"]
+              }
+            },
+            "startIndex": "number",
+            "requireContiguous": "boolean",
+            "actionTemplate": "string"
+          },
+          "$required": [
+            "nameSelector",
+            "classificationSelector",
+            "fieldSelector",
+            "baseCount",
+            "newRowPosition",
+            "sourceCategory",
+            "requiredParts",
+            "startIndex",
+            "requireContiguous",
+            "actionTemplate"
+          ]
+        },
+        "search": {
+          "$object": {
+            "languageQualifierKinds": {
+              "$array": "string"
+            },
+            "languageSuffixTemplate": "string",
+            "selectionMode": {
+              "$enum": ["CLICK", "KEYBOARD_WHEN_IDENTIFIED"]
+            },
+            "confirmationMode": {
+              "$enum": ["VALUE", "CHECKED_OPTION"]
+            },
+            "closedPopup": {
+              "$enum": ["UNMOUNTED", "HIDDEN_OR_UNMOUNTED"]
+            },
+            "preferCatalogOptions": "boolean"
+          },
+          "$required": [
+            "languageQualifierKinds",
+            "languageSuffixTemplate",
+            "selectionMode",
+            "confirmationMode",
+            "closedPopup",
+            "preferCatalogOptions"
+          ]
+        },
+        "address": {
+          "$object": {
+            "verification": {
+              "$enum": ["POSTAL_ONLY", "POSTAL_AND_ADDRESS"]
+            },
+            "requireClosed": "boolean",
+            "zipIndex": "number",
+            "addressIndex": "number",
+            "detailIndex": "number",
+            "protectExisting": "boolean",
+            "fieldCount": "number",
+            "selectionStrategy": {
+              "$enum": ["FIRST_RESULT"]
+            }
+          },
+          "$required": [
+            "verification",
+            "requireClosed",
+            "zipIndex",
+            "addressIndex",
+            "detailIndex",
+            "protectExisting",
+            "fieldCount",
+            "selectionStrategy"
+          ]
+        },
+        "calendar": {
+          "$object": {
+            "allowDayFallback": "boolean",
+            "resultMonthPattern": "string",
+            "resultDayPattern": "string",
+            "resultSeparatorPattern": "string",
+            "clearMismatchedNewValue": "boolean",
+            "clearControlCount": "number"
+          },
+          "$required": [
+            "allowDayFallback",
+            "resultMonthPattern",
+            "resultDayPattern",
+            "resultSeparatorPattern",
+            "clearMismatchedNewValue",
+            "clearControlCount"
+          ]
+        },
+        "workflow": {
+          "$object": {
+            "requireAdapterResponse": "boolean",
+            "enforceUniqueEmail": "boolean",
+            "emailCommitDriver": "boolean",
+            "driverFailureLabel": "boolean",
+            "settleEmailSuggestions": "boolean",
+            "verifySettledValues": "boolean"
+          },
+          "$required": [
+            "requireAdapterResponse",
+            "enforceUniqueEmail",
+            "emailCommitDriver",
+            "driverFailureLabel",
+            "settleEmailSuggestions",
+            "verifySettledValues"
+          ]
+        },
+        "timeouts": {
+          "$object": {
+            "defaultMs": "number",
+            "pollMs": "number",
+            "searchMs": "number",
+            "navigationMs": "number",
+            "addressCloseMs": "number"
+          },
+          "$required": [
+            "defaultMs",
+            "pollMs",
+            "searchMs",
+            "navigationMs",
+            "addressCloseMs"
+          ]
+        },
+        "collection": {
+          "$object": {
+            "includeSearchOptions": "boolean",
+            "ownedLabelsOnly": "boolean",
+            "revalidateAdapterRows": "boolean"
+          },
+          "$required": [
+            "includeSearchOptions",
+            "ownedLabelsOnly",
+            "revalidateAdapterRows"
+          ]
+        },
+        "fingerprint": {
+          "$object": {
+            "element": "string",
+            "control": "string",
+            "selector": "string",
+            "count": "number"
+          },
+          "$required": ["element", "control", "selector", "count"]
+        }
+      },
+      "$required": [
+        "radio",
+        "row",
+        "workflow",
+        "timeouts",
+        "collection",
+        "fingerprint"
+      ]
+    },
+    "addressFields": {
+      "$object": {
+        "selectorTemplate": "string",
+        "inputType": "string",
+        "requireId": "boolean",
+        "requireName": "boolean",
+        "readOnly": {
+          "$array": "boolean"
+        },
+        "zipIndex": "number",
+        "addressIndex": "number",
+        "detailIndex": "number",
+        "requireClosed": "boolean",
+        "requireDetailUnchanged": "boolean",
+        "callbackMs": "number",
+        "pollMs": "number"
+      },
+      "$required": [
+        "selectorTemplate",
+        "inputType",
+        "requireId",
+        "requireName",
+        "readOnly",
+        "zipIndex",
+        "addressIndex",
+        "detailIndex",
+        "requireClosed",
+        "requireDetailUnchanged",
+        "callbackMs",
+        "pollMs"
+      ]
+    }
+  },
+  "$required": [
+    "sectionSelector",
+    "presentationSelector",
+    "placeholderAttributes",
+    "placeholderValues"
+  ]
+}

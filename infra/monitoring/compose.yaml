@@ -8,6 +8,27 @@ x-runtime: &runtime
       max-file: "3"
 
 services:
+  tempo:
+    <<: *runtime
+    image: grafana/tempo:2.9.0@sha256:65a5789759435f1ef696f1953258b9bbdb18eb571d5ce711ff812d2e128288a4
+    profiles: [tracing]
+    mem_limit: 256m
+    environment:
+      GOMEMLIMIT: 200MiB
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - type: bind
+        source: ./tempo/tempo.yaml
+        target: /etc/tempo.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${MONITORING_DATA_DIR:-/srv/career-form-monitoring}/tempo
+        target: /var/tempo
+        bind:
+          create_host_path: false
+
   loki:
     <<: *runtime
     image: grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193
@@ -48,6 +69,12 @@ services:
         bind:
           create_host_path: false
       - type: bind
+        source: ./mongodb-metrics.yaml
+        target: /etc/prometheus/mongodb-metrics.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
         source: ${MONITORING_DATA_DIR:-/srv/career-form-monitoring}/prometheus
         target: /prometheus
         bind:
@@ -82,6 +109,12 @@ services:
         bind:
           create_host_path: false
       - type: bind
+        source: ./grafana/loadtest-dashboards
+        target: /etc/grafana/loadtest-dashboards
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
         source: ./grafana/dashboards
         target: /etc/grafana/dashboards
         read_only: true
@@ -108,6 +141,7 @@ services:
     ports:
       - "${MONITORING_PRIVATE_IP:?MONITORING_PRIVATE_IP is required}:3100:3100"
       - "${MONITORING_PRIVATE_IP:?MONITORING_PRIVATE_IP is required}:9090:9090"
+      - "${MONITORING_PRIVATE_IP:?MONITORING_PRIVATE_IP is required}:4318:4318"
       - "80:80"
     volumes:
       - type: bind

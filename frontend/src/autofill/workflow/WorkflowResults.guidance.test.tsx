@@ -107,14 +107,14 @@ it("keeps specific failure guidance after its snapshot disappears without retain
   ).toBeDisabled();
 });
 
-it("uses a cautious fallback for unknown failures without displaying sensitive previews", () => {
+it("shows the saved value with cautious fallback guidance for unknown failures", () => {
   render(
     <WorkflowResults
       reviewItems={[
         {
           ...item,
-          status: "sensitive",
-          revealed: false,
+          status: "available",
+          revealed: true,
           profileValue: "PRIVATE_VALUE",
         },
       ]}
@@ -127,7 +127,7 @@ it("uses a cautious fallback for unknown failures without displaying sensitive p
       ]}
     />,
   );
-  expect(screen.queryByText(/PRIVATE_VALUE/)).not.toBeInTheDocument();
+  expect(screen.getByText("PRIVATE_VALUE")).toBeVisible();
   expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
   expect(
     screen.getByText(
@@ -156,7 +156,7 @@ it.each<[WriteFailureCode, string]>([
   ],
   ["SEARCH_FOLLOWUP_HALTED", "앞선 검색 실패로 후속 입력을 보류했어요."],
 ])(
-  "renders normalized %s without raw site or profile text",
+  "renders normalized %s without exposing raw failure details",
   (failureCode, guidance) => {
     render(
       <WorkflowResults
@@ -165,8 +165,8 @@ it.each<[WriteFailureCode, string]>([
             ...item,
             profileValue: "PRIVATE_PROFILE",
             previewValue: "PRIVATE_PROFILE",
-            status: "sensitive",
-            revealed: false,
+            status: "available",
+            revealed: true,
           },
         ]}
         results={[
@@ -180,9 +180,8 @@ it.each<[WriteFailureCode, string]>([
       />,
     );
     expect(screen.getByText(guidance)).toBeVisible();
-    expect(
-      screen.queryByText(/RAW_SITE|PRIVATE_PROFILE/),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("PRIVATE_PROFILE")).toBeVisible();
+    expect(screen.queryByText(/RAW_SITE/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("입력 완료 0개")).toBeInTheDocument();
     expect(screen.getByLabelText("확인 필요 1개")).toBeInTheDocument();
   },

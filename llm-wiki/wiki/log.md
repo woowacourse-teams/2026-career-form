@@ -1,11 +1,19 @@
 # Wiki Log
 
+## [2026-10-11] ingest | CF-178 브라우저 테스트 계층과 CI 경계
+
+- Approval-Digest: a44d4319a65cb6f0fc17934d216e915b38e1c1fec8acb5c1d1839957fa6b7013
+- Source-Revision: 2bed14247592b4710bdfa3b2fcd5e4f217576d32
+- 승인한 ADR 전문과 구현 경계 두 후보를 [CF-178 bundle](../raw/issues/CF-178/manifest.md)에 기록했다.
+- [프론트 브라우저 테스트](topics/frontend-browser-testing.md)에 unit/browser 프로젝트, 합성 fixture 검증, 80% 커버리지와 CI 경계를 연결했다.
+- 설치 확장 E2E와 실사이트 R1 기준선을 이번 브라우저 테스트 결과로 대체하지 않는다.
+
 ## [2026-10-09] ingest | CF-173 실패 원인 집계와 설치 revision 근거
 
 - Approval-Digest: 13f6d39b24eeee80a26b35b202c456ab067910ad145274757c03802220f336f9
 - Source-Revision: 094e3b43522fa2ec464fb841ba53b8c7b2c9be8c
 - 승인한 네 후보와 설치본 메타데이터 ADR을 [CF-173 bundle](../raw/issues/CF-173/manifest.md)에 기록했다.
-- [평가 기준선](topics/generic-autofill-evaluation-baselines.md)과 [실사이트 평가](topics/live-autofill-evaluation.md)에 계약 1.1의 원인 집계·미발견 분리·설치 snapshot 근거·비교 보류를 연결했다.
+- [평가 기준선](topics/generic-autofill-evaluation-baselines.md)과 [실사이트 평가](topics/live-autofill-evaluation.md)에 계약 1.1의 원인 집계, 미발견 분리, 설치 snapshot 근거, 비교 보류를 연결했다.
 - 과거 v1 artifact와 raw는 변경하지 않았다. 합성 CLI 및 설치본 재로드 검증을 새 실사이트 자동 입력 결과로 기록하지 않는다.
 
 ## [2026-10-07] ingest | CF-162 카탈로그 식별 검색 선택
@@ -16,7 +24,7 @@
 - Raw: llm-wiki/raw/issues/CF-162/manifest.md
 - Topics: 2
 
-## [2026-10-06] ingest | CF-160 Greeting 기본정보·날짜·주소와 추가 필드
+## [2026-10-06] ingest | CF-160 Greeting 기본정보, 날짜, 주소와 추가 필드
 
 - Disposition: Supersedes CF-94 adapter-greeting and adapter-field-inventory topics
 - Approval-Digest: 03ed4dab97485d3f52bc4069336d4a0cb5d9b31fba41a083db342596c497ab5b
@@ -456,7 +464,7 @@
 - 승인한 세 후보를 [CF-168 bundle](../raw/issues/CF-168/manifest.md)에 기록하고 [Greeting 공통 어댑터](topics/adapter-greeting.md), [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 변경 전 실패 판정 기준, Greeting 어학 수준 필드 단위 보류, `OPTION_UNMATCHED` 보고 범위를 기록했다.
 
-## [2026-10-08] ingest | CF-169 현대·SK 어학 상태 드라이버 실패의 행 단위 격리
+## [2026-10-08] ingest | CF-169 현대, SK 어학 상태 드라이버 실패의 행 단위 격리
 
 - Approval-Digest: 334a004a2a7ed47c3557351c9d59635962c10937400d08d3727cc98f980054e2
 - Source-Revision: 3539437b04cb50c42f04b8d4b68a001cefdc173e
@@ -492,3 +500,41 @@
 - Approval-Digest: 179ef852f0c27dfbb2cc374949e8b18360c58d912b79a13648622ae02d0c6fc7
 - Source-Revision: c2f545f5c1349b1da28feb5203bbbe9ffaf4b525
 - 승인한 두 항목을 [CF-197 bundle](../raw/issues/CF-197/manifest.md)에 기록하고 [시스템 PR 계약](topics/release-pr-contract.md)을 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-13] ingest | CF-201 품질 관측 인터럽트 처리
+
+- Approval-Digest: 8e6c08112dd8956d9e9e3b96c057d46cb46125a296ac59b397cb4dbfb21fe226
+- Source-Revision: 149244d91f4108c183a9b09e22136bbf8a90e6b3
+- 승인한 후보를 [CF-201 bundle](../raw/issues/CF-201/manifest.md)에 기록하고 [품질 관측 인터럽트 처리](topics/quality-observation-interruption.md)를 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-13] ingest | CF-204 품질 report 종료 전송
+
+- Approval-Digest: c77035f9272a13a0c57efcb4397b53809a4cc8f2e4d79b61eb72bafe0e8cc0f3
+- Source-Revision: d0ab0303e2b9514b40a32b316f5b88d434d56693
+- 승인한 후보를 [CF-204 bundle](../raw/issues/CF-204/manifest.md)에 기록하고 [품질 report 전송 시점](topics/quality-report-lifecycle.md)을 추가했다. 기존 raw는 보존했다.
+
+## [2026-10-13] ingest | CF-207 공용 MongoDB 관측
+
+- Approval-Digest: a6f687d3bd725214fa37de4509a5f0ba195e8fb80ffe2272f2a4381f9acffa2b
+- Source-Revision: cbd283762b4b30a485f1ce8be1f48680d00c65cb
+- 승인한 세 후보를 [CF-207 bundle](../raw/issues/CF-207/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)을 갱신했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-193 간단 프로필 등록과 첫 클릭률
+
+- Approval-Digest: eea777b397530073223f8dde4d136056a3edb99391d3a4c5bf27968b0b414859
+- Source-Revision: a1494f67fb6eaa7b47f328254c1747045670dbae
+- 승인한 두 후보를 [CF-193 bundle](../raw/issues/CF-193/manifest.md)에 기록했다.
+- [랜딩, 온보딩](topics/landing-onboarding.md)과 [이용 계측](topics/usage-analytics.md)의 Current를 갱신하고 이전 raw와 개인정보 경계를 보존했다.
+
+## [2026-10-13] ingest | CF-193 단계형 프로필 등록과 첫 클릭률 보완
+
+- Approval-Digest: 8ff319811d59ad9d3db60a1b14a87bdf53acb34f44e6755289f0226655a7edf1
+- Source-Revision: 070b6c55185da237903ec915b2798a8ace7cf47e
+- 새로 승인한 두 후보에 맞춰 아직 병합되지 않은 [CF-193 bundle](../raw/issues/CF-193/manifest.md)을 갱신했다.
+- [랜딩, 온보딩](topics/landing-onboarding.md)의 단계형 질문, 선택 보충, 같은 탭 전환과 [이용 계측](topics/usage-analytics.md)의 단계형 첫 저장 표현을 현재 상태로 기록했다. 기존 개인정보 경계와 웹 시연 경계는 보존했다.
+
+## [2026-10-14] ingest | CF-184 사이트별 자동 입력 결과
+
+- Approval-Digest: 44786fd7c6ee3529b9ffdbe14c2f183836d556bf6b822ad4e86d2dc0019caf3d
+- Source-Revision: 05b7a90ec1a02050b8ded4adc703f5edc3e6a9d4
+- 승인한 세 후보를 [CF-184 bundle](../raw/issues/CF-184/manifest.md)에 기록하고 [사이트별 자동 입력 결과와 일별 그래프](topics/autofill-quality-dashboard.md)를 추가했다. 기존 품질 관측 주제에서 연결하고 기존 raw는 보존했다.

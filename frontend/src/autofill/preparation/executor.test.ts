@@ -393,7 +393,7 @@ describe("approved preparation plan executor", () => {
 
   it("re-identifies the visible add action when a site hides the old button after each click", async () => {
     document.body.innerHTML = `
-      <div class="apply-form-box cert-root">
+      <div role="group" class="apply-form-box cert-root">
         <div class="form-body">
           <div class="form-item-group">
             <button type="button" class="btnAddCert">자격/면허 추가</button>
@@ -476,7 +476,7 @@ describe("approved preparation plan executor", () => {
 
   it("counts and executes sibling add actions by their refreshed identities", async () => {
     document.body.innerHTML = `
-      <div class="apply-form-box education-root">
+      <div role="group" class="apply-form-box education-root">
         <div class="form-body">
           <button id="btnAddEducationHigh" type="button">고등학교 학력 정보 추가</button>
           <button id="btnAddEducationUniv" type="button">대학 학력 정보 추가</button>

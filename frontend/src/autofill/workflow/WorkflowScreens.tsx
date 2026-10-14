@@ -17,8 +17,6 @@ import type { Profile } from "../../profile/model";
 import {
   Header,
   mappingLabel,
-  profileFieldLabel,
-  reviewProfileFieldKey,
   statusLabel,
   interactionLabel,
   currentPreview,
@@ -84,15 +82,10 @@ export function WorkflowScreens({
   stage,
   preparationItems,
   warnings,
-  revealedPreparationKeys,
-  selectedPreparationKeys,
-  setRevealedPreparationKeys,
-  setSelectedPreparationKeys,
   executePreparation,
   reviewItems,
   partial,
   toggleReviewItem,
-  revealSensitiveItem,
   executeWrites,
   results,
   addressResult,
@@ -120,17 +113,6 @@ export function WorkflowScreens({
   }
 
   if (stage === "preparation-review") {
-    const sensitivePreparations = [
-      ...new Map(
-        preparationItems.flatMap((item) =>
-          item.runnable &&
-          item.sensitive &&
-          item.plan.command === "SELECT_OPTION_TO_REVEAL"
-            ? [[item.plan.profileFieldKey, item] as const]
-            : [],
-        ),
-      ).entries(),
-    ];
     const runnableItems = preparationItems.filter((item) => item.runnable);
     const additions = preparationItems.reduce(
       (count, item) => count + (item.requiredAdditions ?? 0),
@@ -167,67 +149,6 @@ export function WorkflowScreens({
                 : warning}
           </aside>
         ))}
-        {sensitivePreparations.length > 0 && (
-          <section
-            className={styles.exceptionList}
-            aria-label="민감정보 준비 승인"
-          >
-            <h3>항목별 확인이 필요합니다</h3>
-            <p>
-              상태 선택은 지원서를 변경합니다. 값을 확인하고 포함한 항목만
-              준비하며, 노출되는 상세 항목은 별도로 확인합니다.
-            </p>
-            {sensitivePreparations.map(([key, item]) => {
-              const label = profileFieldLabel(key);
-              const revealed = revealedPreparationKeys.has(key);
-              const selected = selectedPreparationKeys.has(key);
-              return (
-                <article
-                  className={styles.reviewItem}
-                  key={key}
-                  data-included={selected}
-                >
-                  <span className={styles.reviewCopy}>
-                    <strong>{label}</strong>
-                    <span>
-                      입력 예정값: {revealed ? item.profileValue : "••••••••"}
-                    </span>
-                  </span>
-                  {!revealed ? (
-                    <button
-                      type="button"
-                      className={styles.reviewAction}
-                      aria-label={`${label} 값 보기`}
-                      onClick={() =>
-                        setRevealedPreparationKeys(
-                          (previous) => new Set([...previous, key]),
-                        )
-                      }
-                    >
-                      값 보기
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className={styles.reviewAction}
-                      aria-label={`${label} ${selected ? "제외하기" : "포함하기"}`}
-                      onClick={() =>
-                        setSelectedPreparationKeys((previous) => {
-                          const next = new Set(previous);
-                          if (next.has(key)) next.delete(key);
-                          else next.add(key);
-                          return next;
-                        })
-                      }
-                    >
-                      {selected ? "제외하기" : "포함하기"}
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </section>
-        )}
         <button
           className={styles.primary}
           type="button"
@@ -359,14 +280,6 @@ export function WorkflowScreens({
             aria-label="확인 필요한 항목"
           >
             {exceptionalItems.map((item) => {
-              const profileFieldKey = reviewProfileFieldKey(item);
-              const sensitiveProfileCaption =
-                item.status === "sensitive" && profileFieldKey
-                  ? {
-                      id: `sensitive-profile-${item.candidateId}`,
-                      label: profileFieldLabel(profileFieldKey),
-                    }
-                  : undefined;
               return (
                 <article className={resultStyles.row} key={item.candidateId}>
                   <div className={resultStyles.heading} data-has-values="true">
@@ -387,13 +300,11 @@ export function WorkflowScreens({
                       {(item.status !== "available" ||
                         isCalendar(item) ||
                         !item.selected) &&
-                        !item.disabled &&
-                        (item.status !== "sensitive" || item.revealed) && (
+                        !item.disabled && (
                           <button
                             className={resultStyles.copyButton}
                             type="button"
                             aria-label={`${item.fieldLabel} ${item.selected ? "제외하기" : "포함하기"}`}
-                            aria-describedby={sensitiveProfileCaption?.id}
                             onClick={() => toggleReviewItem(item.candidateId)}
                           >
                             {item.selected ? "제외" : "포함"}
@@ -408,17 +319,6 @@ export function WorkflowScreens({
                     <small className={resultStyles.writtenTag}>
                       {statusLabel(item)}
                     </small>
-                  )}
-                  {item.status === "sensitive" && !item.revealed && (
-                    <button
-                      className={styles.reviewAction}
-                      type="button"
-                      aria-label={`${item.fieldLabel} 값 보기`}
-                      aria-describedby={sensitiveProfileCaption?.id}
-                      onClick={() => revealSensitiveItem(item.candidateId)}
-                    >
-                      값 보기
-                    </button>
                   )}
                 </article>
               );

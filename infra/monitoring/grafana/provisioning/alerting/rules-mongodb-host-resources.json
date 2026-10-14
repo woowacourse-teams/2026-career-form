@@ -1,0 +1,529 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "rules-mongodb-host-resources",
+      "folder": "Career Form",
+      "interval": "30s",
+      "rules": [
+        {
+          "uid": "cf-db-shared-db-disk-warning",
+          "title": "[공용 DB] DB 데이터 디스크 사용률 (%) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_shared_db_disk_warning",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_shared_db_disk_warning_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-disk",
+            "severity": "warning",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "DB 데이터 디스크 사용률 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 80, 10m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "4"
+          }
+        },
+        {
+          "uid": "cf-db-shared-db-disk-critical",
+          "title": "[공용 DB] DB 데이터 디스크 사용률 (%) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_shared_db_disk_critical",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_shared_db_disk_critical_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-disk",
+            "severity": "critical",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "DB 데이터 디스크 사용률 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 90, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "4"
+          }
+        },
+        {
+          "uid": "cf-db-shared-db-cpu-warning",
+          "title": "[공용 DB] CPU 사용률 (%) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_shared_db_cpu_warning",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_shared_db_cpu_warning_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-cpu",
+            "severity": "warning",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "CPU 사용률 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 80, 10m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "2"
+          }
+        },
+        {
+          "uid": "cf-db-shared-db-cpu-critical",
+          "title": "[공용 DB] CPU 사용률 (%) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_shared_db_cpu_critical",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_shared_db_cpu_critical_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-cpu",
+            "severity": "critical",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "CPU 사용률 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 95, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "2"
+          }
+        },
+        {
+          "uid": "cf-db-shared-db-memory-warning",
+          "title": "[공용 DB] 가용 메모리 (%) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_shared_db_memory_warning",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_shared_db_memory_warning_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-memory",
+            "severity": "warning",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "가용 메모리 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 lt 15, 10m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "3"
+          }
+        },
+        {
+          "uid": "cf-db-shared-db-memory-critical",
+          "title": "[공용 DB] 가용 메모리 (%) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_shared_db_memory_critical",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_shared_db_memory_critical_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-memory",
+            "severity": "critical",
+            "instance": "career-db"
+          },
+          "annotations": {
+            "summary": "가용 메모리 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 lt 5, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "3"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -76,7 +76,8 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
                 return new NoMatch(candidate.candidateId());
             }
             FieldRule exactRule = exactRules.getFirst();
-            return exactRule.element() == candidate.element()
+            return !(Boolean.TRUE.equals(exactRule.enabledOnly()) && Boolean.TRUE.equals(candidate.disabled()))
+                && exactRule.element() == candidate.element()
                 && exactRule.control() == candidate.control()
                 ? new Match(candidate.candidateId(), exactRule.valueBinding(),
                     exactRule.allowReadonlyWrite())
@@ -100,6 +101,7 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
             }
         }
         if (rule == null
+            || (Boolean.TRUE.equals(rule.enabledOnly()) && Boolean.TRUE.equals(candidate.disabled()))
             || rule.element() != candidate.element()
             || rule.control() != candidate.control()) {
             return new NoMatch(candidate.candidateId());

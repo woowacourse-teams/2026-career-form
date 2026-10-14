@@ -2,12 +2,12 @@ import type { AddressIdentity } from "./match";
 export interface AddressValue extends AddressIdentity {
   detail: string;
 }
-// true certifies a unique postcode/address match, including provider-verified
-// legal-dong reference metadata when the displayed road address omits it.
+// Reports the first selected result so callers verify the site callback against it.
 export type AddressSearch = (
   expected: AddressIdentity,
   maySelect: () => Promise<boolean>,
   signal: AbortSignal,
+  onSelected?: (selected: AddressIdentity) => void,
 ) => Promise<boolean>;
 export interface AddressExecutionOptions {
   document: Document;

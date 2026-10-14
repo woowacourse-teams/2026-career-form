@@ -1,3 +1,7 @@
+import type {
+  AnalyzeFieldsSnapshot,
+  StaticFieldsSession,
+} from "./static-fields-session";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { AddressResult, AddressSearch } from "../address/types";
 import type { WorkflowAdapter } from "../adapters/workflow";
@@ -14,7 +18,7 @@ import type { WorkflowActivity } from "./progress-model";
 import type { WriteFailureCode } from "../write/failure";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { Stage } from "./workflow-model";
-import type { GreetingResultTargets } from "./greeting-result-registry";
+import type { ComponentResultTargets } from "./component-result-registry";
 
 type FieldsSnapshot = CollectedSnapshot<
   ReturnType<typeof collectFieldsSnapshot>["request"]
@@ -33,10 +37,10 @@ export interface CompletedGenericStateDriver {
   profileValue: string;
 }
 
-export interface GreetingStateDriverReceipt {
+export interface ComponentStateDriverReceipt {
   originalItem: ReviewPlanItem;
   sourceRegistry: CandidateRegistry;
-  captured: GreetingResultTargets;
+  captured: ComponentResultTargets;
   identity: string;
 }
 
@@ -85,6 +89,8 @@ export interface WorkflowAnalysisContext {
   addressRun: MutableRefObject<AddressRun>;
   addressSearch: AddressSearch;
   apiClient: AnalysisApiClient;
+  analyzeFieldsSnapshot?: AnalyzeFieldsSnapshot;
+  refreshFieldsAfterPass?: StaticFieldsSession["refreshAfterPass"];
   pageDocument: Document;
   repository: Pick<ProfileRepository, "load">;
   approvedSensitiveValues: MutableRefObject<Map<string, string>>;
@@ -94,8 +100,8 @@ export interface WorkflowAnalysisContext {
   completedGenericStateDrivers: MutableRefObject<
     ReadonlyMap<string, CompletedGenericStateDriver>
   >;
-  completedGreetingStateDrivers?: MutableRefObject<
-    Map<string, GreetingStateDriverReceipt>
+  completedComponentStateDrivers?: MutableRefObject<
+    Map<string, ComponentStateDriverReceipt>
   >;
   deferredDriverGroups: MutableRefObject<ReadonlySet<Element>>;
   deferredDriverFailures?: MutableRefObject<DeferredDriverFailures>;

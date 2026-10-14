@@ -1,45 +1,46 @@
-import { normalizeAddress, selectAddress, type AddressIdentity } from "./match";
+import type { AddressProviderPolicy } from "./provider-policy";
+import {
+  firstAddressResult,
+  normalizeAddress,
+  type AddressIdentity,
+} from "./match";
 
-import { matchesRoadReference } from "./road-reference";
+export function kakaoResultIdentity(
+  button: HTMLButtonElement,
+  policy: AddressProviderPolicy,
+): AddressIdentity | undefined {
+  const row = button.closest<HTMLElement>(policy.selectors.row);
+  const codes = row?.querySelectorAll(policy.selectors.code);
+  const addresses = button.querySelectorAll(policy.selectors.address);
+  const postalCode = row?.getAttribute(policy.postalAttribute) ?? "";
+  if (
+    codes?.length !== 1 ||
+    addresses.length !== 1 ||
+    button.disabled ||
+    normalizeAddress(codes[0].textContent ?? "") !== postalCode
+  )
+    return undefined;
+  return firstAddressResult([
+    { address: normalizeAddress(addresses[0].textContent ?? ""), postalCode },
+  ]);
+}
 
 export function findKakaoResult(
   document: Document,
-  expected: AddressIdentity,
+  _expected: AddressIdentity,
+  policy: AddressProviderPolicy,
 ): HTMLButtonElement | undefined {
-  const paging = document.querySelectorAll(".paging_post");
+  const paging = document.querySelectorAll(policy.selectors.paging);
   if (
     paging.length !== 1 ||
-    !/현재페이지\s*1\s*\/\s*1(?:\s|$)/.test(paging[0].textContent ?? "")
+    !new RegExp(policy.firstPagePattern).test(paging[0].textContent ?? "")
   )
     return undefined;
-  const results = Array.from(
-    document.querySelectorAll<HTMLElement>("li.list_post_item"),
-  ).flatMap((row) => {
-    const codes = row.querySelectorAll(".txt_postcode");
-    const postalCode = row.dataset.zonecode ?? "";
-    if (
-      codes.length !== 1 ||
-      normalizeAddress(codes[0].textContent ?? "") !== postalCode
-    )
-      return [];
-    return Array.from(
-      row.querySelectorAll<HTMLButtonElement>(
-        "button.link_post:not(.link_english):not(.link_btn_map)",
-      ),
-    ).flatMap((button) => {
-      const addresses = button.querySelectorAll(".txt_addr");
-      if (addresses.length !== 1 || button.disabled) return [];
-      const displayed = addresses[0].textContent ?? "";
-      // The row metadata must independently prove the optional legal-dong suffix.
-      const address = matchesRoadReference(
-        expected.address,
-        displayed,
-        row.dataset.bname ?? "",
-      )
-        ? expected.address
-        : displayed;
-      return [{ address, postalCode, button }];
-    });
-  });
-  return selectAddress(expected, results)?.button;
+  const row = document.querySelector<HTMLElement>(policy.selectors.row);
+  const button = row?.querySelector<HTMLButtonElement>(policy.selectors.result);
+  return button &&
+    policy.resultStrategy === "FIRST_RESULT" &&
+    kakaoResultIdentity(button, policy)
+    ? button
+    : undefined;
 }

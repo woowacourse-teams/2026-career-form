@@ -1,7 +1,7 @@
 /** jsdom has no editing command implementation. Model only the reviewed browser
  * boundary: insertText on the focused, empty email input emits one input event.
  * Real browser trust/React acceptance is verified separately by the live smoke. */
-export function mockGreetingEditingCommand(doc: Document): () => void {
+export function mockComponentEditingCommand(doc: Document): () => void {
   const original = Object.getOwnPropertyDescriptor(doc, "execCommand");
   Object.defineProperty(doc, "execCommand", {
     configurable: true,

@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -28,6 +31,7 @@ function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
     addrDtl: "contact.contact.addressLine2",
   };
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -98,6 +102,7 @@ it("runs the verified Hyundai normal-address modal through the workflow and pres
   };
   let fieldsCalls = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => {
       const action = request.sections
         .flatMap((section) => section.actionCandidates)

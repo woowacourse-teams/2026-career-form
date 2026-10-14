@@ -1,0 +1,605 @@
+{
+  "apiVersion": 1,
+  "groups": [
+    {
+      "orgId": 1,
+      "name": "rules-mongodb-staging-pools",
+      "folder": "Career Form",
+      "interval": "30s",
+      "rules": [
+        {
+          "uid": "cf-db-staging-db-pool-use-warning",
+          "title": "[staging] 앱 풀 사용률 (%) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_staging_db_pool_use_warning",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_staging_db_pool_use_warning_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-pool-use",
+            "severity": "warning",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "앱 풀 사용률 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 80, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "10"
+          }
+        },
+        {
+          "uid": "cf-db-staging-db-pool-use-critical",
+          "title": "[staging] 앱 풀 사용률 (%) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:incident_staging_db_pool_use_critical",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "V",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "V",
+                "expr": "last_over_time(career:mongodb:incident_staging_db_pool_use_critical_observed[24h])",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "0s",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-pool-use",
+            "severity": "critical",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "앱 풀 사용률 (%) | 마지막 실측 값 {{ if $values.V }}{{ printf \"%.3f\" $values.V.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 95, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "10"
+          }
+        },
+        {
+          "uid": "cf-db-staging-db-pool-wait-warning",
+          "title": "[staging] 연결 대기 P95 (초) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:checkout_p95{env=\"staging\"}",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.1
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "5m",
+          "keepFiringFor": "5m",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-pool-wait",
+            "severity": "warning",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "연결 대기 P95 (초) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gt 0.1, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "11"
+          }
+        },
+        {
+          "uid": "cf-db-staging-db-pool-wait-critical",
+          "title": "[staging] 연결 대기 P95 (초) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:checkout_p95{env=\"staging\"}",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "5m",
+          "keepFiringFor": "5m",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-pool-wait",
+            "severity": "critical",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "연결 대기 P95 (초) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gt 0.5, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "11"
+          }
+        },
+        {
+          "uid": "cf-db-staging-db-command-slow-warning",
+          "title": "[staging] DB 명령 응답 P95 (초) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:command_p95{env=\"staging\"}",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0.5
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "5m",
+          "keepFiringFor": "5m",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-command-slow",
+            "severity": "warning",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "DB 명령 응답 P95 (초) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gt 0.5, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "12"
+          }
+        },
+        {
+          "uid": "cf-db-staging-db-command-slow-critical",
+          "title": "[staging] DB 명령 응답 P95 (초) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:command_p95{env=\"staging\"}",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        2
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "5m",
+          "keepFiringFor": "5m",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-command-slow",
+            "severity": "critical",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "DB 명령 응답 P95 (초) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gt 2, 5m 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "12"
+          }
+        },
+        {
+          "uid": "cf-db-stg-checkout-timeout-warning",
+          "title": "[staging] 최근 5분 연결 획득 timeout (건) (warning)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:checkout_timeouts{env=\"staging\"} and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"staging\"}[5m])) > 0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gte",
+                      "params": [
+                        1
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "5m",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-checkout-timeout",
+            "severity": "warning",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "최근 5분 연결 획득 timeout (건) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 1, 0s 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "11"
+          }
+        },
+        {
+          "uid": "cf-db-stg-checkout-timeout-critical",
+          "title": "[staging] 최근 5분 연결 획득 timeout (건) (critical)",
+          "condition": "B",
+          "data": [
+            {
+              "refId": "A",
+              "relativeTimeRange": {
+                "from": 300,
+                "to": 0
+              },
+              "datasourceUid": "prometheus",
+              "model": {
+                "refId": "A",
+                "expr": "career:mongodb:checkout_timeouts{env=\"staging\"} and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"staging\"}[5m])) > 0)",
+                "instant": true,
+                "range": false,
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "datasourceUid": "__expr__",
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gte",
+                      "params": [
+                        3
+                      ]
+                    }
+                  }
+                ],
+                "datasource": {
+                  "type": "__expr__",
+                  "uid": "__expr__"
+                },
+                "intervalMs": 30000,
+                "maxDataPoints": 43200
+              }
+            }
+          ],
+          "noDataState": "KeepLast",
+          "execErrState": "KeepLast",
+          "for": "0s",
+          "keepFiringFor": "5m",
+          "missing_series_evals_to_resolve": 1051200,
+          "isPaused": false,
+          "labels": {
+            "service": "mongodb-observation",
+            "kind": "db-checkout-timeout",
+            "severity": "critical",
+            "env": "staging"
+          },
+          "annotations": {
+            "summary": "최근 5분 연결 획득 timeout (건) | 현재 값 {{ if $values.A }}{{ printf \"%.3f\" $values.A.Value }}{{ else }}측정 불가{{ end }}",
+            "description": "초기 기준 gte 3, 0s 지속. 정상 확인 5m 후 복구. 누락은 정상 복구가 아닙니다. 상세 단위와 조건은 패널을 확인하세요.",
+            "__dashboardUid__": "career-form-mongodb",
+            "__panelId__": "11"
+          }
+        }
+      ]
+    }
+  ]
+}

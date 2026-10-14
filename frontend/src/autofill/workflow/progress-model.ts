@@ -1,4 +1,4 @@
-import { greetingEmploymentStatusValue } from "../adapters/greeting/write";
+import { componentEmploymentStatusValue } from "../policy/components/write";
 import { customFieldValue } from "../dom/custom-field-value";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -73,7 +73,7 @@ function stillReflected(
   }
   return matchesResultValue(
     item,
-    greetingEmploymentStatusValue(handle) ?? customFieldValue(handle) ?? value,
+    componentEmploymentStatusValue(handle) ?? customFieldValue(handle) ?? value,
     item.profileValue ?? "",
     handle,
   );

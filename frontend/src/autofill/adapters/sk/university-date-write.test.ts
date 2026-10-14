@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, expect, it } from "vitest";
 import type { FieldsAnalyzeResponse } from "../../api/types";
 import { collectFieldsSnapshot } from "../../dom/collect";
@@ -43,6 +46,7 @@ it("writes university year-month values through the site formatter and preserves
     ...(s.items ?? []).flatMap((i) => i.fields),
   ]);
   const analysis: FieldsAnalyzeResponse = {
+executionPolicy: fixturePolicy("sk"),
     snapshotId: collected.request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",

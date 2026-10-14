@@ -1,5 +1,7 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -8,11 +10,11 @@ useGreetingHost(() => {
     url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
   });
 });
-import { mockGreetingEditingCommand } from "../interaction/test-utils/greeting-email-editing";
+import { mockComponentEditingCommand } from "../interaction/test-utils/greeting-email-editing";
 import { afterEach, beforeEach, expect, it } from "vitest";
 let restoreEditingCommand: (() => void) | undefined;
 beforeEach(() => {
-  restoreEditingCommand = mockGreetingEditingCommand(document);
+  restoreEditingCommand = mockComponentEditingCommand(document);
 });
 afterEach(() => restoreEditingCommand?.());
 
@@ -24,8 +26,8 @@ import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeApprovedWrites } from "./native-executor";
 
-import { installGreetingEmailCloseBridge } from "../interaction/greeting-email-close-bridge";
-beforeEach(() => installGreetingEmailCloseBridge(document));
+import { installComponentEmailCloseBridge } from "../interaction/component-email-close-bridge";
+beforeEach(() => installComponentEmailCloseBridge(document));
 
 afterEach(() => document.body.replaceChildren());
 function fixture() {
@@ -59,6 +61,10 @@ function fixture() {
     analysis: {
       candidateId: "email",
       matchType: "MATCH",
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "contact.contact.email",
+      },
       mappingStatus: "ADAPTER_VERIFIED",
       interactionStatus: "READY",
       writePlan: { command: "SET_TEXT" },

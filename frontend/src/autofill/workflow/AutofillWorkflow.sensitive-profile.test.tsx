@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
@@ -49,6 +52,7 @@ function setupVeteran() {
   const before = structuredClone(profile);
   let preparations = 0;
   const client: AnalysisApiClient = {
+    loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => {
       preparations++;
       const section = request.sections.find((s) =>
@@ -82,6 +86,7 @@ function setupVeteran() {
       };
     },
     analyzeFields: async (request) => ({
+      executionPolicy: fixturePolicy("sk"),
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",
@@ -159,7 +164,7 @@ it("automatically prepares veteran status and detail without sensitive-value con
   expect(run.profile).toEqual(run.before);
 });
 
-it("identifies same-labelled sensitive candidates without revealing their values", () => {
+it("identifies same-labelled candidates using supplied previews without obsolete approval controls", () => {
   const sensitiveItems = [
     {
       candidateId: "opaque-veteran-candidate-7f3a",
@@ -223,7 +228,7 @@ it("identifies same-labelled sensitive candidates without revealing their values
     onExit: () => undefined,
   });
 
-  const { rerender } = render(<WorkflowScreens {...screenProps()} />);
+  render(<WorkflowScreens {...screenProps()} />);
 
   expect(
     screen.getByRole("button", { name: "처우 / 희망연봉(만원) 필드로 이동" }),
@@ -235,23 +240,10 @@ it("identifies same-labelled sensitive candidates without revealing their values
   expect(screen.queryByText("previous-salary-secret")).not.toBeInTheDocument();
   expect(screen.getAllByText(/^•+$/)).toHaveLength(2);
 
-  const revealButtons = screen.getAllByRole("button", {
-    name: "비대상 값 보기",
-  });
-  expect(revealButtons).toHaveLength(2);
-
-  rerender(
-    <WorkflowScreens
-      {...screenProps(
-        sensitiveItems.map((item) => ({ ...item, revealed: true })),
-      )}
-    />,
-  );
-
-  const includeButtons = screen.getAllByRole("button", {
-    name: "비대상 포함하기",
-  });
-  expect(includeButtons).toHaveLength(2);
+  expect(screen.queryByRole("button", { name: /값 보기/ })).toBeNull();
+  expect(
+    screen.getAllByRole("button", { name: "비대상 포함하기" }),
+  ).toHaveLength(2);
 });
 
 it("uses a binding-only profile key for result labels and keeps missing items safe", () => {
@@ -325,7 +317,7 @@ it("uses a binding-only profile key for result labels and keeps missing items sa
   expect(screen.getAllByText("프로필 정보")).toHaveLength(1);
   expect(
     screen.queryByText("desired-salary-result-secret"),
-  ).not.toBeInTheDocument();
+  ).toBeInTheDocument();
   expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
   expect(screen.queryByText(/복수.*부전공명 진단/)).not.toBeInTheDocument();
   expect(screen.queryByText(/선행 선택 완료/)).not.toBeInTheDocument();

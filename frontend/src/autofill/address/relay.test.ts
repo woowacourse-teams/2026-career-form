@@ -1,3 +1,5 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+const providerPolicy = fixturePolicy("sk").providerPolicy!;
 import { describe, it, expect, vi } from "vitest";
 import { createAddressRelay, type AddressPort } from "./relay";
 function port(role: "top" | "frame", tabId = 1, origin?: string) {
@@ -42,7 +44,7 @@ function port(role: "top" | "frame", tabId = 1, origin?: string) {
   };
 }
 const start = {
-  type: "SEARCH",
+  type: "SEARCH", policy: providerPolicy,
   id: "run",
   expected: {
     address: "제주특별자치도 제주시 첨단로 242",

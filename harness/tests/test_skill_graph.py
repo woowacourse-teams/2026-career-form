@@ -14,6 +14,7 @@ class SkillGraphTest(unittest.TestCase):
             "cf-code-understanding",
             "cf-code-review",
             "cf-deep-interview",
+            "cf-dom-snapshot-collection",
             "cf-executing-plans",
             "cf-finishing-a-development-branch",
             "cf-github-project-onboarding",
@@ -42,6 +43,12 @@ class SkillGraphTest(unittest.TestCase):
             "cf-project-issue-planning",
             "cf-issue-workflow",
             "cf-post-merge-cleanup",
+        )
+
+    def test_live_evaluation_connects_separate_snapshot_collection(self) -> None:
+        self._assert_references(
+            "cf-live-autofill-evaluation",
+            "cf-dom-snapshot-collection",
         )
 
     def test_planning_connects_access_interview_and_grill(self) -> None:

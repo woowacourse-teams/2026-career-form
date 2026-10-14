@@ -34,6 +34,9 @@ class QualityStatsTest {
         assertThat(row.mapped()).isEqualTo(17);
         assertThat(row.humanDenominator()).isEqualTo(200);
         assertThat(row.humanMappedCoverage()).isEqualTo(17.0 / 200);
+        assertThat(row.human().collected()).isEqualTo(100);
+        assertThat(row.human().mapped()).isEqualTo(17);
+        assertThat(row.human().denominator()).isEqualTo(200);
         assertThat(row.humanLabel()).contains("정확도 미검증");
     }
 
@@ -89,6 +92,8 @@ class QualityStatsTest {
         assertThat(row.humanMappedCoverage()).isEqualTo(0.2);
         assertThat(row.humanWrittenCoverage()).isNull();
         assertThat(row.humanRetainedCoverage()).isNull();
+        assertThat(row.human().written()).isNull();
+        assertThat(row.human().retained()).isNull();
     }
 
     private QualityRecord record(int id, long collected, long mapped) {

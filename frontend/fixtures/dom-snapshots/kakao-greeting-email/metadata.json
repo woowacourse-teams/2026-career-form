@@ -1,0 +1,107 @@
+{
+  "fixture_id": "kakao-greeting-email",
+  "site_id": "kakao-games-greeting",
+  "issue_number": 187,
+  "collected_on": "2026-10-12",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "UNAVAILABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "INSTALLATION_UNAVAILABLE"
+  },
+  "scope": {
+    "description": "Kakao Games Greeting 지원서 폼 전체. 입력값이 들어 있는 상태의 화면에서 추출했다",
+    "controls": {
+      "text": 44,
+      "file": 3,
+      "checkbox": 6,
+      "textarea": 3
+    },
+    "control_total": 56,
+    "hidden_controls": 0,
+    "options": 0,
+    "labels": 108,
+    "excluded": [
+      "헤더, 내비게이션, 푸터",
+      "열렸을 때만 그려지는 combobox 선택지 목록"
+    ]
+  },
+  "failure": {
+    "stage": "STATE_DRIVER_WRITE",
+    "expected": "이메일주소가 프로필 값으로 입력된다",
+    "actual": "'이메일주소 선택을 안전하게 적용하지 못했습니다' 예외가 나고 기입이 중단됐다",
+    "conditions": [
+      "정적 구조만으로는 재현되지 않음. 페이지 스크립트의 값 수락 동작 등 동적 조건으로 추정"
+    ]
+  },
+  "sanitization": {
+    "removed": [
+      "입력값",
+      "선택·체크 상태",
+      "style",
+      "svg 142개",
+      "URL",
+      "5자리 이상 숫자열",
+      "이메일 형태 문자열",
+      "코드 식별자 형태가 아닌 class 토큰 703개"
+    ],
+    "replaced": [
+      "코드 식별자 형태가 아닌 id 6개와 name 18개를 익명 값으로 치환하고 참조도 함께 치환",
+      "현재 입력값과 같은 텍스트 11곳과 길이·패턴 기준에 걸린 텍스트 13곳을 [TEXT]로 치환",
+      "사용자 정의 태그 1개를 div로 치환"
+    ],
+    "preserved": [
+      "Greeting 어댑터가 읽는 data-scope·data-part, 코드 식별자 형태의 id 550개·name 77개·class 토큰",
+      "20자 이하 영숫자 data-value(해당 0개), data-view, data-placeholder 계열 속성의 존재 여부",
+      "라벨, 안내 문구, placeholder 원문"
+    ],
+    "preserved_common_text": "사용자가 개인정보 검토를 통과로 확인했다",
+    "redacted_text_count": 24,
+    "dropped_references": 0,
+    "broken_references_in_original": 160
+  },
+  "synthetic_behavior": [
+    "data-state의 체크 상태 6곳을 unchecked로, aria-checked·aria-selected 6곳을 false로 바꿨다",
+    "data-placeholder-shown·data-empty는 원본에 있던 곳에만 값 없이 남겼다. 값이 입력돼 있어 원본에서 빠진 빈 상태 표시는 복원하지 못했다"
+  ],
+  "recollection": {
+    "replaced_fixture": "초기 규칙으로 Kakao Mobility Greeting에서 발췌한 2개 컨트롤 샘플",
+    "changes": [
+      "초기 샘플은 Greeting으로 판정되지 않아 범용 경로로 수집됐다(후보 2개). 재수집본은 greeting으로 판정되고 섹션 32개에 일반 후보 45개와 반복 묶음 4개의 후보 44개, 모두 89개가 수집된다",
+      "초기 샘플의 '정적 구조에서는 이메일이 written'은 Greeting 어댑터를 거치지 않은 결과였다",
+      "재수집본에서도 Greeting 워크플로 전체를 오프라인 실행하면 이메일주소는 written이고 예외가 없다"
+    ]
+  },
+  "limitations": [
+    "combobox 49개의 선택지 목록은 열렸을 때만 그려져 정적 샘플에 없다",
+    "입력값이 있는 화면에서 추출해 빈 상태 표시(data-empty 등)가 일부 빠져 있을 수 있다",
+    "편집 명령과 이메일 확인 버튼 활성화 같은 페이지 반응은 테스트 유틸이 대신하거나 재현하지 않는다",
+    "설치 확장 revision과 실사이트 성공률의 근거가 아니다"
+  ],
+  "review": {
+    "privacy": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-12"
+    },
+    "structure": {
+      "result": "PARTIAL",
+      "human_reviewed": false,
+      "note": "브라우저 안 자동 대조(컨트롤·라벨·숨김 컨트롤 수, 끊긴 참조 수)는 일치했다. 사람 구조 검토는 미실시"
+    }
+  },
+  "reproduction": {
+    "command": "스크래치 테스트(삭제함): 재수집본 + greetingWorkflowAdapter + createAnalyzeFields, 이메일주소만 MATCH",
+    "product_revision": "584a9fe727d9a1872cf4f74188e02d95cf19bd8c",
+    "observed": [
+      "회사 판정 greeting, 후보 89개(반복 묶음 4개 포함), 이메일주소는 basicInformation.email로 수집된다",
+      "이메일주소 입력란은 type=text, role=combobox, data-scope=combobox, data-part=input이고 같은 필드 루트에 버튼 1개가 있다",
+      "검토 계획 available, 쓰기 결과 written, 예외 없음"
+    ],
+    "result": "NOT_REPRODUCED",
+    "mutation_check": "미실시"
+  },
+  "verdict": "HOLD"
+}

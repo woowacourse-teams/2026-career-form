@@ -6,8 +6,6 @@ import java.util.Set;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionRule;
@@ -24,13 +22,12 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonO
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
-@Component
-@Profile("local")
+// Legacy seed fixture; runtime initialization is handled by StartupPolicySeeder.
 final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     static final String COMPANY_KEY = "sk";
-    static final long VERSION = 25;
-    static final long HYUNDAI_VERSION = 8;
+    static final long VERSION = 30;
+    static final long HYUNDAI_VERSION = 14;
 
     private final FormAnalysisCompanyMongoRepository companies;
     private final FormAnalysisPolicyMongoRepository policies;
@@ -45,16 +42,16 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments arguments) {
-        policies.save(skPolicy());
-        companies.save(new FormAnalysisCompanyDocument(
+        insertPolicyIfMissing(skPolicy().withExecutionPolicy(com.careerform.formanalysis.dto.ExecutionPolicy.sk()));
+        insertCompanyIfMissing(new FormAnalysisCompanyDocument(
             COMPANY_KEY,
             COMPANY_KEY,
             "www.skcareers.com",
             List.of("/Application/Index/"),
             VERSION
         ));
-        policies.save(HyundaiCompanyFormPolicyFactory.create());
-        companies.save(new FormAnalysisCompanyDocument(
+        insertPolicyIfMissing(HyundaiCompanyFormPolicyFactory.create().withExecutionPolicy(com.careerform.formanalysis.dto.ExecutionPolicy.hyundai()));
+        insertCompanyIfMissing(new FormAnalysisCompanyDocument(
             "hyundai",
             "hyundai",
             "talent.hyundai.com",
@@ -64,9 +61,18 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
     }
 
 
+    private void insertPolicyIfMissing(FormAnalysisPolicyDocument policy) {
+        if (policies.existsById(policy.id()) || policies.findByCompanyKeyAndVersion(policy.companyKey(), policy.version()).isPresent()) return;
+        try { policies.insert(policy); } catch (org.springframework.dao.DuplicateKeyException ignored) { /* another initializer won */ }
+    }
+    private void insertCompanyIfMissing(FormAnalysisCompanyDocument company) {
+        if (companies.existsById(company.id()) || companies.findByHost(company.host()).isPresent()) return;
+        try { companies.insert(company); } catch (org.springframework.dao.DuplicateKeyException ignored) { /* preserve existing */ }
+    }
+
     static FormAnalysisPolicyDocument skPolicy() {
         return new FormAnalysisPolicyDocument(
-            "sk-policy-v8",
+            "sk-policy-v30",
             COMPANY_KEY,
             VERSION,
             new PreparationFingerprint(
@@ -262,12 +268,12 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "prsMilitarySvcLevel",
                     "military.military.militaryRank"
                 ),
-                textRule(
-                    "prsMilitarySvcFromDate",
+                derivedTextRule(
+                    "prsMilitarySvcFromDate", DerivedRecipe.YEAR_MONTH,
                     "military.military.serviceStartDate"
                 ),
-                textRule(
-                    "prsMilitarySvcToDate",
+                derivedTextRule(
+                    "prsMilitarySvcToDate", DerivedRecipe.YEAR_MONTH,
                     "military.military.serviceEndDate"
                 ),
                 textRule(
@@ -276,8 +282,8 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                 ),
                 constrainedTextRule("cerCertName", "cerCertName", "certifications.certificate.name"),
                 textRule("cerCertSource", "certifications.certificate.issuer"),
-                textRule(
-                    "cerCertDate",
+                derivedTextRule(
+                    "cerCertDate", DerivedRecipe.YEAR_MONTH,
                     "certifications.certificate.acquisitionDate"
                 ),
                 textRule(
@@ -365,14 +371,14 @@ final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
                     "eduhgEducationRegion",
                     "education.highSchool.schoolRegion"
                 ),
-                textRule("eduhgFromDate", "education.highSchool.startDate"),
-                textRule("eduhgToDate", "education.highSchool.endDate"),
+                derivedTextRule("eduhgFromDate", DerivedRecipe.YEAR_MONTH, "education.highSchool.startDate"),
+                derivedTextRule("eduhgToDate", DerivedRecipe.YEAR_MONTH, "education.highSchool.endDate"),
                 selectRule("lngLanguageType", "languages.languageTest.language"),
                 constrainedTextRule("lngExamName", "lngExamName", "languages.languageTest.testName"),
                 constrainedTextRule("lngExamScore", "lngExamScore", "languages.languageTest.grade"),
                 selectRule("lngExamScoreSel", "languages.languageTest.grade"),
-                textRule(
-                    "lngScoreDate",
+                derivedTextRule(
+                    "lngScoreDate", DerivedRecipe.YEAR_MONTH,
                     "languages.languageTest.acquisitionDate"
                 ),
                 textRule(

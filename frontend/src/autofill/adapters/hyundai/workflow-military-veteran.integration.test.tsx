@@ -1,5 +1,7 @@
-import { cleanup, configure, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
+import { act, cleanup, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import {
   control,
@@ -10,15 +12,22 @@ import {
   service,
 } from "./workflow-military-veteran.integration.test-fixtures";
 
+async function settleWorkflow() {
+  for (let pass = 0; pass < 30; pass++) {
+    await act(async () => { await vi.runAllTimersAsync(); });
+    if (!document.querySelector('[aria-busy="true"]')) return;
+  }
+}
+
 beforeEach(() => {
-  // Hyundai's verified conditional workflow has a 5-second settlement budget.
-  // Keep this integration suite's result waits inside that same bound under V8 coverage.
-  configure({ asyncUtilTimeout: 5_000 });
+  // Execute the real settlement timers without racing instrumented CPU work.
+  vi.useFakeTimers();
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
-  configure({ asyncUtilTimeout: 1_000 });
+  await settleWorkflow();
+  vi.useRealTimers();
   document.body.replaceChildren();
   (
     globalThis as unknown as {
@@ -30,13 +39,8 @@ afterEach(() => {
 it("selects both Hyundai drivers, fills corresponding detail display/code/months, and reruns without selection events", async () => {
   const clicks = renderApplication();
   const first = await run(fixtureProfile());
-  await waitFor(
-    () =>
-      expect(
-        first.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    { timeout: 5000 },
-  );
+  await settleWorkflow();
+  expect(first.getByRole("heading", { name: "자동 기입을 마쳤어요" })).toBeInTheDocument();
   expect(first.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
   expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
   expect([control("milDitinc").value, hidden("milDitinc")]).toEqual([
@@ -65,13 +69,10 @@ it("selects both Hyundai drivers, fills corresponding detail display/code/months
   const firstClicks = { ...clicks };
   first.unmount();
   const second = await run(fixtureProfile());
-  await waitFor(
-    () =>
-      expect(
-        second.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    { timeout: 5000 },
-  );
+  await settleWorkflow();
+  expect(
+    second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect(clicks).toEqual(firstClicks);
   expect(control("branchNo").value).toBe("1234567890");
 });
@@ -80,11 +81,10 @@ it("automatically writes Hyundai drivers and details without sensitive-value con
   renderApplication();
   const result = run(fixtureProfile());
 
-  await waitFor(() =>
-    expect(
-      result.getByRole("heading", { name: "기입 결과" }),
-    ).toBeInTheDocument(),
-  );
+  await settleWorkflow();
+  expect(
+    result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect(result.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
   expect([
     hidden("milCd"),
@@ -97,7 +97,7 @@ it("automatically writes Hyundai drivers and details without sensitive-value con
   ]).toEqual(["1", "Y", "2020-03", "2021-09", "41", "1", "1234567890"]);
 });
 
-it("automatically writes Hyundai disability status, grade, and type without sensitive-value confirmation", async () => {
+it("writes Hyundai disability status and newly enabled details within one run", async () => {
   const clicks = renderApplication();
   const profile = fixtureProfile();
   profile.disability = {
@@ -107,11 +107,8 @@ it("automatically writes Hyundai disability status, grade, and type without sens
   };
   const first = run(profile);
 
-  await waitFor(() =>
-    expect(
-      first.getByRole("heading", { name: "기입 결과" }),
-    ).toBeInTheDocument(),
-  );
+  await settleWorkflow();
+  expect(first.getByRole("heading", { name: "자동 기입을 마쳤어요" })).toBeInTheDocument();
   expect(first.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
   expect([
     control("injuryYn").value,
@@ -125,12 +122,12 @@ it("automatically writes Hyundai disability status, grade, and type without sens
 
   first.unmount();
   const second = run(profile);
-  await waitFor(() =>
-    expect(
-      second.getByRole("heading", { name: "기입 결과" }),
-    ).toBeInTheDocument(),
-  );
+  await settleWorkflow();
+  expect(
+    second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect(clicks).toEqual(firstClicks);
+  expect([hidden("injuryGrade"), hidden("injuryType")]).toEqual(["10", "10"]);
 });
 
 it.each(["", "disability-status:unverified", "veteran-status:eligible"])(
@@ -145,11 +142,10 @@ it.each(["", "disability-status:unverified", "veteran-status:eligible"])(
     };
 
     const result = await run(profile);
-    await waitFor(() =>
-      expect(
-        result.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    );
+    await settleWorkflow();
+    expect(
+      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    ).toBeInTheDocument();
     expect([
       hidden("injuryYn"),
       hidden("injuryGrade"),
@@ -164,11 +160,10 @@ it("treats the legacy 만기전역 profile value as 군필 only during Hyundai a
   const profile = fixtureProfile();
   profile.military.militaryStatus = "만기전역";
   const result = await run(profile);
-  await waitFor(() =>
-    expect(
-      result.getByRole("heading", { name: "기입 결과" }),
-    ).toBeInTheDocument(),
-  );
+  await settleWorkflow();
+  expect(
+    result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
   expect([control("milRank").value, hidden("milRank")]).toEqual(["병장", "41"]);
   expect([control("milDitinc").value, hidden("milDitinc")]).toEqual([
@@ -208,11 +203,10 @@ it.each([
     profile.veteran.veteranStatus = scenario.veteranStatus;
 
     const first = await run(profile);
-    await waitFor(() =>
-      expect(
-        first.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    );
+    await settleWorkflow();
+    expect(
+      first.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    ).toBeInTheDocument();
     expect([control("milCd").value, hidden("milCd")]).toEqual(["필", "1"]);
     expect([control("milDitinc").value, hidden("milDitinc")]).toEqual([
       "육군",
@@ -230,11 +224,10 @@ it.each([
 
     first.unmount();
     const second = await run(profile);
-    await waitFor(() =>
-      expect(
-        second.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    );
+    await settleWorkflow();
+    expect(
+      second.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    ).toBeInTheDocument();
     expect(clicks).toEqual(firstClicks);
   },
 );
@@ -263,11 +256,10 @@ it.each([
     profile.veteran.veteranStatus = veteranStatus;
 
     const result = await run(profile);
-    await waitFor(() =>
-      expect(
-        result.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    );
+    await settleWorkflow();
+    expect(
+      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    ).toBeInTheDocument();
     expect([
       control("milCd").value,
       hidden("milCd"),
@@ -297,11 +289,10 @@ it("preserves opposite existing selections while continuing an unrelated field",
     .click();
   const before = { ...clicks };
   const result = await run(fixtureProfile());
-  await waitFor(() =>
-    expect(
-      result.getByRole("heading", { name: "기입 결과" }),
-    ).toBeInTheDocument(),
-  );
+  await settleWorkflow();
+  expect(
+    result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect([
     control("milCd").value,
     hidden("milCd"),
@@ -342,11 +333,10 @@ it.each([
       .click();
     const before = clicks[id];
     const result = await run(fixtureProfile());
-    await waitFor(() =>
-      expect(
-        result.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    );
+    await settleWorkflow();
+    expect(
+      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    ).toBeInTheDocument();
     expect(hidden(id)).toBe(code);
     expect(clicks[id]).toBe(before);
     expect(control(dependent).value).toBe("");
@@ -357,13 +347,10 @@ it.each([
 it("does not write military details after a partial driver transition and still fills veteran and unrelated fields", async () => {
   renderApplication({ failMilitaryTransition: true });
   const result = await run(fixtureProfile());
-  await waitFor(
-    () =>
-      expect(
-        result.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    { timeout: 5000 },
-  );
+  await settleWorkflow();
+  expect(
+    result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect([
     control("milStartDt").value,
     control("milEndDt").value,
@@ -372,7 +359,6 @@ it("does not write military details after a partial driver transition and still 
   ]).toEqual(["", "", "", ""]);
   expect(control("branchNo").value).toBe("1234567890");
   expect(control("engNm").value).toBe("Fixture");
-  // The intentional 3-second driver timeout precedes further explicit review rounds.
 }, 10_000);
 
 it("leaves enabled military details blank when the profile has no supported status", async () => {
@@ -380,11 +366,10 @@ it("leaves enabled military details blank when the profile has no supported stat
   const profile = fixtureProfile();
   profile.military.militaryStatus = "복무중";
   const result = await run(profile);
-  await waitFor(() =>
-    expect(
-      result.getByRole("heading", { name: "기입 결과" }),
-    ).toBeInTheDocument(),
-  );
+  await settleWorkflow();
+  expect(
+    result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect([
     hidden("milCd"),
     control("milStartDt").value,
@@ -401,11 +386,10 @@ it("leaves an incompatible veteran number blank while completing other fields", 
   const profile = fixtureProfile();
   profile.veteran.veteranNumber = "VET-DEMO-001";
   const result = await run(profile);
-  await waitFor(() =>
-    expect(
-      result.getByRole("heading", { name: "기입 결과" }),
-    ).toBeInTheDocument(),
-  );
+  await settleWorkflow();
+  expect(
+    result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+  ).toBeInTheDocument();
   expect(control("branchNo").value).toBe("");
   const review = result.getByRole("region", { name: "확인 필요한 항목" });
   const veteranRow = within(review)
@@ -425,10 +409,16 @@ it("leaves an incompatible veteran number blank while completing other fields", 
 
 it("does not resume detail writes after the workflow is closed during a pending transition", async () => {
   renderApplication({ failMilitaryTransition: true });
+  const onMilitarySelected = vi.fn(() => result.unmount());
+  document
+    .querySelector<HTMLButtonElement>(
+      "#milCd ~ .select-option button[data-code='1']",
+    )!
+    .addEventListener("click", onMilitarySelected, { once: true });
   const result = run(fixtureProfile());
-  await waitFor(() => expect(hidden("milCd")).toBe("1"));
-  result.unmount();
-  await new Promise((resolve) => setTimeout(resolve, 3100));
+  await settleWorkflow();
+  expect(onMilitarySelected).toHaveBeenCalledOnce();
+  expect(hidden("milCd")).toBe("1");
   expect([
     control("milStartDt").value,
     control("milEndDt").value,
@@ -483,11 +473,10 @@ it.each([
         ? { ...profile.veteran, veteranStatus: scenario.veteranStatus }
         : { veteranStatus: scenario.veteranStatus };
     const result = await run(profile);
-    await waitFor(() =>
-      expect(
-        result.getByRole("heading", { name: "기입 결과" }),
-      ).toBeInTheDocument(),
-    );
+    await settleWorkflow();
+    expect(
+      result.getByRole("heading", { name: "자동 기입을 마쳤어요" }),
+    ).toBeInTheDocument();
     expect([
       control("milCd").value,
       hidden("milCd"),

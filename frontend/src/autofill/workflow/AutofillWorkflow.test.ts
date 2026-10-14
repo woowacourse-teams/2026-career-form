@@ -1,10 +1,12 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "./execution-policy";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { PreparationPlan } from "../api/types";
 import { collectPreparationSnapshot } from "../dom/collect";
 import { createEmptyProfile } from "../../profile/model";
 import { localItemCount } from "./AutofillWorkflow";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -48,6 +50,14 @@ describe("Hyundai repeated profile counts", () => {
         <button class="btn-group-add" type="button">추가</button>
       </article>
     `;
+    installExecutionPolicy(
+      document,
+      fixturePolicy(
+        new URL(document.URL).hostname === "talent.hyundai.com"
+          ? "hyundai"
+          : "greeting",
+      ),
+    );
     const snapshot = collectPreparationSnapshot(document);
     const profile = createEmptyProfile();
     profile.languages.push(
@@ -91,6 +101,14 @@ describe("Hyundai repeated profile counts", () => {
         <button class="btn-group-add" type="button">추가</button>
       </article>
     `;
+    installExecutionPolicy(
+      document,
+      fixturePolicy(
+        new URL(document.URL).hostname === "talent.hyundai.com"
+          ? "hyundai"
+          : "greeting",
+      ),
+    );
     const snapshot = collectPreparationSnapshot(document);
     const profile = createEmptyProfile();
     profile.languages.push(
@@ -135,11 +153,19 @@ describe("Greeting graduate major count", () => {
           <input name="${prefix}.majors.0" role="combobox">
           <button type="button" data-scope="tooltip" data-part="trigger">전공 추가</button>
         </div></div></div></div>`;
+    installExecutionPolicy(
+      document,
+      fixturePolicy(
+        new URL(document.URL).hostname === "talent.hyundai.com"
+          ? "hyundai"
+          : "greeting",
+      ),
+    );
     const snapshot = collectPreparationSnapshot(document);
     const plan = addPlan(snapshot, "greeting:add:graduateSchools:0:majors");
     const profile = createEmptyProfile();
     const values = {
-      additionalMajorClassification: "복수전공",
+      doubleMajorStatus: "있음",
       additionalMajorField: "사회계열",
       additionalMajorName: "경영학",
     };
@@ -149,16 +175,31 @@ describe("Greeting graduate major count", () => {
       values,
     });
     expect(
-      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+      localItemCount(
+        plan,
+        snapshot,
+        profile,
+        componentWorkflowAdapter(document),
+      ),
     ).toBe(2);
     delete (values as Partial<typeof values>).additionalMajorField;
     expect(
-      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
-    ).toBeUndefined();
+      localItemCount(
+        plan,
+        snapshot,
+        profile,
+        componentWorkflowAdapter(document),
+      ),
+    ).toBe(2);
     delete (values as Partial<typeof values>).additionalMajorName;
-    delete (values as Partial<typeof values>).additionalMajorClassification;
+    delete (values as Partial<typeof values>).doubleMajorStatus;
     expect(
-      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+      localItemCount(
+        plan,
+        snapshot,
+        profile,
+        componentWorkflowAdapter(document),
+      ),
     ).toBe(1);
   });
 });

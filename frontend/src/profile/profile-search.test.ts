@@ -23,7 +23,7 @@ describe("profile search", () => {
         categoryLabel: "병역",
         fieldLabel: "병역 상태",
         value: "비식별 상태",
-        sensitive: true,
+        sensitive: false,
       }),
     ]);
   });

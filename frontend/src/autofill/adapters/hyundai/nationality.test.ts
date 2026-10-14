@@ -1,8 +1,13 @@
+import {
+  fixturePolicy,
+  usePolicyFixture,
+} from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { runHyundaiNationality } from "./nationality";
+import { createFixedCodeSearchModule } from "../../policy/hidden-code/fixed-code-search";
 
 const NATIONALITY = "대한민국";
 const NATIONALITY_CODE = "KR";
@@ -176,7 +181,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -204,7 +212,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -231,10 +242,16 @@ describe("Hyundai primary nationality search", () => {
     };
 
     await expect(
-      runHyundaiNationality(document, handle, notReady),
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(document, handle, notReady),
     ).resolves.toBe(false);
     await expect(
-      runHyundaiNationality(document, handle, wrongBinding),
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(document, handle, wrongBinding),
     ).resolves.toBe(false);
     expect(display.value).toBe("");
     expect(hidden.value).toBe("");
@@ -260,7 +277,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(document, nationalityHandle(display), item),
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(document, nationalityHandle(display), item),
     ).resolves.toBe(true);
     expect(hidden.value).toBe(NATIONALITY_CODE);
   });
@@ -281,7 +301,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -300,7 +323,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -318,7 +344,10 @@ describe("Hyundai primary nationality search", () => {
     first.display.dataset.searchResult = "미국";
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(first.display),
         nationalityItem({ currentValue: "미국" }),
@@ -330,7 +359,10 @@ describe("Hyundai primary nationality search", () => {
     const second = renderNationalityFields();
     second.display.value = NATIONALITY;
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(second.display),
         nationalityItem({ currentValue: NATIONALITY }),
@@ -365,7 +397,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -392,7 +427,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -418,7 +456,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -445,7 +486,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -470,7 +514,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -493,7 +540,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),
@@ -521,7 +571,10 @@ describe("Hyundai primary nationality search", () => {
     });
 
     await expect(
-      runHyundaiNationality(
+      createFixedCodeSearchModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).runFixedCodeSearch(
         document,
         nationalityHandle(display),
         nationalityItem(),

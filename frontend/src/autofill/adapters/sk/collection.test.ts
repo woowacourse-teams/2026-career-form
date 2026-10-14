@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { collectPreparationSnapshot } from "../../dom/collect";

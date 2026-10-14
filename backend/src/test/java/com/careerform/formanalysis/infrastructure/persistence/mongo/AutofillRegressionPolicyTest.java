@@ -322,7 +322,7 @@ class AutofillRegressionPolicyTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalCompanyFormPolicySeeder(mock(FormAnalysisCompanyMongoRepository.class), policies).run(null);
-        verify(policies, times(2)).save(captured.capture());
+        verify(policies, times(2)).insert(captured.capture());
         return captured.getAllValues().stream().filter(value -> value.companyKey().equals(company))
             .findFirst().orElseThrow();
     }

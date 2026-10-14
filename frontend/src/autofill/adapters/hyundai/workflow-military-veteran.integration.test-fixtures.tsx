@@ -1,3 +1,4 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -266,6 +267,7 @@ function fixtureProfile(): Profile {
 
 function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -300,6 +302,7 @@ function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
 
 function run(profile: Profile) {
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",

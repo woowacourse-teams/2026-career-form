@@ -1,9 +1,11 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { collectFieldsSnapshot } from "../../dom/collect";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { hyundaiWriteAdapter } from "./write";
+import { getWriteAdapter } from "../write";
 import {
   buttonItem,
   gpaItem,
@@ -123,14 +125,18 @@ describe("Hyundai GPA scale button", () => {
       const rendered = renderGpa(display, code);
       const item = gpaItem(display, code);
 
-      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
-        handled: true,
-        written: true,
-      });
-      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
-        handled: true,
-        written: true,
-      });
+      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual(
+        {
+          handled: true,
+          written: true,
+        },
+      );
+      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual(
+        {
+          handled: true,
+          written: true,
+        },
+      );
       expect(rendered.trigger.value).toBe(display);
       expect(rendered.resultHidden.value).toBe(code);
       expect(rendered.directHidden.value).toBe("");
@@ -146,7 +152,7 @@ describe("Hyundai GPA scale button", () => {
     const item = gpaItem("4.5", "4.5");
     item.currentValue = "4.3";
 
-    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
       handled: true,
       written: false,
     });
@@ -154,7 +160,7 @@ describe("Hyundai GPA scale button", () => {
     expect(rendered.resultHidden.value).toBe("4.3");
     expect(rendered.clicks()).toBe(0);
     item.currentValue = "";
-    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
       handled: true,
       written: false,
     });
@@ -165,23 +171,32 @@ describe("Hyundai GPA scale button", () => {
     const rendered = renderGpa("4.5", "4.5", 2, 0);
 
     expect(
-      hyundaiWriteAdapter.tryWrite(rendered.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        rendered.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: true });
     expect(rendered.resultHidden.value).toBe("4.5");
     expect(rendered.directHidden.value).toBe("");
   });
 
-  it("rejects an unsupported GPA code and a non-university row", () => {
+  it("rejects a GPA code absent from the approved binding and a non-university row", () => {
     const unsupported = renderGpa("5.0", "5");
     expect(
-      hyundaiWriteAdapter.tryWrite(unsupported.handle, gpaItem("5.0", "5")),
+      getWriteAdapter(document).tryWrite(
+        unsupported.handle,
+        gpaItem("5.0", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(unsupported.clicks()).toBe(0);
 
     const wrongGroup = renderGpa("4.5", "4.5");
     wrongGroup.handle.itemGroupId = "educationgraduateschool";
     expect(
-      hyundaiWriteAdapter.tryWrite(wrongGroup.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        wrongGroup.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(wrongGroup.clicks()).toBe(0);
   });
@@ -190,7 +205,10 @@ describe("Hyundai GPA scale button", () => {
     const mismatched = renderGpa("4.5", "4.5");
     mismatched.handle.candidate.domId = "rcdPerf_2";
     expect(
-      hyundaiWriteAdapter.tryWrite(mismatched.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        mismatched.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(mismatched.clicks()).toBe(0);
   });
@@ -199,7 +217,7 @@ describe("Hyundai GPA scale button", () => {
     const wrongCodeGroup = renderGpa("4.5", "4.5");
     wrongCodeGroup.trigger.dataset.codegb = "9999";
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         wrongCodeGroup.handle,
         gpaItem("4.5", "4.5"),
       ),
@@ -216,7 +234,10 @@ describe("Hyundai GPA scale button", () => {
     rendered.trigger.closest(".select-wrap")!.prepend(duplicate);
 
     expect(
-      hyundaiWriteAdapter.tryWrite(rendered.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        rendered.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(rendered.clicks()).toBe(0);
   });
@@ -303,7 +324,9 @@ describe("Hyundai academic attendance and location writer", () => {
       code: "D",
     });
 
-    expect(hyundaiWriteAdapter.tryWrite(fixture.handle, fixture.item)).toEqual({
+    expect(
+      getWriteAdapter(document).tryWrite(fixture.handle, fixture.item),
+    ).toEqual({
       handled: true,
       written: true,
     });
@@ -321,7 +344,9 @@ describe("Hyundai academic attendance and location writer", () => {
       code: "KR",
       extra: "js-refer btn-new-loc locNa",
     });
-    expect(hyundaiWriteAdapter.tryWrite(country.handle, country.item)).toEqual({
+    expect(
+      getWriteAdapter(document).tryWrite(country.handle, country.item),
+    ).toEqual({
       handled: true,
       written: true,
     });
@@ -367,7 +392,7 @@ describe("Hyundai academic attendance and location writer", () => {
       },
       elements: [city],
     } as FieldCandidateHandle;
-    expect(hyundaiWriteAdapter.tryWrite(cityHandle, cityItem)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(cityHandle, cityItem)).toEqual({
       handled: true,
       written: true,
     });
@@ -386,7 +411,7 @@ describe("Hyundai academic attendance and location writer", () => {
       group: "educationhighschool",
     });
     expect(
-      hyundaiWriteAdapter.tryWrite(attendance.handle, attendance.item),
+      getWriteAdapter(document).tryWrite(attendance.handle, attendance.item),
     ).toEqual({ handled: true, written: false });
 
     const location = renderAcademicSelection({
@@ -407,7 +432,7 @@ describe("Hyundai academic attendance and location writer", () => {
         '<input type="hidden" class="js-field" name="locCity">',
       );
     expect(
-      hyundaiWriteAdapter.tryWrite(location.handle, location.item),
+      getWriteAdapter(document).tryWrite(location.handle, location.item),
     ).toEqual({ handled: true, written: false });
   });
 });
@@ -448,7 +473,7 @@ describe("Hyundai academic collected no-name triggers", () => {
       "D",
     );
 
-    expect(hyundaiWriteAdapter.tryWrite(lookup.handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(lookup.handle, item)).toEqual({
       handled: true,
       written: true,
     });

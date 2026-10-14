@@ -1,3 +1,5 @@
+import { displayState, withDomReadPass } from "./read-pass";
+import { targetOnlyRadio } from "../policy/radio-validation";
 import type {
   ActionCandidateHandle,
   CandidateBlockReason,
@@ -26,7 +28,7 @@ function liveBlockReason(element: Element): CandidateBlockReason | undefined {
       current;
       current = current.parentElement
     ) {
-      const style = view?.getComputedStyle(current);
+      const style = displayState(current);
       if (style?.display === "none" || style?.visibility === "hidden") {
         return "hidden";
       }
@@ -165,8 +167,22 @@ export class CandidateRegistry {
     return this.lookup(matches[0]);
   }
 
+  private readCache?: Map<string, CandidateLookup<FieldCandidateHandle>>;
+
+  /** Only for synchronous, read-only planning; never span a write or await. */
+  withReadCache<T>(read: () => T): T {
+    const previous = this.readCache;
+    this.readCache = new Map();
+    try { return withDomReadPass(read); }
+    finally { this.readCache = previous; }
+  }
+
   lookupField(candidateId: string): CandidateLookup<FieldCandidateHandle> {
-    return this.lookup(this.fields.get(candidateId));
+    const cached = this.readCache?.get(candidateId);
+    if (cached) return cached;
+    const result = this.lookup(this.fields.get(candidateId));
+    this.readCache?.set(candidateId, result);
+    return result;
   }
 
   /** 개발 진단 로그 전용. 최신성 검사를 거치지 않으므로 기입에 사용하지 않는다. */
@@ -217,13 +233,16 @@ export class CandidateRegistry {
     // A disabled placeholder option, or an initially hidden combobox menu,
     // must not make its owning field unavailable. The concrete target option
     // is checked immediately before its write instead.
+    const targetOnly = registered.handle.kind === "field" && targetOnlyRadio(elements);
     const currentBlockReason = elements
       .map(liveBlockReason)
-      .find((reason) => reason !== undefined);
-    if (registered.blockedReason || currentBlockReason) {
+      .find((reason) => reason !== undefined && !(targetOnly && reason === "disabled"));
+    const registeredReason = targetOnly && registered.blockedReason === "disabled"
+      ? undefined : registered.blockedReason;
+    if (registeredReason || currentBlockReason) {
       return {
         status: "blocked",
-        reason: registered.blockedReason ?? currentBlockReason!,
+        reason: registeredReason ?? currentBlockReason!,
         handle: registered.handle,
       };
     }

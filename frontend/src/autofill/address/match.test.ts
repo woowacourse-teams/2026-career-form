@@ -1,42 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { selectAddress } from "./match";
-
 describe("address result selection", () => {
-  const address = {
-    address: "제주특별자치도 제주시 첨단로 242",
-    postalCode: "63309",
-  };
-  const result = { ...address, id: "result-1" };
-  it("selects the sole full address and postcode match", () => {
-    expect(selectAddress(address, [result])).toBe(result);
+  const expected = { address: "제주특별자치도 제주시 첨단로 242", postalCode: "63309" };
+  const first = { address: "제주시 첨단로 242", postalCode: "63309", id: "result-1" };
+  it("selects the first result even when a later result is an exact textual match", () => {
+    expect(selectAddress(expected, [first, {...expected, id: "result-2"}])).toBe(first);
   });
-  it("normalizes whitespace but not building numbers or regional aliases", () => {
-    expect(
-      selectAddress(
-        { ...address, address: "  제주특별자치도  제주시 첨단로 242 " },
-        [result],
-      ),
-    ).toBe(result);
-    expect(
-      selectAddress({ ...address, address: "제주시 첨단로 242" }, [result]),
-    ).toBeUndefined();
-    expect(
-      selectAddress(
-        { ...address, address: "제주특별자치도 제주시 첨단로 242-1" },
-        [result],
-      ),
-    ).toBeUndefined();
+  it("does not impose input-address or postcode matching before selection", () => {
+    expect(selectAddress({...expected, address: "다른 표시 주소", postalCode: "00000"}, [first])).toBe(first);
   });
-  it("never chooses an empty, ambiguous, or postcode-mismatched result", () => {
-    expect(selectAddress(address, [])).toBeUndefined();
-    expect(
-      selectAddress(address, [result, { ...result, id: "result-2" }]),
-    ).toBeUndefined();
-    expect(
-      selectAddress({ ...address, postalCode: "00000" }, [result]),
-    ).toBeUndefined();
-    expect(
-      selectAddress({ ...address, postalCode: "" }, [result]),
-    ).toBeUndefined();
+  it("does not invent a result when the list is empty", () => {
+    expect(selectAddress(expected, [])).toBeUndefined();
   });
 });

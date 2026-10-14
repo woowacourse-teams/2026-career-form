@@ -1,10 +1,20 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "../workflow/execution-policy";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { collectionAdapterForHost } from "./collection";
 
 describe("collection adapter selection", () => {
   beforeEach(() => {
+    (
+      globalThis as unknown as {
+        jsdom: { reconfigure(options: { url: string }): void };
+      }
+    ).jsdom.reconfigure({
+      url: "https://talent.hyundai.com/apply/applyWrite.hc",
+    });
     document.body.replaceChildren();
+    installExecutionPolicy(document);
   });
 
   it("isolates Hyundai input-button and repeated-row behavior to its exact host", () => {
@@ -17,7 +27,8 @@ describe("collection adapter selection", () => {
     `;
     const article = document.querySelector("article")!;
     const action = document.querySelector("button")!;
-    const hyundai = collectionAdapterForHost("talent.hyundai.com");
+    installExecutionPolicy(document, fixturePolicy("hyundai"));
+    const hyundai = collectionAdapterForHost(document);
     const generic = collectionAdapterForHost("careers.example.test");
 
     expect(hyundai.sectionSelectors).toEqual(["article.field-form-apply"]);
@@ -36,7 +47,8 @@ describe("collection adapter selection", () => {
   });
 
   it("isolates SK hidden-row filtering to field collection", () => {
-    const sk = collectionAdapterForHost("www.skcareers.com");
+    installExecutionPolicy(document, fixturePolicy("sk"));
+    const sk = collectionAdapterForHost(document);
     const generic = collectionAdapterForHost("careers.example.test");
 
     expect(sk.requiresVisibleControl("fields", "generic")).toBe(true);
@@ -70,7 +82,8 @@ describe("collection adapter selection", () => {
       </article>
     `;
     const actions = document.querySelectorAll<HTMLButtonElement>("button");
-    const hyundai = collectionAdapterForHost("talent.hyundai.com");
+    installExecutionPolicy(document, fixturePolicy("hyundai"));
+    const hyundai = collectionAdapterForHost(document);
 
     expect(hyundai.actionDomId(actions[0]!)).toBe("hyundai:add:project");
     expect(hyundai.actionDomId(actions[1]!)).toBe("hyundai:add:publication");
@@ -120,7 +133,8 @@ describe("collection adapter selection", () => {
       </article>
     `;
     const actions = document.querySelectorAll<HTMLButtonElement>("button");
-    const hyundai = collectionAdapterForHost("talent.hyundai.com");
+    installExecutionPolicy(document, fixturePolicy("hyundai"));
+    const hyundai = collectionAdapterForHost(document);
 
     expect(hyundai.actionDomId(actions[0]!)).toBeUndefined();
     expect(hyundai.actionDomId(actions[1]!)).toBeUndefined();

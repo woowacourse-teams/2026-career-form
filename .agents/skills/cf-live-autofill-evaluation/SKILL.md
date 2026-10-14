@@ -1,6 +1,11 @@
 ---
 name: cf-live-autofill-evaluation
 description: 사용자가 외부 Chrome에 평가 대상 채용 페이지를 열고 "평가 시작해줘"처럼 실사이트 자동 입력 평가 실행을 요청할 때, 확장 프로그램의 비민감 입력과 실제 DOM 검증을 안전하게 수행한다. Console 로그 설명이나 코드 조사만 요청한 경우에는 사용하지 않는다.
+metadata:
+  calls:
+    - cf-dom-snapshot-collection
+  portable: true
+  external_dependencies: []
 ---
 
 # Live Autofill Evaluation
@@ -18,6 +23,17 @@ description: 사용자가 외부 Chrome에 평가 대상 채용 페이지를 열
 
 조건이 하나라도 충족되지 않으면 탭을 조작하지 않고 부족한 조건만 보고한다.
 Console 설명, 기존 보고서 요약, 코드 조사 요청은 실행 요청이 아니다.
+
+## 실패 페이지의 픽스처 수집
+
+평가 실행 승인은 DOM 스냅샷 수집 승인이 아니다. 사람이 수집 대상과 최소 영역을
+별도로 지정하고 요청했을 때만
+[`cf-dom-snapshot-collection`](../cf-dom-snapshot-collection/SKILL.md)으로 이어간다.
+수집 요청만 있다면 평가나 자동 입력을 먼저 실행하지 않는다.
+
+실제 값과 구조 원문의 기록 금지는 그대로 유지한다. 평가 Console·스크린샷·보고서를
+수집 자료로 재사용하지 않으며, 정제 픽스처의 `FIXTURE` 결과를 `LIVE_SITE`
+성공률에 합산하지 않는다. 출력 전 정제, 사람 검토와 등록은 전용 스킬의 절차를 따른다.
 
 ## 도구 준비
 

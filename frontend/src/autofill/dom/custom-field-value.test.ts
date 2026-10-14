@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, expect, it } from "vitest";
 import { customFieldValue } from "./custom-field-value";
 import type { FieldCandidateHandle } from "./types";

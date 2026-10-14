@@ -27,6 +27,7 @@ export function rememberCatalogSelection(
   selection: {
     readonly element: HTMLElement;
     readonly evidence: CatalogEvidence;
+    readonly matchesEvidence?: (approval: import("./catalog-match").ApprovedCatalogMatch, evidence: CatalogEvidence) => boolean;
     readonly verify: (element: HTMLElement) => boolean;
   },
 ): boolean {
@@ -34,7 +35,7 @@ export function rememberCatalogSelection(
   if (approval.status === "legacy") return true;
   if (
     approval.status !== "selected" ||
-    !matchesApprovedCatalog(approval.match, selection.evidence) ||
+    !(selection.matchesEvidence ?? matchesApprovedCatalog)(approval.match, selection.evidence) ||
     !selection.element.isConnected ||
     !selection.verify(selection.element)
   )

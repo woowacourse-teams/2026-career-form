@@ -59,6 +59,9 @@ import tools.jackson.databind.type.LogicalType;
 @Component
 @Conditional(InteractionProviderConditions.OpenAiClient.class)
 public final class OpenAiClient {
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.careerform.formanalysis.infrastructure.LocalLlmDiagnostics localDiagnostics;
+
 
     private static final String INVALID_RESPONSE_MESSAGE =
         "LLM 분석 응답 계약을 확인할 수 없습니다";
@@ -188,6 +191,7 @@ public final class OpenAiClient {
                     : OpenAiChatOptions.builder()
                         .store(true)
                         .responseFormat(responseFormat(converter)));
+            if (localDiagnostics != null) localDiagnostics.start("openai", stage);
             called = true;
             response = request.call().chatResponse();
             logResponseMetadata(stage, outputType, response);
@@ -241,6 +245,7 @@ public final class OpenAiClient {
     }
 
     private void recordMetrics(boolean interaction, long startedAt, RuntimeException failure, boolean called, ChatResponse response) {
+        if (localDiagnostics != null) localDiagnostics.end("openai", called, startedAt, failure);
         if (metrics != null) {
             var model = response == null || response.getMetadata() == null ? null : response.getMetadata().getModel();
             metrics.record("openai", interaction ? "interaction" : "analysis", System.nanoTime() - startedAt,

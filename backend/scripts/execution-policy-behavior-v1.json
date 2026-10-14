@@ -1,0 +1,110 @@
+{
+  "sk": {
+    "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "placeholderAttributes": [],
+    "placeholderValues": [],
+    "autocomplete": {
+      "confirmationDataKey": "confirmed",
+      "confirmationValue": true,
+      "invalidResultIds": ["0"]
+    }
+  },
+  "hyundai": {
+    "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box, article.field-form-apply",
+    "placeholderAttributes": [],
+    "placeholderValues": [],
+    "hiddenCode": {
+      "rowSelector": ":scope > .field-content",
+      "rowRelation": "DIRECT_CHILD",
+      "overwriteSelections": false,
+      "schoolMatch": {
+        "mode": "NAME_AND_DETAIL",
+        "splitPosition": "LAST",
+        "requireDetail": true,
+        "unspecifiedRegion": "UNIQUE_CATALOG",
+        "requireUniqueCampus": true
+      }
+    }
+  },
+  "greeting": {
+    "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "placeholderAttributes": ["data-placeholder", "data-placeholder-shown"],
+    "placeholderValues": ["선택"],
+    "components": {
+      "employment": {
+        "checkedValue": "재직중",
+        "uncheckedValue": "퇴사",
+        "allowUncheck": false
+      },
+      "radio": {
+        "optionSelector": "button[role=\"radio\"]",
+        "overwrite": false
+      },
+      "gpa": {
+        "requirePair": true,
+        "scaleBeforeScore": true,
+        "scoreSelector": "input[name=\"{name}\"]",
+        "scaleSelector": "button[name=\"{name}\"]"
+      },
+      "row": {
+        "separator": ".",
+        "indexPattern": "^(0|[1-9]\\d*)\\.(.+)$",
+        "singletonIndex": 0,
+        "maxIndex": 127,
+        "requireContiguous": true
+      },
+      "major": {
+        "nameSelector": "input[role=\"combobox\"]",
+        "classificationSelector": "button",
+        "fieldSelector": "button",
+        "baseCount": 1,
+        "newRowPosition": "LAST",
+        "sourceCategory": "education",
+        "requiredParts": ["name", "classification", "field"]
+      },
+      "search": {
+        "languageQualifierKinds": ["languageTest"],
+        "languageSuffixTemplate": "({language})",
+        "selectionMode": "KEYBOARD_WHEN_IDENTIFIED",
+        "confirmationMode": "CHECKED_OPTION",
+        "closedPopup": "UNMOUNTED"
+      },
+      "address": {
+        "verification": "POSTAL_AND_ADDRESS",
+        "requireClosed": true,
+        "zipIndex": 0,
+        "addressIndex": 1,
+        "detailIndex": 2
+      },
+      "calendar": {
+        "allowDayFallback": true,
+        "resultMonthPattern": "^\\d{4}\\. ?\\d{2}$",
+        "resultDayPattern": "^\\d{4}\\. ?\\d{2}\\. ?\\d{2}$",
+        "resultSeparatorPattern": "\\. ?"
+      },
+      "workflow": {
+        "requireAdapterResponse": true,
+        "enforceUniqueEmail": true,
+        "emailCommitDriver": true,
+        "driverFailureLabel": true,
+        "settleEmailSuggestions": true,
+        "verifySettledValues": true
+      },
+      "timeouts": {
+        "defaultMs": 1200,
+        "pollMs": 25,
+        "searchMs": 5000,
+        "navigationMs": 250,
+        "addressCloseMs": 3000
+      },
+      "collection": {
+        "includeSearchOptions": false,
+        "ownedLabelsOnly": true,
+        "revalidateAdapterRows": true
+      }
+    }
+  }
+}

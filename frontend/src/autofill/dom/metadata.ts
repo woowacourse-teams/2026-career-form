@@ -1,3 +1,4 @@
+import { cachedDomRead, displayState } from "./read-pass";
 import { isTrustedId, trustedLabels } from "./trusted-id";
 
 const MAX_METADATA_LENGTH = 120;
@@ -62,7 +63,7 @@ function inExcludedBranch(
     if (node.contains(target)) return false;
     if (
       node.hasAttribute("hidden") ||
-      view?.getComputedStyle(node).display === "none"
+      displayState(node).display === "none"
     )
       return true;
   }
@@ -112,6 +113,10 @@ export function definitionListLabelOf(
 }
 
 export function labelOf(element: HTMLElement): string | undefined {
+  return cachedDomRead(element, "label", () => uncachedLabelOf(element));
+}
+
+function uncachedLabelOf(element: HTMLElement): string | undefined {
   const ariaLabelledBy = metadata(element.getAttribute("aria-labelledby"));
   if (ariaLabelledBy) {
     const root = element.getRootNode() as Document | ShadowRoot;

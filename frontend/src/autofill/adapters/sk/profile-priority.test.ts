@@ -1,11 +1,13 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, expect, it } from "vitest";
 import type { MatchedFieldAnalysis } from "../../api/types";
 import { collectFieldsSnapshot } from "../../dom/collect";
 import { createStructuralSignature } from "../../dom/candidate-registry";
 import type { ActionCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { skWorkflowAdapter as adapter } from "./workflow";
-import { skWriteAdapter } from "./write";
+import { getWorkflowAdapter } from "../workflow";
+import { getWriteAdapter } from "../write";
 
 const cases = [
   { name: "prsVeteranBenefitYN", key: "veteran.veteran.veteranStatus" },
@@ -84,9 +86,9 @@ it.each(cases)(
   "prepares and reveals $name using profile $value over the existing opposite",
   ({ name, key, value }) => {
     const { target, action } = setup(name, key, value);
-    expect(adapter.canSelectProfileOption?.(action, value)).toBe(true);
+    expect(getWorkflowAdapter(document).canSelectProfileOption?.(action, value)).toBe(true);
     expect(
-      adapter.selectReveal(
+      getWorkflowAdapter(document).selectReveal(
         document,
         { domName: name, profileFieldKey: key, itemIndex: 0 },
         value,
@@ -100,15 +102,15 @@ it.each(cases)(
   "writes verified $name as $value and does not repeat its change event",
   ({ name, key, value }) => {
     const { target, handle, analysis, item } = setup(name, key, value);
-    expect(adapter.prefersProfileValue?.(handle, analysis)).toBe(true);
+    expect(getWorkflowAdapter(document).prefersProfileValue?.(handle, analysis)).toBe(true);
     let changes = 0;
     target.addEventListener("change", () => changes++);
-    expect(skWriteAdapter.tryWrite(handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, item)).toEqual({
       handled: true,
       written: true,
     });
     expect(target.checked).toBe(true);
-    expect(skWriteAdapter.tryWrite(handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, item)).toEqual({
       handled: true,
       written: true,
     });
@@ -125,9 +127,9 @@ it.each(["LLM_SUGGESTED", "UNVERIFIED"] as const)(
       "대상",
     );
     const unverified = { ...analysis, mappingStatus } as MatchedFieldAnalysis;
-    expect(adapter.prefersProfileValue?.(handle, unverified)).not.toBe(true);
+    expect(getWorkflowAdapter(document).prefersProfileValue?.(handle, unverified)).not.toBe(true);
     expect(
-      skWriteAdapter.tryWrite(handle, { ...item, analysis: unverified }),
+      getWriteAdapter(document).tryWrite(handle, { ...item, analysis: unverified }),
     ).toEqual({ handled: true, written: false });
     expect(target.checked).toBe(false);
   },
@@ -147,7 +149,7 @@ it.each(["name", "label", "code", "removed"])(
       if (mutation === "label") target.labels![0].append("wrong");
       if (mutation === "removed") target.remove();
     });
-    expect(skWriteAdapter.tryWrite(handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, item)).toEqual({
       handled: true,
       written: false,
     });
@@ -159,10 +161,10 @@ it.each(cases)(
   ({ name, key, value }) => {
     const { target, action } = setup(name, key, value);
     expect(
-      adapter.canSelectProfileOption?.(action, value, "contact.contact.email"),
+      getWorkflowAdapter(document).canSelectProfileOption?.(action, value, "contact.contact.email"),
     ).toBe(false);
     expect(
-      adapter.selectReveal(
+      getWorkflowAdapter(document).selectReveal(
         document,
         {
           domName: name,

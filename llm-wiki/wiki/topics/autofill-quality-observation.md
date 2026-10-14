@@ -4,7 +4,7 @@
 > Status: Current
 > Current: [CF-164 자동 입력 품질 관측과 사람 확인 분모](../../raw/issues/CF-164/documents/autofill-quality-observation.md)
 > History: [CF-164 자동 입력 품질 관측과 사람 확인 분모](../../raw/issues/CF-164/documents/autofill-quality-observation.md)
-> Updated: 2026-10-12
+> Updated: 2026-10-14
 
 ## 현재 상태
 
@@ -26,3 +26,5 @@
 
 - [공용 모니터링 시스템](monitoring-system.md)
 - [실사이트 자동 입력 평가](live-autofill-evaluation.md)
+- [자동 기입 품질 report의 전송 시점](quality-report-lifecycle.md)
+- [사이트별 자동 입력 결과와 일별 그래프](autofill-quality-dashboard.md)

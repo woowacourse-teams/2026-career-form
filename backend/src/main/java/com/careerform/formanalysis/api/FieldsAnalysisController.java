@@ -14,6 +14,8 @@ import jakarta.validation.Valid;
 public final class FieldsAnalysisController {
 
     private final FieldsAnalysisService service;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.careerform.formanalysis.infrastructure.persistence.mongo.ExecutionPolicyLookup executionPolicies;
 
     public FieldsAnalysisController(FieldsAnalysisService service) {
         this.service = service;
@@ -21,6 +23,8 @@ public final class FieldsAnalysisController {
 
     @PostMapping("/api/v1/fields/analyze")
     public FieldsAnalysisResponse analyze(@Valid @RequestBody FieldsAnalysisRequest request) {
-        return service.analyze(request);
+        var response = service.analyze(request);
+        return executionPolicies != null && response.mode() == FieldsAnalysisResponse.Mode.ADAPTER && response.blockCode() == null
+            ? response.withExecutionPolicy(executionPolicies.find(request.site().host(), request.site().pathPattern())) : response;
     }
 }

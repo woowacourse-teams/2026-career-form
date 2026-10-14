@@ -96,9 +96,9 @@ public final class FieldInteractionPolicy {
         String name = candidate.domName();
         if (candidate.control() == FormControl.TEXT
             && match.valueBinding() instanceof FieldMappingResolver.DerivedBinding derived
-            && (name.matches("educationalBackground\\.universities\\.[0-9]+\\.majors\\.1")
+            && (name.matches("educationalBackground\\.(?:universities|graduateSchools)\\.[0-9]+\\.majors\\.1")
                 && derived.recipe() == FieldMappingResolver.DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_1_NAME
-                || name.matches("educationalBackground\\.universities\\.[0-9]+\\.majors\\.2")
+                || name.matches("educationalBackground\\.(?:universities|graduateSchools)\\.[0-9]+\\.majors\\.2")
                 && derived.recipe() == FieldMappingResolver.DerivedRecipe.UNIVERSITY_ADDITIONAL_MAJOR_2_NAME)) {
             return new Decision(InteractionStatus.READY, List.of(), new WritePlan(WriteCommand.SEARCH_SELECTION));
         }
