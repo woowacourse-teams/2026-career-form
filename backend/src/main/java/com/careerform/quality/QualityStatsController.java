@@ -2,6 +2,7 @@ package com.careerform.quality;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.List;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,15 @@ public final class QualityStatsController {
                                       @RequestParam(required = false) String route, @RequestParam(required = false) String version,
                                       @RequestParam(defaultValue = "FULL") String groupBy) {
         return stats.query(from, to, site, structure, route, version, groupBy);
+    }
+
+    @GetMapping("/api/v1/quality/stats/sites")
+    public List<QualityStatsResponse.SiteOption> sites(@RequestParam(required = false) Instant from,
+                                                      @RequestParam(required = false) Instant to,
+                                                      @RequestParam(required = false) String structure,
+                                                      @RequestParam(required = false) String route,
+                                                      @RequestParam(required = false) String version) {
+        return stats.sites(from, to, structure, route, version);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

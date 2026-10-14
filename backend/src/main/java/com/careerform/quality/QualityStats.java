@@ -2,6 +2,7 @@ package com.careerform.quality;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
@@ -41,13 +42,50 @@ public final class QualityStats {
             .filter(record -> ((QualityDailyAggregate) record.payload()).requests() > 0 || ((QualityDailyAggregate) record.payload()).executions() > 0)
             .collect(Collectors.groupingBy(record -> dimension(record, groupBy)));
         if (groups.size() > 500) { throw narrow(); }
-        var rows = groups.entrySet().stream().sorted(Comparator.comparing(entry -> entry.getKey().toString()))
-            .map(entry -> row(entry.getKey(), entry.getValue(), now)).toList();
+        var dimensions = dimensions(groups, groupBy, firstDay, lastDay);
+        var rows = dimensions.stream().sorted(Comparator.comparing(QualityStatsResponse.Dimension::dateKst).thenComparing(Object::toString))
+            .map(dimension -> row(dimension, groups.getOrDefault(dimension, List.of()), now)).toList();
         var failures = rows.stream().flatMap(row -> row.reasons().entrySet().stream().map(entry -> {
             var parts = entry.getKey().split("\\|", 4);
             return new QualityStatsResponse.Failure(row.dimension(), parts[0], parts[1], parts[2], parts[3], entry.getValue());
         })).toList();
         return new QualityStatsResponse(firstDay, lastDay, rows, failures);
+    }
+
+    public List<QualityStatsResponse.SiteOption> sites(Instant from, Instant to, String structure, String route, String version) {
+        return query(from, to, null, structure, route, version, "SITE").rows().stream()
+            .map(row -> new QualityStatsResponse.SiteOption(row.dimension().site(), siteName(row.dimension())))
+            .sorted(Comparator.comparing(QualityStatsResponse.SiteOption::text)).toList();
+    }
+
+    private List<QualityStatsResponse.Dimension> dimensions(Map<QualityStatsResponse.Dimension, List<QualityRecord>> groups,
+                                                           String groupBy, Instant from, Instant to) {
+        if (!groupBy.equals("VERSION_TREND") && !groupBy.equals("SITE_VERSION_TREND")) { return List.copyOf(groups.keySet()); }
+        var templates = groups.keySet().stream().map(dimension -> dated(dimension, "ALL")).distinct().toList();
+        var days = from.atZone(ZONE).toLocalDate().datesUntil(to.atZone(ZONE).toLocalDate()).toList();
+        if ((long) templates.size() * days.size() > 500) { throw narrow(); }
+        return templates.stream().flatMap(dimension -> days.stream().map(day -> dated(dimension, day.toString()))).toList();
+    }
+
+    private QualityStatsResponse.Dimension dated(QualityStatsResponse.Dimension source, String day) {
+        return new QualityStatsResponse.Dimension(source.environment(), source.site(), source.host(), source.siteIdentity(),
+            source.structure(), source.route(), source.version(), day);
+    }
+
+    private String siteName(QualityStatsResponse.Dimension dimension) {
+        var company = dimension.site().indexOf("|company=");
+        return dimension.host() + (company < 0 ? "" : " (" + dimension.site().substring(company + 9) + ")")
+            + (dimension.siteIdentity().equals("UNVERIFIED") ? " (사이트 확인 안 됨)" : "");
+    }
+
+    private String series(QualityStatsResponse.Dimension dimension) {
+        var method = switch (dimension.route()) {
+            case "STATIC" -> "회사 전용";
+            case "GREETING" -> "그리팅 전용";
+            case "GENERIC" -> "범용";
+            default -> dimension.route();
+        };
+        return (dimension.site().equals("ALL") ? "" : siteName(dimension) + " / ") + method + " / " + dimension.version();
     }
 
     private QualityStatsResponse.Dimension dimension(QualityRecord record, String groupBy) {
@@ -57,6 +95,8 @@ public final class QualityStats {
             case "ROUTE" -> new QualityStatsResponse.Dimension(environment, "ALL", "ALL", "COMPOSITION_VARIES", "ALL", group.route(), "ALL", "ALL");
             case "VERSION_TREND" -> new QualityStatsResponse.Dimension(environment, "ALL", "ALL", "COMPOSITION_VARIES", "ALL", group.route(), group.version(), record.createdAt().atZone(ZONE).toLocalDate().toString());
             case "SITE_ROUTE_VERSION" -> new QualityStatsResponse.Dimension(environment, group.site(), group.host(), group.identity().name(), "ALL", group.route(), group.version(), "ALL");
+            case "SITE_VERSION_TREND" -> new QualityStatsResponse.Dimension(environment, group.site(), group.host(), group.identity().name(), "ALL", group.route(), group.version(), record.createdAt().atZone(ZONE).toLocalDate().toString());
+            case "SITE" -> new QualityStatsResponse.Dimension(environment, group.site(), group.host(), group.identity().name(), "ALL", "ALL", "ALL", "ALL");
             default -> throw new IllegalArgumentException("Invalid grouping");
         };
     }
@@ -106,7 +146,9 @@ public final class QualityStats {
             "사람 확인 분모, 정확도 미검증", "클라이언트 보고, 입력 후 1초 확인",
             calls, failures, timeouts, ratio(failures, calls), ratio(timeouts, calls), analysisTime.p95(), analysisTime.samples(), analysisTime.overflow(),
             aiTime.p95(), aiTime.samples(), aiTime.overflow(), reasons,
-            QualityObservedStats.from(sources.stream().map(source -> new QualityObservedStats.Sample(source.id(), source.value())).toList()));
+            QualityObservedStats.from(sources.stream().map(source -> new QualityObservedStats.Sample(source.id(), source.value())).toList()),
+            dimension.dateKst().equals("ALL") ? null : LocalDate.parse(dimension.dateKst()).atStartOfDay(ZONE).toInstant().toString(),
+            series(dimension));
     }
 
     private QualityMetrics.Counts counts(List<Source> sources, Function<QualityDailyAggregate.Contribution, QualityMetrics.Counts> choose) {
