@@ -1,0 +1,233 @@
+local.file "mongodb_uri" {
+  filename = "/run/secrets/mongodb-uri"
+  is_secret = true
+}
+
+prometheus.exporter.mongodb "db" {
+  mongodb_uri = local.file.mongodb_uri.content
+  collect_all = false
+  compatible_mode = false
+  direct_connect = true
+  enable_diagnostic_data = true
+  enable_db_stats = true
+}
+
+prometheus.scrape "mongodb" {
+  targets = prometheus.exporter.mongodb.db.targets
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  forward_to = [prometheus.relabel.mongodb.receiver]
+}
+
+prometheus.relabel "mongodb" {
+  forward_to = [prometheus.remote_write.central.receiver]
+  rule {
+    source_labels = ["__name__"]
+    regex = "mongodb_up|mongodb_ss_connections|mongodb_ss_opcounters|mongodb_ss_uptime|mongodb_ss_wt_cache_(bytes_currently_in_the_cache|maximum_bytes_configured|tracked_dirty_bytes_in_the_cache|modified_pages_evicted|unmodified_pages_evicted)|mongodb_dbstats_(dataSize|indexSize|storageSize|collections|indexes)"
+    action = "keep"
+  }
+  rule {
+    target_label = "job"
+    replacement = "mongodb"
+  }
+  rule {
+    target_label = "instance"
+    replacement = sys.env("HOST_INSTANCE")
+  }
+  rule {
+    source_labels = ["database"]
+    regex = sys.env("MONGODB_DEV_DATABASE")
+    target_label = "env"
+    replacement = "dev"
+  }
+  rule {
+    source_labels = ["database"]
+    regex = sys.env("MONGODB_STAGING_DATABASE")
+    target_label = "env"
+    replacement = "staging"
+  }
+  rule {
+    source_labels = ["database"]
+    regex = sys.env("MONGODB_PROD_DATABASE")
+    target_label = "env"
+    replacement = "prod"
+  }
+  rule {
+    source_labels = ["__name__", "env"]
+    regex = "mongodb_dbstats_.*;"
+    action = "drop"
+  }
+  rule {
+    action = "labeldrop"
+    regex = "database|cl_role|cl_id|rs_nm|rs_state|server_id|collector|profile|ns|collection"
+  }
+}
+
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path = "/host/sys"
+  rootfs_path = "/host/root"
+  set_collectors = ["cpu", "meminfo", "filesystem", "loadavg", "uname", "diskstats", "vmstat", "textfile"]
+  textfile {
+    directory = "/host/state"
+  }
+}
+
+prometheus.scrape "host" {
+  targets = prometheus.exporter.unix.host.targets
+  scrape_interval = "30s"
+  forward_to = [prometheus.relabel.host.receiver]
+}
+
+prometheus.relabel "host" {
+  forward_to = [prometheus.remote_write.central.receiver]
+  rule {
+    target_label = "job"
+    replacement = "mongodb-host"
+  }
+  rule {
+    target_label = "instance"
+    replacement = sys.env("HOST_INSTANCE")
+  }
+}
+
+prometheus.exporter.self "agent" {}
+
+prometheus.scrape "agent" {
+  targets = prometheus.exporter.self.agent.targets
+  scrape_interval = "30s"
+  forward_to = [prometheus.relabel.agent.receiver]
+}
+
+prometheus.relabel "agent" {
+  forward_to = [prometheus.remote_write.central.receiver]
+  rule {
+    target_label = "job"
+    replacement = "mongodb-agent"
+  }
+  rule {
+    target_label = "instance"
+    replacement = sys.env("HOST_INSTANCE")
+  }
+}
+
+discovery.docker "db" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name = "label"
+    values = ["com.docker.compose.service=mongodb"]
+  }
+}
+
+discovery.relabel "db" {
+  targets = discovery.docker.db.targets
+  rule {
+    target_label = "service"
+    replacement = "mongodb"
+  }
+  rule {
+    target_label = "instance"
+    replacement = sys.env("HOST_INSTANCE")
+  }
+}
+
+loki.source.docker "db" {
+  host = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.db.output
+  forward_to = [loki.process.safe_mongo.receiver]
+}
+
+loki.process "safe_mongo" {
+  forward_to = [loki.write.central.receiver]
+  stage.json {
+    drop_malformed = true
+    expressions = {
+      event_id = "id",
+      command_name = "keys(attr.command || `{}`)[?@ == 'find' || @ == 'getMore' || @ == 'insert' || @ == 'update' || @ == 'delete' || @ == 'aggregate' || @ == 'count' || @ == 'distinct' || @ == 'findAndModify'] | [0]",
+      severity = "s",
+      component = "c",
+      mongo_time = "t.\"$date\"",
+      database = "attr.command.\"$db\"",
+      namespace = "attr.ns",
+      duration_ms = "attr.durationMillis",
+      working_ms = "attr.workingMillis",
+      docs_examined = "attr.docsExamined",
+      keys_examined = "attr.keysExamined",
+      returned = "attr.nreturned",
+      plan = "attr.planSummary",
+    }
+  }
+  stage.regex {
+    source = "namespace"
+    expression = "^(?P<database>[^.]+)\\."
+  }
+  stage.template {
+    source = "env"
+    template = "{{ if eq .database \"" + sys.env("MONGODB_DEV_DATABASE") + "\" }}dev{{ else if eq .database \"" + sys.env("MONGODB_STAGING_DATABASE") + "\" }}staging{{ else if eq .database \"" + sys.env("MONGODB_PROD_DATABASE") + "\" }}prod{{ else }}shared{{ end }}"
+  }
+  stage.template {
+    source = "safe_line"
+    template = `command={{ if regexMatch "^(find|getMore|insert|update|delete|aggregate|count|distinct|findAndModify)$" (printf "%v" .command_name) }}{{ .command_name }}{{ else }}OTHER{{ end }} eventId={{ if regexMatch "^[0-9]+$" (printf "%v" .event_id) }}{{ .event_id }}{{ else }}UNKNOWN{{ end }} severity={{ if regexMatch "^(F|E|W|I|D[1-5])$" (printf "%v" .severity) }}{{ .severity }}{{ else }}UNKNOWN{{ end }} component={{ if regexMatch "^(CONTROL|NETWORK|STORAGE|COMMAND|QUERY|ACCESS|WRITE|REPL|INDEX|SHARDING|TRANSACTION|FTDC|ASIO|EXECUTOR|CONNECTION_POOL)$" (printf "%v" .component) }}{{ .component }}{{ else }}UNKNOWN{{ end }} durationMs={{ if regexMatch "^[0-9]+([.][0-9]+)?$" (printf "%v" .duration_ms) }}{{ .duration_ms }}{{ else }}unavailable{{ end }} workingMs={{ if regexMatch "^[0-9]+([.][0-9]+)?$" (printf "%v" .working_ms) }}{{ .working_ms }}{{ else }}unavailable{{ end }} docsExamined={{ if regexMatch "^[0-9]+$" (printf "%v" .docs_examined) }}{{ .docs_examined }}{{ else }}unavailable{{ end }} keysExamined={{ if regexMatch "^[0-9]+$" (printf "%v" .keys_examined) }}{{ .keys_examined }}{{ else }}unavailable{{ end }} returned={{ if regexMatch "^[0-9]+$" (printf "%v" .returned) }}{{ .returned }}{{ else }}unavailable{{ end }} plan={{ if hasPrefix "COLLSCAN" (printf "%v" .plan) }}COLLSCAN{{ else if hasPrefix "IXSCAN" (printf "%v" .plan) }}IXSCAN{{ else }}OTHER{{ end }} collectionId={{ if .namespace }}{{ Sha2Hash .namespace "career-form-mongo-namespace-v1" }}{{ else }}unavailable{{ end }}`
+  }
+  stage.timestamp {
+    source = "mongo_time"
+    format = "RFC3339Nano"
+    action_on_failure = "skip"
+  }
+  stage.labels {
+    values = {env = ""}
+  }
+  stage.output {
+    source = "safe_line"
+  }
+}
+
+local.file_match "host_events" {
+  path_targets = [{"__path__" = "/host/state/events.log", "service" = "mongodb-host", "instance" = sys.env("HOST_INSTANCE")}]
+}
+
+loki.source.file "host_events" {
+  targets = local.file_match.host_events.targets
+  forward_to = [loki.process.host_events.receiver]
+}
+
+loki.process "host_events" {
+  forward_to = [loki.write.central.receiver]
+  stage.json {
+    drop_malformed = true
+    expressions = {observed_at = "timestamp"}
+  }
+  stage.timestamp {
+    source = "observed_at"
+    format = "Unix"
+    action_on_failure = "skip"
+  }
+}
+
+loki.write "central" {
+  endpoint {
+    url = "http://" + sys.env("MONITORING_PRIVATE_IP") + ":3100/loki/api/v1/push"
+    basic_auth {
+      username = "alloy"
+      password_file = "/run/secrets/ingest-password"
+    }
+  }
+  wal {
+    enabled = true
+  }
+}
+
+prometheus.remote_write "central" {
+  endpoint {
+    url = "http://" + sys.env("MONITORING_PRIVATE_IP") + ":9090/api/v1/write"
+    basic_auth {
+      username = "alloy"
+      password_file = "/run/secrets/ingest-password"
+    }
+    queue_config {
+      capacity = 1000
+      min_shards = 1
+      max_shards = 1
+    }
+  }
+}
