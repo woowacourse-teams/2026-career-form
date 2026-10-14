@@ -2,9 +2,9 @@
 
 > Topic: monitoring-system
 > Status: Current
-> Current: [CF-158 장애 분석 로그와 외부 호출 P95](../../raw/issues/CF-158/documents/monitoring-system.md)
-> History: [CF-158 장애 분석 로그와 외부 호출 P95](../../raw/issues/CF-158/documents/monitoring-system.md); [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md); [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md); [CF-154 Grafana HTTP 접속과 수동 반영](../../raw/issues/CF-154/documents/monitoring-system.md)
-> Updated: 2026-10-06
+> Current: [CF-207 공용 MongoDB 관측과 수집 신뢰성](../../raw/issues/CF-207/documents/monitoring-system.md)
+> History: [CF-207 공용 MongoDB 관측과 수집 신뢰성](../../raw/issues/CF-207/documents/monitoring-system.md); [CF-158 장애 분석 로그와 외부 호출 P95](../../raw/issues/CF-158/documents/monitoring-system.md); [CF-131 공용 모니터링 구성과 관측 경계](../../raw/issues/CF-131/documents/monitoring-system.md); [CF-144 공용 모니터링과 호스트 디스크 알림](../../raw/issues/CF-144/documents/monitoring-system.md); [CF-151 dev 호스트 루트 디스크 임계값 95%](../../raw/issues/CF-151/documents/monitoring-system.md); [CF-154 Grafana HTTP 접속과 수동 반영](../../raw/issues/CF-154/documents/monitoring-system.md)
+> Updated: 2026-10-13
 
 ## 현재 상태
 
@@ -48,6 +48,18 @@ interaction 5초, 기타 API 2초 초과이며 Actuator를 제외한다.
 최근 30초 scrape 상태는 Loki 전송 정상의 근거가 아니다. 빈 결과, 쿼리 오류와
 API_RESULT 파싱 실패를 구분하고 기존 알림과 timeout은 유지한다.
 
+CF-207에서 공용 MongoDB 자원을 한 번 수집하고 앱 풀은 환경, 인스턴스,
+풀별로, 호출은 환경, 인스턴스, 작업별로 구분한다. 명령 왕복, 전체 호출,
+서버 로그의 내부 시간은 다른 관측 범위다. DB 로그는 허용 필드만 전송하며
+HTTP requestId와 드라이버 ID를 구분한다. 명령 시작 시 저장한 요청 문맥을
+비동기 완료 로그에 사용한다. 서버 로그와 앱 요청의 일대일 연결을 보장하지 않는다.
+
+DB 관측에서 수집 누락과 낮은 표본은 복구 근거가 아니다. 격리 시험에서 짧은
+중앙 단절의 로그는 재전송됐지만 단절 중 수집기를 재시작하면 일부 로그가
+로컬 파일에만 남는 경계를 관찰했다. 영속 WAL이 무유실을 보장하지 않는다.
+실제 배포와 Discord 수신, 운영 부하 및 보존 검증은 사람 담당이다.
+중앙 모니터링 중단에 대비한 독립 외부 감시는 이번 변경에 포함하지 않는다.
+
 ## 변경 이유
 
 기존 health와 Docker 로그 회전만으로 제공되지 않았던 중앙 관측 경로를 추가했다.
@@ -64,3 +76,6 @@ CF-154에서 조회 사용자의 SSH 없는 조회를 위해 HTTP 진입점을 �
 
 CF-158에서 개별 로그 확인을 줄이기 위해 조건이 적용된 패널과 요청 연결을 추가했다.
 P95 표본과 수집 상태의 해석 한계를 함께 기록했다.
+
+CF-207에서 공용 DB와 환경별 앱의 관측 범위를 분리하고, 로그 정제와 요청
+문맥 전파 및 수집 단절의 유실 경계를 기록했다. 기존 알림과 보존 정책은 유지한다.

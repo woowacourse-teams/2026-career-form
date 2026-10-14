@@ -55,12 +55,13 @@ public final class QualityRollup {
         var reasons = !deduplicated ? Map.of("OBSERVATION|DEDUPLICATION_UNOBSERVED|ALL", 1L) : fields.entrySet().stream().filter(entry -> entry.getValue().observed() && entry.getValue().progress().reason() != null)
             .collect(Collectors.toUnmodifiableMap(entry -> stage(entry.getValue().progress().reason()) + "|" + entry.getValue().progress().reason()
                 + "|" + controls.getOrDefault(entry.getKey(), "UNKNOWN"), entry -> 1L, Long::sum));
+        var reference = registry.executionReference(group, record.createdAt(), matching);
         var belongs = !matching.isEmpty() || run.snapshots().isEmpty();
         return new QualityDailyAggregate.Contribution(record.revision(), 0, belongs ? 1 : 0, ZERO, deduplicated ? sliced.counts() : ZERO,
             deduplicated ? fields.values().stream().filter(QualityExecution.Field::observed).count() : 0, run.execution().lastObservedAt().plusSeconds(1800),
             belongs ? run.execution().terminal() == null ? QualityExecution.Status.RUNNING : run.execution().terminal() : null,
             reasons, QualityHistogram.empty(), QualityHistogram.empty(), 0, 0, 0,
-            registry.reference(group, record.createdAt()).orElse(null), deduplicated && !run.scopeMismatch() && group.identity() != QualitySite.Status.UNVERIFIED,
+            reference.count(), deduplicated && !run.scopeMismatch() && reference.compatible() && group.identity() != QualitySite.Status.UNVERIFIED,
             deduplicated ? sliced.reportedCounts() : ZERO);
     }
 

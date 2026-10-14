@@ -47,7 +47,7 @@ it("실제 입력 흐름의 수집과 쓰기 및 유지 결과를 연결하고 �
       };
     },
   };
-  render(
+  const { unmount } = render(
     <AutofillWorkflow
       repository={{ load: async () => profile }}
       apiClient={client}
@@ -80,4 +80,8 @@ it("실제 입력 흐름의 수집과 쓰기 및 유지 결과를 연결하고 �
   expect(JSON.stringify(reports)).not.toContain(
     profile.personal.koreanGivenName,
   );
+  expect(reports).toHaveLength(1);
+  unmount();
+  await new Promise((resolve) => globalThis.setTimeout(resolve, 150));
+  expect(reports).toHaveLength(1);
 });

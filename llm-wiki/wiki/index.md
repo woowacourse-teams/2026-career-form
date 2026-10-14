@@ -52,6 +52,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [배포 Runbook](topics/deployment-runbook.md) | 배포, hotfix와 rollback 절차 | 2026-08-22 |
 | [공용 모니터링 시스템](topics/monitoring-system.md) | 중앙 수집, 환경별 알림, 호스트 디스크 감시와 검증 경계 | 2026-10-02 |
 | [자동 입력 품질 관측과 사람 확인 요청](topics/autofill-quality-observation.md) | 실제 경로 및 버전별 지표, 사람 참고 분모와 평일 확인 요청 | 2026-10-07 |
+| [자동 기입 품질 report의 전송 시점](topics/quality-report-lifecycle.md) | 실행 중 누적, 종료 시 전송과 중복 방지 | 2026-10-13 |
 | [기존 구현 계획](topics/implementation-plans.md) | 계획 이력과 신규 저장 경계 | 2026-08-22 |
 | [페이지 분석 조사](topics/page-analysis-research.md) | 회사 페이지와 DOM 분석 근거 | 2026-08-22 |
 | [저장소 스킬](topics/repository-skills.md) | 저장소 스킬 역할과 범위 | 2026-08-22 |
@@ -76,3 +77,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [발표 디자인 시스템](topics/presentation-design-system.md) | 독립 레이아웃, 교체 슬롯과 정적 HTML/CSS 재현 규칙 | 2026-08-26 |
 | [랜딩,온보딩 웹 페이지](topics/landing-onboarding.md) | 단계형 선택 입력과 요약 보충, 확장 온보딩과 웹 경계 | 2026-10-13 |
 | [릴리스 브랜치 유지와 정리](topics/release-branch-lifecycle.md) | 배포,동기화 완료 후 정리와 SHA 보호, 관리자 설정 | 2026-10-03 |
+| [확장 품질 보고의 fetch 호출 문맥](topics/extension-fetch-context.md) | 브라우저 전역 수신자, 보고 요청 계약과 검증 경계 | 2026-10-12 |
+| [Wiki 검증 기준 브랜치](topics/wiki-validation-base.md) | PR, 로컬 작업과 pre-push의 기준 ref 선택 및 raw 보호 | 2026-10-12 |
+| [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 공고별 단일 확인, 공개 링크와 실행 분모 경계 | 2026-10-12 |
+| [시스템 PR 공유 파일 검사와 릴리스 본문 계약](topics/release-pr-contract.md) | 중앙 시스템 PR 분류, 일반 및 hotfix 보호와 릴리스 생성 본문 검증 | 2026-10-12 |
+| [품질 관측 호출의 인터럽트 처리](topics/quality-observation-interruption.md) | 제출 전 인터럽트 검사, 상태 보존과 실행 중 취소 회귀 | 2026-10-13 |

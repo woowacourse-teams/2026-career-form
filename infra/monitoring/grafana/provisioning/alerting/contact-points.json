@@ -15,6 +15,21 @@
           }
         }
       ]
+    },
+    {
+      "orgId": 1,
+      "name": "career-db-discord",
+      "receivers": [
+        {
+          "uid": "career-db-discord",
+          "type": "discord",
+          "disableResolveMessage": false,
+          "settings": {
+            "url": "$DISCORD_WEBHOOK_URL",
+            "message": "{{ template \"career.db.message\" . }}"
+          }
+        }
+      ]
     }
   ]
 }
