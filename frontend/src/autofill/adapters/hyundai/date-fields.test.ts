@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { FieldsAnalyzeResponse } from "../../api/types";
@@ -81,6 +84,7 @@ function response(
   fields: FieldsAnalyzeResponse["fields"],
 ): FieldsAnalyzeResponse {
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",

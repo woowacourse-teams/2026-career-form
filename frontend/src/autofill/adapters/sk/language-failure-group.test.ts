@@ -1,9 +1,11 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { getWorkflowAdapter } from "../workflow";
 
-const adapter = getWorkflowAdapter("www.skcareers.com");
+const adapter = getWorkflowAdapter(document);
 
 afterEach(() => document.body.replaceChildren());
 
@@ -75,9 +77,9 @@ describe("SK language row failure groups", () => {
     expect(failureGroup(0)).toBeUndefined();
   });
 
-  it("keeps stopping when a nested group owns the select", () => {
+  it("uses the configured exam row when an ordinary layout group wraps the select", () => {
     document.body.innerHTML = `<div class="form-item-group langExam-Item"><div class="form-item-group"><select name="lngLanguageType"></select></div></div>`;
-    expect(failureGroup(0)).toBeUndefined();
+    expect(failureGroup(0)).toBe(document.querySelector(".langExam-Item"));
   });
 
   it("keeps stopping for another profile field", () => {

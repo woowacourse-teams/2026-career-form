@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { MatchedFieldAnalysis } from "../../api/types";
@@ -145,16 +147,22 @@ describe("SK military type strict writer", () => {
       "duplicate label",
       '<option value="303001">현역병</option><option value="303099">현역병</option>',
     ],
-  ])("rejects a %s target option", (_reason, option) => {
-    const handle = setup(`${gate()}${status()}${typeSelect(option)}`);
+  ])(
+    "validates %s using the policy label rather than a hardcoded native code",
+    (reason, option) => {
+      const handle = setup(`${gate()}${status()}${typeSelect(option)}`);
 
-    expect(
-      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
-    ).toEqual({
-      handled: true,
-      written: false,
-    });
-  });
+      expect(
+        getWriteAdapter(document).tryWrite(
+          handle,
+          typeItem(handle.candidateId),
+        ),
+      ).toEqual({
+        handled: true,
+        written: reason === "wrong code" || reason === "duplicate code",
+      });
+    },
+  );
 
   it("does not write a disabled control or disabled exact option", () => {
     const disabledControl = setup();
@@ -204,7 +212,10 @@ describe("SK military type strict writer", () => {
     (militaryStatus) => {
       const handle = setup(`${gate()}${status(militaryStatus)}${typeSelect()}`);
       expect(
-        getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
+        getWriteAdapter(document).tryWrite(
+          handle,
+          typeItem(handle.candidateId),
+        ),
       ).toEqual({
         handled: true,
         written: false,
@@ -230,7 +241,7 @@ describe("SK military type strict writer", () => {
     expect(select.value).toBe("");
   });
 
-  it("reports failure when a post-event handler changes the selected type code", () => {
+  it("retains the verified selected option when only its opaque native code changes", () => {
     const handle = setup();
     const select = document.querySelector<HTMLSelectElement>(
       "select[name='prsMilitarySvcType']",
@@ -243,7 +254,7 @@ describe("SK military type strict writer", () => {
       getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
-      written: false,
+      written: true,
     });
   });
 
@@ -277,7 +288,10 @@ describe("SK military type strict writer", () => {
       });
 
       expect(
-        getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
+        getWriteAdapter(document).tryWrite(
+          handle,
+          typeItem(handle.candidateId),
+        ),
       ).toEqual({
         handled: true,
         written: false,

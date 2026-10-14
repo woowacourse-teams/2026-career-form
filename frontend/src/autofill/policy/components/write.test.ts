@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -155,7 +157,7 @@ describe("Greeting exact radio write", () => {
 });
 
 describe("Greeting veteran number", () => {
-  it("allows only the site's eight-digit number format", () => {
+  it("delegates veteran number formats to the native writer when no format rule is configured", () => {
     const input = document.createElement("input");
     input.name =
       "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber";
@@ -166,8 +168,7 @@ describe("Greeting veteran number", () => {
     } as unknown as FieldCandidateHandle;
     const item = { profileValue: "1234567890" } as ReviewPlanItem;
     expect(componentWriteAdapter.tryWrite(handle, item)).toEqual({
-      handled: true,
-      written: false,
+      handled: false,
     });
     item.profileValue = "12-345678";
     expect(componentWriteAdapter.tryWrite(handle, item)).toEqual({
@@ -207,6 +208,10 @@ it("leaves Greeting email suggestion dismissal to settled verification", () => {
       mappingStatus: "ADAPTER_VERIFIED",
       interactionStatus: "READY",
       writePlan: { command: "SET_TEXT" },
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "contact.contact.email",
+      },
     },
   } as ReviewPlanItem;
 
@@ -237,6 +242,10 @@ function emailFixture(label = "이메일주소*", type = "email") {
       mappingStatus: "ADAPTER_VERIFIED",
       interactionStatus: "READY",
       writePlan: { command: "SET_TEXT" },
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "contact.contact.email",
+      },
     },
   } as ReviewPlanItem;
   return { input, handle: lookup.handle, item };
@@ -409,7 +418,10 @@ it("dispatches email value events only inside the acknowledged MAIN commit", () 
 it.each(["IH", "NaN", "Infinity", "-1", "1e3", "1,000", ""])(
   "rejects nonnumeric language score %s before the native writer",
   (profileValue) => {
+    const input = document.createElement("input");
+    document.body.append(input);
     const handle = {
+      elements: [input],
       candidateId: "score",
       candidate: {
         domName:

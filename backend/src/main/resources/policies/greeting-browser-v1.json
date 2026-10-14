@@ -1299,5 +1299,515 @@
     "nestedRepeat",
     "pairedNumber",
     "employment"
-  ]
+  ],
+  "writeRecipes": [
+    {
+      "name": "basicInformation.email",
+      "key": "contact.contact.email",
+      "command": "SET_TEXT",
+      "inputTypes": ["text", "email"],
+      "stage": 0,
+      "plan": [
+        {
+          "op": "IF",
+          "condition": [
+            {
+              "target": "input",
+              "read": "VALUE",
+              "equals": "{value}"
+            }
+          ],
+          "then": [
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        },
+        {
+          "op": "ASSERT",
+          "condition": [
+            {
+              "target": "input",
+              "read": "VALUE",
+              "equals": ""
+            }
+          ]
+        },
+        {
+          "op": "DOM",
+          "plan": [
+            {
+              "op": "SET_VALUE",
+              "target": "input",
+              "value": "{value}"
+            }
+          ]
+        },
+        {
+          "op": "BRIDGE",
+          "name": "mainCommit"
+        },
+        {
+          "op": "ASSERT",
+          "condition": [
+            {
+              "target": "input",
+              "read": "VALUE",
+              "equals": "{value}"
+            }
+          ]
+        },
+        {
+          "op": "RETURN",
+          "value": true
+        }
+      ]
+    }
+  ],
+  "searchFlows": {
+    "afterSelection": "afterSelection",
+    "cleanup": "cleanup",
+    "program": {
+      "targets": {},
+      "conditions": {},
+      "plans": {
+        "afterSelection": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "IF",
+              "condition": {
+                "value": "{success}",
+                "equals": "true"
+              },
+              "then": [
+                {
+                  "op": "RETURN",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "all": [
+                  {
+                    "value": "{selectionMode}",
+                    "equals": "KEYBOARD_WHEN_IDENTIFIED"
+                  },
+                  {
+                    "not": {
+                      "value": "{optionId}",
+                      "equals": ""
+                    }
+                  },
+                  {
+                    "target": "input",
+                    "read": "VALUE",
+                    "equals": "{expected}"
+                  },
+                  {
+                    "target": "input",
+                    "read": "ATTRIBUTE",
+                    "equals": "false",
+                    "name": "aria-expanded"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "op": "AUTHORIZE"
+                },
+                {
+                  "op": "ASSERT",
+                  "condition": {
+                    "all": [
+                      {
+                        "value": "{selectionMode}",
+                        "equals": "KEYBOARD_WHEN_IDENTIFIED"
+                      },
+                      {
+                        "not": {
+                          "value": "{optionId}",
+                          "equals": ""
+                        }
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{expected}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "ATTRIBUTE",
+                        "equals": "false",
+                        "name": "aria-expanded"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "DOM",
+                  "plan": [
+                    {
+                      "op": "KEY",
+                      "target": "input",
+                      "event": "keydown",
+                      "key": "ArrowDown",
+                      "code": "ArrowDown"
+                    },
+                    {
+                      "op": "KEY",
+                      "target": "input",
+                      "event": "keyup",
+                      "key": "ArrowDown",
+                      "code": "ArrowDown"
+                    }
+                  ]
+                },
+                {
+                  "op": "WAIT",
+                  "condition": {
+                    "fact": "selectionConfirmed",
+                    "equals": true
+                  },
+                  "timeoutMs": 5000,
+                  "pollMs": 25
+                },
+                {
+                  "op": "RETURN",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": false
+            }
+          ]
+        },
+        "cleanup": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "IF",
+              "condition": {
+                "all": [
+                  {
+                    "value": "{attempted}",
+                    "equals": "true"
+                  },
+                  {
+                    "value": "{success}",
+                    "equals": "false"
+                  },
+                  {
+                    "any": [
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{desired}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{expected}"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "op": "AUTHORIZE"
+                },
+                {
+                  "op": "ASSERT",
+                  "condition": {
+                    "all": [
+                      {
+                        "value": "{attempted}",
+                        "equals": "true"
+                      },
+                      {
+                        "value": "{success}",
+                        "equals": "false"
+                      },
+                      {
+                        "any": [
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{desired}"
+                          },
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{expected}"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "DOM",
+                  "plan": [
+                    {
+                      "op": "SET_VALUE",
+                      "target": "input",
+                      "value": "{original}"
+                    },
+                    {
+                      "op": "EVENT",
+                      "target": "input",
+                      "event": "input"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "all": [
+                  {
+                    "target": "input",
+                    "read": "ATTRIBUTE",
+                    "equals": "true",
+                    "name": "aria-expanded"
+                  },
+                  {
+                    "any": [
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{original}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{expected}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{desired}"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "op": "AUTHORIZE"
+                },
+                {
+                  "op": "ASSERT",
+                  "condition": {
+                    "all": [
+                      {
+                        "target": "input",
+                        "read": "ATTRIBUTE",
+                        "equals": "true",
+                        "name": "aria-expanded"
+                      },
+                      {
+                        "any": [
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{original}"
+                          },
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{expected}"
+                          },
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{desired}"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "DOM",
+                  "plan": [
+                    {
+                      "target": "input",
+                      "op": "KEY",
+                      "event": "keydown",
+                      "key": "Escape"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        },
+        "retainedCompletion": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "DOM",
+              "plan": [
+                {
+                  "target": "input",
+                  "op": "KEY",
+                  "event": "keydown",
+                  "key": "Escape"
+                }
+              ]
+            },
+            {
+              "op": "WAIT",
+              "condition": {
+                "all": [
+                  {
+                    "target": "input",
+                    "read": "ATTRIBUTE",
+                    "name": "aria-expanded",
+                    "equals": "false"
+                  },
+                  {
+                    "any": [
+                      {
+                        "fact": "linkedPopupMissing",
+                        "equals": true
+                      },
+                      {
+                        "all": [
+                          {
+                            "value": "{closedPopup}",
+                            "equals": "HIDDEN_OR_UNMOUNTED"
+                          },
+                          {
+                            "fact": "linkedPopupsHidden",
+                            "equals": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timeoutMs": 1200,
+              "pollMs": 25
+            },
+            {
+              "op": "DOM",
+              "plan": [
+                {
+                  "op": "BLUR",
+                  "target": "input"
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "retainedCompletion": "retainedCompletion"
+  },
+  "addressCleanup": {
+    "entrypoint": "cleanup",
+    "program": {
+      "targets": {
+        "close": {
+          "from": "dialog",
+          "relation": "QUERY",
+          "selector": "[data-scope=\"dialog\"][data-part=\"close-trigger\"]",
+          "count": 1
+        }
+      },
+      "conditions": {},
+      "plans": {
+        "cleanup": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "IF",
+              "condition": {
+                "value": "{requireClosed}",
+                "equals": "true"
+              },
+              "then": [
+                {
+                  "op": "IF",
+                  "condition": {
+                    "all": [
+                      {
+                        "target": "dialog",
+                        "read": "MATCHES",
+                        "equals": "true",
+                        "name": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]"
+                      },
+                      {
+                        "target": "close",
+                        "read": "EXISTS",
+                        "equals": "true"
+                      }
+                    ]
+                  },
+                  "then": [
+                    {
+                      "op": "DOM",
+                      "plan": [
+                        {
+                          "op": "CLICK",
+                          "target": "close"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "WAIT",
+                  "condition": {
+                    "all": [
+                      {
+                        "not": {
+                          "target": "dialog",
+                          "read": "MATCHES",
+                          "equals": "true",
+                          "name": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]"
+                        }
+                      },
+                      {
+                        "fact": "fieldsInteractive",
+                        "equals": true
+                      }
+                    ]
+                  },
+                  "timeoutMs": 3000,
+                  "pollMs": 25
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        }
+      }
+    }
+  }
 }

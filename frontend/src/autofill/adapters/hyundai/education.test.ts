@@ -1,8 +1,12 @@
+import {
+  fixturePolicy,
+  usePolicyFixture,
+} from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createEmptyProfile, type Profile } from "../../../profile/model";
 import { createRepeatPreparationModule } from "../../policy/hidden-code/repeat-preparation";
-import { executionPolicy } from "../../workflow/execution-policy";
 
 const EDUCATION_OPTIONS = [
   ["고등학교", "3"],
@@ -118,9 +122,12 @@ describe("prepareHyundaiEducation", () => {
       },
     ]);
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      true,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(true);
 
     expect(article.querySelectorAll(":scope > .field-content")).toHaveLength(3);
     expect(article.dataset.clicks).toBe("2");
@@ -146,9 +153,12 @@ describe("prepareHyundaiEducation", () => {
     ]);
     setUrl("https://example.test/apply/applyWrite.hc");
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(
       article.querySelector<HTMLInputElement>("input[name='schGb']")!.value,
@@ -162,9 +172,12 @@ describe("prepareHyundaiEducation", () => {
       { id: "high-2", sectionId: "highSchool", values: {} },
     ]);
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(article.dataset.clicks).toBeUndefined();
     expect(
@@ -182,9 +195,12 @@ describe("prepareHyundaiEducation", () => {
     )!;
     choice.style.display = "none";
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(
       article.querySelector<HTMLInputElement>("input[name='schGb']")!.value,
@@ -207,9 +223,12 @@ describe("prepareHyundaiEducation", () => {
         },
       ]);
 
-      await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-        false,
-      );
+      await expect(
+        createRepeatPreparationModule(
+          document,
+          fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+        ).prepareEducation(document, profile),
+      ).resolves.toBe(false);
 
       expect(article.dataset.clicks).toBeUndefined();
     },
@@ -226,9 +245,12 @@ describe("prepareHyundaiEducation", () => {
         { id: "high", sectionId: "highSchool", values: {} },
       ]);
 
-      await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-        false,
-      );
+      await expect(
+        createRepeatPreparationModule(
+          document,
+          fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+        ).prepareEducation(document, profile),
+      ).resolves.toBe(false);
 
       expect(
         article.querySelector<HTMLInputElement>("input[name='schGb']")!.value,
@@ -245,9 +267,12 @@ describe("prepareHyundaiEducation", () => {
     row.querySelector<HTMLButtonElement>("button[data-code='3']")!.click();
     row.querySelector<HTMLInputElement>("#schNm_1")!.value = "기존 학교";
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      true,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(true);
 
     expect(article.dataset.clicks).toBeUndefined();
     expect(
@@ -266,9 +291,12 @@ describe("prepareHyundaiEducation", () => {
     const row = article.querySelector<HTMLElement>(":scope > .field-content")!;
     row.querySelector<HTMLButtonElement>("button[data-code='5']")!.click();
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(article.dataset.clicks).toBeUndefined();
     expect(
@@ -286,9 +314,12 @@ describe("prepareHyundaiEducation", () => {
       },
     ]);
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(article.dataset.clicks).toBeUndefined();
     expect(
@@ -306,9 +337,12 @@ describe("prepareHyundaiEducation", () => {
     duplicate.textContent = "고등학교";
     article.querySelector(".education-option")!.append(duplicate);
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(article.dataset.clicks).toBeUndefined();
     expect(
@@ -325,7 +359,10 @@ describe("prepareHyundaiEducation", () => {
     controller.abort();
 
     await expect(
-      createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile, controller.signal),
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile, controller.signal),
     ).resolves.toBe(false);
 
     expect(article.dataset.clicks).toBeUndefined();
@@ -346,9 +383,12 @@ describe("prepareHyundaiEducation", () => {
         row.remove();
       });
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
   });
 
   it("fails when adding a row changes an existing selected row", async () => {
@@ -371,9 +411,12 @@ describe("prepareHyundaiEducation", () => {
       },
     ]);
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(schoolName.value).toBe("사용자 변경");
   });
@@ -400,9 +443,12 @@ describe("prepareHyundaiEducation", () => {
       },
     ]);
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      false,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(false);
 
     expect(finalEducation.checked).toBe(false);
   });
@@ -466,9 +512,12 @@ describe("prepareHyundaiEducation", () => {
       },
     ]);
 
-    await expect(createRepeatPreparationModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).prepareEducation(document, profile)).resolves.toBe(
-      true,
-    );
+    await expect(
+      createRepeatPreparationModule(
+        document,
+        fixturePolicy("hyundai").browserPolicy!.hiddenCodeContract!,
+      ).prepareEducation(document, profile),
+    ).resolves.toBe(true);
 
     expect(hidden.value).toBe("3");
     expect(trigger.value).toBe("고등학교");

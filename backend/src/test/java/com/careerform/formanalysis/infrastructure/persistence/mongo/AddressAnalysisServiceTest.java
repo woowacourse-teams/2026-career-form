@@ -19,7 +19,7 @@ class AddressAnalysisServiceTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
-        verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        verify(policies, org.mockito.Mockito.times(2)).insert(captured.capture());
         var p = captured.getAllValues().stream().filter(x -> x.companyKey().equals(companyKey)).findFirst().orElseThrow();
         return CompanyFormPolicy.create(p.companyKey(), p.version(), p.preparationFingerprint(),
             p.fieldsFingerprint(), p.actionRules(), p.fieldRules(), key -> true);

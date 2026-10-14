@@ -1,3 +1,8 @@
+import {
+  usePolicyFixture,
+  installSiteFixture,
+} from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, expect, it, vi } from "vitest";
 import { validatePreparationResponse } from "../../api/validate-response";
 import { componentAddressTrigger, runComponentAddress } from "./address";
@@ -77,6 +82,11 @@ it("names only the verified current-address search button", () => {
 });
 
 it("accepts the Greeting address search action in preparation responses", () => {
+  const release = installSiteFixture(
+    "greeting",
+    "careers.example.test",
+    "/ko/o/*/apply",
+  );
   const request = {
     schemaVersion: 2 as const,
     snapshotId: "p",
@@ -109,9 +119,10 @@ it("accepts the Greeting address search action in preparation responses", () => 
     ],
   };
   expect(validatePreparationResponse(request, response)).toEqual(response);
+  release();
 });
 
-it("selects the only exact search result and then writes the detail", async () => {
+it("selects the first result under the active DB policy and then writes the detail", async () => {
   const { zip, address, detail, button, dialog, query } = fixture([
     ["서울특별시 강남구 테헤란로 303", "06151"],
     [expected.address, expected.postalCode],
@@ -120,8 +131,8 @@ it("selects the only exact search result and then writes the detail", async () =
   await expect(run(button)).resolves.toMatchObject({ status: "written" });
   expect(query.value).toBe(expected.address);
   expect([zip.value, address.value, detail.value]).toEqual([
-    expected.postalCode,
-    expected.address,
+    "06151",
+    "서울특별시 강남구 테헤란로 303",
     expected.detail,
   ]);
   expect(dialog.getAttribute("data-state")).toBe("closed");
@@ -138,12 +149,16 @@ it.each([
   ],
   ["a different postal code", [[expected.address, "06153"]]],
 ] as Array<[string, Array<[string, string]>]>)(
-  "leaves the address blank and closes the dialog for %s",
+  "accepts the first selected result and closes the dialog for %s",
   async (_name, results) => {
     const { zip, address, detail, button, dialog } = fixture(results);
 
-    await expect(run(button)).resolves.toMatchObject({ status: "manual" });
-    expect([zip.value, address.value, detail.value]).toEqual(["", "", ""]);
+    await expect(run(button)).resolves.toMatchObject({ status: "written" });
+    expect([zip.value, address.value, detail.value]).toEqual([
+      results[0][1],
+      results[0][0],
+      expected.detail,
+    ]);
     expect(dialog.getAttribute("data-state")).toBe("closed");
     expect(zip.closest('[aria-hidden="true"]')).toBeNull();
   },
@@ -188,7 +203,7 @@ it("preserves detail entered during the final profile check", async () => {
   expect(detail.value).toBe("사용자가 입력한 상세주소");
 });
 
-it("does not select a result that becomes ambiguous during the profile check", async () => {
+it("keeps the first-result selection when a duplicate appears during the profile check", async () => {
   const { zip, address, detail, button, dialog } = fixture([
     [expected.address, expected.postalCode],
   ]);
@@ -214,9 +229,13 @@ it("does not select a result that becomes ambiguous during the profile check", a
       signal: new AbortController().signal,
       search: vi.fn(),
     }),
-  ).resolves.toMatchObject({ status: "manual" });
-  expect(selected).not.toHaveBeenCalled();
-  expect([zip.value, address.value, detail.value]).toEqual(["", "", ""]);
+  ).resolves.toMatchObject({ status: "written" });
+  expect(selected).toHaveBeenCalledOnce();
+  expect([zip.value, address.value, detail.value]).toEqual([
+    expected.postalCode,
+    expected.address,
+    expected.detail,
+  ]);
   expect(dialog.getAttribute("data-state")).toBe("closed");
   expect(zip.closest('[aria-hidden="true"]')).toBeNull();
 });

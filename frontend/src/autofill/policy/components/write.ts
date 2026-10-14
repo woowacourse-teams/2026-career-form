@@ -1,3 +1,5 @@
+import { runSyncPlan } from "../sync-plan";
+import { componentWriteRecipe, recipeBindingMatches } from "./write-recipe";
 import { componentCapability } from "../component-policy";
 import { componentCompletion } from "./completion";
 import { componentRules } from "../runtime-rules";
@@ -7,7 +9,7 @@ import {
   componentPattern,
 } from "../../policy/component-policy";
 import { executionPolicy } from "../../workflow/execution-policy";
-import { commitComponentEmailInput } from "../../interaction/component-email-close-bridge";
+import { executeComponentCommit } from "../../interaction/component-email-close-bridge";
 import { componentGpaSafe } from "./gpa";
 import { componentSyntheticDomName, componentRowIdentity } from "./collection";
 import type { FieldCandidateHandle } from "../../dom/types";
@@ -166,49 +168,29 @@ export function componentEmploymentWrite(
     input.checked === (item.profileValue === meaning.checkedValue)
   );
 }
-/** Email suggestions are optional; this exact Component forms field accepts free text. */
-function componentEmailWrite(
+function writeConfiguredRecipe(
   handle: FieldCandidateHandle,
   item: ReviewPlanItem,
+  recipe: NonNullable<ReturnType<typeof componentWriteRecipe>>,
 ): boolean {
-  const input = handle.elements[0];
-  const value = item.profileValue;
-  if (
-    !componentApproved(handle, item) ||
-    item.analysis?.writePlan?.command !== "SET_TEXT" ||
-    !(input instanceof HTMLInputElement) ||
-    handle.elements.length !== 1 ||
-    componentSyntheticDomName(input) !==
-      componentPolicy(input.ownerDocument).fieldNames.email ||
-    !componentUsable(input) ||
-    input.readOnly ||
-    !["text", "email"].includes(input.type) ||
-    !value ||
-    (input.maxLength >= 0 && value.length > input.maxLength) ||
-    (input.value !== "" && input.value !== value)
-  )
-    return false;
-  if (input.value === value) return true;
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  if (!setter) return false;
+  const input = handle.elements[0],
+    value = item.profileValue;
+  if (!(input instanceof HTMLInputElement) || !value) return false;
   const writable = () =>
     componentApproved(handle, item) &&
-    componentSyntheticDomName(input) ===
-      componentPolicy(input.ownerDocument).fieldNames.email &&
+    recipeBindingMatches(handle, item, recipe) &&
+    componentSyntheticDomName(input) === recipe.name &&
     componentUsable(input) &&
     !input.readOnly &&
-    ["text", "email"].includes(input.type) &&
-    (input.maxLength < 0 || value.length <= input.maxLength) &&
-    (input.value === "" || input.value === value);
-  if (!writable()) return false;
-  setter.call(input, value);
+    (input.maxLength < 0 || value.length <= input.maxLength);
   return (
-    commitComponentEmailInput(input, writable) &&
-    input.isConnected &&
-    input.value === value
+    writable() &&
+    runSyncPlan(recipe.plan, {
+      targets: { input },
+      values: { value },
+      current: writable,
+      bridges: { mainCommit: () => executeComponentCommit(input, writable) },
+    })
   );
 }
 export const componentWriteAdapter: CompanyWriteAdapter = {
@@ -232,8 +214,12 @@ export const componentWriteAdapter: CompanyWriteAdapter = {
       )
     )
       return { handled: true, written: componentEmploymentWrite(handle, item) };
-    if (handle.candidate.domName === componentPolicy(document).fieldNames.email)
-      return { handled: true, written: componentEmailWrite(handle, item) };
+    const recipe = componentWriteRecipe(handle, item);
+    if (recipe)
+      return {
+        handled: true,
+        written: writeConfiguredRecipe(handle, item, recipe),
+      };
     const format = componentPolicy(document).displayFormats.find(
       (rule) =>
         rule.control === handle.candidate.control &&

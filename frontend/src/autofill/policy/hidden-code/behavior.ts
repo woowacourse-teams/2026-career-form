@@ -179,6 +179,11 @@ export interface HiddenCodeBehavior {
     requireName: boolean;
     callbackTimeoutMs: number;
     callbackPollMs: number;
+    existingValueGuards: {
+      role: "zip" | "address" | "detail";
+      comparison: "EXACT" | "NORMALIZED";
+    }[];
+    existingVerification: "NEVER" | "POSTAL_ONLY" | "POSTAL_AND_ADDRESS";
     detailWorkflow: import("../flow-plan").FlowProgram;
     detailEntrypoint: string;
     selection: "FIRST_VISIBLE";

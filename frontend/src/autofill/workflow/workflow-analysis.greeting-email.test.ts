@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -106,6 +109,7 @@ async function run(
     completedGenericStateDrivers: { current: new Map() },
     deferredDriverGroups: { current: new Set() },
     apiClient: {
+loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async () => {
         throw new Error("unexpected");
       },
@@ -114,6 +118,7 @@ async function run(
         if (mode === "url-analysis") history.replaceState(null, "", "/changed");
         if (mode === "abort") controller.abort();
         return {
+executionPolicy: fixturePolicy("greeting"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER",
           analysisStatus: "COMPLETE",

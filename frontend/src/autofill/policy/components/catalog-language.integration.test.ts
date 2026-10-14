@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, expect, it } from "vitest";
 import { CATALOG_VERSION } from "../../../profile/catalog";
 import {
@@ -92,6 +95,7 @@ async function run(
     profile,
     registry,
     analysis: {
+executionPolicy: fixturePolicy("greeting"),
       snapshotId: "snapshot",
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",

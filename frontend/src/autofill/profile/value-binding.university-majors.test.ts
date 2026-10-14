@@ -29,7 +29,7 @@ it.each([
     },
     [],
   ],
-  [{ minorName: "플래그없음" }, []],
+  [{ minorName: "플래그없음" }, ["플래그없음", "부전공"]],
 ])(
   "resolves compact additional major slots without fabricating empty rows: %j",
   (values, expected) => {

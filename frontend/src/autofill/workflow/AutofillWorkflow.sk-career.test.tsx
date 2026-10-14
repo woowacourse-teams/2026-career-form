@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -49,6 +52,7 @@ function candidates(request: FieldsAnalyzeRequest): FieldCandidate[] {
 
 function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
+executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -181,6 +185,7 @@ function setup(
   ];
   let fieldAnalysisCount = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",

@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -69,6 +72,7 @@ function response(
   mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED" = "ADAPTER_VERIFIED",
 ): FieldsAnalyzeResponse {
   return {
+    executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER" as const,
     analysisStatus: "COMPLETE" as const,
@@ -245,6 +249,8 @@ function setup({
   };
   const requests: FieldsAnalyzeRequest[] = [];
   const client: AnalysisApiClient = {
+    loadExecutionPolicy: async () =>
+      host === "www.skcareers.com" ? fixturePolicy("sk") : undefined,
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -253,7 +259,11 @@ function setup({
     }),
     analyzeFields: async (request) => {
       requests.push(request);
-      return response(request, overrides, mappingStatus);
+      return {
+        ...response(request, overrides, mappingStatus),
+        executionPolicy:
+          host === "www.skcareers.com" ? fixturePolicy("sk") : undefined,
+      };
     },
   };
   render(

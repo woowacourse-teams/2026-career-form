@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -20,6 +23,11 @@ it("executes server-approved Greeting birth and education dates through their ow
   const picker = (name: string, id: string, label: string) =>
     `<div data-scope="field" data-part="root"><label>${label}</label><button type="button" name="${name}" data-scope="date-picker" data-part="trigger" aria-controls="${id}">선택</button></div><div id="${id}" data-scope="date-picker" data-part="content" role="application" aria-label="calendar" hidden><input data-scope="date-picker" data-part="input"></div>`;
   document.body.innerHTML = `<section>${picker("basicInformation.birthdate", "birth", "생년월일")}</section><div data-scope="field" data-part="root"><label>대학교</label><div data-scope="accordion" data-part="root"><div data-scope="accordion" data-part="item"><input name="${university}.schoolName" data-scope="combobox" data-part="input" role="combobox" aria-controls="schools"><div id="schools" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div role="option" data-scope="combobox" data-part="item" data-value="K1" data-state="unchecked">서울대학교</div></div>${picker(`${university}.enrollmentPeriod.startDate`, "start", "입학일")}</div></div></div>`;
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `<input name="basicInformation.name"><input name="basicInformation.phoneNumber.nationalNumber">`,
+  );
   document
     .querySelectorAll<HTMLButtonElement>("button[aria-controls]")
     .forEach((button) => {
@@ -69,6 +77,7 @@ it("executes server-approved Greeting birth and education dates through their ow
     completedGenericStateDrivers: { current: new Map() },
     deferredDriverGroups: { current: new Set() },
     apiClient: {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async () => {
         throw new Error("unexpected preparation");
       },
@@ -76,6 +85,7 @@ it("executes server-approved Greeting birth and education dates through their ow
         validateFieldsResponse(
           { ...request, supportedWriteCommands: ["SELECT_DATE"] },
           {
+            executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",
@@ -168,12 +178,14 @@ it("stops before a Greeting calendar click when the saved profile changes after 
     completedGenericStateDrivers: { current: new Map() },
     deferredDriverGroups: { current: new Set() },
     apiClient: {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async () => {
         throw new Error("unexpected preparation");
       },
       analyzeFields: async (request) => {
         analyzed = true;
         return {
+          executionPolicy: fixturePolicy("greeting"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER" as const,
           analysisStatus: "COMPLETE" as const,
@@ -256,10 +268,12 @@ it("recollects a Greeting control after a preceding selection rerenders the form
     completedGenericStateDrivers: { current: new Map() },
     deferredDriverGroups: { current: new Set() },
     apiClient: {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async () => {
         throw new Error("unexpected preparation");
       },
       analyzeFields: async (request) => ({
+        executionPolicy: fixturePolicy("greeting"),
         snapshotId: request.snapshotId,
         mode: "ADAPTER" as const,
         analysisStatus: "COMPLETE" as const,

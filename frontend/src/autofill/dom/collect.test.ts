@@ -1,3 +1,5 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "../workflow/execution-policy";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -19,6 +21,15 @@ describe("application form DOM collection", () => {
         jsdom: { reconfigure(options: { url: string }): void };
       }
     ).jsdom.reconfigure({ url });
+    const host = new URL(url).hostname;
+    installExecutionPolicy(
+      document,
+      host === "talent.hyundai.com"
+        ? fixturePolicy("hyundai")
+        : host === "www.skcareers.com"
+          ? fixturePolicy("sk")
+          : undefined,
+    );
   }
 
   it("separates action and field snapshots without serializing private values", () => {
@@ -51,7 +62,6 @@ describe("application form DOM collection", () => {
     expect(JSON.stringify(preparation.request)).not.toContain("email");
   });
 
-
   it("does not apply Hyundai repeated-row boundaries on a generic host", () => {
     setPageUrl("https://careers.example.test/apply");
     document.body.innerHTML = `
@@ -71,7 +81,7 @@ describe("application form DOM collection", () => {
   });
 
   it("keeps Hyundai repeated rows and add-action identities separate", () => {
-    setPageUrl("https://talent.hyundai.com/apply");
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
     document.body.innerHTML = `
       <article id="education" class="field-form-apply">
         <div class="field-content"><input id="school" /></div>
@@ -95,7 +105,7 @@ describe("application form DOM collection", () => {
   });
 
   it.each([
-    ["https://talent.hyundai.com/apply", ["position"]],
+    ["https://talent.hyundai.com/apply/applyWrite.hc", ["position"]],
     ["https://careers.example.test/apply", []],
   ] as const)(
     "collects input-button fields only for the owning company: %s",
@@ -120,7 +130,7 @@ describe("application form DOM collection", () => {
     (url, expectedCount) => {
       setPageUrl(url);
       document.body.innerHTML = `
-        <div class="apply-form-box">
+        <div role="group" class="apply-form-box">
           <div class="educationUniv-item">
             <input name="eduMajorSub" /><input name="eduGraduationDate" />
           </div>
@@ -141,9 +151,9 @@ describe("application form DOM collection", () => {
   );
 
   it("preserves generic repeated-row visibility semantics on Hyundai's generic fallback", () => {
-    setPageUrl("https://talent.hyundai.com/apply");
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
     document.body.innerHTML = `
-      <div class="apply-form-box">
+      <div role="group" class="apply-form-box">
         <div class="educationUniv-item"><input name="eduMajorSub" /></div>
         <div class="educationUniv-item" hidden><input name="eduMajorSub" /></div>
       </div>
@@ -182,7 +192,7 @@ describe("application form DOM collection", () => {
 
   it("preserves repeated certification row boundaries and local indexes", () => {
     document.body.innerHTML = `
-      <div class="apply-form-box">
+      <div role="group" class="apply-form-box">
         <h3>자격/면허</h3>
         <div class="form-body">
           <div class="form-item-group cert-Item">
@@ -228,7 +238,7 @@ describe("application form DOM collection", () => {
 
   it("indexes different repeated field groups independently within one section", () => {
     document.body.innerHTML = `
-      <div class="apply-form-box education-root">
+      <div role="group" class="apply-form-box education-root">
         <div class="form-item-group educationhigh-item">
           <input id="high-school" name="highSchoolName" />
           <input name="highSchoolGraduationDate" />
@@ -285,7 +295,7 @@ describe("application form DOM collection", () => {
   it("excludes CSS-hidden template rows from field and item collection", () => {
     document.head.innerHTML = `<style>#TempleteItems { display: none; }</style>`;
     document.body.innerHTML = `
-      <div class="apply-form-box">
+      <div role="group" class="apply-form-box">
         <div class="cert-Item">
           <input id="visible-certificate" /><input name="visible-issuer" />
         </div>
@@ -319,7 +329,7 @@ describe("application form DOM collection", () => {
 
   it("counts nested repeatable items in a form body without counting inner form items", () => {
     document.body.innerHTML = `
-      <div class="apply-form-box cert-root">
+      <div role="group" class="apply-form-box cert-root">
         <div class="form-title"><h3>자격/면허</h3></div>
         <div class="form-body">
           <div class="form-item-group">
@@ -389,7 +399,7 @@ describe("application form DOM collection", () => {
   });
 
   it("caps preparation select options to the analysis API contract", () => {
-    setPageUrl("https://talent.hyundai.com/apply");
+    setPageUrl("https://talent.hyundai.com/apply/applyWrite.hc");
     document.body.innerHTML = `
       <label for="job-role">직무 선택</label>
       <select id="job-role" name="jobRole">
@@ -409,7 +419,7 @@ describe("application form DOM collection", () => {
 
   it("counts different repeatable groups independently within one section", () => {
     document.body.innerHTML = `
-      <div class="apply-form-box education-root">
+      <div role="group" class="apply-form-box education-root">
         <div class="form-item-group educationhigh-item">
           <input name="educationHighName" /><input name="educationHighDate" />
         </div>
@@ -437,7 +447,7 @@ describe("application form DOM collection", () => {
 
   it("excludes hidden repeatable rows from generic-form counts", () => {
     document.body.innerHTML = `
-      <div class="apply-form-box education-root">
+      <div role="group" class="apply-form-box education-root">
         <div class="educationUniv-item">
           <input name="eduMajorSub" /><input name="eduGraduationDate" />
         </div>
@@ -457,7 +467,6 @@ describe("application form DOM collection", () => {
     ).toBe(1);
   });
 
-
   it("recognizes an SK template whose row shell remains visible but controls are hidden", () => {
     document.body.innerHTML = `
       <div id="template-row"><input name="eduMajorSub" hidden /></div>
@@ -474,7 +483,7 @@ describe("application form DOM collection", () => {
 
   it("does not count a sibling education row for an empty education group", () => {
     document.body.innerHTML = `
-      <div class="apply-form-box education-root">
+      <div role="group" class="apply-form-box education-root">
         <div class="form-item-group educationhigh-item">
           <input name="educationHighName" /><input name="educationHighDate" />
         </div>

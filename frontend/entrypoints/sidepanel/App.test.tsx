@@ -195,7 +195,7 @@ describe("side panel App", () => {
     expect(copyText).toHaveBeenCalledWith("copy@example.com");
   });
 
-  it("reveals a military value explicitly before allowing it to be copied", async () => {
+  it("shows a saved military value directly and copies only on request", async () => {
     const copyText = vi.fn(async () => undefined);
     render(<App repository={createRepository()} copyText={copyText} />);
     await screen.findByText("copy@example.com");
@@ -204,12 +204,6 @@ describe("side panel App", () => {
       screen.getByRole("button", { name: "병역, 보훈, 장애와 건강 펼치기" }),
     );
     expect(screen.getByText("병역 상태")).toBeInTheDocument();
-    expect(screen.queryByText("비식별 병역 상태")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "병역 상태 복사" }),
-    ).not.toBeInTheDocument();
-    expect(copyText).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "병역 상태 펼치기" }));
     expect(screen.getByText("비식별 병역 상태")).toBeInTheDocument();
     expect(copyText).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "병역 상태 복사" }));

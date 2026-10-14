@@ -446,7 +446,23 @@
           "callbackTimeoutMs": "number",
           "callbackPollMs": "number",
           "detailWorkflow": "$flow",
-          "detailEntrypoint": "string"
+          "detailEntrypoint": "string",
+          "existingVerification": {
+            "$enum": ["NEVER", "POSTAL_ONLY", "POSTAL_AND_ADDRESS"]
+          },
+          "existingValueGuards": {
+            "$array": {
+              "$object": {
+                "role": {
+                  "$enum": ["zip", "address", "detail"]
+                },
+                "comparison": {
+                  "$enum": ["EXACT", "NORMALIZED"]
+                }
+              },
+              "$required": ["role", "comparison"]
+            }
+          }
         },
         "$required": [
           "selection",
@@ -462,7 +478,9 @@
           "callbackTimeoutMs",
           "callbackPollMs",
           "detailWorkflow",
-          "detailEntrypoint"
+          "detailEntrypoint",
+          "existingVerification",
+          "existingValueGuards"
         ]
       },
       "fixedCodeSearches": {

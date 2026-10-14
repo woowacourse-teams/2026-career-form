@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { beforeEach, describe, it, expect } from "vitest";
 import { runKakaoAddress as runSkAddress } from "../../address/kakao-executor";
 const expected = {
@@ -7,7 +9,7 @@ const expected = {
 };
 function setup() {
   document.body.innerHTML =
-    '<div id="applyContentUserInfo"><button id="btnSearchAddress" type="button">우편번호 찾기</button><input id="prsZipCode" name="prsZipCode" readonly><input id="prsAddress" name="prsAddress" readonly><input id="prsAddressDtl" name="prsAddressDtl"></div><div id="layer" style="display:none"><iframe title="우편번호서비스 레이어 프레임"></iframe></div>';
+    '<div id="applyContentUserInfo"><button id="btnSearchAddress" type="button">우편번호 찾기</button><input id="prsZipCode" name="prsZipCode" readonly><input id="prsAddress" name="prsAddress" readonly><input id="prsAddressDtl" name="prsAddressDtl"></div><div id="layer" style="display:none"><iframe src="https://postcode.map.kakao.com/search" title="우편번호서비스 레이어 프레임"></iframe></div>';
   const button = document.querySelector("#btnSearchAddress")!;
   button.addEventListener("click", () => {
     (document.querySelector("#layer") as HTMLElement).style.display = "block";
@@ -33,7 +35,8 @@ describe("SK address selection", () => {
       expected,
       loadCurrent: async () => expected,
       signal: new AbortController().signal,
-      search: async (actual, validate) => {
+      search: async (actual, validate, _signal, selected) => {
+        selected?.(actual);
         searches++;
         expect(actual).toEqual({
           address: expected.address,
@@ -124,7 +127,8 @@ it("accepts the provider-verified road callback without its legal-dong reference
     expected: profile,
     loadCurrent: async () => profile,
     signal: new AbortController().signal,
-    search: async (_expected, maySelect) => {
+    search: async (_expected, maySelect, _signal, selected) => {
+      selected?.(_expected);
       expect(await maySelect()).toBe(true);
       document.querySelector<HTMLInputElement>("#prsZipCode")!.value =
         expected.postalCode;

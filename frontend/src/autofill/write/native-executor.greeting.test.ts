@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -59,6 +61,10 @@ function fixture() {
     analysis: {
       candidateId: "email",
       matchType: "MATCH",
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "contact.contact.email",
+      },
       mappingStatus: "ADAPTER_VERIFIED",
       interactionStatus: "READY",
       writePlan: { command: "SET_TEXT" },

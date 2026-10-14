@@ -191,7 +191,7 @@ class SkCareerFieldsAnalysisTest {
         ArgumentCaptor<FormAnalysisPolicyDocument> saved = ArgumentCaptor.forClass(
             FormAnalysisPolicyDocument.class
         );
-        verify(policies, times(2)).save(saved.capture());
+        verify(policies, times(2)).insert(saved.capture());
         FormAnalysisPolicyDocument document = saved.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("sk"))
             .findFirst()

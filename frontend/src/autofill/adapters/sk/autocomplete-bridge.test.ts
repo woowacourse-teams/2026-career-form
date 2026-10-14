@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, expect, it, vi } from "vitest";
 
 import { createStructuralSignature } from "../../dom/candidate-registry";

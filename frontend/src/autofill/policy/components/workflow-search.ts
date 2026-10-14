@@ -1,3 +1,4 @@
+import { runFlowProgram } from "../flow-plan";
 import { componentCapability } from "../component-policy";
 import { runDomPlan } from "../action-plan";
 import { componentRules, componentName } from "../runtime-rules";
@@ -424,34 +425,28 @@ export async function search(
         input.value !== original
       )
         return false;
-      if (
-        !runDomPlan(
-          componentPolicy(input.ownerDocument).actionPlans.searchClose,
-          { input },
-          {},
-          () => current() && input.value === original,
-        )
-      )
-        return false;
-      const closed = await waitFor(
-        () => {
-          if (!current() || input.value !== original) return false;
-          if (input.getAttribute("aria-expanded") !== "false") return undefined;
-          const linked = [
-            ...input.ownerDocument.querySelectorAll<HTMLElement>("[id]"),
-          ].filter((node) => node.id === popupId);
-          return linked.length === 0 ||
-            (componentRules(input.ownerDocument).search.closedPopup ===
-              "HIDDEN_OR_UNMOUNTED" &&
-              linked.every((node) => !componentUsable(node)))
-            ? true
-            : undefined;
+      const flows = componentPolicy(input.ownerDocument).searchFlows;
+      const linked = () =>
+        [...input.ownerDocument.querySelectorAll<HTMLElement>("[id]")].filter(
+          (node) => node.id === popupId,
+        );
+      const completed = await runFlowProgram(
+        flows.program,
+        flows.retainedCompletion,
+        {
+          targets: { input },
+          values: {
+            closedPopup: componentRules(input.ownerDocument).search.closedPopup,
+          },
+          facts: {
+            linkedPopupMissing: () => linked().length === 0,
+            linkedPopupsHidden: () =>
+              linked().every((node) => !componentUsable(node)),
+          },
+          current: () => current() && input.value === original,
         },
-        signal,
-        input.ownerDocument,
       );
-      if (closed !== true) return false;
-      input.blur();
+      if (!completed) return false;
       success = current() && input.value === original;
       if (success && catalog) {
         success =
@@ -688,23 +683,19 @@ export async function search(
         : undefined;
     };
     success = !!(await waitFor(selected, signal, input.ownerDocument));
-    if (
-      !success &&
-      componentRules(input.ownerDocument).search.selectionMode ===
-        "KEYBOARD_WHEN_IDENTIFIED" &&
-      option.id &&
-      current() &&
-      input.value === expectedValue &&
-      input.getAttribute("aria-expanded") === "false" &&
-      (await key("ArrowDown"))
-    ) {
-      success = !!(await waitFor(
-        selected,
-        signal,
-        input.ownerDocument,
-        componentRules(input.ownerDocument).timeouts.searchMs,
-      ));
-    }
+    const flows = componentPolicy(input.ownerDocument).searchFlows;
+    success = await runFlowProgram(flows.program, flows.afterSelection, {
+      targets: { input },
+      values: {
+        success: String(success),
+        expected: expectedValue!,
+        optionId: option.id,
+        selectionMode: componentRules(input.ownerDocument).search.selectionMode,
+      },
+      facts: { selectionConfirmed: () => selected() === true },
+      current,
+      authorize: () => mayMutate(signal, beforeMutation),
+    });
     if (success && catalog) {
       success =
         !!selectedId &&
@@ -722,29 +713,21 @@ export async function search(
     }
     return success;
   } finally {
-    if (
-      attemptedWrite &&
-      !success &&
-      (await mayMutate(signal, beforeMutation)) &&
-      current() &&
-      (input.value === item.profileValue || input.value === expectedValue)
-    ) {
-      setter.call(input, original);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+    if (current()) {
+      const flows = componentPolicy(input.ownerDocument).searchFlows;
+      const completed = await runFlowProgram(flows.program, flows.cleanup, {
+        targets: { input },
+        values: {
+          attempted: String(attemptedWrite),
+          success: String(success),
+          original,
+          expected: expectedValue!,
+          desired: item.profileValue!,
+        },
+        current,
+        authorize: () => mayMutate(signal, beforeMutation),
+      });
+      if (!completed) return false;
     }
-    if (
-      (await mayMutate(signal, beforeMutation)) &&
-      current() &&
-      input.getAttribute("aria-expanded") === "true"
-    )
-      if (
-        !runDomPlan(
-          componentPolicy(input.ownerDocument).actionPlans.searchClose,
-          { input },
-          {},
-          () => current() && input.value === original,
-        )
-      )
-        return false;
   }
 }

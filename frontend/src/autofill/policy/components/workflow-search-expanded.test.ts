@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, expect, it, vi } from "vitest";
 import { componentWorkflowAdapter } from "./workflow";
 import type { FieldCandidateHandle } from "../../dom/types";

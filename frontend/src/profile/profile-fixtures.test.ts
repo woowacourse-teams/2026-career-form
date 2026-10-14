@@ -38,10 +38,10 @@ it.each(cases)(
       expect(veteran).toMatchObject({
         veteranStatus: "대상",
         veteranRelation: "본인",
-        veteranNumber: file.includes("components") ? "12-345678" : "1234567890",
+        veteranNumber: file.includes("greeting") ? "12-345678" : "1234567890",
       });
       expect(veteran.veteranNumber).toMatch(
-        file.includes("components") ? /^\d{2}-\d{6}$/ : /^\d{10}$/,
+        file.includes("greeting") ? /^\d{2}-\d{6}$/ : /^\d{10}$/,
       );
     }
   },

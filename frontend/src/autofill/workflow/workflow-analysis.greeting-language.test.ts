@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { componentWorkflowAdapter } from "../policy/components/workflow";
@@ -20,6 +23,11 @@ it.each([false, true])(
     const prefix =
       "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0";
     document.body.innerHTML = `<div data-scope="field" data-part="root"><label>공인외국어시험</label><div data-scope="accordion" data-part="root"><div data-scope="accordion" data-part="item"><button name="${prefix}.foreignLanguage" data-scope="select" data-part="trigger" aria-controls="language">선택</button><input name="${prefix}.testName" disabled data-scope="combobox" data-part="input" role="combobox" aria-controls="tests"><button name="${prefix}.grade" data-scope="tooltip" data-part="trigger" role="combobox" disabled aria-controls="grades">선택</button></div></div></div><div id="language" role="listbox" hidden><button role="option">영어</button></div><div id="tests" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div role="option" data-scope="combobox" data-part="item" data-value="TEST1" data-state="unchecked">${numeric ? "TOEIC" : "OPIc(영어)"}</div></div><div id="grades" role="listbox" hidden><button role="option">Advanced Low</button></div>`;
+
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<input name="basicInformation.name"><input name="basicInformation.phoneNumber.nationalNumber">`,
+    );
     const order: string[] = [];
     const language = document.querySelector<HTMLButtonElement>(
       `[name="${prefix}.foreignLanguage"]`,
@@ -103,6 +111,7 @@ it.each([false, true])(
       completedGenericStateDrivers: { current: new Map() },
       deferredDriverGroups: { current: new Set() },
       apiClient: {
+        loadExecutionPolicy: async () => fixturePolicy("greeting"),
         analyzePreparation: async () => {
           throw Error("unexpected preparation");
         },
@@ -113,6 +122,7 @@ it.each([false, true])(
           ]);
           requests.push(candidates.map((f) => f.domName ?? ""));
           return validateFieldsResponse(request, {
+            executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",

@@ -1,3 +1,4 @@
+import { runFlowProgram } from "../flow-plan";
 import { componentCapability } from "../component-policy";
 import { runDomPlan } from "../action-plan";
 import { componentRules } from "../runtime-rules";
@@ -156,6 +157,11 @@ export async function runComponentAddress({
   const zip = fields[rules.zipIndex],
     address = fields[rules.addressIndex],
     detail = fields[rules.detailIndex];
+  const initialAddressValues = [zip.value, address.value, detail.value];
+  const unchangedAddressValues = () =>
+    [zip, address, detail].every(
+      (field, index) => field.value === initialAddressValues[index],
+    );
   const desired: string[] = [];
   desired[rules.zipIndex] = expected.postalCode;
   desired[rules.addressIndex] = expected.address;
@@ -210,7 +216,7 @@ export async function runComponentAddress({
     if (
       !(await sameProfile()) ||
       !targets() ||
-      componentAddressTrigger(document) !== button ||
+      (rules.requireClosed && componentAddressTrigger(document) !== button) ||
       !selected() ||
       (rules.protectExisting &&
         detail.value !== "" &&
@@ -300,8 +306,8 @@ export async function runComponentAddress({
       !row ||
       !(await sameProfile()) ||
       !targets() ||
-      zip.value ||
-      address.value
+      !unchangedAddressValues() ||
+      (rules.protectExisting && (zip.value !== "" || address.value !== ""))
     )
       return manual();
     const first =
@@ -326,8 +332,8 @@ export async function runComponentAddress({
       () =>
         selected() &&
         (!rules.requireClosed ||
-          !owner.matches(componentSelector(owner, "openDialog"))) &&
-        componentAddressTrigger(document) === button
+          (!owner.matches(componentSelector(owner, "openDialog")) &&
+            componentAddressTrigger(document) === button))
           ? true
           : undefined,
       signal,
@@ -337,28 +343,27 @@ export async function runComponentAddress({
     if (!closed) return manual();
     return writeDetail("주소 검색 선택과 지원서 반영을 확인했습니다.");
   } finally {
-    if (dialog?.matches(componentSelector(dialog, "openDialog"))) {
-      const close = dialog.querySelectorAll<HTMLElement>(
-        componentSelector(dialog, "dialogClose"),
-      );
-      if (close.length === 1) close[0].click();
-    }
-    if (dialog) {
+    if (dialog && !signal.aborted) {
+      const policy = componentPolicy(document).addressCleanup;
       const owner = dialog;
-      const restored = await waitFor(
-        () =>
-          !owner.matches(componentSelector(owner, "openDialog")) &&
-          !fields.some((field) =>
-            field.closest('[aria-hidden="true"], [inert]'),
-          )
-            ? true
-            : undefined,
-        signal,
-        document,
-        componentRules(document).timeouts.addressCloseMs,
+      const completed = await runFlowProgram(
+        policy.program,
+        policy.entrypoint,
+        {
+          targets: { dialog: owner, body: document.body },
+          values: { requireClosed: String(rules.requireClosed) },
+          facts: {
+            fieldsInteractive: () =>
+              !fields.some((field) =>
+                field.closest('[aria-hidden="true"], [inert]'),
+              ),
+          },
+          current: () =>
+            !signal.aborted && fields.every((field) => field.isConnected),
+        },
       );
-      if (!restored && !signal.aborted)
-        throw new Error("주소 검색 창이 닫혔는지 확인하지 못했습니다.");
+      if (!completed && !signal.aborted)
+        throw new Error("주소 검색 창의 종료 정책을 확인하지 못했습니다.");
     }
   }
 }

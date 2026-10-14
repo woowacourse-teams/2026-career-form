@@ -346,7 +346,7 @@ export function closeComponentEmailPopup(
 
 /** A synchronous request with bounded display-label data commits the value already staged in the
  * exact input. A missing or deferred MAIN response never counts as success. */
-export function commitComponentEmailInput(
+export function executeComponentCommit(
   input: HTMLInputElement,
   current: () => boolean,
 ): boolean {
@@ -392,3 +392,6 @@ export function waitForComponentEmailAcceptance(
     ? executeComponentFlow(input, name, current)
     : Promise.resolve(false);
 }
+
+// Compatibility export for existing callers; execution is policy-driven.
+export const commitComponentEmailInput = executeComponentCommit;

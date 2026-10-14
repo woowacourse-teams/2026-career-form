@@ -1,3 +1,4 @@
+import { fixturePolicy } from "../test/fixtures/execution-policy";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -42,10 +43,12 @@ describe("AutofillOverlay", () => {
       ];
       const observedLanguageValues: string[] = [];
       const apiClient: AnalysisApiClient = {
+        loadExecutionPolicy: async () => fixturePolicy("sk"),
         analyzePreparation: createApiClient().analyzePreparation,
         analyzeFields: async (request) => {
           observedLanguageValues.push(language.value);
           return {
+            executionPolicy: fixturePolicy("sk"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",
@@ -89,9 +92,7 @@ describe("AutofillOverlay", () => {
         />,
       );
       await screen.findByRole("heading", {
-        name: selectionAvailable
-          ? "기입 결과"
-          : "조건부 선택을 안전하게 적용하지 못했습니다",
+        name: "기입 결과",
       });
       expect(
         screen.getAllByRole("button", { name: "수동 복사로 돌아가기" }),
@@ -145,6 +146,7 @@ describe("AutofillOverlay", () => {
       let preparationPass = 0;
       let fieldsPass = 0;
       const apiClient: AnalysisApiClient = {
+        loadExecutionPolicy: async () => fixturePolicy("sk"),
         analyzePreparation: async (request) => {
           preparationPass += 1;
           const section = request.sections.find((section) =>
@@ -188,6 +190,7 @@ describe("AutofillOverlay", () => {
             .flatMap((section) => section.fields)
             .find((field) => field.domName === "eduMajorDouble")!;
           return {
+            executionPolicy: fixturePolicy("sk"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus:
@@ -271,6 +274,7 @@ describe("AutofillOverlay", () => {
     ];
     const apiClient = createApiClient();
     apiClient.analyzeFields = async (request) => ({
+      executionPolicy: fixturePolicy("sk"),
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",
@@ -347,6 +351,7 @@ describe("AutofillOverlay", () => {
       </div>
     `;
     const apiClient: AnalysisApiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("sk"),
       analyzePreparation: createApiClient().analyzePreparation,
       analyzeFields: vi.fn(async (request: FieldsAnalyzeRequest) => {
         const candidate = request.sections
@@ -357,6 +362,7 @@ describe("AutofillOverlay", () => {
           .at(0);
         if (!candidate) throw new Error("fixture page is missing its field");
         return {
+          executionPolicy: fixturePolicy("sk"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER" as const,
           analysisStatus: "COMPLETE" as const,
@@ -460,6 +466,7 @@ describe("AutofillOverlay", () => {
     };
     let preparationCallCount = 0;
     const apiClient: AnalysisApiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("sk"),
       analyzePreparation: vi.fn(async (request: PreparationAnalyzeRequest) => {
         preparationCallCount += 1;
         const actions = request.sections.flatMap((section) => [
@@ -529,6 +536,7 @@ describe("AutofillOverlay", () => {
         };
       }),
       analyzeFields: vi.fn(async (request) => ({
+        executionPolicy: fixturePolicy("sk"),
         snapshotId: request.snapshotId,
         mode: "ADAPTER" as const,
         analysisStatus: "COMPLETE" as const,

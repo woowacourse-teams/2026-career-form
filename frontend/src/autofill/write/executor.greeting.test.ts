@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -294,7 +296,7 @@ it("does not rewrite a Greeting value the page cleared after the first successfu
   expect(writes).toBe(1);
 });
 
-it("confirms the Greeting veteran number when the site removes its display hyphen", async () => {
+it("requires verification when a veteran number changes without a policy normalization", async () => {
   const { input, collect, options } = fixture(false, true);
   input.addEventListener("input", () => {
     queueMicrotask(() => {
@@ -306,7 +308,12 @@ it("confirms the Greeting veteran number when the site removes its display hyphe
     settledRegistry: collect,
   });
   expect(input.value).toBe("12345678");
-  expect(results[0]).toEqual({ candidateId: "field", status: "written" });
+  expect(results[0]).toMatchObject({
+    candidateId: "field",
+    status: "skipped",
+    outcome: "needs-verification",
+    code: "RETAINED_VALUE_UNCONFIRMED",
+  });
 });
 
 it("confirms the Greeting phone when the site removes display hyphens", async () => {

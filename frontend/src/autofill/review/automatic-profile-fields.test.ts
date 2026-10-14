@@ -144,19 +144,19 @@ it.each(categories)(
   },
 );
 
-it("keeps unrelated compensation confirmation and profile-search masking", () => {
+it("includes compensation without a separate confirmation gate", () => {
   expect(
     review("compensation.compensation.desiredSalary", "5000", "ALLOWED"),
   ).toMatchObject({
-    status: "sensitive",
-    selected: false,
-    disabled: true,
-    previewValue: "••••••••",
+    status: "available",
+    selected: true,
+    disabled: false,
+    previewValue: "5000",
   });
   for (const id of categories)
     expect(
       PROFILE_CATEGORIES.find((category) => category.id === id)?.sensitive,
-    ).toBe(true);
+    ).toBe(false);
 });
 
 it.each([

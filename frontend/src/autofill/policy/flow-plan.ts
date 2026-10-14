@@ -1,6 +1,7 @@
 import { runDomPlan, validDomPlan, type DomPlan } from "./action-plan";
 
 export type FlowCondition =
+  | { fact: string; equals: boolean }
   | { all: FlowCondition[] }
   | { any: FlowCondition[] }
   | { not: FlowCondition }
@@ -77,6 +78,12 @@ export function validFlowProgram(value: unknown): value is FlowProgram {
     return false;
   const condition = (c: any, chain: string[] = [], depth = 0): boolean => {
     if (!object(c) || depth > 16) return false;
+    if ("fact" in c)
+      return (
+        keys(c, ["fact", "equals"]) &&
+        name(c.fact) &&
+        typeof c.equals === "boolean"
+      );
     if ("ref" in c)
       return (
         keys(c, ["ref"]) &&
@@ -240,6 +247,7 @@ export async function runFlowProgram(
   context: {
     targets: Record<string, HTMLElement | null | undefined>;
     values?: Record<string, string>;
+    facts?: Record<string, () => boolean>;
     current: () => boolean;
     realm?: "LOCAL" | "MAIN";
     authorize?: () => Promise<boolean>;
@@ -290,6 +298,11 @@ export async function runFlowProgram(
     return found.length === 1 ? found[0] : null;
   };
   const passes = (c: FlowCondition): boolean => {
+    if ("fact" in c) {
+      if (!context.facts || !Object.hasOwn(context.facts, c.fact))
+        throw Error("Missing flow fact");
+      return context.facts[c.fact]() === c.equals;
+    }
     if ("ref" in c) return passes(program.conditions[c.ref]);
     if ("all" in c) return c.all.every(passes);
     if ("any" in c) return c.any.some(passes);

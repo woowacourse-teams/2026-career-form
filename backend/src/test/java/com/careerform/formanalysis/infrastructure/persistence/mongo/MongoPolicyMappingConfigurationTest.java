@@ -20,7 +20,7 @@ class MongoPolicyMappingConfigurationTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalCompanyFormPolicySeeder(mock(FormAnalysisCompanyMongoRepository.class), policies).run(null);
-        verify(policies, times(2)).save(captured.capture());
+        verify(policies, times(2)).insert(captured.capture());
 
         try (var context = new AnnotationConfigApplicationContext()) {
             context.register(MongoPolicyMappingConfiguration.class);

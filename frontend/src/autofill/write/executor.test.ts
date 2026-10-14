@@ -1,3 +1,5 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "../workflow/execution-policy";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { MatchedFieldAnalysis } from "../api/types";
@@ -25,6 +27,12 @@ function setPageUrl(url: string): void {
       jsdom: { reconfigure(options: { url: string }): void };
     }
   ).jsdom.reconfigure({ url });
+  installExecutionPolicy(
+    document,
+    new URL(url).hostname === "talent.hyundai.com"
+      ? fixturePolicy("hyundai")
+      : undefined,
+  );
 }
 
 const textAnalysis: MatchedFieldAnalysis = {

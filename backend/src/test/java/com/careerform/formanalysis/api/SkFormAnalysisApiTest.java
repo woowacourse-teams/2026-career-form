@@ -43,6 +43,16 @@ class SkFormAnalysisApiTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.careerform.formanalysis.infrastructure.persistence.mongo.ExecutionPolicyLookup executionPolicies;
+
+    @org.junit.jupiter.api.BeforeEach
+    void loadExecutionPolicyWithoutAnExternalDatabase() {
+        org.mockito.Mockito.when(executionPolicies.find(org.mockito.ArgumentMatchers.eq("www.skcareers.com"), org.mockito.ArgumentMatchers.anyString()))
+            .thenReturn(com.careerform.formanalysis.dto.ExecutionPolicy.sk());
+    }
+
+
     @Test
     @DisplayName("정상 Snapshot A/B는 generic Resolver 없이 ADAPTER COMPLETE로 처리한다")
     void analyzesVerifiedSnapshotsExclusivelyWithTheAdapter() throws Exception {
@@ -111,7 +121,8 @@ class SkFormAnalysisApiTest {
                 .value("certifications.certificate.acquisitionDate"))
             .andExpect(jsonPath("$.fields[18].valueBinding.profileFieldKey")
                 .value("certifications.certificate.registrationNo"))
-            .andExpect(content().string(not(containsString("selector"))));
+            .andExpect(jsonPath("$.fields[*].selector").doesNotExist())
+            .andExpect(jsonPath("$.executionPolicy.browserPolicy").exists());
     }
 
     @Test

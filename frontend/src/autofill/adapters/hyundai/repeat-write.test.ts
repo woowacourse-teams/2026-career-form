@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, expect, it } from "vitest";
 
 import { createEmptyProfile } from "../../../profile/model";
@@ -90,6 +93,7 @@ it("adds two Hyundai certificate rows, writes three distinct entries, and does n
       snapshot,
       plan: buildReviewPlan({
         analysis: {
+executionPolicy: fixturePolicy("hyundai"),
           snapshotId: snapshot.request.snapshotId,
           mode: "ADAPTER",
           analysisStatus: "COMPLETE",

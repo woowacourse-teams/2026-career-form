@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { render, waitFor, cleanup } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -24,6 +27,7 @@ afterEach(() => {
 });
 function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -85,6 +89,7 @@ it("uses one analysis for nationality search and preserves nationality2", async 
   profile.personal.nationality = "대한민국";
   let analyses = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (req) => ({
       snapshotId: req.snapshotId,
       mode: "ADAPTER",
@@ -201,6 +206,7 @@ it("confirms all university search codes before writing the same row dates", asy
   };
   let analyses = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (req) => ({
       snapshotId: req.snapshotId,
       mode: "ADAPTER",
@@ -210,6 +216,7 @@ it("confirms all university search codes before writing the same row dates", asy
     analyzeFields: async (req) => {
       analyses++;
       return {
+executionPolicy: fixturePolicy("hyundai"),
         snapshotId: req.snapshotId,
         mode: "ADAPTER",
         analysisStatus: "COMPLETE",
@@ -379,6 +386,7 @@ it("defers an ambiguous additional major and continues the same university row",
     ]),
   );
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -386,6 +394,7 @@ it("defers an ambiguous additional major and continues the same university row",
       preparationPlans: [],
     }),
     analyzeFields: async (request) => ({
+executionPolicy: fixturePolicy("hyundai"),
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",

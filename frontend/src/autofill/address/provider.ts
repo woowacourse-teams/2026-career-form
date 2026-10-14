@@ -10,6 +10,7 @@ export function attachKakaoProvider(
 ): void {
   let run: Extract<AddressMessage, { type: "SEARCH" }> | undefined;
   let selected: HTMLButtonElement | undefined;
+  let proposedIdentity: import("./match").AddressIdentity | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let deadline = 0,
     used = false,
@@ -18,6 +19,7 @@ export function attachKakaoProvider(
     if (timer) clearTimeout(timer);
     run = undefined;
     selected = undefined;
+    proposedIdentity = undefined;
   };
   const send = (
     type: "PROPOSE" | "SELECTED" | "FAILED",
@@ -77,6 +79,7 @@ export function attachKakaoProvider(
     if (result) {
       localWorkflowLog("address-provider-propose", {});
       selected = result;
+      proposedIdentity = kakaoResultIdentity(result, run.policy);
       send("PROPOSE", run.id);
       timer = setTimeout(fail, run.policy.commitMs);
       return;
@@ -144,7 +147,7 @@ export function attachKakaoProvider(
       const button = selected,
         id = run.id;
       const identity = kakaoResultIdentity(button, run.policy);
-      if (!identity) {
+      if (!identity || !proposedIdentity || identity.postalCode !== proposedIdentity.postalCode || identity.address !== proposedIdentity.address) {
         fail();
         return;
       }

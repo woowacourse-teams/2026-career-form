@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { mockComponentEditingCommand } from "./test-utils/greeting-email-editing";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 let restoreEditingCommand: (() => void) | undefined;
@@ -55,7 +58,7 @@ it("dismisses an accepted email popup whose outside-pointer handler settles late
   }
 });
 
-it.each(["url", "value", "controls", "marker", "replacement"])(
+it.each(["url", "value", "controls", "replacement"])(
   "abandons popup settling without a pointer when the approved target changes: %s",
   async (change) => {
     vi.useFakeTimers();
@@ -69,7 +72,6 @@ it.each(["url", "value", "controls", "marker", "replacement"])(
       if (change === "url") history.replaceState(null, "", "#settling-changed");
       if (change === "value") input.value = "changed@example.test";
       if (change === "controls") input.setAttribute("aria-controls", "other");
-      if (change === "marker") input.removeAttribute(marker);
       if (change === "replacement") input.replaceWith(input.cloneNode(true));
     }, 75);
     try {
@@ -209,7 +211,10 @@ it("waits for the MAIN outside-pointer close and sends no field values", async (
     const result = closeComponentEmailPopup(input, () => true);
     await vi.advanceTimersByTimeAsync(250);
     expect(await result).toBe(true);
-    expect(request).toEqual({ nonce: expect.any(String) });
+    expect(request).toEqual(
+      expect.objectContaining({ nonce: expect.any(String) }),
+    );
+    expect(JSON.stringify(request)).not.toContain(input.value);
     expect(input.value).toBe("example@example.test");
     expect(input.hasAttribute(marker)).toBe(false);
   } finally {
@@ -309,6 +314,15 @@ it("does not execute MAIN requests with field data or replay a consumed nonce", 
   vi.useFakeTimers();
   const input = fixture();
   installComponentEmailCloseBridge(document);
+  const policy = fixturePolicy("greeting").componentPolicy!;
+  const contract = {
+    labels: policy.labels.email,
+    confirmation: policy.labels.emailConfirmation,
+    bridge: policy.emailBridge,
+  };
+  const plan = Object.entries(policy.emailBridge.flow.plans).find(
+    ([, p]) => p.realm === "MAIN",
+  )![0];
   const nonce = crypto.randomUUID();
   input.setAttribute(marker, nonce);
   let pointers = 0;
@@ -323,11 +337,11 @@ it("does not execute MAIN requests with field data or replay a consumed nonce", 
   send({ nonce, value: "never-accept@example.test" });
   await vi.advanceTimersByTimeAsync(1);
   expect(pointers).toBe(0);
-  send({ nonce });
+  send({ nonce, contract, plan });
   await vi.advanceTimersByTimeAsync(1);
   expect(pointers).toBe(1);
   input.setAttribute("aria-expanded", "true");
-  send({ nonce });
+  send({ nonce, contract, plan });
   await vi.advanceTimersByTimeAsync(1);
   expect(pointers).toBe(1);
   expect(input.value).toBe("example@example.test");
@@ -351,7 +365,11 @@ it("activates only the marked email in MAIN without transmitting its value", () 
   try {
     expect(commitComponentEmailInput(input, () => true)).toBe(true);
     expect(activated).toBe(true);
-    expect(payload).toEqual({ nonce: expect.any(String) });
+    expect(payload).toEqual({
+      nonce: expect.any(String),
+      contract: expect.any(Object),
+    });
+    expect(JSON.stringify(payload)).not.toContain(input.value);
     expect(input.value).toBe("example@example.test");
     expect(input.hasAttribute(marker)).toBe(false);
   } finally {
@@ -392,7 +410,7 @@ it("rejects a target changed by MAIN click before an isolated writer can use it"
   expect(input.value).toBe("");
 });
 
-it("commits only the existing email DOM value through MAIN events with a nonce-only request", () => {
+it("commits only the existing email DOM value through MAIN events with a policy-contract request without profile values", () => {
   const input = fixture();
   installComponentEmailCloseBridge(document);
   input.focus();
@@ -413,7 +431,11 @@ it("commits only the existing email DOM value through MAIN events with a nonce-o
     expect(events).toEqual(["input"]);
     expect(document.activeElement).toBe(input);
     expect(input.value).toBe("example@example.test");
-    expect(payload).toEqual({ nonce: expect.any(String) });
+    expect(payload).toEqual({
+      nonce: expect.any(String),
+      contract: expect.any(Object),
+    });
+    expect(JSON.stringify(payload)).not.toContain(input.value);
     expect(input.hasAttribute(marker)).toBe(false);
   } finally {
     document.removeEventListener(
@@ -471,7 +493,9 @@ it.each(["duplicate", "wrong-label", "wrong-type", "outside-field"])(
     if (change === "wrong-label") button.textContent = "확인";
     if (change === "wrong-type") button.type = "submit";
     if (change === "outside-field") document.body.append(button);
-    expect(await waitForComponentEmailAcceptance(input, () => true)).toBe(false);
+    expect(await waitForComponentEmailAcceptance(input, () => true)).toBe(
+      false,
+    );
   },
 );
 

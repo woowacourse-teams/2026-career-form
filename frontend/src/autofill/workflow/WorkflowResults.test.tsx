@@ -520,7 +520,7 @@ it("keeps unresolved unapproved items visible and reports unavailable locations"
   expect(screen.getByText("이동 불가")).toBeInTheDocument();
 });
 
-it("combines write failures with unresolved fields while masking sensitive values", () => {
+it("combines write failures with unresolved fields while showing the saved value for manual completion", () => {
   render(
     <WorkflowResults
       reviewItems={[
@@ -528,10 +528,10 @@ it("combines write failures with unresolved fields while masking sensitive value
           ...item,
           candidateId: "salary",
           fieldLabel: "희망 연봉",
-          status: "sensitive",
-          previewValue: "••••••••",
+          status: "available",
+          previewValue: "5000",
           profileValue: "5000",
-          revealed: false,
+          revealed: true,
         },
       ]}
       results={[
@@ -554,7 +554,7 @@ it("combines write failures with unresolved fields while masking sensitive value
     ),
   ).toBeInTheDocument();
   expect(screen.queryByText("••••••••")).not.toBeInTheDocument();
-  expect(screen.queryByText("5000")).not.toBeInTheDocument();
+  expect(screen.getByText("5000")).toBeVisible();
 });
 
 it("shows only the live options supplied for an unresolved field", () => {
@@ -609,7 +609,7 @@ it("groups remaining values by section and copies independently of field locatio
   expect(onLocate).toHaveBeenCalledWith("major");
 });
 
-it("keeps unavailable sensitive values masked and uncopyable", () => {
+it("allows copying saved compensation when automatic input is unavailable", async () => {
   const copyText = vi.fn(async () => undefined);
   const { container } = render(
     <WorkflowResults
@@ -625,12 +625,12 @@ it("keeps unavailable sensitive values masked and uncopyable", () => {
       copyText={copyText}
     />,
   );
-  expect(container.innerHTML).not.toContain("PRIVATE_SALARY");
-  expect(screen.getByText("값 가림")).toBeVisible();
+  expect(container.innerHTML).toContain("PRIVATE_SALARY");
+  expect(screen.getByText("PRIVATE_SALARY")).toBeVisible();
   const copy = screen.getByRole("button", { name: /복사/ });
-  expect(copy).toBeDisabled();
+  expect(copy).toBeEnabled();
   fireEvent.click(copy);
-  expect(copyText).not.toHaveBeenCalled();
+  await waitFor(() => expect(copyText).toHaveBeenCalledWith("PRIVATE_SALARY"));
 });
 
 it("keeps copy failures retryable without exposing raw clipboard errors", async () => {

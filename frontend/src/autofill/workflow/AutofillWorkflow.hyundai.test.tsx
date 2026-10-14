@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -94,6 +97,7 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
       : [];
   });
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER" as const,
     analysisStatus: "COMPLETE" as const,
@@ -202,6 +206,7 @@ it("refreshes between write passes to fill Hyundai language, exam and dependent 
   ];
   let fieldCalls = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",

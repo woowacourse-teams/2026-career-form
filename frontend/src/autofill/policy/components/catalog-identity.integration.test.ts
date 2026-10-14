@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, expect, it, vi } from "vitest";
 import {
   createEmptyProfile,
@@ -116,6 +119,7 @@ async function run(
   const registry = new CandidateRegistry();
   registry.registerField(handle);
   const analysis: FieldsAnalyzeResponse = {
+    executionPolicy: fixturePolicy("greeting"),
     snapshotId: "snapshot",
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -240,15 +244,15 @@ it("does not select SQLP for a selected SQLD", async () => {
   expect(result.clicked).not.toHaveBeenCalled();
 }, 8000);
 it.each([false, true])(
-  "requires visible campus evidence (visible=%s)",
+  "selects a unique school name with optional campus detail (visible=%s)",
   async (visible) => {
     const result = await run(
       selected({ catalogId: "school:seoul", displayName: "예시대학교" }),
       [{ label: "예시대학교", ...(visible ? { detail: "서울 캠퍼스" } : {}) }],
       true,
     );
-    expect(result.success).toBe(visible);
-    expect(result.clicked.mock.calls).toEqual(visible ? [[0]] : []);
+    expect(result.success).toBe(true);
+    expect(result.clicked.mock.calls).toEqual([[0]]);
   },
   8000,
 );
@@ -271,16 +275,16 @@ it("rolls an alias display value back when the site's checked ID changes", async
   expect(result.clicked).toHaveBeenCalledOnce();
   expect(result.input.value).toBe("");
 });
-it("does not accept hidden campus evidence", async () => {
+it("selects a unique school name without relying on hidden campus detail", async () => {
   const result = await run(
     selected({ catalogId: "school:seoul", displayName: "예시대학교" }),
     [{ label: "예시대학교", detail: "서울 캠퍼스", hiddenDetail: true }],
     true,
   );
-  expect(result.success).toBe(false);
-  expect(result.clicked).not.toHaveBeenCalled();
+  expect(result.success).toBe(true);
+  expect(result.clicked).toHaveBeenCalledOnce();
 }, 8000);
-it("disambiguates same-name campuses using visible exact detail", async () => {
+it("rejects duplicate school names even when campus details differ", async () => {
   const result = await run(
     selected({ catalogId: "school:seoul", displayName: "예시대학교" }),
     [
@@ -289,6 +293,6 @@ it("disambiguates same-name campuses using visible exact detail", async () => {
     ],
     true,
   );
-  expect(result.success).toBe(true);
-  expect(result.clicked.mock.calls).toEqual([[1]]);
+  expect(result.success).toBe(false);
+  expect(result.clicked.mock.calls).toEqual([]);
 });

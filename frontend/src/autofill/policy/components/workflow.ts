@@ -1,3 +1,4 @@
+import { componentWriteRecipe, recipeBindingMatches } from "./write-recipe";
 import { componentCapability } from "../component-policy";
 import { runDomPlan } from "../action-plan";
 import { componentRules, componentName } from "../runtime-rules";
@@ -365,32 +366,24 @@ function confirmedRadioSelection(
     componentText(selected[0]) === value
   );
 }
-/** Only the reviewed, current Component forms email may run before conditional controls. */
-export function isComponentEmailStateDriver(
+export function isComponentRecipeStateDriver(
   item: ReviewPlanItem,
   handle: FieldCandidateHandle,
 ): boolean {
+  const recipe = componentWriteRecipe(handle, item);
   const input = handle.elements[0];
-  const binding = item.analysis?.valueBinding;
   return (
-    input instanceof HTMLInputElement &&
-    componentCapability(input.ownerDocument, "commit") &&
+    !!recipe &&
+    recipeBindingMatches(handle, item, recipe) &&
     componentApproved(handle, item) &&
-    handle.candidate.domName ===
-      componentPolicy(input.ownerDocument).fieldNames.email &&
-    item.analysis?.writePlan?.command === "SET_TEXT" &&
-    binding?.type === "DIRECT" &&
-    binding.profileFieldKey ===
-      componentPolicy(input.ownerDocument).workflow.emailProfileKey &&
-    handle.elements.length === 1 &&
     input instanceof HTMLInputElement &&
-    componentSyntheticDomName(input) ===
-      componentPolicy(input.ownerDocument).fieldNames.email &&
+    componentSyntheticDomName(input) === recipe.name &&
     componentUsable(input) &&
-    !input.readOnly &&
-    ["email", "text"].includes(input.type)
+    !input.readOnly
   );
 }
+// Compatibility alias; production routing uses configured write recipes.
+export const isComponentEmailStateDriver = isComponentRecipeStateDriver;
 
 export function componentWorkflowAdapter(document: Document): WorkflowAdapter {
   const policy = componentPolicy(document);
@@ -450,7 +443,8 @@ export function componentWorkflowAdapter(document: Document): WorkflowAdapter {
       new RegExp(policy.driverPattern).test(name) &&
       policy.driverCommands.includes(item.analysis?.writePlan?.command ?? ""),
     stateDriverStage: (item, handle) => {
-      if (isComponentEmailStateDriver(item, handle)) return policy.emailStage;
+      if (isComponentRecipeStateDriver(item, handle))
+        return componentWriteRecipe(handle, item)!.stage;
       const name = handle.candidate.domName;
       if (!name || !componentApproved(handle, item)) return undefined;
       return policy.stages.find(

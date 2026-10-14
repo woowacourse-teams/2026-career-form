@@ -1,3 +1,4 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import type { AnalysisApiClient } from "../api/types";
@@ -41,6 +42,7 @@ async function fillScore(disableAfterInput: boolean) {
     },
   ];
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -48,6 +50,7 @@ async function fillScore(disableAfterInput: boolean) {
       preparationPlans: [],
     }),
     analyzeFields: async (request) => ({
+executionPolicy: fixturePolicy("hyundai"),
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",

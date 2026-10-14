@@ -1,3 +1,8 @@
+import { installSiteFixture } from "../../test/fixtures/execution-policy";
+import { beforeEach, afterEach } from "vitest";
+let releasePolicy: () => void;
+beforeEach(() => { releasePolicy = installSiteFixture("sk", "www.skcareers.com", "/Application/Index/:id"); });
+afterEach(() => releasePolicy());
 import { describe, expect, it } from "vitest";
 import { validatePreparationResponse } from "../api/validate-response";
 const request = {

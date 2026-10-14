@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { MatchedFieldAnalysis } from "../../api/types";

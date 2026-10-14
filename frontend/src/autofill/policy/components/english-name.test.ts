@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../../profile/model";
 import { collectFieldsSnapshot } from "../../dom/collect";
@@ -29,6 +32,7 @@ function plan(given = "Min Su", family = "Kim", currentValue = "") {
   const snapshot = collectFieldsSnapshot(document);
   const fields = snapshot.request.sections.flatMap((section) => section.fields);
   const analysis = validateFieldsResponse(snapshot.request, {
+executionPolicy: fixturePolicy("greeting"),
     snapshotId: snapshot.request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",

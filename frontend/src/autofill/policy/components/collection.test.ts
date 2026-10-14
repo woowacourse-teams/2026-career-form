@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   componentCollectionAdapter,

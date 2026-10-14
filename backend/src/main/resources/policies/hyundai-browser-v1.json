@@ -1398,10 +1398,18 @@
                 {
                   "op": "IF",
                   "condition": {
-                    "not": {
-                      "value": "{original}",
-                      "equals": ""
-                    }
+                    "all": [
+                      {
+                        "value": "{phase}",
+                        "equals": "selected"
+                      },
+                      {
+                        "not": {
+                          "value": "{original}",
+                          "equals": ""
+                        }
+                      }
+                    ]
                   },
                   "then": [
                     {
@@ -1495,7 +1503,22 @@
               ]
             }
           }
-        }
+        },
+        "existingVerification": "POSTAL_AND_ADDRESS",
+        "existingValueGuards": [
+          {
+            "role": "zip",
+            "comparison": "NORMALIZED"
+          },
+          {
+            "role": "address",
+            "comparison": "NORMALIZED"
+          },
+          {
+            "role": "detail",
+            "comparison": "NORMALIZED"
+          }
+        ]
       },
       "fixedCodeSearches": [
         {

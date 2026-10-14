@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { collectFieldsSnapshot } from "../../dom/collect";
@@ -123,14 +125,18 @@ describe("Hyundai GPA scale button", () => {
       const rendered = renderGpa(display, code);
       const item = gpaItem(display, code);
 
-      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
-        handled: true,
-        written: true,
-      });
-      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
-        handled: true,
-        written: true,
-      });
+      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual(
+        {
+          handled: true,
+          written: true,
+        },
+      );
+      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual(
+        {
+          handled: true,
+          written: true,
+        },
+      );
       expect(rendered.trigger.value).toBe(display);
       expect(rendered.resultHidden.value).toBe(code);
       expect(rendered.directHidden.value).toBe("");
@@ -165,23 +171,32 @@ describe("Hyundai GPA scale button", () => {
     const rendered = renderGpa("4.5", "4.5", 2, 0);
 
     expect(
-      getWriteAdapter(document).tryWrite(rendered.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        rendered.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: true });
     expect(rendered.resultHidden.value).toBe("4.5");
     expect(rendered.directHidden.value).toBe("");
   });
 
-  it("rejects an unsupported GPA code and a non-university row", () => {
+  it("rejects a GPA code absent from the approved binding and a non-university row", () => {
     const unsupported = renderGpa("5.0", "5");
     expect(
-      getWriteAdapter(document).tryWrite(unsupported.handle, gpaItem("5.0", "5")),
+      getWriteAdapter(document).tryWrite(
+        unsupported.handle,
+        gpaItem("5.0", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(unsupported.clicks()).toBe(0);
 
     const wrongGroup = renderGpa("4.5", "4.5");
     wrongGroup.handle.itemGroupId = "educationgraduateschool";
     expect(
-      getWriteAdapter(document).tryWrite(wrongGroup.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        wrongGroup.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(wrongGroup.clicks()).toBe(0);
   });
@@ -190,7 +205,10 @@ describe("Hyundai GPA scale button", () => {
     const mismatched = renderGpa("4.5", "4.5");
     mismatched.handle.candidate.domId = "rcdPerf_2";
     expect(
-      getWriteAdapter(document).tryWrite(mismatched.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        mismatched.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(mismatched.clicks()).toBe(0);
   });
@@ -216,7 +234,10 @@ describe("Hyundai GPA scale button", () => {
     rendered.trigger.closest(".select-wrap")!.prepend(duplicate);
 
     expect(
-      getWriteAdapter(document).tryWrite(rendered.handle, gpaItem("4.5", "4.5")),
+      getWriteAdapter(document).tryWrite(
+        rendered.handle,
+        gpaItem("4.5", "4.5"),
+      ),
     ).toEqual({ handled: true, written: false });
     expect(rendered.clicks()).toBe(0);
   });
@@ -303,7 +324,9 @@ describe("Hyundai academic attendance and location writer", () => {
       code: "D",
     });
 
-    expect(getWriteAdapter(document).tryWrite(fixture.handle, fixture.item)).toEqual({
+    expect(
+      getWriteAdapter(document).tryWrite(fixture.handle, fixture.item),
+    ).toEqual({
       handled: true,
       written: true,
     });
@@ -321,7 +344,9 @@ describe("Hyundai academic attendance and location writer", () => {
       code: "KR",
       extra: "js-refer btn-new-loc locNa",
     });
-    expect(getWriteAdapter(document).tryWrite(country.handle, country.item)).toEqual({
+    expect(
+      getWriteAdapter(document).tryWrite(country.handle, country.item),
+    ).toEqual({
       handled: true,
       written: true,
     });

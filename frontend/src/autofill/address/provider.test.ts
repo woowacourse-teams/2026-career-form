@@ -1,3 +1,5 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+const providerPolicy = fixturePolicy("sk").providerPolicy!;
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { attachKakaoProvider } from "./provider";
 import type { AddressPort } from "./relay";
@@ -51,7 +53,7 @@ describe("postcode provider", () => {
   afterEach(() => vi.useRealTimers());
   it("searches the base address and waits for commit before selecting", async () => {
     const p = setup();
-    p.send({ type: "SEARCH", id: "run", expected });
+    p.send({ type: "SEARCH", policy: providerPolicy, id: "run", expected });
     await vi.advanceTimersByTimeAsync(200);
     expect(
       (document.querySelector("#region_name") as HTMLInputElement).value,
@@ -60,13 +62,13 @@ describe("postcode provider", () => {
     expect(p.selections()).toBe(0);
     p.send({ type: "COMMIT", id: "run" });
     expect(p.selections()).toBe(1);
-    expect(p.messages).toContainEqual({ type: "SELECTED", id: "run" });
+    expect(p.messages).toContainEqual({ type: "SELECTED", id: "run", selected: expected });
     p.send({ type: "COMMIT", id: "run" });
     expect(p.selections()).toBe(1);
   });
   it("never selects after cancellation or replaced results", async () => {
     const p = setup();
-    p.send({ type: "SEARCH", id: "run", expected });
+    p.send({ type: "SEARCH", policy: providerPolicy, id: "run", expected });
     await vi.advanceTimersByTimeAsync(200);
     document.querySelector(".txt_addr")!.textContent = "다른 주소";
     p.send({ type: "COMMIT", id: "run" });
@@ -81,7 +83,7 @@ describe("postcode provider", () => {
     document
       .querySelector(".btn_search")!
       .replaceWith(document.querySelector(".btn_search")!.cloneNode(true));
-    p.send({ type: "SEARCH", id: "run", expected });
+    p.send({ type: "SEARCH", policy: providerPolicy, id: "run", expected });
     await vi.advanceTimersByTimeAsync(8100);
     expect(p.messages).toContainEqual({ type: "FAILED", id: "run" });
     expect(p.selections()).toBe(0);
@@ -100,7 +102,7 @@ it("uses the loaded result document without submitting the same query again", as
     document
       .querySelector(".btn_search")!
       .addEventListener("click", () => submissions++);
-    p.send({ type: "SEARCH", id: "run", expected });
+    p.send({ type: "SEARCH", policy: providerPolicy, id: "run", expected });
     await vi.advanceTimersByTimeAsync(200);
     expect(submissions).toBe(0);
     expect(p.messages).toContainEqual({ type: "PROPOSE", id: "run" });

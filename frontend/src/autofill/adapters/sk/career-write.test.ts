@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, describe, expect, it } from "vitest";
 import type { FieldsAnalyzeResponse, ValueBinding } from "../../api/types";
 import { collectFieldsSnapshot } from "../../dom/collect";
@@ -101,6 +104,7 @@ function setup() {
     ...(s.items ?? []).flatMap((i) => i.fields),
   ]);
   const analysis: FieldsAnalyzeResponse = {
+executionPolicy: fixturePolicy("sk"),
     snapshotId: snapshot.request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",

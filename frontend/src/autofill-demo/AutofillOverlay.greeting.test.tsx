@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../test/fixtures/execution-policy";
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -26,15 +29,10 @@ import { createRepository } from "./AutofillOverlay.test-fixtures";
 
 function componentDocument(host: string): Document {
   const page = document.implementation.createHTMLDocument("greeting apply");
-  return new Proxy(page, {
-    get(target, key) {
-      if (key === "location") {
-        return { host, pathname: "/ko/o/235625/apply" };
-      }
-      const value = Reflect.get(target, key, target);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
+  Object.defineProperty(page, "URL", {
+    value: `https://${host}/ko/o/235625/apply`,
   });
+  return page;
 }
 
 afterEach(() => {
@@ -165,13 +163,14 @@ describe("Greeting with generic autofill controls", () => {
         majorClassification: "주전공",
         majorField: "공학계열",
         majorName: "컴퓨터공학",
-        additionalMajorClassification: "복수전공",
+        doubleMajorStatus: "있음",
         additionalMajorField: "사회계열",
         additionalMajorName: "경영학",
       },
     });
     const preparationRequests: PreparationAnalyzeRequest[] = [];
     const apiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async (request: PreparationAnalyzeRequest) => {
         preparationRequests.push(request);
         const preparationPlans: PreparationPlan[] = request.sections
@@ -190,6 +189,7 @@ describe("Greeting with generic autofill controls", () => {
         };
       },
       analyzeFields: async (request: FieldsAnalyzeRequest) => ({
+        executionPolicy: fixturePolicy("greeting"),
         snapshotId: request.snapshotId,
         mode: "ADAPTER" as const,
         analysisStatus: "COMPLETE" as const,
@@ -205,9 +205,9 @@ describe("Greeting with generic autofill controls", () => {
             candidateId: field.candidateId,
             matchType: "MATCH" as const,
             valueBinding: {
-              type: "DIRECT" as const,
-              profileFieldKey:
-                "education.graduateSchool.additionalMajorClassification",
+              type: "DERIVED" as const,
+              recipe: "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION" as const,
+              profileFieldKey: "education.graduateSchool.additionalMajorName",
             },
             autofillPolicy: "ALLOWED" as const,
             mappingStatus: "ADAPTER_VERIFIED" as const,
@@ -249,6 +249,7 @@ describe("Greeting with generic autofill controls", () => {
     const calls: string[] = [];
     const requests: PreparationAnalyzeRequest[] = [];
     const apiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async (request: PreparationAnalyzeRequest) => {
         calls.push("preparation");
         requests.push(request);
@@ -262,6 +263,7 @@ describe("Greeting with generic autofill controls", () => {
       analyzeFields: async (request: FieldsAnalyzeRequest) => {
         calls.push("fields");
         return {
+          executionPolicy: fixturePolicy("greeting"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER" as const,
           analysisStatus: "COMPLETE" as const,
@@ -289,6 +291,7 @@ describe("Greeting with generic autofill controls", () => {
         container: page.body,
       });
       const apiClient = {
+        loadExecutionPolicy: async () => fixturePolicy("greeting"),
         analyzePreparation: async (request: PreparationAnalyzeRequest) => ({
           snapshotId: request.snapshotId,
           mode:
@@ -300,6 +303,7 @@ describe("Greeting with generic autofill controls", () => {
         }),
         analyzeFields: async (request: FieldsAnalyzeRequest) =>
           ({
+            executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: phase === "llm-fields" ? "ADAPTER" : "GENERIC",
             analysisStatus: "COMPLETE" as const,
@@ -365,10 +369,16 @@ describe("Greeting with generic autofill controls", () => {
           },
         };
       }
+      if (typed.type === "AUTOFILL_LOAD_EXECUTION_POLICY")
+        return {
+          ok: true as const,
+          data: { executionPolicy: fixturePolicy("greeting") },
+        };
       const request = typed.payload as FieldsAnalyzeRequest;
       return {
         ok: true as const,
         data: {
+          executionPolicy: fixturePolicy("greeting"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER",
           analysisStatus: "COMPLETE",
@@ -505,6 +515,7 @@ it("stops before actions when an adapter response has only unowned Greeting name
       repository={createRepository()}
       pageDocument={page}
       apiClient={{
+        loadExecutionPolicy: async () => fixturePolicy("greeting"),
         analyzePreparation: async (request) => {
           calls.push("preparation");
           return {
@@ -517,6 +528,7 @@ it("stops before actions when an adapter response has only unowned Greeting name
         analyzeFields: async (request) => {
           calls.push("fields");
           return {
+            executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",

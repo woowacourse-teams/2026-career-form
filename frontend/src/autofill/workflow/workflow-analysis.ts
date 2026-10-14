@@ -10,7 +10,6 @@ import { captureComponentWriteRegistry } from "./static-fields-session";
 import { hasComponentFieldCandidates } from "../policy/components/fingerprint";
 import { observeQuality } from "../quality/safe-observation";
 import { resolveDocumentCompany } from "../adapters/company";
-import { isComponentEmailStateDriver } from "../policy/components/workflow";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { componentGpaSafe } from "../policy/components/gpa";
 import { resultFieldState } from "./result-field-state";

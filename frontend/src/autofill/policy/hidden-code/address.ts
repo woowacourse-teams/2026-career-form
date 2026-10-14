@@ -138,9 +138,17 @@ export function createAddressModule(
     desired[roles.address] = expected.address;
     desired[roles.detail] = expected.detail;
     if (
-      originals.some(
-        (v, i) =>
-          v !== "" && normalizeAddress(v) !== normalizeAddress(desired[i]),
+      contract.behavior.address.existingValueGuards.some(
+        ({ role, comparison }) => {
+          const index = roles[role];
+          const value = originals[index];
+          return (
+            value !== "" &&
+            (comparison === "EXACT"
+              ? value !== desired[index]
+              : normalizeAddress(value) !== normalizeAddress(desired[index]))
+          );
+        },
       )
     )
       return manual(contract.messages.addressConflict);
@@ -212,6 +220,25 @@ export function createAddressModule(
         p.detail === expected.detail
       );
     };
+    const completeDetail = (phase: string) =>
+      runFlowProgram(
+        contract.behavior.address.detailWorkflow,
+        contract.behavior.address.detailEntrypoint,
+        {
+          targets: {
+            detail,
+            container: detail.closest<HTMLElement>(contract.targets.field),
+          },
+          values: {
+            original: originals[roles.detail],
+            desired: expected.detail,
+            nonEmpty: String(Boolean(expected.detail)),
+            phase,
+          },
+          current: targets,
+          checkpoint: sameProfile,
+        },
+      );
     let openedByRun = false;
     let ownedQueryValue = query.value;
     const closeOwnedModal = () => {
@@ -247,16 +274,17 @@ export function createAddressModule(
     try {
       if (!unchanged() || !(await sameProfile()) || !unchanged())
         return manual();
+      const existingVerification =
+        contract.behavior.address.existingVerification;
       if (
+        existingVerification !== "NEVER" &&
         zip.value === expected.postalCode &&
-        normalizeAddress(address.value) === normalizeAddress(expected.address)
+        (existingVerification === "POSTAL_ONLY" ||
+          normalizeAddress(address.value) ===
+            normalizeAddress(expected.address))
       ) {
-        if (detail.value !== expected.detail) setText(detail, expected.detail);
-        return targets() && detail.value === expected.detail
-          ? {
-              status: "written",
-              reason: contract.messages.addressUnchanged,
-            }
+        return (await completeDetail("existing"))
+          ? { status: "written", reason: contract.messages.addressUnchanged }
           : manual();
       }
       (button as HTMLInputElement).click();
@@ -349,23 +377,7 @@ export function createAddressModule(
             : detail.value !== originals[roles.detail])
         )
           return manual();
-        const completed = await runFlowProgram(
-          contract.behavior.address.detailWorkflow,
-          contract.behavior.address.detailEntrypoint,
-          {
-            targets: {
-              detail,
-              container: detail.closest<HTMLElement>(contract.targets.field),
-            },
-            values: {
-              original: originals[roles.detail],
-              desired: expected.detail,
-              nonEmpty: String(Boolean(expected.detail)),
-            },
-            current: targets,
-            checkpoint: sameProfile,
-          },
-        );
+        const completed = await completeDetail("selected");
         return completed
           ? { status: "written", reason: contract.messages.addressWritten }
           : manual();

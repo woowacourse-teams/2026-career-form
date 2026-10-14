@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { componentWorkflowAdapter } from "../policy/components/workflow";
@@ -60,12 +63,14 @@ it.each([
       completedGenericStateDrivers: { current: new Map() },
       deferredDriverGroups: { current: new Set() },
       apiClient: {
+loadExecutionPolicy: async () => fixturePolicy("greeting"),
         analyzePreparation: async () => {
           throw Error("unexpected prep");
         },
         analyzeFields: async (request) => {
           analyses++;
           return validateFieldsResponse(request, {
+executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",

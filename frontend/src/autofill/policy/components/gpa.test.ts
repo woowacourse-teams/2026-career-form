@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -168,6 +171,7 @@ function reviewFixture() {
     },
   ];
   const analysis: FieldsAnalyzeResponse = {
+executionPolicy: fixturePolicy("greeting"),
     snapshotId: "s",
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",

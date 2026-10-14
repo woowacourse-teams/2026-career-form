@@ -6,14 +6,11 @@ import java.util.Map;
 import org.bson.Document;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.stereotype.Component;
 
 /** Initial local data only. Restarting must never replace an edited provider policy. */
-@Component
-@Profile("local")
+// Legacy seed fixture; runtime initialization is handled by StartupPolicySeeder.
 final class LocalAddressProviderPolicySeeder implements ApplicationRunner {
     private static final String COLLECTION = "execution_provider_policies";
     private static final String ID = "address-provider-v1";

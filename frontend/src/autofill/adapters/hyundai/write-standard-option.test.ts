@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { FieldCandidateHandle } from "../../dom/types";

@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, expect, it, vi } from "vitest";
 import { CATALOG_VERSION } from "../../../profile/catalog";
 import { createEmptyProfile } from "../../../profile/model";
@@ -78,6 +81,7 @@ async function run(
   const registry = new CandidateRegistry();
   registry.registerField(handle);
   const analysis: FieldsAnalyzeResponse = {
+    executionPolicy: fixturePolicy("greeting"),
     snapshotId: "snapshot",
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -106,14 +110,14 @@ async function run(
   return { success, clicked, input, item, handle };
 }
 
-it("selects the same-name high school whose visible sido matches the catalog entry", async () => {
+it("rejects duplicate high-school names even when only one region matches under NAME_ONLY", async () => {
   const result = await run(HIGH_SCHOOL, [
     { description: "대구" },
     { description: "서울" },
     { description: "울산" },
   ]);
-  expect(result.success).toBe(true);
-  expect(result.clicked.mock.calls).toEqual([[1]]);
+  expect(result.success).toBe(false);
+  expect(result.clicked).not.toHaveBeenCalled();
   expect(
     matchesResultValue(
       result.item,
@@ -121,7 +125,7 @@ it("selects the same-name high school whose visible sido matches the catalog ent
       HIGH_SCHOOL.school,
       result.handle,
     ),
-  ).toBe(true);
+  ).toBe(false);
 });
 
 it.each([
@@ -134,12 +138,13 @@ it.each([
   },
   { name: "unrelated description", options: [{ description: "서울 캠퍼스" }] },
 ])(
-  "keeps the high school fail-closed for $name",
-  async ({ options }) => {
+  "applies NAME_ONLY high-school uniqueness for $name",
+  async ({ name, options }) => {
     const result = await run(HIGH_SCHOOL, options);
-    expect(result.success).toBe(false);
-    expect(result.clicked).not.toHaveBeenCalled();
-    expect(result.input.value).toBe("");
+    const unique = !name.startsWith("duplicate");
+    expect(result.success).toBe(unique);
+    expect(result.clicked.mock.calls).toEqual(unique ? [[0]] : []);
+    expect(result.input.value).toBe(unique ? result.item.profileValue : "");
   },
   8000,
 );
@@ -175,12 +180,13 @@ it.each([
   },
   { name: "duplicate options", target: UNIVERSITY, options: [{}, {}] },
 ])(
-  "keeps the university fail-closed for $name",
-  async ({ target, options }) => {
+  "applies NAME_ONLY university uniqueness for $name",
+  async ({ name, target, options }) => {
     const result = await run(target, options);
-    expect(result.success).toBe(false);
-    expect(result.clicked).not.toHaveBeenCalled();
-    expect(result.input.value).toBe("");
+    const unique = !name.startsWith("duplicate");
+    expect(result.success).toBe(unique);
+    expect(result.clicked.mock.calls).toEqual(unique ? [[0]] : []);
+    expect(result.input.value).toBe(unique ? result.item.profileValue : "");
   },
   8000,
 );

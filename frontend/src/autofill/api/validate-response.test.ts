@@ -1,3 +1,5 @@
+import { installSiteFixture } from "../../test/fixtures/execution-policy";
+import { beforeEach as beforePolicy, afterEach as afterPolicy } from "vitest";
 import { describe, expect, it } from "vitest";
 
 import type { FieldsAnalyzeRequest, PreparationAnalyzeRequest } from "./types";
@@ -1176,6 +1178,18 @@ describe("SELECT_DATE capability", () => {
 });
 
 describe("Greeting custom execution contracts", () => {
+  let releasePolicies: (() => void)[] = [];
+  beforePolicy(() => {
+    releasePolicies = [
+      installSiteFixture("greeting", "sample.career.greetinghr.com", "/apply"),
+      installSiteFixture(
+        "greeting",
+        "jobs.unregistered.example",
+        "/ko/o/*/apply",
+      ),
+    ];
+  });
+  afterPolicy(() => releasePolicies.forEach((release) => release()));
   function contract(command: "SEARCH_SELECTION" | "SELECT_DATE") {
     const date = command === "SELECT_DATE";
     const request: FieldsAnalyzeRequest = {
@@ -1221,7 +1235,42 @@ describe("Greeting custom execution contracts", () => {
         },
       ],
     };
-    return { request, response };
+    const baseFields = [
+      "basicInformation.name",
+      "basicInformation.phoneNumber.nationalNumber",
+    ].map((domName, index) => ({
+      candidateId: `base-${index}`,
+      element: "input" as const,
+      control: "text" as const,
+      visibility: "visible" as const,
+      domName,
+    }));
+    request.sections[0].fields.push(...baseFields);
+    return {
+      request,
+      response: {
+        ...response,
+        fields: [
+          response.fields[0]!,
+          ...baseFields.map((field) => ({
+            candidateId: field.candidateId,
+            matchType: "NO_MATCH",
+            mappingStatus: "ADAPTER_VERIFIED",
+            interactionStatus: "BLOCKED",
+            reasonCodes: ["NO_MATCH"],
+          })),
+        ] as [
+          (typeof response.fields)[number],
+          ...Array<{
+            candidateId: string;
+            matchType: string;
+            mappingStatus: string;
+            interactionStatus: string;
+            reasonCodes: string[];
+          }>,
+        ],
+      },
+    };
   }
   it.each(["SEARCH_SELECTION", "SELECT_DATE"] as const)(
     "validates %s on an arbitrary custom domain using the existing base candidates",
@@ -1246,14 +1295,14 @@ describe("Greeting custom execution contracts", () => {
         sections: [
           {
             ...request.sections[0]!,
-            fields: [...request.sections[0]!.fields, ...basicFields],
+            fields: [request.sections[0]!.fields[0], ...basicFields],
           },
         ],
       };
       const customResponse = {
         ...response,
         fields: [
-          ...response.fields,
+          response.fields[0],
           ...basicFields.map((field) => ({
             candidateId: field.candidateId,
             matchType: "NO_MATCH",
@@ -1386,6 +1435,7 @@ describe("Greeting custom execution contracts", () => {
               recipe: `UNIVERSITY_ADDITIONAL_MAJOR_${slot}_NAME`,
             },
           },
+          ...response.fields.slice(1),
         ],
       };
       expect(validateFieldsResponse(request, derived).fields[0]).toMatchObject({

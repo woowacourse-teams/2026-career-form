@@ -1,3 +1,4 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import {
   act,
   fireEvent,
@@ -32,7 +33,7 @@ it.each([
       url: "https://www.skcareers.com/Application/Index/synthetic",
     });
     document.body.innerHTML =
-      '<div id="applyContentUserInfo" class="apply-form-box"><button id="btnSearchAddress" type="button">우편번호 찾기</button><input id="prsZipCode" name="prsZipCode" readonly><input id="prsAddress" name="prsAddress" readonly><input id="prsAddressDtl" name="prsAddressDtl"></div><div id="layer" style="display:none"><iframe title="우편번호서비스 레이어 프레임"></iframe></div>';
+      '<div id="applyContentUserInfo" class="apply-form-box"><button id="btnSearchAddress" type="button">우편번호 찾기</button><input id="prsZipCode" name="prsZipCode" readonly><input id="prsAddress" name="prsAddress" readonly><input id="prsAddressDtl" name="prsAddressDtl"></div><div id="layer" style="display:none"><iframe src="https://postcode.map.kakao.com/search" title="우편번호서비스 레이어 프레임"></iframe></div>';
     for (const el of document.querySelectorAll("button,input"))
       Object.defineProperty(el, "offsetParent", { value: document.body });
     document
@@ -55,6 +56,7 @@ it.each([
       prsAddressDtl: "addressLine2",
     };
     const apiClient: AnalysisApiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("sk"),
       analyzePreparation: async (request) => ({
         snapshotId: request.snapshotId,
         mode: "ADAPTER",
@@ -70,6 +72,7 @@ it.each([
         ],
       }),
       analyzeFields: async (request) => ({
+        executionPolicy: fixturePolicy("sk"),
         snapshotId: request.snapshotId,
         mode: "ADAPTER",
         analysisStatus: "COMPLETE",
@@ -103,10 +106,11 @@ it.each([
         repository={{ load: async () => profile }}
         pageDocument={document}
         onExit={() => {}}
-        addressSearch={async (_expected, maySelect) => {
+        addressSearch={async (_expected, maySelect, _signal, onSelected) => {
           searches++;
           await searching;
           expect(await maySelect()).toBe(true);
+          onSelected?.(_expected);
           (document.querySelector("#prsZipCode") as HTMLInputElement).value =
             profile.contact.postalCode;
           (document.querySelector("#prsAddress") as HTMLInputElement).value =

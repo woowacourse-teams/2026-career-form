@@ -1,3 +1,4 @@
+import { validSyncPlan, type SyncStep } from "./sync-plan";
 import { validFlowProgram, type FlowProgram } from "./flow-plan";
 import { validDomPlan, type DomPlan } from "./action-plan";
 import { validRuntimeRules } from "./runtime-rules";
@@ -61,6 +62,21 @@ export interface ComponentPolicy {
     flow: FlowProgram;
     entrypoints: { acceptance: string; close: string };
   };
+  writeRecipes: {
+    name: string;
+    key: string;
+    command: string;
+    inputTypes: string[];
+    stage: number;
+    plan: SyncStep[];
+  }[];
+  searchFlows: {
+    program: FlowProgram;
+    afterSelection: string;
+    retainedCompletion: string;
+    cleanup: string;
+  };
+  addressCleanup: { program: FlowProgram; entrypoint: string };
   completions: {
     plan: string;
     key: string;
@@ -359,6 +375,41 @@ export function validComponentPolicy(v: unknown): v is ComponentPolicy {
       ].every((n) => Number.isInteger(n) && n > 0 && n <= 16)) &&
     (!has("address") ||
       ["REMOVE_PREFIX", "TEXT"].includes(p.addressStructure.labelRead)) &&
+    (!has("commit") ||
+      (Array.isArray(p.writeRecipes) &&
+        p.writeRecipes.length <= 32 &&
+        new Set(p.writeRecipes.map((r) => r?.name)).size ===
+          p.writeRecipes.length &&
+        p.writeRecipes.every(
+          (r) =>
+            object(r) &&
+            text(r.name) &&
+            text(r.key) &&
+            text(r.command) &&
+            Array.isArray(r.inputTypes) &&
+            r.inputTypes.length > 0 &&
+            r.inputTypes.every(text) &&
+            Number.isInteger(r.stage) &&
+            r.stage >= 0 &&
+            r.stage <= 20 &&
+            validSyncPlan(r.plan),
+        ))) &&
+    (!has("search") ||
+      (object(p.searchFlows) &&
+        validFlowProgram(p.searchFlows.program) &&
+        [
+          p.searchFlows.afterSelection,
+          p.searchFlows.cleanup,
+          p.searchFlows.retainedCompletion,
+        ].every(
+          (n) => text(n) && p.searchFlows.program.plans[n]?.realm === "LOCAL",
+        ))) &&
+    (!has("address") ||
+      (object(p.addressCleanup) &&
+        validFlowProgram(p.addressCleanup.program) &&
+        text(p.addressCleanup.entrypoint) &&
+        p.addressCleanup.program.plans[p.addressCleanup.entrypoint]?.realm ===
+          "LOCAL")) &&
     (!has("commit") || Array.isArray(p.completions)) &&
     (!has("commit") || p.completions.length <= 32) &&
     (!has("commit") ||

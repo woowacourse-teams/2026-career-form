@@ -6,8 +6,6 @@ import java.util.Set;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionKind;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionRule;
@@ -24,8 +22,7 @@ import com.careerform.formanalysis.application.port.FieldMappingResolver.ButtonO
 import com.careerform.formanalysis.dto.FieldsAnalysisRequest;
 import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
-@Component
-@Profile("local")
+// Legacy seed fixture; runtime initialization is handled by StartupPolicySeeder.
 final class LocalCompanyFormPolicySeeder implements ApplicationRunner {
 
     static final String COMPANY_KEY = "sk";

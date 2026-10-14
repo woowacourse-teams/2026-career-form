@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, expect, it } from "vitest";
@@ -37,6 +40,7 @@ function candidates(request: FieldsAnalyzeRequest): FieldCandidate[] {
 
 function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
+    executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -75,7 +79,14 @@ function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
       return {
         candidateId: field.candidateId,
         matchType: "MATCH" as const,
-        valueBinding: { type: "DIRECT" as const, profileFieldKey },
+        valueBinding:
+          field.domName === "cerCertDate"
+            ? {
+                type: "DERIVED" as const,
+                recipe: "YEAR_MONTH" as const,
+                profileFieldKey,
+              }
+            : { type: "DIRECT" as const, profileFieldKey },
         autofillPolicy:
           field.domName === "lngLanguageType" || field.domName === "lngExamName"
             ? ("CONDITIONAL" as const)
@@ -262,6 +273,7 @@ it("fills revealed exam scores after finishing the current mapping pass", async 
   ];
   let analysisCount = 0;
   const apiClient: AnalysisApiClient = {
+    loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -345,6 +357,7 @@ it("confirms canonical OPIc and fills its score after the next analysis", async 
     },
   ];
   const apiClient: AnalysisApiClient = {
+    loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -408,6 +421,7 @@ it("does not confirm SK exam when two live results match the same canonical valu
     },
   ];
   const apiClient: AnalysisApiClient = {
+    loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -494,6 +508,7 @@ it.each([
       ];
     }
     const apiClient: AnalysisApiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("sk"),
       analyzePreparation: async (request) => ({
         snapshotId: request.snapshotId,
         mode: "ADAPTER",
@@ -537,9 +552,18 @@ it.each([false, true])(
     });
     document.body.innerHTML = `<div class="apply-form-box"><input name="prsEngFirstName"></div>
     <div class="apply-form-box" id="applyContentCertificate">
-      <div class="form-item-group cert-Item"><input name="cerCertName"><input name="cerCertSource"><input name="cerCertDate"></div>
-      <div class="form-item-group cert-Item"><input name="cerCertName"><input name="cerCertSource"><input name="cerCertDate"></div>
+      <div class="form-item-group cert-Item"><input name="cerCertName"><input name="cerCertSource"><input name="cerCertDate" type="tel" maxlength="6"></div>
+      <div class="form-item-group cert-Item"><input name="cerCertName"><input name="cerCertSource"><input name="cerCertDate" type="tel" maxlength="6"></div>
     </div>`;
+    document
+      .querySelectorAll<HTMLInputElement>("[name=cerCertDate]")
+      .forEach((input) => {
+        // Model the site's YYYYMM input formatter required by the active policy.
+        input.addEventListener("input", () => {
+          if (/^\d{6}$/.test(input.value))
+            input.value = input.value.slice(0, 4) + "-" + input.value.slice(4);
+        });
+      });
     const rows = Array.from(
       document.querySelectorAll<HTMLElement>(".cert-Item"),
     );
@@ -571,7 +595,7 @@ it.each([false, true])(
         values: {
           name: "샘플 자격증 A",
           issuer: "Unmatched issuer",
-          acquisitionDate: "2025-01",
+          acquisitionDate: "2025-01-01",
         },
       },
       {
@@ -580,7 +604,7 @@ it.each([false, true])(
         values: {
           name: "정보처리기사",
           issuer: "Public issuer",
-          acquisitionDate: "2025-02",
+          acquisitionDate: "2025-02-01",
         },
       },
     ];
@@ -594,6 +618,7 @@ it.each([false, true])(
       );
     let analyses = 0;
     const apiClient: AnalysisApiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("sk"),
       analyzePreparation: async (req) => ({
         snapshotId: req.snapshotId,
         mode: "ADAPTER",
