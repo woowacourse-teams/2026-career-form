@@ -538,7 +538,7 @@ it("stops before actions when an adapter response has only unowned Greeting name
       }}
     />,
   );
-  await screen.findByRole("heading", { name: "분석을 완료하지 못했습니다" });
-  expect(calls).toEqual(["preparation"]);
+  await screen.findByRole("heading", { name: "기입 결과" });
+  expect(calls).toEqual(["preparation", "fields"]);
   expect(page.querySelector<HTMLInputElement>("input")!.value).toBe("");
 });

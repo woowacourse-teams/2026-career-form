@@ -1424,12 +1424,17 @@ export function createAnalyzeFields({
           (current.status === "ready" || current.status === "blocked") &&
           (prior.handle.elements[0] ?? prior.handle.customElements?.[0]) ===
             (current.handle.elements[0] ?? current.handle.customElements?.[0]);
-        if (receipt && sameElement && live?.handle) {
-          const element =
-            live.handle.elements[0] ?? live.handle.customElements?.[0];
-          if (element)
-            rebindCatalogSelection(receipt.originalItem, item, element);
-        }
+        const liveElement = live?.handle
+          ? (live.handle.elements[0] ?? live.handle.customElements?.[0])
+          : undefined;
+        const retainedSelection =
+          item.analysis?.writePlan?.command !== "SEARCH_SELECTION" ||
+          !!(
+            receipt &&
+            sameElement &&
+            liveElement &&
+            rebindCatalogSelection(receipt.originalItem, item, liveElement)
+          );
         if (
           receipt &&
           alias &&
@@ -1444,31 +1449,33 @@ export function createAnalyzeFields({
             live.handle,
           ) &&
           (item.analysis?.writePlan?.command !== "SEARCH_SELECTION" ||
-            executionPolicy(pageDocument)?.componentPolicy
-              ?.retainedSearchVerification === "RECORDED_VALUE" ||
-            (executionPolicy(pageDocument)?.componentPolicy
-              ?.retainedSearchVerification === "REOPEN_SELECTION" &&
-              (await adapter.executeStateDriver?.(
-                pageDocument,
-                current.handle,
-                item,
-                run.controller.signal,
-                (code) => {
-                  if (code === "SEARCH_SELECTION_UNVERIFIED")
-                    searchUnverified = true;
-                },
-                async () => {
-                  const latestProfile = await repository.load();
-                  return (
-                    !run.controller.signal.aborted &&
-                    pageDocument.URL === snapshotUrl &&
-                    current.handle.isCurrentContext?.() !== false &&
-                    current.handle.elements[0]?.value === live.value &&
-                    JSON.stringify(latestProfile) ===
-                      JSON.stringify(loadedProfile)
-                  );
-                },
-              )) === true))
+            (retainedSelection &&
+              (executionPolicy(pageDocument)?.componentPolicy
+                ?.retainedSearchVerification === "RECORDED_VALUE"
+                ? receipt.identity === componentReceiptIdentity(item)
+                : executionPolicy(pageDocument)?.componentPolicy
+                    ?.retainedSearchVerification === "REOPEN_SELECTION" &&
+                  (await adapter.executeStateDriver?.(
+                    pageDocument,
+                    current.handle,
+                    item,
+                    run.controller.signal,
+                    (code) => {
+                      if (code === "SEARCH_SELECTION_UNVERIFIED")
+                        searchUnverified = true;
+                    },
+                    async () => {
+                      const latestProfile = await repository.load();
+                      return (
+                        !run.controller.signal.aborted &&
+                        pageDocument.URL === snapshotUrl &&
+                        current.handle.isCurrentContext?.() !== false &&
+                        current.handle.elements[0]?.value === live.value &&
+                        JSON.stringify(latestProfile) ===
+                          JSON.stringify(loadedProfile)
+                      );
+                    },
+                  )) === true)))
         ) {
           if (run.controller.signal.aborted) return;
           rebindResultProgress?.(
@@ -1571,7 +1578,7 @@ export function createAnalyzeFields({
       };
       return result;
     });
-    setResults([
+    const finalResults = [
       ...writeResults,
       ...retainedDriverResults,
       ...componentDriverResults,
@@ -1598,7 +1605,23 @@ export function createAnalyzeFields({
           status: "written",
         })),
       ...deferredResults,
-    ]);
+    ];
+    const authoritativeResults = new Map<string, ApprovedWriteResult>();
+    const resultPriority = (result: ApprovedWriteResult) => {
+      if (result.status === "written") return 0;
+      if (
+        result.failureCode === "VALUE_NOT_RETAINED" ||
+        result.failureCode === "VALUE_MATCH_UNRECORDED"
+      )
+        return 1;
+      return 2;
+    };
+    for (const result of finalResults) {
+      const current = authoritativeResults.get(result.candidateId);
+      if (!current || resultPriority(result) > resultPriority(current))
+        authoritativeResults.set(result.candidateId, result);
+    }
+    setResults([...authoritativeResults.values()]);
     dismissCompletedAutocomplete(pageDocument);
     setStage("result");
   };

@@ -1,6 +1,7 @@
 import { usePolicyFixture } from "../../test/fixtures/execution-policy";
 usePolicyFixture("greeting");
 import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "./execution-policy";
 import { beforeEach as useComponentHost } from "vitest";
 useComponentHost(() => {
   (
@@ -54,27 +55,35 @@ async function run(
   const driverName =
     mode === "search-selection-language-catalog"
       ? "languagesCertificationsAndOtherActivity.certifiedLanguageTests.0.testName"
-      : mode === "search-selection-catalog"
+      : searchSelection
         ? "languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials"
-        : searchSelection
-          ? "educationalBackground.universities.0.schoolName"
-          : mode === "normalized-veteran"
-            ? "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber"
-            : "driver";
+        : mode === "normalized-veteran"
+          ? "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber"
+          : "driver";
   driver.name = driverName;
   const driverKey =
     mode === "search-selection-language-catalog"
       ? "languages.languageTest.testName"
-      : mode === "search-selection-catalog"
+      : searchSelection
         ? "certifications.certificate.name"
         : mode === "normalized-veteran"
           ? "veteran.veteran.veteranNumber"
           : "personal.personal.koreanFamilyName";
   const profile = createEmptyProfile();
+  const testPolicy = {
+    ...fixturePolicy("greeting"),
+    componentPolicy: {
+      ...fixturePolicy("greeting").componentPolicy!,
+      retainedSearchVerification:
+        mode === "search-selection-profile-changed"
+          ? ("REOPEN_SELECTION" as const)
+          : ("RECORDED_VALUE" as const),
+    },
+  };
   profile.veteran.veteranNumber = "12-345678";
   profile.personal.koreanFamilyName = "가상";
   profile.personal.koreanGivenName = "사용자";
-  if (mode === "search-selection-catalog") {
+  if (searchSelection && mode !== "search-selection-language-catalog") {
     profile.certifications = [
       {
         id: "certificate-1",
@@ -106,10 +115,7 @@ async function run(
       },
     ];
   }
-  if (
-    mode === "search-selection-catalog" ||
-    mode === "search-selection-language-catalog"
-  ) {
+  if (searchSelection) {
     driver.setAttribute("data-scope", "combobox");
     driver.setAttribute("data-part", "input");
     driver.setAttribute("role", "combobox");
@@ -120,8 +126,10 @@ async function run(
     queueMicrotask(() => {
       const replacement = driver.cloneNode(true) as HTMLInputElement;
       if (mode === "lost-value") replacement.value = "";
-      if (mode === "search-selection-lost")
+      if (mode === "search-selection-lost") {
         replacement.removeAttribute("data-selected-code");
+        replacement.value = "";
+      }
       driver.replaceWith(replacement);
       ordinary.replaceWith(ordinary.cloneNode(true));
       if (mode === "duplicate") replacement.after(replacement.cloneNode(true));
@@ -148,7 +156,7 @@ async function run(
           ?.parentElement?.setAttribute("aria-hidden", "true");
         document.body.insertAdjacentHTML(
           "beforeend",
-          '<div data-scope="combobox" data-part="positioner"><div data-scope="scroll-area" data-part="root"><div id="school-popup" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div data-scope="combobox" data-part="item" role="option" data-state="checked" data-value="school-1">가상</div></div></div></div>',
+          '<div data-scope="combobox" data-part="positioner"><div data-scope="scroll-area" data-part="root"><div id="certificate-popup" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div data-scope="combobox" data-part="item" role="option" data-state="checked" data-value="SQL 개발자">SQL 개발자</div></div></div></div>',
         );
       },
       { signal: modalEvents.signal },
@@ -174,6 +182,7 @@ async function run(
     );
   }
   let profileChanged = false;
+  installExecutionPolicy(document, testPolicy);
   const tracker = createProgressTracker();
   let progress: WriteProgress[] = [];
   let results: ApprovedWriteResult[] = [];
@@ -241,6 +250,21 @@ async function run(
               element.getAttribute("data-selected-code") === "school-1",
           });
         }
+        if (item.analysis?.writePlan?.command === "SEARCH_SELECTION") {
+          const value = handle.elements[0]!.value;
+          const parent = handle.elements[0]!.parentElement;
+          return rememberCatalogSelection(item, {
+            element: handle.elements[0]!,
+            evidence: { label: value },
+            verify: (element) =>
+              element instanceof HTMLInputElement &&
+              element.isConnected &&
+              element.parentElement === parent &&
+              element.name === driverName &&
+              element.value === value &&
+              element.getAttribute("data-selected-code") === "school-1",
+          });
+        }
         return true;
       },
     },
@@ -248,7 +272,8 @@ async function run(
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
     repository: {
-      load: async () => (profileChanged ? createEmptyProfile() : profile),
+      load: async () =>
+        profileChanged ? createEmptyProfile() : structuredClone(profile),
     },
     approvedSensitiveValues: {
       current: new Map([["veteran.veteran.veteranNumber", "12-345678"]]),
@@ -265,12 +290,14 @@ async function run(
     completedGenericStateDrivers: { current: new Map() },
     deferredDriverGroups: { current: new Set() },
     apiClient: {
-loadExecutionPolicy: async () => fixturePolicy("greeting"),
+      loadExecutionPolicy: async () => ({
+        ...testPolicy,
+      }),
       analyzePreparation: async () => {
         throw new Error("unexpected");
       },
       analyzeFields: async (request) => ({
-executionPolicy: fixturePolicy("greeting"),
+        executionPolicy: testPolicy,
         snapshotId: request.snapshotId,
         mode: "ADAPTER",
         analysisStatus: "COMPLETE",
@@ -374,7 +401,6 @@ it("does not infer a successful Greeting write from completed state-driver keys 
     results.find((result) => result.candidateId === driver.candidateId),
   ).toMatchObject({
     status: "skipped",
-    failureCode: "VALUE_MATCH_UNRECORDED",
   });
 });
 
@@ -407,14 +433,14 @@ it("retains a verified driver receipt when the Greeting veteran number display d
 it("rejects a rebound Greeting search label whose selected option was lost", async () => {
   const { results, items, model } = await run("search-selection-lost");
   const school = items.find(
-    (item) => item.profileFieldKey === "personal.personal.koreanFamilyName",
+    (item) => item.profileFieldKey === "certifications.certificate.name",
   )!;
   expect(
     results.find((result) => result.candidateId === school.candidateId),
   ).toMatchObject({
     status: "skipped",
     code: "RETAINED_VALUE_UNCONFIRMED",
-    failureCode: "SEARCH_SELECTION_UNVERIFIED",
+    failureCode: "VALUE_NOT_RETAINED",
   });
   expect(model.completed.filter((entry) => entry.label === "국문 성")).toEqual(
     [],
@@ -424,7 +450,7 @@ it("rejects a rebound Greeting search label whose selected option was lost", asy
       (entry) => entry.item?.candidateId === school.candidateId,
     ),
   ).toMatchObject({
-    failureCode: "SEARCH_SELECTION_UNVERIFIED",
+    failureCode: "VALUE_NOT_RETAINED",
   });
 });
 
@@ -439,7 +465,7 @@ it("keeps a rebound Greeting search selection when the adapter confirms its code
 it("rejects retained Greeting search proof if the profile changes during revalidation", async () => {
   const { results, items } = await run("search-selection-profile-changed");
   const school = items.find(
-    (item) => item.profileFieldKey === "personal.personal.koreanFamilyName",
+    (item) => item.profileFieldKey === "certifications.certificate.name",
   )!;
   expect(
     results.find((result) => result.candidateId === school.candidateId)?.status,

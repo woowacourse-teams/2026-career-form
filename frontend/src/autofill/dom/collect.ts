@@ -824,7 +824,7 @@ function repeatableItemElements(
         !isTemplateLike(item) &&
         (!adapter.requiresVisibleControl(phase, source) ||
           hasVisibleFormControl(item) ||
-          (adapter === componentCollectionAdapter &&
+          (adapter.itemGroupId !== undefined &&
             componentFieldElements(item.ownerDocument).some(
               (control) => item.contains(control) && !isHidden(control),
             ))),
@@ -951,10 +951,22 @@ function repeatableItemElementsForAction(
     Object.entries(component.sections).find(
       ([kind]) => componentAction === component.actionPrefix + kind,
     )?.[1];
-  if (section)
-    return allItems.filter(
-      (item) => adapter.itemGroupId?.(item) === section.group,
+  if (section) {
+    const adapterItems = container
+      ? (adapter.repeatableItemCandidates?.(container) ?? [])
+      : [];
+    const candidates = adapterItems.length > 0 ? adapterItems : allItems;
+    return candidates.filter(
+      (item) =>
+        !isTemplateLike(item) &&
+        adapter.itemGroupId?.(item) === section.group &&
+        (hasVisibleFormControl(item) ||
+          (adapter.itemGroupId !== undefined &&
+            componentFieldElements(item.ownerDocument).some(
+              (control) => item.contains(control) && !isHidden(control),
+            ))),
     );
+  }
   // An identifier-less repeat group (C13) owns exactly the rows it proved.
   const implicitGroup =
     adapter === collectionAdapterForHost("") && action
@@ -1159,9 +1171,12 @@ export function collectPreparationSnapshot(
       if (!generic) return undefined;
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
-      const root = sectionRoots.get(sectionId);
-      if (!root || !root.isConnected) return undefined;
       const action = actionElements.get(actionCandidateId);
+      const root =
+        (companyId === "components" && action
+          ? componentSectionContainer(action)
+          : undefined) ?? sectionRoots.get(sectionId);
+      if (!root || !root.isConnected) return undefined;
       const rows = repeatableItemElementsForAction(root, action, adapter);
       if (!rows?.length) return undefined;
       const container = action
@@ -1176,9 +1191,12 @@ export function collectPreparationSnapshot(
     countRepeatableGroups(actionCandidateId) {
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
-      const root = sectionRoots.get(sectionId);
-      if (root === undefined || (root && !root.isConnected)) return undefined;
       const action = actionElements.get(actionCandidateId);
+      const root =
+        (companyId === "components" && action
+          ? componentSectionContainer(action)
+          : undefined) ?? sectionRoots.get(sectionId);
+      if (root === undefined || (root && !root.isConnected)) return undefined;
       const nested =
         action instanceof HTMLElement
           ? adapter.nestedGroupState?.(action)
@@ -1193,9 +1211,12 @@ export function collectPreparationSnapshot(
     repeatableGroupState(actionCandidateId) {
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
-      const root = sectionRoots.get(sectionId);
-      if (root === undefined || (root && !root.isConnected)) return undefined;
       const action = actionElements.get(actionCandidateId);
+      const root =
+        (companyId === "components" && action
+          ? componentSectionContainer(action)
+          : undefined) ?? sectionRoots.get(sectionId);
+      if (root === undefined || (root && !root.isConnected)) return undefined;
       const nested =
         action instanceof HTMLElement
           ? adapter.nestedGroupState?.(action)

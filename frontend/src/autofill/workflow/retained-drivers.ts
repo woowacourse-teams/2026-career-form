@@ -5,6 +5,7 @@ import type { ApprovedWriteResult } from "../write/executor";
 import type { CompletedGenericStateDriver } from "./workflow-analysis-types";
 import { normalizeDisplayName } from "../write/display-name";
 import { stateDriverKey } from "./workflow-model";
+import { executionPolicy } from "./execution-policy";
 
 type RetainedDriverCandidate = {
   item: ReviewPlanItem;
@@ -85,7 +86,20 @@ export function retainedDriverReviewResults(
         }));
       }
       const { item, handle } = matches[0]!;
-      return retainedStateDriverValue(item, handle, record.profileValue)
+      const element = handle.elements[0] ?? handle.customElements?.[0];
+      const policy = element
+        ? executionPolicy(element.ownerDocument)?.componentPolicy
+        : undefined;
+      const isSearch = item.analysis?.writePlan?.command === "SEARCH_SELECTION";
+      const verified =
+        !isSearch ||
+        (!!policy &&
+          policy.retainedSearchVerification === "RECORDED_VALUE" &&
+          item.catalogMatch?.labels.length === 1 &&
+          normalizeDisplayName(item.catalogMatch.labels[0]!) ===
+            normalizeDisplayName(record.profileValue));
+      return verified &&
+        retainedStateDriverValue(item, handle, record.profileValue)
         ? [
             {
               candidateId: item.candidateId,

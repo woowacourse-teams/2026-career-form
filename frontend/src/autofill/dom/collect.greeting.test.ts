@@ -394,8 +394,8 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
         control.getAttribute("name")!.replace(oldPrefix, changedPrefix),
       );
     }
-    expect(first.countRepeatableGroups(major!.candidateId)).toBeUndefined();
-    expect(first.repeatableGroupState(major!.candidateId)).toBeUndefined();
+    expect(first.countRepeatableGroups(major!.candidateId)).toBe(1);
+    expect(first.repeatableGroupState(major!.candidateId)).toHaveLength(1);
     for (const control of document.querySelectorAll<HTMLElement>(
       `[name^="${changedPrefix}."]`,
     )) {
