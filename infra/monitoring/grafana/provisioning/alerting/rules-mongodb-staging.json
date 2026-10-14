@@ -78,7 +78,7 @@
           }
         },
         {
-          "uid": "cf-db-staging-db-command-failure-critical",
+          "uid": "cf-db-stg-command-failure-critical",
           "title": "[staging] 최근 5분 DB 호출 실패율 (%) (critical)",
           "condition": "B",
           "data": [

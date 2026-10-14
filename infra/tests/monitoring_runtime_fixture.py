@@ -72,7 +72,7 @@ class MonitoringFixture:
 
     @classmethod
     def _central_config(cls) -> dict:
-        cls.ports = {name: cls._port() for name in ("grafana", "loki", "prometheus", "ui")}
+        cls.ports = {name: cls._port() for name in ("grafana", "loki", "prometheus", "ui", "traces")}
         cls.public_url = f"http://127.0.0.1:{cls.ports['ui']}/"
         cls.environment["MONITORING_PUBLIC_URL"] = cls.public_url
         rendered = subprocess.run(
@@ -101,7 +101,7 @@ class MonitoringFixture:
              if entry["target"] == "/etc/nginx/ingest-allow.conf")["source"] = str(cls.allowlist)
         config["services"]["grafana"]["ports"][0]["published"] = str(cls.ports["grafana"])
         for port in config["services"]["ingest"]["ports"]:
-            port["published"] = str(cls.ports[{80: "ui", 3100: "loki", 9090: "prometheus"}[port["target"]]])
+            port["published"] = str(cls.ports[{80: "ui", 3100: "loki", 9090: "prometheus", 4318: "traces"}[port["target"]]])
             port["host_ip"] = "127.0.0.1"
         return config
 
