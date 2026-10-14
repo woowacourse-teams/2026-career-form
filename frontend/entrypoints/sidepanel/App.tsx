@@ -215,7 +215,9 @@ export function App({
     try {
       setAutofillFailed(false);
       await openAutofill();
+      track("autofill_open_succeeded", analyticsProperties);
     } catch {
+      track("autofill_open_failed", analyticsProperties);
       setAutofillFailed(true);
     } finally {
       startPending.current = false;

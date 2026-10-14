@@ -2,14 +2,16 @@
 
 > Topic: landing-onboarding
 > Status: Current
-> Current: [CF-96 근거](../../raw/issues/CF-96/documents/landing-onboarding.md)
-> History: [CF-96 근거](../../raw/issues/CF-96/documents/landing-onboarding.md)
-> Updated: 2026-09-19
+> Current: [CF-193 단계형 프로필 등록 온보딩](../../raw/issues/CF-193/documents/landing-onboarding.md)
+> History: [CF-96 근거](../../raw/issues/CF-96/documents/landing-onboarding.md), [CF-193 단계형 프로필 등록 온보딩](../../raw/issues/CF-193/documents/landing-onboarding.md)
+> Updated: 2026-10-13
 
 ## 현재 상태
 
-랜딩·온보딩은 독립 웹 진입점과 산출물로 제공한다. 랜딩은 실제 UI에 가상 데이터와 로컬 분석 응답을 주입하며 확장 런타임 접근을 차단한다. 온보딩은 설치·등록·첫 실행 안내만 제공하고 정책 문서는 미시행 초안으로 유지한다.
+첫 설치 온보딩 한 탭에서 시작 목적을 고른 뒤, 자동 기입 준비를 선택하면 같은 탭에서 단계형 등록으로 전환한다. 국문 성·이름, 이메일, 전화번호, 성별, 생년월일을 선택 입력으로 묻고, 영문 성·이름과 국적은 요약에서 보충한다. 학력·경력·프로젝트는 짧게 등록한 뒤 기간과 상세 정보만 선택해서 보충한다. 기존값·반복 항목 ID를 보존하고 저장 성공 후 이동하며, 재진입 시 저장 정보 요약부터 시작한다. 요약은 자동 기입 사용 안내로 연결한다.
+
+독립 웹 빌드와 가상 데이터 기반 랜딩 시뮬레이션 경계를 유지한다. 웹의 미설치 안내와 확장의 설치 후 등록을 구분하며 정책 문서는 기존 미시행 초안을 유지한다.
 
 ## 변경 이유
 
-신규 웹 페이지의 역할과 확장 프로그램으로부터 분리되는 빌드·데이터 경계를 보존한다.
+입력 범위를 짧은 질문과 선택 보충으로 나눠 첫 프로필 작성 부담을 줄이고 첫 자동 기입으로 이어지게 한다.

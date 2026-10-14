@@ -534,3 +534,17 @@
 - Approval-Digest: a6f687d3bd725214fa37de4509a5f0ba195e8fb80ffe2272f2a4381f9acffa2b
 - Source-Revision: cbd283762b4b30a485f1ce8be1f48680d00c65cb
 - 승인한 세 후보를 [CF-207 bundle](../raw/issues/CF-207/manifest.md)에 기록하고 [공용 모니터링 시스템](topics/monitoring-system.md)을 갱신했다. 기존 raw는 보존했다.
+
+## [2026-10-12] ingest | CF-193 간단 프로필 등록과 첫 클릭률
+
+- Approval-Digest: eea777b397530073223f8dde4d136056a3edb99391d3a4c5bf27968b0b414859
+- Source-Revision: a1494f67fb6eaa7b47f328254c1747045670dbae
+- 승인한 두 후보를 [CF-193 bundle](../raw/issues/CF-193/manifest.md)에 기록했다.
+- [랜딩·온보딩](topics/landing-onboarding.md)과 [이용 계측](topics/usage-analytics.md)의 Current를 갱신하고 이전 raw와 개인정보 경계를 보존했다.
+
+## [2026-10-13] ingest | CF-193 단계형 프로필 등록과 첫 클릭률 보완
+
+- Approval-Digest: 8ff319811d59ad9d3db60a1b14a87bdf53acb34f44e6755289f0226655a7edf1
+- Source-Revision: 070b6c55185da237903ec915b2798a8ace7cf47e
+- 새로 승인한 두 후보에 맞춰 아직 병합되지 않은 [CF-193 bundle](../raw/issues/CF-193/manifest.md)을 갱신했다.
+- [랜딩·온보딩](topics/landing-onboarding.md)의 단계형 질문·선택 보충·같은 탭 전환과 [이용 계측](topics/usage-analytics.md)의 단계형 첫 저장 표현을 현재 상태로 기록했다. 기존 개인정보 경계와 웹 시연 경계는 보존했다.

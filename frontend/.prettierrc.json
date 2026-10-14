@@ -1,0 +1,13 @@
+{
+  "overrides": [
+    {
+      "files": [
+        "src/autofill/interaction/cj-major-public-template.fixture.html",
+        "src/autofill/interaction/cj-school-public-response.fixture.html"
+      ],
+      "options": {
+        "embeddedLanguageFormatting": "off"
+      }
+    }
+  ]
+}

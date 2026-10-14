@@ -3,7 +3,7 @@ import type { Profile, ProfileEnvelope } from "./model";
 import { parseProfileImport, serializeProfileExport } from "./profile-transfer";
 
 const fixtures = import.meta.glob<ProfileEnvelope>(
-  "../../fixtures/**/profile-export*.json",
+  "../../fixtures/**/profile-export.*.json",
   {
     eager: true,
     import: "default",

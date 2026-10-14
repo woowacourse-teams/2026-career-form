@@ -13,7 +13,7 @@ const result = (
 ) =>
   template
     .replace(
-      'id="dtl_nm" name="dtl_nm" value=""',
+      /id="dtl_nm"\s+name="dtl_nm"\s+value=""/,
       'id="dtl_nm" name="dtl_nm" value="합성전공"',
     )
     .replace(
