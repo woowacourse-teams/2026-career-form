@@ -36,18 +36,30 @@ $(document).ready(function(){
 const row = (code: string, name: string, country = "KOR") =>
   `<li><a href="javascript:;" onclick="setUniversityData('${code}', '${name}', '${country}')" title="선택 시 본창에 값이 들어가며 레이어창 닫힘">${name}</a></li>`;
 function response(rows: string, query = "합성대학교", num = "2_0") {
-  const sources = externals.map(path => `<script src="https://imgrec.cj.net${path}"></script>`);
+  const sources = externals.map(
+    (path) => `<script src="https://imgrec.cj.net${path}"></script>`,
+  );
   return `<!DOCTYPE html><html><head>${sources[0]}<script>window.jQuery = window.jQuery || {}; window.jQuery.migrateMute = true; console.trace = function() {};</script>${sources.slice(1).join("")}</head><body><script>${script}</script><form id="mainForm" name="mainForm" method="post" action="https://recruit.cj.net/recruit/ko/resume/search/search_university.fo" onsubmit="return goSearch();"><input type="hidden" name="num" value="${num}"><div class="container_wrap"><div id="popupBasic4" class="popup popup_college iframe_opened"><div class="popup_inner"><div class="popup_content"><div class="sec_top"><p class="desc desc_pop_top">교육부에 등록되어 있는 학교명을 정확히 입력하시고, [검색]버튼을 클릭하세요</p><dl class="box_ex"><dd><ul class="list_ex"><li>성대, 성균관대(X)-성균관대학교(O)</li><li>UCLA(X)-University of California Los Angeles(O)</li><li>Peking University(X)-북경대학교, Beijing Univ(O)</li></ul></dd></dl><div class="area_schForm"><fieldset><input type="text" class="iText" id="school_name" name="school_name" value="${query}" title="학교명 입력" maxlength="30"><input type="submit" value="검색"></fieldset></div><div class="sec_mid scroll-list-wrap"><div class="iScroll"><div class="sec_inner"><ul class="sch_list">${rows}</ul></div></div></div></div></div></div></div></div></form></body></html>`;
 }
 
 describe("CJ school inert response", () => {
   it("parses the sanitized complete public POST response without executing its script", () => {
-    expect(parseCjSchoolResponse(publicTemplate, "합성대학교", "2_0"))
-      .toEqual({ code: "SYN001", label: "합성대학교", country: "KOR" });
+    expect(parseCjSchoolResponse(publicTemplate, "합성대학교", "2_0")).toEqual({
+      code: "SYN001",
+      label: "합성대학교",
+      country: "KOR",
+    });
   });
   it("selects only one exact label from the complete rendered response", () => {
-    expect(parseCjSchoolResponse(response(row("SYN001", "합성대학교") + row("SYN002", "합성대학교(캠퍼스)")), "합성대학교", "2_0"))
-      .toEqual({ code: "SYN001", label: "합성대학교", country: "KOR" });
+    expect(
+      parseCjSchoolResponse(
+        response(
+          row("SYN001", "합성대학교") + row("SYN002", "합성대학교(캠퍼스)"),
+        ),
+        "합성대학교",
+        "2_0",
+      ),
+    ).toEqual({ code: "SYN001", label: "합성대학교", country: "KOR" });
   });
   it.each([
     response(row("SYN001", "합성대학교"), "다른대학교"),
@@ -56,11 +68,23 @@ describe("CJ school inert response", () => {
     response(row("", "합성대학교")),
     response(row("SYN001", "합성대학교", "")),
     response(row("SYN001", "합성대학교")).replace("</html>", ""),
-    response(row("SYN001", "합성대학교")).replace('class="sch_list"', 'class="sch_list loading"'),
-    response(row("SYN001", "합성대학교")).replace("</body>", '<button>다음 페이지</button></body>'),
-    response(row("SYN001", "합성대학교")).replace("parent.universityCallback2_0", "parent.evilCallback"),
+    response(row("SYN001", "합성대학교")).replace(
+      'class="sch_list"',
+      'class="sch_list loading"',
+    ),
+    response(row("SYN001", "합성대학교")).replace(
+      "</body>",
+      "<button>다음 페이지</button></body>",
+    ),
+    response(row("SYN001", "합성대학교")).replace(
+      "parent.universityCallback2_0",
+      "parent.evilCallback",
+    ),
     publicTemplate.replace("var universityData", "varuniversityData"),
-    response(row("SYN001", "합성대학교")).replace('name="num" value="2_0"', 'name="num" value="2_0"><input name="private" value="secret"'),
+    response(row("SYN001", "합성대학교")).replace(
+      'name="num" value="2_0"',
+      'name="num" value="2_0"><input name="private" value="secret"',
+    ),
   ])("rejects ambiguous or unverified result data", (html) => {
     expect(() => parseCjSchoolResponse(html, "합성대학교", "2_0")).toThrow();
   });

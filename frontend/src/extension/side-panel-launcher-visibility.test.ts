@@ -24,9 +24,12 @@ describe("side panel launcher visibility", () => {
     "https://example.test/jobs/RECRUIT/123?next=other#section",
     "https://example.test/company/Greeting/form",
     "https://recruit.example.test/form/step2",
-  ])("shows when an approved keyword appears in the host or pathname: %s", (value) => {
-    expect(shouldShowSidePanelLauncher(new URL(value))).toBe(true);
-  });
+  ])(
+    "shows when an approved keyword appears in the host or pathname: %s",
+    (value) => {
+      expect(shouldShowSidePanelLauncher(new URL(value))).toBe(true);
+    },
+  );
 
   it("hides on pages whose URL does not contain apply", () => {
     expect(
@@ -36,7 +39,9 @@ describe("side panel launcher visibility", () => {
       shouldShowSidePanelLauncher(new URL("https://jobs.example.test/list")),
     ).toBe(false);
     expect(
-      shouldShowSidePanelLauncher(new URL("https://www.skexample.com/openings")),
+      shouldShowSidePanelLauncher(
+        new URL("https://www.skexample.com/openings"),
+      ),
     ).toBe(false);
   });
 });

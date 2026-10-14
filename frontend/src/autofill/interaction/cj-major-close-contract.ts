@@ -94,20 +94,39 @@ export function validMajorOpener(opener: Element): boolean {
 export function validSchoolOpener(opener: Element): boolean {
   const doc = opener.ownerDocument;
   const allowed = new Set([
-    "type", "name", "title", "class", "aria-label", "data-popup-show",
-    "data-iframe-url", "data-width", "data-height", CJ_MAJOR_OPENER_MARKER,
+    "type",
+    "name",
+    "title",
+    "class",
+    "aria-label",
+    "data-popup-show",
+    "data-iframe-url",
+    "data-width",
+    "data-height",
+    CJ_MAJOR_OPENER_MARKER,
   ]);
   return (
-    doc.location.origin === CJ_MAJOR_ORIGIN && opener.isConnected &&
+    doc.location.origin === CJ_MAJOR_ORIGIN &&
+    opener.isConnected &&
     opener.matches('button[type="button"][name="bt_zz_school_nm"]:not([id])') &&
-    [...opener.attributes].every(({ name }) => allowed.has(name.toLowerCase()) && !/^on|^form/i.test(name)) &&
-    (!opener.hasAttribute("data-popup-show") || opener.getAttribute("data-popup-show") === "") &&
+    [...opener.attributes].every(
+      ({ name }) => allowed.has(name.toLowerCase()) && !/^on|^form/i.test(name),
+    ) &&
+    (!opener.hasAttribute("data-popup-show") ||
+      opener.getAttribute("data-popup-show") === "") &&
     opener.getAttribute("data-iframe-url") === CJ_SCHOOL_POPUP_URL &&
     !opener.hasAttribute("data-popup-options") &&
     opener.closest("#sectionNormalUniversity0") !== null &&
-    doc.querySelectorAll('#sectionNormalUniversity0 [name="bt_zz_school_nm"]').length === 1 &&
-    opener.closest("dd")?.querySelectorAll('input#zz_school_nm2_0[name="zz_school_nm"][readonly]').length === 1 &&
-    opener.closest("#sectionNormalUniversity0")?.querySelectorAll('input[type="hidden"][name="school_code"]').length === 1
+    doc.querySelectorAll('#sectionNormalUniversity0 [name="bt_zz_school_nm"]')
+      .length === 1 &&
+    opener
+      .closest("dd")
+      ?.querySelectorAll('input#zz_school_nm2_0[name="zz_school_nm"][readonly]')
+      .length === 1 &&
+    opener
+      .closest("#sectionNormalUniversity0")
+      ?.querySelectorAll('input[type="hidden"][name="school_code"]').length ===
+      1
   );
 }
 

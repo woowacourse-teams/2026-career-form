@@ -1,28 +1,55 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { createEmptyProfile } from "../../src/profile/model";
+import type { ProfileRepository } from "../../src/profile/profile-repository";
+function createRepository(): ProfileRepository {
+  let profile = createEmptyProfile();
+  return {
+    load: async () => structuredClone(profile),
+    save: async (next) => {
+      profile = structuredClone(next);
+    },
+    loadLayout: async () => "a",
+    saveLayout: async () => {},
+  };
+}
 beforeEach(() => vi.spyOn(window, "scrollTo").mockImplementation(() => {}));
 afterEach(() => vi.restoreAllMocks());
 
-it("자동 기입 안내는 배포 사이트와 동일한 설치부터 4단계를 제공한다", () => {
-  render(<App />);
+it("첫 설치 선택 화면에서는 자동 기입 준비가 공고 저장보다 먼저 나온다", () => {
+  render(<App repository={createRepository()} />);
+  const choices = screen.getAllByRole("heading", { level: 2 });
+  expect(choices.map((heading) => heading.textContent)).toEqual([
+    "내 정보는 한 번만",
+    "관심 공고, 놓치지 않게",
+  ]);
+});
+
+it("설치 후 자동 기입을 선택하면 설치 안내 없이 기본 정보만 등록한다", async () => {
+  const repository = createRepository();
+  render(<App repository={repository} />);
   fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "Chrome에 커리어폼을 추가하세요.",
+  expect(await screen.findByLabelText("국문 성")).toBeVisible();
+  expect(screen.getByLabelText("국문 이름")).toBeVisible();
+  expect(screen.queryByLabelText("이메일")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  await screen.findByLabelText("이메일");
+  expect(screen.queryByRole("link", { name: /Chrome에 추가/ })).toBeNull();
+  fireEvent.change(screen.getByLabelText("이메일"), {
+    target: { value: "learner@example.test" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "지금 자동 기입 사용하기" }),
   );
-  expect(screen.getByText("01 / 04")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /프로필 등록 알아보기/ }));
-  expect(screen.getByText("02 / 04")).toBeVisible();
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("프로필");
-  expect(screen.queryByRole("link", { name: /프로필 등록하기/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: /지원서에서 사용하기/ }));
-  expect(screen.getByText("03 / 04")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /결과 확인 알아보기/ }));
-  expect(screen.getByText("04 / 04")).toBeVisible();
+  await screen.findByRole("heading", {
+    name: "지원서에서 자동 기입을 시작하세요",
+  });
+  expect((await repository.load()).contact.email).toBe("learner@example.test");
 });
 
 it("프로필 없이 공고 등록으로 시작하고 시작 방법을 다시 선택할 수 있다", () => {
-  render(<App />);
+  render(<App repository={createRepository()} />);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     "무엇부터 시작할까요?",
   );
@@ -37,8 +64,8 @@ it("프로필 없이 공고 등록으로 시작하고 시작 방법을 다시 �
   ).toBeVisible();
 });
 
-it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고 이전 안내와 선택 화면으로 돌아간다", () => {
-  render(<App />);
+it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고 이전 안내와 선택 화면으로 돌아간다", async () => {
+  render(<App repository={createRepository()} />);
   fireEvent.click(
     screen.getByRole("button", { name: /공고 저장부터 시작하기/ }),
   );
@@ -79,8 +106,21 @@ it("공고 안내는 패널 열기, 정보 입력, 완료 단계를 제공하고
   expect(screen.getByText("02 / 03")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
   fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "Chrome에 커리어폼",
-  );
-  expect(screen.getByText("01 / 04")).toBeVisible();
+  expect(await screen.findByLabelText("국문 성")).toBeVisible();
+});
+
+it("저장한 프로필이 있으면 다시 질문하지 않고 보충할 정보를 고른다", async () => {
+  const repository = createRepository();
+  const profile = createEmptyProfile();
+  profile.contact.email = "saved@example.test";
+  await repository.save(profile);
+  render(<App repository={repository} />);
+  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
+  await screen.findByRole("heading", {
+    name: "저장한 정보부터 이어서 준비해요",
+  });
+  expect(screen.queryByLabelText("국문 성")).toBeNull();
+  expect(screen.getByText("saved@example.test")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "이메일 수정" }));
+  expect(screen.getByLabelText("이메일")).toHaveValue("saved@example.test");
 });

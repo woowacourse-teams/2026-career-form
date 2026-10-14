@@ -4,6 +4,7 @@ import type { TrackEvent } from "../../src/analytics/events";
 import { trackExtensionEvent } from "../../src/analytics/extension-tracker";
 import type { LayoutPreference } from "../../src/profile/model";
 import type { ProfileRepository } from "../../src/profile/profile-repository";
+import { useProfileSaveTracking } from "../../src/analytics/use-profile-save-tracking";
 import { ProfileWorkspace } from "./ProfileWorkspace";
 import { useProfileEditor } from "../../src/profile/hooks/use-profile-editor";
 import {
@@ -40,7 +41,7 @@ function downloadProfile(fileName: string, contents: string) {
 }
 
 export function App({
-  track = trackExtensionEvent,
+  track: injectedTrack = trackExtensionEvent,
   repository: injectedRepository,
   confirmDelete = (message) => globalThis.confirm(message),
   confirmImport = (message) => globalThis.confirm(message),
@@ -50,7 +51,12 @@ export function App({
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
   );
-  const editor = useProfileEditor(repository);
+  const { repository: trackedRepository, track } = useProfileSaveTracking(
+    repository,
+    injectedTrack,
+    "options",
+  );
+  const editor = useProfileEditor(trackedRepository);
   const [layout, setLayout] = useState<LayoutPreference | null>(null);
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false);
   const [transferFeedback, setTransferFeedback] = useState<{
