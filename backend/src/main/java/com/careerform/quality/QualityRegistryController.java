@@ -29,12 +29,49 @@ public final class QualityRegistryController {
 
     public record Row(String id, String site, String structure, String route, String version, String homepage, String publicLink,
                       Instant firstSeen, Instant lastSeen, QualityRegistry.Status status, QualitySite.Status identity, boolean recheck, boolean mine, String claimant,
-                      Instant claimExpiresAt, QualityRegistry.DeferReason deferReason, Instant deferredUntil, List<QualityRegistry.Confirmation> history) {
-        public Row { history = List.copyOf(history); }
+                      Instant claimExpiresAt, QualityRegistry.DeferReason deferReason, Instant deferredUntil, List<QualityRegistry.Confirmation> history, List<QualityPublicLinks.Link> links, boolean linksOverflow, boolean posting) {
+        public Row { history = List.copyOf(history); links = List.copyOf(links); }
     }
 
     public record Page(List<Row> items, boolean hasMore, long nextOffset) {
         public Page { items = List.copyOf(items); }
+    }
+
+    public record SiteRow(String id, String site, String company, String homepage, List<Row> candidates,
+                          List<QualityPublicLinks.Link> links, boolean linksOverflow, List<Row> observations) {
+        public SiteRow { candidates = List.copyOf(candidates); links = List.copyOf(links); observations = List.copyOf(observations); }
+    }
+    public record SitePage(List<SiteRow> items, boolean hasMore, long nextOffset) {
+        public SitePage { items = List.copyOf(items); }
+    }
+    @GetMapping("/api/v1/quality/site-groups")
+    public SitePage groups(@RequestParam(defaultValue = "PENDING") String status,
+                           @RequestParam(defaultValue = "0") long offset, @RequestParam(defaultValue = "50") int limit,
+                           HttpServletRequest request) {
+        if (limit < 1 || limit > 100 || offset < 0 || !List.of("PENDING", "COMPLETED", "ALL").contains(status)) {
+            throw new IllegalArgumentException("Invalid page");
+        }
+        var grouped = QualityCandidateGroups.all(registry).stream()
+            .filter(site -> status.equals("ALL") || site.completed(registry.time()) == status.equals("COMPLETED")).toList();
+        return new SitePage(grouped.stream().skip(offset).limit(limit).map(site -> siteRow(site, request)).toList(),
+            offset < grouped.size() && grouped.size() - offset > limit, offset + limit);
+    }
+    @GetMapping("/api/v1/quality/site-groups/{id}")
+    public SiteRow groupDetails(@PathVariable String id, HttpServletRequest request) {
+        var key = QualityCandidateGroups.groupKey(registry.record(id));
+        return QualityCandidateGroups.all(registry).stream().filter(site -> QualityCandidateGroups.groupKey(site.candidates().getFirst()).equals(key))
+            .map(site -> siteRow(site, request)).findFirst().orElseThrow(QualityRegistry.Conflict::new);
+    }
+    private SiteRow siteRow(QualityCandidateGroups.Site site, HttpServletRequest request) {
+        var candidates = site.candidates().stream().map(record -> row(record, request)).toList();
+        var links = QualityPublicLinks.combine(candidates.stream().flatMap(candidate -> candidate.links().stream()).toList(),
+            candidates.stream().anyMatch(Row::linksOverflow));
+        var group = site.candidates().getFirst().group();
+        var company = group.identity() == QualitySite.Status.POLICY ? group.site().substring(group.site().indexOf("|company=") + 9) : null;
+        var observations = registry.listRecords(null, 0, 10001).stream()
+            .filter(record -> QualityCandidateGroups.groupKey(record).equals(QualityCandidateGroups.groupKey(site.candidates().getFirst())))
+            .filter(record -> !QualityPostings.urls(record).isEmpty()).map(record -> row(record, request)).toList();
+        return new SiteRow(site.id(), candidates.getFirst().site(), company, candidates.getFirst().homepage(), candidates, links.links(), links.overflow(), observations);
     }
 
     @GetMapping("/api/v1/quality/sites")
@@ -64,7 +101,7 @@ public final class QualityRegistryController {
             case "reopen" -> registry.reopen(id, owner);
             case "confirm" -> {
                 if (change == null || change.fieldCount() == null) { throw new IllegalArgumentException("Missing count"); }
-                registry.confirm(id, owner, change.fieldCount(), change.publicLink(), Boolean.TRUE.equals(change.dedicatedHost()));
+                registry.confirm(id, owner, change.fieldCount(), change.publicLink(), Boolean.TRUE.equals(change.dedicatedHost()), change.claimant());
             }
             case "defer" -> {
                 if (change == null) { throw new IllegalArgumentException("Missing reason"); }
@@ -90,6 +127,6 @@ public final class QualityRegistryController {
             candidate.homepage(), candidate.publicLink(), candidate.firstSeen(), candidate.lastSeen(), candidate.statusAt(now), record.group().identity(), candidate.recheck(),
             session != null && candidate.claimedAt(now) && access.validClaimant(session) && QualityProjection.digest(session).equals(candidate.claimOwner()),
             candidate.claimedAt(now) ? candidate.claimant() : null, candidate.claimExpiresAt(),
-            candidate.deferReason(), candidate.deferredUntil(), candidate.history());
+            candidate.deferReason(), candidate.deferredUntil(), candidate.history(), candidate.links(), candidate.linksOverflow(), record.kind() == QualityRecord.Kind.POSTING);
     }
 }

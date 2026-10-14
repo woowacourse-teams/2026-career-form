@@ -9,12 +9,12 @@ Downloaded and verified on 2026-10-07. Broad domestic coverage, not worldwide
 or all historical schools and credentials. Total: **5,148 records**,
 **1,467,942 bytes** of JSON.
 
-| Official publisher / dataset | Snapshot / extraction | Shipped records |
-| --- | --- | ---: |
-| 한국교육개발원 국가교육통계센터, KESS 유초중등 학교별 주요 현황 | 2026-04-01 / 2026-09-03 | 2,447 high schools |
-| 한국교육개발원 국가교육통계센터, KESS 고등교육통계 학교별 주요 현황 | 2026-04-01 / 2026-08-26 | 493 universities, 1,588 graduate schools |
-| 한국산업인력공단 국가자격 종목 목록 정보 | 2025-12-31 | 613 certificates |
-| 한국데이터산업진흥원 데이터 자격 검정 상세정보 | 2026-08-21; portal updated 2026-09-04 | 7 certificates |
+| Official publisher / dataset                                        | Snapshot / extraction                 |                          Shipped records |
+| ------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------: |
+| 한국교육개발원 국가교육통계센터, KESS 유초중등 학교별 주요 현황     | 2026-04-01 / 2026-09-03               |                       2,447 high schools |
+| 한국교육개발원 국가교육통계센터, KESS 고등교육통계 학교별 주요 현황 | 2026-04-01 / 2026-08-26               | 493 universities, 1,588 graduate schools |
+| 한국산업인력공단 국가자격 종목 목록 정보                            | 2025-12-31                            |                         613 certificates |
+| 한국데이터산업진흥원 데이터 자격 검정 상세정보                      | 2026-08-21; portal updated 2026-09-04 |                           7 certificates |
 
 School counts include campuses and closed schools. Source status remains visible
 in detail: closed and renamed institutions can still be relevant to alumni.
@@ -43,12 +43,12 @@ in detail: closed and renamed institutions can still be relevant to alumni.
 KESS XLSX URL template:
 https://kess.kedi.re.kr/contents/dataSet/downLoad.do?fileNm=FILE&userfileNm=2026.xlsx
 
-| Artifact | FILE / attachment | SHA-256 |
-| --- | --- | --- |
-| KESS higher XLSX (1,649,584 bytes) | 202672602239494.xlsx | 8e1b36c6b75d87d7bf59c88347401e5b7f5bee3fc1ff9c1666861f746ec5769d |
-| KESS secondary XLSX (18,472,276 bytes) | 2026835615251.xlsx | 5c198da8b32085c2cb6966dde5e9f9c7ce7da1567362f5a6df18ff928520685e |
-| HRDK CP949 CSV (24,570 bytes) | FILE_000000003660912 | 256691f1b8e1efd9e8b2be03e74b45f9cda550009a575182468c30ea372ce6a5 |
-| KDATA UTF-8 BOM CSV (1,596 bytes) | FILE_000000007623862 | 5a8ab8eb9835f5b78cc156655b9c34a98819e4f03ed446a82055a74fd98cd6c0 |
+| Artifact                               | FILE / attachment    | SHA-256                                                          |
+| -------------------------------------- | -------------------- | ---------------------------------------------------------------- |
+| KESS higher XLSX (1,649,584 bytes)     | 202672602239494.xlsx | 8e1b36c6b75d87d7bf59c88347401e5b7f5bee3fc1ff9c1666861f746ec5769d |
+| KESS secondary XLSX (18,472,276 bytes) | 2026835615251.xlsx   | 5c198da8b32085c2cb6966dde5e9f9c7ce7da1567362f5a6df18ff928520685e |
+| HRDK CP949 CSV (24,570 bytes)          | FILE_000000003660912 | 256691f1b8e1efd9e8b2be03e74b45f9cda550009a575182468c30ea372ce6a5 |
+| KDATA UTF-8 BOM CSV (1,596 bytes)      | FILE_000000007623862 | 5a8ab8eb9835f5b78cc156655b9c34a98819e4f03ed446a82055a74fd98cd6c0 |
 
 CSV URL template:
 https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=ATTACHMENT&fileDetailSn=1&insertDataPrcus=N

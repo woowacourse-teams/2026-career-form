@@ -69,6 +69,8 @@ export class QualityObservation {
   private pending: readonly Promise<void>[] = [];
   private readonly queue: QualityReportQueue;
   private controller = new AbortController();
+  private finishing: Promise<void> | undefined;
+  private finished = false;
 
   constructor(sendMessage: SendMessage) {
     this.queue = new QualityReportQueue(sendMessage);
@@ -79,6 +81,8 @@ export class QualityObservation {
   }
 
   begin(): void {
+    if (this.snapshots.length || this.pending.length)
+      void this.finish("CANCELLED");
     this.controller.abort();
     this.run = qualityIdentity();
     this.controller = new AbortController();
@@ -86,6 +90,8 @@ export class QualityObservation {
     this.nextElement = 0;
     this.snapshots = [];
     this.pending = [];
+    this.finishing = undefined;
+    this.finished = false;
   }
 
   snapshot(
@@ -257,14 +263,20 @@ export class QualityObservation {
     this.pending = [...this.pending, observation];
   }
 
-  async finish(status: "COMPLETED" | "CANCELLED"): Promise<void> {
+  finish(status: "COMPLETED" | "CANCELLED"): Promise<void> {
+    if (status === "CANCELLED" && !this.finished) this.controller.abort();
+    if (this.finishing) return this.finishing;
     const run = this.run;
     const snapshot = this.snapshots.at(-1)?.id ?? null;
     const signal = this.controller.signal;
-    if (status === "CANCELLED") this.controller.abort();
-    await Promise.all(this.pending);
-    this.emit(snapshot, {}, signal.aborted ? "CANCELLED" : status, {}, run);
-    await this.queue.drain();
+    const pending = this.pending;
+    this.finishing = (async () => {
+      await Promise.all(pending);
+      this.emit(snapshot, {}, signal.aborted ? "CANCELLED" : status, {}, run);
+      await this.queue.drain();
+      if (this.run === run) this.finished = true;
+    })();
+    return this.finishing;
   }
 
   private emit(

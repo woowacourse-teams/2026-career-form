@@ -28,6 +28,8 @@ proxy는 두 앱 호스트 IP와 Basic 인증을 함께 확인한다.
 
 ## 수집하는 데이터
 
+공용 MongoDB 서버 지표, 환경별 앱 풀과 호출 계측, 안전한 DB 로그 및 추가 알림은 [공용 MongoDB 관측](mongodb/README.md)의 설치와 검증 절차를 따른다. DB 호스트, 각 앱 환경과 중앙 모니터링에 각각 적용해야 하며 현재 운영 수집 상태를 의미하지 않는다.
+
 - backend 컨테이너 stdout/stderr: 시작, API 결과, 외부 호출 결과와 기존 운영 로그.
 - API_RESULT: 서버 생성 request ID, 환경, HTTP method, route pattern, 상태, 소요 시간, 예외 타입.
 - EXTERNAL_RESULT: OpenAI/Jev provider, operation, 성공/실패/timeout, 소요 시간, request ID.

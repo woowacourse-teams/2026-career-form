@@ -28,6 +28,10 @@ public final class QualityObservationExecutor implements AutoCloseable {
     static QualityObservationExecutor shared() { return SHARED; }
 
     public <T> T observe(Callable<T> observation) {
+        if (Thread.currentThread().isInterrupted()) {
+            LoggerFactory.getLogger(QualityObservationExecutor.class).warn("QUALITY_OBSERVATION_INTERRUPTED");
+            return null;
+        }
         Future<T> pending = null;
         try {
             pending = workers.submit(observation);

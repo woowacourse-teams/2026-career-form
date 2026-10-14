@@ -1,6 +1,7 @@
 import type { QualityReport } from "./observation";
 
 export interface QualitySource {
+  url?: string;
   id?: string;
   tab?: { id?: number };
   frameId?: number;
@@ -170,7 +171,8 @@ export class BackgroundQualityReporting {
       const controller = new AbortController();
       const timeout = globalThis.setTimeout(() => controller.abort(), 8000);
       try {
-        const response = await this.fetcher(
+        const response = await this.fetcher.call(
+          globalThis,
           `${this.baseUrl}/api/v1/quality/executions/${receipt.runId}/report`,
           {
             method: "POST",
