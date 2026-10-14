@@ -66,6 +66,19 @@ class QualityObservedStatsTest {
     }
 
     @Test
+    void bindingUsesOnlyTheReportedMappingCohort() {
+        var source = new QualityDailyAggregate.Contribution(1, 0, 1, new QualityMetrics.Counts(0, 0, 0, 0, 0, 0),
+            new QualityMetrics.Counts(10, 8, 1, 1, 1, 0), 3, now.minusSeconds(1), QualityExecution.Status.COMPLETED,
+            Map.of(), QualityHistogram.empty(), QualityHistogram.empty(), 0, 0, 0, null, false,
+            new QualityMetrics.Counts(3, 2, 1, 1, 1, 0));
+        var row = query(Map.of("partial", source));
+        assertThat(row.observed().binding().rate()).isEqualTo(0.5);
+        assertThat(row.observed().binding().denominator()).isEqualTo(2);
+        assertThat(row.observed().binding().excludedFields()).isEqualTo(6);
+        assertThat(row.observed().fieldUnobserved()).isEqualTo(7);
+    }
+
+    @Test
     void excludesUnverifiedCorrespondenceFromCollectedRetention() {
         var complete = contribution(new QualityMetrics.Counts(2, 2, 2, 2, 2, 2), 2, Map.of());
         var unknown = contribution(new QualityMetrics.Counts(0, 0, 0, 0, 0, 0), 0,

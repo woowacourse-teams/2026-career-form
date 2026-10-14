@@ -75,7 +75,8 @@ public final class QualityStats {
     private String siteName(QualityStatsResponse.Dimension dimension) {
         var company = dimension.site().indexOf("|company=");
         return dimension.host() + (company < 0 ? "" : " (" + dimension.site().substring(company + 9) + ")")
-            + (dimension.siteIdentity().equals("UNVERIFIED") ? " (사이트 확인 안 됨)" : "");
+            + (dimension.siteIdentity().equals("UNVERIFIED") ? " (사이트 확인 안 됨: "
+                + dimension.site().substring(Math.max(0, dimension.site().length() - 8)) + ")" : "");
     }
 
     private String series(QualityStatsResponse.Dimension dimension) {
@@ -148,7 +149,11 @@ public final class QualityStats {
             aiTime.p95(), aiTime.samples(), aiTime.overflow(), reasons,
             QualityObservedStats.from(sources.stream().map(source -> new QualityObservedStats.Sample(source.id(), source.value())).toList()),
             dimension.dateKst().equals("ALL") ? null : LocalDate.parse(dimension.dateKst()).atStartOfDay(ZONE).toInstant().toString(),
-            series(dimension));
+            series(dimension), siteName(dimension),
+            new QualityStatsResponse.HumanSample(denominator, distinct(references, value -> true),
+                human.discovered() == null ? null : humanCounts.discovered(), human.mapped() == null ? null : humanCounts.mapped(),
+                inputCoverageMissing || human.written() == null ? null : humanCounts.written(),
+                retentionCoverageMissing || human.retained() == null ? null : humanCounts.retained()));
     }
 
     private QualityMetrics.Counts counts(List<Source> sources, Function<QualityDailyAggregate.Contribution, QualityMetrics.Counts> choose) {

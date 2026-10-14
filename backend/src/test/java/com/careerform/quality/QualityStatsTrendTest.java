@@ -27,6 +27,7 @@ class QualityStatsTrendTest {
             record("a", "GENERIC", "v1", 2), record("b", "GREETING", "v2", 0)));
         var rows = stats.query(from, to, null, null, null, null, "SITE_VERSION_TREND").rows();
         assertThat(rows).hasSize(6);
+        assertThat(rows).extracting(QualityStatsResponse.Row::time).isSorted();
         var absent = rows.stream().filter(row -> row.dimension().site().equals("a.test")
             && row.dimension().dateKst().equals("2030-01-02")).findFirst().orElseThrow();
         assertThat(absent.time()).isEqualTo("2030-01-01T15:00:00Z");

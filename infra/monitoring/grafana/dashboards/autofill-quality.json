@@ -1,8 +1,8 @@
 {
   "uid": "career-form-autofill-quality",
-  "title": "Career Form 자동 입력 품질",
+  "title": "자동 입력 결과",
   "schemaVersion": 42,
-  "version": 1,
+  "version": 2,
   "timezone": "Asia/Seoul",
   "tags": [
     "career-form",
@@ -26,18 +26,42 @@
           "text": "Quality prod",
           "value": "quality-prod"
         },
-        "refresh": 1
+        "refresh": 1,
+        "description": "집계할 실행 환경을 고릅니다. 개발(dev), 스테이징(staging), 운영(prod)."
       },
       {
-        "name": "site",
-        "label": "사이트",
-        "type": "textbox",
-        "query": "ALL",
+        "name": "route",
+        "label": "입력 방식",
+        "type": "custom",
+        "query": "전체 : ALL,회사 전용 : STATIC,그리팅 전용 : GREETING,범용 : GENERIC",
         "current": {
-          "text": "ALL",
+          "text": "전체",
           "value": "ALL"
         },
-        "description": "ALL은 전체입니다. 사이트는 호스트 또는 사이트 식별자, 버전과 구조는 정확한 식별자로 조회합니다."
+        "options": [
+          {
+            "text": "전체",
+            "value": "ALL",
+            "selected": true
+          },
+          {
+            "text": "회사 전용",
+            "value": "STATIC",
+            "selected": false
+          },
+          {
+            "text": "그리팅 전용",
+            "value": "GREETING",
+            "selected": false
+          },
+          {
+            "text": "범용",
+            "value": "GENERIC",
+            "selected": false
+          }
+        ],
+        "multi": false,
+        "includeAll": false
       },
       {
         "name": "version",
@@ -48,7 +72,7 @@
           "text": "ALL",
           "value": "ALL"
         },
-        "description": "ALL은 전체입니다. 사이트는 호스트 또는 사이트 식별자, 버전과 구조는 정확한 식별자로 조회합니다."
+        "description": "ALL은 전체입니다. 확장, 서버, 정책의 버전 식별값으로 좁힙니다."
       },
       {
         "name": "structure",
@@ -59,7 +83,81 @@
           "text": "ALL",
           "value": "ALL"
         },
-        "description": "ALL은 전체입니다. 사이트는 호스트 또는 사이트 식별자, 버전과 구조는 정확한 식별자로 조회합니다."
+        "description": "ALL은 전체입니다. 화면 구조는 입력 항목 구성의 식별값으로 같은 화면끼리 좁힙니다."
+      },
+      {
+        "name": "site",
+        "label": "채용 사이트",
+        "type": "query",
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "${environment}"
+        },
+        "query": {
+          "queryType": "infinity",
+          "refId": "variable",
+          "infinityQuery": {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "${environment}"
+            },
+            "type": "json",
+            "source": "url",
+            "parser": "backend",
+            "format": "table",
+            "url": "/api/v1/quality/stats/sites",
+            "root_selector": "$",
+            "columns": [
+              {
+                "selector": "text",
+                "text": "__text",
+                "type": "string"
+              },
+              {
+                "selector": "value",
+                "text": "__value",
+                "type": "string"
+              }
+            ],
+            "url_options": {
+              "method": "GET",
+              "params": [
+                {
+                  "key": "from",
+                  "value": "${__from:date:iso}"
+                },
+                {
+                  "key": "to",
+                  "value": "${__to:date:iso}"
+                },
+                {
+                  "key": "structure",
+                  "value": "${structure}"
+                },
+                {
+                  "key": "route",
+                  "value": "${route}"
+                },
+                {
+                  "key": "version",
+                  "value": "${version}"
+                }
+              ]
+            }
+          }
+        },
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "includeAll": true,
+        "allValue": "ALL",
+        "multi": false,
+        "refresh": 2,
+        "options": [],
+        "sort": 1,
+        "description": "도메인 또는 기존 회사 식별 정보로 고릅니다. All은 전체 사이트이며, 회사별 그리팅 사이트를 구분합니다."
       }
     ]
   },
@@ -67,7 +165,7 @@
     {
       "id": 1,
       "type": "text",
-      "title": "관측 범위",
+      "title": "이 숫자는 무엇을 뜻하나요?",
       "gridPos": {
         "h": 4,
         "w": 24,
@@ -76,14 +174,14 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "경로마다 사이트와 제어 구성이 다릅니다. 수치 차이는 AI 정확도나 공정한 우열을 뜻하지 않습니다. 사람 확인은 필드 수만 등록한 참고 분모이며 **정확도 미검증**입니다. 결과는 클라이언트 보고이며 유지 확인은 입력 후 **1초**입니다. 비율은 합산 건수로 계산합니다. 0분모와 미관측은 빈 값으로 표시하며, 관측 결과만의 비율은 전체 실행의 성공률로 해석하지 않습니다. 기간은 KST 일별 집계로 반올림하며 최대 90일입니다. 상세 표본은 30일 보관합니다. 500개 그룹 초과 오류는 사이트·구조·버전·기간을 좁혀 확인하세요."
+        "content": "비율은 **결과를 받은 항목 기준**이며 전체 실행의 성공률이나 AI 정확도가 아닙니다. 각 지표는 같은 대상의 칸 수를 합산해 계산합니다. 계산 기준과 제외된 양은 아래 일별 표에서 확인하세요. 결과가 없거나 계산 기준이 0이면 빈 값입니다. 사람 확인 항목과의 비교도 **정확도 미검증**인 참고 비율입니다. 입력 후 **1초**에 값을 다시 확인합니다. 회사 전용은 회사별 규칙, 그리팅 전용은 그리팅 지원서용 규칙, 범용은 공통 분석 방식입니다. 방식마다 사이트와 입력 항목 구성이 달라 수치만으로 우열을 판단할 수 없습니다. 기간은 **KST 일별 집계**, 최대 90일이며 최근 몇 분을 골라도 해당 날짜 전체를 포함합니다. 빈 날짜의 선은 연결하지 않습니다. 500개 그룹(날짜 포함) 또는 집계 자료 10000개를 넘으면 사이트, 버전, 기간을 좁혀주세요."
       }
     },
     {
       "id": 2,
       "type": "table",
-      "title": "1. 처리 경로별 주요 비율",
-      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "title": "입력 방식별 결과",
+      "description": "결과를 받은 항목 기준입니다. KST 일별 집계이며 빈 값은 0%가 아닙니다.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -110,97 +208,47 @@
           "columns": [
             {
               "selector": "dimension.route",
-              "text": "처리 경로",
+              "text": "입력 방식",
               "type": "string"
             },
             {
-              "selector": "mappingRate",
-              "text": "매핑률",
+              "selector": "observed.mapping.rate",
+              "text": "프로필 연결률",
               "type": "number"
             },
             {
-              "selector": "bindingRate",
-              "text": "값 준비율",
+              "selector": "observed.binding.rate",
+              "text": "입력값 준비율",
               "type": "number"
             },
             {
-              "selector": "inputSuccessRate",
+              "selector": "observed.inputSuccess.rate",
               "text": "입력 성공률",
               "type": "number"
             },
             {
-              "selector": "retentionRate",
-              "text": "1초 유지율",
+              "selector": "observed.retention.rate",
+              "text": "입력 후 1초 유지율",
               "type": "number"
             },
             {
-              "selector": "collectedRetentionRate",
-              "text": "수집 대비 유지율",
+              "selector": "observed.collectedRetention.rate",
+              "text": "전체 칸 대비 입력 유지율",
               "type": "number"
             },
             {
-              "selector": "collected",
-              "text": "요청 수집 후보",
+              "selector": "executionCount",
+              "text": "전체 실행 수",
               "type": "number"
             },
             {
-              "selector": "mapped",
-              "text": "요청 매핑 후보",
+              "selector": "reportedExecutions",
+              "text": "결과를 받은 실행 수",
               "type": "number"
             },
             {
-              "selector": "reportedMapped",
-              "text": "보고 매핑 칸",
-              "type": "number"
-            },
-            {
-              "selector": "bound",
-              "text": "값 준비 칸",
-              "type": "number"
-            },
-            {
-              "selector": "attempted",
-              "text": "입력 시도 칸",
-              "type": "number"
-            },
-            {
-              "selector": "written",
-              "text": "입력 성공 칸",
-              "type": "number"
-            },
-            {
-              "selector": "retained",
-              "text": "1초 유지 칸",
-              "type": "number"
-            },
-            {
-              "selector": "inputResultObserved",
-              "text": "입력 결과 관측",
-              "type": "number"
-            },
-            {
-              "selector": "inputResultUnobserved",
-              "text": "입력 결과 미관측",
-              "type": "number"
-            },
-            {
-              "selector": "retentionObserved",
-              "text": "유지 결과 관측",
-              "type": "number"
-            },
-            {
-              "selector": "retentionUnobserved",
-              "text": "유지 결과 미관측",
-              "type": "number"
-            },
-            {
-              "selector": "observedInputSuccessRate",
-              "text": "관측 결과만의 성공률",
-              "type": "number"
-            },
-            {
-              "selector": "observedRetentionRate",
-              "text": "관측 결과만의 유지율",
+              "selector": "reportingRate",
+              "text": "결과를 받은 실행 비율",
               "type": "number"
             }
           ],
@@ -216,16 +264,20 @@
                 "value": "${__to:date:iso}"
               },
               {
-                "key": "site",
-                "value": "${site}"
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
               },
               {
                 "key": "version",
                 "value": "${version}"
               },
               {
-                "key": "structure",
-                "value": "${structure}"
+                "key": "site",
+                "value": "${site}"
               },
               {
                 "key": "groupBy",
@@ -237,7 +289,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "미관측 또는 분모 없음",
+          "noValue": "결과 또는 계산 기준 없음",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -249,7 +301,34 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "매핑률"
+              "options": "입력 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "STATIC": {
+                        "text": "회사 전용"
+                      },
+                      "GREETING": {
+                        "text": "그리팅 전용"
+                      },
+                      "GENERIC": {
+                        "text": "범용"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "프로필 연결률"
             },
             "properties": [
               {
@@ -265,7 +344,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "값 준비율"
+              "options": "입력값 준비율"
             },
             "properties": [
               {
@@ -297,7 +376,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "1초 유지율"
+              "options": "입력 후 1초 유지율"
             },
             "properties": [
               {
@@ -313,7 +392,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "수집 대비 유지율"
+              "options": "전체 칸 대비 입력 유지율"
             },
             "properties": [
               {
@@ -329,23 +408,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "관측 결과만의 성공률"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "관측 결과만의 유지율"
+              "options": "결과를 받은 실행 비율"
             },
             "properties": [
               {
@@ -366,10 +429,10 @@
       }
     },
     {
-      "id": 3,
+      "id": 8,
       "type": "table",
-      "title": "2. 사람 확인 분모와 참고 커버리지",
-      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "title": "사이트별 입력 결과",
+      "description": "회사별 채용 사이트의 결과입니다. 오른쪽 열에서 각 비율의 계산 기준 칸 수, 포함한 실행 수, 제외한 양을 확인합니다. 날짜별 상세 건수는 일별 결과 표에서 확인하세요.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -395,206 +458,23 @@
           "root_selector": "$.rows",
           "columns": [
             {
-              "selector": "dimension.route",
-              "text": "처리 경로",
+              "selector": "dimension.host",
+              "text": "채용 사이트",
               "type": "string"
             },
             {
-              "selector": "humanCollectedCoverage",
-              "text": "사람 기준 수집 커버리지",
-              "type": "number"
-            },
-            {
-              "selector": "humanMappedCoverage",
-              "text": "사람 기준 매핑 커버리지",
-              "type": "number"
-            },
-            {
-              "selector": "humanWrittenCoverage",
-              "text": "사람 기준 입력 커버리지",
-              "type": "number"
-            },
-            {
-              "selector": "humanRetainedCoverage",
-              "text": "사람 기준 유지 커버리지",
-              "type": "number"
-            },
-            {
-              "selector": "humanDenominator",
-              "text": "사람 확인 분모 합",
-              "type": "number"
-            },
-            {
-              "selector": "humanExecutions",
-              "text": "참고 커버리지 실행",
-              "type": "number"
-            },
-            {
-              "selector": "unregistered",
-              "text": "분모 미등록 실행",
-              "type": "number"
-            },
-            {
-              "selector": "scopeMismatch",
-              "text": "범위 불일치 실행",
-              "type": "number"
-            },
-            {
-              "selector": "humanLabel",
-              "text": "분모 확인 범위",
+              "selector": "siteLabel",
+              "text": "사이트 구분",
               "type": "string"
-            }
-          ],
-          "url_options": {
-            "method": "GET",
-            "params": [
-              {
-                "key": "from",
-                "value": "${__from:date:iso}"
-              },
-              {
-                "key": "to",
-                "value": "${__to:date:iso}"
-              },
-              {
-                "key": "site",
-                "value": "${site}"
-              },
-              {
-                "key": "version",
-                "value": "${version}"
-              },
-              {
-                "key": "structure",
-                "value": "${structure}"
-              },
-              {
-                "key": "groupBy",
-                "value": "ROUTE"
-              }
-            ]
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "미관측 또는 분모 없음",
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "사람 기준 수집 커버리지"
             },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "사람 기준 매핑 커버리지"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "사람 기준 입력 커버리지"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "사람 기준 유지 커버리지"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "decimals",
-                "value": 1
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm"
-      }
-    },
-    {
-      "id": 4,
-      "type": "table",
-      "title": "3. 버전별 주요 비율과 날짜 추이",
-      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 24
-      },
-      "datasource": {
-        "type": "yesoreyeram-infinity-datasource",
-        "uid": "${environment}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "yesoreyeram-infinity-datasource",
-            "uid": "${environment}"
-          },
-          "type": "json",
-          "source": "url",
-          "parser": "backend",
-          "format": "table",
-          "url": "/api/v1/quality/stats",
-          "root_selector": "$.rows",
-          "columns": [
             {
-              "selector": "dimension.dateKst",
-              "text": "KST 날짜",
+              "selector": "dimension.siteIdentity",
+              "text": "사이트 확인 상태",
               "type": "string"
             },
             {
               "selector": "dimension.route",
-              "text": "처리 경로",
+              "text": "입력 방식",
               "type": "string"
             },
             {
@@ -603,53 +483,153 @@
               "type": "string"
             },
             {
-              "selector": "mappingRate",
-              "text": "매핑률",
+              "selector": "observed.mapping.rate",
+              "text": "프로필 연결률",
               "type": "number"
             },
             {
-              "selector": "inputSuccessRate",
+              "selector": "observed.binding.rate",
+              "text": "입력값 준비율",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.rate",
               "text": "입력 성공률",
               "type": "number"
             },
             {
-              "selector": "retentionRate",
-              "text": "1초 유지율",
+              "selector": "observed.retention.rate",
+              "text": "입력 후 1초 유지율",
               "type": "number"
             },
             {
-              "selector": "collected",
-              "text": "요청 수집 후보",
-              "type": "number"
-            },
-            {
-              "selector": "mapped",
-              "text": "요청 매핑 후보",
-              "type": "number"
-            },
-            {
-              "selector": "attempted",
-              "text": "입력 시도 칸",
-              "type": "number"
-            },
-            {
-              "selector": "written",
-              "text": "입력 성공 칸",
-              "type": "number"
-            },
-            {
-              "selector": "retained",
-              "text": "1초 유지 칸",
+              "selector": "observed.collectedRetention.rate",
+              "text": "전체 칸 대비 입력 유지율",
               "type": "number"
             },
             {
               "selector": "executionCount",
-              "text": "고유 실행 수",
+              "text": "전체 실행 수",
               "type": "number"
             },
             {
-              "selector": "unobserved",
-              "text": "결과 미관측 실행",
+              "selector": "observed.fieldUnobserved",
+              "text": "필드 결과 없는 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "inputResultUnobserved",
+              "text": "입력 결과 없는 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "retentionUnobserved",
+              "text": "1초 뒤 결과 없는 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "deduplicationUnknown",
+              "text": "같은 칸인지 확인 안 된 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.denominator",
+              "text": "프로필 연결률 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.sampleCount",
+              "text": "프로필 연결률 포함한 요청 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.excludedSamples",
+              "text": "프로필 연결률 제외한 요청 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.excludedFields",
+              "text": "프로필 연결률 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.denominator",
+              "text": "입력값 준비율 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.sampleCount",
+              "text": "입력값 준비율 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.excludedSamples",
+              "text": "입력값 준비율 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.excludedFields",
+              "text": "입력값 준비율 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.denominator",
+              "text": "입력 성공률 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.sampleCount",
+              "text": "입력 성공률 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.excludedSamples",
+              "text": "입력 성공률 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.excludedFields",
+              "text": "입력 성공률 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.denominator",
+              "text": "입력 후 1초 유지율 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.sampleCount",
+              "text": "입력 후 1초 유지율 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.excludedSamples",
+              "text": "입력 후 1초 유지율 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.excludedFields",
+              "text": "입력 후 1초 유지율 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.denominator",
+              "text": "전체 칸 대비 입력 유지율 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.sampleCount",
+              "text": "전체 칸 대비 입력 유지율 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.excludedSamples",
+              "text": "전체 칸 대비 입력 유지율 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.excludedFields",
+              "text": "전체 칸 대비 입력 유지율 제외한 칸 수",
               "type": "number"
             }
           ],
@@ -665,20 +645,24 @@
                 "value": "${__to:date:iso}"
               },
               {
-                "key": "site",
-                "value": "${site}"
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
               },
               {
                 "key": "version",
                 "value": "${version}"
               },
               {
-                "key": "structure",
-                "value": "${structure}"
+                "key": "site",
+                "value": "${site}"
               },
               {
                 "key": "groupBy",
-                "value": "VERSION_TREND"
+                "value": "SITE_ROUTE_VERSION"
               }
             ]
           }
@@ -686,7 +670,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "미관측 또는 분모 없음",
+          "noValue": "결과 또는 계산 기준 없음",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -698,7 +682,80 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "매핑률"
+              "options": "사이트 확인 상태"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "POLICY": {
+                        "text": "회사 구분 확인됨"
+                      },
+                      "TENANT": {
+                        "text": "그리팅 회사별 사이트"
+                      },
+                      "MANUAL": {
+                        "text": "사람이 확인함"
+                      },
+                      "UNVERIFIED": {
+                        "text": "사이트 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "STATIC": {
+                        "text": "회사 전용"
+                      },
+                      "GREETING": {
+                        "text": "그리팅 전용"
+                      },
+                      "GENERIC": {
+                        "text": "범용"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "프로필 연결률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력값 준비율"
             },
             "properties": [
               {
@@ -730,7 +787,1136 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "1초 유지율"
+              "options": "입력 후 1초 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "전체 칸 대비 입력 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "사람이 확인한 입력 항목과 비교",
+      "description": "사람이 확인한 입력 가능 칸 수를 기준으로 비교합니다. 정확도 미검증인 참고 비율이며 확인되지 않았거나 화면 범위가 다른 실행은 제외합니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "dimension.route",
+              "text": "입력 방식",
+              "type": "string"
+            },
+            {
+              "selector": "humanCollectedCoverage",
+              "text": "사람 확인 항목 대비 수집 비율",
+              "type": "number"
+            },
+            {
+              "selector": "humanMappedCoverage",
+              "text": "사람 확인 항목 대비 연결 비율",
+              "type": "number"
+            },
+            {
+              "selector": "humanWrittenCoverage",
+              "text": "사람 확인 항목 대비 입력 비율",
+              "type": "number"
+            },
+            {
+              "selector": "humanRetainedCoverage",
+              "text": "사람 확인 항목 대비 유지 비율",
+              "type": "number"
+            },
+            {
+              "selector": "humanDenominator",
+              "text": "사람이 확인한 입력 가능 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "humanExecutions",
+              "text": "비교에 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "unregistered",
+              "text": "사람 확인값 없는 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "scopeMismatch",
+              "text": "확인한 화면과 다른 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "humanLabel",
+              "text": "비교 기준",
+              "type": "string"
+            },
+            {
+              "selector": "human.collected",
+              "text": "사람 기준 수집 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "human.mapped",
+              "text": "사람 기준 연결 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "human.written",
+              "text": "사람 기준 입력 성공 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "human.retained",
+              "text": "사람 기준 1초 유지 칸 수",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "ROUTE"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "STATIC": {
+                        "text": "회사 전용"
+                      },
+                      "GREETING": {
+                        "text": "그리팅 전용"
+                      },
+                      "GENERIC": {
+                        "text": "범용"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 수집 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 연결 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 입력 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 유지 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "버전별 일별 결과와 계산 기준",
+      "description": "사이트 / 입력 방식 / 버전 / KST 날짜별 계산 기준입니다. 프로필 연결률의 포함 수는 분석 요청 수, 나머지 포함 수는 실행 수입니다. 결과가 없는 날짜의 비율은 빈 값입니다.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 82
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "dimension.dateKst",
+              "text": "KST 날짜",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.host",
+              "text": "채용 사이트",
+              "type": "string"
+            },
+            {
+              "selector": "siteLabel",
+              "text": "사이트 구분",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.siteIdentity",
+              "text": "사이트 확인 상태",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.route",
+              "text": "입력 방식",
+              "type": "string"
+            },
+            {
+              "selector": "dimension.version",
+              "text": "버전",
+              "type": "string"
+            },
+            {
+              "selector": "observed.mapping.rate",
+              "text": "프로필 연결률",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.numerator",
+              "text": "프로필 연결률 해당 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.denominator",
+              "text": "프로필 연결률 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.sampleCount",
+              "text": "프로필 연결률 포함한 요청 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.excludedSamples",
+              "text": "프로필 연결률 제외한 요청 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.excludedFields",
+              "text": "프로필 연결률 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.mapping.unavailableReason",
+              "text": "프로필 연결률 계산할 수 없는 이유",
+              "type": "string"
+            },
+            {
+              "selector": "observed.binding.rate",
+              "text": "입력값 준비율",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.numerator",
+              "text": "입력값 준비율 해당 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.denominator",
+              "text": "입력값 준비율 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.sampleCount",
+              "text": "입력값 준비율 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.excludedSamples",
+              "text": "입력값 준비율 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.excludedFields",
+              "text": "입력값 준비율 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.binding.unavailableReason",
+              "text": "입력값 준비율 계산할 수 없는 이유",
+              "type": "string"
+            },
+            {
+              "selector": "observed.inputSuccess.rate",
+              "text": "입력 성공률",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.numerator",
+              "text": "입력 성공률 해당 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.denominator",
+              "text": "입력 성공률 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.sampleCount",
+              "text": "입력 성공률 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.excludedSamples",
+              "text": "입력 성공률 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.excludedFields",
+              "text": "입력 성공률 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.inputSuccess.unavailableReason",
+              "text": "입력 성공률 계산할 수 없는 이유",
+              "type": "string"
+            },
+            {
+              "selector": "observed.retention.rate",
+              "text": "입력 후 1초 유지율",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.numerator",
+              "text": "입력 후 1초 유지율 해당 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.denominator",
+              "text": "입력 후 1초 유지율 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.sampleCount",
+              "text": "입력 후 1초 유지율 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.excludedSamples",
+              "text": "입력 후 1초 유지율 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.excludedFields",
+              "text": "입력 후 1초 유지율 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.retention.unavailableReason",
+              "text": "입력 후 1초 유지율 계산할 수 없는 이유",
+              "type": "string"
+            },
+            {
+              "selector": "observed.collectedRetention.rate",
+              "text": "전체 칸 대비 입력 유지율",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.numerator",
+              "text": "전체 칸 대비 입력 유지율 해당 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.denominator",
+              "text": "전체 칸 대비 입력 유지율 계산 기준 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.sampleCount",
+              "text": "전체 칸 대비 입력 유지율 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.excludedSamples",
+              "text": "전체 칸 대비 입력 유지율 제외한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.excludedFields",
+              "text": "전체 칸 대비 입력 유지율 제외한 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "observed.collectedRetention.unavailableReason",
+              "text": "전체 칸 대비 입력 유지율 계산할 수 없는 이유",
+              "type": "string"
+            },
+            {
+              "selector": "humanDenominator",
+              "text": "사람이 확인한 입력 가능 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "humanExecutions",
+              "text": "사람 기준 비교에 포함한 실행 수",
+              "type": "number"
+            },
+            {
+              "selector": "humanCollectedCoverage",
+              "text": "사람 확인 항목 대비 수집 비율",
+              "type": "number"
+            },
+            {
+              "selector": "humanMappedCoverage",
+              "text": "사람 확인 항목 대비 연결 비율",
+              "type": "number"
+            },
+            {
+              "selector": "humanWrittenCoverage",
+              "text": "사람 확인 항목 대비 입력 비율",
+              "type": "number"
+            },
+            {
+              "selector": "humanRetainedCoverage",
+              "text": "사람 확인 항목 대비 유지 비율",
+              "type": "number"
+            },
+            {
+              "selector": "human.collected",
+              "text": "사람 기준 수집 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "human.mapped",
+              "text": "사람 기준 연결 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "human.written",
+              "text": "사람 기준 입력 성공 칸 수",
+              "type": "number"
+            },
+            {
+              "selector": "human.retained",
+              "text": "사람 기준 1초 유지 칸 수",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사이트 확인 상태"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "POLICY": {
+                        "text": "회사 구분 확인됨"
+                      },
+                      "TENANT": {
+                        "text": "그리팅 회사별 사이트"
+                      },
+                      "MANUAL": {
+                        "text": "사람이 확인함"
+                      },
+                      "UNVERIFIED": {
+                        "text": "사이트 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "STATIC": {
+                        "text": "회사 전용"
+                      },
+                      "GREETING": {
+                        "text": "그리팅 전용"
+                      },
+                      "GENERIC": {
+                        "text": "범용"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "프로필 연결률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "프로필 연결률 계산할 수 없는 이유"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "NO_VALID_SAMPLES": {
+                        "text": "계산에 쓸 결과 없음"
+                      },
+                      "ZERO_DENOMINATOR": {
+                        "text": "계산 기준 칸이 0개"
+                      },
+                      "NOT_MAPPED": {
+                        "text": "프로필 항목에 연결 안 됨"
+                      },
+                      "NOT_APPROVED": {
+                        "text": "입력 허용 안 됨"
+                      },
+                      "PROFILE_VALUE_MISSING": {
+                        "text": "프로필 값 없음"
+                      },
+                      "EXISTING_VALUE_PROTECTED": {
+                        "text": "기존 입력값 보호"
+                      },
+                      "UNSUPPORTED_CONTROL": {
+                        "text": "지원하지 않는 입력 칸"
+                      },
+                      "UNSUPPORTED_FORMAT": {
+                        "text": "지원하지 않는 값 형식"
+                      },
+                      "STALE_TARGET": {
+                        "text": "입력 칸이 변경됨"
+                      },
+                      "CONFLICT": {
+                        "text": "입력 대상 충돌"
+                      },
+                      "EXECUTION_FAILED": {
+                        "text": "입력 실패"
+                      },
+                      "RETENTION_UNOBSERVED": {
+                        "text": "1초 뒤 확인 결과 없음"
+                      },
+                      "RETENTION_LOST": {
+                        "text": "1초 뒤 값이 유지되지 않음"
+                      },
+                      "CANCELLED": {
+                        "text": "취소됨"
+                      },
+                      "UNCLASSIFIED": {
+                        "text": "분류되지 않은 사유"
+                      },
+                      "DEDUPLICATION_UNOBSERVED": {
+                        "text": "같은 입력 칸인지 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력값 준비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력값 준비율 계산할 수 없는 이유"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "NO_VALID_SAMPLES": {
+                        "text": "계산에 쓸 결과 없음"
+                      },
+                      "ZERO_DENOMINATOR": {
+                        "text": "계산 기준 칸이 0개"
+                      },
+                      "NOT_MAPPED": {
+                        "text": "프로필 항목에 연결 안 됨"
+                      },
+                      "NOT_APPROVED": {
+                        "text": "입력 허용 안 됨"
+                      },
+                      "PROFILE_VALUE_MISSING": {
+                        "text": "프로필 값 없음"
+                      },
+                      "EXISTING_VALUE_PROTECTED": {
+                        "text": "기존 입력값 보호"
+                      },
+                      "UNSUPPORTED_CONTROL": {
+                        "text": "지원하지 않는 입력 칸"
+                      },
+                      "UNSUPPORTED_FORMAT": {
+                        "text": "지원하지 않는 값 형식"
+                      },
+                      "STALE_TARGET": {
+                        "text": "입력 칸이 변경됨"
+                      },
+                      "CONFLICT": {
+                        "text": "입력 대상 충돌"
+                      },
+                      "EXECUTION_FAILED": {
+                        "text": "입력 실패"
+                      },
+                      "RETENTION_UNOBSERVED": {
+                        "text": "1초 뒤 확인 결과 없음"
+                      },
+                      "RETENTION_LOST": {
+                        "text": "1초 뒤 값이 유지되지 않음"
+                      },
+                      "CANCELLED": {
+                        "text": "취소됨"
+                      },
+                      "UNCLASSIFIED": {
+                        "text": "분류되지 않은 사유"
+                      },
+                      "DEDUPLICATION_UNOBSERVED": {
+                        "text": "같은 입력 칸인지 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 성공률"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 성공률 계산할 수 없는 이유"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "NO_VALID_SAMPLES": {
+                        "text": "계산에 쓸 결과 없음"
+                      },
+                      "ZERO_DENOMINATOR": {
+                        "text": "계산 기준 칸이 0개"
+                      },
+                      "NOT_MAPPED": {
+                        "text": "프로필 항목에 연결 안 됨"
+                      },
+                      "NOT_APPROVED": {
+                        "text": "입력 허용 안 됨"
+                      },
+                      "PROFILE_VALUE_MISSING": {
+                        "text": "프로필 값 없음"
+                      },
+                      "EXISTING_VALUE_PROTECTED": {
+                        "text": "기존 입력값 보호"
+                      },
+                      "UNSUPPORTED_CONTROL": {
+                        "text": "지원하지 않는 입력 칸"
+                      },
+                      "UNSUPPORTED_FORMAT": {
+                        "text": "지원하지 않는 값 형식"
+                      },
+                      "STALE_TARGET": {
+                        "text": "입력 칸이 변경됨"
+                      },
+                      "CONFLICT": {
+                        "text": "입력 대상 충돌"
+                      },
+                      "EXECUTION_FAILED": {
+                        "text": "입력 실패"
+                      },
+                      "RETENTION_UNOBSERVED": {
+                        "text": "1초 뒤 확인 결과 없음"
+                      },
+                      "RETENTION_LOST": {
+                        "text": "1초 뒤 값이 유지되지 않음"
+                      },
+                      "CANCELLED": {
+                        "text": "취소됨"
+                      },
+                      "UNCLASSIFIED": {
+                        "text": "분류되지 않은 사유"
+                      },
+                      "DEDUPLICATION_UNOBSERVED": {
+                        "text": "같은 입력 칸인지 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 후 1초 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 후 1초 유지율 계산할 수 없는 이유"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "NO_VALID_SAMPLES": {
+                        "text": "계산에 쓸 결과 없음"
+                      },
+                      "ZERO_DENOMINATOR": {
+                        "text": "계산 기준 칸이 0개"
+                      },
+                      "NOT_MAPPED": {
+                        "text": "프로필 항목에 연결 안 됨"
+                      },
+                      "NOT_APPROVED": {
+                        "text": "입력 허용 안 됨"
+                      },
+                      "PROFILE_VALUE_MISSING": {
+                        "text": "프로필 값 없음"
+                      },
+                      "EXISTING_VALUE_PROTECTED": {
+                        "text": "기존 입력값 보호"
+                      },
+                      "UNSUPPORTED_CONTROL": {
+                        "text": "지원하지 않는 입력 칸"
+                      },
+                      "UNSUPPORTED_FORMAT": {
+                        "text": "지원하지 않는 값 형식"
+                      },
+                      "STALE_TARGET": {
+                        "text": "입력 칸이 변경됨"
+                      },
+                      "CONFLICT": {
+                        "text": "입력 대상 충돌"
+                      },
+                      "EXECUTION_FAILED": {
+                        "text": "입력 실패"
+                      },
+                      "RETENTION_UNOBSERVED": {
+                        "text": "1초 뒤 확인 결과 없음"
+                      },
+                      "RETENTION_LOST": {
+                        "text": "1초 뒤 값이 유지되지 않음"
+                      },
+                      "CANCELLED": {
+                        "text": "취소됨"
+                      },
+                      "UNCLASSIFIED": {
+                        "text": "분류되지 않은 사유"
+                      },
+                      "DEDUPLICATION_UNOBSERVED": {
+                        "text": "같은 입력 칸인지 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "전체 칸 대비 입력 유지율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "전체 칸 대비 입력 유지율 계산할 수 없는 이유"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "NO_VALID_SAMPLES": {
+                        "text": "계산에 쓸 결과 없음"
+                      },
+                      "ZERO_DENOMINATOR": {
+                        "text": "계산 기준 칸이 0개"
+                      },
+                      "NOT_MAPPED": {
+                        "text": "프로필 항목에 연결 안 됨"
+                      },
+                      "NOT_APPROVED": {
+                        "text": "입력 허용 안 됨"
+                      },
+                      "PROFILE_VALUE_MISSING": {
+                        "text": "프로필 값 없음"
+                      },
+                      "EXISTING_VALUE_PROTECTED": {
+                        "text": "기존 입력값 보호"
+                      },
+                      "UNSUPPORTED_CONTROL": {
+                        "text": "지원하지 않는 입력 칸"
+                      },
+                      "UNSUPPORTED_FORMAT": {
+                        "text": "지원하지 않는 값 형식"
+                      },
+                      "STALE_TARGET": {
+                        "text": "입력 칸이 변경됨"
+                      },
+                      "CONFLICT": {
+                        "text": "입력 대상 충돌"
+                      },
+                      "EXECUTION_FAILED": {
+                        "text": "입력 실패"
+                      },
+                      "RETENTION_UNOBSERVED": {
+                        "text": "1초 뒤 확인 결과 없음"
+                      },
+                      "RETENTION_LOST": {
+                        "text": "1초 뒤 값이 유지되지 않음"
+                      },
+                      "CANCELLED": {
+                        "text": "취소됨"
+                      },
+                      "UNCLASSIFIED": {
+                        "text": "분류되지 않은 사유"
+                      },
+                      "DEDUPLICATION_UNOBSERVED": {
+                        "text": "같은 입력 칸인지 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 수집 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 연결 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 입력 비율"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사람 확인 항목 대비 유지 비율"
             },
             "properties": [
               {
@@ -753,13 +1939,13 @@
     {
       "id": 5,
       "type": "table",
-      "title": "4. 단계 및 사유와 제어별 실패·보류",
+      "title": "입력하지 못한 이유",
       "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 92
       },
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
@@ -786,7 +1972,7 @@
             },
             {
               "selector": "dimension.route",
-              "text": "처리 경로",
+              "text": "입력 방식",
               "type": "string"
             },
             {
@@ -801,7 +1987,7 @@
             },
             {
               "selector": "cohort",
-              "text": "관측 단위",
+              "text": "발생 단위",
               "type": "string"
             },
             {
@@ -816,7 +2002,7 @@
             },
             {
               "selector": "control",
-              "text": "제어 종류",
+              "text": "입력 칸 종류",
               "type": "string"
             },
             {
@@ -837,16 +2023,20 @@
                 "value": "${__to:date:iso}"
               },
               {
-                "key": "site",
-                "value": "${site}"
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
               },
               {
                 "key": "version",
                 "value": "${version}"
               },
               {
-                "key": "structure",
-                "value": "${structure}"
+                "key": "site",
+                "value": "${site}"
               },
               {
                 "key": "groupBy",
@@ -858,7 +2048,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "미관측 또는 분모 없음",
+          "noValue": "결과 또는 계산 기준 없음",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -866,7 +2056,203 @@
             }
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "STATIC": {
+                        "text": "회사 전용"
+                      },
+                      "GREETING": {
+                        "text": "그리팅 전용"
+                      },
+                      "GENERIC": {
+                        "text": "범용"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "발생 단위"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "REQUEST": {
+                        "text": "분석 요청"
+                      },
+                      "EXECUTION": {
+                        "text": "자동 입력 실행"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "단계"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "ANALYSIS": {
+                        "text": "분석"
+                      },
+                      "MAPPING": {
+                        "text": "프로필 연결"
+                      },
+                      "APPROVAL": {
+                        "text": "입력 허용"
+                      },
+                      "BINDING": {
+                        "text": "입력값 준비"
+                      },
+                      "WRITE": {
+                        "text": "입력"
+                      },
+                      "RETENTION": {
+                        "text": "1초 뒤 확인"
+                      },
+                      "END": {
+                        "text": "종료"
+                      },
+                      "OBSERVATION": {
+                        "text": "결과 수집"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "사유"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "NO_VALID_SAMPLES": {
+                        "text": "계산에 쓸 결과 없음"
+                      },
+                      "ZERO_DENOMINATOR": {
+                        "text": "계산 기준 칸이 0개"
+                      },
+                      "NOT_MAPPED": {
+                        "text": "프로필 항목에 연결 안 됨"
+                      },
+                      "NOT_APPROVED": {
+                        "text": "입력 허용 안 됨"
+                      },
+                      "PROFILE_VALUE_MISSING": {
+                        "text": "프로필 값 없음"
+                      },
+                      "EXISTING_VALUE_PROTECTED": {
+                        "text": "기존 입력값 보호"
+                      },
+                      "UNSUPPORTED_CONTROL": {
+                        "text": "지원하지 않는 입력 칸"
+                      },
+                      "UNSUPPORTED_FORMAT": {
+                        "text": "지원하지 않는 값 형식"
+                      },
+                      "STALE_TARGET": {
+                        "text": "입력 칸이 변경됨"
+                      },
+                      "CONFLICT": {
+                        "text": "입력 대상 충돌"
+                      },
+                      "EXECUTION_FAILED": {
+                        "text": "입력 실패"
+                      },
+                      "RETENTION_UNOBSERVED": {
+                        "text": "1초 뒤 확인 결과 없음"
+                      },
+                      "RETENTION_LOST": {
+                        "text": "1초 뒤 값이 유지되지 않음"
+                      },
+                      "CANCELLED": {
+                        "text": "취소됨"
+                      },
+                      "UNCLASSIFIED": {
+                        "text": "분류되지 않은 사유"
+                      },
+                      "DEDUPLICATION_UNOBSERVED": {
+                        "text": "같은 입력 칸인지 확인 안 됨"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "입력 칸 종류"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "TEXT": {
+                        "text": "텍스트 입력"
+                      },
+                      "SELECT": {
+                        "text": "선택 목록"
+                      },
+                      "RADIO": {
+                        "text": "단일 선택"
+                      },
+                      "CHECKBOX": {
+                        "text": "체크박스"
+                      },
+                      "ALL": {
+                        "text": "전체"
+                      },
+                      "UNKNOWN": {
+                        "text": "알 수 없음"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true,
@@ -876,13 +2262,13 @@
     {
       "id": 6,
       "type": "table",
-      "title": "5. 사용량과 표본 및 미관측",
-      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "title": "실행 횟수와 결과 수집 현황",
+      "description": "일부 결과가 있어 보고된 실행에도 결과 누락이 있을 수 있습니다. 결과를 받은 실행 수와 결과가 부족한 실행 수는 겹칠 수 있습니다. 보고율은 전체 필드 관측률이 아닙니다.",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 102
       },
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
@@ -904,7 +2290,7 @@
           "columns": [
             {
               "selector": "dimension.route",
-              "text": "처리 경로",
+              "text": "입력 방식",
               "type": "string"
             },
             {
@@ -914,92 +2300,92 @@
             },
             {
               "selector": "executionCount",
-              "text": "고유 실행 수",
+              "text": "전체 실행 수",
               "type": "number"
             },
             {
               "selector": "reportedExecutions",
-              "text": "보고 실행 수",
+              "text": "결과를 받은 실행 수",
               "type": "number"
             },
             {
               "selector": "reportingRate",
-              "text": "보고율",
+              "text": "결과를 받은 실행 비율",
               "type": "number"
             },
             {
               "selector": "pending",
-              "text": "진행 중 실행",
+              "text": "진행 중 실행 수",
               "type": "number"
             },
             {
               "selector": "unobserved",
-              "text": "결과 미관측 실행",
+              "text": "결과가 부족한 실행 수",
               "type": "number"
             },
             {
               "selector": "cancelled",
-              "text": "취소 실행",
+              "text": "취소한 실행 수",
               "type": "number"
             },
             {
               "selector": "deduplicationUnknown",
-              "text": "중복 제거 미확인 실행",
+              "text": "같은 칸인지 확인 안 된 실행 수",
               "type": "number"
             },
             {
               "selector": "collected",
-              "text": "요청 수집 후보",
+              "text": "분석에서 찾은 칸 수",
               "type": "number"
             },
             {
               "selector": "mapped",
-              "text": "요청 매핑 후보",
+              "text": "프로필에 연결한 칸 수",
               "type": "number"
             },
             {
               "selector": "uniqueCollected",
-              "text": "고유 수집 칸",
+              "text": "중복을 뺀 수집 칸 수",
               "type": "number"
             },
             {
               "selector": "uniqueMapped",
-              "text": "고유 매핑 칸",
+              "text": "중복을 뺀 연결 칸 수",
               "type": "number"
             },
             {
               "selector": "reportedCollected",
-              "text": "보고 수집 칸",
+              "text": "결과를 받은 수집 칸 수",
               "type": "number"
             },
             {
               "selector": "reportedMapped",
-              "text": "보고 매핑 칸",
+              "text": "결과를 받은 연결 칸 수",
               "type": "number"
             },
             {
               "selector": "bound",
-              "text": "값 준비 칸",
+              "text": "입력값이 준비된 칸 수",
               "type": "number"
             },
             {
               "selector": "attempted",
-              "text": "입력 시도 칸",
+              "text": "입력을 시도한 칸 수",
               "type": "number"
             },
             {
               "selector": "written",
-              "text": "입력 성공 칸",
+              "text": "입력에 성공한 칸 수",
               "type": "number"
             },
             {
               "selector": "retained",
-              "text": "1초 유지 칸",
+              "text": "1초 뒤 유지된 칸 수",
               "type": "number"
             },
             {
               "selector": "observationLabel",
-              "text": "결과 관측 범위",
+              "text": "결과 확인 기준",
               "type": "string"
             }
           ],
@@ -1015,16 +2401,20 @@
                 "value": "${__to:date:iso}"
               },
               {
-                "key": "site",
-                "value": "${site}"
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
               },
               {
                 "key": "version",
                 "value": "${version}"
               },
               {
-                "key": "structure",
-                "value": "${structure}"
+                "key": "site",
+                "value": "${site}"
               },
               {
                 "key": "groupBy",
@@ -1036,7 +2426,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "미관측 또는 분모 없음",
+          "noValue": "결과 또는 계산 기준 없음",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -1048,7 +2438,34 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "보고율"
+              "options": "입력 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "STATIC": {
+                        "text": "회사 전용"
+                      },
+                      "GREETING": {
+                        "text": "그리팅 전용"
+                      },
+                      "GENERIC": {
+                        "text": "범용"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "결과를 받은 실행 비율"
             },
             "properties": [
               {
@@ -1071,13 +2488,13 @@
     {
       "id": 7,
       "type": "table",
-      "title": "6. 실제 AI 호출과 실패 및 지연",
-      "description": "분자, 분모와 관측 표본을 함께 확인합니다. 빈 값은 0%가 아닙니다.",
+      "title": "AI 요청 횟수와 응답 시간",
+      "description": "P95는 요청의 약 95%가 이 시간 안에 끝났다는 뜻이며 고정 구간의 근사값입니다. 측정한 요청 수와 측정 상한 초과 수를 함께 봅니다.",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 112
       },
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
@@ -1099,62 +2516,62 @@
           "columns": [
             {
               "selector": "dimension.route",
-              "text": "처리 경로",
+              "text": "입력 방식",
               "type": "string"
             },
             {
               "selector": "aiCalls",
-              "text": "실제 AI 호출 수",
+              "text": "AI 요청 수",
               "type": "number"
             },
             {
               "selector": "aiFailures",
-              "text": "AI 실패 수",
+              "text": "AI 요청 실패 수",
               "type": "number"
             },
             {
               "selector": "aiTimeouts",
-              "text": "AI timeout 수",
+              "text": "AI 응답 시간 초과 수",
               "type": "number"
             },
             {
               "selector": "aiFailureRate",
-              "text": "AI 실패율",
+              "text": "AI 요청 실패율",
               "type": "number"
             },
             {
               "selector": "aiTimeoutRate",
-              "text": "AI timeout 비율",
+              "text": "AI 응답 시간 초과 비율",
               "type": "number"
             },
             {
               "selector": "analysisP95Ms",
-              "text": "분석 P95 근사 ms",
+              "text": "분석 응답 시간 P95 (ms)",
               "type": "number"
             },
             {
               "selector": "analysisSamples",
-              "text": "분석 시간 표본",
+              "text": "시간을 측정한 분석 수",
               "type": "number"
             },
             {
               "selector": "analysisOverflow",
-              "text": "분석 상한 초과",
+              "text": "분석 시간 측정 상한 초과 수",
               "type": "number"
             },
             {
               "selector": "aiP95Ms",
-              "text": "AI P95 근사 ms",
+              "text": "AI 응답 시간 P95 (ms)",
               "type": "number"
             },
             {
               "selector": "aiSamples",
-              "text": "AI 시간 표본",
+              "text": "시간을 측정한 AI 요청 수",
               "type": "number"
             },
             {
               "selector": "aiOverflow",
-              "text": "AI 상한 초과",
+              "text": "AI 시간 측정 상한 초과 수",
               "type": "number"
             }
           ],
@@ -1170,16 +2587,20 @@
                 "value": "${__to:date:iso}"
               },
               {
-                "key": "site",
-                "value": "${site}"
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
               },
               {
                 "key": "version",
                 "value": "${version}"
               },
               {
-                "key": "structure",
-                "value": "${structure}"
+                "key": "site",
+                "value": "${site}"
               },
               {
                 "key": "groupBy",
@@ -1191,7 +2612,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "미관측 또는 분모 없음",
+          "noValue": "결과 또는 계산 기준 없음",
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -1203,7 +2624,34 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "AI 실패율"
+              "options": "입력 방식"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "STATIC": {
+                        "text": "회사 전용"
+                      },
+                      "GREETING": {
+                        "text": "그리팅 전용"
+                      },
+                      "GENERIC": {
+                        "text": "범용"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AI 요청 실패율"
             },
             "properties": [
               {
@@ -1219,7 +2667,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "AI timeout 비율"
+              "options": "AI 응답 시간 초과 비율"
             },
             "properties": [
               {
@@ -1237,6 +2685,1290 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "일별 프로필 연결률",
+      "description": "결과를 받은 항목 기준, KST 일별 집계. 선은 사이트 / 입력 방식 / 버전입니다. 빈 날짜는 연결하지 않습니다. 같은 날짜의 계산 기준은 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "observed.mapping.rate",
+              "text": "프로필 연결률",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "일별 입력값 준비율",
+      "description": "결과를 받은 항목 기준, KST 일별 집계. 선은 사이트 / 입력 방식 / 버전입니다. 빈 날짜는 연결하지 않습니다. 같은 날짜의 계산 기준은 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "observed.binding.rate",
+              "text": "입력값 준비율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "일별 입력 성공률",
+      "description": "결과를 받은 항목 기준, KST 일별 집계. 선은 사이트 / 입력 방식 / 버전입니다. 빈 날짜는 연결하지 않습니다. 같은 날짜의 계산 기준은 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "observed.inputSuccess.rate",
+              "text": "입력 성공률",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "일별 입력 후 1초 유지율",
+      "description": "결과를 받은 항목 기준, KST 일별 집계. 선은 사이트 / 입력 방식 / 버전입니다. 빈 날짜는 연결하지 않습니다. 같은 날짜의 계산 기준은 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "observed.retention.rate",
+              "text": "입력 후 1초 유지율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "일별 전체 칸 대비 입력 유지율",
+      "description": "결과를 받은 항목 기준, KST 일별 집계. 선은 사이트 / 입력 방식 / 버전입니다. 빈 날짜는 연결하지 않습니다. 같은 날짜의 계산 기준은 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "observed.collectedRetention.rate",
+              "text": "전체 칸 대비 입력 유지율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "일별 결과를 받은 실행 비율",
+      "description": "KST 일별 실행 보고 현황입니다. 일부 결과가 있는 실행에도 누락이 남을 수 있어 보고 수와 부족 수는 겹칠 수 있습니다.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "reportingRate",
+              "text": "결과를 받은 실행 비율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "일별 결과를 받은 실행 수",
+      "description": "KST 일별 실행 보고 현황입니다. 일부 결과가 있는 실행에도 누락이 남을 수 있어 보고 수와 부족 수는 겹칠 수 있습니다.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "reportedExecutions",
+              "text": "결과를 받은 실행 수",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "일별 결과가 부족한 실행 수",
+      "description": "KST 일별 실행 보고 현황입니다. 일부 결과가 있는 실행에도 누락이 남을 수 있어 보고 수와 부족 수는 겹칠 수 있습니다.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "unobserved",
+              "text": "결과가 부족한 실행 수",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "일별 사람 확인 항목 대비 수집 비율",
+      "description": "사람이 확인한 입력 가능 칸 수 기준의 참고 비율이며 정확도 미검증입니다. 미등록, 확인한 화면과 범위 불일치는 제외합니다. 같은 날짜의 분모와 포함한 실행 수는 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 56
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "humanCollectedCoverage",
+              "text": "사람 확인 항목 대비 수집 비율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "일별 사람 확인 항목 대비 연결 비율",
+      "description": "사람이 확인한 입력 가능 칸 수 기준의 참고 비율이며 정확도 미검증입니다. 미등록, 확인한 화면과 범위 불일치는 제외합니다. 같은 날짜의 분모와 포함한 실행 수는 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 56
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "humanMappedCoverage",
+              "text": "사람 확인 항목 대비 연결 비율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "일별 사람 확인 항목 대비 입력 비율",
+      "description": "사람이 확인한 입력 가능 칸 수 기준의 참고 비율이며 정확도 미검증입니다. 미등록, 확인한 화면과 범위 불일치는 제외합니다. 같은 날짜의 분모와 포함한 실행 수는 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 64
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "humanWrittenCoverage",
+              "text": "사람 확인 항목 대비 입력 비율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "일별 사람 확인 항목 대비 유지 비율",
+      "description": "사람이 확인한 입력 가능 칸 수 기준의 참고 비율이며 정확도 미검증입니다. 미등록, 확인한 화면과 범위 불일치는 제외합니다. 같은 날짜의 분모와 포함한 실행 수는 일별 결과 표에서 확인하세요.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 64
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${environment}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${environment}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "/api/v1/quality/stats",
+          "root_selector": "$.rows",
+          "columns": [
+            {
+              "selector": "time",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "series",
+              "text": "series",
+              "type": "string"
+            },
+            {
+              "selector": "humanRetainedCoverage",
+              "text": "사람 확인 항목 대비 유지 비율",
+              "type": "number"
+            }
+          ],
+          "url_options": {
+            "method": "GET",
+            "params": [
+              {
+                "key": "from",
+                "value": "${__from:date:iso}"
+              },
+              {
+                "key": "to",
+                "value": "${__to:date:iso}"
+              },
+              {
+                "key": "structure",
+                "value": "${structure}"
+              },
+              {
+                "key": "route",
+                "value": "${route}"
+              },
+              {
+                "key": "version",
+                "value": "${version}"
+              },
+              {
+                "key": "site",
+                "value": "${site}"
+              },
+              {
+                "key": "groupBy",
+                "value": "SITE_VERSION_TREND"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "결과 또는 계산 기준 없음",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "spanNulls": false,
+            "showPoints": "always",
+            "pointSize": 4
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       }
     }
   ]
