@@ -645,3 +645,73 @@ it("reports source identification failure without including exception text", () 
     }),
   );
 });
+
+it.each([
+  [
+    "educationalBackground.graduateSchools.7.majors.0.majorClassification",
+    '<button name="educationalBackground.graduateSchools.7.majors.0.majorClassification">주전공</button>',
+  ],
+  [
+    "workHistory.workExperiences.7.employmentStatus",
+    '<input type="checkbox" name="workHistory.workExperiences.7.employmentStatus">',
+  ],
+])(
+  "excludes a default-only repeated row at %s without losing other rows",
+  (source, control) => {
+    document
+      .querySelector("form")!
+      .insertAdjacentHTML(
+        "beforeend",
+        `<div data-scope="accordion" data-part="item">${control}</div>`,
+      );
+    const result = readGreetingImport(document);
+    expect(
+      result.find((candidate) => candidate.source === source),
+    ).toMatchObject({ status: "unsupported", reason: "empty" });
+    expect(
+      result.find((candidate) => candidate.source === source),
+    ).not.toHaveProperty("value");
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        source: "educationalBackground.universities.0.schoolName",
+        status: "review",
+      }),
+    );
+  },
+);
+it("keeps a graduate default when dates exist even if the school cannot be read", () => {
+  const prefix = "educationalBackground.graduateSchools.7";
+  document
+    .querySelector("form")!
+    .insertAdjacentHTML(
+      "beforeend",
+      `<div data-scope="accordion" data-part="item">${field(prefix + ".schoolName", "합성학교")}<button name="${prefix}.majors.0.majorClassification">주전공</button>${field(prefix + ".enrollmentPeriod.startDate", "2020-03")}</div>`,
+    );
+  const school = document.querySelector(`[name="${prefix}.schoolName"]`)!;
+  Object.defineProperty(school, "value", {
+    get: () => {
+      throw new Error("unreadable");
+    },
+  });
+  const result = readGreetingImport(document);
+  expect(result).toContainEqual(
+    expect.objectContaining({
+      source: prefix + ".schoolName",
+      reason: "read_failed",
+    }),
+  );
+  expect(result).toContainEqual(
+    expect.objectContaining({
+      source: prefix + ".majors.0.majorClassification",
+      value: "주전공",
+      status: "available",
+    }),
+  );
+  expect(result).toContainEqual(
+    expect.objectContaining({
+      source: prefix + ".enrollmentPeriod.startDate",
+      value: "2020-03",
+      status: "review",
+    }),
+  );
+});

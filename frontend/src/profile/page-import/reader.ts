@@ -227,6 +227,40 @@ export function readGreetingImport(
       results.push(unsupported(field, "read_failed"));
     }
   }
+  // Greeting renders these values even on untouched, empty repeated rows.
+  // Other readable fields (including dates or descriptions without a name) keep
+  // the row meaningful; an unreadable sibling must not discard those fields.
+  const defaultOnly = (candidate: ImportCandidate) => {
+    const path = rowPath(candidate.source);
+    return (
+      (path?.kind === "graduateSchools" &&
+        path.suffix === "majors.0.majorClassification" &&
+        candidate.value === "주전공") ||
+      (path?.kind === "workExperiences" &&
+        path.suffix === "employmentStatus" &&
+        candidate.value === "퇴사" &&
+        sources.get(candidate.source)?.[0] instanceof HTMLInputElement &&
+        (sources.get(candidate.source)![0] as HTMLInputElement).type ===
+          "checkbox")
+    );
+  };
+  const meaningfulRows = new Set(
+    results
+      .filter(
+        (candidate) =>
+          candidate.status !== "unsupported" && !defaultOnly(candidate),
+      )
+      .map((candidate) => rowPath(candidate.source)?.prefix)
+      .filter((prefix) => prefix !== undefined),
+  );
+  for (let index = 0; index < results.length; index++) {
+    const candidate = results[index];
+    if (
+      defaultOnly(candidate) &&
+      !meaningfulRows.has(rowPath(candidate.source)!.prefix)
+    )
+      results[index] = unsupported(mapping(candidate.source), "empty");
+  }
   const destinations = new Map<string, number>();
   for (const candidate of results) {
     if (!candidate.profileFieldKey || candidate.status === "unsupported")

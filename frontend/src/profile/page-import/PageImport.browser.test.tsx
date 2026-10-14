@@ -18,12 +18,16 @@ afterEach(() => {
   }
 });
 
-async function mountImport(extra = "") {
+async function mountImport(
+  extra = "",
+  prepare?: (fixture: HTMLElement) => void,
+) {
   const fixture = document.createElement("div");
   fixture.innerHTML = greetingImportFixture().replace(
     "</form>",
     extra + "</form>",
   );
+  prepare?.(fixture);
   document.body.append(fixture);
   const email = fixture.querySelector<HTMLInputElement>(
     '[name="basicInformation.email"]',
@@ -192,5 +196,63 @@ it("imports multiple section types around unknown and malformed fields in Chromi
     registrationNo: "SYNTHETIC-001",
   });
   expect(state.stored().education).toEqual([]);
+  state.expectSourceUnchanged();
+});
+
+it("saves all readable fields while skipping blank default rows and unknown controls", async () => {
+  const state = await mountImport(
+    `
+    <div data-scope="accordion" data-part="item">
+      <input name="educationalBackground.graduateSchools.0.schoolName" value="">
+      <button type="button" name="educationalBackground.graduateSchools.0.majors.0.majorClassification">주전공</button>
+    </div>
+    <div data-scope="accordion" data-part="item">
+      <input name="workHistory.workExperiences.0.companyName" value="">
+      <input type="checkbox" name="workHistory.workExperiences.0.employmentStatus">
+    </div>
+    <div data-scope="accordion" data-part="item">
+      <input name="workHistory.workExperiences.4.companyName" value="합성회사">
+      <input type="checkbox" name="workHistory.workExperiences.4.employmentStatus">
+      <textarea name="workHistory.workExperiences.4.dutiesResponsibility">합성 업무</textarea>
+    </div>
+    <input name="custom.unknown" value="제외할 값">
+  `,
+    (fixture) => {
+      fixture.querySelector<HTMLInputElement>(
+        '[name="basicInformation.name"]',
+      )!.value = "";
+      fixture
+        .querySelector('[data-scope="accordion"][data-part="root"]')!
+        .remove();
+    },
+  );
+  const select = state.ui.getByLabelText(
+    "직장경력 5 저장 대상",
+  ) as HTMLSelectElement;
+  select.value = "new";
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  await userEvent.click(state.ui.getByRole("button", { name: /^전체 선택$/ }));
+  await userEvent.click(
+    state.ui.getByRole("button", { name: "선택한 정보 저장" }),
+  );
+  await expect.poll(() => state.saved()).toBeDefined();
+  expect(state.stored().contact).toEqual({
+    email: "live-browser@example.invalid",
+    phoneNumber: "01000000000",
+    addressLine1: "보존 주소",
+  });
+  expect(state.stored().education).toEqual([]);
+  expect(state.stored().careers).toEqual([
+    {
+      id: expect.any(String),
+      sectionId: "career",
+      values: {
+        companyName: "합성회사",
+        employmentStatus: "퇴사",
+        responsibilities: "합성 업무",
+      },
+    },
+  ]);
+  expect(state.saves()).toBe(1);
   state.expectSourceUnchanged();
 });

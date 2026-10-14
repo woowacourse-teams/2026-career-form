@@ -2,7 +2,7 @@
 
 Issue: [CF-192](https://github.com/woowacourse-teams/2026-career-form/issues/192)
 
-현재 구현은 초기 6종 제한을 제거했다. [정확한 Greeting 필드 경로](../profile/page-import/greeting-import-mappings.ts)를 기존 프로필 필드에 대응시키고, [reader](../profile/page-import/reader.ts)가 현재 페이지의 각 필드를 독립적으로 읽는다. 회사별 미지원 필드와 잘못된 값은 제외하고 나머지 후보를 계속 보여 준다.
+현재 구현은 초기 6종 제한을 제거했다. [정확한 Greeting 필드 경로](../profile/page-import/greeting-import-mappings.ts)를 기존 프로필 필드에 대응시키고, [reader](../profile/page-import/reader.ts)가 현재 페이지의 각 필드를 독립적으로 읽는다. 회사별 미지원 필드와 잘못된 값은 제외하고 나머지 후보를 계속 보여 준다. 기존 Greeting 정적 매핑과 프로필 목적지가 있는 항목을 지원하며, 임의의 회사별 추가 질문을 프로필 필드로 추측하지 않는다.
 
 ## 사용 흐름
 
@@ -43,6 +43,10 @@ Issue: [CF-192](https://github.com/woowacourse-teams/2026-career-form/issues/192
 반복 항목은 페이지 인덱스로 기존 데이터에 자동 연결하지 않는다. 같은 범주·종류의 ID를 사용자가 고르거나 대표 이름과 새 ID로 추가한다. 범주별 대표 이름·날짜·등록번호 등 식별 필드가 같은 새 항목 재추가를 거부한다. 복수·부전공명은 결과 상태가 해당 전공 있음일 때만 저장한다. 날짜·표준 옵션을 검증하고 알 수 없는 필드를 임의 저장하지 않는다.
 
 production 저장은 기존 [background 단일 큐](../storage/profile-write-handler.ts)에서 기준 프로필과 현재값을 비교해 기록한다. 충돌 시 재검토하고 미저장 편집을 임의로 버리지 않는다. 취소·읽기 실패·저장 실패·중복 클릭 처리도 유지한다.
+
+## 빈 반복 행 처리
+
+Greeting이 빈 대학원에 표시하는 `주전공`과 빈 경력의 미체크 재직 여부(`퇴사`)는 다른 읽을 수 있는 값이 없으면 빈 값으로 제외한다. 전체 선택이 이 기본값만 있는 행의 저장 대상이나 이름을 요구하지 않게 한다. 학교명·회사명이 없더라도 날짜·담당업무 등 정상 형제 필드가 있으면 해당 행의 후보는 보존하며, 새 항목의 대표 이름 확인과 저장 충돌 검증은 유지한다.
 
 ## 자동 검증 재현
 
