@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect } from "vitest";
-import { runSkAddress } from "./address";
+import { runKakaoAddress as runSkAddress } from "../../address/kakao-executor";
 const expected = {
   address: "제주특별자치도 제주시 첨단로 242",
   postalCode: "63309",

@@ -4,7 +4,7 @@ import type { PreparationPlan } from "../api/types";
 import { collectPreparationSnapshot } from "../dom/collect";
 import { createEmptyProfile } from "../../profile/model";
 import { localItemCount } from "./AutofillWorkflow";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -149,16 +149,16 @@ describe("Greeting graduate major count", () => {
       values,
     });
     expect(
-      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+      localItemCount(plan, snapshot, profile, componentWorkflowAdapter(document)),
     ).toBe(2);
     delete (values as Partial<typeof values>).additionalMajorField;
     expect(
-      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+      localItemCount(plan, snapshot, profile, componentWorkflowAdapter(document)),
     ).toBeUndefined();
     delete (values as Partial<typeof values>).additionalMajorName;
     delete (values as Partial<typeof values>).additionalMajorClassification;
     expect(
-      localItemCount(plan, snapshot, profile, greetingWorkflowAdapter),
+      localItemCount(plan, snapshot, profile, componentWorkflowAdapter(document)),
     ).toBe(1);
   });
 });

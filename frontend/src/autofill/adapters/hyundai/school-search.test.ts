@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { runHyundaiEducationSearch } from "./school-search";
-import { hyundaiWorkflowAdapter } from "./workflow";
+import { createCodedSearchModule } from "../../policy/hidden-code/coded-search";
+import { executionPolicy } from "../../workflow/execution-policy";
+import { getWorkflowAdapter } from "../workflow";
 
 interface SearchCase {
   itemGroupId: string;
@@ -300,7 +301,7 @@ describe("Hyundai education normal search", () => {
       });
 
       await expect(
-        hyundaiWorkflowAdapter.executeStateDriver?.(
+        getWorkflowAdapter(document).executeStateDriver?.(
           document,
           handleFor(search, display),
           itemFor(search),
@@ -330,7 +331,7 @@ describe("Hyundai education normal search", () => {
         display.addEventListener("keyup", () => results.replaceChildren());
       }
       const onFailure = vi.fn();
-      const pending = runHyundaiEducationSearch(
+      const pending = createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),
@@ -366,7 +367,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),
@@ -386,7 +387,7 @@ describe("Hyundai education normal search", () => {
     const search = SEARCH_CASES[1]!;
     const { display, hidden } = renderSearch(search);
     const onFailure = vi.fn();
-    const pending = runHyundaiEducationSearch(
+    const pending = createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
       document,
       handleFor(search, display),
       itemFor(search),
@@ -428,7 +429,7 @@ describe("Hyundai education normal search", () => {
       });
 
       await expect(
-        runHyundaiEducationSearch(
+        createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
           document,
           handleFor(search, display),
           itemFor(search),
@@ -461,7 +462,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),
@@ -483,7 +484,7 @@ describe("Hyundai education normal search", () => {
       });
 
       await expect(
-        runHyundaiEducationSearch(document, handleFor(search, display), item),
+        createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(document, handleFor(search, display), item),
       ).resolves.toBe(false);
       expect(keyups).toBe(0);
       expect(display.value).toBe("");
@@ -513,10 +514,10 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(document, wrongGroup, itemFor(search)),
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(document, wrongGroup, itemFor(search)),
     ).resolves.toBe(false);
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         wrongBinding,
@@ -533,12 +534,12 @@ describe("Hyundai education normal search", () => {
     highSchoolMajor.itemGroupId = "educationhighschool";
 
     await expect(
-      runHyundaiEducationSearch(document, highSchoolMajor, itemFor(major)),
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(document, highSchoolMajor, itemFor(major)),
     ).resolves.toBe(false);
 
     rendered.display.dataset.autoParams = "0047";
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(major, rendered.display),
         itemFor(major),
@@ -561,7 +562,7 @@ describe("Hyundai education normal search", () => {
       });
 
       await expect(
-        runHyundaiEducationSearch(
+        createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
           document,
           handleFor(search, display),
           itemFor(search),
@@ -584,7 +585,7 @@ describe("Hyundai education normal search", () => {
     existingItem.currentValue = "기존 학교";
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, first.display),
         existingItem,
@@ -598,7 +599,7 @@ describe("Hyundai education normal search", () => {
     const unconfirmedItem = itemFor(search);
     unconfirmedItem.currentValue = search.query;
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, second.display),
         unconfirmedItem,
@@ -625,7 +626,7 @@ describe("Hyundai education normal search", () => {
       });
 
       await expect(
-        runHyundaiEducationSearch(
+        createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
           document,
           handleFor(search, display),
           itemFor(search),
@@ -656,7 +657,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),
@@ -682,7 +683,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),
@@ -713,7 +714,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(document, handle, itemFor(search)),
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(document, handle, itemFor(search)),
     ).resolves.toBe(false);
     expect(clicks).toBe(0);
     expect(display.value).toBe("");
@@ -737,7 +738,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, first.display),
         itemFor(search),
@@ -755,7 +756,7 @@ describe("Hyundai education normal search", () => {
       queueMicrotask(() => controller.abort());
     });
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, second.display),
         itemFor(search),
@@ -783,7 +784,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),
@@ -811,7 +812,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),
@@ -838,7 +839,7 @@ describe("Hyundai education normal search", () => {
     });
 
     await expect(
-      runHyundaiEducationSearch(
+      createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handleFor(search, display),
         itemFor(search),

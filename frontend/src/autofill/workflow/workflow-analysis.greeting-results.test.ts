@@ -1,5 +1,5 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -10,7 +10,7 @@ useGreetingHost(() => {
 });
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { rememberCatalogSelection } from "../profile/catalog-receipt";
 import { getWorkflowAdapter } from "../adapters/workflow";
 import type { CandidateRegistry } from "../dom/candidate-registry";
@@ -191,7 +191,7 @@ async function run(
       ) => {
         if (searchSelection && handle.elements[0].value) {
           if (mode === "search-selection-modal")
-            return greetingWorkflowAdapter.executeStateDriver!(
+            return componentWorkflowAdapter(document).executeStateDriver!(
               _document,
               handle,
               item,

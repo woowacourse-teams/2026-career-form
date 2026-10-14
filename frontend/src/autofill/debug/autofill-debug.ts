@@ -200,7 +200,6 @@ export function debugAnalysis(
 }
 
 function planRow(item: ReviewPlanItem) {
-  const calendar = item.analysis?.writePlan?.command === "SELECT_DATE";
   return {
     candidateId: item.candidateId,
     label: item.fieldLabel,
@@ -211,8 +210,8 @@ function planRow(item: ReviewPlanItem) {
     mapping: item.analysis?.mappingStatus ?? "",
     profileFieldKey: item.profileFieldKey ?? "",
     itemIndex: item.itemIndex ?? "",
-    currentValue: calendar ? "[redacted]" : item.currentValue,
-    profileValue: calendar ? "[redacted]" : (item.profileValue ?? ""),
+    currentValue: item.currentValue,
+    profileValue: item.profileValue ?? "",
     reason: item.reason,
   };
 }
@@ -278,21 +277,16 @@ export function debugWriteRun(
       console.table(
         items.map((item, index) => {
           const raw = registry.debugField(item.candidateId);
-          const calendar = item.analysis?.writePlan?.command === "SELECT_DATE";
           return {
             candidateId: item.candidateId,
             label: item.fieldLabel,
             approved: approvedCandidateIds.has(item.candidateId),
             command: item.analysis?.writePlan?.command ?? "",
-            value: calendar ? "[redacted]" : (item.profileValue ?? ""),
-            before: calendar ? "[redacted]" : item.currentValue,
+            value: item.profileValue ?? "",
+            before: item.currentValue,
             ...(executed ? resultColumns("run.", executed[index]) : {}),
             ...resultColumns("final.", finalResults[index]),
-            pageValueNow: calendar
-              ? "[redacted]"
-              : raw
-                ? pageValueOf(raw.handle)
-                : "",
+            pageValueNow: raw ? pageValueOf(raw.handle) : "",
             ...describeFreshness(registry, item.candidateId),
           };
         }),

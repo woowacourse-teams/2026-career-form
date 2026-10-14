@@ -19,7 +19,7 @@ afterEach(cleanup);
 
 describe("AutofillOverlay", () => {
   it.each([true, false])(
-    "recollects dependent exam options only after a successful language selection (%s)",
+    "refreshes changed exam options after the current write pass (%s)",
     async (selectionAvailable) => {
       const pageDocument = createSkFixtureDocument();
       pageDocument.body.innerHTML = `<section><select name="lngLanguageType"><option value="">선택</option><option>${selectionAvailable ? "영어" : "프랑스어"}</option></select><select name="lngExamName"><option value="">선택</option></select></section>`;
@@ -233,8 +233,12 @@ describe("AutofillOverlay", () => {
           pageDocument={pageDocument}
         />,
       );
-      await screen.findByRole("heading", { name: "기입 결과" });
-      expect(fieldsPass).toBe(2);
+      await screen.findByRole("heading", {
+        name: blockedAnalysis
+          ? "이 페이지에서는 자동 기입을 진행할 수 없습니다"
+          : "기입 결과",
+      });
+      expect(fieldsPass).toBe(1);
       expect(
         pageDocument.querySelector<HTMLInputElement>("[name=eduMajorDouble]")!
           .value,

@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { findKakaoResult } from "./kakao";
+import { findKakaoResult as findPolicyResult } from "./kakao";
+import providerData from "../../../../backend/src/main/resources/policies/address-provider-v1.json";
+import type { AddressProviderPolicy } from "./provider-policy";
+const findKakaoResult = (
+  doc: Document,
+  expected: { address: string; postalCode: string },
+) => findPolicyResult(doc, expected, providerData as AddressProviderPolicy);
 const expected = {
   address: "제주특별자치도 제주시 첨단로 242",
   postalCode: "63309",

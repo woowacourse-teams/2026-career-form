@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { hyundaiWriteAdapter } from "./write";
+import { getWriteAdapter } from "../write";
 import {
   buttonItem,
   gpaItem,
@@ -72,11 +72,11 @@ describe("Hyundai military and veteran buttons", () => {
         spec.code,
       );
 
-      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
         handled: true,
         written: true,
       });
-      expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+      expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
         handled: true,
         written: true,
       });
@@ -107,7 +107,7 @@ describe("Hyundai military and veteran buttons", () => {
     );
     item.currentValue = "필";
 
-    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
       handled: true,
       written: true,
     });
@@ -135,7 +135,7 @@ describe("Hyundai military and veteran buttons", () => {
     );
     item.currentValue = "예";
 
-    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
       handled: true,
       written: true,
     });
@@ -157,7 +157,7 @@ describe("Hyundai military and veteran buttons", () => {
     rendered.option.after(duplicate);
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -181,7 +181,7 @@ describe("Hyundai military and veteran buttons", () => {
     document.querySelector<HTMLInputElement>("#milExcptCd")!.disabled = false;
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -207,7 +207,7 @@ describe("Hyundai military and veteran buttons", () => {
     document.querySelector("article#etc")!.append(specialty);
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -244,7 +244,7 @@ describe("Hyundai military and veteran buttons", () => {
     );
     item.currentValue = currentValue;
 
-    expect(hyundaiWriteAdapter.tryWrite(rendered.handle, item)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(rendered.handle, item)).toEqual({
       handled: true,
       written: false,
     });
@@ -265,7 +265,7 @@ describe("Hyundai military and veteran buttons", () => {
     });
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -288,7 +288,7 @@ describe("Hyundai military and veteran buttons", () => {
     rendered.trigger.disabled = true;
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -313,7 +313,7 @@ describe("Hyundai military and veteran buttons", () => {
       document.querySelector(`#${missingId}`)!.remove();
 
       expect(
-        hyundaiWriteAdapter.tryWrite(
+        getWriteAdapter(document).tryWrite(
           rendered.handle,
           buttonItem(
             rendered.handle.candidateId,
@@ -370,7 +370,7 @@ describe("Hyundai military and veteran buttons", () => {
     mutate();
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -396,7 +396,7 @@ describe("Hyundai military and veteran buttons", () => {
     rendered.hidden.value = "N";
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -454,7 +454,7 @@ describe("Hyundai military and veteran buttons", () => {
     mutate();
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         rendered.handle,
         buttonItem(
           rendered.handle.candidateId,
@@ -493,7 +493,7 @@ describe("Hyundai military and veteran text contracts", () => {
     };
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         {
           kind: "field",
           candidateId,
@@ -538,7 +538,7 @@ describe("Hyundai military and veteran text contracts", () => {
     };
 
     expect(
-      hyundaiWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         {
           kind: "field",
           candidateId,

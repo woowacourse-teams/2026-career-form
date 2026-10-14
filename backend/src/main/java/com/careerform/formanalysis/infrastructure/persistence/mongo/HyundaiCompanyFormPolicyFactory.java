@@ -27,11 +27,11 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
 final class HyundaiCompanyFormPolicyFactory {
 
-    private static final long VERSION = 8;
+    private static final long VERSION = 14;
 
     static FormAnalysisPolicyDocument create() {
         return new FormAnalysisPolicyDocument(
-            "hyundai-policy-v4",
+            "hyundai-policy-v14",
             "hyundai",
             VERSION,
             new PreparationFingerprint(
@@ -304,7 +304,7 @@ final class HyundaiCompanyFormPolicyFactory {
                     "acqDt",
                     "languages.languageTest.acquisitionDate"
                 ),
-                textRule("point", "languages.languageTest.grade"),
+                new FieldRule("point", FieldsAnalysisRequest.FormElement.INPUT, FieldsAnalysisRequest.FormControl.TEXT, new DirectBinding("languages.languageTest.grade"), false, null, null, true),
                 textRule("acqNm", "languages.languageTest.registrationNo"),
                 verifiedButtonOptionRule(
                     "foreLangAbility",
@@ -354,6 +354,11 @@ final class HyundaiCompanyFormPolicyFactory {
                 textRule("hopePos", "compensation.compensation.desiredPosition"),
                 textRule("hopeSal", "compensation.compensation.desiredSalary"),
                 textRule("lastSal", "compensation.compensation.previousSalary"),
+                buttonOptionRule(
+                    "typeGb", "publications.publicationPatent.type",
+                    Map.of("논문", "논문", "특허", "특허"),
+                    Map.of("논문", "T", "특허", "P")
+                ),
                 textRule("title", "publications.publicationPatent.title"),
                 textareaRule("cont", "publications.publicationPatent.details"),
                 buttonOptionRule(

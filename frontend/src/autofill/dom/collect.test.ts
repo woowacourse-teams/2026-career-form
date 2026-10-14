@@ -4,8 +4,6 @@ import {
   collectFieldsSnapshot,
   collectPreparationSnapshot,
   hasVisibleFormControl,
-  isHyundaiTalentHost,
-  isSkCareersHost,
 } from "./collect";
 
 describe("application form DOM collection", () => {
@@ -53,10 +51,6 @@ describe("application form DOM collection", () => {
     expect(JSON.stringify(preparation.request)).not.toContain("email");
   });
 
-  it("recognizes Hyundai's custom field-button host only", () => {
-    expect(isHyundaiTalentHost("talent.hyundai.com")).toBe(true);
-    expect(isHyundaiTalentHost("www.skcareers.com")).toBe(false);
-  });
 
   it("does not apply Hyundai repeated-row boundaries on a generic host", () => {
     setPageUrl("https://careers.example.test/apply");
@@ -463,10 +457,6 @@ describe("application form DOM collection", () => {
     ).toBe(1);
   });
 
-  it("limits the hidden-template exception to SK Careers", () => {
-    expect(isSkCareersHost("www.skcareers.com")).toBe(true);
-    expect(isSkCareersHost("careers.example.test")).toBe(false);
-  });
 
   it("recognizes an SK template whose row shell remains visible but controls are hidden", () => {
     document.body.innerHTML = `

@@ -4,7 +4,7 @@ import {
   runHyundaiCatalogQa,
 } from "./catalog-qa.test-fixtures";
 import { retainedCatalogSelection } from "../../profile/catalog-receipt";
-import { hyundaiWriteAdapter } from "./write";
+import { getWriteAdapter } from "../write";
 import { CandidateRegistry } from "../../dom/candidate-registry";
 import { settledGenericResult } from "../../write/native-executor";
 
@@ -228,7 +228,7 @@ it("does not normalize unrelated language or grade controls using exam identity"
   const fixture = createHyundaiCatalogFixture(document, "languageTest");
   fixture.handle.candidate.domId = "foreLang_1";
   fixture.display.id = "foreLang_1";
-  expect(hyundaiWriteAdapter.tryWrite(fixture.handle, fixture.item)).toEqual({
+  expect(getWriteAdapter(document).tryWrite(fixture.handle, fixture.item)).toEqual({
     handled: true,
     written: false,
   });

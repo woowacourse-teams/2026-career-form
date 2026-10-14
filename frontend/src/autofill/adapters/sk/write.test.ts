@@ -4,7 +4,7 @@ import type { MatchedFieldAnalysis } from "../../api/types";
 import { collectFieldsSnapshot } from "../../dom/collect";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { skWriteAdapter } from "./write";
+import { getWriteAdapter } from "../write";
 
 function setPageUrl(url: string): void {
   (
@@ -74,7 +74,7 @@ describe("SK protected writer", () => {
     setPageUrl("https://www.skcareers.com/Application/Index/");
     document.body.innerHTML = militaryGate();
     const handle = collectedHandle("prsMilitarySvcYN");
-    const result = skWriteAdapter.tryWrite(
+    const result = getWriteAdapter(document).tryWrite(
       handle,
       item(
         analysis(
@@ -110,7 +110,7 @@ describe("SK protected writer", () => {
     const handle = collectedHandle("prsMilitarySvcYN");
 
     expect(
-      skWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         handle,
         item(
           analysis(
@@ -147,7 +147,7 @@ describe("SK protected writer", () => {
     );
     branch.currentValue = "군필";
 
-    expect(skWriteAdapter.tryWrite(handle, branch)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, branch)).toEqual({
       handled: true,
       written: true,
     });
@@ -175,7 +175,7 @@ describe("SK protected writer", () => {
       "중증(기존1급~3급)",
     );
 
-    expect(skWriteAdapter.tryWrite(handle, grade)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, grade)).toEqual({
       handled: true,
       written: false,
     });
@@ -199,13 +199,13 @@ describe("SK protected writer", () => {
     let events = 0;
     input.addEventListener("input", () => events++);
 
-    expect(skWriteAdapter.tryWrite(handle, number)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, number)).toEqual({
       handled: true,
       written: true,
     });
     expect(input.value).toBe("synthetic-number");
     expect(events).toBe(1);
-    expect(skWriteAdapter.tryWrite(handle, number)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, number)).toEqual({
       handled: true,
       written: true,
     });
@@ -225,7 +225,7 @@ describe("SK status writer safety regressions", () => {
     let events = 0;
     negative.addEventListener("change", () => events++);
     const handle = collectedHandle("prsMilitarySvcYN");
-    const result = skWriteAdapter.tryWrite(
+    const result = getWriteAdapter(document).tryWrite(
       handle,
       item(
         analysis(
@@ -258,7 +258,7 @@ describe("SK status writer safety regressions", () => {
     const handle = collectedHandle("prsMilitarySvcStatus");
 
     expect(
-      skWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         handle,
         item(
           analysis(
@@ -307,11 +307,11 @@ describe("SK status writer safety regressions", () => {
       "군필",
     );
 
-    expect(skWriteAdapter.tryWrite(handle, direct)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, direct)).toEqual({
       handled: true,
       written: false,
     });
-    expect(skWriteAdapter.tryWrite(handle, foreign)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, foreign)).toEqual({
       handled: true,
       written: false,
     });
@@ -331,7 +331,7 @@ describe("SK status writer safety regressions", () => {
       ),
       "군필",
     );
-    expect(skWriteAdapter.tryWrite(handle, status)).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, status)).toEqual({
       handled: true,
       written: false,
     });
@@ -340,7 +340,7 @@ describe("SK status writer safety regressions", () => {
     document.querySelector<HTMLInputElement>("[value='1']")!.checked = true;
     const duplicateCode = collectedHandle("prsMilitarySvcStatus");
     expect(
-      skWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         duplicateCode,
         item(
           analysis(

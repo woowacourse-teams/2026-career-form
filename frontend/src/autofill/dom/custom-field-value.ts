@@ -1,3 +1,4 @@
+import { runtimeRules } from "../policy/runtime-rules";
 import type { FieldCandidateHandle } from "./types";
 import { dropdownValue } from "./button-dropdown";
 
@@ -23,11 +24,14 @@ export function customFieldValue(
       .join(", ");
   }
   const value = element.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  const placeholder = ["data-placeholder", "data-placeholder-shown"].some(
-    (name) => {
-      const marker = element.getAttribute(name);
-      return marker !== null && marker !== "false";
-    },
-  );
-  return placeholder || value === "선택" ? "" : value;
+  const placeholder = (
+    runtimeRules(element.ownerDocument)?.placeholderAttributes ?? []
+  ).some((name) => {
+    const marker = element.getAttribute(name);
+    return marker !== null && marker !== "false";
+  });
+  return placeholder ||
+    runtimeRules(element.ownerDocument)?.placeholderValues.includes(value)
+    ? ""
+    : value;
 }

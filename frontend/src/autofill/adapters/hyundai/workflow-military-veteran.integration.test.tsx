@@ -88,7 +88,7 @@ it("automatically writes Hyundai drivers and details without sensitive-value con
   ]).toEqual(["1", "Y", "2020-03", "2021-09", "41", "1", "1234567890"]);
 });
 
-it("automatically writes Hyundai disability status, grade, and type without sensitive-value confirmation", async () => {
+it("writes Hyundai disability status and newly enabled details within one run", async () => {
   const clicks = renderApplication();
   const profile = fixtureProfile();
   profile.disability = {
@@ -118,6 +118,7 @@ it("automatically writes Hyundai disability status, grade, and type without sens
     second.getByRole("heading", { name: "기입 결과" }),
   ).toBeInTheDocument();
   expect(clicks).toEqual(firstClicks);
+  expect([hidden("injuryGrade"), hidden("injuryType")]).toEqual(["10", "10"]);
 });
 
 it.each(["", "disability-status:unverified", "veteran-status:eligible"])(

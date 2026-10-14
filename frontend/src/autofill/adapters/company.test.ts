@@ -4,12 +4,12 @@ import { resolveCompany, resolveDocumentCompany } from "./company";
 
 describe("company resolution", () => {
   it.each([
-    ["www.skcareers.com", "sk"],
-    ["talent.hyundai.com", "hyundai"],
+    ["www.skcareers.com", "generic"],
+    ["talent.hyundai.com", "generic"],
     ["careers.example.test", "generic"],
-    ["kakaomobility.career.greetinghr.com", "greeting"],
-    ["daangnservice.career.greetinghr.com", "greeting"],
-    ["mediquitous.career.greetinghr.com", "greeting"],
+    ["kakaomobility.career.greetinghr.com", "components"],
+    ["daangnservice.career.greetinghr.com", "components"],
+    ["mediquitous.career.greetinghr.com", "components"],
     ["career.hyundai-autoever.com", "generic"],
     ["www.musinsacareers.com", "generic"],
     ["recruit.kakaogames.com", "generic"],
@@ -18,8 +18,8 @@ describe("company resolution", () => {
     ["evilcareer.greetinghr.com", "generic"],
     ["a.career.greetinghr.com.evil.test", "generic"],
     ["a.career.greetinghr.com:443", "generic"],
-    ["WWW.SKCAREERS.COM", "sk"],
-    ["TALENT.HYUNDAI.COM", "hyundai"],
+    ["WWW.SKCAREERS.COM", "generic"],
+    ["TALENT.HYUNDAI.COM", "generic"],
     ["talent.hyundai.com:443", "generic"],
   ] as const)("resolves the exact host %s as %s", (host, expected) => {
     expect(resolveCompany(host)).toBe(expected);
@@ -45,13 +45,13 @@ describe("Greeting document resolution", () => {
   it("selects Greeting on an arbitrary custom domain from its owned common controls", () => {
     expect(
       resolveDocumentCompany(page("jobs.unregistered.example", fields)),
-    ).toBe("greeting");
+    ).toBe("components");
   });
   it("keeps an established custom-domain adapter through rerenders but resets on navigation", () => {
     const document = page("jobs.unregistered.example", fields);
-    expect(resolveDocumentCompany(document)).toBe("greeting");
+    expect(resolveDocumentCompany(document)).toBe("components");
     document.body.replaceChildren();
-    expect(resolveDocumentCompany(document)).toBe("greeting");
+    expect(resolveDocumentCompany(document)).toBe("components");
     Object.defineProperty(document, "URL", {
       value: "https://jobs.unregistered.example/other",
     });
@@ -69,9 +69,9 @@ describe("Greeting document resolution", () => {
     ).toBe("generic");
   });
   it.each([
-    ["www.skcareers.com", "sk"],
-    ["talent.hyundai.com", "hyundai"],
-  ])("preserves registered company priority on %s", (host, expected) => {
-    expect(resolveDocumentCompany(page(host, fields))).toBe(expected);
+    ["www.skcareers.com", "generic"],
+    ["talent.hyundai.com", "generic"],
+  ])("uses detected controls without a company policy on %s", (host) => {
+    expect(resolveDocumentCompany(page(host, fields))).toBe("components");
   });
 });

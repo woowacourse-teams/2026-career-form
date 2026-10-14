@@ -105,13 +105,16 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
     {
       title: "전공과 성적",
       fields: [
+        "majorField",
         "majorName",
         "gpaScore",
         "gpaScale",
         "totalCredits",
         "doubleMajorStatus",
+        "additionalMajorField",
         "additionalMajorName",
         "minorStatus",
+        "minorField",
         "minorName",
       ],
     },
@@ -121,6 +124,7 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
       title: "학교 정보",
       fields: [
         "degreeLevel",
+        "combinedDegreeStatus",
         "country",
         "schoolName",
         "schoolRegion",
@@ -134,19 +138,21 @@ const FIELD_GROUPS: Record<string, { title: string; fields: string[] }[]> = {
     {
       title: "전공과 성적",
       fields: [
-        "majorClassification",
         "majorField",
         "majorName",
         "gpaScore",
         "gpaScale",
-        "additionalMajorClassification",
+        "doubleMajorStatus",
         "additionalMajorField",
         "additionalMajorName",
+        "minorStatus",
+        "minorField",
+        "minorName",
       ],
     },
     {
       title: "연구와 논문",
-      fields: ["labName", "labProfessorName", "thesisTitle", "thesisSummary"],
+      fields: ["labName", "labProfessorName", "researchField", "thesisTitle", "thesisSummary"],
     },
   ],
   languageTest: [

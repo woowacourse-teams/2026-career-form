@@ -136,10 +136,11 @@ function derivedValue(
 ): ValueBindingResolution {
   const recipe = binding.recipe;
   const majorRecipe =
-    /^UNIVERSITY_ADDITIONAL_MAJOR_([12])_(NAME|CLASSIFICATION)$/.exec(recipe);
+    /^UNIVERSITY_ADDITIONAL_MAJOR_([12])_(NAME|CLASSIFICATION|FIELD)$/.exec(recipe);
   if (majorRecipe) {
+    const section = binding.profileFieldKey?.split(".")[1] ?? "university";
     const entries = profile.education.filter(
-      (entry) => entry.sectionId === "university",
+      (entry) => entry.sectionId === section,
     );
     if (itemIndex === undefined && entries.length > 1)
       return { status: "ambiguous", sensitive: false };
@@ -147,10 +148,12 @@ function derivedValue(
     const major =
       entry &&
       universityAdditionalMajors(entry.values)?.[Number(majorRecipe[1]) - 1];
-    return major
+    const value = majorRecipe[2] === "NAME" ? major?.name
+      : majorRecipe[2] === "FIELD" ? major?.field : major?.classification;
+    return major && value
       ? {
           status: "resolved",
-          value: majorRecipe[2] === "NAME" ? major.name : major.classification,
+          value,
           sensitive: false,
           profileEntryId: entry.id,
         }

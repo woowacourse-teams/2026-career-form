@@ -14,11 +14,9 @@ import {
   type ReviewPlanItem,
 } from "../review/review-plan";
 import { progressCategory } from "./progress-model";
-import { sensitiveValueApproved } from "./review-actions";
 import {
   actionLabel,
   adapterProfileValue,
-  localProfileValue,
   type PreparationItem,
   type WorkflowProps,
   type Stage,
@@ -163,12 +161,7 @@ export function createPreparationOptions({
 }
 
 export function prepareApprovedPlans({
-  stage,
-  profile,
   preparationItems,
-  selectedPreparationKeys,
-  consideredSensitiveValues,
-  approvedSensitiveValues,
 }: {
   stage: Stage;
   profile: Profile;
@@ -177,27 +170,7 @@ export function prepareApprovedPlans({
   consideredSensitiveValues: Map<string, string>;
   approvedSensitiveValues: Map<string, string>;
 }) {
-  if (stage === "preparation-review") {
-    for (const item of preparationItems) {
-      if (!item.sensitive || item.plan.command !== "SELECT_OPTION_TO_REVEAL")
-        continue;
-      const key = item.plan.profileFieldKey;
-      const value = localProfileValue(profile, key);
-      if (value === undefined) continue;
-      consideredSensitiveValues.set(key, value);
-      if (item.runnable && selectedPreparationKeys.has(key))
-        approvedSensitiveValues.set(key, value);
-    }
-  }
-  const isApprovedPreparation = (item: PreparationItem) =>
-    item.runnable &&
-    (!item.sensitive ||
-      (item.plan.command === "SELECT_OPTION_TO_REVEAL" &&
-        sensitiveValueApproved(
-          approvedSensitiveValues,
-          profile,
-          item.plan.profileFieldKey,
-        )));
+  const isApprovedPreparation = (item: PreparationItem) => item.runnable;
   const runnablePlans = preparationItems
     .filter(isApprovedPreparation)
     .map((item) => ({ ...item, approved: true }));

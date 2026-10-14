@@ -1,0 +1,969 @@
+{
+  "behavior": {
+    "$object": {
+      "conditionalStates": {
+        "$array": {
+          "$object": {
+            "driver": "string",
+            "code": "string",
+            "label": "string",
+            "controls": {
+              "$array": {
+                "$object": {
+                  "id": "string",
+                  "disabled": "boolean",
+                  "required": "boolean",
+                  "allowAbsent": "boolean"
+                },
+                "$required": ["id", "disabled", "allowAbsent"]
+              }
+            }
+          },
+          "$required": ["driver", "code", "label", "controls"]
+        }
+      },
+      "dependencies": {
+        "$array": {
+          "$object": {
+            "fields": {
+              "$array": "string"
+            },
+            "driver": "string",
+            "code": "string",
+            "label": "string"
+          },
+          "$required": ["fields", "driver", "code", "label"]
+        }
+      },
+      "rowKinds": {
+        "$array": {
+          "$object": {
+            "section": "string",
+            "code": "string",
+            "valueField": "string",
+            "value": "string"
+          },
+          "$required": ["section", "code"]
+        }
+      },
+      "rowPreparation": {
+        "$object": {
+          "sectionOrder": {
+            "$array": "string"
+          },
+          "selectionOrder": {
+            "$enum": ["AFTER_ALL_ROWS", "BEFORE_NEXT_ROW"]
+          },
+          "revealTemplates": {
+            "$array": {
+              "$array": "string"
+            }
+          },
+          "sourceCategory": {
+            "$enum": [
+              "education",
+              "languages",
+              "certifications",
+              "careers",
+              "projects",
+              "publications",
+              "health"
+            ]
+          },
+          "selectSteps": {
+            "$array": {
+              "$enum": ["OPEN_TRIGGER", "CLICK_EXACT_OPTION", "WAIT_REVEALED"]
+            }
+          },
+          "resetSteps": {
+            "$array": {
+              "$enum": ["OPEN_TRIGGER", "CLICK_RESET", "WAIT_EMPTY"]
+            }
+          },
+          "rowSelector": "string",
+          "groupSelector": "string",
+          "resetCode": "string",
+          "resetOptionCount": "number",
+          "requireCompleteOptions": "boolean",
+          "add": {
+            "$object": {
+              "sourcePosition": {
+                "$enum": ["FIRST", "LAST"]
+              },
+              "resultPosition": {
+                "$enum": ["FIRST", "LAST"]
+              },
+              "selector": "string",
+              "reset": "boolean",
+              "plan": "$plan"
+            },
+            "$required": [
+              "sourcePosition",
+              "resultPosition",
+              "selector",
+              "reset",
+              "plan"
+            ]
+          },
+          "alignment": {
+            "$object": {
+              "matchBy": {
+                "$enum": ["POSITION", "KEY"]
+              },
+              "mismatch": {
+                "$enum": ["REJECT", "PRESERVE"]
+              },
+              "empty": {
+                "$enum": ["ASSIGN", "REJECT"]
+              }
+            },
+            "$required": ["matchBy", "mismatch", "empty"]
+          }
+        },
+        "$required": [
+          "sectionOrder",
+          "revealTemplates",
+          "sourceCategory",
+          "selectSteps",
+          "resetSteps",
+          "rowSelector",
+          "groupSelector",
+          "resetCode",
+          "resetOptionCount",
+          "requireCompleteOptions",
+          "add",
+          "alignment"
+        ]
+      },
+      "groupKinds": {
+        "$record": {
+          "$tuple": ["string", "string"]
+        }
+      },
+      "rowActions": {
+        "$array": {
+          "$object": {
+            "id": "string",
+            "fields": {
+              "$array": {
+                "$object": {
+                  "element": "string",
+                  "idBase": "string",
+                  "name": "string",
+                  "type": "string"
+                },
+                "$required": ["element", "idBase", "name"]
+              }
+            }
+          },
+          "$required": ["id", "fields"]
+        }
+      },
+      "searches": {
+        "$array": {
+          "$object": {
+            "domName": "string",
+            "hiddenName": "string",
+            "autoType": "string",
+            "params": "string",
+            "profileFieldKey": "string",
+            "group": "string",
+            "allowDirectInput": "boolean",
+            "directInputCode": "string",
+            "catalogKind": {
+              "$oneOf": ["null", "string"]
+            },
+            "resultMatch": {
+              "$object": {
+                "separator": "string",
+                "nameReplacements": {
+                  "$array": {
+                    "$object": {
+                      "from": "string",
+                      "to": "string"
+                    },
+                    "$required": ["from", "to"]
+                  }
+                },
+                "detailSeparator": "string",
+                "regionDetailIndexes": {
+                  "$array": "number"
+                },
+                "regionReplacements": {
+                  "$array": {
+                    "$object": {
+                      "from": "string",
+                      "to": "string"
+                    },
+                    "$required": ["from", "to"]
+                  }
+                },
+                "unspecifiedRegions": {
+                  "$array": "string"
+                }
+              },
+              "$required": [
+                "separator",
+                "nameReplacements",
+                "detailSeparator",
+                "regionDetailIndexes",
+                "regionReplacements",
+                "unspecifiedRegions"
+              ]
+            }
+          },
+          "$required": [
+            "domName",
+            "hiddenName",
+            "autoType",
+            "params",
+            "profileFieldKey",
+            "group",
+            "allowDirectInput",
+            "directInputCode",
+            "catalogKind"
+          ]
+        }
+      },
+      "drivers": {
+        "$array": {
+          "$object": {
+            "field": "string",
+            "key": "string",
+            "command": "string",
+            "stage": "number",
+            "stride": "number",
+            "handler": {
+              "$enum": ["NONE", "CODED_SEARCH", "FIXED_CODE_SEARCH"]
+            },
+            "conditional": "boolean",
+            "waitForOptions": "boolean",
+            "group": "string"
+          },
+          "$required": [
+            "field",
+            "key",
+            "command",
+            "stage",
+            "stride",
+            "handler",
+            "conditional",
+            "waitForOptions"
+          ]
+        }
+      },
+      "settlements": {
+        "$array": {
+          "$object": {
+            "field": "string",
+            "scope": "string",
+            "condition": "$dom",
+            "fallbackSelector": "string",
+            "failureCondition": "$dom",
+            "failureCode": "string",
+            "selectedCodeSelector": "string",
+            "fallbackPlan": "$plan"
+          },
+          "$required": ["field", "scope", "condition"]
+        }
+      },
+      "failureScopes": {
+        "$array": {
+          "$object": {
+            "field": "string",
+            "key": "string",
+            "command": "string",
+            "scope": "string",
+            "conditional": "boolean",
+            "group": "string",
+            "inputType": "string",
+            "attributes": {
+              "$record": "string"
+            },
+            "idPattern": "string",
+            "condition": "$dom",
+            "ancestor": "string"
+          },
+          "$required": ["field", "key", "command", "scope", "conditional"]
+        }
+      },
+      "repeatHints": {
+        "$record": {
+          "$object": {
+            "categoryId": {
+              "$enum": [
+                "education",
+                "languages",
+                "certifications",
+                "careers",
+                "projects",
+                "publications",
+                "health"
+              ]
+            },
+            "sectionId": "string"
+          },
+          "$required": ["categoryId", "sectionId"]
+        }
+      },
+      "prepareActionId": "string",
+      "ownOptions": "$dom",
+      "groupSections": {
+        "$record": "string"
+      },
+      "textControls": {
+        "$array": {
+          "$object": {
+            "id": "string",
+            "key": "string",
+            "binding": "string",
+            "recipe": {
+              "$oneOf": ["null", "string"]
+            },
+            "maxLength": "number",
+            "attributes": {
+              "$record": "string"
+            },
+            "pattern": {
+              "$object": {
+                "source": "string",
+                "flags": "string"
+              },
+              "$required": ["source", "flags"]
+            },
+            "ancestor": "string"
+          },
+          "$required": [
+            "id",
+            "key",
+            "binding",
+            "recipe",
+            "maxLength",
+            "attributes",
+            "pattern",
+            "ancestor"
+          ]
+        }
+      },
+      "codedButtons": {
+        "$array": {
+          "$object": {
+            "key": "string",
+            "group": "string",
+            "idPattern": "string",
+            "attributes": {
+              "$record": "string"
+            },
+            "hiddenSelector": "string",
+            "codes": {
+              "$record": "string"
+            }
+          },
+          "$required": [
+            "key",
+            "group",
+            "idPattern",
+            "attributes",
+            "hiddenSelector",
+            "codes"
+          ]
+        }
+      },
+      "catalogButtons": {
+        "$array": {
+          "$object": {
+            "key": "string",
+            "kind": "string",
+            "idPattern": "string",
+            "hiddenSelector": "string"
+          },
+          "$required": ["key", "kind", "idPattern", "hiddenSelector"]
+        }
+      },
+      "catalogTexts": {
+        "$array": {
+          "$object": {
+            "name": "string",
+            "key": "string",
+            "kind": "string",
+            "forbiddenDataAttribute": "string",
+            "forbiddenAncestor": "string"
+          },
+          "$required": [
+            "name",
+            "key",
+            "kind",
+            "forbiddenDataAttribute",
+            "forbiddenAncestor"
+          ]
+        }
+      },
+      "delegatedFields": {
+        "$array": "string"
+      },
+      "searchRejectedCodes": {
+        "$array": "string"
+      },
+      "address": {
+        "$object": {
+          "selection": {
+            "$enum": ["FIRST_VISIBLE"]
+          },
+          "verification": {
+            "$enum": [
+              "SELECTED_POSTAL_AND_ADDRESS",
+              "POSTAL_AND_ROAD_WITHOUT_REFERENCE"
+            ]
+          },
+          "detailAfterSelection": {
+            "$enum": ["EMPTY", "UNCHANGED"]
+          },
+          "readOnlyFields": {
+            "$array": "string"
+          },
+          "requireClosed": "boolean",
+          "requiredSelection": {
+            "$object": {
+              "selector": "string",
+              "name": "string",
+              "type": "string",
+              "checked": "boolean"
+            },
+            "$required": ["selector", "name", "type", "checked"]
+          },
+          "roles": {
+            "$object": {
+              "zip": "number",
+              "address": "number",
+              "detail": "number",
+              "trigger": "number"
+            },
+            "$required": ["zip", "address", "detail", "trigger"]
+          },
+          "inputType": "string",
+          "requireId": "boolean",
+          "requireName": "boolean",
+          "callbackTimeoutMs": "number",
+          "callbackPollMs": "number",
+          "detailWorkflow": "$flow",
+          "detailEntrypoint": "string"
+        },
+        "$required": [
+          "selection",
+          "verification",
+          "detailAfterSelection",
+          "readOnlyFields",
+          "requireClosed",
+          "requiredSelection",
+          "roles",
+          "inputType",
+          "requireId",
+          "requireName",
+          "callbackTimeoutMs",
+          "callbackPollMs",
+          "detailWorkflow",
+          "detailEntrypoint"
+        ]
+      },
+      "fixedCodeSearches": {
+        "$array": {
+          "$object": {
+            "name": "string",
+            "key": "string",
+            "options": {
+              "$record": "string"
+            },
+            "attributes": {
+              "$record": "string"
+            },
+            "displaySelector": "string",
+            "hiddenSelector": "string"
+          },
+          "$required": [
+            "name",
+            "key",
+            "options",
+            "attributes",
+            "displaySelector",
+            "hiddenSelector"
+          ]
+        }
+      },
+      "groupIdentity": {
+        "$object": {
+          "rootSelector": "string",
+          "rules": {
+            "$array": {
+              "$object": {
+                "group": "string",
+                "condition": "$dom"
+              },
+              "$required": ["group", "condition"]
+            }
+          }
+        },
+        "$required": ["rootSelector", "rules"]
+      },
+      "datasetKeys": {
+        "$object": {
+          "autoApi": "string",
+          "autoParams": "string",
+          "autoType": "string",
+          "code": "string",
+          "codegb": "string",
+          "disabled": "string",
+          "enabled": "string",
+          "result": "string",
+          "search": "string",
+          "searchResult": "string",
+          "valid": "string"
+        },
+        "$required": [
+          "autoApi",
+          "autoParams",
+          "autoType",
+          "code",
+          "codegb",
+          "disabled",
+          "enabled",
+          "result",
+          "search",
+          "searchResult",
+          "valid"
+        ]
+      },
+      "actionPlans": {
+        "$record": "$plan"
+      },
+      "searchObservation": {
+        "$object": {
+          "childList": "boolean",
+          "subtree": "boolean",
+          "requireMutation": "boolean"
+        },
+        "$required": ["childList", "subtree", "requireMutation"]
+      },
+      "snapshots": {
+        "$record": {
+          "$array": {
+            "$object": {
+              "target": "string",
+              "kind": {
+                "$enum": ["VALUE", "ATTRIBUTE", "CLASS"]
+              },
+              "name": "string",
+              "optional": "boolean"
+            },
+            "$required": ["target", "kind"]
+          }
+        }
+      },
+      "confirmations": {
+        "$record": "$checks"
+      }
+    },
+    "$required": [
+      "conditionalStates",
+      "dependencies",
+      "rowKinds",
+      "rowPreparation",
+      "groupKinds",
+      "rowActions",
+      "searches",
+      "drivers",
+      "settlements",
+      "failureScopes",
+      "repeatHints",
+      "prepareActionId",
+      "ownOptions",
+      "groupSections",
+      "textControls",
+      "codedButtons",
+      "catalogButtons",
+      "catalogTexts",
+      "delegatedFields",
+      "searchRejectedCodes",
+      "address",
+      "fixedCodeSearches",
+      "groupIdentity",
+      "datasetKeys",
+      "actionPlans",
+      "searchObservation",
+      "snapshots",
+      "confirmations"
+    ]
+  },
+  "resources": {
+    "targets": {
+      "$object": {
+        "hiddenAncestors": "string",
+        "addressDialog": "string",
+        "dialogClose": "string",
+        "ownedAddressDialog": "string",
+        "dialogContainer": "string",
+        "addressQuery": "string",
+        "addressSubmit": "string",
+        "addressResults": "string",
+        "addressResultButtons": "string",
+        "resultRow": "string",
+        "postalText": "string",
+        "addressResultButton": "string",
+        "field": "string",
+        "section": "string",
+        "row": "string",
+        "repeatSection": "string",
+        "optionContainer": "string",
+        "optionDescendants": "string",
+        "inaccessibleAncestors": "string",
+        "buttonInput": "string",
+        "directOptions": "string",
+        "hiddenValue": "string",
+        "conditionalSection": "string",
+        "rowOptionContainer": "string",
+        "directRowKindCode": "string",
+        "directRowKindTrigger": "string",
+        "unavailableAncestors": "string",
+        "repeatRoot": "string",
+        "searchField": "string",
+        "searchResults": "string",
+        "maskedAncestors": "string",
+        "searchResultButton": "string",
+        "searchDisplay": "string",
+        "directResultButton": "string",
+        "rowKindOptions": "string",
+        "rowResetOption": "string"
+      },
+      "$required": [
+        "hiddenAncestors",
+        "addressDialog",
+        "dialogClose",
+        "ownedAddressDialog",
+        "dialogContainer",
+        "addressQuery",
+        "addressSubmit",
+        "addressResults",
+        "addressResultButtons",
+        "resultRow",
+        "postalText",
+        "addressResultButton",
+        "field",
+        "section",
+        "row",
+        "repeatSection",
+        "optionContainer",
+        "optionDescendants",
+        "inaccessibleAncestors",
+        "buttonInput",
+        "directOptions",
+        "hiddenValue",
+        "conditionalSection",
+        "rowOptionContainer",
+        "directRowKindCode",
+        "directRowKindTrigger",
+        "unavailableAncestors",
+        "repeatRoot",
+        "searchField",
+        "searchResults",
+        "maskedAncestors",
+        "searchResultButton",
+        "searchDisplay",
+        "directResultButton",
+        "rowKindOptions",
+        "rowResetOption"
+      ]
+    },
+    "tokens": {
+      "$object": {
+        "dialogAttribute": "string",
+        "dialogId": "string",
+        "closeLabel": "string",
+        "openClass": "string",
+        "rowClass": "string",
+        "addClass": "string",
+        "addressAction": "string",
+        "triggerClass": "string",
+        "invalidClass": "string",
+        "boundClass": "string",
+        "resetClass": "string",
+        "emptyChoiceWithPeriod": "string",
+        "emptyChoice": "string",
+        "searchCategory": "string",
+        "selectedLabelAttribute": "string",
+        "completedClass": "string"
+      },
+      "$required": [
+        "dialogAttribute",
+        "dialogId",
+        "closeLabel",
+        "openClass",
+        "rowClass",
+        "addClass",
+        "addressAction",
+        "triggerClass",
+        "invalidClass",
+        "boundClass",
+        "resetClass",
+        "emptyChoiceWithPeriod",
+        "emptyChoice",
+        "searchCategory",
+        "selectedLabelAttribute",
+        "completedClass"
+      ]
+    },
+    "messages": {
+      "$object": {
+        "addressUnconfirmed": "string",
+        "addressConflict": "string",
+        "addressUnchanged": "string",
+        "addressWritten": "string"
+      },
+      "$required": [
+        "addressUnconfirmed",
+        "addressConflict",
+        "addressUnchanged",
+        "addressWritten"
+      ]
+    },
+    "templates": {
+      "$object": {
+        "addressInput": {
+          "$array": "string"
+        },
+        "indexedAction": {
+          "$array": "string"
+        },
+        "addAction": {
+          "$array": "string"
+        },
+        "indexedControl": {
+          "$array": "string"
+        },
+        "profilePath": {
+          "$array": "string"
+        },
+        "directBoundHidden": {
+          "$array": "string"
+        },
+        "idSelector": {
+          "$array": "string"
+        },
+        "textByIdAndName": {
+          "$array": "string"
+        },
+        "buttonById": {
+          "$array": "string"
+        },
+        "directHiddenByName": {
+          "$array": "string"
+        },
+        "visibleValueById": {
+          "$array": "string"
+        },
+        "rowDetails": {
+          "$array": "string"
+        },
+        "namedSearchInput": {
+          "$array": "string"
+        },
+        "hiddenByName": {
+          "$array": "string"
+        }
+      },
+      "$required": [
+        "addressInput",
+        "indexedAction",
+        "addAction",
+        "indexedControl",
+        "profilePath",
+        "directBoundHidden",
+        "idSelector",
+        "textByIdAndName",
+        "buttonById",
+        "directHiddenByName",
+        "visibleValueById",
+        "rowDetails",
+        "namedSearchInput",
+        "hiddenByName"
+      ]
+    },
+    "patterns": {
+      "$object": {
+        "whitespace": {
+          "$object": {
+            "source": "string",
+            "flags": "string"
+          },
+          "$required": ["source", "flags"]
+        },
+        "postalCode": {
+          "$object": {
+            "source": "string",
+            "flags": "string"
+          },
+          "$required": ["source", "flags"]
+        },
+        "indexSuffix": {
+          "$object": {
+            "source": "string",
+            "flags": "string"
+          },
+          "$required": ["source", "flags"]
+        },
+        "rowKindIndex": {
+          "$object": {
+            "source": "string",
+            "flags": "string"
+          },
+          "$required": ["source", "flags"]
+        }
+      },
+      "$required": ["whitespace", "postalCode", "indexSuffix", "rowKindIndex"]
+    },
+    "definitions": {
+      "$object": {
+        "addressFields": {
+          "$array": "string"
+        },
+        "addressResultTimeoutMs": "number",
+        "settlementTimeoutMs": "number",
+        "repeatedOptions": {
+          "$array": {
+            "$object": {
+              "idBase": "string",
+              "hiddenName": "string",
+              "codegb": "string",
+              "profileSuffix": "string",
+              "allowedGroups": {
+                "$array": "string"
+              },
+              "options": {
+                "$object": {
+                  "$map": {
+                    "$array": {
+                      "$tuple": ["string", "string"]
+                    }
+                  }
+                },
+                "$required": ["$map"]
+              },
+              "controlType": "string",
+              "codeAttribute": "string",
+              "classes": {
+                "$array": "string"
+              },
+              "attributes": {
+                "$record": "string"
+              },
+              "gates": {
+                "$array": {
+                  "$object": {
+                    "selector": "string",
+                    "value": "string"
+                  },
+                  "$required": ["selector", "value"]
+                }
+              }
+            },
+            "$required": [
+              "idBase",
+              "hiddenName",
+              "codegb",
+              "profileSuffix",
+              "allowedGroups",
+              "options",
+              "controlType",
+              "codeAttribute",
+              "classes",
+              "attributes",
+              "gates"
+            ]
+          }
+        },
+        "conditionalOptions": {
+          "$object": {
+            "$map": {
+              "$array": {
+                "$tuple": [
+                  "string",
+                  {
+                    "$object": {
+                      "codegb": "string",
+                      "profileFieldKey": "string",
+                      "transitionByCode": {
+                        "$object": {
+                          "$map": {
+                            "$array": {
+                              "$tuple": [
+                                "string",
+                                {
+                                  "$object": {
+                                    "enabled": "string",
+                                    "disabled": "string",
+                                    "valid": "string"
+                                  },
+                                  "$required": ["enabled", "disabled"]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "$required": ["$map"]
+                      }
+                    },
+                    "$required": ["codegb", "profileFieldKey"]
+                  }
+                ]
+              }
+            }
+          },
+          "$required": ["$map"]
+        },
+        "conditionalDrivers": {
+          "$object": {
+            "$map": {
+              "$array": {
+                "$tuple": [
+                  "string",
+                  {
+                    "$object": {
+                      "codegb": "string",
+                      "profileFieldKey": "string"
+                    },
+                    "$required": ["codegb", "profileFieldKey"]
+                  }
+                ]
+              }
+            }
+          },
+          "$required": ["$map"]
+        },
+        "rowKinds": {
+          "$array": {
+            "$object": {
+              "label": "string",
+              "code": "string"
+            },
+            "$required": ["label", "code"]
+          }
+        },
+        "rowTimeoutMs": "number",
+        "rowKindLimits": {
+          "$record": "number"
+        },
+        "searchTimeoutMs": "number"
+      },
+      "$required": [
+        "addressFields",
+        "addressResultTimeoutMs",
+        "settlementTimeoutMs",
+        "repeatedOptions",
+        "conditionalOptions",
+        "conditionalDrivers",
+        "rowKinds",
+        "rowTimeoutMs",
+        "rowKindLimits",
+        "searchTimeoutMs"
+      ]
+    }
+  }
+}

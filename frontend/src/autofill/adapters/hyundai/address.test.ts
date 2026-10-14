@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { runHyundaiAddress } from "./address";
+import { createAddressModule } from "../../policy/hidden-code/address";
+import { executionPolicy } from "../../workflow/execution-policy";
 const expected = {
   address: "서울특별시 중구 세종대로 110 (태평로1가)",
   postalCode: "04524",
@@ -49,7 +50,7 @@ function setup(mode = "unique") {
   return button;
 }
 function run(button: Element, overrides = {}) {
-  return runHyundaiAddress({
+  return createAddressModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runAddress({
     document,
     button,
     expected,

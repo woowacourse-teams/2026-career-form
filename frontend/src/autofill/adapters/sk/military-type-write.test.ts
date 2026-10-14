@@ -5,7 +5,7 @@ import { collectFieldsSnapshot } from "../../dom/collect";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { executeApprovedWrites } from "../../write/executor";
-import { skWriteAdapter } from "./write";
+import { getWriteAdapter } from "../write";
 
 function setPageUrl(url: string): void {
   (
@@ -149,7 +149,7 @@ describe("SK military type strict writer", () => {
     const handle = setup(`${gate()}${status()}${typeSelect(option)}`);
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,
@@ -162,7 +162,7 @@ describe("SK military type strict writer", () => {
       "select[name='prsMilitarySvcType']",
     )!.disabled = true;
     expect(
-      skWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         disabledControl,
         typeItem(disabledControl.candidateId),
       ),
@@ -173,7 +173,7 @@ describe("SK military type strict writer", () => {
       "select[name='prsMilitarySvcType'] option[value='303001']",
     )!.disabled = true;
     expect(
-      skWriteAdapter.tryWrite(
+      getWriteAdapter(document).tryWrite(
         disabledOption,
         typeItem(disabledOption.candidateId),
       ),
@@ -190,7 +190,7 @@ describe("SK military type strict writer", () => {
     select.addEventListener("change", () => events++);
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,
@@ -204,7 +204,7 @@ describe("SK military type strict writer", () => {
     (militaryStatus) => {
       const handle = setup(`${gate()}${status(militaryStatus)}${typeSelect()}`);
       expect(
-        skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+        getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
       ).toEqual({
         handled: true,
         written: false,
@@ -222,7 +222,7 @@ describe("SK military type strict writer", () => {
     });
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,
@@ -240,7 +240,7 @@ describe("SK military type strict writer", () => {
     });
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,
@@ -257,7 +257,7 @@ describe("SK military type strict writer", () => {
     });
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,
@@ -277,7 +277,7 @@ describe("SK military type strict writer", () => {
       });
 
       expect(
-        skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+        getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
       ).toEqual({
         handled: true,
         written: false,
@@ -362,7 +362,7 @@ describe("SK military type strict writer", () => {
     );
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,
@@ -381,7 +381,7 @@ describe("SK military type strict writer", () => {
     select.addEventListener("change", () => events++);
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,
@@ -403,7 +403,7 @@ describe("SK military type strict writer", () => {
     select.addEventListener("change", () => changes++);
 
     expect(
-      skWriteAdapter.tryWrite(handle, typeItem(handle.candidateId)),
+      getWriteAdapter(document).tryWrite(handle, typeItem(handle.candidateId)),
     ).toEqual({
       handled: true,
       written: false,

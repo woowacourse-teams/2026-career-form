@@ -5,10 +5,5 @@ export function shouldShowSidePanelLauncher(url: URL): boolean {
     (keyword) => urlText.includes(keyword),
   );
 
-  return (
-    url.href.toLowerCase().includes("apply") ||
-    hasApplicationKeyword ||
-    (url.hostname.toLowerCase() === "www.skcareers.com" &&
-      url.pathname.startsWith("/Application/"))
-  );
+  return url.href.toLowerCase().includes("apply") || hasApplicationKeyword;
 }

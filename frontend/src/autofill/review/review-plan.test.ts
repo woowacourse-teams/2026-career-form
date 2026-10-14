@@ -1,4 +1,4 @@
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { buildResultModel } from "../workflow/result-model";
 import { describe, expect, it } from "vitest";
 
@@ -1387,9 +1387,9 @@ it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
     expect(item.disabled).toBe(mode !== "valid");
     if (mode === "valid") {
       expect(item.profileValue).toBe("대한민국");
-      expect(greetingWorkflowAdapter.isStateDriver?.(item, name)).toBe(true);
+      expect(componentWorkflowAdapter(document).isStateDriver?.(item, name)).toBe(true);
       expect(
-        await greetingWorkflowAdapter.executeStateDriver?.(
+        await componentWorkflowAdapter(document).executeStateDriver?.(
           document,
           handle,
           item,

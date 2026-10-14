@@ -7,8 +7,9 @@ import {
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { executeApprovedWrites } from "../../write/native-executor";
-import { runHyundaiEducationSearch } from "./school-search";
-import { hyundaiWriteAdapter } from "./write";
+import { createCodedSearchModule } from "../../policy/hidden-code/coded-search";
+import { executionPolicy } from "../../workflow/execution-policy";
+import { getWriteAdapter } from "../write";
 
 export type HyundaiCatalogControl =
   | "highSchool"
@@ -186,14 +187,14 @@ export function createHyundaiCatalogFixture(
   else if (kind === "languageTest") display.addEventListener("click", respond);
   const run = async () => {
     if (school)
-      return runHyundaiEducationSearch(
+      return createCodedSearchModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runCodedSearch(
         document,
         handle,
         item,
         controller.signal,
       );
     if (kind === "languageTest") {
-      const attempt = hyundaiWriteAdapter.tryWrite(handle, item);
+      const attempt = getWriteAdapter(document).tryWrite(handle, item);
       return attempt.handled && attempt.written;
     }
     const registry = new CandidateRegistry();

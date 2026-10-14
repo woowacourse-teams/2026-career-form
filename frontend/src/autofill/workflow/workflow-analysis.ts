@@ -1,22 +1,31 @@
-import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
+import { getWriteAdapter } from "../adapters/write";
+import { runtimeRules } from "../policy/runtime-rules";
+import { dismissCompletedAutocomplete } from "../interaction/autocomplete-completion";
+import { driverContinuationGuard } from "./driver-continuation";
+import { startLocalTiming } from "../debug/local-timing";
+import { executionPolicy, installExecutionPolicy } from "./execution-policy";
+import { activeModal } from "../interaction/search-surface-dom";
+import { localWorkflowLog } from "../debug/local-workflow";
+import { captureComponentWriteRegistry } from "./static-fields-session";
+import { hasComponentFieldCandidates } from "../policy/components/fingerprint";
 import { observeQuality } from "../quality/safe-observation";
 import { resolveDocumentCompany } from "../adapters/company";
-import { isGreetingEmailStateDriver } from "../adapters/greeting/workflow";
-import { sensitiveValueApproved } from "./review-actions";
+import { isComponentEmailStateDriver } from "../policy/components/workflow";
 import type { CandidateRegistry } from "../dom/candidate-registry";
-import { greetingGpaSafe } from "../adapters/greeting/gpa";
+import { componentGpaSafe } from "../policy/components/gpa";
 import { resultFieldState } from "./result-field-state";
 import { matchesResultValue } from "./result-value-match";
 import { rebindCatalogSelection } from "../profile/catalog-receipt";
 import {
-  captureGreetingResultTargets,
-  recollectGreetingResultRegistry,
-} from "./greeting-result-registry";
+  captureComponentResultTargets,
+  collectComponentResultResolver,
+  recollectComponentResultRegistry,
+} from "./component-result-registry";
 import type { WorkflowAnalysisContext } from "./workflow-analysis-types";
 export type {
   CompletedGenericStateDriver,
   DeferredDriverFailures,
-  GreetingStateDriverReceipt,
+  ComponentStateDriverReceipt,
   GenericSearchFollowUp,
 } from "./workflow-analysis-types";
 import {
@@ -47,7 +56,6 @@ import {
 import { takeWrittenSearchFollowUp } from "./search-follow-up-state";
 import { runAddressAnalysis } from "./address-analysis";
 import { belongsToFailedGroup } from "./workflow-write-items";
-import { isPreMutationFailure } from "./driver-failure-scope";
 
 import {
   isGenericStateDriver,
@@ -57,12 +65,11 @@ import {
 import {
   adapterProfileValue,
   addressValue,
-  localProfileValue,
   reviewProfileFieldKey,
   stateDriverKey,
 } from "./workflow-model";
 
-function greetingReceiptIdentity(item: ReviewPlanItem): string {
+function componentReceiptIdentity(item: ReviewPlanItem): string {
   return JSON.stringify([
     item.profileFieldKey,
     item.profileEntryId,
@@ -94,14 +101,14 @@ export function createAnalyzeFields({
   addressRun,
   addressSearch,
   apiClient,
+  analyzeFieldsSnapshot,
+  refreshFieldsAfterPass,
   pageDocument,
   repository,
-  approvedSensitiveValues,
-  consideredSensitiveValues,
   freshDefaultControls,
   completedDriverKeys,
   completedGenericStateDrivers,
-  completedGreetingStateDrivers = { current: new Map() },
+  completedComponentStateDrivers = { current: new Map() },
   deferredDriverGroups,
   deferredDriverFailures = { current: new WeakMap() },
   setAddressResult,
@@ -114,7 +121,7 @@ export function createAnalyzeFields({
   setPartial,
   setWarnings,
   setResults,
-  presentField,
+  presentField: originalPresentField,
   onWriteResult,
   onSearchFollowUp,
   searchFollowUp,
@@ -122,6 +129,20 @@ export function createAnalyzeFields({
   onActivity,
   onAddressOperation,
 }: WorkflowAnalysisContext) {
+  const presentField = originalPresentField
+    ? async (
+        ...args: Parameters<
+          NonNullable<WorkflowAnalysisContext["presentField"]>
+        >
+      ) => {
+        const finish = startLocalTiming("presentation");
+        try {
+          await originalPresentField(...args);
+        } finally {
+          finish();
+        }
+      }
+    : undefined;
   let analysisGeneration = 0;
   const companyId = resolveDocumentCompany(pageDocument);
   const analyzeFields = async (
@@ -167,6 +188,7 @@ export function createAnalyzeFields({
       return;
 
     const analysisStarted = performance.now();
+    const finishQualitySnapshot = startLocalTiming("quality-snapshot");
     observeQuality(() =>
       apiClient.quality?.snapshot(
         snapshot.request.snapshotId,
@@ -179,8 +201,15 @@ export function createAnalyzeFields({
           .map((field) => field.candidateId),
       ),
     );
-    let analysis = await apiClient.analyzeFields(snapshot.request);
+    finishQualitySnapshot();
+    const finishMapping = startLocalTiming("mapping-rebind");
+    let analysis = await (analyzeFieldsSnapshot
+      ? analyzeFieldsSnapshot(snapshot)
+      : apiClient.analyzeFields(snapshot.request));
+    finishMapping();
+    const finishAnalysisLog = startLocalTiming("analysis-log");
     debugAnalysis(snapshot, analysis);
+    finishAnalysisLog();
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -204,11 +233,12 @@ export function createAnalyzeFields({
     if (
       companyId === "generic" &&
       analysis.mode === "ADAPTER" &&
-      hasGreetingFieldCandidates(
+      hasComponentFieldCandidates(
         snapshot.request.sections.flatMap((section) => [
           ...section.fields,
           ...(section.items ?? []).flatMap((item) => item.fields),
         ]),
+        snapshot.request.site,
       )
     ) {
       setExceptionTitle("페이지 구조를 확인할 수 없습니다. 다시 시작해 주세요");
@@ -216,7 +246,8 @@ export function createAnalyzeFields({
       return;
     }
     if (
-      companyId === "greeting" &&
+      executionPolicy(pageDocument)?.componentPolicy?.workflow
+        .requireVerifiedMapping &&
       (analysis.mode !== "ADAPTER" ||
         analysis.fields.some(
           (field) => field.mappingStatus !== "ADAPTER_VERIFIED",
@@ -261,6 +292,26 @@ export function createAnalyzeFields({
       return;
     }
 
+    // Generic field analysis has no site engine. Keep the separately loaded
+    // provider contract without retaining the previous site's mapping engine.
+    const providerPolicy =
+      analysis.executionPolicy?.providerPolicy ??
+      executionPolicy(pageDocument)?.providerPolicy;
+    installExecutionPolicy(
+      pageDocument,
+      analysis.executionPolicy
+        ? { ...analysis.executionPolicy, providerPolicy }
+        : providerPolicy
+          ? {
+              version: 1,
+              searches: [],
+              failureScopes: [],
+              address: null,
+              providerPolicy,
+            }
+          : undefined,
+    );
+
     const addressAnalysis = await runAddressAnalysis({
       analysis,
       snapshot,
@@ -278,49 +329,136 @@ export function createAnalyzeFields({
     if (!addressAnalysis) return;
     analysis = addressAnalysis;
 
-    const ignoreCurrentValueCandidateIds = new Set(
-      ignoreFreshRowDefaults
-        ? analysis.fields.flatMap((field) => {
-            const lookup = snapshot.registry.lookupField(field.candidateId);
-            return (lookup.status === "ready" || lookup.status === "blocked") &&
-              adapter.isFreshRowDefault(lookup.handle.candidate.domName)
-              ? [field.candidateId]
-              : [];
-          })
-        : [],
-    );
-    if (analysis.mode === "ADAPTER") {
-      for (const field of analysis.fields) {
-        if (field.matchType !== "MATCH") continue;
-        const lookup = snapshot.registry.lookupField(field.candidateId);
-        if (
-          lookup.status === "ready" &&
-          adapter.prefersProfileValue?.(lookup.handle, field)
-        )
-          ignoreCurrentValueCandidateIds.add(field.candidateId);
+    const refreshAfterWrites = async (): Promise<boolean> => {
+      if (
+        !refreshFieldsAfterPass ||
+        options.reviewOnly ||
+        (!executionPolicy(pageDocument)?.browserPolicy?.refreshAfterPass &&
+          !executionPolicy(pageDocument)?.componentPolicy?.workflow
+            .refreshAfterPass)
+      )
+        return false;
+      const next = await collectFieldsSnapshotWithDropdowns(
+        pageDocument,
+        run.controller.signal,
+      );
+      if (
+        run.controller.signal.aborted ||
+        currentAnalysisGeneration !== analysisGeneration
+      )
+        return true;
+      const latestProfile = await repository.load();
+      if (
+        run.controller.signal.aborted ||
+        currentAnalysisGeneration !== analysisGeneration
+      )
+        return true;
+      if (
+        pageDocument.URL !== snapshotUrl ||
+        JSON.stringify(latestProfile) !== JSON.stringify(loadedProfile)
+      ) {
+        setExceptionTitle(
+          "입력 중 페이지 또는 프로필이 변경되었습니다. 다시 시작해 주세요",
+        );
+        setStage("exception");
+        return true;
       }
-    }
-    const freshDefaultCandidateIds = new Set(
-      analysis.fields.flatMap((field) => {
-        const lookup = snapshot.registry.lookupField(field.candidateId);
-        return lookup.status === "ready" &&
-          lookup.handle.customElements?.some((element) =>
-            freshDefaultControls.current.has(element),
+      const refreshed = await refreshFieldsAfterPass(
+        next,
+        (handle, previous) => {
+          if (
+            [...failedGroups].some((group) =>
+              [...handle.elements, ...(handle.customElements ?? [])].some(
+                (element) => group.contains(element),
+              ),
+            )
           )
-          ? [field.candidateId]
-          : [];
-      }),
-    );
-    const plan = buildReviewPlan({
-      analysis,
-      profile: loadedProfile,
-      registry: snapshot.registry,
-      ignoreCurrentValueCandidateIds,
-      freshDefaultCandidateIds,
-      normalizeDirectValue: (key, value) =>
-        adapterProfileValue(adapter, key, value),
+            return false;
+          if (previous?.matchType === "MATCH") {
+            const key =
+              previous.valueBinding?.profileFieldKey ??
+              previous.profileFieldKey;
+            if (
+              key &&
+              resolveProfileFieldValue(loadedProfile, key, handle.itemIndex)
+                .status === "missing"
+            )
+              return false;
+          }
+          return true;
+        },
+      );
+      if (
+        run.controller.signal.aborted ||
+        currentAnalysisGeneration !== analysisGeneration
+      )
+        return true;
+      if (!refreshed) return false;
+      await analyzeFields(
+        loadedProfile,
+        ignoreFreshRowDefaults,
+        completedStateDriverKeys,
+        failedGroups,
+        genericPass,
+      );
+      return true;
+    };
+
+    // Share reads only while preparing this plan synchronously. The cache is
+    // released before UI callbacks, awaits and every actual write.
+    const plan = snapshot.registry.withReadCache(() => {
+      const finishDefaults = startLocalTiming("default-checks");
+      const ignoreCurrentValueCandidateIds = new Set(
+        ignoreFreshRowDefaults
+          ? analysis.fields.flatMap((field) => {
+              const lookup = snapshot.registry.lookupField(field.candidateId);
+              return (lookup.status === "ready" ||
+                lookup.status === "blocked") &&
+                adapter.isFreshRowDefault(lookup.handle.candidate.domName)
+                ? [field.candidateId]
+                : [];
+            })
+          : [],
+      );
+      if (analysis.mode === "ADAPTER") {
+        for (const field of analysis.fields) {
+          if (field.matchType !== "MATCH") continue;
+          const lookup = snapshot.registry.lookupField(field.candidateId);
+          if (
+            lookup.status === "ready" &&
+            adapter.prefersProfileValue?.(lookup.handle, field)
+          )
+            ignoreCurrentValueCandidateIds.add(field.candidateId);
+        }
+      }
+      const freshDefaultCandidateIds = new Set(
+        analysis.fields.flatMap((field) => {
+          const lookup = snapshot.registry.lookupField(field.candidateId);
+          return lookup.status === "ready" &&
+            lookup.handle.customElements?.some((element) =>
+              freshDefaultControls.current.has(element),
+            )
+            ? [field.candidateId]
+            : [];
+        }),
+      );
+      finishDefaults();
+      const finishPlan = startLocalTiming("review-plan");
+      const preparedPlan = buildReviewPlan({
+        analysis,
+        profile: loadedProfile,
+        registry: snapshot.registry,
+        ignoreCurrentValueCandidateIds,
+        freshDefaultCandidateIds,
+        normalizeDirectValue: (key, value) =>
+          adapterProfileValue(adapter, key, value),
+      });
+      finishPlan();
+      return preparedPlan;
     });
+    const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
+    finishReviewLog();
     observeQuality(() =>
       apiClient.quality?.review(snapshot.request.snapshotId, plan.items),
     );
@@ -360,6 +498,7 @@ export function createAnalyzeFields({
     }
     setWarnings(analysisWarnings);
     if (plan.items.length === 0) {
+      if (await refreshAfterWrites()) return;
       setReviewItems([]);
       setResults([]);
       if (options.reviewOnly) {
@@ -378,66 +517,40 @@ export function createAnalyzeFields({
       setStage("result");
       return;
     }
-    const adapterDate = (item: ReviewPlanItem) =>
-      companyId === "greeting" &&
-      analysis.mode === "ADAPTER" &&
-      item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
-      item.analysis.writePlan?.command === "SELECT_DATE";
-    const automaticItems = plan.items.map((item) => {
-      if (options.reviewOnly) {
-        return completedSearchCandidateIds.has(item.candidateId)
-          ? {
-              ...item,
-              selected: false,
-              disabled: true,
-              reason: "검색 결과가 같은 행에 유지되어 다시 검색하지 않습니다.",
-            }
-          : { ...item, selected: false };
-      }
-      if (
-        item.analysis?.writePlan?.command === "SELECT_DATE" &&
-        !adapterDate(item)
-      )
-        return { ...item, selected: false };
-      if (adapterDate(item) && item.status === "available" && !item.disabled)
-        return { ...item, selected: true };
-      const key = reviewProfileFieldKey(item);
-      const automatic =
-        item.status === "sensitive" &&
-        key &&
-        sensitiveValueApproved(
-          approvedSensitiveValues.current,
-          loadedProfile,
-          key,
+    const finishAutomaticItems = startLocalTiming("automatic-items");
+    const automaticItems = snapshot.registry.withReadCache(() =>
+      plan.items.map((item) => {
+        if (options.reviewOnly) {
+          return completedSearchCandidateIds.has(item.candidateId)
+            ? {
+                ...item,
+                selected: false,
+                disabled: true,
+                reason:
+                  "검색 결과가 같은 행에 유지되어 다시 검색하지 않습니다.",
+              }
+            : { ...item, selected: false };
+        }
+        if (
+          item.analysis?.writePlan?.command === "SELECT_DATE" &&
+          item.status === "available" &&
+          !item.disabled
         )
-          ? {
-              ...item,
-              selected: true,
-              disabled: false,
-              revealed: true,
-              previewValue: item.profileValue ?? item.previewValue,
-            }
-          : item.status === "needs-review" && !item.disabled
+          return { ...item, selected: true };
+        const automatic =
+          item.status === "needs-review" && !item.disabled
             ? { ...item, selected: true }
             : item;
-      const lookup = snapshot.registry.lookupField(item.candidateId);
-      return lookup.status === "ready" &&
-        adapter.canWriteProfileOption?.(lookup.handle, automatic) === false
-        ? { ...automatic, selected: false }
-        : automatic;
-    });
+        const lookup = snapshot.registry.lookupField(item.candidateId);
+        return lookup.status === "ready" &&
+          adapter.canWriteProfileOption?.(lookup.handle, automatic) === false
+          ? { ...automatic, selected: false }
+          : automatic;
+      }),
+    );
+    finishAutomaticItems();
     setReviewItems(automaticItems);
     if (options.reviewOnly) {
-      setStage("review");
-      return;
-    }
-    if (
-      automaticItems.some(
-        (item) =>
-          item.analysis?.writePlan?.command === "SELECT_DATE" &&
-          !adapterDate(item),
-      )
-    ) {
       setStage("review");
       return;
     }
@@ -468,55 +581,60 @@ export function createAnalyzeFields({
       return;
     }
     if (
-      companyId === "greeting" &&
+      runtimeRules(pageDocument)?.components?.workflow.enforceUniqueEmail &&
       automaticItems.filter(
         (item) =>
           item.analysis?.valueBinding?.type === "DIRECT" &&
           item.analysis.valueBinding.profileFieldKey ===
-            "contact.contact.email",
+            executionPolicy(pageDocument)?.componentPolicy?.workflow
+              .emailProfileKey,
       ).length > 1
     ) {
       setExceptionTitle("이메일 입력 대상을 하나로 확인하지 못했습니다");
       setStage("exception");
       return;
     }
-    const stateDriverItems = automaticItems.flatMap((item) => {
-      const lookup = snapshot.registry.lookupField(item.candidateId);
-      if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
-      const domName =
-        lookup.handle.candidate.domName ?? lookup.handle.candidate.domId;
-      const stage =
-        adapter.stateDriverStage?.(item, lookup.handle) ??
-        (adapter.isStateDriver(item, domName) ||
-        (analysis.mode === "GENERIC" &&
-          isGenericStateDriver(item, lookup.handle))
-          ? 1
-          : undefined);
-      const key = stateDriverKey(item, domName, lookup.handle.itemIndex);
-      return belongsToFailedGroup(item, snapshot, failedGroups) ||
-        !item.selected ||
-        item.disabled ||
-        stage === undefined ||
-        completedStateDriverKeys.has(key)
-        ? []
-        : [
-            {
-              item,
-              handle: lookup.handle,
-              domName,
-              stage,
-              key,
-              captured:
-                companyId === "greeting"
-                  ? captureGreetingResultTargets(snapshot.registry, [item])
+    const finishDriverDiscovery = startLocalTiming("driver-discovery");
+    const stateDriverItems = snapshot.registry.withReadCache(() =>
+      automaticItems.flatMap((item) => {
+        const lookup = snapshot.registry.lookupField(item.candidateId);
+        if (lookup.status !== "ready" && lookup.status !== "blocked") return [];
+        const domName =
+          lookup.handle.candidate.domName ?? lookup.handle.candidate.domId;
+        const stage =
+          adapter.stateDriverStage?.(item, lookup.handle) ??
+          (adapter.isStateDriver(item, domName) ||
+          (analysis.mode === "GENERIC" &&
+            isGenericStateDriver(item, lookup.handle))
+            ? 1
+            : undefined);
+        const key = stateDriverKey(item, domName, lookup.handle.itemIndex);
+        return belongsToFailedGroup(item, snapshot, failedGroups) ||
+          !item.selected ||
+          item.disabled ||
+          stage === undefined ||
+          completedStateDriverKeys.has(key)
+          ? []
+          : [
+              {
+                item,
+                handle: lookup.handle,
+                domName,
+                stage,
+                key,
+                captured: executionPolicy(pageDocument)?.componentPolicy
+                  ?.workflow.captureDriverResults
+                  ? captureComponentResultTargets(snapshot.registry, [item])
                   : undefined,
-              genericTargets:
-                analysis.mode === "GENERIC"
-                  ? genericControlledRegions(lookup.handle)
-                  : [],
-            },
-          ];
-    });
+                genericTargets:
+                  analysis.mode === "GENERIC"
+                    ? genericControlledRegions(lookup.handle)
+                    : [],
+              },
+            ];
+      }),
+    );
+    finishDriverDiscovery();
     if (stateDriverItems.length > 0) {
       if (analysis.mode === "GENERIC" && genericPass >= 3) {
         setWarnings([
@@ -531,33 +649,100 @@ export function createAnalyzeFields({
       const sameStageDrivers = stateDriverItems.filter(
         (driver) => driver.stage === nextStage,
       );
-      // Greeting replaces controls during React updates. Recollect after each
-      // confirmed selection so a later driver never uses an earlier DOM handle.
-      const currentStateDriverItems =
-        companyId === "greeting"
-          ? sameStageDrivers.slice(0, 1)
-          : sameStageDrivers;
-      const rememberGreetingWrite = (
+      // Reuse the stage while its next target still has the reviewed structure.
+      // A replaced control or changed options returns to the normal analysis pass.
+      const currentStateDriverItems = [...sameStageDrivers];
+      startLocalTiming("driver-batch", {
+        count: currentStateDriverItems.length,
+        stage: nextStage,
+        version: 2,
+      })();
+      const continuationGuards = new Map(
+        currentStateDriverItems.map((driver) => [
+          driver.item.candidateId,
+          driverContinuationGuard(driver.handle),
+        ]),
+      );
+      const rememberComponentWrite = (
         driver: (typeof currentStateDriverItems)[number],
       ) => {
         if (!driver.captured) return;
-        completedGreetingStateDrivers.current.set(driver.key, {
+        completedComponentStateDrivers.current.set(driver.key, {
           originalItem: driver.item,
           sourceRegistry: snapshot.registry,
           captured: driver.captured,
-          identity: greetingReceiptIdentity(driver.item),
+          identity: componentReceiptIdentity(driver.item),
         });
       };
       const failureCodes = new Map<string, WriteFailureCode>();
+      const logDriverPhase = (
+        phase: string,
+        successful?: readonly boolean[],
+      ) => {
+        currentStateDriverItems.forEach(({ item, handle, stage }, index) => {
+          const lookup = snapshot.registry.lookupField(item.candidateId);
+          localWorkflowLog(phase, {
+            companyId,
+            snapshotId: snapshot.request.snapshotId,
+            candidateId: item.candidateId,
+            fieldLabel: item.fieldLabel,
+            command: item.analysis?.writePlan?.command,
+            stage,
+            successful: successful?.[index],
+            failureCode: failureCodes.get(item.candidateId),
+            lookup: lookup.status,
+            blockReason:
+              lookup.status === "blocked" ? lookup.reason : undefined,
+            connected: [
+              ...handle.elements,
+              ...(handle.customElements ?? []),
+            ].every((element) => element.isConnected),
+          });
+        });
+      };
+      logDriverPhase("drivers-start");
       const reportFor = (item: ReviewPlanItem) => (code: WriteFailureCode) => {
         if (!run.controller.signal.aborted)
           failureCodes.set(item.candidateId, code);
+        localWorkflowLog("driver-failure-code", {
+          companyId,
+          snapshotId: snapshot.request.snapshotId,
+          candidateId: item.candidateId,
+          fieldLabel: item.fieldLabel,
+          failureCode: code,
+        });
       };
       const deferFailedGroups = async (
         successful: readonly boolean[],
         writesVerified = false,
         genericFailures = false,
       ) => {
+        if (run.controller.signal.aborted) return true;
+        const currentProfile = await repository.load();
+        if (run.controller.signal.aborted) return true;
+        if (
+          pageDocument.URL !== snapshotUrl ||
+          JSON.stringify(currentProfile) !== JSON.stringify(loadedProfile)
+        ) {
+          setExceptionTitle(
+            "입력 중 페이지 또는 프로필이 변경되었습니다. 다시 시작해 주세요",
+          );
+          setStage("exception");
+          return true;
+        }
+        try {
+          if (activeModal(pageDocument)) {
+            setExceptionTitle("열린 팝업을 닫은 뒤 다시 시작해 주세요");
+            setStage("exception");
+            return true;
+          }
+        } catch {
+          setExceptionTitle(
+            "열린 팝업 상태를 확인하지 못했습니다. 팝업을 닫고 다시 시작해 주세요",
+          );
+          setStage("exception");
+          return true;
+        }
         const nextGroups = new Set(failedGroups);
         const nextCompleted = new Set(completedStateDriverKeys);
         for (const [index, driver] of currentStateDriverItems.entries()) {
@@ -565,7 +750,7 @@ export function createAnalyzeFields({
             nextCompleted.add(driver.key);
             continue;
           }
-          if (genericFailures) {
+          if (genericFailures || analysis.mode === "GENERIC") {
             // A generic driver defers its own controls and the region it controls.
             const scope = [
               ...driver.handle.elements,
@@ -583,20 +768,54 @@ export function createAnalyzeFields({
             scope.forEach((element) => nextGroups.add(element));
             continue;
           }
-          const group = adapter.stateDriverFailureGroup?.(
+          const dependencies = adapter.stateDriverFailureTargets?.(
             driver.item,
             driver.handle,
           );
           if (
-            !group?.isConnected ||
-            group.ownerDocument !== pageDocument ||
-            ![
-              ...driver.handle.elements,
-              ...(driver.handle.customElements ?? []),
-            ].every((element) => group.contains(element))
-          )
-            return false;
-          nextGroups.add(group);
+            dependencies?.length &&
+            dependencies.every(
+              (element) =>
+                element.isConnected && element.ownerDocument === pageDocument,
+            )
+          ) {
+            dependencies.forEach((element) => nextGroups.add(element));
+            nextCompleted.add(driver.key);
+            continue;
+          }
+          const group = adapter.stateDriverFailureGroup?.(
+            driver.item,
+            driver.handle,
+          );
+          const targets = [
+            ...driver.handle.elements,
+            ...(driver.handle.customElements ?? []),
+          ];
+          // Company rules may defer dependencies; otherwise defer the failed field itself.
+          const validGroup =
+            group?.isConnected &&
+            group.ownerDocument === pageDocument &&
+            targets.every((element) => group.contains(element));
+          if (validGroup) nextGroups.add(group!);
+          else {
+            if (
+              !targets.length ||
+              targets.some(
+                (element) =>
+                  !element.isConnected ||
+                  element.ownerDocument !== pageDocument,
+              )
+            )
+              return false;
+            targets.forEach((element) => nextGroups.add(element));
+          }
+          nextCompleted.add(driver.key);
+          localWorkflowLog("driver-deferred", {
+            companyId,
+            candidateId: driver.item.candidateId,
+            fieldLabel: driver.item.fieldLabel,
+            scope: validGroup ? "adapter-group" : "field",
+          });
         }
         if (run.controller.signal.aborted) return true;
         currentStateDriverItems.forEach((driver, index) => {
@@ -630,7 +849,7 @@ export function createAnalyzeFields({
           currentStateDriverItems.forEach((driver, index) => {
             const { item } = driver;
             if (successful[index]) {
-              rememberGreetingWrite(driver);
+              rememberComponentWrite(driver);
               onWriteResult?.(
                 item,
                 { candidateId: item.candidateId, status: "written" },
@@ -650,16 +869,21 @@ export function createAnalyzeFields({
       };
       let profileChanged = false;
       const profileCurrent = async () => {
-        if (run.controller.signal.aborted) return false;
-        const same =
-          JSON.stringify(await repository.load()) ===
-          JSON.stringify(loadedProfile);
-        if (!same) profileChanged = true;
-        return (
-          same &&
-          !run.controller.signal.aborted &&
-          pageDocument.URL === snapshotUrl
-        );
+        const finishProfileCheck = startLocalTiming("profile-check");
+        try {
+          if (run.controller.signal.aborted) return false;
+          const same =
+            JSON.stringify(await repository.load()) ===
+            JSON.stringify(loadedProfile);
+          if (!same) profileChanged = true;
+          return (
+            same &&
+            !run.controller.signal.aborted &&
+            pageDocument.URL === snapshotUrl
+          );
+        } finally {
+          finishProfileCheck();
+        }
       };
       const driversReady = await Promise.all(
         currentStateDriverItems.map(
@@ -676,6 +900,7 @@ export function createAnalyzeFields({
             ) ?? true,
         ),
       );
+      logDriverPhase("drivers-ready", driversReady);
       if (!driversReady.every(Boolean)) {
         if (await deferFailedGroups(driversReady)) return;
         setExceptionTitle("조건부 선택 메뉴를 안전하게 준비하지 못했습니다");
@@ -685,12 +910,23 @@ export function createAnalyzeFields({
       const stateSelectionResults: ApprovedWriteResult[] = [];
       for (const { item, captured, stage } of currentStateDriverItems) {
         const lookup = snapshot.registry.lookupField(item.candidateId);
+        if (
+          stateSelectionResults.length > 0 &&
+          (lookup.status !== "ready" ||
+            !continuationGuards.get(item.candidateId)?.())
+        ) {
+          startLocalTiming("driver-recollect", {
+            field: item.profileFieldKey ?? "",
+            reason: lookup.status === "ready" ? "metadata" : lookup.status,
+          })();
+          currentStateDriverItems.splice(stateSelectionResults.length);
+          break;
+        }
         const eligible =
           lookup.status === "ready" &&
           item.selected &&
           !item.disabled &&
           item.status !== "unavailable" &&
-          (item.status !== "sensitive" || item.revealed) &&
           (item.analysis?.mappingStatus === "ADAPTER_VERIFIED" ||
             (analysis.mode === "GENERIC" &&
               item.analysis?.mappingStatus === "LLM_SUGGESTED")) &&
@@ -731,11 +967,27 @@ export function createAnalyzeFields({
             return;
           }
         }
-        if (companyId === "greeting" && stage === 0) {
-          if (!captured || !isGreetingEmailStateDriver(item, lookup.handle)) {
-            setExceptionTitle(
-              "이메일 입력 대상이 변경되었습니다. 다시 시작해 주세요",
-            );
+        if (
+          stateSelectionResults.length > 0 &&
+          (snapshot.registry.lookupField(item.candidateId).status !== "ready" ||
+            !continuationGuards.get(item.candidateId)?.())
+        ) {
+          startLocalTiming("driver-recollect", {
+            field: item.profileFieldKey ?? "",
+            reason: "post-await-changed",
+          })();
+          currentStateDriverItems.splice(stateSelectionResults.length);
+          break;
+        }
+        if (
+          getWriteAdapter(pageDocument).completion?.(lookup.handle, item)
+            ?.stage === stage
+        ) {
+          if (
+            !captured ||
+            !getWriteAdapter(pageDocument).completion?.(lookup.handle, item)
+          ) {
+            setExceptionTitle("입력 대상이 변경되었습니다. 다시 시작해 주세요");
             setStage("exception");
             return;
           }
@@ -751,7 +1003,9 @@ export function createAnalyzeFields({
                 pageDocument.URL === snapshotUrl &&
                 lookup.handle.isCurrentContext?.() !== false,
               settledRegistry: () =>
-                recollectGreetingResultRegistry(pageDocument, captured, [item]),
+                recollectComponentResultRegistry(pageDocument, captured, [
+                  item,
+                ]),
             })),
           );
           if (run.controller.signal.aborted) return;
@@ -805,8 +1059,23 @@ export function createAnalyzeFields({
                 ]),
         );
         const result = stateSelectionResults.at(-1);
+        localWorkflowLog("driver-executed", {
+          companyId,
+          snapshotId: snapshot.request.snapshotId,
+          candidateId: item.candidateId,
+          fieldLabel: item.fieldLabel,
+          stage,
+          command: item.analysis?.writePlan?.command,
+          status: result?.status,
+          code: result?.status === "skipped" ? result.code : undefined,
+          failureCode: failureCodes.get(item.candidateId),
+        });
         if (result?.status === "skipped" && result.failureCode)
           reportFor(item)(result.failureCode);
+        if (result?.status !== "written") {
+          currentStateDriverItems.splice(stateSelectionResults.length);
+          break;
+        }
       }
       if (
         stateSelectionResults.every((result) => result.status === "written")
@@ -827,6 +1096,7 @@ export function createAnalyzeFields({
                 ) ?? true),
           ),
         );
+        logDriverPhase("drivers-settled", settled);
         if (!settled.every(Boolean)) {
           if (analysis.mode === "GENERIC") {
             setResults(
@@ -855,7 +1125,7 @@ export function createAnalyzeFields({
         }
         currentStateDriverItems.forEach((driver) => {
           const { item } = driver;
-          rememberGreetingWrite(driver);
+          rememberComponentWrite(driver);
           onWriteResult?.(
             item,
             {
@@ -913,12 +1183,14 @@ export function createAnalyzeFields({
                 true),
           ),
         );
+        logDriverPhase("drivers-failed-or-unsettled", successful);
         if (await deferFailedGroups(successful, true)) return;
-        const failedLabel =
-          companyId === "greeting"
-            ? currentStateDriverItems.find((_, index) => !successful[index])
-                ?.item.fieldLabel
-            : undefined;
+        logDriverPhase("exception-cannot-isolate-driver", successful);
+        const failedLabel = runtimeRules(pageDocument)?.components?.workflow
+          .driverFailureLabel
+          ? currentStateDriverItems.find((_, index) => !successful[index])?.item
+              .fieldLabel
+          : undefined;
         setExceptionTitle(
           failedLabel
             ? `${failedLabel} 선택을 안전하게 적용하지 못했습니다`
@@ -928,13 +1200,10 @@ export function createAnalyzeFields({
         return;
       }
       if (analysis.mode === "GENERIC") {
-        // Only failures that provably left the page untouched may be deferred.
+        // Keep confirmed writes; defer failed controls and their known dependent regions.
         if (
           stateSelectionResults.length === currentStateDriverItems.length &&
-          stateSelectionResults.every(
-            (result) =>
-              result.status === "written" || isPreMutationFailure(result),
-          )
+          stateSelectionResults.some((result) => result.status !== "written")
         ) {
           const settled = await Promise.all(
             currentStateDriverItems.map(({ genericTargets }, index) =>
@@ -974,68 +1243,62 @@ export function createAnalyzeFields({
         return;
       }
     }
-    const needsSensitiveReview = automaticItems.some((item) => {
-      const key = reviewProfileFieldKey(item);
-      return (
-        item.status === "sensitive" &&
-        key &&
-        consideredSensitiveValues.current.get(key) !==
-          localProfileValue(loadedProfile, key)
-      );
-    });
-    if (needsSensitiveReview) {
-      setStage("review");
-      return;
-    }
-    const approvedCandidateIds = new Set(
-      automaticItems
-        .filter((item) => {
+    const finishOrdinaryPlan = startLocalTiming("ordinary-plan");
+    const { approvedCandidateIds, deferredItems, finalWriteItems } =
+      snapshot.registry.withReadCache(() => {
+        const approvedCandidateIds = new Set(
+          automaticItems
+            .filter((item) => {
+              const lookup = snapshot.registry.lookupField(item.candidateId);
+              if (lookup.status !== "ready" && lookup.status !== "blocked") {
+                return false;
+              }
+              const key = stateDriverKey(
+                item,
+                lookup.handle.candidate.domName ??
+                  lookup.handle.candidate.domId,
+                lookup.handle.itemIndex,
+              );
+              return (
+                !completedStateDriverKeys.has(key) &&
+                !item.disabled &&
+                (item.selected || item.status === "needs-review")
+              );
+            })
+            .map((item) => item.candidateId),
+        );
+        const deferredItems = automaticItems.filter((item) => {
+          if (!belongsToFailedGroup(item, snapshot, failedGroups)) return false;
+          if (analysis.mode !== "GENERIC") return true;
+          const lookup = snapshot.registry.lookupField(item.candidateId);
+          return (
+            lookup.status !== "ready" ||
+            !completedGenericStateDrivers.current.has(
+              stateDriverKey(
+                item,
+                lookup.handle.candidate.domName ??
+                  lookup.handle.candidate.domId,
+                lookup.handle.itemIndex,
+              ),
+            )
+          );
+        });
+        const finalWriteItems = automaticItems.filter((item) => {
+          if (belongsToFailedGroup(item, snapshot, failedGroups)) return false;
           const lookup = snapshot.registry.lookupField(item.candidateId);
           if (lookup.status !== "ready" && lookup.status !== "blocked") {
-            return false;
+            return true;
           }
-          const key = stateDriverKey(
-            item,
-            lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
-            lookup.handle.itemIndex,
+          return !completedStateDriverKeys.has(
+            stateDriverKey(
+              item,
+              lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
+              lookup.handle.itemIndex,
+            ),
           );
-          return (
-            !completedStateDriverKeys.has(key) &&
-            !item.disabled &&
-            (item.selected || item.status === "needs-review")
-          );
-        })
-        .map((item) => item.candidateId),
-    );
-    const deferredItems = automaticItems.filter((item) => {
-      if (!belongsToFailedGroup(item, snapshot, failedGroups)) return false;
-      if (analysis.mode !== "GENERIC") return true;
-      const lookup = snapshot.registry.lookupField(item.candidateId);
-      return (
-        lookup.status !== "ready" ||
-        !completedGenericStateDrivers.current.has(
-          stateDriverKey(
-            item,
-            lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
-            lookup.handle.itemIndex,
-          ),
-        )
-      );
-    });
-    const finalWriteItems = automaticItems.filter((item) => {
-      if (belongsToFailedGroup(item, snapshot, failedGroups)) return false;
-      const lookup = snapshot.registry.lookupField(item.candidateId);
-      if (lookup.status !== "ready" && lookup.status !== "blocked") {
-        return true;
-      }
-      return !completedStateDriverKeys.has(
-        stateDriverKey(
-          item,
-          lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
-          lookup.handle.itemIndex,
-        ),
-      );
-    });
+        });
+        return { approvedCandidateIds, deferredItems, finalWriteItems };
+      });
     if (
       JSON.stringify(await repository.load()) !== JSON.stringify(loadedProfile)
     ) {
@@ -1045,13 +1308,13 @@ export function createAnalyzeFields({
     }
     if (run.controller.signal.aborted) return;
     setStage("writing");
-    const greetingTargets =
-      companyId === "greeting"
-        ? captureGreetingResultTargets(snapshot.registry, automaticItems)
-        : undefined;
-    const greetingDriverKeys = new Map<string, string>();
-    const greetingKeyCounts = new Map<string, number>();
-    if (greetingTargets) {
+    const componentTargets = executionPolicy(pageDocument)?.componentPolicy
+      ?.workflow.captureDriverResults
+      ? captureComponentResultTargets(snapshot.registry, automaticItems)
+      : undefined;
+    const componentDriverKeys = new Map<string, string>();
+    const componentKeyCounts = new Map<string, number>();
+    if (componentTargets) {
       for (const item of automaticItems) {
         const lookup = snapshot.registry.lookupField(item.candidateId);
         if (lookup.status !== "ready" && lookup.status !== "blocked") continue;
@@ -1060,30 +1323,53 @@ export function createAnalyzeFields({
           lookup.handle.candidate.domName ?? lookup.handle.candidate.domId,
           lookup.handle.itemIndex,
         );
-        greetingDriverKeys.set(item.candidateId, key);
-        greetingKeyCounts.set(key, (greetingKeyCounts.get(key) ?? 0) + 1);
+        componentDriverKeys.set(item.candidateId, key);
+        componentKeyCounts.set(key, (componentKeyCounts.get(key) ?? 0) + 1);
       }
     }
-    let greetingResultRegistry: CandidateRegistry | undefined;
+    const rebindComponentWrites = executionPolicy(pageDocument)?.componentPolicy
+      ?.workflow.rebindReplacedControls
+      ? captureComponentWriteRegistry(snapshot)
+      : undefined;
+    let ordinaryRegistry = snapshot.registry;
+    let componentResultRegistry: CandidateRegistry | undefined;
+    finishOrdinaryPlan();
     const writeResults = await executeApprovedWritesAfterPageSettles({
       document: pageDocument,
       onResult: onWriteResult,
       items: finalWriteItems,
+      currentOrdinaryRegistry: rebindComponentWrites
+        ? async (item) => {
+            // Reuse live reviewed targets. React rendering alone does not require
+            // rebuilding every field; recollect only when this target is stale.
+            const current = ordinaryRegistry.lookupField(item.candidateId);
+            if (current.status === "ready") return ordinaryRegistry;
+            // Full collection retains row identity, option and context checks
+            // when a replaced or changed control cannot reuse its old handle.
+            ordinaryRegistry = rebindComponentWrites(
+              await collectFieldsSnapshotWithDropdowns(
+                pageDocument,
+                run.controller.signal,
+              ),
+            );
+            return ordinaryRegistry;
+          }
+        : undefined,
       approvedCandidateIds,
       registry: snapshot.registry,
       beforeWrite: presentField
         ? (item) => presentField(snapshot.registry, item)
         : undefined,
       signal: run.controller.signal,
-      ...(greetingTargets
+      ...(componentTargets
         ? {
             settledRegistry: () => {
-              greetingResultRegistry = recollectGreetingResultRegistry(
+              componentResultRegistry = recollectComponentResultRegistry(
                 pageDocument,
-                greetingTargets,
+                componentTargets,
                 automaticItems,
               );
-              return greetingResultRegistry;
+              return componentResultRegistry;
             },
           }
         : {}),
@@ -1091,9 +1377,9 @@ export function createAnalyzeFields({
         onSearchFollowUp?.(item, controls, snapshot.registry),
     });
     if (run.controller.signal.aborted) return;
-    const greetingDriverResults: ApprovedWriteResult[] = [];
-    if (greetingResultRegistry) {
-      setResultRegistry?.(greetingResultRegistry);
+    const componentDriverResults: ApprovedWriteResult[] = [];
+    if (componentResultRegistry) {
+      setResultRegistry?.(componentResultRegistry);
       const writtenIds = new Set(
         writeResults
           .filter((result) => result.status === "written")
@@ -1102,26 +1388,34 @@ export function createAnalyzeFields({
       rebindResultProgress?.(
         automaticItems.filter((item) => writtenIds.has(item.candidateId)),
         snapshot.registry,
-        greetingResultRegistry,
+        componentResultRegistry,
       );
+      // Share only the read-only policy path; interactive verification recollects.
+      const resolveReceipt =
+        executionPolicy(pageDocument)?.componentPolicy
+          ?.retainedSearchVerification === "RECORDED_VALUE"
+          ? collectComponentResultResolver(pageDocument)
+          : (
+              captured: Parameters<typeof recollectComponentResultRegistry>[1],
+              items: Parameters<typeof recollectComponentResultRegistry>[2],
+            ) =>
+              recollectComponentResultRegistry(pageDocument, captured, items);
       for (const item of automaticItems) {
-        const key = greetingDriverKeys.get(item.candidateId);
+        const key = componentDriverKeys.get(item.candidateId);
         if (!key || !completedStateDriverKeys.has(key)) continue;
-        const receipt = completedGreetingStateDrivers.current.get(key);
+        const receipt = completedComponentStateDrivers.current.get(key);
         const alias =
           receipt &&
-          greetingKeyCounts.get(key) === 1 &&
-          receipt.identity === greetingReceiptIdentity(item)
-            ? recollectGreetingResultRegistry(pageDocument, receipt.captured, [
-                receipt.originalItem,
-              ])
+          componentKeyCounts.get(key) === 1 &&
+          receipt.identity === componentReceiptIdentity(item)
+            ? resolveReceipt(receipt.captured, [receipt.originalItem])
             : undefined;
         const prior =
           receipt && alias?.lookupField(receipt.originalItem.candidateId);
         let searchUnverified = false;
-        const current = greetingResultRegistry.lookupField(item.candidateId);
+        const current = componentResultRegistry.lookupField(item.candidateId);
         const live = resultFieldState(
-          greetingResultRegistry,
+          componentResultRegistry,
           pageDocument,
           item.candidateId,
         );
@@ -1143,7 +1437,7 @@ export function createAnalyzeFields({
           sameElement &&
           live?.visible &&
           (current.status === "ready" || current.status === "blocked") &&
-          greetingGpaSafe(current.handle, item) &&
+          componentGpaSafe(current.handle, item) &&
           matchesResultValue(
             item,
             live.value,
@@ -1151,7 +1445,10 @@ export function createAnalyzeFields({
             live.handle,
           ) &&
           (item.analysis?.writePlan?.command !== "SEARCH_SELECTION" ||
-            (companyId === "greeting" &&
+            executionPolicy(pageDocument)?.componentPolicy
+              ?.retainedSearchVerification === "RECORDED_VALUE" ||
+            (executionPolicy(pageDocument)?.componentPolicy
+              ?.retainedSearchVerification === "REOPEN_SELECTION" &&
               (await adapter.executeStateDriver?.(
                 pageDocument,
                 current.handle,
@@ -1180,7 +1477,7 @@ export function createAnalyzeFields({
             receipt.sourceRegistry,
             alias,
           );
-          greetingDriverResults.push({
+          componentDriverResults.push({
             candidateId: item.candidateId,
             status: "written",
           });
@@ -1194,7 +1491,26 @@ export function createAnalyzeFields({
               item.profileValue ?? "",
               live.handle,
             );
-          greetingDriverResults.push({
+          localWorkflowLog("component-retained-diagnostic", {
+            candidateId: item.candidateId,
+            fieldName: live?.handle.candidate.domName,
+            fieldKey: item.profileFieldKey,
+            receiptPresent: !!receipt,
+            receiptIdentityMatches:
+              !!receipt && receipt.identity === componentReceiptIdentity(item),
+            aliasPresent: !!alias,
+            priorStatus: prior?.status,
+            currentStatus: current.status,
+            capturedCount: componentTargets?.targets.length,
+            receiptCapturedCount: receipt?.captured.targets.length,
+            sameElement: !!sameElement,
+            liveVisible: live?.visible,
+            liveValue: live?.value,
+            expectedValue: item.profileValue,
+            valueMatches,
+            searchUnverified,
+          });
+          componentDriverResults.push({
             candidateId: item.candidateId,
             status: "skipped",
             outcome: "needs-verification",
@@ -1211,6 +1527,7 @@ export function createAnalyzeFields({
         }
       }
     }
+    if (await refreshAfterWrites()) return;
     const pendingFollowUp = searchFollowUp
       ? takeWrittenSearchFollowUp(searchFollowUp, writeResults)
       : undefined;
@@ -1258,14 +1575,15 @@ export function createAnalyzeFields({
     setResults([
       ...writeResults,
       ...retainedDriverResults,
-      ...greetingDriverResults,
+      ...componentDriverResults,
       ...automaticItems
         .filter((item) => {
           const lookup = snapshot.registry.lookupField(item.candidateId);
           return (
             (lookup.status === "ready" || lookup.status === "blocked") &&
             analysis.mode !== "GENERIC" &&
-            companyId !== "greeting" &&
+            !executionPolicy(pageDocument)?.componentPolicy?.workflow
+              .captureDriverResults &&
             completedStateDriverKeys.has(
               stateDriverKey(
                 item,
@@ -1282,6 +1600,7 @@ export function createAnalyzeFields({
         })),
       ...deferredResults,
     ]);
+    dismissCompletedAutocomplete(pageDocument);
     setStage("result");
   };
   return analyzeFields;

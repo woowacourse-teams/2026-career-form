@@ -1,5 +1,5 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -10,9 +10,9 @@ useGreetingHost(() => {
 });
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
-import { installGreetingEmailCloseBridge } from "../interaction/greeting-email-close-bridge";
-import { mockGreetingEditingCommand } from "../interaction/test-utils/greeting-email-editing";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
+import { installComponentEmailCloseBridge } from "../interaction/component-email-close-bridge";
+import { mockComponentEditingCommand } from "../interaction/test-utils/greeting-email-editing";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { ApprovedWriteResult } from "../write/executor";
@@ -44,8 +44,8 @@ async function run(
     | "abort-present-load",
 ) {
   document.body.innerHTML = `<input name="driver"><div data-scope="field" data-part="root"><label>이메일주소*</label><input type="email" role="combobox" data-scope="combobox" data-part="input" aria-expanded="false"><button type="button" disabled>이메일 확인</button></div>`;
-  const restore = mockGreetingEditingCommand(document);
-  installGreetingEmailCloseBridge(document);
+  const restore = mockComponentEditingCommand(document);
+  installComponentEmailCloseBridge(document);
   const email = document.querySelector<HTMLInputElement>('[role="combobox"]')!;
   const confirm = document.querySelector<HTMLButtonElement>("button")!;
   const order: string[] = [];
@@ -71,11 +71,11 @@ async function run(
   let resultRegistry: CandidateRegistry | undefined;
   const analyze = createAnalyzeFields({
     adapter: {
-      ...greetingWorkflowAdapter,
+      ...componentWorkflowAdapter(document),
       stateDriverStage: (item, handle) =>
         handle.candidate.domName === "driver"
           ? 1
-          : greetingWorkflowAdapter.stateDriverStage?.(item, handle),
+          : componentWorkflowAdapter(document).stateDriverStage?.(item, handle),
       executeStateDriver: async (_document, handle, item) => {
         if (handle.candidate.domName !== "driver") return undefined;
         order.push("driver");
@@ -102,7 +102,7 @@ async function run(
     consideredSensitiveValues: { current: new Map() },
     freshDefaultControls: { current: new WeakSet() },
     completedDriverKeys: { current: new Set() },
-    completedGreetingStateDrivers: receipts,
+    completedComponentStateDrivers: receipts,
     completedGenericStateDrivers: { current: new Map() },
     deferredDriverGroups: { current: new Set() },
     apiClient: {

@@ -1,5 +1,5 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };

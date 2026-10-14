@@ -101,7 +101,7 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   };
 }
 
-it("runs Hyundai language, exam, direct-entry, then text stages in one workflow", async () => {
+it("refreshes between write passes to fill Hyundai language, exam and dependent values", async () => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -200,6 +200,7 @@ it("runs Hyundai language, exam, direct-entry, then text stages in one workflow"
       },
     },
   ];
+  let fieldCalls = 0;
   const apiClient: AnalysisApiClient = {
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
@@ -207,7 +208,10 @@ it("runs Hyundai language, exam, direct-entry, then text stages in one workflow"
       analysisStatus: "COMPLETE",
       preparationPlans: [],
     }),
-    analyzeFields: async (request) => fieldResponse(request),
+    analyzeFields: async (request) => {
+      fieldCalls += 1;
+      return fieldResponse(request);
+    },
   };
 
   render(
@@ -231,4 +235,7 @@ it("runs Hyundai language, exam, direct-entry, then text stages in one workflow"
   expect(
     document.querySelector<HTMLInputElement>("#gradeForeLang_1")?.value,
   ).toBe("IH");
+  expect(language.value).toBe("English");
+  expect(exam.value).toBe("OPIC");
+  expect(fieldCalls).toBe(3);
 });

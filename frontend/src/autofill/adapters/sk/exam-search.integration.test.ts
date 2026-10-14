@@ -11,10 +11,10 @@ import type {
 } from "../../api/types";
 import { AutofillWorkflow } from "../../workflow/AutofillWorkflow";
 import {
-  installSkAutocompleteMainBridge,
-  type SkAutocompleteItem,
-  type SkJQuery,
-} from "./autocomplete-main";
+  installJqueryAutocompleteMainBridge,
+  type JqueryAutocompleteItem,
+  type Jquery,
+} from "../../interaction/jquery-autocomplete-main";
 
 const widgetCleanups: Array<() => void> = [];
 
@@ -104,19 +104,19 @@ function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
 interface Widget {
   input: HTMLInputElement;
   menu: HTMLElement;
-  item?: SkAutocompleteItem;
-  items?: readonly SkAutocompleteItem[];
+  item?: JqueryAutocompleteItem;
+  items?: readonly JqueryAutocompleteItem[];
   reveal: () => void;
 }
 
 function installWidgets(widgets: readonly Widget[]): () => void {
-  const items = new WeakMap<Element, SkAutocompleteItem>();
+  const items = new WeakMap<Element, JqueryAutocompleteItem>();
   const data = new WeakMap<Element, Map<string, unknown>>();
   widgets.forEach((widget) => {
     document.body.append(widget.menu);
     const instance: {
       menu: { element: { 0: HTMLElement; length: number } };
-      selectedItem?: SkAutocompleteItem;
+      selectedItem?: JqueryAutocompleteItem;
       term: string;
       pending: number;
     } = {
@@ -161,14 +161,14 @@ function installWidgets(widgets: readonly Widget[]): () => void {
       });
     });
   });
-  const jquery: SkJQuery = (element) => ({
+  const jquery: Jquery = (element) => ({
     data: (key) =>
       key === "ui-autocomplete-item"
         ? items.get(element)
         : data.get(element)?.get(key),
     autocomplete: () => data.get(element)?.get("ui-autocomplete") as never,
   });
-  const cleanup = installSkAutocompleteMainBridge(document, jquery);
+  const cleanup = installJqueryAutocompleteMainBridge(document, jquery);
   widgetCleanups.push(cleanup);
   return cleanup;
 }
@@ -184,7 +184,7 @@ function examRow(id: string, score: "input" | "select"): HTMLDivElement {
   return row;
 }
 
-it("maps two delayed widget-local exam results and retains both names through the final stage", async () => {
+it("fills revealed exam scores after finishing the current mapping pass", async () => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -305,11 +305,11 @@ it("maps two delayed widget-local exam results and retains both names through th
     document.querySelector<HTMLInputElement>("[name=lngAbilityLanguage]")
       ?.value,
   ).toBe("Spanish");
-  expect(analysisCount).toBe(4);
+  expect(analysisCount).toBe(2);
   removeBridge();
 });
 
-it("confirms one SK live OPIc result for the canonical opic profile value", async () => {
+it("confirms canonical OPIc and fills its score after the next analysis", async () => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -362,7 +362,10 @@ it("confirms one SK live OPIc result for the canonical opic profile value", asyn
         onExit: () => undefined,
       }),
     );
-    await waitFor(() => expect(score.value).toBe("830"));
+    await waitFor(() =>
+      expect(document.body.textContent).toContain("기입 결과"),
+    );
+    expect(score.value).toBe("830");
     expect(exam.value).toBe("OPIc(영어)");
   } finally {
     removeBridge();
@@ -553,7 +556,10 @@ it.each([false, true])(
           index === 0
             ? { id: "0", label: "샘플 자격증 A", value: "" }
             : { id: "valid", label: "정보처리기사", value: "정보처리기사" },
-        reveal: () => undefined,
+        reveal: () => {
+          if (replaceFailedRow && index === 0)
+            rows[0].replaceWith(rows[0].cloneNode(true));
+        },
       })),
     );
     const profile = createEmptyProfile();
@@ -578,6 +584,14 @@ it.each([false, true])(
         },
       },
     ];
+    if (replaceFailedRow)
+      names[0].addEventListener(
+        "input",
+        () => {
+          rows[0].replaceWith(rows[0].cloneNode(true));
+        },
+        { once: true },
+      );
     let analyses = 0;
     const apiClient: AnalysisApiClient = {
       analyzePreparation: async (req) => ({
@@ -588,8 +602,6 @@ it.each([false, true])(
       }),
       analyzeFields: async (req) => {
         analyses++;
-        if (replaceFailedRow && analyses === 2)
-          rows[0].replaceWith(rows[0].cloneNode(true));
         return response(req);
       },
     };
@@ -604,10 +616,9 @@ it.each([false, true])(
       );
       if (replaceFailedRow) {
         await waitFor(() =>
-          expect(document.body.textContent).toContain(
-            "입력 보류 중 지원서 구조가 변경되었습니다",
-          ),
+          expect(document.body.textContent).toContain("조건부 선택"),
         );
+        expect(analyses).toBe(1);
         expect(
           document.querySelector<HTMLInputElement>("[name=prsEngFirstName]")!
             .value,

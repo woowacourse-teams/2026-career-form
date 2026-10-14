@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { validateFieldsResponse } from "../api/validate-response";
 import { createAnalyzeFields } from "./workflow-analysis";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -48,7 +48,7 @@ it.each([
     let items: ReviewPlanItem[] = [];
     let analyses = 0;
     const analyze = createAnalyzeFields({
-      adapter: greetingWorkflowAdapter,
+      adapter: componentWorkflowAdapter(document),
       pageDocument: document,
       addressRun: { current: { controller: new AbortController() } },
       addressSearch: async () => false,

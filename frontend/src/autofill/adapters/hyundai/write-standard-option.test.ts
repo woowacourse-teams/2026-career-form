@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { hyundaiWriteAdapter } from "./write";
+import { getWriteAdapter } from "../write";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -86,7 +86,7 @@ describe("Hyundai live button option writer", () => {
       { label: "OPIC", code: "16" },
     ]);
 
-    expect(hyundaiWriteAdapter.tryWrite(handle, canonicalOpicItem())).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, canonicalOpicItem())).toEqual({
       handled: true,
       written: true,
     });
@@ -100,7 +100,7 @@ describe("Hyundai live button option writer", () => {
       { label: "OPIc", code: "99" },
     ]);
 
-    expect(hyundaiWriteAdapter.tryWrite(handle, canonicalOpicItem())).toEqual({
+    expect(getWriteAdapter(document).tryWrite(handle, canonicalOpicItem())).toEqual({
       handled: true,
       written: false,
     });

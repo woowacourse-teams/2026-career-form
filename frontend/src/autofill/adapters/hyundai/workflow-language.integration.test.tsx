@@ -133,7 +133,7 @@ function wireMenus(): void {
   }
 }
 
-it("skips only the language row whose exam selection fails", async () => {
+it("refreshes changed exam mappings and skips only the failing language row", async () => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };

@@ -1,3 +1,4 @@
+import { cachedDomRead } from "./read-pass";
 import { definitionListLabelOf, unassociatedLabelOf } from "./metadata";
 import type { SemanticContext } from "../api/types";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
@@ -258,6 +259,7 @@ export function semanticText(
 function staticText(element: Element | null): string | undefined {
   if (!element || element.matches("input, select, textarea, [contenteditable]"))
     return undefined;
+  return cachedDomRead(element, "semantic-static-text", () => {
   const clone = element.cloneNode(true) as Element;
   clone
     .querySelectorAll(
@@ -265,6 +267,7 @@ function staticText(element: Element | null): string | undefined {
     )
     .forEach((child) => child.remove());
   return semanticText(clone.textContent);
+  });
 }
 
 function linkedText(
@@ -286,6 +289,7 @@ const WRAPPED_HEADING =
   ":scope > * > h1, :scope > * > h2, :scope > * > h3, :scope > * > h4, :scope > * > h5, :scope > * > h6, :scope > * > [role='heading']";
 
 function uniqueHeadingText(container: Element): string | undefined {
+  return cachedDomRead(container, "semantic-heading", () => {
   const headings = [
     ...container.querySelectorAll(DIRECT_HEADING),
     ...container.querySelectorAll(WRAPPED_HEADING),
@@ -294,6 +298,7 @@ function uniqueHeadingText(container: Element): string | undefined {
     .filter((text): text is string => Boolean(text));
   const unique = [...new Set(headings)];
   return unique.length === 1 ? unique[0] : undefined;
+  });
 }
 
 function nearestStructuralHeading(

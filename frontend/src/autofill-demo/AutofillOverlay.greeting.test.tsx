@@ -1,5 +1,5 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -24,7 +24,7 @@ import { parseProfileImport } from "../profile/profile-transfer";
 import { AutofillOverlay } from "./AutofillOverlay";
 import { createRepository } from "./AutofillOverlay.test-fixtures";
 
-function greetingDocument(host: string): Document {
+function componentDocument(host: string): Document {
   const page = document.implementation.createHTMLDocument("greeting apply");
   return new Proxy(page, {
     get(target, key) {
@@ -46,7 +46,7 @@ afterEach(() => {
   ).jsdom.reconfigure({ url: "http://localhost:3000" });
 });
 
-function ControlledGreetingForm({ renderCount }: { renderCount: number }) {
+function ControlledComponentForm({ renderCount }: { renderCount: number }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   return (
@@ -242,8 +242,8 @@ describe("Greeting with generic autofill controls", () => {
   });
 
   it("collects the local adapter immediately and uses one preparation call", async () => {
-    const page = greetingDocument("jobs.unregistered.example");
-    render(<ControlledGreetingForm renderCount={0} />, {
+    const page = componentDocument("jobs.unregistered.example");
+    render(<ControlledComponentForm renderCount={0} />, {
       container: page.body,
     });
     const calls: string[] = [];
@@ -284,8 +284,8 @@ describe("Greeting with generic autofill controls", () => {
   it.each(["preparation", "fields", "llm-fields"] as const)(
     "stops when a known Greeting site receives generic %s",
     async (phase) => {
-      const page = greetingDocument("jobs.unregistered.example");
-      render(<ControlledGreetingForm renderCount={0} />, {
+      const page = componentDocument("jobs.unregistered.example");
+      render(<ControlledComponentForm renderCount={0} />, {
         container: page.body,
       });
       const apiClient = {
@@ -342,8 +342,8 @@ describe("Greeting with generic autofill controls", () => {
     "career.hyundai-autoever.com",
     "jobs.unregistered.example",
   ])("uses full profile, writes only name and phone on %s", async (host) => {
-    const page = greetingDocument(host);
-    const form = render(<ControlledGreetingForm renderCount={0} />, {
+    const page = componentDocument(host);
+    const form = render(<ControlledComponentForm renderCount={0} />, {
       container: page.body,
     });
     const profile = parseProfileImport(JSON.stringify(profileExportExample));
@@ -427,7 +427,7 @@ describe("Greeting with generic autofill controls", () => {
     );
 
     await screen.findByRole("heading", { name: "기입 결과" });
-    form.rerender(<ControlledGreetingForm renderCount={1} />);
+    form.rerender(<ControlledComponentForm renderCount={1} />);
     expect(
       page.querySelector<HTMLInputElement>("[name='basicInformation.name']")
         ?.value,
@@ -495,7 +495,7 @@ describe("Greeting with generic autofill controls", () => {
 });
 
 it("stops before actions when an adapter response has only unowned Greeting name markers", async () => {
-  const page = greetingDocument("jobs.unregistered.example");
+  const page = componentDocument("jobs.unregistered.example");
   page.body.innerHTML =
     '<label>이름<input name="basicInformation.name"></label><label>전화번호<input name="basicInformation.phoneNumber.nationalNumber"></label>';
   const calls: string[] = [];

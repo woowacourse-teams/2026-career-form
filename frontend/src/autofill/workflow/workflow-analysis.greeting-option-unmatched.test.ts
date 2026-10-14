@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { validateFieldsResponse } from "../api/validate-response";
 import type { ApprovedWriteResult } from "../write/executor";
 import { createAnalyzeFields } from "./workflow-analysis";
@@ -69,7 +69,7 @@ async function analyze(
   const errors: string[] = [];
   let results: ApprovedWriteResult[] = [];
   const run = createAnalyzeFields({
-    adapter: greetingWorkflowAdapter,
+    adapter: componentWorkflowAdapter(document),
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,

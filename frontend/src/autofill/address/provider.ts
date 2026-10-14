@@ -1,6 +1,8 @@
+import { runDomPlan } from "../policy/action-plan";
+import { localWorkflowLog } from "../debug/local-workflow";
 import type { AddressPort } from "./relay";
 import { addressMessage, type AddressMessage } from "./messages";
-import { findKakaoResult } from "./kakao";
+import { findKakaoResult, kakaoResultIdentity } from "./kakao";
 import { normalizeAddress } from "./match";
 export function attachKakaoProvider(
   document: Document,
@@ -17,23 +19,43 @@ export function attachKakaoProvider(
     run = undefined;
     selected = undefined;
   };
-  const send = (type: "PROPOSE" | "SELECTED" | "FAILED", id: string) => {
+  const send = (
+    type: "PROPOSE" | "SELECTED" | "FAILED",
+    id: string,
+    identity?: import("./match").AddressIdentity,
+  ) => {
     if (!disconnected)
       try {
-        port.postMessage({ type, id });
+        port.postMessage({
+          type,
+          id,
+          ...(identity ? { selected: identity } : {}),
+        });
       } catch {
         disconnected = true;
         stop();
       }
   };
   const fail = () => {
+    localWorkflowLog("address-provider-failed", {
+      queryMatches: !!current(),
+      resultFound: !!(
+        run && findKakaoResult(document, run.expected, run.policy)
+      ),
+      selected: !!selected,
+      expired: Date.now() >= deadline,
+    });
     const id = run?.id;
     stop();
     if (id) send("FAILED", id);
   };
   const current = () => {
-    const input = document.querySelector<HTMLInputElement>("#region_name");
-    const query = document.querySelector<HTMLInputElement>("#cQuery");
+    const input =
+      run &&
+      document.querySelector<HTMLInputElement>(run.policy.selectors.input);
+    const query =
+      run &&
+      document.querySelector<HTMLInputElement>(run.policy.selectors.query);
     return (
       run &&
       input &&
@@ -50,28 +72,31 @@ export function attachKakaoProvider(
       return;
     }
     const result = current()
-      ? findKakaoResult(document, run.expected)
+      ? findKakaoResult(document, run.expected, run.policy)
       : undefined;
     if (result) {
+      localWorkflowLog("address-provider-propose", {});
       selected = result;
       send("PROPOSE", run.id);
-      timer = setTimeout(fail, 5000);
+      timer = setTimeout(fail, run.policy.commitMs);
       return;
     }
-    timer = setTimeout(poll, 100);
+    timer = setTimeout(poll, run!.policy.pollMs);
   };
   port.onMessage.addListener((value) => {
     const m = addressMessage(value);
     if (!m || disconnected) return;
     if (m.type === "SEARCH" && !used) {
+      localWorkflowLog("address-provider-search", {});
       used = true;
       run = m;
-      deadline = Date.now() + 8000;
+      deadline = Date.now() + m.policy.searchMs;
       const inputs = document.querySelectorAll<HTMLInputElement>(
-        "#region_name[name=region_name]",
+        m.policy.selectors.input,
       );
-      const buttons =
-        document.querySelectorAll<HTMLButtonElement>("button.btn_search");
+      const buttons = document.querySelectorAll<HTMLButtonElement>(
+        m.policy.selectors.trigger,
+      );
       if (
         inputs.length !== 1 ||
         buttons.length !== 1 ||
@@ -83,18 +108,22 @@ export function attachKakaoProvider(
         return;
       }
       if (current()) {
-        timer = setTimeout(poll, 100);
+        timer = setTimeout(poll, run!.policy.pollMs);
         return;
       }
       const input = inputs[0];
-      Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "value",
-      )!.set!.call(input, m.expected.address);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      buttons[0].click();
-      timer = setTimeout(poll, 100);
+      if (
+        !runDomPlan(
+          m.policy.searchPlan,
+          { input, control: buttons[0] },
+          { value: m.expected.address },
+          () => !!run && !disconnected && input.isConnected,
+        )
+      ) {
+        fail();
+        return;
+      }
+      timer = setTimeout(poll, run!.policy.pollMs);
       return;
     }
     if (!run || m.id !== run.id) return;
@@ -107,16 +136,21 @@ export function attachKakaoProvider(
         !selected ||
         !selected.isConnected ||
         !current() ||
-        findKakaoResult(document, run.expected) !== selected
+        findKakaoResult(document, run.expected, run.policy) !== selected
       ) {
         fail();
         return;
       }
       const button = selected,
         id = run.id;
+      const identity = kakaoResultIdentity(button, run.policy);
+      if (!identity) {
+        fail();
+        return;
+      }
       stop();
       button.click();
-      send("SELECTED", id);
+      send("SELECTED", id, identity);
     }
   });
   port.onDisconnect.addListener(() => {

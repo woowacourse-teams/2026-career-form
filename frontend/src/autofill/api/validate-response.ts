@@ -1,5 +1,6 @@
-import { hasGreetingFieldCandidates } from "../adapters/greeting/fingerprint";
-import { resolveCompany } from "../adapters/company";
+import { executionPolicyForSite } from "../workflow/execution-policy";
+import { validExecutionPolicy } from "../workflow/execution-policy";
+import { hasComponentFieldCandidates } from "../policy/components/fingerprint";
 import { isAddressSearchAction } from "../adapters/address-contract";
 import type {
   FieldCandidate,
@@ -286,7 +287,7 @@ function validateFieldAnalysis(
   value: unknown,
   candidates: Map<string, FieldCandidate>,
   request: FieldsAnalyzeRequest,
-  greeting = false,
+  components = false,
 ): string {
   if (!isRecord(value) || !isNonEmptyString(value.candidateId)) {
     throw new AnalysisContractError();
@@ -394,6 +395,8 @@ function validateFieldAnalysis(
             "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
             "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
             "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+            "UNIVERSITY_ADDITIONAL_MAJOR_1_FIELD",
+            "UNIVERSITY_ADDITIONAL_MAJOR_2_FIELD",
           ]) ||
           (value.valueBinding.profileFieldKey !== undefined &&
             (!isNonEmptyString(value.valueBinding.profileFieldKey) ||
@@ -443,8 +446,8 @@ function validateFieldAnalysis(
       isRecord(value.valueBinding) && value.valueBinding.type === "DIRECT"
         ? value.valueBinding.profileFieldKey
         : undefined;
-    const greetingReady =
-      greeting &&
+    const componentReady =
+      components &&
       value.mappingStatus === "ADAPTER_VERIFIED" &&
       candidate.visibility === "visible" &&
       !candidate.disabled &&
@@ -456,40 +459,31 @@ function validateFieldAnalysis(
           /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_NAME$/.test(
             String(value.valueBinding.recipe),
           )));
-    const greetingSearch =
-      greetingReady &&
+    const component = executionPolicyForSite(request.site)?.componentPolicy;
+    const componentSearch =
+      componentReady &&
       candidate.element === "input" &&
       candidate.control === "text" &&
       !candidate.readonly &&
-      (/^(?:educationalBackground\.(?:(?:universities|graduateSchools)\.\d+\.(?:schoolName|majors\.\d+)|highSchool\.schoolName)|workHistory\.workExperiences\.\d+\.companyName|languagesCertificationsAndOtherActivity\.(?:certifiedLanguageTests\.\d+\.testName|certificatesLicenses\.\d+\.credentials))$/.test(
+      !!component &&
+      (new RegExp(component.patterns.searchField).test(
         candidate.domName ?? "",
       ) ||
-        (candidate.domName === "basicInformation.nationalityCode" &&
-          candidate.displayName === "국적" &&
+        (candidate.domName === component.fieldNames.nationality &&
+          candidate.displayName === component.labels.nationality &&
           directKey === "personal.personal.nationality"));
-    const greetingDate =
+    const componentDate =
       request.supportedWriteCommands?.includes("SELECT_DATE") === true &&
-      greetingReady &&
+      componentReady &&
       candidate.element === "input" &&
       candidate.control === "button" &&
       typeof directKey === "string" &&
       isDateProfileFieldKey(directKey) &&
-      (candidate.domName === "basicInformation.birthdate" ||
-        /^educationalBackground\.(?:(?:universities|graduateSchools)\.\d+|highSchool)\.enrollmentPeriod\.(startDate|endDate)$/.test(
-          candidate.domName ?? "",
-        ) ||
-        /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.test(
-          candidate.domName ?? "",
-        ) ||
-        /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.test(
-          candidate.domName ?? "",
-        ) ||
-        /^workHistory\.projects\.\d+\.projectPeriod\.(startDate|endDate)$/.test(
-          candidate.domName ?? "",
-        ) ||
-        /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.test(
-          candidate.domName ?? "",
-        ));
+      !!component?.dateRules?.some(
+        (rule) =>
+          rule.key === directKey &&
+          new RegExp(rule.pattern).test(candidate.domName ?? ""),
+      );
     const searchSelection =
       value.mappingStatus === "LLM_SUGGESTED" &&
       candidate.element === "input" &&
@@ -523,9 +517,9 @@ function validateFieldAnalysis(
       throw new AnalysisContractError();
     }
     const expectedCommand =
-      calendarSelection || greetingDate
+      calendarSelection || componentDate
         ? "SELECT_DATE"
-        : searchSelection || greetingSearch
+        : searchSelection || componentSearch
           ? "SEARCH_SELECTION"
           : candidate.element === "input" &&
               candidate.control === "text" &&
@@ -570,7 +564,10 @@ export function validateFieldsResponse(
       "fields",
       "warningCodes",
       "blockCode",
+      "executionPolicy",
     ]) ||
+    (value.executionPolicy !== undefined &&
+      !validExecutionPolicy(value.executionPolicy)) ||
     value.snapshotId !== request.snapshotId ||
     !Array.isArray(value.fields) ||
     !validateStringArray(value.warningCodes, [
@@ -595,9 +592,10 @@ export function validateFieldsResponse(
   }
 
   const candidates = collectFieldCandidates(request);
-  const greeting =
-    resolveCompany(request.site.host) === "greeting" ||
-    hasGreetingFieldCandidates(candidates.values());
+  const components = hasComponentFieldCandidates(
+    candidates.values(),
+    request.site,
+  );
   const seen = new Set<string>();
   for (const field of value.fields) {
     let candidateId: string;
@@ -606,14 +604,14 @@ export function validateFieldsResponse(
         field,
         candidates,
         request,
-        greeting && value.mode === "ADAPTER",
+        components && value.mode === "ADAPTER",
       );
       if (
         isRecord(field) &&
         isRecord(field.writePlan) &&
         field.writePlan.command === "SEARCH_SELECTION" &&
         value.mode !== "GENERIC" &&
-        !greeting
+        !components
       )
         throw new AnalysisContractError();
     } catch (error) {

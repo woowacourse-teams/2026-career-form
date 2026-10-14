@@ -1,5 +1,5 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -8,11 +8,11 @@ useGreetingHost(() => {
     url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
   });
 });
-import { mockGreetingEditingCommand } from "../interaction/test-utils/greeting-email-editing";
+import { mockComponentEditingCommand } from "../interaction/test-utils/greeting-email-editing";
 import { afterEach, beforeEach, expect, it } from "vitest";
 let restoreEditingCommand: (() => void) | undefined;
 beforeEach(() => {
-  restoreEditingCommand = mockGreetingEditingCommand(document);
+  restoreEditingCommand = mockComponentEditingCommand(document);
 });
 afterEach(() => restoreEditingCommand?.());
 
@@ -23,13 +23,13 @@ import {
 import type { ReviewPlanItem } from "../review/review-plan";
 import { collectFieldsSnapshot } from "../dom/collect";
 import {
-  captureGreetingResultTargets,
-  recollectGreetingResultRegistry,
-} from "../workflow/greeting-result-registry";
+  captureComponentResultTargets,
+  recollectComponentResultRegistry,
+} from "../workflow/component-result-registry";
 import { executeApprovedWritesAfterPageSettles } from "./executor";
-import { installGreetingEmailCloseBridge } from "../interaction/greeting-email-close-bridge";
+import { installComponentEmailCloseBridge } from "../interaction/component-email-close-bridge";
 
-beforeEach(() => installGreetingEmailCloseBridge(document));
+beforeEach(() => installComponentEmailCloseBridge(document));
 afterEach(() => document.body.replaceChildren());
 
 it.each([false, true])(
@@ -41,7 +41,7 @@ it.each([false, true])(
     )!;
     const education = document.querySelector<HTMLElement>("#education")!;
     const confirm = input.parentElement!.querySelector("button")!;
-    installGreetingEmailCloseBridge(document);
+    installComponentEmailCloseBridge(document);
     let blurredBeforeAcceptance = false;
     input.addEventListener("blur", () => {
       if (confirm.disabled) blurredBeforeAcceptance = true;
@@ -125,7 +125,7 @@ it.each([false, true])(
       },
     } as ReviewPlanItem;
     const items = laterDriver ? [item, nameItem] : [item];
-    const captured = captureGreetingResultTargets(snapshot.registry, items);
+    const captured = captureComponentResultTargets(snapshot.registry, items);
     const result = await executeApprovedWritesAfterPageSettles({
       items,
       approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
@@ -141,7 +141,7 @@ it.each([false, true])(
       },
       settledRegistry: () => {
         expect(education.hasAttribute("aria-hidden")).toBe(false);
-        return recollectGreetingResultRegistry(document, captured, [item]);
+        return recollectComponentResultRegistry(document, captured, [item]);
       },
     });
     expect(blurredBeforeAcceptance).toBe(false);
@@ -193,7 +193,7 @@ function fixture(gpa = false, veteran = false, phone = false) {
     reason: "",
     ...(gpa
       ? {
-          greetingGpaApproval: {
+          componentGpaApproval: {
             rowName: "educationalBackground.universities.0",
             score: "4.20",
             scale: "4.50",
@@ -466,7 +466,7 @@ it("keeps an independently retained native field verified when email settlement 
       input.value = "";
     }),
   );
-  const targets = captureGreetingResultTargets(snapshot.registry, items);
+  const targets = captureComponentResultTargets(snapshot.registry, items);
   const results = await executeApprovedWritesAfterPageSettles({
     items,
     approvedCandidateIds: new Set(items.map((item) => item.candidateId)),
@@ -475,7 +475,7 @@ it("keeps an independently retained native field verified when email settlement 
       if (item === items[2]) laterDriverRan = true;
     },
     settledRegistry: () =>
-      recollectGreetingResultRegistry(document, targets, items),
+      recollectComponentResultRegistry(document, targets, items),
   });
   expect(laterDriverRan).toBe(false);
   expect(results[2]).toMatchObject({ status: "skipped", code: "STALE_TARGET" });

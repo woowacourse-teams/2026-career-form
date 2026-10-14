@@ -1,10 +1,11 @@
+import { executionPolicy } from "../workflow/execution-policy";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
-  approveGreetingGpaPairs,
-  type GreetingGpaApproval,
-} from "../adapters/greeting/gpa";
+  approveComponentGpaPairs,
+  type ComponentGpaApproval,
+} from "../policy/components/gpa";
 import { customFieldValue } from "../dom/custom-field-value";
 import { normalizeDisplayName } from "../write/display-name";
 import {
@@ -41,7 +42,6 @@ import {
 import { catalogEvidenceForElement } from "../profile/catalog-evidence";
 import { matchStandardOption } from "../profile/standard-option-match";
 import { schoolRegionSearchValues } from "../../profile/standard-values";
-import { requiresSensitiveConfirmation } from "../profile/sensitive-confirmation";
 import { formatProfileDate } from "../profile/date-format";
 import {
   buildLocalSearchValuePlan,
@@ -96,7 +96,7 @@ export interface ReviewPlanItem {
   calendarApproval?: CalendarApproval;
   /** Separate approval for readonly year-month-day calendars. */
   dayCalendarApproval?: DayCalendarApproval;
-  greetingGpaApproval?: GreetingGpaApproval;
+  componentGpaApproval?: ComponentGpaApproval;
   verifiedFreshDefaultValue?: string;
   /** Local-only approved search forms; never include these values in API requests. */
   searchValuePlan?: LocalSearchValuePlan;
@@ -300,7 +300,7 @@ function itemForAnalysis(
   freshDefaultCandidateIds: ReadonlySet<string>,
   normalizeDirectValue?: (profileFieldKey: string, value: string) => string,
   generic = true,
-  greeting = false,
+  components = false,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
   if (analysis.matchType === "NO_MATCH") {
@@ -320,9 +320,17 @@ function itemForAnalysis(
   }
 
   const lookup = registry.lookupField(analysis.candidateId);
+  const componentDocument =
+    "handle" in lookup
+      ? (lookup.handle.elements[0] ?? lookup.handle.customElements?.[0])
+          ?.ownerDocument
+      : undefined;
+  const component = componentDocument
+    ? executionPolicy(componentDocument)?.componentPolicy
+    : undefined;
   const searchCommand = analysis.writePlan.command === "SEARCH_SELECTION";
-  const greetingSearch =
-    greeting &&
+  const componentSearch =
+    components &&
     searchCommand &&
     analysis.mappingStatus === "ADAPTER_VERIFIED" &&
     ((analysis.valueBinding?.type === "DIRECT" &&
@@ -332,16 +340,19 @@ function itemForAnalysis(
           analysis.valueBinding.recipe,
         ))) &&
     lookup.status === "ready" &&
-    (/^(?:educationalBackground\.(?:(?:universities|graduateSchools)\.\d+\.(?:schoolName|majors\.\d+)|highSchool\.schoolName)|workHistory\.workExperiences\.\d+\.companyName|languagesCertificationsAndOtherActivity\.(?:certifiedLanguageTests\.\d+\.testName|certificatesLicenses\.\d+\.credentials))$/.test(
+    !!component &&
+    (new RegExp(component.patterns.searchField).test(
       lookup.handle.candidate.domName ?? "",
     ) ||
-      (lookup.handle.candidate.domName === "basicInformation.nationalityCode" &&
-        lookup.handle.candidate.displayName === "국적" &&
-        analysis.valueBinding.profileFieldKey ===
-          "personal.personal.nationality"));
+      (component.scopedSearches ?? []).some(
+        (rule) =>
+          lookup.handle.candidate.domName === rule.name &&
+          lookup.handle.candidate.displayName === rule.label &&
+          analysis.valueBinding!.profileFieldKey === rule.key,
+      ));
   if (
     searchCommand &&
-    !greetingSearch &&
+    !componentSearch &&
     (!generic ||
       analysis.mappingStatus !== "LLM_SUGGESTED" ||
       analysis.valueBinding?.type !== "DIRECT" ||
@@ -368,7 +379,7 @@ function itemForAnalysis(
     lookup.status === "blocked" &&
     lookup.reason === "readonly";
   if (
-    (searchCommand && !readonlySearch && !greetingSearch) ||
+    (searchCommand && !readonlySearch && !componentSearch) ||
     (lookup.status !== "ready" && !readonlySearch && !readonlyCalendar)
   ) {
     return unavailableItem(
@@ -416,10 +427,12 @@ function itemForAnalysis(
   }
   const parts =
     binding.type === "DERIVED" &&
-    /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_(NAME|CLASSIFICATION)$/.test(
+    /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_(NAME|CLASSIFICATION|FIELD)$/.test(
       binding.recipe,
     )
-      ? profileFieldParts("education.university.additionalMajorName")
+      ? profileFieldParts(
+          binding.profileFieldKey ?? "education.university.additionalMajorName",
+        )
       : binding.profileFieldKey
         ? profileFieldParts(binding.profileFieldKey)
         : undefined;
@@ -771,24 +784,20 @@ function itemForAnalysis(
 
   const pageValue = currentValue(lookup.handle);
   const verifiedFreshDefault =
-    greeting &&
+    components &&
     freshDefaultCandidateIds.has(analysis.candidateId) &&
     analysis.mappingStatus === "ADAPTER_VERIFIED" &&
     analysis.writePlan.command === "SELECT_BUTTON_OPTION" &&
-    ((binding.type === "DIRECT" &&
-      binding.profileFieldKey ===
-        "education.graduateSchool.additionalMajorClassification" &&
-      /^educationalBackground\.graduateSchools\.(0|[1-9]\d*)\.majors\.1\.majorClassification$/.test(
-        lookup.handle.candidate.domName ?? "",
-      )) ||
-      (binding.type === "DERIVED" &&
-        /^UNIVERSITY_ADDITIONAL_MAJOR_[12]_CLASSIFICATION$/.test(
-          binding.recipe,
-        ) &&
-        new RegExp(
-          `^educationalBackground\\.universities\\.(0|[1-9]\\d*)\\.majors\\.${binding.recipe.includes("_1_") ? "1" : "2"}\\.majorClassification$`,
-        ).test(lookup.handle.candidate.domName ?? ""))) &&
-    pageValue.trim() === "주전공";
+    !!(component?.freshDefaults ?? []).some(
+      (rule) =>
+        rule.binding === binding.type &&
+        rule.key ===
+          (binding.type === "DERIVED"
+            ? binding.recipe
+            : binding.profileFieldKey) &&
+        new RegExp(rule.pattern).test(lookup.handle.candidate.domName ?? "") &&
+        pageValue.trim() === rule.value,
+    );
   const hasConflict =
     !ignoreCurrentValueCandidateIds.has(analysis.candidateId) &&
     !verifiedFreshDefault &&
@@ -801,42 +810,6 @@ function itemForAnalysis(
             : [resolvedProfileValue.value]
         ).some((value) => normalized(pageValue) === normalized(value))
       : pageValue.trim() !== resolvedProfileValue.value.trim());
-  if (
-    requiresSensitiveConfirmation(
-      binding.profileFieldKey,
-      resolvedProfileValue.sensitive ||
-        analysis.autofillPolicy === "SENSITIVE_CONFIRMATION",
-    )
-  ) {
-    return {
-      candidateId: analysis.candidateId,
-      fieldLabel,
-      ...(binding.type === "DIRECT" ||
-      (binding.type !== "DERIVED" && catalogMatch)
-        ? { profileFieldKey: binding.profileFieldKey }
-        : {}),
-      ...(resolvedProfileValue.profileEntryId
-        ? { profileEntryId: resolvedProfileValue.profileEntryId }
-        : {}),
-      ...(itemIndex !== undefined ? { itemIndex } : {}),
-      currentValue: pageValue,
-      profileValue: resolvedProfileValue.value,
-      previewValue: "••••••••",
-      status: "sensitive",
-      selected: false,
-      disabled: true,
-      revealed: false,
-      reason: "민감정보는 값을 확인한 뒤에만 선택할 수 있습니다.",
-      analysis,
-      ...(dateApproval ? { dateApproval } : {}),
-      ...(calendarApproval ? { calendarApproval } : {}),
-      ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
-      ...(searchValuePlan ? { searchValuePlan } : {}),
-      ...(searchIdentity
-        ? { searchIdentity, ...(catalogMatch ? { catalogMatch } : {}) }
-        : {}),
-    };
-  }
   if (hasConflict) {
     return {
       candidateId: analysis.candidateId,
@@ -888,7 +861,9 @@ function itemForAnalysis(
       revealed: true,
       reason: "지원서 조건을 확인한 뒤 선택해 주세요.",
       analysis,
-      ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
+      ...(verifiedFreshDefault
+        ? { verifiedFreshDefaultValue: component!.labels.defaultMajor }
+        : {}),
       ...(dateApproval ? { dateApproval } : {}),
       ...(calendarApproval ? { calendarApproval } : {}),
       ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
@@ -927,7 +902,9 @@ function itemForAnalysis(
             : "달력 연월을 확인한 뒤 선택해 주세요."
         : "저장된 값과 지원서 필드가 명확히 연결되었습니다.",
     analysis,
-    ...(verifiedFreshDefault ? { verifiedFreshDefaultValue: "주전공" } : {}),
+    ...(verifiedFreshDefault
+      ? { verifiedFreshDefaultValue: component!.labels.defaultMajor }
+      : {}),
     ...(dateApproval ? { dateApproval } : {}),
     ...(calendarApproval ? { calendarApproval } : {}),
     ...(dayCalendarApproval ? { dayCalendarApproval } : {}),
@@ -991,14 +968,15 @@ export function buildReviewPlan({
   if (analysis.analysisStatus === "BLOCKED") {
     return { status: "blocked", items: [] };
   }
-  const greeting = analysis.fields.some((field) => {
+  const components = analysis.fields.some((field) => {
     const lookup = registry.lookupField(field.candidateId);
     if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
     const document = (
       lookup.handle.elements[0] ?? lookup.handle.customElements?.[0]
     )?.ownerDocument;
     return (
-      document !== undefined && resolveDocumentCompany(document) === "greeting"
+      document !== undefined &&
+      resolveDocumentCompany(document) === "components"
     );
   });
   const items = analysis.fields.map((field) =>
@@ -1010,14 +988,14 @@ export function buildReviewPlan({
       freshDefaultCandidateIds,
       normalizeDirectValue,
       analysis.mode === "GENERIC",
-      greeting && analysis.mode === "ADAPTER",
+      components && analysis.mode === "ADAPTER",
     ),
   );
   return {
     status: analysis.analysisStatus === "PARTIAL" ? "partial" : "ready",
     items:
-      greeting && analysis.mode === "ADAPTER"
-        ? approveGreetingGpaPairs(
+      components && analysis.mode === "ADAPTER"
+        ? approveComponentGpaPairs(
             rejectDuplicateRepeatedBindings(items),
             registry,
           )

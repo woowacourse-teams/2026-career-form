@@ -1,5 +1,5 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -11,7 +11,7 @@ useGreetingHost(() => {
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { collectFieldsSnapshot, collectPreparationSnapshot } from "./collect";
-import { greetingCollectionAdapter } from "../adapters/greeting/collection";
+import { componentCollectionAdapter } from "../policy/components/collection";
 
 const UNIVERSITY = "educationalBackground.universities.0";
 
@@ -369,7 +369,7 @@ describe("Greeting collection is enabled only by the server adapter ID", () => {
         'button[data-scope="tooltip"][data-part="trigger"]',
       ),
     ].find((button) => button.textContent === "전공 추가")!;
-    expect(greetingCollectionAdapter.actionDomId(firstAdd)).toBe(
+    expect(componentCollectionAdapter.actionDomId(firstAdd)).toBe(
       "greeting:add:graduateSchools:0:majors",
     );
     const first = collectPreparationSnapshot(document);

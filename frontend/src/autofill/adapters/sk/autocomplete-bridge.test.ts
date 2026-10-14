@@ -3,18 +3,18 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createStructuralSignature } from "../../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../../dom/types";
 import {
-  confirmSkAutocomplete,
-  isSkAutocompleteBridgeReady,
-  SK_AUTOCOMPLETE_REQUEST_EVENT,
-  SK_AUTOCOMPLETE_RESPONSE_EVENT,
-  SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
-} from "./autocomplete-bridge";
+  confirmJqueryAutocomplete,
+  isJqueryAutocompleteBridgeReady,
+  JQUERY_AUTOCOMPLETE_REQUEST_EVENT,
+  JQUERY_AUTOCOMPLETE_RESPONSE_EVENT,
+  JQUERY_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+} from "../../interaction/jquery-autocomplete-bridge";
 import {
-  installSkAutocompleteMainBridge,
-  type SkAutocompleteItem,
-  type SkJQuery,
-} from "./autocomplete-main";
-import { skWorkflowAdapter } from "./workflow";
+  installJqueryAutocompleteMainBridge,
+  type JqueryAutocompleteItem,
+  type Jquery,
+} from "../../interaction/jquery-autocomplete-main";
+import { getWorkflowAdapter } from "../workflow";
 import type { WriteFailureCode } from "../../write/failure";
 
 import { CATALOG, CATALOG_VERSION } from "../../../profile/catalog";
@@ -99,7 +99,7 @@ function setupAutocomplete(options: {
   name: "eduEducationName" | "cerCertName" | "lngExamName";
   rowClass: string;
   query: string;
-  items: SkAutocompleteItem[];
+  items: JqueryAutocompleteItem[];
   scoreControl?: "input" | "select";
   leavesSearchPending?: boolean;
 }) {
@@ -128,11 +128,11 @@ function setupAutocomplete(options: {
 
   const menu = document.createElement("ul");
   menu.className = "ui-menu ui-autocomplete";
-  const itemByElement = new WeakMap<Element, SkAutocompleteItem>();
+  const itemByElement = new WeakMap<Element, JqueryAutocompleteItem>();
   const dataByElement = new WeakMap<Element, Map<string, unknown>>();
   const instance: {
     menu: { element: { 0: HTMLElement; length: number } };
-    selectedItem?: SkAutocompleteItem;
+    selectedItem?: JqueryAutocompleteItem;
     term: string;
     pending: number;
   } = {
@@ -163,7 +163,7 @@ function setupAutocomplete(options: {
   }
   document.body.append(menu);
 
-  const jquery: SkJQuery = (element) => ({
+  const jquery: Jquery = (element) => ({
     data: (key) =>
       key === "ui-autocomplete-item"
         ? itemByElement.get(element)
@@ -179,7 +179,7 @@ function setupAutocomplete(options: {
       return instance;
     },
   });
-  const removeBridge = installSkAutocompleteMainBridge(document, jquery);
+  const removeBridge = installJqueryAutocompleteMainBridge(document, jquery);
   bridgeCleanups.push(removeBridge);
   return { input, menu, removeBridge, searches: () => searches };
 }
@@ -219,7 +219,7 @@ it.each([
     fixture.menu.addEventListener("click", () => selections++);
 
     await expect(
-      skWorkflowAdapter.settleStateDriver!(
+      getWorkflowAdapter(document).settleStateDriver!(
         document,
         fieldHandle(fixture.input),
         (code) => failures.push(code),
@@ -241,7 +241,7 @@ it("reports an unfinished search as a timeout, not empty results", async () => {
     leavesSearchPending: true,
   });
   const failures: WriteFailureCode[] = [];
-  const confirmation = confirmSkAutocomplete(
+  const confirmation = confirmJqueryAutocomplete(
     document,
     fieldHandle(fixture.input),
     (code) => failures.push(code),
@@ -264,7 +264,7 @@ it("does not call hidden search candidates an empty completed result", async () 
   const failures: WriteFailureCode[] = [];
 
   await expect(
-    confirmSkAutocomplete(document, fieldHandle(fixture.input), (code) =>
+    confirmJqueryAutocomplete(document, fieldHandle(fixture.input), (code) =>
       failures.push(code),
     ),
   ).resolves.toBe(false);
@@ -281,7 +281,7 @@ it("keeps a settled hidden empty menu unconfirmed without response-content evide
   });
   fixture.menu.hidden = true;
   const failures: WriteFailureCode[] = [];
-  const confirmation = confirmSkAutocomplete(
+  const confirmation = confirmJqueryAutocomplete(
     document,
     fieldHandle(fixture.input),
     (code) => failures.push(code),
@@ -304,7 +304,7 @@ it("does not interpret malformed search candidate data as no exact match", async
   const failures: WriteFailureCode[] = [];
 
   await expect(
-    confirmSkAutocomplete(document, fieldHandle(fixture.input), (code) =>
+    confirmJqueryAutocomplete(document, fieldHandle(fixture.input), (code) =>
       failures.push(code),
     ),
   ).resolves.toBe(false);
@@ -322,7 +322,7 @@ it("reports the missing score control only after selecting the exact exam", asyn
   const failures: WriteFailureCode[] = [];
   let selections = 0;
   fixture.menu.addEventListener("click", () => selections++);
-  const confirmation = confirmSkAutocomplete(
+  const confirmation = confirmJqueryAutocomplete(
     document,
     fieldHandle(fixture.input),
     (code) => failures.push(code),
@@ -355,9 +355,9 @@ it.each([
     const respond = (event: Event) => {
       const request = JSON.parse((event as CustomEvent<string>).detail);
       if (_name === "marker")
-        fixture.input.removeAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE);
+        fixture.input.removeAttribute(JQUERY_AUTOCOMPLETE_TARGET_ATTRIBUTE);
       document.dispatchEvent(
-        new CustomEvent(SK_AUTOCOMPLETE_RESPONSE_EVENT, {
+        new CustomEvent(JQUERY_AUTOCOMPLETE_RESPONSE_EVENT, {
           detail: JSON.stringify({
             ...request,
             status: "rejected",
@@ -367,13 +367,13 @@ it.each([
         }),
       );
     };
-    document.addEventListener(SK_AUTOCOMPLETE_REQUEST_EVENT, respond);
+    document.addEventListener(JQUERY_AUTOCOMPLETE_REQUEST_EVENT, respond);
     bridgeCleanups.push(() =>
-      document.removeEventListener(SK_AUTOCOMPLETE_REQUEST_EVENT, respond),
+      document.removeEventListener(JQUERY_AUTOCOMPLETE_REQUEST_EVENT, respond),
     );
     const failures: WriteFailureCode[] = [];
 
-    const confirmation = confirmSkAutocomplete(
+    const confirmation = confirmJqueryAutocomplete(
       document,
       fieldHandle(fixture.input),
       (code) => failures.push(code),
@@ -395,13 +395,13 @@ it("keeps rejected bridge diagnostics free of the searched profile value", async
   const responses: string[] = [];
   const collect = (event: Event) =>
     responses.push((event as CustomEvent<string>).detail);
-  document.addEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, collect);
+  document.addEventListener(JQUERY_AUTOCOMPLETE_RESPONSE_EVENT, collect);
   bridgeCleanups.push(() =>
-    document.removeEventListener(SK_AUTOCOMPLETE_RESPONSE_EVENT, collect),
+    document.removeEventListener(JQUERY_AUTOCOMPLETE_RESPONSE_EVENT, collect),
   );
 
   await expect(
-    confirmSkAutocomplete(document, fieldHandle(fixture.input)),
+    confirmJqueryAutocomplete(document, fieldHandle(fixture.input)),
   ).resolves.toBe(false);
   expect(responses).toHaveLength(1);
   expect(JSON.parse(responses[0])).toMatchObject({
@@ -421,7 +421,7 @@ it("reports a missing bridge response as a timeout", async () => {
   });
   fixture.removeBridge();
   const failures: WriteFailureCode[] = [];
-  const confirmation = confirmSkAutocomplete(
+  const confirmation = confirmJqueryAutocomplete(
     document,
     fieldHandle(fixture.input),
     (code) => failures.push(code),
@@ -436,7 +436,7 @@ it.each([
   [
     "the request marker is removed",
     (input: HTMLInputElement) =>
-      input.removeAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE),
+      input.removeAttribute(JQUERY_AUTOCOMPLETE_TARGET_ATTRIBUTE),
   ],
   [
     "the page changes the value",
@@ -455,17 +455,17 @@ it.each([
       leavesSearchPending: true,
     });
     await expect(
-      isSkAutocompleteBridgeReady(document, fieldHandle(fixture.input)),
+      isJqueryAutocompleteBridgeReady(document, fieldHandle(fixture.input)),
     ).resolves.toBe(true);
     fixture.input.value = "Written query";
     const dispatched = new Promise<void>((resolve) =>
       document.addEventListener(
-        SK_AUTOCOMPLETE_REQUEST_EVENT,
+        JQUERY_AUTOCOMPLETE_REQUEST_EVENT,
         () => resolve(),
         { once: true },
       ),
     );
-    const confirmation = confirmSkAutocomplete(
+    const confirmation = confirmJqueryAutocomplete(
       document,
       fieldHandle(fixture.input),
     );
@@ -500,10 +500,10 @@ it.each([
     });
 
     await expect(
-      isSkAutocompleteBridgeReady(document, fieldHandle(fixture.input)),
+      isJqueryAutocompleteBridgeReady(document, fieldHandle(fixture.input)),
     ).resolves.toBe(true);
     await expect(
-      confirmSkAutocomplete(document, fieldHandle(fixture.input)),
+      confirmJqueryAutocomplete(document, fieldHandle(fixture.input)),
     ).resolves.toBe(true);
     expect(fixture.searches()).toBe(1);
     expect(fixture.input.value).toBe("정확한 공개 항목");
@@ -523,7 +523,7 @@ it.each(["input", "select"] as const)(
     });
 
     await expect(
-      confirmSkAutocomplete(document, fieldHandle(fixture.input)),
+      confirmJqueryAutocomplete(document, fieldHandle(fixture.input)),
     ).resolves.toBe(true);
     fixture.removeBridge();
   },
@@ -555,7 +555,7 @@ it.each([
   });
 
   await expect(
-    confirmSkAutocomplete(document, fieldHandle(fixture.input)),
+    confirmJqueryAutocomplete(document, fieldHandle(fixture.input)),
   ).resolves.toBe(false);
   fixture.removeBridge();
 });
@@ -574,7 +574,7 @@ it("rejects an allowlisted name outside its verified row without leaving a marke
   });
 
   await expect(
-    confirmSkAutocomplete(document, fieldHandle(fixture.input)),
+    confirmJqueryAutocomplete(document, fieldHandle(fixture.input)),
   ).resolves.toBe(false);
   expect(
     fixture.input.hasAttribute("data-career-form-sk-autocomplete-target"),
@@ -596,7 +596,7 @@ it.each(["certificate", "languageTest"] as const)(
       scoreControl: "input",
     });
     expect(
-      await skWorkflowAdapter.settleStateDriver!(
+      await getWorkflowAdapter(document).settleStateDriver!(
         document,
         fieldHandle(fixture.input),
         undefined,
@@ -638,7 +638,7 @@ it.each(["valid", "missing", "hidden", "shared", "mismatch"])(
       }
     }
     expect(
-      await skWorkflowAdapter.settleStateDriver!(
+      await getWorkflowAdapter(document).settleStateDriver!(
         document,
         fieldHandle(fixture.input),
         undefined,
@@ -682,7 +682,7 @@ it.each([
     context.item.catalogMatch = { ...match, labels: [] };
   if (mode === "protected") {
     expect(
-      await skWorkflowAdapter.waitForStateDriverReady!(
+      await getWorkflowAdapter(document).waitForStateDriverReady!(
         document,
         fieldHandle(fixture.input),
         undefined,
@@ -696,7 +696,7 @@ it.each([
       ? { ...context, signal: AbortSignal.abort() }
       : context;
   expect(
-    await skWorkflowAdapter.settleStateDriver!(
+    await getWorkflowAdapter(document).settleStateDriver!(
       document,
       fieldHandle(fixture.input),
       undefined,
@@ -704,7 +704,7 @@ it.each([
     ),
   ).toBe(false);
   expect(clicks).toBe(0);
-  expect(fixture.input.hasAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE)).toBe(
+  expect(fixture.input.hasAttribute(JQUERY_AUTOCOMPLETE_TARGET_ATTRIBUTE)).toBe(
     false,
   );
 });
@@ -720,11 +720,11 @@ it("invalidates an in-flight request on cancellation before any late result can 
     leavesSearchPending: true,
   });
   const dispatched = new Promise<void>((resolve) =>
-    document.addEventListener(SK_AUTOCOMPLETE_REQUEST_EVENT, () => resolve(), {
+    document.addEventListener(JQUERY_AUTOCOMPLETE_REQUEST_EVENT, () => resolve(), {
       once: true,
     }),
   );
-  const confirmation = skWorkflowAdapter.settleStateDriver!(
+  const confirmation = getWorkflowAdapter(document).settleStateDriver!(
     document,
     fieldHandle(fixture.input),
     undefined,
@@ -733,7 +733,7 @@ it("invalidates an in-flight request on cancellation before any late result can 
   await dispatched;
   controller.abort();
   expect(await confirmation).toBe(false);
-  expect(fixture.input.hasAttribute(SK_AUTOCOMPLETE_TARGET_ATTRIBUTE)).toBe(
+  expect(fixture.input.hasAttribute(JQUERY_AUTOCOMPLETE_TARGET_ATTRIBUTE)).toBe(
     false,
   );
   expect(fixture.input.value).toBe(context.item.catalogMatch!.query);
@@ -751,7 +751,7 @@ it.each(["rejected", "stale"])(
       items: [{ id: "88", label: query, value: query }],
     });
     expect(
-      await skWorkflowAdapter.settleStateDriver!(
+      await getWorkflowAdapter(document).settleStateDriver!(
         document,
         fieldHandle(fixture.input),
         undefined,
@@ -784,7 +784,7 @@ it.each(["wrongkind", "malformed", "oversized"])(
       items: [{ id: "88", label: match.query, value: match.query }],
     });
     fixture.input.setAttribute(
-      SK_AUTOCOMPLETE_TARGET_ATTRIBUTE,
+      JQUERY_AUTOCOMPLETE_TARGET_ATTRIBUTE,
       "wire-request",
     );
     const catalogMatch =
@@ -794,7 +794,7 @@ it.each(["wrongkind", "malformed", "oversized"])(
           ? { ...match, labels: [] }
           : { ...match, query: "x".repeat(513) };
     document.dispatchEvent(
-      new CustomEvent(SK_AUTOCOMPLETE_REQUEST_EVENT, {
+      new CustomEvent(JQUERY_AUTOCOMPLETE_REQUEST_EVENT, {
         detail: JSON.stringify({
           requestId: "wire-request",
           command: "confirm",

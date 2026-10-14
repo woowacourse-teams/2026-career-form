@@ -1,5 +1,5 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -10,7 +10,7 @@ useGreetingHost(() => {
 });
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { validateFieldsResponse } from "../api/validate-response";
 import { createAnalyzeFields } from "./workflow-analysis";
 
@@ -57,7 +57,7 @@ it("executes server-approved Greeting birth and education dates through their ow
   });
   const errors: string[] = [];
   const analyze = createAnalyzeFields({
-    adapter: greetingWorkflowAdapter,
+    adapter: componentWorkflowAdapter(document),
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
@@ -156,7 +156,7 @@ it("stops before a Greeting calendar click when the saved profile changes after 
   let analyzed = false;
   const errors: string[] = [];
   const analyze = createAnalyzeFields({
-    adapter: greetingWorkflowAdapter,
+    adapter: componentWorkflowAdapter(document),
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
@@ -222,7 +222,7 @@ it("recollects a Greeting control after a preceding selection rerenders the form
   const errors: string[] = [];
   const analyze = createAnalyzeFields({
     adapter: {
-      ...greetingWorkflowAdapter,
+      ...componentWorkflowAdapter(document),
       stateDriverStage: () => 1,
       executeStateDriver: async (_document, handle) => {
         const input = handle.elements[0] as HTMLInputElement;
