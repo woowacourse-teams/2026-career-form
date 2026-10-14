@@ -16,8 +16,8 @@ class HyundaiCompanyFormPolicyFactoryTest {
     void seedsConstrainedHyundaiFields() {
         FormAnalysisPolicyDocument hyundaiPolicy = HyundaiCompanyFormPolicyFactory.create();
 
-        assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v4");
-        assertThat(hyundaiPolicy.version()).isEqualTo(8);
+        assertThat(hyundaiPolicy.id()).isEqualTo("hyundai-policy-v14");
+        assertThat(hyundaiPolicy.version()).isEqualTo(14);
         assertThat(hyundaiPolicy.fieldRules().stream()
             .filter(rule -> java.util.Set.of(
                 "acqDtForeLang", "acqDt", "nationLicNm"
@@ -54,7 +54,7 @@ class HyundaiCompanyFormPolicyFactoryTest {
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
 
         org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2))
-            .save(savedPolicies.capture());
+            .insert(savedPolicies.capture());
         FormAnalysisPolicyDocument hyundaiPolicy = savedPolicies.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("hyundai"))
             .findFirst()
@@ -129,7 +129,7 @@ class HyundaiCompanyFormPolicyFactoryTest {
         );
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
         org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2))
-            .save(savedPolicies.capture());
+            .insert(savedPolicies.capture());
         FormAnalysisPolicyDocument hyundaiPolicy = savedPolicies.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("hyundai"))
             .findFirst()
@@ -204,7 +204,7 @@ class HyundaiCompanyFormPolicyFactoryTest {
         );
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
         org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2))
-            .save(savedPolicies.capture());
+            .insert(savedPolicies.capture());
         FormAnalysisPolicyDocument hyundaiPolicy = savedPolicies.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("hyundai"))
             .findFirst()
@@ -328,7 +328,7 @@ class HyundaiCompanyFormPolicyFactoryTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
-        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).insert(captured.capture());
         var hyundai = captured.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("hyundai")).findFirst().orElseThrow();
 
@@ -430,7 +430,7 @@ class HyundaiCompanyFormPolicyFactoryTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
-        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).insert(captured.capture());
         var hyundai = captured.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("hyundai")).findFirst().orElseThrow();
         var policy = com.careerform.formanalysis.application.policy.CompanyFormPolicy.create(

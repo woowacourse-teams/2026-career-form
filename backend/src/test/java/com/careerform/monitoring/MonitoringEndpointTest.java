@@ -27,6 +27,9 @@ import org.springframework.test.context.ActiveProfiles;
     "management.server.port=0",
     "management.health.mongodb.enabled=false"
 })
+// Monitoring tests do not require a database; seed behavior is covered separately.
+@org.springframework.test.context.bean.override.mockito.MockitoBean(
+    name = "startupPolicySeeder", types = org.springframework.boot.ApplicationRunner.class)
 @ActiveProfiles("dev")
 @ExtendWith(OutputCaptureExtension.class)
 class MonitoringEndpointTest {

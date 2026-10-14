@@ -16,8 +16,8 @@ class LocalGreetingFormPolicySeederTest {
 
         new LocalGreetingFormPolicySeeder(policies).run(null);
 
-        verify(policies).save(document.capture());
+        verify(policies).insert(document.capture());
         assertThat(document.getValue().companyKey()).isEqualTo("greeting");
-        assertThat(document.getValue().version()).isEqualTo(1);
+        assertThat(document.getValue().version()).isEqualTo(8);
     }
 }

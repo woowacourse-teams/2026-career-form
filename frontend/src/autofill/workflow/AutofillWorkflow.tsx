@@ -1,4 +1,11 @@
-import { greetingBasicControls } from "../adapters/greeting/fingerprint";
+import { runtimeRules } from "../policy/runtime-rules";
+import { installExecutionPolicy, executionPolicy } from "./execution-policy";
+import {
+  createStaticFieldsSession,
+  type AnalyzeFieldsSnapshot,
+  type StaticFieldsSession,
+} from "./static-fields-session";
+import { componentBasicControls } from "../policy/components/fingerprint";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
   createPreparationOptions,
@@ -9,9 +16,9 @@ import { useWriteProgress } from "./use-write-progress";
 import { useOperatedFields } from "./use-operated-fields";
 import { resultFieldOptions, resultFieldState } from "./result-field-state";
 import {
-  captureGreetingResultTargets,
-  recollectGreetingResultRegistry,
-} from "./greeting-result-registry";
+  captureComponentResultTargets,
+  recollectComponentResultRegistry,
+} from "./component-result-registry";
 import {
   retainedDriverCandidates,
   retainedDriverReviewResults,
@@ -50,7 +57,7 @@ import {
   createAnalyzeFields,
   type DeferredDriverFailures,
   type CompletedGenericStateDriver,
-  type GreetingStateDriverReceipt,
+  type ComponentStateDriverReceipt,
   type GenericSearchFollowUp,
 } from "./workflow-analysis";
 import { createWriteRevealedFields } from "./revealed-fields";
@@ -63,9 +70,7 @@ import { completedSearchFollowUpsRefIsCurrent } from "./search-follow-up-analysi
 import { collectRevealDiagnostics } from "./reveal-diagnostics";
 import { approvedReviewExecution } from "./workflow-write-items";
 import {
-  localProfileValue,
   preparationItem,
-  reviewProfileFieldKey,
   safeErrorTitle,
   type PreparationItem,
   type Stage,
@@ -76,7 +81,50 @@ import { prepareMixedSectionRows } from "./mixed-section-preparation";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
-export function AutofillWorkflow({
+export function AutofillWorkflow(props: WorkflowProps) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string>();
+  useEffect(() => {
+    let active = true;
+    const url = props.pageDocument.URL;
+    setLoaded(false);
+    setError(undefined);
+    const siteUrl = new URL(url);
+    Promise.resolve(
+      props.apiClient.loadExecutionPolicy?.({
+        host: siteUrl.host,
+        pathPattern: siteUrl.pathname,
+      }),
+    )
+      .then((policy) => {
+        if (!active || props.pageDocument.URL !== url) return;
+        installExecutionPolicy(props.pageDocument, policy);
+        setLoaded(true);
+      })
+      .catch((error: unknown) => {
+        if (active)
+          setError(
+            "사이트 정책을 불러오지 못했습니다. " +
+              (error instanceof Error ? error.message : "다시 실행해 주세요."),
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [props.apiClient, props.pageDocument]);
+  if (error)
+    return (
+      <div role="alert">
+        {error}
+        <button onClick={props.onExit}>돌아가기</button>
+      </div>
+    );
+  if (!loaded)
+    return <div role="status">사이트 입력 정책을 확인하고 있어요</div>;
+  return <PolicyReadyWorkflow {...props} />;
+}
+
+function PolicyReadyWorkflow({
   exitInToolbar = false,
   followFields = false,
   apiClient,
@@ -87,6 +135,13 @@ export function AutofillWorkflow({
   addressSearch = runtimeAddressSearch,
 }: WorkflowProps) {
   const companyId = resolveDocumentCompany(pageDocument);
+  const staticFieldsSession = useRef<StaticFieldsSession | undefined>(
+    undefined,
+  );
+  const analyzeFieldsSnapshot: AnalyzeFieldsSnapshot = (snapshot) =>
+    staticFieldsSession.current
+      ? staticFieldsSession.current(snapshot)
+      : apiClient.analyzeFields(snapshot.request);
   const adapter = getWorkflowAdapter(pageDocument);
   const presentation = useMemo(
     () => createFieldPresentation(pageDocument),
@@ -146,8 +201,8 @@ export function AutofillWorkflow({
   const completedGenericStateDrivers = useRef<
     ReadonlyMap<string, CompletedGenericStateDriver>
   >(new Map());
-  const completedGreetingStateDrivers = useRef<
-    Map<string, GreetingStateDriverReceipt>
+  const completedComponentStateDrivers = useRef<
+    Map<string, ComponentStateDriverReceipt>
   >(new Map());
   const searchFollowUp = useRef<GenericSearchFollowUp | undefined>(undefined);
   const completedSearchFollowUps = useRef<readonly GenericSearchFollowUp[]>([]);
@@ -198,6 +253,10 @@ export function AutofillWorkflow({
       addressRun,
       addressSearch,
       apiClient,
+      analyzeFieldsSnapshot,
+      refreshFieldsAfterPass: (snapshot, eligible) =>
+        staticFieldsSession.current?.refreshAfterPass(snapshot, eligible) ??
+        Promise.resolve(false),
       pageDocument,
       repository,
       approvedSensitiveValues,
@@ -205,7 +264,7 @@ export function AutofillWorkflow({
       freshDefaultControls,
       completedDriverKeys,
       completedGenericStateDrivers,
-      completedGreetingStateDrivers,
+      completedComponentStateDrivers,
       deferredDriverGroups,
       deferredDriverFailures,
       setAddressResult,
@@ -247,6 +306,15 @@ export function AutofillWorkflow({
 
   useEffect(() => {
     let active = true;
+    staticFieldsSession.current =
+      executionPolicy(pageDocument)?.browserPolicy?.refreshAfterPass ||
+      executionPolicy(pageDocument)?.componentPolicy?.workflow.refreshAfterPass
+        ? createStaticFieldsSession(apiClient, {
+            rebindComponentElements:
+              executionPolicy(pageDocument)?.componentPolicy?.workflow
+                .rebindReplacedControls === true,
+          })
+        : undefined;
     observeQuality(() => apiClient.quality?.begin());
     const run: {
       controller: AbortController;
@@ -259,16 +327,20 @@ export function AutofillWorkflow({
         const loadedProfile = await repository.load();
         if (!active) return;
         setProfile(loadedProfile);
-        completedGreetingStateDrivers.current.clear();
+        completedComponentStateDrivers.current.clear();
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
         if (
           companyId === "generic" &&
           analysis.mode === "ADAPTER" &&
-          greetingBasicControls(pageDocument)
+          componentBasicControls(pageDocument)
         )
-          throw new Error("Unverified Greeting page structure");
-        if (companyId === "greeting" && analysis.mode !== "ADAPTER")
+          throw new Error("Unverified Component forms page structure");
+        if (
+          runtimeRules(pageDocument)?.components?.workflow
+            .requireAdapterResponse &&
+          analysis.mode !== "ADAPTER"
+        )
           throw new Error("Unexpected generic response for registered adapter");
         const adapter = getWorkflowAdapter(pageDocument);
 
@@ -358,11 +430,7 @@ export function AutofillWorkflow({
         );
         setPreparationItems(items);
         setWarnings(analysis.warningCodes ?? []);
-        if (items.some((item) => item.runnable && item.sensitive)) {
-          setStage("preparation-review");
-        } else {
-          setPreparationExecutionPending(true);
-        }
+        setPreparationExecutionPending(true);
       } catch (error) {
         if (!active) return;
         setExceptionTitle(safeErrorTitle(error));
@@ -375,7 +443,7 @@ export function AutofillWorkflow({
       run.controller.abort();
       observeQuality(() => apiClient.quality?.finish("CANCELLED"));
     };
-  }, [apiClient, pageDocument, repository]);
+  }, [apiClient, pageDocument, repository, companyId]);
 
   useEffect(() => {
     if (stage === "result" || stage === "exception" || stage === "unsupported")
@@ -451,7 +519,9 @@ export function AutofillWorkflow({
         );
         if (
           followUpAnalysis.analysisStatus === "BLOCKED" ||
-          (companyId === "greeting" && followUpAnalysis.mode !== "ADAPTER")
+          (runtimeRules(pageDocument)?.components?.workflow
+            .requireAdapterResponse &&
+            followUpAnalysis.mode !== "ADAPTER")
         )
           throw new Error("Unexpected adapter response");
 
@@ -530,6 +600,7 @@ export function AutofillWorkflow({
     onWriteResult,
     adapter,
     apiClient,
+    analyzeFieldsSnapshot,
     pageDocument,
     setWorkflowDiagnostics,
     presentField: async (registry, item) => {
@@ -547,21 +618,6 @@ export function AutofillWorkflow({
     executionPending.current = true;
     setResultRegistry(undefined);
     try {
-      if (profile && reviewItems.some((item) => item.status === "sensitive")) {
-        for (const item of reviewItems) {
-          const key = reviewProfileFieldKey(item);
-          if (item.status !== "sensitive" || !key) continue;
-          const value = localProfileValue(profile, key);
-          if (value === undefined) continue;
-          consideredSensitiveValues.current.set(key, value);
-          if (item.selected && !item.disabled && item.revealed)
-            approvedSensitiveValues.current.set(key, value);
-          else approvedSensitiveValues.current.delete(key);
-        }
-        setStage("analyzing");
-        await analyzeFields(profile);
-        return;
-      }
       const retainedDrivers = retainedDriverReviewResults(
         retainedDriverCandidates(
           reviewItems,
@@ -614,21 +670,21 @@ export function AutofillWorkflow({
       writeController.current.abort();
       writeController.current = new AbortController();
       const approvedProfile = JSON.stringify(profile);
-      const greetingTargets =
-        companyId === "greeting"
-          ? captureGreetingResultTargets(fieldsSnapshot.registry, reviewItems)
-          : undefined;
-      let settledGreetingRegistry: CandidateRegistry | undefined;
+      const componentTargets = executionPolicy(pageDocument)?.componentPolicy
+        ?.workflow.captureDriverResults
+        ? captureComponentResultTargets(fieldsSnapshot.registry, reviewItems)
+        : undefined;
+      let settledComponentRegistry: CandidateRegistry | undefined;
       const nextResults = await executeApprovedWritesAfterPageSettles({
-        ...(greetingTargets
+        ...(componentTargets
           ? {
               settledRegistry: () => {
-                settledGreetingRegistry = recollectGreetingResultRegistry(
+                settledComponentRegistry = recollectComponentResultRegistry(
                   pageDocument,
-                  greetingTargets,
+                  componentTargets,
                   reviewItems,
                 );
-                return settledGreetingRegistry;
+                return settledComponentRegistry;
               },
             }
           : {}),
@@ -659,7 +715,7 @@ export function AutofillWorkflow({
           ),
       });
       if (!mounted.current) return;
-      if (settledGreetingRegistry) {
+      if (settledComponentRegistry) {
         [...retainedDrivers.results, ...nextResults].forEach((result) => {
           if (result.status !== "written") return;
           const item = reviewItems.find(
@@ -669,10 +725,10 @@ export function AutofillWorkflow({
             progressTracker.rebindWritten(
               item,
               fieldsSnapshot.registry,
-              settledGreetingRegistry!,
+              settledComponentRegistry!,
             );
         });
-        setResultRegistry(settledGreetingRegistry);
+        setResultRegistry(settledComponentRegistry);
       }
       const pendingFollowUp = takeWrittenSearchFollowUp(
         searchFollowUp,
@@ -719,7 +775,9 @@ export function AutofillWorkflow({
   }, [preparationExecutionPending]);
 
   const visibleRegistry =
-    stage === "result" && companyId === "greeting"
+    stage === "result" &&
+    executionPolicy(pageDocument)?.componentPolicy?.workflow
+      .captureDriverResults
       ? (resultRegistry ?? fieldsSnapshot?.registry)
       : fieldsSnapshot?.registry;
 

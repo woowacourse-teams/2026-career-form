@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { beforeEach, afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { collectFieldsSnapshot } from "../dom/collect";
@@ -16,19 +19,25 @@ afterEach(() => document.body.replaceChildren());
 function plan(profileRows = 1, fresh = true) {
   const base = "educationalBackground.universities.0";
   document.body.innerHTML = `<div data-scope="field" data-part="root"><label>대학교</label><div data-scope="accordion" data-part="root"><div data-scope="accordion" data-part="item"><input name="${base}.schoolName"><input name="${base}.majors.1" data-scope="combobox" data-part="input" role="combobox" aria-controls="majors"><button name="${base}.majors.1.majorClassification" aria-controls="classification">주전공</button></div></div></div>`;
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `<input name="basicInformation.name"><input name="basicInformation.phoneNumber.nationalNumber">`,
+  );
   const snapshot = collectFieldsSnapshot(document);
   const candidates = snapshot.request.sections.flatMap((section) => [
     ...section.fields,
     ...(section.items ?? []).flatMap((row) => row.fields),
   ]);
   const response = validateFieldsResponse(snapshot.request, {
+    executionPolicy: fixturePolicy("greeting"),
     snapshotId: snapshot.request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
     fields: candidates.map((field) => {
       const name = field.domName ?? "";
       const classification = name.endsWith(".majorClassification");
-      return name.endsWith(".schoolName")
+      return name.endsWith(".schoolName") ||
+        name.startsWith("basicInformation.")
         ? {
             candidateId: field.candidateId,
             matchType: "NO_MATCH",

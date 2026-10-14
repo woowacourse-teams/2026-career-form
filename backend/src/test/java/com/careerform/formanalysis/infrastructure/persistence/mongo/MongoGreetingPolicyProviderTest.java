@@ -26,16 +26,16 @@ class MongoGreetingPolicyProviderTest {
     private final SupportedProfileFields profileFields = new SupportedProfileFields();
 
     @Test
-    @DisplayName("두 도메인이 공유할 Greeting 버전 1 정책을 읽는다")
+    @DisplayName("두 도메인이 공유할 Greeting 버전 8 정책을 읽는다")
     void loadsTheSharedPolicy() {
-        when(policies.findByCompanyKeyAndVersion("greeting", 1))
+        when(policies.findByCompanyKeyAndVersion("greeting", 8))
             .thenReturn(Optional.of(GreetingCompanyFormPolicyFactory.create()));
 
-        Object result = new MongoGreetingPolicyProvider(policies, profileFields, 1).find();
+        Object result = new MongoGreetingPolicyProvider(policies, profileFields, 8).find();
 
         assertThat(result).isInstanceOfSatisfying(Available.class, available -> {
             assertThat(available.policy().companyKey()).isEqualTo("greeting");
-            assertThat(available.policy().version()).isEqualTo(1);
+            assertThat(available.policy().version()).isEqualTo(8);
             assertThat(available.policy().fieldRules()).extracting(rule -> rule.structuralName())
                 .contains("basicInformation.name", "basicInformation.phoneNumber.nationalNumber",
                     "educationalBackground.universities.*.schoolName");
@@ -45,11 +45,11 @@ class MongoGreetingPolicyProviderTest {
     @Test
     @DisplayName("정책이 없거나 조회에 실패하면 범용으로 넘기지 않는다")
     void reportsUnavailableForMissingOrFailedPolicy() {
-        when(policies.findByCompanyKeyAndVersion("greeting", 1))
+        when(policies.findByCompanyKeyAndVersion("greeting", 8))
             .thenReturn(Optional.empty())
             .thenThrow(new DataAccessResourceFailureException("synthetic-db-failure"));
         MongoGreetingPolicyProvider provider =
-            new MongoGreetingPolicyProvider(policies, profileFields, 1);
+            new MongoGreetingPolicyProvider(policies, profileFields, 8);
 
         assertThat(provider.find()).isInstanceOf(Unavailable.class);
         assertThat(provider.find()).isInstanceOf(Unavailable.class);
@@ -64,10 +64,10 @@ class MongoGreetingPolicyProviderTest {
 
     @Test
     void recordsLookupDurationAndFailureTypeWithoutExceptionDetails(CapturedOutput output) {
-        when(policies.findByCompanyKeyAndVersion("greeting", 1))
+        when(policies.findByCompanyKeyAndVersion("greeting", 8))
             .thenThrow(new DataAccessResourceFailureException("synthetic-private-db-query"));
 
-        assertThat(new MongoGreetingPolicyProvider(policies, profileFields, 1).find())
+        assertThat(new MongoGreetingPolicyProvider(policies, profileFields, 8).find())
             .isInstanceOf(Unavailable.class);
         assertThat(output.getAll()).contains("failure=DataAccessResourceFailureException", "durationMs=")
             .doesNotContain("synthetic-private-db-query");

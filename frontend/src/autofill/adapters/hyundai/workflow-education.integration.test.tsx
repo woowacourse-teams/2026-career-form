@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -81,6 +84,7 @@ function addEducationRow(article: HTMLElement, index: number): HTMLElement {
 
 function fieldsResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -180,6 +184,7 @@ it("prepares Hyundai education once, binds each collected section index, and pre
   ];
   let preparationCalls = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => {
       preparationCalls += 1;
       const action = request.sections

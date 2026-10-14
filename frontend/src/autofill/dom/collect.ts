@@ -1,3 +1,10 @@
+import { runtimeRules, componentName } from "../policy/runtime-rules";
+import { componentPolicy } from "../policy/component-policy";
+import { componentSelector } from "../policy/component-dom";
+import { cachedDomRead, displayState, withDomReadPass } from "./read-pass";
+import { startLocalTiming } from "../debug/local-timing";
+import { executionPolicy } from "../workflow/execution-policy";
+import { targetOnlyRadio } from "../policy/radio-validation";
 import { resolveDocumentCompany } from "../adapters/company";
 import type { CompanyId } from "../adapters/company";
 import type {
@@ -10,20 +17,19 @@ import type {
   PreparationSection,
 } from "../api/types";
 import {
-  greetingCollectionAdapter,
-  greetingFieldElements,
-  greetingFieldLabel,
-  greetingMajorRowsForAction,
-  greetingSectionContainer,
-  greetingSyntheticDomName,
-} from "../adapters/greeting/collection";
+  componentCollectionAdapter,
+  componentFieldElements,
+  componentFieldLabel,
+  componentMajorRowsForAction,
+  componentSectionContainer,
+  componentSyntheticDomName,
+} from "../policy/components/collection";
 import {
   collectionAdapterForHost,
   type CollectionAdapter,
   type CollectionPhase,
   type CollectionSource,
 } from "../adapters/collection";
-export { isHyundaiTalentHost, isSkCareersHost } from "../adapters/company";
 import {
   CandidateRegistry,
   createStructuralSignature,
@@ -55,7 +61,7 @@ import {
 
 const EXPLICIT_ROW_SELECTOR = "[data-repeatable-group], [data-repeater-item]";
 
-const SECTION_SELECTOR = "fieldset, section, [role='group'], .apply-form-box";
+const SECTION_SELECTOR = "fieldset, section, [role='group']";
 const FORBIDDEN_ACTION =
   /저장|제출|지원|완료|다음|이전|이동|미리보기|삭제|업로드|계산기|submit|save|next|previous|preview|delete|upload|remove|calculator/i;
 const GENERIC_PREPARATION_FORBIDDEN_ACTION =
@@ -142,6 +148,12 @@ function repeatableItemGroupId(element: Element): string | undefined {
 }
 
 function isHidden(element: HTMLElement): boolean {
+  return cachedDomRead(element, "collect-hidden", () =>
+    hiddenUncached(element),
+  );
+}
+
+function hiddenUncached(element: HTMLElement): boolean {
   if (
     element.hidden ||
     element.closest("[hidden], [aria-hidden='true']") ||
@@ -154,7 +166,7 @@ function isHidden(element: HTMLElement): boolean {
   if (!view) return false;
   let current: Element | null = element;
   while (current) {
-    const style = view.getComputedStyle(current);
+    const style = displayState(current);
     if (style.display === "none" || style.visibility === "hidden") {
       return true;
     }
@@ -247,8 +259,14 @@ function groupBySection<T extends Element>(
   return groups;
 }
 
-function sectionSelector(adapter: CollectionAdapter): string {
-  return [SECTION_SELECTOR, ...adapter.sectionSelectors].join(", ");
+function sectionSelector(
+  adapter: CollectionAdapter,
+  document: Document,
+): string {
+  return [
+    runtimeRules(document)?.sectionSelector ?? SECTION_SELECTOR,
+    ...adapter.sectionSelectors,
+  ].join(", ");
 }
 
 function actionDomId(
@@ -311,8 +329,8 @@ function collectFieldElements(
       element.type,
     );
   });
-  return companyId === "greeting"
-    ? [...native, ...greetingFieldElements(document)]
+  return companyId === "components"
+    ? [...native, ...componentFieldElements(document)]
     : native;
 }
 
@@ -320,390 +338,424 @@ export function collectFieldsSnapshot(
   document: Document,
   dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
-  const companyId = resolveDocumentCompany(document);
-  const adapter = collectionAdapterForHost(document);
-  const registry = new CandidateRegistry();
-  let candidateIndex = 0;
-  const sections: FieldsSection[] = [];
-  const groups = groupBySection(
-    [
-      ...collectFieldElements(document, adapter, companyId),
-      ...dropdowns.keys(),
-    ],
-    sectionSelector(adapter),
-    adapter === collectionAdapterForHost(""),
-    companyId === "greeting" ? greetingSectionContainer : undefined,
-  );
-
-  Array.from(groups.entries()).forEach(
-    ([container, elements], sectionIndex) => {
-      const sectionId = container
-        ? createOpaqueId("section", sectionIndex)
-        : "section-root";
-      const fields: FieldCandidate[] = [];
-      const explicitGroupId = (row: Element) =>
-        adapter.itemGroupId?.(row) ?? repeatableItemGroupId(row);
-      // One shared group assignment feeds itemIndex, the semantic repeat
-      // context, registry counts and the pre-execution revalidation below.
-      const currentAssignments = (revalidate = false) =>
-        container
-          ? assignRepeatGroups(
-              container,
-              revalidate && companyId === "greeting"
-                ? (adapter.repeatableItemCandidates(container) ?? []).filter(
-                    (row) => !isTemplateLike(row),
-                  )
-                : repeatableItemElements(container, adapter, "fields"),
-              explicitGroupId,
-              sectionId,
-            )
-          : [];
-      const repeatableItems = currentAssignments().map(
-        (assignment, itemPosition) => ({
-          ...assignment,
-          element: assignment.row,
-          itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
-          fields: [] as FieldCandidate[],
-        }),
+  const finishTiming = startLocalTiming("collect", { version: 2 });
+  try {
+    return withDomReadPass(() => {
+      const companyId = resolveDocumentCompany(document);
+      const adapter = collectionAdapterForHost(document);
+      const registry = new CandidateRegistry();
+      let candidateIndex = 0;
+      const sections: FieldsSection[] = [];
+      const groups = groupBySection(
+        [
+          ...collectFieldElements(document, adapter, companyId),
+          ...dropdowns.keys(),
+        ],
+        sectionSelector(adapter, document),
+        adapter === collectionAdapterForHost(""),
+        companyId === "components" ? componentSectionContainer : undefined,
       );
-      // Mixed-section groups (C5) are detected from the same assignment.
-      const mixedRowOf = new Map<
-        Element,
-        { groupKey: string; rowIndex: number; group: MixedSectionGroup }
-      >();
-      if (container && adapter === collectionAdapterForHost("")) {
-        const byGroup = new Map<number, Element[]>();
-        for (const item of repeatableItems)
-          if (!item.ambiguous)
-            byGroup.set(item.groupOrdinal, [
-              ...(byGroup.get(item.groupOrdinal) ?? []),
-              item.element,
-            ]);
-        for (const [ordinal, rows] of byGroup) {
-          const group = detectMixedSectionGroup(
-            container,
-            rows,
-            explicitGroupId,
-          );
-          if (!group) continue;
-          rows.forEach((row, rowIndex) =>
-            mixedRowOf.set(row, {
-              groupKey: `${sectionId}-group-${ordinal}`,
-              rowIndex,
-              group,
+
+      Array.from(groups.entries()).forEach(
+        ([container, elements], sectionIndex) => {
+          const sectionId = container
+            ? createOpaqueId("section", sectionIndex)
+            : "section-root";
+          const fields: FieldCandidate[] = [];
+          const explicitGroupId = (row: Element) =>
+            adapter.itemGroupId?.(row) ?? repeatableItemGroupId(row);
+          // One shared group assignment feeds itemIndex, the semantic repeat
+          // context, registry counts and the pre-execution revalidation below.
+          const currentAssignments = (
+            revalidate = false,
+          ): ReturnType<typeof assignRepeatGroups> =>
+            cachedDomRead(currentAssignments, String(revalidate), () =>
+              container
+                ? assignRepeatGroups(
+                    container,
+                    revalidate &&
+                      runtimeRules(document)?.components?.collection
+                        .revalidateAdapterRows
+                      ? (
+                          adapter.repeatableItemCandidates(container) ?? []
+                        ).filter((row) => !isTemplateLike(row))
+                      : repeatableItemElements(container, adapter, "fields"),
+                    explicitGroupId,
+                    sectionId,
+                  )
+                : [],
+            );
+          const repeatableItems = currentAssignments().map(
+            (assignment, itemPosition) => ({
+              ...assignment,
+              element: assignment.row,
+              itemId: createOpaqueId(`${sectionId}-item`, itemPosition),
+              fields: [] as FieldCandidate[],
             }),
           );
-        }
-      }
-      const consumed = new Set<Element>();
-
-      for (const element of elements) {
-        if (consumed.has(element)) continue;
-        const customRadio =
-          companyId === "greeting" &&
-          element.getAttribute("role") === "radiogroup";
-        const isChoice =
-          customRadio ||
-          (element instanceof HTMLInputElement &&
-            (element.type === "radio" || element.type === "checkbox"));
-        const grouped =
-          element instanceof HTMLInputElement && isChoice && element.name
-            ? elements.filter(
-                (peer) =>
-                  peer instanceof HTMLInputElement &&
-                  peer.type === element.type &&
-                  peer.name === element.name &&
-                  repeatableItems.find(({ element: row }) => row.contains(peer))
-                    ?.element ===
-                    repeatableItems.find(({ element: row }) =>
-                      row.contains(element),
-                    )?.element,
-              )
-            : [element];
-        grouped.forEach((peer) => consumed.add(peer));
-
-        const candidateId = createOpaqueId("field", candidateIndex++);
-        const first = grouped[0]!;
-        const matchingItems = repeatableItems.filter(({ element: item }) =>
-          grouped.every((field) => item.contains(field)),
-        );
-        const item = matchingItems.length === 1 ? matchingItems[0] : undefined;
-        let candidate: FieldCandidate;
-        const optionElements = new Map<string, HTMLElement>();
-        const buttonDropdown = dropdowns.get(first);
-        if (buttonDropdown) {
-          const options = buttonDropdown.options.map((option, index) => {
-            const optionId = createOpaqueId(`${candidateId}-option`, index);
-            optionElements.set(optionId, option.element);
-            return { optionId, displayName: option.text };
-          });
-          candidate = {
-            ...baseCandidate(first, candidateId),
-            element: "custom",
-            control: "select",
-            options,
-          };
-        } else if (isChoice) {
-          const optionPeers = customRadio
-            ? Array.from(
-                element.querySelectorAll<HTMLElement>(
-                  'button[role="radio"][data-scope="toggle-group"][data-part="item"]',
-                ),
-              )
-            : grouped;
-          const options = optionPeers.map((peer, optionIndex) => {
-            const optionId = createOpaqueId(
-              `${candidateId}-option`,
-              optionIndex,
-            );
-            optionElements.set(optionId, peer);
-            return {
-              optionId,
-              displayName: labelOf(peer) ?? `선택 ${optionIndex + 1}`,
-            };
-          });
-          candidate = {
-            ...baseCandidate(
-              first,
-              candidateId,
-              companyId === "greeting"
-                ? greetingSyntheticDomName(first)
-                : undefined,
-            ),
-            element: "input",
-            control: customRadio
-              ? "radio"
-              : ((first as HTMLInputElement).type as "radio" | "checkbox"),
-            options,
-          };
-        } else if (first instanceof HTMLSelectElement) {
-          const options = Array.from(first.options)
-            .map((option, optionIndex) => {
-              const displayName = metadata(option.textContent);
-              if (!displayName) return undefined;
-              const optionId = createOpaqueId(
-                `${candidateId}-option`,
-                optionIndex,
+          // Mixed-section groups (C5) are detected from the same assignment.
+          const mixedRowOf = new Map<
+            Element,
+            { groupKey: string; rowIndex: number; group: MixedSectionGroup }
+          >();
+          if (container && adapter === collectionAdapterForHost("")) {
+            const byGroup = new Map<number, Element[]>();
+            for (const item of repeatableItems)
+              if (!item.ambiguous)
+                byGroup.set(item.groupOrdinal, [
+                  ...(byGroup.get(item.groupOrdinal) ?? []),
+                  item.element,
+                ]);
+            for (const [ordinal, rows] of byGroup) {
+              const group = detectMixedSectionGroup(
+                container,
+                rows,
+                explicitGroupId,
               );
-              optionElements.set(optionId, option);
-              return { optionId, displayName };
-            })
-            .filter(
-              (option): option is { optionId: string; displayName: string } =>
-                Boolean(option),
-            );
-          candidate = {
-            ...baseCandidate(
-              first,
-              candidateId,
-              companyId === "greeting"
-                ? greetingSyntheticDomName(first)
-                : undefined,
-            ),
-            element: "select",
-            control: "select",
-            ...(options.length > 0 ? { options } : {}),
-          };
-        } else {
-          const isButton =
-            first instanceof HTMLButtonElement ||
-            (first instanceof HTMLInputElement && first.type === "button");
-          candidate = {
-            ...baseCandidate(
-              first,
-              candidateId,
-              companyId === "greeting"
-                ? greetingSyntheticDomName(first)
-                : undefined,
-            ),
-            element:
-              first instanceof HTMLTextAreaElement ? "textarea" : "input",
-            control:
-              first instanceof HTMLTextAreaElement
-                ? "textarea"
-                : isButton
-                  ? "button"
-                  : "text",
-          };
-        }
-
-        // Greeting search suggestions can echo the user's typed answer.
-        // Its local workflow resolves options without sending them to analysis.
-        if (
-          companyId !== "greeting" &&
-          first.getAttribute("role") === "combobox"
-        ) {
-          const ids =
-            first.getAttribute("aria-controls")?.trim().split(/\s+/) ?? [];
-          const menu =
-            ids.length === 1 ? document.getElementById(ids[0]) : null;
-          if (menu?.getAttribute("role") === "listbox") {
-            const options = Array.from(
-              menu.querySelectorAll<HTMLElement>("[role='option']"),
-            );
-            if (options.length <= 128) {
-              candidate.options = options.map((option, index) => {
-                const optionId = createOpaqueId(`${candidateId}-option`, index);
-                optionElements.set(optionId, option);
-                return {
-                  optionId,
-                  displayName: metadata(option.textContent) ?? "선택지",
-                };
-              });
+              if (!group) continue;
+              rows.forEach((row, rowIndex) =>
+                mixedRowOf.set(row, {
+                  groupKey: `${sectionId}-group-${ordinal}`,
+                  rowIndex,
+                  group,
+                }),
+              );
             }
           }
-        }
-        const semanticContext = collectSemanticContext(first, container);
-        if (companyId === "greeting") {
-          const label = metadata(greetingFieldLabel(first));
-          delete candidate.displayName;
-          if (label) candidate.displayName = label;
-          delete semanticContext.labels;
-          const text = semanticText(label);
-          if (text) semanticContext.labels = [{ source: "label", text }];
-        }
-        if (
-          item &&
-          item.itemIndex !== undefined &&
-          item.rowCount !== undefined &&
-          item.rowCount <= 128
-        ) {
-          semanticContext.repeat = {
-            groupId:
-              companyId === "greeting" && item.itemGroupId
-                ? item.itemGroupId
-                : `${sectionId}-group-${item.groupOrdinal}`,
-            rowIndex: item.itemIndex,
-            rowCount: item.rowCount,
-          };
-        }
-        candidate = { ...candidate, semanticContext };
-        if (item) item.fields.push(candidate);
-        else fields.push(candidate);
-        const elementsForHandle = grouped.filter(
-          (
-            peer,
-          ): peer is
-            HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
-            peer instanceof HTMLInputElement ||
-            peer instanceof HTMLSelectElement ||
-            peer instanceof HTMLTextAreaElement,
-        );
-        const customElements = grouped.filter(
-          (peer) =>
-            !(peer instanceof HTMLInputElement) &&
-            !(peer instanceof HTMLSelectElement) &&
-            !(peer instanceof HTMLTextAreaElement),
-        );
-        const mixed = item ? mixedRowOf.get(item.element) : undefined;
-        const kindSelect = mixed?.group.kindSelects[mixed.rowIndex];
-        const selectedKind = kindSelect?.selectedOptions[0]?.value
-          ? metadata(kindSelect.selectedOptions[0].textContent)
-          : undefined;
-        registry.registerField(
-          {
-            kind: "field",
-            ...(buttonDropdown ? { buttonDropdown } : {}),
-            ...(mixed
-              ? {
-                  mixedSectionRow: {
-                    groupKey: mixed.groupKey,
-                    rowIndex: mixed.rowIndex,
-                    rowCount: mixed.group.rows.length,
-                    ...(selectedKind ? { selectedKind } : {}),
-                    isKindSelect: kindSelect === first,
-                    group: mixed.group,
-                  },
-                }
-              : {}),
-            candidateId,
-            candidate,
-            elements: elementsForHandle,
-            ...(customElements.length > 0 ? { customElements } : {}),
-            optionElements,
-            sectionId,
-            ...(item
-              ? {
-                  itemId: item.itemId,
-                  isCurrentContext: () => {
-                    if (!grouped.every((field) => item.element.contains(field)))
-                      return false;
-                    const current = currentAssignments(true).find(
-                      ({ row }) => row === item.element,
-                    );
-                    if (!current) return false;
-                    // An ambiguous row never becomes indexed later; it only
-                    // has to remain the same unindexed row.
-                    if (item.ambiguous) return current.ambiguous;
-                    return (
-                      !current.ambiguous &&
-                      sameRepeatGroupKey(current.key, item.key) &&
-                      current.rowCount === item.rowCount &&
-                      current.itemIndex === item.itemIndex
-                    );
-                  },
-                  ...(item.itemIndex !== undefined
-                    ? { itemIndex: item.itemIndex }
-                    : {}),
-                  ...(item.itemGroupId
-                    ? { itemGroupId: item.itemGroupId }
-                    : {}),
-                }
-              : {}),
-            signature: createStructuralSignature([
-              ...elementsForHandle,
-              ...customElements,
-            ]),
-          },
-          blockReason(first),
-        );
-      }
-      // Ambiguous rows carry no group id and no count; review keeps them
-      // unavailable because they have no itemIndex.
-      const itemGroups = new Set(
-        repeatableItems
-          .filter(({ ambiguous }) => !ambiguous)
-          .map(({ itemGroupId }) => itemGroupId),
-      );
-      for (const itemGroupId of itemGroups) {
-        const groupItems = repeatableItems.filter(
-          (item) => !item.ambiguous && item.itemGroupId === itemGroupId,
-        );
-        registry.setFieldItemCount(sectionId, groupItems.length, itemGroupId);
-        registry.setFieldItemElements(
-          sectionId,
-          groupItems.map(({ element }) => element),
-          itemGroupId,
-        );
-      }
-      const itemFields: FieldsItem[] = repeatableItems
-        .filter(({ fields: itemFields }) => itemFields.length > 0)
-        .map(({ itemId, itemGroupId, fields: itemFields }) => ({
-          itemId,
-          ...(itemGroupId ? { itemGroupId } : {}),
-          fields: itemFields,
-        }));
-      sections.push({
-        sectionId,
-        ...(sectionName(container)
-          ? { displayName: sectionName(container) }
-          : {}),
-        fields,
-        ...(itemFields.length > 0 ? { items: itemFields } : {}),
-      });
-    },
-  );
+          const consumed = new Set<Element>();
 
-  return {
-    request: {
-      schemaVersion: 2,
-      supportedWriteCommands: ["SELECT_DATE"],
-      snapshotId: createSnapshotId("fields"),
-      site: siteOf(document),
-      sections,
-    },
-    registry,
-  };
+          for (const element of elements) {
+            if (consumed.has(element)) continue;
+            const customRadio =
+              companyId === "components" &&
+              element.getAttribute("role") === "radiogroup";
+            const isChoice =
+              customRadio ||
+              (element instanceof HTMLInputElement &&
+                (element.type === "radio" || element.type === "checkbox"));
+            const grouped =
+              element instanceof HTMLInputElement && isChoice && element.name
+                ? elements.filter(
+                    (peer) =>
+                      peer instanceof HTMLInputElement &&
+                      peer.type === element.type &&
+                      peer.name === element.name &&
+                      repeatableItems.find(({ element: row }) =>
+                        row.contains(peer),
+                      )?.element ===
+                        repeatableItems.find(({ element: row }) =>
+                          row.contains(element),
+                        )?.element,
+                  )
+                : [element];
+            grouped.forEach((peer) => consumed.add(peer));
+
+            const candidateId = createOpaqueId("field", candidateIndex++);
+            const first = grouped[0]!;
+            const matchingItems = repeatableItems.filter(({ element: item }) =>
+              grouped.every((field) => item.contains(field)),
+            );
+            const item =
+              matchingItems.length === 1 ? matchingItems[0] : undefined;
+            let candidate: FieldCandidate;
+            const optionElements = new Map<string, HTMLElement>();
+            const buttonDropdown = dropdowns.get(first);
+            if (buttonDropdown) {
+              const options = buttonDropdown.options.map((option, index) => {
+                const optionId = createOpaqueId(`${candidateId}-option`, index);
+                optionElements.set(optionId, option.element);
+                return { optionId, displayName: option.text };
+              });
+              candidate = {
+                ...baseCandidate(first, candidateId),
+                element: "custom",
+                control: "select",
+                options,
+              };
+            } else if (isChoice) {
+              const optionPeers = customRadio
+                ? Array.from(
+                    element.querySelectorAll<HTMLElement>(
+                      componentSelector(element, "collectedRadioOption"),
+                    ),
+                  )
+                : grouped;
+              const options = optionPeers.map((peer, optionIndex) => {
+                const optionId = createOpaqueId(
+                  `${candidateId}-option`,
+                  optionIndex,
+                );
+                optionElements.set(optionId, peer);
+                return {
+                  optionId,
+                  displayName: labelOf(peer) ?? `선택 ${optionIndex + 1}`,
+                };
+              });
+              candidate = {
+                ...baseCandidate(
+                  first,
+                  candidateId,
+                  companyId === "components"
+                    ? componentSyntheticDomName(first)
+                    : undefined,
+                ),
+                element: "input",
+                control: customRadio
+                  ? "radio"
+                  : ((first as HTMLInputElement).type as "radio" | "checkbox"),
+                options,
+              };
+            } else if (first instanceof HTMLSelectElement) {
+              const options = Array.from(first.options)
+                .map((option, optionIndex) => {
+                  const displayName = metadata(option.textContent);
+                  if (!displayName) return undefined;
+                  const optionId = createOpaqueId(
+                    `${candidateId}-option`,
+                    optionIndex,
+                  );
+                  optionElements.set(optionId, option);
+                  return { optionId, displayName };
+                })
+                .filter(
+                  (
+                    option,
+                  ): option is { optionId: string; displayName: string } =>
+                    Boolean(option),
+                );
+              candidate = {
+                ...baseCandidate(
+                  first,
+                  candidateId,
+                  companyId === "components"
+                    ? componentSyntheticDomName(first)
+                    : undefined,
+                ),
+                element: "select",
+                control: "select",
+                ...(options.length > 0 ? { options } : {}),
+              };
+            } else {
+              const isButton =
+                first instanceof HTMLButtonElement ||
+                (first instanceof HTMLInputElement && first.type === "button");
+              candidate = {
+                ...baseCandidate(
+                  first,
+                  candidateId,
+                  companyId === "components"
+                    ? componentSyntheticDomName(first)
+                    : undefined,
+                ),
+                element:
+                  first instanceof HTMLTextAreaElement ? "textarea" : "input",
+                control:
+                  first instanceof HTMLTextAreaElement
+                    ? "textarea"
+                    : isButton
+                      ? "button"
+                      : "text",
+              };
+            }
+
+            // Component forms search suggestions can echo the user's typed answer.
+            // Its local workflow resolves options without sending them to analysis.
+            if (
+              runtimeRules(document)?.components?.collection
+                .includeSearchOptions !== false &&
+              first.getAttribute("role") === "combobox"
+            ) {
+              const ids =
+                first.getAttribute("aria-controls")?.trim().split(/\s+/) ?? [];
+              const menu =
+                ids.length === 1 ? document.getElementById(ids[0]) : null;
+              if (menu?.getAttribute("role") === "listbox") {
+                const options = Array.from(
+                  menu.querySelectorAll<HTMLElement>("[role='option']"),
+                );
+                if (options.length <= 128) {
+                  candidate.options = options.map((option, index) => {
+                    const optionId = createOpaqueId(
+                      `${candidateId}-option`,
+                      index,
+                    );
+                    optionElements.set(optionId, option);
+                    return {
+                      optionId,
+                      displayName: metadata(option.textContent) ?? "선택지",
+                    };
+                  });
+                }
+              }
+            }
+            const semanticContext = collectSemanticContext(first, container);
+            if (
+              runtimeRules(document)?.components?.collection.ownedLabelsOnly
+            ) {
+              const label = metadata(componentFieldLabel(first));
+              delete candidate.displayName;
+              if (label) candidate.displayName = label;
+              delete semanticContext.labels;
+              const text = semanticText(label);
+              if (text) semanticContext.labels = [{ source: "label", text }];
+            }
+            if (
+              item &&
+              item.itemIndex !== undefined &&
+              item.rowCount !== undefined &&
+              item.rowCount <= 128
+            ) {
+              semanticContext.repeat = {
+                groupId:
+                  companyId === "components" && item.itemGroupId
+                    ? item.itemGroupId
+                    : `${sectionId}-group-${item.groupOrdinal}`,
+                rowIndex: item.itemIndex,
+                rowCount: item.rowCount,
+              };
+            }
+            candidate = { ...candidate, semanticContext };
+            if (candidate.control === "radio" && targetOnlyRadio(grouped)) {
+              delete candidate.disabled;
+            }
+            if (item) item.fields.push(candidate);
+            else fields.push(candidate);
+            const elementsForHandle = grouped.filter(
+              (
+                peer,
+              ): peer is
+                HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+                peer instanceof HTMLInputElement ||
+                peer instanceof HTMLSelectElement ||
+                peer instanceof HTMLTextAreaElement,
+            );
+            const customElements = grouped.filter(
+              (peer) =>
+                !(peer instanceof HTMLInputElement) &&
+                !(peer instanceof HTMLSelectElement) &&
+                !(peer instanceof HTMLTextAreaElement),
+            );
+            const mixed = item ? mixedRowOf.get(item.element) : undefined;
+            const kindSelect = mixed?.group.kindSelects[mixed.rowIndex];
+            const selectedKind = kindSelect?.selectedOptions[0]?.value
+              ? metadata(kindSelect.selectedOptions[0].textContent)
+              : undefined;
+            registry.registerField(
+              {
+                kind: "field",
+                ...(buttonDropdown ? { buttonDropdown } : {}),
+                ...(mixed
+                  ? {
+                      mixedSectionRow: {
+                        groupKey: mixed.groupKey,
+                        rowIndex: mixed.rowIndex,
+                        rowCount: mixed.group.rows.length,
+                        ...(selectedKind ? { selectedKind } : {}),
+                        isKindSelect: kindSelect === first,
+                        group: mixed.group,
+                      },
+                    }
+                  : {}),
+                candidateId,
+                candidate,
+                elements: elementsForHandle,
+                ...(customElements.length > 0 ? { customElements } : {}),
+                optionElements,
+                sectionId,
+                ...(item
+                  ? {
+                      itemId: item.itemId,
+                      isCurrentContext: () => {
+                        if (
+                          !grouped.every((field) =>
+                            item.element.contains(field),
+                          )
+                        )
+                          return false;
+                        const current = currentAssignments(true).find(
+                          ({ row }) => row === item.element,
+                        );
+                        if (!current) return false;
+                        // An ambiguous row never becomes indexed later; it only
+                        // has to remain the same unindexed row.
+                        if (item.ambiguous) return current.ambiguous;
+                        return (
+                          !current.ambiguous &&
+                          sameRepeatGroupKey(current.key, item.key) &&
+                          current.rowCount === item.rowCount &&
+                          current.itemIndex === item.itemIndex
+                        );
+                      },
+                      ...(item.itemIndex !== undefined
+                        ? { itemIndex: item.itemIndex }
+                        : {}),
+                      ...(item.itemGroupId
+                        ? { itemGroupId: item.itemGroupId }
+                        : {}),
+                    }
+                  : {}),
+                signature: createStructuralSignature([
+                  ...elementsForHandle,
+                  ...customElements,
+                ]),
+              },
+              blockReason(first),
+            );
+          }
+          // Ambiguous rows carry no group id and no count; review keeps them
+          // unavailable because they have no itemIndex.
+          const itemGroups = new Set(
+            repeatableItems
+              .filter(({ ambiguous }) => !ambiguous)
+              .map(({ itemGroupId }) => itemGroupId),
+          );
+          for (const itemGroupId of itemGroups) {
+            const groupItems = repeatableItems.filter(
+              (item) => !item.ambiguous && item.itemGroupId === itemGroupId,
+            );
+            registry.setFieldItemCount(
+              sectionId,
+              groupItems.length,
+              itemGroupId,
+            );
+            registry.setFieldItemElements(
+              sectionId,
+              groupItems.map(({ element }) => element),
+              itemGroupId,
+            );
+          }
+          const itemFields: FieldsItem[] = repeatableItems
+            .filter(({ fields: itemFields }) => itemFields.length > 0)
+            .map(({ itemId, itemGroupId, fields: itemFields }) => ({
+              itemId,
+              ...(itemGroupId ? { itemGroupId } : {}),
+              fields: itemFields,
+            }));
+          sections.push({
+            sectionId,
+            ...(sectionName(container)
+              ? { displayName: sectionName(container) }
+              : {}),
+            fields,
+            ...(itemFields.length > 0 ? { items: itemFields } : {}),
+          });
+        },
+      );
+
+      return {
+        request: {
+          schemaVersion: 2,
+          supportedWriteCommands: ["SELECT_DATE"],
+          snapshotId: createSnapshotId("fields"),
+          site: siteOf(document),
+          sections,
+        },
+        registry,
+      };
+    });
+  } finally {
+    finishTiming();
+  }
 }
 
 export async function collectFieldsSnapshotWithDropdowns(
@@ -772,8 +824,8 @@ function repeatableItemElements(
         !isTemplateLike(item) &&
         (!adapter.requiresVisibleControl(phase, source) ||
           hasVisibleFormControl(item) ||
-          (adapter === greetingCollectionAdapter &&
-            greetingFieldElements(item.ownerDocument).some(
+          (adapter.itemGroupId !== undefined &&
+            componentFieldElements(item.ownerDocument).some(
               (control) => item.contains(control) && !isHidden(control),
             ))),
     );
@@ -890,16 +942,31 @@ function repeatableItemElementsForAction(
   adapter: CollectionAdapter,
 ): Element[] | undefined {
   const allItems = repeatableItemElements(container, adapter, "preparation");
-  const greetingAction =
+  const componentAction =
     action instanceof HTMLElement ? adapter.actionDomId(action) : undefined;
-  if (greetingAction === "greeting:add:universities")
-    return allItems.filter(
-      (item) => adapter.itemGroupId?.(item) === "educationuniversity",
+  const component =
+    action && executionPolicy(action.ownerDocument)?.componentPolicy;
+  const section =
+    component &&
+    Object.entries(component.sections).find(
+      ([kind]) => componentAction === component.actionPrefix + kind,
+    )?.[1];
+  if (section) {
+    const adapterItems = container
+      ? (adapter.repeatableItemCandidates?.(container) ?? [])
+      : [];
+    const candidates = adapterItems.length > 0 ? adapterItems : allItems;
+    return candidates.filter(
+      (item) =>
+        !isTemplateLike(item) &&
+        adapter.itemGroupId?.(item) === section.group &&
+        (hasVisibleFormControl(item) ||
+          (adapter.itemGroupId !== undefined &&
+            componentFieldElements(item.ownerDocument).some(
+              (control) => item.contains(control) && !isHidden(control),
+            ))),
     );
-  if (greetingAction === "greeting:add:graduateSchools")
-    return allItems.filter(
-      (item) => adapter.itemGroupId?.(item) === "educationgraduateschool",
-    );
+  }
   // An identifier-less repeat group (C13) owns exactly the rows it proved.
   const implicitGroup =
     adapter === collectionAdapterForHost("") && action
@@ -971,7 +1038,7 @@ export function collectPreparationSnapshot(
   const generic = adapter === collectionAdapterForHost("");
   const actions = [
     ...collectActionElements(document).filter((element) =>
-      companyId === "greeting"
+      companyId === "components"
         ? Boolean(adapter.actionDomId(element))
         : !generic ||
           ((element instanceof HTMLButtonElement ||
@@ -981,12 +1048,12 @@ export function collectPreparationSnapshot(
     ),
     ...(adapter.additionalActionElements?.(document) ?? []),
   ];
-  const selector = sectionSelector(adapter);
+  const selector = sectionSelector(adapter, document);
   const actionsBySection = groupBySection(
     actions,
     selector,
     adapter === collectionAdapterForHost(""),
-    companyId === "greeting" ? greetingSectionContainer : undefined,
+    companyId === "components" ? componentSectionContainer : undefined,
   );
   const containers: Array<Element | null> = Array.from(
     new Set([
@@ -1008,7 +1075,6 @@ export function collectPreparationSnapshot(
   const sectionRoots = new Map<string, Element | null>();
   const actionSectionIds = new Map<string, string>();
   const actionElements = new Map<string, Element>();
-  const majorActionIds = new Map<string, string>();
 
   containers.forEach((container, sectionIndex) => {
     const elements = actionsBySection.get(container) ?? [];
@@ -1064,12 +1130,6 @@ export function collectPreparationSnapshot(
       );
       actionSectionIds.set(candidateId, sectionId);
       actionElements.set(candidateId, element);
-      if (
-        /^greeting:add:(universities|graduateSchools):(0|[1-9]\d*):majors$/.test(
-          domId ?? "",
-        )
-      )
-        majorActionIds.set(candidateId, domId!);
       return candidate;
     });
     // The API only accepts nested items when they contain at least one
@@ -1111,9 +1171,12 @@ export function collectPreparationSnapshot(
       if (!generic) return undefined;
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
-      const root = sectionRoots.get(sectionId);
-      if (!root || !root.isConnected) return undefined;
       const action = actionElements.get(actionCandidateId);
+      const root =
+        (companyId === "components" && action
+          ? componentSectionContainer(action)
+          : undefined) ?? sectionRoots.get(sectionId);
+      if (!root || !root.isConnected) return undefined;
       const rows = repeatableItemElementsForAction(root, action, adapter);
       if (!rows?.length) return undefined;
       const container = action
@@ -1128,15 +1191,17 @@ export function collectPreparationSnapshot(
     countRepeatableGroups(actionCandidateId) {
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
-      const root = sectionRoots.get(sectionId);
+      const action = actionElements.get(actionCandidateId);
+      const root =
+        (companyId === "components" && action
+          ? componentSectionContainer(action)
+          : undefined) ?? sectionRoots.get(sectionId);
       if (root === undefined || (root && !root.isConnected)) return undefined;
-      if (majorActionIds.has(actionCandidateId)) {
-        const action = actionElements.get(actionCandidateId);
-        return action instanceof HTMLElement &&
-          adapter.actionDomId(action) === majorActionIds.get(actionCandidateId)
-          ? greetingMajorRowsForAction(action)?.length
+      const nested =
+        action instanceof HTMLElement
+          ? adapter.nestedGroupState?.(action)
           : undefined;
-      }
+      if (nested !== undefined) return nested?.length;
       return repeatableItemElementsForAction(
         root,
         actionElements.get(actionCandidateId),
@@ -1146,31 +1211,17 @@ export function collectPreparationSnapshot(
     repeatableGroupState(actionCandidateId) {
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
-      const root = sectionRoots.get(sectionId);
+      const action = actionElements.get(actionCandidateId);
+      const root =
+        (companyId === "components" && action
+          ? componentSectionContainer(action)
+          : undefined) ?? sectionRoots.get(sectionId);
       if (root === undefined || (root && !root.isConnected)) return undefined;
-      if (majorActionIds.has(actionCandidateId)) {
-        const action = actionElements.get(actionCandidateId);
-        if (
-          !(action instanceof HTMLElement) ||
-          adapter.actionDomId(action) !== majorActionIds.get(actionCandidateId)
-        )
-          return undefined;
-        return greetingMajorRowsForAction(action)?.map((input) => {
-          const field = input.closest(
-            '[data-scope="field"][data-part="root"]',
-          )!;
-          const buttons = Array.from(
-            field.querySelectorAll<HTMLButtonElement>("button[name]"),
-          )
-            .filter(
-              (button) =>
-                button.name === `${input.name}.majorClassification` ||
-                button.name === `${input.name}.majorField`,
-            )
-            .map((button) => [button.name, button.textContent?.trim() ?? ""]);
-          return JSON.stringify([input.name, input.value, ...buttons]);
-        });
-      }
+      const nested =
+        action instanceof HTMLElement
+          ? adapter.nestedGroupState?.(action)
+          : undefined;
+      if (nested !== undefined) return nested ?? undefined;
       return repeatableItemElementsForAction(
         root,
         actionElements.get(actionCandidateId),

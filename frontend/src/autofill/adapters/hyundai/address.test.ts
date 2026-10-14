@@ -1,5 +1,8 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { beforeEach, describe, expect, it } from "vitest";
-import { runHyundaiAddress } from "./address";
+import { createAddressModule } from "../../policy/hidden-code/address";
+import { executionPolicy } from "../../workflow/execution-policy";
 const expected = {
   address: "서울특별시 중구 세종대로 110 (태평로1가)",
   postalCode: "04524",
@@ -49,7 +52,7 @@ function setup(mode = "unique") {
   return button;
 }
 function run(button: Element, overrides = {}) {
-  return runHyundaiAddress({
+  return createAddressModule(document, executionPolicy(document)!.browserPolicy!.hiddenCodeContract!).runAddress({
     document,
     button,
     expected,
@@ -89,19 +92,19 @@ describe("Hyundai normal address selection", () => {
     expect(button.readOnly).toBe(true);
   });
   it.each(["duplicate", "none"])(
-    "does not select %s results or change existing detail",
+    "selects the first duplicate result but preserves detail; handles %s",
     async (mode) => {
       const button = setup(mode);
       document.querySelector<HTMLInputElement>("#addrDtl")!.value =
         expected.detail;
-      expect((await run(button)).status).toBe("manual");
-      expect(button.value).toBe("");
+      expect((await run(button)).status).toBe(mode === "none" ? "manual" : "written");
+      expect(button.value).toBe(mode === "none" ? "" : expected.postalCode);
       expect(document.querySelector<HTMLInputElement>("#addrDtl")!.value).toBe(
         expected.detail,
       );
       const modal = document.querySelector<HTMLElement>(".modal-address")!;
       expect(modal.classList.contains("active")).toBe(false);
-      expect(modal.getAttribute("data-close-clicks")).toBe("1");
+      expect(modal.getAttribute("data-close-clicks")).toBe(mode === "none" ? "1" : null);
       expect(
         document.querySelector(".modal-wrap")!.classList.contains("active"),
       ).toBe(false);
@@ -272,4 +275,17 @@ describe("Hyundai normal address selection", () => {
       ).toBeNull();
     },
   );
+});
+
+it("uses DB-configured guards before postal-only existing-address completion", async () => {
+  const button = setup();
+  const rules = executionPolicy(document)!.browserPolicy!.hiddenCodeContract!.behavior.address;
+  rules.existingVerification = "POSTAL_ONLY";
+  rules.existingValueGuards = [{role: "zip", comparison: "EXACT"}];
+  document.querySelector<HTMLInputElement>("#postCd")!.value = expected.postalCode;
+  document.querySelector<HTMLInputElement>("#addr")!.value = "사이트의 다른 주소 표기";
+  document.querySelector<HTMLInputElement>("#addrDtl")!.value = "기존 상세주소";
+  expect((await run(button)).status).toBe("written");
+  expect(document.querySelector<HTMLInputElement>("#addrDtl")!.value).toBe(expected.detail);
+  expect(document.querySelector(".modal-address")!.classList.contains("active")).toBe(false);
 });

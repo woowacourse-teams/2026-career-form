@@ -453,7 +453,7 @@ describe("synthetic date-format approved-write workflow", () => {
     expect(events).toEqual(["input", "change"]);
   });
 
-  it("requires health-date reveal and individual selection before the approved write", () => {
+  it("selects a saved health date automatically but still requires an approved write", () => {
     install();
     const snapshot = collectFieldsSnapshot(document);
     const profile = profileData();
@@ -464,10 +464,10 @@ describe("synthetic date-format approved-write workflow", () => {
     const target = document.querySelector<HTMLInputElement>("#health-date")!;
     const events = eventLog(target);
     expect(masked).toMatchObject({
-      status: "sensitive",
-      previewValue: "••••••••",
-      selected: false,
-      revealed: false,
+      status: "available",
+      previewValue: "2021.04.05",
+      selected: true,
+      revealed: true,
     });
     const unapproved = executeApprovedWrites({
       items: plan.items,

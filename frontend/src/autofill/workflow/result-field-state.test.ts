@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { buildResultModel } from "./result-model";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { afterEach, expect, it } from "vitest";

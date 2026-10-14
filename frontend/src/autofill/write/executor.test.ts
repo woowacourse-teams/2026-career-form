@@ -1,3 +1,5 @@
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "../workflow/execution-policy";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { MatchedFieldAnalysis } from "../api/types";
@@ -25,6 +27,12 @@ function setPageUrl(url: string): void {
       jsdom: { reconfigure(options: { url: string }): void };
     }
   ).jsdom.reconfigure({ url });
+  installExecutionPolicy(
+    document,
+    new URL(url).hostname === "talent.hyundai.com"
+      ? fixturePolicy("hyundai")
+      : undefined,
+  );
 }
 
 const textAnalysis: MatchedFieldAnalysis = {
@@ -337,7 +345,7 @@ describe("approved native-control writes", () => {
     ]);
   });
 
-  it("reapplies an adapter-approved select and reports a reset generic value", async () => {
+  it("reports reset adapter and generic values without reapplying either field", async () => {
     const select = document.createElement("select");
     const professionalCollege = new Option("전문대학(전문학사)", "associate");
     const university = new Option("대학(학사)", "bachelor");
@@ -409,10 +417,16 @@ describe("approved native-control writes", () => {
       registry,
     });
 
-    expect(select.value).toBe("bachelor");
+    expect(select.value).toBe("associate");
     expect(schoolName.value).toBe("");
     expect(result).toEqual([
-      { candidateId: "education-type", status: "written" },
+      {
+        candidateId: "education-type",
+        status: "skipped",
+        outcome: "needs-verification",
+        code: "RETAINED_VALUE_UNCONFIRMED",
+        reason: "입력한 값이 유지되는지 확인하지 못했습니다.",
+      },
       {
         candidateId: "school-name",
         status: "skipped",

@@ -1,3 +1,6 @@
+import { componentRules } from "../policy/runtime-rules";
+import { componentSelector } from "../policy/component-dom";
+import { executionPolicy } from "./execution-policy";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { catalogApprovalForItem } from "../profile/catalog-identity";
@@ -44,7 +47,7 @@ function telephoneDigits(value: string): string | undefined {
   return value.replace(/[ -]/g, "");
 }
 
-function greetingDatePrecision(
+function componentDatePrecision(
   item: ReviewPlanItem,
   key: string | undefined,
   handle?: FieldCandidateHandle,
@@ -59,61 +62,17 @@ function greetingDatePrecision(
     item.analysis?.mappingStatus !== "ADAPTER_VERIFIED" ||
     handle.isCurrentContext?.() === false ||
     trigger.getAttribute("name") !== name ||
-    !trigger.matches(
-      'button[data-scope="date-picker"][data-part="trigger"][aria-controls]',
-    )
+    !trigger.matches(componentSelector(trigger, "calendarTrigger"))
   )
     return undefined;
-  if (
-    name === "basicInformation.birthdate" &&
-    key === "personal.personal.birthDate"
-  )
-    return "day";
-  const education =
-    /^educationalBackground\.(universities|graduateSchools)\.(0|[1-9]\d*)\.enrollmentPeriod\.(startDate|endDate)$/.exec(
-      name,
-    );
-  if (
-    education &&
-    key ===
-      `education.${education[1] === "universities" ? "university" : "graduateSchool"}.${education[3]}`
-  )
-    return "month";
-  const highSchool =
-    /^educationalBackground\.highSchool\.enrollmentPeriod\.(startDate|endDate)$/.exec(
-      name,
-    );
-  if (highSchool && key === `education.highSchool.${highSchool[1]}`)
-    return "month";
-  const career =
-    /^workHistory\.workExperiences\.\d+\.employmentPeriod\.(startDate|endDate)$/.exec(
-      name,
-    );
-  if (career && key === `careers.career.${career[1]}`) return "month";
-  const acquisition =
-    /^languagesCertificationsAndOtherActivity\.(certifiedLanguageTests|certificatesLicenses)\.\d+\.acquisitionDate$/.exec(
-      name,
-    );
-  if (
-    acquisition &&
-    key ===
-      `${acquisition[1] === "certifiedLanguageTests" ? "languages.languageTest" : "certifications.certificate"}.acquisitionDate`
-  )
-    return "month";
-  const military =
-    /^militaryServicePreferentialEmploymentStatus\.militaryService\.servicePeriod\.(startDate|endDate)$/.exec(
-      name,
-    );
-  if (
-    military &&
-    key ===
-      `military.military.${military[1] === "startDate" ? "serviceStartDate" : "serviceEndDate"}`
-  )
-    return "month";
-  return undefined;
+  return executionPolicy(
+    trigger.ownerDocument,
+  )?.componentPolicy?.dateRules?.find(
+    (rule) => rule.key === key && new RegExp(rule.pattern).test(name),
+  )?.precision;
 }
 
-function greetingExactDisplayFormat(
+function componentExactDisplayFormat(
   item: ReviewPlanItem,
   current: string,
   expected: string,
@@ -133,28 +92,22 @@ function greetingExactDisplayFormat(
     element.getAttribute("name") !== name
   )
     return undefined;
+  const rule = executionPolicy(
+    element.ownerDocument,
+  )?.componentPolicy?.displayFormats.find(
+    (rule) =>
+      rule.key === binding.profileFieldKey &&
+      rule.control === handle.candidate.control &&
+      new RegExp(rule.pattern).test(name),
+  );
   if (
-    /^educationalBackground\.(?:universities|graduateSchools)\.(?:0|[1-9]\d*)\.gpa\.scoreScale$/.test(
-      name,
-    ) &&
-    binding.profileFieldKey ===
-      `education.${name.includes(".universities.") ? "university" : "graduateSchool"}.gpaScale` &&
-    element instanceof HTMLButtonElement &&
-    handle.candidate.control === "button" &&
-    /^\d+(?:\.\d{1,2})?$/.test(current) &&
-    /^\d+(?:\.\d{1,2})?$/.test(expected)
+    rule &&
+    new RegExp(rule.valuePattern).test(current) &&
+    new RegExp(rule.valuePattern).test(expected)
   )
-    return Number(current) === Number(expected);
-  if (
-    name ===
-      "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber" &&
-    binding.profileFieldKey === "veteran.veteran.veteranNumber" &&
-    element instanceof HTMLInputElement &&
-    handle.candidate.control === "text" &&
-    /^\d{2}-?\d{6}$/.test(current) &&
-    /^\d{2}-?\d{6}$/.test(expected)
-  )
-    return current.replace("-", "") === expected.replace("-", "");
+    return rule.mode === "DECIMAL"
+      ? Number(current) === Number(expected)
+      : current.replaceAll("-", "") === expected.replaceAll("-", "");
   return undefined;
 }
 
@@ -195,13 +148,42 @@ export function matchesResultValue(
     );
   }
   if (left === right) return true;
-  const greetingDisplayMatch = greetingExactDisplayFormat(
+  const element = handle?.elements[0];
+  const policyBinding = item.analysis?.valueBinding;
+  if (
+    element instanceof HTMLInputElement &&
+    element.isConnected &&
+    handle?.candidateId === item.candidateId &&
+    handle.isCurrentContext?.() !== false &&
+    item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
+    policyBinding?.type === "DIRECT" &&
+    item.analysis.writePlan?.command === "SET_TEXT"
+  ) {
+    const rule = executionPolicy(
+      element.ownerDocument,
+    )?.browserPolicy?.resultComparisons?.find(
+      (r) =>
+        r.name === element.name &&
+        r.name === handle.candidate.domName &&
+        r.key === policyBinding.profileFieldKey,
+    );
+    if (rule?.mode === "GROUPED_NUMBER") {
+      // Accept only valid digit grouping; do not erase arbitrary punctuation.
+      const numeric = /^(?:\d+|[1-9]\d{0,2}(?:,\d{3})+)(?:\.\d+)?$/;
+      return (
+        numeric.test(left) &&
+        numeric.test(right) &&
+        left.replaceAll(",", "") === right.replaceAll(",", "")
+      );
+    }
+  }
+  const componentDisplayMatch = componentExactDisplayFormat(
     item,
     left,
     right,
     handle,
   );
-  if (greetingDisplayMatch !== undefined) return greetingDisplayMatch;
+  if (componentDisplayMatch !== undefined) return componentDisplayMatch;
   const binding = item.analysis?.valueBinding;
   if (binding?.type === "LOOKUP" || binding?.type === "BUTTON_OPTION")
     return false;
@@ -209,11 +191,18 @@ export function matchesResultValue(
     return false;
   const key = binding?.profileFieldKey ?? item.profileFieldKey;
   const kind = key ? fieldTypes.get(key) : undefined;
-  const precision = greetingDatePrecision(item, key, handle);
+  const precision = componentDatePrecision(item, key, handle);
   if (precision) {
     const monthOnly = precision === "month";
-    const dotted = monthOnly ? /^\d{4}\. ?\d{2}$/ : /^\d{4}\. ?\d{2}\. ?\d{2}$/;
-    const rendered = dotted.test(left) ? left.replace(/\. ?/g, "-") : left;
+    const document = (handle!.elements[0] ?? handle!.customElements?.[0])!
+      .ownerDocument;
+    const formats = componentRules(document).calendar;
+    const dotted = new RegExp(
+      monthOnly ? formats.resultMonthPattern : formats.resultDayPattern,
+    );
+    const rendered = dotted.test(left)
+      ? left.replace(new RegExp(formats.resultSeparatorPattern, "g"), "-")
+      : left;
     const actual = dateDigits(rendered, monthOnly);
     const fullExpected = dateDigits(right, false);
     const expectedDate = monthOnly

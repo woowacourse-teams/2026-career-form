@@ -61,6 +61,11 @@ const select = (
   options,
 });
 
+const MAJOR_FIELD_OPTIONS = [
+  "인문계열", "사회계열", "교육계열", "공학계열", "자연과학계열",
+  "의약학계열", "예체능계열", "농수해양/생명자원계열", "기타",
+];
+
 const EDUCATION_STATUS_OPTIONS = [
   "재학중",
   "졸업예정",
@@ -169,17 +174,30 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("gpaScore", "평점"),
           select("gpaScale", "기준평점", ["4.00", "4.30", "4.50", "100.00"]),
           text("totalCredits", "총 이수학점"),
+          select("majorField", "주전공 계열", MAJOR_FIELD_OPTIONS),
           text("majorName", "주전공명"),
           select("transferStatus", "편입유무", ["비해당", "해당"]),
           select("doubleMajorStatus", "복수전공유무", ["없음", "있음"]),
           select("minorStatus", "부전공유무", ["없음", "있음"]),
           {
+            ...select("additionalMajorField", "복수전공 계열", MAJOR_FIELD_OPTIONS),
+            visibleWhen: (values) => values.doubleMajorStatus === "있음" ||
+              (!values.doubleMajorStatus && Boolean(values.additionalMajorName || values.additionalMajorField)),
+          },
+          {
             ...text("additionalMajorName", "복수전공명"),
-            visibleWhen: (values) => values.doubleMajorStatus === "있음",
+            visibleWhen: (values) => values.doubleMajorStatus === "있음" ||
+              (!values.doubleMajorStatus && Boolean(values.additionalMajorName || values.additionalMajorField)),
+          },
+          {
+            ...select("minorField", "부전공 계열", MAJOR_FIELD_OPTIONS),
+            visibleWhen: (values) => values.minorStatus === "있음" ||
+              (!values.minorStatus && Boolean(values.minorName || values.minorField)),
           },
           {
             ...text("minorName", "부전공명"),
-            visibleWhen: (values) => values.minorStatus === "있음",
+            visibleWhen: (values) => values.minorStatus === "있음" ||
+              (!values.minorStatus && Boolean(values.minorName || values.minorField)),
           },
         ],
       },
@@ -187,7 +205,8 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
         id: "graduateSchool",
         label: "대학원",
         fields: [
-          text("degreeLevel", "학위구분"),
+          select("degreeLevel", "학위구분", ["석사", "박사", "석박사통합"]),
+          select("combinedDegreeStatus", "석박사 통합여부", ["예", "아니오"]),
           text("country", "국가"),
           text("schoolName", "학교명"),
           select("attendanceType", "주·야간", ATTENDANCE_TYPE_OPTIONS),
@@ -198,12 +217,31 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
           text("completionStatus", "졸업구분"),
           text("gpaScore", "평점"),
           text("gpaScale", "만점기준"),
-          text("majorClassification", "주전공 구분"),
-          text("majorField", "주전공 계열"),
+          select("majorField", "주전공 계열", MAJOR_FIELD_OPTIONS),
           text("majorName", "주전공명"),
-          text("additionalMajorClassification", "추가 전공 구분"),
-          text("additionalMajorField", "추가 전공 계열"),
-          text("additionalMajorName", "추가 전공명"),
+          select("doubleMajorStatus", "복수전공유무", ["없음", "있음"]),
+          select("minorStatus", "부전공유무", ["없음", "있음"]),
+          {
+            ...select("additionalMajorField", "복수전공 계열", MAJOR_FIELD_OPTIONS),
+            visibleWhen: (values) => values.doubleMajorStatus === "있음" ||
+              (!values.doubleMajorStatus && Boolean(values.additionalMajorName || values.additionalMajorField)),
+          },
+          {
+            ...text("additionalMajorName", "복수전공명"),
+            visibleWhen: (values) => values.doubleMajorStatus === "있음" ||
+              (!values.doubleMajorStatus && Boolean(values.additionalMajorName || values.additionalMajorField)),
+          },
+          {
+            ...select("minorField", "부전공 계열", MAJOR_FIELD_OPTIONS),
+            visibleWhen: (values) => values.minorStatus === "있음" ||
+              (!values.minorStatus && Boolean(values.minorName || values.minorField)),
+          },
+          {
+            ...text("minorName", "부전공명"),
+            visibleWhen: (values) => values.minorStatus === "있음" ||
+              (!values.minorStatus && Boolean(values.minorName || values.minorField)),
+          },
+          text("researchField", "연구분야"),
           text("labName", "LAB실명"),
           text("labProfessorName", "LAB 담당교수 성명"),
           text("thesisTitle", "논문명"),
@@ -347,7 +385,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "compensation",
     label: "처우",
     repeatable: false,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "compensation",
@@ -364,7 +402,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "military",
     label: "병역",
     repeatable: false,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "military",
@@ -393,7 +431,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "veteran",
     label: "보훈",
     repeatable: false,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "veteran",
@@ -411,7 +449,7 @@ export const PROFILE_CATEGORIES: readonly ProfileCategoryDefinition[] = [
     id: "disability",
     label: "장애",
     repeatable: false,
-    sensitive: true,
+    sensitive: false,
     sections: [
       {
         id: "disability",

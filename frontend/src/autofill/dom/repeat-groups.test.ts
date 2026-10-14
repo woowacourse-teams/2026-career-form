@@ -211,7 +211,7 @@ describe("ownership-based repeated field groups", () => {
 
   it("preserves explicit item-name groups", () => {
     document.body.innerHTML = `
-      <div class="apply-form-box">
+      <div role="group" class="apply-form-box">
         <div class="form-item-group educationhigh-item">
           <input id="h0-name" /><input name="highSchoolGraduationDate" />
         </div>

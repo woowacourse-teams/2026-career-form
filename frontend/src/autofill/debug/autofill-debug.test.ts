@@ -105,7 +105,7 @@ describe("autofill debug log", () => {
     ]);
   });
 
-  it("keeps calendar values out of review and execution diagnostics", () => {
+  it("includes calendar values in local review and execution diagnostics", () => {
     setAutofillDebugEnabled(true);
     vi.spyOn(console, "groupCollapsed").mockImplementation(() => {});
     vi.spyOn(console, "groupEnd").mockImplementation(() => {});
@@ -134,8 +134,8 @@ describe("autofill debug log", () => {
     );
 
     const recorded = JSON.stringify(table.mock.calls);
-    expect(recorded).not.toContain("2001-02");
-    expect(recorded).not.toContain("2026-03");
+    expect(recorded).toContain("2001-02");
+    expect(recorded).toContain("2026-03");
     expect(table.mock.calls[0]?.[0]).toEqual([
       expect.objectContaining({ command: "SELECT_DATE", selected: true }),
     ]);

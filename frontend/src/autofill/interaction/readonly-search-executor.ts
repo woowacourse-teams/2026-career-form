@@ -38,22 +38,6 @@ import {
 import { captureSearchFollowUp } from "./search-follow-up";
 import { interactive, elements, safeActivation } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
-import {
-  isCjMajorCandidate,
-  isCjMajorTarget,
-  validateCjMajorPreflight,
-} from "./cj-major-contract";
-import {
-  prepareCjMajorClose,
-  prepareCjSchoolClose,
-} from "./cj-major-close-bridge";
-import {
-  isCjSchoolCandidate,
-  isCjSchoolTarget,
-  validateCjSchoolRow,
-} from "./cj-school-contract";
-import { executeCjSchoolSearch } from "./cj-school-search";
-import { executeCjMajorSearch } from "./cj-major-search";
 
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
@@ -267,20 +251,7 @@ export async function executeReadonlySearch(
       normalized(initialValue) !== normalized(args.expectedCurrentValue)
     )
       throw new SearchFailure("stale_target");
-    const schoolCandidate = isCjSchoolCandidate(
-      document,
-      canonicalFieldKey,
-      identity,
-    );
-    // CJ's flat school response cannot prove campus identity. Never open it for catalog selections.
-    if (schoolCandidate && catalogMatch)
-      throw new SearchFailure("selection_effect_unverified");
-    if (schoolCandidate)
-      validateCjSchoolRow(
-        target,
-        initialValue === expectedValue ? expectedValue : undefined,
-      );
-    if (normalized(initialValue) && !schoolCandidate) {
+    if (normalized(initialValue)) {
       if (catalogMatch || !matches(initialValue))
         throw new SearchFailure("existing_value_conflict");
       await session.prepareMutation();
@@ -309,52 +280,10 @@ export async function executeReadonlySearch(
       !interactive(opener)
     )
       throw new SearchFailure("stale_field_group");
-    const cjCandidate = isCjMajorCandidate(
-      document,
-      canonicalFieldKey,
-      identity,
-    );
-    const cjMajor =
-      cjCandidate &&
-      isCjMajorTarget(document, canonicalFieldKey, identity, opener);
-    const cjSchool =
-      schoolCandidate &&
-      isCjSchoolTarget(document, canonicalFieldKey, identity, opener);
-    if ((cjCandidate && !cjMajor) || (schoolCandidate && !cjSchool))
-      throw new SearchFailure("unverified_search_form");
-    if (cjMajor) validateCjMajorPreflight(identity);
-    if (cjSchool)
-      validateCjSchoolRow(
-        target,
-        initialValue === expectedValue ? expectedValue : undefined,
-      );
-    const cjLease = cjMajor
-      ? await prepareCjMajorClose(opener, session)
-      : cjSchool
-        ? await prepareCjSchoolClose(opener, session)
-        : undefined;
-    guard(initialValue);
-    if (cjLease) {
-      if (
-        !openerRole!.current() ||
-        !safeSearchOpener(opener) ||
-        !interactive(opener) ||
-        !(cjMajor
-          ? isCjMajorTarget(document, canonicalFieldKey, identity, opener)
-          : isCjSchoolTarget(document, canonicalFieldKey, identity, opener))
-      )
-        throw new SearchFailure("unverified_search_form");
-      if (cjMajor) validateCjMajorPreflight(identity);
-      else
-        validateCjSchoolRow(
-          target,
-          initialValue === expectedValue ? expectedValue : undefined,
-        );
-    }
     effect = "interaction-started";
     trace("검색 버튼 클릭", {
       opener,
-      flow: cjMajor ? "cj-major" : cjSchool ? "cj-school" : "generic",
+      flow: "generic",
     });
     opener.click();
     surface = await session.wait(
@@ -375,27 +304,6 @@ export async function executeReadonlySearch(
       validateRegionContext(args, currentSurface);
     };
     surfaceGuard();
-    if (cjLease) {
-      trace(cjMajor ? "CJ 전공 검색 실행" : "CJ 학교 검색 실행");
-      const runCj = cjMajor ? executeCjMajorSearch : executeCjSchoolSearch;
-      const cjResult = await runCj(
-        currentSurface,
-        session,
-        cjLease,
-        expectedValue,
-        (allowed) => guard(allowed),
-        () => observation.assertOwned(currentSurface),
-        () => {
-          effect = "value-observed";
-        },
-      );
-      return {
-        status: cjResult === "unchanged" ? "unchanged" : "selected",
-        targetCandidateId,
-        identity,
-        effect,
-      };
-    }
     const controls = await session.wait(() => {
       surfaceGuard();
       const queries = queryControls(currentSurface);

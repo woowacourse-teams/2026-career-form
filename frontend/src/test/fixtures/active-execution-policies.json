@@ -1,0 +1,5164 @@
+{
+  "sk": {
+    "version": 37,
+    "executionPolicy": {
+      "version": 1,
+      "searches": [
+        {
+          "fieldName": "eduEducationName",
+          "profileFieldKey": "education.university.schoolName",
+          "rowSelector": ".form-item-group.educationUniv-item",
+          "catalogKind": "university",
+          "stageOffset": 0,
+          "requireResultId": false,
+          "readySelector": "",
+          "standardAliases": false,
+          "stripParentheticalLabel": false,
+          "allowDirectInput": true,
+          "menuTimeoutMs": 2500,
+          "readyTimeoutMs": 1000
+        },
+        {
+          "fieldName": "cerCertName",
+          "profileFieldKey": "certifications.certificate.name",
+          "rowSelector": ".form-item-group.cert-Item",
+          "catalogKind": "certificate",
+          "stageOffset": 1,
+          "requireResultId": false,
+          "readySelector": "",
+          "standardAliases": false,
+          "stripParentheticalLabel": false,
+          "allowDirectInput": true,
+          "menuTimeoutMs": 2500,
+          "readyTimeoutMs": 1000
+        },
+        {
+          "fieldName": "lngExamName",
+          "profileFieldKey": "languages.languageTest.testName",
+          "rowSelector": ".form-item-group.langExam-Item",
+          "catalogKind": "languageTest",
+          "stageOffset": 2,
+          "requireResultId": true,
+          "readySelector": "input[name='lngExamScore'], select[name='lngExamScoreSel']",
+          "standardAliases": true,
+          "stripParentheticalLabel": true,
+          "allowDirectInput": true,
+          "menuTimeoutMs": 2500,
+          "readyTimeoutMs": 1000
+        }
+      ],
+      "failureScopes": [
+        {
+          "fieldName": "lngLanguageType",
+          "profileFieldKey": "languages.languageTest.language",
+          "rowSelector": ".form-item-group.langExam-Item"
+        },
+        {
+          "fieldName": "eduEducationName",
+          "profileFieldKey": "education.university.schoolName",
+          "rowSelector": ".form-item-group.educationUniv-item"
+        },
+        {
+          "fieldName": "cerCertName",
+          "profileFieldKey": "certifications.certificate.name",
+          "rowSelector": ".form-item-group.cert-Item"
+        },
+        {
+          "fieldName": "lngExamName",
+          "profileFieldKey": "languages.languageTest.testName",
+          "rowSelector": ".form-item-group.langExam-Item"
+        }
+      ],
+      "address": {
+        "provider": "KAKAO",
+        "rootSelector": "#applyContentUserInfo",
+        "triggerSelector": "#btnSearchAddress",
+        "fieldNames": ["prsZipCode", "prsAddress", "prsAddressDtl"],
+        "layerSelector": "#layer",
+        "closeSelector": "img#btnCloseLayer"
+      },
+      "browserPolicy": {
+        "schemaVersion": 1,
+        "fields": [
+          {
+            "name": "prsMilitarySvcYN",
+            "key": "military.military.militaryStatus",
+            "kind": "radio",
+            "binding": "LOOKUP",
+            "recipe": null,
+            "options": {
+              "대상": "1",
+              "비대상": "0"
+            },
+            "overwrite": false,
+            "priority": false,
+            "stage": null,
+            "details": [],
+            "positiveLabel": "대상",
+            "negativeLabel": "비대상",
+            "settleMs": 1000,
+            "radioValidation": "TARGET_ONLY",
+            "acceptAlreadySelected": true
+          },
+          {
+            "name": "prsVeteranBenefitYN",
+            "key": "veteran.veteran.veteranStatus",
+            "kind": "radio",
+            "binding": "DERIVED",
+            "recipe": "BOOLEAN_YN",
+            "options": {
+              "대상": "1",
+              "비대상": "0"
+            },
+            "overwrite": true,
+            "priority": true,
+            "stage": -2,
+            "details": ["prsVeteranBenefitNumber", "prsVeteranBenefitRelation"],
+            "positiveLabel": "대상",
+            "negativeLabel": "비대상",
+            "settleMs": 1000
+          },
+          {
+            "name": "prsDisabledYN",
+            "key": "disability.disability.disabilityStatus",
+            "kind": "radio",
+            "binding": "DERIVED",
+            "recipe": "BOOLEAN_YN",
+            "options": {
+              "대상": "1",
+              "비대상": "0"
+            },
+            "overwrite": true,
+            "priority": true,
+            "stage": -1,
+            "details": ["prsDisabledType", "prsDisabledTypeDtl"],
+            "positiveLabel": "대상",
+            "negativeLabel": "비대상",
+            "settleMs": 1000
+          },
+          {
+            "name": "prsMilitarySvcStatus",
+            "key": "military.military.militaryStatus",
+            "kind": "select",
+            "binding": "DIRECT",
+            "labels": ["군필", "미필", "면제", "복무중"],
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsMilitarySvcYN",
+                "labels": ["대상"]
+              }
+            ],
+            "requireAllOptions": true,
+            "reviewWritable": true
+          },
+          {
+            "name": "prsMilitarySvcType",
+            "key": "military.military.militaryType",
+            "kind": "select",
+            "binding": "DIRECT",
+            "labels": [
+              "현역병",
+              "상근예비역",
+              "공익근무요원",
+              "전문연구요원",
+              "산업기능요원"
+            ],
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsMilitarySvcYN",
+                "labels": ["대상"]
+              },
+              {
+                "name": "prsMilitarySvcStatus",
+                "labels": ["군필", "복무중"]
+              }
+            ],
+            "requireAllOptions": false,
+            "reviewWritable": false
+          },
+          {
+            "name": "prsMilitarySvcCategory",
+            "key": "military.military.militaryBranch",
+            "kind": "select",
+            "binding": "DIRECT",
+            "labels": [
+              "육군",
+              "해군",
+              "공군",
+              "해병대",
+              "전투경찰",
+              "해양경찰",
+              "의무경찰",
+              "의무소방"
+            ],
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsMilitarySvcYN",
+                "labels": ["대상"]
+              },
+              {
+                "name": "prsMilitarySvcStatus",
+                "labels": ["군필", "복무중"]
+              }
+            ],
+            "requireAllOptions": true,
+            "reviewWritable": true
+          },
+          {
+            "name": "prsDisabledType",
+            "key": "disability.disability.disabilityGrade",
+            "kind": "select",
+            "binding": "LOOKUP",
+            "labels": ["중증(기존1급~3급)", "경증(기존4급~6급)"],
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsDisabledYN",
+                "labels": ["대상"]
+              }
+            ],
+            "requireAllOptions": false,
+            "reviewWritable": false
+          },
+          {
+            "name": "prsDisabledTypeDtl",
+            "key": "disability.disability.disabilityType",
+            "kind": "select",
+            "binding": "DIRECT",
+            "labels": [
+              "지체장애",
+              "뇌병변장애",
+              "시각장애",
+              "청각장애",
+              "언어장애",
+              "지적장애",
+              "자폐성장애",
+              "정신장애",
+              "신장장애",
+              "심장장애",
+              "호흡기장애",
+              "간장애",
+              "안면장애",
+              "장루·요루장애",
+              "뇌전증장애",
+              "췌장장애"
+            ],
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsDisabledYN",
+                "labels": ["대상"]
+              }
+            ],
+            "requireAllOptions": false,
+            "reviewWritable": false
+          },
+          {
+            "name": "prsVeteranBenefitNumber",
+            "key": "veteran.veteran.veteranNumber",
+            "kind": "text",
+            "binding": "DIRECT",
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsVeteranBenefitYN",
+                "labels": ["대상"]
+              }
+            ]
+          },
+          {
+            "name": "prsVeteranBenefitRelation",
+            "key": "veteran.veteran.veteranRelation",
+            "kind": "text",
+            "binding": "DIRECT",
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsVeteranBenefitYN",
+                "labels": ["대상"]
+              }
+            ]
+          },
+          {
+            "name": "carFromDate",
+            "key": "careers.career.startDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "carToDate",
+            "key": "careers.career.endDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "eduFromDate",
+            "key": "education.university.startDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "eduToDate",
+            "key": "education.university.endDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "prsMilitarySvcLevel",
+            "kind": "select",
+            "key": "military.military.militaryRank",
+            "binding": "DIRECT",
+            "labels": [
+              "대위",
+              "중위",
+              "소위",
+              "준위",
+              "상사",
+              "중사",
+              "하사",
+              "병장",
+              "상병",
+              "일병",
+              "이병",
+              "기타"
+            ],
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsMilitarySvcYN",
+                "labels": ["대상"]
+              },
+              {
+                "name": "prsMilitarySvcStatus",
+                "labels": ["군필", "복무중"]
+              }
+            ],
+            "requireAllOptions": false,
+            "reviewWritable": true
+          },
+          {
+            "name": "prsDisabledNumber",
+            "key": "disability.disability.disabilityRegistrationNumber",
+            "kind": "text",
+            "binding": "DIRECT",
+            "overwrite": false,
+            "gates": [
+              {
+                "name": "prsDisabledYN",
+                "labels": ["대상"]
+              }
+            ]
+          },
+          {
+            "name": "cerCertDate",
+            "key": "certifications.certificate.acquisitionDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "lngScoreDate",
+            "key": "languages.languageTest.acquisitionDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "prsMilitarySvcFromDate",
+            "key": "military.military.serviceStartDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM",
+            "gates": [
+              {
+                "name": "prsMilitarySvcYN",
+                "labels": ["대상"]
+              },
+              {
+                "name": "prsMilitarySvcStatus",
+                "labels": ["군필", "복무중"]
+              }
+            ]
+          },
+          {
+            "name": "prsMilitarySvcToDate",
+            "key": "military.military.serviceEndDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM",
+            "gates": [
+              {
+                "name": "prsMilitarySvcYN",
+                "labels": ["대상"]
+              },
+              {
+                "name": "prsMilitarySvcStatus",
+                "labels": ["군필", "복무중"]
+              }
+            ]
+          },
+          {
+            "name": "eduhgFromDate",
+            "key": "education.highSchool.startDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "eduhgToDate",
+            "key": "education.highSchool.endDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "edugdFromDate",
+            "key": "education.graduateSchool.startDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          },
+          {
+            "name": "edugdToDate",
+            "key": "education.graduateSchool.endDate",
+            "kind": "yearMonth",
+            "binding": "DERIVED",
+            "recipe": "YEAR_MONTH",
+            "overwrite": false,
+            "inputType": "tel",
+            "maxLength": 6,
+            "inputFormat": "YYYYMM",
+            "resultFormat": "YYYY-MM"
+          }
+        ],
+        "normalizations": [
+          {
+            "keys": ["military.military.militaryStatus"],
+            "values": {
+              "만기전역": "군필"
+            }
+          },
+          {
+            "keys": [
+              "education.highSchool.schoolRegion",
+              "education.university.schoolRegion",
+              "education.graduateSchool.schoolRegion"
+            ],
+            "values": {
+              "region:seoul": "서울특별시",
+              "서울": "서울특별시",
+              "region:busan": "부산광역시",
+              "부산": "부산광역시",
+              "region:daegu": "대구광역시",
+              "대구": "대구광역시",
+              "region:incheon": "인천광역시",
+              "인천": "인천광역시",
+              "region:gwangju": "광주광역시",
+              "광주": "광주광역시",
+              "region:daejeon": "대전광역시",
+              "대전": "대전광역시",
+              "region:ulsan": "울산광역시",
+              "울산": "울산광역시",
+              "region:sejong": "세종특별자치시",
+              "세종": "세종특별자치시",
+              "region:gyeonggi": "경기도",
+              "경기": "경기도",
+              "region:gangwon": "강원도",
+              "강원": "강원도",
+              "region:chungbuk": "충청북도",
+              "충북": "충청북도",
+              "region:chungnam": "충청남도",
+              "충남": "충청남도",
+              "region:jeonbuk": "전라북도",
+              "전북": "전라북도",
+              "region:jeonnam": "전라남도",
+              "전남": "전라남도",
+              "region:gyeongbuk": "경상북도",
+              "경북": "경상북도",
+              "region:gyeongnam": "경상남도",
+              "경남": "경상남도",
+              "region:jeju": "제주특별자치도",
+              "제주": "제주특별자치도",
+              "region:overseas": "해외",
+              "해외": "해외"
+            }
+          }
+        ],
+        "reveals": [
+          {
+            "domName": "eduMajorDoubleYN",
+            "profileFieldKey": "education.university.doubleMajorStatus",
+            "itemIndex": 0,
+            "values": {
+              "있음": "있음"
+            },
+            "nameSuffixPattern": "^_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          {
+            "domName": "eduMajorSubYN",
+            "profileFieldKey": "education.university.minorStatus",
+            "itemIndex": 0,
+            "values": {
+              "있음": "있음"
+            },
+            "nameSuffixPattern": "^_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          {
+            "domName": "prsMilitarySvcYN",
+            "profileFieldKey": "military.military.militaryStatus",
+            "itemIndex": 0,
+            "values": {
+              "군필": "대상",
+              "미필": "대상",
+              "면제": "대상",
+              "복무중": "대상",
+              "비대상": "비대상"
+            },
+            "nameSuffixPattern": ""
+          },
+          {
+            "domName": "prsVeteranBenefitYN",
+            "profileFieldKey": "veteran.veteran.veteranStatus",
+            "itemIndex": 0,
+            "values": {
+              "대상": "대상",
+              "비대상": "비대상"
+            },
+            "nameSuffixPattern": ""
+          },
+          {
+            "domName": "prsDisabledYN",
+            "profileFieldKey": "disability.disability.disabilityStatus",
+            "itemIndex": 0,
+            "values": {
+              "대상": "대상",
+              "비대상": "비대상"
+            },
+            "nameSuffixPattern": ""
+          }
+        ],
+        "collection": {
+          "actions": [
+            {
+              "id": "btnAddCareer",
+              "label": "경력 사항 추가",
+              "selector": "div#applyContentCareer.apply-form-box.career-root > div.form-body > div.form-item-group.career-item > div.form-item-asset > div.form-item-column.btn-control > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddCareer"
+            },
+            {
+              "id": "btnAddCert",
+              "label": "자격/면허 추가",
+              "selector": "div#applyContentLicense.apply-form-box.cert-root > div.form-body > div.form-item-group.cert-Item > div.form-item-asset > div.form-item-column:not(.btn-control) > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddCert"
+            },
+            {
+              "id": "btnAddLangExam",
+              "label": "공인 외국어 시험 추가",
+              "selector": "div#applyContentLinguistics.apply-form-box.langExam-root > div.form-body > div.form-item-group.langExam-Item > div.form-item-asset > div.form-item-column:not(.btn-control) > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddLangExam"
+            },
+            {
+              "id": "btnAddLangAbility",
+              "label": "외국어 능력 추가",
+              "selector": "div#applyContentLanguage.apply-form-box.langAbility-root > div.form-body > div.form-item-group.langAbility-item > div.form-item-asset > div.form-item-column.btn-control > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddLangAbility"
+            },
+            {
+              "id": "btnAddEducationHigh",
+              "label": "고등학교 학력 정보 추가",
+              "selector": "button.btn.medium.btn-dashed.btnAddEducationHigh",
+              "parentSelector": "div.form-add-control.column",
+              "grandparentSelector": "div.form-item-column.btn-control",
+              "rowSelector": "div.form-item-group.educationhigh-item",
+              "rootSelector": "#applyContentAcademic.apply-form-box.education-root",
+              "assetSelector": "div.form-item-asset",
+              "requiredSelector": "input[name='eduhgEducationName']"
+            },
+            {
+              "id": "btnAddEducationUniv",
+              "label": "대학 학력 정보 추가",
+              "selector": "button.btn.medium.btn-dashed.btnAddEducationUniv",
+              "parentSelector": "div.form-add-control.column",
+              "grandparentSelector": "div.form-item-column.btn-control",
+              "rowSelector": "div.form-item-group.educationUniv-item",
+              "rootSelector": "#applyContentAcademic.apply-form-box.education-root",
+              "assetSelector": "div.form-item-asset",
+              "requiredSelector": "input[name='eduEducationName']"
+            },
+            {
+              "id": "btnAddEducationGrad",
+              "label": "대학원 학력 정보 추가",
+              "selector": "button.btn.medium.btn-dashed.btnAddEducationGrad",
+              "parentSelector": "div.form-add-control.column",
+              "grandparentSelector": "div.form-item-column.btn-control",
+              "rowSelector": "div.form-item-group.educationGrad-item",
+              "rootSelector": "#applyContentAcademic.apply-form-box.education-root",
+              "assetSelector": "div.form-item-asset",
+              "requiredSelector": "input[name='edugdEducationName']"
+            }
+          ],
+          "visiblePhases": ["fields"],
+          "collectsInputButtonFields": false,
+          "sectionSelectors": []
+        },
+        "repeatHints": {
+          "btnAddLangExam": {
+            "categoryId": "languages",
+            "sectionId": "languageTest"
+          },
+          "btnAddLangAbility": {
+            "categoryId": "languages",
+            "sectionId": "languageSkill"
+          },
+          "btnAddEducationGrad": {
+            "categoryId": "education",
+            "sectionId": "graduateSchool"
+          }
+        },
+        "educationHints": {
+          "educationgrad": "graduateSchool",
+          "educationhigh": "highSchool",
+          "educationuniv": "university"
+        },
+        "freshRowFields": ["eduEducationName"],
+        "freshDefaults": ["eduEducationType"],
+        "stateDrivers": [
+          {
+            "name": "lngLanguageType",
+            "key": "languages.languageTest.language",
+            "binding": "DIRECT",
+            "stage": 1
+          },
+          {
+            "name": "carWorkingYN",
+            "key": "careers.career.employmentStatus",
+            "binding": "LOOKUP"
+          }
+        ],
+        "searchStageBase": 2,
+        "searchRowStride": 3,
+        "refreshAfterPass": true,
+        "diagnosticsTitle": "복수·부전공명 진단",
+        "addressAction": {
+          "domId": "btnSearchAddress",
+          "element": "button"
+        },
+        "mainWorldBridge": "JQUERY_AUTOCOMPLETE",
+        "failureDependencies": {
+          "lngExamName": ["lngExamScore", "lngExamScoreSel"]
+        },
+        "addressVerification": "POSTAL_AND_ROAD_WITHOUT_REFERENCE",
+        "completionAutocompleteSelector": "input.ui-autocomplete-input",
+        "runtimeRules": {
+          "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+          "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+          "placeholderAttributes": [],
+          "placeholderValues": [],
+          "autocomplete": {
+            "confirmationDataKey": "confirmed",
+            "confirmationValue": true,
+            "invalidResultIds": ["0"],
+            "readyCount": 1
+          },
+          "addressFields": {
+            "selectorTemplate": "#{name},[name=\"{name}\"]",
+            "inputType": "text",
+            "requireId": true,
+            "requireName": true,
+            "readOnly": [true, true, false],
+            "zipIndex": 0,
+            "addressIndex": 1,
+            "detailIndex": 2,
+            "requireClosed": true,
+            "requireDetailUnchanged": true,
+            "callbackMs": 2000,
+            "pollMs": 50
+          }
+        }
+      }
+    }
+  },
+  "hyundai": {
+    "version": 24,
+    "executionPolicy": {
+      "version": 1,
+      "searches": [],
+      "failureScopes": [],
+      "address": null,
+      "browserPolicy": {
+        "schemaVersion": 1,
+        "fields": [],
+        "normalizations": [],
+        "reveals": [],
+        "collection": {
+          "actions": [],
+          "visiblePhases": [],
+          "collectsInputButtonFields": true,
+          "sectionSelectors": []
+        },
+        "repeatHints": {},
+        "educationHints": {},
+        "freshRowFields": [],
+        "freshDefaults": [],
+        "stateDrivers": [],
+        "searchStageBase": 2,
+        "searchRowStride": 3,
+        "refreshAfterPass": true,
+        "diagnosticsTitle": "Hidden-code form",
+        "addressAction": {
+          "domId": "hyundai:search:address",
+          "domName": "postCd",
+          "element": "input"
+        },
+        "mainWorldBridge": "NONE",
+        "hiddenCodeContract": {
+          "schemaVersion": 3,
+          "engine": "HIDDEN_CODE_FORM",
+          "host": "talent.hyundai.com",
+          "path": "/apply/applyWrite.hc",
+          "behavior": {
+            "conditionalStates": [
+              {
+                "driver": "milCd",
+                "code": "1",
+                "label": "필",
+                "controls": [
+                  {
+                    "id": "milStartDt",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milEndDt",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milRank",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milDitinc",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milExcptCd",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milSpeNm",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": true
+                  }
+                ]
+              },
+              {
+                "driver": "milCd",
+                "code": "5",
+                "label": "면제",
+                "controls": [
+                  {
+                    "id": "milExcptCd",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milStartDt",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milEndDt",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milRank",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milDitinc",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milSpeNm",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": true
+                  }
+                ]
+              },
+              {
+                "driver": "milCd",
+                "code": "2",
+                "label": "미필",
+                "controls": [
+                  {
+                    "id": "milExcptCd",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milStartDt",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milEndDt",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milRank",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milDitinc",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milSpeNm",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": true
+                  }
+                ]
+              },
+              {
+                "driver": "milCd",
+                "code": "7",
+                "label": "비대상(여성/해외국적)",
+                "controls": [
+                  {
+                    "id": "milExcptCd",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milStartDt",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milEndDt",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milRank",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milDitinc",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "milSpeNm",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": true
+                  }
+                ]
+              },
+              {
+                "driver": "branchYn",
+                "code": "Y",
+                "label": "예",
+                "controls": [
+                  {
+                    "id": "branchRel",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "branchAddPoint",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "branchNo",
+                    "disabled": false,
+                    "required": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "branchSupplyYn",
+                    "disabled": false,
+                    "required": false,
+                    "allowAbsent": false
+                  }
+                ]
+              },
+              {
+                "driver": "branchYn",
+                "code": "N",
+                "label": "아니오",
+                "controls": [
+                  {
+                    "id": "branchRel",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "branchSupplyYn",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "branchAddPoint",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "branchNo",
+                    "disabled": true,
+                    "required": false,
+                    "allowAbsent": false
+                  }
+                ]
+              },
+              {
+                "driver": "injuryYn",
+                "code": "Y",
+                "label": "예",
+                "controls": [
+                  {
+                    "id": "injuryGrade",
+                    "disabled": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "injuryType",
+                    "disabled": false,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "injuryCont",
+                    "disabled": false,
+                    "allowAbsent": false
+                  }
+                ]
+              },
+              {
+                "driver": "injuryYn",
+                "code": "N",
+                "label": "아니오",
+                "controls": [
+                  {
+                    "id": "injuryGrade",
+                    "disabled": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "injuryType",
+                    "disabled": true,
+                    "allowAbsent": false
+                  },
+                  {
+                    "id": "injuryCont",
+                    "disabled": true,
+                    "allowAbsent": false
+                  }
+                ]
+              }
+            ],
+            "dependencies": [
+              {
+                "fields": ["milStartDt", "milEndDt", "milRank", "milDitinc"],
+                "driver": "milCd",
+                "code": "1",
+                "label": "필"
+              },
+              {
+                "fields": ["milExcptCd"],
+                "driver": "milCd",
+                "code": "5",
+                "label": "면제"
+              },
+              {
+                "fields": ["branchRel", "branchNo"],
+                "driver": "branchYn",
+                "code": "Y",
+                "label": "예"
+              },
+              {
+                "fields": ["injuryGrade", "injuryType"],
+                "driver": "injuryYn",
+                "code": "Y",
+                "label": "예"
+              }
+            ],
+            "rowKinds": [
+              {
+                "section": "highSchool",
+                "code": "3"
+              },
+              {
+                "section": "university",
+                "valueField": "degreeLevel",
+                "value": "전문학사",
+                "code": "4"
+              },
+              {
+                "section": "university",
+                "valueField": "degreeLevel",
+                "value": "학사",
+                "code": "5"
+              },
+              {
+                "section": "graduateSchool",
+                "valueField": "degreeLevel",
+                "value": "석사",
+                "code": "6"
+              },
+              {
+                "section": "graduateSchool",
+                "valueField": "degreeLevel",
+                "value": "박사",
+                "code": "7"
+              }
+            ],
+            "rowPreparation": {
+              "sectionOrder": ["highSchool", "university", "graduateSchool"],
+              "revealTemplates": [
+                ["input#schNm_", "[name='schNm'][type='text']"],
+                ["input#whiStDt_", "[type='text'][maxlength='7']"],
+                ["input#whiEndDt_", "[type='text'][maxlength='7']"]
+              ],
+              "sourceCategory": "education",
+              "selectionOrder": "BEFORE_NEXT_ROW",
+              "selectSteps": [
+                "OPEN_TRIGGER",
+                "CLICK_EXACT_OPTION",
+                "WAIT_REVEALED"
+              ],
+              "resetSteps": ["OPEN_TRIGGER", "CLICK_RESET", "WAIT_EMPTY"],
+              "rowSelector": ":scope > .field-content",
+              "groupSelector": ":scope > .field-group",
+              "resetCode": "",
+              "resetOptionCount": 1,
+              "requireCompleteOptions": true,
+              "add": {
+                "sourcePosition": "LAST",
+                "resultPosition": "LAST",
+                "selector": ":scope > .button-wrap > button.btn-group-add",
+                "reset": true,
+                "plan": [
+                  {
+                    "target": "control",
+                    "op": "CLICK"
+                  }
+                ]
+              },
+              "alignment": {
+                "matchBy": "POSITION",
+                "mismatch": "REJECT",
+                "empty": "ASSIGN"
+              }
+            },
+            "groupKinds": {
+              "3": ["고등학교", "educationhighschool"],
+              "4": ["전문대학", "educationuniversity"],
+              "5": ["학사", "educationuniversity"],
+              "6": ["석사", "educationgraduateschool"],
+              "7": ["박사", "educationgraduateschool"]
+            },
+            "rowActions": [
+              {
+                "id": "hyundai:add:project",
+                "fields": [
+                  {
+                    "element": "input",
+                    "idBase": "prjNm",
+                    "name": "prjNm",
+                    "type": "text"
+                  },
+                  {
+                    "element": "input",
+                    "idBase": "prjStDt",
+                    "name": "prjStDt",
+                    "type": "text"
+                  },
+                  {
+                    "element": "input",
+                    "idBase": "prjEndDt",
+                    "name": "prjEndDt",
+                    "type": "text"
+                  },
+                  {
+                    "element": "input",
+                    "idBase": "prjRoleNm",
+                    "name": "prjRoleNm",
+                    "type": "text"
+                  },
+                  {
+                    "element": "textarea",
+                    "idBase": "prjRoleDtl",
+                    "name": "prjRoleDtl"
+                  }
+                ]
+              },
+              {
+                "id": "hyundai:add:publication",
+                "fields": [
+                  {
+                    "element": "input",
+                    "idBase": "typeGb",
+                    "name": "",
+                    "type": "button"
+                  },
+                  {
+                    "element": "input",
+                    "idBase": "title",
+                    "name": "title",
+                    "type": "text"
+                  },
+                  {
+                    "element": "textarea",
+                    "idBase": "cont",
+                    "name": "cont"
+                  }
+                ]
+              }
+            ],
+            "searches": [
+              {
+                "domName": "schNm",
+                "hiddenName": "schCd",
+                "autoType": "school",
+                "params": "0045",
+                "profileFieldKey": "education.highSchool.schoolName",
+                "group": "educationhighschool",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": "highSchool",
+                "resultMatch": {
+                  "separator": " - ",
+                  "nameReplacements": [
+                    {
+                      "from": "고등학교",
+                      "to": "고"
+                    }
+                  ],
+                  "detailSeparator": " · ",
+                  "regionDetailIndexes": [0, 1],
+                  "regionReplacements": [
+                    {
+                      "from": "경기도",
+                      "to": "경기"
+                    },
+                    {
+                      "from": "서울특별시",
+                      "to": "서울"
+                    },
+                    {
+                      "from": "특별자치도",
+                      "to": ""
+                    },
+                    {
+                      "from": "광역시",
+                      "to": ""
+                    },
+                    {
+                      "from": "특별자치시",
+                      "to": ""
+                    },
+                    {
+                      "from": "시",
+                      "to": ""
+                    },
+                    {
+                      "from": "군",
+                      "to": ""
+                    },
+                    {
+                      "from": "구",
+                      "to": ""
+                    }
+                  ],
+                  "unspecifiedRegions": ["전국"]
+                }
+              },
+              {
+                "domName": "schNm",
+                "hiddenName": "schCd",
+                "autoType": "school",
+                "params": "0047",
+                "profileFieldKey": "education.university.schoolName",
+                "group": "educationuniversity",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": "university",
+                "resultMatch": {
+                  "separator": " - ",
+                  "nameReplacements": [],
+                  "detailSeparator": " · ",
+                  "regionDetailIndexes": [0, 1],
+                  "regionReplacements": [
+                    {
+                      "from": "경기도",
+                      "to": "경기"
+                    },
+                    {
+                      "from": "서울특별시",
+                      "to": "서울"
+                    },
+                    {
+                      "from": "특별자치도",
+                      "to": ""
+                    },
+                    {
+                      "from": "광역시",
+                      "to": ""
+                    },
+                    {
+                      "from": "특별자치시",
+                      "to": ""
+                    },
+                    {
+                      "from": "시",
+                      "to": ""
+                    },
+                    {
+                      "from": "군",
+                      "to": ""
+                    },
+                    {
+                      "from": "구",
+                      "to": ""
+                    }
+                  ],
+                  "unspecifiedRegions": ["전국"]
+                }
+              },
+              {
+                "domName": "schNm",
+                "hiddenName": "schCd",
+                "autoType": "school",
+                "params": "0047",
+                "profileFieldKey": "education.graduateSchool.schoolName",
+                "group": "educationgraduateschool",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": "graduateSchool",
+                "resultMatch": {
+                  "separator": " - ",
+                  "nameReplacements": [],
+                  "detailSeparator": " · ",
+                  "regionDetailIndexes": [0, 1],
+                  "regionReplacements": [
+                    {
+                      "from": "경기도",
+                      "to": "경기"
+                    },
+                    {
+                      "from": "서울특별시",
+                      "to": "서울"
+                    },
+                    {
+                      "from": "특별자치도",
+                      "to": ""
+                    },
+                    {
+                      "from": "광역시",
+                      "to": ""
+                    },
+                    {
+                      "from": "특별자치시",
+                      "to": ""
+                    },
+                    {
+                      "from": "시",
+                      "to": ""
+                    },
+                    {
+                      "from": "군",
+                      "to": ""
+                    },
+                    {
+                      "from": "구",
+                      "to": ""
+                    }
+                  ],
+                  "unspecifiedRegions": ["전국"]
+                }
+              },
+              {
+                "domName": "majorNm",
+                "hiddenName": "major",
+                "autoType": "basic",
+                "params": "0015",
+                "profileFieldKey": "education.university.majorName",
+                "group": "educationuniversity",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": null
+              },
+              {
+                "domName": "majorNm",
+                "hiddenName": "major",
+                "autoType": "basic",
+                "params": "0015",
+                "profileFieldKey": "education.graduateSchool.majorName",
+                "group": "educationgraduateschool",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": null
+              },
+              {
+                "domName": "dblMajorNm",
+                "hiddenName": "dblMajor",
+                "autoType": "basic",
+                "params": "0015",
+                "profileFieldKey": "education.university.additionalMajorName",
+                "group": "educationuniversity",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": null
+              },
+              {
+                "domName": "minorNm",
+                "hiddenName": "minor",
+                "autoType": "basic",
+                "params": "0015",
+                "profileFieldKey": "education.university.minorName",
+                "group": "educationuniversity",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": null
+              },
+              {
+                "domName": "dblMajorNm",
+                "hiddenName": "dblMajor",
+                "autoType": "basic",
+                "params": "0015",
+                "profileFieldKey": "education.graduateSchool.additionalMajorName",
+                "group": "educationgraduateschool",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": null
+              },
+              {
+                "domName": "minorNm",
+                "hiddenName": "minor",
+                "autoType": "basic",
+                "params": "0015",
+                "profileFieldKey": "education.graduateSchool.minorName",
+                "group": "educationgraduateschool",
+                "allowDirectInput": true,
+                "directInputCode": "9999",
+                "catalogKind": null
+              }
+            ],
+            "drivers": [
+              {
+                "field": "milCd",
+                "key": "military.military.militaryStatus",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 1,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": true,
+                "waitForOptions": true
+              },
+              {
+                "field": "branchYn",
+                "key": "veteran.veteran.veteranStatus",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 1,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": true,
+                "waitForOptions": true
+              },
+              {
+                "field": "injuryYn",
+                "key": "disability.disability.disabilityStatus",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 1,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": true,
+                "waitForOptions": true
+              },
+              {
+                "field": "schNm",
+                "key": "education.highSchool.schoolName",
+                "group": "educationhighschool",
+                "command": "SET_TEXT",
+                "stage": 3,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "schNm",
+                "key": "education.university.schoolName",
+                "group": "educationuniversity",
+                "command": "SET_TEXT",
+                "stage": 3,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "schNm",
+                "key": "education.graduateSchool.schoolName",
+                "group": "educationgraduateschool",
+                "command": "SET_TEXT",
+                "stage": 3,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "majorNm",
+                "key": "education.university.majorName",
+                "group": "educationuniversity",
+                "command": "SET_TEXT",
+                "stage": 4,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "majorNm",
+                "key": "education.graduateSchool.majorName",
+                "group": "educationgraduateschool",
+                "command": "SET_TEXT",
+                "stage": 4,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "dblMajorNm",
+                "key": "education.university.additionalMajorName",
+                "group": "educationuniversity",
+                "command": "SET_TEXT",
+                "stage": 5,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "minorNm",
+                "key": "education.university.minorName",
+                "group": "educationuniversity",
+                "command": "SET_TEXT",
+                "stage": 6,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "locNation",
+                "key": "education.university.schoolRegion",
+                "group": "educationuniversity",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 2,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": false,
+                "waitForOptions": true
+              },
+              {
+                "field": "locCity",
+                "key": "education.university.schoolRegion",
+                "group": "educationuniversity",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 3,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": false,
+                "waitForOptions": true
+              },
+              {
+                "field": "locNation",
+                "key": "education.graduateSchool.schoolRegion",
+                "group": "educationgraduateschool",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 2,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": false,
+                "waitForOptions": true
+              },
+              {
+                "field": "locCity",
+                "key": "education.graduateSchool.schoolRegion",
+                "group": "educationgraduateschool",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 3,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": false,
+                "waitForOptions": true
+              },
+              {
+                "field": "nationCd1Nm",
+                "key": "personal.personal.nationality",
+                "command": "SET_TEXT",
+                "stage": 1,
+                "stride": 0,
+                "handler": "FIXED_CODE_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "foreLang",
+                "key": "languages.languageTest.language",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 1,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": false,
+                "waitForOptions": true
+              },
+              {
+                "field": "foreExamCd",
+                "key": "languages.languageTest.testName",
+                "command": "SELECT_BUTTON_OPTION",
+                "stage": 2,
+                "stride": 0,
+                "handler": "NONE",
+                "conditional": false,
+                "waitForOptions": true
+              },
+              {
+                "field": "dblMajorNm",
+                "key": "education.graduateSchool.additionalMajorName",
+                "group": "educationgraduateschool",
+                "command": "SET_TEXT",
+                "stage": 5,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              },
+              {
+                "field": "minorNm",
+                "key": "education.graduateSchool.minorName",
+                "group": "educationgraduateschool",
+                "command": "SET_TEXT",
+                "stage": 6,
+                "stride": 4,
+                "handler": "CODED_SEARCH",
+                "conditional": false,
+                "waitForOptions": false
+              }
+            ],
+            "settlements": [
+              {
+                "field": "foreLang",
+                "scope": ".field-group",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[name='foreExamCd']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='button'][id^='foreExamCd_']"
+                        }
+                      ],
+                      "enabled": true
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='button'][id^='foreExamCd_']"
+                        },
+                        {
+                          "closest": ".select-wrap"
+                        },
+                        {
+                          "query": ".select-option button[data-code]:not([data-code=''])"
+                        }
+                      ],
+                      "minCount": 1,
+                      "maxCount": 256
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "foreExamCd",
+                "scope": ".field-group",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[name='acqNm']"
+                        }
+                      ],
+                      "enabled": true
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[name='acqDt']"
+                        }
+                      ],
+                      "enabled": true
+                    },
+                    {
+                      "any": [
+                        {
+                          "path": [
+                            {
+                              "query": "input[name='point']"
+                            }
+                          ],
+                          "enabled": true
+                        },
+                        {
+                          "all": [
+                            {
+                              "path": [
+                                {
+                                  "query": "input[name='grade']"
+                                },
+                                {
+                                  "parent": true
+                                },
+                                {
+                                  "query": ".btn-select"
+                                }
+                              ],
+                              "enabled": true
+                            },
+                            {
+                              "path": [
+                                {
+                                  "query": "input[name='grade']"
+                                },
+                                {
+                                  "parent": true
+                                },
+                                {
+                                  "query": ".btn-select"
+                                },
+                                {
+                                  "closest": ".select-wrap"
+                                },
+                                {
+                                  "query": ".select-option button[data-code]:not([data-code=''])"
+                                }
+                              ],
+                              "minCount": 1,
+                              "maxCount": 256
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "fallbackSelector": "button.exam_cancle",
+                "failureCondition": {
+                  "any": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[name='point']"
+                        }
+                      ],
+                      "enabled": true
+                    },
+                    {
+                      "all": [
+                        {
+                          "path": [
+                            {
+                              "query": "input[name='grade']"
+                            },
+                            {
+                              "parent": true
+                            },
+                            {
+                              "query": ".btn-select"
+                            }
+                          ],
+                          "enabled": true
+                        },
+                        {
+                          "path": [
+                            {
+                              "query": "input[name='grade']"
+                            },
+                            {
+                              "parent": true
+                            },
+                            {
+                              "query": ".btn-select"
+                            },
+                            {
+                              "closest": ".select-wrap"
+                            },
+                            {
+                              "query": ".select-option button[data-code]:not([data-code=''])"
+                            }
+                          ],
+                          "minCount": 1,
+                          "maxCount": 256
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "failureCode": "EXAM_SCORE_NOT_READY",
+                "selectedCodeSelector": "input[type='hidden'][name='foreExamCd']",
+                "fallbackPlan": [
+                  {
+                    "target": "control",
+                    "op": "CLICK"
+                  }
+                ]
+              }
+            ],
+            "failureScopes": [
+              {
+                "field": "milCd",
+                "key": "military.military.militaryStatus",
+                "command": "SELECT_BUTTON_OPTION",
+                "scope": ".field",
+                "conditional": true
+              },
+              {
+                "field": "branchYn",
+                "key": "veteran.veteran.veteranStatus",
+                "command": "SELECT_BUTTON_OPTION",
+                "scope": ".field",
+                "conditional": true
+              },
+              {
+                "field": "injuryYn",
+                "key": "disability.disability.disabilityStatus",
+                "command": "SELECT_BUTTON_OPTION",
+                "scope": ".field",
+                "conditional": true
+              },
+              {
+                "field": "dblMajorNm",
+                "key": "education.university.additionalMajorName",
+                "command": "SET_TEXT",
+                "group": "educationuniversity",
+                "scope": ".field.search",
+                "inputType": "text",
+                "conditional": false,
+                "attributes": {
+                  "name": "dblMajorNm",
+                  "data-auto-type": "basic",
+                  "data-auto-api": "0200",
+                  "data-auto-params": "0015"
+                },
+                "idPattern": "^dblMajorNm_([1-9][0-9]*)$",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='dblMajor']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": ".search-result-list"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "minorNm",
+                "key": "education.university.minorName",
+                "command": "SET_TEXT",
+                "group": "educationuniversity",
+                "scope": ".field.search",
+                "inputType": "text",
+                "conditional": false,
+                "attributes": {
+                  "name": "minorNm",
+                  "data-auto-type": "basic",
+                  "data-auto-api": "0200",
+                  "data-auto-params": "0015"
+                },
+                "idPattern": "^minorNm_([1-9][0-9]*)$",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='minor']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": ".search-result-list"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "locNation",
+                "key": "education.university.schoolRegion",
+                "command": "SELECT_BUTTON_OPTION",
+                "group": "educationuniversity",
+                "scope": ".select-wrap",
+                "ancestor": "article#academic.field-form-apply",
+                "inputType": "text",
+                "conditional": false
+              },
+              {
+                "field": "locCity",
+                "key": "education.university.schoolRegion",
+                "command": "SELECT_BUTTON_OPTION",
+                "group": "educationuniversity",
+                "scope": ".select-wrap",
+                "ancestor": "article#academic.field-form-apply",
+                "inputType": "text",
+                "conditional": false
+              },
+              {
+                "field": "locNation",
+                "key": "education.graduateSchool.schoolRegion",
+                "command": "SELECT_BUTTON_OPTION",
+                "group": "educationgraduateschool",
+                "scope": ".select-wrap",
+                "ancestor": "article#academic.field-form-apply",
+                "inputType": "text",
+                "conditional": false
+              },
+              {
+                "field": "locCity",
+                "key": "education.graduateSchool.schoolRegion",
+                "command": "SELECT_BUTTON_OPTION",
+                "group": "educationgraduateschool",
+                "scope": ".select-wrap",
+                "ancestor": "article#academic.field-form-apply",
+                "inputType": "text",
+                "conditional": false
+              },
+              {
+                "field": "foreLang",
+                "key": "languages.languageTest.language",
+                "command": "SELECT_BUTTON_OPTION",
+                "scope": ".field-group",
+                "inputType": "button",
+                "conditional": false,
+                "idPattern": "^foreLang_([1-9][0-9]*)$",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='foreLang']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='foreExamCd']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='button'][id^='foreLang_']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='button'][id^='foreExamCd_']"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "foreExamCd",
+                "key": "languages.languageTest.testName",
+                "command": "SELECT_BUTTON_OPTION",
+                "scope": ".field-group",
+                "inputType": "button",
+                "conditional": false,
+                "idPattern": "^foreExamCd_([1-9][0-9]*)$",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='foreLang']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='foreExamCd']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='button'][id^='foreLang_']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='button'][id^='foreExamCd_']"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "dblMajorNm",
+                "key": "education.graduateSchool.additionalMajorName",
+                "command": "SET_TEXT",
+                "group": "educationgraduateschool",
+                "scope": ".field.search",
+                "inputType": "text",
+                "conditional": false,
+                "attributes": {
+                  "name": "dblMajorNm",
+                  "data-auto-type": "basic",
+                  "data-auto-api": "0200",
+                  "data-auto-params": "0015"
+                },
+                "idPattern": "^dblMajorNm_([1-9][0-9]*)$",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='dblMajor']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": ".search-result-list"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "field": "minorNm",
+                "key": "education.graduateSchool.minorName",
+                "command": "SET_TEXT",
+                "group": "educationgraduateschool",
+                "scope": ".field.search",
+                "inputType": "text",
+                "conditional": false,
+                "attributes": {
+                  "name": "minorNm",
+                  "data-auto-type": "basic",
+                  "data-auto-api": "0200",
+                  "data-auto-params": "0015"
+                },
+                "idPattern": "^minorNm_([1-9][0-9]*)$",
+                "condition": {
+                  "all": [
+                    {
+                      "path": [
+                        {
+                          "query": "input[type='hidden'][name='minor']"
+                        }
+                      ]
+                    },
+                    {
+                      "path": [
+                        {
+                          "query": ".search-result-list"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "repeatHints": {
+              "hyundai:add:foreign": {
+                "categoryId": "languages",
+                "sectionId": "languageTest"
+              },
+              "hyundai:add:foreignAbility": {
+                "categoryId": "languages",
+                "sectionId": "languageSkill"
+              }
+            },
+            "prepareActionId": "hyundai:add:academic",
+            "ownOptions": {
+              "path": [
+                {
+                  "closest": ".select-wrap"
+                },
+                {
+                  "query": ".select-option button[data-code]:not([data-code=''])"
+                }
+              ],
+              "minCount": 1,
+              "maxCount": 256
+            },
+            "groupSections": {
+              "educationuniversity": "university",
+              "educationgraduateschool": "graduateSchool"
+            },
+            "textControls": [
+              {
+                "id": "milStartDt",
+                "key": "military.military.serviceStartDate",
+                "binding": "DERIVED",
+                "recipe": "YEAR_MONTH",
+                "maxLength": 7,
+                "attributes": {
+                  "data-date-format": "yyyy-mm",
+                  "data-min-view": "months",
+                  "data-view": "months"
+                },
+                "pattern": {
+                  "source": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "flags": ""
+                },
+                "ancestor": ".field.calendar.col-medium.js-required"
+              },
+              {
+                "id": "milEndDt",
+                "key": "military.military.serviceEndDate",
+                "binding": "DERIVED",
+                "recipe": "YEAR_MONTH",
+                "maxLength": 7,
+                "attributes": {
+                  "data-date-format": "yyyy-mm",
+                  "data-min-view": "months",
+                  "data-view": "months"
+                },
+                "pattern": {
+                  "source": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "flags": ""
+                },
+                "ancestor": ".field.calendar.col-medium.js-required"
+              },
+              {
+                "id": "branchNo",
+                "key": "veteran.veteran.veteranNumber",
+                "binding": "DIRECT",
+                "recipe": null,
+                "maxLength": 10,
+                "attributes": {
+                  "data-parsley-type": "digits"
+                },
+                "pattern": {
+                  "source": "^\\d{1,10}$",
+                  "flags": ""
+                },
+                "ancestor": ".field.col-medium.js-required"
+              }
+            ],
+            "codedButtons": [
+              {
+                "key": "education.university.gpaScale",
+                "group": "educationuniversity",
+                "idPattern": "^rcdPerf_([1-9][0-9]*)$",
+                "attributes": {
+                  "data-codegb": "0017"
+                },
+                "hiddenSelector": ":scope > input[type='hidden'].js-field[name='rcdPerf']",
+                "codes": {
+                  "100": "100",
+                  "4.0": "4",
+                  "4.3": "4.3",
+                  "4.5": "4.5",
+                  "5.0": "5"
+                }
+              },
+              {
+                "key": "education.graduateSchool.gpaScale",
+                "group": "educationgraduateschool",
+                "idPattern": "^rcdPerf_([1-9][0-9]*)$",
+                "attributes": {
+                  "data-codegb": "0017"
+                },
+                "hiddenSelector": ":scope > input[type='hidden'].js-field[name='rcdPerf']",
+                "codes": {
+                  "100": "100",
+                  "4.0": "4",
+                  "4.3": "4.3",
+                  "4.5": "4.5",
+                  "5.0": "5"
+                }
+              },
+              {
+                "key": "education.graduateSchool.combinedDegreeStatus",
+                "group": "educationgraduateschool",
+                "idPattern": "^docCombYn_([1-9][0-9]*)$",
+                "attributes": {
+                  "data-codegb": "0129"
+                },
+                "hiddenSelector": ":scope > input[type='hidden'].js-field[name='docCombYn']",
+                "codes": {
+                  "예": "Y",
+                  "아니오": "N"
+                }
+              }
+            ],
+            "catalogButtons": [
+              {
+                "key": "languages.languageTest.testName",
+                "kind": "languageTest",
+                "idPattern": "^foreExamCd_([1-9][0-9]*)$",
+                "hiddenSelector": ":scope > input[type='hidden'].js-field[name='foreExamCd']"
+              }
+            ],
+            "catalogTexts": [
+              {
+                "name": "nationLicNm",
+                "key": "certifications.certificate.name",
+                "kind": "certificate",
+                "forbiddenDataAttribute": "data-auto-type",
+                "forbiddenAncestor": ".field.search, .select-wrap"
+              }
+            ],
+            "delegatedFields": [
+              "nationCd1Nm",
+              "schNm",
+              "majorNm",
+              "dblMajorNm",
+              "minorNm"
+            ],
+            "searchRejectedCodes": ["9999"],
+            "address": {
+              "selection": "FIRST_VISIBLE",
+              "verification": "SELECTED_POSTAL_AND_ADDRESS",
+              "detailAfterSelection": "EMPTY",
+              "readOnlyFields": ["postCd", "addr"],
+              "requireClosed": true,
+              "requiredSelection": {
+                "selector": "#inExGb",
+                "name": "inExGb",
+                "type": "radio",
+                "checked": true
+              },
+              "callbackTimeoutMs": 0,
+              "requireName": true,
+              "inputType": "text",
+              "requireId": true,
+              "roles": {
+                "zip": 0,
+                "address": 1,
+                "detail": 2,
+                "trigger": 0
+              },
+              "callbackPollMs": 25,
+              "detailWorkflow": {
+                "targets": {},
+                "conditions": {},
+                "plans": {
+                  "complete": {
+                    "realm": "LOCAL",
+                    "timeoutMs": 5000,
+                    "steps": [
+                      {
+                        "op": "IF",
+                        "condition": {
+                          "all": [
+                            {
+                              "value": "{phase}",
+                              "equals": "selected"
+                            },
+                            {
+                              "not": {
+                                "value": "{original}",
+                                "equals": ""
+                              }
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "op": "DOM",
+                            "plan": [
+                              {
+                                "target": "detail",
+                                "op": "SET_VALUE",
+                                "value": "{original}"
+                              },
+                              {
+                                "target": "detail",
+                                "op": "EVENT",
+                                "event": "input"
+                              },
+                              {
+                                "target": "detail",
+                                "op": "EVENT",
+                                "event": "change"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "CHECKPOINT"
+                      },
+                      {
+                        "op": "ASSERT",
+                        "condition": {
+                          "target": "detail",
+                          "read": "VALUE",
+                          "equals": "{original}"
+                        }
+                      },
+                      {
+                        "op": "IF",
+                        "condition": {
+                          "not": {
+                            "target": "detail",
+                            "read": "VALUE",
+                            "equals": "{desired}"
+                          }
+                        },
+                        "then": [
+                          {
+                            "op": "DOM",
+                            "plan": [
+                              {
+                                "target": "detail",
+                                "op": "SET_VALUE",
+                                "value": "{desired}"
+                              },
+                              {
+                                "target": "detail",
+                                "op": "EVENT",
+                                "event": "input"
+                              },
+                              {
+                                "target": "detail",
+                                "op": "EVENT",
+                                "event": "change"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "DOM",
+                        "plan": [
+                          {
+                            "target": "container",
+                            "op": "CLASS",
+                            "name": "exist",
+                            "value": "{nonEmpty}"
+                          }
+                        ]
+                      },
+                      {
+                        "op": "ASSERT",
+                        "condition": {
+                          "target": "detail",
+                          "read": "VALUE",
+                          "equals": "{desired}"
+                        }
+                      },
+                      {
+                        "op": "RETURN",
+                        "value": true
+                      }
+                    ]
+                  }
+                }
+              },
+              "detailEntrypoint": "complete",
+              "existingVerification": "POSTAL_AND_ADDRESS",
+              "existingValueGuards": [
+                {
+                  "role": "zip",
+                  "comparison": "NORMALIZED"
+                },
+                {
+                  "role": "address",
+                  "comparison": "NORMALIZED"
+                },
+                {
+                  "role": "detail",
+                  "comparison": "NORMALIZED"
+                }
+              ]
+            },
+            "fixedCodeSearches": [
+              {
+                "name": "nationCd1Nm",
+                "key": "personal.personal.nationality",
+                "options": {
+                  "대한민국": "KR"
+                },
+                "attributes": {
+                  "data-auto-type": "basic",
+                  "data-auto-api": "0200",
+                  "data-auto-params": "0003"
+                },
+                "displaySelector": "input#nationCd1Nm[name='nationCd1Nm'][type='text']",
+                "hiddenSelector": "input[type='hidden'][name='nationCd1']"
+              }
+            ],
+            "groupIdentity": {
+              "rootSelector": "#academic > .field-content",
+              "rules": [
+                {
+                  "group": "educationhighschool",
+                  "condition": {
+                    "all": [
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "3"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          }
+                        ],
+                        "value": "고등학교",
+                        "attributePatterns": {
+                          "id": "^schGb_[1-9][0-9]*$"
+                        }
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "3"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "button[data-code=\"3\"]"
+                          }
+                        ],
+                        "text": "고등학교"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "group": "educationuniversity",
+                  "condition": {
+                    "all": [
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "4"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          }
+                        ],
+                        "value": "전문대학",
+                        "attributePatterns": {
+                          "id": "^schGb_[1-9][0-9]*$"
+                        }
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "4"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "button[data-code=\"4\"]"
+                          }
+                        ],
+                        "text": "전문대학"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "group": "educationuniversity",
+                  "condition": {
+                    "all": [
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "5"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          }
+                        ],
+                        "value": "학사",
+                        "attributePatterns": {
+                          "id": "^schGb_[1-9][0-9]*$"
+                        }
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "5"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "button[data-code=\"5\"]"
+                          }
+                        ],
+                        "text": "학사"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "group": "educationgraduateschool",
+                  "condition": {
+                    "all": [
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "6"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          }
+                        ],
+                        "value": "석사",
+                        "attributePatterns": {
+                          "id": "^schGb_[1-9][0-9]*$"
+                        }
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "6"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "button[data-code=\"6\"]"
+                          }
+                        ],
+                        "text": "석사"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "group": "educationgraduateschool",
+                  "condition": {
+                    "all": [
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "7"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          }
+                        ],
+                        "value": "박사",
+                        "attributePatterns": {
+                          "id": "^schGb_[1-9][0-9]*$"
+                        }
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "input[type=hidden][name=schGb]"
+                          }
+                        ],
+                        "value": "7"
+                      },
+                      {
+                        "path": [
+                          {
+                            "query": "input[type=button][id^=schGb_]"
+                          },
+                          {
+                            "closest": ".select-wrap"
+                          },
+                          {
+                            "query": "button[data-code=\"7\"]"
+                          }
+                        ],
+                        "text": "박사"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "datasetKeys": {
+              "autoApi": "autoApi",
+              "autoParams": "autoParams",
+              "autoType": "autoType",
+              "code": "code",
+              "codegb": "codegb",
+              "disabled": "disabled",
+              "enabled": "enabled",
+              "result": "result",
+              "search": "search",
+              "searchResult": "searchResult",
+              "valid": "valid"
+            },
+            "confirmations": {
+              "coded-search": [
+                {
+                  "target": "display",
+                  "read": "VALUE",
+                  "equals": "{query}",
+                  "normalize": "NFKC_COLLAPSE"
+                },
+                {
+                  "target": "display",
+                  "read": "ATTRIBUTE",
+                  "name": "data-search-result",
+                  "equals": "{query}",
+                  "normalize": "NFKC_COLLAPSE"
+                },
+                {
+                  "target": "hidden",
+                  "read": "NONEMPTY",
+                  "equals": "true"
+                }
+              ],
+              "fixed-code-search": [
+                {
+                  "target": "display",
+                  "read": "VALUE",
+                  "equals": "{query}",
+                  "normalize": "NFKC_COLLAPSE"
+                },
+                {
+                  "target": "display",
+                  "read": "ATTRIBUTE",
+                  "name": "data-search-result",
+                  "equals": "{query}",
+                  "normalize": "NFKC_COLLAPSE"
+                },
+                {
+                  "target": "hidden",
+                  "read": "VALUE",
+                  "equals": "{code}"
+                }
+              ],
+              "blank": [
+                {
+                  "target": "display",
+                  "read": "VALUE",
+                  "equals": "",
+                  "normalize": "NFKC_COLLAPSE"
+                },
+                {
+                  "target": "display",
+                  "read": "ATTRIBUTE",
+                  "name": "data-search-result",
+                  "equals": "",
+                  "normalize": "NFKC_COLLAPSE"
+                },
+                {
+                  "target": "hidden",
+                  "read": "NONEMPTY",
+                  "equals": "false"
+                }
+              ],
+              "option": [
+                {
+                  "target": "display",
+                  "read": "VALUE",
+                  "equals": "{query}",
+                  "normalize": "DISPLAY"
+                },
+                {
+                  "target": "hidden",
+                  "read": "VALUE",
+                  "equals": "{code}"
+                }
+              ],
+              "catalogOption": [
+                {
+                  "target": "display",
+                  "read": "VALUE",
+                  "equals": "{query}"
+                },
+                {
+                  "target": "hidden",
+                  "read": "VALUE",
+                  "equals": "{code}"
+                }
+              ]
+            },
+            "searchObservation": {
+              "childList": true,
+              "subtree": true,
+              "requireMutation": true
+            },
+            "actionPlans": {
+              "searchNotify": [
+                {
+                  "target": "input",
+                  "op": "EVENT",
+                  "event": "input"
+                },
+                {
+                  "target": "input",
+                  "op": "KEY",
+                  "event": "keyup",
+                  "key": "Unidentified"
+                }
+              ],
+              "searchConfirmed": [
+                {
+                  "target": "container",
+                  "op": "CLASS",
+                  "name": "exist",
+                  "value": "true"
+                }
+              ],
+              "afterTextWrite": [
+                {
+                  "target": "container",
+                  "op": "CLASS",
+                  "name": "exist",
+                  "value": "true"
+                }
+              ]
+            },
+            "snapshots": {
+              "coded-search": [
+                {
+                  "target": "display",
+                  "kind": "VALUE"
+                },
+                {
+                  "target": "hidden",
+                  "kind": "VALUE"
+                },
+                {
+                  "target": "display",
+                  "kind": "ATTRIBUTE",
+                  "name": "data-search-result"
+                },
+                {
+                  "target": "container",
+                  "kind": "CLASS",
+                  "name": "exist",
+                  "optional": true
+                }
+              ],
+              "fixed-code-search": [
+                {
+                  "target": "display",
+                  "kind": "VALUE"
+                },
+                {
+                  "target": "hidden",
+                  "kind": "VALUE"
+                },
+                {
+                  "target": "display",
+                  "kind": "ATTRIBUTE",
+                  "name": "data-search-result"
+                }
+              ]
+            }
+          },
+          "messages": {
+            "addressUnconfirmed": "주소 검색 결과를 확정하지 못했습니다. 직접 확인해 주세요.",
+            "addressConflict": "지원서에 다른 주소가 입력되어 있어 덮어쓰지 않았습니다.",
+            "addressUnchanged": "주소 일치와 상세주소 반영을 확인했습니다.",
+            "addressWritten": "주소 검색 선택과 지원서 반영을 확인했습니다."
+          },
+          "tokens": {
+            "dialogAttribute": "data-modal",
+            "dialogId": "modal-address",
+            "closeLabel": "닫기",
+            "openClass": "active",
+            "rowClass": "field-content",
+            "addClass": "btn-group-add",
+            "addressAction": "hyundai:search:address",
+            "triggerClass": "btn-select",
+            "invalidClass": "invalid",
+            "boundClass": "js-field",
+            "resetClass": "btn-option-reset",
+            "emptyChoiceWithPeriod": "선택하세요.",
+            "emptyChoice": "선택하세요",
+            "searchCategory": "0200",
+            "selectedLabelAttribute": "data-search-result",
+            "completedClass": "exist"
+          },
+          "patterns": {
+            "whitespace": {
+              "source": "\\s+",
+              "flags": "g"
+            },
+            "postalCode": {
+              "source": "^\\d{5}$",
+              "flags": ""
+            },
+            "indexSuffix": {
+              "source": "_[1-9][0-9]*$",
+              "flags": ""
+            },
+            "rowKindIndex": {
+              "source": "^schGb_([1-9][0-9]*)$",
+              "flags": ""
+            }
+          },
+          "targets": {
+            "hiddenAncestors": "[hidden], [inert], [aria-hidden=true]",
+            "addressDialog": ".modal-address",
+            "dialogClose": "button.btn-modal-close[type='button']",
+            "ownedAddressDialog": ".modal.modal-address",
+            "dialogContainer": ".modal-wrap",
+            "addressQuery": "#addressKeyword",
+            "addressSubmit": "#btnAddress",
+            "addressResults": ".table-modal tbody",
+            "addressResultButtons": "tr .btn-address",
+            "resultRow": "tr",
+            "postalText": ".zipcode",
+            "addressResultButton": ".btn-address",
+            "field": ".field",
+            "section": "article.field-form-apply",
+            "row": ".field-content",
+            "repeatSection": "article#academic.field-form-apply",
+            "optionContainer": ".select-wrap",
+            "optionDescendants": ":scope > .select-option button[data-code]",
+            "inaccessibleAncestors": "[hidden], [aria-hidden='true'], [inert]",
+            "buttonInput": "input[type='button']",
+            "directOptions": ":scope > .select-option > button[data-code]",
+            "hiddenValue": "input[type='hidden'].js-field",
+            "conditionalSection": "article#etc.field-form-apply",
+            "rowOptionContainer": ":scope > .field > .select-wrap",
+            "directRowKindCode": ":scope > input[type='hidden'].js-field[name='schGb']",
+            "directRowKindTrigger": ":scope > input[type='button'].btn-select[id^='schGb_']",
+            "unavailableAncestors": "[hidden], [aria-hidden='true'], [inert], .none",
+            "repeatRoot": "#academic.field-form-apply",
+            "searchField": ".field.search",
+            "searchResults": ".search-result-list",
+            "maskedAncestors": "[aria-hidden='true'], [inert]",
+            "searchResultButton": "li button.auto_result[type='button']",
+            "searchDisplay": ".field-search-view",
+            "directResultButton": "button.auto_result",
+            "rowKindOptions": ":scope > .select-option.education-option > button[data-code]",
+            "rowResetOption": ":scope > .select-option.education-option > button.btn-option-reset"
+          },
+          "definitions": {
+            "addressFields": ["postCd", "addr", "addrDtl"],
+            "addressResultTimeoutMs": 3000,
+            "settlementTimeoutMs": 3000,
+            "repeatedOptions": [
+              {
+                "idBase": "schClass",
+                "hiddenName": "schClass",
+                "codegb": "0155",
+                "profileSuffix": "attendanceType",
+                "allowedGroups": [
+                  "educationuniversity",
+                  "educationgraduateschool"
+                ],
+                "options": {
+                  "$map": [
+                    ["주간", "D"],
+                    ["야간", "N"]
+                  ]
+                },
+                "controlType": "button",
+                "codeAttribute": "data-codegb",
+                "classes": [],
+                "attributes": {},
+                "gates": []
+              },
+              {
+                "idBase": "locNation",
+                "hiddenName": "locNation",
+                "codegb": "0003",
+                "profileSuffix": "schoolRegion",
+                "allowedGroups": [
+                  "educationuniversity",
+                  "educationgraduateschool"
+                ],
+                "options": {
+                  "$map": [["대한민국", "KR"]]
+                },
+                "controlType": "text",
+                "codeAttribute": "data-codegb",
+                "classes": ["js-refer", "btn-new-loc", "locNa"],
+                "attributes": {},
+                "gates": []
+              },
+              {
+                "idBase": "locCity",
+                "hiddenName": "locCity",
+                "codegb": "0013",
+                "profileSuffix": "schoolRegion",
+                "allowedGroups": [
+                  "educationuniversity",
+                  "educationgraduateschool"
+                ],
+                "options": {
+                  "$map": [
+                    ["서울", "95"],
+                    ["세종", "01356"]
+                  ]
+                },
+                "controlType": "text",
+                "codeAttribute": "data-target-codegb",
+                "classes": ["js-target", "btn-new-loc", "locNa"],
+                "attributes": {
+                  "data-target-codegb": "0013",
+                  "data-refer": "locNation",
+                  "data-attr1": "KR"
+                },
+                "gates": [
+                  {
+                    "selector": "input[type='hidden'].js-field[name='locNation']",
+                    "value": "KR"
+                  }
+                ]
+              }
+            ],
+            "conditionalOptions": {
+              "$map": [
+                [
+                  "milCd",
+                  {
+                    "codegb": "0004",
+                    "profileFieldKey": "military.military.militaryStatus",
+                    "transitionByCode": {
+                      "$map": [
+                        [
+                          "1",
+                          {
+                            "enabled": "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+                            "disabled": "milExcptCd",
+                            "valid": "milStartDt,milEndDt,milRank,milDitinc,milSpeNm"
+                          }
+                        ],
+                        [
+                          "2",
+                          {
+                            "enabled": "",
+                            "disabled": "milExcptCd,milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+                            "valid": ""
+                          }
+                        ],
+                        [
+                          "5",
+                          {
+                            "enabled": "milExcptCd",
+                            "disabled": "milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+                            "valid": "milExcptCd"
+                          }
+                        ],
+                        [
+                          "7",
+                          {
+                            "enabled": "",
+                            "disabled": "milExcptCd,milStartDt,milEndDt,milRank,milDitinc,milSpeNm",
+                            "valid": ""
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                [
+                  "milExcptCd",
+                  {
+                    "codegb": "0094",
+                    "profileFieldKey": "military.military.exemptionReason"
+                  }
+                ],
+                [
+                  "milRank",
+                  {
+                    "codegb": "0006",
+                    "profileFieldKey": "military.military.militaryRank"
+                  }
+                ],
+                [
+                  "milDitinc",
+                  {
+                    "codegb": "0005",
+                    "profileFieldKey": "military.military.militaryBranch"
+                  }
+                ],
+                [
+                  "branchYn",
+                  {
+                    "codegb": "1502",
+                    "profileFieldKey": "veteran.veteran.veteranStatus",
+                    "transitionByCode": {
+                      "$map": [
+                        [
+                          "Y",
+                          {
+                            "enabled": "branchRel,branchSupplyYn,branchAddPoint,branchNo",
+                            "disabled": "",
+                            "valid": "branchRel,branchAddPoint,branchNo"
+                          }
+                        ],
+                        [
+                          "N",
+                          {
+                            "enabled": "",
+                            "disabled": "branchRel,branchSupplyYn,branchAddPoint,branchNo",
+                            "valid": ""
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                [
+                  "branchRel",
+                  {
+                    "codegb": "0007",
+                    "profileFieldKey": "veteran.veteran.veteranRelation"
+                  }
+                ],
+                [
+                  "injuryYn",
+                  {
+                    "codegb": "1503",
+                    "profileFieldKey": "disability.disability.disabilityStatus",
+                    "transitionByCode": {
+                      "$map": [
+                        [
+                          "Y",
+                          {
+                            "enabled": "injuryGrade,injuryType,injuryTypeNm,injuryCont",
+                            "disabled": ""
+                          }
+                        ],
+                        [
+                          "N",
+                          {
+                            "enabled": "",
+                            "disabled": "injuryGrade,injuryType,injuryTypeNm,injuryCont"
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                [
+                  "injuryGrade",
+                  {
+                    "codegb": "0164",
+                    "profileFieldKey": "disability.disability.disabilityGrade"
+                  }
+                ],
+                [
+                  "injuryType",
+                  {
+                    "codegb": "0368",
+                    "profileFieldKey": "disability.disability.disabilityType"
+                  }
+                ]
+              ]
+            },
+            "conditionalDrivers": {
+              "$map": [
+                [
+                  "milCd",
+                  {
+                    "codegb": "0004",
+                    "profileFieldKey": "military.military.militaryStatus"
+                  }
+                ],
+                [
+                  "branchYn",
+                  {
+                    "codegb": "1502",
+                    "profileFieldKey": "veteran.veteran.veteranStatus"
+                  }
+                ],
+                [
+                  "injuryYn",
+                  {
+                    "codegb": "1503",
+                    "profileFieldKey": "disability.disability.disabilityStatus"
+                  }
+                ]
+              ]
+            },
+            "rowKinds": [
+              {
+                "label": "고등학교",
+                "code": "3"
+              },
+              {
+                "label": "전문대학",
+                "code": "4"
+              },
+              {
+                "label": "학사",
+                "code": "5"
+              },
+              {
+                "label": "석사",
+                "code": "6"
+              },
+              {
+                "label": "박사",
+                "code": "7"
+              }
+            ],
+            "rowTimeoutMs": 3000,
+            "rowKindLimits": {
+              "3": 1,
+              "4": 2,
+              "5": 2,
+              "6": 2,
+              "7": 2
+            },
+            "searchTimeoutMs": 3000
+          },
+          "templates": {
+            "addressInput": ["#", ",input[name=\"", "\"]"],
+            "indexedAction": ["^", "_([1-9][0-9]*)$"],
+            "addAction": ["hyundai:add:", ""],
+            "indexedControl": ["^", "_[1-9][0-9]*$"],
+            "profilePath": ["education.", ".", ""],
+            "directBoundHidden": [
+              ":scope > input[type='hidden'].js-field[name='",
+              "']"
+            ],
+            "idSelector": ["#", ""],
+            "textByIdAndName": ["input[type='text']#", "[name='", "']"],
+            "buttonById": ["input[type='button']#", ""],
+            "directHiddenByName": [
+              ":scope > input[type='hidden'][name='",
+              "']"
+            ],
+            "visibleValueById": [
+              ":is(input, textarea)#",
+              ":not([type='hidden'])"
+            ],
+            "rowDetails": [".js-education ", ""],
+            "namedSearchInput": ["input#", "[name='", "'][type='text']"],
+            "hiddenByName": ["input[type='hidden'][name='", "']"]
+          }
+        },
+        "presentationGroups": {
+          "rootSelector": "article#etc.field-form-apply",
+          "fieldSelector": ".field",
+          "families": [
+            [
+              "milCd",
+              "milExcptCd",
+              "milRank",
+              "milDitinc",
+              "milStartDt",
+              "milEndDt"
+            ],
+            [
+              "branchYn",
+              "branchRel",
+              "branchSupplyYn",
+              "branchAddPoint",
+              "branchNo"
+            ],
+            [
+              "injuryYn",
+              "injuryGrade",
+              "injuryType",
+              "injuryTypeNm",
+              "injuryCont"
+            ]
+          ]
+        },
+        "resultComparisons": [
+          {
+            "name": "hopeSal",
+            "key": "compensation.compensation.desiredSalary",
+            "mode": "GROUPED_NUMBER"
+          },
+          {
+            "name": "lastSal",
+            "key": "compensation.compensation.previousSalary",
+            "mode": "GROUPED_NUMBER"
+          }
+        ],
+        "runtimeRules": {
+          "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+          "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box, article.field-form-apply",
+          "placeholderAttributes": [],
+          "placeholderValues": [],
+          "hiddenCode": {
+            "rowSelector": ":scope > .field-content",
+            "rowRelation": "DIRECT_CHILD",
+            "overwriteSelections": false,
+            "schoolMatch": {
+              "mode": "NAME_AND_DETAIL",
+              "splitPosition": "LAST",
+              "requireDetail": true,
+              "unspecifiedRegion": "UNIQUE_CATALOG",
+              "requireUniqueCampus": true
+            },
+            "protectCatalogText": true
+          }
+        }
+      }
+    }
+  },
+  "greeting": {
+    "version": 17,
+    "executionPolicy": {
+      "version": 1,
+      "searches": [],
+      "failureScopes": [],
+      "address": null,
+      "componentPolicy": {
+        "schemaVersion": 1,
+        "engine": "ARIA_COMPONENTS",
+        "sections": {
+          "universities": {
+            "label": "대학교",
+            "prefix": "educationalBackground.universities",
+            "group": "educationuniversity",
+            "anchor": "schoolName",
+            "singleton": false
+          },
+          "graduateSchools": {
+            "label": "대학원",
+            "prefix": "educationalBackground.graduateSchools",
+            "group": "educationgraduateschool",
+            "anchor": "schoolName",
+            "singleton": false
+          },
+          "highSchool": {
+            "label": "고등학교",
+            "prefix": "educationalBackground.highSchool",
+            "group": "educationhighschool",
+            "anchor": "schoolName",
+            "singleton": true
+          },
+          "workExperiences": {
+            "label": "직장경력",
+            "prefix": "workHistory.workExperiences",
+            "group": "careerscareer",
+            "anchor": "companyName",
+            "singleton": false
+          },
+          "certifiedLanguageTests": {
+            "label": "공인외국어시험",
+            "prefix": "languagesCertificationsAndOtherActivity.certifiedLanguageTests",
+            "group": "languageslanguagetest",
+            "anchor": "testName",
+            "singleton": false
+          },
+          "foreignLanguageProficiencies": {
+            "label": "외국어활용능력",
+            "prefix": "languagesCertificationsAndOtherActivity.foreignLanguageProficiencies",
+            "group": "languageslanguageskill",
+            "anchor": "foreignLanguage",
+            "singleton": false
+          },
+          "projects": {
+            "label": "프로젝트",
+            "prefix": "workHistory.projects",
+            "group": "projectsproject",
+            "anchor": "projectName",
+            "singleton": false
+          },
+          "certificatesLicenses": {
+            "label": "자격증/면허증",
+            "prefix": "languagesCertificationsAndOtherActivity.certificatesLicenses",
+            "group": "certificationscertificate",
+            "anchor": "credentials",
+            "singleton": false
+          }
+        },
+        "radioGroups": {
+          "장애여부": {
+            "suffix": "disability.disabilityStatus",
+            "options": ["비대상", "대상"],
+            "scope": "DOCUMENT",
+            "allowedGroups": [],
+            "prefix": "militaryServicePreferentialEmploymentStatus"
+          },
+          "보훈여부": {
+            "suffix": "veteran.veteranStatus",
+            "options": ["비대상", "대상"],
+            "scope": "DOCUMENT",
+            "allowedGroups": [],
+            "prefix": "militaryServicePreferentialEmploymentStatus"
+          },
+          "학위구분": {
+            "suffix": "degreeLevel",
+            "options": ["전문학사", "학사"],
+            "scope": "ROW",
+            "allowedGroups": ["educationuniversity"]
+          },
+          "입학구분": {
+            "suffix": "admissionType",
+            "options": ["입학", "편입"],
+            "scope": "ROW",
+            "allowedGroups": [
+              "educationhighschool",
+              "educationuniversity",
+              "educationgraduateschool"
+            ]
+          },
+          "주/야간구분": {
+            "suffix": "attendanceType",
+            "options": ["주간", "야간"],
+            "scope": "ROW",
+            "allowedGroups": [
+              "educationhighschool",
+              "educationuniversity",
+              "educationgraduateschool"
+            ]
+          }
+        },
+        "topLevelLabels": {
+          "basicInformation.birthdate": "생년월일",
+          "basicInformation.gender": "성별",
+          "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceStatus": "병역사항",
+          "militaryServicePreferentialEmploymentStatus.militaryService.branchOfService": "군별",
+          "militaryServicePreferentialEmploymentStatus.militaryService.rank": "계급",
+          "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceClassification": "병역구분",
+          "militaryServicePreferentialEmploymentStatus.militaryService.dischargeType": "제대구분",
+          "militaryServicePreferentialEmploymentStatus.veteranStatus.veteranRelationship": "보훈관계",
+          "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.startDate": "복무기간",
+          "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.endDate": "복무기간",
+          "militaryServicePreferentialEmploymentStatus.disability.degreeOfDisability": "장애정도",
+          "militaryServicePreferentialEmploymentStatus.disability.descriptionOfDisability": "장애내용"
+        },
+        "buttonFieldsByGroup": {
+          "educationuniversity": "^(enrollmentPeriod\\.(startDate|endDate)|completionStatus|gpa\\.scoreScale|majors\\.\\d+\\.(majorClassification|majorField)|degreeLevel|schoolLocation)$",
+          "educationgraduateschool": "^(enrollmentPeriod\\.(startDate|endDate)|completionStatus|gpa\\.scoreScale|majors\\.\\d+\\.(majorClassification|majorField)|degreeLevel|schoolLocation)$",
+          "educationhighschool": "^(schoolLocation|completionStatus|enrollmentPeriod\\.(startDate|endDate))$",
+          "careerscareer": "^(employmentType|employmentPeriod\\.(startDate|endDate))$",
+          "languageslanguagetest": "^(foreignLanguage|acquisitionDate|grade)$",
+          "languageslanguageskill": "^(foreignLanguage|conversationalProficiency)$",
+          "projectsproject": "^projectPeriod\\.(startDate|endDate)$",
+          "certificationscertificate": "^acquisitionDate$"
+        },
+        "patterns": {
+          "education": "^educationalBackground\\.(?:(universities|graduateSchools)\\.(0|[1-9]\\d*)|highSchool)\\.",
+          "freshMajor": "^educationalBackground\\.(?:graduateSchools|universities)\\.(0|[1-9]\\d*)\\.majors\\.[12]\\.majorClassification$",
+          "educationDate": "^educationalBackground\\.(?:(?:universities|graduateSchools)\\.\\d+|highSchool)\\.enrollmentPeriod\\.(startDate|endDate)$",
+          "militaryDate": "^militaryServicePreferentialEmploymentStatus\\.militaryService\\.servicePeriod\\.(startDate|endDate)$",
+          "careerDate": "^workHistory\\.workExperiences\\.\\d+\\.employmentPeriod\\.(startDate|endDate)$",
+          "projectDate": "^workHistory\\.projects\\.\\d+\\.projectPeriod\\.(startDate|endDate)$",
+          "acquisitionDate": "^languagesCertificationsAndOtherActivity\\.(certifiedLanguageTests|certificatesLicenses)\\.\\d+\\.acquisitionDate$",
+          "examRow": "^(languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+)\\.testName$",
+          "directSearch": "^(?:educationalBackground\\.highSchool\\.schoolName|workHistory\\.workExperiences\\.\\d+\\.companyName|languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials)$",
+          "searchField": "^(?:educationalBackground\\.(?:(?:universities|graduateSchools)\\.\\d+\\.(?:schoolName|majors\\.\\d+)|highSchool\\.schoolName)|workHistory\\.workExperiences\\.\\d+\\.companyName|languagesCertificationsAndOtherActivity\\.(?:certifiedLanguageTests\\.\\d+\\.testName|certificatesLicenses\\.\\d+\\.credentials))$",
+          "certificate": "^languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials$",
+          "languageTest": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.testName$",
+          "university": "^educationalBackground\\.universities\\.\\d+\\.schoolName$",
+          "graduateSchool": "^educationalBackground\\.graduateSchools\\.\\d+\\.schoolName$",
+          "employment": "^workHistory\\.workExperiences\\.(0|[1-9]\\d*)\\.employmentStatus$",
+          "numericScore": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.score\\.score$",
+          "employmentWrite": "^workHistory\\.workExperiences\\.\\d+\\.employmentStatus$",
+          "gpa": "^(educationalBackground\\.(?:universities|graduateSchools)\\.(?:0|[1-9]\\d*))\\.gpa\\.(score|scoreScale)$",
+          "languageLevel": "\\.(grade|conversationalProficiency)$",
+          "majorAction": "^greeting:add:(universities|graduateSchools):(0|[1-9]\\d*):majors$"
+        },
+        "fieldNames": {
+          "email": "basicInformation.email",
+          "nationality": "basicInformation.nationalityCode",
+          "birthDate": "basicInformation.birthdate",
+          "personalPrefix": "militaryServicePreferentialEmploymentStatus",
+          "veteranNumber": "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber"
+        },
+        "labels": {
+          "email": ["이메일주소", "이메일"],
+          "nationality": "국적",
+          "address": "현주소",
+          "addressTrigger": "주소 찾기",
+          "addressResult": "주소",
+          "postalResult": "우편번호",
+          "add": "항목 추가",
+          "majorAdd": "전공 추가",
+          "major": "전공",
+          "defaultMajor": "주전공",
+          "employed": "재직중",
+          "retired": "퇴사",
+          "employmentOptions": ["재직중", "재직 중"],
+          "emailConfirmation": "이메일 확인"
+        },
+        "addressNames": [
+          "personalInformation.currentAddress.postalCode",
+          "personalInformation.currentAddress.address",
+          "personalInformation.currentAddress.detailedAddress"
+        ],
+        "basicNames": [
+          "basicInformation.name",
+          "basicInformation.phoneNumber.nationalNumber"
+        ],
+        "stages": [
+          {
+            "commands": ["SELECT_BUTTON_OPTION"],
+            "pattern": "\\.(grade|conversationalProficiency)$",
+            "stage": 3
+          },
+          {
+            "commands": [
+              "CHECK_RADIO",
+              "CHECK_CHECKBOX",
+              "SELECT_BUTTON_OPTION"
+            ],
+            "pattern": ".*",
+            "stage": 1
+          },
+          {
+            "commands": ["SEARCH_SELECTION"],
+            "pattern": "\\.(schoolName|companyName|testName|credentials)$",
+            "stage": 2
+          },
+          {
+            "commands": ["SEARCH_SELECTION"],
+            "pattern": ".*",
+            "stage": 3
+          },
+          {
+            "commands": ["SELECT_DATE"],
+            "pattern": ".*",
+            "stage": 4
+          }
+        ],
+        "driverCommands": [
+          "SELECT_BUTTON_OPTION",
+          "CHECK_RADIO",
+          "CHECK_CHECKBOX",
+          "SEARCH_SELECTION",
+          "SELECT_DATE"
+        ],
+        "driverPattern": "^(?:educationalBackground\\.(?:(?:universities|graduateSchools)\\.(?:0|[1-9]\\d*)|highSchool)\\.|militaryServicePreferentialEmploymentStatus\\.|basicInformation\\.(?:gender|birthdate|nationalityCode)$|workHistory\\.workExperiences\\.|languagesCertificationsAndOtherActivity\\.)",
+        "failureCommands": ["SELECT_DATE", "SEARCH_SELECTION"],
+        "failurePattern": "\\.(grade|conversationalProficiency)$",
+        "dateRules": [
+          {
+            "pattern": "^educationalBackground\\.universities\\.\\d+\\.enrollmentPeriod\\.startDate$",
+            "key": "education.university.startDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^educationalBackground\\.universities\\.\\d+\\.enrollmentPeriod\\.endDate$",
+            "key": "education.university.endDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^educationalBackground\\.graduateSchools\\.\\d+\\.enrollmentPeriod\\.startDate$",
+            "key": "education.graduateSchool.startDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^educationalBackground\\.graduateSchools\\.\\d+\\.enrollmentPeriod\\.endDate$",
+            "key": "education.graduateSchool.endDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^educationalBackground\\.highSchool\\.enrollmentPeriod\\.startDate$",
+            "key": "education.highSchool.startDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^educationalBackground\\.highSchool\\.enrollmentPeriod\\.endDate$",
+            "key": "education.highSchool.endDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^workHistory\\.workExperiences\\.\\d+\\.employmentPeriod\\.startDate$",
+            "key": "careers.career.startDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^workHistory\\.workExperiences\\.\\d+\\.employmentPeriod\\.endDate$",
+            "key": "careers.career.endDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.acquisitionDate$",
+            "key": "languages.languageTest.acquisitionDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^workHistory\\.projects\\.\\d+\\.projectPeriod\\.startDate$",
+            "key": "projects.project.startDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^workHistory\\.projects\\.\\d+\\.projectPeriod\\.endDate$",
+            "key": "projects.project.endDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.acquisitionDate$",
+            "key": "certifications.certificate.acquisitionDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^basicInformation\\.birthdate$",
+            "key": "personal.personal.birthDate",
+            "precision": "day"
+          },
+          {
+            "pattern": "^militaryServicePreferentialEmploymentStatus\\.militaryService\\.servicePeriod\\.startDate$",
+            "key": "military.military.serviceStartDate",
+            "precision": "month"
+          },
+          {
+            "pattern": "^militaryServicePreferentialEmploymentStatus\\.militaryService\\.servicePeriod\\.endDate$",
+            "key": "military.military.serviceEndDate",
+            "precision": "month"
+          }
+        ],
+        "searchKinds": [
+          {
+            "kind": "certificate",
+            "pattern": "^languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials$",
+            "matchMode": "NAME_ONLY"
+          },
+          {
+            "kind": "languageTest",
+            "pattern": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.testName$",
+            "matchMode": "NAME_ONLY"
+          },
+          {
+            "kind": "highSchool",
+            "pattern": "^educationalBackground\\.highSchool\\.schoolName$",
+            "matchMode": "NAME_ONLY"
+          },
+          {
+            "kind": "university",
+            "pattern": "^educationalBackground\\.universities\\.\\d+\\.schoolName$",
+            "matchMode": "NAME_ONLY"
+          },
+          {
+            "kind": "graduateSchool",
+            "pattern": "^educationalBackground\\.graduateSchools\\.\\d+\\.schoolName$",
+            "matchMode": "NAME_ONLY"
+          }
+        ],
+        "profileSections": {
+          "greeting:add:universities": {
+            "categoryId": "education",
+            "sectionId": "university"
+          },
+          "greeting:add:graduateSchools": {
+            "categoryId": "education",
+            "sectionId": "graduateSchool"
+          },
+          "greeting:add:highSchool": {
+            "categoryId": "education",
+            "sectionId": "highSchool"
+          },
+          "greeting:add:workExperiences": {
+            "categoryId": "careers",
+            "sectionId": "career"
+          },
+          "greeting:add:certifiedLanguageTests": {
+            "categoryId": "languages",
+            "sectionId": "languageTest"
+          },
+          "greeting:add:foreignLanguageProficiencies": {
+            "categoryId": "languages",
+            "sectionId": "languageSkill"
+          },
+          "greeting:add:projects": {
+            "categoryId": "projects",
+            "sectionId": "project"
+          },
+          "greeting:add:certificatesLicenses": {
+            "categoryId": "certifications",
+            "sectionId": "certificate"
+          }
+        },
+        "actionPrefix": "greeting:add:",
+        "addressAction": "greeting:search:address",
+        "freshDefaults": [
+          {
+            "pattern": "^educationalBackground\\.universities\\.(0|[1-9]\\d*)\\.majors\\.1\\.majorClassification$",
+            "binding": "DERIVED",
+            "key": "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+            "value": "주전공"
+          },
+          {
+            "pattern": "^educationalBackground\\.universities\\.(0|[1-9]\\d*)\\.majors\\.2\\.majorClassification$",
+            "binding": "DERIVED",
+            "key": "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+            "value": "주전공"
+          },
+          {
+            "pattern": "^educationalBackground\\.graduateSchools\\.(0|[1-9]\\d*)\\.majors\\.1\\.majorClassification$",
+            "binding": "DERIVED",
+            "key": "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+            "value": "주전공"
+          },
+          {
+            "pattern": "^educationalBackground\\.graduateSchools\\.(0|[1-9]\\d*)\\.majors\\.2\\.majorClassification$",
+            "binding": "DERIVED",
+            "key": "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+            "value": "주전공"
+          }
+        ],
+        "directSearch": {
+          "code": "[[new]]",
+          "labelPrefix": "직접 입력하기:“",
+          "labelSuffix": "”",
+          "normalNavigationLimit": 128
+        },
+        "displayFormats": [
+          {
+            "pattern": "^educationalBackground\\.universities\\.(?:0|[1-9]\\d*)\\.gpa\\.scoreScale$",
+            "key": "education.university.gpaScale",
+            "mode": "DECIMAL",
+            "control": "button",
+            "valuePattern": "^\\d+(?:\\.\\d{1,2})?$"
+          },
+          {
+            "pattern": "^educationalBackground\\.graduateSchools\\.(?:0|[1-9]\\d*)\\.gpa\\.scoreScale$",
+            "key": "education.graduateSchool.gpaScale",
+            "mode": "DECIMAL",
+            "control": "button",
+            "valuePattern": "^\\d+(?:\\.\\d{1,2})?$"
+          },
+          {
+            "pattern": "^militaryServicePreferentialEmploymentStatus\\.veteranStatus\\.veteransRegistrationNumber$",
+            "key": "veteran.veteran.veteranNumber",
+            "mode": "HYPHEN_INSENSITIVE",
+            "control": "text",
+            "valuePattern": "^[0-9]+(?:-[0-9]+)*$"
+          }
+        ],
+        "groups": {
+          "education": [
+            "educationhighschool",
+            "educationuniversity",
+            "educationgraduateschool"
+          ],
+          "university": "educationuniversity",
+          "employment": "careerscareer"
+        },
+        "major": {
+          "additionalTypes": ["복수전공", "부전공", "연계전공", "융합전공"],
+          "fields": [
+            "인문계열",
+            "사회계열",
+            "교육계열",
+            "공학계열",
+            "자연과학계열",
+            "의약학계열",
+            "예체능계열",
+            "농수해양/생명자원계열",
+            "기타"
+          ],
+          "maxRows": 5,
+          "freshCounts": [2, 3],
+          "rowSuffix": "majors",
+          "classificationSuffix": "majorClassification",
+          "fieldSuffix": "majorField",
+          "parts": [
+            {
+              "suffix": "",
+              "selector": "input[role=\"combobox\"]",
+              "required": true,
+              "read": "VALUE"
+            },
+            {
+              "suffix": "majorClassification",
+              "selector": "button",
+              "required": true,
+              "read": "TEXT"
+            },
+            {
+              "suffix": "majorField",
+              "selector": "button",
+              "required": true,
+              "read": "TEXT"
+            }
+          ]
+        },
+        "gpa": {
+          "scoreSuffix": "gpa.score",
+          "scaleSuffix": "gpa.scoreScale",
+          "scalePart": "scoreScale",
+          "placeholder": "선택"
+        },
+        "languageSuffix": "foreignLanguage",
+        "emailStage": 0,
+        "retainedSearchVerification": "RECORDED_VALUE",
+        "selectors": {
+          "field": "[data-scope=\"field\"][data-part=\"root\"]",
+          "addressResults": "[data-scope=\"scroll-area\"][data-part=\"content\"]",
+          "openDialog": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]",
+          "dialogClose": "[data-scope=\"dialog\"][data-part=\"close-trigger\"]",
+          "unnamedEmail": "input[role=\"combobox\"][data-scope=\"combobox\"][data-part=\"input\"]:not([name])",
+          "row": "[data-scope=\"accordion\"][data-part=\"item\"]",
+          "fieldLabel": "label, [data-scope=\"field\"][data-part=\"label\"]",
+          "radioGroup": "[data-scope=\"toggle-group\"][data-part=\"root\"][role=\"radiogroup\"]",
+          "radioOption": "button[data-scope=\"toggle-group\"][data-part=\"item\"][role=\"radio\"]",
+          "addTrigger": "button[data-scope=\"tooltip\"][data-part=\"trigger\"]",
+          "section": "[data-scope=\"accordion\"][data-part=\"root\"]",
+          "extraFields": "button[name], [data-scope=\"toggle-group\"][data-part=\"root\"][role=\"radiogroup\"]",
+          "openSearchPopup": "[data-scope=\"scroll-area\"][data-part=\"viewport\"][role=\"presentation\"][data-state=\"open\"]",
+          "scrollRoot": "[data-scope=\"scroll-area\"][data-part=\"root\"]",
+          "searchPositioner": "[data-scope=\"combobox\"][data-part=\"positioner\"]",
+          "checkedItem": "[data-part=\"item\"][role=\"option\"][data-state=\"checked\"]",
+          "optionDetail": "[data-part=\"item-description\"]",
+          "optionDecoration": "[data-part=\"item-description\"], [data-part=\"item-indicator\"]",
+          "searchInput": "[data-scope=\"combobox\"][data-part=\"input\"][role=\"combobox\"][aria-controls]",
+          "searchItem": "[data-scope=\"combobox\"][data-part=\"item\"]",
+          "checkedSearchItem": "[data-scope=\"combobox\"][data-part=\"item\"][role=\"option\"][data-state=\"checked\"]",
+          "codedSearchItem": "[data-scope=\"combobox\"][data-part=\"item\"][role=\"option\"][data-value]",
+          "searchOption": "[data-scope=\"combobox\"][data-part=\"item\"][role=\"option\"]",
+          "searchPopup": "[data-scope=\"scroll-area\"][data-part=\"viewport\"][role=\"presentation\"]",
+          "choicePopup": "[role=\"listbox\"], [data-scope=\"scroll-area\"][data-part=\"viewport\"][role=\"presentation\"][data-state=\"open\"]",
+          "calendarTrigger": "button[data-scope=\"date-picker\"][data-part=\"trigger\"][aria-controls]",
+          "calendarPopup": "[data-scope=\"date-picker\"][data-part=\"content\"][role=\"application\"][aria-label=\"calendar\"]",
+          "calendarInput": "input[data-scope=\"date-picker\"][data-part=\"input\"]",
+          "calendarCells": "[data-scope=\"date-picker\"][data-part=\"table-cell-trigger\"][data-view]",
+          "calendarClear": "[data-scope=\"date-picker\"][data-part=\"clear-trigger\"]",
+          "calendarRoot": "[data-scope=\"date-picker\"][data-part=\"root\"]",
+          "fieldGroup": "[data-scope=\"field\"][data-part=\"root\"][role=\"group\"]",
+          "calendarValue": "[data-scope=\"date-picker\"][data-part=\"table-cell-trigger\"][data-view=\"{0}\"][data-value]",
+          "collectedRadioOption": "button[role=\"radio\"][data-scope=\"toggle-group\"][data-part=\"item\"]"
+        },
+        "widget": {
+          "optionCodeAttribute": "data-value",
+          "calendarViewAttribute": "data-view",
+          "monthView": "month",
+          "dayView": "day",
+          "stateAttribute": "data-state",
+          "openState": "open",
+          "monthSeparator": ". ",
+          "daySeparator": ".",
+          "monthLabelTemplate": "{year}년 {month}월",
+          "placeholderAttributes": [
+            "data-placeholder",
+            "data-placeholder-shown"
+          ],
+          "searchPlaceholderAttribute": "data-placeholder-shown",
+          "languagePlaceholder": "선택",
+          "directCodeTemplate": "{code}-{value}",
+          "popupRootDepth": 1,
+          "popupPositionerDepth": 2,
+          "ignorePositionerAriaHidden": true
+        },
+        "workflow": {
+          "requireVerifiedMapping": true,
+          "refreshAfterPass": true,
+          "rebindReplacedControls": true,
+          "captureDriverResults": true,
+          "emailProfileKey": "contact.contact.email"
+        },
+        "emailBridge": {
+          "selectors": {
+            "field": "[data-scope=\"field\"][data-part=\"root\"]",
+            "input": "input[role=\"combobox\"][data-scope=\"combobox\"][data-part=\"input\"]:not([name])",
+            "row": "[data-scope=\"accordion\"][data-part=\"item\"]",
+            "label": "label, [data-scope=\"field\"][data-part=\"label\"]"
+          },
+          "plans": {
+            "commit": [
+              {
+                "target": "input",
+                "op": "SET_VALUE",
+                "value": ""
+              },
+              {
+                "target": "input",
+                "op": "FOCUS"
+              },
+              {
+                "target": "input",
+                "op": "CLICK"
+              },
+              {
+                "target": "input",
+                "op": "INSERT_TEXT",
+                "value": "{value}",
+                "require": [
+                  {
+                    "target": "input",
+                    "read": "VALUE",
+                    "equals": ""
+                  },
+                  {
+                    "target": "input",
+                    "read": "ACTIVE",
+                    "equals": "true"
+                  }
+                ]
+              }
+            ]
+          },
+          "ownership": {
+            "excludeRows": true,
+            "labelCount": 1,
+            "inputCount": 1
+          },
+          "ackTimeoutMs": 1000,
+          "flow": {
+            "targets": {
+              "field": {
+                "from": "input",
+                "relation": "CLOSEST",
+                "selector": "div[data-scope=\"field\"][data-part=\"root\"]"
+              },
+              "confirmation": {
+                "from": "field",
+                "relation": "QUERY",
+                "selector": "button",
+                "count": 1
+              },
+              "confirmationOwner": {
+                "from": "confirmation",
+                "relation": "CLOSEST",
+                "selector": "[data-scope=\"field\"][data-part=\"root\"]"
+              },
+              "hiddenAncestor": {
+                "from": "confirmation",
+                "relation": "CLOSEST",
+                "selector": "[hidden], [inert]"
+              },
+              "confirmationParent": {
+                "from": "confirmation",
+                "relation": "PARENT"
+              },
+              "hiddenParent": {
+                "from": "confirmationParent",
+                "relation": "CLOSEST",
+                "selector": "[aria-hidden=\"true\"]"
+              },
+              "popup": {
+                "from": "input",
+                "relation": "CONTROLLED"
+              },
+              "popupRoot": {
+                "from": "popup",
+                "relation": "PARENT",
+                "depth": 1
+              }
+            },
+            "conditions": {
+              "popup": {
+                "all": [
+                  {
+                    "target": "input",
+                    "read": "ATTRIBUTE",
+                    "equals": "true",
+                    "name": "aria-expanded"
+                  },
+                  {
+                    "target": "popup",
+                    "read": "MATCHES",
+                    "equals": "true",
+                    "name": "div[role=\"presentation\"][data-scope=\"scroll-area\"][data-part=\"viewport\"]"
+                  },
+                  {
+                    "target": "popupRoot",
+                    "read": "MATCHES",
+                    "equals": "true",
+                    "name": "div[data-scope=\"scroll-area\"][data-part=\"root\"]"
+                  }
+                ]
+              },
+              "closed": {
+                "target": "input",
+                "read": "ATTRIBUTE",
+                "equals": "false",
+                "name": "aria-expanded"
+              },
+              "accepted": {
+                "all": [
+                  {
+                    "target": "confirmation",
+                    "read": "MATCHES",
+                    "equals": "true",
+                    "name": "button[type=\"button\"]:not(:disabled):not([aria-disabled=\"true\"])"
+                  },
+                  {
+                    "target": "confirmation",
+                    "read": "TEXT",
+                    "equals": "이메일 확인",
+                    "trim": true
+                  },
+                  {
+                    "target": "confirmationOwner",
+                    "read": "SAME",
+                    "equals": "field"
+                  },
+                  {
+                    "target": "hiddenAncestor",
+                    "read": "EXISTS",
+                    "equals": "false"
+                  },
+                  {
+                    "target": "hiddenParent",
+                    "read": "EXISTS",
+                    "equals": "false"
+                  },
+                  {
+                    "any": [
+                      {
+                        "not": {
+                          "target": "confirmation",
+                          "read": "ATTRIBUTE",
+                          "equals": "true",
+                          "name": "aria-hidden"
+                        }
+                      },
+                      {
+                        "ref": "popup"
+                      }
+                    ]
+                  },
+                  {
+                    "not": {
+                      "target": "confirmation",
+                      "read": "STYLE",
+                      "equals": "none",
+                      "name": "display"
+                    }
+                  },
+                  {
+                    "not": {
+                      "target": "confirmation",
+                      "read": "STYLE",
+                      "equals": "hidden",
+                      "name": "visibility"
+                    }
+                  }
+                ]
+              },
+              "emptyPopup": {
+                "all": [
+                  {
+                    "ref": "popup"
+                  },
+                  {
+                    "target": "popup",
+                    "read": "MATCHES",
+                    "equals": "true",
+                    "name": "[data-empty]"
+                  },
+                  {
+                    "target": "popup",
+                    "read": "STYLE",
+                    "equals": "none",
+                    "name": "display"
+                  }
+                ]
+              }
+            },
+            "plans": {
+              "acceptance": {
+                "realm": "LOCAL",
+                "timeoutMs": 3100,
+                "steps": [
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "not": {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": ""
+                      }
+                    }
+                  },
+                  {
+                    "op": "WAIT",
+                    "condition": {
+                      "ref": "accepted"
+                    },
+                    "timeoutMs": 3000,
+                    "pollMs": 50,
+                    "stableTargets": ["confirmation"]
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              },
+              "close": {
+                "realm": "LOCAL",
+                "timeoutMs": 1200,
+                "steps": [
+                  {
+                    "op": "PIN",
+                    "target": "input",
+                    "attributes": ["aria-controls"]
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "popup"
+                    }
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "accepted"
+                    }
+                  },
+                  {
+                    "op": "DELAY",
+                    "ms": 150
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "accepted"
+                    }
+                  },
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "ref": "closed"
+                    },
+                    "then": [
+                      {
+                        "op": "RETURN",
+                        "value": true
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "popup"
+                    }
+                  },
+                  {
+                    "op": "BRIDGE",
+                    "plan": "dismiss"
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "closed"
+                    }
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              },
+              "completion": {
+                "realm": "LOCAL",
+                "timeoutMs": 4500,
+                "steps": [
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "not": {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": ""
+                      }
+                    }
+                  },
+                  {
+                    "op": "WAIT",
+                    "condition": {
+                      "ref": "accepted"
+                    },
+                    "timeoutMs": 3000,
+                    "pollMs": 50,
+                    "stableTargets": ["confirmation"]
+                  },
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "not": {
+                        "target": "input",
+                        "read": "ATTRIBUTE",
+                        "equals": "true",
+                        "name": "aria-expanded"
+                      }
+                    },
+                    "then": [
+                      {
+                        "op": "RETURN",
+                        "value": true
+                      }
+                    ]
+                  },
+                  {
+                    "op": "AUTHORIZE"
+                  },
+                  {
+                    "op": "PIN",
+                    "target": "input",
+                    "attributes": ["aria-controls"]
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "popup"
+                    }
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "accepted"
+                    }
+                  },
+                  {
+                    "op": "DELAY",
+                    "ms": 150
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "accepted"
+                    }
+                  },
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "ref": "closed"
+                    },
+                    "then": [
+                      {
+                        "op": "RETURN",
+                        "value": true
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "popup"
+                    }
+                  },
+                  {
+                    "op": "BRIDGE",
+                    "plan": "dismiss"
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "closed"
+                    }
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              },
+              "dismiss": {
+                "realm": "MAIN",
+                "timeoutMs": 800,
+                "stopWhen": {
+                  "ref": "closed"
+                },
+                "steps": [
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "popup"
+                    }
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "ref": "accepted"
+                    }
+                  },
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "ref": "emptyPopup"
+                    },
+                    "then": [
+                      {
+                        "op": "DOM",
+                        "plan": [
+                          {
+                            "target": "input",
+                            "op": "KEY",
+                            "event": "keydown",
+                            "key": "Escape",
+                            "code": "Escape"
+                          },
+                          {
+                            "target": "input",
+                            "op": "KEY",
+                            "event": "keyup",
+                            "key": "Escape",
+                            "code": "Escape"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "DOM",
+                    "plan": [
+                      {
+                        "target": "input",
+                        "op": "BLUR"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "DELAY",
+                    "ms": 0
+                  },
+                  {
+                    "op": "ASSERT",
+                    "condition": {
+                      "all": [
+                        {
+                          "target": "input",
+                          "read": "ACTIVE",
+                          "equals": "false"
+                        },
+                        {
+                          "ref": "popup"
+                        },
+                        {
+                          "ref": "accepted"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "op": "DOM",
+                    "plan": [
+                      {
+                        "target": "body",
+                        "op": "POINTER",
+                        "event": "pointerdown",
+                        "composed": true
+                      }
+                    ]
+                  },
+                  {
+                    "op": "WAIT",
+                    "condition": {
+                      "ref": "closed"
+                    },
+                    "timeoutMs": 800,
+                    "pollMs": 50
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              }
+            }
+          },
+          "entrypoints": {
+            "acceptance": "acceptance",
+            "close": "close"
+          }
+        },
+        "structure": {
+          "addressReadOnly": [true, true, false],
+          "addressRows": ":scope > *",
+          "addressParts": ":scope > *",
+          "addressPartLabel": ":scope > :first-child",
+          "addressSearchInput": "input[type=\"search\"]",
+          "sectionAddRelation": "DIRECT_CHILD",
+          "dayDateFieldNames": ["basicInformation.birthdate"]
+        },
+        "runtimeRules": {
+          "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+          "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+          "placeholderAttributes": [
+            "data-placeholder",
+            "data-placeholder-shown"
+          ],
+          "placeholderValues": ["선택"],
+          "components": {
+            "employment": {
+              "checkedValue": "재직중",
+              "uncheckedValue": "퇴사",
+              "allowUncheck": false
+            },
+            "radio": {
+              "optionSelector": "button[role=\"radio\"]",
+              "overwrite": false
+            },
+            "gpa": {
+              "requirePair": true,
+              "scaleBeforeScore": true,
+              "scoreSelector": "input[name=\"{name}\"]",
+              "scaleSelector": "button[name=\"{name}\"]"
+            },
+            "row": {
+              "separator": ".",
+              "indexPattern": "^(0|[1-9]\\d*)\\.(.+)$",
+              "singletonIndex": 0,
+              "maxIndex": 127,
+              "requireContiguous": true
+            },
+            "major": {
+              "nameSelector": "input[role=\"combobox\"]",
+              "classificationSelector": "button",
+              "fieldSelector": "button",
+              "baseCount": 1,
+              "newRowPosition": "LAST",
+              "sourceCategory": "education",
+              "requiredParts": ["name", "classification", "field"],
+              "requireContiguous": true,
+              "actionTemplate": "{prefix}{section}:{index}:majors",
+              "startIndex": 0
+            },
+            "search": {
+              "languageQualifierKinds": ["languageTest"],
+              "languageSuffixTemplate": "({language})",
+              "selectionMode": "KEYBOARD_WHEN_IDENTIFIED",
+              "confirmationMode": "CHECKED_OPTION",
+              "closedPopup": "UNMOUNTED",
+              "preferCatalogOptions": true
+            },
+            "address": {
+              "verification": "POSTAL_AND_ADDRESS",
+              "requireClosed": true,
+              "zipIndex": 0,
+              "addressIndex": 1,
+              "detailIndex": 2,
+              "fieldCount": 3,
+              "protectExisting": true,
+              "selectionStrategy": "FIRST_RESULT"
+            },
+            "calendar": {
+              "allowDayFallback": true,
+              "resultMonthPattern": "^\\d{4}\\. ?\\d{2}$",
+              "resultDayPattern": "^\\d{4}\\. ?\\d{2}\\. ?\\d{2}$",
+              "resultSeparatorPattern": "\\. ?",
+              "clearControlCount": 1,
+              "clearMismatchedNewValue": true
+            },
+            "workflow": {
+              "requireAdapterResponse": true,
+              "enforceUniqueEmail": true,
+              "emailCommitDriver": true,
+              "driverFailureLabel": true,
+              "settleEmailSuggestions": true,
+              "verifySettledValues": true
+            },
+            "timeouts": {
+              "defaultMs": 1200,
+              "pollMs": 25,
+              "searchMs": 5000,
+              "navigationMs": 250,
+              "addressCloseMs": 3000
+            },
+            "collection": {
+              "includeSearchOptions": false,
+              "ownedLabelsOnly": true,
+              "revalidateAdapterRows": true
+            },
+            "fingerprint": {
+              "element": "input",
+              "control": "text",
+              "selector": "input[name=\"{name}\"]",
+              "count": 1
+            }
+          }
+        },
+        "scopedSearches": [
+          {
+            "name": "basicInformation.nationalityCode",
+            "label": "국적",
+            "excludeRows": true,
+            "count": 1,
+            "navigationLimit": 256,
+            "key": "personal.personal.nationality"
+          }
+        ],
+        "failureScope": {
+          "selector": "[data-scope=\"field\"][data-part=\"root\"][role=\"group\"]",
+          "memberSelector": "[name]",
+          "memberCount": 1
+        },
+        "actionPlans": {
+          "searchActivate": [
+            {
+              "target": "input",
+              "op": "FOCUS"
+            },
+            {
+              "target": "input",
+              "op": "CLICK"
+            }
+          ],
+          "searchWrite": [
+            {
+              "target": "input",
+              "op": "SET_VALUE",
+              "value": "{value}"
+            },
+            {
+              "target": "input",
+              "op": "EVENT",
+              "event": "input"
+            }
+          ],
+          "searchOpen": [
+            {
+              "target": "input",
+              "op": "KEY",
+              "event": "keydown",
+              "key": "ArrowDown",
+              "code": "ArrowDown"
+            },
+            {
+              "target": "input",
+              "op": "KEY",
+              "event": "keyup",
+              "key": "ArrowDown",
+              "code": "ArrowDown"
+            }
+          ],
+          "searchClose": [
+            {
+              "target": "input",
+              "op": "KEY",
+              "event": "keydown",
+              "key": "Escape"
+            }
+          ],
+          "calendarWrite": [
+            {
+              "target": "input",
+              "op": "SET_VALUE",
+              "value": "{value}"
+            },
+            {
+              "target": "input",
+              "op": "EVENT",
+              "event": "input"
+            },
+            {
+              "target": "input",
+              "op": "EVENT",
+              "event": "change"
+            },
+            {
+              "target": "input",
+              "op": "KEY",
+              "event": "keydown",
+              "key": "Enter",
+              "code": "Enter"
+            },
+            {
+              "target": "input",
+              "op": "KEY",
+              "event": "keyup",
+              "key": "Enter",
+              "code": "Enter"
+            }
+          ],
+          "calendarClear": [
+            {
+              "target": "control",
+              "op": "CLICK"
+            }
+          ],
+          "addressSearch": [
+            {
+              "target": "input",
+              "op": "FOCUS"
+            },
+            {
+              "target": "input",
+              "op": "SET_VALUE",
+              "value": "{value}"
+            },
+            {
+              "target": "input",
+              "op": "EVENT",
+              "event": "input"
+            },
+            {
+              "target": "input",
+              "op": "EVENT",
+              "event": "change"
+            },
+            {
+              "target": "input",
+              "op": "KEY",
+              "event": "keydown",
+              "key": "Enter",
+              "code": "Enter"
+            }
+          ],
+          "searchReopen": [
+            {
+              "target": "input",
+              "op": "FOCUS"
+            },
+            {
+              "target": "input",
+              "op": "CLICK"
+            }
+          ]
+        },
+        "addressStructure": {
+          "labelCount": 1,
+          "labelRead": "REMOVE_PREFIX",
+          "resultLabelCount": 1
+        },
+        "capabilities": [
+          "commit",
+          "search",
+          "calendar",
+          "address",
+          "nestedRepeat",
+          "pairedNumber",
+          "employment"
+        ],
+        "syntheticFields": [
+          {
+            "selector": "input[role=\"combobox\"][data-scope=\"combobox\"][data-part=\"input\"]:not([name])",
+            "labels": ["이메일주소", "이메일"],
+            "name": "basicInformation.email",
+            "excludeRows": true,
+            "count": 1
+          }
+        ],
+        "completions": [
+          {
+            "key": "contact.contact.email",
+            "name": "basicInformation.email",
+            "enabled": true,
+            "stage": 0,
+            "failureMessage": "입력 후 완료 조건을 확인하지 못했습니다.",
+            "plan": "completion"
+          }
+        ],
+        "writeRecipes": [
+          {
+            "name": "basicInformation.email",
+            "key": "contact.contact.email",
+            "command": "SET_TEXT",
+            "inputTypes": ["text", "email"],
+            "stage": 0,
+            "plan": [
+              {
+                "op": "IF",
+                "condition": [
+                  {
+                    "target": "input",
+                    "read": "VALUE",
+                    "equals": "{value}"
+                  }
+                ],
+                "then": [
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              },
+              {
+                "op": "ASSERT",
+                "condition": [
+                  {
+                    "target": "input",
+                    "read": "VALUE",
+                    "equals": ""
+                  }
+                ]
+              },
+              {
+                "op": "DOM",
+                "plan": [
+                  {
+                    "op": "SET_VALUE",
+                    "target": "input",
+                    "value": "{value}"
+                  }
+                ]
+              },
+              {
+                "op": "BRIDGE",
+                "name": "mainCommit"
+              },
+              {
+                "op": "ASSERT",
+                "condition": [
+                  {
+                    "target": "input",
+                    "read": "VALUE",
+                    "equals": "{value}"
+                  }
+                ]
+              },
+              {
+                "op": "RETURN",
+                "value": true
+              }
+            ]
+          }
+        ],
+        "searchFlows": {
+          "afterSelection": "afterSelection",
+          "cleanup": "cleanup",
+          "program": {
+            "targets": {},
+            "conditions": {},
+            "plans": {
+              "afterSelection": {
+                "realm": "LOCAL",
+                "timeoutMs": 10000,
+                "steps": [
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "value": "{success}",
+                      "equals": "true"
+                    },
+                    "then": [
+                      {
+                        "op": "RETURN",
+                        "value": true
+                      }
+                    ]
+                  },
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "all": [
+                        {
+                          "value": "{selectionMode}",
+                          "equals": "KEYBOARD_WHEN_IDENTIFIED"
+                        },
+                        {
+                          "not": {
+                            "value": "{optionId}",
+                            "equals": ""
+                          }
+                        },
+                        {
+                          "target": "input",
+                          "read": "VALUE",
+                          "equals": "{expected}"
+                        },
+                        {
+                          "target": "input",
+                          "read": "ATTRIBUTE",
+                          "equals": "false",
+                          "name": "aria-expanded"
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "op": "AUTHORIZE"
+                      },
+                      {
+                        "op": "ASSERT",
+                        "condition": {
+                          "all": [
+                            {
+                              "value": "{selectionMode}",
+                              "equals": "KEYBOARD_WHEN_IDENTIFIED"
+                            },
+                            {
+                              "not": {
+                                "value": "{optionId}",
+                                "equals": ""
+                              }
+                            },
+                            {
+                              "target": "input",
+                              "read": "VALUE",
+                              "equals": "{expected}"
+                            },
+                            {
+                              "target": "input",
+                              "read": "ATTRIBUTE",
+                              "equals": "false",
+                              "name": "aria-expanded"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "DOM",
+                        "plan": [
+                          {
+                            "op": "KEY",
+                            "target": "input",
+                            "event": "keydown",
+                            "key": "ArrowDown",
+                            "code": "ArrowDown"
+                          },
+                          {
+                            "op": "KEY",
+                            "target": "input",
+                            "event": "keyup",
+                            "key": "ArrowDown",
+                            "code": "ArrowDown"
+                          }
+                        ]
+                      },
+                      {
+                        "op": "WAIT",
+                        "condition": {
+                          "fact": "selectionConfirmed",
+                          "equals": true
+                        },
+                        "timeoutMs": 5000,
+                        "pollMs": 25
+                      },
+                      {
+                        "op": "RETURN",
+                        "value": true
+                      }
+                    ]
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": false
+                  }
+                ]
+              },
+              "cleanup": {
+                "realm": "LOCAL",
+                "timeoutMs": 10000,
+                "steps": [
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "all": [
+                        {
+                          "value": "{attempted}",
+                          "equals": "true"
+                        },
+                        {
+                          "value": "{success}",
+                          "equals": "false"
+                        },
+                        {
+                          "any": [
+                            {
+                              "target": "input",
+                              "read": "VALUE",
+                              "equals": "{desired}"
+                            },
+                            {
+                              "target": "input",
+                              "read": "VALUE",
+                              "equals": "{expected}"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "op": "AUTHORIZE"
+                      },
+                      {
+                        "op": "ASSERT",
+                        "condition": {
+                          "all": [
+                            {
+                              "value": "{attempted}",
+                              "equals": "true"
+                            },
+                            {
+                              "value": "{success}",
+                              "equals": "false"
+                            },
+                            {
+                              "any": [
+                                {
+                                  "target": "input",
+                                  "read": "VALUE",
+                                  "equals": "{desired}"
+                                },
+                                {
+                                  "target": "input",
+                                  "read": "VALUE",
+                                  "equals": "{expected}"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "DOM",
+                        "plan": [
+                          {
+                            "op": "SET_VALUE",
+                            "target": "input",
+                            "value": "{original}"
+                          },
+                          {
+                            "op": "EVENT",
+                            "target": "input",
+                            "event": "input"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "all": [
+                        {
+                          "target": "input",
+                          "read": "ATTRIBUTE",
+                          "equals": "true",
+                          "name": "aria-expanded"
+                        },
+                        {
+                          "any": [
+                            {
+                              "target": "input",
+                              "read": "VALUE",
+                              "equals": "{original}"
+                            },
+                            {
+                              "target": "input",
+                              "read": "VALUE",
+                              "equals": "{expected}"
+                            },
+                            {
+                              "target": "input",
+                              "read": "VALUE",
+                              "equals": "{desired}"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "op": "AUTHORIZE"
+                      },
+                      {
+                        "op": "ASSERT",
+                        "condition": {
+                          "all": [
+                            {
+                              "target": "input",
+                              "read": "ATTRIBUTE",
+                              "equals": "true",
+                              "name": "aria-expanded"
+                            },
+                            {
+                              "any": [
+                                {
+                                  "target": "input",
+                                  "read": "VALUE",
+                                  "equals": "{original}"
+                                },
+                                {
+                                  "target": "input",
+                                  "read": "VALUE",
+                                  "equals": "{expected}"
+                                },
+                                {
+                                  "target": "input",
+                                  "read": "VALUE",
+                                  "equals": "{desired}"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "DOM",
+                        "plan": [
+                          {
+                            "target": "input",
+                            "op": "KEY",
+                            "event": "keydown",
+                            "key": "Escape"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              },
+              "retainedCompletion": {
+                "realm": "LOCAL",
+                "timeoutMs": 10000,
+                "steps": [
+                  {
+                    "op": "DOM",
+                    "plan": [
+                      {
+                        "target": "input",
+                        "op": "KEY",
+                        "event": "keydown",
+                        "key": "Escape"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "WAIT",
+                    "condition": {
+                      "all": [
+                        {
+                          "target": "input",
+                          "read": "ATTRIBUTE",
+                          "name": "aria-expanded",
+                          "equals": "false"
+                        },
+                        {
+                          "any": [
+                            {
+                              "fact": "linkedPopupMissing",
+                              "equals": true
+                            },
+                            {
+                              "all": [
+                                {
+                                  "value": "{closedPopup}",
+                                  "equals": "HIDDEN_OR_UNMOUNTED"
+                                },
+                                {
+                                  "fact": "linkedPopupsHidden",
+                                  "equals": true
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "timeoutMs": 1200,
+                    "pollMs": 25
+                  },
+                  {
+                    "op": "DOM",
+                    "plan": [
+                      {
+                        "op": "BLUR",
+                        "target": "input"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              }
+            }
+          },
+          "retainedCompletion": "retainedCompletion"
+        },
+        "addressCleanup": {
+          "entrypoint": "cleanup",
+          "program": {
+            "targets": {
+              "close": {
+                "from": "dialog",
+                "relation": "QUERY",
+                "selector": "[data-scope=\"dialog\"][data-part=\"close-trigger\"]",
+                "count": 1
+              }
+            },
+            "conditions": {},
+            "plans": {
+              "cleanup": {
+                "realm": "LOCAL",
+                "timeoutMs": 10000,
+                "steps": [
+                  {
+                    "op": "IF",
+                    "condition": {
+                      "value": "{requireClosed}",
+                      "equals": "true"
+                    },
+                    "then": [
+                      {
+                        "op": "IF",
+                        "condition": {
+                          "all": [
+                            {
+                              "target": "dialog",
+                              "read": "MATCHES",
+                              "equals": "true",
+                              "name": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]"
+                            },
+                            {
+                              "target": "close",
+                              "read": "EXISTS",
+                              "equals": "true"
+                            }
+                          ]
+                        },
+                        "then": [
+                          {
+                            "op": "DOM",
+                            "plan": [
+                              {
+                                "op": "CLICK",
+                                "target": "close"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "op": "WAIT",
+                        "condition": {
+                          "all": [
+                            {
+                              "not": {
+                                "target": "dialog",
+                                "read": "MATCHES",
+                                "equals": "true",
+                                "name": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]"
+                              }
+                            },
+                            {
+                              "fact": "fieldsInteractive",
+                              "equals": true
+                            }
+                          ]
+                        },
+                        "timeoutMs": 3000,
+                        "pollMs": 25
+                      }
+                    ]
+                  },
+                  {
+                    "op": "RETURN",
+                    "value": true
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

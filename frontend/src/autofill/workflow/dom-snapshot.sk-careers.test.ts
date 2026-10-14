@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { collectFieldsSnapshot } from "../dom/collect";
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+
+usePolicyFixture("sk");
 
 const FIXTURE = join(
   process.cwd(),
@@ -14,7 +17,9 @@ beforeEach(() => {
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
     }
-  ).jsdom.reconfigure({ url: "https://www.skcareers.com/apply" });
+  ).jsdom.reconfigure({
+    url: "https://www.skcareers.com/Application/Index/R262165",
+  });
 });
 
 afterEach(() => document.body.replaceChildren());

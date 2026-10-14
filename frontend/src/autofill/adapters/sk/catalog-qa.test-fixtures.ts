@@ -4,13 +4,13 @@ import { retainedCatalogSelection } from "../../profile/catalog-receipt";
 import { createStructuralSignature } from "../../dom/candidate-registry";
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { skWorkflowAdapter } from "./workflow";
+import { getWorkflowAdapter } from "../workflow";
 import {
-  installSkAutocompleteMainBridge,
-  type SkAutocompleteInstance,
-  type SkAutocompleteItem,
-  type SkJQuery,
-} from "./autocomplete-main";
+  installJqueryAutocompleteMainBridge,
+  type JqueryAutocompleteInstance,
+  type JqueryAutocompleteItem,
+  type Jquery,
+} from "../../interaction/jquery-autocomplete-main";
 
 export type SkCatalogQaMode =
   | "certificate"
@@ -107,12 +107,12 @@ export async function runSkCatalogQa(
   menu.className = "ui-autocomplete";
   root.append(row, menu);
   document.body.append(root);
-  const instance: SkAutocompleteInstance = {
+  const instance: JqueryAutocompleteInstance = {
     menu: { element: { 0: menu, length: 1 } },
     term: "",
     pending: 0,
   };
-  const candidates = new WeakMap<Element, SkAutocompleteItem>();
+  const candidates = new WeakMap<Element, JqueryAutocompleteItem>();
   let confirmed = false;
   let clicks = 0;
   let searches = 0;
@@ -150,7 +150,7 @@ export async function runSkCatalogQa(
       }
     }
   }
-  const jquery: SkJQuery = (element) => ({
+  const jquery: Jquery = (element) => ({
     data: (key) =>
       key === "ui-autocomplete-item"
         ? candidates.get(element)
@@ -172,7 +172,7 @@ export async function runSkCatalogQa(
       return instance;
     },
   });
-  const uninstall = installSkAutocompleteMainBridge(document, jquery);
+  const uninstall = installJqueryAutocompleteMainBridge(document, jquery);
   const handle: FieldCandidateHandle = {
     kind: "field",
     candidateId: "sk-qa",
@@ -190,7 +190,7 @@ export async function runSkCatalogQa(
     itemIndex: 0,
     signature: createStructuralSignature([input]),
   };
-  const ready = await skWorkflowAdapter.waitForStateDriverReady!(
+  const ready = await getWorkflowAdapter(document).waitForStateDriverReady!(
     document,
     handle,
     undefined,
@@ -200,7 +200,7 @@ export async function runSkCatalogQa(
   let selected = false;
   if (ready) {
     input.value = entry.name;
-    selected = await skWorkflowAdapter.settleStateDriver!(
+    selected = await getWorkflowAdapter(document).settleStateDriver!(
       document,
       handle,
       (code) => failures.push(code),

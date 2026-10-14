@@ -35,7 +35,6 @@ export interface ResultModel {
   skipped: { id: string; item: ReviewPlanItem; reason: string }[];
 }
 function pendingReason(item: ReviewPlanItem): string {
-  if (item.status === "sensitive") return "승인 필요";
   if (item.status === "conflict") return "기존 값과 다름";
   if (
     item.status === "needs-review" ||

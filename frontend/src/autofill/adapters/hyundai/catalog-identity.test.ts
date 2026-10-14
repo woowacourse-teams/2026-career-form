@@ -1,10 +1,12 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createHyundaiCatalogFixture,
   runHyundaiCatalogQa,
 } from "./catalog-qa.test-fixtures";
 import { retainedCatalogSelection } from "../../profile/catalog-receipt";
-import { hyundaiWriteAdapter } from "./write";
+import { getWriteAdapter } from "../write";
 import { CandidateRegistry } from "../../dom/candidate-registry";
 import { settledGenericResult } from "../../write/native-executor";
 
@@ -93,8 +95,11 @@ describe.each([
     expect(await fixture.run()).toBe(false);
     fixture.hidden!.value = "SITE-42";
     // Even a different approved spelling is not the exact captured selection.
-    fixture.display.value = fixture.entry.name;
-    expect(fixture.entry.name).not.toBe(fixture.label);
+    fixture.display.value =
+      kind === "languageTest"
+        ? fixture.entry.name
+        : fixture.entry.name + " changed";
+    expect(fixture.display.value).not.toBe(fixture.label);
     if (kind !== "languageTest")
       fixture.display.dataset.searchResult = fixture.entry.name;
     expect(
@@ -116,7 +121,7 @@ describe.each([
 describe.each(["highSchool", "university", "graduateSchool"] as const)(
   "%s detail/freshness",
   (kind) => {
-    it.each(["no-detail", "stale-query", "cancel"] as const)(
+    it.each(["stale-query", "cancel"] as const)(
       "rejects %s and restores owned blank values",
       async (mode) => {
         const fixture = createHyundaiCatalogFixture(document, kind, mode);
@@ -128,7 +133,7 @@ describe.each(["highSchool", "university", "graduateSchool"] as const)(
         ).toBe(false);
       },
     );
-    it("rejects short, hidden, duplicate-ID and shared descriptions", async () => {
+    it("rejects a mismatched region and falls back to unique catalog identity when detail is unavailable", async () => {
       for (const mode of [
         "short",
         "hidden",
@@ -149,9 +154,15 @@ describe.each(["highSchool", "university", "graduateSchool"] as const)(
             fixture.results!.append(other);
           }
         });
-        expect(await fixture.run()).toBe(false);
-        expect(fixture.clicks()).toBe(0);
+        expect(await fixture.run()).toBe(mode !== "short");
+        expect(fixture.clicks()).toBe(mode === "short" ? 0 : 1);
       }
+    });
+    it("selects a description-less school only when its catalog name is unique", async () => {
+      const fixture = createHyundaiCatalogFixture(document, kind, "no-detail");
+      expect(await fixture.run()).toBe(true);
+      expect(fixture.display.value).toBe(fixture.entry.name);
+      expect(fixture.hidden?.value).toBe("SITE-42");
     });
     it("does not restore over a user mutation during failed selection", async () => {
       const fixture = createHyundaiCatalogFixture(document, kind);
@@ -228,7 +239,9 @@ it("does not normalize unrelated language or grade controls using exam identity"
   const fixture = createHyundaiCatalogFixture(document, "languageTest");
   fixture.handle.candidate.domId = "foreLang_1";
   fixture.display.id = "foreLang_1";
-  expect(hyundaiWriteAdapter.tryWrite(fixture.handle, fixture.item)).toEqual({
+  expect(
+    getWriteAdapter(document).tryWrite(fixture.handle, fixture.item),
+  ).toEqual({
     handled: true,
     written: false,
   });

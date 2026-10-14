@@ -1,3 +1,6 @@
+import { executionPolicy } from "./execution-policy";
+import { runKakaoAddress } from "../address/kakao-executor";
+import { localWorkflowLog } from "../debug/local-workflow";
 import type { Profile } from "../../profile/model";
 import type { AddressSearch } from "../address/types";
 import type { WorkflowAdapter } from "../adapters/workflow";
@@ -41,8 +44,21 @@ export async function runAddressAnalysis({
   onWriteResult?: WriteResultListener;
   setAddressResult: (result: Awaited<NonNullable<AddressRun["task"]>>) => void;
 }): Promise<FieldsAnalyzeResponse | undefined> {
-  const addressNames = adapter.addressFieldNames ?? [];
-  if (!run.button || !adapter.runAddress)
+  const policy = executionPolicy(pageDocument)?.address;
+  const runner =
+    policy?.provider === "KAKAO" ? runKakaoAddress : adapter.runAddress;
+  const addressNames = policy?.fieldNames ?? adapter.addressFieldNames ?? [];
+  if (policy && !run.button) {
+    const buttons = pageDocument.querySelectorAll(policy.triggerSelector);
+    if (buttons.length === 1) run.button = buttons[0];
+  }
+  localWorkflowLog("address-enter", {
+    snapshotId: snapshot.request.snapshotId,
+    hasButton: !!run.button,
+    hasRunner: !!runner,
+    hasTask: !!run.task,
+  });
+  if (!run.button || !runner)
     return adapter.addressRequiresSearch
       ? withoutAddressFields(analysis, snapshot, addressNames)
       : analysis;
@@ -103,6 +119,11 @@ export async function runAddressAnalysis({
           : [];
       })
     : [];
+  localWorkflowLog("address-permission", {
+    snapshotId: snapshot.request.snapshotId,
+    permitted,
+    targetCount: addressTargets.length,
+  });
   if (permitted) onActivity?.("address");
   if (!run.task && permitted) {
     const button = run.button;
@@ -110,22 +131,25 @@ export async function runAddressAnalysis({
       if (button) onAddressOperation?.(button);
     };
     button?.addEventListener("click", onClick, { once: true });
-    run.task = adapter
-      .runAddress({
-        document: pageDocument,
-        button,
-        expected: addressValue(profile),
-        loadCurrent: async () => addressValue(await repository.load()),
-        signal: run.controller.signal,
-        search: addressSearch,
-      })
-      .finally(() => button?.removeEventListener("click", onClick));
+    run.task = runner({
+      document: pageDocument,
+      button,
+      expected: addressValue(profile),
+      loadCurrent: async () => addressValue(await repository.load()),
+      signal: run.controller.signal,
+      search: addressSearch,
+    }).finally(() => button?.removeEventListener("click", onClick));
   }
   run.task ??= Promise.resolve({
     status: "manual",
     reason: "주소 입력란의 연결을 확인하지 못했습니다. 직접 확인해 주세요.",
   });
   const result = await run.task;
+  localWorkflowLog("address-result", {
+    snapshotId: snapshot.request.snapshotId,
+    status: result.status,
+    aborted: run.controller.signal.aborted,
+  });
   if (run.controller.signal.aborted) return undefined;
   setAddressResult(result);
   if (result.status === "written") {

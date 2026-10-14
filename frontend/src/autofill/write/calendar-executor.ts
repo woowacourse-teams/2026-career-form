@@ -201,12 +201,7 @@ export async function executeApprovedCalendarWrite(
   args: ExecuteApprovedCalendarWriteArgs,
 ): Promise<ApprovedCalendarWriteExecution> {
   const { item } = args;
-  if (
-    !item.selected ||
-    item.disabled ||
-    item.status === "unavailable" ||
-    (item.status === "sensitive" && !item.revealed)
-  )
+  if (!item.selected || item.disabled || item.status === "unavailable")
     return stop(
       item.candidateId,
       "NOT_APPROVED",

@@ -439,14 +439,14 @@ describe("approved university major search boundary", () => {
       document.querySelectorAll<HTMLButtonElement>("button")[1]!;
     regionOpener.setAttribute(
       "data-iframe-url",
-      "https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0",
+      "https://careers.example.test/recruit/ko/resume/search/search_school_place.fo?num=5_0",
     );
     vi.mocked(executeReadonlySearch).mockImplementation(async (args) => {
       if (args.canonicalFieldKey === "education.university.schoolName") {
         school!.value = "합성대학교";
         regionOpener.setAttribute(
           "data-iframe-url",
-          "https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0&country_cd=KOR",
+          "https://careers.example.test/recruit/ko/resume/search/search_school_place.fo?num=5_0&country_cd=KOR",
         );
       } else {
         expect(regionOpener.getAttribute("data-iframe-url")).toContain(

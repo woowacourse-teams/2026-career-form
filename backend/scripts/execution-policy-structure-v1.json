@@ -1,0 +1,42 @@
+{
+  "datasetKeys": {
+    "autoApi": "autoApi",
+    "autoParams": "autoParams",
+    "autoType": "autoType",
+    "code": "code",
+    "codegb": "codegb",
+    "disabled": "disabled",
+    "enabled": "enabled",
+    "result": "result",
+    "search": "search",
+    "searchResult": "searchResult",
+    "valid": "valid"
+  },
+  "rowPreparation": {
+    "rowSelector": ":scope > .field-content",
+    "groupSelector": ":scope > .field-group",
+    "resetCode": "",
+    "resetOptionCount": 1,
+    "requireCompleteOptions": true
+  },
+  "structure": {
+    "addressReadOnly": [
+      true,
+      true,
+      false
+    ],
+    "addressRows": ":scope > *",
+    "addressParts": ":scope > *",
+    "addressPartLabel": ":scope > :first-child",
+    "addressSearchInput": "input[type=\"search\"]",
+    "sectionAddRelation": "DIRECT_CHILD",
+    "dayDateFieldNames": [
+      "basicInformation.birthdate"
+    ]
+  },
+  "emailBridge": {
+    "confirmationSelector": "button",
+    "confirmationCount": 1,
+    "popupRootDepth": 1
+  }
+}

@@ -79,7 +79,7 @@ export function isSelectableApproved(item: ReviewPlanItem): boolean {
     item.status === "unavailable"
   )
     return false;
-  return item.status !== "sensitive" || item.revealed;
+  return true;
 }
 
 export function bindingKey(item: ReviewPlanItem): string | undefined {

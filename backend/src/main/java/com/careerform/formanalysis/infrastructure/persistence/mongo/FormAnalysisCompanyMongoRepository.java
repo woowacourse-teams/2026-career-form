@@ -7,5 +7,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 public interface FormAnalysisCompanyMongoRepository
     extends MongoRepository<FormAnalysisCompanyDocument, String> {
 
+    Optional<FormAnalysisCompanyDocument> findByCompanyKey(String companyKey);
+
     Optional<FormAnalysisCompanyDocument> findByHost(String host);
 }

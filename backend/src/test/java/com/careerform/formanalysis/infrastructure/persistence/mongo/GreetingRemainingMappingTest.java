@@ -119,7 +119,7 @@ class GreetingRemainingMappingTest {
             var parts = group.split("\\|");
             var region = lookup("educationalBackground." + parts[0] + ".0.schoolLocation", parts[1]);
             assertThat(region.profileFieldKey()).isEqualTo("education." + parts[2] + ".schoolRegion");
-            assertThat(region.optionMap()).containsEntry("서울", "서울").containsEntry("해외", "해외").hasSize(18);
+            assertThat(region.optionMap()).containsEntry("서울", "서울").containsEntry("해외", "해외").containsEntry("region:seoul", "서울").containsEntry("region:overseas", "해외").hasSize(36);
         }
         for (var name : List.of("client", "placeOfEmployment", "contribution")) {
             var unmatched = new Example("workHistory.projects.0." + name, FormElement.INPUT, FormControl.TEXT, "projectsproject", "unused", WriteCommand.SET_TEXT);

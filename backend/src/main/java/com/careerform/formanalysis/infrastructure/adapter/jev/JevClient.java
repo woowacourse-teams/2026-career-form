@@ -30,6 +30,9 @@ import com.careerform.monitoring.tracing.LangSmithTraceRecorder;
 @Component
 @Conditional(InteractionProviderConditions.JevClient.class)
 public final class JevClient {
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.careerform.formanalysis.infrastructure.LocalLlmDiagnostics localDiagnostics;
+
     public static final String ABSTAIN = "ABSTAIN";
     private static final Logger log = LoggerFactory.getLogger(JevClient.class);
     private final HttpClient http;
@@ -125,6 +128,7 @@ public final class JevClient {
                 .timeout(Duration.ofMillis(timeoutMs))
                 .header("Authorization", "Bearer " + apiKey).header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8)).build();
+            if (localDiagnostics != null) localDiagnostics.start("jev", state.getClass().getSimpleName());
             called = true;
             var pending = http.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             HttpResponse<String> response;
@@ -202,6 +206,7 @@ public final class JevClient {
     }
 
     private void recordMetrics(long startedAt, RuntimeException failure, boolean called, String observedModel) {
+        if (localDiagnostics != null) localDiagnostics.end("jev", called, startedAt, failure);
         if (metrics != null) {
             metrics.record("jev", "analysis", System.nanoTime() - startedAt,
                 failure != null, ExternalCallMetrics.isTimeout(failure),
