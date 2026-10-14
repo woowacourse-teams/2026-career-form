@@ -17,7 +17,7 @@ from infra.tests.monitoring_proxy_checks import MonitoringProxyChecks
 class MonitoringRuntimeTest(MonitoringProxyChecks, MonitoringFixture, unittest.TestCase):
     def test_provisioned_dashboard_and_datasources_are_available(self) -> None:
         sources = self._get("/api/datasources")
-        self.assertEqual({"loki", "prometheus"}, {entry["uid"] for entry in sources})
+        self.assertTrue({"loki", "prometheus", "tempo"}.issubset({entry["uid"] for entry in sources}))
         dashboard = self._get("/api/dashboards/uid/career-form-monitoring")
         self.assertEqual("career-form-monitoring", dashboard["dashboard"]["uid"])
         selected = next(entry for entry in dashboard["dashboard"]["templating"]["list"]
