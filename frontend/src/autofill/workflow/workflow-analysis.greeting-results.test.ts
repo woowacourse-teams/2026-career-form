@@ -41,6 +41,8 @@ async function run(
     | "normalized-veteran"
     | "search-selection-lost"
     | "search-selection-retained"
+    | "search-selection-same-element"
+    | "search-selection-generic"
     | "search-selection-profile-changed"
     | "search-selection-modal"
     | "search-selection-catalog"
@@ -90,11 +92,15 @@ async function run(
         sectionId: "certificate",
         values: { name: "SQL 개발자" },
         identity: {
-          status: "selected",
-          catalogId: "certificate:kdata:sqld",
-          displayName: "SQL 개발자",
-          originalText: "SQLD",
-          catalogVersion: "2026-10-07",
+          ...(mode === "search-selection-generic"
+            ? { status: "manual" as const, originalText: "SQL 개발자" }
+            : {
+                status: "selected" as const,
+                catalogId: "certificate:kdata:sqld",
+                displayName: "SQL 개발자",
+                originalText: "SQLD",
+                catalogVersion: "2026-10-07",
+              }),
         },
       },
     ];
@@ -124,6 +130,7 @@ async function run(
   if (mode === "unrecorded") driver.value = "가상";
   ordinary.addEventListener("input", () => {
     queueMicrotask(() => {
+      if (mode === "search-selection-same-element") return;
       const replacement = driver.cloneNode(true) as HTMLInputElement;
       if (mode === "lost-value") replacement.value = "";
       if (mode === "search-selection-lost") {
@@ -460,6 +467,24 @@ it("keeps a rebound Greeting search selection when the adapter confirms its code
     2,
   );
   expect(model.completed).toHaveLength(2);
+});
+
+it("keeps a recorded Greeting search selection on the same DOM element", async () => {
+  const { model, results } = await run("search-selection-same-element");
+  expect(results.filter((result) => result.status === "written")).toHaveLength(
+    2,
+  );
+  expect(model.completed).toHaveLength(2);
+  expect(model.pending).toEqual([]);
+});
+
+it("trusts a recorded Greeting search write without catalog identity", async () => {
+  const { model, results } = await run("search-selection-generic");
+  expect(results.filter((result) => result.status === "written")).toHaveLength(
+    2,
+  );
+  expect(model.completed).toHaveLength(2);
+  expect(model.pending).toEqual([]);
 });
 
 it("rejects retained Greeting search proof if the profile changes during revalidation", async () => {

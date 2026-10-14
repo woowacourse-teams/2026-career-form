@@ -14,7 +14,10 @@ import type { CandidateRegistry } from "../dom/candidate-registry";
 import { componentGpaSafe } from "../policy/components/gpa";
 import { resultFieldState } from "./result-field-state";
 import { matchesResultValue } from "./result-value-match";
-import { rebindCatalogSelection } from "../profile/catalog-receipt";
+import {
+  rebindCatalogSelection,
+  retainedCatalogSelection,
+} from "../profile/catalog-receipt";
 import {
   captureComponentResultTargets,
   collectComponentResultResolver,
@@ -1427,14 +1430,24 @@ export function createAnalyzeFields({
         const liveElement = live?.handle
           ? (live.handle.elements[0] ?? live.handle.customElements?.[0])
           : undefined;
+        const retainedSearchVerification =
+          executionPolicy(pageDocument)?.componentPolicy
+            ?.retainedSearchVerification;
+        const recordedSearchSelection =
+          item.analysis?.writePlan?.command === "SEARCH_SELECTION" &&
+          retainedSearchVerification === "RECORDED_VALUE" &&
+          receipt?.identity === componentReceiptIdentity(item);
+        const catalogSelectionRetained = !!(
+          receipt &&
+          sameElement &&
+          liveElement &&
+          (retainedCatalogSelection(item, liveElement) !== undefined ||
+            rebindCatalogSelection(receipt.originalItem, item, liveElement))
+        );
         const retainedSelection =
           item.analysis?.writePlan?.command !== "SEARCH_SELECTION" ||
-          !!(
-            receipt &&
-            sameElement &&
-            liveElement &&
-            rebindCatalogSelection(receipt.originalItem, item, liveElement)
-          );
+          recordedSearchSelection ||
+          catalogSelectionRetained;
         if (
           receipt &&
           alias &&
@@ -1450,11 +1463,9 @@ export function createAnalyzeFields({
           ) &&
           (item.analysis?.writePlan?.command !== "SEARCH_SELECTION" ||
             (retainedSelection &&
-              (executionPolicy(pageDocument)?.componentPolicy
-                ?.retainedSearchVerification === "RECORDED_VALUE"
-                ? receipt.identity === componentReceiptIdentity(item)
-                : executionPolicy(pageDocument)?.componentPolicy
-                    ?.retainedSearchVerification === "REOPEN_SELECTION" &&
+              (retainedSearchVerification === "RECORDED_VALUE"
+                ? recordedSearchSelection
+                : retainedSearchVerification === "REOPEN_SELECTION" &&
                   (await adapter.executeStateDriver?.(
                     pageDocument,
                     current.handle,
