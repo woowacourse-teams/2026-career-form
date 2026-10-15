@@ -26,8 +26,8 @@ export function ImportTargetChoices({
       <p>{name || "이름 없는 항목"}</p>
       {!targetValue && (
         <p className={styles.hint}>
-          확인 필요 · 같은 이름의 정보가 있거나 대표 이름이 없습니다. 저장
-          방법을 선택해 주세요.
+          같은 이름의 정보가 있으면 업데이트할 항목을 골라 주세요. 새 항목에는
+          이름이 필요합니다.
         </p>
       )}
       <label className={styles.targetChoice}>
@@ -39,7 +39,7 @@ export function ImportTargetChoices({
           disabled={!name}
           onChange={() => onChange("new")}
         />
-        새 정보로 추가{name ? `: ${name}` : " (대표 이름 필요)"}
+        새 정보로 추가{name ? `: ${name}` : " (이름 필요)"}
       </label>
       <small>기존 프로필은 유지하고 별도 항목을 만듭니다.</small>
       {entries.map((entry) => (
@@ -59,9 +59,7 @@ export function ImportTargetChoices({
         </label>
       ))}
       {entries.length > 0 && (
-        <small>
-          업데이트를 고르면 선택한 필드만 바뀌고 나머지는 유지됩니다.
-        </small>
+        <small>업데이트할 때는 선택한 정보만 바뀝니다.</small>
       )}
     </fieldset>
   );

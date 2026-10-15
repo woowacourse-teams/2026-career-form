@@ -56,6 +56,7 @@ export function PageImport({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [bulkMessage, setBulkMessage] = useState("");
   const [retry, setRetry] = useState(0);
   const alive = useRef(false);
   const pending = useRef(false);
@@ -74,6 +75,7 @@ export function PageImport({
     setEdits({});
     setConfirmedNames({});
     setStepIndex(0);
+    setBulkMessage("");
     void Promise.all([repository.load(), readCandidates()])
       .then(([profile, found]) => {
         if (!active) return;
@@ -166,12 +168,13 @@ export function PageImport({
   useEffect(() => {
     if (loading || !panel.current) return;
     titleRef.current?.focus({ preventScroll: true });
-    titleRef.current?.scrollIntoView?.({ block: "start", inline: "nearest" });
+    const firstVisible = stepIndex === 0 ? panel.current : titleRef.current;
+    firstVisible?.scrollIntoView?.({ block: "start", inline: "nearest" });
     return presentImportSources(
       panel.current.ownerDocument,
       JSON.parse(sources) as string[],
     );
-  }, [sources, loading]);
+  }, [sources, loading, stepIndex]);
 
   const rowInfo = (candidate: ImportCandidate) => {
     const { category, section } = destination(candidate)!;
@@ -286,6 +289,7 @@ export function PageImport({
   };
   const nextStep = () => {
     setError("");
+    setBulkMessage("");
     setStepIndex((index) => index + 1);
   };
   const takeStep = () => {
@@ -312,42 +316,78 @@ export function PageImport({
     skippedCounts.set(reason, (skippedCounts.get(reason) ?? 0) + 1);
   }
 
-  const selection: ImportSelection = { single: {}, entries: [] };
-  for (const group of nameGroups)
-    for (const [key] of group.keys)
-      if (chosen[key])
-        selection.single!.personal = {
-          ...selection.single!.personal,
-          [key]: edits[key].trim(),
+  const buildSelection = (
+    selectionKeys: Record<string, boolean>,
+  ): ImportSelection => {
+    const selection: ImportSelection = { single: {}, entries: [] };
+    for (const group of nameGroups)
+      for (const [key] of group.keys)
+        if (selectionKeys[key])
+          selection.single!.personal = {
+            ...selection.single!.personal,
+            [key]: edits[key].trim(),
+          };
+    for (const candidate of fields) {
+      if (!selectionKeys[candidate.source]) continue;
+      const { category, section, field } = destination(candidate)!;
+      const value = valueFor(candidate);
+      if (!category.repeatable) {
+        const id = category.id as SingleProfileCategoryId;
+        selection.single![id] = { ...selection.single![id], [field.id]: value };
+        continue;
+      }
+      const row = rowInfo(candidate);
+      let entry = selection.entries!.find(
+        (entry) =>
+          entry.categoryId === category.id &&
+          entry.sectionId === section.id &&
+          entry.sourceRow === candidate.rowIndex,
+      );
+      if (!entry) {
+        entry = {
+          categoryId: category.id as RepeatedProfileCategoryId,
+          sectionId: section.id,
+          sourceRow: candidate.rowIndex!,
+          ...(row.targetValue === "new" ? {} : { targetId: row.target!.id }),
+          values: {},
         };
-  for (const candidate of fields) {
-    if (!chosen[candidate.source]) continue;
-    const { category, section, field } = destination(candidate)!;
-    const value = valueFor(candidate);
-    if (!category.repeatable) {
-      const id = category.id as SingleProfileCategoryId;
-      selection.single![id] = { ...selection.single![id], [field.id]: value };
-      continue;
+        selection.entries!.push(entry);
+      }
+      entry.values[field.id] = value;
     }
-    const row = rowInfo(candidate);
-    let entry = selection.entries!.find(
-      (entry) =>
-        entry.categoryId === category.id &&
-        entry.sectionId === section.id &&
-        entry.sourceRow === candidate.rowIndex,
+    return selection;
+  };
+  const selectAll = () => {
+    if (!baseline || saving) return;
+    const all = effectiveSelected(
+      Object.fromEntries([
+        ...fields.map((candidate) => [candidate.source, true]),
+        ...nameGroups.flatMap((group) =>
+          group.keys.map(([key]) => [key, true]),
+        ),
+      ]),
     );
-    if (!entry) {
-      entry = {
-        categoryId: category.id as RepeatedProfileCategoryId,
-        sectionId: section.id,
-        sourceRow: candidate.rowIndex!,
-        ...(row.targetValue === "new" ? {} : { targetId: row.target!.id }),
-        values: {},
-      };
-      selection.entries!.push(entry);
+    const rejected = findInvalidImportRows(baseline, buildSelection(all));
+    const rejectedKeys = new Set(
+      rejected.map(
+        (row) => `${row.categoryId}.${row.sectionId}.${row.sourceRow}`,
+      ),
+    );
+    for (const candidate of fields) {
+      if (rejectedKeys.has(groupKey(candidate))) delete all[candidate.source];
     }
-    entry.values[field.id] = value;
-  }
+    const count = Object.keys(all).length;
+    const total =
+      fields.length +
+      nameGroups.reduce((sum, group) => sum + group.keys.length, 0);
+    setSelected(all);
+    setBulkMessage(
+      `${count}개를 선택했습니다. 확인이 필요하거나 중복된 ${total - count}개는 제외했습니다. 아래 목록에서 다시 확인할 수 있습니다.`,
+    );
+    setError("");
+    setStepIndex(steps.length);
+  };
+  const selection = buildSelection(chosen);
   const invalidRows =
     baseline && summary ? findInvalidImportRows(baseline, selection) : [];
   const invalidKeys = new Set(
@@ -385,6 +425,7 @@ export function PageImport({
         setTargets({});
         setConfirmedNames({});
         setStepIndex(0);
+        setBulkMessage("");
         try {
           const latest = await repository.load();
           if (alive.current) setBaseline(latest);
@@ -437,20 +478,15 @@ export function PageImport({
         )}
         {missingDate && (
           <small>
-            확인 필요 · 정확한 연·월·일을 입력하면 선택할 수 있습니다. 모르면 이
-            날짜를 제외하고 진행하세요.
+            정확한 날짜를 입력해 주세요. 일자를 모르면 이 날짜는 제외할 수
+            있어요.
           </small>
         )}
         {!valid && !missingDate && (
-          <small>
-            확인 필요 · 저장 위치 또는 관련 항목을 먼저 선택해 주세요.
-          </small>
+          <small>저장할 항목이나 관련 정보를 먼저 선택해 주세요.</small>
         )}
         {candidate.reason === "catalog_unverified" && (
-          <small>
-            직접 입력한 이름으로 저장됩니다. 검색 선택은 프로필 관리에서 할 수
-            있습니다.
-          </small>
+          <small>지원서에 적힌 이름으로 저장합니다.</small>
         )}
         {category.repeatable &&
           rowInfo(candidate).targetValue === "new" &&
@@ -477,8 +513,8 @@ export function PageImport({
       <style>{css}</style>
       <h2>지원서에서 가져오기</h2>
       <p className={styles.hint}>
-        항목별로 확인한 뒤 마지막에 저장합니다. 원본 입력란은 색 테두리로
-        표시하며, 지원서 값·저장·제출은 변경하지 않습니다.
+        지원서에서 가져올 정보를 확인해 주세요. 확인 중인 원본은 색 테두리로
+        표시됩니다.
       </p>
       {loading && <p role="status">지원서 정보를 읽고 있습니다.</p>}
       {error && (
@@ -496,10 +532,31 @@ export function PageImport({
         <form onSubmit={(e) => void save(e)}>
           <fieldset disabled={saving} className={styles.fields}>
             <legend>가져올 정보 확인</legend>
+            <div className={styles.bulkActions}>
+              <button
+                type="button"
+                className={styles.bulkButton}
+                onClick={selectAll}
+              >
+                가능한 정보 모두 선택
+              </button>
+              <p className={styles.hint}>
+                민감 정보도 포함합니다. 이름·날짜 등 확인이 필요한 값은
+                제외하고, 저장 전 목록으로 이동합니다.
+              </p>
+            </div>
             <p className={styles.progress} aria-live="polite">
               {Math.min(stepIndex + 1, steps.length + 1)} / {steps.length + 1}{" "}
               단계 · {checkedCount}개 선택
             </p>
+            <div className={styles.progressTrack} aria-hidden="true">
+              <div
+                className={styles.progressFill}
+                style={{
+                  width: `${((stepIndex + 1) / (steps.length + 1)) * 100}%`,
+                }}
+              />
+            </div>
             <h3 ref={titleRef} tabIndex={-1}>
               {step?.title ?? "저장 전 확인"}
             </h3>
@@ -588,6 +645,11 @@ export function PageImport({
             {!nameGroup && step?.fields.map(renderField)}
             {summary && (
               <>
+                {bulkMessage && (
+                  <p role="status" className={styles.bulkNotice}>
+                    {bulkMessage}
+                  </p>
+                )}
                 <p>
                   선택한 {checkedCount}개 값만 프로필에 저장합니다. 기존 값과
                   다르면 아래 값으로 바뀝니다.
@@ -646,6 +708,7 @@ export function PageImport({
                       <button
                         type="button"
                         onClick={() => {
+                          setBulkMessage("");
                           setStepIndex(index);
                           setError("");
                         }}
@@ -679,31 +742,46 @@ export function PageImport({
                     </button>
                   </div>
                 )}
+              </>
+            )}
+            <div className={styles.actions} role="group" aria-label="단계 이동">
+              <button
+                type="button"
+                disabled={stepIndex === 0}
+                onClick={() => {
+                  setBulkMessage("");
+                  setStepIndex((index) => index - 1);
+                  setError("");
+                }}
+              >
+                이전
+              </button>
+              {summary ? (
                 <button
                   type="submit"
+                  className={styles.primaryButton}
                   disabled={!checkedCount || invalidRows.length > 0}
                 >
                   {saving ? "저장 중…" : "선택한 정보 저장"}
                 </button>
-              </>
-            )}
-            <div className={styles.actions}>
-              {stepIndex > 0 && (
+              ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    setStepIndex((index) => index - 1);
-                    setError("");
-                  }}
+                  className={nameGroup ? styles.primaryButton : undefined}
+                  onClick={nextStep}
                 >
-                  이전
+                  다음
                 </button>
               )}
               {step && (
                 <>
+                  <button type="button" onClick={skipStep}>
+                    건너뛰기
+                  </button>
                   {!nameGroup && (
                     <button
                       type="button"
+                      className={styles.primaryButton}
                       onClick={takeStep}
                       disabled={
                         !step.fields.some((c) =>
@@ -716,24 +794,18 @@ export function PageImport({
                         )
                       }
                     >
-                      이 단계 가져오기
+                      모두 선택 후 다음
                     </button>
                   )}
-                  <button type="button" onClick={nextStep}>
-                    다음
-                  </button>
-                  <button type="button" onClick={skipStep}>
-                    이 단계 건너뛰기
-                  </button>
                 </>
               )}
             </div>
             {step && (
               <p className={styles.hint}>
                 {nameGroup
-                  ? "이름을 확인하거나 건너뛸 수 있습니다."
-                  : "이 단계 가져오기는 선택 가능한 항목만 포함합니다. 일부만 가져오려면 체크한 뒤 다음을 누르세요."}{" "}
-                확인하지 못한 날짜는 제외해도 다른 정보는 저장할 수 있습니다.
+                  ? "이름을 확인한 뒤 다음으로 이동해 주세요."
+                  : "일부만 가져오려면 원하는 항목을 체크하고 다음을 누르세요."}{" "}
+                건너뛰면 이 단계의 선택을 해제합니다.
               </p>
             )}
           </fieldset>
@@ -751,7 +823,7 @@ export function PageImport({
           </ul>
         </details>
       )}
-      <div className={styles.actions}>
+      <div className={styles.exitActions}>
         {!loading && (!baseline || !usable.length) && (
           <button
             type="button"

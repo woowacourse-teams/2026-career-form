@@ -47,11 +47,11 @@ it("imports current Greeting values through the panel, refreshes profile, and ke
     await screen.findByRole("button", { name: "지원서에서 가져오기" }),
   );
   await screen.findByLabelText("국문 성");
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "이메일 가져오기" }));
   fireEvent.click(screen.getByRole("button", { name: "다음" }));
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
   fireEvent.click(screen.getByRole("button", { name: "선택한 정보 저장" }));
   await waitFor(() =>
     expect(profile.contact.email).toBe("fixture@example.invalid"),
@@ -98,11 +98,11 @@ it("does not replace an imported profile with the panel's late initial load", as
   );
   fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
   await screen.findByLabelText("국문 성");
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "이메일 가져오기" }));
   fireEvent.click(screen.getByRole("button", { name: "다음" }));
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
   fireEvent.click(screen.getByRole("button", { name: "선택한 정보 저장" }));
   await screen.findByText("선택한 정보를 프로필에 저장했습니다.");
   const { act } = await import("@testing-library/react");

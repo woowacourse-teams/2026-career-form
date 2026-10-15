@@ -1,12 +1,21 @@
 .importer {
-  color: #202735;
+  color: #172b4d;
+  font-family: inherit;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.6;
   overflow-wrap: anywhere;
+  min-width: 0;
 }
 .importer h2 {
-  font-size: 20px;
+  font-size: 21px;
+  letter-spacing: -0.04em;
+  line-height: 1.4;
   margin: 0 0 8px;
+}
+.importer h3,
+.importer h4 {
+  margin: 0 0 12px;
+  line-height: 1.5;
 }
 .importer p {
   margin: 8px 0 16px;
@@ -22,29 +31,45 @@
   margin-bottom: 12px;
 }
 .group {
-  border: 1px solid #dce2e9;
+  border: 1px solid #d8e1ec;
   border-radius: 12px;
+  background: #fff;
   padding: 12px;
   margin: 16px 0;
   min-width: 0;
 }
 .group > legend {
-  padding: 0 4px;
+  padding: 0 6px;
   font-weight: 700;
 }
 .field {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin: 12px 0;
   padding: 12px;
-  border-radius: 8px;
-  background: #f5f7fa;
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  background: #f7f9fc;
+  min-width: 0;
+}
+.field > label {
+  min-height: 44px;
+  align-items: center;
+}
+.importer .field > label:has(> input[type="date"]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.field:has(input[type="checkbox"]:checked) {
+  border-color: #819cde;
+  background: #edf3ff;
 }
 .importer label {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
-  align-items: center;
+  align-items: flex-start;
+  min-width: 0;
 }
 .importer input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 .importer select {
@@ -52,68 +77,150 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  border: 1px solid #aeb8c6;
-  border-radius: 6px;
+  min-height: 44px;
+  border: 1px solid #a8b6c9;
+  border-radius: 8px;
   background: white;
-  color: #202735;
-  padding: 8px;
+  color: #172b4d;
+  padding: 9px;
   font: inherit;
 }
-.importer input[type="checkbox"] {
+.importer input[type="checkbox"],
+.importer input[type="radio"] {
   width: 18px;
   height: 18px;
-  accent-color: #365eaf;
+  flex: 0 0 18px;
+  margin: 3px 0 0;
+  accent-color: #3155b5;
 }
 .importer button {
-  border: 1px solid #bcc8da;
-  border-radius: 8px;
-  padding: 10px 14px;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid #c2cede;
+  border-radius: 9px;
+  padding: 10px 12px;
   font: inherit;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
-  color: #203b6a;
-  background: #eef3fc;
+  color: #28436c;
+  background: #fff;
+}
+.importer button:hover:not(:disabled) {
+  background: #edf3ff;
+  border-color: #829acb;
 }
 .importer button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
 }
 .importer :focus-visible {
-  outline: 2px solid #365eaf;
+  outline: 3px solid #3155b5;
   outline-offset: 3px;
 }
 .hint,
 .importer small {
-  color: #566274;
+  color: #52647b;
   font-size: 12px;
+  line-height: 1.6;
 }
 .error {
-  color: #ab2934;
+  color: #a32939;
 }
 .actions {
-  display: flex;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 20px;
+  padding: 12px 0;
+  background: #fff;
+  border-top: 1px solid #d8e1ec;
+  box-shadow: 0 -8px 12px -12px #52647b;
 }
-
+.actions > button {
+  width: 100%;
+}
+.importer .primaryButton,
+.importer .bulkButton {
+  color: #fff;
+  border-color: #3155b5;
+  background: #3155b5;
+}
+.importer .primaryButton:hover:not(:disabled),
+.importer .bulkButton:hover:not(:disabled) {
+  color: #fff;
+  border-color: #254491;
+  background: #254491;
+}
+.bulkActions {
+  padding: 14px;
+  margin: 16px 0;
+  border: 1px solid #d6e2fb;
+  border-radius: 12px;
+  background: #f0f5ff;
+}
+.bulkButton {
+  width: 100%;
+}
+.bulkActions p {
+  margin: 8px 0 0;
+}
+.bulkNotice {
+  padding: 12px;
+  border: 1px solid #bad3cb;
+  border-radius: 10px;
+  color: #235747;
+  background: #eff8f4;
+}
 .needsReview {
-  border: 2px solid #b66a09;
-  background: #fff8eb;
+  border: 1px solid #c69238;
+  background: #fff9ed;
+}
+.field.needsReview {
+  border-left-width: 4px;
 }
 .progress {
-  color: #365eaf;
+  color: #3155b5;
   font-weight: 700;
+  font-size: 12px;
 }
-.targetChoice {
-  padding: 12px 0;
+.progressTrack {
+  height: 5px;
+  border-radius: 4px;
+  background: #e5ebf5;
+  overflow: hidden;
+  margin-bottom: 16px;
 }
-.importer input[type="radio"] {
-  width: 18px;
-  height: 18px;
-  accent-color: #365eaf;
+.progressFill {
+  height: 100%;
+  background: #3155b5;
+  border-radius: inherit;
+}
+.importer .targetChoice {
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #d8e1ec;
+  border-radius: 9px;
+  background: #fff;
+}
+.importer .targetChoice:has(input:checked) {
+  border-color: #819cde;
+  background: #edf3ff;
 }
 .importer input:disabled {
   opacity: 0.55;
 }
-.actions {
-  flex-wrap: wrap;
+.exitActions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
 }

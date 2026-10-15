@@ -21,6 +21,7 @@ afterEach(() => {
 async function mountImport(
   extra = "",
   prepare?: (fixture: HTMLElement) => void,
+  viewport?: { width: string; height: string; overflowY: string },
 ) {
   const fixture = document.createElement("div");
   fixture.innerHTML = greetingImportFixture().replace(
@@ -59,6 +60,7 @@ async function mountImport(
   const host = document.createElement("career-form-profile-panel");
   const shadow = host.attachShadow({ mode: "open" });
   const container = document.createElement("div");
+  if (viewport) Object.assign(container.style, viewport);
   shadow.append(container);
   document.body.append(host);
   const root = createRoot(container);
@@ -108,9 +110,7 @@ async function goTo(
       await userEvent.click(revisit);
       return;
     }
-    await userEvent.click(
-      state.ui.getByRole("button", { name: "이 단계 건너뛰기" }),
-    );
+    await userEvent.click(state.ui.getByRole("button", { name: "건너뛰기" }));
   }
   throw new Error(`Review step not found: ${title}`);
 }
@@ -119,7 +119,7 @@ const next = async (state: Awaited<ReturnType<typeof mountImport>>) => {
 };
 const take = async (state: Awaited<ReturnType<typeof mountImport>>) => {
   await userEvent.click(
-    state.ui.getByRole("button", { name: "이 단계 가져오기" }),
+    state.ui.getByRole("button", { name: "모두 선택 후 다음" }),
   );
 };
 async function finish(state: Awaited<ReturnType<typeof mountImport>>) {
@@ -328,4 +328,84 @@ it("reveals the new step title after advancing from the bottom of a tall review"
       );
     })
     .toBe(true);
+});
+
+it.each([280, 332])(
+  "keeps navigation aligned and reachable in a %ipx panel",
+  async (width) => {
+    const state = await mountImport();
+    Object.assign(state.container.style, {
+      width: `${width}px`,
+      height: "400px",
+      overflowY: "auto",
+    });
+    await goTo(state, "연락처와 주소");
+    const previous = state.ui.getByRole("button", { name: "이전" });
+    const forward = state.ui.getByRole("button", { name: "다음" });
+    const skip = state.ui.getByRole("button", {
+      name: "건너뛰기",
+    });
+    const select = state.ui.getByRole("button", {
+      name: "모두 선택 후 다음",
+    });
+    const a = previous.getBoundingClientRect();
+    const b = forward.getBoundingClientRect();
+    const c = skip.getBoundingClientRect();
+    const d = select.getBoundingClientRect();
+    expect(Math.abs(a.top - b.top)).toBeLessThan(1);
+    expect(Math.abs(c.top - d.top)).toBeLessThan(1);
+    expect(c.top).toBeGreaterThanOrEqual(a.bottom);
+    expect(Math.abs(a.width - b.width)).toBeLessThan(1);
+    expect(Math.abs(c.width - d.width)).toBeLessThan(1);
+    const frame = state.container.getBoundingClientRect();
+    for (const button of [previous, forward, skip, select]) {
+      const bounds = button.getBoundingClientRect();
+      expect(bounds.height).toBeGreaterThanOrEqual(44);
+      expect(bounds.left).toBeGreaterThanOrEqual(frame.left);
+      expect(bounds.right).toBeLessThanOrEqual(frame.right + 1);
+      expect(bounds.top).toBeGreaterThanOrEqual(frame.top);
+      expect(bounds.bottom).toBeLessThanOrEqual(frame.bottom + 1);
+      expect(button.scrollWidth).toBeLessThanOrEqual(button.clientWidth);
+    }
+    expect(state.container.scrollWidth).toBeLessThanOrEqual(
+      state.container.clientWidth,
+    );
+  },
+);
+
+it("shows the bulk action when a constrained panel first opens", async () => {
+  const state = await mountImport("", undefined, {
+    width: "332px",
+    height: "300px",
+    overflowY: "auto",
+  });
+  await expect
+    .poll(() => (state.container.getRootNode() as ShadowRoot).activeElement)
+    .toBe(state.ui.getByRole("heading", { name: "이름 확인" }));
+  const frame = state.container.getBoundingClientRect();
+  const button = state.ui
+    .getByRole("button", { name: "가능한 정보 모두 선택" })
+    .getBoundingClientRect();
+  expect(button.top).toBeGreaterThanOrEqual(frame.top);
+  expect(button.bottom).toBeLessThanOrEqual(frame.bottom);
+});
+
+it("keeps date confirmation labels above a full-width date input", async () => {
+  const state = await mountImport("", undefined, {
+    width: "280px",
+    height: "400px",
+    overflowY: "auto",
+  });
+  await goTo(state, "대학교 1");
+  const input = state.ui.getByLabelText("대학교 1 입학일 확인");
+  const label = input.closest("label")!;
+  const text = label.firstChild!;
+  const range = document.createRange();
+  range.selectNode(text);
+  const textBounds = range.getBoundingClientRect();
+  const inputBounds = input.getBoundingClientRect();
+  expect(inputBounds.top).toBeGreaterThanOrEqual(textBounds.bottom);
+  expect(
+    Math.abs(inputBounds.width - label.getBoundingClientRect().width),
+  ).toBeLessThan(1);
 });

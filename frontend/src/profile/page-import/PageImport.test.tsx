@@ -85,9 +85,9 @@ function setup(
 const next = () =>
   fireEvent.click(screen.getByRole("button", { name: "다음" }));
 const skip = () =>
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
+  fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
 const take = () =>
-  fireEvent.click(screen.getByRole("button", { name: "이 단계 가져오기" }));
+  fireEvent.click(screen.getByRole("button", { name: "모두 선택 후 다음" }));
 const save = () =>
   fireEvent.click(screen.getByRole("button", { name: "선택한 정보 저장" }));
 async function selectEmail() {
@@ -330,6 +330,9 @@ it("prevents double saves and navigation while persistence is pending", async ()
   fireEvent.submit(form);
   expect(screen.getByRole("button", { name: "가져오기 취소" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "이전" })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "가능한 정보 모두 선택" }),
+  ).toBeDisabled();
   expect(state.onSaved).not.toHaveBeenCalled();
   finish();
   await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
@@ -393,12 +396,12 @@ describe("단계별 가져오기", () => {
     ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "이름 확인 완료" }));
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
-    fireEvent.click(screen.getByRole("button", { name: "이 단계 가져오기" }));
+    fireEvent.click(screen.getByRole("button", { name: "모두 선택 후 다음" }));
     expect(
       screen.getByRole("checkbox", { name: "대학교 1 입학일 가져오기" }),
     ).toBeDisabled();
     expect(screen.getByLabelText("대학교 1 입학일 확인")).toHaveValue("");
-    fireEvent.click(screen.getByRole("button", { name: "이 단계 가져오기" }));
+    fireEvent.click(screen.getByRole("button", { name: "모두 선택 후 다음" }));
     expect(state.repository.save).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "저장 전 확인" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "선택한 정보 저장" }));
@@ -423,15 +426,15 @@ describe("단계별 가져오기", () => {
     ];
     const state = setup({ initial });
     await screen.findByLabelText("국문 성");
-    fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
-    fireEvent.click(screen.getByRole("button", { name: "이 단계 건너뛰기" }));
+    fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
+    fireEvent.click(screen.getByRole("button", { name: "건너뛰기" }));
     expect(
       screen.getByRole("checkbox", { name: "대학교 1 학교명 가져오기" }),
     ).toBeDisabled();
     fireEvent.click(
       screen.getByRole("radio", { name: /기존 정보 업데이트: 예시대학교/ }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "이 단계 가져오기" }));
+    fireEvent.click(screen.getByRole("button", { name: "모두 선택 후 다음" }));
     fireEvent.click(screen.getByRole("button", { name: "선택한 정보 저장" }));
     await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
     expect(state.stored().education).toEqual(initial.education);
@@ -509,4 +512,139 @@ it("catches two source rows updating the same existing entry before any writes",
   save();
   await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
   expect(state.stored().careers).toEqual(initial.careers);
+});
+
+describe("가능한 정보 모두 선택", () => {
+  const selectAll = () =>
+    fireEvent.click(
+      screen.getByRole("button", { name: "가능한 정보 모두 선택" }),
+    );
+
+  it("reviews all ready values before saving and excludes unconfirmed names and partial dates", async () => {
+    const state = setup();
+    await screen.findByLabelText("국문 성");
+    selectAll();
+    expect(screen.getByRole("heading", { name: "저장 전 확인" })).toBeVisible();
+    expect(state.stored().contact.email).toBe("old@example.test");
+    expect(state.stored().education).toEqual([]);
+    expect(screen.getByRole("status")).toHaveTextContent("2개");
+    save();
+    await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
+    expect(state.stored().personal).toEqual({});
+    expect(state.stored().contact).toEqual({
+      email: "new@example.test",
+      addressLine1: "보존할 주소",
+    });
+    expect(state.stored().education[0].values).toEqual({
+      schoolName: "예시대학교",
+    });
+    expect(state.stored().education).toHaveLength(1);
+  });
+
+  it("includes explicitly confirmed names and corrected dates when selecting all again", async () => {
+    const state = setup();
+    await screen.findByLabelText("국문 성");
+    fireEvent.click(screen.getByRole("button", { name: "이름 확인 완료" }));
+    next();
+    next();
+    fireEvent.change(screen.getByLabelText("대학교 1 입학일 확인"), {
+      target: { value: "2020-03-02" },
+    });
+    selectAll();
+    selectAll();
+    save();
+    await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
+    expect(state.stored().personal).toEqual({
+      koreanFamilyName: "예",
+      koreanGivenName: "시이름",
+    });
+    expect(state.stored().education).toHaveLength(1);
+    expect(state.stored().education[0].values).toEqual({
+      schoolName: "예시대학교",
+      startDate: "2020-03-02",
+    });
+  });
+
+  it("does not silently link same-name existing rows or overwrite their unselected values", async () => {
+    const initial = createEmptyProfile();
+    initial.education = [
+      {
+        id: "keep",
+        sectionId: "university",
+        values: { schoolName: "예시대학교", major: "보존전공" },
+      },
+    ];
+    const state = setup({ initial });
+    await screen.findByLabelText("국문 성");
+    selectAll();
+    save();
+    await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
+    expect(state.stored().education).toEqual(initial.education);
+    expect(state.stored().contact.email).toBe("new@example.test");
+  });
+
+  it("excludes duplicate rows while retaining normal values and discloses their exclusion", async () => {
+    const state = setup({
+      candidates: [
+        {
+          source: "basicInformation.email",
+          profileFieldKey: "contact.contact.email",
+          status: "available",
+          reason: "direct",
+          value: "new@example.test",
+        },
+        ...[0, 1].map((rowIndex): ImportCandidate => ({
+          source: `educationalBackground.universities.${rowIndex}.schoolName`,
+          rowIndex,
+          profileFieldKey: "education.university.schoolName",
+          status: "review",
+          reason: "catalog_unverified",
+          value: "서울대학교",
+        })),
+        {
+          source: "custom.question",
+          status: "unsupported",
+          reason: "no_profile_mapping",
+        },
+      ],
+    });
+    await screen.findByRole("checkbox", { name: "이메일 가져오기" });
+    selectAll();
+    expect(screen.getByRole("status")).toHaveTextContent("중복");
+    expect(
+      screen.getByRole("button", { name: "선택한 정보 저장" }),
+    ).toBeEnabled();
+    save();
+    await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
+    expect(state.stored().education).toHaveLength(1);
+    expect(state.stored().education[0].values).toEqual({
+      schoolName: "서울대학교",
+    });
+    expect(state.stored().contact.email).toBe("new@example.test");
+  });
+
+  it("includes sensitive values only after the explicit bulk action and keeps saving separate", async () => {
+    const state = setup({
+      candidates: [
+        {
+          source: "military.status",
+          profileFieldKey: "military.military.militaryStatus",
+          status: "available",
+          reason: "direct",
+          value: "military-status:not-applicable",
+        },
+      ],
+    });
+    expect(
+      await screen.findByRole("checkbox", { name: "병역 상태 가져오기" }),
+    ).not.toBeChecked();
+    expect(screen.getByText(/민감 정보도 포함/)).toBeVisible();
+    selectAll();
+    expect(state.stored().military).toEqual({});
+    save();
+    await waitFor(() => expect(state.onSaved).toHaveBeenCalledOnce());
+    expect(state.stored().military).toEqual({
+      militaryStatus: "military-status:not-applicable",
+    });
+  });
 });
