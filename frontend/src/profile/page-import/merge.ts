@@ -106,7 +106,7 @@ function validateValues(
       throw new ImportSelectionError();
   }
 }
-const ENTRY_KEYS: Record<string, readonly string[]> = {
+export const IMPORT_ENTRY_KEYS: Record<string, readonly string[]> = {
   highSchool: ["schoolName", "startDate", "endDate", "qualificationPassDate"],
   university: ["schoolName", "startDate", "endDate"],
   graduateSchool: ["schoolName", "startDate", "endDate", "degreeLevel"],
@@ -250,7 +250,7 @@ export function mergeImportSelection(
     );
     if (!Object.keys(values).length) throw new ImportSelectionError();
     const entries = result[row.categoryId];
-    const identityKeys = ENTRY_KEYS[row.sectionId];
+    const identityKeys = IMPORT_ENTRY_KEYS[row.sectionId];
     const primary = identityKeys[0];
     let target: ProfileEntry;
     if (row.targetId !== undefined) {
@@ -288,7 +288,7 @@ export function mergeImportSelection(
     count += Object.keys(values).length;
   }
   for (const { categoryId, entry } of additions) {
-    const keys = ENTRY_KEYS[entry.sectionId];
+    const keys = IMPORT_ENTRY_KEYS[entry.sectionId];
     if (
       result[categoryId].some(
         (existing) =>

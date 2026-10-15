@@ -46,7 +46,7 @@
   gap: 8px;
   align-items: center;
 }
-.importer input:not([type="checkbox"]),
+.importer input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 .importer select {
   display: block;
   box-sizing: border-box;
@@ -93,4 +93,27 @@
   display: flex;
   gap: 8px;
   margin-top: 16px;
+}
+
+.needsReview {
+  border: 2px solid #b66a09;
+  background: #fff8eb;
+}
+.progress {
+  color: #365eaf;
+  font-weight: 700;
+}
+.targetChoice {
+  padding: 12px 0;
+}
+.importer input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #365eaf;
+}
+.importer input:disabled {
+  opacity: 0.55;
+}
+.actions {
+  flex-wrap: wrap;
 }

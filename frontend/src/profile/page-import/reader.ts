@@ -508,3 +508,34 @@ function dateCandidate(field: ImportField, text: string): ImportCandidate {
     precision: "day",
   };
 }
+
+/** Resolve only sources still safe to read, using the same exact/synthetic identity. */
+export function resolveImportSourceControls(
+  document: Document,
+  requested: readonly string[],
+): HTMLElement[] {
+  const wanted = new Set(requested);
+  const eligible = new Set(
+    readGreetingImport(document)
+      .filter(
+        (candidate) =>
+          wanted.has(candidate.source) && candidate.status !== "unsupported",
+      )
+      .map((candidate) => candidate.source),
+  );
+  return [...document.querySelectorAll<HTMLElement>(CONTROLS)].filter(
+    (element) => {
+      try {
+        const source = namedSource(element);
+        return (
+          !!source &&
+          eligible.has(source) &&
+          element.isConnected &&
+          visible(element)
+        );
+      } catch {
+        return false;
+      }
+    },
+  );
+}
