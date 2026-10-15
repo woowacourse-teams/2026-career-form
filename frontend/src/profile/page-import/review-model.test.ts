@@ -199,6 +199,7 @@ describe("review model", () => {
       id: "education.university.0",
       name: "예시대학교",
       primary: "schoolName",
+      fields: [{ fieldId: "schoolName", label: "학교명", value: "예시대학교" }],
     });
 
     const target = (value: string) =>

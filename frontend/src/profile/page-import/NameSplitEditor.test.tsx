@@ -66,7 +66,9 @@ describe("name split suggestions", () => {
     render(<Editor source="Van der Meer" language="english" />);
     fireEvent.change(screen.getByRole("slider"), { target: { value: "2" } });
     expect(screen.getByLabelText("영문 성")).toHaveValue("Van der");
-    fireEvent.click(screen.getByRole("button", { name: "성·이름 바꾸기" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "성과 이름 순서 바꾸기" }),
+    );
     expect(screen.getByLabelText("영문 성")).toHaveValue("Meer");
     expect(screen.getByLabelText("영문 이름")).toHaveValue("Van der");
   });
@@ -81,5 +83,23 @@ describe("name split suggestions", () => {
     expect(
       screen.getByRole("button", { name: "이름 확인 완료" }),
     ).toBeEnabled();
+  });
+  it("uses the caller's confirm label and keeps copy free of middle dots", () => {
+    const { container } = render(
+      <NameSplitEditor
+        source="Van der Meer"
+        language="english"
+        familyName="Van"
+        givenName="der Meer"
+        confirmed={false}
+        confirmLabel="이렇게 저장할게요"
+        onChange={() => {}}
+        onConfirm={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "이렇게 저장할게요" }),
+    ).toBeEnabled();
+    expect(container.textContent).not.toContain("·");
   });
 });

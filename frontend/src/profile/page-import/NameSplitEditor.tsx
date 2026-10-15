@@ -35,6 +35,7 @@ type Props = {
   familyName: string;
   givenName: string;
   confirmed: boolean;
+  confirmLabel?: string;
   /** The owner must revoke confirmation and import selection whenever names change. */
   onChange: (familyName: string, givenName: string) => void;
   onConfirm: () => void;
@@ -46,6 +47,7 @@ export function NameSplitEditor({
   familyName,
   givenName,
   confirmed,
+  confirmLabel = "이름 확인 완료",
   onChange,
   onConfirm,
 }: Props) {
@@ -125,14 +127,14 @@ export function NameSplitEditor({
       </div>
       <div className={styles.actions}>
         <button type="button" onClick={() => onChange(givenName, familyName)}>
-          성·이름 바꾸기
+          성과 이름 순서 바꾸기
         </button>
         <button
           type="button"
           disabled={!valid || confirmed}
           onClick={onConfirm}
         >
-          이름 확인 완료
+          {confirmLabel}
         </button>
       </div>
       <p role="status" className={styles.hint}>

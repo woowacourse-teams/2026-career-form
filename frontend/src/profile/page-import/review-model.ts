@@ -78,6 +78,8 @@ export type Confirmation =
       source: string;
       name?: string;
       primary: string;
+      /** Values this application row would save, for side-by-side comparison. */
+      fields: readonly { fieldId: string; label: string; value: string }[];
       entries: readonly ProfileEntry[];
     };
 export interface ReviewModel {
@@ -291,6 +293,9 @@ function confirmationsFor(
         source: row.source,
         name: target.name,
         primary: target.primary,
+        fields: rows
+          .filter((r) => r.groupKey === row.groupKey)
+          .map(({ fieldId, label, value }) => ({ fieldId, label, value })),
         entries: target.entries,
       });
     }
