@@ -1,6 +1,11 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { greetingImportFixture } from "../../research/greeting-import-probe.test-fixtures";
 import { presentImportSources } from "./source-presentation";
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "../../autofill/workflow/execution-policy";
+
+beforeEach(() => installExecutionPolicy(document, fixturePolicy("greeting")));
+afterEach(() => installExecutionPolicy(document));
 let cleanup = () => {};
 afterEach(() => {
   cleanup();

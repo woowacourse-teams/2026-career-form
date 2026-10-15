@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { render, waitFor, cleanup } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -24,6 +27,7 @@ afterEach(() => {
 });
 function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -57,7 +61,7 @@ function response(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
       ),
   };
 }
-it("uses normal nationality search before reanalysis and preserves nationality2", async () => {
+it("uses one analysis for nationality search and preserves nationality2", async () => {
   document.body.innerHTML =
     '<article class="field-form-apply"><div class="field search"><input type="hidden" name="nationCd1" class="js-field"><input type="text" id="nationCd1Nm" name="nationCd1Nm" data-auto-type="basic" data-auto-api="0200" data-auto-params="0003"><div class="field-search-view"><ul class="search-result-list"></ul></div></div><input name="nationCd2" type="hidden" value="original-code"><input id="nationCd2Nm" name="nationCd2Nm" value="기존 국적"></article>';
   const input = document.querySelector<HTMLInputElement>("#nationCd1Nm")!;
@@ -85,6 +89,7 @@ it("uses normal nationality search before reanalysis and preserves nationality2"
   profile.personal.nationality = "대한민국";
   let analyses = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (req) => ({
       snapshotId: req.snapshotId,
       mode: "ADAPTER",
@@ -116,7 +121,7 @@ it("uses normal nationality search before reanalysis and preserves nationality2"
   expect(
     document.querySelector<HTMLInputElement>("[name=nationCd2]")!.value,
   ).toBe("original-code");
-  expect(analyses).toBe(2);
+  expect(analyses).toBe(1);
 });
 
 it("confirms all university search codes before writing the same row dates", async () => {
@@ -201,6 +206,7 @@ it("confirms all university search codes before writing the same row dates", asy
   };
   let analyses = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (req) => ({
       snapshotId: req.snapshotId,
       mode: "ADAPTER",
@@ -210,6 +216,7 @@ it("confirms all university search codes before writing the same row dates", asy
     analyzeFields: async (req) => {
       analyses++;
       return {
+executionPolicy: fixturePolicy("hyundai"),
         snapshotId: req.snapshotId,
         mode: "ADAPTER",
         analysisStatus: "COMPLETE",
@@ -286,7 +293,7 @@ it("confirms all university search codes before writing the same row dates", asy
         ?.classList.contains("exist"),
     ).toBe(true);
   }
-  expect(analyses).toBe(5);
+  expect(analyses).toBe(1);
 });
 
 it("defers an ambiguous additional major and continues the same university row", async () => {
@@ -379,6 +386,7 @@ it("defers an ambiguous additional major and continues the same university row",
     ]),
   );
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -386,6 +394,7 @@ it("defers an ambiguous additional major and continues the same university row",
       preparationPlans: [],
     }),
     analyzeFields: async (request) => ({
+executionPolicy: fixturePolicy("hyundai"),
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",

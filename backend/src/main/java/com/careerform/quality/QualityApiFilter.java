@@ -49,7 +49,8 @@ public final class QualityApiFilter extends OncePerRequestFilter {
         var login = path.equals(PREFIX + "/login") && request.getMethod().equals("POST");
         if (!reporting && !sameOrigin(request)) { reject(response, 403); return; }
         if (!reporting && !login) {
-            var query = path.equals(PREFIX + "/stats") && request.getMethod().equals("GET") && access.canQuery(bearer(request));
+            var query = (path.equals(PREFIX + "/stats") || path.equals(PREFIX + "/stats/sites"))
+                && request.getMethod().equals("GET") && access.canQuery(bearer(request));
             if (!query) {
                 var status = access.login(password(request), request.getRemoteAddr()).status();
                 if (status != QualityAccess.LoginStatus.OK) {

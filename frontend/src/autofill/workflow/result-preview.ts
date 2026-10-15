@@ -6,9 +6,7 @@ export function resultPreview(
   item: ReviewPlanItem,
   profile?: Profile,
 ): string[] {
-  return savedResultValues(item, profile).map(({ value, sensitive }) =>
-    sensitive && !item.revealed ? "••••••••" : value,
-  );
+  return savedResultValues(item, profile).map(({ value }) => value);
 }
 
 export function savedResultValues(

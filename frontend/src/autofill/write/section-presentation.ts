@@ -1,23 +1,21 @@
+import { runtimeRules } from "../policy/runtime-rules";
+import { executionPolicy } from "../workflow/execution-policy";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import { FIELD_HIGHLIGHT } from "./field-highlight-style";
 import { fieldHighlightClip, floatingLabelRects } from "./field-highlight-clip";
 
 /** Only presentation uses these containers; this never authorizes a write. */
 function reviewRoots(element: HTMLElement): HTMLElement[] {
-  const etc = element.closest("article#etc.field-form-apply");
+  const config = executionPolicy(element.ownerDocument)?.browserPolicy
+    ?.presentationGroups;
+  const etc = config ? element.closest(config.rootSelector) : undefined;
   if (etc) {
-    // Hyundai puts three unrelated categories in one article. Include every
-    // dependent control of the operated family, but not the entire article.
-    const families = [
-      ["milCd", "milExcptCd", "milRank", "milDitinc", "milStartDt", "milEndDt"],
-      ["branchYn", "branchRel", "branchSupplyYn", "branchAddPoint", "branchNo"],
-      ["injuryYn", "injuryGrade", "injuryType", "injuryTypeNm", "injuryCont"],
-    ];
+    const families = config!.families;
     const family = families.find((ids) => ids.includes(element.id));
     if (family)
       return [...etc.querySelectorAll<HTMLElement>("[id]")]
         .filter((node) => family.includes(node.id))
-        .map((node) => node.closest<HTMLElement>(".field") ?? node)
+        .map((node) => node.closest<HTMLElement>(config!.fieldSelector) ?? node)
         .filter(
           (node) =>
             !node.closest("[hidden], [inert]") &&
@@ -25,7 +23,8 @@ function reviewRoots(element: HTMLElement): HTMLElement[] {
         );
   }
   const root = element.closest<HTMLElement>(
-    "fieldset, section, [role='group'], .apply-form-box, article.field-form-apply",
+    runtimeRules(element.ownerDocument)?.presentationSelector ??
+      "fieldset, section, [role='group']",
   );
   return root ? [root] : [];
 }

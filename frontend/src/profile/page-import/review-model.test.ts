@@ -363,4 +363,24 @@ describe("review model", () => {
         .rows[0].linkable,
     ).toBe(false);
   });
+
+  it("keeps military, veteran and disability off by default even though field definitions no longer mark them sensitive", () => {
+    const salary: ImportCandidate = {
+      source: "applicationDetail.desiredSalary.salary",
+      profileFieldKey: "compensation.compensation.desiredSalary",
+      status: "available",
+      reason: "direct",
+      value: "4500",
+    };
+    const model = buildReviewModel(
+      [military, salary],
+      createEmptyProfile(),
+      initialDecisions([]),
+    );
+    expect(model.rows.map((r) => [r.categoryId, r.sensitive])).toEqual([
+      ["military", true],
+      ["compensation", false],
+    ]);
+    expect(defaultSelection(model.rows)).toEqual({ [salary.source]: true });
+  });
 });

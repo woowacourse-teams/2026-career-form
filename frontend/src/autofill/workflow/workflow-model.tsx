@@ -106,7 +106,7 @@ const REVIEW_ITEM_GROUPS: readonly Omit<ReviewItemGroup, "items">[] = [
   {
     id: "needs-review",
     label: "확인 필요",
-    description: "조건부 입력, 기존 값과 민감정보를 직접 확인해 주세요.",
+    description: "조건부 입력과 기존 값을 확인해 주세요.",
   },
 ];
 
@@ -526,9 +526,7 @@ export function interactionLabel(item: ReviewPlanItem): string | undefined {
 }
 
 export function currentPreview(item: ReviewPlanItem): string {
-  return item.status === "sensitive" && !item.revealed
-    ? "••••••••"
-    : item.currentValue || "입력된 값 없음";
+  return item.currentValue || "입력된 값 없음";
 }
 
 export function diagnosticLabel(code: WorkflowDiagnostic["code"]): string {

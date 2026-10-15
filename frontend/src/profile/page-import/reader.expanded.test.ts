@@ -4,6 +4,9 @@ import {
   greetingImportFixture,
   universityRow,
 } from "../../research/greeting-import-probe.test-fixtures";
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+
+usePolicyFixture("greeting");
 beforeEach(() => {
   document.body.innerHTML = greetingImportFixture();
 });
@@ -123,6 +126,44 @@ it("continues after a live input getter fails without exposing its exception", (
   );
   expect(JSON.stringify(result)).not.toContain("PRIVATE ERROR");
 });
+it("maps additional graduate majors and their fields by classification", () => {
+  const prefix = "educationalBackground.graduateSchools.0";
+  document
+    .querySelector("form")!
+    .insertAdjacentHTML(
+      "beforeend",
+      `<div data-scope="accordion" data-part="item">${field(prefix + ".schoolName", "합성대학원")}${field(prefix + ".majors.1", "합성복수전공")}<button name="${prefix}.majors.1.majorClassification">복수전공</button><button name="${prefix}.majors.1.majorField">공학계열</button>${field(prefix + ".majors.2", "합성부전공")}<button name="${prefix}.majors.2.majorClassification">부전공</button></div>`,
+    );
+  const result = readGreetingImport(document);
+  for (const [key, value] of [
+    ["additionalMajorName", "합성복수전공"],
+    ["doubleMajorStatus", "있음"],
+    ["additionalMajorField", "공학계열"],
+    ["minorName", "합성부전공"],
+    ["minorStatus", "있음"],
+  ])
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        profileFieldKey: `education.graduateSchool.${key}`,
+        value,
+        rowIndex: 0,
+      }),
+    );
+});
+it("does not guess a graduate major without its classification", () => {
+  const prefix = "educationalBackground.graduateSchools.0";
+  document
+    .querySelector("form")!
+    .insertAdjacentHTML(
+      "beforeend",
+      `<div data-scope="accordion" data-part="item">${field(prefix + ".schoolName", "합성대학원")}${field(prefix + ".majors.1", "합성추가전공")}</div>`,
+    );
+  expect(
+    readGreetingImport(document).find(
+      (candidate) => candidate.source === prefix + ".majors.1",
+    ),
+  ).toMatchObject({ status: "unsupported", reason: "no_profile_mapping" });
+});
 it("maps additional university majors by classification instead of their index", () => {
   const row = document
     .querySelector('[name="educationalBackground.universities.0.schoolName"]')!
@@ -197,14 +238,14 @@ it("reads observed LF salary paths without importing unrelated application detai
     expect.objectContaining({
       profileFieldKey: "compensation.compensation.previousSalary",
       value: "4000",
-      sensitive: true,
+      sensitive: false,
     }),
   );
   expect(results).toContainEqual(
     expect.objectContaining({
       profileFieldKey: "compensation.compensation.desiredSalary",
       value: "4500",
-      sensitive: true,
+      sensitive: false,
     }),
   );
   expect(JSON.stringify(results)).not.toContain("PRIVATE");
@@ -410,13 +451,6 @@ it.each([
     "education.graduateSchool.majorField",
     "공학계열",
     "공학계열",
-    true,
-  ],
-  [
-    "educationalBackground.graduateSchools.7.majors.1",
-    "education.graduateSchool.additionalMajorName",
-    "합성추가전공",
-    "합성추가전공",
     true,
   ],
   [
@@ -667,7 +701,7 @@ it.each([
     const result = readGreetingImport(document);
     expect(
       result.find((candidate) => candidate.source === source),
-    ).toMatchObject({ status: "unsupported", reason: "empty" });
+    ).toMatchObject({ status: "unsupported" });
     expect(
       result.find((candidate) => candidate.source === source),
     ).not.toHaveProperty("value");
@@ -679,7 +713,7 @@ it.each([
     );
   },
 );
-it("keeps a graduate default when dates exist even if the school cannot be read", () => {
+it("keeps graduate dates when the school cannot be read and leaves the removed classification unmapped", () => {
   const prefix = "educationalBackground.graduateSchools.7";
   document
     .querySelector("form")!
@@ -703,8 +737,8 @@ it("keeps a graduate default when dates exist even if the school cannot be read"
   expect(result).toContainEqual(
     expect.objectContaining({
       source: prefix + ".majors.0.majorClassification",
-      value: "주전공",
-      status: "available",
+      status: "unsupported",
+      reason: "no_profile_mapping",
     }),
   );
   expect(result).toContainEqual(

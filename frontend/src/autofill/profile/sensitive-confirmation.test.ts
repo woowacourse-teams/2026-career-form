@@ -8,7 +8,7 @@ it.each([
   "military.unknown.militaryStatus",
   "veteran.veteran.unknown",
   "disability.disability.disabilityStatus.extra",
-])("does not exempt unknown or unrelated field %s", (key) => {
-  expect(requiresSensitiveConfirmation(key, true)).toBe(true);
+])("does not add a sensitive confirmation gate for %s", (key) => {
+  expect(requiresSensitiveConfirmation(key, true)).toBe(false);
   expect(requiresSensitiveConfirmation(key, false)).toBe(false);
 });

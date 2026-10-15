@@ -1,3 +1,4 @@
+import type { AnalyzeFieldsSnapshot } from "./static-fields-session";
 import type { Dispatch, SetStateAction } from "react";
 import type { WorkflowAdapter, WorkflowDiagnostic } from "../adapters/workflow";
 import type { AnalysisApiClient } from "../api/types";
@@ -22,6 +23,7 @@ interface RevealedFieldsContext {
   onWriteResult?: WriteResultListener;
   adapter: WorkflowAdapter;
   apiClient: AnalysisApiClient;
+  analyzeFieldsSnapshot?: AnalyzeFieldsSnapshot;
   pageDocument: Document;
   setWorkflowDiagnostics: Dispatch<SetStateAction<WorkflowDiagnostic[]>>;
   presentField?(
@@ -34,6 +36,7 @@ interface RevealedFieldsContext {
 export function createWriteRevealedFields({
   adapter,
   apiClient,
+  analyzeFieldsSnapshot,
   pageDocument,
   setWorkflowDiagnostics,
   presentField,
@@ -55,7 +58,9 @@ export function createWriteRevealedFields({
 
     const snapshot = collectFieldsSnapshot(pageDocument);
     onActivity?.("matching");
-    const analysis = await apiClient.analyzeFields(snapshot.request);
+    const analysis = await (analyzeFieldsSnapshot
+      ? analyzeFieldsSnapshot(snapshot)
+      : apiClient.analyzeFields(snapshot.request));
     debugAnalysis(snapshot, analysis);
     if (signal?.aborted) return;
     if (analysis.analysisStatus === "BLOCKED") {

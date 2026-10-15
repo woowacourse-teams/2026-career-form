@@ -26,7 +26,7 @@ it("keeps saved ambiguous entries visible without selecting one for writing", ()
   expect(item.profileValue).toBeUndefined();
 });
 
-it("masks saved sensitive values even when the field is unavailable", () => {
+it("shows saved values even when the field is unavailable", () => {
   const profile = createEmptyProfile();
   profile.compensation.desiredSalary = "5000";
   expect(
@@ -45,7 +45,7 @@ it("masks saved sensitive values even when the field is unavailable", () => {
       },
       profile,
     ),
-  ).toEqual(["••••••••"]);
+  ).toEqual(["5000"]);
 });
 
 it("keeps a saved value visible when the site's option mapping cannot resolve it", () => {

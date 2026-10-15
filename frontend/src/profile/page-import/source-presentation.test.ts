@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { greetingImportFixture } from "../../research/greeting-import-probe.test-fixtures";
 import { presentImportSources } from "./source-presentation";
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+
+usePolicyFixture("greeting");
 let cleanup = () => {};
 beforeEach(() => {
   document.body.innerHTML = greetingImportFixture();

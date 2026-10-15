@@ -1,10 +1,4 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
@@ -95,8 +89,10 @@ it("shows analysis status while preparation remains unresolved", async () => {
     />,
   );
 
-  expect(await screen.findByRole("status")).toHaveTextContent(
-    "지원서 항목과 프로필 정보를 맞추고 있어요",
+  await waitFor(() =>
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "지원서 항목과 프로필 정보를 맞추고 있어요",
+    ),
   );
   const status = screen.getByRole("status");
   expect(status.closest('[aria-busy="true"]')).toBeNull();
@@ -134,12 +130,11 @@ it("removes busy status and shows the existing exception screen after preparatio
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
 });
 
-it("runs the sensitive re-analysis once when the review action is clicked twice", async () => {
+it("analyzes and writes saved compensation once without a confirmation round trip", async () => {
   document.body.innerHTML = '<label>이름 <input name="name"></label>';
   const profile = createEmptyProfile();
   profile.compensation.desiredSalary = "5000";
   let analyses = 0;
-
   render(
     <AutofillWorkflow
       apiClient={fieldClient(() => analyses++)}
@@ -148,61 +143,22 @@ it("runs the sensitive re-analysis once when the review action is clicked twice"
       onExit={() => undefined}
     />,
   );
-
-  await screen.findByRole("button", { name: "이름 값 보기" });
-  fireEvent.click(screen.getByRole("button", { name: "이름 값 보기" }));
-  fireEvent.click(screen.getByRole("button", { name: "이름 포함하기" }));
-  const write = screen.getByRole("button", { name: "1개 항목 기입하기" });
-  fireEvent.click(write);
-  fireEvent.click(write);
-
-  expect(screen.getByRole("status")).toHaveTextContent(
-    "지원서 항목과 프로필 정보를 맞추고 있어요",
-  );
-  expect(screen.getByRole("status").closest('[aria-busy="true"]')).toBeNull();
-  expect(document.querySelector('[aria-busy="true"]')).toBeVisible();
-
   await screen.findByRole("heading", { name: "기입 결과" });
-  expect(analyses).toBe(2);
+  expect(analyses).toBe(1);
+  expect(document.querySelector<HTMLInputElement>("input")!.value).toBe("5000");
+  expect(screen.queryByRole("button", { name: /값 보기|포함하기/ })).toBeNull();
 });
-
-it("shows the exception screen when StrictMode re-runs effects and sensitive re-analysis fails", async () => {
+it("shows the exception screen when automatic field analysis fails in StrictMode", async () => {
   document.body.innerHTML = '<label>이름 <input name="name"></label>';
   const profile = createEmptyProfile();
-  profile.compensation.desiredSalary = "5000";
-  let fieldAnalyses = 0;
-
   render(
     <StrictMode>
       <AutofillWorkflow
         apiClient={{
           analyzePreparation: async (request) =>
             preparationResponse(request.snapshotId),
-          analyzeFields: async (request) => {
-            fieldAnalyses++;
-            if (fieldAnalyses > 1) throw new Error("analysis failed");
-            return {
-              snapshotId: request.snapshotId,
-              mode: "ADAPTER" as const,
-              analysisStatus: "COMPLETE" as const,
-              fields: request.sections
-                .flatMap((section) => [
-                  ...section.fields,
-                  ...(section.items ?? []).flatMap((item) => item.fields),
-                ])
-                .map((field) => ({
-                  candidateId: field.candidateId,
-                  matchType: "MATCH" as const,
-                  valueBinding: {
-                    type: "DIRECT" as const,
-                    profileFieldKey: "compensation.compensation.desiredSalary",
-                  },
-                  autofillPolicy: "SENSITIVE_CONFIRMATION" as const,
-                  mappingStatus: "ADAPTER_VERIFIED" as const,
-                  interactionStatus: "READY" as const,
-                  writePlan: { command: "SET_TEXT" as const },
-                })),
-            };
+          analyzeFields: async () => {
+            throw new Error("analysis failed");
           },
         }}
         repository={{ load: async () => profile }}
@@ -211,14 +167,10 @@ it("shows the exception screen when StrictMode re-runs effects and sensitive re-
       />
     </StrictMode>,
   );
-
-  fireEvent.click(await screen.findByRole("button", { name: "이름 값 보기" }));
-  fireEvent.click(screen.getByRole("button", { name: "이름 포함하기" }));
-  fireEvent.click(screen.getByRole("button", { name: "1개 항목 기입하기" }));
-
   expect(
     await screen.findByRole("heading", { name: "분석을 완료하지 못했습니다" }),
   ).toBeVisible();
+  expect(document.querySelector<HTMLInputElement>("input")!.value).toBe("");
 });
 
 it("shows writing status while the automatic workflow writer is pending", async () => {

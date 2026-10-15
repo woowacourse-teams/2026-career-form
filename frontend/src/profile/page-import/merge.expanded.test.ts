@@ -333,6 +333,31 @@ it("invalidates selected catalog identity only when imported certificate name ch
 it.each<FieldValues>([
   { additionalMajorName: "복수전공" },
   { minorName: "부전공" },
+])(
+  "accepts an additional-major name without any status as develop's field definitions allow: %j",
+  (values) => {
+    const result = mergeImportSelection(
+      createEmptyProfile(),
+      {
+        entries: [
+          {
+            categoryId: "education",
+            sectionId: "university",
+            sourceRow: 0,
+            values: { schoolName: "합성 대학", ...values },
+          },
+        ],
+      },
+      () => "row",
+    );
+    expect(result.education[0].values).toEqual({
+      schoolName: "합성 대학",
+      ...values,
+    });
+  },
+);
+
+it.each<FieldValues>([
   { additionalMajorName: "복수전공", doubleMajorStatus: "없음" },
   { minorName: "부전공", minorStatus: "없음" },
 ])(

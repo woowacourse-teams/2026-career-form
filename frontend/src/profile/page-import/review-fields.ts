@@ -30,6 +30,16 @@ export function displayValue(
   return option && typeof option !== "string" ? option.label : value;
 }
 
+/**
+ * Categories that start unselected on import (Issue 192 scope). Kept here because
+ * field-definitions no longer marks any category sensitive since #212.
+ */
+export const IMPORT_SENSITIVE_CATEGORIES: ReadonlySet<string> = new Set([
+  "military",
+  "veteran",
+  "disability",
+]);
+
 export const NAME_GROUPS = [
   {
     source: "basicInformation.name",

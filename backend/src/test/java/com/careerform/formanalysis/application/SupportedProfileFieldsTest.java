@@ -13,10 +13,10 @@ class SupportedProfileFieldsTest {
     private final SupportedProfileFields supportedFields = new SupportedProfileFields();
 
     @Test
-    @DisplayName("canonical profile key 115개를 제공한다")
-    void exposesExactlyTheCanonicalOneHundredTwelveKeys() {
+    @DisplayName("canonical profile key 125개를 제공한다")
+    void exposesCanonicalKeysIncludingGraduateMajors() {
         assertThat(supportedFields.keys())
-            .hasSize(115)
+            .hasSize(125)
             .contains(
                 "personal.personal.koreanFamilyName",
                 "contact.contact.phoneNumber",

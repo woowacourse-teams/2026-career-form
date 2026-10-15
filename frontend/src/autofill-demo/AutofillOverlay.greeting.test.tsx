@@ -1,5 +1,8 @@
-import { beforeEach as useGreetingHost } from "vitest";
-useGreetingHost(() => {
+import { usePolicyFixture } from "../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../test/fixtures/execution-policy";
+import { beforeEach as useComponentHost } from "vitest";
+useComponentHost(() => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -24,17 +27,12 @@ import { parseProfileImport } from "../profile/profile-transfer";
 import { AutofillOverlay } from "./AutofillOverlay";
 import { createRepository } from "./AutofillOverlay.test-fixtures";
 
-function greetingDocument(host: string): Document {
+function componentDocument(host: string): Document {
   const page = document.implementation.createHTMLDocument("greeting apply");
-  return new Proxy(page, {
-    get(target, key) {
-      if (key === "location") {
-        return { host, pathname: "/ko/o/235625/apply" };
-      }
-      const value = Reflect.get(target, key, target);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
+  Object.defineProperty(page, "URL", {
+    value: `https://${host}/ko/o/235625/apply`,
   });
+  return page;
 }
 
 afterEach(() => {
@@ -46,7 +44,7 @@ afterEach(() => {
   ).jsdom.reconfigure({ url: "http://localhost:3000" });
 });
 
-function ControlledGreetingForm({ renderCount }: { renderCount: number }) {
+function ControlledComponentForm({ renderCount }: { renderCount: number }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   return (
@@ -165,13 +163,14 @@ describe("Greeting with generic autofill controls", () => {
         majorClassification: "주전공",
         majorField: "공학계열",
         majorName: "컴퓨터공학",
-        additionalMajorClassification: "복수전공",
+        doubleMajorStatus: "있음",
         additionalMajorField: "사회계열",
         additionalMajorName: "경영학",
       },
     });
     const preparationRequests: PreparationAnalyzeRequest[] = [];
     const apiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async (request: PreparationAnalyzeRequest) => {
         preparationRequests.push(request);
         const preparationPlans: PreparationPlan[] = request.sections
@@ -190,6 +189,7 @@ describe("Greeting with generic autofill controls", () => {
         };
       },
       analyzeFields: async (request: FieldsAnalyzeRequest) => ({
+        executionPolicy: fixturePolicy("greeting"),
         snapshotId: request.snapshotId,
         mode: "ADAPTER" as const,
         analysisStatus: "COMPLETE" as const,
@@ -205,9 +205,9 @@ describe("Greeting with generic autofill controls", () => {
             candidateId: field.candidateId,
             matchType: "MATCH" as const,
             valueBinding: {
-              type: "DIRECT" as const,
-              profileFieldKey:
-                "education.graduateSchool.additionalMajorClassification",
+              type: "DERIVED" as const,
+              recipe: "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION" as const,
+              profileFieldKey: "education.graduateSchool.additionalMajorName",
             },
             autofillPolicy: "ALLOWED" as const,
             mappingStatus: "ADAPTER_VERIFIED" as const,
@@ -242,13 +242,14 @@ describe("Greeting with generic autofill controls", () => {
   });
 
   it("collects the local adapter immediately and uses one preparation call", async () => {
-    const page = greetingDocument("jobs.unregistered.example");
-    render(<ControlledGreetingForm renderCount={0} />, {
+    const page = componentDocument("jobs.unregistered.example");
+    render(<ControlledComponentForm renderCount={0} />, {
       container: page.body,
     });
     const calls: string[] = [];
     const requests: PreparationAnalyzeRequest[] = [];
     const apiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async (request: PreparationAnalyzeRequest) => {
         calls.push("preparation");
         requests.push(request);
@@ -262,6 +263,7 @@ describe("Greeting with generic autofill controls", () => {
       analyzeFields: async (request: FieldsAnalyzeRequest) => {
         calls.push("fields");
         return {
+          executionPolicy: fixturePolicy("greeting"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER" as const,
           analysisStatus: "COMPLETE" as const,
@@ -284,11 +286,12 @@ describe("Greeting with generic autofill controls", () => {
   it.each(["preparation", "fields", "llm-fields"] as const)(
     "stops when a known Greeting site receives generic %s",
     async (phase) => {
-      const page = greetingDocument("jobs.unregistered.example");
-      render(<ControlledGreetingForm renderCount={0} />, {
+      const page = componentDocument("jobs.unregistered.example");
+      render(<ControlledComponentForm renderCount={0} />, {
         container: page.body,
       });
       const apiClient = {
+        loadExecutionPolicy: async () => fixturePolicy("greeting"),
         analyzePreparation: async (request: PreparationAnalyzeRequest) => ({
           snapshotId: request.snapshotId,
           mode:
@@ -300,6 +303,7 @@ describe("Greeting with generic autofill controls", () => {
         }),
         analyzeFields: async (request: FieldsAnalyzeRequest) =>
           ({
+            executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: phase === "llm-fields" ? "ADAPTER" : "GENERIC",
             analysisStatus: "COMPLETE" as const,
@@ -342,8 +346,8 @@ describe("Greeting with generic autofill controls", () => {
     "career.hyundai-autoever.com",
     "jobs.unregistered.example",
   ])("uses full profile, writes only name and phone on %s", async (host) => {
-    const page = greetingDocument(host);
-    const form = render(<ControlledGreetingForm renderCount={0} />, {
+    const page = componentDocument(host);
+    const form = render(<ControlledComponentForm renderCount={0} />, {
       container: page.body,
     });
     const profile = parseProfileImport(JSON.stringify(profileExportExample));
@@ -365,10 +369,16 @@ describe("Greeting with generic autofill controls", () => {
           },
         };
       }
+      if (typed.type === "AUTOFILL_LOAD_EXECUTION_POLICY")
+        return {
+          ok: true as const,
+          data: { executionPolicy: fixturePolicy("greeting") },
+        };
       const request = typed.payload as FieldsAnalyzeRequest;
       return {
         ok: true as const,
         data: {
+          executionPolicy: fixturePolicy("greeting"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER",
           analysisStatus: "COMPLETE",
@@ -427,7 +437,7 @@ describe("Greeting with generic autofill controls", () => {
     );
 
     await screen.findByRole("heading", { name: "기입 결과" });
-    form.rerender(<ControlledGreetingForm renderCount={1} />);
+    form.rerender(<ControlledComponentForm renderCount={1} />);
     expect(
       page.querySelector<HTMLInputElement>("[name='basicInformation.name']")
         ?.value,
@@ -495,7 +505,7 @@ describe("Greeting with generic autofill controls", () => {
 });
 
 it("stops before actions when an adapter response has only unowned Greeting name markers", async () => {
-  const page = greetingDocument("jobs.unregistered.example");
+  const page = componentDocument("jobs.unregistered.example");
   page.body.innerHTML =
     '<label>이름<input name="basicInformation.name"></label><label>전화번호<input name="basicInformation.phoneNumber.nationalNumber"></label>';
   const calls: string[] = [];
@@ -505,6 +515,7 @@ it("stops before actions when an adapter response has only unowned Greeting name
       repository={createRepository()}
       pageDocument={page}
       apiClient={{
+        loadExecutionPolicy: async () => fixturePolicy("greeting"),
         analyzePreparation: async (request) => {
           calls.push("preparation");
           return {
@@ -517,6 +528,7 @@ it("stops before actions when an adapter response has only unowned Greeting name
         analyzeFields: async (request) => {
           calls.push("fields");
           return {
+            executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",
@@ -526,7 +538,7 @@ it("stops before actions when an adapter response has only unowned Greeting name
       }}
     />,
   );
-  await screen.findByRole("heading", { name: "분석을 완료하지 못했습니다" });
-  expect(calls).toEqual(["preparation"]);
+  await screen.findByRole("heading", { name: "기입 결과" });
+  expect(calls).toEqual(["preparation", "fields"]);
   expect(page.querySelector<HTMLInputElement>("input")!.value).toBe("");
 });

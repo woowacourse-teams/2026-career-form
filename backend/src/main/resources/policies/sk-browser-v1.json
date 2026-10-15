@@ -1,0 +1,617 @@
+{
+  "schemaVersion": 1,
+  "fields": [
+    {
+      "name": "prsMilitarySvcYN",
+      "key": "military.military.militaryStatus",
+      "kind": "radio",
+      "binding": "LOOKUP",
+      "recipe": null,
+      "options": {
+        "대상": "1",
+        "비대상": "0"
+      },
+      "overwrite": false,
+      "priority": false,
+      "stage": null,
+      "details": [],
+      "positiveLabel": "대상",
+      "negativeLabel": "비대상",
+      "settleMs": 1000,
+      "radioValidation": "TARGET_ONLY",
+      "acceptAlreadySelected": true
+    },
+    {
+      "name": "prsVeteranBenefitYN",
+      "key": "veteran.veteran.veteranStatus",
+      "kind": "radio",
+      "binding": "DERIVED",
+      "recipe": "BOOLEAN_YN",
+      "options": {
+        "대상": "1",
+        "비대상": "0"
+      },
+      "overwrite": true,
+      "priority": true,
+      "stage": -2,
+      "details": ["prsVeteranBenefitNumber", "prsVeteranBenefitRelation"],
+      "positiveLabel": "대상",
+      "negativeLabel": "비대상",
+      "settleMs": 1000
+    },
+    {
+      "name": "prsDisabledYN",
+      "key": "disability.disability.disabilityStatus",
+      "kind": "radio",
+      "binding": "DERIVED",
+      "recipe": "BOOLEAN_YN",
+      "options": {
+        "대상": "1",
+        "비대상": "0"
+      },
+      "overwrite": true,
+      "priority": true,
+      "stage": -1,
+      "details": ["prsDisabledType", "prsDisabledTypeDtl"],
+      "positiveLabel": "대상",
+      "negativeLabel": "비대상",
+      "settleMs": 1000
+    },
+    {
+      "name": "prsMilitarySvcStatus",
+      "key": "military.military.militaryStatus",
+      "kind": "select",
+      "binding": "DIRECT",
+      "labels": ["군필", "미필", "면제", "복무중"],
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsMilitarySvcYN",
+          "labels": ["대상"]
+        }
+      ],
+      "requireAllOptions": true,
+      "reviewWritable": true
+    },
+    {
+      "name": "prsMilitarySvcType",
+      "key": "military.military.militaryType",
+      "kind": "select",
+      "binding": "DIRECT",
+      "labels": [
+        "현역병",
+        "상근예비역",
+        "공익근무요원",
+        "전문연구요원",
+        "산업기능요원"
+      ],
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsMilitarySvcYN",
+          "labels": ["대상"]
+        },
+        {
+          "name": "prsMilitarySvcStatus",
+          "labels": ["군필", "복무중"]
+        }
+      ],
+      "requireAllOptions": false,
+      "reviewWritable": false
+    },
+    {
+      "name": "prsMilitarySvcCategory",
+      "key": "military.military.militaryBranch",
+      "kind": "select",
+      "binding": "DIRECT",
+      "labels": [
+        "육군",
+        "해군",
+        "공군",
+        "해병대",
+        "전투경찰",
+        "해양경찰",
+        "의무경찰",
+        "의무소방"
+      ],
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsMilitarySvcYN",
+          "labels": ["대상"]
+        },
+        {
+          "name": "prsMilitarySvcStatus",
+          "labels": ["군필", "복무중"]
+        }
+      ],
+      "requireAllOptions": true,
+      "reviewWritable": true
+    },
+    {
+      "name": "prsDisabledType",
+      "key": "disability.disability.disabilityGrade",
+      "kind": "select",
+      "binding": "LOOKUP",
+      "labels": ["중증(기존1급~3급)", "경증(기존4급~6급)"],
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsDisabledYN",
+          "labels": ["대상"]
+        }
+      ],
+      "requireAllOptions": false,
+      "reviewWritable": false
+    },
+    {
+      "name": "prsDisabledTypeDtl",
+      "key": "disability.disability.disabilityType",
+      "kind": "select",
+      "binding": "DIRECT",
+      "labels": [
+        "지체장애",
+        "뇌병변장애",
+        "시각장애",
+        "청각장애",
+        "언어장애",
+        "지적장애",
+        "자폐성장애",
+        "정신장애",
+        "신장장애",
+        "심장장애",
+        "호흡기장애",
+        "간장애",
+        "안면장애",
+        "장루·요루장애",
+        "뇌전증장애",
+        "췌장장애"
+      ],
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsDisabledYN",
+          "labels": ["대상"]
+        }
+      ],
+      "requireAllOptions": false,
+      "reviewWritable": false
+    },
+    {
+      "name": "prsVeteranBenefitNumber",
+      "key": "veteran.veteran.veteranNumber",
+      "kind": "text",
+      "binding": "DIRECT",
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsVeteranBenefitYN",
+          "labels": ["대상"]
+        }
+      ]
+    },
+    {
+      "name": "prsVeteranBenefitRelation",
+      "key": "veteran.veteran.veteranRelation",
+      "kind": "text",
+      "binding": "DIRECT",
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsVeteranBenefitYN",
+          "labels": ["대상"]
+        }
+      ]
+    },
+    {
+      "name": "carFromDate",
+      "key": "careers.career.startDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    },
+    {
+      "name": "carToDate",
+      "key": "careers.career.endDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    },
+    {
+      "name": "eduFromDate",
+      "key": "education.university.startDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    },
+    {
+      "name": "eduToDate",
+      "key": "education.university.endDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    },
+    {
+      "name": "prsMilitarySvcLevel",
+      "kind": "select",
+      "key": "military.military.militaryRank",
+      "binding": "DIRECT",
+      "labels": [
+        "대위",
+        "중위",
+        "소위",
+        "준위",
+        "상사",
+        "중사",
+        "하사",
+        "병장",
+        "상병",
+        "일병",
+        "이병",
+        "기타"
+      ],
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsMilitarySvcYN",
+          "labels": ["대상"]
+        },
+        {
+          "name": "prsMilitarySvcStatus",
+          "labels": ["군필", "복무중"]
+        }
+      ],
+      "requireAllOptions": false,
+      "reviewWritable": true
+    },
+    {
+      "name": "prsDisabledNumber",
+      "key": "disability.disability.disabilityRegistrationNumber",
+      "kind": "text",
+      "binding": "DIRECT",
+      "overwrite": false,
+      "gates": [
+        {
+          "name": "prsDisabledYN",
+          "labels": ["대상"]
+        }
+      ]
+    },
+    {
+      "name": "cerCertDate",
+      "key": "certifications.certificate.acquisitionDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    },
+    {
+      "name": "lngScoreDate",
+      "key": "languages.languageTest.acquisitionDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    },
+    {
+      "name": "prsMilitarySvcFromDate",
+      "key": "military.military.serviceStartDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM",
+      "gates": [
+        {
+          "name": "prsMilitarySvcYN",
+          "labels": ["대상"]
+        },
+        {
+          "name": "prsMilitarySvcStatus",
+          "labels": ["군필", "복무중"]
+        }
+      ]
+    },
+    {
+      "name": "prsMilitarySvcToDate",
+      "key": "military.military.serviceEndDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM",
+      "gates": [
+        {
+          "name": "prsMilitarySvcYN",
+          "labels": ["대상"]
+        },
+        {
+          "name": "prsMilitarySvcStatus",
+          "labels": ["군필", "복무중"]
+        }
+      ]
+    },
+    {
+      "name": "eduhgFromDate",
+      "key": "education.highSchool.startDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    },
+    {
+      "name": "eduhgToDate",
+      "key": "education.highSchool.endDate",
+      "kind": "yearMonth",
+      "binding": "DERIVED",
+      "recipe": "YEAR_MONTH",
+      "overwrite": false,
+      "inputType": "tel",
+      "maxLength": 6,
+      "inputFormat": "YYYYMM",
+      "resultFormat": "YYYY-MM"
+    }
+  ],
+  "normalizations": [
+    {
+      "keys": ["military.military.militaryStatus"],
+      "values": {
+        "만기전역": "군필"
+      }
+    },
+    {
+      "keys": [
+        "education.highSchool.schoolRegion",
+        "education.university.schoolRegion",
+        "education.graduateSchool.schoolRegion"
+      ],
+      "values": {
+        "region:seoul": "서울특별시",
+        "서울": "서울특별시",
+        "region:busan": "부산광역시",
+        "부산": "부산광역시",
+        "region:daegu": "대구광역시",
+        "대구": "대구광역시",
+        "region:incheon": "인천광역시",
+        "인천": "인천광역시",
+        "region:gwangju": "광주광역시",
+        "광주": "광주광역시",
+        "region:daejeon": "대전광역시",
+        "대전": "대전광역시",
+        "region:ulsan": "울산광역시",
+        "울산": "울산광역시",
+        "region:sejong": "세종특별자치시",
+        "세종": "세종특별자치시",
+        "region:gyeonggi": "경기도",
+        "경기": "경기도",
+        "region:gangwon": "강원도",
+        "강원": "강원도",
+        "region:chungbuk": "충청북도",
+        "충북": "충청북도",
+        "region:chungnam": "충청남도",
+        "충남": "충청남도",
+        "region:jeonbuk": "전라북도",
+        "전북": "전라북도",
+        "region:jeonnam": "전라남도",
+        "전남": "전라남도",
+        "region:gyeongbuk": "경상북도",
+        "경북": "경상북도",
+        "region:gyeongnam": "경상남도",
+        "경남": "경상남도",
+        "region:jeju": "제주특별자치도",
+        "제주": "제주특별자치도",
+        "region:overseas": "해외",
+        "해외": "해외"
+      }
+    }
+  ],
+  "reveals": [
+    {
+      "domName": "eduMajorDoubleYN",
+      "profileFieldKey": "education.university.doubleMajorStatus",
+      "itemIndex": 0,
+      "values": {
+        "있음": "있음"
+      },
+      "nameSuffixPattern": "^_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    {
+      "domName": "eduMajorSubYN",
+      "profileFieldKey": "education.university.minorStatus",
+      "itemIndex": 0,
+      "values": {
+        "있음": "있음"
+      },
+      "nameSuffixPattern": "^_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    {
+      "domName": "prsMilitarySvcYN",
+      "profileFieldKey": "military.military.militaryStatus",
+      "itemIndex": 0,
+      "values": {
+        "군필": "대상",
+        "미필": "대상",
+        "면제": "대상",
+        "복무중": "대상",
+        "비대상": "비대상"
+      },
+      "nameSuffixPattern": ""
+    },
+    {
+      "domName": "prsVeteranBenefitYN",
+      "profileFieldKey": "veteran.veteran.veteranStatus",
+      "itemIndex": 0,
+      "values": {
+        "대상": "대상",
+        "비대상": "비대상"
+      },
+      "nameSuffixPattern": ""
+    },
+    {
+      "domName": "prsDisabledYN",
+      "profileFieldKey": "disability.disability.disabilityStatus",
+      "itemIndex": 0,
+      "values": {
+        "대상": "대상",
+        "비대상": "비대상"
+      },
+      "nameSuffixPattern": ""
+    }
+  ],
+  "collection": {
+    "actions": [
+      {
+        "id": "btnAddCareer",
+        "label": "경력 사항 추가",
+        "selector": "div#applyContentCareer.apply-form-box.career-root > div.form-body > div.form-item-group.career-item > div.form-item-asset > div.form-item-column.btn-control > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddCareer"
+      },
+      {
+        "id": "btnAddCert",
+        "label": "자격/면허 추가",
+        "selector": "div#applyContentLicense.apply-form-box.cert-root > div.form-body > div.form-item-group.cert-Item > div.form-item-asset > div.form-item-column:not(.btn-control) > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddCert"
+      },
+      {
+        "id": "btnAddLangExam",
+        "label": "공인 외국어 시험 추가",
+        "selector": "div#applyContentLinguistics.apply-form-box.langExam-root > div.form-body > div.form-item-group.langExam-Item > div.form-item-asset > div.form-item-column:not(.btn-control) > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddLangExam"
+      },
+      {
+        "id": "btnAddLangAbility",
+        "label": "외국어 능력 추가",
+        "selector": "div#applyContentLanguage.apply-form-box.langAbility-root > div.form-body > div.form-item-group.langAbility-item > div.form-item-asset > div.form-item-column.btn-control > div.form-add-control.column > button.btn.medium.btn-dashed.btnAddLangAbility"
+      },
+      {
+        "id": "btnAddEducationHigh",
+        "label": "고등학교 학력 정보 추가",
+        "selector": "button.btn.medium.btn-dashed.btnAddEducationHigh",
+        "parentSelector": "div.form-add-control.column",
+        "grandparentSelector": "div.form-item-column.btn-control",
+        "rowSelector": "div.form-item-group.educationhigh-item",
+        "rootSelector": "#applyContentAcademic.apply-form-box.education-root",
+        "assetSelector": "div.form-item-asset",
+        "requiredSelector": "input[name='eduhgEducationName']"
+      },
+      {
+        "id": "btnAddEducationUniv",
+        "label": "대학 학력 정보 추가",
+        "selector": "button.btn.medium.btn-dashed.btnAddEducationUniv",
+        "parentSelector": "div.form-add-control.column",
+        "grandparentSelector": "div.form-item-column.btn-control",
+        "rowSelector": "div.form-item-group.educationUniv-item",
+        "rootSelector": "#applyContentAcademic.apply-form-box.education-root",
+        "assetSelector": "div.form-item-asset",
+        "requiredSelector": "input[name='eduEducationName']"
+      }
+    ],
+    "visiblePhases": ["fields"],
+    "collectsInputButtonFields": false,
+    "sectionSelectors": []
+  },
+  "repeatHints": {
+    "btnAddLangExam": {
+      "categoryId": "languages",
+      "sectionId": "languageTest"
+    },
+    "btnAddLangAbility": {
+      "categoryId": "languages",
+      "sectionId": "languageSkill"
+    }
+  },
+  "educationHints": {
+    "educationgrad": "graduateSchool",
+    "educationhigh": "highSchool",
+    "educationuniv": "university"
+  },
+  "freshRowFields": ["eduEducationName"],
+  "freshDefaults": ["eduEducationType"],
+  "stateDrivers": [
+    {
+      "name": "lngLanguageType",
+      "key": "languages.languageTest.language",
+      "binding": "DIRECT",
+      "stage": 1
+    },
+    {
+      "name": "carWorkingYN",
+      "key": "careers.career.employmentStatus",
+      "binding": "LOOKUP"
+    }
+  ],
+  "searchStageBase": 2,
+  "searchRowStride": 3,
+  "refreshAfterPass": true,
+  "diagnosticsTitle": "복수·부전공명 진단",
+  "addressAction": {
+    "domId": "btnSearchAddress",
+    "element": "button"
+  },
+  "mainWorldBridge": "JQUERY_AUTOCOMPLETE",
+  "failureDependencies": {
+    "lngExamName": ["lngExamScore", "lngExamScoreSel"]
+  },
+  "addressVerification": "POSTAL_AND_ROAD_WITHOUT_REFERENCE",
+  "runtimeRules": {
+    "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "placeholderAttributes": [],
+    "placeholderValues": [],
+    "autocomplete": {
+      "confirmationDataKey": "confirmed",
+      "confirmationValue": true,
+      "invalidResultIds": ["0"],
+      "readyCount": 1
+    },
+    "addressFields": {
+      "selectorTemplate": "#{name},[name=\"{name}\"]",
+      "inputType": "text",
+      "requireId": true,
+      "requireName": true,
+      "readOnly": [true, true, false],
+      "zipIndex": 0,
+      "addressIndex": 1,
+      "detailIndex": 2,
+      "requireClosed": true,
+      "requireDetailUnchanged": true,
+      "callbackMs": 2000,
+      "pollMs": 50
+    }
+  }
+}

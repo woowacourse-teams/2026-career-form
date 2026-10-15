@@ -8,3 +8,12 @@ providers:
     allowUiUpdates: false
     options:
       path: /etc/grafana/dashboards
+  - name: career-form-loadtest
+    orgId: 1
+    folder: 부하테스트
+    folderUid: cf-loadtest
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/loadtest-dashboards

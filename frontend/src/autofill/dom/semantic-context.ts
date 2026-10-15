@@ -1,4 +1,8 @@
-import { definitionListLabelOf, unassociatedLabelOf } from "./metadata";
+import { cachedDomRead } from "./read-pass";
+import {
+  definitionListLabelOf, unassociatedLabelOf, fixedTextChunks, formText, structuralLabelOf, structuralRow,
+} from "./metadata";
+import { isTrustedId, trustedLabels } from "./trusted-id";
 import type { SemanticContext } from "../api/types";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 
@@ -258,6 +262,7 @@ export function semanticText(
 function staticText(element: Element | null): string | undefined {
   if (!element || element.matches("input, select, textarea, [contenteditable]"))
     return undefined;
+  return cachedDomRead(element, "semantic-static-text", () => {
   const clone = element.cloneNode(true) as Element;
   clone
     .querySelectorAll(
@@ -265,6 +270,7 @@ function staticText(element: Element | null): string | undefined {
     )
     .forEach((child) => child.remove());
   return semanticText(clone.textContent);
+  });
 }
 
 function linkedText(
@@ -286,6 +292,7 @@ const WRAPPED_HEADING =
   ":scope > * > h1, :scope > * > h2, :scope > * > h3, :scope > * > h4, :scope > * > h5, :scope > * > h6, :scope > * > [role='heading']";
 
 function uniqueHeadingText(container: Element): string | undefined {
+  return cachedDomRead(container, "semantic-heading", () => {
   const headings = [
     ...container.querySelectorAll(DIRECT_HEADING),
     ...container.querySelectorAll(WRAPPED_HEADING),
@@ -294,6 +301,7 @@ function uniqueHeadingText(container: Element): string | undefined {
     .filter((text): text is string => Boolean(text));
   const unique = [...new Set(headings)];
   return unique.length === 1 ? unique[0] : undefined;
+  });
 }
 
 function nearestStructuralHeading(
@@ -354,11 +362,82 @@ function contextLabels(
   return labels;
 }
 
+interface ContextOptions {
+  generic?: boolean;
+  group?: readonly HTMLElement[];
+}
+
+function genericContextLabels(
+  element: HTMLElement,
+  section: Element | null,
+  group?: readonly HTMLElement[],
+): NonNullable<SemanticContext["labels"]> {
+  const labels: NonNullable<SemanticContext["labels"]> = [];
+  const add = (source: NonNullable<SemanticContext["labels"]>[number]["source"], value?: string | null) => {
+    const text = formText(value);
+    if (text && labels.length < 8 &&
+      !labels.some((label) => label.source === source && label.text === text))
+      labels.push({ source, text });
+  };
+  const textOf = (node: Element | null) => node
+    ? formText(fixedTextChunks(node).join(" "))
+    : undefined;
+  const linked = (attribute: string) => {
+    const root = element.getRootNode() as Document | ShadowRoot;
+    const ids = element.getAttribute(attribute)?.trim().split(/\s+/) ?? [];
+    if (ids.length > 8) return undefined;
+    return formText(ids.filter((id) => isTrustedId(root, id))
+      .map((id) => textOf(root.getElementById(id))).filter(Boolean).join(" "));
+  };
+  const choice = element instanceof HTMLInputElement &&
+    ["radio", "checkbox"].includes(element.type);
+  const question = group ? structuralLabelOf(group)
+    : choice ? undefined : structuralLabelOf([element]);
+  if (group) {
+    add("label", question?.label);
+    add("description", question?.description);
+  }
+  add("aria-labelledby", linked("aria-labelledby"));
+  add("aria-label", element.getAttribute("aria-label"));
+  if ("labels" in element && !group) {
+    const trusted = trustedLabels(element as HTMLInputElement);
+    const owned = trusted.length ? trusted : [unassociatedLabelOf(element)];
+    add("label", owned.filter((label): label is HTMLLabelElement => Boolean(label))
+      .map(textOf).filter(Boolean).join(" "));
+  }
+  add("label", definitionListLabelOf(element, true));
+  if (!group) {
+    add("label", question?.label);
+    add("description", question?.description);
+  }
+  add("placeholder", element.getAttribute("placeholder"));
+  add("legend", textOf(element.closest("fieldset")?.querySelector(":scope > legend") ?? null));
+  const row = structuralRow(element);
+  let current = element.parentElement;
+  for (let depth = 0; current && depth < 8; depth += 1) {
+    const headings = [...current.querySelectorAll(`${DIRECT_HEADING}, ${WRAPPED_HEADING}`)]
+      .filter((heading) => heading.parentElement === current ||
+        !heading.parentElement?.querySelector("input, select, textarea"));
+    const texts = [...new Set(headings.map(textOf).filter(Boolean))];
+    if (texts.length === 1) {
+      add("section-heading", texts[0]);
+      break;
+    }
+    if (current === section || current === row) break;
+    current = current.parentElement;
+  }
+  add("description", linked("aria-describedby"));
+  return labels;
+}
+
 export function collectSemanticContext(
   element: HTMLElement,
   section: Element | null,
+  options: ContextOptions = {},
 ): SemanticContext {
-  const labels = contextLabels(element, section);
+  const labels = options.generic
+    ? genericContextLabels(element, section, options.group)
+    : contextLabels(element, section);
   const context: SemanticContext = labels.length ? { labels } : {};
   if (
     element instanceof HTMLInputElement &&
@@ -435,10 +514,12 @@ export function collectSemanticContext(
 export function collectActionSemanticContext(
   element: HTMLElement,
   section: Element | null,
+  options: ContextOptions = {},
 ): Pick<SemanticContext, "labels" | "required" | "multiple"> {
   const { labels, required, multiple } = collectSemanticContext(
     element,
     section,
+    options,
   );
   return {
     ...(labels ? { labels } : {}),

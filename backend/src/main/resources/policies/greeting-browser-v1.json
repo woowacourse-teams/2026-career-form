@@ -1,0 +1,1813 @@
+{
+  "schemaVersion": 1,
+  "engine": "ARIA_COMPONENTS",
+  "sections": {
+    "universities": {
+      "label": "대학교",
+      "prefix": "educationalBackground.universities",
+      "group": "educationuniversity",
+      "anchor": "schoolName",
+      "singleton": false
+    },
+    "graduateSchools": {
+      "label": "대학원",
+      "prefix": "educationalBackground.graduateSchools",
+      "group": "educationgraduateschool",
+      "anchor": "schoolName",
+      "singleton": false
+    },
+    "highSchool": {
+      "label": "고등학교",
+      "prefix": "educationalBackground.highSchool",
+      "group": "educationhighschool",
+      "anchor": "schoolName",
+      "singleton": true
+    },
+    "workExperiences": {
+      "label": "직장경력",
+      "prefix": "workHistory.workExperiences",
+      "group": "careerscareer",
+      "anchor": "companyName",
+      "singleton": false
+    },
+    "certifiedLanguageTests": {
+      "label": "공인외국어시험",
+      "prefix": "languagesCertificationsAndOtherActivity.certifiedLanguageTests",
+      "group": "languageslanguagetest",
+      "anchor": "testName",
+      "singleton": false
+    },
+    "foreignLanguageProficiencies": {
+      "label": "외국어활용능력",
+      "prefix": "languagesCertificationsAndOtherActivity.foreignLanguageProficiencies",
+      "group": "languageslanguageskill",
+      "anchor": "foreignLanguage",
+      "singleton": false
+    },
+    "projects": {
+      "label": "프로젝트",
+      "prefix": "workHistory.projects",
+      "group": "projectsproject",
+      "anchor": "projectName",
+      "singleton": false
+    },
+    "certificatesLicenses": {
+      "label": "자격증/면허증",
+      "prefix": "languagesCertificationsAndOtherActivity.certificatesLicenses",
+      "group": "certificationscertificate",
+      "anchor": "credentials",
+      "singleton": false
+    }
+  },
+  "radioGroups": {
+    "장애여부": {
+      "suffix": "disability.disabilityStatus",
+      "options": ["비대상", "대상"],
+      "scope": "DOCUMENT",
+      "allowedGroups": [],
+      "prefix": "militaryServicePreferentialEmploymentStatus"
+    },
+    "보훈여부": {
+      "suffix": "veteran.veteranStatus",
+      "options": ["비대상", "대상"],
+      "scope": "DOCUMENT",
+      "allowedGroups": [],
+      "prefix": "militaryServicePreferentialEmploymentStatus"
+    },
+    "학위구분": {
+      "suffix": "degreeLevel",
+      "options": ["전문학사", "학사"],
+      "scope": "ROW",
+      "allowedGroups": ["educationuniversity"]
+    },
+    "입학구분": {
+      "suffix": "admissionType",
+      "options": ["입학", "편입"],
+      "scope": "ROW",
+      "allowedGroups": [
+        "educationhighschool",
+        "educationuniversity",
+        "educationgraduateschool"
+      ]
+    },
+    "주/야간구분": {
+      "suffix": "attendanceType",
+      "options": ["주간", "야간"],
+      "scope": "ROW",
+      "allowedGroups": [
+        "educationhighschool",
+        "educationuniversity",
+        "educationgraduateschool"
+      ]
+    }
+  },
+  "topLevelLabels": {
+    "basicInformation.birthdate": "생년월일",
+    "basicInformation.gender": "성별",
+    "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceStatus": "병역사항",
+    "militaryServicePreferentialEmploymentStatus.militaryService.branchOfService": "군별",
+    "militaryServicePreferentialEmploymentStatus.militaryService.rank": "계급",
+    "militaryServicePreferentialEmploymentStatus.militaryService.militaryServiceClassification": "병역구분",
+    "militaryServicePreferentialEmploymentStatus.militaryService.dischargeType": "제대구분",
+    "militaryServicePreferentialEmploymentStatus.veteranStatus.veteranRelationship": "보훈관계",
+    "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.startDate": "복무기간",
+    "militaryServicePreferentialEmploymentStatus.militaryService.servicePeriod.endDate": "복무기간",
+    "militaryServicePreferentialEmploymentStatus.disability.degreeOfDisability": "장애정도",
+    "militaryServicePreferentialEmploymentStatus.disability.descriptionOfDisability": "장애내용"
+  },
+  "buttonFieldsByGroup": {
+    "educationuniversity": "^(enrollmentPeriod\\.(startDate|endDate)|completionStatus|gpa\\.scoreScale|majors\\.\\d+\\.(majorClassification|majorField)|degreeLevel|schoolLocation)$",
+    "educationgraduateschool": "^(enrollmentPeriod\\.(startDate|endDate)|completionStatus|gpa\\.scoreScale|majors\\.\\d+\\.(majorClassification|majorField)|degreeLevel|schoolLocation)$",
+    "educationhighschool": "^(schoolLocation|completionStatus|enrollmentPeriod\\.(startDate|endDate))$",
+    "careerscareer": "^(employmentType|employmentPeriod\\.(startDate|endDate))$",
+    "languageslanguagetest": "^(foreignLanguage|acquisitionDate|grade)$",
+    "languageslanguageskill": "^(foreignLanguage|conversationalProficiency)$",
+    "projectsproject": "^projectPeriod\\.(startDate|endDate)$",
+    "certificationscertificate": "^acquisitionDate$"
+  },
+  "patterns": {
+    "education": "^educationalBackground\\.(?:(universities|graduateSchools)\\.(0|[1-9]\\d*)|highSchool)\\.",
+    "freshMajor": "^educationalBackground\\.(?:graduateSchools|universities)\\.(0|[1-9]\\d*)\\.majors\\.[12]\\.majorClassification$",
+    "educationDate": "^educationalBackground\\.(?:(?:universities|graduateSchools)\\.\\d+|highSchool)\\.enrollmentPeriod\\.(startDate|endDate)$",
+    "militaryDate": "^militaryServicePreferentialEmploymentStatus\\.militaryService\\.servicePeriod\\.(startDate|endDate)$",
+    "careerDate": "^workHistory\\.workExperiences\\.\\d+\\.employmentPeriod\\.(startDate|endDate)$",
+    "projectDate": "^workHistory\\.projects\\.\\d+\\.projectPeriod\\.(startDate|endDate)$",
+    "acquisitionDate": "^languagesCertificationsAndOtherActivity\\.(certifiedLanguageTests|certificatesLicenses)\\.\\d+\\.acquisitionDate$",
+    "examRow": "^(languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+)\\.testName$",
+    "directSearch": "^(?:educationalBackground\\.highSchool\\.schoolName|workHistory\\.workExperiences\\.\\d+\\.companyName|languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials)$",
+    "searchField": "^(?:educationalBackground\\.(?:(?:universities|graduateSchools)\\.\\d+\\.(?:schoolName|majors\\.\\d+)|highSchool\\.schoolName)|workHistory\\.workExperiences\\.\\d+\\.companyName|languagesCertificationsAndOtherActivity\\.(?:certifiedLanguageTests\\.\\d+\\.testName|certificatesLicenses\\.\\d+\\.credentials))$",
+    "certificate": "^languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials$",
+    "languageTest": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.testName$",
+    "university": "^educationalBackground\\.universities\\.\\d+\\.schoolName$",
+    "graduateSchool": "^educationalBackground\\.graduateSchools\\.\\d+\\.schoolName$",
+    "employment": "^workHistory\\.workExperiences\\.(0|[1-9]\\d*)\\.employmentStatus$",
+    "numericScore": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.score\\.score$",
+    "employmentWrite": "^workHistory\\.workExperiences\\.\\d+\\.employmentStatus$",
+    "gpa": "^(educationalBackground\\.(?:universities|graduateSchools)\\.(?:0|[1-9]\\d*))\\.gpa\\.(score|scoreScale)$",
+    "languageLevel": "\\.(grade|conversationalProficiency)$",
+    "majorAction": "^greeting:add:(universities|graduateSchools):(0|[1-9]\\d*):majors$"
+  },
+  "fieldNames": {
+    "email": "basicInformation.email",
+    "nationality": "basicInformation.nationalityCode",
+    "birthDate": "basicInformation.birthdate",
+    "personalPrefix": "militaryServicePreferentialEmploymentStatus",
+    "veteranNumber": "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber"
+  },
+  "labels": {
+    "email": ["이메일주소", "이메일"],
+    "nationality": "국적",
+    "address": "현주소",
+    "addressTrigger": "주소 찾기",
+    "addressResult": "주소",
+    "postalResult": "우편번호",
+    "add": "항목 추가",
+    "majorAdd": "전공 추가",
+    "major": "전공",
+    "defaultMajor": "주전공",
+    "employed": "재직중",
+    "retired": "퇴사",
+    "employmentOptions": ["재직중", "재직 중"],
+    "emailConfirmation": "이메일 확인"
+  },
+  "addressNames": [
+    "personalInformation.currentAddress.postalCode",
+    "personalInformation.currentAddress.address",
+    "personalInformation.currentAddress.detailedAddress"
+  ],
+  "basicNames": [
+    "basicInformation.name",
+    "basicInformation.phoneNumber.nationalNumber"
+  ],
+  "stages": [
+    {
+      "commands": ["SELECT_BUTTON_OPTION"],
+      "pattern": "\\.(grade|conversationalProficiency)$",
+      "stage": 3
+    },
+    {
+      "commands": ["CHECK_RADIO", "CHECK_CHECKBOX", "SELECT_BUTTON_OPTION"],
+      "pattern": ".*",
+      "stage": 1
+    },
+    {
+      "commands": ["SEARCH_SELECTION"],
+      "pattern": "\\.(schoolName|companyName|testName|credentials)$",
+      "stage": 2
+    },
+    {
+      "commands": ["SEARCH_SELECTION"],
+      "pattern": ".*",
+      "stage": 3
+    },
+    {
+      "commands": ["SELECT_DATE"],
+      "pattern": ".*",
+      "stage": 4
+    }
+  ],
+  "driverCommands": [
+    "SELECT_BUTTON_OPTION",
+    "CHECK_RADIO",
+    "CHECK_CHECKBOX",
+    "SEARCH_SELECTION",
+    "SELECT_DATE"
+  ],
+  "driverPattern": "^(?:educationalBackground\\.(?:(?:universities|graduateSchools)\\.(?:0|[1-9]\\d*)|highSchool)\\.|militaryServicePreferentialEmploymentStatus\\.|basicInformation\\.(?:gender|birthdate|nationalityCode)$|workHistory\\.workExperiences\\.|languagesCertificationsAndOtherActivity\\.)",
+  "failureCommands": ["SELECT_DATE", "SEARCH_SELECTION"],
+  "failurePattern": "\\.(grade|conversationalProficiency)$",
+  "dateRules": [
+    {
+      "pattern": "^educationalBackground\\.universities\\.\\d+\\.enrollmentPeriod\\.startDate$",
+      "key": "education.university.startDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^educationalBackground\\.universities\\.\\d+\\.enrollmentPeriod\\.endDate$",
+      "key": "education.university.endDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^educationalBackground\\.graduateSchools\\.\\d+\\.enrollmentPeriod\\.startDate$",
+      "key": "education.graduateSchool.startDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^educationalBackground\\.graduateSchools\\.\\d+\\.enrollmentPeriod\\.endDate$",
+      "key": "education.graduateSchool.endDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^educationalBackground\\.highSchool\\.enrollmentPeriod\\.startDate$",
+      "key": "education.highSchool.startDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^educationalBackground\\.highSchool\\.enrollmentPeriod\\.endDate$",
+      "key": "education.highSchool.endDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^workHistory\\.workExperiences\\.\\d+\\.employmentPeriod\\.startDate$",
+      "key": "careers.career.startDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^workHistory\\.workExperiences\\.\\d+\\.employmentPeriod\\.endDate$",
+      "key": "careers.career.endDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.acquisitionDate$",
+      "key": "languages.languageTest.acquisitionDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^workHistory\\.projects\\.\\d+\\.projectPeriod\\.startDate$",
+      "key": "projects.project.startDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^workHistory\\.projects\\.\\d+\\.projectPeriod\\.endDate$",
+      "key": "projects.project.endDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.acquisitionDate$",
+      "key": "certifications.certificate.acquisitionDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^basicInformation\\.birthdate$",
+      "key": "personal.personal.birthDate",
+      "precision": "day"
+    },
+    {
+      "pattern": "^militaryServicePreferentialEmploymentStatus\\.militaryService\\.servicePeriod\\.startDate$",
+      "key": "military.military.serviceStartDate",
+      "precision": "month"
+    },
+    {
+      "pattern": "^militaryServicePreferentialEmploymentStatus\\.militaryService\\.servicePeriod\\.endDate$",
+      "key": "military.military.serviceEndDate",
+      "precision": "month"
+    }
+  ],
+  "searchKinds": [
+    {
+      "kind": "certificate",
+      "pattern": "^languagesCertificationsAndOtherActivity\\.certificatesLicenses\\.\\d+\\.credentials$"
+    },
+    {
+      "kind": "languageTest",
+      "pattern": "^languagesCertificationsAndOtherActivity\\.certifiedLanguageTests\\.\\d+\\.testName$"
+    },
+    {
+      "kind": "highSchool",
+      "pattern": "^educationalBackground\\.highSchool\\.schoolName$"
+    },
+    {
+      "kind": "university",
+      "pattern": "^educationalBackground\\.universities\\.\\d+\\.schoolName$"
+    },
+    {
+      "kind": "graduateSchool",
+      "pattern": "^educationalBackground\\.graduateSchools\\.\\d+\\.schoolName$"
+    }
+  ],
+  "profileSections": {
+    "greeting:add:universities": {
+      "categoryId": "education",
+      "sectionId": "university"
+    },
+    "greeting:add:graduateSchools": {
+      "categoryId": "education",
+      "sectionId": "graduateSchool"
+    },
+    "greeting:add:highSchool": {
+      "categoryId": "education",
+      "sectionId": "highSchool"
+    },
+    "greeting:add:workExperiences": {
+      "categoryId": "careers",
+      "sectionId": "career"
+    },
+    "greeting:add:certifiedLanguageTests": {
+      "categoryId": "languages",
+      "sectionId": "languageTest"
+    },
+    "greeting:add:foreignLanguageProficiencies": {
+      "categoryId": "languages",
+      "sectionId": "languageSkill"
+    },
+    "greeting:add:projects": {
+      "categoryId": "projects",
+      "sectionId": "project"
+    },
+    "greeting:add:certificatesLicenses": {
+      "categoryId": "certifications",
+      "sectionId": "certificate"
+    }
+  },
+  "actionPrefix": "greeting:add:",
+  "addressAction": "greeting:search:address",
+  "freshDefaults": [
+    {
+      "pattern": "^educationalBackground\\.graduateSchools\\.(0|[1-9]\\d*)\\.majors\\.1\\.majorClassification$",
+      "binding": "DIRECT",
+      "key": "education.graduateSchool.additionalMajorClassification",
+      "value": "주전공"
+    },
+    {
+      "pattern": "^educationalBackground\\.universities\\.(0|[1-9]\\d*)\\.majors\\.1\\.majorClassification$",
+      "binding": "DERIVED",
+      "key": "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+      "value": "주전공"
+    },
+    {
+      "pattern": "^educationalBackground\\.universities\\.(0|[1-9]\\d*)\\.majors\\.2\\.majorClassification$",
+      "binding": "DERIVED",
+      "key": "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+      "value": "주전공"
+    }
+  ],
+  "directSearch": {
+    "code": "[[new]]",
+    "labelPrefix": "직접 입력하기:“",
+    "labelSuffix": "”",
+    "normalNavigationLimit": 128
+  },
+  "displayFormats": [
+    {
+      "pattern": "^educationalBackground\\.universities\\.(?:0|[1-9]\\d*)\\.gpa\\.scoreScale$",
+      "key": "education.university.gpaScale",
+      "mode": "DECIMAL",
+      "control": "button",
+      "valuePattern": "^\\d+(?:\\.\\d{1,2})?$"
+    },
+    {
+      "pattern": "^educationalBackground\\.graduateSchools\\.(?:0|[1-9]\\d*)\\.gpa\\.scoreScale$",
+      "key": "education.graduateSchool.gpaScale",
+      "mode": "DECIMAL",
+      "control": "button",
+      "valuePattern": "^\\d+(?:\\.\\d{1,2})?$"
+    },
+    {
+      "pattern": "^militaryServicePreferentialEmploymentStatus\\.veteranStatus\\.veteransRegistrationNumber$",
+      "key": "veteran.veteran.veteranNumber",
+      "mode": "HYPHEN_INSENSITIVE",
+      "control": "text",
+      "valuePattern": "^[0-9]+(?:-[0-9]+)*$"
+    }
+  ],
+  "groups": {
+    "education": [
+      "educationhighschool",
+      "educationuniversity",
+      "educationgraduateschool"
+    ],
+    "university": "educationuniversity",
+    "employment": "careerscareer"
+  },
+  "major": {
+    "additionalTypes": ["복수전공", "부전공", "연계전공", "융합전공"],
+    "fields": [
+      "인문계열",
+      "사회계열",
+      "교육계열",
+      "공학계열",
+      "자연과학계열",
+      "의약학계열",
+      "예체능계열",
+      "농수해양/생명자원계열",
+      "기타"
+    ],
+    "maxRows": 5,
+    "freshCounts": [2, 3],
+    "rowSuffix": "majors",
+    "classificationSuffix": "majorClassification",
+    "fieldSuffix": "majorField",
+    "parts": [
+      {
+        "suffix": "",
+        "selector": "input[role=\"combobox\"]",
+        "required": true,
+        "read": "VALUE"
+      },
+      {
+        "suffix": "majorClassification",
+        "selector": "button",
+        "required": true,
+        "read": "TEXT"
+      },
+      {
+        "suffix": "majorField",
+        "selector": "button",
+        "required": true,
+        "read": "TEXT"
+      }
+    ]
+  },
+  "gpa": {
+    "scoreSuffix": "gpa.score",
+    "scaleSuffix": "gpa.scoreScale",
+    "scalePart": "scoreScale",
+    "placeholder": "선택"
+  },
+  "languageSuffix": "foreignLanguage",
+  "emailStage": 0,
+  "retainedSearchVerification": "RECORDED_VALUE",
+  "selectors": {
+    "field": "[data-scope=\"field\"][data-part=\"root\"]",
+    "addressResults": "[data-scope=\"scroll-area\"][data-part=\"content\"]",
+    "openDialog": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]",
+    "dialogClose": "[data-scope=\"dialog\"][data-part=\"close-trigger\"]",
+    "unnamedEmail": "input[role=\"combobox\"][data-scope=\"combobox\"][data-part=\"input\"]:not([name])",
+    "row": "[data-scope=\"accordion\"][data-part=\"item\"]",
+    "fieldLabel": "label, [data-scope=\"field\"][data-part=\"label\"]",
+    "radioGroup": "[data-scope=\"toggle-group\"][data-part=\"root\"][role=\"radiogroup\"]",
+    "radioOption": "button[data-scope=\"toggle-group\"][data-part=\"item\"][role=\"radio\"]",
+    "addTrigger": "button[data-scope=\"tooltip\"][data-part=\"trigger\"]",
+    "section": "[data-scope=\"accordion\"][data-part=\"root\"]",
+    "extraFields": "button[name], [data-scope=\"toggle-group\"][data-part=\"root\"][role=\"radiogroup\"]",
+    "openSearchPopup": "[data-scope=\"scroll-area\"][data-part=\"viewport\"][role=\"presentation\"][data-state=\"open\"]",
+    "scrollRoot": "[data-scope=\"scroll-area\"][data-part=\"root\"]",
+    "searchPositioner": "[data-scope=\"combobox\"][data-part=\"positioner\"]",
+    "checkedItem": "[data-part=\"item\"][role=\"option\"][data-state=\"checked\"]",
+    "optionDetail": "[data-part=\"item-description\"]",
+    "optionDecoration": "[data-part=\"item-description\"], [data-part=\"item-indicator\"]",
+    "searchInput": "[data-scope=\"combobox\"][data-part=\"input\"][role=\"combobox\"][aria-controls]",
+    "searchItem": "[data-scope=\"combobox\"][data-part=\"item\"]",
+    "checkedSearchItem": "[data-scope=\"combobox\"][data-part=\"item\"][role=\"option\"][data-state=\"checked\"]",
+    "codedSearchItem": "[data-scope=\"combobox\"][data-part=\"item\"][role=\"option\"][data-value]",
+    "searchOption": "[data-scope=\"combobox\"][data-part=\"item\"][role=\"option\"]",
+    "searchPopup": "[data-scope=\"scroll-area\"][data-part=\"viewport\"][role=\"presentation\"]",
+    "choicePopup": "[role=\"listbox\"], [data-scope=\"scroll-area\"][data-part=\"viewport\"][role=\"presentation\"][data-state=\"open\"]",
+    "calendarTrigger": "button[data-scope=\"date-picker\"][data-part=\"trigger\"][aria-controls]",
+    "calendarPopup": "[data-scope=\"date-picker\"][data-part=\"content\"][role=\"application\"][aria-label=\"calendar\"]",
+    "calendarInput": "input[data-scope=\"date-picker\"][data-part=\"input\"]",
+    "calendarCells": "[data-scope=\"date-picker\"][data-part=\"table-cell-trigger\"][data-view]",
+    "calendarClear": "[data-scope=\"date-picker\"][data-part=\"clear-trigger\"]",
+    "calendarRoot": "[data-scope=\"date-picker\"][data-part=\"root\"]",
+    "fieldGroup": "[data-scope=\"field\"][data-part=\"root\"][role=\"group\"]",
+    "calendarValue": "[data-scope=\"date-picker\"][data-part=\"table-cell-trigger\"][data-view=\"{0}\"][data-value]",
+    "collectedRadioOption": "button[role=\"radio\"][data-scope=\"toggle-group\"][data-part=\"item\"]"
+  },
+  "widget": {
+    "optionCodeAttribute": "data-value",
+    "calendarViewAttribute": "data-view",
+    "monthView": "month",
+    "dayView": "day",
+    "stateAttribute": "data-state",
+    "openState": "open",
+    "monthSeparator": ". ",
+    "daySeparator": ".",
+    "monthLabelTemplate": "{year}년 {month}월",
+    "placeholderAttributes": ["data-placeholder", "data-placeholder-shown"],
+    "searchPlaceholderAttribute": "data-placeholder-shown",
+    "languagePlaceholder": "선택",
+    "directCodeTemplate": "{code}-{value}",
+    "popupRootDepth": 1,
+    "popupPositionerDepth": 2,
+    "ignorePositionerAriaHidden": true
+  },
+  "workflow": {
+    "requireVerifiedMapping": true,
+    "refreshAfterPass": true,
+    "rebindReplacedControls": true,
+    "captureDriverResults": true,
+    "emailProfileKey": "contact.contact.email"
+  },
+  "emailBridge": {
+    "selectors": {
+      "field": "[data-scope=\"field\"][data-part=\"root\"]",
+      "input": "input[role=\"combobox\"][data-scope=\"combobox\"][data-part=\"input\"]:not([name])",
+      "row": "[data-scope=\"accordion\"][data-part=\"item\"]",
+      "label": "label, [data-scope=\"field\"][data-part=\"label\"]"
+    },
+    "plans": {
+      "commit": [
+        {
+          "target": "input",
+          "op": "SET_VALUE",
+          "value": ""
+        },
+        {
+          "target": "input",
+          "op": "FOCUS"
+        },
+        {
+          "target": "input",
+          "op": "CLICK"
+        },
+        {
+          "target": "input",
+          "op": "INSERT_TEXT",
+          "value": "{value}",
+          "require": [
+            {
+              "target": "input",
+              "read": "VALUE",
+              "equals": ""
+            },
+            {
+              "target": "input",
+              "read": "ACTIVE",
+              "equals": "true"
+            }
+          ]
+        }
+      ]
+    },
+    "ownership": {
+      "excludeRows": true,
+      "labelCount": 1,
+      "inputCount": 1
+    },
+    "ackTimeoutMs": 1000,
+    "flow": {
+      "targets": {
+        "field": {
+          "from": "input",
+          "relation": "CLOSEST",
+          "selector": "div[data-scope=\"field\"][data-part=\"root\"]"
+        },
+        "confirmation": {
+          "from": "field",
+          "relation": "QUERY",
+          "selector": "button",
+          "count": 1
+        },
+        "confirmationOwner": {
+          "from": "confirmation",
+          "relation": "CLOSEST",
+          "selector": "[data-scope=\"field\"][data-part=\"root\"]"
+        },
+        "hiddenAncestor": {
+          "from": "confirmation",
+          "relation": "CLOSEST",
+          "selector": "[hidden], [inert]"
+        },
+        "confirmationParent": {
+          "from": "confirmation",
+          "relation": "PARENT"
+        },
+        "hiddenParent": {
+          "from": "confirmationParent",
+          "relation": "CLOSEST",
+          "selector": "[aria-hidden=\"true\"]"
+        },
+        "popup": {
+          "from": "input",
+          "relation": "CONTROLLED"
+        },
+        "popupRoot": {
+          "from": "popup",
+          "relation": "PARENT",
+          "depth": 1
+        }
+      },
+      "conditions": {
+        "popup": {
+          "all": [
+            {
+              "target": "input",
+              "read": "ATTRIBUTE",
+              "equals": "true",
+              "name": "aria-expanded"
+            },
+            {
+              "target": "popup",
+              "read": "MATCHES",
+              "equals": "true",
+              "name": "div[role=\"presentation\"][data-scope=\"scroll-area\"][data-part=\"viewport\"]"
+            },
+            {
+              "target": "popupRoot",
+              "read": "MATCHES",
+              "equals": "true",
+              "name": "div[data-scope=\"scroll-area\"][data-part=\"root\"]"
+            }
+          ]
+        },
+        "closed": {
+          "target": "input",
+          "read": "ATTRIBUTE",
+          "equals": "false",
+          "name": "aria-expanded"
+        },
+        "accepted": {
+          "all": [
+            {
+              "target": "confirmation",
+              "read": "MATCHES",
+              "equals": "true",
+              "name": "button[type=\"button\"]:not(:disabled):not([aria-disabled=\"true\"])"
+            },
+            {
+              "target": "confirmation",
+              "read": "TEXT",
+              "equals": "이메일 확인",
+              "trim": true
+            },
+            {
+              "target": "confirmationOwner",
+              "read": "SAME",
+              "equals": "field"
+            },
+            {
+              "target": "hiddenAncestor",
+              "read": "EXISTS",
+              "equals": "false"
+            },
+            {
+              "target": "hiddenParent",
+              "read": "EXISTS",
+              "equals": "false"
+            },
+            {
+              "any": [
+                {
+                  "not": {
+                    "target": "confirmation",
+                    "read": "ATTRIBUTE",
+                    "equals": "true",
+                    "name": "aria-hidden"
+                  }
+                },
+                {
+                  "ref": "popup"
+                }
+              ]
+            },
+            {
+              "not": {
+                "target": "confirmation",
+                "read": "STYLE",
+                "equals": "none",
+                "name": "display"
+              }
+            },
+            {
+              "not": {
+                "target": "confirmation",
+                "read": "STYLE",
+                "equals": "hidden",
+                "name": "visibility"
+              }
+            }
+          ]
+        },
+        "emptyPopup": {
+          "all": [
+            {
+              "ref": "popup"
+            },
+            {
+              "target": "popup",
+              "read": "MATCHES",
+              "equals": "true",
+              "name": "[data-empty]"
+            },
+            {
+              "target": "popup",
+              "read": "STYLE",
+              "equals": "none",
+              "name": "display"
+            }
+          ]
+        }
+      },
+      "plans": {
+        "acceptance": {
+          "realm": "LOCAL",
+          "timeoutMs": 3100,
+          "steps": [
+            {
+              "op": "ASSERT",
+              "condition": {
+                "not": {
+                  "target": "input",
+                  "read": "VALUE",
+                  "equals": ""
+                }
+              }
+            },
+            {
+              "op": "WAIT",
+              "condition": {
+                "ref": "accepted"
+              },
+              "timeoutMs": 3000,
+              "pollMs": 50,
+              "stableTargets": ["confirmation"]
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        },
+        "close": {
+          "realm": "LOCAL",
+          "timeoutMs": 1200,
+          "steps": [
+            {
+              "op": "PIN",
+              "target": "input",
+              "attributes": ["aria-controls"]
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "popup"
+              }
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "accepted"
+              }
+            },
+            {
+              "op": "DELAY",
+              "ms": 150
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "accepted"
+              }
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "ref": "closed"
+              },
+              "then": [
+                {
+                  "op": "RETURN",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "popup"
+              }
+            },
+            {
+              "op": "BRIDGE",
+              "plan": "dismiss"
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "closed"
+              }
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        },
+        "completion": {
+          "realm": "LOCAL",
+          "timeoutMs": 4500,
+          "steps": [
+            {
+              "op": "ASSERT",
+              "condition": {
+                "not": {
+                  "target": "input",
+                  "read": "VALUE",
+                  "equals": ""
+                }
+              }
+            },
+            {
+              "op": "WAIT",
+              "condition": {
+                "ref": "accepted"
+              },
+              "timeoutMs": 3000,
+              "pollMs": 50,
+              "stableTargets": ["confirmation"]
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "not": {
+                  "target": "input",
+                  "read": "ATTRIBUTE",
+                  "equals": "true",
+                  "name": "aria-expanded"
+                }
+              },
+              "then": [
+                {
+                  "op": "RETURN",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "op": "AUTHORIZE"
+            },
+            {
+              "op": "PIN",
+              "target": "input",
+              "attributes": ["aria-controls"]
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "popup"
+              }
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "accepted"
+              }
+            },
+            {
+              "op": "DELAY",
+              "ms": 150
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "accepted"
+              }
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "ref": "closed"
+              },
+              "then": [
+                {
+                  "op": "RETURN",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "popup"
+              }
+            },
+            {
+              "op": "BRIDGE",
+              "plan": "dismiss"
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "closed"
+              }
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        },
+        "dismiss": {
+          "realm": "MAIN",
+          "timeoutMs": 800,
+          "stopWhen": {
+            "ref": "closed"
+          },
+          "steps": [
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "popup"
+              }
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "ref": "accepted"
+              }
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "ref": "emptyPopup"
+              },
+              "then": [
+                {
+                  "op": "DOM",
+                  "plan": [
+                    {
+                      "target": "input",
+                      "op": "KEY",
+                      "event": "keydown",
+                      "key": "Escape",
+                      "code": "Escape"
+                    },
+                    {
+                      "target": "input",
+                      "op": "KEY",
+                      "event": "keyup",
+                      "key": "Escape",
+                      "code": "Escape"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "DOM",
+              "plan": [
+                {
+                  "target": "input",
+                  "op": "BLUR"
+                }
+              ]
+            },
+            {
+              "op": "DELAY",
+              "ms": 0
+            },
+            {
+              "op": "ASSERT",
+              "condition": {
+                "all": [
+                  {
+                    "target": "input",
+                    "read": "ACTIVE",
+                    "equals": "false"
+                  },
+                  {
+                    "ref": "popup"
+                  },
+                  {
+                    "ref": "accepted"
+                  }
+                ]
+              }
+            },
+            {
+              "op": "DOM",
+              "plan": [
+                {
+                  "target": "body",
+                  "op": "POINTER",
+                  "event": "pointerdown",
+                  "composed": true
+                }
+              ]
+            },
+            {
+              "op": "WAIT",
+              "condition": {
+                "ref": "closed"
+              },
+              "timeoutMs": 800,
+              "pollMs": 50
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "entrypoints": {
+      "acceptance": "acceptance",
+      "close": "close"
+    }
+  },
+  "structure": {
+    "addressReadOnly": [true, true, false],
+    "addressRows": ":scope > *",
+    "addressParts": ":scope > *",
+    "addressPartLabel": ":scope > :first-child",
+    "addressSearchInput": "input[type=\"search\"]",
+    "sectionAddRelation": "DIRECT_CHILD",
+    "dayDateFieldNames": ["basicInformation.birthdate"]
+  },
+  "runtimeRules": {
+    "sectionSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "presentationSelector": "fieldset, section, [role=\"group\"], .apply-form-box",
+    "placeholderAttributes": ["data-placeholder", "data-placeholder-shown"],
+    "placeholderValues": ["선택"],
+    "components": {
+      "employment": {
+        "checkedValue": "재직중",
+        "uncheckedValue": "퇴사",
+        "allowUncheck": false
+      },
+      "radio": {
+        "optionSelector": "button[role=\"radio\"]",
+        "overwrite": false
+      },
+      "gpa": {
+        "requirePair": true,
+        "scaleBeforeScore": true,
+        "scoreSelector": "input[name=\"{name}\"]",
+        "scaleSelector": "button[name=\"{name}\"]"
+      },
+      "row": {
+        "separator": ".",
+        "indexPattern": "^(0|[1-9]\\d*)\\.(.+)$",
+        "singletonIndex": 0,
+        "maxIndex": 127,
+        "requireContiguous": true
+      },
+      "major": {
+        "nameSelector": "input[role=\"combobox\"]",
+        "classificationSelector": "button",
+        "fieldSelector": "button",
+        "baseCount": 1,
+        "newRowPosition": "LAST",
+        "sourceCategory": "education",
+        "requiredParts": ["name", "classification", "field"],
+        "startIndex": 0,
+        "requireContiguous": true,
+        "actionTemplate": "{prefix}{section}:{index}:majors"
+      },
+      "search": {
+        "languageQualifierKinds": ["languageTest"],
+        "languageSuffixTemplate": "({language})",
+        "selectionMode": "KEYBOARD_WHEN_IDENTIFIED",
+        "confirmationMode": "CHECKED_OPTION",
+        "closedPopup": "UNMOUNTED",
+        "preferCatalogOptions": true
+      },
+      "address": {
+        "verification": "POSTAL_AND_ADDRESS",
+        "requireClosed": true,
+        "zipIndex": 0,
+        "addressIndex": 1,
+        "detailIndex": 2,
+        "protectExisting": true,
+        "fieldCount": 3,
+        "selectionStrategy": "FIRST_RESULT"
+      },
+      "calendar": {
+        "allowDayFallback": true,
+        "resultMonthPattern": "^\\d{4}\\. ?\\d{2}$",
+        "resultDayPattern": "^\\d{4}\\. ?\\d{2}\\. ?\\d{2}$",
+        "resultSeparatorPattern": "\\. ?",
+        "clearMismatchedNewValue": true,
+        "clearControlCount": 1
+      },
+      "workflow": {
+        "requireAdapterResponse": true,
+        "enforceUniqueEmail": true,
+        "emailCommitDriver": true,
+        "driverFailureLabel": true,
+        "settleEmailSuggestions": true,
+        "verifySettledValues": true
+      },
+      "timeouts": {
+        "defaultMs": 1200,
+        "pollMs": 25,
+        "searchMs": 5000,
+        "navigationMs": 250,
+        "addressCloseMs": 3000
+      },
+      "collection": {
+        "includeSearchOptions": false,
+        "ownedLabelsOnly": true,
+        "revalidateAdapterRows": true
+      },
+      "fingerprint": {
+        "element": "input",
+        "control": "text",
+        "selector": "input[name=\"{name}\"]",
+        "count": 1
+      }
+    }
+  },
+  "actionPlans": {
+    "searchActivate": [
+      {
+        "target": "input",
+        "op": "FOCUS"
+      },
+      {
+        "target": "input",
+        "op": "CLICK"
+      }
+    ],
+    "searchWrite": [
+      {
+        "target": "input",
+        "op": "SET_VALUE",
+        "value": "{value}"
+      },
+      {
+        "target": "input",
+        "op": "EVENT",
+        "event": "input"
+      }
+    ],
+    "searchOpen": [
+      {
+        "target": "input",
+        "op": "KEY",
+        "event": "keydown",
+        "key": "ArrowDown",
+        "code": "ArrowDown"
+      },
+      {
+        "target": "input",
+        "op": "KEY",
+        "event": "keyup",
+        "key": "ArrowDown",
+        "code": "ArrowDown"
+      }
+    ],
+    "searchClose": [
+      {
+        "target": "input",
+        "op": "KEY",
+        "event": "keydown",
+        "key": "Escape"
+      }
+    ],
+    "calendarWrite": [
+      {
+        "target": "input",
+        "op": "SET_VALUE",
+        "value": "{value}"
+      },
+      {
+        "target": "input",
+        "op": "EVENT",
+        "event": "input"
+      },
+      {
+        "target": "input",
+        "op": "EVENT",
+        "event": "change"
+      },
+      {
+        "target": "input",
+        "op": "KEY",
+        "event": "keydown",
+        "key": "Enter",
+        "code": "Enter"
+      },
+      {
+        "target": "input",
+        "op": "KEY",
+        "event": "keyup",
+        "key": "Enter",
+        "code": "Enter"
+      }
+    ],
+    "calendarClear": [
+      {
+        "target": "control",
+        "op": "CLICK"
+      }
+    ],
+    "addressSearch": [
+      {
+        "target": "input",
+        "op": "FOCUS"
+      },
+      {
+        "target": "input",
+        "op": "SET_VALUE",
+        "value": "{value}"
+      },
+      {
+        "target": "input",
+        "op": "EVENT",
+        "event": "input"
+      },
+      {
+        "target": "input",
+        "op": "EVENT",
+        "event": "change"
+      },
+      {
+        "target": "input",
+        "op": "KEY",
+        "event": "keydown",
+        "key": "Enter",
+        "code": "Enter"
+      }
+    ],
+    "searchReopen": [
+      {
+        "target": "input",
+        "op": "FOCUS"
+      },
+      {
+        "target": "input",
+        "op": "CLICK"
+      }
+    ]
+  },
+  "scopedSearches": [
+    {
+      "name": "basicInformation.nationalityCode",
+      "label": "국적",
+      "excludeRows": true,
+      "count": 1,
+      "navigationLimit": 256,
+      "key": "personal.personal.nationality"
+    }
+  ],
+  "failureScope": {
+    "selector": "[data-scope=\"field\"][data-part=\"root\"][role=\"group\"]",
+    "memberSelector": "[name]",
+    "memberCount": 1
+  },
+  "addressStructure": {
+    "labelCount": 1,
+    "labelRead": "REMOVE_PREFIX",
+    "resultLabelCount": 1
+  },
+  "completions": [
+    {
+      "key": "contact.contact.email",
+      "name": "basicInformation.email",
+      "enabled": true,
+      "stage": 0,
+      "failureMessage": "입력 후 완료 조건을 확인하지 못했습니다.",
+      "plan": "completion"
+    }
+  ],
+  "syntheticFields": [
+    {
+      "selector": "input[role=\"combobox\"][data-scope=\"combobox\"][data-part=\"input\"]:not([name])",
+      "labels": ["이메일주소", "이메일"],
+      "name": "basicInformation.email",
+      "excludeRows": true,
+      "count": 1
+    }
+  ],
+  "capabilities": [
+    "commit",
+    "search",
+    "calendar",
+    "address",
+    "nestedRepeat",
+    "pairedNumber",
+    "employment"
+  ],
+  "writeRecipes": [
+    {
+      "name": "basicInformation.email",
+      "key": "contact.contact.email",
+      "command": "SET_TEXT",
+      "inputTypes": ["text", "email"],
+      "stage": 0,
+      "plan": [
+        {
+          "op": "IF",
+          "condition": [
+            {
+              "target": "input",
+              "read": "VALUE",
+              "equals": "{value}"
+            }
+          ],
+          "then": [
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        },
+        {
+          "op": "ASSERT",
+          "condition": [
+            {
+              "target": "input",
+              "read": "VALUE",
+              "equals": ""
+            }
+          ]
+        },
+        {
+          "op": "DOM",
+          "plan": [
+            {
+              "op": "SET_VALUE",
+              "target": "input",
+              "value": "{value}"
+            }
+          ]
+        },
+        {
+          "op": "BRIDGE",
+          "name": "mainCommit"
+        },
+        {
+          "op": "ASSERT",
+          "condition": [
+            {
+              "target": "input",
+              "read": "VALUE",
+              "equals": "{value}"
+            }
+          ]
+        },
+        {
+          "op": "RETURN",
+          "value": true
+        }
+      ]
+    }
+  ],
+  "searchFlows": {
+    "afterSelection": "afterSelection",
+    "cleanup": "cleanup",
+    "program": {
+      "targets": {},
+      "conditions": {},
+      "plans": {
+        "afterSelection": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "IF",
+              "condition": {
+                "value": "{success}",
+                "equals": "true"
+              },
+              "then": [
+                {
+                  "op": "RETURN",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "all": [
+                  {
+                    "value": "{selectionMode}",
+                    "equals": "KEYBOARD_WHEN_IDENTIFIED"
+                  },
+                  {
+                    "not": {
+                      "value": "{optionId}",
+                      "equals": ""
+                    }
+                  },
+                  {
+                    "target": "input",
+                    "read": "VALUE",
+                    "equals": "{expected}"
+                  },
+                  {
+                    "target": "input",
+                    "read": "ATTRIBUTE",
+                    "equals": "false",
+                    "name": "aria-expanded"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "op": "AUTHORIZE"
+                },
+                {
+                  "op": "ASSERT",
+                  "condition": {
+                    "all": [
+                      {
+                        "value": "{selectionMode}",
+                        "equals": "KEYBOARD_WHEN_IDENTIFIED"
+                      },
+                      {
+                        "not": {
+                          "value": "{optionId}",
+                          "equals": ""
+                        }
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{expected}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "ATTRIBUTE",
+                        "equals": "false",
+                        "name": "aria-expanded"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "DOM",
+                  "plan": [
+                    {
+                      "op": "KEY",
+                      "target": "input",
+                      "event": "keydown",
+                      "key": "ArrowDown",
+                      "code": "ArrowDown"
+                    },
+                    {
+                      "op": "KEY",
+                      "target": "input",
+                      "event": "keyup",
+                      "key": "ArrowDown",
+                      "code": "ArrowDown"
+                    }
+                  ]
+                },
+                {
+                  "op": "WAIT",
+                  "condition": {
+                    "fact": "selectionConfirmed",
+                    "equals": true
+                  },
+                  "timeoutMs": 5000,
+                  "pollMs": 25
+                },
+                {
+                  "op": "RETURN",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": false
+            }
+          ]
+        },
+        "cleanup": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "IF",
+              "condition": {
+                "all": [
+                  {
+                    "value": "{attempted}",
+                    "equals": "true"
+                  },
+                  {
+                    "value": "{success}",
+                    "equals": "false"
+                  },
+                  {
+                    "any": [
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{desired}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{expected}"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "op": "AUTHORIZE"
+                },
+                {
+                  "op": "ASSERT",
+                  "condition": {
+                    "all": [
+                      {
+                        "value": "{attempted}",
+                        "equals": "true"
+                      },
+                      {
+                        "value": "{success}",
+                        "equals": "false"
+                      },
+                      {
+                        "any": [
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{desired}"
+                          },
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{expected}"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "DOM",
+                  "plan": [
+                    {
+                      "op": "SET_VALUE",
+                      "target": "input",
+                      "value": "{original}"
+                    },
+                    {
+                      "op": "EVENT",
+                      "target": "input",
+                      "event": "input"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "IF",
+              "condition": {
+                "all": [
+                  {
+                    "target": "input",
+                    "read": "ATTRIBUTE",
+                    "equals": "true",
+                    "name": "aria-expanded"
+                  },
+                  {
+                    "any": [
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{original}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{expected}"
+                      },
+                      {
+                        "target": "input",
+                        "read": "VALUE",
+                        "equals": "{desired}"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "op": "AUTHORIZE"
+                },
+                {
+                  "op": "ASSERT",
+                  "condition": {
+                    "all": [
+                      {
+                        "target": "input",
+                        "read": "ATTRIBUTE",
+                        "equals": "true",
+                        "name": "aria-expanded"
+                      },
+                      {
+                        "any": [
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{original}"
+                          },
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{expected}"
+                          },
+                          {
+                            "target": "input",
+                            "read": "VALUE",
+                            "equals": "{desired}"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "op": "DOM",
+                  "plan": [
+                    {
+                      "target": "input",
+                      "op": "KEY",
+                      "event": "keydown",
+                      "key": "Escape"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        },
+        "retainedCompletion": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "DOM",
+              "plan": [
+                {
+                  "target": "input",
+                  "op": "KEY",
+                  "event": "keydown",
+                  "key": "Escape"
+                }
+              ]
+            },
+            {
+              "op": "WAIT",
+              "condition": {
+                "all": [
+                  {
+                    "target": "input",
+                    "read": "ATTRIBUTE",
+                    "name": "aria-expanded",
+                    "equals": "false"
+                  },
+                  {
+                    "any": [
+                      {
+                        "fact": "linkedPopupMissing",
+                        "equals": true
+                      },
+                      {
+                        "all": [
+                          {
+                            "value": "{closedPopup}",
+                            "equals": "HIDDEN_OR_UNMOUNTED"
+                          },
+                          {
+                            "fact": "linkedPopupsHidden",
+                            "equals": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timeoutMs": 1200,
+              "pollMs": 25
+            },
+            {
+              "op": "DOM",
+              "plan": [
+                {
+                  "op": "BLUR",
+                  "target": "input"
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "retainedCompletion": "retainedCompletion"
+  },
+  "addressCleanup": {
+    "entrypoint": "cleanup",
+    "program": {
+      "targets": {
+        "close": {
+          "from": "dialog",
+          "relation": "QUERY",
+          "selector": "[data-scope=\"dialog\"][data-part=\"close-trigger\"]",
+          "count": 1
+        }
+      },
+      "conditions": {},
+      "plans": {
+        "cleanup": {
+          "realm": "LOCAL",
+          "timeoutMs": 10000,
+          "steps": [
+            {
+              "op": "IF",
+              "condition": {
+                "value": "{requireClosed}",
+                "equals": "true"
+              },
+              "then": [
+                {
+                  "op": "IF",
+                  "condition": {
+                    "all": [
+                      {
+                        "target": "dialog",
+                        "read": "MATCHES",
+                        "equals": "true",
+                        "name": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]"
+                      },
+                      {
+                        "target": "close",
+                        "read": "EXISTS",
+                        "equals": "true"
+                      }
+                    ]
+                  },
+                  "then": [
+                    {
+                      "op": "DOM",
+                      "plan": [
+                        {
+                          "op": "CLICK",
+                          "target": "close"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "WAIT",
+                  "condition": {
+                    "all": [
+                      {
+                        "not": {
+                          "target": "dialog",
+                          "read": "MATCHES",
+                          "equals": "true",
+                          "name": "[role=\"dialog\"][data-scope=\"dialog\"][data-part=\"content\"][data-state=\"open\"]"
+                        }
+                      },
+                      {
+                        "fact": "fieldsInteractive",
+                        "equals": true
+                      }
+                    ]
+                  },
+                  "timeoutMs": 3000,
+                  "pollMs": 25
+                }
+              ]
+            },
+            {
+              "op": "RETURN",
+              "value": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}

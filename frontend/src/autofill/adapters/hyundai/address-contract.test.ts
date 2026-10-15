@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { expect, it } from "vitest";
 import { validatePreparationResponse } from "../../api/validate-response";
 const request = {

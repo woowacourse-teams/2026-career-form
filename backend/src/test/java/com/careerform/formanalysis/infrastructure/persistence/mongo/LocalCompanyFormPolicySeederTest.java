@@ -19,7 +19,7 @@ class LocalCompanyFormPolicySeederTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
-        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).insert(captured.capture());
         var sk = captured.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("sk")).findFirst().orElseThrow();
         for (var entry : java.util.Map.of(
@@ -55,7 +55,7 @@ class LocalCompanyFormPolicySeederTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
-        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).insert(captured.capture());
         var sk = captured.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("sk")).findFirst().orElseThrow();
         for (var entry : java.util.Map.of(
@@ -83,13 +83,13 @@ class LocalCompanyFormPolicySeederTest {
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
 
         org.mockito.Mockito.verify(companies, org.mockito.Mockito.times(2))
-            .save(org.mockito.Mockito.any(FormAnalysisCompanyDocument.class));
+            .insert(org.mockito.Mockito.any(FormAnalysisCompanyDocument.class));
         org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2))
-            .save(org.mockito.Mockito.any(FormAnalysisPolicyDocument.class));
+            .insert(org.mockito.Mockito.any(FormAnalysisPolicyDocument.class));
     }
 
     @Test
-    @DisplayName("SK 공통 구조 v25와 직무별 option lookup을 결정적으로 저장한다")
+    @DisplayName("SK 공통 구조 v30와 직무별 option lookup을 결정적으로 저장한다")
     void overwritesTheDeterministicSkSeedOnEveryRun() throws Exception {
         FormAnalysisCompanyMongoRepository companies = mock(
             FormAnalysisCompanyMongoRepository.class
@@ -111,11 +111,11 @@ class LocalCompanyFormPolicySeederTest {
         seeder.run(null);
 
         InOrder order = inOrder(policies, companies);
-        order.verify(policies).save(policy.capture());
-        order.verify(companies).save(company.capture());
-        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v8");
+        order.verify(policies).insert(policy.capture());
+        order.verify(companies).insert(company.capture());
+        assertThat(policy.getValue().id()).isEqualTo("sk-policy-v30");
         assertThat(policy.getValue().companyKey()).isEqualTo("sk");
-        assertThat(policy.getValue().version()).isEqualTo(25);
+        assertThat(policy.getValue().version()).isEqualTo(30);
         assertThat(policy.getValue().preparationFingerprint().requiredSectionIds())
             .containsExactly("section-1");
         assertThat(policy.getValue().preparationFingerprint().requiredActions())
@@ -271,7 +271,7 @@ class LocalCompanyFormPolicySeederTest {
             "sk",
             "www.skcareers.com",
             java.util.List.of("/Application/Index/"),
-            25
+            30
         ));
     }
 
@@ -282,7 +282,7 @@ class LocalCompanyFormPolicySeederTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var captured = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalCompanyFormPolicySeeder(companies, policies).run(null);
-        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).save(captured.capture());
+        org.mockito.Mockito.verify(policies, org.mockito.Mockito.times(2)).insert(captured.capture());
         var sk = captured.getAllValues().stream()
             .filter(policy -> policy.companyKey().equals("sk")).findFirst().orElseThrow();
 

@@ -174,18 +174,27 @@ it("skips only a conditional select without a matching option and its controlled
   ).toEqual(["gender", "givenC", "independent"]);
 });
 
-it("keeps the previous behavior when a conditional select cannot be confirmed after writing", async () => {
+it("continues independent fields while deferring an unconfirmed conditional select", async () => {
   const { stages, results, progress, domNameOf } =
     await analyzeConditionalSelects("retained-unconfirmed");
 
   expect(stages.at(-1)).toBe("result");
   expect(value("familyA")).toBe("");
-  expect(value("independent")).toBe("");
-  expect(progress.filter((entry) => entry.status === "written")).toEqual([]);
+  expect(value("independent")).toBe("사용자");
+  expect(
+    progress.find(
+      (entry) =>
+        entry.candidateId !== undefined &&
+        domNameOf(entry.candidateId) === "independent",
+    ),
+  ).toMatchObject({ status: "written" });
+  expect(
+    results.find((result) => domNameOf(result.candidateId) === "independent"),
+  ).toMatchObject({ status: "written" });
   expect(
     results.find((result) => domNameOf(result.candidateId) === "nationality"),
   ).toMatchObject({
     status: "skipped",
-    code: "RETAINED_VALUE_UNCONFIRMED",
+    failureCode: "ROW_SEARCH_UNCONFIRMED",
   });
 });

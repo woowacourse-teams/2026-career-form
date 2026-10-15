@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -69,6 +72,7 @@ function response(
   mappingStatus: "ADAPTER_VERIFIED" | "LLM_SUGGESTED" = "ADAPTER_VERIFIED",
 ): FieldsAnalyzeResponse {
   return {
+    executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER" as const,
     analysisStatus: "COMPLETE" as const,
@@ -245,6 +249,8 @@ function setup({
   };
   const requests: FieldsAnalyzeRequest[] = [];
   const client: AnalysisApiClient = {
+    loadExecutionPolicy: async () =>
+      host === "www.skcareers.com" ? fixturePolicy("sk") : undefined,
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -253,7 +259,11 @@ function setup({
     }),
     analyzeFields: async (request) => {
       requests.push(request);
-      return response(request, overrides, mappingStatus);
+      return {
+        ...response(request, overrides, mappingStatus),
+        executionPolicy:
+          host === "www.skcareers.com" ? fixturePolicy("sk") : undefined,
+      };
     },
   };
   render(
@@ -271,7 +281,7 @@ function setup({
   };
 }
 
-it("prioritizes canonical SK status values through 0→1 and 1→0, then fills only reanalyzed visible details", async () => {
+it("applies SK status drivers once then refreshes to fill revealed details", async () => {
   const run = setup();
   await screen.findByRole("heading", { name: "기입 결과" });
   expect(
@@ -296,7 +306,7 @@ it("prioritizes canonical SK status values through 0→1 and 1→0, then fills o
   ).toBe("keep");
   expect(run.veteranChanges()).toBe(1);
   expect(run.disabilityChanges()).toBe(1);
-  expect(run.requests).toHaveLength(3);
+  expect(run.requests).toHaveLength(2);
   expect(
     allFields(run.requests.at(-1)!).map((field) => field.domName),
   ).toContain("prsVeteranBenefitRelation");
@@ -307,7 +317,7 @@ it("prioritizes canonical SK status values through 0→1 and 1→0, then fills o
   ).not.toContain("prsDisabledType");
 });
 
-it("supports legacy 대상/비대상 values and writes SK disability grade/type codes once", async () => {
+it("applies legacy status values and fills changed disability controls after refresh", async () => {
   const run = setup({
     veteran: "비대상",
     disability: "대상",

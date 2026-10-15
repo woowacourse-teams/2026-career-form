@@ -6,6 +6,9 @@ import {
   type SingleProfileCategoryId,
 } from "../model";
 import { mergeImportSelection } from "./merge";
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+
+usePolicyFixture("greeting");
 
 // Independent cases from GreetingCompanyFormPolicyFactory: source suffix,
 // destination, source value, expected stored value. A removed/misdirected
@@ -126,11 +129,7 @@ admissionType|transferStatus|편입|해당`,
     educationCommon +
       `\ndegreeLevel|degreeLevel|석사
 admissionType|admissionType|입학
-majors.0.majorClassification|majorClassification|주전공
-majors.0.majorField|majorField|공학계열
-majors.1|additionalMajorName|합성추가전공
-majors.1.majorClassification|additionalMajorClassification|복수전공
-majors.1.majorField|additionalMajorField|인문계열`,
+majors.0.majorField|majorField|공학계열`,
   ],
 ] as const;
 const cases = [...groups, ...educationGroups].flatMap(

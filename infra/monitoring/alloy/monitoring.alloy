@@ -33,3 +33,81 @@ prometheus.remote_write "central" {
     }
   }
 }
+
+// Only the authenticated ingest proxy publishes this receiver.
+otelcol.receiver.otlp "traces" {
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  output {
+    traces = [otelcol.processor.filter.safe_traces.input]
+  }
+}
+
+// Drop payloads on transformation errors rather than exporting unsanitized spans.
+otelcol.processor.transform "safe_traces" {
+  error_mode = "propagate"
+  trace_statements {
+    context = "resource"
+    statements = [
+      `keep_keys(attributes, ["service.name", "deployment.environment.name"])`,
+    ]
+  }
+  trace_statements {
+    context = "scope"
+    statements = [`keep_keys(attributes, [])`]
+  }
+  trace_statements {
+    context = "span"
+    statements = [
+      `keep_keys(attributes, ["http.request.method", "http.response.status_code", "http.route", "db.system", "db.system.name", "db.operation", "db.operation.name", "code.function", "code.namespace", "code.function.name", "error.type"])`,
+      `set(status.message, "")`,
+      `set(name, "internal")`,
+      `set(name, "HTTP") where attributes["http.request.method"] != nil`,
+      `set(name, Concat([attributes["http.request.method"], attributes["http.route"]], " ")) where attributes["http.request.method"] != nil and attributes["http.route"] != nil`,
+      `set(name, attributes["db.operation"]) where attributes["db.operation"] != nil`,
+      `set(name, attributes["db.operation.name"]) where attributes["db.operation.name"] != nil`,
+      `set(name, Concat([attributes["code.namespace"], attributes["code.function"]], ".")) where attributes["code.namespace"] != nil and attributes["code.function"] != nil`,
+      `set(name, attributes["code.function.name"]) where attributes["code.function.name"] != nil`,
+    ]
+  }
+  output {
+    traces = [otelcol.processor.batch.traces.input]
+  }
+}
+
+otelcol.processor.batch "traces" {
+  send_batch_size = 128
+  send_batch_max_size = 256
+  timeout = "1s"
+  output {
+    traces = [otelcol.exporter.otlphttp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+    timeout = "3s"
+  }
+  sending_queue {
+    queue_size = 32
+    num_consumers = 1
+  }
+  retry_on_failure {
+    max_elapsed_time = "10s"
+  }
+}
+
+// Span links are not needed for the initial HTTP/DB tree. Drop linked spans
+// rather than retaining arbitrary link attributes; remove all event payloads.
+otelcol.processor.filter "safe_traces" {
+  error_mode = "propagate"
+  traces {
+    span = ["Len(links) > 0"]
+    spanevent = ["true"]
+  }
+  output {
+    traces = [otelcol.processor.transform.safe_traces.input]
+  }
+}

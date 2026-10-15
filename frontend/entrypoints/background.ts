@@ -1,3 +1,4 @@
+import { loadPolicyForSender } from "../src/autofill/policy/background";
 import { createProfileWriteHandler } from "../src/storage/profile-write-handler";
 import { installPostingBackground } from "../src/job-postings/background";
 import { browser } from "wxt/browser";
@@ -48,6 +49,8 @@ export default defineBackground(() => {
     storage: browser.storage.local,
   });
   browser.runtime.onMessage.addListener((message, sender) => {
+    if (message?.type === "AUTOFILL_LOAD_EXECUTION_POLICY")
+      return loadPolicyForSender(message, sender);
     const profileResponse = handleProfileWrite(message, sender);
     if (profileResponse !== undefined) return profileResponse;
     const postingResponse = handlePostings(message, sender);

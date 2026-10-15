@@ -1,3 +1,8 @@
+import { startLocalTiming } from "../debug/local-timing";
+import {
+  validExecutionPolicy,
+  type ExecutionPolicy,
+} from "../workflow/execution-policy";
 import type {
   InteractionDecisionRequest,
   InteractionDecisionResponse,
@@ -59,6 +64,25 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     );
   }
 
+  async loadExecutionPolicy(
+    site: import("./types").SiteDescriptor,
+  ): Promise<ExecutionPolicy | undefined> {
+    const response = await this.request({
+      type: "AUTOFILL_LOAD_EXECUTION_POLICY",
+      payload: site,
+    });
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("executionPolicy" in response)
+    )
+      throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
+    if (response.executionPolicy === null) return undefined;
+    if (!validExecutionPolicy(response.executionPolicy))
+      throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
+    return response.executionPolicy;
+  }
+
   async decideInteractions(
     request: InteractionDecisionRequest,
   ): Promise<InteractionDecisionResponse> {
@@ -106,6 +130,7 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     payload: unknown;
   }): Promise<unknown> {
     let envelope: unknown;
+    const finishTiming = startLocalTiming("api", { type: message.type });
     try {
       envelope = await this.sendMessage({
         ...message,
@@ -114,6 +139,8 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     } catch (error) {
       debugApiMessage(message, { error });
       throw new AnalysisServiceError(errorMessages.NETWORK);
+    } finally {
+      finishTiming();
     }
     debugApiMessage(message, {
       envelope,

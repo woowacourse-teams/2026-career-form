@@ -6,6 +6,9 @@ import {
   universityPrefix,
   universityRow,
 } from "./greeting-import-probe.test-fixtures";
+import { usePolicyFixture } from "../test/fixtures/execution-policy";
+
+usePolicyFixture("greeting");
 
 const email = "basicInformation.email";
 const phone = "basicInformation.phoneNumber.nationalNumber";

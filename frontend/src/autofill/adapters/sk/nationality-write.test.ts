@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { FieldsAnalyzeResponse } from "../../api/types";
@@ -21,6 +24,7 @@ function nationalityAnalysis(
     (section) => section.fields,
   )[0]!;
   return {
+executionPolicy: fixturePolicy("sk"),
     snapshotId: snapshot.request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",

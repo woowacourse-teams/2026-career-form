@@ -54,11 +54,7 @@ export const greetingRepeatedMappings: Readonly<
     fields: {
       ...education,
       admissionType: "admissionType",
-      "majors.0.majorClassification": "majorClassification",
       "majors.0.majorField": "majorField",
-      "majors.1": "additionalMajorName",
-      "majors.1.majorClassification": "additionalMajorClassification",
-      "majors.1.majorField": "additionalMajorField",
     },
   },
   highSchool: {

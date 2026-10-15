@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { render, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, expect, it } from "vitest";
@@ -25,6 +28,7 @@ function analysis(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
       section.items?.flatMap((item) => item.fields) ?? section.fields,
   );
   return {
+executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -96,6 +100,7 @@ it("skips only the exam row whose language selection fails", async () => {
     },
   ];
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",

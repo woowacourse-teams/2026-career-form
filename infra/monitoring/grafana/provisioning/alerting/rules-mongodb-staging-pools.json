@@ -460,7 +460,7 @@
           }
         },
         {
-          "uid": "cf-db-staging-db-checkout-timeout-warning",
+          "uid": "cf-db-stg-checkout-timeout-warning",
           "title": "[staging] 최근 5분 연결 획득 timeout (건) (warning)",
           "condition": "B",
           "data": [
@@ -530,7 +530,7 @@
           }
         },
         {
-          "uid": "cf-db-staging-db-checkout-timeout-critical",
+          "uid": "cf-db-stg-checkout-timeout-critical",
           "title": "[staging] 최근 5분 연결 획득 timeout (건) (critical)",
           "condition": "B",
           "data": [

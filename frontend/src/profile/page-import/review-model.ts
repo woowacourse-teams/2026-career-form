@@ -15,6 +15,7 @@ import {
   destination,
   fieldLabel,
   groupKey,
+  IMPORT_SENSITIVE_CATEGORIES,
   NAME_GROUPS,
 } from "./review-fields";
 import { findInvalidImportRows } from "./review-selection";
@@ -237,7 +238,7 @@ function fieldRow(
       category.repeatable ? field.label : fieldLabel(candidate),
     ),
     value: date.value,
-    sensitive: category.sensitive,
+    sensitive: IMPORT_SENSITIVE_CATEGORIES.has(category.id),
     field,
   };
   if (!category.repeatable) {

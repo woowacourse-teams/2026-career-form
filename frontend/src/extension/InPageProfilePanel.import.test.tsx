@@ -12,6 +12,9 @@ import { createEmptyProfile } from "../profile/model";
 import type { ProfileRepository } from "../profile/profile-repository";
 import { greetingImportFixture } from "../research/greeting-import-probe.test-fixtures";
 import { createApiClient } from "../autofill-demo/AutofillOverlay.test-fixtures";
+import { usePolicyFixture } from "../test/fixtures/execution-policy";
+
+usePolicyFixture("greeting");
 
 afterEach(() => {
   cleanup();

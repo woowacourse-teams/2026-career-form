@@ -24,8 +24,18 @@ public record FormAnalysisPolicyDocument(
     PreparationFingerprint preparationFingerprint,
     FieldsFingerprint fieldsFingerprint,
     List<ActionRule> actionRules,
-    List<FieldRule> fieldRules
+    List<FieldRule> fieldRules,
+    com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy
 ) {
+
+    public FormAnalysisPolicyDocument(String id, String companyKey, long version,
+        PreparationFingerprint preparationFingerprint, FieldsFingerprint fieldsFingerprint,
+        List<ActionRule> actionRules, List<FieldRule> fieldRules) {
+        this(id, companyKey, version, preparationFingerprint, fieldsFingerprint, actionRules, fieldRules, null);
+    }
+    public FormAnalysisPolicyDocument withExecutionPolicy(com.careerform.formanalysis.dto.ExecutionPolicy policy) {
+        return new FormAnalysisPolicyDocument(id, companyKey, version, preparationFingerprint, fieldsFingerprint, actionRules, fieldRules, policy);
+    }
 
     public FormAnalysisPolicyDocument {
         actionRules = actionRules == null ? null : List.copyOf(actionRules);

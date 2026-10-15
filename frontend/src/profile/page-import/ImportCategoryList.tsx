@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { PROFILE_CATEGORIES } from "../field-definitions";
+import { IMPORT_SENSITIVE_CATEGORIES } from "./review-fields";
 import {
   isSelectable,
   plainLabel,
@@ -221,6 +222,7 @@ function Category({
   const [showSame, setShowSame] = useState(false);
   const definition = PROFILE_CATEGORIES.find((item) => item.id === categoryId)!;
   const label = plainLabel(definition.label);
+  const sensitive = IMPORT_SENSITIVE_CATEGORIES.has(categoryId);
   const same = rows.filter((row) => row.status === "same");
   const visible = rows.filter((row) => showSame || row.status !== "same");
   const changed = rows.filter((row) => row.status === "changed").length;
@@ -241,13 +243,11 @@ function Category({
         >
           <b>
             {label}
-            {definition.sensitive && (
-              <span className={styles.tagWarn}>민감 정보</span>
-            )}
+            {sensitive && <span className={styles.tagWarn}>민감 정보</span>}
             {changed > 0 && <span className={styles.tag}>변경 {changed}</span>}
             {pending && <span className={styles.tagWarn}>확인 필요</span>}
           </b>
-          <span>{categoryNote(rows, shared.chosen, definition.sensitive)}</span>
+          <span>{categoryNote(rows, shared.chosen, sensitive)}</span>
         </button>
         <Switch
           rows={rows}

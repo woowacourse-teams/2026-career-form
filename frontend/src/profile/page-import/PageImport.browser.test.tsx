@@ -1,12 +1,17 @@
 import { createRoot, type Root } from "react-dom/client";
 import { within } from "@testing-library/dom";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
 import { greetingImportFixture } from "../../research/greeting-import-probe.test-fixtures";
 import { createEmptyProfile, type Profile } from "../model";
 import type { ProfileRepository } from "../profile-repository";
 import { PageImport } from "./PageImport";
 import { readGreetingImport } from "./reader";
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "../../autofill/workflow/execution-policy";
+
+beforeEach(() => installExecutionPolicy(document, fixturePolicy("greeting")));
+afterEach(() => installExecutionPolicy(document));
 
 const mounts: { root: Root; fixture: HTMLElement; host: HTMLElement }[] = [];
 

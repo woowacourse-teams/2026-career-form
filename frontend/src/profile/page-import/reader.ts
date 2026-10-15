@@ -1,11 +1,11 @@
-import { resolveDocumentCompany } from "../../autofill/adapters/company";
-import { greetingBasicControls } from "../../autofill/adapters/greeting/fingerprint";
+import { componentBasicControls } from "../../autofill/policy/components/fingerprint";
 import {
-  greetingSyntheticDomName,
-  greetingRadioGroupDomName,
-  greetingFieldLabel,
-} from "../../autofill/adapters/greeting/collection";
-import { greetingSections } from "../../autofill/adapters/greeting/sections";
+  componentFieldLabel,
+  componentRadioGroupDomName,
+  componentSyntheticDomName,
+} from "../../autofill/policy/components/collection";
+import { componentSections } from "../../autofill/policy/components/sections";
+import { executionPolicy } from "../../autofill/workflow/execution-policy";
 import { formatProfileDate } from "../../autofill/profile/date-format";
 import { standardValueAliases } from "../standard-values";
 import type { ProfileIdentity, ProfileCategoryId } from "../model";
@@ -15,6 +15,7 @@ import {
   greetingSensitiveMappings,
   importDefinition,
 } from "./greeting-import-mappings";
+import { IMPORT_SENSITIVE_CATEGORIES } from "./review-fields";
 
 export interface ImportCandidate {
   readonly source: string;
@@ -38,19 +39,20 @@ interface ImportField {
   kind?: string;
   reviewKind?: "koreanName" | "englishName";
 }
+type Sections = ReturnType<typeof componentSections>;
 const ROW = '[data-scope="accordion"][data-part="item"]';
 const CONTROLS =
   'input,textarea,select,button[name],[data-scope="toggle-group"][role="radiogroup"]';
-function namedSource(element: Element) {
+function namedSource(element: Element, sections: Sections) {
   return (
     element.getAttribute("name") ||
-    greetingSyntheticDomName(element) ||
-    greetingRadioGroupDomName(element) ||
-    importRowRadioName(element)
+    componentSyntheticDomName(element) ||
+    componentRadioGroupDomName(element) ||
+    importRowRadioName(element, sections)
   );
 }
-function rowPath(name: string) {
-  for (const [kind, section] of Object.entries(greetingSections)) {
+function rowPath(name: string, sections: Sections) {
+  for (const [kind, section] of Object.entries(sections)) {
     const base = section.prefix + ".";
     if (!name.startsWith(base)) continue;
     const tail = name.slice(base.length);
@@ -67,7 +69,10 @@ function rowPath(name: string) {
   }
 }
 /** The same known toggle signatures, with import-local row failure isolation. */
-function importRowRadioName(element: Element): string | undefined {
+function importRowRadioName(
+  element: Element,
+  sections: Sections,
+): string | undefined {
   if (
     !element.matches(
       '[data-scope="toggle-group"][data-part="root"][role="radiogroup"]',
@@ -78,7 +83,7 @@ function importRowRadioName(element: Element): string | undefined {
   if (!row) return undefined;
   const paths = [...row.querySelectorAll("[name]")]
     .filter((control) => control.closest(ROW) === row)
-    .map((control) => rowPath(control.getAttribute("name")!))
+    .map((control) => rowPath(control.getAttribute("name")!, sections))
     .filter((path) => path !== undefined);
   const prefix = paths[0]?.prefix;
   if (
@@ -87,7 +92,7 @@ function importRowRadioName(element: Element): string | undefined {
     !["universities", "graduateSchools"].includes(paths[0].kind)
   )
     return undefined;
-  const label = greetingFieldLabel(element as HTMLElement);
+  const label = componentFieldLabel(element as HTMLElement);
   const signatures: Record<string, { suffix: string; options: string[] }> = {
     학위구분: { suffix: "degreeLevel", options: ["전문학사", "학사"] },
     입학구분: { suffix: "admissionType", options: ["입학", "편입"] },
@@ -115,7 +120,7 @@ function ownMapping(
 ): string | undefined {
   return Object.hasOwn(map, key) ? map[key] : undefined;
 }
-function mapping(source: string): ImportField {
+function mapping(source: string, sections: Sections): ImportField {
   if (source === "basicInformation.name") return { source, kind: "name" };
   if (source === "basicInformation.englishName")
     return { source, kind: "name", reviewKind: "englishName" };
@@ -127,7 +132,7 @@ function mapping(source: string): ImportField {
           source.slice("militaryServicePreferentialEmploymentStatus.".length),
         )
       : undefined);
-  const path = rowPath(source);
+  const path = rowPath(source, sections);
   const group = path && greetingRepeatedMappings[path.kind];
   if (group && ownMapping(group.fields, path!.suffix))
     profileFieldKey = `${group.category}.${group.section}.${group.fields[path!.suffix]}`;
@@ -163,14 +168,21 @@ function visible(element: Element) {
   }
   return true;
 }
+/**
+ * Greeting forms are recognized only through the installed component execution
+ * policy (DB-managed since #212); without it nothing is guessed.
+ */
+function policySections(document: Document): Sections | undefined {
+  if (!executionPolicy(document)?.componentPolicy) return undefined;
+  if (!componentBasicControls(document)) return undefined;
+  return componentSections(document);
+}
 /** Reads local controls independently; a malformed field never aborts its siblings. */
 export function readGreetingImport(
   document: Document,
 ): readonly ImportCandidate[] {
-  if (
-    !greetingBasicControls(document) ||
-    resolveDocumentCompany(document) !== "greeting"
-  )
+  const sections = policySections(document);
+  if (!sections)
     return [
       {
         source: "document",
@@ -184,7 +196,7 @@ export function readGreetingImport(
   for (const element of document.querySelectorAll(CONTROLS)) {
     let source: string | undefined;
     try {
-      source = namedSource(element) ?? undefined;
+      source = namedSource(element, sections) ?? undefined;
     } catch {
       source = `unmapped-control:${unnamedIndex++}`;
       identificationFailures.add(source);
@@ -202,7 +214,7 @@ export function readGreetingImport(
     if (!sources.has(source)) sources.set(source, []);
   // Preserve missing date diagnostics on recognized university rows.
   for (const source of [...sources.keys()]) {
-    const path = rowPath(source);
+    const path = rowPath(source, sections);
     if (path?.kind === "universities")
       for (const suffix of [
         "schoolName",
@@ -215,14 +227,14 @@ export function readGreetingImport(
   }
   const results: ImportCandidate[] = [];
   for (const [source, elements] of sources) {
-    let field = mapping(source);
+    let field = mapping(source, sections);
     if (identificationFailures.has(source)) {
       results.push(unsupported(field, "read_failed"));
       continue;
     }
     try {
-      field = majorMapping(field, sources);
-      results.push(readField(field, elements, sources));
+      field = majorMapping(field, sources, sections);
+      results.push(readField(field, elements, sources, sections));
     } catch {
       results.push(unsupported(field, "read_failed"));
     }
@@ -231,7 +243,7 @@ export function readGreetingImport(
   // Other readable fields (including dates or descriptions without a name) keep
   // the row meaningful; an unreadable sibling must not discard those fields.
   const defaultOnly = (candidate: ImportCandidate) => {
-    const path = rowPath(candidate.source);
+    const path = rowPath(candidate.source, sections);
     return (
       (path?.kind === "graduateSchools" &&
         path.suffix === "majors.0.majorClassification" &&
@@ -250,16 +262,19 @@ export function readGreetingImport(
         (candidate) =>
           candidate.status !== "unsupported" && !defaultOnly(candidate),
       )
-      .map((candidate) => rowPath(candidate.source)?.prefix)
+      .map((candidate) => rowPath(candidate.source, sections)?.prefix)
       .filter((prefix) => prefix !== undefined),
   );
   for (let index = 0; index < results.length; index++) {
     const candidate = results[index];
     if (
       defaultOnly(candidate) &&
-      !meaningfulRows.has(rowPath(candidate.source)!.prefix)
+      !meaningfulRows.has(rowPath(candidate.source, sections)!.prefix)
     )
-      results[index] = unsupported(mapping(candidate.source), "empty");
+      results[index] = unsupported(
+        mapping(candidate.source, sections),
+        "empty",
+      );
   }
   const destinations = new Map<string, number>();
   for (const candidate of results) {
@@ -291,25 +306,41 @@ export function readGreetingImport(
     })
     .sort((a, b) => (a.rowIndex ?? -1) - (b.rowIndex ?? -1));
 }
+const MAJOR_SECTIONS: Readonly<Record<string, string>> = {
+  universities: "education.university.",
+  graduateSchools: "education.graduateSchool.",
+};
+const MAJOR_PARTS: Readonly<
+  Record<string, { name: string; status: string; field: string }>
+> = {
+  복수전공: {
+    name: "additionalMajorName",
+    status: "doubleMajorStatus",
+    field: "additionalMajorField",
+  },
+  부전공: { name: "minorName", status: "minorStatus", field: "minorField" },
+};
+/** Additional majors are identified by their visible classification, never by index. */
 function majorMapping(
   field: ImportField,
   sources: Map<string, Element[]>,
+  sections: Sections,
 ): ImportField {
-  const path = rowPath(field.source);
+  const path = rowPath(field.source, sections);
+  const target = path && ownMapping(MAJOR_SECTIONS, path.kind);
   const match =
-    path?.kind === "universities" &&
-    /^majors\.([1-9]\d*)(\.majorClassification)?$/.exec(path.suffix);
-  if (!match || !path) return field;
+    target &&
+    /^majors\.([1-9]\d*)(?:\.(majorClassification|majorField))?$/.exec(
+      path.suffix,
+    );
+  if (!match || !path || !target) return field;
   const base = path.prefix + ".majors." + match[1];
   const controls = sources.get(base + ".majorClassification") ?? [];
   if (controls.length !== 1 || !visible(controls[0])) return field;
-  const classification = controls[0].textContent?.trim();
-  const part =
-    classification === "복수전공"
-      ? "additionalMajorName"
-      : classification === "부전공"
-        ? "minorName"
-        : undefined;
+  const classification = controls[0].textContent?.trim() ?? "";
+  const part = Object.hasOwn(MAJOR_PARTS, classification)
+    ? MAJOR_PARTS[classification]
+    : undefined;
   if (!part) return field;
   const classifications = [...sources]
     .filter(
@@ -323,21 +354,19 @@ function majorMapping(
         visible(control) && control.textContent?.trim() === classification,
     );
   if (classifications.length !== 1) return field;
-  return {
-    ...field,
-    profileFieldKey:
-      "education.university." +
-      (match[2]
-        ? part === "minorName"
-          ? "minorStatus"
-          : "doubleMajorStatus"
-        : part),
-  };
+  const key =
+    match[2] === "majorClassification"
+      ? part.status
+      : match[2] === "majorField"
+        ? part.field
+        : part.name;
+  return { ...field, profileFieldKey: target + key };
 }
 function readField(
   field: ImportField,
   elements: Element[],
   sources: Map<string, Element[]>,
+  sections: Sections,
 ): ImportCandidate {
   if (!field.profileFieldKey && field.kind !== "name")
     return unsupported(field, "no_profile_mapping");
@@ -345,19 +374,19 @@ function readField(
   if (!elements.length) return unsupported(field, "not_collected");
   const element = elements[0];
   if (!visible(element)) return unsupported(field, "hidden_or_inert");
-  const path = rowPath(field.source);
+  const path = rowPath(field.source, sections);
   if (path) {
     const row = element.closest(ROW);
     if (!row) return unsupported(field, "unbound_control");
     const rowPaths = [...row.querySelectorAll("[name]")]
       .filter((control) => control.closest(ROW) === row)
-      .map((control) => rowPath(control.getAttribute("name")!))
+      .map((control) => rowPath(control.getAttribute("name")!, sections))
       .filter((item) => item !== undefined);
     if (rowPaths.some((item) => item.prefix !== path.prefix))
       return unsupported(field, "invalid_rows");
     const owners = new Set(
       [...sources]
-        .filter(([source]) => rowPath(source)?.prefix === path.prefix)
+        .filter(([source]) => rowPath(source, sections)?.prefix === path.prefix)
         .flatMap(([, items]) => items.map((item) => item.closest(ROW)))
         .filter(Boolean),
     );
@@ -422,7 +451,7 @@ function readField(
           label: target.label,
           sectionId: section.id,
           categoryId: category.id,
-          sensitive: category.sensitive,
+          sensitive: IMPORT_SENSITIVE_CATEGORIES.has(category.id),
         }
       : {}),
   };
@@ -514,6 +543,8 @@ export function resolveImportSourceControls(
   document: Document,
   requested: readonly string[],
 ): HTMLElement[] {
+  const sections = policySections(document);
+  if (!sections) return [];
   const wanted = new Set(requested);
   const eligible = new Set(
     readGreetingImport(document)
@@ -526,7 +557,7 @@ export function resolveImportSourceControls(
   return [...document.querySelectorAll<HTMLElement>(CONTROLS)].filter(
     (element) => {
       try {
-        const source = namedSource(element);
+        const source = namedSource(element, sections);
         return (
           !!source &&
           eligible.has(source) &&
