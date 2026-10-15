@@ -92,7 +92,13 @@ const SKIP = "skip";
 const EXISTING = "existing:";
 
 /** Category and section labels use "A·B"; the import screen reads "A와 B". */
+const LABEL_OVERRIDES: Readonly<Record<string, string>> = {
+  "주·야간": "주야간",
+};
+
 export function plainLabel(label: string): string {
+  const override = LABEL_OVERRIDES[label];
+  if (override) return override;
   return label.replace(/\s*·\s*/gu, (_match, offset: number, whole: string) => {
     const code = whole.charCodeAt(offset - 1) - 0xac00;
     const batchim = code >= 0 && code < 11172 && code % 28 !== 0;

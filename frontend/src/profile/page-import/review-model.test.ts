@@ -6,6 +6,7 @@ import {
   defaultSelection,
   effectiveSelection,
   initialDecisions,
+  plainLabel,
   toImportSelection,
   type ReviewDecisions,
 } from "./review-model";
@@ -308,5 +309,7 @@ describe("review model", () => {
     );
     expect(model.rows[0].label).not.toContain("·");
     expect(model.rows[0].groupLabel).toBe("자격증과 면허증 1");
+    expect(plainLabel("주·야간")).toBe("주야간");
+    expect(plainLabel("면제·비대상 사유")).toBe("면제와 비대상 사유");
   });
 });
