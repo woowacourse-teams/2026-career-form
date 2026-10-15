@@ -120,7 +120,7 @@ export function App({
   const [profile, setProfile] = useState<Profile>();
   const profileLoadGeneration = useRef(0);
   const [importActive, setImportActive] = useState(false);
-  const [importSaved, setImportSaved] = useState(false);
+  const [importSavedCount, setImportSavedCount] = useState<number>();
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [query, setQuery] = useState("");
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
@@ -334,12 +334,12 @@ export function App({
             repository={repository}
             readCandidates={readImportCandidates}
             onClose={() => setImportActive(false)}
-            onSaved={(saved) => {
+            onSaved={(saved, count) => {
               ++profileLoadGeneration.current;
               setProfile(saved);
               setLoadStatus("ready");
               setImportActive(false);
-              setImportSaved(true);
+              setImportSavedCount(count);
             }}
           />
         </main>
@@ -365,7 +365,7 @@ export function App({
                 <button
                   type="button"
                   onClick={() => {
-                    setImportSaved(false);
+                    setImportSavedCount(undefined);
                     setImportActive(true);
                   }}
                 >
@@ -374,8 +374,18 @@ export function App({
                 <p>이미 작성한 Greeting 지원서로 프로필을 채워보세요.</p>
               </section>
             )}
-            {importSaved && (
-              <p role="status">선택한 정보를 프로필에 저장했습니다.</p>
+            {importSavedCount !== undefined && (
+              <section
+                role="status"
+                aria-label="가져오기 결과"
+                className={styles.importResult}
+              >
+                <strong>프로필에 {importSavedCount}개를 저장했어요</strong>
+                <p>
+                  다른 지원서에서 자동 기입을 누르면 방금 저장한 정보로 채울 수
+                  있어요
+                </p>
+              </section>
             )}
             <label className={styles.search}>
               <span className={styles.visuallyHidden}>프로필 검색</span>

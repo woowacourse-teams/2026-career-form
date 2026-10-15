@@ -51,9 +51,14 @@ it("imports current Greeting values through the panel, refreshes profile, and ke
   await waitFor(() =>
     expect(profile.contact.email).toBe("fixture@example.invalid"),
   );
-  expect(
-    await screen.findByText("선택한 정보를 프로필에 저장했습니다."),
-  ).toBeVisible();
+  const notice = await screen.findByRole("status", {
+    name: "가져오기 결과",
+  });
+  expect(notice).toHaveTextContent(/프로필에 \d+개를 저장했어요/);
+  expect(notice).toHaveTextContent(
+    "다른 지원서에서 자동 기입을 누르면 방금 저장한 정보로 채울 수 있어요",
+  );
+  expect(notice.textContent).not.toContain("·");
   expect(screen.getByRole("button", { name: "이메일주소 복사" })).toBeVisible();
   expect(form.outerHTML).toBe(original);
   expect(api.analyzePreparation).not.toHaveBeenCalled();
@@ -94,7 +99,7 @@ it("does not replace an imported profile with the panel's late initial load", as
   fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
   await screen.findByText("프로필에 가져올 정보");
   fireEvent.click(screen.getByRole("button", { name: /프로필에 저장하기/ }));
-  await screen.findByText("선택한 정보를 프로필에 저장했습니다.");
+  await screen.findByRole("status", { name: "가져오기 결과" });
   const { act } = await import("@testing-library/react");
   await act(async () => {
     releaseInitial(old);
