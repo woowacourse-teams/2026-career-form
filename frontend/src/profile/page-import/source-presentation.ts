@@ -1,10 +1,16 @@
 import { FIELD_HIGHLIGHT } from "../../autofill/write/field-highlight-style";
 import { resolveImportSourceControls } from "./reader";
 
+export interface PresentationOptions {
+  /** "nearest" leaves the page still when the source is already visible. */
+  scroll?: "center" | "nearest";
+}
+
 /** Presentation only: never focuses, clicks or writes to a source form control. */
 export function presentImportSources(
   document: Document,
   sources: readonly string[],
+  options: PresentationOptions = {},
 ): () => void {
   const view = document.defaultView;
   if (!view) return () => {};
@@ -34,7 +40,7 @@ export function presentImportSources(
   );
   if (!elements.length) return () => {};
   elements[0].scrollIntoView?.({
-    block: "center",
+    block: options.scroll ?? "center",
     inline: "nearest",
     behavior: "instant",
   });

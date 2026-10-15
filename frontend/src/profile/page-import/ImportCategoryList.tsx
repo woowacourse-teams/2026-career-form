@@ -84,7 +84,7 @@ function Row({
     <div
       className={styles.row}
       data-status={row.status}
-      onPointerEnter={() => onPresent(row.source)}
+      onPointerMove={() => onPresent(row.source)}
       onFocus={() => onPresent(row.source)}
     >
       <label className={styles.rowMeta} htmlFor={id}>
@@ -148,7 +148,7 @@ function Entry({
     <div role="group" aria-label={title} className={styles.entry}>
       <div
         className={styles.entryHead}
-        onPointerEnter={() => onPresent(rows[0].source)}
+        onPointerMove={() => onPresent(rows[0].source)}
       >
         <div className={styles.entryTitle}>
           <b>{title}</b>
@@ -290,11 +290,7 @@ export function ImportCategoryList({ rows, ...shared }: Props) {
     rows.some((row) => row.categoryId === category.id),
   );
   return (
-    <section
-      className={styles.categories}
-      aria-label="가져올 정보"
-      onPointerLeave={() => shared.onPresent(undefined)}
-    >
+    <section className={styles.categories} aria-label="가져올 정보">
       {categories.map((category) => (
         <Category
           key={category.id}

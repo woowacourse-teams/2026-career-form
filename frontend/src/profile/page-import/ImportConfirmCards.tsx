@@ -326,7 +326,7 @@ export function ImportConfirmCards({
         <article
           key={current.id}
           className={styles.card}
-          onPointerEnter={() => onPresent(current.source)}
+          onPointerMove={() => onPresent(current.source)}
           onFocus={() => onPresent(current.source)}
         >
           <Card

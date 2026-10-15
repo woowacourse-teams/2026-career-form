@@ -309,3 +309,30 @@ it("keeps the day input whole inside a 280px date card", async () => {
   expect(input.left).toBeGreaterThanOrEqual(card.left);
   expect(input.right).toBeLessThanOrEqual(card.right);
 });
+
+it("highlights the original field of the focused value and clears it on close", async () => {
+  const state = await mountImport();
+  await userEvent.click(button(state, /연락처와 주소/));
+  state.ui.getByRole("checkbox", { name: "전화번호 가져오기" }).focus();
+  await expect.poll(() => highlights()).toHaveLength(1);
+  const phone = document.querySelector<HTMLElement>(
+    '[name="basicInformation.phoneNumber.nationalNumber"]',
+  )!;
+  await expect
+    .poll(() => {
+      const box = highlights()[0].getBoundingClientRect();
+      const field = phone.getBoundingClientRect();
+      return (
+        box.left <= field.left + 1 &&
+        box.right >= field.right - 1 &&
+        box.top <= field.top + 1 &&
+        box.bottom >= field.bottom - 1
+      );
+    })
+    .toBe(true);
+  state.ui.getByRole("checkbox", { name: "이메일 가져오기" }).focus();
+  await expect.poll(() => highlights()).toHaveLength(1);
+  await userEvent.click(button(state, "닫기"));
+  await expect.poll(() => highlights()).toHaveLength(0);
+  state.expectSourceUnchanged();
+});

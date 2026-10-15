@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Profile } from "../model";
 import type { ProfileRepository } from "../profile-repository";
 import { ImportCategoryList } from "./ImportCategoryList";
@@ -11,6 +11,7 @@ import {
 } from "./merge";
 import type { ImportCandidate } from "./reader";
 import { destination, isName, skippedReason } from "./review-fields";
+import { presentImportSources } from "./source-presentation";
 import {
   buildReviewModel,
   defaultSelection,
@@ -81,6 +82,8 @@ export function PageImport({
   const alive = useRef(false);
   const pending = useRef(false);
   const panel = useRef<HTMLElement>(null);
+  const clearPresentation = useRef<() => void>(() => {});
+  const presentTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     alive.current = true;
@@ -113,8 +116,28 @@ export function PageImport({
     };
   }, [repository, readCandidates, retry]);
 
-  // Source highlighting on hover and focus is wired in the next step.
-  const present = (_source: string | undefined) => {};
+  // A short dwell keeps a passing pointer from flashing every field it crosses.
+  const present = useCallback((source: string | undefined) => {
+    window.clearTimeout(presentTimer.current);
+    const show = () => {
+      clearPresentation.current();
+      clearPresentation.current =
+        source && panel.current
+          ? presentImportSources(panel.current.ownerDocument, [source], {
+              scroll: "nearest",
+            })
+          : () => {};
+    };
+    if (source) presentTimer.current = window.setTimeout(show, 80);
+    else show();
+  }, []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(presentTimer.current);
+      clearPresentation.current();
+    },
+    [],
+  );
 
   const model = useMemo(
     () => baseline && buildReviewModel(candidates, baseline, decisions),

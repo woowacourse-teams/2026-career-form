@@ -36,3 +36,19 @@ it("scrolls a real offscreen source into view and draws a non-interactive border
   cleanup();
   expect(overlay.isConnected).toBe(false);
 });
+
+it("keeps the page still for a visible source when asked for the nearest position", () => {
+  document.body.innerHTML =
+    '<div style="height:200px"></div>' +
+    greetingImportFixture() +
+    '<div style="height:3000px"></div>';
+  window.scrollTo(0, 100);
+  const before = window.scrollY;
+  cleanup = presentImportSources(document, ["basicInformation.name"], {
+    scroll: "nearest",
+  });
+  expect(window.scrollY).toBe(before);
+  expect(
+    document.querySelectorAll("[data-career-form-import-highlight]"),
+  ).toHaveLength(1);
+});
