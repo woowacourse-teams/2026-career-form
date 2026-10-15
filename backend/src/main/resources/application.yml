@@ -64,6 +64,7 @@ career-form:
       timeout-ms: ${CAREER_FORM_JEV_TIMEOUT_MS:8000}
       min-confidence: ${CAREER_FORM_JEV_MIN_CONFIDENCE:0.8}
       data-policy-reviewed: ${CAREER_FORM_JEV_DATA_POLICY_REVIEWED:false}
+      rate-limit-retries: ${CAREER_FORM_JEV_RATE_LIMIT_RETRIES:2}
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:}
 

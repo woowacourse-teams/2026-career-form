@@ -24,6 +24,7 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.mockito.ArgumentCaptor;
@@ -43,9 +44,14 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import com.careerform.formanalysis.exception.ResolverException;
+import com.careerform.formanalysis.exception.TokenLimitExceeded;
 
+@ExtendWith(OutputCaptureExtension.class)
 class JevClientTest {
     private static final String SECRET = "SYNTHETIC_PRIVATE_8421";
     private static final String FIELD = "contact.contact.addressLine1";
@@ -241,6 +247,150 @@ class JevClientTest {
             .containsExactly(Map.entry("decision", JevClient.ABSTAIN));
     }
 
+    @Test
+    void answerReturnsProviderConfidenceAndProbabilitiesWithoutMinConfidenceCut() throws Exception {
+        var http = new FixedResponseHttpClient(choiceBody(0.42, 0.6, 0.4));
+
+        var answers = answerClient(http, new ArrayList<>()).answer("safe-state", questions());
+
+        assertThat(answers).containsExactly(Map.entry("decision", new JevClient.Judgement(
+            "candidate", 0.42, Map.of("candidate", 0.6, JevClient.ABSTAIN, 0.4))));
+        assertThat(http.calls()).isEqualTo(1);
+    }
+
+    @Test
+    void answerAcceptsProbabilitySumWithinFivePercent() throws Exception {
+        for (double candidate : List.of(0.89, 0.87, 0.85, 0.95)) {
+            var http = new FixedResponseHttpClient(choiceBody(0.9, candidate, 0.1));
+
+            assertThat(answerClient(http, new ArrayList<>()).answer("safe-state", questions()).get("decision"))
+                .isEqualTo(new JevClient.Judgement("candidate", 0.9,
+                    Map.of("candidate", candidate, JevClient.ABSTAIN, 0.1)));
+        }
+    }
+
+    @Test
+    void answerRejectsProbabilitySumOutsideFivePercentWithDiagnostic(CapturedOutput output) throws Exception {
+        for (double candidate : List.of(0.84, 0.8)) {
+            var client = answerClient(new FixedResponseHttpClient(choiceBody(0.9, candidate, 0.1)), new ArrayList<>());
+
+            assertThatThrownBy(() -> client.answer("safe-state", questions()))
+                .isExactlyInstanceOf(ResolverException.class)
+                .hasMessage("Jev 분석 응답을 사용할 수 없습니다");
+        }
+        assertThat(output.getOut().lines().filter(line -> line.contains("JEV_INVALID_RESPONSE reason=PROBABILITY_SUM")))
+            .hasSize(2);
+    }
+
+    @Test
+    void answerSurfacesTokenLimitWithoutLoggingTheProviderBody(CapturedOutput output) throws Exception {
+        var http = new FixedResponseHttpClient(List.of(
+            Map.entry(400, "{\"error_type\":\"max_tokens_exceeded\",\"detail\":\"" + SECRET + "\"}")));
+        var sleeps = new ArrayList<Duration>();
+
+        assertThatThrownBy(() -> answerClient(http, sleeps).answer("safe-state", questions()))
+            .isInstanceOf(TokenLimitExceeded.class);
+
+        assertThat(http.calls()).isEqualTo(1);
+        assertThat(sleeps).isEmpty();
+        assertThat(output).contains("JEV_UNAVAILABLE status=400 errorType=max_tokens_exceeded")
+            .doesNotContain(SECRET);
+    }
+
+    @Test
+    void answerLogsErrorTypeWithoutBodyForOtherHttpFailures(CapturedOutput output) throws Exception {
+        for (var reply : List.of(
+            Map.entry(503, "{\"error_type\":\"overloaded\",\"detail\":\"" + SECRET + "\"}"),
+            Map.entry(400, SECRET))) {
+            var http = new FixedResponseHttpClient(List.of(reply));
+
+            assertThatThrownBy(() -> answerClient(http, new ArrayList<>()).answer("safe-state", questions()))
+                .isExactlyInstanceOf(ResolverException.class);
+            assertThat(http.calls()).isEqualTo(1);
+        }
+        assertThat(output).contains("JEV_UNAVAILABLE status=503 errorType=overloaded")
+            .contains("JEV_UNAVAILABLE status=400 errorType=UNRECOGNIZED")
+            .doesNotContain(SECRET);
+    }
+
+    @Test
+    void answerRetriesRateLimitWithExponentialBackoffByDefault() throws Exception {
+        var http = new FixedResponseHttpClient(List.of(
+            Map.entry(429, "{}"), Map.entry(429, "{}"), Map.entry(200, choiceBody(0.9, 0.9, 0.1))));
+        var sleeps = new ArrayList<Duration>();
+
+        var answers = answerClient(http, sleeps).answer("safe-state", questions());
+
+        assertThat(answers.get("decision").choice()).isEqualTo("candidate");
+        assertThat(http.calls()).isEqualTo(3);
+        assertThat(sleeps).containsExactly(Duration.ofMillis(500), Duration.ofMillis(1000));
+    }
+
+    @Test
+    void answerBecomesUnavailableWhenRateLimitRetriesAreExhausted() throws Exception {
+        var http = new FixedResponseHttpClient(List.of(
+            Map.entry(429, "{}"), Map.entry(429, "{}"), Map.entry(429, "{}")));
+        var sleeps = new ArrayList<Duration>();
+
+        assertThatThrownBy(() -> answerClient(http, sleeps).answer("safe-state", questions()))
+            .isExactlyInstanceOf(ResolverException.class)
+            .hasMessage("Jev 분석 응답을 사용할 수 없습니다");
+
+        assertThat(http.calls()).isEqualTo(3);
+        assertThat(sleeps).containsExactly(Duration.ofMillis(500), Duration.ofMillis(1000));
+    }
+
+    @Test
+    void answerUsesTheConfiguredRateLimitRetries() throws Exception {
+        var http = new FixedResponseHttpClient(List.of(
+            Map.entry(429, "{}"), Map.entry(200, choiceBody(0.9, 0.9, 0.1))));
+        var sleeps = new ArrayList<Duration>();
+        var client = new JevClient("synthetic-key", "jev-test", 8000, 0.8, true,
+            (com.careerform.monitoring.ExternalCallMetrics) null, null, false, 0);
+        setField(client, "http", http);
+        setField(client, "sleeper", (JevClient.Sleeper) sleeps::add);
+
+        assertThatThrownBy(() -> client.answer("safe-state", questions())).isInstanceOf(ResolverException.class);
+
+        assertThat(http.calls()).isEqualTo(1);
+        assertThat(sleeps).isEmpty();
+    }
+
+    @Test
+    void chooseKeepsStrictProbabilitySumAndDoesNotRetryRateLimit() throws Exception {
+        JevClient strict = clientWith(choiceBody(0.9, 0.87, 0.1));
+        assertThatThrownBy(() -> strict.choose("safe-state", questions())).isInstanceOf(ResolverException.class);
+
+        var http = new FixedResponseHttpClient(List.of(
+            Map.entry(429, "{}"), Map.entry(200, choiceBody(0.9, 0.9, 0.1))));
+        var sleeps = new ArrayList<Duration>();
+        var client = answerClient(http, sleeps);
+        assertThatThrownBy(() -> client.choose("safe-state", questions()))
+            .isInstanceOf(ResolverException.class)
+            .hasMessage("Jev 분석 응답을 사용할 수 없습니다");
+        assertThat(http.calls()).isEqualTo(1);
+        assertThat(sleeps).isEmpty();
+    }
+
+    private static String choiceBody(double confidence, double candidate, double abstain) {
+        return "{\"model\":\"jev-test\",\"answers\":{\"decision\":{\"type\":\"choice\",\"choice\":\"candidate\","
+            + "\"confidence\":" + confidence + ",\"probabilities\":{\"ABSTAIN\":" + abstain
+            + ",\"candidate\":" + candidate + "}}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
+    }
+
+    private static JevClient answerClient(HttpClient http, List<Duration> sleeps) throws Exception {
+        JevClient client = new JevClient("synthetic-key", "jev-test", 8000, 0.8, true);
+        setField(client, "http", http);
+        setField(client, "sleeper", (JevClient.Sleeper) sleeps::add);
+        return client;
+    }
+
+    private static void setField(JevClient client, String name, Object value) throws Exception {
+        Field field = JevClient.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(client, value);
+    }
+
     private static JevClient clientWith(String body) throws Exception {
         JevClient client = new JevClient("synthetic-key", "jev-test", 8000, 0.8, true);
         Field field = JevClient.class.getDeclaredField("http");
@@ -256,14 +406,18 @@ class JevClientTest {
     }
 
     private static final class FixedResponseHttpClient extends HttpClient {
-        private final String body;
-        private final int status;
+        private final List<Map.Entry<Integer, String>> replies;
+        private final AtomicInteger calls = new AtomicInteger();
 
         private FixedResponseHttpClient(String body) { this(body, 200); }
         private FixedResponseHttpClient(String body, int status) {
-            this.body = body;
-            this.status = status;
+            this(List.of(Map.entry(status, body)));
         }
+        private FixedResponseHttpClient(List<Map.Entry<Integer, String>> replies) {
+            this.replies = replies;
+        }
+
+        private int calls() { return calls.get(); }
 
         @Override public Optional<CookieHandler> cookieHandler() { return Optional.empty(); }
         @Override public Optional<Duration> connectTimeout() { return Optional.empty(); }
@@ -279,7 +433,8 @@ class JevClientTest {
         }
         @Override public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
             HttpResponse.BodyHandler<T> handler) {
-            return CompletableFuture.completedFuture(response(request, (T) body, status));
+            var reply = replies.get(Math.min(calls.getAndIncrement(), replies.size() - 1));
+            return CompletableFuture.completedFuture(response(request, (T) reply.getValue(), reply.getKey()));
         }
         @Override public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
             HttpResponse.BodyHandler<T> handler,
