@@ -110,3 +110,63 @@ it("does not replace an imported profile with the panel's late initial load", as
   });
   expect(screen.getByRole("button", { name: "이메일주소 복사" })).toBeVisible();
 });
+
+it("loads the Greeting policy before reading when none is installed yet", async () => {
+  document.body.innerHTML = greetingImportFixture();
+  const { installExecutionPolicy } =
+    await import("../autofill/workflow/execution-policy");
+  const { fixturePolicy } = await import("../test/fixtures/execution-policy");
+  installExecutionPolicy(document);
+  const api = createApiClient();
+  api.loadExecutionPolicy = vi.fn(async () => fixturePolicy("greeting"));
+  render(
+    <InPageProfilePanel
+      pageDocument={document}
+      repository={{
+        load: async () => createEmptyProfile(),
+        save: async () => {},
+        loadLayout: async () => "a",
+        saveLayout: async () => {},
+      }}
+      apiClient={api}
+      controller={createProfilePanelController()}
+      closePanel={() => {}}
+      openOptions={() => {}}
+      logoUrl="/logo.png"
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+  expect(await screen.findByText("프로필에 가져올 정보")).toBeVisible();
+  expect(api.loadExecutionPolicy).toHaveBeenCalledOnce();
+});
+
+it("offers another read when the policy cannot be loaded", async () => {
+  document.body.innerHTML = greetingImportFixture();
+  const { installExecutionPolicy } =
+    await import("../autofill/workflow/execution-policy");
+  installExecutionPolicy(document);
+  const api = createApiClient();
+  api.loadExecutionPolicy = vi.fn(async () => {
+    throw new Error("private network detail");
+  });
+  render(
+    <InPageProfilePanel
+      pageDocument={document}
+      repository={{
+        load: async () => createEmptyProfile(),
+        save: async () => {},
+        loadLayout: async () => "a",
+        saveLayout: async () => {},
+      }}
+      apiClient={api}
+      controller={createProfilePanelController()}
+      closePanel={() => {}}
+      openOptions={() => {}}
+      logoUrl="/logo.png"
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "지원서에서 가져오기" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("불러오지 못");
+  expect(screen.queryByText(/private network detail/)).toBeNull();
+  expect(screen.getByRole("button", { name: "다시 읽기" })).toBeEnabled();
+});

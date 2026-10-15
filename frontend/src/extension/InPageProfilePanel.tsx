@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 
+import { prepareImportPolicy } from "../profile/page-import/load-import-policy";
 import { readGreetingImport } from "../profile/page-import/reader";
 import { App } from "../../entrypoints/sidepanel/App";
 import { RuntimeAnalysisApiClient } from "../autofill/api/runtime-client";
@@ -44,10 +45,13 @@ export function InPageProfilePanel({
   );
 
   useEffect(() => () => controller.showProfile(), [controller]);
-  const readImportCandidates = useCallback(
-    async () => readGreetingImport(pageDocument),
-    [pageDocument],
-  );
+  const readImportCandidates = useCallback(async () => {
+    await prepareImportPolicy(
+      pageDocument,
+      apiClient.loadExecutionPolicy?.bind(apiClient),
+    );
+    return readGreetingImport(pageDocument);
+  }, [pageDocument, apiClient]);
 
   return (
     <App
