@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { collectFieldsSnapshot } from "../dom/collect";
+import { collectSemanticContext } from "../dom/semantic-context";
 import { buildReviewPlan } from "../review/review-plan";
 
 const FIXTURE = join(
@@ -56,7 +57,11 @@ describe("LG AI Research sanitized application form structure", () => {
       )!;
       document.querySelector(".birth-date-selects select")!.id = label.htmlFor;
     });
-    expect(labelTexts(fields[3]!)).toContain("생년월일");
+    expect(labelTexts(fields[3]!)).toContain("생년월일 *");
+    const year = document.querySelector<HTMLElement>(".birth-date-selects select")!;
+    expect(collectSemanticContext(year, null).labels).toContainEqual({
+      source: "label", text: "생년월일",
+    });
   });
 
   it("does not treat the email id input as an unsupported split email", () => {
@@ -89,5 +94,22 @@ describe("LG AI Research sanitized application form structure", () => {
     });
     expect(emailId.displayName).toBe("이메일 아이디");
     expect(plan.items[0]).toMatchObject({ status: "available" });
+  });
+
+  it("recovers an unassociated sibling title and description without borrowing other questions", () => {
+    const { fields } = collect(() => {
+      const input = document.querySelector<HTMLInputElement>("#phone")!;
+      const title = input.previousElementSibling!;
+      const block = document.createElement("div");
+      block.innerHTML = "<p>추천인 연락 방법</p><p>본인 연락처가 아닙니다.</p>";
+      title.replaceWith(block);
+      input.placeholder = "내용 입력";
+    });
+    expect(fields[1]?.displayName).toBe("추천인 연락 방법");
+    expect(fields[1]?.semanticContext?.labels).toContainEqual({
+      source: "description", text: "본인 연락처가 아닙니다.",
+    });
+    expect(labelTexts(fields[0]!)).not.toContain("추천인 연락 방법");
+    expect(fields.slice(3, 6).map(labelTexts)).toEqual([[], [], []]);
   });
 });

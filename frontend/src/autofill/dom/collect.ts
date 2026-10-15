@@ -40,7 +40,7 @@ import {
   semanticText,
   collectActionSemanticContext,
 } from "./semantic-context";
-import { metadata, labelOf, sectionName } from "./metadata";
+import { metadata, labelOf, sectionName, structuralLabelOf, unnamedRadioGroupOf } from "./metadata";
 import { collectButtonDropdowns, type ButtonDropdown } from "./button-dropdown";
 import { acquireDocumentRun } from "../interaction/document-run";
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
@@ -284,6 +284,7 @@ function baseCandidate(
   element: HTMLElement,
   candidateId: string,
   syntheticDomName?: string,
+  generic = false,
 ) {
   const control =
     element instanceof HTMLInputElement ||
@@ -292,7 +293,7 @@ function baseCandidate(
   return {
     candidateId,
     visibility: visibility(element),
-    ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
+    ...(labelOf(element, generic) ? { displayName: labelOf(element, generic) } : {}),
     ...(metadata(element.id) ? { domId: metadata(element.id) } : {}),
     ...((metadata(element.getAttribute("name")) ?? syntheticDomName)
       ? { domName: metadata(element.getAttribute("name")) ?? syntheticDomName }
@@ -342,6 +343,7 @@ export function collectFieldsSnapshot(
   try {
     return withDomReadPass(() => {
       const companyId = resolveDocumentCompany(document);
+      const generic = companyId === "generic";
       const adapter = collectionAdapterForHost(document);
       const registry = new CandidateRegistry();
       let candidateIndex = 0;
@@ -447,7 +449,13 @@ export function collectFieldsSnapshot(
                           row.contains(element),
                         )?.element,
                   )
-                : [element];
+                : generic && element instanceof HTMLInputElement &&
+                    element.type === "radio" && !element.name
+                  ? unnamedRadioGroupOf(element).filter((peer) =>
+                      elements.includes(peer) && !consumed.has(peer) &&
+                      repeatableItems.find(({ element: row }) => row.contains(peer))?.element ===
+                        repeatableItems.find(({ element: row }) => row.contains(element))?.element)
+                  : [element];
             grouped.forEach((peer) => consumed.add(peer));
 
             const candidateId = createOpaqueId("field", candidateIndex++);
@@ -467,7 +475,7 @@ export function collectFieldsSnapshot(
                 return { optionId, displayName: option.text };
               });
               candidate = {
-                ...baseCandidate(first, candidateId),
+                ...baseCandidate(first, candidateId, undefined, generic),
                 element: "custom",
                 control: "select",
                 options,
@@ -488,7 +496,7 @@ export function collectFieldsSnapshot(
                 optionElements.set(optionId, peer);
                 return {
                   optionId,
-                  displayName: labelOf(peer) ?? `선택 ${optionIndex + 1}`,
+                  displayName: labelOf(peer, generic) ?? `선택 ${optionIndex + 1}`,
                 };
               });
               candidate = {
@@ -498,6 +506,7 @@ export function collectFieldsSnapshot(
                   companyId === "components"
                     ? componentSyntheticDomName(first)
                     : undefined,
+                  generic,
                 ),
                 element: "input",
                 control: customRadio
@@ -505,6 +514,10 @@ export function collectFieldsSnapshot(
                   : ((first as HTMLInputElement).type as "radio" | "checkbox"),
                 options,
               };
+              const question = generic && !customRadio && grouped.length > 1
+                ? structuralLabelOf(grouped)?.label
+                : undefined;
+              if (question) candidate.displayName = question;
             } else if (first instanceof HTMLSelectElement) {
               const options = Array.from(first.options)
                 .map((option, optionIndex) => {
@@ -530,6 +543,7 @@ export function collectFieldsSnapshot(
                   companyId === "components"
                     ? componentSyntheticDomName(first)
                     : undefined,
+                  generic,
                 ),
                 element: "select",
                 control: "select",
@@ -546,6 +560,7 @@ export function collectFieldsSnapshot(
                   companyId === "components"
                     ? componentSyntheticDomName(first)
                     : undefined,
+                  generic,
                 ),
                 element:
                   first instanceof HTMLTextAreaElement ? "textarea" : "input",
@@ -588,7 +603,11 @@ export function collectFieldsSnapshot(
                 }
               }
             }
-            const semanticContext = collectSemanticContext(first, container);
+            const semanticContext = collectSemanticContext(first, container, {
+              generic,
+              ...(generic && isChoice && !customRadio && grouped.length > 1
+                ? { group: grouped } : {}),
+            });
             if (
               runtimeRules(document)?.components?.collection.ownedLabelsOnly
             ) {
@@ -1099,7 +1118,9 @@ export function collectPreparationSnapshot(
               ? "radio"
               : "button",
         visibility: visibility(element),
-        semanticContext: collectActionSemanticContext(element, container),
+        semanticContext: collectActionSemanticContext(element, container, {
+          generic: companyId === "generic",
+        }),
         ...(labelOf(element) ? { displayName: labelOf(element) } : {}),
         ...(domId ? { domId } : {}),
         ...(metadata(element.name) ? { domName: metadata(element.name) } : {}),

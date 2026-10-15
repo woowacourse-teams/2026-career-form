@@ -1,5 +1,12 @@
 # Wiki Log
 
+## [2026-10-15] ingest | CF-198 범용 폼 컨텍스트 수집 경계와 전후 비교
+
+- Approval-Digest: a62db0f0fe59c1802b8232a2d513137ad07c402bcb9cd25b185461b7e9a53ba2
+- Source-Revision: adc78ef58f88c1a8070fc084c62355ba52cde08a
+- 승인한 세 후보를 [CF-198 bundle](../raw/issues/CF-198/manifest.md)에 기록하고 [범용 폼 컨텍스트 수집](topics/generic-form-context.md)을 추가했다.
+- 실사이트 전후 비교는 혼합·고분산 결과이며 개선으로 판정하지 않는다. 후보 수 동일은 악화 원인을 확정하지 않으며 원인은 미확인이다. 설치 revision은 UNVERIFIED이고 범위는 보이는 native control이다.
+
 ## [2026-10-11] ingest | CF-178 브라우저 테스트 계층과 CI 경계
 
 - Approval-Digest: a44d4319a65cb6f0fc17934d216e915b38e1c1fec8acb5c1d1839957fa6b7013

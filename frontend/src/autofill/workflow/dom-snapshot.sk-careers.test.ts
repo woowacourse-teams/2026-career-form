@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { collectFieldsSnapshot } from "../dom/collect";
 import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "./execution-policy";
 
 usePolicyFixture("sk");
 
@@ -55,6 +56,26 @@ function load(mutate?: () => void) {
 // Sanitized structure from a real SK careers application form with one row of
 // each repeatable section added. Not evidence of live-site success rates.
 describe("SK careers sanitized application form structure", () => {
+  it("collects the same structural radio question without a company policy or names", () => {
+    installExecutionPolicy(document);
+    document.body.innerHTML = readFileSync(FIXTURE, "utf8");
+    const radios = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="prsVeteranBenefitYN"]'));
+    radios.forEach((radio) => radio.removeAttribute("name"));
+    const question = radios[0]!.closest(".btn-selector-container")!;
+    question.querySelector(".form-label")!.insertAdjacentHTML("beforeend", "<p>국가유공자 해당 여부</p>");
+    const fields = collectFieldsSnapshot(document).request.sections.flatMap((section) => [
+      ...section.fields, ...(section.items ?? []).flatMap((item) => item.fields),
+    ]);
+    const group = fields.find((field) => field.displayName === "보훈 정보");
+    expect(group?.options?.map((option) => option.displayName)).toEqual(["비대상", "대상"]);
+    expect(group?.semanticContext?.labels).toContainEqual({
+      source: "description", text: "국가유공자 해당 여부",
+    });
+    expect(group?.semanticContext?.labels).not.toContainEqual({
+      source: "label", text: "병역 정보",
+    });
+  }, TIMEOUT_MS);
+
   it(
     "collects sections and repeat rows through the SK adapter with the page's hidden split",
     () => {
