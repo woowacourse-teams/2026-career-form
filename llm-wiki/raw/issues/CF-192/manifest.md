@@ -1,9 +1,9 @@
 # CF-192 Knowledge Bundle
 
 > Issue: CF-192
-> Collected: 2026-10-12
-> Approval-Digest: be3091d11a003a6f41f64ee7b5b14317c0671f9d6d96f3091872611a6970d463
-> Source-Revision: accb29d8d3edafadffc7ff8b0e7a69ed5767dec9
+> Collected: 2026-10-15
+> Approval-Digest: dcf2130a93c947448df405fedb580e0143e8a836eeca0e6a06be55c783062682
+> Source-Revision: f926716d0f1efc792d8129f6d2dff8df6f98cdc5
 
 ## greeting-profile-import
 

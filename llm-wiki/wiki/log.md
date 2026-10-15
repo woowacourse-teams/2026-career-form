@@ -548,3 +548,10 @@
 - Source-Revision: 070b6c55185da237903ec915b2798a8ace7cf47e
 - 새로 승인한 두 후보에 맞춰 아직 병합되지 않은 [CF-193 bundle](../raw/issues/CF-193/manifest.md)을 갱신했다.
 - [랜딩·온보딩](topics/landing-onboarding.md)의 단계형 질문·선택 보충·같은 탭 전환과 [이용 계측](topics/usage-analytics.md)의 단계형 첫 저장 표현을 현재 상태로 기록했다. 기존 개인정보 경계와 웹 시연 경계는 보존했다.
+
+## [2026-10-15] ingest | CF-192 한 화면 가져오기 검토
+
+- Approval-Digest: dcf2130a93c947448df405fedb580e0143e8a836eeca0e6a06be55c783062682
+- Source-Revision: f926716d0f1efc792d8129f6d2dff8df6f98cdc5
+- 승인한 후보 8개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)의 현재 상태를 한 화면 검토, 새 값 미리 선택, 확인 카드, 중복 행 안내, 원본 칸 강조, 화면 문구 규칙으로 갱신했다.
