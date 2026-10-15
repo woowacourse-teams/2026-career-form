@@ -336,3 +336,41 @@ it("highlights the original field of the focused value and clears it on close", 
   await expect.poll(() => highlights()).toHaveLength(0);
   state.expectSourceUnchanged();
 });
+
+it("fits every expanded category and card in a 280px panel without middle dots", async () => {
+  const state = await mountImport(
+    `<div data-scope="accordion" data-part="item">
+      <input name="languagesCertificationsAndOtherActivity.certificatesLicenses.0.credentials" value="합성자격증">
+    </div>`,
+    undefined,
+    { width: "280px", height: "500px", overflowY: "auto" },
+  );
+  await userEvent.click(button(state, "아니에요"));
+  for (const toggle of state.ui
+    .getAllByRole("button", { expanded: false })
+    .filter((element) => element.hasAttribute("aria-expanded")))
+    await userEvent.click(toggle);
+  expect(state.container.scrollWidth).toBeLessThanOrEqual(
+    state.container.clientWidth,
+  );
+  expect(state.container.textContent).not.toContain("·");
+  const card = state.ui
+    .getByRole("heading", { name: "성과 이름을 나눠 주세요" })
+    .closest("article")!;
+  const cardBox = card.getBoundingClientRect();
+  for (const control of within(card).getAllByRole("button")) {
+    const box = control.getBoundingClientRect();
+    expect(box.height).toBeGreaterThanOrEqual(36);
+    expect(box.left).toBeGreaterThanOrEqual(cardBox.left);
+    expect(box.right).toBeLessThanOrEqual(cardBox.right + 1);
+    expect(control.scrollWidth).toBeLessThanOrEqual(control.clientWidth + 1);
+  }
+  for (const row of state.container.querySelectorAll<HTMLElement>(
+    "[data-status]",
+  )) {
+    const box = row.getBoundingClientRect();
+    expect(box.right).toBeLessThanOrEqual(
+      state.container.getBoundingClientRect().right + 1,
+    );
+  }
+});
