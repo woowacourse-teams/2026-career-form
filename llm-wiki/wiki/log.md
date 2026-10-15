@@ -568,3 +568,10 @@
 - Source-Revision: f926716d0f1efc792d8129f6d2dff8df6f98cdc5
 - 승인한 후보 8개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
 - [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)의 현재 상태를 한 화면 검토, 새 값 미리 선택, 확인 카드, 중복 행 안내, 원본 칸 강조, 화면 문구 규칙으로 갱신했다.
+
+## [2026-10-15] ingest | CF-192 실행 정책 기반 가져오기 통합
+
+- Approval-Digest: e7990fbc0dfac3e68910c58c5e8a6037f640da03eae1c85b69c822281d58ccb1
+- Source-Revision: 843c7ebb10e771ac51570dfff7efc8fbda2aded2
+- 최신 develop 병합 뒤 승인한 후보 10개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 실행 정책 기반 읽기, 가져오기 전용 민감 범주, 구분값 기준 추가 전공을 반영했다.
