@@ -185,7 +185,8 @@ public final class InteractionDecisionService {
                 || decision.candidates().isEmpty()
                 || decision.candidates().size() > MAX_CANDIDATES_PER_DECISION
                 || isCalendarRole(decision.role())
-                    && decision.candidates().size() > MAX_CALENDAR_CANDIDATES_PER_DECISION) {
+                    && decision.candidates().size() > MAX_CALENDAR_CANDIDATES_PER_DECISION
+                || (decision.role() == Role.ROW_KIND_OPTION) != (decision.targetKind() != null)) {
                 invalidSnapshot();
             }
             for (Candidate candidate : decision.candidates()) {
@@ -214,6 +215,12 @@ public final class InteractionDecisionService {
                     }
                 }
                 else if (candidate.calendarStructure() != null) {
+                    invalidSnapshot();
+                }
+                if (isStructureActionRole(decision.role()) && !validStructureAction(candidate)
+                    || decision.role() == Role.ROW_KIND_OPTION && !isSelectOption(candidate)
+                    || decision.role() != Role.ROW_KIND_OPTION
+                        && (candidate.element() == Element.SELECT || candidate.control() == Control.OPTION)) {
                     invalidSnapshot();
                 }
             }
@@ -320,6 +327,8 @@ public final class InteractionDecisionService {
             case CALENDAR_OPENER, CALENDAR_YEAR_TRIGGER, CALENDAR_YEAR_CONTROL,
                 CALENDAR_MONTH_CONTROL, CALENDAR_DAY_CONTROL, CALENDAR_NAVIGATION, CALENDAR_APPLY ->
                     eligibleCalendar(role, candidate);
+            case REPEAT_ADD, SECTION_REVEAL -> validStructureAction(candidate);
+            case ROW_KIND_OPTION -> !Boolean.TRUE.equals(candidate.readonly()) && isSelectOption(candidate);
         };
     }
 
@@ -362,6 +371,23 @@ public final class InteractionDecisionService {
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private static boolean isStructureActionRole(Role role) {
+        return role == Role.REPEAT_ADD || role == Role.SECTION_REVEAL;
+    }
+
+    private static boolean validStructureAction(Candidate candidate) {
+        return candidate.visibility() == Visibility.VISIBLE
+            && !Boolean.TRUE.equals(candidate.disabled())
+            && !Boolean.TRUE.equals(candidate.readonly())
+            && !Boolean.TRUE.equals(candidate.inert())
+            && candidate.element() != Element.SELECT
+            && candidate.control() == Control.BUTTON;
+    }
+
+    private static boolean isSelectOption(Candidate candidate) {
+        return candidate.element() == Element.SELECT && candidate.control() == Control.OPTION;
     }
 
     private static boolean isCalendarRole(Role role) {

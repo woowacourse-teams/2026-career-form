@@ -20,9 +20,11 @@ import com.careerform.formanalysis.dto.InteractionDecisionRequest.Decision;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Element;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.RelationToTarget;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Role;
+import com.careerform.formanalysis.dto.InteractionDecisionRequest.TargetKind;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Visibility;
 import com.careerform.formanalysis.dto.InteractionDecisionResponse;
 import com.careerform.formanalysis.exception.InvalidSnapshotException;
+import com.careerform.formanalysis.application.policy.CompanyFormPolicyFixture;
 import com.careerform.formanalysis.infrastructure.AnalysisProviderSelection;
 
 import jakarta.validation.Validation;
@@ -136,6 +138,98 @@ class InteractionDecisionServiceTest {
 
         assertThat(response.status()).isEqualTo(InteractionDecisionResponse.Status.LLM_UNAVAILABLE);
         assertThat(response.decisions()).isEmpty();
+    }
+
+    @Test
+    void acceptsStructureRolesWithButtonLikeAndSelectOptionCandidates() {
+        InteractionDecisionRequest request = structureRequest(
+            new Decision("add-row", Role.REPEAT_ADD, "education.university.schoolName",
+                List.of(candidate("add-button", Element.BUTTON, Control.BUTTON, RelationToTarget.SAME_CONTAINER))),
+            new Decision("reveal", Role.SECTION_REVEAL, "careers.career.companyName",
+                List.of(candidate("reveal-toggle", Element.CUSTOM, Control.BUTTON, RelationToTarget.SAME_CONTAINER))),
+            new Decision("kind-master", Role.ROW_KIND_OPTION, "education.graduateSchool.schoolName",
+                List.of(candidate("master-option", Element.SELECT, Control.OPTION, RelationToTarget.SAME_REPEAT_ROW)),
+                TargetKind.MASTER));
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            assertThat(factory.getValidator().validate(request)).isEmpty();
+        }
+
+        InteractionDecisionResponse response = service(InteractionDecisionServiceTest::selectFirst).decide(request);
+
+        assertThat(response.status()).isEqualTo(InteractionDecisionResponse.Status.COMPLETE);
+        assertThat(response.decisions()).containsExactly(
+            InteractionDecisionResponse.Decision.selected("add-row", Role.REPEAT_ADD, "add-button"),
+            InteractionDecisionResponse.Decision.selected("reveal", Role.SECTION_REVEAL, "reveal-toggle"),
+            InteractionDecisionResponse.Decision.selected("kind-master", Role.ROW_KIND_OPTION, "master-option"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"REPEAT_ADD", "SECTION_REVEAL"})
+    void rejectsStructureActionCandidatesThatAreNotVisibleEnabledButtons(String roleName) {
+        Role role = Role.valueOf(roleName);
+        List<Candidate> invalid = List.of(
+            candidate("select-control", Element.SELECT, Control.OPTION, RelationToTarget.SAME_CONTAINER),
+            candidate("text-input", Element.INPUT, Control.TEXT, RelationToTarget.SAME_CONTAINER),
+            candidate("submit-button", Element.BUTTON, Control.SUBMIT, RelationToTarget.SAME_CONTAINER),
+            new Candidate("hidden-button", Element.BUTTON, Control.BUTTON, Visibility.HIDDEN, null, null, null,
+                RelationToTarget.SAME_CONTAINER, null),
+            new Candidate("disabled-button", Element.BUTTON, Control.BUTTON, Visibility.VISIBLE, true, null, null,
+                RelationToTarget.SAME_CONTAINER, null),
+            new Candidate("inert-button", Element.BUTTON, Control.BUTTON, Visibility.VISIBLE, null, null, true,
+                RelationToTarget.SAME_CONTAINER, null));
+        for (Candidate candidate : invalid) {
+            assertThatThrownBy(() -> service(batch -> {
+                throw new AssertionError("Invalid structure candidate must not reach provider");
+            }).decide(structureRequest(new Decision("structure", role, "education.university.schoolName",
+                List.of(candidate))))).as(candidate.candidateId()).isInstanceOf(InvalidSnapshotException.class);
+        }
+    }
+
+    @Test
+    void rejectsRowKindDecisionsWithoutSelectOptionsOrTargetKind() {
+        List<Decision> invalid = List.of(
+            new Decision("kind", Role.ROW_KIND_OPTION, "education.university.schoolName",
+                List.of(candidate("kind-button", Element.BUTTON, Control.BUTTON, RelationToTarget.SAME_REPEAT_ROW)),
+                TargetKind.BACHELOR),
+            new Decision("kind", Role.ROW_KIND_OPTION, "education.university.schoolName",
+                List.of(candidate("kind-option", Element.SELECT, Control.OPTION, RelationToTarget.SAME_REPEAT_ROW))),
+            new Decision("opener", Role.SEARCH_POPUP_OPENER, "education.university.schoolName",
+                List.of(candidate("open-button", Element.BUTTON, Control.BUTTON, RelationToTarget.SAME_FIELD_GROUP)),
+                TargetKind.BACHELOR),
+            new Decision("opener", Role.SEARCH_POPUP_OPENER, "education.university.schoolName",
+                List.of(candidate("open-option", Element.SELECT, Control.OPTION, RelationToTarget.SAME_FIELD_GROUP))));
+        for (Decision decision : invalid) {
+            assertThatThrownBy(() -> service(batch -> {
+                throw new AssertionError("Invalid row kind observation must not reach provider");
+            }).decide(structureRequest(decision))).isInstanceOf(InvalidSnapshotException.class);
+        }
+    }
+
+    @Test
+    void keepsStaticPolicyShortCircuitForStructureRoles() {
+        InteractionDecisionResponse response = new InteractionDecisionService(
+            Optional.<InteractionDecisionProvider>of(batch -> {
+                throw new AssertionError("Static policy site must not call a provider");
+            }),
+            new FormAnalysisRouter((host, path) -> new CompanyFormPolicyProvider.Available(CompanyFormPolicyFixture.sk())),
+            new InteractionObservationProjector()
+        ).decide(structureRequest(new Decision("add-row", Role.REPEAT_ADD, "education.university.schoolName",
+            List.of(candidate("add-button", Element.BUTTON, Control.BUTTON, RelationToTarget.SAME_CONTAINER)))));
+
+        assertThat(response.status()).isEqualTo(InteractionDecisionResponse.Status.STATIC_POLICY_PRESENT);
+        assertThat(response.decisions()).isEmpty();
+    }
+
+    private static InteractionDecisionProvider.Resolution selectFirst(InteractionDecisionProvider.Batch batch) {
+        return new InteractionDecisionProvider.Resolution(2, batch.decisions().stream()
+            .map(decision -> (InteractionDecisionProvider.Result) new InteractionDecisionProvider.Selected(
+                decision.decisionId(), decision.role(), decision.candidates().getFirst().candidateId()))
+            .toList());
+    }
+
+    private static InteractionDecisionRequest structureRequest(Decision... decisions) {
+        return new InteractionDecisionRequest(2, "structure-snapshot",
+            new InteractionDecisionRequest.Site("example.test", "/application"), List.of(decisions));
     }
 
     private static InteractionDecisionService service(InteractionDecisionProvider provider) {

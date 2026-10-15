@@ -2,6 +2,7 @@ package com.careerform.formanalysis.infrastructure.adapter.openai;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.context.annotation.Conditional;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
@@ -18,6 +19,10 @@ public final class OpenAiInteractionDecisionProvider
 
     private static final String INVALID_RESPONSE_MESSAGE =
         "LLM 동적 판단 응답 계약을 확인할 수 없습니다";
+    private static final String UNSUPPORTED_ROLE_MESSAGE =
+        "UNSUPPORTED: OpenAI 동적 판단은 범용 구조 역할을 지원하지 않습니다";
+    private static final Set<Role> UNSUPPORTED_ROLES =
+        Set.of(Role.REPEAT_ADD, Role.SECTION_REVEAL, Role.ROW_KIND_OPTION);
     static final String SYSTEM_PROMPT = """
         Choose roles from a bounded, de-identified application-form observation.
         Return every decision exactly once, either in selections or abstentions.
@@ -49,6 +54,9 @@ public final class OpenAiInteractionDecisionProvider
 
     @Override
     public Resolution decide(Batch batch) {
+        if (batch.decisions().stream().anyMatch(decision -> UNSUPPORTED_ROLES.contains(decision.role()))) {
+            throw new ResolverException(UNSUPPORTED_ROLE_MESSAGE);
+        }
         ProviderOutput output = client.generateInteraction(
             SYSTEM_PROMPT,
             batch,
