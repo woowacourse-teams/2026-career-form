@@ -55,6 +55,8 @@ export interface ReviewRow {
   targetId?: string;
   /** Absent for name parts, which have no profile field definition. */
   field?: ProfileFieldDefinition;
+  /** A repeated row whose section already has entries the user may link to. */
+  linkable?: boolean;
 }
 export type Confirmation =
   | {
@@ -196,8 +198,10 @@ function rowTarget(
     (entry) => entry.sectionId === section.id,
   );
   const duplicate = entries.some((e) => e.values[primary]?.trim() === name);
-  const value = decisions.targets[key] ?? (name && !duplicate ? NEW : "");
-  const entry = entries.find((e) => `${EXISTING}${e.id}` === value);
+  const decided = decisions.targets[key] ?? (name && !duplicate ? NEW : "");
+  const entry = entries.find((e) => `${EXISTING}${e.id}` === decided);
+  // A link to an entry that no longer exists must be asked again, never added as new.
+  const value = decided.startsWith(EXISTING) && !entry ? "" : decided;
   return { value, name, primary, entries, entry };
 }
 
@@ -263,6 +267,7 @@ function fieldRow(
     sectionId: section.id,
     rowIndex: candidate.rowIndex,
     targetId: target.entry?.id,
+    linkable: target.entries.length > 0,
   };
 }
 
@@ -397,7 +402,7 @@ function ready(
   );
 }
 
-export function effectiveSelection(
+function readySelection(
   model: ReviewModel,
   selected: Readonly<Record<string, boolean>>,
   baseline: Profile,
@@ -406,27 +411,58 @@ export function effectiveSelection(
   for (const row of model.rows)
     if (selected[row.key] && ready(row, model.rows, selected, baseline))
       result[row.key] = true;
-  for (const row of model.rows)
-    if (row.groupKey && !row.targetId && row.primary && !result[row.key])
-      dropGroup(result, model.rows, row.groupKey);
-  for (const row of model.rows)
-    if (
-      row.groupKey &&
-      !row.targetId &&
-      !model.rows.some((r) => r.groupKey === row.groupKey && r.primary)
-    )
-      delete result[row.key];
-  const rejected = findInvalidImportRows(
-    baseline,
-    toImportSelection(model, result),
-  );
-  for (const entry of rejected)
-    dropGroup(
-      result,
-      model.rows,
-      `${entry.categoryId}.${entry.sectionId}.${entry.sourceRow}`,
+  for (const row of model.rows) {
+    if (!row.groupKey || row.targetId) continue;
+    const primary = model.rows.find(
+      (r) => r.groupKey === row.groupKey && r.primary,
     );
+    // A new entry is saved only together with its name.
+    if (!primary || !result[primary.key]) delete result[row.key];
+  }
   return result;
+}
+
+/** Repeated rows the save would reject (duplicates or two rows into one entry). */
+export function rejectedGroups(
+  model: ReviewModel,
+  selected: Readonly<Record<string, boolean>>,
+  baseline: Profile,
+): string[] {
+  const ready = readySelection(model, selected, baseline);
+  return findInvalidImportRows(baseline, toImportSelection(model, ready)).map(
+    (entry) => `${entry.categoryId}.${entry.sectionId}.${entry.sourceRow}`,
+  );
+}
+
+export function effectiveSelection(
+  model: ReviewModel,
+  selected: Readonly<Record<string, boolean>>,
+  baseline: Profile,
+): Record<string, boolean> {
+  const result = readySelection(model, selected, baseline);
+  for (const key of rejectedGroups(model, selected, baseline))
+    dropGroup(result, model.rows, key);
+  return result;
+}
+
+/** Keeps a new entry's name selected with its values and clears the entry with its name. */
+export function toggleRows(
+  rows: readonly ReviewRow[],
+  selected: Readonly<Record<string, boolean>>,
+  keys: readonly string[],
+  checked: boolean,
+): Record<string, boolean> {
+  const next = { ...selected };
+  for (const key of keys) {
+    next[key] = checked;
+    const row = rows.find((r) => r.key === key);
+    if (!row?.groupKey || row.targetId) continue;
+    const group = rows.filter((r) => r.groupKey === row.groupKey);
+    if (checked && !row.primary)
+      for (const r of group) if (r.primary) next[r.key] = true;
+    if (!checked && row.primary) for (const r of group) next[r.key] = false;
+  }
+  return next;
 }
 
 function dropGroup(

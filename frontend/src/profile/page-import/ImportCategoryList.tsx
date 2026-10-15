@@ -155,6 +155,23 @@ function Entry({
           <span className={`${styles.mode} ${mode.tone}`}>{mode.text}</span>
           <small>{rows[0].groupLabel}</small>
         </div>
+        {decisions.targets[key] === undefined &&
+          rows[0].linkable &&
+          mode.text === "새 항목" && (
+            <button
+              type="button"
+              className={styles.textButton}
+              aria-label={`${title} 저장 위치 바꾸기`}
+              onClick={() =>
+                onDecide({
+                  ...decisions,
+                  targets: { ...decisions.targets, [key]: "" },
+                })
+              }
+            >
+              저장 위치 바꾸기
+            </button>
+          )}
         {decisions.targets[key] !== undefined && (
           <button
             type="button"

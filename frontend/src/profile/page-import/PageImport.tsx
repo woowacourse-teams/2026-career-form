@@ -1,43 +1,69 @@
-import { findInvalidImportRows } from "./review-selection";
-import { ImportTargetChoices } from "./ImportTargetChoices";
-import {
-  destination,
-  displayValue,
-  NAME_GROUPS,
-  isName,
-  groupKey,
-  fieldLabel,
-  skippedReason,
-} from "./review-fields";
-import { formatProfileDate } from "../../autofill/profile/date-format";
-import { NameSplitEditor, initialNameParts } from "./NameSplitEditor";
-import { presentImportSources } from "./source-presentation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import type {
-  Profile,
-  RepeatedProfileCategoryId,
-  SingleProfileCategoryId,
-} from "../model";
-import { PROFILE_CATEGORIES } from "../field-definitions";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Profile } from "../model";
 import type { ProfileRepository } from "../profile-repository";
-import type { ImportCandidate } from "./reader";
+import { ImportCategoryList } from "./ImportCategoryList";
+import { ImportConfirmCards } from "./ImportConfirmCards";
+import { ImportSummary } from "./ImportSummary";
 import {
-  IMPORT_ENTRY_KEYS,
   ImportConflictError,
   ImportSelectionError,
   saveImportSelection,
-  type ImportSelection,
 } from "./merge";
+import type { ImportCandidate } from "./reader";
+import { destination, isName, skippedReason } from "./review-fields";
+import {
+  buildReviewModel,
+  defaultSelection,
+  effectiveSelection,
+  initialDecisions,
+  isSelectable,
+  rejectedGroups,
+  toggleRows,
+  toImportSelection,
+  type ReviewDecisions,
+} from "./review-model";
 import styles from "./PageImport.module.css";
 import css from "./PageImport.module.css?inline";
+import reviewCss from "./ImportReview.module.css?inline";
 
 interface Props {
   repository: ProfileRepository;
   readCandidates(): Promise<readonly ImportCandidate[]>;
-  onSaved(profile: Profile): void;
+  onSaved(profile: Profile, savedCount: number): void;
   onClose(): void;
 }
 
+const NO_DECISIONS: ReviewDecisions = { names: {}, dates: {}, targets: {} };
+
+const usable = (candidate: ImportCandidate) =>
+  candidate.status !== "unsupported" &&
+  Boolean(candidate.value) &&
+  (isName(candidate) || Boolean(destination(candidate)));
+
+function skippedCounts(candidates: readonly ImportCandidate[]) {
+  const counts = new Map<string, number>();
+  for (const candidate of candidates) {
+    if (usable(candidate)) continue;
+    const reason = skippedReason(
+      candidate.status === "unsupported"
+        ? candidate.reason
+        : "no_profile_mapping",
+    );
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function startingState(
+  candidates: readonly ImportCandidate[],
+  profile: Profile,
+) {
+  const decisions = initialDecisions(candidates);
+  const model = buildReviewModel(candidates, profile, decisions);
+  return { decisions, selected: defaultSelection(model.rows) };
+}
+
+/** One-screen review: new values start selected, overwrites and sensitive values start off. */
 export function PageImport({
   repository,
   readCandidates,
@@ -46,22 +72,15 @@ export function PageImport({
 }: Props) {
   const [baseline, setBaseline] = useState<Profile>();
   const [candidates, setCandidates] = useState<readonly ImportCandidate[]>([]);
+  const [decisions, setDecisions] = useState(NO_DECISIONS);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [edits, setEdits] = useState<Record<string, string>>({});
-  const [confirmedNames, setConfirmedNames] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [targets, setTargets] = useState<Record<string, string>>({});
-  const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [bulkMessage, setBulkMessage] = useState("");
   const [retry, setRetry] = useState(0);
   const alive = useRef(false);
   const pending = useRef(false);
   const panel = useRef<HTMLElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     alive.current = true;
@@ -70,40 +89,19 @@ export function PageImport({
     setError("");
     setBaseline(undefined);
     setCandidates([]);
-    setSelected({});
-    setTargets({});
-    setEdits({});
-    setConfirmedNames({});
-    setStepIndex(0);
-    setBulkMessage("");
     void Promise.all([repository.load(), readCandidates()])
       .then(([profile, found]) => {
         if (!active) return;
-        const initialEdits: Record<string, string> = Object.fromEntries(
-          found
-            .filter((c) => c.value && c.precision === "day")
-            .map((c) => [c.source, c.value!]),
-        );
-        for (const group of NAME_GROUPS) {
-          const candidate = found.find(
-            (c) => c.source === group.source && c.status !== "unsupported",
-          );
-          if (!candidate?.value) continue;
-          const parts = initialNameParts(
-            candidate.value,
-            group.source === "basicInformation.name" ? "korean" : "english",
-          );
-          initialEdits[group.keys[0][0]] = parts.familyName;
-          initialEdits[group.keys[1][0]] = parts.givenName;
-        }
+        const start = startingState(found, profile);
         setBaseline(profile);
         setCandidates(found);
-        setEdits(initialEdits);
+        setDecisions(start.decisions);
+        setSelected(start.selected);
       })
       .catch(() => {
         if (active)
           setError(
-            "지원서 정보를 불러오지 못했습니다. 지원서 페이지에서 다시 시도해 주세요.",
+            "지원서 정보를 불러오지 못했어요. 지원서 페이지에서 다시 시도해 주세요.",
           );
       })
       .finally(() => {
@@ -115,727 +113,202 @@ export function PageImport({
     };
   }, [repository, readCandidates, retry]);
 
-  const usable = candidates.filter(
-    (c) =>
-      c.status !== "unsupported" && c.value && (isName(c) || destination(c)),
-  );
-  const fields = usable.filter((c) => destination(c));
-  const groups = [
-    ...new Set(
-      fields.filter((c) => destination(c)!.category.repeatable).map(groupKey),
-    ),
-  ];
-  const nameGroups = NAME_GROUPS.filter((group) =>
-    usable.some((c) => c.source === group.source),
-  );
-  const steps = [
-    ...nameGroups.map((group) => ({
-      id: group.source,
-      title: group.title,
-      fields: usable.filter((c) => c.source === group.source),
-    })),
-    ...PROFILE_CATEGORIES.filter((category) => !category.repeatable).flatMap(
-      (category) => {
-        const items = fields.filter(
-          (c) => destination(c)!.category.id === category.id,
-        );
-        return items.length
-          ? [
-              {
-                id: category.id,
-                title:
-                  category.label + (category.sensitive ? " · 민감 정보" : ""),
-                fields: items,
-              },
-            ]
-          : [];
-      },
-    ),
-    ...groups.map((key) => {
-      const items = fields.filter((c) => groupKey(c) === key);
-      return {
-        id: key,
-        title: `${destination(items[0])!.section.label} ${items[0].rowIndex! + 1}`,
-        fields: items,
-      };
-    }),
-  ];
-  const step = steps[stepIndex];
-  const summary = !step;
-  const nameGroup = nameGroups.find((group) => group.source === step?.id);
-  // Stable source list: editing a review value must not scroll the application again.
-  const sources = JSON.stringify(step?.fields.map((c) => c.source) ?? []);
-  useEffect(() => {
-    if (loading || !panel.current) return;
-    titleRef.current?.focus({ preventScroll: true });
-    const firstVisible = stepIndex === 0 ? panel.current : titleRef.current;
-    firstVisible?.scrollIntoView?.({ block: "start", inline: "nearest" });
-    return presentImportSources(
-      panel.current.ownerDocument,
-      JSON.parse(sources) as string[],
-    );
-  }, [sources, loading, stepIndex]);
+  // Source highlighting on hover and focus is wired in the next step.
+  const present = (_source: string | undefined) => {};
 
-  const rowInfo = (candidate: ImportCandidate) => {
-    const { category, section } = destination(candidate)!;
-    const key = groupKey(candidate);
-    const rowFields = fields.filter((c) => groupKey(c) === key);
-    const primary = IMPORT_ENTRY_KEYS[section.id][0];
-    const name = rowFields
-      .find((c) => destination(c)!.field.id === primary)
-      ?.value?.trim();
-    const entries =
-      baseline?.[category.id as RepeatedProfileCategoryId].filter(
-        (entry) => entry.sectionId === section.id,
-      ) ?? [];
-    const possibleDuplicate = entries.some(
-      (entry) => entry.values[primary]?.trim() === name,
-    );
-    const targetValue =
-      targets[key] ?? (name && !possibleDuplicate ? "new" : "");
-    const target = entries.find(
-      (entry) => `existing:${entry.id}` === targetValue,
-    );
-    return {
-      key,
-      rowFields,
-      primary,
-      name,
-      entries,
-      targetValue,
-      target,
-      section,
-    };
-  };
-  const currentValue = (candidate: ImportCandidate) => {
-    const { category, field } = destination(candidate)!;
-    return category.repeatable
-      ? rowInfo(candidate).target?.values[field.id]
-      : baseline?.[category.id as SingleProfileCategoryId][field.id];
-  };
-  const valueFor = (candidate: ImportCandidate) =>
-    destination(candidate)!.field.inputType === "date"
-      ? (edits[candidate.source] ?? "")
-      : candidate.value!;
-  const ready = (candidate: ImportCandidate, selection = selected) => {
-    const { category, field } = destination(candidate)!;
-    if (category.repeatable && !rowInfo(candidate).targetValue) return false;
-    const value = valueFor(candidate);
-    if (!value.trim()) return false;
-    if (
-      field.inputType === "date" &&
-      formatProfileDate(value, "YYYY-MM-DD").status !== "resolved"
-    )
-      return false;
-    const existing = category.repeatable
-      ? rowInfo(candidate).target?.values
-      : baseline?.[category.id as SingleProfileCategoryId];
-    const combined = { ...existing };
-    for (const other of fields) {
-      const dest = destination(other)!;
-      if (
-        dest.category.id === category.id &&
-        (!category.repeatable || groupKey(other) === groupKey(candidate)) &&
-        selection[other.source]
-      )
-        combined[dest.field.id] = valueFor(other);
-    }
-    combined[field.id] = value;
-    if (field.visibleWhen && !field.visibleWhen(combined)) return false;
-    const options = field.optionsFor?.(combined) ?? field.options;
-    return (
-      !options ||
-      options.some(
-        (option) =>
-          (typeof option === "string" ? option : option.value) === value,
-      )
-    );
-  };
-  const effectiveSelected = (selection: Record<string, boolean>) => {
-    const result: Record<string, boolean> = {};
-    for (const c of fields)
-      if (selection[c.source] && ready(c, selection)) result[c.source] = true;
-    for (const group of nameGroups)
-      if (confirmedNames[group.source])
-        for (const [key] of group.keys)
-          if (selection[key] && edits[key]?.trim()) result[key] = true;
-    return result;
-  };
-  const chosen = effectiveSelected(selected);
-  const checkedCount = Object.keys(chosen).length;
-  const stepKeys = nameGroup
-    ? nameGroup.keys.map(([key]) => key)
-    : (step?.fields.map((c) => c.source) ?? []);
-  const toggle = (candidate: ImportCandidate, checked: boolean) => {
-    const next = { ...selected, [candidate.source]: checked };
-    if (checked && destination(candidate)!.category.repeatable) {
-      const row = rowInfo(candidate);
-      if (row.targetValue === "new") {
-        const primary = row.rowFields.find(
-          (c) => destination(c)!.field.id === row.primary,
-        );
-        if (primary) next[primary.source] = true;
-      }
-    }
-    if (!checked && destination(candidate)!.category.repeatable) {
-      const row = rowInfo(candidate);
-      if (
-        row.targetValue === "new" &&
-        destination(candidate)!.field.id === row.primary
-      )
-        for (const c of row.rowFields) next[c.source] = false;
-    }
-    setSelected(effectiveSelected(next));
-  };
-  const nextStep = () => {
-    setError("");
-    setBulkMessage("");
-    setStepIndex((index) => index + 1);
-  };
-  const takeStep = () => {
-    const next = { ...selected };
-    for (const key of stepKeys) next[key] = true;
-    setSelected(effectiveSelected(next));
-    nextStep();
-  };
-  const skipStep = () => {
-    setSelected((current) => ({
-      ...current,
-      ...Object.fromEntries(stepKeys.map((key) => [key, false])),
-    }));
-    nextStep();
-  };
-  const skipped = candidates.filter((c) => !usable.includes(c));
-  const skippedCounts = new Map<string, number>();
-  for (const candidate of skipped) {
-    const reason = skippedReason(
-      candidate.status === "unsupported"
-        ? candidate.reason
-        : "no_profile_mapping",
-    );
-    skippedCounts.set(reason, (skippedCounts.get(reason) ?? 0) + 1);
-  }
+  const model = useMemo(
+    () => baseline && buildReviewModel(candidates, baseline, decisions),
+    [candidates, baseline, decisions],
+  );
+  const chosen =
+    model && baseline ? effectiveSelection(model, selected, baseline) : {};
+  const count = Object.keys(chosen).length;
+  const duplicates =
+    model && baseline ? rejectedGroups(model, selected, baseline).length : 0;
+  const hasValues = candidates.some(usable);
 
-  const buildSelection = (
-    selectionKeys: Record<string, boolean>,
-  ): ImportSelection => {
-    const selection: ImportSelection = { single: {}, entries: [] };
-    for (const group of nameGroups)
-      for (const [key] of group.keys)
-        if (selectionKeys[key])
-          selection.single!.personal = {
-            ...selection.single!.personal,
-            [key]: edits[key].trim(),
-          };
-    for (const candidate of fields) {
-      if (!selectionKeys[candidate.source]) continue;
-      const { category, section, field } = destination(candidate)!;
-      const value = valueFor(candidate);
-      if (!category.repeatable) {
-        const id = category.id as SingleProfileCategoryId;
-        selection.single![id] = { ...selection.single![id], [field.id]: value };
-        continue;
-      }
-      const row = rowInfo(candidate);
-      let entry = selection.entries!.find(
-        (entry) =>
-          entry.categoryId === category.id &&
-          entry.sectionId === section.id &&
-          entry.sourceRow === candidate.rowIndex,
+  const decide = (next: ReviewDecisions) => {
+    if (!model || !baseline) return;
+    const after = buildReviewModel(candidates, baseline, next);
+    const before = new Map(model.rows.map((row) => [row.key, row.status]));
+    const moved = after.rows.filter((r) => before.get(r.key) !== r.status);
+    // A decision restarts the affected rows like a fresh read: new values on,
+    // overwrites and sensitive values off.
+    const on = moved.filter((r) => r.status === "new" && !r.sensitive);
+    const off = moved.filter((r) => !on.includes(r));
+    setDecisions(next);
+    setSelected((current) => {
+      const cleared = toggleRows(
+        after.rows,
+        current,
+        off.map((r) => r.key),
+        false,
       );
-      if (!entry) {
-        entry = {
-          categoryId: category.id as RepeatedProfileCategoryId,
-          sectionId: section.id,
-          sourceRow: candidate.rowIndex!,
-          ...(row.targetValue === "new" ? {} : { targetId: row.target!.id }),
-          values: {},
-        };
-        selection.entries!.push(entry);
-      }
-      entry.values[field.id] = value;
-    }
-    return selection;
-  };
-  const selectAll = () => {
-    if (!baseline || saving) return;
-    const all = effectiveSelected(
-      Object.fromEntries([
-        ...fields.map((candidate) => [candidate.source, true]),
-        ...nameGroups.flatMap((group) =>
-          group.keys.map(([key]) => [key, true]),
-        ),
-      ]),
-    );
-    const rejected = findInvalidImportRows(baseline, buildSelection(all));
-    const rejectedKeys = new Set(
-      rejected.map(
-        (row) => `${row.categoryId}.${row.sectionId}.${row.sourceRow}`,
-      ),
-    );
-    for (const candidate of fields) {
-      if (rejectedKeys.has(groupKey(candidate))) delete all[candidate.source];
-    }
-    const count = Object.keys(all).length;
-    const total =
-      fields.length +
-      nameGroups.reduce((sum, group) => sum + group.keys.length, 0);
-    setSelected(all);
-    setBulkMessage(
-      `${count}개를 선택했습니다. 확인이 필요하거나 중복된 ${total - count}개는 제외했습니다. 아래 목록에서 다시 확인할 수 있습니다.`,
-    );
+      return toggleRows(
+        after.rows,
+        cleared,
+        on.map((r) => r.key),
+        true,
+      );
+    });
     setError("");
-    setStepIndex(steps.length);
   };
-  const selection = buildSelection(chosen);
-  const invalidRows =
-    baseline && summary ? findInvalidImportRows(baseline, selection) : [];
-  const invalidKeys = new Set(
-    invalidRows.map(
-      (row) => `${row.categoryId}.${row.sectionId}.${row.sourceRow}`,
-    ),
-  );
-  const save = async (event: FormEvent) => {
-    event.preventDefault();
-    if (
-      pending.current ||
-      !baseline ||
-      !checkedCount ||
-      !summary ||
-      invalidRows.length
-    )
-      return;
+  const toggle = (keys: readonly string[], checked: boolean) => {
+    if (model) setSelected(toggleRows(model.rows, selected, keys, checked));
+  };
+
+  const recover = async () => {
+    setError(
+      "검토하는 동안 프로필이 바뀌었어요. 최신 프로필을 다시 불러왔으니 가져올 정보를 다시 확인해 주세요.",
+    );
+    try {
+      const latest = await repository.load();
+      if (!alive.current) return;
+      const start = startingState(candidates, latest);
+      setBaseline(latest);
+      setDecisions(start.decisions);
+      setSelected(start.selected);
+    } catch {
+      if (alive.current) setBaseline(undefined);
+    }
+  };
+  const save = async () => {
+    if (pending.current || !model || !baseline || !count) return;
     pending.current = true;
     setSaving(true);
     setError("");
     try {
-      const saved = await saveImportSelection(repository, baseline, selection);
-      if (alive.current) onSaved(saved);
+      const saved = await saveImportSelection(
+        repository,
+        baseline,
+        toImportSelection(model, chosen),
+      );
+      if (alive.current) {
+        present(undefined);
+        onSaved(saved, count);
+      }
     } catch (failure) {
       if (!alive.current) return;
-      if (failure instanceof ImportSelectionError)
+      if (failure instanceof ImportConflictError) await recover();
+      else if (failure instanceof ImportSelectionError)
         setError(
-          "선택한 정보를 확인해 주세요. 같은 항목이 이미 있다면 해당 단계로 돌아가 기존 정보 업데이트를 선택해 주세요. 새 항목에는 대표 이름이 필요합니다.",
+          "고른 정보 중 저장할 수 없는 항목이 있어요. 확인이 필요한 항목을 다시 확인해 주세요.",
         );
-      else if (failure instanceof ImportConflictError) {
-        setError(
-          "검토 중 프로필이 변경되었습니다. 최신 값을 확인하고 가져올 항목을 다시 선택해 주세요.",
-        );
-        setSelected({});
-        setTargets({});
-        setConfirmedNames({});
-        setStepIndex(0);
-        setBulkMessage("");
-        try {
-          const latest = await repository.load();
-          if (alive.current) setBaseline(latest);
-        } catch {
-          if (alive.current) setBaseline(undefined);
-        }
-      } else setError("프로필을 저장하지 못했습니다. 다시 시도해 주세요.");
+      else setError("프로필을 저장하지 못했어요. 다시 시도해 주세요.");
     } finally {
       pending.current = false;
       if (alive.current) setSaving(false);
     }
   };
 
-  const renderField = (candidate: ImportCandidate) => {
-    const { field, category } = destination(candidate)!;
-    const label = fieldLabel(candidate);
-    const valid = ready(candidate);
-    const missingDate =
-      field.inputType === "date" &&
-      formatProfileDate(valueFor(candidate), "YYYY-MM-DD").status !==
-        "resolved";
-    return (
-      <div
-        className={`${styles.field} ${!valid ? styles.needsReview : ""}`}
-        key={candidate.source}
-      >
-        <label>
-          <input
-            type="checkbox"
-            checked={Boolean(chosen[candidate.source])}
-            disabled={!valid}
-            onChange={(e) => toggle(candidate, e.target.checked)}
-          />
-          {label} 가져오기
-        </label>
-        <span>지원서 값: {displayValue(candidate.value, candidate)}</span>
-        {field.inputType === "date" && (
-          <label>
-            {label} 확인
-            <input
-              type="date"
-              value={edits[candidate.source] ?? ""}
-              aria-invalid={missingDate}
-              onChange={(e) => {
-                setEdits({ ...edits, [candidate.source]: e.target.value });
-                setSelected({ ...selected, [candidate.source]: false });
-              }}
-            />
-          </label>
-        )}
-        {missingDate && (
-          <small>
-            정확한 날짜를 입력해 주세요. 일자를 모르면 이 날짜는 제외할 수
-            있어요.
-          </small>
-        )}
-        {!valid && !missingDate && (
-          <small>저장할 항목이나 관련 정보를 먼저 선택해 주세요.</small>
-        )}
-        {candidate.reason === "catalog_unverified" && (
-          <small>지원서에 적힌 이름으로 저장합니다.</small>
-        )}
-        {category.repeatable &&
-          rowInfo(candidate).targetValue === "new" &&
-          destination(candidate)!.field.id === rowInfo(candidate).primary && (
-            <small>새 항목을 추가할 때 이 이름이 함께 저장됩니다.</small>
-          )}
-        <small>
-          기존 값: {displayValue(currentValue(candidate), candidate)}
-        </small>
-      </div>
-    );
-  };
+  const pendingCount = model?.confirmations.length ?? 0;
+  const sensitiveOff = model?.rows.some(
+    (row) => row.sensitive && isSelectable(row) && !chosen[row.key],
+  );
+  const note = pendingCount
+    ? `확인하지 않은 ${pendingCount}개는 빼고 저장해요`
+    : sensitiveOff
+      ? "민감 정보는 직접 켜야 저장돼요"
+      : "고른 정보만 저장하고, 지원서는 바꾸지 않아요";
+  const skipped = skippedCounts(candidates);
+  const skippedTotal = [...skipped.values()].reduce((sum, n) => sum + n, 0);
 
-  const repeated =
-    step?.fields[0] && destination(step.fields[0])?.category.repeatable
-      ? rowInfo(step.fields[0])
-      : undefined;
   return (
     <section
       ref={panel}
       className={styles.importer}
       aria-label="지원서에서 프로필 가져오기"
     >
-      <style>{css}</style>
-      <h2>지원서에서 가져오기</h2>
-      <p className={styles.hint}>
-        지원서에서 가져올 정보를 확인해 주세요. 확인 중인 원본은 색 테두리로
-        표시됩니다.
-      </p>
-      {loading && <p role="status">지원서 정보를 읽고 있습니다.</p>}
+      <style>
+        {css}
+        {reviewCss}
+      </style>
+      {loading && (
+        <p role="status" className={styles.status}>
+          지원서 정보를 읽고 있어요
+        </p>
+      )}
       {error && (
         <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
-      {!loading && !usable.length && (
-        <p>
-          가져올 정보가 없습니다. Greeting 지원서에서 작성한 정보가 보이는지
+      {!loading && !hasValues && (
+        <p className={styles.empty}>
+          가져올 정보가 없어요. Greeting 지원서에 쓴 내용이 화면에 보이는지
           확인해 주세요.
         </p>
       )}
-      {!loading && usable.length > 0 && baseline && (
-        <form onSubmit={(e) => void save(e)}>
-          <fieldset disabled={saving} className={styles.fields}>
-            <legend>가져올 정보 확인</legend>
-            <div className={styles.bulkActions}>
-              <button
-                type="button"
-                className={styles.bulkButton}
-                onClick={selectAll}
-              >
-                가능한 정보 모두 선택
-              </button>
-              <p className={styles.hint}>
-                민감 정보도 포함합니다. 이름·날짜 등 확인이 필요한 값은
-                제외하고, 저장 전 목록으로 이동합니다.
-              </p>
-            </div>
-            <p className={styles.progress} aria-live="polite">
-              {Math.min(stepIndex + 1, steps.length + 1)} / {steps.length + 1}{" "}
-              단계 · {checkedCount}개 선택
-            </p>
-            <div className={styles.progressTrack} aria-hidden="true">
-              <div
-                className={styles.progressFill}
-                style={{
-                  width: `${((stepIndex + 1) / (steps.length + 1)) * 100}%`,
-                }}
-              />
-            </div>
-            <h3 ref={titleRef} tabIndex={-1}>
-              {step?.title ?? "저장 전 확인"}
-            </h3>
-            {nameGroup && (
-              <fieldset
-                className={`${styles.group} ${!confirmedNames[nameGroup.source] ? styles.needsReview : ""}`}
-              >
-                <legend>{nameGroup.title}</legend>
-                <NameSplitEditor
-                  source={step.fields[0].value!}
-                  language={
-                    nameGroup.source === "basicInformation.name"
-                      ? "korean"
-                      : "english"
-                  }
-                  familyName={edits[nameGroup.keys[0][0]] ?? ""}
-                  givenName={edits[nameGroup.keys[1][0]] ?? ""}
-                  confirmed={Boolean(confirmedNames[nameGroup.source])}
-                  onChange={(family, given) => {
-                    setEdits({
-                      ...edits,
-                      [nameGroup.keys[0][0]]: family,
-                      [nameGroup.keys[1][0]]: given,
-                    });
-                    setConfirmedNames({
-                      ...confirmedNames,
-                      [nameGroup.source]: false,
-                    });
-                    setSelected({
-                      ...selected,
-                      ...Object.fromEntries(
-                        nameGroup.keys.map(([key]) => [key, false]),
-                      ),
-                    });
-                  }}
-                  onConfirm={() => {
-                    setConfirmedNames({
-                      ...confirmedNames,
-                      [nameGroup.source]: true,
-                    });
-                    setSelected({
-                      ...selected,
-                      ...Object.fromEntries(
-                        nameGroup.keys.map(([key]) => [key, true]),
-                      ),
-                    });
-                  }}
-                />
-                {nameGroup.keys.map(([key, label]) => (
-                  <div className={styles.field} key={key}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(chosen[key])}
-                        disabled={
-                          !confirmedNames[nameGroup.source] ||
-                          !edits[key]?.trim()
-                        }
-                        onChange={(e) =>
-                          setSelected({ ...selected, [key]: e.target.checked })
-                        }
-                      />
-                      {label} 가져오기
-                    </label>
-                    <small>기존 값: {baseline.personal[key] || "없음"}</small>
-                  </div>
+      {!loading && hasValues && model && (
+        <fieldset disabled={saving} className={styles.fields}>
+          <legend hidden>가져올 정보 확인</legend>
+          <ImportSummary rows={model.rows} chosen={chosen} />
+          <ImportConfirmCards
+            confirmations={model.confirmations}
+            decisions={decisions}
+            duplicateCount={duplicates}
+            onDecide={decide}
+            onPresent={present}
+          />
+          <ImportCategoryList
+            rows={model.rows}
+            chosen={chosen}
+            decisions={decisions}
+            onToggle={toggle}
+            onPresent={present}
+            onDecide={decide}
+          />
+          {skippedTotal > 0 && (
+            <details className={styles.skipped}>
+              <summary>가져올 수 없는 {skippedTotal}개 보기</summary>
+              <ul>
+                {[...skipped].map(([reason, n]) => (
+                  <li key={reason}>
+                    {reason}: {n}개
+                  </li>
                 ))}
-              </fieldset>
-            )}
-            {repeated && (
-              <ImportTargetChoices
-                name={repeated.name}
-                primary={repeated.primary}
-                entries={repeated.entries}
-                targetValue={repeated.targetValue}
-                groupId={step.id}
-                onChange={(value) => {
-                  setTargets({ ...targets, [repeated.key]: value });
-                  setSelected({
-                    ...selected,
-                    ...Object.fromEntries(stepKeys.map((key) => [key, false])),
-                  });
-                }}
-              />
-            )}
-            {!nameGroup && step?.fields.map(renderField)}
-            {summary && (
-              <>
-                {bulkMessage && (
-                  <p role="status" className={styles.bulkNotice}>
-                    {bulkMessage}
-                  </p>
-                )}
-                <p>
-                  선택한 {checkedCount}개 값만 프로필에 저장합니다. 기존 값과
-                  다르면 아래 값으로 바뀝니다.
-                </p>
-                {steps.map((item, index) => {
-                  const group = nameGroups.find((g) => g.source === item.id);
-                  const items = group
-                    ? group.keys
-                        .filter(([key]) => chosen[key])
-                        .map(([key, label]) => ({
-                          label,
-                          value: edits[key],
-                          current: baseline.personal[key],
-                        }))
-                    : item.fields
-                        .filter((c) => chosen[c.source])
-                        .map((c) => ({
-                          label: fieldLabel(c),
-                          value: displayValue(valueFor(c), c),
-                          current: displayValue(currentValue(c), c),
-                        }));
-                  const row =
-                    !group && destination(item.fields[0])!.category.repeatable
-                      ? rowInfo(item.fields[0])
-                      : undefined;
-                  return (
-                    <div
-                      className={`${styles.group} ${invalidKeys.has(item.id) ? styles.needsReview : ""}`}
-                      key={item.id}
-                    >
-                      {invalidKeys.has(item.id) && (
-                        <p>
-                          확인 필요 · 중복 항목 또는 같은 저장 위치가 있습니다.
-                          이름·기간·저장 위치를 다시 확인하거나 제외해 주세요.
-                        </p>
-                      )}
-                      <h4>
-                        {item.title} ·{" "}
-                        {items.length ? `${items.length}개 선택` : "제외"}
-                      </h4>
-                      {row && items.length > 0 && (
-                        <p>
-                          {row.targetValue === "new"
-                            ? "새 정보로 추가"
-                            : `기존 정보 업데이트: ${row.target?.values[row.primary] || "이름 없음"}`}
-                        </p>
-                      )}
-                      {items.map((item) => (
-                        <div className={styles.field} key={item.label}>
-                          <strong>
-                            {item.label}: {item.value}
-                          </strong>
-                          <small>기존 값: {item.current || "없음"}</small>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBulkMessage("");
-                          setStepIndex(index);
-                          setError("");
-                        }}
-                      >
-                        {item.title} 다시 확인
-                      </button>
-                    </div>
-                  );
-                })}
-                {invalidRows.length > 0 && (
-                  <div role="alert" className={styles.needsReview}>
-                    <p>
-                      저장 전 확인이 필요한 항목이 {invalidRows.length}개
-                      있습니다. 표시한 단계에서 수정하거나 이 항목만 제외해
-                      주세요.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelected((current) => ({
-                          ...current,
-                          ...Object.fromEntries(
-                            fields
-                              .filter((c) => invalidKeys.has(groupKey(c)))
-                              .map((c) => [c.source, false]),
-                          ),
-                        }))
-                      }
-                    >
-                      문제 항목 제외하고 계속
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-            <div className={styles.actions} role="group" aria-label="단계 이동">
-              <button
-                type="button"
-                disabled={stepIndex === 0}
-                onClick={() => {
-                  setBulkMessage("");
-                  setStepIndex((index) => index - 1);
-                  setError("");
-                }}
-              >
-                이전
-              </button>
-              {summary ? (
-                <button
-                  type="submit"
-                  className={styles.primaryButton}
-                  disabled={!checkedCount || invalidRows.length > 0}
-                >
-                  {saving ? "저장 중…" : "선택한 정보 저장"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={nameGroup ? styles.primaryButton : undefined}
-                  onClick={nextStep}
-                >
-                  다음
-                </button>
-              )}
-              {step && (
-                <>
-                  <button type="button" onClick={skipStep}>
-                    건너뛰기
-                  </button>
-                  {!nameGroup && (
-                    <button
-                      type="button"
-                      className={styles.primaryButton}
-                      onClick={takeStep}
-                      disabled={
-                        !step.fields.some((c) =>
-                          ready(
-                            c,
-                            Object.fromEntries(
-                              stepKeys.map((key) => [key, true]),
-                            ),
-                          ),
-                        )
-                      }
-                    >
-                      모두 선택 후 다음
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-            {step && (
-              <p className={styles.hint}>
-                {nameGroup
-                  ? "이름을 확인한 뒤 다음으로 이동해 주세요."
-                  : "일부만 가져오려면 원하는 항목을 체크하고 다음을 누르세요."}{" "}
-                건너뛰면 이 단계의 선택을 해제합니다.
-              </p>
-            )}
-          </fieldset>
-        </form>
+              </ul>
+            </details>
+          )}
+        </fieldset>
       )}
-      {!loading && skipped.length > 0 && (
-        <details className={styles.hint} aria-label="제외한 항목">
-          <summary>{skipped.length}개 항목 제외</summary>
-          <ul>
-            {[...skippedCounts].map(([reason, count]) => (
-              <li key={reason}>
-                {reason}: {count}개
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <div className={styles.exitActions}>
-        {!loading && (!baseline || !usable.length) && (
+      <div className={styles.footer}>
+        {!loading && hasValues && model && (
+          <>
+            <button
+              type="button"
+              className={styles.saveButton}
+              disabled={!count || saving}
+              aria-busy={saving}
+              onClick={() => void save()}
+            >
+              프로필에 저장하기
+              <span className={styles.badge}>{count}</span>
+            </button>
+            <p className={styles.footNote}>{note}</p>
+          </>
+        )}
+        <div className={styles.exitActions}>
+          {!loading && (!baseline || !hasValues) && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setRetry((value) => value + 1)}
+            >
+              다시 읽기
+            </button>
+          )}
           <button
             type="button"
             disabled={saving}
-            onClick={() => setRetry((value) => value + 1)}
+            onClick={() => {
+              present(undefined);
+              onClose();
+            }}
           >
-            다시 읽기
+            닫기
           </button>
-        )}
-        <button type="button" disabled={saving} onClick={onClose}>
-          가져오기 취소
-        </button>
+        </div>
       </div>
     </section>
   );

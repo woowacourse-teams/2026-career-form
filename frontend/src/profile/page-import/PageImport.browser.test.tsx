@@ -79,7 +79,7 @@ async function mountImport(
   );
   const ui = within(container);
   await expect
-    .poll(() => ui.queryByRole("button", { name: "다음" }))
+    .poll(() => ui.queryByText("프로필에 가져올 정보"))
     .not.toBeNull();
   return {
     ui,
@@ -97,49 +97,24 @@ async function mountImport(
   };
 }
 
-async function goTo(
-  state: Awaited<ReturnType<typeof mountImport>>,
-  title: string,
-) {
-  for (let count = 0; count < 20; count++) {
-    if (state.ui.queryByRole("heading", { name: title })) return;
-    const revisit = state.ui.queryByRole("button", {
-      name: `${title} 다시 확인`,
-    });
-    if (revisit) {
-      await userEvent.click(revisit);
-      return;
-    }
-    await userEvent.click(state.ui.getByRole("button", { name: "건너뛰기" }));
-  }
-  throw new Error(`Review step not found: ${title}`);
-}
-const next = async (state: Awaited<ReturnType<typeof mountImport>>) => {
-  await userEvent.click(state.ui.getByRole("button", { name: "다음" }));
-};
-const take = async (state: Awaited<ReturnType<typeof mountImport>>) => {
-  await userEvent.click(
-    state.ui.getByRole("button", { name: "모두 선택 후 다음" }),
-  );
-};
-async function finish(state: Awaited<ReturnType<typeof mountImport>>) {
-  await goTo(state, "저장 전 확인");
-  await expect
-    .poll(() =>
-      document.querySelectorAll("[data-career-form-import-highlight]"),
-    )
-    .toHaveLength(0);
-  await userEvent.click(
-    state.ui.getByRole("button", { name: "선택한 정보 저장" }),
-  );
+type Mounted = Awaited<ReturnType<typeof mountImport>>;
+const highlights = () =>
+  document.querySelectorAll("[data-career-form-import-highlight]");
+const button = (state: Mounted, name: string | RegExp) =>
+  state.ui.getByRole("button", { name });
+async function save(state: Mounted) {
+  await userEvent.click(button(state, /프로필에 저장하기/));
   await expect.poll(() => state.saved()).toBeDefined();
+  await expect.poll(() => highlights()).toHaveLength(0);
 }
+const bySchool = (profile: Profile) =>
+  [...profile.education].sort((a, b) =>
+    a.values.schoolName.localeCompare(b.values.schoolName),
+  );
 
-it("reviews sources step by step and saves only selected fields without inventing a date", async () => {
+it("reviews the page on one screen and saves new values without inventing dates", async () => {
   const state = await mountImport();
-  expect(
-    state.ui.queryByRole("checkbox", { name: "이메일 가져오기" }),
-  ).toBeNull();
+  await userEvent.click(button(state, "아니에요"));
   const divider = state.ui.getByRole("slider", {
     name: "국문 성과 이름 구분선",
   });
@@ -149,64 +124,43 @@ it("reviews sources step by step and saves only selected fields without inventin
     expect(dividerStyle[`border${edge}Width`]).toBe("0px");
     expect(dividerStyle[`padding${edge}`]).toBe("0px");
   }
-
-  await expect
-    .poll(() =>
-      document.querySelectorAll("[data-career-form-import-highlight]"),
-    )
-    .toHaveLength(1);
-  await goTo(state, "연락처와 주소");
-  await expect
-    .poll(() =>
-      document.querySelectorAll("[data-career-form-import-highlight]"),
-    )
-    .toHaveLength(2);
+  await userEvent.click(button(state, /연락처와 주소/));
   await userEvent.click(
     state.ui.getByRole("checkbox", { name: "이메일 가져오기" }),
   );
-  await next(state);
-  await goTo(state, "대학교 1");
-  expect(
-    (state.ui.getByLabelText("대학교 1 입학일 확인") as HTMLInputElement).value,
-  ).toBe("");
-  expect(
-    state.ui.getByRole("checkbox", { name: "대학교 1 입학일 가져오기" }),
-  ).toBeDisabled();
-  expect(
-    state.ui.getByRole("radio", { name: /^새 정보로 추가/ }),
-  ).toBeChecked();
-  await userEvent.click(
-    state.ui.getByRole("checkbox", { name: "대학교 1 학교명 가져오기" }),
-  );
-  await next(state);
-  await finish(state);
+  await save(state);
   expect(state.saves()).toBe(1);
   expect(state.stored().contact).toEqual({
     email: "live-browser@example.invalid",
+    phoneNumber: "01000000000",
     addressLine1: "보존 주소",
   });
   expect(state.stored().personal).toEqual({});
-  expect(state.stored().education).toEqual([
+  expect(bySchool(state.stored())).toEqual([
     {
       id: expect.any(String),
       sectionId: "university",
       values: { schoolName: "합성대학교A" },
       identity: { status: "manual", originalText: "합성대학교A" },
     },
+    {
+      id: expect.any(String),
+      sectionId: "university",
+      values: { schoolName: "합성대학교B", startDate: "2022-03-02" },
+      identity: { status: "manual", originalText: "합성대학교B" },
+    },
   ]);
   expect(state.saved()).toEqual(state.stored());
   state.expectSourceUnchanged();
 });
 
-it("cancels a step review without profile writes or source-page events", async () => {
+it("closes the review without profile writes or source-page events", async () => {
   const state = await mountImport();
-  await goTo(state, "연락처와 주소");
+  await userEvent.click(button(state, /연락처와 주소/));
   await userEvent.click(
     state.ui.getByRole("checkbox", { name: "이메일 가져오기" }),
   );
-  await userEvent.click(
-    state.ui.getByRole("button", { name: "가져오기 취소" }),
-  );
+  await userEvent.click(button(state, "닫기"));
   await expect.poll(() => state.closed()).toBe(true);
   expect(state.saves()).toBe(0);
   expect(state.saved()).toBeUndefined();
@@ -229,19 +183,15 @@ it("imports multiple section types around unknown and malformed fields in Chromi
         <input name="languagesCertificationsAndOtherActivity.certificatesLicenses.0.registrationNumber" value="SYNTHETIC-001">
       </div>
     </div>`);
-  await goTo(state, "기본 인적사항");
-  await take(state);
-  await goTo(state, "자격증·면허증 1");
-  await take(state);
-  await goTo(state, "직장경력 5");
+  await userEvent.click(
+    state.ui.getByRole("switch", { name: "학력 가져오기" }),
+  );
+  await userEvent.click(button(state, /직장경력/));
   expect(
     state.ui.queryByRole("checkbox", { name: "직장경력 5 입사일 가져오기" }),
   ).toBeNull();
-  expect(
-    state.ui.getByRole("radio", { name: /^새 정보로 추가/ }),
-  ).toBeChecked();
-  await take(state);
-  await finish(state);
+  expect(state.ui.getByText("새 항목")).toBeDefined();
+  await save(state);
   expect(state.stored().personal).toEqual({ gender: "남성" });
   expect(state.stored().careers[0].values).toEqual({
     companyName: "합성회사",
@@ -255,7 +205,7 @@ it("imports multiple section types around unknown and malformed fields in Chromi
   state.expectSourceUnchanged();
 });
 
-it("takes readable steps while skipping blank default rows and unknown controls", async () => {
+it("skips blank default rows and unknown controls", async () => {
   const state = await mountImport(
     `
     <div data-scope="accordion" data-part="item">
@@ -282,11 +232,12 @@ it("takes readable steps while skipping blank default rows and unknown controls"
         .remove();
     },
   );
-  await take(state);
-  expect(state.ui.getByRole("heading", { name: "직장경력 5" })).toBeDefined();
-  await take(state);
-  expect(state.ui.getByRole("heading", { name: "저장 전 확인" })).toBeDefined();
-  await finish(state);
+  expect(state.ui.queryByRole("heading", { name: /이렇게 나누면/ })).toBeNull();
+  await userEvent.click(button(state, /연락처와 주소/));
+  await userEvent.click(
+    state.ui.getByRole("checkbox", { name: "이메일 가져오기" }),
+  );
+  await save(state);
   expect(state.stored().contact).toEqual({
     email: "live-browser@example.invalid",
     phoneNumber: "01000000000",
@@ -308,104 +259,53 @@ it("takes readable steps while skipping blank default rows and unknown controls"
   state.expectSourceUnchanged();
 });
 
-it("reveals the new step title after advancing from the bottom of a tall review", async () => {
-  const state = await mountImport();
-  Object.assign(state.container.style, { height: "300px", overflowY: "auto" });
-  await goTo(state, "대학교 1");
-  const nextButton = state.ui.getByRole("button", { name: "다음" });
-  nextButton.scrollIntoView({ block: "end" });
-  expect(state.container.scrollTop).toBeGreaterThan(100);
-  await userEvent.click(nextButton);
-  const title = state.ui.getByRole("heading", { name: "대학교 2" });
-  await expect
-    .poll(() => {
-      const frame = state.container.getBoundingClientRect();
-      const heading = title.getBoundingClientRect();
-      // Chromium rounds scrollTop to whole pixels while layout uses subpixels.
-      return (
-        Math.round(heading.top - frame.top) >= 0 &&
-        Math.round(heading.bottom - frame.bottom) <= 0
-      );
-    })
-    .toBe(true);
-});
-
 it.each([280, 332])(
-  "keeps navigation aligned and reachable in a %ipx panel",
+  "keeps the save button reachable without sideways scrolling in a %ipx panel",
   async (width) => {
-    const state = await mountImport();
-    Object.assign(state.container.style, {
+    const state = await mountImport("", undefined, {
       width: `${width}px`,
       height: "400px",
       overflowY: "auto",
     });
-    await goTo(state, "연락처와 주소");
-    const previous = state.ui.getByRole("button", { name: "이전" });
-    const forward = state.ui.getByRole("button", { name: "다음" });
-    const skip = state.ui.getByRole("button", {
-      name: "건너뛰기",
-    });
-    const select = state.ui.getByRole("button", {
-      name: "모두 선택 후 다음",
-    });
-    const a = previous.getBoundingClientRect();
-    const b = forward.getBoundingClientRect();
-    const c = skip.getBoundingClientRect();
-    const d = select.getBoundingClientRect();
-    expect(Math.abs(a.top - b.top)).toBeLessThan(1);
-    expect(Math.abs(c.top - d.top)).toBeLessThan(1);
-    expect(c.top).toBeGreaterThanOrEqual(a.bottom);
-    expect(Math.abs(a.width - b.width)).toBeLessThan(1);
-    expect(Math.abs(c.width - d.width)).toBeLessThan(1);
     const frame = state.container.getBoundingClientRect();
-    for (const button of [previous, forward, skip, select]) {
-      const bounds = button.getBoundingClientRect();
-      expect(bounds.height).toBeGreaterThanOrEqual(44);
-      expect(bounds.left).toBeGreaterThanOrEqual(frame.left);
-      expect(bounds.right).toBeLessThanOrEqual(frame.right + 1);
-      expect(bounds.top).toBeGreaterThanOrEqual(frame.top);
-      expect(bounds.bottom).toBeLessThanOrEqual(frame.bottom + 1);
-      expect(button.scrollWidth).toBeLessThanOrEqual(button.clientWidth);
-    }
+    const bounds = button(state, /프로필에 저장하기/).getBoundingClientRect();
+    expect(bounds.height).toBeGreaterThanOrEqual(44);
+    expect(bounds.left).toBeGreaterThanOrEqual(frame.left);
+    expect(bounds.right).toBeLessThanOrEqual(frame.right + 1);
+    expect(bounds.bottom).toBeLessThanOrEqual(frame.bottom + 1);
     expect(state.container.scrollWidth).toBeLessThanOrEqual(
       state.container.clientWidth,
     );
   },
 );
 
-it("shows the bulk action when a constrained panel first opens", async () => {
+it("shows the summary first when a constrained panel opens", async () => {
   const state = await mountImport("", undefined, {
     width: "332px",
     height: "300px",
     overflowY: "auto",
   });
-  await expect
-    .poll(() => (state.container.getRootNode() as ShadowRoot).activeElement)
-    .toBe(state.ui.getByRole("heading", { name: "이름 확인" }));
   const frame = state.container.getBoundingClientRect();
-  const button = state.ui
-    .getByRole("button", { name: "가능한 정보 모두 선택" })
+  const summary = state.ui
+    .getByText("프로필에 가져올 정보")
     .getBoundingClientRect();
-  expect(button.top).toBeGreaterThanOrEqual(frame.top);
-  expect(button.bottom).toBeLessThanOrEqual(frame.bottom);
+  expect(summary.top).toBeGreaterThanOrEqual(frame.top);
+  expect(summary.bottom).toBeLessThanOrEqual(frame.bottom);
 });
 
-it("keeps date confirmation labels above a full-width date input", async () => {
+it("keeps the day input whole inside a 280px date card", async () => {
   const state = await mountImport("", undefined, {
     width: "280px",
     height: "400px",
     overflowY: "auto",
   });
-  await goTo(state, "대학교 1");
-  const input = state.ui.getByLabelText("대학교 1 입학일 확인");
-  const label = input.closest("label")!;
-  const text = label.firstChild!;
-  const range = document.createRange();
-  range.selectNode(text);
-  const textBounds = range.getBoundingClientRect();
-  const inputBounds = input.getBoundingClientRect();
-  expect(inputBounds.top).toBeGreaterThanOrEqual(textBounds.bottom);
-  expect(
-    Math.abs(inputBounds.width - label.getBoundingClientRect().width),
-  ).toBeLessThan(1);
+  await userEvent.click(button(state, "나중에 할게요"));
+  const card = state.ui
+    .getByRole("heading", { name: /며칠인가요/ })
+    .closest("article")!
+    .getBoundingClientRect();
+  const input = state.ui.getByLabelText(/의 일$/).getBoundingClientRect();
+  expect(input.width).toBeGreaterThanOrEqual(60);
+  expect(input.left).toBeGreaterThanOrEqual(card.left);
+  expect(input.right).toBeLessThanOrEqual(card.right);
 });

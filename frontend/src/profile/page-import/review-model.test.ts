@@ -7,6 +7,8 @@ import {
   effectiveSelection,
   initialDecisions,
   plainLabel,
+  rejectedGroups,
+  toggleRows,
   toImportSelection,
   type ReviewDecisions,
 } from "./review-model";
@@ -311,5 +313,54 @@ describe("review model", () => {
     expect(model.rows[0].groupLabel).toBe("자격증과 면허증 1");
     expect(plainLabel("주·야간")).toBe("주야간");
     expect(plainLabel("면제·비대상 사유")).toBe("면제와 비대상 사유");
+  });
+
+  it("reports the groups saving would reject so the screen can explain them", () => {
+    const second = {
+      ...certificate,
+      source: "certificates.1.name",
+      rowIndex: 1,
+    };
+    const model = buildReviewModel(
+      [certificate, second],
+      createEmptyProfile(),
+      initialDecisions([certificate, second]),
+    );
+    expect(
+      rejectedGroups(model, defaultSelection(model.rows), createEmptyProfile()),
+    ).toEqual(["certifications.certificate.1"]);
+  });
+
+  it("selects the name of a new entry with any of its values and clears the entry with its name", () => {
+    const found = [school, dayStart];
+    const model = buildReviewModel(
+      found,
+      createEmptyProfile(),
+      initialDecisions(found),
+    );
+    expect(toggleRows(model.rows, {}, [dayStart.source], true)).toEqual({
+      [dayStart.source]: true,
+      [school.source]: true,
+    });
+    expect(
+      toggleRows(
+        model.rows,
+        { [dayStart.source]: true, [school.source]: true },
+        [school.source],
+        false,
+      ),
+    ).toEqual({ [dayStart.source]: false, [school.source]: false });
+  });
+
+  it("marks repeated rows that could be linked to an existing entry", () => {
+    const other = { ...school, value: "다른대학교" };
+    expect(
+      buildReviewModel([other], withUniversity(), initialDecisions([other]))
+        .rows[0],
+    ).toMatchObject({ status: "new", linkable: true });
+    expect(
+      buildReviewModel([other], createEmptyProfile(), initialDecisions([other]))
+        .rows[0].linkable,
+    ).toBe(false);
   });
 });
