@@ -37,9 +37,4 @@ it("collects sanitized questions and choices in Chromium without display values"
     },
   ]);
   expect(JSON.stringify(fields)).not.toMatch(/PRIVATE_VALUE|HIDDEN_VALUE|BUTTON_VALUE/);
-  console.info("task-18-sanitized-collection", JSON.stringify(fields.map((field) => ({
-    displayName: field.displayName,
-    options: field.options,
-    semanticContext: field.semanticContext,
-  }))));
 });

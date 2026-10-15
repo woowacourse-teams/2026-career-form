@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { resolveDocumentCompany } from "../adapters/company";
 import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { installExecutionPolicy } from "../workflow/execution-policy";
 import { collectFieldsSnapshot } from "./collect";
@@ -145,6 +146,8 @@ describe("generic structural collection boundaries", () => {
     document.body.innerHTML = `<form><div><p>추천인 연락 방법</p><input placeholder="내용 입력"></div></form>`;
     const input = document.querySelector("input")!;
     expect(labelOf(input)).toBe("내용 입력");
+    expect(labelOf(input, false)).toBe("내용 입력");
+    expect(labelOf(input, true)).toBe("추천인 연락 방법");
     expect(collectSemanticContext(input, null)).toEqual({ inputType: "text" });
   });
 
@@ -172,7 +175,9 @@ describe("generic structural collection boundaries", () => {
     const legacy = collectSemanticContext(input, null);
     expect(collectSemanticContext(input, null, {})).toEqual(legacy);
     expect(collectSemanticContext(input, null, { generic: false })).toEqual(legacy);
-    expect(labelOf(input, false)).toBe(labelOf(input));
+    expect(labelOf(input)).toBe("연결 질문");
+    expect(labelOf(input, false)).toBe("연결 질문");
+    expect(labelOf(input, true)).toBe("연결 질문");
   });
 
   it("caps overflowing context sources at eight while retaining explicit and owned questions", () => {
@@ -209,5 +214,42 @@ describe("generic structural collection boundaries", () => {
       { name: undefined, control: "radio", options: ["선택 1"], context: {} },
       { name: undefined, control: "radio", options: ["선택 1"], context: {} },
     ]);
+  });
+
+  it("keeps policy and components request structures independent of the generic opt-in", () => {
+    const html = `<section><div><div><p>추천인 연락 방법</p><p>고정 설명</p></div>
+      <div><input placeholder="내용 입력"></div></div>${question("선택 문항")}</section>`;
+    const collect = (site?: "sk" | "greeting") => {
+      installExecutionPolicy(document, site ? fixturePolicy(site) : undefined);
+      document.body.innerHTML = html;
+      const request = collectFieldsSnapshot(document).request;
+      return { company: resolveDocumentCompany(document), request: JSON.stringify(request) };
+    };
+    const generic = collect();
+    const policy = collect("sk");
+    const components = collect("greeting");
+    expect([generic.company, policy.company, components.company])
+      .toEqual(["generic", "policy", "components"]);
+    expect(generic.request).toContain("추천인 연락 방법");
+    expect(generic.request).toContain("고정 설명");
+    for (const mode of [policy, components]) {
+      expect(mode.request).not.toContain("추천인 연락 방법");
+      expect(mode.request).not.toContain("고정 설명");
+      expect(mode.request).not.toContain("선택 문항");
+    }
+    expect(policy.request).toContain("내용 입력");
+    const radio = (id: string) => ({
+      candidateId: id, visibility: "visible", element: "input", control: "radio",
+      options: [{ optionId: `${id}-option-1`, displayName: "선택 1" }], semanticContext: {},
+    });
+    const sections = (first: Record<string, unknown>) => [{
+      sectionId: "section-1",
+      fields: [first, radio("field-2"), radio("field-3")],
+    }];
+    const text = { candidateId: "field-1", visibility: "visible", placeholder: "내용 입력",
+      element: "input", control: "text", semanticContext: { inputType: "text" } };
+    expect(JSON.parse(policy.request).sections)
+      .toEqual(sections({ ...text, displayName: "내용 입력" }));
+    expect(JSON.parse(components.request).sections).toEqual(sections(text));
   });
 });
