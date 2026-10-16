@@ -2,8 +2,8 @@
 
 > Issue: CF-192
 > Collected: 2026-10-16
-> Approval-Digest: 9a96f691055d378fe05e9106fab5ed1b61926d2ef0fba8e9fc7a8b5d03d35c0b
-> Source-Revision: 79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6
+> Approval-Digest: de295217a0f0ddc3729a15851d2e779ef7d3326104eb5618449cb5f86ab71c2c
+> Source-Revision: 6c20ffac15cd7548b067afc36b44b230e7eec252
 
 ## greeting-profile-import
 
