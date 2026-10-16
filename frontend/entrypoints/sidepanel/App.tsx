@@ -15,6 +15,8 @@ import {
   type ProfileSearchItem,
 } from "../../src/profile/profile-search";
 import { ChromeProfileStorage } from "../../src/storage/chrome-profile-storage";
+import { PageImport } from "../../src/profile/page-import/PageImport";
+import type { ImportCandidate } from "../../src/profile/page-import/reader";
 import styles from "./App.module.css";
 import panelCss from "./App.module.css?inline";
 
@@ -32,6 +34,7 @@ interface AppProps {
   returnToProfile?: () => void;
   actionPosition?: "top" | "bottom";
   showPostings?: boolean;
+  readImportCandidates?: () => Promise<readonly ImportCandidate[]>;
 }
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -108,12 +111,16 @@ export function App({
   returnToProfile,
   actionPosition = "top",
   showPostings = true,
+  readImportCandidates,
 }: AppProps) {
   const repository = useMemo(
     () => injectedRepository ?? new ChromeProfileStorage(),
     [injectedRepository],
   );
   const [profile, setProfile] = useState<Profile>();
+  const profileLoadGeneration = useRef(0);
+  const [importActive, setImportActive] = useState(false);
+  const [importSavedCount, setImportSavedCount] = useState<number>();
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [query, setQuery] = useState("");
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
@@ -129,6 +136,10 @@ export function App({
   const previouslyActive = useRef(autofillActive);
 
   useEffect(() => {
+    if (autofillActive) setImportActive(false);
+  }, [autofillActive]);
+
+  useEffect(() => {
     if (previouslyActive.current && !autofillActive)
       startButton.current?.focus();
     previouslyActive.current = autofillActive;
@@ -138,13 +149,21 @@ export function App({
   );
 
   useEffect(() => {
+    const generation = ++profileLoadGeneration.current;
     repository
       .load()
       .then((loadedProfile) => {
+        if (generation !== profileLoadGeneration.current) return;
         setProfile(loadedProfile);
         setLoadStatus("ready");
       })
-      .catch(() => setLoadStatus("error"));
+      .catch(() => {
+        if (generation === profileLoadGeneration.current)
+          setLoadStatus("error");
+      });
+    return () => {
+      ++profileLoadGeneration.current;
+    };
   }, [repository]);
 
   const items = profile ? buildSearchItems(profile) : [];
@@ -253,18 +272,24 @@ export function App({
               <span aria-hidden="true">←</span>
             </button>
           )}
-          <h1>{autofillActive ? "자동 기입" : "내 지원 정보"}</h1>
+          <h1>
+            {autofillActive
+              ? "자동 기입"
+              : importActive
+                ? "프로필 가져오기"
+                : "내 지원 정보"}
+          </h1>
           <button
             className={styles.profileButton}
             data-profile-management
-            hidden={autofillActive}
+            hidden={autofillActive || importActive}
             type="button"
             onClick={() => void openProfileManagement()}
           >
             프로필 관리 <span aria-hidden="true">↗</span>
           </button>
         </div>
-        {!autofillActive && showPostings && (
+        {!autofillActive && !importActive && showPostings && (
           <nav className={styles.postingsActions} aria-label="공고 관리">
             <button
               type="button"
@@ -277,7 +302,7 @@ export function App({
             </button>
           </nav>
         )}
-        {!autofillActive && actionPosition === "top" && (
+        {!autofillActive && !importActive && actionPosition === "top" && (
           <section className={styles.autofillAction}>
             <button
               data-autofill-start
@@ -303,7 +328,22 @@ export function App({
           </p>
         )}
       </header>
-      {autofillActive ? (
+      {importActive && readImportCandidates ? (
+        <main className={styles.main} aria-label="프로필 가져오기 화면">
+          <PageImport
+            repository={repository}
+            readCandidates={readImportCandidates}
+            onClose={() => setImportActive(false)}
+            onSaved={(saved, count) => {
+              ++profileLoadGeneration.current;
+              setProfile(saved);
+              setLoadStatus("ready");
+              setImportActive(false);
+              setImportSavedCount(count);
+            }}
+          />
+        </main>
+      ) : autofillActive ? (
         <main className={styles.workflowMain} aria-label="지원서 작업 화면">
           {autofillView}
         </main>
@@ -320,6 +360,33 @@ export function App({
               </p>
             )}
 
+            {readImportCandidates && (
+              <section className={styles.importAction}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImportSavedCount(undefined);
+                    setImportActive(true);
+                  }}
+                >
+                  지원서에서 가져오기
+                </button>
+                <p>이미 작성한 Greeting 지원서로 프로필을 채워보세요.</p>
+              </section>
+            )}
+            {importSavedCount !== undefined && (
+              <section
+                role="status"
+                aria-label="가져오기 결과"
+                className={styles.importResult}
+              >
+                <strong>프로필에 {importSavedCount}개를 저장했어요</strong>
+                <p>
+                  다른 지원서에서 자동 기입을 누르면 방금 저장한 정보로 채울 수
+                  있어요
+                </p>
+              </section>
+            )}
             <label className={styles.search}>
               <span className={styles.visuallyHidden}>프로필 검색</span>
               <svg

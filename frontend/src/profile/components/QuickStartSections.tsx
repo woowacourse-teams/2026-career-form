@@ -39,7 +39,12 @@ export function QuickStartGuide({
       <OpeningGuide />
       <p className={styles.note}>지원서 저장과 제출은 직접 해 주세요.</p>
       <div className={styles.actions}>
-        <button type="button" className={styles.primary} onClick={onBack}>
+        <button
+          type="button"
+          className={styles.primary}
+          disabled={pending}
+          onClick={onBack}
+        >
           입력 이어가기
         </button>
         <button type="button" disabled={pending} onClick={onOpenProfile}>

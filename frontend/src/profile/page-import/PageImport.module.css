@@ -1,0 +1,144 @@
+/* Colors come from src/styles/theme.css; review components style themselves in ImportReview.module.css. */
+.importer {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.importer :focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.fields {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.status,
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.empty {
+  padding: 24px 14px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 12px;
+  text-align: center;
+}
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-control);
+  color: var(--color-danger-text);
+  background: var(--color-danger-soft);
+  font-size: 12.5px;
+}
+.skipped {
+  padding: 10px 14px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 12px;
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+.skipped summary {
+  color: var(--color-text);
+  font-weight: 650;
+  cursor: pointer;
+}
+.skipped ul {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 2px;
+  padding-left: 18px;
+}
+/* The panel's scroll area keeps 20px of bottom padding; the sticky footer covers it
+   so the list never shows through beneath the save button. */
+.footer {
+  --import-panel-bottom-gap: 20px;
+  position: sticky;
+  bottom: calc(-1 * var(--import-panel-bottom-gap));
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  margin-bottom: calc(-1 * var(--import-panel-bottom-gap));
+  padding: 12px 0 calc(4px + var(--import-panel-bottom-gap));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.saveButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 12px;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.saveButton:hover:not(:disabled) {
+  border-color: var(--color-brand-hover);
+  background: var(--color-brand-hover);
+}
+.saveButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 99px;
+  color: var(--color-on-action);
+  background: var(--color-action);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.footNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  text-align: center;
+}
+.exitActions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.exitActions button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.exitActions button:hover:not(:disabled) {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+.exitActions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

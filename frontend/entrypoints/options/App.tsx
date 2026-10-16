@@ -19,6 +19,7 @@ interface AppProps {
   repository?: ProfileRepository;
   confirmDelete?: (message: string) => boolean;
   confirmImport?: (message: string) => boolean;
+  confirmReload?: (message: string) => boolean;
   downloadProfile?: (fileName: string, contents: string) => void;
 }
 
@@ -27,6 +28,7 @@ const SAVE_STATUS_LABEL = {
   saving: "저장 중",
   saved: "저장됨",
   error: "저장 실패",
+  conflict: "최신 프로필 확인 필요",
 } as const;
 
 function downloadProfile(fileName: string, contents: string) {
@@ -45,6 +47,7 @@ export function App({
   repository: injectedRepository,
   confirmDelete = (message) => globalThis.confirm(message),
   confirmImport = (message) => globalThis.confirm(message),
+  confirmReload = (message) => globalThis.confirm(message),
   downloadProfile: injectedDownloadProfile = downloadProfile,
 }: AppProps) {
   const repository = useMemo(
@@ -184,6 +187,37 @@ export function App({
           </div>
         </div>
       </header>
+
+      {editor.saveStatus === "conflict" && (
+        <div className={styles.transferError} role="alert">
+          <p>
+            다른 화면에서 프로필이 변경되었습니다. 현재 편집은 저장하지
+            않았습니다. 최신 프로필을 다시 불러온 뒤 편집해 주세요.
+          </p>
+          <button
+            type="button"
+            disabled={editor.isReloading}
+            onClick={() => {
+              if (
+                confirmReload(
+                  "저장되지 않은 편집이 사라집니다. 최신 프로필을 다시 불러올까요?",
+                )
+              ) {
+                setTransferFeedback(null);
+                void editor.reloadLatest();
+              }
+            }}
+          >
+            {editor.isReloading ? "불러오는 중…" : "최신 프로필 다시 불러오기"}
+          </button>
+          {editor.reloadFailed && (
+            <p>
+              최신 프로필을 불러오지 못했습니다. 편집 내용은 유지됩니다. 다시
+              시도해 주세요.
+            </p>
+          )}
+        </div>
+      )}
 
       {transferFeedback && (
         <p

@@ -337,7 +337,9 @@ describe("품질 관측의 로컬 값 검증과 비식별 보고", () => {
 
   it("종료 호출 없이 새 실행을 시작해도 이전 관측을 취소 결과로 정리한다", async () => {
     vi.useFakeTimers();
-    const send = vi.fn(async (_message: unknown) => ({ ok: true }));
+    const send = vi.fn<ConstructorParameters<typeof QualityObservation>[0]>(
+      async () => ({ ok: true }),
+    );
     const quality = new QualityObservation(send);
     const input = document.createElement("input");
     document.body.append(input);

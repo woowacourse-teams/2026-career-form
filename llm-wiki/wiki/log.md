@@ -485,6 +485,22 @@
 - 승인한 세 후보를 [CF-169 bundle](../raw/issues/CF-169/manifest.md)에 기록하고 [현대 어댑터](topics/adapter-hyundai.md), [SK 어댑터](topics/adapter-sk.md), [어댑터 필드 현황](topics/adapter-field-inventory.md)의 Current를 갱신했다. 기존 raw는 보존했다.
 - 현대 `.field-group`과 SK `.form-item-group.langExam-Item`의 행 격리 조건, 국적과 우대 여부 드라이버 제외를 기록했다.
 
+## [2026-10-12] ingest | CF-192 Greeting 프로필 import 기술 검증
+
+- Approval-Digest: 09e992e80ac677ab64606c19fe1babcff1e300a589fa7a3f99b93e04eafd01c2
+- Source-Revision: 2567a6ab93014787eb155670651796ef5013567c
+- 승인한 네 후보를 [CF-192 bundle](../raw/issues/CF-192/manifest.md)과 [Greeting 프로필 import 기술 검증](topics/greeting-profile-import.md)에 기록하고 색인을 추가했다.
+- 기존 raw와 자동 기입 정책은 보존하고, 읽기 검증 결과와 제품 구현의 후속 조건을 구분했다.
+
+## [2026-10-12] ingest | CF-192 Greeting 프로필 가져오기 제품 연결
+
+- Approval-Digest: 1d53de70607a0afcdd1bf1ae1d18373d5b927860730dbb1efd1606ce09e551dc
+- Source-Revision: aa33c040f7f183a3fce454c89db4dc33f5bda415
+- 새로 승인한 네 후보로 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)과 [가져오기 topic](topics/greeting-profile-import.md)을 제품 구현 상태에 맞춰 갱신했다. 기준 브랜치의 raw는 변경하지 않았다.
+- 선택 병합·저장, 이름·날짜·학력 확인, 공통 저장 큐의 충돌 보호와 복구, 합성 fixture 검증의 한계를 기록했다.
+
+- 2026-10-12: CF-192 승인된 전체 필드 가져오기·부분 실패 격리·Aside LF/HLB 검증 근거로 병합 전 raw와 topic을 갱신했다.
+
 ## [2026-10-12] ingest | CF-183 확장 품질 보고 fetch 호출 문맥
 
 - Approval-Digest: a0023aa706b1b4fd3c776de453075b9a7718c3ff09d069f63780963d8836fc13
@@ -552,3 +568,24 @@
 - Approval-Digest: 44786fd7c6ee3529b9ffdbe14c2f183836d556bf6b822ad4e86d2dc0019caf3d
 - Source-Revision: 05b7a90ec1a02050b8ded4adc703f5edc3e6a9d4
 - 승인한 세 후보를 [CF-184 bundle](../raw/issues/CF-184/manifest.md)에 기록하고 [사이트별 자동 입력 결과와 일별 그래프](topics/autofill-quality-dashboard.md)를 추가했다. 기존 품질 관측 주제에서 연결하고 기존 raw는 보존했다.
+
+## [2026-10-15] ingest | CF-192 한 화면 가져오기 검토
+
+- Approval-Digest: dcf2130a93c947448df405fedb580e0143e8a836eeca0e6a06be55c783062682
+- Source-Revision: f926716d0f1efc792d8129f6d2dff8df6f98cdc5
+- 승인한 후보 8개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)의 현재 상태를 한 화면 검토, 새 값 미리 선택, 확인 카드, 중복 행 안내, 원본 칸 강조, 화면 문구 규칙으로 갱신했다.
+
+## [2026-10-15] ingest | CF-192 실행 정책 기반 가져오기 통합
+
+- Approval-Digest: e7990fbc0dfac3e68910c58c5e8a6037f640da03eae1c85b69c822281d58ccb1
+- Source-Revision: 843c7ebb10e771ac51570dfff7efc8fbda2aded2
+- 최신 develop 병합 뒤 승인한 후보 10개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 실행 정책 기반 읽기, 가져오기 전용 민감 범주, 구분값 기준 추가 전공을 반영했다.
+
+## [2026-10-16] ingest | CF-192 실사이트 테스트와 재가져오기 보완
+
+- Approval-Digest: 9a96f691055d378fe05e9106fab5ed1b61926d2ef0fba8e9fc7a8b5d03d35c0b
+- Source-Revision: 79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6
+- 승인한 후보 12개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 재가져오기 생략 조건과 실사이트 테스트 범위를 반영했다.
