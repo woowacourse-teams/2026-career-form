@@ -1,11 +1,14 @@
+/* Colors come from src/styles/theme.css. */
 .editor {
-  border: 1px solid;
-  border-radius: 10px;
-  padding: 10px;
+  display: grid;
+  gap: 12px;
   min-width: 0;
+  padding: 14px;
+  border: 1px solid;
+  border-radius: 14px;
 }
 .review {
-  border-color: var(--color-border-strong);
+  border-color: var(--color-border);
   background: var(--color-surface-muted);
 }
 .confirmed {
@@ -13,22 +16,49 @@
   background: var(--color-success-soft);
 }
 .source {
-  margin: 0 0 8px;
+  display: grid;
+  gap: 2px;
+  margin: 0;
   overflow-wrap: anywhere;
 }
+.source small {
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.source b {
+  color: var(--color-text-strong);
+  font-size: 16px;
+  font-weight: 750;
+}
 .hint {
+  margin: 0;
+  color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.5;
-  margin: 8px 0;
+}
+.splitArea {
+  display: grid;
+  gap: 4px;
+}
+.sides {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+  color: var(--color-action);
+  font-size: 11.5px;
+  font-weight: 650;
 }
 .splitter {
   position: relative;
-  margin: 16px 0;
   padding: 0 7px;
 }
 .units {
   display: grid;
-  min-height: 44px;
+  overflow: hidden;
+  min-height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
   text-align: center;
   align-items: stretch;
 }
@@ -38,7 +68,12 @@
   justify-content: center;
   overflow-wrap: anywhere;
   padding: 4px 0;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+  transition: background-color 120ms ease;
+}
+.space {
+  box-shadow: inset -3px 0 0 var(--color-surface-muted);
 }
 .family {
   color: var(--color-text-strong);
@@ -65,9 +100,9 @@
 .divider::-webkit-slider-thumb {
   appearance: none;
   width: 14px;
-  height: 52px;
+  height: 56px;
   border: 4px solid transparent;
-  border-radius: 6px;
+  border-radius: 7px;
   background: var(--color-action);
   background-clip: padding-box;
 }
@@ -76,10 +111,10 @@
 }
 .divider::-moz-range-thumb {
   width: 6px;
-  height: 44px;
-  background: var(--color-action);
+  height: 48px;
   border: 0;
   border-radius: 3px;
+  background: var(--color-action);
 }
 .divider:focus-visible {
   outline: 3px solid var(--color-focus);
@@ -87,49 +122,103 @@
 }
 .fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
 }
 .editor .fields label {
   display: grid;
   gap: 4px;
+  min-width: 0;
+  color: var(--color-text-muted);
   font-size: 12px;
+  font-weight: 600;
 }
 .fields input {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 8px;
+  min-height: 42px;
+  padding: 8px 10px;
   border: 1px solid var(--color-field-border);
   border-radius: var(--radius-control);
   color: var(--color-text-strong);
   background: var(--color-surface);
+  font: inherit;
+  font-size: 14px;
 }
-.actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-}
-.actions button {
-  min-width: 0;
-  min-height: 44px;
-  padding: 8px;
-  overflow-wrap: anywhere;
+.swap {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
   border: 1px solid var(--color-accent);
-  border-radius: 10px;
-  background: var(--color-accent-soft);
+  border-radius: 99px;
   color: var(--color-action-strong);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 13px;
   font-weight: 650;
   cursor: pointer;
+  transition: background-color 120ms ease;
 }
-.actions button:last-child {
+.swap svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--color-action);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 300ms ease;
+}
+.swap:hover {
+  background: var(--color-accent-soft);
+}
+.swap:hover svg {
+  transform: rotate(180deg);
+}
+.swap:active svg {
+  transform: rotate(360deg);
+}
+.confirm {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
   border: 2px solid var(--color-border-strong);
-  background: var(--color-brand);
+  border-radius: 12px;
   color: var(--color-on-brand);
+  background: var(--color-brand);
+  font: inherit;
+  font-size: 14.5px;
   font-weight: 750;
+  cursor: pointer;
 }
-.actions button:disabled {
+.confirm:hover:not(:disabled) {
+  border-color: var(--color-brand-hover);
+  background: var(--color-brand-hover);
+}
+.confirm:disabled {
   opacity: 0.55;
   cursor: default;
+}
+.status {
+  margin: -4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .swap,
+  .units span {
+    transition: none;
+  }
+  .swap svg {
+    transition: none;
+  }
+  .swap:hover svg,
+  .swap:active svg {
+    transform: none;
+  }
 }

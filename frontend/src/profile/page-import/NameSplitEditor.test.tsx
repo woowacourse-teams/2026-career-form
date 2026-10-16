@@ -64,13 +64,35 @@ describe("name split suggestions", () => {
   });
   it("swaps English names and allows compound family names at word boundaries", () => {
     render(<Editor source="Van der Meer" language="english" />);
-    fireEvent.change(screen.getByRole("slider"), { target: { value: "2" } });
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "6" } });
     expect(screen.getByLabelText("영문 성")).toHaveValue("Van der");
-    fireEvent.click(
-      screen.getByRole("button", { name: "성과 이름 순서 바꾸기" }),
-    );
+    expect(screen.getByLabelText("영문 이름")).toHaveValue("Meer");
+    fireEvent.click(screen.getByRole("button", { name: "성과 이름 바꾸기" }));
     expect(screen.getByLabelText("영문 성")).toHaveValue("Meer");
     expect(screen.getByLabelText("영문 이름")).toHaveValue("Van der");
+  });
+  it("lets the divider split an English name written without a space", () => {
+    render(<Editor source="YunaJeong" language="english" />);
+    const slider = screen.getByRole("slider");
+    expect(slider).toHaveAttribute("max", "9");
+    expect(slider).toHaveValue("0");
+    fireEvent.change(slider, { target: { value: "4" } });
+    expect(screen.getByLabelText("영문 성")).toHaveValue("Yuna");
+    expect(screen.getByLabelText("영문 이름")).toHaveValue("Jeong");
+    fireEvent.change(slider, { target: { value: "5" } });
+    expect(screen.getByLabelText("영문 성")).toHaveValue("YunaJ");
+    expect(screen.getByLabelText("영문 이름")).toHaveValue("eong");
+  });
+  it("starts English names at the first space and labels the two sides", () => {
+    render(<Editor source="Yuna Jeong" language="english" />);
+    expect(screen.getByRole("slider")).toHaveValue("4");
+    expect(screen.getByLabelText("영문 성")).toHaveValue("Yuna");
+    const swap = screen.getByRole("button", { name: "성과 이름 바꾸기" });
+    expect(swap.querySelector("svg")).not.toBeNull();
+    fireEvent.click(swap);
+    expect(screen.getByLabelText("영문 성")).toHaveValue("Jeong");
+    expect(screen.getByLabelText("영문 이름")).toHaveValue("Yuna");
+    expect(screen.getByRole("slider")).toHaveValue("5");
   });
   it("does not confirm missing name parts", () => {
     render(<Editor source="Madonna" language="english" />);
