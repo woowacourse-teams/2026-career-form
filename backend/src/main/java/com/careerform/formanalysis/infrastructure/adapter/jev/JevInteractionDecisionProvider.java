@@ -7,6 +7,8 @@ import java.util.Map;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 import com.careerform.formanalysis.application.port.InteractionDecisionProvider;
+import com.careerform.formanalysis.dto.InteractionDecisionRequest.Role;
+import com.careerform.formanalysis.dto.InteractionDecisionRequest.TargetKind;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 
 @Component
@@ -14,6 +16,35 @@ import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 public final class JevInteractionDecisionProvider implements InteractionDecisionProvider {
     static final String ABSTAIN_CRITERION = "Cannot identify one safe, supported, unambiguous role.";
     static final String CANDIDATE_CRITERION = "This observed candidate only; do not choose hidden, disabled, readonly, inert or unrelated controls.";
+    static final String REPEAT_ADD_CRITERION = "ADD: activating this observed control adds exactly one new empty row "
+        + "to the target repeat group; it does not save, submit, delete, navigate or open another page.";
+    static final String REPEAT_ADD_ABSTAIN_CRITERION =
+        "No observed control safely adds exactly one new row to the target repeat group.";
+    static final String SECTION_REVEAL_CRITERION = "REVEAL: activating this observed control expands the collapsed "
+        + "section that holds the target field; it does not save, submit, delete, navigate or open another page.";
+    static final String SECTION_REVEAL_ABSTAIN_CRITERION =
+        "No observed control safely expands the collapsed section that holds the target field.";
+    static String rowKindCriterion(TargetKind kind) {
+        return "This observed option of the row kind select denotes the education level " + kind.name() + ".";
+    }
+    static String rowKindAbstainCriterion(TargetKind kind) {
+        return "No observed option unambiguously denotes the education level " + kind.name() + ".";
+    }
+    static String structureInstructions(Role role, TargetKind kind, String id) {
+        return switch (role) {
+            case REPEAT_ADD -> "Decide for role REPEAT_ADD from observation " + id + " whether one observed visible "
+                + "enabled button-like control adds exactly one row to the target repeat group. Choose that control "
+                + "(ADD) or ABSTAIN. Never choose save, submit, delete, navigation or unrelated controls.";
+            case SECTION_REVEAL -> "Decide for role SECTION_REVEAL from observation " + id + " whether one observed "
+                + "visible enabled button-like control expands the collapsed section that holds the target field. "
+                + "Choose that control (REVEAL) or ABSTAIN. Never choose save, submit, delete, navigation or "
+                + "unrelated controls.";
+            case ROW_KIND_OPTION -> "Select for role ROW_KIND_OPTION from observation " + id + " the one observed "
+                + "option of the row kind select whose label denotes the education level " + kind.name() + ". "
+                + "Use only the option labels. Choose ABSTAIN when no option or more than one option fits.";
+            default -> throw new IllegalArgumentException("Not a structure role");
+        };
+    }
     static String instructions(String role, String id) {
         return "Select the candidate with role " + role + " from observation " + id +
                 ". Choose only the observed visible enabled control structurally related to the target or calendar. " +
@@ -29,13 +60,16 @@ public final class JevInteractionDecisionProvider implements InteractionDecision
         Map<String, ChoiceContext> state = new LinkedHashMap<>();
         Map<String, JevClient.Choice> questions = new LinkedHashMap<>();
         for (Decision decision : batch.decisions()) {
+            boolean structure = isStructureRole(decision.role());
             Map<String, String> criteria = new LinkedHashMap<>();
-            criteria.put(JevClient.ABSTAIN, ABSTAIN_CRITERION);
+            criteria.put(JevClient.ABSTAIN, structure ? abstainCriterion(decision) : ABSTAIN_CRITERION);
+            String candidateCriterion = structure ? candidateCriterion(decision) : CANDIDATE_CRITERION;
             decision.candidates().forEach(candidate -> criteria.put(candidate.candidateId(),
-                CANDIDATE_CRITERION));
+                candidateCriterion));
             state.put(decision.decisionId(), new ChoiceContext(decision.role().name(), decision.canonicalFieldKey(), decision.candidates()));
-            questions.put(decision.decisionId(), new JevClient.Choice(
-                instructions(decision.role().name(), decision.decisionId()), criteria));
+            questions.put(decision.decisionId(), new JevClient.Choice(structure
+                ? structureInstructions(decision.role(), decision.targetKind(), decision.decisionId())
+                : instructions(decision.role().name(), decision.decisionId()), criteria));
         }
         var answers = client.choose(state, questions);
         List<Result> results = new ArrayList<>();
@@ -46,6 +80,23 @@ public final class JevInteractionDecisionProvider implements InteractionDecision
                 : new Selected(decision.decisionId(), decision.role(), selected));
         }
         return new Resolution(batch.schemaVersion(), List.copyOf(results));
+    }
+    private static boolean isStructureRole(Role role) {
+        return role == Role.REPEAT_ADD || role == Role.SECTION_REVEAL || role == Role.ROW_KIND_OPTION;
+    }
+    private static String abstainCriterion(Decision decision) {
+        return switch (decision.role()) {
+            case REPEAT_ADD -> REPEAT_ADD_ABSTAIN_CRITERION;
+            case SECTION_REVEAL -> SECTION_REVEAL_ABSTAIN_CRITERION;
+            default -> rowKindAbstainCriterion(decision.targetKind());
+        };
+    }
+    private static String candidateCriterion(Decision decision) {
+        return switch (decision.role()) {
+            case REPEAT_ADD -> REPEAT_ADD_CRITERION;
+            case SECTION_REVEAL -> SECTION_REVEAL_CRITERION;
+            default -> rowKindCriterion(decision.targetKind());
+        };
     }
     private record ChoiceContext(String role, String canonicalFieldKey, List<Candidate> candidates) {}
 }
