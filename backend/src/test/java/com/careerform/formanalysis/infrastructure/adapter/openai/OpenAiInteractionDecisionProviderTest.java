@@ -1,10 +1,12 @@
 package com.careerform.formanalysis.infrastructure.adapter.openai;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -14,6 +16,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.careerform.formanalysis.application.port.InteractionDecisionProvider;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Role;
+import com.careerform.formanalysis.exception.ResolverException;
 
 class OpenAiInteractionDecisionProviderTest {
     @ParameterizedTest
@@ -30,5 +33,20 @@ class OpenAiInteractionDecisionProviderTest {
         assertThat(result.results()).containsExactly(
             new InteractionDecisionProvider.Selected("shape", role, "candidate"),
             new InteractionDecisionProvider.Abstained("unknown-shape", role));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Role.class, names = {"REPEAT_ADD", "SECTION_REVEAL", "ROW_KIND_OPTION"})
+    void rejectsStructureRolesAsUnsupportedWithoutCallingOpenAi(Role role) {
+        OpenAiClient client = mock(OpenAiClient.class);
+        var batch = new InteractionDecisionProvider.Batch(2, List.of(
+            new InteractionDecisionProvider.Decision("search", Role.SEARCH_POPUP_OPENER,
+                "education.university.schoolName", List.of()),
+            new InteractionDecisionProvider.Decision("structure", role, "education.university.schoolName", List.of())));
+
+        assertThatThrownBy(() -> new OpenAiInteractionDecisionProvider(client).decide(batch))
+            .isInstanceOf(ResolverException.class)
+            .hasMessageContaining("UNSUPPORTED");
+        verifyNoInteractions(client);
     }
 }

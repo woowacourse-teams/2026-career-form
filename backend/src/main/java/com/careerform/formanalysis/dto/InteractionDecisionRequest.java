@@ -45,8 +45,12 @@ public record InteractionDecisionRequest(
         @NotNull Role role,
         @NotBlank @Size(max = 128) @Pattern(regexp = CANONICAL_FIELD) String canonicalFieldKey,
         @NotNull @Size(min = 1, max = 24)
-        List<@NotNull @Valid Candidate> candidates
+        List<@NotNull @Valid Candidate> candidates,
+        TargetKind targetKind
     ) {
+        public Decision(String decisionId, Role role, String canonicalFieldKey, List<Candidate> candidates) {
+            this(decisionId, role, canonicalFieldKey, candidates, null);
+        }
     }
 
     public record Candidate(
@@ -121,7 +125,18 @@ public record InteractionDecisionRequest(
         CALENDAR_MONTH_CONTROL,
         CALENDAR_DAY_CONTROL,
         CALENDAR_NAVIGATION,
-        CALENDAR_APPLY
+        CALENDAR_APPLY,
+        REPEAT_ADD,
+        SECTION_REVEAL,
+        ROW_KIND_OPTION
+    }
+
+    public enum TargetKind {
+        HIGH_SCHOOL,
+        ASSOCIATE,
+        BACHELOR,
+        MASTER,
+        DOCTOR
     }
 
     public enum Element {
@@ -132,7 +147,9 @@ public record InteractionDecisionRequest(
         @JsonProperty("link")
         LINK,
         @JsonProperty("custom")
-        CUSTOM
+        CUSTOM,
+        @JsonProperty("select")
+        SELECT
     }
 
     public enum Control {
@@ -147,7 +164,9 @@ public record InteractionDecisionRequest(
         @JsonProperty("container")
         CONTAINER,
         @JsonProperty("item")
-        ITEM
+        ITEM,
+        @JsonProperty("option")
+        OPTION
     }
 
     public enum Visibility {

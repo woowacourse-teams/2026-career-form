@@ -2,10 +2,13 @@ package com.careerform.formanalysis.application.port;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Control;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Element;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.RelationToTarget;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Role;
+import com.careerform.formanalysis.dto.InteractionDecisionRequest.TargetKind;
 import com.careerform.formanalysis.dto.InteractionDecisionRequest.Visibility;
 
 public interface InteractionDecisionProvider {
@@ -25,8 +28,13 @@ public interface InteractionDecisionProvider {
         String decisionId,
         Role role,
         String canonicalFieldKey,
-        List<Candidate> candidates
+        List<Candidate> candidates,
+        @JsonInclude(JsonInclude.Include.NON_NULL) TargetKind targetKind
     ) {
+        public Decision(String decisionId, Role role, String canonicalFieldKey, List<Candidate> candidates) {
+            this(decisionId, role, canonicalFieldKey, candidates, null);
+        }
+
         public Decision {
             candidates = List.copyOf(candidates);
         }

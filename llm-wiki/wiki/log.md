@@ -1,5 +1,12 @@
 # Wiki Log
 
+## [2026-10-16] ingest | CF-222 범용 구조 행동, JEV 단일화, 범용 API 분리 ADR 초안
+
+- Approval-Digest: 7d9a06235498d16e25310b1a8ecb773c87d2a4fa6c1e4656991a891cfdb4dbef
+- Source-Revision: fa9125d656cf4f645b7f317318a35e9dd5f2d9a5
+- 승인한 세 후보를 [CF-222 bundle](../raw/issues/CF-222/manifest.md)에 기록하고 [구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md), [JEV 단일 provider](topics/jev-single-analysis-provider.md), [범용 API 분리](topics/generic-api-section-category-matching.md)를 추가했다.
+- 세 ADR은 제안됨 상태이며 구현 결과를 반영한 확정은 후속 작업에서 한다.
+
 ## [2026-10-15] ingest | CF-198 범용 폼 컨텍스트 수집 경계와 전후 비교
 
 - Approval-Digest: a62db0f0fe59c1802b8232a2d513137ad07c402bcb9cd25b185461b7e9a53ba2

@@ -51,7 +51,7 @@ public final class SearchRoutedInteractionDecisionProvider implements Interactio
                 SEARCH_RESULT_CONTAINER, SEARCH_RESULT_ITEM, SEARCH_RESULT_ACTION -> selection.searchProvider();
             case CALENDAR_OPENER, CALENDAR_YEAR_TRIGGER, CALENDAR_YEAR_CONTROL,
                 CALENDAR_MONTH_CONTROL, CALENDAR_DAY_CONTROL, CALENDAR_NAVIGATION,
-                CALENDAR_APPLY -> selection.calendarProvider();
+                CALENDAR_APPLY, REPEAT_ADD, SECTION_REVEAL, ROW_KIND_OPTION -> selection.calendarProvider();
         };
     }
     private static ResolverException invalid() {
