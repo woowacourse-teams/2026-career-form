@@ -71,6 +71,12 @@ it("confirms a suggested name split with one answer", () => {
   expect(
     screen.getByRole("heading", { name: "국문 이름을 이렇게 나누면 될까요?" }),
   ).toBeVisible();
+  expect(
+    screen
+      .getAllByRole("button")
+      .map((item) => item.textContent)
+      .filter((text) => text === "맞아요" || text === "아니에요"),
+  ).toEqual(["맞아요", "아니에요"]);
   fireEvent.click(screen.getByRole("button", { name: "맞아요" }));
   expect(onDecide).toHaveBeenCalledWith({
     ...base,

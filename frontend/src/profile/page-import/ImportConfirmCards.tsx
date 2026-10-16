@@ -90,18 +90,18 @@ function NameCard({ card, decisions, onDecide, onLater }: CardProps<"name">) {
       <div className={styles.cardActions}>
         <button
           type="button"
-          className={styles.secondaryButton}
-          onClick={() => setEditing(true)}
-        >
-          아니에요
-        </button>
-        <button
-          type="button"
           className={styles.primaryButton}
           disabled={!complete}
           onClick={() => confirm(suggestion)}
         >
           맞아요
+        </button>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => setEditing(true)}
+        >
+          아니에요
         </button>
         {later(onLater)}
       </div>
