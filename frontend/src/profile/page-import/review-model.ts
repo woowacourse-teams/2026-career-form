@@ -122,8 +122,72 @@ const usable = (candidate: ImportCandidate) =>
 const languageOf = (source: string) =>
   source === "basicInformation.name" ? "korean" : "english";
 
+const NAME_KEYS = {
+  korean: ["koreanFamilyName", "koreanGivenName", ""],
+  english: ["englishFamilyName", "englishGivenName", " "],
+} as const;
+
+/** A split the profile already holds counts as confirmed when it spells the same name. */
+function savedName(
+  value: string,
+  language: "korean" | "english",
+  baseline?: Profile,
+): NameDecision | undefined {
+  const [familyKey, givenKey, separator] = NAME_KEYS[language];
+  const familyName = baseline?.personal[familyKey]?.trim();
+  const givenName = baseline?.personal[givenKey]?.trim();
+  if (!familyName || !givenName) return undefined;
+  const spelled = (text: string) => text.trim().replace(/\s+/gu, " ");
+  return spelled(familyName + separator + givenName) === spelled(value)
+    ? { familyName, givenName, confirmed: true }
+    : undefined;
+}
+
+/**
+ * Re-importing the same application must not ask again: when exactly one same-name
+ * entry already holds every value (a month equal to the start of its saved day), the
+ * row is linked to it. Nothing would be written, so no entry is linked silently.
+ */
+function savedEntries(
+  candidates: readonly ImportCandidate[],
+  baseline: Profile,
+): Pick<ReviewDecisions, "dates" | "targets"> {
+  const dates: Record<string, string> = {};
+  const targets: Record<string, string> = {};
+  const fields = candidates.filter((c) => usable(c) && destination(c));
+  const groups = new Set(
+    fields
+      .filter((c) => destination(c)!.category.repeatable)
+      .map((c) => groupKey(c)),
+  );
+  for (const key of groups) {
+    const rows = fields.filter((c) => groupKey(c) === key);
+    const { category, section } = destination(rows[0])!;
+    const entries = baseline[category.id as RepeatedProfileCategoryId].filter(
+      (entry) => entry.sectionId === section.id,
+    );
+    const holds = (entry: ProfileEntry, c: ImportCandidate) => {
+      const saved = entry.values[destination(c)!.field.id] ?? "";
+      return (
+        saved === c.value ||
+        (c.precision === "month" && saved.startsWith(`${c.value}-`))
+      );
+    };
+    const matches = entries.filter((entry) =>
+      rows.every((c) => holds(entry, c)),
+    );
+    if (matches.length !== 1) continue;
+    targets[key] = `${EXISTING}${matches[0].id}`;
+    for (const c of rows)
+      if (c.precision === "month")
+        dates[c.source] = matches[0].values[destination(c)!.field.id];
+  }
+  return { dates, targets };
+}
+
 export function initialDecisions(
   candidates: readonly ImportCandidate[],
+  baseline?: Profile,
 ): ReviewDecisions {
   const names: Record<string, NameDecision> = {};
   for (const group of NAME_GROUPS) {
@@ -131,10 +195,18 @@ export function initialDecisions(
       (c) => c.source === group.source && usable(c),
     );
     if (!candidate?.value) continue;
-    const parts = initialNameParts(candidate.value, languageOf(group.source));
-    names[group.source] = { ...parts, confirmed: false };
+    const language = languageOf(group.source);
+    names[group.source] = savedName(candidate.value, language, baseline) ?? {
+      ...initialNameParts(candidate.value, language),
+      confirmed: false,
+    };
   }
-  return { names, dates: {}, targets: {} };
+  return {
+    names,
+    ...(baseline
+      ? savedEntries(candidates, baseline)
+      : { dates: {}, targets: {} }),
+  };
 }
 
 function statusOf(

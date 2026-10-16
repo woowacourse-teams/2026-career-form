@@ -59,7 +59,7 @@ function startingState(
   candidates: readonly ImportCandidate[],
   profile: Profile,
 ) {
-  const decisions = initialDecisions(candidates);
+  const decisions = initialDecisions(candidates, profile);
   const model = buildReviewModel(candidates, profile, decisions);
   return { decisions, selected: defaultSelection(model.rows) };
 }

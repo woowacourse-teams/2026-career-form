@@ -405,4 +405,85 @@ describe("review model", () => {
       card.fields.find((f) => f.fieldId === "schoolRegion")?.options,
     ).toContainEqual({ value: "region:seoul", label: "서울" });
   });
+
+  describe("re-importing the same application", () => {
+    const monthEnd: ImportCandidate = {
+      source: "educationalBackground.universities.0.enrollmentPeriod.endDate",
+      rowIndex: 0,
+      profileFieldKey: "education.university.endDate",
+      status: "review",
+      reason: "month_precision",
+      precision: "month",
+      value: "2023-02",
+    };
+    const savedProfile = (): Profile => ({
+      ...createEmptyProfile(),
+      personal: { koreanFamilyName: "김", koreanGivenName: "예시" },
+      education: [
+        {
+          id: "u1",
+          sectionId: "university",
+          values: { schoolName: "예시대학교", endDate: "2023-02-17" },
+        },
+      ],
+    });
+
+    it("does not ask again for a name the profile already holds split the same way", () => {
+      const profile = savedProfile();
+      const model = buildReviewModel(
+        [koreanName],
+        profile,
+        initialDecisions([koreanName], profile),
+      );
+      expect(model.confirmations).toEqual([]);
+      expect(model.rows.map((r) => r.status)).toEqual(["same", "same"]);
+    });
+
+    it("does not ask again when one same-name entry already holds every value", () => {
+      const profile = savedProfile();
+      const model = buildReviewModel(
+        [school, monthEnd],
+        profile,
+        initialDecisions([school, monthEnd], profile),
+      );
+      expect(model.confirmations).toEqual([]);
+      expect(model.rows.map((r) => r.status)).toEqual(["same", "same"]);
+      expect(
+        effectiveSelection(model, defaultSelection(model.rows), profile),
+      ).toEqual({});
+    });
+
+    it("still asks when any value would change", () => {
+      const profile = savedProfile();
+      const changed = { ...monthEnd, value: "2024-02" };
+      const model = buildReviewModel(
+        [school, changed],
+        profile,
+        initialDecisions([school, changed], profile),
+      );
+      expect(model.confirmations.map((c) => c.kind)).toEqual(["target"]);
+    });
+
+    it("reuses the profile's own split of the same name and asks for a different name", () => {
+      const profile = {
+        ...savedProfile(),
+        personal: { koreanFamilyName: "김예", koreanGivenName: "시" },
+      };
+      expect(
+        buildReviewModel(
+          [koreanName],
+          profile,
+          initialDecisions([koreanName], profile),
+        ).confirmations.map((c) => c.kind),
+      ).toEqual([]);
+      const other = { ...koreanName, value: "박예시" };
+      expect(
+        buildReviewModel(
+          [other],
+          profile,
+          initialDecisions([other], profile),
+        ).confirmations.map((c) => c.kind),
+      ).toEqual(["name"]);
+    });
+  });
 });
