@@ -82,9 +82,16 @@ export type Confirmation =
       name?: string;
       primary: string;
       /** Values this application row would save, for side-by-side comparison. */
-      fields: readonly { fieldId: string; label: string; value: string }[];
+      fields: readonly ComparedField[];
       entries: readonly ProfileEntry[];
     };
+/** A field shown in the same-entry comparison; options turn stored codes into labels. */
+export interface ComparedField {
+  fieldId: string;
+  label: string;
+  value: string;
+  options?: ProfileFieldDefinition["options"];
+}
 export interface ReviewModel {
   rows: readonly ReviewRow[];
   confirmations: readonly Confirmation[];
@@ -307,7 +314,12 @@ function confirmationsFor(
         primary: target.primary,
         fields: rows
           .filter((r) => r.groupKey === row.groupKey)
-          .map(({ fieldId, label, value }) => ({ fieldId, label, value })),
+          .map(({ fieldId, label, value, field }) => ({
+            fieldId,
+            label,
+            value,
+            ...(field?.options ? { options: field.options } : {}),
+          })),
         entries: target.entries,
       });
     }

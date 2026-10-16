@@ -282,3 +282,33 @@ it("never renders a middle dot in card copy", () => {
   fireEvent.click(screen.getByRole("button", { name: "아니에요" }));
   expect(container.textContent).not.toContain("·");
 });
+
+it("shows option labels rather than stored codes in the comparison table", () => {
+  renderCards([
+    {
+      ...targetCard,
+      fields: [
+        {
+          fieldId: "schoolRegion",
+          label: "학교 소재지",
+          value: "region:seoul",
+          options: [
+            { value: "region:seoul", label: "서울" },
+            { value: "region:busan", label: "부산" },
+          ],
+        },
+      ],
+      entries: [
+        {
+          id: "u1",
+          sectionId: "university",
+          values: { schoolName: "예시대학교", schoolRegion: "region:busan" },
+        },
+      ],
+    },
+  ]);
+  const row = screen.getByRole("row", { name: /학교 소재지/ });
+  expect(row).toHaveTextContent("부산");
+  expect(row).toHaveTextContent("서울");
+  expect(row.textContent).not.toContain("region:");
+});

@@ -1,18 +1,25 @@
 import { useId, useState } from "react";
 import type { ProfileEntry } from "../model";
+import type { ComparedField } from "./review-model";
 import review from "./ImportReview.module.css";
 
 interface CompareProps {
   name?: string;
   primary: string;
-  fields: readonly { fieldId: string; label: string; value: string }[];
+  fields: readonly ComparedField[];
   entries: readonly ProfileEntry[];
   /** "new", "skip" or `existing:<entry id>`; never chosen without a click. */
   onChoose(value: string): void;
 }
 
-const display = (value?: string) =>
-  value ? value.replace(/^(\d{4})-(\d{2})-(\d{2})$/u, "$1.$2.$3") : "없음";
+function display(value?: string, options?: ComparedField["options"]) {
+  if (!value) return "없음";
+  const option = options?.find((item) =>
+    typeof item === "string" ? item === value : item.value === value,
+  );
+  if (option && typeof option !== "string") return option.label;
+  return value.replace(/^(\d{4})-(\d{2})-(\d{2})$/u, "$1.$2.$3");
+}
 
 function period(entry: ProfileEntry) {
   const start = entry.values.startDate || entry.values.acquisitionDate;
@@ -71,8 +78,8 @@ export function ImportTargetCompare({
                   data-different={String(current !== field.value)}
                 >
                   <th scope="row">{field.label}</th>
-                  <td>{display(current)}</td>
-                  <td>{display(field.value)}</td>
+                  <td>{display(current, field.options)}</td>
+                  <td>{display(field.value, field.options)}</td>
                 </tr>
               );
             })}

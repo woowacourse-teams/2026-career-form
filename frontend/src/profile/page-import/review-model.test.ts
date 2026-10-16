@@ -383,4 +383,26 @@ describe("review model", () => {
     ]);
     expect(defaultSelection(model.rows)).toEqual({ [salary.source]: true });
   });
+
+  it("carries option labels to the target comparison", () => {
+    const region: ImportCandidate = {
+      source: "educationalBackground.universities.0.schoolLocation",
+      rowIndex: 0,
+      profileFieldKey: "education.university.schoolRegion",
+      status: "available",
+      reason: "direct",
+      value: "region:seoul",
+    };
+    const model = buildReviewModel(
+      [school, region],
+      withUniversity(),
+      initialDecisions([school, region]),
+    );
+    const card = model.confirmations[0];
+    expect(card.kind).toBe("target");
+    if (card.kind !== "target") return;
+    expect(
+      card.fields.find((f) => f.fieldId === "schoolRegion")?.options,
+    ).toContainEqual({ value: "region:seoul", label: "서울" });
+  });
 });
