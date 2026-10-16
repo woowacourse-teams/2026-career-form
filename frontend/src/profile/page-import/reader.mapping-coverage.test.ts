@@ -121,7 +121,8 @@ const educationGroups = [
     educationCommon +
       `\ndegreeLevel|degreeLevel|학사
 totalCreditsEarned|totalCredits|140
-admissionType|transferStatus|편입|해당`,
+admissionType|transferStatus|편입|해당
+majors.0.majorField|majorField|공학계열`,
   ],
   [
     "educationalBackground.graduateSchools.7",
@@ -129,7 +130,9 @@ admissionType|transferStatus|편입|해당`,
     educationCommon +
       `\ndegreeLevel|degreeLevel|석사
 admissionType|admissionType|입학
-majors.0.majorField|majorField|공학계열`,
+majors.0.majorField|majorField|공학계열
+countryCode|country|대한민국
+researchField|researchField|합성연구분야`,
   ],
 ] as const;
 const cases = [...groups, ...educationGroups].flatMap(

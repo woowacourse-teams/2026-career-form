@@ -28,6 +28,7 @@ const education = {
   "gpa.score": "gpaScore",
   "gpa.scoreScale": "gpaScale",
   "majors.0": "majorName",
+  "majors.0.majorField": "majorField",
 };
 export const greetingRepeatedMappings: Readonly<
   Record<
@@ -54,7 +55,8 @@ export const greetingRepeatedMappings: Readonly<
     fields: {
       ...education,
       admissionType: "admissionType",
-      "majors.0.majorField": "majorField",
+      countryCode: "country",
+      researchField: "researchField",
     },
   },
   highSchool: {
