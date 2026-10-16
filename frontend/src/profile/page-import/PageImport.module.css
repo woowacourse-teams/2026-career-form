@@ -60,13 +60,17 @@
   margin: 10px 0 2px;
   padding-left: 18px;
 }
+/* The panel's scroll area keeps 20px of bottom padding; the sticky footer covers it
+   so the list never shows through beneath the save button. */
 .footer {
+  --import-panel-bottom-gap: 20px;
   position: sticky;
-  bottom: 0;
+  bottom: calc(-1 * var(--import-panel-bottom-gap));
   z-index: 1;
   display: grid;
   gap: 8px;
-  padding: 12px 0 4px;
+  margin-bottom: calc(-1 * var(--import-panel-bottom-gap));
+  padding: 12px 0 calc(4px + var(--import-panel-bottom-gap));
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
 }

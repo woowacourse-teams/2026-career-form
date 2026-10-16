@@ -379,3 +379,27 @@ it("fits every expanded category and card in a 280px panel without middle dots",
     );
   }
 });
+
+it("covers the panel's bottom padding so the list does not show beneath the save area", async () => {
+  const state = await mountImport("", undefined, {
+    width: "332px",
+    height: "420px",
+    overflowY: "auto",
+  });
+  Object.assign(state.container.style, {
+    padding: "16px 16px 20px",
+    boxSizing: "border-box",
+  });
+  await expect
+    .poll(() => state.container.scrollHeight)
+    .toBeGreaterThan(state.container.clientHeight);
+  const frame = state.container.getBoundingClientRect();
+  const saveButton = button(state, /프로필에 저장하기/);
+  const footer = saveButton.parentElement!;
+  const x = frame.left + frame.width / 2;
+  const hit = (state.container.getRootNode() as ShadowRoot).elementFromPoint(
+    x,
+    frame.bottom - 5,
+  );
+  expect(footer.contains(hit)).toBe(true);
+});
