@@ -35,7 +35,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [프로필 필드](topics/profile-fields.md) | 지원 정보 구조와 필드 계약 | 2026-08-22 |
 | [프로필 카탈로그 선택과 식별 연결](topics/profile-catalog-identity.md) | 학교, 자격, 시험명의 오프라인 카탈로그 선택과 식별자 저장 | 2026-10-07 |
 | [프로필 JSON 전송](topics/profile-json-transfer.md) | 로컬 프로필의 versioned JSON 백업,전체 복원 계약 | 2026-09-07 |
-| [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계 | 2026-10-15 |
+| [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md) | 합성 fixture의 읽기 전용 후보 생성, 한 화면 검토와 확인 카드, 병합과 실사이트 검증 경계 | 2026-10-16 |
 | [프로필 입력과 안전한 어학 선택](topics/profile-input-and-language-matching.md) | 자유 텍스트 어학과 유일 후보만 허용하는 회사 옵션 선택 | 2026-09-09 |
 | [확장 프로그램 프로필,지원서 패널 UI](topics/extension-ui.md) | 프로필,패널 탐색과 하늘색 중심 UI 계층 | 2026-09-12 |
 | [지원서 패널 안 자동 기입 흐름](topics/autofill-panel-workflow.md) | 단일 패널 실행,범용 실제 값 판정과 드롭다운 값 보존 | 2026-10-02 |

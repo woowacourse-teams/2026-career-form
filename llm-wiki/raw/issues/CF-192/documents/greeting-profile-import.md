@@ -20,6 +20,8 @@ Greeting 가져오기는 기본 인적사항·연락처·주소, 고등학교·�
 
 가져오기 화면 문구에는 가운데 점을 쓰지 않는다. field-definitions의 "A·B" label은 plainLabel로 받침에 맞춰 "A와 B" 또는 "A과 B"로 바꾸고 "주·야간"은 "주야간"으로 표시한다. 색은 theme.css 토큰, 주요 버튼은 사이드 패널 자동 기입 버튼 모양을 따른다. 저장 뒤 되돌리기는 범위 밖으로 두었다.
 
+같은 지원서를 다시 가져올 때, 프로필의 성과 이름이 지원서 이름과 같은 글자를 이루면 그 분리를 확인된 것으로 쓰고, 같은 이름의 기존 반복 항목 하나가 지원서 값을 모두 이미 가지면(연월은 저장된 일자의 앞부분과 같으면) 그 항목에 연결된 것으로 미리 정해 카드를 다시 띄우지 않는다. 이때 저장할 변화가 없으므로 같은 이름 항목 자동 연결 금지와 충돌하지 않고, 값이 하나라도 다르면 지금처럼 묻는다.
+
 ## 실행 정책 기반 읽기
 
 #212가 프론트 Greeting 정적 어댑터를 지우고 실행 정책을 DB로 옮긴 뒤, 가져오기는 자동 기입과 같은 실행 정책 API를 호출해 host와 pathname만 보내고 받은 정책을 문서에 설치한 뒤 읽는다. Greeting 판정은 componentPolicy가 설치돼 있고 기본 컨트롤이 확인될 때만 참이다. 정책이 없으면 읽지 않아 가져올 정보가 없다고 안내하고, 조회에 실패하면 오류 상세 없이 다시 읽기를 안내하며, 같은 URL에 이미 설치된 정책은 다시 부르지 않는다. 지원서 값은 외부로 보내지 않는다.
@@ -40,20 +42,22 @@ Greeting 가져오기는 기본 인적사항·연락처·주소, 고등학교·�
 
 Aside에서 검증 확장만 활성화하고 이전 콘텐츠 스크립트가 남은 테스트 페이지를 새로고침한 뒤 라이나 3개 및 에코마케팅 5개 필드를 전체 선택 저장과 프로필 재조회로 대조해 일치를 확인했다. 에코의 미지원 수상 필드는 제외됐고 처우 및 반복 항목 개수는 보존됐다. 전체 사이트 호환성은 미입증이다.
 
+2026-10-16 새 빌드(70d63e9)와 develop 정책 백엔드로 Greeting 실사이트를 합성 정보로 확인했다. 코텍 FW개발 공고에서 이름 2개, 같은 학교 연결 2개, 연월 일자 4개 확인 카드를 거쳐 10개를 저장했고 다시 가져오기에서 새 값 0개로 저장을 확인했다. 한화엔진 경력 공고에서는 병역, 학력, 경력, 프로젝트를 읽고 대응 목적지 없는 76개와 빈 37개를 제외했다. 이 테스트에서 비교표의 선택지 코드 표시, 저장 영역 아래 비침, 재가져오기 반복 질문 3개를 찾아 고쳤다. 지원서 제출, 임시저장, 이메일 인증은 하지 않았고 나머지 대표 사이트는 지원서 입력 권한 문제로 확인하지 못했다.
+
 visible disabled·readonly는 읽고 숨김·inert 영역은 제외한다. 지원서 DOM·페이지 저장·제출을 변경하지 않으며 읽은 값을 외부 서버·분석·로그로 보내지 않는다.
 
 ## 구현 근거
 
-- [전체 필드 매핑](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/greeting-import-mappings.ts)
-- [필드별 reader](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/reader.ts)
-- [한 화면 검토 상태 모델](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/review-model.ts)
-- [한 화면 검토 UI](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/PageImport.tsx)
-- [확인 카드](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/ImportConfirmCards.tsx)
-- [범주 목록](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/ImportCategoryList.tsx)
-- [원본 칸 강조](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/source-presentation.ts)
-- [실행 정책 불러오기](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/load-import-policy.ts)
-- [선택 병합과 저장](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/merge.ts)
-- [공통 저장 큐](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/storage/profile-write-handler.ts)
-- [전체 필드 및 실패 격리 회귀](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/reader.expanded.test.ts)
-- [Chromium 흐름 검증](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/profile/page-import/PageImport.browser.test.tsx)
-- [실사이트 포함 구현·검증 보고서](https://github.com/woowacourse-teams/2026-career-form/blob/843c7ebb10e771ac51570dfff7efc8fbda2aded2/frontend/src/research/greeting-import-probe.md)
+- [전체 필드 매핑](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/greeting-import-mappings.ts)
+- [필드별 reader](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/reader.ts)
+- [한 화면 검토 상태 모델](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/review-model.ts)
+- [한 화면 검토 UI](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/PageImport.tsx)
+- [확인 카드](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/ImportConfirmCards.tsx)
+- [범주 목록](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/ImportCategoryList.tsx)
+- [원본 칸 강조](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/source-presentation.ts)
+- [실행 정책 불러오기](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/load-import-policy.ts)
+- [선택 병합과 저장](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/merge.ts)
+- [공통 저장 큐](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/storage/profile-write-handler.ts)
+- [전체 필드 및 실패 격리 회귀](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/reader.expanded.test.ts)
+- [Chromium 흐름 검증](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/profile/page-import/PageImport.browser.test.tsx)
+- [실사이트 포함 구현·검증 보고서](https://github.com/woowacourse-teams/2026-career-form/blob/79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6/frontend/src/research/greeting-import-probe.md)

@@ -575,3 +575,10 @@
 - Source-Revision: 843c7ebb10e771ac51570dfff7efc8fbda2aded2
 - 최신 develop 병합 뒤 승인한 후보 10개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
 - [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 실행 정책 기반 읽기, 가져오기 전용 민감 범주, 구분값 기준 추가 전공을 반영했다.
+
+## [2026-10-16] ingest | CF-192 실사이트 테스트와 재가져오기 보완
+
+- Approval-Digest: 9a96f691055d378fe05e9106fab5ed1b61926d2ef0fba8e9fc7a8b5d03d35c0b
+- Source-Revision: 79a3dd19f1fc99bcfb4ac0482bf9d2c3f9a944c6
+- 승인한 후보 12개에 맞춰 아직 병합되지 않은 [CF-192 bundle](../raw/issues/CF-192/manifest.md)을 갱신했다.
+- [Greeting 지원서에서 프로필 가져오기](topics/greeting-profile-import.md)에 재가져오기 생략 조건과 실사이트 테스트 범위를 반영했다.
