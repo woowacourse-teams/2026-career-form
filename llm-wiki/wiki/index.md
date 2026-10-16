@@ -84,3 +84,6 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [품질 확인 사이트와 공개 지원서 링크](topics/quality-site-links.md) | 공고별 단일 확인, 공개 링크와 실행 분모 경계 | 2026-10-12 |
 | [시스템 PR 공유 파일 검사와 릴리스 본문 계약](topics/release-pr-contract.md) | 중앙 시스템 PR 분류, 일반 및 hotfix 보호와 릴리스 생성 본문 검증 | 2026-10-12 |
 | [품질 관측 호출의 인터럽트 처리](topics/quality-observation-interruption.md) | 제출 전 인터럽트 검사, 상태 보존과 실행 중 취소 회귀 | 2026-10-13 |
+| [범용 지원서의 구조 행동 자동 실행](topics/generic-autonomous-structural-actions.md) | 구조 행동 자동 실행과 값 쓰기 승인 유지, 제안됨 ADR | 2026-10-16 |
+| [범용 분석 provider의 JEV 단일화](topics/jev-single-analysis-provider.md) | JEV 단일 provider 결정과 데이터 정책 미검증 위험, 제안됨 ADR | 2026-10-16 |
+| [범용 전용 API 분리와 섹션 범주별 칸 매칭](topics/generic-api-section-category-matching.md) | 범용 API 분리와 섹션 분류 기반 범주별 매칭, 제안됨 ADR | 2026-10-16 |
