@@ -45,6 +45,8 @@ import javax.net.ssl.SSLParameters;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
@@ -370,6 +372,25 @@ class JevClientTest {
             .hasMessage("Jev 분석 응답을 사용할 수 없습니다");
         assertThat(http.calls()).isEqualTo(1);
         assertThat(sleeps).isEmpty();
+    }
+
+    @ParameterizedTest(name = "candidate={0} + ABSTAIN 0.1")
+    @ValueSource(doubles = {0.89, 0.91})
+    void chooseAcceptsProbabilitySumAtTheOnePercentBoundary(double candidate) throws Exception {
+        JevClient client = clientWith(choiceBody(0.9, candidate, 0.1));
+
+        assertThat(client.choose("safe-state", questions()))
+            .containsExactly(Map.entry("decision", "candidate"));
+    }
+
+    @ParameterizedTest(name = "candidate={0} + ABSTAIN 0.1")
+    @ValueSource(doubles = {0.889, 0.911})
+    void chooseRejectsProbabilitySumJustOutsideTheOnePercentBoundary(double candidate) throws Exception {
+        JevClient client = clientWith(choiceBody(0.9, candidate, 0.1));
+
+        assertThatThrownBy(() -> client.choose("safe-state", questions()))
+            .isExactlyInstanceOf(ResolverException.class)
+            .hasMessage("Jev 분석 응답을 사용할 수 없습니다");
     }
 
     private static String choiceBody(double confidence, double candidate, double abstain) {
