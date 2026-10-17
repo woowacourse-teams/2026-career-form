@@ -553,26 +553,26 @@
         },
         {
           "field_id": "f092",
-          "classification": "AUTOFILLABLE",
-          "classification_reason": "PROFILE_VALUE_AVAILABLE",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
           "control_kind": "TEXT"
         },
         {
           "field_id": "f093",
-          "classification": "AUTOFILLABLE",
-          "classification_reason": "PROFILE_VALUE_AVAILABLE",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
           "control_kind": "TEXT"
         },
         {
           "field_id": "f094",
-          "classification": "AUTOFILLABLE",
-          "classification_reason": "PROFILE_VALUE_AVAILABLE",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
           "control_kind": "TEXT"
         },
         {
           "field_id": "f095",
-          "classification": "AUTOFILLABLE",
-          "classification_reason": "PROFILE_VALUE_AVAILABLE",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
           "control_kind": "TEXT"
         },
         {
@@ -790,6 +790,174 @@
           "classification": "PROFILE_VALUE_MISSING",
           "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
           "control_kind": "FILE"
+        },
+        {
+          "field_id": "f132",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f133",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f134",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f135",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f136",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f137",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f138",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f139",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f140",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f141",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f142",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f143",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f144",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f145",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f146",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f147",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f148",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f149",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f150",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f151",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f152",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f153",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f154",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "SELECT"
+        },
+        {
+          "field_id": "f155",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f156",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f157",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXTAREA"
+        },
+        {
+          "field_id": "f158",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
+        },
+        {
+          "field_id": "f159",
+          "classification": "PROFILE_VALUE_MISSING",
+          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "control_kind": "TEXT"
         }
       ]
     }

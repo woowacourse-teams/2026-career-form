@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "harness" / "fixtures" / "generic-autofill"
 PAGE = FIXTURES / "pages" / "large-generic-form.html"
 TRUTH = FIXTURES / "ground-truth-generic-jev-v1.json"
+PROFILE = ROOT / "frontend" / "fixtures" / "profile-export.example.json"
+STATIC_CONTROL_COUNT = 131
+KINDS = {"text": "TEXT", "select": "SELECT", "textarea": "TEXTAREA", "file": "FILE"}
 SCRIPT = ROOT / "harness" / "scripts" / "evaluate-generic-autofill.py"
 COMPANY_IDENTIFIERS = re.compile(
     r"hyundai|sk-?careers|greeting|naver|krafton|ahnlab|lgresearch|recruiter\.co\.kr",
@@ -30,6 +33,12 @@ class PageParser(HTMLParser):
         self.in_form = False
         self.titles: list[str] = []
         self.rows = 0
+        self.scripts: list[tuple[dict[str, str], str]] = []
+        self.add_buttons: dict[str, dict[str, str]] = {}
+        self.row_controls: dict[str, list[list[tuple[str, str]]]] = {}
+        self._row_group: str | None = None
+        self._row_depth = 0
+        self._script: list[str] | None = None
         self._capture: list[str] | None = None
         self._capture_kind = ""
 
@@ -39,10 +48,22 @@ class PageParser(HTMLParser):
         classes = values.get("class", "").split()
         if tag == "form":
             self.in_form = True
+        if tag == "script":
+            self.scripts.append((values, ""))
+            self._script = []
+        if self._row_group is not None and tag == "div":
+            self._row_depth += 1
+        control = None
         if tag == "input" and values.get("type", "text") not in {"hidden", "submit", "button"}:
-            self.controls.append((tag, values.get("type", "text")))
+            control = (tag, values.get("type", "text"))
         if tag in {"select", "textarea"}:
-            self.controls.append((tag, tag))
+            control = (tag, tag)
+        if control is not None:
+            self.controls.append(control)
+            if self._row_group is not None:
+                self.row_controls[self._row_group][-1].append(control)
+        if tag == "button" and "add" in classes:
+            self.add_buttons[values.get("data-group", "")] = values
         if tag == "button":
             self.buttons.append((values.get("type", "submit"), "", self.in_form))
             self._capture, self._capture_kind = [], "button"
@@ -50,8 +71,19 @@ class PageParser(HTMLParser):
             self._capture, self._capture_kind = [], "title"
         if tag == "div" and "repeat-row" in classes:
             self.rows += 1
+            self._row_group = values.get("data-row", "")
+            self._row_depth = 1
+            self.row_controls.setdefault(self._row_group, []).append([])
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "script" and self._script is not None:
+            attrs, _ = self.scripts[-1]
+            self.scripts[-1] = (attrs, "".join(self._script))
+            self._script = None
+        if self._row_group is not None and tag == "div":
+            self._row_depth -= 1
+            if self._row_depth == 0:
+                self._row_group = None
         if tag == "form":
             self.in_form = False
         if self._capture is not None and tag in {"button", "div"}:
@@ -64,8 +96,15 @@ class PageParser(HTMLParser):
             self._capture = None
 
     def handle_data(self, data: str) -> None:
+        if self._script is not None:
+            self._script.append(data)
         if self._capture is not None:
             self._capture.append(data)
+
+
+def kind(control: tuple[str, str]) -> str:
+    tag, input_type = control
+    return KINDS["select" if tag == "select" else "textarea" if tag == "textarea" else input_type]
 
 
 def parse_page() -> PageParser:
@@ -98,6 +137,27 @@ class LargeGenericFormPageTest(unittest.TestCase):
         self.assertIn("국가번호", text)
         self.assertRegex(text, r'<select[^>]*name="referrer-phone-country"')
 
+    def test_page_script_is_inline_without_external_resources(self) -> None:
+        page = parse_page()
+        self.assertEqual(1, len(page.scripts))
+        attrs, source = page.scripts[0]
+        self.assertNotIn("src", attrs)
+        self.assertTrue(source.strip())
+        self.assertNotRegex(
+            source,
+            r"https?:|fetch\s*\(|XMLHttpRequest|WebSocket|import\s*\(|\.src\b|sendBeacon",
+        )
+
+    def test_add_buttons_declare_fixed_dynamic_row_numbering(self) -> None:
+        page = parse_page()
+        self.assertEqual(
+            {"education": "132 141", "career": "150"},
+            {
+                group: page.add_buttons.get(group, {}).get("data-id-starts")
+                for group in ("education", "career")
+            },
+        )
+
     def test_page_has_no_personal_data_or_company_identifiers(self) -> None:
         text = PAGE.read_text(encoding="utf-8")
         self.assertIsNone(re.search(r"\d{6}-?\d{7}", text))
@@ -121,15 +181,55 @@ class GenericBaselineGroundTruthTest(unittest.TestCase):
     def test_ground_truth_fields_follow_page_controls_in_dom_order(self) -> None:
         page = parse_page()
         fields = self.load()["sites"][0]["fields"]
-        self.assertEqual(len(page.controls), len(fields))
+        self.assertEqual(STATIC_CONTROL_COUNT, len(page.controls))
         self.assertEqual(
             [f"f{index:03d}" for index in range(1, len(fields) + 1)],
             [field["field_id"] for field in fields],
         )
-        kinds = {"text": "TEXT", "select": "SELECT", "textarea": "TEXTAREA", "file": "FILE"}
-        for (tag, input_type), field in zip(page.controls, fields):
-            expected = kinds["select" if tag == "select" else "textarea" if tag == "textarea" else input_type]
-            self.assertEqual(expected, field["control_kind"], field["field_id"])
+        for control, field in zip(page.controls, fields[:STATIC_CONTROL_COUNT]):
+            self.assertEqual(kind(control), field["control_kind"], field["field_id"])
+
+    def test_dynamic_row_fields_repeat_first_row_structure(self) -> None:
+        page = parse_page()
+        fields = self.load()["sites"][0]["fields"][STATIC_CONTROL_COUNT:]
+        expected = (
+            page.row_controls["education"][0] * 2 + page.row_controls["career"][0]
+        )
+        self.assertEqual(28, len(expected))
+        self.assertEqual(
+            [f"f{index:03d}" for index in range(132, 160)],
+            [field["field_id"] for field in fields],
+        )
+        self.assertEqual(
+            [kind(control) for control in expected],
+            [field["control_kind"] for field in fields],
+        )
+        self.assertTrue(
+            all(
+                (field["classification"], field["classification_reason"])
+                == ("PROFILE_VALUE_MISSING", "PROFILE_VALUE_UNAVAILABLE")
+                for field in fields
+            )
+        )
+
+    def test_second_language_row_without_test_values_is_not_autofillable(self) -> None:
+        profile = json.loads(PROFILE.read_text(encoding="utf-8"))["profile"]
+        second = profile["languages"][1]["values"]
+        fields = {field["field_id"]: field for field in self.load()["sites"][0]["fields"]}
+        missing = ("testName", "registrationNo", "acquisitionDate", "grade")
+        self.assertFalse(any(second.get(key) for key in missing))
+        for field_id in ("f092", "f093", "f094", "f095"):
+            self.assertEqual(
+                ("PROFILE_VALUE_MISSING", "PROFILE_VALUE_UNAVAILABLE"),
+                (fields[field_id]["classification"], fields[field_id]["classification_reason"]),
+                field_id,
+            )
+        self.assertTrue(second.get("language"))
+        for field_id in ("f085", "f086", "f087", "f088", "f089", "f091"):
+            self.assertEqual("AUTOFILLABLE", fields[field_id]["classification"], field_id)
+        self.assertEqual(
+            65, sum(field["classification"] == "AUTOFILLABLE" for field in fields.values())
+        )
 
     def test_ground_truth_declares_only_definitional_labels(self) -> None:
         fields = self.load()["sites"][0]["fields"]
