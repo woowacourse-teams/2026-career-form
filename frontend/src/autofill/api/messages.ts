@@ -1,5 +1,10 @@
 import type { InteractionDecisionRequest } from "./interaction-types";
-import type { FieldsAnalyzeRequest, PreparationAnalyzeRequest } from "./types";
+import type {
+  FieldsAnalyzeRequest,
+  GenericFieldsRequest,
+  PreparationAnalyzeRequest,
+  SectionClassifyRequest,
+} from "./types";
 
 export type AnalysisRequestMessage =
   | {
@@ -10,7 +15,23 @@ export type AnalysisRequestMessage =
       type: "AUTOFILL_ANALYZE_PREPARATION";
       payload: PreparationAnalyzeRequest;
     }
-  | { type: "AUTOFILL_ANALYZE_FIELDS"; payload: FieldsAnalyzeRequest };
+  | { type: "AUTOFILL_ANALYZE_FIELDS"; payload: FieldsAnalyzeRequest }
+  | {
+      type: "AUTOFILL_GENERIC_CLASSIFY_SECTIONS";
+      payload: SectionClassifyRequest;
+    }
+  | {
+      type: "AUTOFILL_GENERIC_ANALYZE_FIELDS";
+      payload: GenericFieldsRequest;
+    };
+
+const schemaVersionByType: Record<AnalysisRequestMessage["type"], number> = {
+  AUTOFILL_ANALYZE_PREPARATION: 2,
+  AUTOFILL_ANALYZE_FIELDS: 2,
+  AUTOFILL_DECIDE_INTERACTIONS: 2,
+  AUTOFILL_GENERIC_CLASSIFY_SECTIONS: 1,
+  AUTOFILL_GENERIC_ANALYZE_FIELDS: 2,
+};
 
 export type AnalysisErrorCode =
   | "NOT_CONFIGURED"
@@ -35,13 +56,13 @@ export function isAnalysisRequestMessage(
   const type = (value as { type?: unknown }).type;
   const payload = (value as { payload?: unknown }).payload;
   return (
-    (type === "AUTOFILL_ANALYZE_PREPARATION" ||
-      type === "AUTOFILL_ANALYZE_FIELDS" ||
-      type === "AUTOFILL_DECIDE_INTERACTIONS") &&
+    typeof type === "string" &&
+    Object.hasOwn(schemaVersionByType, type) &&
     typeof payload === "object" &&
     payload !== null &&
     "schemaVersion" in payload &&
-    payload.schemaVersion === 2 &&
+    payload.schemaVersion ===
+      schemaVersionByType[type as AnalysisRequestMessage["type"]] &&
     "snapshotId" in payload &&
     typeof payload.snapshotId === "string"
   );

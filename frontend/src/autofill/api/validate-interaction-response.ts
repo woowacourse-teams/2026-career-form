@@ -1,4 +1,5 @@
 import type {
+  InteractionCandidate,
   InteractionDecisionRequest,
   InteractionDecisionResponse,
 } from "./interaction-types";
@@ -46,6 +47,18 @@ function validResultStructure(value: unknown): boolean {
     value.childCount >= 0 &&
     value.childCount <= 24
   );
+}
+
+/** Mirrors the server's structure-role candidate contract; other roles never select select/option. */
+function structureRoleAccepts(
+  role: InteractionDecisionRequest["decisions"][number]["role"],
+  candidate: InteractionCandidate,
+): boolean {
+  if (role === "REPEAT_ADD" || role === "SECTION_REVEAL")
+    return candidate.control === "button" && candidate.element !== "select";
+  if (role === "ROW_KIND_OPTION")
+    return candidate.element === "select" && candidate.control === "option";
+  return candidate.element !== "select" && candidate.control !== "option";
 }
 
 export function validateInteractionDecisionResponse(
@@ -143,7 +156,8 @@ export function validateInteractionDecisionResponse(
           (expected.role === "SEARCH_RESULT_CONTAINER" &&
             candidate.control !== "container") ||
           (expected.role === "SEARCH_RESULT_ITEM" &&
-            candidate.control !== "item")))
+            candidate.control !== "item"))) ||
+      !structureRoleAccepts(expected.role, candidate)
     ) {
       throw new AnalysisContractError();
     }

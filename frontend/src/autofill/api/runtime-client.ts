@@ -19,9 +19,17 @@ import type {
   AnalysisApiClient,
   FieldsAnalyzeRequest,
   FieldsAnalyzeResponse,
+  GenericFieldsRequest,
+  GenericFieldsResponse,
   PreparationAnalyzeRequest,
   PreparationAnalyzeResponse,
+  SectionClassifyRequest,
+  SectionClassifyResponse,
 } from "./types";
+import {
+  validateGenericFieldsResponse,
+  validateSectionClassifyResponse,
+} from "./validate-generic-response";
 import {
   validateFieldsResponse,
   validatePreparationResponse,
@@ -91,6 +99,26 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       payload: request,
     });
     return validateInteractionDecisionResponse(request, response);
+  }
+
+  async classifySections(
+    request: SectionClassifyRequest,
+  ): Promise<SectionClassifyResponse> {
+    const response = await this.request({
+      type: "AUTOFILL_GENERIC_CLASSIFY_SECTIONS",
+      payload: request,
+    });
+    return validateSectionClassifyResponse(request, response);
+  }
+
+  async analyzeGenericFields(
+    request: GenericFieldsRequest,
+  ): Promise<GenericFieldsResponse> {
+    const response = await this.request({
+      type: "AUTOFILL_GENERIC_ANALYZE_FIELDS",
+      payload: request,
+    });
+    return validateGenericFieldsResponse(request, response);
   }
 
   async analyzePreparation(

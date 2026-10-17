@@ -135,6 +135,73 @@ export interface FieldsAnalyzeRequest {
   sections: FieldsSection[];
 }
 
+export type SectionControlKind =
+  | "TEXT"
+  | "TEXTAREA"
+  | "SELECT"
+  | "RADIO"
+  | "CHECKBOX"
+  | "DATE"
+  | "FILE"
+  | "BUTTON"
+  | "OTHER";
+
+/** Section structure only; never profile values, current input values or counts. */
+export interface SectionClassifyRequest {
+  schemaVersion: 1;
+  snapshotId: string;
+  site: SiteDescriptor;
+  sections: Array<{
+    sectionId: string;
+    parentSectionId?: string;
+    title?: string;
+    labels: string[];
+    controlKinds: SectionControlKind[];
+    repeated: boolean;
+  }>;
+}
+
+export type GenericAnalysisStatus =
+  "COMPLETE" | "STATIC_POLICY_PRESENT" | "POLICY_UNAVAILABLE";
+
+export interface SectionClassifyResponse {
+  schemaVersion: 1;
+  snapshotId: string;
+  status: GenericAnalysisStatus;
+  sections: Array<{ sectionId: string; category: string; confidence: number }>;
+}
+
+export interface GenericFieldsSection {
+  sectionId: string;
+  parentSectionId?: string;
+  displayName?: string;
+  fields: FieldCandidate[];
+  items?: FieldsItem[];
+  category?: string;
+}
+
+export interface GenericFieldsRequest {
+  schemaVersion: 2;
+  supportedWriteCommands?: ["SELECT_DATE"];
+  snapshotId: string;
+  site: SiteDescriptor;
+  sections: GenericFieldsSection[];
+}
+
+export interface GenericFieldsResponse {
+  schemaVersion: 1;
+  snapshotId: string;
+  status: GenericAnalysisStatus;
+  fields: Array<{
+    candidateId: string;
+    profileFieldKey: string | null;
+    confidence: number;
+    categoryConfirmed: boolean;
+    reason?: "LLM_UNAVAILABLE";
+  }>;
+  diagnostics: { jevCalls: number; elapsedMs: number };
+}
+
 export type PreparationPlan =
   | {
       actionCandidateId: string;
@@ -267,6 +334,12 @@ export interface AnalysisApiClient {
   decideInteractions?(
     request: InteractionDecisionRequest,
   ): Promise<InteractionDecisionResponse>;
+  classifySections?(
+    request: SectionClassifyRequest,
+  ): Promise<SectionClassifyResponse>;
+  analyzeGenericFields?(
+    request: GenericFieldsRequest,
+  ): Promise<GenericFieldsResponse>;
   analyzePreparation(
     request: PreparationAnalyzeRequest,
   ): Promise<PreparationAnalyzeResponse>;
