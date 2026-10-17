@@ -189,7 +189,7 @@ export interface GenericFieldsRequest {
 }
 
 export interface GenericFieldsResponse {
-  schemaVersion: 1;
+  schemaVersion: 2;
   snapshotId: string;
   status: GenericAnalysisStatus;
   fields: Array<{
@@ -198,6 +198,12 @@ export interface GenericFieldsResponse {
     confidence: number;
     categoryConfirmed: boolean;
     reason?: "LLM_UNAVAILABLE";
+    /** Present exactly when profileFieldKey is set. */
+    autofillPolicy?: MatchedFieldAnalysis["autofillPolicy"];
+    /** BLOCKED when profileFieldKey is null. */
+    interactionStatus: MatchedFieldAnalysis["interactionStatus"];
+    /** Only when interactionStatus is READY. */
+    writePlan?: { command: WriteCommand };
   }>;
   diagnostics: { jevCalls: number; elapsedMs: number };
 }

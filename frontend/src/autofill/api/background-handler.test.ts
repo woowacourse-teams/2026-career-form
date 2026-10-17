@@ -142,6 +142,7 @@ describe("analysis background handler", () => {
 
   it.each([
     [400, "BAD_REQUEST"],
+    [404, "BAD_REQUEST"],
     [413, "PAYLOAD_TOO_LARGE"],
     [429, "RATE_LIMITED"],
     [503, "SERVER_ERROR"],

@@ -42,6 +42,7 @@ import {
 } from "./semantic-context";
 import { metadata, labelOf, sectionName, structuralLabelOf, unnamedRadioGroupOf } from "./metadata";
 import { collectButtonDropdowns, type ButtonDropdown } from "./button-dropdown";
+import { isSafeStructuralClick } from "../generic/click-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
 import { genericFormGroupFor, genericFormGroups } from "./generic-form-groups";
 import { genericRowFor, genericRows } from "./repeatable-rows";
@@ -786,7 +787,15 @@ export async function collectFieldsSnapshotWithDropdowns(
   const release = acquireDocumentRun(document);
   if (!release) return collectFieldsSnapshot(document);
   try {
-    const dropdowns = await collectButtonDropdowns(document, signal);
+    const dropdowns = await collectButtonDropdowns(
+      document,
+      signal,
+      (trigger) =>
+        isSafeStructuralClick(
+          trigger,
+          trigger.closest("form") ?? document.body,
+        ).allowed,
+    );
     return collectFieldsSnapshot(document, dropdowns);
   } finally {
     release();

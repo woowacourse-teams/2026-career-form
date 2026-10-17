@@ -207,11 +207,21 @@ const field = (candidateId: string, extra: object = {}) => ({
   profileFieldKey: "contact.contact.email",
   confidence: 0.85,
   categoryConfirmed: true,
+  autofillPolicy: "ALLOWED",
+  interactionStatus: "READY",
+  writePlan: { command: "SET_TEXT" },
   ...extra,
 });
 
+const unmatched = {
+  profileFieldKey: null,
+  autofillPolicy: undefined,
+  interactionStatus: "BLOCKED",
+  writePlan: undefined,
+};
+
 const fieldsComplete = (fields: unknown[], extra: object = {}) => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   snapshotId: "generic-1",
   status: "COMPLETE",
   fields,
@@ -224,9 +234,12 @@ const allFields = () => [
   field("c2", {
     profileFieldKey: "education.university.schoolType",
     categoryConfirmed: false,
+    autofillPolicy: "CONDITIONAL",
+    interactionStatus: "UNVERIFIED",
+    writePlan: undefined,
   }),
   field("c3", {
-    profileFieldKey: null,
+    ...unmatched,
     confidence: 0,
     categoryConfirmed: false,
     reason: "LLM_UNAVAILABLE",
@@ -247,12 +260,31 @@ describe("generic fields response validation", () => {
     });
   });
 
+  it("keeps the per-field policy, interaction status and write plan as sent", () => {
+    const fields = validateGenericFieldsResponse(
+      fieldsRequest,
+      fieldsComplete(allFields()),
+    ).fields;
+    expect(fields[0]).toMatchObject({
+      autofillPolicy: "ALLOWED",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    });
+    expect(fields[1]).toMatchObject({
+      autofillPolicy: "CONDITIONAL",
+      interactionStatus: "UNVERIFIED",
+    });
+    expect(fields[1]?.writePlan).toBeUndefined();
+    expect(fields[2]).toMatchObject({ interactionStatus: "BLOCKED" });
+    expect(fields[2]?.autofillPolicy).toBeUndefined();
+  });
+
   it.each(["STATIC_POLICY_PRESENT", "POLICY_UNAVAILABLE"])(
     "accepts the %s short circuit with empty fields and zero diagnostics",
     (status) => {
       expect(
         validateGenericFieldsResponse(fieldsRequest, {
-          schemaVersion: 1,
+          schemaVersion: 2,
           snapshotId: "generic-1",
           status,
           fields: [],
@@ -264,8 +296,82 @@ describe("generic fields response validation", () => {
 
   it.each<[string, unknown]>([
     [
-      "schemaVersion 2 echoed from the request",
-      { ...fieldsComplete(allFields()), schemaVersion: 2 },
+      "schemaVersion 1 without the per-field policy",
+      { ...fieldsComplete(allFields()), schemaVersion: 1 },
+    ],
+    [
+      "missing interactionStatus",
+      fieldsComplete([
+        field("c1", { interactionStatus: undefined, writePlan: undefined }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "unknown interactionStatus",
+      fieldsComplete([
+        field("c1", { interactionStatus: "DONE", writePlan: undefined }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "matched field without autofillPolicy",
+      fieldsComplete([
+        field("c1", { autofillPolicy: undefined }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "unknown autofillPolicy",
+      fieldsComplete([
+        field("c1", { autofillPolicy: "ALWAYS" }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "writePlan when not READY",
+      fieldsComplete([
+        field("c1", { interactionStatus: "UNVERIFIED" }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "writePlan with an extra key",
+      fieldsComplete([
+        field("c1", { writePlan: { command: "SET_TEXT", target: "x" } }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "unknown write command",
+      fieldsComplete([
+        field("c1", { writePlan: { command: "CLICK" } }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "unmatched field with autofillPolicy",
+      fieldsComplete([
+        field("c1", { ...unmatched, autofillPolicy: "ALLOWED" }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "unmatched field with writePlan",
+      fieldsComplete([
+        field("c1", {
+          ...unmatched,
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        }),
+        ...allFields().slice(1),
+      ]),
+    ],
+    [
+      "unmatched field that is not BLOCKED",
+      fieldsComplete([
+        field("c1", { ...unmatched, interactionStatus: "UNVERIFIED" }),
+        ...allFields().slice(1),
+      ]),
     ],
     [
       "snapshot mismatch",
@@ -365,7 +471,7 @@ describe("generic fields response validation", () => {
     [
       "short circuit with fields",
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         snapshotId: "generic-1",
         status: "POLICY_UNAVAILABLE",
         fields: [field("c1")],
@@ -375,7 +481,7 @@ describe("generic fields response validation", () => {
     [
       "short circuit with non-zero diagnostics",
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         snapshotId: "generic-1",
         status: "STATIC_POLICY_PRESENT",
         fields: [],

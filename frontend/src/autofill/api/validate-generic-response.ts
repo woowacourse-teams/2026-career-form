@@ -8,6 +8,23 @@ import type {
 import { AnalysisContractError } from "./validate-response";
 
 const STATUSES = ["COMPLETE", "STATIC_POLICY_PRESENT", "POLICY_UNAVAILABLE"];
+const AUTOFILL_POLICIES = ["ALLOWED", "CONDITIONAL", "SENSITIVE_CONFIRMATION"];
+const INTERACTION_STATUSES = [
+  "READY",
+  "MANUAL_REVEAL_REQUIRED",
+  "BLOCKED",
+  "SYSTEM_CONTROL",
+  "UNVERIFIED",
+];
+const WRITE_COMMANDS = [
+  "SEARCH_SELECTION",
+  "SET_TEXT",
+  "SELECT_OPTION",
+  "SELECT_BUTTON_OPTION",
+  "CHECK_RADIO",
+  "CHECK_CHECKBOX",
+  "SELECT_DATE",
+];
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -44,6 +61,7 @@ function coversExactlyOnce(requested: string[], returned: unknown[]): boolean {
 
 function validEnvelope(
   value: unknown,
+  schemaVersion: number,
   snapshotId: string,
   keys: string[],
   list: string,
@@ -51,7 +69,7 @@ function validEnvelope(
   return (
     record(value) &&
     onlyKeys(value, keys) &&
-    value.schemaVersion === 1 &&
+    value.schemaVersion === schemaVersion &&
     value.snapshotId === snapshotId &&
     STATUSES.includes(String(value.status)) &&
     Array.isArray(value[list])
@@ -65,6 +83,7 @@ export function validateSectionClassifyResponse(
   if (
     !validEnvelope(
       value,
+      1,
       request.snapshotId,
       ["schemaVersion", "snapshotId", "status", "sections"],
       "sections",
@@ -104,6 +123,31 @@ function requestedCandidateIds(request: GenericFieldsRequest): string[] {
   ]);
 }
 
+/**
+ * A matched field carries its policy; an unmatched one is BLOCKED with neither
+ * policy nor plan. A write plan holds one known command and only when READY.
+ */
+function validFieldPolicy(field: Record<string, unknown>): boolean {
+  if (!INTERACTION_STATUSES.includes(String(field.interactionStatus)))
+    return false;
+  if (field.writePlan !== undefined) {
+    if (
+      field.interactionStatus !== "READY" ||
+      !record(field.writePlan) ||
+      !onlyKeys(field.writePlan, ["command"]) ||
+      !WRITE_COMMANDS.includes(String(field.writePlan.command))
+    )
+      return false;
+  }
+  if (field.profileFieldKey === null)
+    return (
+      field.autofillPolicy === undefined &&
+      field.writePlan === undefined &&
+      field.interactionStatus === "BLOCKED"
+    );
+  return AUTOFILL_POLICIES.includes(String(field.autofillPolicy));
+}
+
 export function validateGenericFieldsResponse(
   request: GenericFieldsRequest,
   value: unknown,
@@ -111,6 +155,7 @@ export function validateGenericFieldsResponse(
   if (
     !validEnvelope(
       value,
+      2,
       request.snapshotId,
       ["schemaVersion", "snapshotId", "status", "fields", "diagnostics"],
       "fields",
@@ -141,7 +186,11 @@ export function validateGenericFieldsResponse(
           "confidence",
           "categoryConfirmed",
           "reason",
+          "autofillPolicy",
+          "interactionStatus",
+          "writePlan",
         ]) &&
+        validFieldPolicy(field) &&
         (field.profileFieldKey === null ||
           (typeof field.profileFieldKey === "string" &&
             isAutofillProfileFieldKey(field.profileFieldKey))) &&

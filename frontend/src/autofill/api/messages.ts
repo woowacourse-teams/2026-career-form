@@ -45,7 +45,7 @@ export type AnalysisErrorCode =
 
 export type AnalysisResponseEnvelope =
   | { ok: true; data: unknown; quality?: boolean }
-  | { ok: false; code: AnalysisErrorCode };
+  | { ok: false; code: AnalysisErrorCode; status?: 404 };
 
 export function isAnalysisRequestMessage(
   value: unknown,
@@ -79,6 +79,7 @@ export function isAnalysisResponseEnvelope(
   }
   return (
     value.ok === false &&
+    (!("status" in value) || value.status === 404) &&
     "code" in value &&
     [
       "NOT_CONFIGURED",

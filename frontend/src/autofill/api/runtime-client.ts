@@ -52,7 +52,10 @@ const errorMessages: Record<
 };
 
 export class AnalysisServiceError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly status?: 404,
+  ) {
     super(message);
     this.name = "AnalysisServiceError";
   }
@@ -180,7 +183,10 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     }
     if (!envelope.ok) {
-      throw new AnalysisServiceError(errorMessages[envelope.code]);
+      throw new AnalysisServiceError(
+        errorMessages[envelope.code],
+        envelope.status,
+      );
     }
     this.reportingSupported = envelope.quality === true;
     return envelope.data;

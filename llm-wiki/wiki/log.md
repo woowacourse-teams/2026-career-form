@@ -1,5 +1,12 @@
 # Wiki Log
 
+## [2026-10-17] ingest | CF-244 범용 클릭 경계, 섹션 캐시와 endpoint 부재 전달
+
+- Approval-Digest: c03f361ba687892e12dd432b8b9607ec34af9fd86545fe697a7896e6ba510135
+- Source-Revision: 7aac227f4663c5e402d92158607adaeb3f3342db
+- 승인한 세 후보를 [CF-244 bundle](../raw/issues/CF-244/manifest.md)에 기록하고 [드롭다운 클릭 경계](topics/generic-dropdown-click-gate.md), [섹션 분석 캐시](topics/generic-section-analysis-cache.md), [endpoint 부재 전달](topics/generic-endpoint-unavailable.md)를 추가했다.
+- 합성 DOM·API mock의 검증 경계를 유지한다. 기존 raw와 ADR 초안의 상태는 변경하지 않는다.
+
 ## [2026-10-16] ingest | CF-222 범용 구조 행동, JEV 단일화, 범용 API 분리 ADR 초안
 
 - Approval-Digest: 7d9a06235498d16e25310b1a8ecb773c87d2a4fa6c1e4656991a891cfdb4dbef

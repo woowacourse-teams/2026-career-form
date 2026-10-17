@@ -35,6 +35,13 @@ import {
   retainedDriverReviewResults,
 } from "./retained-drivers";
 import { collectFieldsSnapshotWithDropdowns } from "../dom/collect";
+import {
+  analyzeGenericFields,
+  applyGenericGrade,
+  createGenericAnalysisCache,
+  type GenericAnalysisCache,
+  type GenericAnalysisResult,
+} from "../generic/generic-analysis";
 import { debugAnalysis, debugReviewPlan } from "../debug/autofill-debug";
 import {
   buildReviewPlan,
@@ -97,8 +104,12 @@ function deferredDriverReason(
   return generic ? GENERIC_DEFERRED_REASON : fallback;
 }
 
+/** Section results of one workflow run, keyed by its run object. */
+const genericAnalysisCaches = new WeakMap<object, GenericAnalysisCache>();
+
 export function createAnalyzeFields({
   onAnalysis,
+  onGenericGrades,
   adapter,
   addressRun,
   addressSearch,
@@ -205,9 +216,31 @@ export function createAnalyzeFields({
     );
     finishQualitySnapshot();
     const finishMapping = startLocalTiming("mapping-rebind");
-    let analysis = await (analyzeFieldsSnapshot
-      ? analyzeFieldsSnapshot(snapshot)
-      : apiClient.analyzeFields(snapshot.request));
+    let genericResult: GenericAnalysisResult | undefined;
+    if (
+      companyId === "generic" &&
+      apiClient.classifySections &&
+      apiClient.analyzeGenericFields
+    ) {
+      const cache =
+        genericAnalysisCaches.get(run) ?? createGenericAnalysisCache();
+      genericAnalysisCaches.set(run, cache);
+      genericResult = await analyzeGenericFields(
+        snapshot,
+        pageDocument,
+        {
+          classifySections: apiClient.classifySections.bind(apiClient),
+          analyzeGenericFields: apiClient.analyzeGenericFields.bind(apiClient),
+        },
+        loadedProfile,
+        cache,
+      );
+    }
+    let analysis =
+      genericResult?.analysis ??
+      (await (analyzeFieldsSnapshot
+        ? analyzeFieldsSnapshot(snapshot)
+        : apiClient.analyzeFields(snapshot.request)));
     finishMapping();
     const finishAnalysisLog = startLocalTiming("analysis-log");
     debugAnalysis(snapshot, analysis);
@@ -314,20 +347,23 @@ export function createAnalyzeFields({
           : undefined,
     );
 
-    const addressAnalysis = await runAddressAnalysis({
-      analysis,
-      snapshot,
-      adapter,
-      run,
-      pageDocument,
-      profile: loadedProfile,
-      repository,
-      addressSearch,
-      onActivity,
-      onAddressOperation,
-      onWriteResult,
-      setAddressResult,
-    });
+    // The section flow writes nothing before the user approves the review.
+    const addressAnalysis = genericResult
+      ? analysis
+      : await runAddressAnalysis({
+          analysis,
+          snapshot,
+          adapter,
+          run,
+          pageDocument,
+          profile: loadedProfile,
+          repository,
+          addressSearch,
+          onActivity,
+          onAddressOperation,
+          onWriteResult,
+          setAddressResult,
+        });
     if (!addressAnalysis) return;
     analysis = addressAnalysis;
 
@@ -487,6 +523,8 @@ export function createAnalyzeFields({
     const completedSearchCandidateIds = new Set(
       completedSearchItems?.map((item) => item.candidateId),
     );
+    if (genericResult)
+      onGenericGrades?.(genericResult.grades, genericResult.sections);
     setFieldsSnapshot(snapshot);
     setPartial(plan.status === "partial");
     const analysisWarnings: string[] = [...(analysis.warningCodes ?? [])];
@@ -520,8 +558,13 @@ export function createAnalyzeFields({
       return;
     }
     const finishAutomaticItems = startLocalTiming("automatic-items");
+    const planItems = genericResult
+      ? plan.items.map((item) =>
+          applyGenericGrade(item, genericResult.grades.get(item.candidateId)),
+        )
+      : plan.items;
     const automaticItems = snapshot.registry.withReadCache(() =>
-      plan.items.map((item) => {
+      planItems.map((item) => {
         if (options.reviewOnly) {
           return completedSearchCandidateIds.has(item.candidateId)
             ? {
@@ -533,6 +576,7 @@ export function createAnalyzeFields({
               }
             : { ...item, selected: false };
         }
+        if (genericResult) return item;
         if (
           item.analysis?.writePlan?.command === "SELECT_DATE" &&
           item.status === "available" &&
@@ -552,7 +596,7 @@ export function createAnalyzeFields({
     );
     finishAutomaticItems();
     setReviewItems(automaticItems);
-    if (options.reviewOnly) {
+    if (options.reviewOnly || genericResult) {
       setStage("review");
       return;
     }
