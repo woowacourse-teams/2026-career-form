@@ -19,6 +19,10 @@ import type { WriteFailureCode } from "../write/failure";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { Stage } from "./workflow-model";
 import type { ComponentResultTargets } from "./component-result-registry";
+import type {
+  GenericFieldGrade,
+  GenericSectionResult,
+} from "../generic/generic-analysis";
 
 type FieldsSnapshot = CollectedSnapshot<
   ReturnType<typeof collectFieldsSnapshot>["request"]
@@ -79,6 +83,11 @@ export interface WorkflowAnalysisContext {
     registry: CandidateRegistry,
     item: ReviewPlanItem,
   ) => Promise<void>;
+  /** Generic section flow only: field grades and section results for review. */
+  onGenericGrades?: (
+    grades: ReadonlyMap<string, GenericFieldGrade>,
+    sections: readonly GenericSectionResult[],
+  ) => void;
   onAnalysis?: (summary: {
     mode: "ADAPTER" | "GENERIC";
     durationMs: number;

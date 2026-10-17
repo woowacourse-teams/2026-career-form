@@ -11,7 +11,10 @@ import type {
   SectionControlKind,
 } from "../api/types";
 import type { CollectedSnapshot } from "../dom/collect";
-import { resolveProfileFieldValue } from "../review/review-plan";
+import {
+  resolveProfileFieldValue,
+  type ReviewPlanItem,
+} from "../review/review-plan";
 import {
   gradeGenericField,
   type FieldGrade,
@@ -102,6 +105,27 @@ const MAX_LABEL_LENGTH = 200;
 const MAX_TITLE_LENGTH = 200;
 const MAX_DISPLAY_NAME_LENGTH = 120;
 const UNCONFIRMED_CATEGORIES = new Set(["MIXED", "ABSTAIN"]);
+
+const GENERIC_BLOCKED_REASON =
+  "자동으로 입력할 수 없는 항목입니다. 직접 확인해 주세요.";
+
+/**
+ * AUTO keeps the plan's selection, REVIEW is never preselected, and BLOCKED
+ * can be neither selected nor written.
+ */
+export function applyGenericGrade(
+  item: ReviewPlanItem,
+  grade: GenericFieldGrade | undefined,
+): ReviewPlanItem {
+  if (!grade || grade.grade === "AUTO") return item;
+  if (grade.grade === "REVIEW") return { ...item, selected: false };
+  return {
+    ...item,
+    selected: false,
+    disabled: true,
+    reason: item.reason || GENERIC_BLOCKED_REASON,
+  };
+}
 
 function controlKind(candidate: FieldCandidate): SectionControlKind {
   switch (candidate.control) {
