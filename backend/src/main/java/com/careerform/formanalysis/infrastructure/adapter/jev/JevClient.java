@@ -180,7 +180,7 @@ public final class JevClient {
                     answer.probabilities().values().stream().anyMatch(p -> p == null || !validProbability(p)))
                     throw unavailable();
                 double sum = answer.probabilities().values().stream().mapToDouble(Double::doubleValue).sum();
-                if (Math.abs(sum - 1) > 0.01) throw unavailable();
+                if (Math.abs(sum - 1) > 0.01 + 1e-9) throw unavailable();
                 double probability = answer.probabilities().get(answer.choice());
                 boolean uniqueWinner = answer.probabilities().entrySet().stream()
                     .filter(option -> !option.getKey().equals(answer.choice()))
