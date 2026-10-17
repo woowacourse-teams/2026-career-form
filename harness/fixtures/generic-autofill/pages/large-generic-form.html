@@ -29,6 +29,7 @@
 <div class="field"><label for="c017">주소</label><input id="c017" name="address-1" type="text"></div>
 <div class="field"><label for="c018">상세 주소</label><input id="c018" name="address-2" type="text"></div>
 <div class="section-title">학력</div>
+<div class="repeat-group" data-group="education">
 <div class="repeat-row" data-row="education">
 <div class="field"><label for="c019">학교 구분</label><select id="c019" name="edu-process-1"><option>선택</option><option>고등학교</option><option>대학교(학사)</option><option>대학원(석사)</option><option>대학원(박사)</option></select></div>
 <div class="field"><label for="c020">학교명</label><input id="c020" name="edu-school-1" type="text"></div>
@@ -73,8 +74,10 @@
 <div class="field"><label for="c053">전공</label><input id="c053" name="edu-major-4" type="text"></div>
 <div class="field"><label for="c054">학점</label><input id="c054" name="edu-gpa-4" type="text"></div>
 </div>
-<button type="button" class="add">학력 추가</button>
+<button type="button" class="add" data-group="education" data-id-starts="132 141">학력 추가</button>
+</div>
 <div class="section-title">경력</div>
+<div class="repeat-group" data-group="career">
 <div class="repeat-row" data-row="career">
 <div class="field"><label for="c055">회사명</label><input id="c055" name="car-company-1" type="text"></div>
 <div class="field"><label for="c056">고용 형태</label><select id="c056" name="car-type-1"><option>선택</option><option>정규</option><option>계약</option><option>인턴</option><option>기타</option></select></div>
@@ -111,7 +114,8 @@
 <div class="field"><label for="c083">퇴사 사유</label><input id="c083" name="car-reason-3" type="text"></div>
 <div class="field"><label for="c084">연봉</label><input id="c084" name="car-salary-3" type="text"></div>
 </div>
-<button type="button" class="add">경력 추가</button>
+<button type="button" class="add" data-group="career" data-id-starts="150">경력 추가</button>
+</div>
 <div class="section-title">어학</div>
 <div class="repeat-row" data-row="language">
 <div class="field"><label for="c085">언어</label><select id="c085" name="lang-language-1"><option>선택</option><option>영어</option><option>일본어</option><option>중국어</option><option>기타</option></select></div>
@@ -181,5 +185,41 @@
 <button type="button" name="save">임시 저장</button>
 <button type="submit">제출</button>
 </form>
+<script>
+(function () {
+  "use strict";
+  // Each add button appends one empty copy of its group's first row right after
+  // the group's last row. Dynamic ids are fixed per group and addition order:
+  // education c132-c140 then c141-c149, career c150-c159. The button is
+  // disabled once its fixed rows are used up.
+  var buttons = document.querySelectorAll("button.add[data-group]");
+  Array.prototype.forEach.call(buttons, function (button) {
+    var group = button.getAttribute("data-group");
+    var starts = button.getAttribute("data-id-starts").split(" ").map(Number);
+    var added = 0;
+    button.addEventListener("click", function () {
+      if (added >= starts.length) return;
+      var rows = button.parentElement.querySelectorAll(
+        '.repeat-row[data-row="' + group + '"]'
+      );
+      var row = rows[0].cloneNode(true);
+      var rowNumber = rows.length + 1;
+      var controls = row.querySelectorAll("input, select, textarea");
+      Array.prototype.forEach.call(controls, function (control, index) {
+        var id = "c" + String(starts[added] + index).padStart(3, "0");
+        var label = row.querySelector('label[for="' + control.id + '"]');
+        if (label) label.htmlFor = id;
+        control.id = id;
+        control.name = control.name.replace(/-\d+$/, "-" + rowNumber);
+        if (control.tagName === "SELECT") control.selectedIndex = 0;
+        else control.value = "";
+      });
+      rows[rows.length - 1].after(row);
+      added += 1;
+      if (added >= starts.length) button.disabled = true;
+    });
+  });
+})();
+</script>
 </body>
 </html>

@@ -68,6 +68,10 @@ git config "branch.$(git branch --show-current).career-form-base" origin/release
   --output /tmp/generic-autofill-baseline.json
 ```
 
+합성 대형 페이지(`pages/large-generic-form.html`)의 JEV·OpenAI 기준선 관측과 소요 시간은
+[범용 기준선 측정 드라이버](../frontend/fixtures/generic-baseline/README.md)로 만든 뒤 위 명령으로
+평가한다.
+
 계약 `1.1`의 예제는 `alpha`와 `beta`라는 합성 사이트를 사용한다. 예제의 SHA와
 `LIVE_SITE` 구획은 parser 검증용이며 실제 설치본 검증이나 실사이트 실행 근거가 아니다.
 기존 `*-v1.json`과 병합된 raw는 당시 기록으로 보존한다. 현재 CLI는 이전 계약 입력과
