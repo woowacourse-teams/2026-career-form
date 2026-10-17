@@ -12,6 +12,8 @@ import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.AutofillPolicy;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.InteractionStatus;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.WritePlan;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.Binding;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
 
 /**
  * 범용 칸을 공유 범용 경로와 같은 규칙으로 판정한다. 범용 요청을 공유 칸 후보로 상수 이름 기준 변환해
@@ -30,16 +32,19 @@ final class GenericFieldPolicy {
     record Assessment(AutofillPolicy autofillPolicy, InteractionStatus interactionStatus, WritePlan writePlan) {
     }
 
-    Assessment assess(FieldCandidate candidate, String profileFieldKey, List<WriteCommand> supportedWriteCommands) {
-        FieldMappingResolver.Result mapping = profileFieldKey == null
-            ? new FieldMappingResolver.NoMatch(candidate.candidateId())
-            : new FieldMappingResolver.Match(candidate.candidateId(), profileFieldKey, false);
+    Assessment assess(FieldCandidate candidate, String profileFieldKey, Binding binding,
+        List<WriteCommand> supportedWriteCommands) {
+        FieldMappingResolver.Result mapping = binding instanceof NameBinding name
+            ? new FieldMappingResolver.Match(candidate.candidateId(), new FieldMappingResolver.DerivedBinding(name.recipe()))
+            : profileFieldKey == null
+                ? new FieldMappingResolver.NoMatch(candidate.candidateId())
+                : new FieldMappingResolver.Match(candidate.candidateId(), profileFieldKey, false);
         FieldInteractionPolicy.Decision decision = interactionPolicy.evaluate(toShared(candidate), mapping, true,
             supportedWriteCommands.stream()
                 .map(command -> rename(command, FieldsAnalysisResponse.WriteCommand.class))
                 .toList());
         AutofillPolicy autofillPolicy = profileFieldKey == null
-            ? null
+            ? binding instanceof NameBinding ? AutofillPolicy.ALLOWED : null
             : rename(supportedProfileFields.policyOf(profileFieldKey).orElseThrow(), AutofillPolicy.class);
         WritePlan writePlan = decision.writePlan() == null
             ? null

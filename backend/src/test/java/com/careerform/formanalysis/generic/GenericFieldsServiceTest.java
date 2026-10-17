@@ -51,7 +51,7 @@ class GenericFieldsServiceTest {
         assertThat(staticPolicy.status()).isEqualTo(Status.STATIC_POLICY_PRESENT);
         assertThat(unavailable.status()).isEqualTo(Status.POLICY_UNAVAILABLE);
         for (var response : List.of(staticPolicy, unavailable)) {
-            assertThat(response.schemaVersion()).isEqualTo(2);
+            assertThat(response.schemaVersion()).isEqualTo(3);
             assertThat(response.snapshotId()).isEqualTo("synthetic-snapshot");
             assertThat(response.fields()).isEmpty();
             assertThat(response.diagnostics().jevCalls()).isZero();
@@ -66,7 +66,7 @@ class GenericFieldsServiceTest {
         var response = service(notRegistered()).analyze(sample());
 
         assertThat(response.status()).isEqualTo(Status.COMPLETE);
-        assertThat(response.schemaVersion()).isEqualTo(2);
+        assertThat(response.schemaVersion()).isEqualTo(3);
         assertThat(response.fields()).containsExactly(
             new Field("edu-1", SCHOOL, 0.66, true, null, AutofillPolicy.CONDITIONAL, InteractionStatus.READY,
                 new WritePlan(WriteCommand.SET_TEXT)),
@@ -84,7 +84,7 @@ class GenericFieldsServiceTest {
             .analyze(sample());
 
         assertThat(response.status()).isEqualTo(Status.COMPLETE);
-        assertThat(response.schemaVersion()).isEqualTo(2);
+        assertThat(response.schemaVersion()).isEqualTo(3);
         assertThat(response.fields()).containsExactly(
             new Field("edu-1", null, 0.0, false, Reason.LLM_UNAVAILABLE, null, InteractionStatus.BLOCKED, null),
             new Field("mixed-1", null, 0.0, false, Reason.LLM_UNAVAILABLE, null, InteractionStatus.BLOCKED, null));
@@ -125,7 +125,7 @@ class GenericFieldsServiceTest {
             || name.toLowerCase().contains("profile") || name.toLowerCase().contains("itemcount"));
         assertThat(components(GenericFieldsResponse.Field.class))
             .containsExactly("candidateId", "profileFieldKey", "confidence", "categoryConfirmed", "reason",
-                "autofillPolicy", "interactionStatus", "writePlan");
+                "autofillPolicy", "interactionStatus", "writePlan", "binding");
         assertThat(components(GenericFieldsResponse.WritePlan.class)).containsExactly("command");
         assertThat(components(GenericFieldsResponse.Diagnostics.class)).containsExactly("jevCalls", "elapsedMs");
     }
