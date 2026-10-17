@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,11 @@ class GenericFieldsApiTest {
 
     private static final String SYNTHETIC_PROFILE_VALUE = "SYNTHETIC_PRIVATE_8421";
     private static final String SYNTHETIC_CURRENT_VALUE = "SYNTHETIC_CURRENT_5513";
+    private static final String SYNTHETIC_LABEL = "SYNTHETIC_LABEL_3307";
+    private static final String SYNTHETIC_OPTION = "SYNTHETIC_OPTION_6620";
+    private static final String SYNTHETIC_DOM = "SYNTHETIC_DOM_7731";
+    private static final Set<String> FIELD_KEYS = Set.of("candidateId", "profileFieldKey", "confidence",
+        "categoryConfirmed", "reason", "autofillPolicy", "interactionStatus", "writePlan");
     private static final String STATIC_HOST = "static-policy.example.test";
     private static final String SCHOOL = "education.university.schoolName";
 
@@ -71,7 +77,7 @@ class GenericFieldsApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson("example.test", false)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.schemaVersion").value(1))
+            .andExpect(jsonPath("$.schemaVersion").value(2))
             .andExpect(jsonPath("$.status").value("COMPLETE"))
             .andExpect(jsonPath("$.snapshotId").value("synthetic-snapshot"))
             .andExpect(jsonPath("$.fields.length()").value(2))
@@ -80,12 +86,32 @@ class GenericFieldsApiTest {
             .andExpect(jsonPath("$.fields[0].confidence").value(0.42))
             .andExpect(jsonPath("$.fields[0].categoryConfirmed").value(true))
             .andExpect(jsonPath("$.fields[0].reason").doesNotExist())
+            .andExpect(jsonPath("$.fields[0].autofillPolicy").value("CONDITIONAL"))
+            .andExpect(jsonPath("$.fields[0].interactionStatus").value("READY"))
+            .andExpect(jsonPath("$.fields[0].writePlan.command").value("SET_TEXT"))
             .andExpect(jsonPath("$.fields[1].candidateId").value("cand-grade"))
+            .andExpect(jsonPath("$.fields[1].interactionStatus").value("BLOCKED"))
+            .andExpect(jsonPath("$.fields[1].autofillPolicy").doesNotExist())
+            .andExpect(jsonPath("$.fields[1].writePlan").doesNotExist())
             .andExpect(jsonPath("$.diagnostics.jevCalls").value(1))
             .andExpect(jsonPath("$.diagnostics.elapsedMs").isNumber())
             .andReturn();
 
-        assertThat(result.getResponse().getContentAsString()).contains("\"profileFieldKey\":null");
+        String responseBody = result.getResponse().getContentAsString();
+        assertThat(responseBody).contains("\"profileFieldKey\":null").doesNotContain(SYNTHETIC_PROFILE_VALUE,
+            SYNTHETIC_CURRENT_VALUE, SYNTHETIC_LABEL, SYNTHETIC_OPTION, SYNTHETIC_DOM, "학교명", "학점");
+        var fields = GenericFieldsJevHttp.JSON.readTree(responseBody).path("fields");
+        assertThat(fields.size()).isEqualTo(2);
+        for (var field : fields) {
+            Set<String> keys = new java.util.HashSet<>();
+            field.propertyNames().forEach(keys::add);
+            assertThat(FIELD_KEYS).containsAll(keys);
+            if (keys.contains("writePlan")) {
+                List<String> planKeys = new java.util.ArrayList<>();
+                field.path("writePlan").propertyNames().forEach(planKeys::add);
+                assertThat(planKeys).containsExactly("command");
+            }
+        }
         assertThat(http.bodies()).hasSize(1).allSatisfy(body -> assertThat(body).doesNotContain(
             SYNTHETIC_PROFILE_VALUE, SYNTHETIC_CURRENT_VALUE, "profileItemCount", "currentValue", "\"value\"",
             "cand-school", "edu-block"));
@@ -101,7 +127,7 @@ class GenericFieldsApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson(STATIC_HOST, false)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.schemaVersion").value(1))
+            .andExpect(jsonPath("$.schemaVersion").value(2))
             .andExpect(jsonPath("$.status").value("STATIC_POLICY_PRESENT"))
             .andExpect(jsonPath("$.fields.length()").value(0));
 
@@ -134,9 +160,11 @@ class GenericFieldsApiTest {
         school.put("control", "text");
         school.put("visibility", "visible");
         school.put("displayName", "학교명 " + SYNTHETIC_PROFILE_VALUE);
+        school.put("domId", SYNTHETIC_DOM);
+        school.put("domName", SYNTHETIC_DOM + "-name");
         school.put("placeholder", SYNTHETIC_PROFILE_VALUE);
         school.put("semanticContext", Map.of("labels", List.of(
-            Map.of("source", "label", "text", "학교명 " + SYNTHETIC_PROFILE_VALUE))));
+            Map.of("source", "label", "text", "학교명 " + SYNTHETIC_LABEL))));
         if (withValues) {
             school.put("value", SYNTHETIC_PROFILE_VALUE);
             school.put("currentValue", SYNTHETIC_CURRENT_VALUE);
@@ -147,7 +175,8 @@ class GenericFieldsApiTest {
         grade.put("control", "select");
         grade.put("visibility", "visible");
         grade.put("displayName", "학점");
-        grade.put("options", List.of(Map.of("optionId", "opt-1", "displayName", SYNTHETIC_CURRENT_VALUE)));
+        grade.put("options", List.of(Map.of("optionId", "opt-1", "displayName", SYNTHETIC_OPTION),
+            Map.of("optionId", "opt-2", "displayName", SYNTHETIC_CURRENT_VALUE)));
         var section = new LinkedHashMap<String, Object>();
         section.put("sectionId", "edu-block");
         section.put("displayName", "학력 " + SYNTHETIC_PROFILE_VALUE);

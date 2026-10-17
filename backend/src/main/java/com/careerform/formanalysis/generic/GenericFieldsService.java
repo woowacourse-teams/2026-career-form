@@ -12,8 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.careerform.formanalysis.application.FieldInteractionPolicy;
 import com.careerform.formanalysis.application.FormAnalysisRouter;
 import com.careerform.formanalysis.application.FormAnalysisRouter.GenericRouteKind;
+import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.FieldCandidate;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Section;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Diagnostics;
@@ -26,10 +28,13 @@ public final class GenericFieldsService {
 
     private final Optional<JevCategoryFieldResolver> resolver;
     private final FormAnalysisRouter router;
+    private final GenericFieldPolicy fieldPolicy;
 
-    public GenericFieldsService(Optional<JevCategoryFieldResolver> resolver, FormAnalysisRouter router) {
+    public GenericFieldsService(Optional<JevCategoryFieldResolver> resolver, FormAnalysisRouter router,
+        FieldInteractionPolicy interactionPolicy, SupportedProfileFields supportedProfileFields) {
         this.resolver = resolver;
         this.router = router;
+        this.fieldPolicy = new GenericFieldPolicy(interactionPolicy, supportedProfileFields);
     }
 
     public GenericFieldsResponse analyze(GenericFieldsRequest request) {
@@ -52,10 +57,14 @@ public final class GenericFieldsService {
         List<Field> fields = new ArrayList<>();
         for (FieldCandidate candidate : request.fieldCandidatesInTraversalOrder()) {
             Mapping mapping = mappings.get(candidate.candidateId());
-            fields.add(mapping == null
-                ? new Field(candidate.candidateId(), null, 0.0, false, Reason.LLM_UNAVAILABLE)
-                : new Field(candidate.candidateId(), mapping.profileFieldKey(), mapping.confidence(),
-                    mapping.categoryConfirmed(), mapping.reason()));
+            if (mapping == null) {
+                mapping = new Mapping(null, 0.0, false, Reason.LLM_UNAVAILABLE);
+            }
+            GenericFieldPolicy.Assessment assessment =
+                fieldPolicy.assess(candidate, mapping.profileFieldKey(), request.supportedWriteCommands());
+            fields.add(new Field(candidate.candidateId(), mapping.profileFieldKey(), mapping.confidence(),
+                mapping.categoryConfirmed(), mapping.reason(), assessment.autofillPolicy(),
+                assessment.interactionStatus(), assessment.writePlan()));
         }
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
         return GenericFieldsResponse.complete(request.snapshotId(), fields, new Diagnostics(jevCalls, elapsedMs));

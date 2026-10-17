@@ -20,12 +20,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.careerform.formanalysis.application.FieldInteractionPolicy;
 import com.careerform.formanalysis.application.FormAnalysisRouter;
+import com.careerform.formanalysis.application.SupportedProfileFields;
 import com.careerform.formanalysis.application.policy.CompanyFormPolicyFixture;
 import com.careerform.formanalysis.application.port.CompanyFormPolicyProvider;
+import com.careerform.formanalysis.generic.GenericFieldsRequest.WriteCommand;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.AutofillPolicy;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Field;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.InteractionStatus;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Reason;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Status;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.WritePlan;
 
 @DisplayName("범용 섹션별 칸 매칭 서비스")
 class GenericFieldsServiceTest {
@@ -45,7 +51,7 @@ class GenericFieldsServiceTest {
         assertThat(staticPolicy.status()).isEqualTo(Status.STATIC_POLICY_PRESENT);
         assertThat(unavailable.status()).isEqualTo(Status.POLICY_UNAVAILABLE);
         for (var response : List.of(staticPolicy, unavailable)) {
-            assertThat(response.schemaVersion()).isEqualTo(1);
+            assertThat(response.schemaVersion()).isEqualTo(2);
             assertThat(response.snapshotId()).isEqualTo("synthetic-snapshot");
             assertThat(response.fields()).isEmpty();
             assertThat(response.diagnostics().jevCalls()).isZero();
@@ -60,24 +66,28 @@ class GenericFieldsServiceTest {
         var response = service(notRegistered()).analyze(sample());
 
         assertThat(response.status()).isEqualTo(Status.COMPLETE);
-        assertThat(response.schemaVersion()).isEqualTo(1);
+        assertThat(response.schemaVersion()).isEqualTo(2);
         assertThat(response.fields()).containsExactly(
-            new Field("edu-1", SCHOOL, 0.66, true, null),
-            new Field("mixed-1", SCHOOL, 0.66, false, null));
+            new Field("edu-1", SCHOOL, 0.66, true, null, AutofillPolicy.CONDITIONAL, InteractionStatus.READY,
+                new WritePlan(WriteCommand.SET_TEXT)),
+            new Field("mixed-1", SCHOOL, 0.66, false, null, AutofillPolicy.CONDITIONAL, InteractionStatus.READY,
+                new WritePlan(WriteCommand.SET_TEXT)));
         assertThat(response.diagnostics().jevCalls()).isEqualTo(2);
         assertThat(response.diagnostics().elapsedMs()).isNotNegative();
     }
 
     @Test
-    @DisplayName("JEV resolver가 없으면 모든 칸을 null 매핑과 LLM_UNAVAILABLE로 응답한다")
+    @DisplayName("JEV resolver가 없으면 모든 칸을 null 매핑, LLM_UNAVAILABLE, BLOCKED로 응답한다")
     void missingResolverIsUnavailable() {
-        var response = new GenericFieldsService(Optional.empty(), new FormAnalysisRouter(notRegistered()))
+        var response = new GenericFieldsService(Optional.empty(), new FormAnalysisRouter(notRegistered()),
+            new FieldInteractionPolicy(), new SupportedProfileFields())
             .analyze(sample());
 
         assertThat(response.status()).isEqualTo(Status.COMPLETE);
+        assertThat(response.schemaVersion()).isEqualTo(2);
         assertThat(response.fields()).containsExactly(
-            new Field("edu-1", null, 0.0, false, Reason.LLM_UNAVAILABLE),
-            new Field("mixed-1", null, 0.0, false, Reason.LLM_UNAVAILABLE));
+            new Field("edu-1", null, 0.0, false, Reason.LLM_UNAVAILABLE, null, InteractionStatus.BLOCKED, null),
+            new Field("mixed-1", null, 0.0, false, Reason.LLM_UNAVAILABLE, null, InteractionStatus.BLOCKED, null));
         assertThat(response.diagnostics().jevCalls()).isZero();
     }
 
@@ -101,7 +111,7 @@ class GenericFieldsServiceTest {
     }
 
     @Test
-    @DisplayName("요청 DTO에는 프로필 값, 현재 입력값, 프로필 항목 개수 필드가 없고 진단은 개수와 시간만 담는다")
+    @DisplayName("요청 DTO에는 값 필드가 없고 응답 칸은 매핑과 세 입력 판정만, 진단은 개수와 시간만 담는다")
     void contractsCarryNoValues() {
         Set<String> request = new HashSet<>();
         for (Class<?> type : GenericFieldsRequest.class.getDeclaredClasses()) {
@@ -114,14 +124,17 @@ class GenericFieldsServiceTest {
         assertThat(request).contains("category").noneMatch(name -> name.toLowerCase().contains("value")
             || name.toLowerCase().contains("profile") || name.toLowerCase().contains("itemcount"));
         assertThat(components(GenericFieldsResponse.Field.class))
-            .containsExactly("candidateId", "profileFieldKey", "confidence", "categoryConfirmed", "reason");
+            .containsExactly("candidateId", "profileFieldKey", "confidence", "categoryConfirmed", "reason",
+                "autofillPolicy", "interactionStatus", "writePlan");
+        assertThat(components(GenericFieldsResponse.WritePlan.class)).containsExactly("command");
         assertThat(components(GenericFieldsResponse.Diagnostics.class)).containsExactly("jevCalls", "elapsedMs");
     }
 
     private GenericFieldsService service(CompanyFormPolicyProvider policies) {
         var resolver = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(http), FIELDS, CATEGORIES, 3, 5, 10,
             8000);
-        return new GenericFieldsService(Optional.of(resolver), new FormAnalysisRouter(policies));
+        return new GenericFieldsService(Optional.of(resolver), new FormAnalysisRouter(policies),
+            new FieldInteractionPolicy(), new SupportedProfileFields());
     }
 
     private static CompanyFormPolicyProvider notRegistered() {
