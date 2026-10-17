@@ -4,6 +4,8 @@ import {
   collectFieldsSnapshotWithDropdowns as collectFieldsSnapshot,
 } from "./collect";
 import { mountButtonDropdowns } from "./button-dropdown.fixture";
+import { collectButtonDropdowns } from "./button-dropdown";
+import { isSafeStructuralClick } from "../generic/click-policy";
 
 afterEach(() => {
   document.body.onmousedown = null;
@@ -200,4 +202,111 @@ it("preserves an explicit combobox collector without probing or duplicating it",
       .find((field) => field.options)?.options,
   ).toHaveLength(2);
   expect(menu.hidden).toBe(true);
+});
+
+const FORM_TRIGGER_TEXTS = ["학력 구분", "삭제", "업로드", "제출"];
+
+function mountFormMenuTriggers() {
+  document.body.innerHTML = `<form id="application">${FORM_TRIGGER_TEXTS.map(
+    (text, index) => `
+      <div id="question-${index}">
+        <span>항목 ${index}</span>
+        <button type="button" aria-haspopup="menu" aria-controls="menu-${index}">${text}</button>
+      </div>
+      <ul id="menu-${index}" role="menu" hidden>
+        <li role="menuitem">가 항목</li><li role="menuitem">나 항목</li>
+      </ul>`,
+  ).join("")}</form>`;
+  const clicks = new Map<string, number>();
+  document
+    .querySelectorAll<HTMLButtonElement>("button[aria-controls]")
+    .forEach((trigger) => {
+      const menu = document.getElementById(
+        trigger.getAttribute("aria-controls")!,
+      )!;
+      trigger.addEventListener("click", () => {
+        clicks.set(
+          trigger.textContent!,
+          (clicks.get(trigger.textContent!) ?? 0) + 1,
+        );
+        menu.hidden = !menu.hidden;
+      });
+    });
+  return clicks;
+}
+
+const safeTrigger = (trigger: HTMLElement) =>
+  isSafeStructuralClick(trigger, trigger.closest("form") ?? document.body)
+    .allowed;
+
+it.each(["aria-label", "title"])(
+  "does not override a forbidden %s when the visible dropdown text is safe",
+  async (attribute) => {
+    const { triggers, menus } = mountButtonDropdowns({ count: 1 });
+    const trigger = triggers[0]!;
+    trigger.setAttribute(attribute, "삭제");
+    let clicks = 0;
+    trigger.addEventListener("click", () => {
+      clicks += 1;
+    });
+
+    const snapshot = await collectFieldsSnapshot(document);
+
+    expect(clicks).toBe(0);
+    expect(menus[0]!.hidden).toBe(true);
+    expect(
+      snapshot.request.sections
+        .flatMap((section) => section.fields)
+        .filter((field) => field.control === "select"),
+    ).toHaveLength(0);
+  },
+);
+
+it("opens no form menu trigger that the structural click policy forbids", async () => {
+  const clicks = mountFormMenuTriggers();
+
+  const dropdowns = await collectButtonDropdowns(
+    document,
+    undefined,
+    safeTrigger,
+  );
+
+  expect(clicks.get("삭제") ?? 0).toBe(0);
+  expect(clicks.get("업로드") ?? 0).toBe(0);
+  expect(clicks.get("제출") ?? 0).toBe(0);
+  expect([...dropdowns.keys()].map((trigger) => trigger.textContent)).toEqual([
+    "학력 구분",
+  ]);
+});
+
+it("keeps the previous trigger filter when no click check is passed", async () => {
+  const clicks = mountFormMenuTriggers();
+
+  const dropdowns = await collectButtonDropdowns(document);
+
+  expect(clicks.get("삭제")).toBeGreaterThan(0);
+  expect(clicks.get("업로드")).toBeGreaterThan(0);
+  expect(clicks.get("제출") ?? 0).toBe(0);
+  expect([...dropdowns.keys()].map((trigger) => trigger.textContent)).toEqual([
+    "학력 구분",
+    "삭제",
+    "업로드",
+  ]);
+});
+
+it("never clicks forbidden form menu triggers while collecting a generic document", async () => {
+  const clicks = mountFormMenuTriggers();
+
+  const snapshot = await collectFieldsSnapshot(document);
+
+  expect(clicks.get("삭제") ?? 0).toBe(0);
+  expect(clicks.get("업로드") ?? 0).toBe(0);
+  expect(clicks.get("제출") ?? 0).toBe(0);
+  expect(clicks.get("학력 구분")).toBeGreaterThan(0);
+  const menus = snapshot.request.sections
+    .flatMap((section) => section.fields)
+    .filter((field) => field.control === "select");
+  expect(
+    menus.map((field) => field.options?.map((o) => o.displayName)),
+  ).toEqual([["가 항목", "나 항목"]]);
 });

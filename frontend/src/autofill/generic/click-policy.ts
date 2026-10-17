@@ -68,10 +68,13 @@ function blockReason(
     return "new-window-target";
   if (element.hasAttribute("formaction") || element.hasAttribute("form"))
     return "form-override-attribute";
-  const label = labelOf(element);
-  if (FORBIDDEN_LABELS.some((pattern) => pattern.test(label)))
-    return "forbidden-label";
+  if (isForbiddenClickLabel(labelOf(element))) return "forbidden-label";
   return undefined;
+}
+
+/** Whether text names an action that a structural click must never take. */
+export function isForbiddenClickLabel(text: string): boolean {
+  return FORBIDDEN_LABELS.some((pattern) => pattern.test(text));
 }
 
 function isInvisible(element: Element): boolean {
