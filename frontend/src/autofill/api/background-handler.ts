@@ -15,6 +15,8 @@ const endpointByType: Record<AnalysisRequestMessage["type"], string> = {
   AUTOFILL_ANALYZE_PREPARATION: "/api/v1/preparation/analyze",
   AUTOFILL_DECIDE_INTERACTIONS: "/api/v1/generic/interaction-decisions",
   AUTOFILL_ANALYZE_FIELDS: "/api/v1/fields/analyze",
+  AUTOFILL_GENERIC_CLASSIFY_SECTIONS: "/api/v1/generic/sections/classify",
+  AUTOFILL_GENERIC_ANALYZE_FIELDS: "/api/v1/generic/fields/analyze",
 };
 
 const errorCodeByStatus: Record<number, AnalysisErrorCode> = {
