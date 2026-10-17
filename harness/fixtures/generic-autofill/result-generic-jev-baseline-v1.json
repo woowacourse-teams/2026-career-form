@@ -2,8 +2,8 @@
   "contract_version": "1.1",
   "follow_up_priorities": [],
   "inputs": {
-    "ground_truth_sha256": "0a717b902d1a47bb430a6b952cfe1ef4eeecafdc2810735765aca8b61eef504b",
-    "observations_sha256": "bc8f3cd3aab452422488119239c521a72126fbbb1f6a986e3d0d852729c0f2a3"
+    "ground_truth_sha256": "09f244274e54725df0ddd921e7a07fc48389fac64ea3096f086253b9ba05e3a5",
+    "observations_sha256": "cc980b6c79c44954dcddc8417021fa195ae98cdfe0658c3257815e4239e0a39a"
   },
   "profile_version": "profile-export-example-v1",
   "sources": {
@@ -12,7 +12,7 @@
       "measured_sites": 1,
       "overall": {
         "correct_input_rate": {
-          "denominator": 65,
+          "denominator": 67,
           "numerator": 0,
           "rate": 0.0
         },
@@ -28,7 +28,7 @@
           "rate": null
         },
         "mapping_recall": {
-          "denominator": 65,
+          "denominator": 67,
           "numerator": 0,
           "rate": 0.0
         },
@@ -43,8 +43,8 @@
             "CONDITIONAL_NOT_REVEALED": 0,
             "EXISTING_VALUE_PROTECTED": 0,
             "MAPPING_INCORRECT": 0,
-            "MAPPING_NO_MATCH": 67,
-            "PROFILE_VALUE_MISSING": 61,
+            "MAPPING_NO_MATCH": 69,
+            "PROFILE_VALUE_MISSING": 59,
             "RETENTION_FAILED": 0,
             "UNSUPPORTED_CONTROL": 0,
             "USER_NOT_APPROVED": 0,
@@ -307,14 +307,14 @@
           {
             "candidate_id": "c035",
             "field_id": "f035",
-            "reason_code": "PROFILE_VALUE_MISSING",
+            "reason_code": "MAPPING_NO_MATCH",
             "site_id": "synthetic-large-generic-form",
             "terminal_result": "DEFERRED"
           },
           {
             "candidate_id": "c036",
             "field_id": "f036",
-            "reason_code": "PROFILE_VALUE_MISSING",
+            "reason_code": "MAPPING_NO_MATCH",
             "site_id": "synthetic-large-generic-form",
             "terminal_result": "DEFERRED"
           },
@@ -984,7 +984,7 @@
       "sites": {
         "synthetic-large-generic-form": {
           "correct_input_rate": {
-            "denominator": 65,
+            "denominator": 67,
             "numerator": 0,
             "rate": 0.0
           },
@@ -1002,7 +1002,7 @@
             "rate": null
           },
           "mapping_recall": {
-            "denominator": 65,
+            "denominator": 67,
             "numerator": 0,
             "rate": 0.0
           },
@@ -1021,8 +1021,8 @@
               "CONDITIONAL_NOT_REVEALED": 0,
               "EXISTING_VALUE_PROTECTED": 0,
               "MAPPING_INCORRECT": 0,
-              "MAPPING_NO_MATCH": 67,
-              "PROFILE_VALUE_MISSING": 61,
+              "MAPPING_NO_MATCH": 69,
+              "PROFILE_VALUE_MISSING": 59,
               "RETENTION_FAILED": 0,
               "UNSUPPORTED_CONTROL": 0,
               "USER_NOT_APPROVED": 0,
@@ -1285,14 +1285,14 @@
             {
               "candidate_id": "c035",
               "field_id": "f035",
-              "reason_code": "PROFILE_VALUE_MISSING",
+              "reason_code": "MAPPING_NO_MATCH",
               "site_id": "synthetic-large-generic-form",
               "terminal_result": "DEFERRED"
             },
             {
               "candidate_id": "c036",
               "field_id": "f036",
-              "reason_code": "PROFILE_VALUE_MISSING",
+              "reason_code": "MAPPING_NO_MATCH",
               "site_id": "synthetic-large-generic-form",
               "terminal_result": "DEFERRED"
             },

@@ -117,6 +117,8 @@ schoolRow(28, "university", [
   [4, "schoolRegion", "서울"],
   [5, "startDate", "2019-03-01"],
   [6, "endDate", "2023-02-28"],
+  [7, "majorName", "컴퓨터공학"],
+  [8, "gpaScore", "4.20"],
 ]);
 [
   ["companyName", "예시 주식회사"],

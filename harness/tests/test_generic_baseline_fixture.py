@@ -228,8 +228,28 @@ class GenericBaselineGroundTruthTest(unittest.TestCase):
         for field_id in ("f085", "f086", "f087", "f088", "f089", "f091"):
             self.assertEqual("AUTOFILLABLE", fields[field_id]["classification"], field_id)
         self.assertEqual(
-            65, sum(field["classification"] == "AUTOFILLABLE" for field in fields.values())
+            67, sum(field["classification"] == "AUTOFILLABLE" for field in fields.values())
         )
+
+    def test_education_major_and_gpa_follow_example_profile_rows(self) -> None:
+        profile = json.loads(PROFILE.read_text(encoding="utf-8"))["profile"]
+        fields = {field["field_id"]: field for field in self.load()["sites"][0]["fields"]}
+        rows = ((profile["education"][0]["values"], "f026", "f027"),
+                (profile["education"][1]["values"], "f035", "f036"))
+        for values, major_id, gpa_id in rows:
+            for key, field_id in (("majorName", major_id), ("gpaScore", gpa_id)):
+                expected = (
+                    ("AUTOFILLABLE", "PROFILE_VALUE_AVAILABLE")
+                    if values.get(key)
+                    else ("PROFILE_VALUE_MISSING", "PROFILE_VALUE_UNAVAILABLE")
+                )
+                self.assertEqual(
+                    expected,
+                    (fields[field_id]["classification"], fields[field_id]["classification_reason"]),
+                    field_id,
+                )
+        self.assertTrue(profile["education"][1]["values"].get("majorName"))
+        self.assertFalse(profile["education"][0]["values"].get("majorName"))
 
     def test_ground_truth_declares_only_definitional_labels(self) -> None:
         fields = self.load()["sites"][0]["fields"]
@@ -242,6 +262,43 @@ class GenericBaselineGroundTruthTest(unittest.TestCase):
             {(f["classification"], f["classification_reason"]) for f in fields} <= allowed
         )
         self.assertTrue(any(f["classification"] == "FORBIDDEN" for f in fields))
+
+
+class CommittedBaselineRescoreTest(unittest.TestCase):
+    def test_unmapped_candidate_reasons_match_ground_truth(self) -> None:
+        truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+        classes = {f["field_id"]: f["classification"] for f in truth["sites"][0]["fields"]}
+        for provider in ("jev", "openai"):
+            path = FIXTURES / f"observations-generic-{provider}-baseline-v1.json"
+            runs = json.loads(path.read_text(encoding="utf-8"))["runs"]
+            for candidate in (c for run in runs for c in run.get("candidates", [])):
+                if "MAPPED" in candidate["stages"]:
+                    continue
+                expected = (
+                    "PROFILE_VALUE_MISSING"
+                    if classes[candidate["field_id"]] == "PROFILE_VALUE_MISSING"
+                    else "MAPPING_NO_MATCH"
+                )
+                self.assertEqual(
+                    expected, candidate["reason_code"], f"{provider} {candidate['field_id']}"
+                )
+
+    def test_committed_results_equal_cli_output(self) -> None:
+        for provider in ("jev", "openai"):
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "result.json"
+                subprocess.run(
+                    (
+                        sys.executable, str(SCRIPT),
+                        "--ground-truth", str(TRUTH),
+                        "--observations",
+                        str(FIXTURES / f"observations-generic-{provider}-baseline-v1.json"),
+                        "--output", str(output),
+                    ),
+                    cwd=ROOT, capture_output=True, check=True,
+                )
+                committed = FIXTURES / f"result-generic-{provider}-baseline-v1.json"
+                self.assertEqual(committed.read_bytes(), output.read_bytes(), provider)
 
 
 class ContractRejectionTest(unittest.TestCase):
