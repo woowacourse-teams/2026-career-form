@@ -111,6 +111,11 @@ export function createAnalysisMessageHandler({
           code:
             errorCodeByStatus[response.status] ??
             (response.status >= 500 ? "SERVER_ERROR" : "BAD_REQUEST"),
+          ...(response.status === 404 &&
+          (message.type === "AUTOFILL_GENERIC_CLASSIFY_SECTIONS" ||
+            message.type === "AUTOFILL_GENERIC_ANALYZE_FIELDS")
+            ? { status: 404 as const }
+            : {}),
         };
       }
       try {

@@ -140,6 +140,21 @@ describe("RuntimeAnalysisApiClient", () => {
       "분석 서버 응답을 확인할 수 없습니다.",
     );
   });
+
+  it.each([null, 200, "404"])(
+    "rejects invalid endpoint status metadata %s",
+    async (status) => {
+      const client = new RuntimeAnalysisApiClient(async () => ({
+        ok: false,
+        code: "BAD_REQUEST",
+        status,
+      }));
+
+      await expect(client.classifySections(classifyRequest)).rejects.toThrow(
+        "분석 서버 응답을 확인할 수 없습니다.",
+      );
+    },
+  );
 });
 
 const genericSite = { host: "example.test", pathPattern: "/apply" };
@@ -269,7 +284,7 @@ describe("RuntimeAnalysisApiClient generic endpoints", () => {
 
   it("analyzes generic fields through the generic message and validates the response", async () => {
     const data = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       snapshotId: "generic-1",
       status: "COMPLETE",
       fields: [
@@ -278,6 +293,9 @@ describe("RuntimeAnalysisApiClient generic endpoints", () => {
           profileFieldKey: "contact.contact.email",
           confidence: 0.9,
           categoryConfirmed: true,
+          autofillPolicy: "ALLOWED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
         },
       ],
       diagnostics: { jevCalls: 1, elapsedMs: 30 },
@@ -298,7 +316,7 @@ describe("RuntimeAnalysisApiClient generic endpoints", () => {
   it("rejects a generic fields response whose candidate ids do not match", async () => {
     const client = new RuntimeAnalysisApiClient(
       respond({
-        schemaVersion: 1,
+        schemaVersion: 2,
         snapshotId: "generic-1",
         status: "COMPLETE",
         fields: [
@@ -308,6 +326,7 @@ describe("RuntimeAnalysisApiClient generic endpoints", () => {
             confidence: 0,
             categoryConfirmed: false,
             reason: "LLM_UNAVAILABLE",
+            interactionStatus: "BLOCKED",
           },
         ],
         diagnostics: { jevCalls: 0, elapsedMs: 0 },
