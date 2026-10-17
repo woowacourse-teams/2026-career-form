@@ -36,9 +36,14 @@ const { values: args } = parseArgs({
     "metrics-url": { type: "string" },
     diagnose: { type: "boolean", default: false },
     screenshot: { type: "boolean", default: false },
+    "check-only": { type: "boolean", default: false },
   },
 });
-for (const name of ["provider", "model", "timeout-ms", "out"]) {
+// --check-only runs only the add-button check: Vite is enough, no backend or
+// provider is involved.
+for (const name of args["check-only"]
+  ? ["out"]
+  : ["provider", "model", "timeout-ms", "out"]) {
   if (!args[name]) throw new Error(`--${name} is required`);
 }
 const provider = args.provider;
@@ -234,12 +239,16 @@ async function groupRows(page) {
 
 // Exercises both add buttons on a fresh page: every click must add exactly one
 // row with fixed ids, keep existing row values and disable the button at its
-// cap. Existing values are filled only in this throwaway context.
+// cap. Existing values are filled only in this throwaway context. The check
+// query keeps the production workflow unmounted, so this context must not send
+// any /api/ request that could reach the backend during measurement.
 async function checkAddButtons(browser) {
   const context = await browser.newContext();
+  const requests = [];
+  context.on("request", (request) => requests.push(request.url()));
   const page = await context.newPage();
-  await page.goto(args.url);
-  await page.locator("career-form-profile-panel").waitFor({ state: "attached" });
+  await page.goto(`${args.url}?check=add-buttons`);
+  await page.locator("form button.add").first().waitFor({ state: "attached" });
   await page.fill("#c020", "existing-education");
   await page.fill("#c055", "existing-career");
   const clicks = [];
@@ -283,7 +292,18 @@ async function checkAddButtons(browser) {
       path: join(outDir, "screenshot-add-buttons.png"),
       fullPage: true,
     });
+  const panels = await page.locator("career-form-profile-panel").count();
   await context.close();
+  const apiRequests = requests.filter((url) =>
+    new URL(url).pathname.startsWith("/api/"),
+  );
+  if (apiRequests.length > 0 || panels > 0) {
+    throw new Error(
+      `add button check context must not run the workflow: ` +
+        `api_requests=${JSON.stringify(apiRequests.map((url) => new URL(url).pathname))} ` +
+        `profile_panels=${panels}`,
+    );
+  }
   const expectedIds = Array.from(
     { length: 28 },
     (_, index) => `c${132 + index}`,
@@ -464,6 +484,14 @@ async function runOnce(browser, index) {
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  // Analysis requests seen on the network, excluding the execution policy
+  // lookup. Each AUTOFILL_* event sends exactly one of them.
+  const networkAnalysisRequests = [];
+  context.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/api/v1/") && path !== "/api/v1/execution-policy")
+      networkAnalysisRequests.push(path);
+  });
   const callsBefore = await providerCalls();
   const started = Date.now();
   await page.goto(args.diagnose ? `${args.url}?diagnose` : args.url);
@@ -482,6 +510,7 @@ async function runOnce(browser, index) {
   const retained = await readControls(page);
   const rowsAfter = await groupRows(page);
   const state = await page.evaluate(() => window.__cfBaseline);
+  const networkAnalysisCount = networkAnalysisRequests.length;
   if (args.screenshot) {
     await page.screenshot({
       path: join(outDir, `screenshot-${provider}-run${index}.png`),
@@ -513,6 +542,10 @@ async function runOnce(browser, index) {
   for (const event of analysisEvents.filter((item) => item.ok === false))
     failures.push(`${event.type} failed: ${event.code}`);
   if (fieldRequests.length === 0) failures.push("no field analysis request");
+  if (networkAnalysisCount !== analysisEvents.length)
+    failures.push(
+      `analysis request count mismatch: network=${networkAnalysisCount} events=${analysisEvents.length}`,
+    );
   return {
     record: {
       run: index,
@@ -579,7 +612,11 @@ let addButtonCheck;
 try {
   addButtonCheck = await checkAddButtons(browser);
   console.log(`add buttons: ${JSON.stringify(addButtonCheck)}`);
-  for (let index = 1; index <= runCount; index += 1) {
+  for (
+    let index = 1;
+    !args["check-only"] && index <= runCount;
+    index += 1
+  ) {
     const { record, candidates } = await runOnce(browser, index);
     runs.push(record);
     if (index === 1) observedCandidates = candidates;
@@ -596,6 +633,40 @@ try {
   }
 } finally {
   await browser.close();
+}
+
+if (args["check-only"]) {
+  const expectedClicks = [
+    ["education", 1, true, 4, 5],
+    ["education", 2, true, 5, 6],
+    ["education", 3, false, 6, 6],
+    ["career", 1, true, 3, 4],
+    ["career", 2, false, 4, 4],
+  ];
+  const clicksMatch =
+    JSON.stringify(
+      addButtonCheck.clicks.map((click) => [
+        click.group,
+        click.click,
+        click.enabled_before,
+        click.rows_before,
+        click.rows_after,
+      ]),
+    ) === JSON.stringify(expectedClicks) &&
+    addButtonCheck.clicks.at(-1).disabled_after &&
+    addButtonCheck.clicks[2].disabled_after;
+  const failed = Object.entries({
+    clicks: clicksMatch,
+    ids_match_fixed_numbering: addButtonCheck.ids_match_fixed_numbering,
+    existing_values_preserved: addButtonCheck.existing_values_preserved,
+    new_rows_empty: addButtonCheck.new_rows_empty,
+  })
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  if (failed.length > 0)
+    throw new Error(`add button check failed: ${failed.join(", ")}`);
+  console.log("add button check passed");
+  process.exit(0);
 }
 
 const config = {
