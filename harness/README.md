@@ -70,7 +70,10 @@ git config "branch.$(git branch --show-current).career-form-base" origin/release
 
 합성 대형 페이지(`pages/large-generic-form.html`)의 JEV·OpenAI 기준선 관측과 소요 시간은
 [범용 기준선 측정 드라이버](../frontend/fixtures/generic-baseline/README.md)로 만든 뒤 위 명령으로
-평가한다.
+평가한다. 커밋된 기준선 result는 측정 뒤 정답의 대학 `전공`·`학점`(f035, f036)을 `AUTOFILLABLE`로
+보정하고(Issue #242, 분모 67) provider를 다시 호출하지 않은 채 다시 채점한 값이다. 관측은 미매핑
+f035/f036의 `reason_code`만 드라이버 판정 규칙으로 다시 계산했다. 측정 원본은 Issue #236 시점의
+Git 이력에 있고, 보정 기록은 `timing-generic-baseline-v1.json`의 `rescore`에 있다.
 
 계약 `1.1`의 예제는 `alpha`와 `beta`라는 합성 사이트를 사용한다. 예제의 SHA와
 `LIVE_SITE` 구획은 parser 검증용이며 실제 설치본 검증이나 실사이트 실행 근거가 아니다.

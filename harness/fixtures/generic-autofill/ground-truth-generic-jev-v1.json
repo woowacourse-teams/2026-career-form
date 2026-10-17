@@ -211,14 +211,14 @@
         },
         {
           "field_id": "f035",
-          "classification": "PROFILE_VALUE_MISSING",
-          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "classification": "AUTOFILLABLE",
+          "classification_reason": "PROFILE_VALUE_AVAILABLE",
           "control_kind": "TEXT"
         },
         {
           "field_id": "f036",
-          "classification": "PROFILE_VALUE_MISSING",
-          "classification_reason": "PROFILE_VALUE_UNAVAILABLE",
+          "classification": "AUTOFILLABLE",
+          "classification_reason": "PROFILE_VALUE_AVAILABLE",
           "control_kind": "TEXT"
         },
         {

@@ -2179,5 +2179,50 @@
       ],
       "analysis_duration_p95_ms": 22063
     }
+  },
+  "rescore": {
+    "issue": "#242",
+    "reason": "Ground truth f035/f036 (education row 2 university majorName/gpaScore) were misclassified as PROFILE_VALUE_MISSING although frontend/fixtures/profile-export.example.json education[1] has both values; corrected to AUTOFILLABLE/PROFILE_VALUE_AVAILABLE (AUTOFILLABLE 65 -> 67).",
+    "provider_rerun": false,
+    "corrected_field_ids": [
+      "f035",
+      "f036"
+    ],
+    "observation_reason_changes": {
+      "jev": [
+        {
+          "field_id": "f035",
+          "from": "PROFILE_VALUE_MISSING",
+          "to": "MAPPING_NO_MATCH"
+        },
+        {
+          "field_id": "f036",
+          "from": "PROFILE_VALUE_MISSING",
+          "to": "MAPPING_NO_MATCH"
+        }
+      ],
+      "openai": [
+        {
+          "field_id": "f036",
+          "from": "PROFILE_VALUE_MISSING",
+          "to": "MAPPING_NO_MATCH"
+        }
+      ]
+    },
+    "observation_rule": "Only unmapped f035/f036 reason_code values were recomputed with the driver README rule (PROFILE_VALUE_MISSING when the ground truth is PROFILE_VALUE_MISSING, otherwise MAPPING_NO_MATCH). OpenAI f035 stays MAPPING_INCORRECT (mapped to education.university.majorField). stages, mapping_result, write_result and other candidates are unchanged.",
+    "base_commit": "912370f379210c6f86530281922cea934c766928",
+    "inputs": {
+      "ground_truth_sha256": "09f244274e54725df0ddd921e7a07fc48389fac64ea3096f086253b9ba05e3a5",
+      "observations_sha256": {
+        "jev": "cc980b6c79c44954dcddc8417021fa195ae98cdfe0658c3257815e4239e0a39a",
+        "openai": "e600154720525549b30d64b98a757afa01b55aba53019a9e37f59eb695191319"
+      }
+    },
+    "driver_files": {
+      "frontend/fixtures/generic-baseline/README.md": "f67ace08372183d07f63c6f65301d7d1e1f89a64845ee87dae33a53531571068",
+      "frontend/fixtures/generic-baseline/run-baseline.mjs": "5a8c890efe65aa4cf21ca0597ae4d95954ef40c4ea1ad1ade94bc039a6a5b888"
+    },
+    "preserved": "meta.inputs, meta.driver_files and per-run summary values are the measurement-time records and are not recomputed.",
+    "limitations": "Per-run summary for runs 2-5 is not recomputed: mapping_correct could be recomputed from mapped keys (e.g. OpenAI run 4 mapped c035 to education.university.majorName, +1), but write_correct cannot because per-field final DOM values were not recorded."
   }
 }

@@ -449,7 +449,7 @@
           "mapping_result": null,
           "write_result": null,
           "terminal_result": "DEFERRED",
-          "reason_code": "PROFILE_VALUE_MISSING",
+          "reason_code": "MAPPING_NO_MATCH",
           "existing_value_changed": false
         },
         {
@@ -461,7 +461,7 @@
           "mapping_result": null,
           "write_result": null,
           "terminal_result": "DEFERRED",
-          "reason_code": "PROFILE_VALUE_MISSING",
+          "reason_code": "MAPPING_NO_MATCH",
           "existing_value_changed": false
         },
         {

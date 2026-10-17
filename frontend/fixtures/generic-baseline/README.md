@@ -91,6 +91,16 @@ node fixtures/generic-baseline/combine-timing.mjs --meta <meta.json> \
 `READY`이면서 `ALLOWED`면 `WRITE_FAILED`, `READY`이면서 확인이 필요한 정책이면
 `USER_NOT_APPROVED`, 그 밖은 `WRITE_BLOCKED`다. token과 비용은 관측하지 않아 0과 `null`로 둔다.
 
+## 측정 뒤 정답 보정과 재채점
+
+Issue #242에서 정답의 학력 2행(대학) `전공`(f035)과 `학점`(f036)을 예시 프로필 `education[1]`에 맞춰
+`AUTOFILLABLE`로 보정했다. AUTOFILLABLE은 65칸에서 67칸이 됐고 `EXPECTED`에 `c035`, `c036`을 더했다.
+커밋된 JEV·OpenAI 기준선은 provider를 다시 호출하지 않고 보정된 정답으로 다시 채점한 값이다.
+관측에서는 기록된 매핑 키로 위 판정 규칙을 다시 적용해 미매핑 f035/f036의 `reason_code`만 바꿨다.
+result 파일은 평가 CLI로 다시 만들었다. timing 파일의 `rescore`에 보정 내용과 새 sha256을 기록했고,
+측정 당시 `meta.inputs`, `meta.driver_files`와 실행별 `summary`는 그대로 보존했다.
+측정 원본은 Issue #236 시점의 Git 이력과 `.worktrees-evidence/CF-236/measure/`에 남아 있다.
+
 ## 증거 경계
 
 - 합성 페이지와 예시 프로필만 사용한다. 실제 지원서 값, 계정, 세션, 사용자 브라우저 프로필은 쓰지 않는다.
