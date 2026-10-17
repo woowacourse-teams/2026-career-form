@@ -109,13 +109,12 @@ function diagnosePreparation(response: PreparationAnalyzeResponse): void {
   }
 }
 
-// The production background handler talks to the backend through the Vite
-// /api proxy. This page never reads or forwards provider keys.
-const backgroundHandler = createAnalysisMessageHandler({
-  baseUrl: location.origin,
-});
+type BackgroundHandler = ReturnType<typeof createAnalysisMessageHandler>;
 
-async function sendMessage(message: unknown): Promise<unknown> {
+async function sendMessage(
+  backgroundHandler: BackgroundHandler,
+  message: unknown,
+): Promise<unknown> {
   const typed = message as { type?: string; payload?: unknown };
   if (typed.type === "AUTOFILL_LOAD_EXECUTION_POLICY") {
     const response = await fetch("/api/v1/execution-policy", {
@@ -153,18 +152,34 @@ async function sendMessage(message: unknown): Promise<unknown> {
   return envelope;
 }
 
-const apiClient = new RuntimeAnalysisApiClient(sendMessage);
-const host = document.createElement("career-form-profile-panel");
-host.dataset.baselineWorkflow = "";
-document.body.append(host);
-const container = document.createElement("div");
-host.attachShadow({ mode: "open" }).append(container);
+function mountWorkflow(): void {
+  // The production background handler talks to the backend through the Vite
+  // /api proxy. This page never reads or forwards provider keys.
+  const backgroundHandler = createAnalysisMessageHandler({
+    baseUrl: location.origin,
+  });
+  const apiClient = new RuntimeAnalysisApiClient((message) =>
+    sendMessage(backgroundHandler, message),
+  );
+  const host = document.createElement("career-form-profile-panel");
+  host.dataset.baselineWorkflow = "";
+  document.body.append(host);
+  const container = document.createElement("div");
+  host.attachShadow({ mode: "open" }).append(container);
 
-createRoot(container).render(
-  <AutofillWorkflow
-    apiClient={apiClient}
-    repository={repository}
-    pageDocument={document}
-    onExit={() => undefined}
-  />,
-);
+  createRoot(container).render(
+    <AutofillWorkflow
+      apiClient={apiClient}
+      repository={repository}
+      pageDocument={document}
+      onExit={() => undefined}
+    />,
+  );
+}
+
+// The add-button check (?check=add-buttons) needs only the harness page and its
+// inline scripts. Mounting the workflow there would start an analysis that the
+// backend keeps processing after the check context closes.
+if (new URLSearchParams(location.search).get("check") !== "add-buttons") {
+  mountWorkflow();
+}

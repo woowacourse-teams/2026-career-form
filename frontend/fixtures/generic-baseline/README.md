@@ -60,16 +60,28 @@ node fixtures/generic-baseline/combine-timing.mjs --meta <meta.json> \
 `currentGroupCount`, 필요 추가 수, 인식된 행의 입력란 이름을 기록한다. observations는 만들지 않는다.
 `--screenshot`은 출력 디렉터리에 화면을 저장한다. 스크린샷은 커밋하지 않는다.
 
+`--check-only`는 실행 절차 1단계의 추가 버튼 점검만 실행한다. 백엔드, `--provider`, `--model`,
+`--timeout-ms` 없이 Vite만 띄우고 실행하며 결과는 exit code로 판정한다. 측정 run과 출력 파일은 만들지 않는다.
+
+```sh
+node fixtures/generic-baseline/run-baseline.mjs --check-only --out /tmp/cf-driver-check; echo "check=$?"
+```
+
 브라우저로 직접 확인하려면 Vite 실행 중에
 `http://127.0.0.1:4173/fixtures/generic-baseline/index.html`을 연다.
 
 ## 실행 절차
 
-1. 새 context에서 `학력 추가`를 3회, `경력 추가`를 2회 누른다. 행 수, 고정 `id`(c132~c159),
-   비활성화, 기존 값 보존, 새 행이 비어 있는지를 `add_button_check`에 기록한다.
+1. 새 context에서 `?check=add-buttons`로 페이지를 연다. 이 query에서는 하네스 페이지와 인라인 스크립트만
+   불러오고 운영 워크플로우를 마운트하지 않는다. `학력 추가`를 3회, `경력 추가`를 2회 누른다. 행 수,
+   고정 `id`(c132~c159), 비활성화, 기존 값 보존, 새 행이 비어 있는지를 `add_button_check`에 기록한다.
+   이 context의 `/api/` 요청이 1건이라도 있거나 `career-form-profile-panel`이 있으면 측정 run 전에 실패한다.
+   `--check-only`는 기록 값까지 기대값과 비교해 다르면 실패한다.
 2. 실행마다 새 context에서 페이지를 연다. 워크플로우 기본값으로 진행하며, `준비하고 계속`과
    기입 버튼이 나오면 누른다. 결과 화면 또는 예외 화면에서 멈춘다.
 3. 결과 화면에서 입력란 값을 읽고, 2초 뒤 다시 읽어 유지 여부를 판정한다.
+4. 실행마다 network에서 본 `/api/v1/**` 분석 요청 수(실행 정책 조회 제외)를 기록한 `AUTOFILL_*` event 수와
+   비교한다. 다르면 그 run의 `failure_reasons`에 `analysis request count mismatch`를 남긴다.
 
 ## 출력 형식
 
