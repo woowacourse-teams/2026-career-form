@@ -297,6 +297,7 @@ describe("gradeGenericField composite name recipes", () => {
     categoryConfirmed: true,
     hasProfileValue: true,
     control: "text",
+    displayName: "이름",
     composite: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
     ...override,
   });
@@ -364,6 +365,7 @@ describe("gradeGenericField date part selects", () => {
     categoryConfirmed: true,
     hasProfileValue: true,
     control: "select",
+    displayName: "생년월일",
     options: options("선택", ...names),
     ...override,
   });
