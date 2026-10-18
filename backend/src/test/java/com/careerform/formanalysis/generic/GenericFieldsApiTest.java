@@ -77,7 +77,7 @@ class GenericFieldsApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson("example.test", false)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.schemaVersion").value(2))
+            .andExpect(jsonPath("$.schemaVersion").value(3))
             .andExpect(jsonPath("$.status").value("COMPLETE"))
             .andExpect(jsonPath("$.snapshotId").value("synthetic-snapshot"))
             .andExpect(jsonPath("$.fields.length()").value(2))
@@ -117,7 +117,8 @@ class GenericFieldsApiTest {
             "cand-school", "edu-block"));
         var call = http.calls().getFirst();
         assertThat(call.request().path("questions").path("field_0").path("type").asString()).isEqualTo("choice");
-        assertThat(call.criteria("field_0")).allMatch(key -> key.startsWith("education.") || key.equals("ABSTAIN"));
+        assertThat(call.criteria("field_0")).allMatch(key -> key.startsWith("education.")
+            || key.startsWith("DATE_PART:education.") || key.equals("ABSTAIN"));
     }
 
     @Test
@@ -127,7 +128,7 @@ class GenericFieldsApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson(STATIC_HOST, false)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.schemaVersion").value(2))
+            .andExpect(jsonPath("$.schemaVersion").value(3))
             .andExpect(jsonPath("$.status").value("STATIC_POLICY_PRESENT"))
             .andExpect(jsonPath("$.fields.length()").value(0));
 

@@ -1,3 +1,4 @@
+import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import { isAutofillProfileFieldKey } from "../profile/profile-field-key";
 import type {
   GenericFieldsRequest,
@@ -139,13 +140,51 @@ function validFieldPolicy(field: Record<string, unknown>): boolean {
     )
       return false;
   }
-  if (field.profileFieldKey === null)
+  if (field.profileFieldKey === null && field.binding === undefined)
     return (
       field.autofillPolicy === undefined &&
       field.writePlan === undefined &&
       field.interactionStatus === "BLOCKED"
     );
+  if (record(field.binding) && field.binding.type === "DERIVED")
+    return field.autofillPolicy === "ALLOWED";
   return AUTOFILL_POLICIES.includes(String(field.autofillPolicy));
+}
+
+function validBinding(field: Record<string, unknown>): boolean {
+  if (field.binding === undefined) return true;
+  const binding = field.binding;
+  if (!record(binding)) return false;
+  if (binding.type === "DERIVED")
+    return (
+      onlyKeys(binding, ["type", "recipe"]) &&
+      field.profileFieldKey === null &&
+      [
+        "KOREAN_FULL_NAME",
+        "ENGLISH_FULL_NAME_GIVEN_FIRST",
+        "ENGLISH_FULL_NAME_FAMILY_FIRST",
+      ].includes(String(binding.recipe))
+    );
+  if (binding.type !== "DATE_PART" || typeof field.profileFieldKey !== "string")
+    return false;
+  const [categoryId, sectionId, fieldId] = field.profileFieldKey.split(".");
+  return (
+    onlyKeys(binding, ["type", "part"]) &&
+    ["YEAR", "MONTH", "DAY"].includes(String(binding.part)) &&
+    PROFILE_CATEGORIES.some(
+      (category) =>
+        category.id === categoryId &&
+        category.sections.some(
+          (section) =>
+            section.id === sectionId &&
+            section.fields.some(
+              (profileField) =>
+                profileField.id === fieldId &&
+                profileField.inputType === "date",
+            ),
+        ),
+    )
+  );
 }
 
 export function validateGenericFieldsResponse(
@@ -155,7 +194,7 @@ export function validateGenericFieldsResponse(
   if (
     !validEnvelope(
       value,
-      2,
+      3,
       request.snapshotId,
       ["schemaVersion", "snapshotId", "status", "fields", "diagnostics"],
       "fields",
@@ -189,7 +228,9 @@ export function validateGenericFieldsResponse(
           "autofillPolicy",
           "interactionStatus",
           "writePlan",
+          "binding",
         ]) &&
+        validBinding(field) &&
         validFieldPolicy(field) &&
         (field.profileFieldKey === null ||
           (typeof field.profileFieldKey === "string" &&

@@ -61,10 +61,11 @@ public final class GenericFieldsService {
                 mapping = new Mapping(null, 0.0, false, Reason.LLM_UNAVAILABLE);
             }
             GenericFieldPolicy.Assessment assessment =
-                fieldPolicy.assess(candidate, mapping.profileFieldKey(), request.supportedWriteCommands());
+                fieldPolicy.assess(candidate, mapping.profileFieldKey(), mapping.binding(),
+                    request.supportedWriteCommands());
             fields.add(new Field(candidate.candidateId(), mapping.profileFieldKey(), mapping.confidence(),
                 mapping.categoryConfirmed(), mapping.reason(), assessment.autofillPolicy(),
-                assessment.interactionStatus(), assessment.writePlan()));
+                assessment.interactionStatus(), assessment.writePlan(), mapping.binding()));
         }
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
         return GenericFieldsResponse.complete(request.snapshotId(), fields, new Diagnostics(jevCalls, elapsedMs));
