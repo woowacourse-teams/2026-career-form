@@ -17,6 +17,16 @@ final class LocalHplaceFormPolicySeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments arguments) {
-        policies.save(HplaceCompanyFormPolicyFactory.create());
+        for (var document : java.util.List.of(HplaceCompanyFormPolicyFactory.create(), HplaceCompanyFormPolicyFactory.createNative())) {
+            if (policies.findByCompanyKeyAndVersion(document.companyKey(), document.version()).isEmpty()) {
+                try {
+                    policies.insert(document);
+                } catch (org.springframework.dao.DuplicateKeyException concurrentInsert) {
+                    if (policies.findByCompanyKeyAndVersion(document.companyKey(), document.version()).isEmpty()) {
+                        throw concurrentInsert;
+                    }
+                }
+            }
+        }
     }
 }

@@ -27,11 +27,19 @@ public final class MongoHplacePolicyProvider implements HplacePolicyProvider {
     public MongoHplacePolicyProvider(
         FormAnalysisPolicyMongoRepository policies,
         SupportedProfileFields supportedProfileFields,
-        @Value("${careerform.hplace.active-policy-version:3}") long activeVersion
+        @Value("${careerform.hplace.active-policy-version:4}") long activeVersion
     ) {
         this.policies = policies;
         this.supportedProfileFields = supportedProfileFields;
         this.activeVersion = activeVersion;
+    }
+
+    public com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy() {
+        var result = find();
+        if (result instanceof Available available && available.policy().executionPolicy() != null) {
+            return available.policy().executionPolicy();
+        }
+        throw new IllegalStateException("Hplace execution policy unavailable");
     }
 
     @Override
@@ -43,14 +51,15 @@ public final class MongoHplacePolicyProvider implements HplacePolicyProvider {
         try {
             var result = policies.findByCompanyKeyAndVersion(POLICY_KEY, activeVersion)
                 .filter(document -> POLICY_KEY.equals(document.companyKey())
-                    && document.version() == activeVersion)
+                    && document.version() == activeVersion
+                    && (activeVersion < 4 || document.executionPolicy() != null && !document.sectionContracts().isEmpty()))
                 .<LookupResult>map(document -> new Available(CompanyFormPolicy.create(
                     document.companyKey(),
                     document.version(),
                     document.preparationFingerprint(),
                     document.fieldsFingerprint(),
                     document.actionRules(),
-                    document.fieldRules(),
+                    document.fieldRules(), document.sectionContracts(), document.executionPolicy(),
                     supportedProfileFields::contains
                 )))
                 .orElseGet(Unavailable::new);

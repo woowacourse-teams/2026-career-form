@@ -1,0 +1,1061 @@
+{
+  "version": 4,
+  "legacyVersion": 3,
+  "evidence": {
+    "basic": "GS step1 live structural observation; T:29,184,188,1021,1031",
+    "career": "GS/한국타이어 step2 실DOM 확인. 고용형태 tenant Sn은 라벨과 수집 코드 쌍으로 고정. WORK/LEAVE 확인. 확장 입력은 미검증.",
+    "foreignAbility": "한국타이어 step3 실DOM 확인. 언어 코드 01–34 전체 실관측 쌍 포함. 회화수준은 정확 라벨과 관측 Sn 쌍 검증. 작문/독해는 수동. 확장 입력 미검증.",
+    "native": "공개 템플릿 기반; T:2634–2753,2774–2870,3789–3862. 실DOM 확인 대기. 미확인 옵션 코드표 없음.",
+    "unmapped": [
+      "career.salary ≠ latestSalary",
+      "project.performWork/comment ≠ activityDetails",
+      "writing/reading ≠ conversationalLevel",
+      "joinPossibleDate: 프로필 키 없음",
+      "existYn=false 자동 선택 금지"
+    ]
+  },
+  "sectionContracts": [
+    {
+      "sectionId": "hplace-mrs2-basic-extra",
+      "parentSectionId": null,
+      "itemGroupId": null,
+      "maxRows": 1,
+      "maxFields": 5,
+      "anchors": [],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.basic.chineseName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.basic.hopeSalary",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.basic.latestSalary",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.basic.militaryBranchCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.basic.militaryRole",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "sectionId": "hplace-mrs2-career",
+      "parentSectionId": null,
+      "itemGroupId": "hplace.mrs2.career",
+      "maxRows": 20,
+      "maxFields": 9,
+      "anchors": ["hplace.mrs2.career.careerCriteriaCodeSn"],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.career.careerCriteriaCodeSn",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.company",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.entranceDate",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.leavingDate",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.workingStatusCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.department",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.position",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.assignedTask",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.career.retirementReason",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": [
+        {
+          "structuralNames": ["hplace.mrs2.career.add"],
+          "element": "button",
+          "control": "button"
+        }
+      ]
+    },
+    {
+      "sectionId": "hplace-mrs2-project",
+      "parentSectionId": null,
+      "itemGroupId": "hplace.mrs2.project",
+      "maxRows": 20,
+      "maxFields": 4,
+      "anchors": ["hplace.mrs2.project.projectName"],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.project.projectName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.project.startDate",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.project.endDate",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.project.role",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": [
+        {
+          "structuralNames": ["hplace.mrs2.project.add"],
+          "element": "button",
+          "control": "button"
+        }
+      ]
+    },
+    {
+      "sectionId": "hplace-mrs2-foreignAbility",
+      "parentSectionId": null,
+      "itemGroupId": "hplace.mrs2.foreignAbility",
+      "maxRows": 20,
+      "maxFields": 2,
+      "anchors": ["hplace.mrs2.foreignAbility.languageCode"],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.foreignAbility.languageCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.foreignAbility.speakingLevelCodeSn",
+          "element": "select",
+          "control": "select"
+        }
+      ],
+      "actions": [
+        {
+          "structuralNames": ["hplace.mrs2.foreignAbility.add"],
+          "element": "button",
+          "control": "button"
+        }
+      ]
+    }
+  ],
+  "actionRules": [
+    {
+      "structuralNames": ["hplace.mrs2.career.add"],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": ["hplace.mrs2.project.add"],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": ["hplace.mrs2.foreignAbility.add"],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    }
+  ],
+  "fieldRules": [
+    {
+      "structuralName": "hplace.mrs2.basic.chineseName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "HANJA_FULL_NAME"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.basic.chineseName",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.basic.hopeSalary",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "compensation.compensation.desiredSalary"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.basic.hopeSalary",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.basic.latestSalary",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "compensation.compensation.previousSalary"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.basic.latestSalary",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.basic.militaryBranchCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "military.military.militaryBranch"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.basic.militaryBranchCode",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.basic.militaryRole",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "military.military.militarySpecialty"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.basic.militaryRole",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.careerCriteriaCodeSn",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.employmentType"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.careerCriteriaCodeSn",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.company",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.companyName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.company",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.entranceDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.startDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.entranceDate",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.leavingDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.endDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.leavingDate",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.workingStatusCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.employmentStatus"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.workingStatusCode",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.department",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.department"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.department",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.position",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.position"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.position",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.assignedTask",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.responsibilities"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.assignedTask",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.career.retirementReason",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "careers.career.terminationReason"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.career.retirementReason",
+      "requiredItemGroupId": "hplace.mrs2.career",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.project.projectName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "projects.project.projectName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.project.projectName",
+      "requiredItemGroupId": "hplace.mrs2.project",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.project.startDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "projects.project.startDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.project.startDate",
+      "requiredItemGroupId": "hplace.mrs2.project",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.project.endDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "projects.project.endDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.project.endDate",
+      "requiredItemGroupId": "hplace.mrs2.project",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.project.role",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "projects.project.role"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.project.role",
+      "requiredItemGroupId": "hplace.mrs2.project",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.foreignAbility.languageCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "languages.languageSkill.language"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.foreignAbility.languageCode",
+      "requiredItemGroupId": "hplace.mrs2.foreignAbility",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.foreignAbility.speakingLevelCodeSn",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "languages.languageSkill.conversationalLevel"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.foreignAbility.speakingLevelCodeSn",
+      "requiredItemGroupId": "hplace.mrs2.foreignAbility",
+      "enabledOnly": true
+    }
+  ],
+  "executionPolicy": {
+    "version": 1,
+    "searches": [],
+    "failureScopes": [],
+    "address": null,
+    "browserPolicy": {
+      "schemaVersion": 2,
+      "nativeForm": {
+        "capabilities": [
+          "SCOPED_FIELDS",
+          "SINGLE_DEPTH_ROWS",
+          "NATIVE_DRIVERS",
+          "NATIVE_DATES"
+        ],
+        "path": "/mrs2/applicant/resume/writeResume",
+        "formSelector": "form#frm",
+        "rootSelector": "#wrapResume",
+        "assetPaths": [
+          "/mrs2/release/js/applicant/writeResume/writeResume.js",
+          "/mrs2/release/js/applicant/writeResume/writeResumeTemplate.js"
+        ],
+        "maxFieldsRequests": 5,
+        "sections": [
+          {
+            "id": "hplace-mrs2-basic-extra",
+            "title": "기본정보 추가",
+            "selector": "#wrapResume",
+            "enabled": true,
+            "anchors": [],
+            "fields": [
+              {
+                "name": "hplace.mrs2.basic.chineseName",
+                "rawName": "chineseName",
+                "type": "text",
+                "label": "한자명",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "HANJA_FULL_NAME"
+                },
+                "maxLength": 32,
+                "scopeSelector": "section.writeResume[data-code='11']"
+              },
+              {
+                "name": "hplace.mrs2.basic.hopeSalary",
+                "rawName": "hopeSalary",
+                "type": "number",
+                "label": "희망연봉",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "compensation.compensation.desiredSalary"
+                },
+                "min": 0,
+                "max": 210000000,
+                "step": 1,
+                "scopeSelector": "section.writeResume[data-code='11']"
+              },
+              {
+                "name": "hplace.mrs2.basic.latestSalary",
+                "rawName": "latestSalary",
+                "type": "number",
+                "label": "직전연봉",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "compensation.compensation.previousSalary"
+                },
+                "min": 0,
+                "max": 210000000,
+                "step": 1,
+                "scopeSelector": "section.writeResume[data-code='11']"
+              },
+              {
+                "name": "hplace.mrs2.basic.militaryBranchCode",
+                "rawName": "military.militaryBranchCode",
+                "type": "select",
+                "label": "군별",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "military.military.militaryBranch"
+                },
+                "options": {
+                  "육군": "01",
+                  "해군": "02",
+                  "공군": "03",
+                  "해병": "04",
+                  "전경": "05",
+                  "의경": "06",
+                  "해경": "07",
+                  "공익": "08",
+                  "병역특례": "09",
+                  "카투사": "10",
+                  "의무소방": "11",
+                  "기타": "99"
+                },
+                "scopeSelector": "section.writeResume[data-code='13']"
+              },
+              {
+                "name": "hplace.mrs2.basic.militaryRole",
+                "rawName": "military.militaryRole",
+                "type": "text",
+                "label": "병과",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "military.military.militarySpecialty"
+                },
+                "maxLength": 64,
+                "scopeSelector": "section.writeResume[data-code='13']"
+              }
+            ]
+          },
+          {
+            "id": "hplace-mrs2-career",
+            "title": "경력",
+            "selector": "section.writeResume[data-code='16'] > .subject[data-code='153'][data-wrap='career']",
+            "enabled": true,
+            "anchors": ["hplace.mrs2.career.careerCriteriaCodeSn"],
+            "rows": {
+              "selector": ":scope > .loop[data-loop='career']",
+              "namePrefix": "career",
+              "groupId": "hplace.mrs2.career",
+              "maxCount": 20
+            },
+            "action": {
+              "id": "hplace.mrs2.career.add",
+              "selector": "button[type='button'][data-button='add']",
+              "label": "경력 추가",
+              "categoryId": "careers",
+              "profileSectionId": "career"
+            },
+            "fields": [
+              {
+                "name": "hplace.mrs2.career.careerCriteriaCodeSn",
+                "rawName": "career[{index}].careerCriteriaCodeSn",
+                "type": "select",
+                "label": "고용형태",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.employmentType"
+                },
+                "dynamicOptions": {
+                  "labels": [
+                    "정규직",
+                    "계약직",
+                    "파견직",
+                    "프리랜서",
+                    "개인사업",
+                    "병역특례",
+                    "인턴",
+                    "아르바이트",
+                    "기타"
+                  ],
+                  "codeFormat": "POSITIVE_INTEGER"
+                },
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1000,
+                  "dependencies": [
+                    "hplace.mrs2.career.company",
+                    "hplace.mrs2.career.entranceDate",
+                    "hplace.mrs2.career.workingStatusCode",
+                    "hplace.mrs2.career.department",
+                    "hplace.mrs2.career.position",
+                    "hplace.mrs2.career.assignedTask",
+                    "hplace.mrs2.career.retirementReason"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.career.company",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.career.entranceDate",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.career.workingStatusCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.career.department",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.career.position",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.career.assignedTask",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.career.retirementReason",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.career.company",
+                "rawName": "career[{index}].company",
+                "type": "text",
+                "label": "회사명",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.companyName"
+                },
+                "maxLength": 128
+              },
+              {
+                "name": "hplace.mrs2.career.entranceDate",
+                "rawName": "career[{index}].entranceDate",
+                "type": "text",
+                "label": "입사일",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.startDate"
+                },
+                "date": {
+                  "group": "career[{index}].careerDate",
+                  "role": "START",
+                  "formats": ["YM", "YMD"],
+                  "peer": "hplace.mrs2.career.leavingDate",
+                  "forbiddenAfterToday": true
+                }
+              },
+              {
+                "name": "hplace.mrs2.career.leavingDate",
+                "rawName": "career[{index}].leavingDate",
+                "type": "text",
+                "label": "퇴사일",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.endDate"
+                },
+                "date": {
+                  "group": "career[{index}].careerDate",
+                  "role": "END",
+                  "formats": ["YM", "YMD"],
+                  "peer": "hplace.mrs2.career.entranceDate",
+                  "forbiddenAfterToday": true
+                }
+              },
+              {
+                "name": "hplace.mrs2.career.workingStatusCode",
+                "rawName": "career[{index}].workingStatusCode",
+                "type": "radio",
+                "label": "재직상태",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.employmentStatus"
+                },
+                "options": {
+                  "재직중": "WORK",
+                  "퇴사": "LEAVE"
+                },
+                "driver": {
+                  "stage": 2,
+                  "timeoutMs": 1000,
+                  "dependencies": ["hplace.mrs2.career.leavingDate"],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.career.leavingDate",
+                      "state": "enabled",
+                      "whenLabel": "퇴사"
+                    },
+                    {
+                      "field": "hplace.mrs2.career.leavingDate",
+                      "state": "disabled",
+                      "whenLabel": "재직중"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.career.department",
+                "rawName": "career[{index}].department",
+                "type": "text",
+                "label": "부서",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.department"
+                },
+                "maxLength": 128
+              },
+              {
+                "name": "hplace.mrs2.career.position",
+                "rawName": "career[{index}].position",
+                "type": "text",
+                "label": "직급",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.position"
+                },
+                "maxLength": 64
+              },
+              {
+                "name": "hplace.mrs2.career.assignedTask",
+                "rawName": "career[{index}].assignedTask",
+                "type": "text",
+                "label": "담당업무",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.responsibilities"
+                },
+                "maxLength": 216
+              },
+              {
+                "name": "hplace.mrs2.career.retirementReason",
+                "rawName": "career[{index}].retirementReason",
+                "type": "text",
+                "label": "퇴직사유",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "careers.career.terminationReason"
+                },
+                "maxLength": 512
+              }
+            ]
+          },
+          {
+            "id": "hplace-mrs2-project",
+            "title": "프로젝트",
+            "selector": "section.writeResume[data-code='16'] > .subject[data-code='154'][data-wrap='project']",
+            "enabled": false,
+            "reason": "실DOM 확인 대기: 구조 미확인",
+            "anchors": ["hplace.mrs2.project.projectName"],
+            "rows": {
+              "selector": ":scope > .loop[data-loop='project']",
+              "namePrefix": "project",
+              "groupId": "hplace.mrs2.project",
+              "maxCount": 20
+            },
+            "action": {
+              "id": "hplace.mrs2.project.add",
+              "selector": "button[type='button'][data-button='add']",
+              "label": "프로젝트 추가",
+              "categoryId": "projects",
+              "profileSectionId": "project"
+            },
+            "fields": [
+              {
+                "name": "hplace.mrs2.project.projectName",
+                "rawName": "project[{index}].projectName",
+                "type": "text",
+                "label": "프로젝트명",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "projects.project.projectName"
+                },
+                "maxLength": 128,
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1000,
+                  "dependencies": [
+                    "hplace.mrs2.project.startDate",
+                    "hplace.mrs2.project.endDate",
+                    "hplace.mrs2.project.role"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.project.startDate",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.project.endDate",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.project.role",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.project.startDate",
+                "rawName": "project[{index}].startDate",
+                "type": "text",
+                "label": "시작일",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "projects.project.startDate"
+                },
+                "date": {
+                  "group": "project[{index}].projectDate",
+                  "role": "START",
+                  "formats": ["YMD"],
+                  "peer": "hplace.mrs2.project.endDate",
+                  "forbiddenAfterToday": false
+                }
+              },
+              {
+                "name": "hplace.mrs2.project.endDate",
+                "rawName": "project[{index}].endDate",
+                "type": "text",
+                "label": "종료일",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "projects.project.endDate"
+                },
+                "date": {
+                  "group": "project[{index}].projectDate",
+                  "role": "END",
+                  "formats": ["YMD"],
+                  "peer": "hplace.mrs2.project.startDate",
+                  "forbiddenAfterToday": false
+                }
+              },
+              {
+                "name": "hplace.mrs2.project.role",
+                "rawName": "project[{index}].role",
+                "type": "text",
+                "label": "참여역할",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "projects.project.role"
+                },
+                "maxLength": 128
+              }
+            ]
+          },
+          {
+            "id": "hplace-mrs2-foreignAbility",
+            "title": "외국어활용능력",
+            "selector": "section.writeResume[data-code='18'] > .subject[data-code='166'][data-wrap='foreignAbility']",
+            "enabled": true,
+            "anchors": ["hplace.mrs2.foreignAbility.languageCode"],
+            "rows": {
+              "selector": ":scope > .loop[data-loop='languageSkill']",
+              "namePrefix": "languageSkill",
+              "groupId": "hplace.mrs2.foreignAbility",
+              "maxCount": 20
+            },
+            "action": {
+              "id": "hplace.mrs2.foreignAbility.add",
+              "selector": "button[type='button'][data-button='add']",
+              "label": "외국어활용능력 추가",
+              "categoryId": "languages",
+              "profileSectionId": "languageSkill"
+            },
+            "fields": [
+              {
+                "name": "hplace.mrs2.foreignAbility.languageCode",
+                "rawName": "languageSkill[{index}].languageCode",
+                "type": "select",
+                "label": "외국어",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "languages.languageSkill.language"
+                },
+                "options": {
+                  "영어": "01",
+                  "일본어": "02",
+                  "중국어": "03",
+                  "프랑스어": "04",
+                  "독일어": "05",
+                  "스페인어": "06",
+                  "포르투갈어": "07",
+                  "이탈리아어": "08",
+                  "네덜란드어": "09",
+                  "아랍어": "10",
+                  "말레이시아어": "11",
+                  "인도네시아어": "12",
+                  "베트남어": "13",
+                  "인도어": "14",
+                  "태국어": "15",
+                  "러시아어": "16",
+                  "이란어": "17",
+                  "터키어": "18",
+                  "핀란드어": "19",
+                  "노르웨이어": "20",
+                  "헝가리어": "21",
+                  "덴마크어": "22",
+                  "미얀마어": "23",
+                  "불가리아어": "24",
+                  "폴란드어": "25",
+                  "방글라데시어": "26",
+                  "타직어": "27",
+                  "스와힐리어": "28",
+                  "키르키즈어": "29",
+                  "라오어": "30",
+                  "세르비아어": "31",
+                  "캄보디아어": "32",
+                  "우즈베크어": "33",
+                  "스웨덴어": "34"
+                },
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1000,
+                  "dependencies": [
+                    "hplace.mrs2.foreignAbility.speakingLevelCodeSn"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.foreignAbility.speakingLevelCodeSn",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.foreignAbility.speakingLevelCodeSn",
+                "rawName": "languageSkill[{index}].speakingLevelCodeSn",
+                "type": "select",
+                "label": "회화수준",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "languages.languageSkill.conversationalLevel"
+                },
+                "dynamicOptions": {
+                  "labels": [
+                    "Authentic",
+                    "Advanced",
+                    "Intermediate",
+                    "Basic",
+                    "Beginner"
+                  ],
+                  "codeFormat": "POSITIVE_INTEGER"
+                }
+              }
+            ]
+          }
+        ],
+        "unsupportedSections": [
+          {
+            "selector": ".subject[data-code='167']",
+            "reason": "프로필 키 없음",
+            "title": "해외경험"
+          },
+          {
+            "selector": ".subject[data-code='169']",
+            "reason": "프로필 키 없음",
+            "title": "컴퓨터활용"
+          },
+          {
+            "selector": ".subject[data-code='170']",
+            "reason": "프로필 키 없음",
+            "title": "수상"
+          },
+          {
+            "selector": ".subject[data-code='171']",
+            "reason": "프로필 키 없음",
+            "title": "교육이수"
+          },
+          {
+            "selector": ".subject[data-code='172']",
+            "reason": "프로필 키 없음",
+            "title": "활동"
+          },
+          {
+            "selector": ".subject[data-code='173']",
+            "reason": "프로필 키 없음",
+            "title": "봉사"
+          }
+        ]
+      },
+      "runtimeRules": {
+        "sectionSelector": "section.writeResume",
+        "presentationSelector": ".subject",
+        "placeholderAttributes": [],
+        "placeholderValues": []
+      },
+      "fields": [],
+      "normalizations": [],
+      "reveals": [],
+      "collection": {
+        "actions": [],
+        "sectionSelectors": [],
+        "visiblePhases": [],
+        "collectsInputButtonFields": false
+      },
+      "repeatHints": {},
+      "educationHints": {},
+      "freshRowFields": [],
+      "freshDefaults": [],
+      "stateDrivers": [],
+      "searchStageBase": 0,
+      "searchRowStride": 1,
+      "refreshAfterPass": false,
+      "diagnosticsTitle": "지원서 항목 확인",
+      "addressAction": {
+        "domId": "unused-native-address",
+        "element": "button"
+      },
+      "mainWorldBridge": "NONE"
+    }
+  }
+}

@@ -53,8 +53,8 @@ class HplacePolicyTest {
         var policies = mock(FormAnalysisPolicyMongoRepository.class);
         var document = ArgumentCaptor.forClass(FormAnalysisPolicyDocument.class);
         new LocalHplaceFormPolicySeeder(policies).run(null);
-        verify(policies).save(document.capture());
-        when(policies.findByCompanyKeyAndVersion("hplace", 3)).thenReturn(Optional.of(document.getValue()));
+        verify(policies, org.mockito.Mockito.times(2)).insert(document.capture());
+        when(policies.findByCompanyKeyAndVersion("hplace", 3)).thenReturn(Optional.of(document.getAllValues().getFirst()));
         var provider = new MongoHplacePolicyProvider(policies, new SupportedProfileFields(), 3);
         var router = new FormAnalysisRouter((host, path) -> new NotRegistered(),
             (host, path) -> Decision.NO_POSITIVE_EVIDENCE, Unavailable::new, provider);

@@ -19,6 +19,8 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 
 public final class CompanyFormPolicy {
 
+    private final List<SectionContract> sectionContracts;
+    private final com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy;
     private final String companyKey;
     private final long version;
     private final PreparationFingerprint preparationFingerprint;
@@ -32,8 +34,12 @@ public final class CompanyFormPolicy {
         PreparationFingerprint preparationFingerprint,
         FieldsFingerprint fieldsFingerprint,
         List<ActionRule> actionRules,
-        List<FieldRule> fieldRules
+        List<FieldRule> fieldRules,
+        List<SectionContract> sectionContracts,
+        com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy
     ) {
+        this.sectionContracts = List.copyOf(sectionContracts);
+        this.executionPolicy = executionPolicy;
         this.companyKey = companyKey;
         this.version = version;
         this.preparationFingerprint = preparationFingerprint;
@@ -51,6 +57,16 @@ public final class CompanyFormPolicy {
         List<FieldRule> fieldRules,
         Predicate<String> isSupportedProfileKey
     ) {
+        return create(companyKey, version, preparationFingerprint, fieldsFingerprint, actionRules, fieldRules,
+            List.of(), null, isSupportedProfileKey);
+    }
+
+    public static CompanyFormPolicy create(String companyKey, long version, PreparationFingerprint preparationFingerprint,
+        FieldsFingerprint fieldsFingerprint, List<ActionRule> actionRules, List<FieldRule> fieldRules,
+        List<SectionContract> sectionContracts, com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy,
+        Predicate<String> isSupportedProfileKey) {
+        if (sectionContracts == null || sectionContracts.size() > 16
+            || sectionContracts.stream().map(SectionContract::sectionId).distinct().count() != sectionContracts.size()) invalidPolicy();
         requireText(companyKey);
         if (version < 1
             || preparationFingerprint == null
@@ -67,28 +83,34 @@ public final class CompanyFormPolicy {
         if (fieldsFingerprint.anySection() && !"greeting".equals(companyKey)) {
             invalidPolicy();
         }
-        if (preparationFingerprint.noActionPreparation() && !actionRules.isEmpty()) {
+        if (preparationFingerprint.noActionPreparation() && !actionRules.isEmpty() && sectionContracts.isEmpty()) {
             invalidPolicy();
         }
         requireUniqueActionRules(actionRules);
         requireUniqueFieldRules(fieldRules);
         for (ActionRule rule : actionRules) {
             validateActionRule(rule, preparationFingerprint.requiredSectionIds(), isSupportedProfileKey);
+            if (!sectionContracts.isEmpty() && (rule.kind() != ActionKind.ADD || sectionContracts.stream()
+                .flatMap(c -> c.actions().stream()).noneMatch(a -> a.structuralNames().contains(rule.structuralName())))) invalidPolicy();
         }
         for (FieldRule rule : fieldRules) {
             if (rule == null || !isSupportedBinding(rule.valueBinding(), isSupportedProfileKey)) {
                 invalidPolicy();
             }
         }
+        var validatedContracts = NativePolicyContract.validate(sectionContracts, fieldRules, executionPolicy);
         return new CompanyFormPolicy(
             companyKey,
             version,
             preparationFingerprint,
             fieldsFingerprint,
             actionRules,
-            fieldRules
+            fieldRules, validatedContracts, executionPolicy
         );
     }
+
+    public List<SectionContract> sectionContracts() { return sectionContracts; }
+    public com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy() { return executionPolicy; }
 
     public String companyKey() {
         return companyKey;

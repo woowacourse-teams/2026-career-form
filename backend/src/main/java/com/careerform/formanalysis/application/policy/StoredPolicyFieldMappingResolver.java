@@ -16,6 +16,7 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
     private final List<FieldRule> constrainedRules;
     private final Map<String, FieldRule> unconstrainedRules;
     private final boolean exactTopLevelDomName;
+    private final List<SectionContract> sectionContracts;
 
     public StoredPolicyFieldMappingResolver(CompanyFormPolicy policy) {
         this(policy, false);
@@ -26,6 +27,7 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
         boolean exactTopLevelDomName
     ) {
         this.exactTopLevelDomName = exactTopLevelDomName;
+        this.sectionContracts = policy.sectionContracts();
         constrainedRules = policy.fieldRules().stream()
             .filter(rule -> rule.requiredDomName() != null
                 || rule.requiredItemGroupId() != null)
@@ -43,12 +45,13 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
     public Resolution resolve(FieldsAnalysisRequest request) {
         List<Result> results = new ArrayList<>();
         for (FieldsAnalysisRequest.Section section : request.sections()) {
-            section.fields().forEach(candidate ->
-                results.add(resolve(candidate, null, false)));
+            var contract = sectionContracts.stream().filter(c -> c.sectionId().equals(section.sectionId())).findFirst().orElse(null);
+            section.fields().forEach(candidate -> results.add(contract != null && !contract.enabled()
+                ? new NoMatch(candidate.candidateId()) : resolve(candidate, null, false, contract != null)));
             if (section.items() == null) continue;
             for (FieldsAnalysisRequest.Item item : section.items()) {
                 item.fields().forEach(candidate ->
-                    results.add(resolve(candidate, item.itemGroupId(), true)));
+                    results.add(contract != null && !contract.enabled() ? new NoMatch(candidate.candidateId()) : resolve(candidate, item.itemGroupId(), true, contract != null)));
             }
         }
         return new Resolution(
@@ -61,9 +64,9 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
     private Result resolve(
         FieldCandidate candidate,
         String itemGroupId,
-        boolean insideRepeatableItem
+        boolean insideRepeatableItem, boolean nativeSection
     ) {
-        if (exactTopLevelDomName) {
+        if (exactTopLevelDomName && !nativeSection) {
             if (insideRepeatableItem || candidate.domName() == null) {
                 return new NoMatch(candidate.candidateId());
             }

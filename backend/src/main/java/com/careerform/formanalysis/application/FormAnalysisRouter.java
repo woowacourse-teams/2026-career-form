@@ -1,6 +1,5 @@
 package com.careerform.formanalysis.application;
 
-import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,10 +32,6 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 public final class FormAnalysisRouter {
 
     private static final Logger log = LoggerFactory.getLogger(FormAnalysisRouter.class);
-    private static final Pattern HPLACE_HOST = Pattern.compile(
-        "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.(?:recruiter\\.co\\.kr|recruiter\\.im)$",
-        Pattern.CASE_INSENSITIVE
-    );
     private final HplacePolicyProvider hplacePolicyProvider;
     private final HplaceFormFingerprint hplaceFingerprint = new HplaceFormFingerprint();
     private final CompanyFormPolicyProvider policyProvider;
@@ -99,7 +94,7 @@ public final class FormAnalysisRouter {
         }
         CompanyFormPolicy policy = available.policy();
         if (!("hplace".equals(policy.companyKey())
-            ? hplaceFingerprint.matches(request) : fingerprint.matches(policy, request))) {
+            ? hplaceFingerprint.matches(policy, request) : fingerprint.matches(policy, request))) {
             return observed(new ActionRoute(RouteKind.STRUCTURE_MISMATCH, null, greetingCandidate), policy);
         }
         return observed(new ActionRoute(
@@ -129,7 +124,7 @@ public final class FormAnalysisRouter {
         CompanyFormPolicy policy = available.policy();
         boolean greeting = "greeting".equals(policy.companyKey());
         boolean hplace = "hplace".equals(policy.companyKey());
-        if (!(hplace ? hplaceFingerprint.matches(request) : greeting
+        if (!(hplace ? hplaceFingerprint.matches(policy, request) : greeting
             ? greetingFingerprint.matches(request)
             : fingerprint.matches(policy, request))) {
             return observed(new FieldRoute(RouteKind.STRUCTURE_MISMATCH, null), policy, greeting);
@@ -137,7 +132,8 @@ public final class FormAnalysisRouter {
         return observed(new FieldRoute(
             RouteKind.ADAPTER,
             greeting ? new GreetingFieldMappingResolver(policy)
-                : new StoredPolicyFieldMappingResolver(policy, hplace), greeting
+                : new StoredPolicyFieldMappingResolver(policy, hplace), greeting, hplace && com.careerform.formanalysis.application.policy.HplaceApplicantSite.DETAIL_PATH.equals(request.site().pathPattern())
+                    ? policy.executionPolicy() : null
         ), policy, greeting);
     }
 
@@ -177,10 +173,7 @@ public final class FormAnalysisRouter {
     }
 
     private static boolean isHplaceApplicant(String host, String pathPattern) {
-        return host != null && HPLACE_HOST.matcher(host).matches() && pathPattern != null
-            && (pathPattern.startsWith("/app/applicant/") || pathPattern.equals("/app/applicant")
-                || pathPattern.startsWith("/mrs2/applicant/resume/") || pathPattern.equals("/mrs2/applicant/resume")
-                || pathPattern.startsWith("/v1/applicant/") || pathPattern.equals("/v1/applicant"));
+        return com.careerform.formanalysis.application.policy.HplaceApplicantSite.matches(host, pathPattern);
     }
 
     private ActionRoute observed(ActionRoute route, CompanyFormPolicy policy) {
@@ -235,7 +228,11 @@ public final class FormAnalysisRouter {
         }
     }
 
-    public record FieldRoute(RouteKind kind, FieldMappingResolver resolver, boolean greeting) {
+    public record FieldRoute(RouteKind kind, FieldMappingResolver resolver, boolean greeting,
+        com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy) {
+        public FieldRoute(RouteKind kind, FieldMappingResolver resolver, boolean greeting) {
+            this(kind, resolver, greeting, null);
+        }
         public FieldRoute(RouteKind kind, FieldMappingResolver resolver) {
             this(kind, resolver, false);
         }

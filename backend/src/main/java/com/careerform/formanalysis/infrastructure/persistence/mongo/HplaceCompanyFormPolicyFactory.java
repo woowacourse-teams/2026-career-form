@@ -39,6 +39,22 @@ final class HplaceCompanyFormPolicyFactory {
         );
     }
 
+    static FormAnalysisPolicyDocument createNative() {
+        try (var stream = HplaceCompanyFormPolicyFactory.class.getResourceAsStream("/policies/hplace-mrs2-v4.json")) {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var resource = mapper.readTree(stream);
+            var legacy = create();
+            var fields = new ArrayList<>(legacy.fieldRules());
+            fields.addAll(mapper.convertValue(resource.get("fieldRules"),
+                new com.fasterxml.jackson.core.type.TypeReference<List<FieldRule>>() {}));
+            return new FormAnalysisPolicyDocument("hplace-policy-v4", "hplace", 4,
+                legacy.preparationFingerprint(), legacy.fieldsFingerprint(),
+                mapper.convertValue(resource.get("actionRules"), new com.fasterxml.jackson.core.type.TypeReference<List<com.careerform.formanalysis.application.policy.CompanyFormPolicy.ActionRule>>() {}),
+                fields, mapper.treeToValue(resource.get("executionPolicy"), com.careerform.formanalysis.dto.ExecutionPolicy.class),
+                mapper.convertValue(resource.get("sectionContracts"), new com.fasterxml.jackson.core.type.TypeReference<List<com.careerform.formanalysis.application.policy.SectionContract>>() {}));
+        } catch (java.io.IOException error) { throw new IllegalStateException("Cannot load Hplace native policy", error); }
+    }
+
     private static List<FieldRule> rules() {
         var rules = new ArrayList<>(List.of(
             new FieldRule(HplaceFormFingerprint.NAME, FormElement.INPUT, FormControl.TEXT,

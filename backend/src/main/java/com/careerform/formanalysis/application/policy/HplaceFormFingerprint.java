@@ -34,6 +34,39 @@ public final class HplaceFormFingerprint {
         .flatMap(Set::stream).collect(java.util.stream.Collectors.toUnmodifiableSet());
     private static final Set<String> FIELD_NAMES = Set.of(NAME, MOBILE, EMAIL);
 
+    public boolean matches(CompanyFormPolicy policy, PreparationAnalysisRequest request) {
+        if (policy.sectionContracts().isEmpty() || !HplaceApplicantSite.DETAIL_PATH.equals(request.site().pathPattern())) return matches(request);
+        Set<String> sections = new HashSet<>(), ids = new HashSet<>();
+        if (request.sections().isEmpty()) return false;
+        for (var section : request.sections()) {
+            if (!sections.add(section.sectionId())) return false;
+            if (DETAIL_SECTION.equals(section.sectionId())) {
+                if (!matches(new PreparationAnalysisRequest(request.schemaVersion(), request.snapshotId(), request.site(), List.of(section)))) return false;
+            } else {
+                var contract = policy.sectionContracts().stream().filter(c -> c.sectionId().equals(section.sectionId())).findFirst().orElse(null);
+                if (contract == null || !NativeSectionFingerprint.preparation(contract, section, ids)) return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean matches(CompanyFormPolicy policy, FieldsAnalysisRequest request) {
+        if (policy.sectionContracts().isEmpty() || !HplaceApplicantSite.DETAIL_PATH.equals(request.site().pathPattern())) return matches(request);
+        Set<String> sections = new HashSet<>(), ids = new HashSet<>(), items = new HashSet<>();
+        if (request.sections().isEmpty()) return false;
+        for (var section : request.sections()) {
+            if (!sections.add(section.sectionId())) return false;
+            if (DETAIL_SECTION.equals(section.sectionId())) {
+                if (!matches(new FieldsAnalysisRequest(request.schemaVersion(), request.snapshotId(), request.site(), List.of(section)))
+                    || !section.fields().stream().allMatch(f -> ids.add(f.candidateId()))) return false;
+            } else {
+                var contract = policy.sectionContracts().stream().filter(c -> c.sectionId().equals(section.sectionId())).findFirst().orElse(null);
+                if (contract == null || !NativeSectionFingerprint.fields(contract, section, ids, items)) return false;
+            }
+        }
+        return true;
+    }
+
     public boolean matches(PreparationAnalysisRequest request) {
         if (request.sections().size() != 1) return false;
         var section = request.sections().getFirst();
