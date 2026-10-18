@@ -70,6 +70,7 @@ export interface NativeField {
   };
 }
 export interface NativeSection {
+  singleEntity?: true;
   identityFields?: string[];
   excludedRow?: { name: string; reason: string };
   id: string;
@@ -192,6 +193,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
         "id",
         "excludedRow",
         "identityFields",
+        "singleEntity",
         "title",
         "selector",
         "enabled",
@@ -216,13 +218,21 @@ export function validNativeForm(value: unknown): value is NativeForm {
       return false;
     if (
       s.identityFields &&
-      (!s.rows ||
+      ((!s.rows && !s.singleEntity) ||
         !list(s.identityFields, 8) ||
         !s.identityFields.length ||
         new Set(s.identityFields).size !== s.identityFields.length ||
         !s.identityFields.every(
           (n) => name(n) && s.fields.some((f) => f.name === n),
         ))
+    )
+      return false;
+    if (
+      s.singleEntity !== undefined &&
+      (s.singleEntity !== true ||
+        s.rows ||
+        s.identityFields?.length !== 1 ||
+        !s.fields.some((f) => f.name === s.identityFields![0] && f.search))
     )
       return false;
     ids.add(s.id);

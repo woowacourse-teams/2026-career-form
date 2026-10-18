@@ -162,7 +162,8 @@
       "militarySiteOnly": ["공익", "병역특례", "카투사", "기타"]
     },
     "salaryUnit": "GS 실관측: 직접 부모 label.label.money의 ::after content 정확히 \"만원\", million 클래스 없음. 원/억원/표시 없음/미검증 span은 입력 불가.",
-    "repeatRowIdentity": "기존 populated 행 전체 보호; identityFields 정확 일치 + populated mapped detail 일치 시에만 이미 입력됨 처리. 불완전/충돌/중복은 섹션 수동, 남은 프로필만 빈 행 배정 및 부족분 ADD."
+    "repeatRowIdentity": "기존 populated 행 전체 보호; identityFields 정확 일치 + populated mapped detail 일치 시에만 이미 입력됨 처리. 불완전/충돌/중복은 섹션 수동, 남은 프로필만 빈 행 배정 및 부족분 ADD.",
+    "singleHighschoolEntity": "코디네이터 확정: 140도 141/142와 같이 기존 값이 하나라도 있으면 전체 보존. 확정 학교 identity 일치는 이미 입력됨, 다른/불명확 identity는 기존 값 사용자 처리. 기본정보에는 적용하지 않음."
   },
   "sectionContracts": [
     {
@@ -2066,7 +2067,9 @@
                   "maxDateSelector": ".row.in-span > .msg > strong"
                 }
               }
-            ]
+            ],
+            "singleEntity": true,
+            "identityFields": ["hplace.mrs2.highschool.academyName"]
           },
           {
             "id": "hplace-mrs2-college",

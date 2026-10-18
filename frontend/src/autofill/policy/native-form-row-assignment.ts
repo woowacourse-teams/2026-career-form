@@ -246,12 +246,55 @@ export function nativeRepeatableProfileCount(
   if (state) captureNativePreparationRows(state.root, state.rows);
   return state?.required ?? null;
 }
+function singleEntityAssignment(
+  o: NativeOwnership,
+  profile: Profile,
+): number | { reason: string } {
+  const field = o.section.fields.find(
+    (f) => f.name === o.section.identityFields?.[0],
+  )!;
+  const [category, section] = (field.binding.profileFieldKey ?? "").split(".");
+  const source = profile[category as keyof Profile];
+  const entries = Array.isArray(source)
+    ? (source as ProfileEntry[]).filter((e) => e.sectionId === section)
+    : [];
+  const blocked = {
+    reason: "입력 불가(기존 값 — 사용자 처리): 학교 신원을 확인해 주세요.",
+  };
+  if (entries.length !== 1) return blocked;
+  const profileDigest = JSON.stringify(entries),
+    previous = assigned.get(o.row);
+  if (
+    previous?.profile === profileDigest &&
+    previous.digest === o.digest &&
+    previous.url === o.url &&
+    previous.entryId === entries[0].id &&
+    (nativeRowBlank(o.row) || nativeRowHasWrites(o))
+  )
+    return 0;
+  if (nativeRowBlank(o.row)) {
+    assigned.set(o.row, {
+      profile: profileDigest,
+      digest: o.digest,
+      url: o.url,
+      entryId: entries[0].id,
+      index: 0,
+    });
+    return 0;
+  }
+  const expected = resolveValueBinding(profile, field.binding, 0);
+  return expected.status === "resolved" &&
+    fieldValue(o.row, field, 0) === expected.value
+    ? { reason: "이미 입력된 항목입니다. 기존 엔티티는 수정하지 않습니다." }
+    : blocked;
+}
 export function nativeProfileAssignment(
   handle: FieldCandidateHandle,
   profile: Profile,
 ): number | { reason: string } | undefined {
   const o = nativeOwnership(handle);
   if (!o?.section.identityFields) return;
+  if (o.section.singleEntity) return singleEntityAssignment(o, profile);
   const state = assignments(o.row.ownerDocument, o.section, profile);
   return (
     state?.result.get(o.row) ?? {

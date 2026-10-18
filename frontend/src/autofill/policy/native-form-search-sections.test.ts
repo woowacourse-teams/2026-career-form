@@ -396,3 +396,135 @@ it.each(["score", "grade"])(
     ).toBe(true);
   },
 );
+
+import { buildReviewPlan } from "../review/review-plan";
+import type { ProfileEntry } from "../../profile/model";
+function educationReview(
+  entry: ProfileEntry,
+  sectionId = "hplace-mrs2-highschool",
+) {
+  const profile = createEmptyProfile();
+  profile.education = [entry];
+  const snapshot = collectFieldsSnapshot(document);
+  const fields = snapshot.request.sections
+    .filter((s) => s.sectionId === sectionId)
+    .flatMap((s) => [...s.fields, ...(s.items ?? []).flatMap((i) => i.fields)]);
+  const review = buildReviewPlan({
+    registry: snapshot.registry,
+    profile,
+    analysis: {
+      snapshotId: snapshot.request.snapshotId,
+      mode: "ADAPTER",
+      analysisStatus: "COMPLETE",
+      fields: fields.map((f) => {
+        const l = snapshot.registry.lookupField(f.candidateId);
+        if (!("handle" in l)) throw new Error();
+        return {
+          candidateId: f.candidateId,
+          matchType: "MATCH",
+          mappingStatus: "ADAPTER_VERIFIED",
+          interactionStatus: "READY",
+          autofillPolicy: "ALLOWED",
+          valueBinding: nativeOwnership(l.handle)!.field.binding,
+          writePlan: {
+            command:
+              f.control === "radio"
+                ? "CHECK_RADIO"
+                : f.control === "select"
+                  ? "SELECT_OPTION"
+                  : "SET_TEXT",
+          },
+        };
+      }),
+    },
+  });
+  return { snapshot, items: review.items };
+}
+const highschoolProfile = () => ({
+  id: "synthetic-highschool",
+  sectionId: "highSchool",
+  values: {
+    schoolName: "합성고등학교",
+    completionStatus: "졸업",
+    startDate: "2020-03-01",
+    endDate: "2023-02-01",
+  },
+});
+function existingSchool(prefix: string, name: string, code: string) {
+  const input = document.querySelector<HTMLInputElement>(
+    `[name="${prefix}.academyName"]`,
+  )!;
+  input.value = name;
+  document.querySelector<HTMLInputElement>(
+    `[name="${prefix}.academyCode"]`,
+  )!.value = code;
+  input.parentElement!.querySelector(".searchResultName")!.textContent = name;
+}
+it.each(["different-school", "date-only", "status-only"])(
+  "blocks the highschool entity when existing values have %s identity",
+  (fault) => {
+    mount();
+    if (fault === "different-school")
+      existingSchool("highschool", "다른 합성고등학교", "H001");
+    if (fault === "date-only")
+      document.querySelector<HTMLInputElement>(
+        '[name="highschool.entranceDate"]',
+      )!.value = "2018.03";
+    if (fault === "status-only")
+      document.querySelector<HTMLInputElement>(
+        '[name="highschool.graduationTypeCode"]',
+      )!.checked = true;
+    const { items } = educationReview(highschoolProfile());
+    expect(items.every((i) => i.disabled)).toBe(true);
+    expect(items.some((i) => i.reason.includes("신원"))).toBe(true);
+  },
+);
+it("preserves the entire highschool entity even when its committed identity matches", () => {
+  mount();
+  existingSchool("highschool", "합성고등학교", "H001");
+  const { items } = educationReview(highschoolProfile());
+  expect(items.every((i) => i.disabled)).toBe(true);
+  expect(items.every((i) => i.reason.includes("이미 입력"))).toBe(true);
+  expect(
+    document.querySelector<HTMLInputElement>(
+      '[name="highschool.graduationDate"]',
+    )!.value,
+  ).toBe("");
+});
+it("blocks an existing highschool row at the writer even without a local profile assignment", () => {
+  mount();
+  document.querySelector<HTMLInputElement>(
+    '[name="highschool.entranceDate"]',
+  )!.value = "2018.03";
+  const end = item("hplace.mrs2.highschool.graduationDate", "2023-02-01");
+  expect(getWriteAdapter(document).tryWrite(end.handle, end.item)).toEqual({
+    handled: true,
+    written: false,
+  });
+  expect(end.handle.elements[0].value).toBe("");
+});
+it("keeps matching existing college and highschool entities protected consistently", () => {
+  mount();
+  existingSchool("college[0]", "합성대학교", "U001");
+  document.querySelector<HTMLInputElement>(
+    '[name="college[0].degreeTypeCode"]',
+  )!.checked = true;
+  document.querySelector<HTMLInputElement>(
+    '[name="college[0].entranceDate"]',
+  )!.value = "2020.03";
+  const { items } = educationReview(
+    {
+      id: "synthetic-college",
+      sectionId: "university",
+      values: {
+        schoolName: "합성대학교",
+        degreeLevel: "학사",
+        startDate: "2020-03-01",
+        endDate: "2024-02-01",
+      },
+    },
+    "hplace-mrs2-college",
+  );
+  expect(items.every((i) => i.disabled)).toBe(true);
+  expect(items.every((i) => i.reason.includes("이미 입력된 항목"))).toBe(true);
+});

@@ -30,7 +30,7 @@ export function nativeRowWritable(
   o: NativeOwnership,
   changing: Element[] = [],
 ): boolean {
-  if (!o.section.rows) return true;
+  if (!o.section.rows && !o.section.singleEntity) return true;
   const receipt = writes.get(o.row);
   if (receipt && (receipt.url !== o.url || receipt.digest !== o.digest))
     return false;
@@ -58,7 +58,7 @@ export function recordNativeRowWrite(
   o: NativeOwnership,
   elements: Element[],
 ): void {
-  if (!o.section.rows) return;
+  if (!o.section.rows && !o.section.singleEntity) return;
   let receipt = writes.get(o.row);
   if (!receipt) {
     receipt = { url: o.url, digest: o.digest, values: new Map() };
