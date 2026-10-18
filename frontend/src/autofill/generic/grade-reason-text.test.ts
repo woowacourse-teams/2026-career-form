@@ -3,10 +3,14 @@ import type { GenericSectionFailure } from "./generic-analysis";
 import { GENERIC_BLOCKED_REASON } from "./generic-analysis";
 import type { GradeReason } from "./field-grading";
 import { genericReasonText } from "./grade-reason-text";
+import type { GENERIC_STRUCTURE_BLOCKED_REASON } from "./structure-context";
 
 // A missing key here fails type checking when a reason code is added.
 const KNOWN_CODES: Record<
-  GradeReason | GenericSectionFailure | "UNLINKED",
+  | GradeReason
+  | GenericSectionFailure
+  | "UNLINKED"
+  | typeof GENERIC_STRUCTURE_BLOCKED_REASON,
   true
 > = {
   NO_PROFILE_VALUE: true,
@@ -27,6 +31,7 @@ const KNOWN_CODES: Record<
   LLM_UNAVAILABLE: true,
   SECTION_PROCESSING_FAILED: true,
   UNLINKED: true,
+  STRUCTURE_BLOCKED: true,
 };
 
 describe("genericReasonText", () => {

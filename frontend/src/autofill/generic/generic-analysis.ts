@@ -97,6 +97,7 @@ interface SegmentField {
   control: string;
   candidate: FieldCandidate;
   itemIndex?: number;
+  structureStage?: string;
 }
 
 interface SectionEntry {
@@ -188,6 +189,7 @@ function cacheKey(section: GenericSection<SegmentField>): string {
       candidate.readonly === true,
       candidate.inert === true,
     ]),
+    section.fields.map(({ structureStage }) => structureStage),
   ]);
 }
 
@@ -410,6 +412,7 @@ export async function analyzeGenericFields(
         control: candidate.control,
         candidate,
         itemIndex: handle.itemIndex,
+        structureStage: handle.itemGroupId?.split(":stage:")[1],
       });
   }
   const entries: SectionEntry[] = segmentGenericSections(

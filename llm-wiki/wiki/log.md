@@ -1,5 +1,12 @@
 # Wiki Log
 
+## [2026-10-18] ingest | CF-260 범용 구조 반복 실행과 학력 행 격리
+
+- Approval-Digest: 3af32cb932097163bced35189944304b518e3778188cbd73b763cfa764e1128c
+- Source-Revision: 252e9e1fb86ca7b631d9e18b26dbfeccc8aea44c
+- 승인한 후보 네 개를 [CF-260 bundle](../raw/issues/CF-260/manifest.md)에 기록하고 [구조 반복 실행](topics/generic-structure-loop.md)을 추가했다.
+- 기본 수집 보존, 단계별 행 식별과 보류 격리의 합성 검증을 기록했다. 기존 raw와 구조 행동 ADR의 제안 상태를 유지하며 실사이트 검증으로 확대하지 않는다.
+
 ## [2026-10-18] ingest | CF-259 범용 검토 화면의 3단계 표시
 
 - Approval-Digest: 2ec99be9cf99938cbeb5b9489acb77830cddf0df2b1bc7355eb47d0497fe35ff

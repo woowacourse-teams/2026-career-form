@@ -1,5 +1,6 @@
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { GradeReason } from "./field-grading";
+import type { GENERIC_STRUCTURE_BLOCKED_REASON } from "./structure-context";
 import {
   GENERIC_BLOCKED_REASON,
   GENERIC_UNLINKED_REASON,
@@ -7,7 +8,10 @@ import {
 } from "./generic-analysis";
 
 type KnownReasonCode =
-  GradeReason | GenericSectionFailure | typeof GENERIC_UNLINKED_REASON;
+  | GradeReason
+  | GenericSectionFailure
+  | typeof GENERIC_UNLINKED_REASON
+  | typeof GENERIC_STRUCTURE_BLOCKED_REASON;
 
 // A new reason code fails type checking here until it gets a sentence.
 const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
@@ -37,6 +41,8 @@ const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
   SECTION_PROCESSING_FAILED:
     "이 영역을 처리하는 중 문제가 생겨 입력할 수 없습니다.",
   UNLINKED: "저장된 정보와 연결하지 못했습니다.",
+  STRUCTURE_BLOCKED:
+    "이 항목은 입력 구조 준비 결과에 따라 자동 기입에서 제외했습니다.",
 };
 
 /** Reason shown for a generic-path review item; others keep their own. */
