@@ -791,11 +791,12 @@ export function collectFieldsSnapshot(
 export async function collectFieldsSnapshotWithDropdowns(
   document: Document,
   signal?: AbortSignal,
+  options: { mixedSectionDetection?: boolean } = {},
 ): Promise<CollectedSnapshot<FieldsAnalyzeRequest>> {
   if (resolveDocumentCompany(document) !== "generic")
     return collectFieldsSnapshot(document);
   const release = acquireDocumentRun(document);
-  if (!release) return collectFieldsSnapshot(document, new Map(), { recoverBrokenLabels: true });
+  if (!release) return collectFieldsSnapshot(document, new Map(), { recoverBrokenLabels: true, ...options });
   try {
     const dropdowns = await collectButtonDropdowns(
       document,
@@ -806,7 +807,7 @@ export async function collectFieldsSnapshotWithDropdowns(
           trigger.closest("form") ?? document.body,
         ).allowed,
     );
-    return collectFieldsSnapshot(document, dropdowns, { recoverBrokenLabels: true });
+    return collectFieldsSnapshot(document, dropdowns, { recoverBrokenLabels: true, ...options });
   } finally {
     release();
   }

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { collectFieldsSnapshot, collectPreparationSnapshot } from "./collect";
+import { collectFieldsSnapshot, collectPreparationSnapshot } from "../dom/collect";
 
 afterEach(() => document.body.replaceChildren());
 

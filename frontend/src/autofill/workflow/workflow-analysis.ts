@@ -36,6 +36,10 @@ import {
 } from "./retained-drivers";
 import { collectFieldsSnapshotWithDropdowns } from "../dom/collect";
 import {
+  applyGenericStructureAnalysis,
+  applyGenericStructureReview,
+} from "../generic/structure-context";
+import {
   analyzeGenericFields,
   applyGenericGrade,
   createGenericAnalysisCache,
@@ -115,6 +119,8 @@ export function createAnalyzeFields({
   addressSearch,
   apiClient,
   analyzeFieldsSnapshot,
+  collectFields = collectFieldsSnapshotWithDropdowns,
+  genericStructure,
   refreshFieldsAfterPass,
   pageDocument,
   repository,
@@ -190,7 +196,7 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = await collectFieldsSnapshotWithDropdowns(
+    const snapshot = await collectFields(
       pageDocument,
       run.controller.signal,
     );
@@ -241,6 +247,8 @@ export function createAnalyzeFields({
       (await (analyzeFieldsSnapshot
         ? analyzeFieldsSnapshot(snapshot)
         : apiClient.analyzeFields(snapshot.request)));
+    if (genericResult && genericStructure)
+      analysis = applyGenericStructureAnalysis(analysis, snapshot, genericStructure);
     finishMapping();
     const finishAnalysisLog = startLocalTiming("analysis-log");
     debugAnalysis(snapshot, analysis);
@@ -376,7 +384,7 @@ export function createAnalyzeFields({
             .refreshAfterPass)
       )
         return false;
-      const next = await collectFieldsSnapshotWithDropdowns(
+      const next = await collectFields(
         pageDocument,
         run.controller.signal,
       );
@@ -559,9 +567,14 @@ export function createAnalyzeFields({
     }
     const finishAutomaticItems = startLocalTiming("automatic-items");
     const planItems = genericResult
-      ? plan.items.map((item) =>
-          applyGenericGrade(item, genericResult.grades.get(item.candidateId)),
-        )
+      ? plan.items.map((item) => {
+          const graded = applyGenericGrade(
+            item, genericResult.grades.get(item.candidateId),
+          );
+          return genericStructure
+            ? applyGenericStructureReview(graded, snapshot, genericStructure)
+            : graded;
+        })
       : plan.items;
     const automaticItems = snapshot.registry.withReadCache(() =>
       planItems.map((item) => {
@@ -1393,7 +1406,7 @@ export function createAnalyzeFields({
             // Full collection retains row identity, option and context checks
             // when a replaced or changed control cannot reuse its old handle.
             ordinaryRegistry = rebindComponentWrites(
-              await collectFieldsSnapshotWithDropdowns(
+              await collectFields(
                 pageDocument,
                 run.controller.signal,
               ),

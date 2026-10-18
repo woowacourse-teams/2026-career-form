@@ -26,6 +26,12 @@ import {
   type EducationRowKind,
 } from "../profile/education-row-kind";
 import { genericRowFor } from "../dom/repeatable-rows";
+import { acquireDocumentRun } from "../interaction/document-run";
+import {
+  bindGenericStructureRows,
+  createGenericStructureContext,
+  type GenericStructureContext,
+} from "./structure-context";
 import { isSafeStructuralClick } from "./click-policy";
 import {
   analyzeGenericFields,
@@ -89,9 +95,10 @@ export interface StructureLoopSection {
 }
 
 export type StructureLoopStop =
-  "NONE_REMAINING" | "NO_PROGRESS" | "ABORTED" | "ITERATION_LIMIT";
+  "NONE_REMAINING" | "NO_PROGRESS" | "ABORTED" | "ITERATION_LIMIT" | "FAILED";
 
 export interface StructureLoopResult {
+  context: GenericStructureContext;
   stopReason: StructureLoopStop;
   actions: StructureLoopAction[];
   sections: StructureLoopSection[];
@@ -218,11 +225,7 @@ function visibleControlCount(document: Document): number {
     document.querySelectorAll("input, select, textarea"),
   ).filter((control) => {
     if (control.closest("[hidden], [aria-hidden='true' i]")) return false;
-    for (
-      let node: Element | null = control;
-      node;
-      node = node.parentElement
-    )
+    for (let node: Element | null = control; node; node = node.parentElement)
       if (view?.getComputedStyle(node).display === "none") return false;
     return true;
   }).length;
@@ -248,11 +251,13 @@ export async function runGenericStructureLoop(
   options: StructureLoopOptions,
 ): Promise<StructureLoopResult> {
   const { document, profile, apiClient, signal, onAction } = options;
+  const initialUrl = document.URL;
   const actions: StructureLoopAction[] = [];
   const questions: StructureLoopQuestion[] = [];
   const blocked = new Map<string, StructureLoopSection>();
   const classified = new Map<string, string>();
-  const analysisCache = createGenericAnalysisCache();
+  const context = createGenericStructureContext();
+  const groupScopes = new Map<string, Element>();
   const addDecision = new Map<string, Element | null>();
   const revealAsked = new WeakSet<Element>();
   const revealChosen = new WeakSet<Element>();
@@ -260,7 +265,7 @@ export async function runGenericStructureLoop(
   const handledSelects = new WeakSet<Element>();
   const failures = new WeakMap<Element, number>();
   const lastFailure = new Map<string, string>();
-  const actionCounts = new Map<string, number>();
+  const actionCounts = new WeakMap<Element, number>();
   const sectionsSeen = new Map<string, StructureLoopSection>();
   const containerIds = new WeakMap<Element, string>();
   const containerId = (element: Element): string => {
@@ -275,6 +280,10 @@ export async function runGenericStructureLoop(
   let containerCounter = 0;
   let initialRemaining: RemainingPoint[] | undefined;
   let stopReason: StructureLoopStop = "NONE_REMAINING";
+  const actionScope = (element: Element): Element =>
+    element.closest("section, fieldset, [role='group']") ??
+    element.parentElement ??
+    document.body;
 
   const record = (action: StructureLoopAction) => {
     actions.push(action);
@@ -298,6 +307,8 @@ export async function runGenericStructureLoop(
     section.status = "BLOCKED";
     section.reason = reason;
     blocked.set(key, section);
+    const scope = groupScopes.get(key);
+    if (scope) context.blockedScopes.set(scope, reason);
     record({
       kind: "ADD_ROW",
       ...(section.title ? { sectionTitle: section.title } : {}),
@@ -334,7 +345,9 @@ export async function runGenericStructureLoop(
           .slice(0, 32)
           .map((label) => label.slice(0, 200)),
         controlKinds: [
-          ...new Set(section.fields.map(({ candidate }) => controlKind(candidate))),
+          ...new Set(
+            section.fields.map(({ candidate }) => controlKind(candidate)),
+          ),
         ],
         repeated: section.boundary === "repeat-row",
       });
@@ -405,6 +418,8 @@ export async function runGenericStructureLoop(
       const key = rowElement?.parentElement
         ? `${containerId(rowElement.parentElement)}|${section.title ?? ""}`
         : `${section.parentTitle ?? ""}|${section.title ?? ""}|${section.fingerprint}`;
+      if (rowElement?.parentElement)
+        groupScopes.set(key, rowElement.parentElement);
       const group = groups.get(key) ?? {
         key,
         ...(section.title ? { title: section.title } : {}),
@@ -489,7 +504,7 @@ export async function runGenericStructureLoop(
       const section = sectionOf(group);
       if (!group.category) {
         if (apiClient.classifySections && section.status === "OPEN")
-          section.reason ??= "CLASSIFY_UNAVAILABLE";
+          blockGroup(group, "CLASSIFY_UNAVAILABLE");
         continue;
       }
       const needed = repeatedEntries(profile, group.category);
@@ -511,6 +526,9 @@ export async function runGenericStructureLoop(
       if (sectionOf(group).status === "BLOCKED") continue;
       group.rows.forEach((row, rowIndex) => {
         const first = row.fields[0]?.element;
+        const scope = first && genericRowFor(first)?.parentElement;
+        if (first instanceof HTMLSelectElement && scope)
+          context.educationGroups.add(scope);
         if (
           first instanceof HTMLSelectElement &&
           !handledSelects.has(first) &&
@@ -614,14 +632,16 @@ export async function runGenericStructureLoop(
       collected.repeatableGroupState(plan.actionCandidateId),
   });
 
-  const aborted = () => signal?.aborted === true;
+  const aborted = () =>
+    signal?.aborted === true || document.URL !== initialUrl;
 
   async function addRow(
     point: Extract<Point, { kind: "ADD_ROW" }>,
     observation: Observation,
   ): Promise<boolean> {
     const { group } = point;
-    const used = actionCounts.get(group.key) ?? 0;
+    const scope = actionScope(group.rows[0]!.fields[0]!.element);
+    const used = actionCounts.get(scope) ?? 0;
     if (used >= MAX_ACTIONS_PER_SECTION) {
       blockGroup(group, "SECTION_ACTION_LIMIT");
       return false;
@@ -674,6 +694,8 @@ export async function runGenericStructureLoop(
       ],
       document,
       ...(signal ? { signal } : {}),
+      beforeMutation: async () =>
+        !aborted() && isSafeStructuralClick(action.element, document.body).allowed,
       initialSnapshot: executionSnapshot(observation.prep),
       refreshSnapshot: async () => {
         await settle();
@@ -684,7 +706,11 @@ export async function runGenericStructureLoop(
       countRepeatableGroups: (snapshot, plan) =>
         snapshot.countRepeatableGroups?.(plan) ?? Number.NaN,
     });
-    actionCounts.set(group.key, used + 1);
+    actionCounts.set(scope, used + 1);
+    if (document.URL !== initialUrl) {
+      blockGroup(group, "URL_CHANGED");
+      return false;
+    }
     if (result.status === "completed") {
       record({
         kind: "ADD_ROW",
@@ -709,16 +735,33 @@ export async function runGenericStructureLoop(
     observation: Observation,
   ): Promise<boolean> {
     const { action } = point;
+    const scope = actionScope(action.element);
+    const used = actionCounts.get(scope) ?? 0;
+    const blockReveal = (reason: string) => {
+      context.blockedScopes.set(scope, reason);
+      sectionsSeen.set(`reveal:${containerId(scope)}`, {
+        title: action.label,
+        status: "BLOCKED",
+        reason,
+        blockedRows: [],
+      });
+      record({
+        kind: "REVEAL_SECTION",
+        ...(action.label ? { sectionTitle: action.label } : {}),
+        result: "blocked",
+        reason,
+      });
+    };
+    if (used >= MAX_ACTIONS_PER_SECTION) {
+      revealAsked.add(action.element);
+      blockReveal("SECTION_ACTION_LIMIT");
+      return false;
+    }
     if (!revealAsked.has(action.element)) {
-      const refs = actionRefs(observation).filter(
-        (ref) =>
-          isCollapsedControl(ref, observation.groups) &&
-          !revealAsked.has(ref.element),
-      );
+      const refs = [action];
       const category =
-        REVEAL_PRIORITY.find(
-          (id) => (repeatedEntries(profile, id) ?? 0) > 0,
-        ) ?? "education";
+        REVEAL_PRIORITY.find((id) => (repeatedEntries(profile, id) ?? 0) > 0) ??
+        "education";
       const chosenId = await askButtons(
         "SECTION_REVEAL",
         profileKeyOf(category) ?? "personal.personal.koreanFamilyName",
@@ -729,15 +772,11 @@ export async function runGenericStructureLoop(
       const chosen = refs.find((ref) => ref.candidateId === chosenId);
       if (chosen) revealChosen.add(chosen.element);
       if (chosenId === undefined || chosenId === null)
-        record({
-          kind: "REVEAL_SECTION",
-          ...(action.label ? { sectionTitle: action.label } : {}),
-          result: "blocked",
-          reason:
-            chosenId === undefined
-              ? "INTERACTION_UNAVAILABLE"
-              : "SECTION_REVEAL_ABSTAINED",
-        });
+        blockReveal(
+          chosenId === undefined
+            ? "INTERACTION_UNAVAILABLE"
+            : "SECTION_REVEAL_ABSTAINED",
+        );
     }
     if (!revealChosen.has(action.element)) return false;
     revealChosen.delete(action.element);
@@ -756,6 +795,8 @@ export async function runGenericStructureLoop(
       ],
       document,
       ...(signal ? { signal } : {}),
+      beforeMutation: async () =>
+        !aborted() && isSafeStructuralClick(action.element, document.body).allowed,
       initialSnapshot: executionSnapshot(observation.prep),
       refreshSnapshot: async () => {
         await settle();
@@ -766,18 +807,23 @@ export async function runGenericStructureLoop(
       },
       countRepeatableGroups: () => Number.NaN,
     });
-    record({
-      kind: "REVEAL_SECTION",
-      ...(action.label ? { sectionTitle: action.label } : {}),
-      result: result.status === "completed" ? "done" : "blocked",
-      ...(result.status === "completed"
-        ? {}
-        : {
-            reason: `executor:${
-              result.status === "failed" ? result.reason : "approval-required"
-            }`,
-          }),
-    });
+    actionCounts.set(scope, used + 1);
+    if (document.URL !== initialUrl) {
+      blockReveal("URL_CHANGED");
+      return false;
+    }
+    if (result.status === "completed")
+      record({
+        kind: "REVEAL_SECTION",
+        ...(action.label ? { sectionTitle: action.label } : {}),
+        result: "done",
+      });
+    else
+      blockReveal(
+        `executor:${
+          result.status === "failed" ? result.reason : "approval-required"
+        }`,
+      );
     return result.status === "completed";
   }
 
@@ -786,10 +832,12 @@ export async function runGenericStructureLoop(
     observation: Observation,
   ): Promise<boolean> {
     const { group, rowIndex, select } = point;
+    const rowElement = genericRowFor(select);
     handledSelects.add(select);
     const section = sectionOf(group);
     const blockRow = (reason: string) => {
       section.blockedRows.push(rowIndex);
+      if (rowElement) context.blockedScopes.set(rowElement, reason);
       record({
         kind: "SELECT_ROW_KIND",
         ...(group.title ? { sectionTitle: group.title } : {}),
@@ -799,6 +847,12 @@ export async function runGenericStructureLoop(
       });
       return false;
     };
+    const scope = actionScope(select);
+    const used = actionCounts.get(scope) ?? 0;
+    if (used >= MAX_ACTIONS_PER_SECTION) {
+      blockGroup(group, "SECTION_ACTION_LIMIT");
+      return false;
+    }
     const optionList = Array.from(select.options)
       .map((option, index) => ({
         index,
@@ -816,7 +870,10 @@ export async function runGenericStructureLoop(
       try {
         byTarget = apiClient.decideInteractions
           ? await decideRowKindOptions(
-              { decideInteractions: apiClient.decideInteractions.bind(apiClient) },
+              {
+                decideInteractions:
+                  apiClient.decideInteractions.bind(apiClient),
+              },
               {
                 snapshotId: observation.fieldsSnapshot.request.snapshotId,
                 site: observation.prep.request.site,
@@ -827,7 +884,10 @@ export async function runGenericStructureLoop(
                   visibility: "visible" as const,
                   semanticContext: {
                     labels: [
-                      { source: "label" as const, text: truncated(option.text) },
+                      {
+                        source: "label" as const,
+                        text: truncated(option.text),
+                      },
                     ],
                   },
                 })),
@@ -844,103 +904,164 @@ export async function runGenericStructureLoop(
     const optionId = byTarget.get(TARGET_OF_ROW_KIND[kind]);
     if (!optionId) return blockRow("ROW_KIND_OPTION_UNDECIDED");
     if (aborted()) return false;
-    select.selectedIndex = Number(optionId);
-    select.dispatchEvent(new Event("input", { bubbles: true }));
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-    await settle();
-
-    // Rematch what the row now shows: only keys of this stage may appear.
-    const after = await observe();
-    const row = after.groups
-      .flatMap((candidateGroup) => candidateGroup.rows)
-      .find((candidate) =>
-        candidate.fields.some((field) => field.element === select),
-      );
-    if (!row) return blockRow("ROW_NOT_FOUND");
-    const api: Partial<GenericAnalysisApi> = {
-      classifySections: apiClient.classifySections?.bind(apiClient),
-      analyzeGenericFields: apiClient.analyzeGenericFields?.bind(apiClient),
-    };
-    if (!api.classifySections || !api.analyzeGenericFields)
-      return blockRow("REMATCH_UNAVAILABLE");
-    let keys: string[];
+    const release = acquireDocumentRun(document);
+    if (!release) return blockRow("run-in-progress");
     try {
-      const analysis = await analyzeGenericFields(
-        after.fieldsSnapshot,
-        document,
-        api as GenericAnalysisApi,
-        profile,
-        analysisCache,
-      );
-      const ids = new Set(row.fields.map(({ candidate }) => candidate.candidateId));
-      keys = analysis.analysis.fields.flatMap((field) =>
-        ids.has(field.candidateId) &&
-        field.matchType === "MATCH" &&
-        field.valueBinding &&
-        "profileFieldKey" in field.valueBinding &&
-        field.valueBinding.profileFieldKey
-          ? [field.valueBinding.profileFieldKey]
-          : [],
-      );
-    } catch {
-      return blockRow("REMATCH_UNAVAILABLE");
+      actionCounts.set(scope, used + 1);
+      select.selectedIndex = Number(optionId);
+      select.dispatchEvent(new Event("input", { bubbles: true }));
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      await settle();
+      if (document.URL !== initialUrl) return blockRow("URL_CHANGED");
+      if (rowElement) {
+        const entry = profile.education[rowIndex]!;
+        context.educationRows.set(rowElement, {
+          sectionId: sectionOfKind(kind),
+          sectionIndex: profile.education
+            .slice(0, rowIndex)
+            .filter((previous) => previous.sectionId === entry.sectionId)
+            .length,
+          select,
+          selectedValue: select.value,
+        });
+      }
+
+      // Rematch what the row now shows: only keys of this stage may appear.
+      const after = await observe();
+      const row = after.groups
+        .flatMap((candidateGroup) => candidateGroup.rows)
+        .find((candidate) =>
+          candidate.fields.some((field) => field.element === select),
+        );
+      if (!row) return blockRow("ROW_NOT_FOUND");
+      const api: Partial<GenericAnalysisApi> = {
+        classifySections: apiClient.classifySections?.bind(apiClient),
+        analyzeGenericFields: apiClient.analyzeGenericFields?.bind(apiClient),
+      };
+      if (!api.classifySections || !api.analyzeGenericFields)
+        return blockRow("REMATCH_UNAVAILABLE");
+      let keys: string[];
+      try {
+        // Only the changed row is rematched. A previous row's result must not
+        // be reused for another education stage with the same visible labels.
+        const ids = new Set(
+          row.fields.map(({ candidate }) => candidate.candidateId),
+        );
+        const rowSnapshot = bindGenericStructureRows(
+          {
+            ...after.fieldsSnapshot,
+            request: {
+              ...after.fieldsSnapshot.request,
+              sections: after.fieldsSnapshot.request.sections
+                .map((section) => ({
+                  ...section,
+                  fields: section.fields.filter((field) =>
+                    ids.has(field.candidateId),
+                  ),
+                  items: (section.items ?? [])
+                    .map((item) => ({
+                      ...item,
+                      fields: item.fields.filter((field) =>
+                        ids.has(field.candidateId),
+                      ),
+                    }))
+                    .filter((item) => item.fields.length > 0),
+                }))
+                .filter(
+                  (section) =>
+                    section.fields.length > 0 ||
+                    (section.items?.length ?? 0) > 0,
+                ),
+            },
+          },
+          context,
+        );
+        const analysis = await analyzeGenericFields(
+          rowSnapshot,
+          document,
+          api as GenericAnalysisApi,
+          profile,
+          createGenericAnalysisCache(),
+        );
+        keys = analysis.analysis.fields.flatMap((field) =>
+          ids.has(field.candidateId) &&
+          field.matchType === "MATCH" &&
+          field.valueBinding &&
+          "profileFieldKey" in field.valueBinding &&
+          field.valueBinding.profileFieldKey
+            ? [field.valueBinding.profileFieldKey]
+            : [],
+        );
+      } catch {
+        return blockRow("REMATCH_UNAVAILABLE");
+      }
+      const prefix = `education.${sectionOfKind(kind)}.`;
+      if (keys.length === 0 || keys.some((key) => !key.startsWith(prefix)))
+        return blockRow("STAGE_KEY_MISMATCH");
+      record({
+        kind: "SELECT_ROW_KIND",
+        ...(group.title ? { sectionTitle: group.title } : {}),
+        result: "done",
+        rowIndex,
+      });
+      return true;
+    } finally {
+      release();
     }
-    const prefix = `education.${sectionOfKind(kind)}.`;
-    if (keys.length === 0 || keys.some((key) => !key.startsWith(prefix)))
-      return blockRow("STAGE_KEY_MISMATCH");
-    record({
-      kind: "SELECT_ROW_KIND",
-      ...(group.title ? { sectionTitle: group.title } : {}),
-      result: "done",
-      rowIndex,
-    });
-    return true;
   }
 
   let previousSignature: string | undefined;
-  for (let iteration = 0; ; iteration += 1) {
-    if (aborted()) {
-      stopReason = "ABORTED";
-      break;
+  try {
+    for (let iteration = 0; ; iteration += 1) {
+      if (aborted()) {
+        stopReason = "ABORTED";
+        break;
+      }
+      if (iteration >= MAX_ITERATIONS) {
+        stopReason = "ITERATION_LIMIT";
+        break;
+      }
+      const observation = await observe();
+      const points = computePoints(observation);
+      initialRemaining ??= points.map(describe);
+      if (points.length === 0) break;
+      const signatureNow = JSON.stringify(points.map(describe));
+      if (signatureNow === previousSignature) {
+        stopReason = "NO_PROGRESS";
+        for (const point of points)
+          if (point.kind !== "REVEAL_SECTION")
+            blockGroup(point.group, "NO_PROGRESS");
+        break;
+      }
+      let acted = false;
+      for (const point of points) {
+        if (point.kind === "ADD_ROW") acted = await addRow(point, observation);
+        else if (point.kind === "REVEAL_SECTION")
+          acted = await revealSection(point, observation);
+        else acted = await selectRowKind(point, observation);
+        if (acted) break;
+        if (aborted()) break;
+      }
+      previousSignature = acted ? signatureNow : undefined;
+      if (!acted && points.every((point) => point.kind === "REVEAL_SECTION")) {
+        // Every collapsed control was declined; nothing else can change.
+        const pending = points.filter(
+          (point) =>
+            point.kind === "REVEAL_SECTION" &&
+            !revealChosen.has(point.action.element) &&
+            !revealAsked.has(point.action.element),
+        );
+        if (pending.length === 0) break;
+      }
     }
-    if (iteration >= MAX_ITERATIONS) {
-      stopReason = "ITERATION_LIMIT";
-      break;
-    }
-    const observation = await observe();
-    const points = computePoints(observation);
-    initialRemaining ??= points.map(describe);
-    if (points.length === 0) break;
-    const signatureNow = JSON.stringify(points.map(describe));
-    if (signatureNow === previousSignature) {
-      stopReason = "NO_PROGRESS";
-      for (const point of points)
-        if (point.kind !== "REVEAL_SECTION") blockGroup(point.group, "NO_PROGRESS");
-      break;
-    }
-    let acted = false;
-    for (const point of points) {
-      if (point.kind === "ADD_ROW") acted = await addRow(point, observation);
-      else if (point.kind === "REVEAL_SECTION")
-        acted = await revealSection(point, observation);
-      else acted = await selectRowKind(point, observation);
-      if (acted) break;
-      if (aborted()) break;
-    }
-    previousSignature = acted ? signatureNow : undefined;
-    if (!acted && points.every((point) => point.kind === "REVEAL_SECTION")) {
-      // Every collapsed control was declined; nothing else can change.
-      const pending = points.filter(
-        (point) =>
-          point.kind === "REVEAL_SECTION" &&
-          !revealChosen.has(point.action.element) &&
-          !revealAsked.has(point.action.element),
-      );
-      if (pending.length === 0) break;
-    }
+  } catch {
+    // A local failure must end the loop, never the whole preparation step.
+    stopReason = "FAILED";
+    context.blockedScopes.set(document.body, "STRUCTURE_LOOP_FAILED");
   }
 
   return {
+    context,
     stopReason,
     actions,
     sections: [...sectionsSeen.values()],

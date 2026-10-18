@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -103,7 +103,9 @@ function mockApi(options: MockOptions = {}) {
               return {
                 decisionId: decision.decisionId,
                 role: decision.role,
-                selection: match ? ("SELECTED" as const) : ("ABSTAINED" as const),
+                selection: match
+                  ? ("SELECTED" as const)
+                  : ("ABSTAINED" as const),
                 candidateId: match?.candidateId ?? null,
               };
             }
@@ -153,7 +155,9 @@ function mockApi(options: MockOptions = {}) {
                 confidence: 0.95,
                 categoryConfirmed: true,
                 autofillPolicy: "ALLOWED" as const,
-                interactionStatus: key ? ("READY" as const) : ("BLOCKED" as const),
+                interactionStatus: key
+                  ? ("READY" as const)
+                  : ("BLOCKED" as const),
               };
             }),
           ),
@@ -199,6 +203,12 @@ function watchClicks(): string[] {
   return clicks;
 }
 
+function recordQa(name: string, evidence: unknown) {
+  const directory = process.env.CF_QA_EVIDENCE_DIRECTORY;
+  if (directory)
+    writeFileSync(join(directory, name), JSON.stringify(evidence, null, 2) + "\n");
+}
+
 describe("runGenericStructureLoop", () => {
   it("grows one career row to three without touching save or next", async () => {
     document.body.innerHTML = `<form action="/submit"><section>
@@ -206,7 +216,10 @@ describe("runGenericStructureLoop", () => {
       <div id="rows">${careerRow(0)}</div>
       <button type="button" id="add">경력 추가</button>
       <button id="save">저장</button>
+      <button type="submit" id="submit">제출</button>
+      <button type="button" id="save-explicit">Save</button>
       <a id="next" href="/next">다음</a>
+      <a id="link" href="/elsewhere">항목 추가</a>
     </section></form>`;
     const rows = document.querySelector("#rows")!;
     document.querySelector("#add")!.addEventListener("click", () => {
@@ -269,6 +282,16 @@ describe("runGenericStructureLoop", () => {
       { role: "REPEAT_ADD", candidates: ["경력 추가"] },
     ]);
     expect(api.raw.analyzePreparation).not.toHaveBeenCalled();
+    recordQa("task-13-loop.txt", {
+      fixture: "synthetic-career-form",
+      rowsBefore: 1,
+      rowsAfter: rows.querySelectorAll("[ismultirow]").length,
+      clickLog: clicks,
+      submitCalls: submits.mock.calls.length,
+      urlUnchanged: document.URL === url,
+      actions: result.actions,
+      questions: result.questions,
+    });
   });
 
   it("stops at two rows and records why when the add button disappears", async () => {
@@ -281,8 +304,7 @@ describe("runGenericStructureLoop", () => {
     let presses = 0;
     document.querySelector("#add")!.addEventListener("click", (event) => {
       presses += 1;
-      if (presses === 1)
-        rows.insertAdjacentHTML("beforeend", careerRow(1));
+      if (presses === 1) rows.insertAdjacentHTML("beforeend", careerRow(1));
       else (event.target as Element).remove();
     });
     const profile: Profile = {
@@ -343,6 +365,14 @@ describe("runGenericStructureLoop", () => {
         blockedRows: [],
       },
     ]);
+    recordQa("task-13-abstain.txt", {
+      fixture: "synthetic-career-form",
+      rowsBefore: 1,
+      rowsAfter: document.querySelectorAll("[ismultirow]").length,
+      clickLog: clicks,
+      sections: result.sections,
+      questions: result.questions,
+    });
   });
 
   it("never offers a forbidden control for a repeat group", async () => {
@@ -371,19 +401,19 @@ describe("runGenericStructureLoop", () => {
     const educationDocument = (withSelect = true) => {
       document.body.innerHTML = `<section><h3>학력</h3><div id="list">${[0, 1]
         .map(
-          (index) => `<div class="r" ismultirow="true">${
-            withSelect
-              ? `<select name="kind${index}"><option value="">구분</option><option value="B">대학(학사)</option><option value="M">대학원(석사)</option></select>`
-              : ""
-          }<label><span class="t">학교명</span><input name="school${index}" /></label><label>전공<input name="major${index}" /></label></div>`,
+          (index) =>
+            `<div class="r" ismultirow="true">${
+              withSelect
+                ? `<select name="kind${index}"><option value="">구분</option><option value="B">대학(학사)</option><option value="M">대학원(석사)</option></select>`
+                : ""
+            }<label><span class="t">학교명</span><input name="school${index}" /></label><label>전공<input name="major${index}" /></label></div>`,
         )
         .join("")}</div><button type="button">학력 추가</button></section>`;
       document.querySelectorAll("select").forEach((select) =>
         select.addEventListener("change", () => {
           const text = select.value === "M" ? "대학원 학교명" : "대학교 학교명";
-          select
-            .closest(".r")!
-            .querySelector(".t")!.textContent = text.replace(" 학교명", "") + " 학교명";
+          select.closest(".r")!.querySelector(".t")!.textContent =
+            text.replace(" 학교명", "") + " 학교명";
         }),
       );
     };
@@ -520,7 +550,9 @@ describe("runGenericStructureLoop", () => {
     });
 
     expect(clicks).toEqual(["open"]);
-    expect(document.querySelector("#panel")!.hasAttribute("hidden")).toBe(false);
+    expect(document.querySelector("#panel")!.hasAttribute("hidden")).toBe(
+      false,
+    );
     expect(result.actions).toEqual([
       { kind: "REVEAL_SECTION", sectionTitle: "경력 펼치기", result: "done" },
     ]);
@@ -563,6 +595,189 @@ describe("runGenericStructureLoop", () => {
     expect(result.stopReason).toBe("ABORTED");
     expect(clicks).toEqual([]);
   });
+});
+
+describe("structural loop live safety and termination", () => {
+  it("blocks the section if a structural handler changes the URL", async () => {
+    const url = document.URL;
+    document.body.innerHTML = `<section><h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button></section>`;
+    const clicked = vi.fn(() => {
+      document.getElementById("rows")!.insertAdjacentHTML("beforeend", careerRow(1));
+      window.history.pushState(null, "", "#unexpected-navigation");
+    });
+    document.getElementById("add")!.addEventListener("click", clicked);
+    try {
+      const result = await runGenericStructureLoop({
+        document,
+        profile: { ...createEmptyProfile(), careers: entries(3, "career") },
+        apiClient: mockApi().client,
+      });
+      expect(clicked).toHaveBeenCalledTimes(1);
+      expect(result.sections[0]).toMatchObject({
+        status: "BLOCKED", reason: "URL_CHANGED",
+      });
+      expect(result.stopReason).toBe("ABORTED");
+    } finally {
+      window.history.replaceState(null, "", url);
+    }
+  });
+
+  it("blocks an unclassified section while another section still adds its row", async () => {
+    document.body.innerHTML = `<section><h3>경력</h3>
+      <div id="career-rows">${careerRow(0)}</div>
+      <button type="button" id="career-add">경력 추가</button></section>
+      <section><h3>자격증</h3><div id="certificate-rows">
+      <div ismultirow="true"><label>자격명<input name="credential0"></label>
+      <label>취득일<input name="date0"></label></div></div>
+      <button type="button" id="certificate-add">자격증 추가</button></section>`;
+    document
+      .getElementById("career-add")!
+      .addEventListener("click", () =>
+        document
+          .getElementById("career-rows")!
+          .insertAdjacentHTML("beforeend", careerRow(1)),
+      );
+    const api = mockApi();
+    const classify = api.raw.classifySections.getMockImplementation()!;
+    api.raw.classifySections.mockImplementation(async (request) => {
+      const response = await classify(request);
+      return {
+        ...response,
+        sections: response.sections.filter(
+          ({ category }) => category !== "certifications",
+        ),
+      };
+    });
+    const result = await runGenericStructureLoop({
+      document,
+      profile: {
+        ...createEmptyProfile(),
+        careers: entries(2, "career"),
+        certifications: entries(2, "certificate"),
+      },
+      apiClient: api.client,
+    });
+    expect(document.querySelector("#career-rows")!.children).toHaveLength(2);
+    expect(document.querySelector("#certificate-rows")!.children).toHaveLength(
+      1,
+    );
+    expect(
+      result.sections.find(({ category }) => category === "careers")?.status,
+    ).toBe("OPEN");
+    expect(
+      result.sections.find(({ title }) => title === "자격증"),
+    ).toMatchObject({
+      status: "BLOCKED",
+      reason: "CLASSIFY_UNAVAILABLE",
+    });
+  });
+
+  it("rechecks a button that becomes a save submit while the decision is pending", async () => {
+    document.body.innerHTML = `<form><section><h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button>
+    </section></form>`;
+    const button = document.querySelector<HTMLButtonElement>("#add")!;
+    const clicks = vi.fn();
+    button.addEventListener("click", clicks);
+    document
+      .querySelector("form")!
+      .addEventListener("submit", (event) => event.preventDefault());
+    const api = mockApi();
+    const decide = api.raw.decideInteractions.getMockImplementation()!;
+    api.raw.decideInteractions.mockImplementation(async (request) => {
+      const response = await decide(request);
+      button.removeAttribute("type");
+      button.textContent = "저장";
+      return response;
+    });
+    const result = await runGenericStructureLoop({
+      document,
+      profile: { ...createEmptyProfile(), careers: entries(2, "career") },
+      apiClient: api.client,
+    });
+    expect(clicks).not.toHaveBeenCalled();
+    expect(result.sections[0]?.status).toBe("BLOCKED");
+  });
+
+  it("opens each of two unrelated collapsed sections", async () => {
+    document.body.innerHTML = `<section><h3>경력</h3>
+      <button type="button" id="one" aria-expanded="false">첫 영역 펼치기</button>
+      <div id="first" hidden><label>회사명<input></label></div>
+    </section><section><h3>자격증</h3>
+      <button type="button" id="two" aria-expanded="false">둘째 영역 펼치기</button>
+      <div id="second" hidden><label>자격명<input></label></div>
+    </section>`;
+    for (const [button, panel] of [
+      ["one", "first"],
+      ["two", "second"],
+    ]) {
+      document.getElementById(button!)!.addEventListener("click", () => {
+        document.getElementById(panel!)!.removeAttribute("hidden");
+        document.getElementById(button!)!.setAttribute("aria-expanded", "true");
+      });
+    }
+    const result = await runGenericStructureLoop({
+      document,
+      profile: createEmptyProfile(),
+      apiClient: mockApi().client,
+    });
+    expect(document.querySelectorAll("[hidden]")).toHaveLength(0);
+    expect(
+      result.actions.filter(({ result: outcome }) => outcome === "done"),
+    ).toHaveLength(2);
+  });
+
+  it("limits one section to ten verified row additions", async () => {
+    document.body.innerHTML = `<section><h3>경력</h3>
+      <div id="rows">${careerRow(0)}</div>
+      <button type="button" id="add">경력 추가</button></section>`;
+    const rows = document.getElementById("rows")!;
+    const click = vi.fn(() =>
+      rows.insertAdjacentHTML("beforeend", careerRow(rows.children.length)),
+    );
+    document.getElementById("add")!.addEventListener("click", click);
+    const result = await runGenericStructureLoop({
+      document,
+      profile: { ...createEmptyProfile(), careers: entries(15, "career") },
+      apiClient: mockApi().client,
+    });
+    expect(click).toHaveBeenCalledTimes(10);
+    expect(rows.children).toHaveLength(11);
+    expect(result.sections[0]).toMatchObject({
+      status: "BLOCKED",
+      reason: "SECTION_ACTION_LIMIT",
+    });
+  }, 30_000);
+
+  it("limits one section to ten openings even with more eligible controls", async () => {
+    document.body.innerHTML = `<section><h3>경력</h3>${Array.from(
+      { length: 11 },
+      (_, i) => `<button type="button" aria-expanded="false"
+        aria-controls="panel${i}">영역 ${i} 펼치기</button>
+        <div id="panel${i}" hidden><input name="text${i}"></div>`,
+    ).join("")}</section>`;
+    const clicked = vi.fn();
+    document.querySelectorAll("button").forEach((button) => {
+      button.addEventListener("click", () => {
+        clicked();
+        document
+          .getElementById(button.getAttribute("aria-controls")!)!
+          .removeAttribute("hidden");
+        button.setAttribute("aria-expanded", "true");
+      });
+    });
+    const result = await runGenericStructureLoop({
+      document,
+      profile: createEmptyProfile(),
+      apiClient: mockApi().client,
+    });
+    expect(clicked).toHaveBeenCalledTimes(10);
+    expect(document.querySelectorAll("[hidden]")).toHaveLength(1);
+    expect(result.actions.at(-1)?.reason).toBe("SECTION_ACTION_LIMIT");
+  }, 30_000);
 });
 
 describe("runGenericStructureLoop on sanitized fixtures", () => {
