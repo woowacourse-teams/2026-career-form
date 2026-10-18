@@ -85,6 +85,14 @@ import {
   type WorkflowProps,
 } from "./workflow-model";
 import { prepareMixedSectionRows } from "./mixed-section-preparation";
+import {
+  runGenericStructureLoop,
+  type StructureLoopAction,
+} from "../generic/structure-loop";
+import {
+  collectGenericStructureSnapshot,
+  type GenericStructureContext,
+} from "../generic/structure-context";
 
 export { localItemCount, shouldRunRevealPlan } from "./workflow-model";
 
@@ -189,6 +197,11 @@ function PolicyReadyWorkflow({
   }>({ controller: new AbortController() });
   const [addressResult, setAddressResult] = useState<AddressResult>();
   const executionPending = useRef(false);
+  const structureActions = useRef<StructureLoopAction[]>([]);
+  const genericStructure = useRef<GenericStructureContext | undefined>(undefined);
+  const genericCollector = useRef<
+    Parameters<typeof createAnalyzeFields>[0]["collectFields"]
+  >(undefined);
   const writeController = useRef(new AbortController());
   const mounted = useRef(true);
   const [stage, setStage] = useState<Stage>("analyzing");
@@ -261,6 +274,8 @@ function PolicyReadyWorkflow({
       addressSearch,
       apiClient,
       analyzeFieldsSnapshot,
+      collectFields: genericCollector.current,
+      genericStructure: genericStructure.current,
       refreshFieldsAfterPass: (snapshot, eligible) =>
         staticFieldsSession.current?.refreshAfterPass(snapshot, eligible) ??
         Promise.resolve(false),
@@ -343,6 +358,33 @@ function PolicyReadyWorkflow({
         }
         setProfile(loadedProfile);
         completedComponentStateDrivers.current.clear();
+        // Generic documents prepare themselves: the loop decides each
+        // structural action locally and asks only for interaction decisions.
+        // Documents with an installed policy and clients without these
+        // endpoints keep the approved preparation flow below.
+        if (
+          companyId === "generic" &&
+          !executionPolicy(pageDocument) &&
+          apiClient.decideInteractions &&
+          apiClient.classifySections &&
+          apiClient.analyzeGenericFields
+        ) {
+          structureActions.current = [];
+          setActivity("preparing");
+          const structure = await runGenericStructureLoop({
+            document: pageDocument,
+            profile: loadedProfile,
+            apiClient,
+            signal: run.controller.signal,
+            onAction: (action) => structureActions.current.push(action),
+          });
+          if (!active) return;
+          genericStructure.current = structure.context;
+          genericCollector.current = (document, signal) =>
+            collectGenericStructureSnapshot(document, signal, structure.context);
+          await analyzeFields(loadedProfile);
+          return;
+        }
         const snapshot = collectPreparationSnapshot(pageDocument);
         const analysis = await apiClient.analyzePreparation(snapshot.request);
         if (!active) return;
