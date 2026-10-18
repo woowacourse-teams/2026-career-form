@@ -69,14 +69,37 @@ class MongoCompanyFormPolicyProviderTest {
             (host, path) -> { throw new AssertionError("shared Greeting lookup"); },
             () -> { throw new AssertionError("Greeting policy lookup"); },
             () -> { throw new AssertionError("Hplace policy lookup"); });
-        for (String host : List.of("www.skcareers.com", "talent.hyundai.com", "jobs.greetinghr.com", "synthetic.recruiter.co.kr")) {
-            when(companies.findByHost(host)).thenReturn(Optional.of(company()));
+        for (String host : List.of("www.skcareers.com", "talent.hyundai.com", "jobs.greetinghr.com")) {
+            when(companies.findByHost(host)).thenReturn(Optional.of(new FormAnalysisCompanyDocument("synthetic", "synthetic", host, List.of("/registered/"), 2)));
             String path = "/mrs2/applicant/resume/writeResume";
             assertThat(router.routeGeneric(host, path)).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.GenericRouteKind.GENERIC);
             assertThat(router.route(new FieldsAnalysisRequest(2, "synthetic", new FieldsAnalysisRequest.Site(host, path), List.of())).kind())
                 .isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.GENERIC);
             assertThat(router.route(new PreparationAnalysisRequest(2, "synthetic", new PreparationAnalysisRequest.Site(host, path), List.of())).kind())
                 .isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.GENERIC);
+        }
+    }
+
+    @Test
+    void rejectsDocumentsForAnotherHostBeforeRegisteredRouting() {
+        when(companies.findByHost("other.example")).thenReturn(Optional.of(company()));
+        for(String path:List.of("/Recruit/Apply/example","/other"))
+            assertThat(provider.find("other.example",path)).isInstanceOf(Unavailable.class);
+    }
+
+    @Test
+    void neverRoutesRegisteredSupplierHostsToGenericOnPathMismatch() {
+        var router = new com.careerform.formanalysis.application.FormAnalysisRouter(provider,
+            (host, path) -> { throw new AssertionError("shared Greeting lookup"); },
+            () -> { throw new AssertionError("Greeting policy lookup"); },
+            () -> { throw new AssertionError("Hplace policy lookup"); });
+        for(String host:List.of("synthetic.recruiter.co.kr","synthetic.recruiter.im")) {
+            when(companies.findByHost(host)).thenReturn(Optional.of(new FormAnalysisCompanyDocument("synthetic","synthetic",host,List.of("/registered/"),2)));
+            for(String path:List.of("/mrs2/applicant/resume/other","/outside")) {
+                assertThat(router.routeGeneric(host,path)).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.GenericRouteKind.POLICY_UNAVAILABLE);
+                assertThat(router.route(new FieldsAnalysisRequest(2,"synthetic",new FieldsAnalysisRequest.Site(host,path),List.of())).kind()).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.POLICY_UNAVAILABLE);
+                assertThat(router.route(new PreparationAnalysisRequest(2,"synthetic",new PreparationAnalysisRequest.Site(host,path),List.of())).kind()).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.POLICY_UNAVAILABLE);
+            }
         }
     }
 

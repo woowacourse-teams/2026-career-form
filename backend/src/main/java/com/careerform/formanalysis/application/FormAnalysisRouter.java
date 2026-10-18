@@ -76,13 +76,20 @@ public final class FormAnalysisRouter {
         this.observer = observer;
     }
 
+    private static RouteKind registeredMismatchKind(CompanyFormPolicyProvider.RegisteredPathMismatch mismatch, String host) {
+        String normalized=host==null?"":host.toLowerCase(java.util.Locale.ROOT).replaceFirst("\\.$", "");
+        return !normalized.isBlank() && normalized.equals(mismatch.registeredHost())
+            && !com.careerform.formanalysis.application.policy.HplaceApplicantSite.supplierHost(host)
+            ? RouteKind.GENERIC : RouteKind.POLICY_UNAVAILABLE;
+    }
+
     public ActionRoute route(PreparationAnalysisRequest request) {
         CompanyFormPolicyProvider.LookupResult lookup = policyProvider.find(
             request.site().host(),
             request.site().pathPattern()
         );
-        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch) {
-            return observed(new ActionRoute(RouteKind.GENERIC, null), null);
+        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch mismatch) {
+            return observed(new ActionRoute(registeredMismatchKind(mismatch,request.site().host()), null), null);
         }
         boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
@@ -113,8 +120,8 @@ public final class FormAnalysisRouter {
             request.site().host(),
             request.site().pathPattern()
         );
-        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch) {
-            return observed(new FieldRoute(RouteKind.GENERIC, null), null, false);
+        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch mismatch) {
+            return observed(new FieldRoute(registeredMismatchKind(mismatch,request.site().host()), null), null, false);
         }
         boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
@@ -148,9 +155,10 @@ public final class FormAnalysisRouter {
             host,
             pathPattern
         );
-        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch) {
-            observe(Operation.INTERACTION, RouteKind.GENERIC, false, null);
-            return GenericRouteKind.GENERIC;
+        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch mismatch) {
+            var kind=registeredMismatchKind(mismatch,host);
+            observe(Operation.INTERACTION, kind, false, null);
+            return kind==RouteKind.GENERIC?GenericRouteKind.GENERIC:GenericRouteKind.POLICY_UNAVAILABLE;
         }
         var greetingCandidate = false;
         if (lookup instanceof NotRegistered) {

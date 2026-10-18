@@ -15,7 +15,7 @@ public interface CompanyFormPolicyProvider {
     }
 
     /** Registered host outside its policy paths; shared platform lookup must be skipped. */
-    record RegisteredPathMismatch() implements LookupResult {
+    record RegisteredPathMismatch(String registeredHost) implements LookupResult {
     }
 
     record Available(CompanyFormPolicy policy) implements LookupResult {

@@ -37,8 +37,10 @@ public final class MongoCompanyFormPolicyProvider
             if (company.isEmpty()) {
                 return new NotRegistered();
             }
-            if (!matchesPath(company.orElseThrow(), pathPattern)) {
-                return new RegisteredPathMismatch();
+            var registered = company.orElseThrow();
+            if (!normalizeHost(host).equals(normalizeHost(registered.host()))) return new Unavailable();
+            if (!matchesPath(registered, pathPattern)) {
+                return new RegisteredPathMismatch(normalizeHost(registered.host()));
             }
             return loadActivePolicy(company.orElseThrow());
         }
