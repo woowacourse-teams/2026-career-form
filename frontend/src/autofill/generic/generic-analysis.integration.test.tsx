@@ -216,7 +216,7 @@ function createClient(options: ClientOptions = {}) {
       track("analyzeGenericFields", () => {
         genericRequests.push(structuredClone(request));
         return {
-          schemaVersion: 2 as const,
+          schemaVersion: 3 as const,
           snapshotId: request.snapshotId,
           status: "COMPLETE" as const,
           fields: request.sections.flatMap((section) =>
@@ -790,7 +790,7 @@ describe("gate", () => {
         return {
           ok: true,
           data: {
-            schemaVersion: 2,
+            schemaVersion: 3,
             snapshotId: generic.snapshotId,
             status: "COMPLETE",
             fields: generic.sections.flatMap((section) =>

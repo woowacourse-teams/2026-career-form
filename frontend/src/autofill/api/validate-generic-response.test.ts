@@ -221,7 +221,7 @@ const unmatched = {
 };
 
 const fieldsComplete = (fields: unknown[], extra: object = {}) => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   snapshotId: "generic-1",
   status: "COMPLETE",
   fields,
@@ -247,6 +247,121 @@ const allFields = () => [
 ];
 
 describe("generic fields response validation", () => {
+  it.each([
+    "KOREAN_FULL_NAME",
+    "ENGLISH_FULL_NAME_GIVEN_FIRST",
+    "ENGLISH_FULL_NAME_FAMILY_FIRST",
+  ])(
+    "accepts the %s derived name recipe with shared ALLOWED policy",
+    (recipe) => {
+      const bound = field("c1", {
+        profileFieldKey: null,
+        binding: { type: "DERIVED", recipe },
+      });
+      expect(
+        validateGenericFieldsResponse(
+          fieldsRequest,
+          fieldsComplete([bound, ...allFields().slice(1)]),
+        ).fields[0],
+      ).toEqual(bound);
+    },
+  );
+
+  it.each(["YEAR", "MONTH", "DAY"])(
+    "accepts DATE_PART %s on a date key",
+    (part) => {
+      const bound = field("c2", {
+        profileFieldKey: "personal.personal.birthDate",
+        binding: { type: "DATE_PART", part },
+        writePlan: { command: "SELECT_OPTION" },
+      });
+      expect(
+        validateGenericFieldsResponse(
+          fieldsRequest,
+          fieldsComplete([field("c1"), bound, allFields()[2]]),
+        ).fields[1],
+      ).toEqual(bound);
+    },
+  );
+
+  it.each(["MANUAL_REVEAL_REQUIRED", "BLOCKED", "UNVERIFIED"])(
+    "accepts a derived recipe with %s and no write plan",
+    (interactionStatus) => {
+      expect(
+        validateGenericFieldsResponse(
+          fieldsRequest,
+          fieldsComplete([
+            field("c1", {
+              profileFieldKey: null,
+              binding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+              interactionStatus,
+              writePlan: undefined,
+            }),
+            ...allFields().slice(1),
+          ]),
+        ).schemaVersion,
+      ).toBe(3);
+    },
+  );
+
+  it.each([
+    {
+      profileFieldKey: null,
+      binding: { type: "UNKNOWN", recipe: "KOREAN_FULL_NAME" },
+    },
+    {
+      profileFieldKey: null,
+      binding: { type: "DERIVED", recipe: "BOOLEAN_YN" },
+    },
+    {
+      profileFieldKey: null,
+      binding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME", part: "YEAR" },
+    },
+    { binding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" } },
+    { profileFieldKey: null, binding: { type: "DATE_PART", part: "YEAR" } },
+    { binding: { type: "DATE_PART", part: "YEAR" } },
+    {
+      profileFieldKey: "personal.personal.birthDate",
+      binding: { type: "DATE_PART", part: "YEAR_MONTH" },
+    },
+    {
+      profileFieldKey: "personal.personal.birthDate",
+      binding: { type: "DATE_PART", part: "YEAR", recipe: "KOREAN_FULL_NAME" },
+    },
+    { profileFieldKey: null, binding: null },
+    { profileFieldKey: null, binding: { type: "DERIVED" } },
+    {
+      profileFieldKey: "personal.personal.birthDate",
+      binding: { type: "DATE_PART" },
+    },
+    {
+      profileFieldKey: null,
+      binding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+      autofillPolicy: "CONDITIONAL",
+    },
+    {
+      profileFieldKey: null,
+      binding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+      autofillPolicy: undefined,
+    },
+  ])("rejects an invalid synthetic binding %#", (extra) => {
+    expect(() =>
+      validateGenericFieldsResponse(
+        fieldsRequest,
+        fieldsComplete([field("c1", extra), ...allFields().slice(1)]),
+      ),
+    ).toThrow(AnalysisContractError);
+  });
+
+  it("rejects the old version 2 field response", () => {
+    expect(() =>
+      validateGenericFieldsResponse(
+        fieldsRequest,
+        fieldsComplete(allFields(), { schemaVersion: 2 }),
+      ),
+    ).toThrow(AnalysisContractError);
+  });
+
   it("accepts every requested candidate once, including unavailable and unconfirmed fields", () => {
     expect(
       validateGenericFieldsResponse(fieldsRequest, fieldsComplete(allFields())),
@@ -284,7 +399,7 @@ describe("generic fields response validation", () => {
     (status) => {
       expect(
         validateGenericFieldsResponse(fieldsRequest, {
-          schemaVersion: 2,
+          schemaVersion: 3,
           snapshotId: "generic-1",
           status,
           fields: [],
@@ -471,7 +586,7 @@ describe("generic fields response validation", () => {
     [
       "short circuit with fields",
       {
-        schemaVersion: 2,
+        schemaVersion: 3,
         snapshotId: "generic-1",
         status: "POLICY_UNAVAILABLE",
         fields: [field("c1")],
@@ -481,7 +596,7 @@ describe("generic fields response validation", () => {
     [
       "short circuit with non-zero diagnostics",
       {
-        schemaVersion: 2,
+        schemaVersion: 3,
         snapshotId: "generic-1",
         status: "STATIC_POLICY_PRESENT",
         fields: [],

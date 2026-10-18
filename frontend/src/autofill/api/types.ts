@@ -189,7 +189,7 @@ export interface GenericFieldsRequest {
 }
 
 export interface GenericFieldsResponse {
-  schemaVersion: 2;
+  schemaVersion: 3;
   snapshotId: string;
   status: GenericAnalysisStatus;
   fields: Array<{
@@ -198,9 +198,18 @@ export interface GenericFieldsResponse {
     confidence: number;
     categoryConfirmed: boolean;
     reason?: "LLM_UNAVAILABLE";
-    /** Present exactly when profileFieldKey is set. */
+    binding?:
+      | {
+          type: "DERIVED";
+          recipe:
+            | "KOREAN_FULL_NAME"
+            | "ENGLISH_FULL_NAME_GIVEN_FIRST"
+            | "ENGLISH_FULL_NAME_FAMILY_FIRST";
+        }
+      | { type: "DATE_PART"; part: "YEAR" | "MONTH" | "DAY" };
+    /** Present when profileFieldKey or a derived name binding is set. */
     autofillPolicy?: MatchedFieldAnalysis["autofillPolicy"];
-    /** BLOCKED when profileFieldKey is null. */
+    /** BLOCKED when neither profileFieldKey nor binding is present. */
     interactionStatus: MatchedFieldAnalysis["interactionStatus"];
     /** Only when interactionStatus is READY. */
     writePlan?: { command: WriteCommand };
