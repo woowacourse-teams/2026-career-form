@@ -11,7 +11,7 @@ describe("AutofillDemo", () => {
       name: "입력 가능 1개",
     });
     const needsHumanReview = screen.getByRole("region", {
-      name: "사람 확인 필요 3개",
+      name: "사람 확인 필요 2개",
     });
     const unavailable = screen.getByRole("region", {
       name: "입력 불가 1개",
@@ -24,7 +24,6 @@ describe("AutofillDemo", () => {
     expect(
       within(needsHumanReview).getByText("기존 값 충돌"),
     ).toBeInTheDocument();
-    expect(within(needsHumanReview).getByText("민감정보")).toBeInTheDocument();
     expect(
       within(unavailable).getByRole("checkbox", { name: /지원 동기/ }),
     ).toBeDisabled();

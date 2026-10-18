@@ -12,11 +12,7 @@ import {
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type { ReviewPlanItem } from "./review-plan";
-import {
-  buildReviewPlan,
-  revealSensitiveReviewItem,
-  reviewItemsForDisplay,
-} from "./review-plan";
+import { buildReviewPlan, reviewItemsForDisplay } from "./review-plan";
 
 function response(
   fields: FieldsAnalyzeResponse["fields"],
@@ -313,17 +309,10 @@ describe("review plan", () => {
         item("unavailable", "unavailable"),
         item("needs-review", "needs-review"),
         item("available-1", "available"),
-        item("sensitive", "sensitive"),
         item("available-2", "available"),
         item("conflict", "conflict"),
       ]).map(({ candidateId }) => candidateId),
-    ).toEqual([
-      "available-1",
-      "available-2",
-      "needs-review",
-      "sensitive",
-      "conflict",
-    ]);
+    ).toEqual(["available-1", "available-2", "needs-review", "conflict"]);
   });
 
   it("selects a ready allowed value when the page field is empty", () => {
@@ -849,7 +838,7 @@ describe("review plan", () => {
     });
   });
 
-  it("keeps reveal compatibility idempotent for an included saved value", () => {
+  it("never produces a sensitive review status for a sensitive-confirmation field", () => {
     const profile = createEmptyProfile();
     profile.compensation.desiredPosition = "군필";
     const [item] = buildReviewPlan({
@@ -864,7 +853,11 @@ describe("review plan", () => {
       registry: registryWithTextField(),
     }).items;
 
-    expect(revealSensitiveReviewItem(item)).toMatchObject({
+    expect(["available", "needs-review", "conflict", "unavailable"]).toContain(
+      item.status,
+    );
+    expect(item).toMatchObject({
+      status: "available",
       previewValue: "군필",
       selected: true,
       disabled: false,
@@ -986,20 +979,6 @@ describe("review plan", () => {
       profileEntryId: "health-1",
       itemIndex: 0,
       dateApproval: { format: "YYYY.MM.DD" },
-    });
-    const revealed = revealSensitiveReviewItem(item);
-    expect(revealed).toMatchObject({
-      status: "available",
-      previewValue: "2020.04.05",
-      selected: true,
-      disabled: false,
-      revealed: true,
-      dateApproval: item.dateApproval,
-    });
-    expect({ ...revealed, selected: true }).toMatchObject({
-      selected: true,
-      disabled: false,
-      dateApproval: item.dateApproval,
     });
   });
 

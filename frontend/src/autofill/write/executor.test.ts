@@ -54,11 +54,6 @@ const nonWritableCases = [
     { status: "conflict", selected: false },
     new Set(["field-1"]),
   ],
-  [
-    "an unrevealed sensitive field",
-    { status: "sensitive", selected: false, disabled: true, revealed: false },
-    new Set(["field-1"]),
-  ],
 ] satisfies ReadonlyArray<[string, Partial<ReviewPlanItem>, Set<string>]>;
 
 function reviewItem(
@@ -664,7 +659,6 @@ describe("approved native-control writes", () => {
     const result = executeApprovedWrites({
       items: [
         reviewItem(sensitiveAnalysis, "복무 완료", {
-          status: "sensitive",
           selected: true,
           disabled: false,
           revealed: true,

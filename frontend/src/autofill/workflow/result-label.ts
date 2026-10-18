@@ -19,14 +19,12 @@ export function resultFieldLabel(item: ReviewPlanItem): string {
     label = topLevelField.label;
   } else if (field && section && category) {
     label =
-      category.sections.length > 1 || item.status === "sensitive"
+      category.sections.length > 1
         ? `${section.label} / ${field.label}`
         : field.label;
     if (category.repeatable && item.itemIndex !== undefined) {
       label += ` (${item.itemIndex + 1})`;
     }
-  } else if (item.status === "sensitive" && key) {
-    label = "프로필 정보";
   }
   return (label || "입력 필드").replaceAll("·", "/");
 }
