@@ -41,16 +41,24 @@ describe("nativeForm single-depth contract", () => {
     expect(JSON.stringify(snapshot.request)).not.toContain("careerSn");
     expect(JSON.stringify(snapshot.request)).not.toContain('"value"');
   });
-  it.each([0, 1, 2])("owns exactly one icon add action for %s rows", (rows) => {
-    mountSyntheticNative(rows);
-    installExecutionPolicy(document, syntheticNativePolicy());
-    const snapshot = collectPreparationSnapshot(document);
-    const actions = snapshot.request.sections.flatMap(
-      (s) => s.actionCandidates,
-    );
-    expect(actions.map((a) => a.domId)).toEqual(["hplace.mrs2.career.add"]);
-    expect(snapshot.countRepeatableGroups(actions[0].candidateId)).toBe(rows);
-  });
+  it.each([0, 1, 2])(
+    "offers one owned icon add only when %s rows were collected",
+    (rows) => {
+      mountSyntheticNative(rows);
+      installExecutionPolicy(document, syntheticNativePolicy());
+      const snapshot = collectPreparationSnapshot(document);
+      const actions = snapshot.request.sections.flatMap(
+        (s) => s.actionCandidates,
+      );
+      expect(actions.map((a) => a.domId)).toEqual(
+        rows > 0 ? ["hplace.mrs2.career.add"] : [],
+      );
+      if (rows > 0)
+        expect(snapshot.countRepeatableGroups(actions[0].candidateId)).toBe(
+          rows,
+        );
+    },
+  );
   it("rejects discontinuous indices instead of mapping a matching suffix", () => {
     mountSyntheticNative(2);
     document.querySelector<HTMLInputElement>(
