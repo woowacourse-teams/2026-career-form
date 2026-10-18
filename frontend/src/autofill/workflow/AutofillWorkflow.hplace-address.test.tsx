@@ -20,7 +20,7 @@ afterEach(() => {
 function mountWorkflow(
   existing: boolean | "all" = false,
   withAction = true,
-  spaced = false,
+  spaced: boolean | "province" = false,
 ) {
   setHplacePage(
     "https://synthetic.recruiter.im/mrs2/applicant/resume/writeResume",
@@ -29,7 +29,13 @@ function mountWorkflow(
     spaced
       ? {
           results: [
-            { ...addressExpected, address: "서울특별시  가상구 가상새봄로 50" },
+            {
+              ...addressExpected,
+              address:
+                spaced === "province"
+                  ? "서울 가상구 가상새봄로 50"
+                  : "서울특별시  가상구 가상새봄로 50",
+            },
           ],
         }
       : {},
@@ -166,4 +172,10 @@ it("reports all three committed values when only road whitespace differs", async
   const { s } = mountWorkflow(false, true, true);
   expect(await screen.findByLabelText("입력 완료 3개")).toBeVisible();
   expect(s.inputs()[1].value).toBe("서울특별시  가상구 가상새봄로 50");
+});
+
+it("reports all three committed values with an approved province abbreviation", async () => {
+  const { s } = mountWorkflow(false, true, "province");
+  expect(await screen.findByLabelText("입력 완료 3개")).toBeVisible();
+  expect(s.inputs()[1].value).toBe("서울 가상구 가상새봄로 50");
 });

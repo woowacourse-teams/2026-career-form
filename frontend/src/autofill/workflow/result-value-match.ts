@@ -1,5 +1,5 @@
 import { nativeGpaComplete } from "../policy/native-form-gpa";
-import { normalizeAddress } from "../address/match";
+import { normalizeStagedRoad } from "../policy/staged-address-road";
 import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { nativeOwnership } from "../policy/native-form-collection";
 import { nativeTarget, nativeValueMatches } from "../policy/native-form-write";
@@ -134,7 +134,7 @@ export function matchesResultValue(
     return (
       address.value === current &&
       (address.index === 1
-        ? normalizeAddress(address.value) === normalizeAddress(expected)
+        ? normalizeStagedRoad(address.value) === normalizeStagedRoad(expected)
         : address.value === expected)
     );
   if (handle?.owner === "native")

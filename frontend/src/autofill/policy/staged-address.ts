@@ -1,6 +1,10 @@
 import { recordStagedAddress } from "./staged-address-receipt";
 import type { AddressExecutionOptions, AddressResult } from "../address/types";
 import { normalizeAddress } from "../address/match";
+import {
+  normalizeStagedRoad as road,
+  validStagedRoad,
+} from "./staged-address-road";
 import { executionPolicy } from "../workflow/execution-policy";
 import { runDomPlan } from "./action-plan";
 import { activateOwnedPrimary } from "./staged-address-activation";
@@ -13,11 +17,6 @@ import { visible } from "./primitives";
 const manual = (
   reason = "주소 검색 결과를 확정하지 못했습니다. 직접 확인해 주세요.",
 ): AddressResult => ({ status: "manual", reason });
-const road = (s: string) => normalizeAddress(s);
-const validRoad = (s: string) =>
-  /^\S+(?:시|도) (?:\S+(?:시|군|구|읍|면) ){1,3}\S+[로길] \d+(?:-\d+)?$/.test(
-    road(s),
-  );
 const pause = (view: Window) =>
   new Promise<void>((resolve) => view.setTimeout(resolve, 20));
 export async function runStagedAddress({
@@ -34,9 +33,12 @@ export async function runStagedAddress({
     policy = JSON.stringify(executionPolicy(document)),
     approved = JSON.stringify(expected);
   const desired = [expected.postalCode, expected.address, expected.detail];
+  if (!validStagedRoad(expected.address))
+    return manual(
+      "지원하지 않는 도로명주소 표기입니다. 시도명과 도로명·건물번호를 직접 확인해 주세요.",
+    );
   if (
     !/^\d{5}$/.test(expected.postalCode) ||
-    !validRoad(expected.address) ||
     !expected.detail.trim() ||
     desired.some(
       (v, i) =>

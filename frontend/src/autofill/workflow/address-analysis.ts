@@ -1,4 +1,4 @@
-import { normalizeAddress } from "../address/match";
+import { normalizeStagedRoad } from "../policy/staged-address-road";
 import { stagedAddressNodes } from "../policy/staged-address-dom";
 import { runStagedAddress } from "../policy/staged-address";
 import { executionPolicy } from "./execution-policy";
@@ -146,7 +146,7 @@ export async function runAddressAnalysis({
         (f, i) =>
           f === staged.fields[i] &&
           (i === 1
-            ? normalizeAddress(f.value) === normalizeAddress(target[i])
+            ? normalizeStagedRoad(f.value) === normalizeStagedRoad(target[i])
             : f.value === target[i]),
       )
     ) {
