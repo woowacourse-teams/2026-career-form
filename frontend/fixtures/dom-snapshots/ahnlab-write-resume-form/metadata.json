@@ -44,7 +44,8 @@
     "actual": "2026-10-17 실사이트 관찰에서 기본주소가 우편번호 칸에 입력되었다. v4 오프라인에서는 수집 단계만 재확인한다.",
     "conditions": [
       "우편번호 입력칸은 displayName 없이 수집된다",
-      "실제 형식은 inputType=text, maxLength=126이며 numeric inputMode와 postal-code autocomplete가 없다"
+      "실제 형식은 inputType=text, maxLength=126이며 numeric inputMode와 postal-code autocomplete가 없다",
+      "우편번호 title은 DOM에만 있다. 범용 분석은 기존 registry의 실제 요소에서 자체 title/placeholder를 읽어 로컬 등급 검사에만 사용한다"
     ]
   },
   "sanitization": {
@@ -121,12 +122,14 @@
     "product_revision": "a8b3a5725a4c940e9bdde820d28699c9e1300554",
     "observed": [
       "collectFieldsSnapshot으로 우편번호 후보의 displayName 누락을 확인한다",
-      "추가질문을 유지하고 API 기권 응답이 프로필 키 매칭으로 바뀌지 않는지 검사한다"
+      "추가질문을 유지하고 API 기권 응답이 프로필 키 매칭으로 바뀌지 않는지 검사한다",
+      "원래 v4 우편번호 칸에 고정 addressLine1 응답을 주면 자체 title 근거로 FORMAT_KEY_MISMATCH가 되어 승인·쓰기가 차단되고 postalCode 응답은 해당 규칙으로 차단되지 않는지 검사한다"
     ],
     "mutation_check": "메모리상 우편번호 입력란에 aria-label=우편번호를 추가하면 displayName과 aria-label 문맥이 생긴다. HTML 원문에는 반영하지 않는다.",
     "evidence": ".worktrees-evidence/CF-252/fixture-green.log",
     "external_requests": "Playwright Chromium offline=true 및 HTTP(S) 요청 차단, 외부 요청 시도 0건. 근거: .worktrees-evidence/CF-252/start-implementation.log",
-    "backend_mapping": "NOT RUN: localhost:8080 미실행. 실제 JEV 출력은 검증하지 않음."
+    "backend_mapping": "NOT RUN: localhost:8080 미실행. 실제 JEV 출력은 검증하지 않음.",
+    "scope_extension": "2026-10-18 오케스트레이터 결정: 사용자 답변 없이 30분 경과 후 범용 분석에서 기존 registry 요소의 자체 title/placeholder를 읽는 방식 채택. 사용자 승인으로 간주하지 않는다. 공유 수집·정적 후보 타입·API는 확장하지 않는다."
   },
   "sanitized_html_sha256": "f85570bc1f96ee0cc2abb5a465f78e993f6b600e6fa92a38e3179d03d86823f8"
 }

@@ -161,12 +161,15 @@ describe("AhnLab sanitized application form", () => {
   });
 
   it.each([
-    ["contact.contact.addressLine1", "BLOCKED"],
-    ["contact.contact.postalCode", "AUTO"],
-  ])("applies %s to a postal-hint mutation before review and writing", async (key, expectedGrade) => {
+    ["original title", "contact.contact.addressLine1", "BLOCKED"],
+    ["original title", "contact.contact.postalCode", "AUTO"],
+    ["autocomplete mutation", "contact.contact.addressLine1", "BLOCKED"],
+    ["autocomplete mutation", "contact.contact.postalCode", "AUTO"],
+  ])("applies %s with %s before review and writing", async (hint, key, expectedGrade) => {
     const { snapshot, postalField, postal } = collect(() => {
-      document.querySelector<HTMLInputElement>('input[title="우편번호"]')!
-        .autocomplete = "postal-code";
+      if (hint === "autocomplete mutation")
+        document.querySelector<HTMLInputElement>('input[title="우편번호"]')!
+          .autocomplete = "postal-code";
     });
     const profile = createEmptyProfile();
     profile.contact.addressLine1 = "합성 기본주소";

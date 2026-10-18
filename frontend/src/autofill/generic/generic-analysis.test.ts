@@ -186,6 +186,38 @@ async function run(
 }
 
 describe("generic section analysis", () => {
+  it.each([
+    ['title="우편번호"', "BLOCKED"],
+    ['placeholder="Enter ZIP code"', "BLOCKED"],
+    ['title="도로명주소"', "AUTO"],
+    ['title="zipper"', "AUTO"],
+  ])("uses only the matched element's own postal text: %s", async (attribute, expected) => {
+    document.body.innerHTML = `<label>기본주소<input name="address" ${attribute}></label>`;
+    const profile = fullProfile();
+    profile.contact.addressLine1 = "합성 기본주소";
+    const { byName, analyzeRequests } = await run({
+      field: () => ({
+        profileFieldKey: "contact.contact.addressLine1",
+        confidence: 0.95,
+        categoryConfirmed: true,
+        interactionStatus: "READY",
+        autofillPolicy: "ALLOWED",
+        writePlan: { command: "SET_TEXT" },
+      }),
+    }, profile);
+    expect(byName("address").grade?.grade).toBe(expected);
+    if (expected === "BLOCKED")
+      expect(byName("address").grade?.reason).toBe("FORMAT_KEY_MISMATCH");
+    expect(analyzeRequests[0]?.sections.flatMap((section) => section.fields)[0])
+      .not.toHaveProperty("title");
+  });
+
+  it("does not borrow a postal title from an ancestor or another field", async () => {
+    document.body.innerHTML = `<div title="우편번호"><label>성<input name="family" title="이름"></label><input title="ZIP code"></div>`;
+    const { byName } = await run();
+    expect(byName("family").grade?.grade).toBe("AUTO");
+  });
+
   it("passes absent field context to grading instead of AUTO-selecting a confident match", async () => {
     document.body.innerHTML = '<input name="family">';
     const { byName } = await run();

@@ -221,7 +221,7 @@ function convertSection(
   });
   const fields: FieldAnalysis[] = [];
   const grades: [string, GenericFieldGrade][] = [];
-  section.fields.forEach(({ candidate, itemIndex }, index) => {
+  section.fields.forEach(({ candidate, itemIndex, element }, index) => {
     const response = outcome.fields[index]!;
     const { candidateId } = candidate;
     if (response.reason === "LLM_UNAVAILABLE") {
@@ -266,6 +266,8 @@ function convertSection(
         maxLength: candidate.semanticContext?.maxLength,
         displayName: candidate.displayName,
         labels: candidate.semanticContext?.labels,
+        title: element.getAttribute("title") ?? undefined,
+        placeholder: element.getAttribute("placeholder") ?? undefined,
         options: candidate.options,
         rowSiblings,
       }),

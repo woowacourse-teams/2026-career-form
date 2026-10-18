@@ -64,7 +64,12 @@ v2는 폼 내부 header/session 텍스트 잔존, v3는 읽기 전용 지원자 
   `start-implementation.log`, `fixture-red.log`, `fixture-green.log`.
 
 원래 우편번호 칸은 `type=text`, `maxlength=126`이며 numeric inputMode와 postal-code
-autocomplete가 없다. Issue의 형식 차단 규칙과 실제 칸의 차이는 별도 판단 대상이다.
+autocomplete가 없다. 자체 title은 DOM에만 있고 수집 후보에는 포함되지 않는다.
+2026-10-18 오케스트레이터가 사용자 답변 없이 30분 경과 후 기존 registry로 해석한
+요소의 자체 title/placeholder를 범용 등급에만 전달하는 방식을 결정했다.
+이를 사용자 승인으로 간주하지 않는다. 공유 수집·정적 후보 타입·API는 확장하지 않는다.
+고정 응답으로 원래 v4 칸의 addressLine1 차단 및 postalCode 허용을 검사하며,
+합성 autocomplete 변이 검사도 유지한다.
 페이지 CSS·스크립트·이벤트·폼 밖 검색 팝업·서버 반응·설치 확장 실행은 재현하지 않는다.
 
 ## 등록

@@ -7,9 +7,15 @@ import { gradeGenericField } from "./field-grading";
 
 afterEach(() => document.body.replaceChildren());
 
-function grade(candidate: FieldCandidate, key: string, confidence = 0.95) {
+function grade(
+  candidate: FieldCandidate,
+  key: string,
+  confidence = 0.95,
+  hints: { title?: string; placeholder?: string } = {},
+) {
   return gradeGenericField({
     ...candidate.semanticContext,
+    ...hints,
     displayName: candidate.displayName,
     profileFieldKey: key,
     confidence,
@@ -42,6 +48,19 @@ function fixtureField(site: string, mutate?: (element: HTMLInputElement) => void
 // Independent sanitized structures with in-memory semantic/format mutations.
 // These are code-check evidence, not predictions of a live backend's mapping.
 describe.each(sites)("generic context and format checks: %s", (site) => {
+  it.each([
+    ["title", "ZIP code"],
+    ["placeholder", "우편번호"],
+  ])("checks postal text in its own %s", (source, text) => {
+    const candidate = fixtureField(site);
+    expect(grade(candidate, "contact.contact.addressLine1", 0.95, {
+      [source]: text,
+    })).toEqual({ grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" });
+    expect(grade(candidate, "contact.contact.postalCode", 0.95, {
+      [source]: text,
+    }).grade).toBe("AUTO");
+  });
+
   it("never AUTO-selects a high-confidence candidate after all name and context evidence is removed", () => {
     const candidate = fixtureField(site);
     const unnamed = {

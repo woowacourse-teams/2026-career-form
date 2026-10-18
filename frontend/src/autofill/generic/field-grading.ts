@@ -37,6 +37,9 @@ export interface GradeFieldInput extends Pick<
   hasProfileValue: boolean;
   control: FieldCandidate["control"];
   displayName?: string;
+  /** Own DOM attributes, supplied locally by generic analysis, not sent to APIs. */
+  title?: string;
+  placeholder?: string;
   options?: readonly { displayName: string }[];
   /** Other matched fields in the same repeat row, excluding this field. */
   rowSiblings?: readonly GradeSibling[];
@@ -50,6 +53,7 @@ export interface FieldGradeResult {
 const COUNTRY_KEYS = new Set(["nationality", "residenceCountry"]);
 const COUNTRY_CODE_OPTION = /^\+\d{1,3}/;
 const EDUCATION_RECORDS = new Set(["highSchool", "university", "graduateSchool"]);
+const POSTAL_TEXT = /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
 
 function fieldIdOf(key: string): string {
   return key.split(".")[2] ?? "";
@@ -119,7 +123,8 @@ function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
   }
   const postalFormat = input.autocomplete === "postal-code" ||
     (input.maxLength !== undefined && input.maxLength > 0 &&
-      input.maxLength <= 6 && input.inputMode === "numeric");
+      input.maxLength <= 6 && input.inputMode === "numeric") ||
+    [input.title, input.placeholder].some((text) => POSTAL_TEXT.test(text ?? ""));
   return postalFormat &&
     input.profileFieldKey.startsWith("contact.contact.") &&
     ["addressLine1", "addressLine2", "residenceCountry"].includes(fieldIdOf(input.profileFieldKey));
