@@ -8,9 +8,12 @@ import {
 } from "../dom/collect";
 import {
   analyzeGenericFields,
+  applyGenericGrade,
   createGenericAnalysisCache,
   type GenericAnalysisApi,
 } from "../generic/generic-analysis";
+import { buildReviewPlan } from "../review/review-plan";
+import { executeApprovedWrites } from "../write/executor";
 
 const FIXTURE = join(
   process.cwd(),
@@ -35,6 +38,45 @@ function collect(mutate?: () => void) {
     return "handle" in lookup && lookup.handle.elements.includes(postal);
   })!;
   return { snapshot, fields, postal, postalField };
+}
+
+function mockApi(
+  mappings: ReadonlyMap<string, string> = new Map(),
+): GenericAnalysisApi {
+  return {
+    classifySections: async (request) => ({
+      schemaVersion: 1,
+      snapshotId: request.snapshotId,
+      status: "COMPLETE",
+      sections: request.sections.map((section) => ({
+        sectionId: section.sectionId,
+        category: "PERSONAL",
+        confidence: 1,
+      })),
+    }),
+    analyzeGenericFields: async (request) => ({
+      schemaVersion: 2,
+      snapshotId: request.snapshotId,
+      status: "COMPLETE",
+      fields: request.sections.flatMap((section) =>
+        section.fields.map((field) => {
+          const key = mappings.get(field.candidateId);
+          return {
+            candidateId: field.candidateId,
+            profileFieldKey: key ?? null,
+            confidence: 1,
+            categoryConfirmed: true,
+            ...(key ? {
+              interactionStatus: "READY" as const,
+              autofillPolicy: "ALLOWED" as const,
+              writePlan: { command: "SET_TEXT" as const },
+            } : { interactionStatus: "BLOCKED" as const }),
+          };
+        }),
+      ),
+      diagnostics: { jevCalls: 0, elapsedMs: 0 },
+    }),
+  };
 }
 
 // Reviewed v4 structure only. API responses below are mocks, not evidence of
@@ -102,37 +144,10 @@ describe("AhnLab sanitized application form", () => {
     expect(heading.parentElement!.querySelectorAll("input")).toHaveLength(4);
     expect(additional.map((field) => field.control)).toEqual(["checkbox", "text"]);
     expect(additional[0]?.options).toHaveLength(3);
-    const api: GenericAnalysisApi = {
-      classifySections: async (request) => ({
-        schemaVersion: 1,
-        snapshotId: request.snapshotId,
-        status: "COMPLETE",
-        sections: request.sections.map((section) => ({
-          sectionId: section.sectionId,
-          category: "NONE",
-          confidence: 1,
-        })),
-      }),
-      analyzeGenericFields: async (request) => ({
-        schemaVersion: 2,
-        snapshotId: request.snapshotId,
-        status: "COMPLETE",
-        fields: request.sections.flatMap((section) =>
-          section.fields.map((field) => ({
-            candidateId: field.candidateId,
-            profileFieldKey: null,
-            confidence: 1,
-            categoryConfirmed: true,
-            interactionStatus: "BLOCKED",
-          })),
-        ),
-        diagnostics: { jevCalls: 0, elapsedMs: 0 },
-      }),
-    };
     const result = await analyzeGenericFields(
       snapshot,
       document,
-      api,
+      mockApi(),
       createEmptyProfile(),
       createGenericAnalysisCache(),
     );
@@ -142,6 +157,58 @@ describe("AhnLab sanitized application form", () => {
           (field) => field.candidateId === candidate.candidateId,
         ),
       ).toMatchObject({ matchType: "NO_MATCH" });
+    }
+  });
+
+  it.each([
+    ["contact.contact.addressLine1", "BLOCKED"],
+    ["contact.contact.postalCode", "AUTO"],
+  ])("applies %s to a postal-hint mutation before review and writing", async (key, expectedGrade) => {
+    const { snapshot, postalField, postal } = collect(() => {
+      document.querySelector<HTMLInputElement>('input[title="우편번호"]')!
+        .autocomplete = "postal-code";
+    });
+    const profile = createEmptyProfile();
+    profile.contact.addressLine1 = "합성 기본주소";
+    profile.contact.postalCode = "12345";
+    const result = await analyzeGenericFields(
+      snapshot,
+      document,
+      mockApi(new Map([[postalField.candidateId, key]])),
+      profile,
+      createGenericAnalysisCache(),
+    );
+    const grade = result.grades.get(postalField.candidateId);
+    expect(grade?.grade).toBe(expectedGrade);
+    if (expectedGrade === "BLOCKED")
+      expect(grade?.reason).toBe("FORMAT_KEY_MISMATCH");
+    const plan = buildReviewPlan({
+      analysis: result.analysis,
+      profile,
+      registry: snapshot.registry,
+    });
+    const items = plan.items.map((item) =>
+      applyGenericGrade(item, result.grades.get(item.candidateId)),
+    );
+    const item = items.find((entry) => entry.candidateId === postalField.candidateId)!;
+    const events: string[] = [];
+    postal.addEventListener("input", () => events.push("input"));
+    postal.addEventListener("change", () => events.push("change"));
+    if (expectedGrade === "BLOCKED") {
+      expect(item).toMatchObject({ selected: false, disabled: true });
+    }
+    const writes = executeApprovedWrites({
+      items,
+      approvedCandidateIds: new Set([postalField.candidateId]),
+      registry: snapshot.registry,
+    });
+    if (expectedGrade === "BLOCKED") {
+      expect(postal.value).toBe("");
+      expect(events).toEqual([]);
+      expect(writes.every((write) => write.status !== "written")).toBe(true);
+    } else {
+      expect(postal.value).toBe("12345");
+      expect(writes.some((write) => write.status === "written")).toBe(true);
     }
   });
 });

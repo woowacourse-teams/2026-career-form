@@ -186,6 +186,24 @@ async function run(
 }
 
 describe("generic section analysis", () => {
+  it("passes absent field context to grading instead of AUTO-selecting a confident match", async () => {
+    document.body.innerHTML = '<input name="family">';
+    const { byName } = await run();
+    expect(byName("family").grade).toEqual({
+      grade: "REVIEW",
+      reason: "NO_FIELD_CONTEXT",
+    });
+  });
+
+  it("passes input format hints to grading before approval", async () => {
+    document.body.innerHTML = '<label>성<input name="family" type="email"></label>';
+    const { byName } = await run();
+    expect(byName("family").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "FORMAT_KEY_MISMATCH",
+    });
+  });
+
   it("classifies each section once, sends its category and converts matches to the shared analysis shape", async () => {
     mountThreeSections();
 
