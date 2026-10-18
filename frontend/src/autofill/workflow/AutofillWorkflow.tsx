@@ -695,6 +695,9 @@ function PolicyReadyWorkflow({
         items: executableReviewItems,
         approvedCandidateIds,
         registry: fieldsSnapshot.registry,
+        ...(analysisSummary?.mode === "GENERIC"
+          ? { followUpHaltScope: "row" as const }
+          : {}),
         ...(analysisSummary?.mode === "GENERIC" && apiClient.decideInteractions
           ? {
               interactionDecisionProvider:
