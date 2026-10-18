@@ -25,7 +25,6 @@ const STATUS_LABEL: Record<ReviewStatus, string> = {
   available: "입력 가능",
   "needs-review": "확인 필요",
   conflict: "기존 값 충돌",
-  sensitive: "민감정보",
   unavailable: "입력 불가",
 };
 
