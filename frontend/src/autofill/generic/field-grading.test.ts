@@ -570,3 +570,63 @@ describe("gradeGenericField date part selects", () => {
     ).toEqual({ grade: "AUTO" });
   });
 });
+
+describe("gradeGenericField other-person composite name recipes", () => {
+  const blocked = { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
+  const recipeInput = (
+    recipe: "KOREAN_FULL_NAME" | "ENGLISH_FULL_NAME_GIVEN_FIRST" | "ENGLISH_FULL_NAME_FAMILY_FIRST",
+    override: Partial<GradeFieldInput> = {},
+  ): GradeFieldInput => ({
+    confidence: 0.95,
+    categoryConfirmed: true,
+    hasProfileValue: true,
+    control: "text",
+    displayName: "이름",
+    composite: { type: "DERIVED", recipe },
+    ...override,
+  });
+
+  it.each([
+    ["KOREAN_FULL_NAME", "추천인 성명"],
+    ["KOREAN_FULL_NAME", "보증인 성명"],
+    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "Guardian name"],
+    ["ENGLISH_FULL_NAME_FAMILY_FIRST", "보호자 영문 성명"],
+    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "Emergency contact name"],
+  ] as const)("blocks %s labelled %s even at full confidence", (recipe, name) => {
+    expect(
+      gradeGenericField(recipeInput(recipe, { displayName: name, confidence: 1 })),
+    ).toEqual(blocked);
+  });
+
+  it.each(["displayName", "label", "title", "placeholder"] as const)(
+    "reads the role vocabulary of a recipe field from %s",
+    (source) => {
+      const text = "추천인 성명";
+      const override: Partial<GradeFieldInput> = {
+        displayName: "성명",
+        ...(source === "displayName" ? { displayName: text } : {}),
+        ...(source === "label" ? { labels: [{ source: "label", text }] } : {}),
+        ...(source === "title" ? { title: text } : {}),
+        ...(source === "placeholder" ? { placeholder: text } : {}),
+      };
+      expect(gradeGenericField(recipeInput("KOREAN_FULL_NAME", override))).toEqual(blocked);
+    },
+  );
+
+  it.each([
+    ["KOREAN_FULL_NAME", "성명"],
+    ["KOREAN_FULL_NAME", "지원자 성명"],
+    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "영문 이름"],
+    ["ENGLISH_FULL_NAME_FAMILY_FIRST", "Full name"],
+  ] as const)("keeps the applicant's own %s field labelled %s unchanged", (recipe, name) => {
+    expect(gradeGenericField(recipeInput(recipe, { displayName: name }))).toEqual({
+      grade: "AUTO",
+    });
+  });
+
+  it("keeps the safety order: a missing profile value is reported first", () => {
+    expect(
+      gradeGenericField(recipeInput("KOREAN_FULL_NAME", { displayName: "추천인 성명", hasProfileValue: false })),
+    ).toEqual({ grade: "BLOCKED", reason: "NO_PROFILE_VALUE" });
+  });
+});

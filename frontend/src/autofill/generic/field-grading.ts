@@ -180,9 +180,13 @@ function isLowerDuplicate(input: GradeFieldInput): boolean {
 }
 
 function hasOtherPersonContext(input: GradeFieldInput): boolean {
-  const [categoryId, sectionId, fieldId] = (input.profileFieldKey ?? "").split(".");
-  if (!APPLICANT_OWN_FIELD_IDS[`${categoryId}.${sectionId}`]?.has(fieldId ?? "")) {
-    return false;
+  // Every derived recipe composes the applicant's own name, so it is never
+  // right for another person's field.
+  if (input.composite?.type !== "DERIVED") {
+    const [categoryId, sectionId, fieldId] = (input.profileFieldKey ?? "").split(".");
+    if (!APPLICANT_OWN_FIELD_IDS[`${categoryId}.${sectionId}`]?.has(fieldId ?? "")) {
+      return false;
+    }
   }
   return [
     input.displayName,
