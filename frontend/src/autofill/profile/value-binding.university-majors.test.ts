@@ -88,3 +88,30 @@ it("requires a unique university or explicit matching row", () => {
     status: "missing",
   });
 });
+
+it.each(["university", "graduateSchool"])(
+  "derives a main role only from the named %s profile row",
+  (sectionId) => {
+    const profile = createEmptyProfile();
+    profile.education = [
+      { id: "empty", sectionId, values: {} },
+      { id: "named", sectionId, values: { majorName: " 합성전공 " } },
+    ];
+    const binding = {
+      type: "DERIVED" as const,
+      recipe: "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION" as DerivedRecipe,
+      profileFieldKey: `education.${sectionId}.majorName`,
+    };
+    expect(resolveValueBinding(profile, binding, 0)).toMatchObject({
+      status: "missing",
+    });
+    expect(resolveValueBinding(profile, binding, 1)).toMatchObject({
+      status: "resolved",
+      value: "주전공",
+      profileEntryId: "named",
+    });
+    expect(resolveValueBinding(profile, binding)).toMatchObject({
+      status: "ambiguous",
+    });
+  },
+);

@@ -135,6 +135,18 @@ function derivedValue(
   itemIndex?: number,
 ): ValueBindingResolution {
   const recipe = binding.recipe;
+  if (recipe === "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION") {
+    const key = binding.profileFieldKey;
+    if (
+      !key ||
+      !/^education\.(university|graduateSchool)\.majorName$/.test(key)
+    )
+      return { status: "unknown", sensitive: false };
+    const source = directValue(profile, key, itemIndex);
+    return source.status === "resolved"
+      ? { ...source, value: "주전공" }
+      : source;
+  }
   const majorRecipe =
     /^UNIVERSITY_ADDITIONAL_MAJOR_([12])_(NAME|CLASSIFICATION|FIELD)$/.exec(
       recipe,
