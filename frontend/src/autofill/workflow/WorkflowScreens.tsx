@@ -8,6 +8,7 @@ import {
 import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
+import { genericItemReason } from "../generic/grade-reason-text";
 import { resultFieldLabel } from "./result-label";
 import resultStyles from "./WorkflowResults.module.css";
 import resultCss from "./WorkflowResults.module.css?inline";
@@ -26,6 +27,10 @@ import {
 
 const DEFAULT_CONDITIONAL_REVIEW_REASON =
   "지원서 조건을 확인한 뒤 선택해 주세요.";
+
+function reasonFor(item: ReviewPlanItem): string {
+  return item.genericGrade ? genericItemReason(item) : item.reason;
+}
 
 interface WorkflowScreensProps {
   exitInToolbar?: boolean;
@@ -312,14 +317,26 @@ export function WorkflowScreens({
                         )}
                     </div>
                   </div>
-                  {item.reason !== DEFAULT_CONDITIONAL_REVIEW_REASON && (
-                    <p className={resultStyles.guidance}>{item.reason}</p>
-                  )}
-                  {item.status !== "needs-review" && (
-                    <small className={resultStyles.writtenTag}>
-                      {statusLabel(item)}
-                    </small>
-                  )}
+                  {reasonFor(item) &&
+                    reasonFor(item) !== DEFAULT_CONDITIONAL_REVIEW_REASON && (
+                      <p className={resultStyles.guidance}>{reasonFor(item)}</p>
+                    )}
+                  {item.genericGrade
+                    ? item.genericGrade !== "AUTO" && (
+                        <small
+                          className={resultStyles.writtenTag}
+                          data-generic-grade={item.genericGrade}
+                        >
+                          {item.genericGrade === "REVIEW"
+                            ? "확인 필요"
+                            : "입력 불가"}
+                        </small>
+                      )
+                    : item.status !== "needs-review" && (
+                        <small className={resultStyles.writtenTag}>
+                          {statusLabel(item)}
+                        </small>
+                      )}
                 </article>
               );
             })}

@@ -1,3 +1,4 @@
+import type { ReviewPlanItem } from "../review/review-plan";
 import type { GradeReason } from "./field-grading";
 import {
   GENERIC_BLOCKED_REASON,
@@ -37,6 +38,19 @@ const REASON_TEXT: Readonly<Record<KnownReasonCode, string>> = {
     "이 영역을 처리하는 중 문제가 생겨 입력할 수 없습니다.",
   UNLINKED: "저장된 정보와 연결하지 못했습니다.",
 };
+
+/** Reason shown for a generic-path review item; others keep their own. */
+export function genericItemReason(item: ReviewPlanItem): string {
+  const { genericGrade: grade, genericReasonCode: code } = item;
+  if (!grade || grade === "AUTO") return item.reason;
+  if (
+    grade === "BLOCKED" &&
+    code !== undefined &&
+    Object.hasOwn(REASON_TEXT, code)
+  )
+    return genericReasonText(code);
+  return item.reason || genericReasonText(code);
+}
 
 /** Readable sentence of a grade reason; unknown codes get the generic one. */
 export function genericReasonText(code: string | undefined): string {
