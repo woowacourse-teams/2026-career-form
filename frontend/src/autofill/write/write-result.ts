@@ -1,3 +1,4 @@
+import type { SurfaceLeftOpenReason } from "../interaction/readonly-search";
 import type { WriteFailureCode } from "./failure";
 export type ApprovedWriteResult =
   | {
@@ -13,7 +14,7 @@ export type ApprovedWriteResult =
       failureCode?: WriteFailureCode;
       /** A popup the search opened could not be closed after this failure. */
       surfaceLeftOpen?: true;
-      surfaceLeftOpenReason?: "no_safe_close_control" | "close_not_confirmed";
+      surfaceLeftOpenReason?: SurfaceLeftOpenReason;
       outcome?: "failed" | "needs-verification" | "unsupported" | "unchanged";
       code?:
         | "ALREADY_MATCHED"

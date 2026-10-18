@@ -24,7 +24,8 @@ export type GradeReason =
   | "DUPLICATE_KEY_IN_ROW"
   | "DATE_PART_OPTIONS_MISMATCH"
   | "NO_FIELD_CONTEXT"
-  | "FORMAT_KEY_MISMATCH";
+  | "FORMAT_KEY_MISMATCH"
+  | "OTHER_PERSON_CONTEXT";
 
 /** A match whose value is composed: a name recipe or one part of a date. */
 export type GradeComposite =
@@ -73,6 +74,21 @@ const COUNTRY_KEYS = new Set(["nationality", "residenceCountry"]);
 const COUNTRY_CODE_OPTION = /^\+\d{1,3}/;
 const EDUCATION_RECORDS = new Set(["highSchool", "university", "graduateSchool"]);
 const POSTAL_TEXT = /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
+
+/** Role words for a person other than the applicant (referee, guarantor, guardian, emergency contact). */
+const OTHER_PERSON_ROLE =
+  /추천\s*인|추천\s*자|보증\s*인|보호\s*자|법정\s*대리인|비상\s*연락|긴급\s*연락|\b(?:referee|referrer|referral|guarantor|guardian|next[\s_-]+of[\s_-]+kin|emergency[\s_-]+contact)\b/i;
+/** Applicant's own contact and identity keys that must never fill another person's field. */
+const APPLICANT_OWN_FIELD_IDS: Readonly<Record<string, ReadonlySet<string>>> = {
+  "personal.personal": new Set([
+    "koreanFamilyName", "koreanGivenName", "hanjaFamilyName", "hanjaGivenName",
+    "englishFamilyName", "englishGivenName",
+  ]),
+  "contact.contact": new Set([
+    "email", "secondaryEmail", "phoneNumber", "residenceCountry", "postalCode",
+    "addressLine1", "addressLine2",
+  ]),
+};
 
 function fieldIdOf(key: string | undefined): string {
   return key?.split(".")[2] ?? "";
@@ -163,6 +179,19 @@ function isLowerDuplicate(input: GradeFieldInput): boolean {
   );
 }
 
+function hasOtherPersonContext(input: GradeFieldInput): boolean {
+  const [categoryId, sectionId, fieldId] = (input.profileFieldKey ?? "").split(".");
+  if (!APPLICANT_OWN_FIELD_IDS[`${categoryId}.${sectionId}`]?.has(fieldId ?? "")) {
+    return false;
+  }
+  return [
+    input.displayName,
+    input.title,
+    input.placeholder,
+    ...(input.labels ?? []).map((label) => label.text),
+  ].some((text) => OTHER_PERSON_ROLE.test(text ?? ""));
+}
+
 function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
   if (input.inputType === "email" || input.inputType === "tel") {
     return !isProfileFieldType(input.profileFieldKey, input.inputType);
@@ -196,6 +225,9 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   }
   if (hasMixedEducationRecords(input)) {
     return { grade: "BLOCKED", reason: "MIXED_EDUCATION_RECORD" };
+  }
+  if (hasOtherPersonContext(input)) {
+    return { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
   }
   if (hasFormatKeyMismatch(input)) {
     return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };

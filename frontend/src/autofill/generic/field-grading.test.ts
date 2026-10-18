@@ -289,6 +289,119 @@ describe("gradeGenericField on sanitized fixtures", () => {
   }, 30_000);
 });
 
+describe("gradeGenericField other-person context", () => {
+  const blocked = { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
+
+  it.each([
+    ["contact.contact.phoneNumber", "추천인 연락처"],
+    ["contact.contact.email", "추천인 이메일"],
+    ["personal.personal.koreanFamilyName", "보증인 성명"],
+    ["contact.contact.addressLine1", "보호자 주소"],
+    ["contact.contact.phoneNumber", "비상연락 전화번호"],
+    ["contact.contact.phoneNumber", "법정대리인 휴대전화"],
+    ["personal.personal.englishGivenName", "Referrer name"],
+    ["contact.contact.email", "Guarantor email"],
+    ["contact.contact.phoneNumber", "Guardian phone"],
+    ["contact.contact.phoneNumber", "Emergency contact phone"],
+  ])("blocks %s labelled %s even at full confidence", (profileFieldKey, name) => {
+    expect(
+      gradeGenericField(input({ profileFieldKey, displayName: name, confidence: 1 })),
+    ).toEqual(blocked);
+  });
+
+  it.each(["displayName", "label", "title", "placeholder"] as const)(
+    "reads the role vocabulary from %s",
+    (source) => {
+      const text = "추천인 연락처";
+      const override: Partial<GradeFieldInput> = {
+        profileFieldKey: "contact.contact.phoneNumber",
+        displayName: "연락처",
+        ...(source === "displayName" ? { displayName: text } : {}),
+        ...(source === "label" ? { labels: [{ source: "label", text }] } : {}),
+        ...(source === "title" ? { title: text } : {}),
+        ...(source === "placeholder" ? { placeholder: text } : {}),
+      };
+      expect(gradeGenericField(input(override))).toEqual(blocked);
+    },
+  );
+
+  it("keeps the safety order: missing profile value first, format mismatch after", () => {
+    const own = {
+      profileFieldKey: "contact.contact.phoneNumber",
+      displayName: "추천인 연락처",
+    };
+    expect(gradeGenericField(input({ ...own, hasProfileValue: false }))).toEqual({
+      grade: "BLOCKED",
+      reason: "NO_PROFILE_VALUE",
+    });
+    expect(gradeGenericField(input({ ...own, inputType: "tel" }))).toEqual(blocked);
+  });
+
+  it("does not block keys that are not applicant personal or contact keys", () => {
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "contact.contact.emergencyPhoneNumber",
+          displayName: "비상연락처",
+          inputType: "tel",
+        }),
+      ),
+    ).toEqual({ grade: "AUTO" });
+    expect(
+      gradeGenericField(
+        input({ profileFieldKey: "careers.career.companyName", displayName: "추천인 소속" }),
+      ),
+    ).toEqual({ grade: "AUTO" });
+  });
+
+  it.each([
+    ["contact.contact.phoneNumber", "연락처"],
+    ["contact.contact.phoneNumber", "휴대전화"],
+    ["contact.contact.phoneNumber", "지원자 연락처"],
+    ["contact.contact.email", "지원자 이메일"],
+    ["personal.personal.koreanFamilyName", "지원자 성명"],
+    ["personal.personal.koreanFamilyName", "이름"],
+    ["contact.contact.addressLine1", "주소"],
+    ["contact.contact.phoneNumber", "Applicant phone"],
+  ])("leaves the applicant's own %s field labelled %s unchanged", (profileFieldKey, name) => {
+    expect(gradeGenericField(input({ profileFieldKey, displayName: name }))).toEqual({
+      grade: "AUTO",
+    });
+  });
+});
+
+// Role-vocabulary evidence from unrelated sanitized structures; keys are fixed
+// mocks and the grading input mirrors what generic analysis passes.
+describe("gradeGenericField other-person context on sanitized fixtures", () => {
+  function gradeByName(name: string, pattern: RegExp, key: string) {
+    const field = collectFields(name).find((candidate) =>
+      pattern.test(candidate.displayName ?? ""),
+    );
+    if (!field) throw new Error(`fixture field missing: ${pattern}`);
+    return gradeGenericField({
+      profileFieldKey: key,
+      confidence: 1,
+      categoryConfirmed: true,
+      hasProfileValue: true,
+      control: field.control,
+      displayName: field.displayName,
+      labels: field.semanticContext?.labels,
+      inputType: field.semanticContext?.inputType,
+    });
+  }
+  const blocked = { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
+
+  it("blocks referrer fields of kakao-greeting-email", () => {
+    expect(gradeByName("kakao-greeting-email", /^추천인 이메일/, "contact.contact.email")).toEqual(blocked);
+    expect(gradeByName("kakao-greeting-email", /^추천인 이름/, "personal.personal.koreanFamilyName")).toEqual(blocked);
+  }, 30_000);
+
+  it("keeps the applicant's own fields of lg-ai-research-birth-split-email unchanged", () => {
+    expect(gradeByName("lg-ai-research-birth-split-email", /^전화번호/, "contact.contact.phoneNumber")).toEqual({ grade: "AUTO" });
+    expect(gradeByName("lg-ai-research-birth-split-email", /^이름/, "personal.personal.koreanFamilyName")).toEqual({ grade: "AUTO" });
+  }, 30_000);
+});
+
 describe("gradeGenericField composite name recipes", () => {
   const recipe = (
     override: Partial<GradeFieldInput> = {},

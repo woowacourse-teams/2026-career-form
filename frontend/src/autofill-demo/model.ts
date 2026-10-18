@@ -1,5 +1,5 @@
 export type ReviewStatus =
-  "available" | "needs-review" | "conflict" | "sensitive" | "unavailable";
+  "available" | "needs-review" | "conflict" | "unavailable";
 
 export interface ReviewItem {
   id: string;
@@ -29,7 +29,7 @@ const REVIEW_GROUPS: readonly Omit<ReviewGroup, "items">[] = [
   {
     id: "needs-human-review",
     label: "사람 확인 필요",
-    description: "선택지, 기존 값과 민감정보를 직접 확인해 주세요.",
+    description: "선택지와 기존 값을 직접 확인해 주세요.",
   },
   {
     id: "unavailable",
@@ -60,13 +60,6 @@ const MOCK_REVIEW_ITEMS: readonly Omit<ReviewItem, "selected" | "disabled">[] =
       previewValue: "010-****-0000",
       status: "conflict",
       reason: "기존 값 있음",
-    },
-    {
-      id: "veteran",
-      fieldLabel: "보훈 대상 여부",
-      previewValue: "가려진 민감정보",
-      status: "sensitive",
-      reason: "지원 건별 개별 확인 필요",
     },
     {
       id: "motivation",

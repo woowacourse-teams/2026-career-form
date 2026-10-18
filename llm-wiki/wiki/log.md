@@ -7,6 +7,20 @@
 - 승인한 후보 네 개를 [CF-260 bundle](../raw/issues/CF-260/manifest.md)에 기록하고 [구조 반복 실행](topics/generic-structure-loop.md)을 추가했다.
 - 기본 수집 보존, 단계별 행 식별과 보류 격리의 합성 검증을 기록했다. 기존 raw와 구조 행동 ADR의 제안 상태를 유지하며 실사이트 검증으로 확대하지 않는다.
 
+## [2026-10-18] ingest | CF-263 검색 표면 닫기 안전 판정과 사유 타입
+
+- Approval-Digest: b3cd2e7383f13f6aa4efbe5b4a9b8094dbf7cd672175f9a8c840a3b516b52ec3
+- Source-Revision: e0849a8ee250a0f8c588a85b7a0511ad7dc97a68
+- 승인한 세 후보를 [CF-263 bundle](../raw/issues/CF-263/manifest.md)에 기록하고 [검색 표면 닫기 판정](topics/generic-search-surface-close-safety.md)을 추가했다.
+- 기존 raw는 변경하지 않았다. 특성화와 변이 실패는 합성 DOM의 현재 복구 검증이며 과거 커밋 전 RED나 실사이트 검증으로 기록하지 않는다.
+## [2026-10-18] ingest | CF-261 범용 등급의 다른 사람 대상 칸 차단
+
+- Approval-Digest: efaf5d4ecaf8f6976e70d9aefc2c5196e03ffe049bc661bcae08f52f7a236f72
+- Source-Revision: 76ecbdac4d71b174390ff5efa5d66d07be4d8a11
+- 승인한 후보 세 개를 [CF-261 bundle](../raw/issues/CF-261/manifest.md)에 기록하고
+  [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md)을 추가했다.
+- 화면 문구는 Task 12(#259)의 변환 표에 위임하며 실사이트 검증은 하지 않았다.
+
 ## [2026-10-18] update | CF-251 범용 합성 값 binding 소비와 등급 경계
 
 - Approval-Digest: b280bc6ed4d3bd17c43b277a87b1322d47113bd2f22c96c83ea4be78fd8d9ef1

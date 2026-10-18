@@ -48,6 +48,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 칸 매칭 응답의 합성 값 표현](topics/generic-synthetic-binding-response.md) | schemaVersion 3 binding, 이름 레시피와 코드 확정 날짜 부분 | 2026-10-18 |
 | [범용 합성 값 표현의 frontend 검증 경계](topics/generic-binding-frontend-validation.md) | v3 binding 검증, 이름 레시피·날짜 부분 select 소비와 등급, BE·FE 동시 배포 | 2026-10-18 |
 | [범용 검색 실패의 후속 보류 범위와 팝업 정리](topics/generic-search-failure-isolation.md) | 같은 행으로 제한한 보류, 팝업 닫기와 실사이트 분기 미확인 경계 | 2026-10-18 |
+| [검색 표면 닫기 판정과 실패 사유 타입](topics/generic-search-surface-close-safety.md) | 순수 닫기의 금지 패턴 제외, 닫기 사유 특성화와 공유 타입 | 2026-10-18 |
 | [검토된 DOM 스냅샷 fixture의 공백 정규화](topics/dom-snapshot-fixture-whitespace.md) | pre-commit 공백 검사 통과를 위한 승인된 공백만 정규화 기록 | 2026-10-18 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
@@ -81,6 +82,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 계약 1.1 원인별 집계, 설치 revision 근거와 비교 보류 및 과거 기준선 | 2026-10-09 |
 | [범용 폼 컨텍스트 수집](topics/generic-form-context.md) | 문서 회사 기준 수집 선택, 동기 읽기 캐시 경계와 혼합 전후 비교 | 2026-10-15 |
 | [범용 칸 라벨 문맥과 형식 검사](topics/generic-field-context-safety.md) | 끊긴 라벨 복원, 문맥 없는 칸의 REVIEW와 로컬 형식 검사 | 2026-10-18 |
+| [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치와 설치본 snapshot 기반 보고 | 2026-10-09 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |

@@ -74,7 +74,7 @@ export type ProfileValueResolution =
   | { status: "unknown"; sensitive: false };
 
 export type ReviewItemStatus =
-  "available" | "needs-review" | "conflict" | "sensitive" | "unavailable";
+  "available" | "needs-review" | "conflict" | "unavailable";
 
 export interface ReviewPlanItem {
   candidateId: string;
@@ -1000,17 +1000,5 @@ export function buildReviewPlan({
             registry,
           )
         : rejectDuplicateRepeatedBindings(items),
-  };
-}
-
-export function revealSensitiveReviewItem(
-  item: ReviewPlanItem,
-): ReviewPlanItem {
-  if (item.status !== "sensitive" || !item.profileValue) return item;
-  return {
-    ...item,
-    previewValue: item.profileValue,
-    disabled: false,
-    revealed: true,
   };
 }

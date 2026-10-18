@@ -652,8 +652,7 @@ function PolicyReadyWorkflow({
     signal: addressRun.current.controller.signal,
   });
 
-  const { toggleReviewItem, revealSensitiveItem } =
-    createReviewActions(setReviewItems);
+  const { toggleReviewItem } = createReviewActions(setReviewItems);
 
   const executeWrites = async () => {
     if (!fieldsSnapshot || executionPending.current) return;
@@ -855,7 +854,6 @@ function PolicyReadyWorkflow({
       reviewItems={reviewItems}
       partial={partial}
       toggleReviewItem={toggleReviewItem}
-      revealSensitiveItem={revealSensitiveItem}
       executeWrites={executeWrites}
       results={results}
       analysisSummary={analysisSummary}
