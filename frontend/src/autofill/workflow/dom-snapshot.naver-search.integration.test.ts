@@ -225,6 +225,7 @@ describe("opt-in row-scoped hold after the same empty-search failure", () => {
       reason: "search_results_not_found",
       effect: "interaction-started",
       surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "no_safe_close_control",
     }));
     const results = await executeApprovedWritesAfterPageSettles({
       items: test.items,
@@ -239,6 +240,7 @@ describe("opt-in row-scoped hold after the same empty-search failure", () => {
     expect(results[0]).toMatchObject({
       failureCode: "SEARCH_NO_EXACT_MATCH",
       surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "no_safe_close_control",
     });
     expect(value("score")).toBe("");
   });

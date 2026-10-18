@@ -596,7 +596,13 @@ export async function executeApprovedSearchWrites({
                 searchDiagnosticCode(failedResult!.reason),
               );
     if (failedResult?.surfaceLeftOpen && results[index]!.status === "skipped")
-      results[index] = { ...results[index]!, surfaceLeftOpen: true };
+      results[index] = {
+        ...results[index]!,
+        surfaceLeftOpen: true,
+        ...(failedResult.surfaceLeftOpenReason
+          ? { surfaceLeftOpenReason: failedResult.surfaceLeftOpenReason }
+          : {}),
+      };
     onResult?.(item, results[index]!);
     if (result.status === "selected" && result.followUp?.controls.length) {
       onSearchFollowUp?.(item, result.followUp.controls);

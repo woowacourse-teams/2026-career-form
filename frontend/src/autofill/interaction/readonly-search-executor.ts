@@ -13,6 +13,7 @@ import {
   type ExecuteReadonlySearchArgs,
   type ReadonlySearchExecutionResult,
   type SearchEffect,
+  type SurfaceLeftOpenReason,
   type TargetIdentity,
 } from "./readonly-search";
 import { SearchFailure, SearchSession } from "./search-session";
@@ -150,9 +151,11 @@ function validateRegionContext(
 }
 
 /** Close a popup this search opened using only a safe bare close control. */
-function closeOwnedSurface(surface: SearchSurface): boolean {
-  if (surface.kind === "inline-listbox") return true;
-  if (surface.closure() !== "open") return true;
+function closeOwnedSurface(
+  surface: SearchSurface,
+): SurfaceLeftOpenReason | undefined {
+  if (surface.kind === "inline-listbox") return undefined;
+  if (surface.closure() !== "open") return undefined;
   const control = Array.from(
     surface.container.querySelectorAll<HTMLElement>(
       "button, a[href], input[type=button]",
@@ -160,13 +163,13 @@ function closeOwnedSurface(surface: SearchSurface): boolean {
   ).find(
     (element) => isSafeSurfaceCloseClick(element, surface.container).allowed,
   );
-  if (!control) return false;
+  if (!control) return "no_safe_close_control";
   try {
     control.click();
   } catch {
-    return false;
+    return "close_not_confirmed";
   }
-  return surface.closure() === "closed";
+  return surface.closure() === "closed" ? undefined : "close_not_confirmed";
 }
 
 export async function executeReadonlySearch(
@@ -741,13 +744,17 @@ export async function executeReadonlySearch(
     const reason =
       error instanceof SearchFailure ? error.reason : "execution_failed";
     debugSearchFailure(targetCandidateId, step, reason, effect, error);
+    const leftOpenReason = surface ? closeOwnedSurface(surface) : undefined;
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,
       effect,
       reason,
-      ...(surface && !closeOwnedSurface(surface)
-        ? { surfaceLeftOpen: true as const }
+      ...(leftOpenReason
+        ? {
+            surfaceLeftOpen: true as const,
+            surfaceLeftOpenReason: leftOpenReason,
+          }
         : {}),
     };
   } finally {

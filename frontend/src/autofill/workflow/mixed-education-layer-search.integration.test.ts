@@ -239,6 +239,7 @@ describe("mixed education layer search (task 5.1)", () => {
       status: "failed",
       reason: "search_results_not_found",
       surfaceLeftOpen: true,
+      surfaceLeftOpenReason: "no_safe_close_control",
     });
     expect(
       fixture!.events.filter((event) => event.type === "close"),
