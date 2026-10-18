@@ -35,7 +35,7 @@ final class NativePolicyContract {
         var ids = new java.util.HashSet<String>();
         for (var section : form.path("sections")) {
             String id = section.path("id").asText();
-            require(keys(section, "id", "title", "selector", "enabled", "reason", "anchors", "rows", "action", "fields", "excludedRow")
+            require(keys(section, "id", "title", "selector", "enabled", "reason", "anchors", "rows", "action", "fields", "excludedRow", "identityFields")
                 && ids.add(id) && section.path("enabled").isBoolean() && text(section.path("selector"))
                 && section.path("fields").isArray() && section.path("fields").size() <= 64);
             var contract = contracts.stream().filter(c -> c.sectionId().equals(id)).findFirst().orElseThrow();
@@ -82,6 +82,12 @@ final class NativePolicyContract {
                     && bounded(field.path("driver").path("timeoutMs"), 1, 2000));
             }
             require(names.containsAll(contract.anchors()));
+            if (section.has("identityFields")) {
+                var identity = section.path("identityFields");
+                require(contract.itemGroupId() != null && identity.isArray() && !identity.isEmpty() && identity.size() <= 8);
+                var unique = new java.util.HashSet<String>();
+                for (var field : identity) require(field.isTextual() && names.contains(field.asText()) && unique.add(field.asText()));
+            }
             if(contract.excludedRow()!=null) require(java.util.stream.StreamSupport.stream(section.path("fields").spliterator(),false)
                 .anyMatch(f->f.path("name").asText().equals(contract.excludedRow().name()) && f.path("search").path("kind").asText().equals("EXAM")));
             for(var field:section.path("fields")) if(field.has("gate")) {

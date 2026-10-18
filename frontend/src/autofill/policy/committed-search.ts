@@ -1,3 +1,7 @@
+import {
+  nativeRowWritable,
+  recordNativeRowWrite,
+} from "./native-form-row-state";
 import { executionPolicy } from "../workflow/execution-policy";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -64,7 +68,7 @@ export function committedSearchMatches(
   item: ReviewPlanItem,
 ): boolean {
   const o = approved(handle, item);
-  if (!o) return false;
+  if (!o || !nativeRowWritable(o)) return false;
   return searchReceipt(o.row, o.field, o.index)?.value === item.profileValue;
 }
 const pause = (view: Window, ms: number) =>
@@ -78,7 +82,7 @@ export async function executeCommittedSearch(
   const o = approved(handle, item),
     s = o?.field.search,
     n = o?.search;
-  if (!o || !s || !n || signal.aborted) return false;
+  if (!o || !s || !n || signal.aborted || !nativeRowWritable(o)) return false;
   if (committedSearchMatches(handle, item))
     return !beforeMutation || (await beforeMutation());
   const value = item.profileValue!.trim(),
@@ -96,6 +100,7 @@ export async function executeCommittedSearch(
     identity() === captured &&
     !signal.aborted &&
     !!approved(handle, item) &&
+    nativeRowWritable(o, [n.query, n.name, n.code]) &&
     sameSearchNodes(n, searchNodes(o.row, o.field, o.index)) &&
     !protectedSearchRow(o.row, s, o.index);
   const detail = s.detailSelector
@@ -152,6 +157,8 @@ export async function executeCommittedSearch(
     )
   )
     return false;
+  if (!nativeRowWritable(o, [n.query])) return false;
+  recordNativeRowWrite(o, [n.query]);
   const deadline = Date.now() + s.timeoutMs;
   let buttons: HTMLButtonElement[] = [];
   while (
@@ -230,7 +237,7 @@ export async function executeCommittedSearch(
       (e) => e.getAttribute("title") === value,
     ).length === 1;
   if (beforeMutation && !(await beforeMutation())) return false;
-  if (!resultCurrent()) return false;
+  if (!resultCurrent() || !nativeRowWritable(o)) return false;
   button.click();
   const tupleCurrent = () =>
     current() &&
@@ -278,7 +285,9 @@ export async function executeCommittedSearch(
   while (current() && !settled() && Date.now() < settleDeadline)
     await pause(view, 10);
   if (beforeMutation && !(await beforeMutation())) return false;
-  if (!settled()) return false;
+  if (!settled() || !nativeRowWritable(o, [n.query, n.name, n.code]))
+    return false;
+  recordNativeRowWrite(o, [n.query, n.name, n.code]);
   const newDetail = s.detailSelector
     ? o.row.querySelector(s.detailSelector!)!
     : undefined;

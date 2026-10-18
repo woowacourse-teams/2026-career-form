@@ -1,3 +1,7 @@
+import {
+  nativeRowWritable,
+  recordNativeRowWrite,
+} from "./native-form-row-state";
 import { nativeUnitMatches } from "./native-form-unit";
 import { committedSearchMatches } from "./committed-search";
 import type { FieldCandidateHandle } from "../dom/types";
@@ -132,6 +136,7 @@ function authorized(handle: FieldCandidateHandle, item: ReviewPlanItem) {
   if (
     !o ||
     !o.section.enabled ||
+    !nativeRowWritable(o) ||
     handle.elements.some((e) => !nativeUnitMatches(e, o.row, o.field.unit)) ||
     !item.selected ||
     item.disabled ||
@@ -246,13 +251,22 @@ export const nativeWriteAdapter: CompanyWriteAdapter = {
       if (kind === "radio") {
         if (handle.elements.some((e) => (e as HTMLInputElement).checked))
           return fail;
+        // The click dispatches site handlers synchronously; only the selected group is adopted.
         (option as HTMLInputElement).click();
+        if (
+          !(option as HTMLInputElement).checked ||
+          handle.elements.filter((e) => (e as HTMLInputElement).checked)
+            .length !== 1
+        )
+          return fail;
+        recordNativeRowWrite(o, handle.elements);
       } else {
         if (el.value !== "") return fail;
         Object.getOwnPropertyDescriptor(
           HTMLSelectElement.prototype,
           "value",
         )!.set!.call(el, option.value);
+        recordNativeRowWrite(o, handle.elements);
         el.dispatchEvent(new Event("input", { bubbles: true }));
         el.dispatchEvent(new Event("change", { bubbles: true }));
       }
@@ -260,11 +274,18 @@ export const nativeWriteAdapter: CompanyWriteAdapter = {
       const target = nativeTarget(handle, item.profileValue ?? "");
       if (target === undefined || el.value !== "") return fail;
       el.focus();
+      if (
+        !authorized(handle, item) ||
+        el.value !== "" ||
+        nativeTarget(handle, item.profileValue ?? "") !== target
+      )
+        return fail;
       const proto =
         el instanceof HTMLTextAreaElement
           ? HTMLTextAreaElement.prototype
           : HTMLInputElement.prototype;
       Object.getOwnPropertyDescriptor(proto, "value")!.set!.call(el, target);
+      recordNativeRowWrite(o, handle.elements);
       el.dispatchEvent(new Event("input", { bubbles: true }));
       el.dispatchEvent(new Event("change", { bubbles: true }));
       el.blur();

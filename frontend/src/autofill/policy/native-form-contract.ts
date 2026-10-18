@@ -70,6 +70,7 @@ export interface NativeField {
   };
 }
 export interface NativeSection {
+  identityFields?: string[];
   excludedRow?: { name: string; reason: string };
   id: string;
   title: string;
@@ -190,6 +191,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
       !keys(s, [
         "id",
         "excludedRow",
+        "identityFields",
         "title",
         "selector",
         "enabled",
@@ -210,6 +212,17 @@ export function validNativeForm(value: unknown): value is NativeForm {
       !s.anchors.every(name) ||
       !list(s.fields, 64) ||
       !s.fields.length
+    )
+      return false;
+    if (
+      s.identityFields &&
+      (!s.rows ||
+        !list(s.identityFields, 8) ||
+        !s.identityFields.length ||
+        new Set(s.identityFields).size !== s.identityFields.length ||
+        !s.identityFields.every(
+          (n) => name(n) && s.fields.some((f) => f.name === n),
+        ))
     )
       return false;
     ids.add(s.id);

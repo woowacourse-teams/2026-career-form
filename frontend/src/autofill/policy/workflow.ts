@@ -1,3 +1,4 @@
+import { nativeRepeatableProfileCount } from "./native-form-row-assignment";
 import {
   executeCommittedSearch,
   committedSearchMatches,
@@ -211,6 +212,8 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
     get diagnosticsTitle() {
       return config()?.diagnosticsTitle;
     },
+    repeatableProfileCount: (id, profile) =>
+      nativeRepeatableProfileCount(document, id, profile),
     repeatedProfileSectionHint: (id) =>
       id
         ? (() => {

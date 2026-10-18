@@ -1,3 +1,4 @@
+import { nativePreparationRowsCurrent } from "./native-form-row-state";
 import { nativeUnitMatches } from "./native-form-unit";
 import {
   excludedSearchRow,
@@ -481,7 +482,8 @@ export function collectNativePreparation(
                     buttons[0].getAttribute("data-button"),
                   ].join(" "),
                 ) &&
-                !!nativeRows(root, section)
+                !!nativeRows(root, section) &&
+                nativePreparationRowsCurrent(root, nativeRows(root, section)!)
               );
             },
           });

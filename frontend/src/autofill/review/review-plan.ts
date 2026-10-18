@@ -1,3 +1,4 @@
+import { nativeProfileAssignment } from "../policy/native-form-row-assignment";
 import { executionPolicy } from "../workflow/execution-policy";
 import { isSplitEmailTarget, SPLIT_EMAIL_REASON } from "../dom/split-email";
 import type { WriteFailureCode } from "../write/failure";
@@ -450,7 +451,15 @@ function itemForAnalysis(
       : binding.profileFieldKey
         ? profileFieldParts(binding.profileFieldKey)
         : undefined;
-  let itemIndex = lookup.handle.itemIndex;
+  const nativeIndex = nativeProfileAssignment(lookup.handle, profile);
+  if (typeof nativeIndex === "object")
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      nativeIndex.reason,
+      analysis,
+    );
+  let itemIndex = nativeIndex ?? lookup.handle.itemIndex;
   // A mixed-section row is bound through its local assignment (C8).
   const mixed = lookup.handle.mixedSectionRow;
   if (mixed?.isKindSelect) {
@@ -484,7 +493,12 @@ function itemForAnalysis(
   // has a row but no index; it must not fall back to the sole profile entry.
   const unindexedRepeatRow =
     lookup.handle.itemId !== undefined && lookup.handle.itemIndex === undefined;
-  if (!mixedRow && parts?.repeatable && !parts.topLevel) {
+  if (
+    nativeIndex === undefined &&
+    !mixedRow &&
+    parts?.repeatable &&
+    !parts.topLevel
+  ) {
     const profileEntries = profile[
       parts.categoryId as RepeatedProfileCategoryId
     ].filter((entry) => entry.sectionId === parts.sectionId);

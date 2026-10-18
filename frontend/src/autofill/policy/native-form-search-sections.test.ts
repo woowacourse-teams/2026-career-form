@@ -333,3 +333,66 @@ it("maps the actual profile 재학중 value to the observed 재학 radio", () =>
     )!.checked,
   ).toBe(true);
 });
+
+it.each(["score", "grade"])(
+  "retains a real repeat exam row's committed search before writing fresh %s",
+  async (kind) => {
+    mount();
+    document
+      .querySelector('section[data-code="18"]')!
+      .insertAdjacentHTML(
+        "beforeend",
+        `<div class="subject" data-code="165" data-wrap="foreignExam"><div class="loop" data-loop="languageExam" data-index="0"><div class="span"><div class="search"><label><input type="search" data-type="foreignExam"></label><div class="searchResult"></div></div><input type="hidden" name="languageExam[0].languageExamName"><span class="searchResultName"></span><input class="hidden" name="languageExam[0].languageExamCode"></div><span class="ybmValidateDone hide" style="display:none"></span><div data-template="detail"><input type="hidden" name="languageExam[0].languageExamSn"></div><button type="button" data-button="add"></button></div></div>`,
+      );
+    const query = document.querySelector<HTMLInputElement>(
+      '[data-type="foreignExam"]',
+    )!;
+    query.addEventListener("keypress", () => {
+      const results = query
+        .closest("div.search")!
+        .querySelector(".searchResult")!;
+      results.innerHTML = `<ul class="searchResultList"><li><button class="ellipsis" type="button" data-code="EX001" title="합성 어학시험" data-gradeflag="${kind === "grade"}" data-scoreflag="${kind === "score"}" data-setupcode="" data-setupvalue="" data-perfactgrade="200">합성 어학시험</button></li></ul>`;
+      results.querySelector("button")!.addEventListener("click", () => {
+        const row = query.closest("[data-loop]")!;
+        row.querySelector<HTMLInputElement>(
+          '[name$=".languageExamName"]',
+        )!.value = "합성 어학시험";
+        row.querySelector<HTMLInputElement>(
+          '[name$=".languageExamCode"]',
+        )!.value = "EX001";
+        row.querySelector(".searchResultName")!.textContent = "합성 어학시험";
+        row.querySelector('[data-template="detail"]')!.innerHTML =
+          kind === "score"
+            ? '<input type="number" name="languageExam[0].score" min="0" max="9999"><input type="number" name="languageExam[0].perfectScore"><input name="languageExam[0].examDate"><input type="hidden" name="languageExam[0].languageExamSn">'
+            : '<select name="languageExam[0].gradeCode"><option value=""></option><option value="G2">2급</option></select><input type="hidden" name="languageExam[0].languageExamSn">';
+      });
+    });
+    const searchItem = item(
+      "hplace.mrs2.foreignExam.languageExamName",
+      "합성 어학시험",
+    );
+    expect(
+      await getWorkflowAdapter(document).executeStateDriver?.(
+        document,
+        searchItem.handle,
+        searchItem.item,
+        new AbortController().signal,
+      ),
+    ).toBe(true);
+    const detail = item(
+      `hplace.mrs2.foreignExam.${kind === "grade" ? "gradeCode" : "score"}`,
+      kind === "grade" ? "2급" : "150",
+    );
+    if (kind === "grade")
+      detail.item.analysis!.writePlan = { command: "SELECT_OPTION" };
+    expect(
+      getWriteAdapter(document).tryWrite(detail.handle, detail.item),
+    ).toEqual({ handled: true, written: true });
+    expect(
+      getWriteAdapter(document).verifyRetained?.(
+        searchItem.handle,
+        searchItem.item,
+      ),
+    ).toBe(true);
+  },
+);

@@ -102,3 +102,19 @@ it("refuses circular driver dependencies and an unsupported operation", () => {
   Object.assign(policy.browserPolicy, { operation: "SUBMIT" });
   expect(validExecutionPolicy(policy)).toBe(false);
 });
+
+it("omits disabled native dependents and recollects them only after enabling", () => {
+  mountSyntheticNative();
+  installExecutionPolicy(document, syntheticNativePolicy());
+  const company = document.querySelector<HTMLInputElement>(
+    '[name="career[0].company"]',
+  )!;
+  const names = () =>
+    collectFieldsSnapshot(document).request.sections.flatMap(
+      (s) => s.items?.flatMap((i) => i.fields.map((f) => f.domName)) ?? [],
+    );
+  company.disabled = true;
+  expect(names()).not.toContain("hplace.mrs2.career.company");
+  company.disabled = false;
+  expect(names()).toContain("hplace.mrs2.career.company");
+});

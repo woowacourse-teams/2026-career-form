@@ -161,7 +161,8 @@
       "militaryBranch": "프로필 8개 → 실관측 코드/라벨, 4개 별칭은 코디네이터 의미 확인",
       "militarySiteOnly": ["공익", "병역특례", "카투사", "기타"]
     },
-    "salaryUnit": "GS 실관측: 직접 부모 label.label.money의 ::after content 정확히 \"만원\", million 클래스 없음. 원/억원/표시 없음/미검증 span은 입력 불가."
+    "salaryUnit": "GS 실관측: 직접 부모 label.label.money의 ::after content 정확히 \"만원\", million 클래스 없음. 원/억원/표시 없음/미검증 span은 입력 불가.",
+    "repeatRowIdentity": "기존 populated 행 전체 보호; identityFields 정확 일치 + populated mapped detail 일치 시에만 이미 입력됨 처리. 불완전/충돌/중복은 섹션 수동, 남은 프로필만 빈 행 배정 및 부족분 ADD."
   },
   "sectionContracts": [
     {
@@ -1647,6 +1648,10 @@
                 },
                 "maxLength": 512
               }
+            ],
+            "identityFields": [
+              "hplace.mrs2.career.company",
+              "hplace.mrs2.career.entranceDate"
             ]
           },
           {
@@ -1749,6 +1754,10 @@
                 },
                 "maxLength": 128
               }
+            ],
+            "identityFields": [
+              "hplace.mrs2.project.projectName",
+              "hplace.mrs2.project.startDate"
             ]
           },
           {
@@ -1850,7 +1859,8 @@
                   "codeFormat": "POSITIVE_INTEGER"
                 }
               }
-            ]
+            ],
+            "identityFields": ["hplace.mrs2.foreignAbility.languageCode"]
           },
           {
             "id": "hplace-mrs2-highschool",
@@ -2301,7 +2311,12 @@
               "label": "대학교 추가",
               "categoryId": "education",
               "profileSectionId": "university"
-            }
+            },
+            "identityFields": [
+              "hplace.mrs2.college.academyName",
+              "hplace.mrs2.college.degreeTypeCode",
+              "hplace.mrs2.college.entranceDate"
+            ]
           },
           {
             "id": "hplace-mrs2-graduateSchool",
@@ -2542,7 +2557,12 @@
               "label": "대학원 추가",
               "categoryId": "education",
               "profileSectionId": "graduateSchool"
-            }
+            },
+            "identityFields": [
+              "hplace.mrs2.graduateSchool.academyName",
+              "hplace.mrs2.graduateSchool.degreeTypeCode",
+              "hplace.mrs2.graduateSchool.entranceDate"
+            ]
           },
           {
             "id": "hplace-mrs2-license",
@@ -2664,6 +2684,10 @@
                   "forbiddenAfterToday": false
                 }
               }
+            ],
+            "identityFields": [
+              "hplace.mrs2.license.licenseName",
+              "hplace.mrs2.license.acquireDate"
             ]
           },
           {
@@ -2800,7 +2824,8 @@
             "excludedRow": {
               "name": "hplace.mrs2.foreignExam.languageExamName",
               "reason": "입력 불가(인증 시험 — 사용자 처리)"
-            }
+            },
+            "identityFields": ["hplace.mrs2.foreignExam.languageExamName"]
           }
         ],
         "unsupportedSections": [
