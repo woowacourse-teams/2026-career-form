@@ -1,3 +1,4 @@
+import { nativeUnitMatches } from "./native-form-unit";
 import { committedSearchMatches } from "./committed-search";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -30,6 +31,7 @@ export function nativeTarget(
   const o = currentNativeOwner(handle),
     el = handle.elements[0];
   if (!o || !o.section.enabled || !el || !value) return;
+  if (!nativeUnitMatches(el, o.row, o.field.unit)) return;
   const f = o.field;
   if (f.date) {
     if (!(el instanceof HTMLInputElement) || el.type !== "text") return;
@@ -130,6 +132,7 @@ function authorized(handle: FieldCandidateHandle, item: ReviewPlanItem) {
   if (
     !o ||
     !o.section.enabled ||
+    handle.elements.some((e) => !nativeUnitMatches(e, o.row, o.field.unit)) ||
     !item.selected ||
     item.disabled ||
     item.candidateId !== handle.candidateId ||

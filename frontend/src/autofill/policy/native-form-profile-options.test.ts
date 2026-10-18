@@ -6,6 +6,7 @@ import { createEmptyProfile, type Profile } from "../../profile/model";
 import { resolveValueBinding } from "../profile/value-binding";
 import { collectFieldsSnapshot } from "../dom/collect";
 import { getWriteAdapter } from "../adapters/write";
+import type { NativeField } from "./native-form-contract";
 import { nativeOwnership } from "./native-form-collection";
 import type { ReviewPlanItem } from "../review/review-plan";
 import {
@@ -59,8 +60,12 @@ function write(suffix: string, profile: Profile) {
 const employment = PROFILE_CATEGORIES.find((c) => c.id === "careers")!
   .sections.find((s) => s.id === "career")!
   .fields.find((f) => f.id === "employmentType")!;
-if (!("options" in employment)) throw new Error();
-it.each(employment.options)(
+if (!("options" in employment) || !employment.options) throw new Error();
+it.each(
+  employment.options.map((value) =>
+    typeof value === "string" ? value : value.value,
+  ),
+)(
   "maps actual employment profile option %s to a pinned tenant label",
   (value) => {
     mount();
@@ -82,7 +87,7 @@ it.each(employment.options)(
       id: "synthetic-career",
       sectionId: "career",
       values: {
-        employmentType: typeof value === "string" ? value : value.value,
+        employmentType: value,
       },
     });
     write("careerCriteriaCodeSn", profile);
@@ -92,10 +97,10 @@ it.each(MILITARY_BRANCH_OPTIONS)(
   "maps standard military $label to its verified site code",
   ({ value }) => {
     mount();
-    const options =
-      seed.executionPolicy.browserPolicy.nativeForm.sections[0].fields.find(
-        (f) => f.name.endsWith("militaryBranchCode"),
-      )!.options!;
+    const options = (
+      seed.executionPolicy.browserPolicy.nativeForm.sections[0]
+        .fields as unknown as NativeField[]
+    ).find((f) => f.name.endsWith("militaryBranchCode"))!.options!;
     document.querySelector("#wrapResume")!.insertAdjacentHTML(
       "beforeend",
       `<section class="writeResume" data-code="13"><select name="military.militaryBranchCode"><option value=""></option>${Object.entries(

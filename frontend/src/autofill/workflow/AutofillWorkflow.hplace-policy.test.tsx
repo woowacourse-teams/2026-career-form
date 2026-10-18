@@ -13,10 +13,17 @@ import type { FieldsAnalyzeRequest, FieldsAnalyzeResponse } from "../api/types";
 import { collectFieldsSnapshot } from "../dom/collect";
 import seed from "../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json";
 afterEach(() => {
+  vi.restoreAllMocks();
   resetHplacePage();
   installExecutionPolicy(document);
 });
 function mount() {
+  const nativeStyle = window.getComputedStyle.bind(window);
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element, pseudo) =>
+    pseudo === "::after"
+      ? ({ content: '\"만원\"' } as CSSStyleDeclaration)
+      : nativeStyle(element, pseudo),
+  );
   mountBasicDetail();
   activateBasicDetails();
   document
@@ -34,7 +41,7 @@ function mount() {
     .querySelector('section[data-code="11"]')!
     .insertAdjacentHTML(
       "beforeend",
-      '<input name="chineseName" id="chineseName" maxlength="32"><input type="number" name="hopeSalary" min="0" max="210000000" step="1">',
+      '<input name="chineseName" id="chineseName" maxlength="32"><label class="label money"><input type="number" name="hopeSalary" min="0" max="210000000" step="1"></label>',
     );
 }
 const policy = () => structuredClone(seed.executionPolicy) as ExecutionPolicy;

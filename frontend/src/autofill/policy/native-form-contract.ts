@@ -29,6 +29,7 @@ export interface NativeSearch {
   registrationName?: string;
 }
 export interface NativeField {
+  unit?: { parentSelector: string; pseudo: "::after"; content: string };
   search?: NativeSearch;
   gate?: {
     search: string;
@@ -254,6 +255,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
         if (
           !object(f) ||
           !keys(f, [
+            "unit",
             "name",
             "search",
             "gate",
@@ -282,6 +284,16 @@ export function validNativeForm(value: unknown): value is NativeForm {
         )
           return false;
         fields.add(f.name);
+        if (
+          f.unit &&
+          (!object(f.unit) ||
+            !keys(f.unit, ["parentSelector", "pseudo", "content"]) ||
+            f.type !== "number" ||
+            !selector(f.unit.parentSelector) ||
+            f.unit.pseudo !== "::after" ||
+            !str(f.unit.content))
+        )
+          return false;
         if (
           f.search &&
           (!p.capabilities.includes("KEYPRESS_COMMITTED_TUPLE") ||

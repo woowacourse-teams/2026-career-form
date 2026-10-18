@@ -1,3 +1,4 @@
+import { nativeUnitMatches } from "./native-form-unit";
 import {
   excludedSearchRow,
   searchNodes,
@@ -269,6 +270,9 @@ export function collectNativeFields(
             ))
         )
           continue;
+        const unitMismatch = elements.some(
+          (e) => !nativeUnitMatches(e, row, field.unit),
+        );
         const candidateId = `native-field-${++next}`;
         const optionElements = new Map<string, HTMLElement>();
         if (elements[0] instanceof HTMLSelectElement) {
@@ -339,11 +343,13 @@ export function collectNativeFields(
           optionElements,
           signature: createStructuralSignature(elements),
           isCurrentContext: () => !!currentNativeOwner(handle),
-          unsupportedReason: excluded
-            ? section.excludedRow!.reason
-            : !section.enabled
-              ? section.reason
-              : undefined,
+          unsupportedReason: unitMismatch
+            ? "입력 불가(단위 불일치)"
+            : excluded
+              ? section.excludedRow!.reason
+              : !section.enabled
+                ? section.reason
+                : undefined,
         };
         owners.set(handle, {
           search: field.search ? searchNodes(row, field, index) : undefined,
@@ -366,7 +372,9 @@ export function collectNativeFields(
         });
         registry.registerField(
           handle,
-          section.enabled && !excluded ? undefined : "unsupported",
+          section.enabled && !excluded && !unitMismatch
+            ? undefined
+            : "unsupported",
         );
         elements.forEach((e) => claimed.add(e));
         (section.rows ? itemFields : fields).push(candidate);

@@ -160,7 +160,8 @@
       "employmentType": "실제 프로필 선택지 9개 → 실관측 동적 라벨, tenant Sn은 관측값 고정",
       "militaryBranch": "프로필 8개 → 실관측 코드/라벨, 4개 별칭은 코디네이터 의미 확인",
       "militarySiteOnly": ["공익", "병역특례", "카투사", "기타"]
-    }
+    },
+    "salaryUnit": "GS 실관측: 직접 부모 label.label.money의 ::after content 정확히 \"만원\", million 클래스 없음. 원/억원/표시 없음/미검증 span은 입력 불가."
   },
   "sectionContracts": [
     {
@@ -1353,7 +1354,12 @@
                 "min": 0,
                 "max": 210000000,
                 "step": 1,
-                "scopeSelector": "section.writeResume[data-code='11']"
+                "scopeSelector": "section.writeResume[data-code='11']",
+                "unit": {
+                  "parentSelector": "label.label.money:not(.million)",
+                  "pseudo": "::after",
+                  "content": "\"만원\""
+                }
               },
               {
                 "name": "hplace.mrs2.basic.latestSalary",
@@ -1367,7 +1373,12 @@
                 "min": 0,
                 "max": 210000000,
                 "step": 1,
-                "scopeSelector": "section.writeResume[data-code='11']"
+                "scopeSelector": "section.writeResume[data-code='11']",
+                "unit": {
+                  "parentSelector": "label.label.money:not(.million)",
+                  "pseudo": "::after",
+                  "content": "\"만원\""
+                }
               },
               {
                 "name": "hplace.mrs2.basic.militaryBranchCode",

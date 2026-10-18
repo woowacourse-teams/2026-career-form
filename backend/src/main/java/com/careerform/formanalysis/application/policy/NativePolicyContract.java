@@ -50,7 +50,7 @@ final class NativePolicyContract {
             var names = new java.util.HashSet<String>();
             for (var field : section.path("fields")) {
                 String name = field.path("name").asText(), type = field.path("type").asText();
-                require(keys(field, "name", "rawName", "scopeSelector", "dynamicOptions", "type", "label", "binding", "maxLength", "min", "max", "step", "options", "date", "driver", "search", "gate")
+                require(keys(field, "unit", "name", "rawName", "scopeSelector", "dynamicOptions", "type", "label", "binding", "maxLength", "min", "max", "step", "options", "date", "driver", "search", "gate")
                     && names.add(name) && Set.of("text", "number", "textarea", "select", "radio").contains(type)
                     && text(field.path("label")) && field.path("rawName").asText().matches("[A-Za-z][A-Za-z0-9_]*(?:\\[\\{index}])?(?:\\.[A-Za-z][A-Za-z0-9_]*)*"));
                 var structure = contract.fields().stream().filter(f -> f.structuralName().equals(name)).findFirst().orElseThrow();
@@ -69,6 +69,11 @@ final class NativePolicyContract {
                 if (field.has("search")) {
                     require(type.equals("text") && field.has("driver") && capabilities.contains("KEYPRESS_COMMITTED_TUPLE"));
                     validateSearch(field.path("search"));
+                }
+                if (field.has("unit")) {
+                    var unit = field.path("unit");
+                    require(type.equals("number") && keys(unit,"parentSelector","pseudo","content")
+                        && text(unit.path("parentSelector")) && unit.path("pseudo").asText().equals("::after") && text(unit.path("content")));
                 }
                 if (field.has("date")) validateDate(field.path("date"));
                 if (field.has("driver")) require(keys(field.path("driver"), "stage", "timeoutMs", "dependencies", "settled")
