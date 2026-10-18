@@ -844,3 +844,81 @@ describe("gate", () => {
     expect(api.calls).toEqual([]);
   });
 });
+
+describe("generic synthetic name binding flow", () => {
+  const nameField = (
+    candidate: FieldCandidate,
+  ): Partial<GenericFieldsResponse["fields"][number]> =>
+    candidate.displayName === "이름"
+      ? {
+          profileFieldKey: null,
+          binding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+          confidence: 0.92,
+          categoryConfirmed: true,
+          autofillPolicy: "ALLOWED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        }
+      : {};
+
+  function nameProfile(): Profile {
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "합성성씨";
+    profile.personal.koreanGivenName = "합성이름";
+    return profile;
+  }
+
+  it("proposes the combined name, leaves the page untouched and writes it only after approval", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <label>이름<input name="fullName" /></label>
+      </form>`;
+    const before = controlValues();
+    const api = createClient({ field: nameField });
+    const run = workflow(api.client, nameProfile());
+
+    await run.analyze();
+
+    expect(run.stages.at(-1)).toBe("review");
+    expect(controlValues()).toEqual(before);
+    const item = run.item("fullName");
+    expect(item).toMatchObject({
+      status: "available",
+      selected: true,
+      previewValue: "합성성씨합성이름",
+    });
+    await executeApprovedWritesAfterPageSettles({
+      items: run.state.reviewItems,
+      approvedCandidateIds: new Set([item.candidateId]),
+      registry: run.state.snapshot!.registry,
+      document,
+    });
+    expect(document.querySelector<HTMLInputElement>("[name=fullName]")!.value).toBe(
+      "합성성씨합성이름",
+    );
+    const bodies = JSON.stringify([api.classifyRequests, api.genericRequests]);
+    expect(bodies).not.toContain("합성성씨");
+    expect(bodies).not.toContain("합성이름");
+  });
+
+  it("blocks the recipe field and writes nothing when a name key is empty", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <label>이름<input name="fullName" /></label>
+      </form>`;
+    const profile = nameProfile();
+    profile.personal.koreanGivenName = "";
+    const api = createClient({ field: nameField });
+    const run = workflow(api.client, profile);
+
+    await run.analyze();
+
+    const grade = run.state.grades?.get(run.state.reviewItems[0]!.candidateId);
+    expect(grade).toEqual({ grade: "BLOCKED", reason: "NO_PROFILE_VALUE" });
+    expect(
+      run.state.reviewItems.every((entry) => !entry.selected),
+    ).toBe(true);
+  });
+});

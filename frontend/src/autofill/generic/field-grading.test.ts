@@ -285,3 +285,61 @@ describe("gradeGenericField on sanitized fixtures", () => {
     );
   }, 30_000);
 });
+
+describe("gradeGenericField composite name recipes", () => {
+  const recipe = (
+    override: Partial<GradeFieldInput> = {},
+  ): GradeFieldInput => ({
+    confidence: 0.9,
+    categoryConfirmed: true,
+    hasProfileValue: true,
+    control: "text",
+    composite: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+    ...override,
+  });
+
+  it("grades a recipe field without a profile key by its confidence", () => {
+    expect(gradeGenericField(recipe())).toEqual({ grade: "AUTO" });
+    expect(gradeGenericField(recipe({ confidence: 0.6 }))).toEqual({
+      grade: "REVIEW",
+      reason: "MODERATE_CONFIDENCE",
+    });
+  });
+
+  it("blocks a recipe whose profile values are not all present", () => {
+    expect(gradeGenericField(recipe({ hasProfileValue: false }))).toEqual({
+      grade: "BLOCKED",
+      reason: "NO_PROFILE_VALUE",
+    });
+  });
+
+  it("treats the same recipe twice in a row as a duplicate and a different recipe as none", () => {
+    expect(
+      gradeGenericField(
+        recipe({
+          rowSiblings: [
+            {
+              composite: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+              confidence: 0.95,
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "REVIEW", reason: "DUPLICATE_KEY_IN_ROW" });
+    expect(
+      gradeGenericField(
+        recipe({
+          rowSiblings: [
+            {
+              composite: {
+                type: "DERIVED",
+                recipe: "ENGLISH_FULL_NAME_GIVEN_FIRST",
+              },
+              confidence: 0.95,
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "AUTO" });
+  });
+});

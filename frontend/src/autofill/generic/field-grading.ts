@@ -1,5 +1,9 @@
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
-import type { FieldCandidate, SemanticContext } from "../api/types";
+import type {
+  DerivedRecipe,
+  FieldCandidate,
+  SemanticContext,
+} from "../api/types";
 
 /** Lower bound (inclusive) of confidence for AUTO. */
 export const AUTO_CONFIDENCE_MIN = 0.8;
@@ -18,14 +22,20 @@ export type GradeReason =
   | "CATEGORY_UNCONFIRMED"
   | "DUPLICATE_KEY_IN_ROW";
 
+/** A match that has no single profile key: a derived value recipe. */
+export type GradeComposite = { type: "DERIVED"; recipe: DerivedRecipe };
+
 export interface GradeSibling {
-  profileFieldKey: string;
+  profileFieldKey?: string;
+  composite?: GradeComposite;
   confidence: number;
 }
 
 export interface GradeFieldInput {
   /** Profile field key such as "personal.personal.nationality". */
-  profileFieldKey: string;
+  profileFieldKey?: string;
+  /** Present when the field is bound to a derived value instead of one key. */
+  composite?: GradeComposite;
   confidence: number;
   categoryConfirmed: boolean;
   /** Whether a profile value exists. Evaluated locally; the value is never passed. */
@@ -46,11 +56,12 @@ const COUNTRY_KEYS = new Set(["nationality", "residenceCountry"]);
 const COUNTRY_CODE_OPTION = /^\+\d{1,3}/;
 const EDUCATION_RECORDS = new Set(["highSchool", "university", "graduateSchool"]);
 
-function fieldIdOf(key: string): string {
-  return key.split(".")[2] ?? "";
+function fieldIdOf(key: string | undefined): string {
+  return key?.split(".")[2] ?? "";
 }
 
-function isDateProfileFieldKey(value: string): boolean {
+function isDateProfileFieldKey(value: string | undefined): boolean {
+  if (!value) return false;
   const [categoryId, sectionId, fieldId] = value.split(".");
   return PROFILE_CATEGORIES.some(
     (category) =>
@@ -65,7 +76,8 @@ function isDateProfileFieldKey(value: string): boolean {
   );
 }
 
-function educationRecordOf(key: string): string | undefined {
+function educationRecordOf(key: string | undefined): string | undefined {
+  if (!key) return undefined;
   const [categoryId, sectionId] = key.split(".");
   return categoryId === "education" && EDUCATION_RECORDS.has(sectionId ?? "")
     ? sectionId
@@ -100,10 +112,15 @@ function hasMixedEducationRecords(input: GradeFieldInput): boolean {
   });
 }
 
+function compositeSlot(composite: GradeComposite | undefined): string {
+  return composite ? `${composite.type}:${composite.recipe}` : "";
+}
+
 function isLowerDuplicate(input: GradeFieldInput): boolean {
   return (input.rowSiblings ?? []).some(
     (sibling) =>
       sibling.profileFieldKey === input.profileFieldKey &&
+      compositeSlot(sibling.composite) === compositeSlot(input.composite) &&
       sibling.confidence >= input.confidence,
   );
 }

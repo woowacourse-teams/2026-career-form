@@ -586,3 +586,140 @@ describe("request privacy", () => {
     expect(sent[0]!.semanticContext).toBeDefined();
   });
 });
+
+const direct = (profileFieldKey: string): FieldOverride => ({
+  profileFieldKey,
+  confidence: 0.92,
+  categoryConfirmed: true,
+  autofillPolicy: "ALLOWED",
+  interactionStatus: "READY",
+  writePlan: { command: "SET_TEXT" },
+});
+
+const derived = (
+  recipe: NonNullable<
+    Extract<
+      NonNullable<GenericFieldsResponse["fields"][number]["binding"]>,
+      { type: "DERIVED" }
+    >["recipe"]
+  >,
+  override: FieldOverride = {},
+): FieldOverride => ({
+  profileFieldKey: null,
+  binding: { type: "DERIVED", recipe },
+  confidence: 0.92,
+  categoryConfirmed: true,
+  autofillPolicy: "ALLOWED",
+  interactionStatus: "READY",
+  writePlan: { command: "SET_TEXT" },
+  ...override,
+});
+
+function nameProfile(): Profile {
+  const profile = createEmptyProfile();
+  profile.personal.koreanFamilyName = "합성성씨";
+  profile.personal.koreanGivenName = "합성이름";
+  profile.personal.englishFamilyName = "Synthfamily";
+  profile.personal.englishGivenName = "Synthgiven";
+  return profile;
+}
+
+function mountNameForm() {
+  document.body.innerHTML = `
+    <form>
+      <h2>인적사항</h2>
+      <label>이름<input name="fullName" /></label>
+      <label>영문 이름<input name="englishName" /></label>
+    </form>`;
+}
+
+describe("generic synthetic name bindings", () => {
+  it("keeps a name recipe field as a DERIVED match with the response policy", async () => {
+    mountNameForm();
+
+    const { byName } = await run(
+      {
+        field: (candidate) =>
+          candidate.domName === "fullName"
+            ? derived("KOREAN_FULL_NAME", { autofillPolicy: "CONDITIONAL" })
+            : {},
+      },
+      nameProfile(),
+    );
+
+    expect(byName("fullName").field).toEqual({
+      candidateId: byName("fullName").field.candidateId,
+      matchType: "MATCH",
+      valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+      mappingStatus: "LLM_SUGGESTED",
+      autofillPolicy: "CONDITIONAL",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    });
+    expect(byName("fullName").grade).toEqual({ grade: "AUTO" });
+    expect(byName("englishName").field).toMatchObject({ matchType: "NO_MATCH" });
+  });
+
+  it.each([
+    ["KOREAN_FULL_NAME", "koreanGivenName"],
+    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "englishGivenName"],
+    ["ENGLISH_FULL_NAME_FAMILY_FIRST", "englishFamilyName"],
+  ] as const)(
+    "grades %s AUTO with both name keys and BLOCKED without %s",
+    async (recipe, missingKey) => {
+      mountNameForm();
+      const options = {
+        field: (candidate: FieldCandidate) =>
+          candidate.domName === "fullName" ? derived(recipe) : {},
+      };
+
+      const full = await run(options, nameProfile());
+      const fullGrade = full.byName("fullName").grade;
+      document.body.replaceChildren();
+      mountNameForm();
+      const partial = nameProfile();
+      partial.personal[missingKey] = "";
+      const missing = await run(options, partial);
+
+      expect(fullGrade).toEqual({ grade: "AUTO" });
+      expect(missing.byName("fullName").grade).toEqual({
+        grade: "BLOCKED",
+        reason: "NO_PROFILE_VALUE",
+      });
+    },
+  );
+
+  it("keeps split family and given name fields as two DIRECT bindings", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <label>성<input name="family" /></label>
+        <label>이름<input name="given" /></label>
+      </form>`;
+
+    const { byName } = await run(
+      {
+        field: (candidate) =>
+          candidate.domName === "given"
+            ? direct("personal.personal.koreanGivenName")
+            : {},
+      },
+      nameProfile(),
+    );
+
+    expect(byName("family").field).toMatchObject({
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "personal.personal.koreanFamilyName",
+      },
+    });
+    expect(byName("given").field).toMatchObject({
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "personal.personal.koreanGivenName",
+      },
+    });
+    expect(byName("family").grade).toEqual({ grade: "AUTO" });
+    expect(byName("given").grade).toEqual({ grade: "AUTO" });
+  });
+});

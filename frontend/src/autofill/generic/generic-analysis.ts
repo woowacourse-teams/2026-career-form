@@ -15,9 +15,11 @@ import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
 } from "../review/review-plan";
+import { resolveValueBinding } from "../profile/value-binding";
 import {
   gradeGenericField,
   type FieldGrade,
+  type GradeComposite,
   type GradeReason,
   type GradeSibling,
 } from "./field-grading";
@@ -205,6 +207,12 @@ function classifyEntry(
   };
 }
 
+function compositeOf(response: ResponseField): GradeComposite | undefined {
+  return response.binding?.type === "DERIVED"
+    ? { type: "DERIVED", recipe: response.binding.recipe }
+    : undefined;
+}
+
 function convertSection(
   entry: SectionEntry,
   outcome: SectionOutcome,
@@ -215,8 +223,9 @@ function convertSection(
   const matched = section.fields.flatMap((field, index) => {
     const response = outcome.fields[index];
     if (!response) throw new Error("Section result does not match its fields");
-    return response.profileFieldKey && response.reason === undefined
-      ? [{ index, profileFieldKey: response.profileFieldKey, response }]
+    return (response.profileFieldKey || compositeOf(response)) &&
+      response.reason === undefined
+      ? [{ index, response }]
       : [];
   });
   const fields: FieldAnalysis[] = [];
@@ -232,8 +241,9 @@ function convertSection(
       ]);
       return;
     }
-    const profileFieldKey = response.profileFieldKey;
-    if (!profileFieldKey) {
+    const profileFieldKey = response.profileFieldKey ?? undefined;
+    const composite = compositeOf(response);
+    if (!profileFieldKey && !composite) {
       fields.push(noMatch(candidateId));
       return;
     }
@@ -242,19 +252,19 @@ function convertSection(
         ? matched
             .filter((sibling) => sibling.index !== index)
             .map((sibling) => ({
-              profileFieldKey: sibling.profileFieldKey,
+              profileFieldKey: sibling.response.profileFieldKey ?? undefined,
+              composite: compositeOf(sibling.response),
               confidence: sibling.response.confidence,
             }))
         : undefined;
-    const resolution = resolveProfileFieldValue(
-      profile,
-      profileFieldKey,
-      itemIndex,
-    ).status;
+    const resolution = composite
+      ? resolveValueBinding(profile, composite, itemIndex).status
+      : resolveProfileFieldValue(profile, profileFieldKey!, itemIndex).status;
     grades.push([
       candidateId,
       gradeGenericField({
         profileFieldKey,
+        composite,
         confidence: response.confidence,
         categoryConfirmed: response.categoryConfirmed && categoryOpen,
         hasProfileValue:
@@ -268,7 +278,7 @@ function convertSection(
     fields.push({
       candidateId,
       matchType: "MATCH",
-      valueBinding: { type: "DIRECT", profileFieldKey },
+      valueBinding: composite ?? { type: "DIRECT", profileFieldKey: profileFieldKey! },
       autofillPolicy: response.autofillPolicy!,
       mappingStatus: "LLM_SUGGESTED",
       interactionStatus: response.interactionStatus,
