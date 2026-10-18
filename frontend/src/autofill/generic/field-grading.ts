@@ -25,7 +25,8 @@ export type GradeReason =
   | "DATE_PART_OPTIONS_MISMATCH"
   | "NO_FIELD_CONTEXT"
   | "FORMAT_KEY_MISMATCH"
-  | "OTHER_PERSON_CONTEXT";
+  | "OTHER_PERSON_CONTEXT"
+  | "OPTION_VALUE_UNMATCHED";
 
 /** A match whose value is composed: a name recipe or one part of a date. */
 export type GradeComposite =
@@ -61,6 +62,11 @@ export interface GradeFieldInput extends Pick<
   title?: string;
   placeholder?: string;
   options?: readonly { displayName: string }[];
+  /**
+   * Present for a field whose written value must be one of its options.
+   * Evaluated locally and never sent; the value is read only to compare it.
+   */
+  optionValueCheck?: { profileValue?: string };
   /** Other matched fields in the same repeat row, excluding this field. */
   rowSiblings?: readonly GradeSibling[];
 }
@@ -74,6 +80,66 @@ const COUNTRY_KEYS = new Set(["nationality", "residenceCountry"]);
 const COUNTRY_CODE_OPTION = /^\+\d{1,3}/;
 const EDUCATION_RECORDS = new Set(["highSchool", "university", "graduateSchool"]);
 const POSTAL_TEXT = /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
+
+const normalizeOptionText = (text: string): string =>
+  text.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+
+/** Labels of the fixed option set a profile field defines, empty when it has none. */
+function fixedOptionLabels(
+  profileFieldKey: string | undefined,
+  profileValue: string,
+): string[] {
+  const [categoryId, sectionId, fieldId] = (profileFieldKey ?? "").split(".");
+  const options = PROFILE_CATEGORIES.find(
+    (category) => category.id === categoryId,
+  )
+    ?.sections.find((section) => section.id === sectionId)
+    ?.fields.find((field) => field.id === fieldId)?.options;
+  const wanted = normalizeOptionText(profileValue);
+  return (options ?? []).flatMap((option) => {
+    const [value, label] =
+      typeof option === "string" ? [option, option] : [option.value, option.label];
+    return normalizeOptionText(value) === wanted ||
+      normalizeOptionText(label) === wanted
+      ? [label]
+      : [];
+  });
+}
+
+/**
+ * The page option a stored value maps to, or undefined unless exactly one
+ * option matches. Evidence is the normalized value itself or the label the
+ * profile field's fixed option set gives it; nothing is guessed beyond that.
+ */
+export function matchProfileValueOption(
+  profileFieldKey: string | undefined,
+  profileValue: string | undefined,
+  options: readonly { displayName: string }[] | undefined,
+): string | undefined {
+  if (!profileValue?.trim()) return undefined;
+  const accepted = new Set(
+    [profileValue, ...fixedOptionLabels(profileFieldKey, profileValue)].map(
+      normalizeOptionText,
+    ),
+  );
+  const matches = (options ?? []).filter((option) =>
+    accepted.has(normalizeOptionText(option.displayName)),
+  );
+  return matches.length === 1 ? matches[0]!.displayName : undefined;
+}
+
+function hasUnmatchedOptionValue(input: GradeFieldInput): boolean {
+  if (!input.optionValueCheck) return false;
+  if (input.control !== "select" && input.control !== "radio") return false;
+  if (input.composite) return false;
+  return (
+    matchProfileValueOption(
+      input.profileFieldKey,
+      input.optionValueCheck.profileValue,
+      input.options,
+    ) === undefined
+  );
+}
 
 /** Role words for a person other than the applicant (referee, guarantor, guardian, emergency contact). */
 const OTHER_PERSON_ROLE =
@@ -231,6 +297,9 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   }
   if (hasFormatKeyMismatch(input)) {
     return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };
+  }
+  if (hasUnmatchedOptionValue(input)) {
+    return { grade: "BLOCKED", reason: "OPTION_VALUE_UNMATCHED" };
   }
   if (!input.categoryConfirmed) {
     return { grade: "REVIEW", reason: "CATEGORY_UNCONFIRMED" };
