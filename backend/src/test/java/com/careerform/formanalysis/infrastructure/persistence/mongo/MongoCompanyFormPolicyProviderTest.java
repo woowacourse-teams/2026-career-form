@@ -48,7 +48,7 @@ class MongoCompanyFormPolicyProviderTest {
     }
 
     @Test
-    @DisplayName("등록되지 않은 host 또는 path는 generic 대상이다")
+    @DisplayName("등록되지 않은 host만 generic 대상이고 등록 host의 다른 path는 차단한다")
     void reportsAnUnregisteredSite() {
         when(companies.findByHost("unknown.example")).thenReturn(Optional.empty());
 
@@ -59,7 +59,7 @@ class MongoCompanyFormPolicyProviderTest {
             .thenReturn(Optional.of(company()));
 
         assertThat(provider.find("www.skcareers.com", "/Other/Page/*"))
-            .isInstanceOf(NotRegistered.class);
+            .isInstanceOf(Unavailable.class);
     }
 
     @Test

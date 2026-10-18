@@ -34,8 +34,11 @@ public final class MongoCompanyFormPolicyProvider
             Optional<FormAnalysisCompanyDocument> company = companies.findByHost(
                 normalizeHost(host)
             );
-            if (company.isEmpty() || !matchesPath(company.orElseThrow(), pathPattern)) {
+            if (company.isEmpty()) {
                 return new NotRegistered();
+            }
+            if (!matchesPath(company.orElseThrow(), pathPattern)) {
+                return new Unavailable();
             }
             return loadActivePolicy(company.orElseThrow());
         }
