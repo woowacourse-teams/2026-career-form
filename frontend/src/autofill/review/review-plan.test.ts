@@ -849,6 +849,33 @@ describe("review plan", () => {
     });
   });
 
+  it("never produces a sensitive review status for a sensitive-confirmation field", () => {
+    const profile = createEmptyProfile();
+    profile.compensation.desiredPosition = "군필";
+    const [item] = buildReviewPlan({
+      analysis: response([
+        {
+          ...allowedEmail,
+          profileFieldKey: "compensation.compensation.desiredPosition",
+          autofillPolicy: "SENSITIVE_CONFIRMATION",
+        },
+      ]),
+      profile,
+      registry: registryWithTextField(),
+    }).items;
+
+    expect(["available", "needs-review", "conflict", "unavailable"]).toContain(
+      item.status,
+    );
+    expect(item).toMatchObject({
+      status: "available",
+      previewValue: "군필",
+      selected: true,
+      disabled: false,
+      revealed: true,
+    });
+  });
+
   it("keeps reveal compatibility idempotent for an included saved value", () => {
     const profile = createEmptyProfile();
     profile.compensation.desiredPosition = "군필";
