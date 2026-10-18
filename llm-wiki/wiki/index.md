@@ -45,6 +45,8 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 드롭다운의 구조 클릭 허용 경계](topics/generic-dropdown-click-gate.md) | accessible label 금지 판정 유지와 수집기의 클릭 정책 적용 | 2026-10-17 |
 | [범용 섹션 분석 캐시의 키와 수명](topics/generic-section-analysis-cache.md) | 구조·칸 상태 키, 실행·URL 수명과 변경 섹션만 재분석 | 2026-10-17 |
 | [범용 endpoint 부재의 frontend 오류 전달](topics/generic-endpoint-unavailable.md) | 범용 분석 404의 ENDPOINT_UNAVAILABLE 전달과 공유 오류 계약 보존 | 2026-10-17 |
+| [범용 칸 매칭 응답의 합성 값 표현](topics/generic-synthetic-binding-response.md) | schemaVersion 3 binding, 이름 레시피와 코드 확정 날짜 부분 | 2026-10-18 |
+| [범용 합성 값 표현의 frontend 검증 경계](topics/generic-binding-frontend-validation.md) | v3 binding 검증, 소비 보류와 BE·FE 동시 배포 | 2026-10-18 |
 | [입력 위치 표시와 설치 안내](topics/autofill-follow-and-install.md) | 기본 필드 추적, 확인 필요 결과와 첫 설치 안내 | 2026-09-22 |
 | [프로젝트 컨벤션](topics/project-conventions.md) | 공통, Git과 스택별 규약 | 2026-08-22 |
 | [프론트 브라우저 테스트](topics/frontend-browser-testing.md) | jsdom/Chromium 계층, 합성 상호작용 검증과 CI 실행 경계 | 2026-10-11 |
