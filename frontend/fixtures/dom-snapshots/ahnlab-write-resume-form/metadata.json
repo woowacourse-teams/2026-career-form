@@ -58,8 +58,8 @@
     "replaced": [
       "id·name 31개 익명화와 참조 동시 치환",
       "선택지 코드 14개 합성 치환",
-      "추출 단계 텍스트 3곳을 [TEXT]로 치환",
-      "승인된 오프라인 후처리로 div.row > div.span > span.text 3곳의 본문을 [TEXT]로 치환"
+      "추출 단계 텍스트 치환 3회(수집 보고 기준). 결과 자리표시자는 국가 선택지 option 1곳과 div.row > div.span > span.text 2곳",
+      "승인된 오프라인 후처리로 div.row > div.span > span.text 3곳의 본문을 [TEXT]로 치환. 그중 2곳은 추출 단계에서 이미 [TEXT]였다"
     ],
     "preserved": [
       "사람이 검토한 공통 라벨·안내·옵션·placeholder",
@@ -67,9 +67,10 @@
       "추가질문 컨트롤 4개"
     ],
     "preserved_common_text": "2026-10-18 사람 개인정보 검토 통과",
-    "redacted_text_count": 6,
+    "redacted_text_count": 4,
     "redacted_text_extraction": 3,
     "redacted_text_post_filter": 3,
+    "redacted_text_overlap": 2,
     "anonymized_ids": 31,
     "synthetic_option_codes": 14,
     "dropped_regions": 5,
@@ -91,7 +92,7 @@
   "limitations": [
     "폼 내부 header/session 영역과 그 안의 버튼 9개는 재현 범위에서 제외된다",
     "폼 밖 주소 검색 팝업, 페이지 CSS·스크립트·이벤트·서버 반응은 재현하지 않는다",
-    "읽기 전용 표시 텍스트 3곳과 추출 시 정제한 텍스트 3곳은 [TEXT]다",
+    "[TEXT]는 4곳이다: 읽기 전용 표시 span.text 3곳과 국가 선택지 option 1곳. 추출 단계 치환 3회 중 2회는 후처리 대상 span.text와 같은 자리여서 중복 집계되지 않는다. 추출 카운터 원문 로그는 보존되지 않아 추출 3회와 겹침 2곳은 UNVERIFIED다",
     "설치본 revision, 확장 브라우저 통합 실행 또는 실사이트 성공률의 근거가 아니다",
     "백엔드 미실행으로 JEV 매칭은 재검증하지 않았다. 추가질문 NO_MATCH는 고정 API 응답의 소비 회귀 검사다."
   ],
