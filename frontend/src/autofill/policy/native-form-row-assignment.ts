@@ -1,3 +1,10 @@
+import { approveNativeGpa } from "./native-form-gpa";
+import { universityAdditionalMajors } from "../profile/university-additional-majors";
+import {
+  captureNativeNestedRows,
+  nativeNestedRows,
+  nativeNestedPreparationCurrent,
+} from "./native-form-nested";
 import type { Profile, ProfileEntry } from "../../profile/model";
 import type { FieldCandidateHandle } from "../dom/types";
 import { resolveValueBinding } from "../profile/value-binding";
@@ -30,6 +37,8 @@ type Assignment = {
   url: string;
   entryId: string;
   index: number;
+  physicalIndex: number;
+  children?: Element[];
 };
 const assigned = new WeakMap<Element, Assignment>();
 function fieldValue(
@@ -156,8 +165,20 @@ function assignments(
   for (const [physicalIndex, row] of rows.entries()) {
     const previous = assigned.get(row),
       o = ownership(document, section, root, row, physicalIndex);
+    if (previous?.children) {
+      const children = nativeNestedRows(row, section, physicalIndex);
+      if (
+        !children ||
+        previous.children.some((child, i) => children[i] !== child) ||
+        (children.length > previous.children.length &&
+          !nativeNestedPreparationCurrent(row, rows))
+      )
+        return null;
+      previous.children = [...children];
+    }
     if (
       previous &&
+      previous.physicalIndex === physicalIndex &&
       previous.profile === profileDigest &&
       previous.digest === digest &&
       previous.url === document.URL &&
@@ -234,6 +255,8 @@ function assignments(
         url: document.URL,
         entryId: entries[index].id,
         index,
+        physicalIndex: rows.indexOf(row),
+        children: nativeNestedRows(row, section, rows.indexOf(row)),
       });
     }
   });
@@ -244,6 +267,34 @@ export function nativeRepeatableProfileCount(
   id: string | undefined,
   profile: Profile,
 ): number | null | undefined {
+  const nested = nativeForm(document)?.sections.find(
+    (s) => s.nested && id?.startsWith(s.nested.action.idPrefix),
+  );
+  if (nested) {
+    const suffix = id!.slice(nested.nested!.action.idPrefix.length);
+    if (!/^(0|[1-9][0-9]*)$/.test(suffix)) return null;
+    const state = assignments(document, nested, profile),
+      physical = Number(suffix),
+      parent = state?.rows[physical];
+    if (!state || !parent) return null;
+    const index = state.result.get(parent);
+    if (index === undefined) return null;
+    const entry = profile.education.filter(
+      (e) => e.sectionId === nested.action!.profileSectionId,
+    )[index];
+    const majors = entry && universityAdditionalMajors(entry.values);
+    if (
+      !entry?.values.majorName?.trim() ||
+      !majors ||
+      new Set([entry.values.majorName.trim(), ...majors.map((m) => m.name)])
+        .size !==
+        majors.length + 1 ||
+      !nativeNestedRows(parent, nested, physical) ||
+      !captureNativeNestedRows(state.root, state.rows, parent, nested, physical)
+    )
+      return null;
+    return 1 + majors.length;
+  }
   const section = nativeForm(document)?.sections.find(
     (s) => s.action?.id === id,
   );
@@ -289,6 +340,7 @@ function singleEntityAssignment(
       url: o.url,
       entryId: entries[0].id,
       index: 0,
+      physicalIndex: 0,
     });
     return 0;
   }
@@ -306,8 +358,28 @@ export function nativeProfileAssignment(
   if (!o?.section.identityFields) return;
   if (o.section.singleEntity) return singleEntityAssignment(o, profile);
   const state = assignments(o.row.ownerDocument, o.section, profile);
+  const index = state?.result.get(o.row);
+  if (index !== undefined && o.field.nestedIndex !== undefined) {
+    const entry = profile.education.filter(
+      (e) => e.sectionId === o.section.action!.profileSectionId,
+    )[index];
+    const majors = entry && universityAdditionalMajors(entry.values);
+    if (
+      !entry?.values.majorName?.trim() ||
+      !majors ||
+      new Set([entry.values.majorName.trim(), ...majors.map((m) => m.name)])
+        .size !==
+        majors.length + 1 ||
+      o.field.nestedIndex > majors.length
+    )
+      return {
+        reason: "전공 역할과 프로필 이름을 유일하게 연결할 수 없습니다.",
+      };
+  }
+  if (index !== undefined && !approveNativeGpa(handle, profile, index))
+    return { reason: "숫자 평점과 만점기준을 함께 확인해 주세요." };
   return (
-    state?.result.get(o.row) ?? {
+    index ?? {
       reason:
         state?.existing.get(o.row) ??
         "행 신원을 확인할 수 없어 해당 섹션은 사용자 확인이 필요합니다.",

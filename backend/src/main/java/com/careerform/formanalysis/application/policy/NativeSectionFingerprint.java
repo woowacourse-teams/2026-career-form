@@ -44,11 +44,24 @@ final class NativeSectionFingerprint {
         return names.containsAll(c.anchors());
     }
     static boolean preparation(SectionContract c, PreparationAnalysisRequest.Section s, Set<String> ids) {
-        if (!Objects.equals(c.parentSectionId(), s.parentSectionId()) || s.items() != null && !s.items().isEmpty()
-            || s.actionCandidates().size() > c.actions().size() || !c.enabled() && !s.actionCandidates().isEmpty()) return false;
-        return s.actionCandidates().stream().allMatch(a -> ids.add(a.candidateId())
-            && a.visibility() == PreparationAnalysisRequest.Visibility.VISIBLE && !Boolean.TRUE.equals(a.disabled())
-            && !Boolean.TRUE.equals(a.inert()) && c.actions().stream().anyMatch(r -> r.structuralNames().contains(a.domId())
-                && r.element() == a.element() && r.control() == a.control() && a.domName() == null));
+        if (!Objects.equals(c.parentSectionId(), s.parentSectionId()) || s.actionCandidates().size()>1
+            || !c.enabled() && (!s.actionCandidates().isEmpty() || s.items()!=null && !s.items().isEmpty())) return false;
+        if(!s.actionCandidates().stream().allMatch(a->action(c,a,ids,0))) return false;
+        if(s.items()==null) return true;
+        if(c.actions().size()!=2 || s.items().size()>c.maxRows()) return false;
+        Set<String> items=new HashSet<>();
+        for(var item:s.items()) {
+            if(!items.add(item.itemId()) || item.actionCandidates().size()!=1) return false;
+            var a=item.actionCandidates().getFirst();
+            int index=c.actions().get(1).structuralNames().indexOf(a.domId());
+            if(index<0 || !item.itemId().equals(c.sectionId()+"-item-"+index) || !action(c,a,ids,1)) return false;
+        }
+        return true;
+    }
+    private static boolean action(SectionContract c, PreparationAnalysisRequest.ActionCandidate a,Set<String> ids,int index) {
+        return c.actions().size()>index && ids.add(a.candidateId()) && a.visibility()==PreparationAnalysisRequest.Visibility.VISIBLE
+            && !Boolean.TRUE.equals(a.disabled()) && !Boolean.TRUE.equals(a.inert()) && !Boolean.TRUE.equals(a.readonly())
+            && c.actions().get(index).structuralNames().contains(a.domId()) && c.actions().get(index).element()==a.element()
+            && c.actions().get(index).control()==a.control() && a.domName()==null;
     }
 }

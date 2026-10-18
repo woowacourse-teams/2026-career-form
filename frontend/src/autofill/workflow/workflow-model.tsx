@@ -240,13 +240,17 @@ export function localItemCount(
         : snapshot.request.site.host,
     );
   const section = snapshot.request.sections.find((candidate) =>
-    candidate.actionCandidates.some(
-      (action) => action.candidateId === plan.actionCandidateId,
-    ),
+    [
+      ...candidate.actionCandidates,
+      ...(candidate.items ?? []).flatMap((i) => i.actionCandidates),
+    ].some((action) => action.candidateId === plan.actionCandidateId),
   );
-  const action = section?.actionCandidates.find(
-    (candidate) => candidate.candidateId === plan.actionCandidateId,
-  );
+  const action =
+    section &&
+    [
+      ...section.actionCandidates,
+      ...(section.items ?? []).flatMap((i) => i.actionCandidates),
+    ].find((candidate) => candidate.candidateId === plan.actionCandidateId);
   const adapterCount = selectedAdapter.repeatableProfileCount?.(
     action?.domId,
     profile,

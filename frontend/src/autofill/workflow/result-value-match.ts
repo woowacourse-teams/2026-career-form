@@ -1,3 +1,4 @@
+import { nativeGpaComplete } from "../policy/native-form-gpa";
 import { normalizeAddress } from "../address/match";
 import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { nativeOwnership } from "../policy/native-form-collection";
@@ -139,6 +140,7 @@ export function matchesResultValue(
   if (handle?.owner === "native")
     return (
       nativeValueMatches(handle, item) &&
+      (!nativeOwnership(handle)?.field.gpa || nativeGpaComplete(handle)) &&
       (nativeOwnership(handle)?.field.search
         ? current.trim() === expected
         : current.trim() === (nativeTarget(handle, expected) ?? expected))

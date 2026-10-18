@@ -1,3 +1,4 @@
+import { nativeGpaTarget, nativeGpaComplete } from "./native-form-gpa";
 import {
   nativeRowWritable,
   recordNativeRowWrite,
@@ -38,6 +39,7 @@ export function nativeTarget(
   if (!o || !o.section.enabled || !el || !value) return;
   if (!nativeUnitMatches(el, o.row, o.field.unit)) return;
   const f = o.field;
+  if (f.gpa) return nativeGpaTarget(handle, value);
   if (f.date) {
     if (!(el instanceof HTMLInputElement) || el.type !== "text") return;
     const peer = f.date.peer ? peerControl(o, f.date.peer) : undefined,
@@ -138,6 +140,8 @@ function authorized(handle: FieldCandidateHandle, item: ReviewPlanItem) {
     !o ||
     !o.section.enabled ||
     !nativeRowWritable(o) ||
+    (o.field.gpa &&
+      nativeGpaTarget(handle, item.profileValue ?? "") === undefined) ||
     handle.elements.some((e) => !nativeUnitMatches(e, o.row, o.field.unit)) ||
     !item.selected ||
     item.disabled ||
@@ -306,7 +310,9 @@ export const nativeWriteAdapter: CompanyWriteAdapter = {
     }
     return { handled: true, written: nativeValueMatches(handle, item) };
   },
-  verifyRetained: nativeValueMatches,
+  verifyRetained: (handle, item) =>
+    nativeValueMatches(handle, item) &&
+    (!nativeOwnership(handle)?.field.gpa || nativeGpaComplete(handle)),
 };
 export async function settleNativeDriver(
   handle: FieldCandidateHandle,

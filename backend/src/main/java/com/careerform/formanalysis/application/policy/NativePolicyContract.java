@@ -32,14 +32,14 @@ final class NativePolicyContract {
         form.path("capabilities").forEach(n -> capabilities.add(n.asText()));
         var core=Set.of("SCOPED_FIELDS", "SINGLE_DEPTH_ROWS", "NATIVE_DRIVERS", "NATIVE_DATES");
         require(form.path("capabilities").size()==capabilities.size() && capabilities.containsAll(core)
-            && Set.of("SCOPED_FIELDS", "SINGLE_DEPTH_ROWS", "NATIVE_DRIVERS", "NATIVE_DATES", "KEYPRESS_COMMITTED_TUPLE", "STAGED_MODAL_COMMIT").containsAll(capabilities)
+            && Set.of("SCOPED_FIELDS", "SINGLE_DEPTH_ROWS", "NATIVE_DRIVERS", "NATIVE_DATES", "KEYPRESS_COMMITTED_TUPLE", "STAGED_MODAL_COMMIT", "NESTED_MAJOR_ROWS", "NUMERIC_GPA_PAIR").containsAll(capabilities)
             && capabilities.contains("STAGED_MODAL_COMMIT")==form.has("address"));
         if(form.has("address")) StagedAddressContract.validate(form.path("address"),rules,browser.path("addressAction"));
         var result = new ArrayList<SectionContract>();
         var ids = new java.util.HashSet<String>();
         for (var section : form.path("sections")) {
             String id = section.path("id").asText();
-            require(keys(section, "id", "title", "selector", "enabled", "reason", "anchors", "rows", "action", "fields", "excludedRow", "identityFields", "singleEntity")
+            require(keys(section, "id", "title", "selector", "enabled", "reason", "anchors", "rows", "action", "fields", "excludedRow", "identityFields", "singleEntity", "nested")
                 && ids.add(id) && section.path("enabled").isBoolean() && text(section.path("selector"))
                 && section.path("fields").isArray() && section.path("fields").size() <= 64);
             var contract = contracts.stream().filter(c -> c.sectionId().equals(id)).findFirst().orElseThrow();
@@ -51,12 +51,22 @@ final class NativePolicyContract {
             if (contract.itemGroupId() != null) require(section.path("rows").path("groupId").asText().equals(contract.itemGroupId())
                 && section.path("rows").path("maxCount").asInt() == contract.maxRows()
                 && section.path("rows").path("selector").asText().startsWith(":scope > "));
+            if (section.has("nested")) {
+                var n=section.path("nested");
+                require(capabilities.contains("NESTED_MAJOR_ROWS") && contract.itemGroupId()!=null && section.has("identityFields") && section.has("action")
+                    && keys(n,"namePrefix","wrapperSelector","rowSelector","maxCount","action") && n.path("namePrefix").asText().equals("collegeMajor") && n.path("maxCount").asInt()==3
+                    && n.path("wrapperSelector").asText().startsWith(":scope > ") && n.path("rowSelector").asText().startsWith(":scope > ")
+                    && keys(n.path("action"),"idPrefix","selector","label") && text(n.path("action").path("selector")) && text(n.path("action").path("label")));
+                var expected=new java.util.HashSet<String>();
+                for(int i=0;i<contract.maxRows();i++) expected.add(n.path("action").path("idPrefix").asText()+i);
+                require(contract.actions().size()==2 && expected.equals(new java.util.HashSet<>(contract.actions().get(1).structuralNames())));
+            } else require(contract.actions().size()<=1);
             var names = new java.util.HashSet<String>();
             for (var field : section.path("fields")) {
                 String name = field.path("name").asText(), type = field.path("type").asText();
-                require(keys(field, "unit", "name", "rawName", "scopeSelector", "dynamicOptions", "type", "label", "binding", "maxLength", "min", "max", "step", "options", "emptyRadioLabel", "date", "driver", "search", "gate")
+                require(keys(field, "unit", "name", "rawName", "scopeSelector", "dynamicOptions", "type", "label", "binding", "maxLength", "min", "max", "step", "options", "emptyRadioLabel", "date", "driver", "search", "gate", "nestedIndex", "gpa")
                     && names.add(name) && Set.of("text", "number", "textarea", "select", "radio").contains(type)
-                    && text(field.path("label")) && field.path("rawName").asText().matches("[A-Za-z][A-Za-z0-9_]*(?:\\[\\{index}])?(?:\\.[A-Za-z][A-Za-z0-9_]*)*"));
+                    && text(field.path("label")) && validName(field, section));
                 var structure = contract.fields().stream().filter(f -> f.structuralName().equals(name)).findFirst().orElseThrow();
                 var rule = rules.stream().filter(r -> r.structuralName().equals(name) && name.equals(r.requiredDomName())
                     && java.util.Objects.equals(contract.itemGroupId(), r.requiredItemGroupId())).findFirst().orElseThrow();
@@ -65,6 +75,14 @@ final class NativePolicyContract {
                 require(structure.control().name().equalsIgnoreCase(control) && structure.element().name().equalsIgnoreCase(element)
                     && rule.control() == structure.control() && rule.element() == structure.element()
                     && MAPPER.valueToTree(rule.valueBinding()).equals(field.path("binding")));
+                if (field.has("gpa")) {
+                    var g=field.path("gpa");
+                    var peer=java.util.stream.StreamSupport.stream(section.path("fields").spliterator(),false).filter(f->f.path("name").equals(g.path("peer"))).findFirst().orElseThrow();
+                    require(capabilities.contains("NUMERIC_GPA_PAIR") && section.has("identityFields") && contract.itemGroupId()!=null && !field.has("nestedIndex") && !peer.has("nestedIndex")
+                        && keys(g,"role","peer") && peer.path("gpa").path("peer").asText().equals(name)
+                        && (g.path("role").asText().equals("SCORE") ? type.equals("number") && field.has("driver") && peer.path("type").asText().equals("select") && peer.path("gpa").path("role").asText().equals("SCALE")
+                            : g.path("role").asText().equals("SCALE") && type.equals("select") && peer.path("type").asText().equals("number") && peer.path("gpa").path("role").asText().equals("SCORE")));
+                }
                 if (field.has("emptyRadioLabel")) require(type.equals("radio") && section.path("singleEntity").asBoolean() && text(field.path("emptyRadioLabel")));
                 if (type.equals("radio") || type.equals("select")) require(field.path("options").isObject()
                     || type.equals("select") && field.path("dynamicOptions").path("labels").isArray()
@@ -124,6 +142,14 @@ final class NativePolicyContract {
                 contract.maxRows(), contract.maxFields(), contract.anchors(), contract.fields(), contract.actions(), section.path("enabled").asBoolean(), contract.excludedRow()));
         }
         return List.copyOf(result);
+    }
+    private static boolean validName(JsonNode f, JsonNode section) {
+        String raw=f.path("rawName").asText();
+        if(!f.has("nestedIndex")) return raw.matches("[A-Za-z][A-Za-z0-9_]*(?:\\[\\{index}])?(?:\\.[A-Za-z][A-Za-z0-9_]*)*");
+        if(!section.has("nested") || !bounded(f.path("nestedIndex"),0,2)) return false;
+        String prefix=section.path("rows").path("namePrefix").asText()+"[{index}].collegeMajor["+f.path("nestedIndex").asInt()+"].";
+        return raw.startsWith(prefix) && raw.substring(prefix.length()).matches("[A-Za-z][A-Za-z0-9_]*")
+            && (!f.has("search") || f.path("search").path("codeName").asText().equals(raw.replaceFirst("Name$","Code")));
     }
     private static void validateSearch(JsonNode s) {
         require(keys(s,"protocol","catalogKind","widgetSelector","querySelector","resultsSelector","resultSelector","displaySelector","codeName","kind","metadata","timeoutMs","detailSelector","protectedSelector","protectedVisibleSelector","protectedValueNames","forbiddenCodes","gradeName","scoreName","registrationName")

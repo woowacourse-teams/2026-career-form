@@ -33,6 +33,8 @@ export interface NativeSearch {
   registrationName?: string;
 }
 export interface NativeField {
+  nestedIndex?: 0 | 1 | 2;
+  gpa?: { role: "SCORE" | "SCALE"; peer: string };
   unit?: { parentSelector: string; pseudo: "::after"; content: string };
   search?: NativeSearch;
   gate?: {
@@ -75,6 +77,13 @@ export interface NativeField {
   };
 }
 export interface NativeSection {
+  nested?: {
+    namePrefix: "collegeMajor";
+    wrapperSelector: string;
+    rowSelector: string;
+    maxCount: 3;
+    action: { idPrefix: string; selector: string; label: string };
+  };
   singleEntity?: true;
   identityFields?: string[];
   excludedRow?: { name: string; reason: string };
@@ -120,7 +129,7 @@ const str = (x: unknown): x is string =>
 const name = (x: unknown) => str(x) && /^[A-Za-z][A-Za-z0-9_.-]*$/.test(x);
 const template = (x: unknown) =>
   str(x) &&
-  /^[A-Za-z][A-Za-z0-9_]*(?:\[\{index\}\])?(?:\.[A-Za-z][A-Za-z0-9_]*)*$/.test(
+  /^[A-Za-z][A-Za-z0-9_]*(?:\[\{index\}\])?(?:\.[A-Za-z][A-Za-z0-9_]*(?:\[[0-2]\])?)*$/.test(
     x,
   );
 const list = (x: unknown, limit = 64): x is unknown[] =>
@@ -155,7 +164,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
     return false;
   const p = value as unknown as NativeForm;
   if (
-    !list(p.capabilities, 6) ||
+    !list(p.capabilities, 8) ||
     p.capabilities.length < 4 ||
     new Set(p.capabilities).size !== p.capabilities.length ||
     !p.capabilities.every((c) =>
@@ -166,6 +175,8 @@ export function validNativeForm(value: unknown): value is NativeForm {
         "NATIVE_DATES",
         "KEYPRESS_COMMITTED_TUPLE",
         "STAGED_MODAL_COMMIT",
+        "NESTED_MAJOR_ROWS",
+        "NUMERIC_GPA_PAIR",
       ].includes(c),
     ) ||
     !str(p.path) ||
@@ -214,6 +225,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
         "excludedRow",
         "identityFields",
         "singleEntity",
+        "nested",
         "title",
         "selector",
         "enabled",
@@ -253,6 +265,34 @@ export function validNativeForm(value: unknown): value is NativeForm {
         s.rows ||
         s.identityFields?.length !== 1 ||
         !s.fields.some((f) => f.name === s.identityFields![0] && f.search))
+    )
+      return false;
+    if (
+      s.nested &&
+      (!p.capabilities.includes("NESTED_MAJOR_ROWS") ||
+        !s.rows ||
+        !s.identityFields ||
+        !s.action ||
+        !object(s.nested) ||
+        !keys(s.nested, [
+          "namePrefix",
+          "wrapperSelector",
+          "rowSelector",
+          "maxCount",
+          "action",
+        ]) ||
+        s.nested.namePrefix !== "collegeMajor" ||
+        s.nested.maxCount !== 3 ||
+        !selector(s.nested.wrapperSelector) ||
+        !s.nested.wrapperSelector.startsWith(":scope > ") ||
+        !selector(s.nested.rowSelector) ||
+        !s.nested.rowSelector.startsWith(":scope > ") ||
+        !object(s.nested.action) ||
+        !keys(s.nested.action, ["idPrefix", "selector", "label"]) ||
+        !name(s.nested.action.idPrefix) ||
+        !s.nested.action.idPrefix.endsWith(".") ||
+        !selector(s.nested.action.selector) ||
+        !str(s.nested.action.label))
     )
       return false;
     ids.add(s.id);
@@ -299,6 +339,8 @@ export function validNativeForm(value: unknown): value is NativeForm {
           !object(f) ||
           !keys(f, [
             "unit",
+            "nestedIndex",
+            "gpa",
             "name",
             "search",
             "gate",
@@ -327,6 +369,52 @@ export function validNativeForm(value: unknown): value is NativeForm {
           !object(f.binding)
         )
           return false;
+        if (
+          f.nestedIndex !== undefined
+            ? !s.nested ||
+              !integer(f.nestedIndex, 0, 2) ||
+              !f.rawName.startsWith(
+                `${s.rows!.namePrefix}[{index}].${s.nested.namePrefix}[${f.nestedIndex}].`,
+              ) ||
+              !/^[A-Za-z][A-Za-z0-9_]*$/.test(
+                f.rawName.slice(
+                  `${s.rows!.namePrefix}[{index}].${s.nested.namePrefix}[${f.nestedIndex}].`
+                    .length,
+                ),
+              )
+            : /\[[0-9]\]/.test(f.rawName)
+        )
+          return false;
+        if (
+          f.search &&
+          f.nestedIndex !== undefined &&
+          f.search.codeName !== f.rawName.replace(/Name$/, "Code")
+        )
+          return false;
+        if (f.gpa) {
+          const peer = s.fields.find((p) => p.name === f.gpa!.peer);
+          if (
+            !p.capabilities.includes("NUMERIC_GPA_PAIR") ||
+            !s.identityFields ||
+            !s.rows ||
+            !object(f.gpa) ||
+            !keys(f.gpa, ["role", "peer"]) ||
+            !peer ||
+            peer.gpa?.peer !== f.name ||
+            f.nestedIndex !== undefined ||
+            peer.nestedIndex !== undefined ||
+            (f.gpa.role === "SCORE"
+              ? f.type !== "number" ||
+                peer.type !== "select" ||
+                peer.gpa?.role !== "SCALE" ||
+                !f.driver
+              : f.gpa.role !== "SCALE" ||
+                f.type !== "select" ||
+                peer.type !== "number" ||
+                peer.gpa?.role !== "SCORE")
+          )
+            return false;
+        }
         fields.add(f.name);
         if (
           f.unit &&
@@ -386,8 +474,14 @@ export function validNativeForm(value: unknown): value is NativeForm {
             keys(b, ["type", "profileFieldKey"]) &&
             name(b.profileFieldKey)) ||
           (b.type === "DERIVED" &&
-            keys(b, ["type", "recipe"]) &&
-            b.recipe === "HANJA_FULL_NAME") ||
+            keys(b, ["type", "recipe", "profileFieldKey"]) &&
+            (b.recipe === "HANJA_FULL_NAME" ||
+              (/^UNIVERSITY_(?:MAIN_MAJOR_CLASSIFICATION|ADDITIONAL_MAJOR_[12]_(?:NAME|CLASSIFICATION|FIELD))$/.test(
+                b.recipe,
+              ) &&
+                /^education\.(university|graduateSchool)\.(majorName|additionalMajorName)$/.test(
+                  b.profileFieldKey ?? "",
+                )))) ||
           (b.type === "LOOKUP" &&
             keys(b, ["type", "profileFieldKey", "optionMap"]) &&
             name(b.profileFieldKey) &&

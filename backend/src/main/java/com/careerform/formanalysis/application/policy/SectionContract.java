@@ -17,7 +17,7 @@ public record SectionContract(String sectionId, String parentSectionId, String i
     public SectionContract {
         if (sectionId == null || sectionId.isBlank() || maxRows < 1 || maxRows > 32 || maxFields < 1 || maxFields > 64
             || fields == null || fields.isEmpty() || fields.size() > maxFields || anchors == null || actions == null
-            || actions.size() > 1 || itemGroupId == null && !actions.isEmpty()
+            || actions.size() > 2 || itemGroupId == null && !actions.isEmpty()
             || fields.stream().map(FieldStructure::structuralName).distinct().count() != fields.size()
             || !fields.stream().map(FieldStructure::structuralName).toList().containsAll(anchors)) {
             throw new IllegalArgumentException("Invalid section contract");

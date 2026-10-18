@@ -226,7 +226,9 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       id
         ? (() => {
             const section = nativeForm(document)?.sections.find(
-              (s) => s.action?.id === id,
+              (s) =>
+                s.action?.id === id ||
+                (s.nested && id.startsWith(s.nested.action.idPrefix)),
             );
             return section?.action
               ? {

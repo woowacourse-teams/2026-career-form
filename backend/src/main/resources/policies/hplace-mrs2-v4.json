@@ -375,7 +375,7 @@
       "parentSectionId": null,
       "itemGroupId": "hplace.mrs2.college",
       "maxRows": 20,
-      "maxFields": 7,
+      "maxFields": 19,
       "anchors": [],
       "fields": [
         {
@@ -412,11 +412,97 @@
           "structuralName": "hplace.mrs2.college.graduationDate",
           "element": "input",
           "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major0.majorName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major0.majorTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major0.majorCategoryCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major0.dayOrNight",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major1.majorName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major1.majorTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major1.majorCategoryCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major2.majorName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major2.majorTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.major2.majorCategoryCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.score",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.perfectScore",
+          "element": "select",
+          "control": "select"
         }
       ],
       "actions": [
         {
           "structuralNames": ["hplace.mrs2.college.add"],
+          "element": "button",
+          "control": "button"
+        },
+        {
+          "structuralNames": [
+            "hplace.mrs2.college.major.add.0",
+            "hplace.mrs2.college.major.add.1",
+            "hplace.mrs2.college.major.add.2",
+            "hplace.mrs2.college.major.add.3",
+            "hplace.mrs2.college.major.add.4",
+            "hplace.mrs2.college.major.add.5",
+            "hplace.mrs2.college.major.add.6",
+            "hplace.mrs2.college.major.add.7",
+            "hplace.mrs2.college.major.add.8",
+            "hplace.mrs2.college.major.add.9",
+            "hplace.mrs2.college.major.add.10",
+            "hplace.mrs2.college.major.add.11",
+            "hplace.mrs2.college.major.add.12",
+            "hplace.mrs2.college.major.add.13",
+            "hplace.mrs2.college.major.add.14",
+            "hplace.mrs2.college.major.add.15",
+            "hplace.mrs2.college.major.add.16",
+            "hplace.mrs2.college.major.add.17",
+            "hplace.mrs2.college.major.add.18",
+            "hplace.mrs2.college.major.add.19"
+          ],
           "element": "button",
           "control": "button"
         }
@@ -427,7 +513,7 @@
       "parentSectionId": null,
       "itemGroupId": "hplace.mrs2.graduateSchool",
       "maxRows": 20,
-      "maxFields": 7,
+      "maxFields": 19,
       "anchors": [],
       "fields": [
         {
@@ -464,11 +550,97 @@
           "structuralName": "hplace.mrs2.graduateSchool.graduationDate",
           "element": "input",
           "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major0.majorName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major0.majorTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major0.majorCategoryCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major0.dayOrNight",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major1.majorName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major1.majorTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major1.majorCategoryCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major2.majorName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major2.majorTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.major2.majorCategoryCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.score",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.perfectScore",
+          "element": "select",
+          "control": "select"
         }
       ],
       "actions": [
         {
           "structuralNames": ["hplace.mrs2.graduateSchool.add"],
+          "element": "button",
+          "control": "button"
+        },
+        {
+          "structuralNames": [
+            "hplace.mrs2.graduateSchool.major.add.0",
+            "hplace.mrs2.graduateSchool.major.add.1",
+            "hplace.mrs2.graduateSchool.major.add.2",
+            "hplace.mrs2.graduateSchool.major.add.3",
+            "hplace.mrs2.graduateSchool.major.add.4",
+            "hplace.mrs2.graduateSchool.major.add.5",
+            "hplace.mrs2.graduateSchool.major.add.6",
+            "hplace.mrs2.graduateSchool.major.add.7",
+            "hplace.mrs2.graduateSchool.major.add.8",
+            "hplace.mrs2.graduateSchool.major.add.9",
+            "hplace.mrs2.graduateSchool.major.add.10",
+            "hplace.mrs2.graduateSchool.major.add.11",
+            "hplace.mrs2.graduateSchool.major.add.12",
+            "hplace.mrs2.graduateSchool.major.add.13",
+            "hplace.mrs2.graduateSchool.major.add.14",
+            "hplace.mrs2.graduateSchool.major.add.15",
+            "hplace.mrs2.graduateSchool.major.add.16",
+            "hplace.mrs2.graduateSchool.major.add.17",
+            "hplace.mrs2.graduateSchool.major.add.18",
+            "hplace.mrs2.graduateSchool.major.add.19"
+          ],
           "element": "button",
           "control": "button"
         }
@@ -627,6 +799,68 @@
     {
       "structuralNames": ["hplace.mrs2.currentAddress.search"],
       "kind": "SEARCH_ADDRESS",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": [
+        "hplace.mrs2.college.major.add.0",
+        "hplace.mrs2.college.major.add.1",
+        "hplace.mrs2.college.major.add.2",
+        "hplace.mrs2.college.major.add.3",
+        "hplace.mrs2.college.major.add.4",
+        "hplace.mrs2.college.major.add.5",
+        "hplace.mrs2.college.major.add.6",
+        "hplace.mrs2.college.major.add.7",
+        "hplace.mrs2.college.major.add.8",
+        "hplace.mrs2.college.major.add.9",
+        "hplace.mrs2.college.major.add.10",
+        "hplace.mrs2.college.major.add.11",
+        "hplace.mrs2.college.major.add.12",
+        "hplace.mrs2.college.major.add.13",
+        "hplace.mrs2.college.major.add.14",
+        "hplace.mrs2.college.major.add.15",
+        "hplace.mrs2.college.major.add.16",
+        "hplace.mrs2.college.major.add.17",
+        "hplace.mrs2.college.major.add.18",
+        "hplace.mrs2.college.major.add.19"
+      ],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": [
+        "hplace.mrs2.graduateSchool.major.add.0",
+        "hplace.mrs2.graduateSchool.major.add.1",
+        "hplace.mrs2.graduateSchool.major.add.2",
+        "hplace.mrs2.graduateSchool.major.add.3",
+        "hplace.mrs2.graduateSchool.major.add.4",
+        "hplace.mrs2.graduateSchool.major.add.5",
+        "hplace.mrs2.graduateSchool.major.add.6",
+        "hplace.mrs2.graduateSchool.major.add.7",
+        "hplace.mrs2.graduateSchool.major.add.8",
+        "hplace.mrs2.graduateSchool.major.add.9",
+        "hplace.mrs2.graduateSchool.major.add.10",
+        "hplace.mrs2.graduateSchool.major.add.11",
+        "hplace.mrs2.graduateSchool.major.add.12",
+        "hplace.mrs2.graduateSchool.major.add.13",
+        "hplace.mrs2.graduateSchool.major.add.14",
+        "hplace.mrs2.graduateSchool.major.add.15",
+        "hplace.mrs2.graduateSchool.major.add.16",
+        "hplace.mrs2.graduateSchool.major.add.17",
+        "hplace.mrs2.graduateSchool.major.add.18",
+        "hplace.mrs2.graduateSchool.major.add.19"
+      ],
+      "kind": "ADD",
       "targetSectionId": null,
       "profileFieldKey": null,
       "optionDisplayName": null,
@@ -1349,6 +1583,348 @@
       "requiredDomName": "hplace.mrs2.currentAddress.detailAddress",
       "requiredItemGroupId": null,
       "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major0.majorName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.majorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major0.majorName",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major0.majorTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION",
+        "profileFieldKey": "education.university.majorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major0.majorTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major0.majorCategoryCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.majorField"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major0.majorCategoryCode",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major0.dayOrNight",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.attendanceType"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major0.dayOrNight",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major1.majorName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
+        "profileFieldKey": "education.university.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major1.majorName",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major1.majorTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+        "profileFieldKey": "education.university.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major1.majorTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major1.majorCategoryCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_FIELD",
+        "profileFieldKey": "education.university.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major1.majorCategoryCode",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major2.majorName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
+        "profileFieldKey": "education.university.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major2.majorName",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major2.majorTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+        "profileFieldKey": "education.university.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major2.majorTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.major2.majorCategoryCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_FIELD",
+        "profileFieldKey": "education.university.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.major2.majorCategoryCode",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.score",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.gpaScore"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.score",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.college.perfectScore",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.university.gpaScale",
+        "optionMap": {
+          "3.0": "3.0",
+          "3.5": "3.5",
+          "4.0": "4.0",
+          "4.3": "4.3",
+          "4.5": "4.5",
+          "5.0": "5.0",
+          "7.0": "7.0",
+          "20": "20",
+          "100": "100",
+          "3.00": "3.0",
+          "3.50": "3.5",
+          "4.00": "4.0",
+          "4.30": "4.3",
+          "4.50": "4.5",
+          "5.00": "5.0",
+          "7.00": "7.0",
+          "20.00": "20",
+          "100.00": "100"
+        }
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.perfectScore",
+      "requiredItemGroupId": "hplace.mrs2.college"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major0.majorName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.majorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major0.majorName",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major0.majorTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION",
+        "profileFieldKey": "education.graduateSchool.majorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major0.majorTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major0.majorCategoryCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.majorField"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major0.majorCategoryCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major0.dayOrNight",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.attendanceType"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major0.dayOrNight",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major1.majorName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
+        "profileFieldKey": "education.graduateSchool.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major1.majorName",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major1.majorTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+        "profileFieldKey": "education.graduateSchool.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major1.majorTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major1.majorCategoryCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_FIELD",
+        "profileFieldKey": "education.graduateSchool.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major1.majorCategoryCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major2.majorName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
+        "profileFieldKey": "education.graduateSchool.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major2.majorName",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major2.majorTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+        "profileFieldKey": "education.graduateSchool.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major2.majorTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.major2.majorCategoryCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DERIVED",
+        "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_FIELD",
+        "profileFieldKey": "education.graduateSchool.additionalMajorName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.major2.majorCategoryCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.score",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.gpaScore"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.score",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.perfectScore",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.graduateSchool.gpaScale",
+        "optionMap": {
+          "3.0": "3.0",
+          "3.5": "3.5",
+          "4.0": "4.0",
+          "4.3": "4.3",
+          "4.5": "4.5",
+          "5.0": "5.0",
+          "7.0": "7.0",
+          "20": "20",
+          "100": "100",
+          "3.00": "3.0",
+          "3.50": "3.5",
+          "4.00": "4.0",
+          "4.30": "4.3",
+          "4.50": "4.5",
+          "5.00": "5.0",
+          "7.00": "7.0",
+          "20.00": "20",
+          "100.00": "100"
+        }
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.perfectScore",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool"
     }
   ],
   "executionPolicy": {
@@ -1365,7 +1941,9 @@
           "NATIVE_DRIVERS",
           "NATIVE_DATES",
           "KEYPRESS_COMMITTED_TUPLE",
-          "STAGED_MODAL_COMMIT"
+          "STAGED_MODAL_COMMIT",
+          "NESTED_MAJOR_ROWS",
+          "NUMERIC_GPA_PAIR"
         ],
         "path": "/mrs2/applicant/resume/writeResume",
         "formSelector": "form#frm",
@@ -2351,6 +2929,406 @@
                   "tokens": ["college", "graduationCriteriaDate"],
                   "maxDateSelector": ".row.in-span > .msg > strong"
                 }
+              },
+              {
+                "name": "hplace.mrs2.college.major0.majorName",
+                "rawName": "college[{index}].collegeMajor[0].majorName",
+                "nestedIndex": 0,
+                "type": "text",
+                "label": "전공명",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.majorName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": null,
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"major\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "college[{index}].collegeMajor[0].majorCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 3,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major0.majorTypeCode",
+                "rawName": "college[{index}].collegeMajor[0].majorTypeCode",
+                "nestedIndex": 0,
+                "type": "radio",
+                "label": "전공 구분",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION",
+                  "profileFieldKey": "education.university.majorName"
+                },
+                "options": {
+                  "주전공": "01",
+                  "복수전공": "02",
+                  "부전공": "03",
+                  "연계전공": "04",
+                  "융합전공": "05"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major0.majorCategoryCode",
+                "rawName": "college[{index}].collegeMajor[0].majorCategoryCode",
+                "nestedIndex": 0,
+                "type": "select",
+                "label": "전공 계열",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.majorField"
+                },
+                "options": {
+                  "인문계열(언어ㆍ문학)": "101",
+                  "인문계열(인문과학)": "102",
+                  "상경계열(경영·경제)": "103",
+                  "상경계열(회계·금융)": "136",
+                  "상경계열(통계)": "137",
+                  "상경계열(무역)": "141",
+                  "사회계열(법률)": "104",
+                  "사회계열(사회과학)": "105",
+                  "교육계열(교육일반)": "106",
+                  "교육계열(유아교육)": "107",
+                  "교육계열(특수교육)": "108",
+                  "교육계열(초등교육)": "109",
+                  "교육계열(중등교육)": "110",
+                  "공학계열(건축)": "111",
+                  "공학계열(토목·도시)": "112",
+                  "공학계열(교통·운송)": "113",
+                  "공학계열(기계·금속)": "114",
+                  "공학계열(전기·전자)": "115",
+                  "공학계열(정밀·에너지)": "116",
+                  "공학계열(소재·재료)": "117",
+                  "공학계열(컴퓨터·통신)": "118",
+                  "공학계열(산업)": "119",
+                  "공학계열(화공)": "120",
+                  "공학계열(환경)": "139",
+                  "공학계열(조선해양)": "140",
+                  "자연계열(농림·수산)": "121",
+                  "자연계열(생물·화학·환경)": "122",
+                  "자연계열(생활과학)": "123",
+                  "자연계열(수학·물리·천문·지리)": "124",
+                  "자연계열(교통.운송)": "138",
+                  "의약계열(의료)": "125",
+                  "의약계열(간호)": "126",
+                  "의약계열(약학)": "127",
+                  "의약계열(치료·보건)": "128",
+                  "예체능계열(디자인)": "129",
+                  "예체능계열(응용예술)": "130",
+                  "예체능계열(무용·체육)": "131",
+                  "예체능계열(미술·조형)": "132",
+                  "예체능계열(연극·영화)": "133",
+                  "예체능계열(음악)": "134",
+                  "기타": "135"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major0.dayOrNight",
+                "rawName": "college[{index}].collegeMajor[0].dayOrNight",
+                "nestedIndex": 0,
+                "type": "radio",
+                "label": "주전공 주야간",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.attendanceType"
+                },
+                "options": {
+                  "주간": "01",
+                  "야간": "02"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major1.majorName",
+                "rawName": "college[{index}].collegeMajor[1].majorName",
+                "nestedIndex": 1,
+                "type": "text",
+                "label": "전공명",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
+                  "profileFieldKey": "education.university.additionalMajorName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": null,
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"major\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "college[{index}].collegeMajor[1].majorCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 3,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major1.majorTypeCode",
+                "rawName": "college[{index}].collegeMajor[1].majorTypeCode",
+                "nestedIndex": 1,
+                "type": "radio",
+                "label": "전공 구분",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+                  "profileFieldKey": "education.university.additionalMajorName"
+                },
+                "options": {
+                  "주전공": "01",
+                  "복수전공": "02",
+                  "부전공": "03",
+                  "연계전공": "04",
+                  "융합전공": "05"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major1.majorCategoryCode",
+                "rawName": "college[{index}].collegeMajor[1].majorCategoryCode",
+                "nestedIndex": 1,
+                "type": "select",
+                "label": "전공 계열",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_FIELD",
+                  "profileFieldKey": "education.university.additionalMajorName"
+                },
+                "options": {
+                  "인문계열(언어ㆍ문학)": "101",
+                  "인문계열(인문과학)": "102",
+                  "상경계열(경영·경제)": "103",
+                  "상경계열(회계·금융)": "136",
+                  "상경계열(통계)": "137",
+                  "상경계열(무역)": "141",
+                  "사회계열(법률)": "104",
+                  "사회계열(사회과학)": "105",
+                  "교육계열(교육일반)": "106",
+                  "교육계열(유아교육)": "107",
+                  "교육계열(특수교육)": "108",
+                  "교육계열(초등교육)": "109",
+                  "교육계열(중등교육)": "110",
+                  "공학계열(건축)": "111",
+                  "공학계열(토목·도시)": "112",
+                  "공학계열(교통·운송)": "113",
+                  "공학계열(기계·금속)": "114",
+                  "공학계열(전기·전자)": "115",
+                  "공학계열(정밀·에너지)": "116",
+                  "공학계열(소재·재료)": "117",
+                  "공학계열(컴퓨터·통신)": "118",
+                  "공학계열(산업)": "119",
+                  "공학계열(화공)": "120",
+                  "공학계열(환경)": "139",
+                  "공학계열(조선해양)": "140",
+                  "자연계열(농림·수산)": "121",
+                  "자연계열(생물·화학·환경)": "122",
+                  "자연계열(생활과학)": "123",
+                  "자연계열(수학·물리·천문·지리)": "124",
+                  "자연계열(교통.운송)": "138",
+                  "의약계열(의료)": "125",
+                  "의약계열(간호)": "126",
+                  "의약계열(약학)": "127",
+                  "의약계열(치료·보건)": "128",
+                  "예체능계열(디자인)": "129",
+                  "예체능계열(응용예술)": "130",
+                  "예체능계열(무용·체육)": "131",
+                  "예체능계열(미술·조형)": "132",
+                  "예체능계열(연극·영화)": "133",
+                  "예체능계열(음악)": "134",
+                  "기타": "135"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major2.majorName",
+                "rawName": "college[{index}].collegeMajor[2].majorName",
+                "nestedIndex": 2,
+                "type": "text",
+                "label": "전공명",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
+                  "profileFieldKey": "education.university.additionalMajorName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": null,
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"major\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "college[{index}].collegeMajor[2].majorCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 3,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major2.majorTypeCode",
+                "rawName": "college[{index}].collegeMajor[2].majorTypeCode",
+                "nestedIndex": 2,
+                "type": "radio",
+                "label": "전공 구분",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+                  "profileFieldKey": "education.university.additionalMajorName"
+                },
+                "options": {
+                  "주전공": "01",
+                  "복수전공": "02",
+                  "부전공": "03",
+                  "연계전공": "04",
+                  "융합전공": "05"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.major2.majorCategoryCode",
+                "rawName": "college[{index}].collegeMajor[2].majorCategoryCode",
+                "nestedIndex": 2,
+                "type": "select",
+                "label": "전공 계열",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_FIELD",
+                  "profileFieldKey": "education.university.additionalMajorName"
+                },
+                "options": {
+                  "인문계열(언어ㆍ문학)": "101",
+                  "인문계열(인문과학)": "102",
+                  "상경계열(경영·경제)": "103",
+                  "상경계열(회계·금융)": "136",
+                  "상경계열(통계)": "137",
+                  "상경계열(무역)": "141",
+                  "사회계열(법률)": "104",
+                  "사회계열(사회과학)": "105",
+                  "교육계열(교육일반)": "106",
+                  "교육계열(유아교육)": "107",
+                  "교육계열(특수교육)": "108",
+                  "교육계열(초등교육)": "109",
+                  "교육계열(중등교육)": "110",
+                  "공학계열(건축)": "111",
+                  "공학계열(토목·도시)": "112",
+                  "공학계열(교통·운송)": "113",
+                  "공학계열(기계·금속)": "114",
+                  "공학계열(전기·전자)": "115",
+                  "공학계열(정밀·에너지)": "116",
+                  "공학계열(소재·재료)": "117",
+                  "공학계열(컴퓨터·통신)": "118",
+                  "공학계열(산업)": "119",
+                  "공학계열(화공)": "120",
+                  "공학계열(환경)": "139",
+                  "공학계열(조선해양)": "140",
+                  "자연계열(농림·수산)": "121",
+                  "자연계열(생물·화학·환경)": "122",
+                  "자연계열(생활과학)": "123",
+                  "자연계열(수학·물리·천문·지리)": "124",
+                  "자연계열(교통.운송)": "138",
+                  "의약계열(의료)": "125",
+                  "의약계열(간호)": "126",
+                  "의약계열(약학)": "127",
+                  "의약계열(치료·보건)": "128",
+                  "예체능계열(디자인)": "129",
+                  "예체능계열(응용예술)": "130",
+                  "예체능계열(무용·체육)": "131",
+                  "예체능계열(미술·조형)": "132",
+                  "예체능계열(연극·영화)": "133",
+                  "예체능계열(음악)": "134",
+                  "기타": "135"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.score",
+                "rawName": "college[{index}].score",
+                "type": "number",
+                "label": "평점",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.gpaScore"
+                },
+                "min": 0,
+                "step": 0.001,
+                "gpa": {
+                  "role": "SCORE",
+                  "peer": "hplace.mrs2.college.perfectScore"
+                },
+                "driver": {
+                  "stage": 4,
+                  "timeoutMs": 1500,
+                  "dependencies": ["hplace.mrs2.college.perfectScore"],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.college.perfectScore",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.perfectScore",
+                "rawName": "college[{index}].perfectScore",
+                "type": "select",
+                "label": "만점기준",
+                "binding": {
+                  "type": "LOOKUP",
+                  "profileFieldKey": "education.university.gpaScale",
+                  "optionMap": {
+                    "3.0": "3.0",
+                    "3.5": "3.5",
+                    "4.0": "4.0",
+                    "4.3": "4.3",
+                    "4.5": "4.5",
+                    "5.0": "5.0",
+                    "7.0": "7.0",
+                    "20": "20",
+                    "100": "100",
+                    "3.00": "3.0",
+                    "3.50": "3.5",
+                    "4.00": "4.0",
+                    "4.30": "4.3",
+                    "4.50": "4.5",
+                    "5.00": "5.0",
+                    "7.00": "7.0",
+                    "20.00": "20",
+                    "100.00": "100"
+                  }
+                },
+                "options": {
+                  "3.0": "3.0",
+                  "3.5": "3.5",
+                  "4.0": "4.0",
+                  "4.3": "4.3",
+                  "4.5": "4.5",
+                  "5.0": "5.0",
+                  "7.0": "7.0",
+                  "20": "20",
+                  "100": "100"
+                },
+                "gpa": {
+                  "role": "SCALE",
+                  "peer": "hplace.mrs2.college.score"
+                }
               }
             ],
             "rows": {
@@ -2371,7 +3349,18 @@
               "hplace.mrs2.college.academyName",
               "hplace.mrs2.college.degreeTypeCode",
               "hplace.mrs2.college.entranceDate"
-            ]
+            ],
+            "nested": {
+              "namePrefix": "collegeMajor",
+              "wrapperSelector": ":scope > div.subject[data-wrap=\"major\"]",
+              "rowSelector": ":scope > div.row.loop[data-loop=\"collegeMajor\"]",
+              "maxCount": 3,
+              "action": {
+                "idPrefix": "hplace.mrs2.college.major.add.",
+                "selector": "button[type=\"button\"][data-button=\"add\"]",
+                "label": "전공 추가"
+              }
+            }
           },
           {
             "id": "hplace-mrs2-graduateSchool",
@@ -2597,6 +3586,406 @@
                   "tokens": ["college", "graduationCriteriaDate"],
                   "maxDateSelector": ".row.in-span > .msg > strong"
                 }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major0.majorName",
+                "rawName": "graduateSchool[{index}].collegeMajor[0].majorName",
+                "nestedIndex": 0,
+                "type": "text",
+                "label": "전공명",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.majorName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": null,
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"major\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "graduateSchool[{index}].collegeMajor[0].majorCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 3,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major0.majorTypeCode",
+                "rawName": "graduateSchool[{index}].collegeMajor[0].majorTypeCode",
+                "nestedIndex": 0,
+                "type": "radio",
+                "label": "전공 구분",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_MAIN_MAJOR_CLASSIFICATION",
+                  "profileFieldKey": "education.graduateSchool.majorName"
+                },
+                "options": {
+                  "주전공": "01",
+                  "복수전공": "02",
+                  "부전공": "03",
+                  "연계전공": "04",
+                  "융합전공": "05"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major0.majorCategoryCode",
+                "rawName": "graduateSchool[{index}].collegeMajor[0].majorCategoryCode",
+                "nestedIndex": 0,
+                "type": "select",
+                "label": "전공 계열",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.majorField"
+                },
+                "options": {
+                  "인문계열(언어ㆍ문학)": "101",
+                  "인문계열(인문과학)": "102",
+                  "상경계열(경영·경제)": "103",
+                  "상경계열(회계·금융)": "136",
+                  "상경계열(통계)": "137",
+                  "상경계열(무역)": "141",
+                  "사회계열(법률)": "104",
+                  "사회계열(사회과학)": "105",
+                  "교육계열(교육일반)": "106",
+                  "교육계열(유아교육)": "107",
+                  "교육계열(특수교육)": "108",
+                  "교육계열(초등교육)": "109",
+                  "교육계열(중등교육)": "110",
+                  "공학계열(건축)": "111",
+                  "공학계열(토목·도시)": "112",
+                  "공학계열(교통·운송)": "113",
+                  "공학계열(기계·금속)": "114",
+                  "공학계열(전기·전자)": "115",
+                  "공학계열(정밀·에너지)": "116",
+                  "공학계열(소재·재료)": "117",
+                  "공학계열(컴퓨터·통신)": "118",
+                  "공학계열(산업)": "119",
+                  "공학계열(화공)": "120",
+                  "공학계열(환경)": "139",
+                  "공학계열(조선해양)": "140",
+                  "자연계열(농림·수산)": "121",
+                  "자연계열(생물·화학·환경)": "122",
+                  "자연계열(생활과학)": "123",
+                  "자연계열(수학·물리·천문·지리)": "124",
+                  "자연계열(교통.운송)": "138",
+                  "의약계열(의료)": "125",
+                  "의약계열(간호)": "126",
+                  "의약계열(약학)": "127",
+                  "의약계열(치료·보건)": "128",
+                  "예체능계열(디자인)": "129",
+                  "예체능계열(응용예술)": "130",
+                  "예체능계열(무용·체육)": "131",
+                  "예체능계열(미술·조형)": "132",
+                  "예체능계열(연극·영화)": "133",
+                  "예체능계열(음악)": "134",
+                  "기타": "135"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major0.dayOrNight",
+                "rawName": "graduateSchool[{index}].collegeMajor[0].dayOrNight",
+                "nestedIndex": 0,
+                "type": "radio",
+                "label": "주전공 주야간",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.attendanceType"
+                },
+                "options": {
+                  "주간": "01",
+                  "야간": "02"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major1.majorName",
+                "rawName": "graduateSchool[{index}].collegeMajor[1].majorName",
+                "nestedIndex": 1,
+                "type": "text",
+                "label": "전공명",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME",
+                  "profileFieldKey": "education.graduateSchool.additionalMajorName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": null,
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"major\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "graduateSchool[{index}].collegeMajor[1].majorCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 3,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major1.majorTypeCode",
+                "rawName": "graduateSchool[{index}].collegeMajor[1].majorTypeCode",
+                "nestedIndex": 1,
+                "type": "radio",
+                "label": "전공 구분",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION",
+                  "profileFieldKey": "education.graduateSchool.additionalMajorName"
+                },
+                "options": {
+                  "주전공": "01",
+                  "복수전공": "02",
+                  "부전공": "03",
+                  "연계전공": "04",
+                  "융합전공": "05"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major1.majorCategoryCode",
+                "rawName": "graduateSchool[{index}].collegeMajor[1].majorCategoryCode",
+                "nestedIndex": 1,
+                "type": "select",
+                "label": "전공 계열",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_1_FIELD",
+                  "profileFieldKey": "education.graduateSchool.additionalMajorName"
+                },
+                "options": {
+                  "인문계열(언어ㆍ문학)": "101",
+                  "인문계열(인문과학)": "102",
+                  "상경계열(경영·경제)": "103",
+                  "상경계열(회계·금융)": "136",
+                  "상경계열(통계)": "137",
+                  "상경계열(무역)": "141",
+                  "사회계열(법률)": "104",
+                  "사회계열(사회과학)": "105",
+                  "교육계열(교육일반)": "106",
+                  "교육계열(유아교육)": "107",
+                  "교육계열(특수교육)": "108",
+                  "교육계열(초등교육)": "109",
+                  "교육계열(중등교육)": "110",
+                  "공학계열(건축)": "111",
+                  "공학계열(토목·도시)": "112",
+                  "공학계열(교통·운송)": "113",
+                  "공학계열(기계·금속)": "114",
+                  "공학계열(전기·전자)": "115",
+                  "공학계열(정밀·에너지)": "116",
+                  "공학계열(소재·재료)": "117",
+                  "공학계열(컴퓨터·통신)": "118",
+                  "공학계열(산업)": "119",
+                  "공학계열(화공)": "120",
+                  "공학계열(환경)": "139",
+                  "공학계열(조선해양)": "140",
+                  "자연계열(농림·수산)": "121",
+                  "자연계열(생물·화학·환경)": "122",
+                  "자연계열(생활과학)": "123",
+                  "자연계열(수학·물리·천문·지리)": "124",
+                  "자연계열(교통.운송)": "138",
+                  "의약계열(의료)": "125",
+                  "의약계열(간호)": "126",
+                  "의약계열(약학)": "127",
+                  "의약계열(치료·보건)": "128",
+                  "예체능계열(디자인)": "129",
+                  "예체능계열(응용예술)": "130",
+                  "예체능계열(무용·체육)": "131",
+                  "예체능계열(미술·조형)": "132",
+                  "예체능계열(연극·영화)": "133",
+                  "예체능계열(음악)": "134",
+                  "기타": "135"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major2.majorName",
+                "rawName": "graduateSchool[{index}].collegeMajor[2].majorName",
+                "nestedIndex": 2,
+                "type": "text",
+                "label": "전공명",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME",
+                  "profileFieldKey": "education.graduateSchool.additionalMajorName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": null,
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"major\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "graduateSchool[{index}].collegeMajor[2].majorCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 3,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major2.majorTypeCode",
+                "rawName": "graduateSchool[{index}].collegeMajor[2].majorTypeCode",
+                "nestedIndex": 2,
+                "type": "radio",
+                "label": "전공 구분",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION",
+                  "profileFieldKey": "education.graduateSchool.additionalMajorName"
+                },
+                "options": {
+                  "주전공": "01",
+                  "복수전공": "02",
+                  "부전공": "03",
+                  "연계전공": "04",
+                  "융합전공": "05"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.major2.majorCategoryCode",
+                "rawName": "graduateSchool[{index}].collegeMajor[2].majorCategoryCode",
+                "nestedIndex": 2,
+                "type": "select",
+                "label": "전공 계열",
+                "binding": {
+                  "type": "DERIVED",
+                  "recipe": "UNIVERSITY_ADDITIONAL_MAJOR_2_FIELD",
+                  "profileFieldKey": "education.graduateSchool.additionalMajorName"
+                },
+                "options": {
+                  "인문계열(언어ㆍ문학)": "101",
+                  "인문계열(인문과학)": "102",
+                  "상경계열(경영·경제)": "103",
+                  "상경계열(회계·금융)": "136",
+                  "상경계열(통계)": "137",
+                  "상경계열(무역)": "141",
+                  "사회계열(법률)": "104",
+                  "사회계열(사회과학)": "105",
+                  "교육계열(교육일반)": "106",
+                  "교육계열(유아교육)": "107",
+                  "교육계열(특수교육)": "108",
+                  "교육계열(초등교육)": "109",
+                  "교육계열(중등교육)": "110",
+                  "공학계열(건축)": "111",
+                  "공학계열(토목·도시)": "112",
+                  "공학계열(교통·운송)": "113",
+                  "공학계열(기계·금속)": "114",
+                  "공학계열(전기·전자)": "115",
+                  "공학계열(정밀·에너지)": "116",
+                  "공학계열(소재·재료)": "117",
+                  "공학계열(컴퓨터·통신)": "118",
+                  "공학계열(산업)": "119",
+                  "공학계열(화공)": "120",
+                  "공학계열(환경)": "139",
+                  "공학계열(조선해양)": "140",
+                  "자연계열(농림·수산)": "121",
+                  "자연계열(생물·화학·환경)": "122",
+                  "자연계열(생활과학)": "123",
+                  "자연계열(수학·물리·천문·지리)": "124",
+                  "자연계열(교통.운송)": "138",
+                  "의약계열(의료)": "125",
+                  "의약계열(간호)": "126",
+                  "의약계열(약학)": "127",
+                  "의약계열(치료·보건)": "128",
+                  "예체능계열(디자인)": "129",
+                  "예체능계열(응용예술)": "130",
+                  "예체능계열(무용·체육)": "131",
+                  "예체능계열(미술·조형)": "132",
+                  "예체능계열(연극·영화)": "133",
+                  "예체능계열(음악)": "134",
+                  "기타": "135"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.score",
+                "rawName": "graduateSchool[{index}].score",
+                "type": "number",
+                "label": "평점",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.gpaScore"
+                },
+                "min": 0,
+                "step": 0.001,
+                "gpa": {
+                  "role": "SCORE",
+                  "peer": "hplace.mrs2.graduateSchool.perfectScore"
+                },
+                "driver": {
+                  "stage": 4,
+                  "timeoutMs": 1500,
+                  "dependencies": ["hplace.mrs2.graduateSchool.perfectScore"],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.graduateSchool.perfectScore",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.perfectScore",
+                "rawName": "graduateSchool[{index}].perfectScore",
+                "type": "select",
+                "label": "만점기준",
+                "binding": {
+                  "type": "LOOKUP",
+                  "profileFieldKey": "education.graduateSchool.gpaScale",
+                  "optionMap": {
+                    "3.0": "3.0",
+                    "3.5": "3.5",
+                    "4.0": "4.0",
+                    "4.3": "4.3",
+                    "4.5": "4.5",
+                    "5.0": "5.0",
+                    "7.0": "7.0",
+                    "20": "20",
+                    "100": "100",
+                    "3.00": "3.0",
+                    "3.50": "3.5",
+                    "4.00": "4.0",
+                    "4.30": "4.3",
+                    "4.50": "4.5",
+                    "5.00": "5.0",
+                    "7.00": "7.0",
+                    "20.00": "20",
+                    "100.00": "100"
+                  }
+                },
+                "options": {
+                  "3.0": "3.0",
+                  "3.5": "3.5",
+                  "4.0": "4.0",
+                  "4.3": "4.3",
+                  "4.5": "4.5",
+                  "5.0": "5.0",
+                  "7.0": "7.0",
+                  "20": "20",
+                  "100": "100"
+                },
+                "gpa": {
+                  "role": "SCALE",
+                  "peer": "hplace.mrs2.graduateSchool.score"
+                }
               }
             ],
             "rows": {
@@ -2617,7 +4006,18 @@
               "hplace.mrs2.graduateSchool.academyName",
               "hplace.mrs2.graduateSchool.degreeTypeCode",
               "hplace.mrs2.graduateSchool.entranceDate"
-            ]
+            ],
+            "nested": {
+              "namePrefix": "collegeMajor",
+              "wrapperSelector": ":scope > div.subject[data-wrap=\"major\"]",
+              "rowSelector": ":scope > div.row.loop[data-loop=\"collegeMajor\"]",
+              "maxCount": 3,
+              "action": {
+                "idPrefix": "hplace.mrs2.graduateSchool.major.add.",
+                "selector": "button[type=\"button\"][data-button=\"add\"]",
+                "label": "전공 추가"
+              }
+            }
           },
           {
             "id": "hplace-mrs2-license",

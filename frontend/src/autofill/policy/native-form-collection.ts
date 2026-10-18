@@ -1,4 +1,9 @@
 import {
+  nativeNestedRows,
+  nativeNestedPreparationCurrent,
+  nativeNestedState,
+} from "./native-form-nested";
+import {
   collectStagedAddress,
   collectStagedAddressAction,
 } from "./staged-address-collection";
@@ -38,6 +43,7 @@ import {
 } from "./native-form-contract";
 
 export interface NativeOwnership {
+  childRow?: Element;
   search?: SearchNodes;
   form: NativeForm;
   section: NativeSection;
@@ -206,6 +212,12 @@ export function currentNativeOwner(
   )
     return;
   if (
+    o.childRow &&
+    nativeNestedRows(o.row, o.section, o.index!)?.[o.field.nestedIndex!] !==
+      o.childRow
+  )
+    return;
+  if (
     o.search &&
     !sameSearchNodes(o.search, searchNodes(o.row, o.field, o.index))
   )
@@ -270,6 +282,11 @@ export function collectNativeFields(
       );
       if (excluded && !section.excludedRow) continue;
       for (const field of section.fields) {
+        const childRow =
+          field.nestedIndex === undefined
+            ? undefined
+            : nativeNestedRows(row, section, index!)?.[field.nestedIndex];
+        if (field.nestedIndex !== undefined && !childRow) continue;
         if (
           excluded
             ? field.name !== section.excludedRow!.name
@@ -279,6 +296,7 @@ export function collectNativeFields(
         const elements = controls(row, field, index);
         if (
           !elements.length ||
+          (childRow && elements.some((e) => !childRow.contains(e))) ||
           elements.some((e) => claimed.has(e)) ||
           (!excluded &&
             elements.some(
@@ -368,6 +386,7 @@ export function collectNativeFields(
                 : undefined,
         };
         owners.set(handle, {
+          childRow,
           search: field.search ? searchNodes(row, field, index) : undefined,
           form,
           section,
@@ -433,7 +452,10 @@ export function collectNativePreparation(
     ...(legacy?.request.sections ?? []),
   ];
   const form = nativeForm(document);
-  const actions = new Map<string, { root: Element; section: NativeSection }>();
+  const actions = new Map<
+    string,
+    { root: Element; section: NativeSection; parent?: Element; index?: number }
+  >();
   if (form && nativeDocument(document, form))
     for (const { section, root, rows } of scopes(document, form)) {
       const candidates: PreparationAnalyzeRequest["sections"][number]["actionCandidates"] =
@@ -508,17 +530,94 @@ export function collectNativePreparation(
           candidates.push(candidate);
         }
       }
+      const items: NonNullable<
+        PreparationAnalyzeRequest["sections"][number]["items"]
+      > = [];
+      if (section.enabled && section.nested)
+        for (const [index, parent] of rows.entries()) {
+          const n = section.nested,
+            children = nativeNestedRows(parent, section, index);
+          if (!children) continue;
+          const buttons = Array.from(
+            parent.querySelectorAll(n.action.selector),
+          ).filter(
+            (e): e is HTMLButtonElement =>
+              e instanceof HTMLButtonElement &&
+              e.type === "button" &&
+              visible(e) &&
+              e.closest(`[data-loop="${n.namePrefix}"]`) === children.at(-1) &&
+              e.getAttribute("data-rel-target") ===
+                `${section.rows!.namePrefix}[${index}]` &&
+              !forbidden.test(
+                [
+                  e.textContent,
+                  e.name,
+                  e.id,
+                  e.getAttribute("data-button"),
+                ].join(" "),
+              ),
+          );
+          if (buttons.length !== 1) continue;
+          const candidateId = `native-action-${actions.size}`,
+            itemId = `${section.id}-item-${index}`;
+          const candidate = {
+            candidateId,
+            domId: n.action.idPrefix + index,
+            displayName: n.action.label,
+            element: "button" as const,
+            control: "button" as const,
+            visibility: "visible" as const,
+          };
+          const url = document.URL,
+            digest = JSON.stringify(form);
+          registry.registerAction({
+            kind: "action",
+            owner: "native",
+            candidateId,
+            candidate,
+            sectionId: section.id,
+            itemId,
+            itemIndex: index,
+            element: buttons[0],
+            signature: createStructuralSignature(buttons),
+            isCurrentContext: () => {
+              const current = nativeRows(root, section),
+                child = nativeNestedRows(parent, section, index);
+              return (
+                document.URL === url &&
+                JSON.stringify(nativeForm(document)) === digest &&
+                nativeDocument(document) &&
+                !!current &&
+                current[index] === parent &&
+                !!child &&
+                buttons[0].isConnected &&
+                buttons[0].type === "button" &&
+                visible(buttons[0]) &&
+                buttons[0].matches(n.action.selector) &&
+                child.at(-1)!.contains(buttons[0]) &&
+                buttons[0].getAttribute("data-rel-target") ===
+                  `${section.rows!.namePrefix}[${index}]` &&
+                nativeNestedPreparationCurrent(parent, current)
+              );
+            },
+          });
+          actions.set(candidateId, { root, section, parent, index });
+          items.push({ itemId, actionCandidates: [candidate] });
+        }
       sections.push({
         sectionId: section.id,
         displayName: section.title,
         actionCandidates: candidates,
+        ...(items.length ? { items } : {}),
       });
     }
   collectStagedAddressAction(document, registry, sections);
   const current = (id: string) => {
     const a = actions.get(id);
     return a && nativeDocument(document, form)
-      ? nativeRows(a.root, a.section)
+      ? a.parent
+        ? nativeNestedRows(a.parent, a.section, a.index!)
+        : nativeRows(a.root, a.section)
       : undefined;
   };
   return {
@@ -526,9 +625,19 @@ export function collectNativePreparation(
     request: { schemaVersion: 2, snapshotId, site, sections },
     isSectionVisible: (id) => sections.some((s) => s.sectionId === id),
     countRepeatableGroups: (id) => current(id)?.length,
-    repeatableGroupLimit: (id) => actions.get(id)?.section.rows?.maxCount,
-    repeatableGroupState: (id) =>
-      current(id)?.map((row) =>
+    repeatableGroupLimit: (id) => {
+      const a = actions.get(id);
+      return a?.parent ? a.section.nested?.maxCount : a?.section.rows?.maxCount;
+    },
+    repeatableGroupState: (id) => {
+      const a = actions.get(id);
+      if (a?.parent) {
+        const parents = nativeRows(a.root, a.section);
+        return parents && nativeNestedPreparationCurrent(a.parent, parents)
+          ? nativeNestedState(a.parent, parents, a.section, a.index!)
+          : undefined;
+      }
+      return current(id)?.map((row) =>
         JSON.stringify(
           Array.from(
             row.querySelectorAll<
@@ -541,6 +650,7 @@ export function collectNativePreparation(
             e instanceof HTMLInputElement ? e.checked : null,
           ]),
         ),
-      ),
+      );
+    },
   };
 }
