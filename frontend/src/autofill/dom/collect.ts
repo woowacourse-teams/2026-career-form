@@ -339,7 +339,11 @@ function collectFieldElements(
 export function collectFieldsSnapshot(
   document: Document,
   dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
-  options: { recoverBrokenLabels?: boolean } = {},
+  options: {
+    recoverBrokenLabels?: boolean;
+    /** Opt out of mixed section detection; omitted keeps it on. */
+    mixedSectionDetection?: boolean;
+  } = {},
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   const finishTiming = startLocalTiming("collect", { version: 2 });
   try {
@@ -402,7 +406,11 @@ export function collectFieldsSnapshot(
             Element,
             { groupKey: string; rowIndex: number; group: MixedSectionGroup }
           >();
-          if (container && adapter === collectionAdapterForHost("")) {
+          if (
+            container &&
+            adapter === collectionAdapterForHost("") &&
+            options.mixedSectionDetection !== false
+          ) {
             const byGroup = new Map<number, Element[]>();
             for (const item of repeatableItems)
               if (!item.ambiguous)
@@ -1059,6 +1067,10 @@ function repeatableItemElementsForAction(
 
 export function collectPreparationSnapshot(
   document: Document,
+  options: {
+    /** Opt out of mixed section detection; omitted keeps it on. */
+    mixedSectionDetection?: boolean;
+  } = {},
 ): PreparationCollectedSnapshot {
   const companyId = resolveDocumentCompany(document);
   const adapter = collectionAdapterForHost(document);
@@ -1200,7 +1212,8 @@ export function collectPreparationSnapshot(
       );
     },
     mixedSectionGroup(actionCandidateId) {
-      if (!generic) return undefined;
+      if (!generic || options.mixedSectionDetection === false)
+        return undefined;
       const sectionId = actionSectionIds.get(actionCandidateId);
       if (!sectionId) return undefined;
       const action = actionElements.get(actionCandidateId);
