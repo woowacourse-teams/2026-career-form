@@ -55,7 +55,7 @@ function mockApi(
       })),
     }),
     analyzeGenericFields: async (request) => ({
-      schemaVersion: 2,
+      schemaVersion: 3,
       snapshotId: request.snapshotId,
       status: "COMPLETE",
       fields: request.sections.flatMap((section) =>
