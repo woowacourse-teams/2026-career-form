@@ -1,3 +1,4 @@
+import type { NativeMajorPreparationState } from "./native-major-preparation";
 import type {
   AnalyzeFieldsSnapshot,
   StaticFieldsSession,
@@ -37,6 +38,7 @@ type AddressRun = {
   hplaceFieldsRequests?: number;
   nativeFieldsRequests?: number;
   nativeProgress?: string;
+  nativeMajors?: NativeMajorPreparationState;
   button?: Element;
   task?: Promise<AddressResult>;
 };

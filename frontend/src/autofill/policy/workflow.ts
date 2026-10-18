@@ -220,6 +220,12 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
     get diagnosticsTitle() {
       return config()?.diagnosticsTitle;
     },
+    followUpRepeatableAction: (id) =>
+      !!id &&
+      !!nativeForm(document)?.sections.some(
+        (section) =>
+          section.nested && id.startsWith(section.nested.action.idPrefix),
+      ),
     repeatableProfileCount: (id, profile) =>
       nativeRepeatableProfileCount(document, id, profile),
     repeatedProfileSectionHint: (id) =>

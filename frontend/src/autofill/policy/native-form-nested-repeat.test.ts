@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 import {
-  mountEducation,
+  mountEducation as mountBlankEducation,
   educationProfile,
   educationReview,
   educationItem,
@@ -15,6 +15,9 @@ import {
   type PreparationSnapshot,
 } from "../preparation/executor";
 afterEach(() => installExecutionPolicy(document));
+// These unit cases exercise the phase where the site has enabled major controls.
+const mountEducation = (count = 2, majors = 1) =>
+  mountBlankEducation(count, majors, true);
 function action(index = 0) {
   const c = collectPreparationSnapshot(document);
   const a = c.request.sections

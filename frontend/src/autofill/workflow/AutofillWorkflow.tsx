@@ -198,10 +198,13 @@ function PolicyReadyWorkflow({
   const [addressResult, setAddressResult] = useState<AddressResult>();
   const executionPending = useRef(false);
   const structureActions = useRef<StructureLoopAction[]>([]);
-  const genericStructure = useRef<GenericStructureContext | undefined>(undefined);
-  const genericCollector = useRef<
-    Parameters<typeof createAnalyzeFields>[0]["collectFields"]
-  >(undefined);
+  const genericStructure = useRef<GenericStructureContext | undefined>(
+    undefined,
+  );
+  const genericCollector =
+    useRef<Parameters<typeof createAnalyzeFields>[0]["collectFields"]>(
+      undefined,
+    );
   const writeController = useRef(new AbortController());
   const mounted = useRef(true);
   const [stage, setStage] = useState<Stage>("analyzing");
@@ -381,7 +384,11 @@ function PolicyReadyWorkflow({
           if (!active) return;
           genericStructure.current = structure.context;
           genericCollector.current = (document, signal) =>
-            collectGenericStructureSnapshot(document, signal, structure.context);
+            collectGenericStructureSnapshot(
+              document,
+              signal,
+              structure.context,
+            );
           await analyzeFields(loadedProfile);
           return;
         }
@@ -499,7 +506,35 @@ function PolicyReadyWorkflow({
         const items = preparationPlans.map((plan) =>
           preparationItem(plan, snapshot, loadedProfile, adapter),
         );
-        setPreparationItems(items);
+        // Parent additions precede nested additions; the follow-up recollects
+        // children with guards captured against the final parent topology.
+        const addingParents = new Set(
+          items.flatMap((item) => {
+            const lookup = snapshot.registry.lookupAction(
+              item.plan.actionCandidateId,
+            );
+            return item.runnable &&
+              (item.requiredAdditions ?? 0) > 0 &&
+              "handle" in lookup &&
+              lookup.handle.owner === "native" &&
+              !lookup.handle.itemId
+              ? [lookup.handle.sectionId]
+              : [];
+          }),
+        );
+        setPreparationItems(
+          items.filter((item) => {
+            const lookup = snapshot.registry.lookupAction(
+              item.plan.actionCandidateId,
+            );
+            return !(
+              "handle" in lookup &&
+              lookup.handle.owner === "native" &&
+              lookup.handle.itemId &&
+              addingParents.has(lookup.handle.sectionId)
+            );
+          }),
+        );
         setWarnings(analysis.warningCodes ?? []);
         setPreparationExecutionPending(true);
       } catch (error) {

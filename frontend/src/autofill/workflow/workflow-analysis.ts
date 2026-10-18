@@ -1,3 +1,4 @@
+import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
 import { nativePolicyRequired } from "./execution-policy";
 import { nativeForm } from "../policy/native-form-collection";
 import { getWriteAdapter } from "../adapters/write";
@@ -596,6 +597,8 @@ export function createAnalyzeFields({
       finishPlan();
       return preparedPlan;
     });
+    if (run.nativeMajors?.unavailable.length)
+      plan.items.push(...run.nativeMajors.unavailable);
     const finishReviewLog = startLocalTiming("review-log");
     debugReviewPlan(plan);
     finishReviewLog();
@@ -1309,6 +1312,18 @@ export function createAnalyzeFields({
           });
           completedGenericStateDrivers.current = nextCompletedGenericDrivers;
         }
+        await prepareNativeMajorsAfterSchool({
+          document: pageDocument,
+          profile: loadedProfile,
+          handles: currentStateDriverItems.map((driver) => driver.handle),
+          state: (run.nativeMajors ??= {
+            attempted: new WeakSet(),
+            unavailable: [],
+          }),
+          apiClient,
+          signal: run.controller.signal,
+          beforeMutation: profileCurrent,
+        });
         await analyzeFields(
           loadedProfile,
           ignoreFreshRowDefaults,

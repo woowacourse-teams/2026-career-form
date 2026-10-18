@@ -18,7 +18,7 @@ export const collegeRow = (kind: string, index: number, majors = 1) => {
   const parent = `${kind}[${index}]`;
   return `<div class="wrapSubject" data-loop="${kind}" data-index="${index}">${widget(parent, "college", "academy")}<label><input type="radio" name="${parent}.degreeTypeCode" value="${kind === "college" ? "50" : "62"}">${kind === "college" ? "학사" : "석사"}</label><input name="${parent}.entranceDate" data-dates="${parent}.date:YM college graduationCriteriaDate"><input name="${parent}.graduationDate" data-dates="${parent}.date:END"><div class="subject"><div class="subject" data-wrap="major">${Array.from({ length: majors }, (_, j) => majorRow(parent, j)).join("")}</div></div><input type="number" name="${parent}.score" step="0.001" min="0" data-rel-id="${parent}.perfectScore" data-rel-target="${parent}"><select name="${parent}.perfectScore" data-rel-target="${parent}.perfectScore" disabled><option value="">만점기준</option>${["3.0", "3.5", "4.0", "4.3", "4.5", "5.0", "7.0", "20", "100"].map((v) => `<option value="${v}">${v}</option>`).join("")}</select><input type="number" name="${parent}.majorCredits"><input type="number" name="${parent}.majorAverageScore"><select name="${parent}.majorPerfectScore"><option value=""></option><option value="4.5">4.5</option></select></div>`;
 };
-export function mountEducation(count = 2, majors = 1) {
+export function mountEducation(count = 2, majors = 1, majorEnabled = false) {
   window.history.replaceState({}, "", "/mrs2/applicant/resume/writeResume");
   const policy = structuredClone(
     seed.executionPolicy,
@@ -28,19 +28,51 @@ export function mountEducation(count = 2, majors = 1) {
       .map((src) => `<script src="${src}"></script>`)
       .join("") +
     `<form id="frm"><div id="wrapResume">${["college", "graduateSchool"].map((kind, i) => `<section class="writeResume" data-code="${141 + i}"><div class="wrapCollege" data-wrap="collegeLoop" data-type="${kind}" data-required="true" data-dateinputformat="YM">${Array.from({ length: i ? 1 : count }, (_, j) => collegeRow(kind, j, majors)).join("")}</div><div class="collegeBtnSet"><button type="button" data-button="addCollege" data-loopname="${kind}"></button></div></section>`).join("")}</div></form>`;
-  for (const root of document.querySelectorAll("[data-wrap=major]"))
+  const wireParent = (parent: Element) => {
+    const root = parent.querySelector("[data-wrap=major]")!;
     wireMajorAdd(root);
-  for (const input of document.querySelectorAll<HTMLInputElement>(
-    '[name$=".score"]',
+    for (const input of root.querySelectorAll<
+      HTMLInputElement | HTMLButtonElement
+    >("input[type=search],button[data-button=add]"))
+      input.disabled = !majorEnabled;
+  };
+  for (const parent of document.querySelectorAll(
+    "[data-loop=college],[data-loop=graduateSchool]",
   ))
-    input.addEventListener("blur", () => {
+    wireParent(parent);
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    "[data-button=addCollege]",
+  )) {
+    button.onclick = () => {
+      const kind = button.getAttribute("data-loopname")!;
+      const root = button
+        .closest("section")!
+        .querySelector("[data-wrap=collegeLoop]")!;
+      root.insertAdjacentHTML(
+        "beforeend",
+        collegeRow(kind, root.children.length),
+      );
+      wireParent(root.lastElementChild!);
+    };
+  }
+  document.querySelector("#frm")!.addEventListener(
+    "blur",
+    (event) => {
+      const input = event.target;
+      if (
+        !(input instanceof HTMLInputElement) ||
+        !input.name.endsWith(".score")
+      )
+        return;
       setTimeout(() => {
         const scale = input.parentElement!.querySelector<HTMLSelectElement>(
           '[name$=".perfectScore"]',
         )!;
         scale.disabled = false;
       }, 50);
-    });
+    },
+    true,
+  );
   installExecutionPolicy(document, policy);
   return policy;
 }
