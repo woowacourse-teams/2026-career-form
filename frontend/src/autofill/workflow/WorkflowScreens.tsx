@@ -55,7 +55,6 @@ interface WorkflowScreensProps {
   reviewItems: readonly ReviewPlanItem[];
   partial: boolean;
   toggleReviewItem(candidateId: string): void;
-  revealSensitiveItem(candidateId: string): void;
   executeWrites(): Promise<void>;
   results: readonly ApprovedWriteResult[];
   addressResult?: AddressResult;
