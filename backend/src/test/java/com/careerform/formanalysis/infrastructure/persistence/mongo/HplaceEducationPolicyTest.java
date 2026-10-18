@@ -66,4 +66,16 @@ class HplaceEducationPolicyTest {
         assertThat(fingerprint.matches(policy,MAPPER.treeToValue(r,com.careerform.formanalysis.dto.PreparationAnalysisRequest.class))).isFalse();
     }
 
+    @Test void acceptsMajorDescendantsWithOwnershipInsteadOfFixedWrapperDepth() throws Exception {
+        var doc=HplaceCompanyFormPolicyFactory.createNative();
+        var tree=MAPPER.valueToTree(doc.executionPolicy());
+        for (var section:tree.path("browserPolicy").path("nativeForm").path("sections")) {
+            if (!section.has("nested")) continue;
+            ((ObjectNode)section.path("nested")).put("wrapperSelector", "div.subject[data-wrap=\"major\"]")
+                .put("rowSelector", "div.row.loop[data-loop=\"collegeMajor\"]");
+        }
+        var updated=doc.withExecutionPolicy(MAPPER.treeToValue(tree,com.careerform.formanalysis.dto.ExecutionPolicy.class));
+        assertThatCode(()->policy(updated)).doesNotThrowAnyException();
+    }
+
 }

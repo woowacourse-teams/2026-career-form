@@ -3352,8 +3352,8 @@
             ],
             "nested": {
               "namePrefix": "collegeMajor",
-              "wrapperSelector": ":scope > div.subject[data-wrap=\"major\"]",
-              "rowSelector": ":scope > div.row.loop[data-loop=\"collegeMajor\"]",
+              "wrapperSelector": "div.subject[data-wrap=\"major\"]",
+              "rowSelector": "div.row.loop[data-loop=\"collegeMajor\"]",
               "maxCount": 3,
               "action": {
                 "idPrefix": "hplace.mrs2.college.major.add.",
@@ -4009,8 +4009,8 @@
             ],
             "nested": {
               "namePrefix": "collegeMajor",
-              "wrapperSelector": ":scope > div.subject[data-wrap=\"major\"]",
-              "rowSelector": ":scope > div.row.loop[data-loop=\"collegeMajor\"]",
+              "wrapperSelector": "div.subject[data-wrap=\"major\"]",
+              "rowSelector": "div.row.loop[data-loop=\"collegeMajor\"]",
               "maxCount": 3,
               "action": {
                 "idPrefix": "hplace.mrs2.graduateSchool.major.add.",

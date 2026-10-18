@@ -14,14 +14,22 @@ export function nativeNestedRows(
 ): Element[] | undefined {
   const n = section.nested;
   if (!n || !section.rows) return;
-  const wrappers = parent.querySelectorAll(n.wrapperSelector);
-  if (wrappers.length !== 1) return;
-  const rows = Array.from(wrappers[0].querySelectorAll(n.rowSelector));
+  const owner = '[data-loop="college"],[data-loop="graduateSchool"]';
+  const owned = (e: Element) =>
+    e.parentElement?.closest("[data-loop]") === parent &&
+    e.closest(owner) === parent;
+  const rows = Array.from(parent.querySelectorAll(n.rowSelector)).filter(owned);
+  const wrappers = Array.from(
+    parent.querySelectorAll(n.wrapperSelector),
+  ).filter(owned);
   if (
     !rows.length ||
     rows.length > n.maxCount ||
-    parent.querySelectorAll(`[data-loop="${n.namePrefix}"]`).length !==
-      rows.length
+    wrappers.length !== 1 ||
+    rows.some((row) => row.closest('[data-wrap="major"]') !== wrappers[0]) ||
+    Array.from(parent.querySelectorAll(`[data-loop="${n.namePrefix}"]`)).filter(
+      owned,
+    ).length !== rows.length
   )
     return;
   const prefix = `${section.rows.namePrefix}[${index}]`;
@@ -34,9 +42,12 @@ export function nativeNestedRows(
       ) ||
       Array.from(row.querySelectorAll("[data-rel-target]")).some(
         (e) =>
-          ![prefix, `${prefix}.${n.namePrefix}[${j}]`].includes(
-            e.getAttribute("data-rel-target")!,
-          ),
+          ![
+            prefix,
+            `${prefix}.${n.namePrefix}[${j}]`,
+            `${prefix}.${n.namePrefix}[${j}].majorCategoryCode`,
+            `${prefix}.${n.namePrefix}[${j}].ranking`,
+          ].includes(e.getAttribute("data-rel-target")!),
       )
     )
       return;

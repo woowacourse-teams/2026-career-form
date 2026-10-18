@@ -292,3 +292,73 @@ it("reruns a completed major preparation without another click", async () => {
     executedPlanCount: 0,
   });
 });
+
+it("collects majors through arbitrary non-loop wrappers but never from another parent", () => {
+  mountEducation();
+  const root = document.querySelector("[data-wrap=major]")!;
+  const wrapper = document.createElement("div");
+  root.replaceWith(wrapper);
+  wrapper.append(root);
+  expect(
+    educationReview().review.items.filter(
+      (i) => i.profileValue === "소프트웨어융합",
+    ),
+  ).toHaveLength(1);
+  const alien = document.createElement("div");
+  alien.dataset.loop = "graduateSchool";
+  root.replaceWith(alien);
+  alien.append(root);
+  expect(
+    educationReview().snapshot.request.sections[0].items![0].fields.some((f) =>
+      f.domName?.includes("major0"),
+    ),
+  ).toBe(false);
+});
+it.each(["majorCategoryCode", "ranking"])(
+  "accepts exact rank dependency %s but rejects a sibling major dependency",
+  (suffix) => {
+    mountEducation();
+    const root = document.querySelector("[data-wrap=major]")!;
+    root.closest("[data-loop=college]")!.append(root);
+    const child = document.querySelector("[data-loop=collegeMajor]")!;
+    const rank = document.createElement("div");
+    rank.dataset.relTarget = `college[0].collegeMajor[0].${suffix}`;
+    child.append(rank);
+    expect(
+      educationReview().snapshot.request.sections[0].items![0].fields.some(
+        (f) => f.domName?.includes("major0"),
+      ),
+    ).toBe(true);
+    rank.dataset.relTarget = `college[0].collegeMajor[1].${suffix}`;
+    expect(
+      educationReview().snapshot.request.sections[0].items![0].fields.some(
+        (f) => f.domName?.includes("major0"),
+      ),
+    ).toBe(false);
+  },
+);
+
+it("rejects a second empty major wrapper instead of choosing the populated wrapper", () => {
+  mountEducation();
+  const wrapper = document.querySelector("[data-wrap=major]")!;
+  wrapper.after(wrapper.cloneNode(false));
+  expect(
+    educationReview().snapshot.request.sections[0].items![0].fields.some((f) =>
+      f.domName?.includes("major0"),
+    ),
+  ).toBe(false);
+});
+
+it("rejects a malformed nearest major wrapper instead of skipping it", () => {
+  mountEducation();
+  const child = document.querySelector("[data-loop=collegeMajor]")!;
+  const wrapper = document.createElement("section");
+  wrapper.dataset.wrap = "major";
+  child.replaceWith(wrapper);
+  wrapper.append(child);
+  expect(
+    educationReview().snapshot.request.sections[0].items![0].fields.some((f) =>
+      f.domName?.includes("major0"),
+    ),
+  ).toBe(false);
+});

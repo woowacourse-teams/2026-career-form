@@ -55,7 +55,7 @@ final class NativePolicyContract {
                 var n=section.path("nested");
                 require(capabilities.contains("NESTED_MAJOR_ROWS") && contract.itemGroupId()!=null && section.has("identityFields") && section.has("action")
                     && keys(n,"namePrefix","wrapperSelector","rowSelector","maxCount","action") && n.path("namePrefix").asText().equals("collegeMajor") && n.path("maxCount").asInt()==3
-                    && n.path("wrapperSelector").asText().startsWith(":scope > ") && n.path("rowSelector").asText().startsWith(":scope > ")
+                    && n.path("wrapperSelector").asText().equals("div.subject[data-wrap=\"major\"]") && n.path("rowSelector").asText().equals("div.row.loop[data-loop=\"collegeMajor\"]")
                     && keys(n.path("action"),"idPrefix","selector","label") && text(n.path("action").path("selector")) && text(n.path("action").path("label")));
                 var expected=new java.util.HashSet<String>();
                 for(int i=0;i<contract.maxRows();i++) expected.add(n.path("action").path("idPrefix").asText()+i);

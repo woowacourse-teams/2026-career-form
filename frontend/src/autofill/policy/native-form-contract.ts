@@ -284,9 +284,9 @@ export function validNativeForm(value: unknown): value is NativeForm {
         s.nested.namePrefix !== "collegeMajor" ||
         s.nested.maxCount !== 3 ||
         !selector(s.nested.wrapperSelector) ||
-        !s.nested.wrapperSelector.startsWith(":scope > ") ||
+        s.nested.wrapperSelector !== 'div.subject[data-wrap="major"]' ||
         !selector(s.nested.rowSelector) ||
-        !s.nested.rowSelector.startsWith(":scope > ") ||
+        s.nested.rowSelector !== 'div.row.loop[data-loop="collegeMajor"]' ||
         !object(s.nested.action) ||
         !keys(s.nested.action, ["idPrefix", "selector", "label"]) ||
         !name(s.nested.action.idPrefix) ||

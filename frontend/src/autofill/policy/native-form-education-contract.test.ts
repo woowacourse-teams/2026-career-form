@@ -56,3 +56,14 @@ it("rejects depth three even when a matching search code is forged with it", () 
   field.search.codeName = "college[{index}].collegeMajor[0].child[0].majorCode";
   expect(validNativeForm(form)).toBe(false);
 });
+
+it("accepts ownership-scoped descendant major selectors without fixing wrapper depth", () => {
+  const form = structuredClone(
+    seed.executionPolicy.browserPolicy.nativeForm,
+  ) as any;
+  for (const section of form.sections.filter((s: any) => s.nested)) {
+    section.nested.wrapperSelector = 'div.subject[data-wrap="major"]';
+    section.nested.rowSelector = 'div.row.loop[data-loop="collegeMajor"]';
+  }
+  expect(validNativeForm(form)).toBe(true);
+});
