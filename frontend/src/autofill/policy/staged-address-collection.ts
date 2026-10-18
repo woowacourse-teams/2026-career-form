@@ -19,18 +19,23 @@ export function collectStagedAddress(
     JSON.stringify(executionPolicy(document)) === digest &&
     sameAddressNodes(n, stagedAddressNodes(document));
   const existing = sections.flatMap((s) => s.fields);
+  const reusedIndexes = new Set<number>();
+  for (const [i, f] of n.policy.fields.entries()) {
+    if (f.legacyName === undefined) continue;
+    const reused = existing.filter((c) => c.domName === f.legacyName);
+    if (!reused.length) continue;
+    if (reused.length !== 1) return;
+    const lookup = registry.lookupField(reused[0].candidateId);
+    if (
+      !("handle" in lookup) ||
+      lookup.handle.elements.length !== 1 ||
+      lookup.handle.elements[0] !== n.fields[i]
+    )
+      return;
+    reusedIndexes.add(i);
+  }
   const fields = n.policy.fields.flatMap((f, i) => {
-    const reused = existing.find((c) => c.domName === f.legacyName);
-    if (reused) {
-      const lookup = registry.lookupField(reused.candidateId);
-      if (
-        "handle" in lookup &&
-        lookup.handle.elements.length === 1 &&
-        lookup.handle.elements[0] === n.fields[i]
-      )
-        return [];
-      return [];
-    }
+    if (reusedIndexes.has(i)) return [];
     const candidate = {
       candidateId: `staged-address-${i}`,
       domId: f.name,
