@@ -155,6 +155,11 @@
         "자율형 공립": "13",
         "기타": "99"
       }
+    },
+    "p1ReviewLabelCoverage": {
+      "employmentType": "실제 프로필 선택지 9개 → 실관측 동적 라벨, tenant Sn은 관측값 고정",
+      "militaryBranch": "프로필 8개 → 실관측 코드/라벨, 4개 별칭은 코디네이터 의미 확인",
+      "militarySiteOnly": ["공익", "병역특례", "카투사", "기타"]
     }
   },
   "sectionContracts": [
@@ -661,8 +666,18 @@
       "element": "select",
       "control": "select",
       "valueBinding": {
-        "type": "DIRECT",
-        "profileFieldKey": "military.military.militaryBranch"
+        "type": "LOOKUP",
+        "profileFieldKey": "military.military.militaryBranch",
+        "optionMap": {
+          "해병대": "해병",
+          "전투경찰": "전경",
+          "해양경찰": "해경",
+          "의무경찰": "의경",
+          "육군": "육군",
+          "해군": "해군",
+          "공군": "공군",
+          "의무소방": "의무소방"
+        }
       },
       "allowReadonlyWrite": false,
       "requiredDomName": "hplace.mrs2.basic.militaryBranchCode",
@@ -687,8 +702,19 @@
       "element": "select",
       "control": "select",
       "valueBinding": {
-        "type": "DIRECT",
-        "profileFieldKey": "careers.career.employmentType"
+        "type": "LOOKUP",
+        "profileFieldKey": "careers.career.employmentType",
+        "optionMap": {
+          "정규": "정규직",
+          "계약": "계약직",
+          "파견": "파견직",
+          "인턴": "인턴",
+          "프리랜서": "프리랜서",
+          "아르바이트": "아르바이트",
+          "개인사업": "개인사업",
+          "병역특례": "병역특례",
+          "기타": "기타"
+        }
       },
       "allowReadonlyWrite": false,
       "requiredDomName": "hplace.mrs2.career.careerCriteriaCodeSn",
@@ -1349,8 +1375,18 @@
                 "type": "select",
                 "label": "군별",
                 "binding": {
-                  "type": "DIRECT",
-                  "profileFieldKey": "military.military.militaryBranch"
+                  "type": "LOOKUP",
+                  "profileFieldKey": "military.military.militaryBranch",
+                  "optionMap": {
+                    "해병대": "해병",
+                    "전투경찰": "전경",
+                    "해양경찰": "해경",
+                    "의무경찰": "의경",
+                    "육군": "육군",
+                    "해군": "해군",
+                    "공군": "공군",
+                    "의무소방": "의무소방"
+                  }
                 },
                 "options": {
                   "육군": "01",
@@ -1408,8 +1444,19 @@
                 "type": "select",
                 "label": "고용형태",
                 "binding": {
-                  "type": "DIRECT",
-                  "profileFieldKey": "careers.career.employmentType"
+                  "type": "LOOKUP",
+                  "profileFieldKey": "careers.career.employmentType",
+                  "optionMap": {
+                    "정규": "정규직",
+                    "계약": "계약직",
+                    "파견": "파견직",
+                    "인턴": "인턴",
+                    "프리랜서": "프리랜서",
+                    "아르바이트": "아르바이트",
+                    "개인사업": "개인사업",
+                    "병역특례": "병역특례",
+                    "기타": "기타"
+                  }
                 },
                 "dynamicOptions": {
                   "labels": [
