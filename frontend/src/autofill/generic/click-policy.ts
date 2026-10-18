@@ -8,10 +8,16 @@ const GENERIC_PREPARATION_FORBIDDEN_ACTION =
   /초기화|재설정|reset|clear|검색|조회|찾기|search|find|lookup/i;
 const STRUCTURAL_CLICK_FORBIDDEN_ACTION =
   /임시\s*저장|미리\s*보기|로그아웃|취소|닫기|logout|log out|sign out|cancel|close/i;
-const FORBIDDEN_LABELS = [
+// Patterns that still block a bare close label. STRUCTURAL_CLICK_FORBIDDEN_ACTION
+// is left out on purpose: it names 닫기/close, so it would reject every bare
+// close label.
+const CLOSE_LABEL_BLOCKING_PATTERNS = [
   FORBIDDEN_LABEL,
   FORBIDDEN_ACTION,
   GENERIC_PREPARATION_FORBIDDEN_ACTION,
+];
+const FORBIDDEN_LABELS = [
+  ...CLOSE_LABEL_BLOCKING_PATTERNS,
   STRUCTURAL_CLICK_FORBIDDEN_ACTION,
 ];
 
@@ -86,7 +92,7 @@ function blockReason(
   const label = labelOf(element);
   if (closeOnly) {
     return BARE_CLOSE_LABEL.test(label) &&
-      !FORBIDDEN_LABELS.slice(0, 3).some((pattern) => pattern.test(label))
+      !CLOSE_LABEL_BLOCKING_PATTERNS.some((pattern) => pattern.test(label))
       ? undefined
       : "forbidden-label";
   }
