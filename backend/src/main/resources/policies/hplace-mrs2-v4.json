@@ -4373,7 +4373,10 @@
           "confirmOkSelector": "button[data-button=\"ok\"]",
           "confirmOkLabel": "확인",
           "timeoutMs": 2500,
-          "stagePostcodePlaceholder": "-"
+          "stagePostcodePlaceholder": "-",
+          "confirmCancelSelector": "button[data-button=\"cancel\"]",
+          "confirmCancelLabel": "취소",
+          "modalCloseSelector": "button[data-button=\"modalClose\"]"
         }
       },
       "runtimeRules": {

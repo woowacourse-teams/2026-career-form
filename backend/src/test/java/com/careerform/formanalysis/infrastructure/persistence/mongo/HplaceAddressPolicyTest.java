@@ -60,6 +60,15 @@ class HplaceAddressPolicyTest {
             assertThatThrownBy(()->policy(changed)).isInstanceOf(IllegalArgumentException.class);
         }
     }
+    @Test void rejectsRedirectedOwnedTargets() throws Exception {
+        var d=HplaceCompanyFormPolicyFactory.createNative();
+        for(String key:List.of("commitSelector","confirmSelector","confirmOkSelector","modalSelector")) {
+            var tree=MAPPER.valueToTree(d.executionPolicy());
+            ((ObjectNode)tree.path("browserPolicy").path("nativeForm").path("address")).put(key,"button[type=submit]");
+            var changed=d.withExecutionPolicy(MAPPER.treeToValue(tree,ExecutionPolicy.class));
+            assertThatThrownBy(()->policy(changed)).isInstanceOf(IllegalArgumentException.class);
+        }
+    }
     @Test void disabledAddressDoesNotOfferAction() throws Exception {
         var d=HplaceCompanyFormPolicyFactory.createNative();var tree=MAPPER.valueToTree(d.executionPolicy());
         assertThat(tree.path("browserPolicy").path("nativeForm").path("address").isObject()).isTrue();

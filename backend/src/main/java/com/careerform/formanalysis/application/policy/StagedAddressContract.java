@@ -12,8 +12,8 @@ import com.careerform.formanalysis.dto.PreparationAnalysisRequest;
 /** Bounded local address commit, separate from ordinary writable native fields. */
 final class StagedAddressContract {
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final List<String> SELECTORS = List.of("rowSelector","triggerSelector","postcodeSelector","modalSelector","contentSelector","querySelector","searchSelector","resultsSelector","resultSelector","resultAddressSelector","resultPostcodeSelector","resultSelectSelector","commitSelector","confirmSelector","confirmOkSelector");
-    private static final List<String> LABELS = List.of("sectionId","actionId","triggerLabel","searchLabel","commitLabel","confirmMessage","confirmOkLabel");
+    private static final List<String> SELECTORS = List.of("rowSelector","triggerSelector","postcodeSelector","modalSelector","contentSelector","querySelector","searchSelector","resultsSelector","resultSelector","resultAddressSelector","resultPostcodeSelector","resultSelectSelector","commitSelector","confirmSelector","confirmOkSelector","confirmCancelSelector","modalCloseSelector");
+    private static final List<String> LABELS = List.of("sectionId","actionId","triggerLabel","searchLabel","commitLabel","confirmMessage","confirmOkLabel","confirmCancelLabel");
     private StagedAddressContract() { }
     static JsonNode address(ExecutionPolicy execution) {
         return MAPPER.valueToTree(execution).path("browserPolicy").path("nativeForm").path("address");
@@ -25,6 +25,23 @@ final class StagedAddressContract {
         for(String key:SELECTORS)require(text(a.path(key)));for(String key:LABELS)require(text(a.path(key)));
         require(a.path("sectionId").asText().equals("hplace-mrs2-currentAddress") && a.path("actionId").asText().equals("hplace.mrs2.currentAddress.search")
             && action.path("domId").equals(a.path("actionId")) && action.path("element").asText().equals("button") && !action.has("domName"));
+        var fixedTargets=java.util.Map.ofEntries(
+            java.util.Map.entry("rowSelector","section.writeResume[data-code=\"13\"] div[data-row=\"address\"].address"),
+            java.util.Map.entry("triggerSelector","div.addresszipcode button[type=\"button\"][data-type=\"currentAddress\"]"),
+            java.util.Map.entry("modalSelector","#modal.modal-bg"),
+            java.util.Map.entry("contentSelector",".modal"),
+            java.util.Map.entry("commitSelector","button[data-button=\"modalSubmit\"]"),
+            java.util.Map.entry("commitLabel","저장"),
+            java.util.Map.entry("confirmSelector","#wrapDialog > #Dialog"),
+            java.util.Map.entry("confirmOkSelector","button[data-button=\"ok\"]"),
+            java.util.Map.entry("confirmOkLabel","확인"),
+            java.util.Map.entry("confirmCancelSelector","button[data-button=\"cancel\"]"),
+            java.util.Map.entry("confirmCancelLabel","취소"),
+            java.util.Map.entry("modalCloseSelector","button[data-button=\"modalClose\"]"),
+            java.util.Map.entry("sectionId","hplace-mrs2-currentAddress"),
+            java.util.Map.entry("actionId","hplace.mrs2.currentAddress.search"));
+        fixedTargets.forEach((key,value)->require(a.path(key).asText().equals(value)));
+        require(a.path("stageSelectors").equals(MAPPER.valueToTree(List.of(".internal input.postcode",".internal input.address",".internal input.details"))));
         require(a.path("activation").isArray() && a.path("activation").size()==1);
         var activation=a.path("activation").get(0);
         require(keys(activation,Set.of("op","target")) && activation.path("op").asText().equals("ACTIVATE_PRIMARY") && activation.path("target").asText().equals("commit"));

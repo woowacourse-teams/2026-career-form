@@ -72,6 +72,9 @@ export const addressContract = () => ({
   confirmMessage: "저장하시겠습니까?",
   confirmOkSelector: 'button[data-button="ok"]',
   confirmOkLabel: "확인",
+  confirmCancelSelector: 'button[data-button="cancel"]',
+  confirmCancelLabel: "취소",
+  modalCloseSelector: 'button[data-button="modalClose"]',
   timeoutMs: 1500,
 });
 export function addressPolicy() {
@@ -93,6 +96,7 @@ export function mountAddress(
     delay?: number;
     detailBeforeSelection?: string;
     onEvent?: (name: string) => void;
+    onLoadCurrent?: () => void;
     copyWrong?: boolean;
     noPointerResponse?: boolean;
   } = {},
@@ -128,12 +132,18 @@ export function mountAddress(
     event("open");
     document.body.insertAdjacentHTML(
       "beforeend",
-      `<div id="modal" class="modal-bg"><div class="modal"><div id="searchAppAdressForm"><input type="text" placeholder="예 : 반포대교로 201, 합성"><button type="button">검색</button></div><div id="searchAppAdressResult"><div class="postcodify_search_form"></div></div><div class="internal"><input class="postcode" value="-" readonly><input class="address" readonly><input class="details" maxlength="128"></div><button type="button" data-button="modalSubmit" disabled>저장</button><button type="button" data-button="modalCancel">취소</button></div></div>`,
+      `<div id="modal" class="modal-bg"><div class="modal"><button type="button" data-button="modalClose"></button><div id="searchAppAdressForm"><input type="text" placeholder="예 : 반포대교로 201, 합성"><button type="button">검색</button></div><div id="searchAppAdressResult"><div class="postcodify_search_form"></div></div><div class="internal"><input class="postcode" value="-" readonly><input class="address" readonly><input class="details" maxlength="128"></div><button type="button" data-button="modalSubmit" disabled>저장</button><button type="button" data-button="modalCancel">취소</button></div></div>`,
     );
     const modal = document.querySelector("#modal")!,
       stage = Array.from(
         modal.querySelectorAll<HTMLInputElement>(".internal input"),
       );
+    modal
+      .querySelector('[data-button="modalClose"]')!
+      .addEventListener("click", () => {
+        event("modal-close");
+        modal.remove();
+      });
     stage[2].value = options.detailBeforeSelection ?? "";
     const submit = modal.querySelector<HTMLButtonElement>(
       '[data-button="modalSubmit"]',
@@ -204,6 +214,12 @@ export function mountAddress(
               modal.remove();
               wrap.remove();
             });
+          wrap
+            .querySelector('[data-button="cancel"]')!
+            .addEventListener("click", () => {
+              event("cancel");
+              wrap.remove();
+            });
           document.body.append(wrap);
         }
       });
@@ -215,7 +231,10 @@ export function mountAddress(
       document,
       button,
       expected,
-      loadCurrent: async () => current,
+      loadCurrent: async () => {
+        options.onLoadCurrent?.();
+        return current;
+      },
       signal: controller.signal,
       search: async () => {
         throw Error("generic search");

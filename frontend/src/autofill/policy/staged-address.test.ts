@@ -229,15 +229,11 @@ it("rejects a foreign dialog inserted during pointerdown", async () => {
   expect(s.events).not.toContain("click");
   expect(s.events).not.toContain("ok");
 });
-it("clears only its unchanged editable staging after a missing confirm", async () => {
+it("closes its staging modal after a missing confirm without changing originals", async () => {
   const s = mountAddress({ confirm: "missing" });
   expect(await s.run()).toMatchObject({ status: "manual" });
-  expect(
-    document.querySelector<HTMLInputElement>(".internal .details")?.value,
-  ).toBe("");
-  expect(
-    document.querySelector<HTMLInputElement>(".internal .postcode")?.value,
-  ).toBe("00001");
+  expect(document.querySelector("#modal")).toBeNull();
+  expect(s.events).toContain("modal-close");
   expect(s.inputs().every((e) => e.value === "")).toBe(true);
 });
 it("uses the seeded v4 current-address descriptor for real collection and execution", async () => {
@@ -326,3 +322,73 @@ it("does not misreport an unexpectedly visible zipcode as hidden", () => {
       .some((a) => a.domId === "hplace.mrs2.currentAddress.search"),
   ).toBe(false);
 });
+
+it.each(["profile", "abort", "wrong-message", "original-node"])(
+  "cancels its pending confirmation and closes staging after %s post-submit failure",
+  async (change) => {
+    const s = mountAddress({
+      confirm: change === "wrong-message" ? "wrong" : undefined,
+      onEvent(name) {
+        if (name !== "click") return;
+        if (change === "profile")
+          s.setCurrent({ ...addressExpected, detail: "변경" });
+        if (change === "abort") s.controller.abort();
+        if (change === "original-node")
+          s.inputs()[0].replaceWith(s.inputs()[0].cloneNode(true));
+      },
+    });
+    expect(await s.run()).toMatchObject({ status: "manual" });
+    expect(s.events.slice(-2)).toEqual(["cancel", "modal-close"]);
+    expect(s.events).not.toContain("ok");
+    expect(document.querySelector("#wrapDialog > #Dialog")).toBeNull();
+    expect(document.querySelector("#modal")).toBeNull();
+    expect(s.inputs().map((e) => e.value)).toEqual(["", "", ""]);
+    expect(document.querySelector("span.postCode")!.textContent).toBe("");
+  },
+);
+it.each([
+  "commitSelector",
+  "confirmSelector",
+  "confirmOkSelector",
+  "modalSelector",
+  "stageSelectors",
+])("rejects redirected staged-address target %s", (key) => {
+  const p = addressPolicy();
+  Object.assign(p.browserPolicy!.nativeForm!.address!, {
+    [key]:
+      key === "stageSelectors"
+        ? [".postcode", ".address", ".details"]
+        : "button[type=submit]",
+  });
+  expect(validBrowserPolicy(p.browserPolicy)).toBe(false);
+});
+
+it.each(["dialog", "cancel"])(
+  "does not cancel a replaced %s or empty staging beneath it",
+  async (kind) => {
+    let changed = false;
+    const s = mountAddress({
+      onLoadCurrent() {
+        const dialog = document.querySelector("#wrapDialog > #Dialog");
+        if (!dialog || changed) return;
+        changed = true;
+        const node =
+          kind === "dialog"
+            ? dialog
+            : dialog.querySelector('[data-button="cancel"]')!;
+        node.replaceWith(node.cloneNode(true));
+        s.setCurrent({ ...addressExpected, detail: "변경" });
+      },
+    });
+    expect(await s.run()).toMatchObject({
+      status: "manual",
+      reason: expect.stringContaining("남은 주소 확인창"),
+    });
+    expect(s.events).not.toContain("ok");
+    expect(s.events).not.toContain("cancel");
+    expect(
+      document.querySelector<HTMLInputElement>(".internal .details")?.value,
+    ).toBe(addressExpected.detail);
+    expect(s.inputs().map((e) => e.value)).toEqual(["", "", ""]);
+  },
+);

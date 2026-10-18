@@ -2,7 +2,8 @@ import { recordStagedAddress } from "./staged-address-receipt";
 import type { AddressExecutionOptions, AddressResult } from "../address/types";
 import { normalizeAddress } from "../address/match";
 import { executionPolicy } from "../workflow/execution-policy";
-import { activateOwnedPrimary, runDomPlan } from "./action-plan";
+import { runDomPlan } from "./action-plan";
+import { activateOwnedPrimary } from "./staged-address-activation";
 import {
   sameAddressNodes,
   stagedAddressNodes,
@@ -105,7 +106,11 @@ export async function runStagedAddress({
       await pause(view);
     } while (Date.now() < deadline);
   };
-  try {
+  let activated = false;
+  let close: HTMLElement | undefined;
+  let confirmations: { node: HTMLElement; cancel: HTMLElement | undefined }[] =
+    [];
+  const execute = async (): Promise<AddressResult> => {
     if (!(await profile()) || !fresh()) return manual();
     n.button.click();
     modal = await wait(
@@ -123,6 +128,7 @@ export async function runStagedAddress({
       search = one(content, p.searchSelector);
     const stages = p.stageSelectors.map((s) => one(content, s));
     const commit = one(content, p.commitSelector);
+    close = one(content, p.modalCloseSelector);
     if (
       !(query instanceof HTMLInputElement) ||
       query.type !== "text" ||
@@ -133,6 +139,9 @@ export async function runStagedAddress({
       search.type !== "button" ||
       search.textContent?.trim() !== p.searchLabel ||
       !visible(search) ||
+      !(close instanceof HTMLButtonElement) ||
+      close.type !== "button" ||
+      !visible(close) ||
       !(commit instanceof HTMLButtonElement) ||
       commit.type !== "button" ||
       commit.textContent?.trim() !== p.commitLabel ||
@@ -286,15 +295,26 @@ export async function runStagedAddress({
           commit.type === "button" &&
           commit.textContent?.trim() === p.commitLabel &&
           visible(commit),
+        () => {
+          activated = true;
+          confirmations = Array.from(
+            document.querySelectorAll<HTMLElement>(p.confirmSelector),
+          ).map((node) => ({
+            node,
+            cancel: one(node, p.confirmCancelSelector),
+          }));
+        },
       ))
     )
       return manual();
     if (!(await guarded()) || !complete()) return manual();
     // The site creates its HTML dialog synchronously in the owned activation handler.
     // No later unrelated dialog may be adopted during a timeout window.
-    const confirmation = one(document, p.confirmSelector);
+    const confirmation =
+      confirmations.length === 1 ? confirmations[0].node : undefined;
     if (
       !confirmation ||
+      one(document, p.confirmSelector) !== confirmation ||
       !visible(confirmation, true) ||
       confirmation.closest(p.modalSelector)
     )
@@ -339,21 +359,71 @@ export async function runStagedAddress({
       status: "written",
       reason: "현주소 검색 결과와 세 값의 로컬 반영을 확인했습니다.",
     };
-  } finally {
-    // Revert only our editable staging value, never originals or another/replaced modal.
-    if (
-      writtenDetail !== undefined &&
-      detail?.isConnected &&
-      modal &&
-      one(document, p.modalSelector) === modal &&
-      modal.contains(detail) &&
-      detail.value === writtenDetail &&
-      current()
-    ) {
-      Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "value",
-      )!.set!.call(detail, detailBefore);
+  };
+  const outcome = await execute().catch(() => manual());
+  if (outcome.status === "written") return outcome;
+  if (activated) {
+    // The synchronous owned click establishes cancellation ownership, even if approval
+    // is subsequently revoked. Never adopt replacement dialogs or press their OK.
+    for (const { node, cancel } of confirmations) {
+      if (
+        document.URL === url &&
+        node.isConnected &&
+        node.matches(p.confirmSelector) &&
+        one(node, p.confirmCancelSelector) === cancel &&
+        cancel instanceof HTMLButtonElement &&
+        cancel.type === "button" &&
+        cancel.textContent?.trim() === p.confirmCancelLabel &&
+        visible(cancel)
+      )
+        cancel.click();
     }
+    const pending =
+      confirmations.some(({ node }) => node.isConnected) ||
+      !!document.querySelector(p.confirmSelector);
+    if (
+      !pending &&
+      document.URL === url &&
+      modal?.isConnected &&
+      one(document, p.modalSelector) === modal &&
+      close instanceof HTMLButtonElement &&
+      one(modal, p.modalCloseSelector) === close &&
+      close.type === "button" &&
+      visible(close)
+    )
+      close.click();
+    const originalsUnchanged =
+      untouched() && sameAddressNodes(n, stagedAddressNodes(document));
+    if (!originalsUnchanged)
+      return manual(
+        "주소 원본의 변경을 감지했습니다. 세 값을 직접 확인해 주세요.",
+      );
+    if (
+      pending ||
+      modal?.isConnected ||
+      document.querySelector(p.modalSelector)
+    )
+      return manual(
+        "주소 입력을 중단했습니다. 남은 주소 확인창이나 모달을 취소한 뒤 직접 확인해 주세요.",
+      );
+    return manual(
+      "주소 입력을 중단하고 확인창과 모달을 닫았습니다. 원래 주소 세 값은 변경하지 않았습니다.",
+    );
   }
+  // Before activation only our unchanged staging text may be restored.
+  if (
+    writtenDetail !== undefined &&
+    detail?.isConnected &&
+    modal &&
+    one(document, p.modalSelector) === modal &&
+    modal.contains(detail) &&
+    detail.value === writtenDetail &&
+    current()
+  ) {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(detail, detailBefore);
+  }
+  return outcome;
 }

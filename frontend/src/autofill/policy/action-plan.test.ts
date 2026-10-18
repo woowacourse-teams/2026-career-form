@@ -1,11 +1,13 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { activateOwnedPrimary } from "./staged-address-activation";
 import { runDomPlan, validDomPlan, type DomPlan } from "./action-plan";
 afterEach(() => vi.restoreAllMocks());
 const activation = [
   { op: "ACTIVATE_PRIMARY", target: "commit" },
 ] as unknown as DomPlan;
 function target() {
-  document.body.innerHTML = '<button type="button">로컬 확정</button>';
+  document.body.innerHTML =
+    '<div id="modal" class="modal-bg"><div class="modal"><button type="button" data-button="modalSubmit">저장</button></div></div>';
   const button = document.querySelector("button")!;
   vi.spyOn(button, "getBoundingClientRect").mockReturnValue({
     x: 20,
@@ -20,7 +22,7 @@ function target() {
   });
   return button;
 }
-it("activates only a primary pointer with coordinates and complete mouse compatibility sequence", () => {
+it("activates only a primary pointer with coordinates and complete mouse compatibility sequence", async () => {
   const button = target();
   const events: unknown[] = [];
   for (const name of [
@@ -42,8 +44,7 @@ it("activates only a primary pointer with coordinates and complete mouse compati
         e.type.startsWith("pointer") ? e.isPrimary : null,
       ]);
     });
-  expect(validDomPlan(activation)).toBe(true);
-  expect(runDomPlan(activation, { commit: button }, {}, () => true)).toBe(true);
+  expect(await activateOwnedPrimary(button, async () => true)).toBe(true);
   expect(events).toEqual([
     ["pointerdown", 0, 1, 60, 50, false, true],
     ["mousedown", 0, 1, 60, 50, false, null],
@@ -52,7 +53,7 @@ it("activates only a primary pointer with coordinates and complete mouse compati
     ["click", 0, 0, 60, 50, false, null],
   ]);
 });
-it("rechecks ownership between each event and never finishes a revoked activation", () => {
+it("rechecks ownership between each event and never finishes a revoked activation", async () => {
   const button = target();
   let current = true;
   const events: string[] = [];
@@ -67,9 +68,7 @@ it("rechecks ownership between each event and never finishes a revoked activatio
       events.push(name);
       if (name === "mousedown") current = false;
     });
-  expect(runDomPlan(activation, { commit: button }, {}, () => current)).toBe(
-    false,
-  );
+  expect(await activateOwnedPrimary(button, async () => current)).toBe(false);
   expect(events).toEqual(["pointerdown", "mousedown"]);
 });
 it.each([
@@ -84,7 +83,7 @@ it.each([
 });
 it.each(["submit", "disabled", "zero-size"])(
   "refuses unsafe activation target %s",
-  (kind) => {
+  async (kind) => {
     const button = target();
     if (kind === "submit") button.type = "submit";
     if (kind === "disabled") button.disabled = true;
@@ -92,9 +91,41 @@ it.each(["submit", "disabled", "zero-size"])(
       vi.mocked(button.getBoundingClientRect).mockReturnValue(new DOMRect());
     let clicked = false;
     button.addEventListener("click", () => (clicked = true));
-    expect(runDomPlan(activation, { commit: button }, {}, () => true)).toBe(
-      false,
-    );
+    expect(await activateOwnedPrimary(button, async () => true)).toBe(false);
     expect(clicked).toBe(false);
   },
 );
+
+it("rejects primary activation in generic plans without dispatching any event", () => {
+  const button = target();
+  const clicked = vi.fn();
+  button.addEventListener("click", clicked);
+  expect(validDomPlan(activation)).toBe(false);
+  expect(runDomPlan(activation, { commit: button }, {}, () => true)).toBe(
+    false,
+  );
+  expect(clicked).not.toHaveBeenCalled();
+});
+
+it.each(["searchActivate", "addressSearch"])(
+  "rejects primary activation in Greeting %s",
+  async (key) => {
+    const { fixturePolicy } =
+      await import("../../test/fixtures/execution-policy");
+    const { validComponentPolicy } = await import("./component-policy");
+    const policy = fixturePolicy("greeting").componentPolicy!;
+    expect(validComponentPolicy(policy)).toBe(true);
+    policy.actionPlans[key] = activation;
+    expect(validComponentPolicy(policy)).toBe(false);
+  },
+);
+it("rejects primary activation in other address provider plans", async () => {
+  const { fixturePolicy } =
+    await import("../../test/fixtures/execution-policy");
+  const { validAddressProviderPolicy } =
+    await import("../address/provider-policy");
+  const policy = fixturePolicy("sk").providerPolicy!;
+  expect(validAddressProviderPolicy(policy)).toBe(true);
+  policy.searchPlan = activation;
+  expect(validAddressProviderPolicy(policy)).toBe(false);
+});

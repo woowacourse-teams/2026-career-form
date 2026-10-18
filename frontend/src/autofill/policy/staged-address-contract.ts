@@ -1,4 +1,3 @@
-import { validDomPlan, type DomPlan } from "./action-plan";
 export interface StagedAddress {
   protocol: "STAGED_MODAL_COMMIT";
   enabled: boolean;
@@ -30,13 +29,34 @@ export interface StagedAddress {
   stagePostcodePlaceholder: string;
   commitSelector: string;
   commitLabel: string;
-  activation: DomPlan;
+  activation: { op: "ACTIVATE_PRIMARY"; target: "commit" }[];
   confirmSelector: string;
   confirmMessage: string;
   confirmOkSelector: string;
   confirmOkLabel: string;
+  confirmCancelSelector: string;
+  confirmCancelLabel: string;
+  modalCloseSelector: string;
   timeoutMs: number;
 }
+const ownedTargets = {
+  rowSelector:
+    'section.writeResume[data-code="13"] div[data-row="address"].address',
+  triggerSelector:
+    'div.addresszipcode button[type="button"][data-type="currentAddress"]',
+  modalSelector: "#modal.modal-bg",
+  contentSelector: ".modal",
+  commitSelector: 'button[data-button="modalSubmit"]',
+  commitLabel: "저장",
+  confirmSelector: "#wrapDialog > #Dialog",
+  confirmOkSelector: 'button[data-button="ok"]',
+  confirmOkLabel: "확인",
+  confirmCancelSelector: 'button[data-button="cancel"]',
+  confirmCancelLabel: "취소",
+  modalCloseSelector: 'button[data-button="modalClose"]',
+  sectionId: "hplace-mrs2-currentAddress",
+  actionId: "hplace.mrs2.currentAddress.search",
+} as const;
 const selectors = [
   "rowSelector",
   "triggerSelector",
@@ -53,6 +73,8 @@ const selectors = [
   "commitSelector",
   "confirmSelector",
   "confirmOkSelector",
+  "confirmCancelSelector",
+  "modalCloseSelector",
 ] as const;
 const labels = [
   "sectionId",
@@ -62,6 +84,7 @@ const labels = [
   "commitLabel",
   "confirmMessage",
   "confirmOkLabel",
+  "confirmCancelLabel",
 ] as const;
 const string = (v: unknown): v is string =>
   typeof v === "string" && !!v.trim() && v.length <= 500;
@@ -106,8 +129,18 @@ export function validStagedAddress(value: unknown): value is StagedAddress {
     a.stageSelectors.length !== 3 ||
     new Set(a.stageSelectors).size !== 3 ||
     !a.stageSelectors.every(selector) ||
-    !validDomPlan(a.activation) ||
+    !Object.entries(ownedTargets).every(
+      ([key, value]) => a[key as keyof typeof ownedTargets] === value,
+    ) ||
+    JSON.stringify(a.stageSelectors) !==
+      JSON.stringify([
+        ".internal input.postcode",
+        ".internal input.address",
+        ".internal input.details",
+      ]) ||
+    !Array.isArray(a.activation) ||
     a.activation.length !== 1 ||
+    !a.activation[0] ||
     a.activation[0].op !== "ACTIVATE_PRIMARY" ||
     a.activation[0].target !== "commit" ||
     Object.keys(a.activation[0]).length !== 2 ||
