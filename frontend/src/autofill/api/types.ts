@@ -203,6 +203,7 @@ export interface GenericFieldsResponse {
           type: "DERIVED";
           recipe:
             | "KOREAN_FULL_NAME"
+            | "HANJA_FULL_NAME"
             | "ENGLISH_FULL_NAME_GIVEN_FIRST"
             | "ENGLISH_FULL_NAME_FAMILY_FIRST";
         }
@@ -270,6 +271,7 @@ export type WriteCommand =
 
 export type DerivedRecipe =
   | "KOREAN_FULL_NAME"
+  | "HANJA_FULL_NAME"
   | "ENGLISH_FULL_NAME_GIVEN_FIRST"
   | "ENGLISH_FULL_NAME_FAMILY_FIRST"
   | "BOOLEAN_YN"

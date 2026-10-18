@@ -176,3 +176,36 @@ describe("resolveValueBinding", () => {
     ).toMatchObject({ status: "resolved", value: "고등학교" });
   });
 });
+
+describe("HANJA_FULL_NAME", () => {
+  it("joins both Hanja components without using Korean or English names", () => {
+    const profile = createEmptyProfile();
+    profile.personal.hanjaFamilyName = " 金 ";
+    profile.personal.hanjaGivenName = " 試驗 ";
+    profile.personal.englishFamilyName = "Fixture";
+    profile.personal.englishGivenName = "Only";
+    expect(
+      resolveValueBinding(profile, {
+        type: "DERIVED",
+        recipe: "HANJA_FULL_NAME",
+      }),
+    ).toMatchObject({ status: "resolved", value: "金試驗" });
+  });
+  it.each(["hanjaFamilyName", "hanjaGivenName"] as const)(
+    "requires %s",
+    (missing) => {
+      const profile = createEmptyProfile();
+      profile.personal.hanjaFamilyName = "金";
+      profile.personal.hanjaGivenName = "試驗";
+      profile.personal[missing] = " ";
+      profile.personal.englishFamilyName = "Fixture";
+      profile.personal.englishGivenName = "Only";
+      expect(
+        resolveValueBinding(profile, {
+          type: "DERIVED",
+          recipe: "HANJA_FULL_NAME",
+        }),
+      ).toMatchObject({ status: "missing" });
+    },
+  );
+});

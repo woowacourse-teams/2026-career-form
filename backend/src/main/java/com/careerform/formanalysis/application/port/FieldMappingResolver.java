@@ -103,6 +103,7 @@ public interface FieldMappingResolver {
 
     enum DerivedRecipe {
         KOREAN_FULL_NAME,
+        HANJA_FULL_NAME,
         ENGLISH_FULL_NAME_GIVEN_FIRST,
         ENGLISH_FULL_NAME_FAMILY_FIRST,
         BOOLEAN_YN,
