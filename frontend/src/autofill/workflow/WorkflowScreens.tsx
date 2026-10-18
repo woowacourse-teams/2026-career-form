@@ -9,6 +9,11 @@ import type { ApprovedWriteResult } from "../write/executor";
 import styles from "../../autofill-demo/AutofillDemo.module.css";
 import { WorkflowResults, type WorkflowResultsProps } from "./WorkflowResults";
 import { genericItemReason } from "../generic/grade-reason-text";
+import {
+  structureActionLine,
+  structureStatusText,
+  type StructureDiagnostics,
+} from "../generic/structure-diagnostics";
 import { resultFieldLabel } from "./result-label";
 import resultStyles from "./WorkflowResults.module.css";
 import resultCss from "./WorkflowResults.module.css?inline";
@@ -49,6 +54,8 @@ interface WorkflowScreensProps {
     fieldCount: number;
     matchedCount: number;
   };
+  /** Present only for generic documents; static paths never set it. */
+  structureDiagnostics?: StructureDiagnostics;
   stage: Stage;
   preparationItems: readonly PreparationItem[];
   warnings: readonly string[];
@@ -93,6 +100,7 @@ export function WorkflowScreens({
   executeWrites,
   results,
   addressResult,
+  structureDiagnostics,
   exceptionTitle,
   unsupportedImageUrl,
   onExit,
@@ -363,6 +371,38 @@ export function WorkflowScreens({
             <summary>주소 확인 필요</summary>
             <p>주소 직접 확인 필요: {addressResult.reason}</p>
           </details>
+        )}
+        {structureDiagnostics && (
+          <section aria-label="구조 자동 준비">
+            <h3>구조 자동 준비</h3>
+            <p className={resultStyles.guidance}>
+              {structureStatusText(structureDiagnostics.status)}
+            </p>
+            {structureDiagnostics.actions.length > 0 && (
+              <>
+                <h4>자동으로 한 일</h4>
+                <ul aria-label="자동으로 한 일">
+                  {structureDiagnostics.actions.map((action, index) => {
+                    const line = structureActionLine(action);
+                    return (
+                      <li key={index}>
+                        <span>{line.kindText}</span>{" "}
+                        {line.sectionTitle && <span>{line.sectionTitle}</span>}{" "}
+                        <small className={resultStyles.writtenTag}>
+                          {line.resultText}
+                        </small>
+                        {line.reasonText && (
+                          <p className={resultStyles.guidance}>
+                            {line.reasonText}
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+          </section>
         )}
         <WorkflowResults
           wasWritten={wasWritten}
