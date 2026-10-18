@@ -214,4 +214,53 @@ describe("AhnLab sanitized application form", () => {
       expect(writes.some((write) => write.status === "written")).toBe(true);
     }
   });
+
+  it.each(["contact.contact.phoneNumber", "contact.contact.email"])(
+    "blocks the referrer contact field matched to the applicant's own %s",
+    async (key) => {
+      const { snapshot, fields } = collect(() => {
+        // The live field is disabled; enable it to prove the grade, not the
+        // disabled state, keeps the applicant's value out.
+        document.getElementById("anon-id-6")!.removeAttribute("disabled");
+      });
+      const target = document.getElementById("anon-id-6") as HTMLInputElement;
+      const referrerField = fields.find((field) => {
+        const lookup = snapshot.registry.lookupField(field.candidateId);
+        return "handle" in lookup && lookup.handle.elements.includes(target);
+      })!;
+      expect(referrerField.displayName).toBe("추천인 연락처");
+      const profile = createEmptyProfile();
+      profile.contact.phoneNumber = "01012345678";
+      profile.contact.email = "synthetic@example.com";
+      const result = await analyzeGenericFields(
+        snapshot,
+        document,
+        mockApi(new Map([[referrerField.candidateId, key]])),
+        profile,
+        createGenericAnalysisCache(),
+      );
+      expect(result.grades.get(referrerField.candidateId)).toEqual({
+        grade: "BLOCKED",
+        reason: "OTHER_PERSON_CONTEXT",
+      });
+      const plan = buildReviewPlan({
+        analysis: result.analysis,
+        profile,
+        registry: snapshot.registry,
+      });
+      const items = plan.items.map((item) =>
+        applyGenericGrade(item, result.grades.get(item.candidateId)),
+      );
+      expect(
+        items.find((item) => item.candidateId === referrerField.candidateId),
+      ).toMatchObject({ selected: false, disabled: true });
+      const writes = executeApprovedWrites({
+        items,
+        approvedCandidateIds: new Set([referrerField.candidateId]),
+        registry: snapshot.registry,
+      });
+      expect(target.value).toBe("");
+      expect(writes.every((write) => write.status !== "written")).toBe(true);
+    },
+  );
 });
