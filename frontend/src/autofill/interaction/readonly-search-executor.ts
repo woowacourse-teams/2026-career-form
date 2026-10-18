@@ -40,6 +40,7 @@ import { captureSearchFollowUp } from "./search-follow-up";
 import { interactive, elements, safeActivation } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
 import { isSafeSurfaceCloseClick } from "../generic/click-policy";
+import { queryCandidates } from "./readonly-search-popup";
 
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
@@ -332,6 +333,20 @@ export async function executeReadonlySearch(
       surfaceGuard();
       const queries = queryControls(currentSurface);
       const submits = submitControls(currentSurface);
+      if (args.genericPopupRecovery) {
+        if (queries.length > 1)
+          throw new SearchFailure("multiple_search_query_inputs");
+        // A visible search button/result shell can precede its query input.
+        // Recollect within this wait's existing budget instead of accepting it.
+        if (
+          !queries.length &&
+          (submits.length ||
+            queryCandidates(currentSurface.document).some((input) =>
+              currentSurface.contains(input),
+            ))
+        )
+          return undefined;
+      }
       return queries.length ||
         submits.length ||
         currentSurface.resultRoots().length ||

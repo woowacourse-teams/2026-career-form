@@ -34,7 +34,7 @@ const decisionProvider: InteractionDecisionProvider = async (request) => ({
 function fixture(kind: "table" | "dialog", delayed = false) {
   const content =
     kind === "table"
-      ? `<h2>전공 검색</h2><p>검색어를 입력한 뒤 항목을 선택하세요.</p>
+      ? `<h2>전공 검색</h2><p>항목명을 입력하세요.</p>
          <table><tbody><tr><th><label for="query">검색어</label></th>
          <td><input id="query" style="display:none"></td></tr></tbody></table>
          <button type="button" data-search>검색</button>
@@ -89,7 +89,9 @@ function fixture(kind: "table" | "dialog", delayed = false) {
     results.innerHTML =
       resultMode === "empty"
         ? "검색 결과가 없습니다."
-        : `<button type="button">${VALUE}</button>`;
+        : kind === "table"
+          ? `<tbody><tr><td><button type="button">${VALUE}</button></td></tr></tbody>`
+          : `<li><button type="button">${VALUE}</button></li>`;
     results.querySelector("button")?.addEventListener("click", () => {
       if (resultMode === "selected") {
         target.value = VALUE;
@@ -111,7 +113,7 @@ function fixture(kind: "table" | "dialog", delayed = false) {
   }
   const targetId = idFor(target);
   const surface = new SearchSurface(
-    kind === "table" ? "same-document-dialog" : "same-document-dialog",
+    "same-document-dialog",
     popup, popup, opener, target,
   );
   function item(element: HTMLInputElement, key: string, entry: string, search = false): ReviewPlanItem {
@@ -139,11 +141,11 @@ function fixture(kind: "table" | "dialog", delayed = false) {
     popup, target, query, opener, confirm, search, direct, forbidden, surface,
     snapshot, targetId,
     setMode(mode: typeof resultMode) { resultMode = mode; },
-    async run() {
+    async run(genericPopupRecovery = false) {
       const pending = executeReadonlySearch({
         document, registry: snapshot.registry, targetCandidateId: targetId,
         canonicalFieldKey: "education.university.majorName", expectedValue: VALUE,
-        decisionProvider,
+        decisionProvider, genericPopupRecovery,
       });
       await vi.runAllTimersAsync();
       return pending;
@@ -187,6 +189,70 @@ describe.each(["table", "dialog"] as const)("%s search popup", (kind) => {
     test.query.style.display = "block";
     expect(isQueryInput(test.query)).toBe(true);
     expect(queryControls(test.surface)).toEqual([test.query]);
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("recollects the delayed query before selecting a result on the generic route", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind, true);
+    const pause = SearchSession.prototype.pause;
+    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(function (ms) {
+      test.query.style.display = "block";
+      return pause.call(this, ms);
+    });
+    const result = await test.run(true);
+    expect(result, JSON.stringify(result)).toMatchObject({ status: "selected" });
+    expect(test.query.value).toBe(VALUE);
+    expect(test.target.value).toBe(VALUE);
+    expect(test.surface.closure()).toBe("closed");
+    expect(test.direct).not.toHaveBeenCalled();
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it("writes the selected generic search without unsupported controls", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind, true);
+    const pause = SearchSession.prototype.pause;
+    vi.spyOn(SearchSession.prototype, "pause").mockImplementation(function (ms) {
+      test.query.style.display = "block";
+      return pause.call(this, ms);
+    });
+    const results = await test.batch("row");
+    expect(results.map(({ status }) => status), JSON.stringify(results)).toEqual(["written", "written", "written"]);
+    expect(results.some((result) => result.status === "skipped" && result.code === "UNSUPPORTED_CONTROL")).toBe(false);
+    expect(test.direct).not.toHaveBeenCalled();
+    expect(test.forbidden).not.toHaveBeenCalled();
+  });
+
+  it.each(["readonly", "disabled", "hidden"] as const)(
+    "never types into a query that stays %s and keeps the existing wait budget",
+    async (mode) => {
+      vi.useFakeTimers();
+      const test = fixture(kind, mode === "hidden");
+      test.query.readOnly = mode === "readonly";
+      test.query.disabled = mode === "disabled";
+      const started = performance.now();
+      const result = await test.run(true);
+      expect(result).toMatchObject({ reason: "search_query_not_found" });
+      expect(performance.now() - started).toBeLessThanOrEqual(8_000);
+      expect(test.query.value).toBe("");
+      expect(test.target.value).toBe("");
+      expect(test.forbidden).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects multiple live queries without asking the provider to choose one", async () => {
+    vi.useFakeTimers();
+    const test = fixture(kind);
+    const second = test.query.cloneNode() as HTMLInputElement;
+    second.removeAttribute("id");
+    second.setAttribute("aria-label", "검색어");
+    second.style.display = "block";
+    test.query.after(second);
+    const result = await test.run(true);
+    expect(result).toMatchObject({ reason: "multiple_search_query_inputs" });
+    expect(test.query.value).toBe("");
+    expect(second.value).toBe("");
     expect(test.forbidden).not.toHaveBeenCalled();
   });
 });

@@ -169,6 +169,8 @@ export interface ExecuteReadonlySearchArgs {
   canonicalFieldKey: string;
   /** Kept local; it is never included in an interaction decision request. */
   expectedValue: string;
+  /** Generic row-scoped recovery only; static callers retain existing behavior. */
+  genericPopupRecovery?: boolean;
   /** A known pre-review value, also retained locally for the conflict guard. */
   expectedCurrentValue?: string;
   /** Local-only exact search forms. The original expected value is always first. */
