@@ -6,6 +6,12 @@
 - Source-Revision: 01c430db48c9e2d6277a84e544f106dc6b7cc00f
 - 승인한 후보 4개를 [CF-250 bundle](../raw/issues/CF-250/manifest.md)에 기록하고 [합성 값 표현](topics/generic-synthetic-binding-response.md)과 [frontend 검증 경계](topics/generic-binding-frontend-validation.md)를 추가했다.
 - 합성 요청·응답 검증 경계를 유지한다. 기존 raw는 변경하지 않는다.
+## [2026-10-18] ingest | CF-253 범용 검색 실패 격리와 fixture 공백 정규화
+
+- Approval-Digest: 39539b34214157c8ade45d63698fd83be4ca20b3c668b66d2d2de77776379603
+- Source-Revision: 470686cd80f395921b6daf499fe40c13b63122ac
+- 승인한 후보 4개를 [CF-253 bundle](../raw/issues/CF-253/manifest.md)에 기록하고 [검색 실패 격리](topics/generic-search-failure-isolation.md), [fixture 공백 정규화](topics/dom-snapshot-fixture-whitespace.md)를 추가했다.
+- 합성 DOM과 검색 경계 mock의 검증 경계를 유지한다. 실사이트에서 실제로 탄 분기는 확인되지 않았다.
 
 ## [2026-10-17] ingest | CF-244 범용 클릭 경계, 섹션 캐시와 endpoint 부재 전달
 

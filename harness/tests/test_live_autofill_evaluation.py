@@ -21,7 +21,7 @@ from harness.lib.live_autofill_evaluation import (
 
 
 class LiveAutofillEvaluationTest(unittest.TestCase):
-    def test_selects_non_sensitive_conflicts_without_retaining_values(self) -> None:
+    def test_selects_candidates_including_sensitive_without_retaining_values(self) -> None:
         candidates = (
             CandidateState("candidate-1", "available"),
             CandidateState("candidate-2", "conflict"),
@@ -31,11 +31,11 @@ class LiveAutofillEvaluationTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            ("candidate-1", "candidate-2", "candidate-3"),
+            ("candidate-1", "candidate-2", "candidate-3", "candidate-4"),
             write_candidate_ids(candidates),
         )
         self.assertEqual(
-            ("candidate-4", "candidate-5"),
+            ("candidate-5",),
             deferred_candidate_ids(candidates),
         )
 
