@@ -41,7 +41,7 @@ function mount() {
     .querySelector('section[data-code="11"]')!
     .insertAdjacentHTML(
       "beforeend",
-      '<input name="chineseName" id="chineseName" maxlength="32"><label class="label money"><input type="number" name="hopeSalary" min="0" max="210000000" step="1"></label>',
+      '<input name="chineseName" id="chineseName" maxlength="32"><span class="span label money"><input type="number" name="hopeSalary" min="0" max="210000000" step="1"></span>',
     );
 }
 const policy = () => structuredClone(seed.executionPolicy) as ExecutionPolicy;

@@ -161,7 +161,7 @@
       "militaryBranch": "프로필 8개 → 실관측 코드/라벨, 4개 별칭은 코디네이터 의미 확인",
       "militarySiteOnly": ["공익", "병역특례", "카투사", "기타"]
     },
-    "salaryUnit": "GS 실관측: 직접 부모 label.label.money의 ::after content 정확히 \"만원\", million 클래스 없음. 원/억원/표시 없음/미검증 span은 입력 불가.",
+    "salaryUnit": "실관측 직접 부모 span.money 또는 label.money의 ::after content 정확히 \"만원\", million 클래스 없음. 원/억원/표시 없음은 입력 불가.",
     "repeatRowIdentity": "기존 populated 행 전체 보호; identityFields 정확 일치 + populated mapped detail 일치 시에만 이미 입력됨 처리. 불완전/충돌/중복은 섹션 수동, 남은 프로필만 빈 행 배정 및 부족분 ADD.",
     "singleHighschoolEntity": "코디네이터 확정: 140도 141/142와 같이 기존 값이 하나라도 있으면 전체 보존. 확정 학교 identity 일치는 이미 입력됨, 다른/불명확 identity는 기존 값 사용자 처리. 기본정보에는 적용하지 않음.",
     "p3": "GS리테일·한국타이어 postcodify 구조 + modalSubmit→HTML 확인창→현주소 로컬 복사. resource currentAddress만 활성; DB/운영 활성화 및 설치 확장 합성 포인터 수용은 별도 미검증. zip/base 직접 쓰기, 상동/reset/다른 주소 자동화 없음."
@@ -1409,7 +1409,7 @@
                 "step": 1,
                 "scopeSelector": "section.writeResume[data-code='11']",
                 "unit": {
-                  "parentSelector": "label.label.money:not(.million)",
+                  "parentSelector": ":is(span, label).money:not(.million)",
                   "pseudo": "::after",
                   "content": "\"만원\""
                 }
@@ -1428,7 +1428,7 @@
                 "step": 1,
                 "scopeSelector": "section.writeResume[data-code='11']",
                 "unit": {
-                  "parentSelector": "label.label.money:not(.million)",
+                  "parentSelector": ":is(span, label).money:not(.million)",
                   "pseudo": "::after",
                   "content": "\"만원\""
                 }
@@ -2353,7 +2353,7 @@
               }
             ],
             "rows": {
-              "selector": ":scope > div[data-wrap=\"collegeLoop\"][data-type=\"college\"] > div.loop[data-loop=\"college\"]",
+              "selector": ":scope > div[data-wrap=\"collegeLoop\"][data-type=\"college\"] > div[data-loop=\"college\"][data-index]",
               "namePrefix": "college",
               "groupId": "hplace.mrs2.college",
               "maxCount": 20
@@ -2599,7 +2599,7 @@
               }
             ],
             "rows": {
-              "selector": ":scope > div[data-wrap=\"collegeLoop\"][data-type=\"graduateSchool\"] > div.loop[data-loop=\"graduateSchool\"]",
+              "selector": ":scope > div[data-wrap=\"collegeLoop\"][data-type=\"graduateSchool\"] > div[data-loop=\"graduateSchool\"][data-index]",
               "namePrefix": "graduateSchool",
               "groupId": "hplace.mrs2.graduateSchool",
               "maxCount": 20

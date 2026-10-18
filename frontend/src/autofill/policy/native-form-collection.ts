@@ -95,8 +95,19 @@ export function nativeRows(
   if (!root.isConnected) return;
   if (!section.rows) return [root];
   const rows = Array.from(root.querySelectorAll(section.rows.selector));
-  if (rows.length > section.rows.maxCount) return;
+  if (
+    rows.length > section.rows.maxCount ||
+    root.querySelectorAll(
+      `[data-loop="${CSS.escape(section.rows.namePrefix)}"]`,
+    ).length !== rows.length
+  )
+    return;
   for (const [index, row] of rows.entries()) {
+    if (
+      row.hasAttribute("data-index") &&
+      row.getAttribute("data-index") !== String(index)
+    )
+      return;
     const names = Array.from(
       row.querySelectorAll<HTMLInputElement>("[name]"),
     ).map((e) => e.name);
@@ -431,6 +442,7 @@ export function collectNativePreparation(
         section.enabled &&
         section.action &&
         section.rows &&
+        rows.length > 0 &&
         rows.length < section.rows.maxCount
       ) {
         const buttons = Array.from(

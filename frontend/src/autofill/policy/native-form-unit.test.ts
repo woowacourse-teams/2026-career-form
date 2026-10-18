@@ -13,7 +13,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   installExecutionPolicy(document);
 });
-function target(content: string, classes = "label money", parent = "label") {
+function target(content: string, classes = "label money", parent = "span") {
   mountSyntheticNative(0);
   document.querySelectorAll("script").forEach((s, i) => {
     s.src = seed.executionPolicy.browserPolicy.nativeForm.assetPaths[i];
@@ -71,8 +71,8 @@ it.each(["none", '"원"', '"억원"', ""])(
 );
 it.each([
   ["label money million", "label"],
-  ["label money", "span"],
-  ["money", "label"],
+  ["label money", "div"],
+  ["label", "span"],
 ])("requires the exact observed owning label %s / %s", (classes, parent) => {
   const { lookup, item } = target('"만원"', classes, parent);
   expect(getWriteAdapter(document).tryWrite(lookup.handle, item)).toEqual({
@@ -80,16 +80,19 @@ it.each([
     written: false,
   });
 });
-it("writes and reads back only while the owning label keeps the verified unit", () => {
-  const { input, owner, lookup, item } = target('"만원"');
-  expect(lookup.status).toBe("ready");
-  expect(getWriteAdapter(document).tryWrite(lookup.handle, item)).toEqual({
-    handled: true,
-    written: true,
-  });
-  expect(input.value).toBe("4500");
-  owner.classList.add("million");
-  expect(getWriteAdapter(document).verifyRetained?.(lookup.handle, item)).toBe(
-    false,
-  );
-});
+it.each(["span", "label"])(
+  "writes only while the owning %s keeps the verified unit",
+  (parent) => {
+    const { input, owner, lookup, item } = target('"만원"', "money", parent);
+    expect(lookup.status).toBe("ready");
+    expect(getWriteAdapter(document).tryWrite(lookup.handle, item)).toEqual({
+      handled: true,
+      written: true,
+    });
+    expect(input.value).toBe("4500");
+    owner.classList.add("million");
+    expect(
+      getWriteAdapter(document).verifyRetained?.(lookup.handle, item),
+    ).toBe(false);
+  },
+);

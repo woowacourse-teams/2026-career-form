@@ -20,7 +20,7 @@ function collect() {
     repeatableGroupState: (p) => c.repeatableGroupState(p.actionCandidateId),
   } satisfies PreparationSnapshot;
 }
-it.each([0, 1])("adds exactly one owned row from %s", async (count) => {
+it.each([1])("adds exactly one owned row from %s", async (count) => {
   mountSyntheticNative(count);
   installExecutionPolicy(document, syntheticNativePolicy());
   const root = document.querySelector(".subject")!;
@@ -120,6 +120,16 @@ it("never collects a disabled add, existYn or submit control", () => {
       "beforeend",
       '<label><input type="radio" name="career.existYn" value="false">없음</label><button type="submit" data-button="add">다음</button>',
     );
+  expect(
+    collectPreparationSnapshot(document).request.sections.flatMap(
+      (s) => s.actionCandidates,
+    ),
+  ).toEqual([]);
+});
+
+it("never offers native ADD when an existing section has no collected rows", () => {
+  mountSyntheticNative(0);
+  installExecutionPolicy(document, syntheticNativePolicy());
   expect(
     collectPreparationSnapshot(document).request.sections.flatMap(
       (s) => s.actionCandidates,

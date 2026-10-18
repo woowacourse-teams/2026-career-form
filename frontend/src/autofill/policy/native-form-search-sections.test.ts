@@ -22,14 +22,14 @@ afterEach(() => installExecutionPolicy(document));
 const search = (prefix: string, type: string) =>
   `<div class="span"><div class="search"><label><input type="search" data-type="${type}"></label><div class="searchResult"></div></div><input type="hidden" name="${prefix}.academyName"><span class="searchResultName"></span><input class="hidden" name="${prefix}.academyCode"></div>`;
 const college = (name: string, index: number) =>
-  `<div class="loop" data-loop="${name}" data-index="${index}"><label><input type="radio" name="${name}[${index}].degreeTypeCode" value="${name === "college" ? "50" : "62"}">${name === "college" ? "학사" : "석사"}</label>${search(`${name}[${index}]`, "college")}<input name="${name}[${index}].entranceDate" data-dates="${name}[${index}].date:YM college graduationCriteriaDate"><input name="${name}[${index}].graduationDate" data-dates="${name}[${index}].date:END"><div data-loop="collegeMajor"><input name="${name}[${index}].collegeMajor[0].majorName" type="hidden"><input type="search" data-type="major"><button type="button" data-button="add"></button></div></div>`;
+  `<div class="wrapSubject" data-loop="${name}" data-index="${index}"><label><input type="radio" name="${name}[${index}].degreeTypeCode" value="${name === "college" ? "50" : "62"}">${name === "college" ? "학사" : "석사"}</label>${search(`${name}[${index}]`, "college")}<input name="${name}[${index}].entranceDate" data-dates="${name}[${index}].date:YM college graduationCriteriaDate"><input name="${name}[${index}].graduationDate" data-dates="${name}[${index}].date:END"><div class="row loop" data-loop="collegeMajor"><input name="${name}[${index}].collegeMajor[0].majorName" type="hidden"><input type="search" data-type="major"><button type="button" data-button="add"></button></div></div>`;
 function mount() {
   window.history.replaceState({}, "", "/mrs2/applicant/resume/writeResume");
   document.body.innerHTML =
     seed.executionPolicy.browserPolicy.nativeForm.assetPaths
       .map((src) => `<script src="${src}"></script>`)
       .join("") +
-    `<form id="frm"><div id="wrapResume"><section class="writeResume" data-code="140"><label><input type="radio" name="highschool.graduationTypeCode" value="01">졸업</label>${search("highschool", "highschool")}<input name="highschool.entranceDate" data-dates="highschoolDate:YM highschool graduationCriteriaDate"><input name="highschool.graduationDate" data-dates="highschoolDate:END"></section>${["college", "graduateSchool"].map((name, i) => `<section class="writeResume" data-code="${141 + i}"><div data-wrap="collegeLoop" data-type="${name}">${college(name, 0)}</div><div class="collegeBtnSet"><button type="button" data-button="addCollege" data-loopname="${name}">추가</button><button type="button" data-button="removeCollege" data-loopname="${name}">삭제</button></div></section>`).join("")}<section class="writeResume" data-code="18"><div class="subject" data-code="168" data-wrap="license"><div class="loop" data-loop="license"><div class="span"><div class="search"><label><input type="search" data-type="license"></label><div class="searchResult"></div></div><input type="hidden" name="license[0].licenseName"><span class="searchResultName"></span><input class="hidden" name="license[0].licenseCode"></div><input name="license[0].organization" maxlength="64"><div data-privateremove="test"><input name="license[0].registNumber" maxlength="32"></div><input name="license[0].acquireDate" data-dates="license[0].licenseDate:YMD"><button type="button" data-button="add"></button></div></div></section></div></form>`;
+    `<form id="frm"><div id="wrapResume"><section class="writeResume" data-code="140"><label><input type="radio" name="highschool.graduationTypeCode" value="01">졸업</label>${search("highschool", "highschool")}<input name="highschool.entranceDate" data-dates="highschoolDate:YM highschool graduationCriteriaDate"><input name="highschool.graduationDate" data-dates="highschoolDate:END"></section>${["college", "graduateSchool"].map((name, i) => `<section class="writeResume" data-code="${141 + i}"><div class="wrapCollege" data-wrap="collegeLoop" data-type="${name}">${college(name, 0)}</div><div class="collegeBtnSet"><button type="button" data-button="addCollege" data-loopname="${name}">추가</button><button type="button" data-button="removeCollege" data-loopname="${name}">삭제</button></div></section>`).join("")}<section class="writeResume" data-code="18"><div class="subject" data-code="168" data-wrap="license"><div class="loop" data-loop="license"><div class="span"><div class="search"><label><input type="search" data-type="license"></label><div class="searchResult"></div></div><input type="hidden" name="license[0].licenseName"><span class="searchResultName"></span><input class="hidden" name="license[0].licenseCode"></div><input name="license[0].organization" maxlength="64"><div data-privateremove="test"><input name="license[0].registNumber" maxlength="32"></div><input name="license[0].acquireDate" data-dates="license[0].licenseDate:YMD"><button type="button" data-button="add"></button></div></div></section></div></form>`;
   installExecutionPolicy(
     document,
     structuredClone(seed.executionPolicy) as unknown as ExecutionPolicy,
@@ -528,3 +528,15 @@ it("keeps matching existing college and highschool entities protected consistent
   expect(items.every((i) => i.disabled)).toBe(true);
   expect(items.every((i) => i.reason.includes("이미 입력된 항목"))).toBe(true);
 });
+
+it.each(["college", "graduateSchool"])(
+  "does not offer ADD for an existing %s section with zero collected rows",
+  (name) => {
+    mount();
+    document.querySelector(`[data-loop="${name}"]`)!.remove();
+    const section = collectPreparationSnapshot(document).request.sections.find(
+      (s) => s.sectionId === `hplace-mrs2-${name}`,
+    );
+    expect(section?.actionCandidates ?? []).toEqual([]);
+  },
+);
