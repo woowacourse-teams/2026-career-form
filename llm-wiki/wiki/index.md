@@ -81,6 +81,7 @@ Issue raw를 주제별 현재 상태와 이력으로 연결한다.
 | [범용 자동 기입 평가 기준선](topics/generic-autofill-evaluation-baselines.md) | 계약 1.1 원인별 집계, 설치 revision 근거와 비교 보류 및 과거 기준선 | 2026-10-09 |
 | [범용 폼 컨텍스트 수집](topics/generic-form-context.md) | 문서 회사 기준 수집 선택, 동기 읽기 캐시 경계와 혼합 전후 비교 | 2026-10-15 |
 | [범용 칸 라벨 문맥과 형식 검사](topics/generic-field-context-safety.md) | 끊긴 라벨 복원, 문맥 없는 칸의 REVIEW와 로컬 형식 검사 | 2026-10-18 |
+| [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md) | 추천인·보증인 등 다른 사람 대상 칸에 본인 정보 키가 매칭되면 BLOCKED | 2026-10-18 |
 | [DOM fixture 표시 텍스트 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md) | v4 무변경 보존, 표시 텍스트 검토와 mock·실사이트 근거 구분 | 2026-10-18 |
 | [실사이트 자동 입력 평가 워크플로우](topics/live-autofill-evaluation.md) | 사전 분모, DOM 검증, 후보 관측 일치와 설치본 snapshot 기반 보고 | 2026-10-09 |
 | [범용 자동 기입 검색 표면](topics/generic-autofill-search.md) | 범용 자격증 반복 행, 검색, 후속 재검토, 혼합 학력 행, role 없는 레이어 검색, 공급자 중립 검색 결과 구조 해석과 기존 CJ 계약 및 실사이트 검증 경계 | 2026-10-01 |

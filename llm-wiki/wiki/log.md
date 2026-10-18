@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-18] ingest | CF-261 범용 등급의 다른 사람 대상 칸 차단
+
+- Approval-Digest: efaf5d4ecaf8f6976e70d9aefc2c5196e03ffe049bc661bcae08f52f7a236f72
+- Source-Revision: 76ecbdac4d71b174390ff5efa5d66d07be4d8a11
+- 승인한 후보 세 개를 [CF-261 bundle](../raw/issues/CF-261/manifest.md)에 기록하고
+  [범용 등급의 다른 사람 대상 칸 차단](topics/generic-other-person-context.md)을 추가했다.
+- 화면 문구는 Task 12(#259)의 변환 표에 위임하며 실사이트 검증은 하지 않았다.
+
 ## [2026-10-18] update | CF-251 범용 합성 값 binding 소비와 등급 경계
 
 - Approval-Digest: b280bc6ed4d3bd17c43b277a87b1322d47113bd2f22c96c83ea4be78fd8d9ef1
