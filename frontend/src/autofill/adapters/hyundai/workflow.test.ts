@@ -1,7 +1,9 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { hyundaiWorkflowAdapter } from "./workflow";
+import { getWorkflowAdapter } from "../workflow";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -74,7 +76,7 @@ describe("Hyundai language state drivers", () => {
     const onFailure = vi.fn();
 
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(
+      getWorkflowAdapter(document).settleStateDriver?.(
         document,
         { elements: [exam], candidate: { domId: "foreExamCd_1" } } as never,
         onFailure,
@@ -102,7 +104,7 @@ describe("Hyundai language state drivers", () => {
     `;
     const exam = document.querySelector<HTMLInputElement>("#foreExamCd_1")!;
     const onFailure = vi.fn();
-    const pending = hyundaiWorkflowAdapter.settleStateDriver?.(
+    const pending = getWorkflowAdapter(document).settleStateDriver?.(
       document,
       { elements: [exam], candidate: { domId: "foreExamCd_1" } } as never,
       onFailure,
@@ -149,7 +151,7 @@ describe("Hyundai language state drivers", () => {
       );
     }
     const onFailure = vi.fn();
-    const pending = hyundaiWorkflowAdapter.settleStateDriver?.(
+    const pending = getWorkflowAdapter(document).settleStateDriver?.(
       document,
       { elements: [exam], candidate: { domId: "foreExamCd_1" } } as never,
       onFailure,
@@ -222,13 +224,13 @@ describe("Hyundai language state drivers", () => {
     }, 1);
 
     expect(
-      hyundaiWorkflowAdapter.stateDriverStage?.(
+      getWorkflowAdapter(document).stateDriverStage?.(
         buttonOptionItem("languages.languageTest.language"),
         targetHandle,
       ),
     ).toBe(1);
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(document, targetHandle),
+      getWorkflowAdapter(document).settleStateDriver?.(document, targetHandle),
     ).resolves.toBe(true);
   });
 
@@ -285,13 +287,13 @@ describe("Hyundai language state drivers", () => {
     });
 
     expect(
-      hyundaiWorkflowAdapter.stateDriverStage?.(
+      getWorkflowAdapter(document).stateDriverStage?.(
         buttonOptionItem("languages.languageTest.testName"),
         { elements: [exam], candidate: { domId: "foreExamCd_1" } } as never,
       ),
     ).toBe(2);
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(
+      getWorkflowAdapter(document).settleStateDriver?.(
         document,
         {
           elements: [exam],
@@ -305,7 +307,7 @@ describe("Hyundai language state drivers", () => {
     expect(loadClicks).toBe(0);
     expect(onFailure).not.toHaveBeenCalled();
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(document, {
+      getWorkflowAdapter(document).settleStateDriver?.(document, {
         elements: [exam],
         candidate: { domId: "foreExamCd_1" },
       } as never),
@@ -345,7 +347,7 @@ describe("Hyundai language state drivers", () => {
     }, 0);
 
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(document, {
+      getWorkflowAdapter(document).settleStateDriver?.(document, {
         elements: [exam],
         candidate: { domId: "foreExamCd_1" },
       } as never),
@@ -372,7 +374,7 @@ describe("Hyundai language state drivers", () => {
       });
 
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(document, {
+      getWorkflowAdapter(document).settleStateDriver?.(document, {
         elements: [exam],
         candidate: { domId: "foreExamCd_1" },
       } as never),
@@ -399,7 +401,7 @@ describe("Hyundai language state drivers", () => {
           clicks += 1;
         });
       });
-    const pending = hyundaiWorkflowAdapter.settleStateDriver?.(document, {
+    const pending = getWorkflowAdapter(document).settleStateDriver?.(document, {
       elements: [exam],
       candidate: { domId: "foreExamCd_1" },
     } as never);
@@ -433,7 +435,7 @@ describe("Hyundai university search failure groups", () => {
     } as never;
 
     expect(
-      hyundaiWorkflowAdapter.stateDriverFailureGroup?.(
+      getWorkflowAdapter(document).stateDriverFailureGroup?.(
         searchItem(candidateId, fieldKey),
         handle,
       ),
@@ -453,7 +455,7 @@ describe("Hyundai university search failure groups", () => {
       const candidateId = `field-${domName}`;
 
       expect(
-        hyundaiWorkflowAdapter.stateDriverFailureGroup?.(
+        getWorkflowAdapter(document).stateDriverFailureGroup?.(
           searchItem(candidateId, fieldKey),
           {
             candidateId,
@@ -537,7 +539,7 @@ describe("Hyundai military and veteran state drivers", () => {
   ] as const)("runs %s before dependent fields", (id, fieldKey) => {
     renderConditionalFields();
     expect(
-      hyundaiWorkflowAdapter.stateDriverStage?.(
+      getWorkflowAdapter(document).stateDriverStage?.(
         stateDriverItem(id, fieldKey),
         driverHandle(id),
       ),
@@ -548,7 +550,7 @@ describe("Hyundai military and veteran state drivers", () => {
     renderConditionalFields();
     document.querySelector("article")!.id = "foreign";
     expect(
-      hyundaiWorkflowAdapter.stateDriverStage?.(
+      getWorkflowAdapter(document).stateDriverStage?.(
         stateDriverItem("milCd", "military.military.militaryStatus"),
         driverHandle("milCd"),
       ),
@@ -563,7 +565,7 @@ describe("Hyundai military and veteran state drivers", () => {
     document.querySelector<HTMLInputElement>("#milExcptCd")!.required = false;
 
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(
+      getWorkflowAdapter(document).settleStateDriver?.(
         document,
         driverHandle("milCd"),
       ),
@@ -575,7 +577,7 @@ describe("Hyundai military and veteran state drivers", () => {
     const { militaryHidden } = renderConditionalFields();
     militaryHidden.value = "2";
     document.querySelector<HTMLInputElement>("#milCd")!.value = "미필";
-    const pending = hyundaiWorkflowAdapter.settleStateDriver?.(
+    const pending = getWorkflowAdapter(document).settleStateDriver?.(
       document,
       driverHandle("milCd"),
     );
@@ -590,7 +592,7 @@ describe("Hyundai military and veteran state drivers", () => {
     document.querySelector<HTMLInputElement>("#branchYn")!.value = "예";
 
     await expect(
-      hyundaiWorkflowAdapter.settleStateDriver?.(
+      getWorkflowAdapter(document).settleStateDriver?.(
         document,
         driverHandle("branchYn"),
       ),
@@ -602,7 +604,7 @@ describe("Hyundai military and veteran state drivers", () => {
     const { veteranHidden } = renderConditionalFields();
     veteranHidden.value = "N";
     document.querySelector<HTMLInputElement>("#branchYn")!.value = "아니오";
-    const pending = hyundaiWorkflowAdapter.settleStateDriver?.(
+    const pending = getWorkflowAdapter(document).settleStateDriver?.(
       document,
       driverHandle("branchYn"),
     );
@@ -623,13 +625,13 @@ describe("Hyundai academic location state drivers", () => {
       candidate: { domId: id, domName: id.replace(/_[0-9]+$/, "") },
     });
     expect(
-      hyundaiWorkflowAdapter.stateDriverStage?.(
+      getWorkflowAdapter(document).stateDriverStage?.(
         item,
         locationHandle("locNation_1") as never,
       ),
     ).toBe(2);
     expect(
-      hyundaiWorkflowAdapter.stateDriverStage?.(
+      getWorkflowAdapter(document).stateDriverStage?.(
         item,
         locationHandle("locCity_1") as never,
       ),
@@ -642,7 +644,7 @@ describe("Hyundai location failure isolation", () => {
     document.body.innerHTML = `<article id="academic" class="field-form-apply"><div class="field-content"><div class="select-wrap"><input class="btn-select js-target btn-new-loc locNa" type="text" id="locCity_1" data-target-codegb="0013" data-refer="locNation" data-attr1="KR"><input class="js-field" type="hidden" name="locCity"></div></div></article>`;
     const trigger = document.querySelector<HTMLInputElement>("#locCity_1")!;
     const item = buttonOptionItem("education.university.schoolRegion");
-    const group = hyundaiWorkflowAdapter.stateDriverFailureGroup?.(item, {
+    const group = getWorkflowAdapter(document).stateDriverFailureGroup?.(item, {
       candidateId: item.candidateId,
       itemGroupId: "educationuniversity",
       itemIndex: 0,

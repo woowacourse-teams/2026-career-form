@@ -38,6 +38,7 @@ class QualityManagementApiTest {
     static class Controller {
         @GetMapping("/api/v1/quality/sites") Map<String, String> sites() { return Map.of("status", "ok"); }
         @GetMapping("/api/v1/quality/stats") Map<String, String> stats() { return Map.of("status", "ok"); }
+        @GetMapping("/api/v1/quality/stats/sites") Map<String, String> options() { return Map.of("status", "ok"); }
         @PostMapping("/api/v1/quality/sites/fixture/claim") Map<String, String> claim() { return Map.of("status", "ok"); }
     }
 
@@ -45,6 +46,8 @@ class QualityManagementApiTest {
     void readonlyCredentialsNeverPermitManagementOrWriting() throws Exception {
         var mvc = MockMvcBuilders.standaloneSetup(new Controller()).addFilters(new QualityApiFilter(access)).build();
         mvc.perform(get("/api/v1/quality/stats").header("Authorization", "Bearer synthetic-readonly"))
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/quality/stats/sites").header("Authorization", "Bearer synthetic-readonly"))
             .andExpect(status().isOk());
         mvc.perform(get("/api/v1/quality/sites").header("Authorization", "Bearer synthetic-readonly"))
             .andExpect(status().isUnauthorized());

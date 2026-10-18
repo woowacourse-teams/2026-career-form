@@ -57,7 +57,10 @@
           "minorStatus": "있음",
           "additionalMajorName": "디자인",
           "minorName": "경영학",
-          "latestEducationType": "대학(학사)"
+          "latestEducationType": "대학(학사)",
+          "majorField": "공학계열",
+          "additionalMajorField": "사회계열",
+          "minorField": "자연과학계열"
         }
       }
     ],

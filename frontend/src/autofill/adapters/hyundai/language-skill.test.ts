@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, expect, it } from "vitest";
 
 import { createEmptyProfile } from "../../../profile/model";
@@ -115,6 +118,7 @@ it("writes each language skill row and verifies its own code without inventing w
     profile,
     registry: snapshot.registry,
     analysis: {
+executionPolicy: fixturePolicy("hyundai"),
       snapshotId: snapshot.request.snapshotId,
       mode: "ADAPTER",
       analysisStatus: "COMPLETE",

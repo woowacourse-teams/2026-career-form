@@ -26,7 +26,7 @@ export function mountButtonDropdowns({
         menu.hidden = true;
       });
   };
-  const labels = ["지원경로", "재직 이력", "보훈구분", "장애구분"];
+  const labels = ["유입경로", "재직 이력", "보훈구분", "장애구분"];
   for (let index = 0; index < count; index += 1) {
     const field = document.createElement("div");
     field.id = `question-${index}`;

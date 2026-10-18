@@ -37,6 +37,6 @@ export function pendingResultPresentation(item?: ReviewPlanItem) {
       : prefix && label.startsWith(prefix)
         ? label.slice(prefix.length)
         : label,
-    sensitive: category?.sensitive === true || item?.status === "sensitive",
+    sensitive: category?.sensitive === true,
   };
 }

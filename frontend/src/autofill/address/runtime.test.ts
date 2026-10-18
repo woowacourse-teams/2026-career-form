@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { describe, it, expect } from "vitest";
 import { createAddressSearch } from "./runtime";
 import type { AddressPort } from "./relay";
@@ -48,7 +50,7 @@ describe("address runtime client", () => {
     await Promise.resolve();
     expect(checked).toBe(true);
     expect(p.sent).toContainEqual({ type: "COMMIT", id });
-    p.receive({ type: "SELECTED", id });
+    p.receive({ type: "SELECTED", id, selected: {address: "공개 예시", postalCode: "12345"} });
     expect(await result).toBe(true);
   });
   it("cancels when validation fails or the caller aborts", async () => {

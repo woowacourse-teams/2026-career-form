@@ -1,6 +1,8 @@
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { installExecutionPolicy } from "../workflow/execution-policy";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { buildResultModel } from "../workflow/result-model";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { FieldsAnalyzeResponse } from "../api/types";
 import {
@@ -10,11 +12,7 @@ import {
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
 import type { ReviewPlanItem } from "./review-plan";
-import {
-  buildReviewPlan,
-  revealSensitiveReviewItem,
-  reviewItemsForDisplay,
-} from "./review-plan";
+import { buildReviewPlan, reviewItemsForDisplay } from "./review-plan";
 
 function response(
   fields: FieldsAnalyzeResponse["fields"],
@@ -311,17 +309,10 @@ describe("review plan", () => {
         item("unavailable", "unavailable"),
         item("needs-review", "needs-review"),
         item("available-1", "available"),
-        item("sensitive", "sensitive"),
         item("available-2", "available"),
         item("conflict", "conflict"),
       ]).map(({ candidateId }) => candidateId),
-    ).toEqual([
-      "available-1",
-      "available-2",
-      "needs-review",
-      "sensitive",
-      "conflict",
-    ]);
+    ).toEqual(["available-1", "available-2", "needs-review", "conflict"]);
   });
 
   it("selects a ready allowed value when the page field is empty", () => {
@@ -695,7 +686,7 @@ describe("review plan", () => {
     });
   });
 
-  it("masks and disables a sensitive value before the user reveals it", () => {
+  it("includes saved sensitive values without an extra reveal step", () => {
     const profile = createEmptyProfile();
     profile.compensation.desiredPosition = "군필";
     const registry = registryWithTextField();
@@ -713,11 +704,11 @@ describe("review plan", () => {
     }).items;
 
     expect(item).toMatchObject({
-      status: "sensitive",
-      previewValue: "••••••••",
-      selected: false,
-      disabled: true,
-      revealed: false,
+      status: "available",
+      previewValue: "군필",
+      selected: true,
+      disabled: false,
+      revealed: true,
     });
   });
 
@@ -847,7 +838,7 @@ describe("review plan", () => {
     });
   });
 
-  it("reveals a sensitive value only after the explicit reveal action", () => {
+  it("never produces a sensitive review status for a sensitive-confirmation field", () => {
     const profile = createEmptyProfile();
     profile.compensation.desiredPosition = "군필";
     const [item] = buildReviewPlan({
@@ -862,9 +853,13 @@ describe("review plan", () => {
       registry: registryWithTextField(),
     }).items;
 
-    expect(revealSensitiveReviewItem(item)).toMatchObject({
+    expect(["available", "needs-review", "conflict", "unavailable"]).toContain(
+      item.status,
+    );
+    expect(item).toMatchObject({
+      status: "available",
       previewValue: "군필",
-      selected: false,
+      selected: true,
       disabled: false,
       revealed: true,
     });
@@ -945,7 +940,7 @@ describe("review plan", () => {
     });
   });
 
-  it("masks an individually confirmed real date and retains approval through reveal", () => {
+  it("keeps a confirmed date visible and retains its approval", () => {
     const profile: Profile = {
       ...createEmptyProfile(),
       health: [
@@ -975,29 +970,15 @@ describe("review plan", () => {
       registry,
     }).items;
     expect(item).toMatchObject({
-      status: "sensitive",
+      status: "available",
       profileValue: "2020.04.05",
-      previewValue: "••••••••",
-      selected: false,
-      disabled: true,
-      revealed: false,
+      previewValue: "2020.04.05",
+      selected: true,
+      disabled: false,
+      revealed: true,
       profileEntryId: "health-1",
       itemIndex: 0,
       dateApproval: { format: "YYYY.MM.DD" },
-    });
-    const revealed = revealSensitiveReviewItem(item);
-    expect(revealed).toMatchObject({
-      status: "sensitive",
-      previewValue: "2020.04.05",
-      selected: false,
-      disabled: false,
-      revealed: true,
-      dateApproval: item.dateApproval,
-    });
-    expect({ ...revealed, selected: true }).toMatchObject({
-      selected: true,
-      disabled: false,
-      dateApproval: item.dateApproval,
     });
   });
 
@@ -1330,12 +1311,17 @@ it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
       url: "https://kakaomobility.career.greetinghr.com/ko/o/1/apply",
     });
 
+    installExecutionPolicy(document, fixturePolicy("greeting"));
     const name =
       mode === "wrong-name"
         ? "customQuestion.country"
         : "basicInformation.nationalityCode";
     const label = mode === "wrong-label" ? "관심국가" : "국적";
     document.body.innerHTML = `<div data-scope="field" data-part="root"><label>${label}</label><input name="${name}" data-scope="combobox" data-part="input" role="combobox" aria-controls="countries"></div><div id="countries" data-scope="scroll-area" data-part="viewport" role="presentation" data-state="open"><div role="option" data-scope="combobox" data-part="item" data-value="KR" data-state="unchecked">대한민국</div></div>`;
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<input name="basicInformation.name"><input name="basicInformation.phoneNumber.nationalNumber">',
+    );
     const input = document.querySelector<HTMLInputElement>("input")!;
     const option = document.querySelector<HTMLElement>('[role="option"]')!;
     option.onclick = () => {
@@ -1387,9 +1373,11 @@ it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
     expect(item.disabled).toBe(mode !== "valid");
     if (mode === "valid") {
       expect(item.profileValue).toBe("대한민국");
-      expect(greetingWorkflowAdapter.isStateDriver?.(item, name)).toBe(true);
       expect(
-        await greetingWorkflowAdapter.executeStateDriver?.(
+        componentWorkflowAdapter(document).isStateDriver?.(item, name),
+      ).toBe(true);
+      expect(
+        await componentWorkflowAdapter(document).executeStateDriver?.(
           document,
           handle,
           item,
@@ -1402,3 +1390,5 @@ it.each(["valid", "wrong-name", "wrong-label", "wrong-binding", "untrusted"])(
     }
   },
 );
+
+afterEach(() => installExecutionPolicy(document));

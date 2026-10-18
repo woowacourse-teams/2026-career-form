@@ -16,7 +16,7 @@ class GreetingCompanyFormPolicyFactoryTest {
         FormAnalysisPolicyDocument document = GreetingCompanyFormPolicyFactory.create();
 
         assertThat(document.companyKey()).isEqualTo("greeting");
-        assertThat(document.version()).isEqualTo(1);
+        assertThat(document.version()).isEqualTo(8);
         assertThat(document.preparationFingerprint().noActionPreparation()).isTrue();
         assertThat(document.actionRules()).isEmpty();
         assertThat(document.fieldRules()).extracting(rule -> rule.structuralName())

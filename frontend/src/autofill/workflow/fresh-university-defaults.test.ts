@@ -1,14 +1,21 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { describe, expect, it } from "vitest";
 
 import { shouldRunRevealPlan } from "./AutofillWorkflow";
 import { getWorkflowAdapter } from "../adapters/workflow";
-const hasFreshUniversityRows =
-  getWorkflowAdapter("www.skcareers.com").hasFreshRows;
+const hasFreshUniversityRows = (
+  ...args: Parameters<ReturnType<typeof getWorkflowAdapter>["hasFreshRows"]>
+) => getWorkflowAdapter(document).hasFreshRows(...args);
 const isLanguageTypeStateDriver = (
   item: ReviewPlanItem,
   domName: string,
   host: string,
-) => getWorkflowAdapter(host).isStateDriver(item, domName);
+) =>
+  getWorkflowAdapter(
+    host === "www.skcareers.com" ? document : host,
+  ).isStateDriver(item, domName);
 
 import type { ReviewPlanItem } from "../review/review-plan";
 
@@ -81,6 +88,10 @@ describe("isLanguageTypeStateDriver", () => {
     analysis: {
       candidateId: "language-type",
       matchType: "MATCH",
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "languages.languageTest.language",
+      },
       autofillPolicy: "ALLOWED",
       mappingStatus: "ADAPTER_VERIFIED",
       interactionStatus: "READY",

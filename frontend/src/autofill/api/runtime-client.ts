@@ -1,3 +1,8 @@
+import { startLocalTiming } from "../debug/local-timing";
+import {
+  validExecutionPolicy,
+  type ExecutionPolicy,
+} from "../workflow/execution-policy";
 import type {
   InteractionDecisionRequest,
   InteractionDecisionResponse,
@@ -14,9 +19,17 @@ import type {
   AnalysisApiClient,
   FieldsAnalyzeRequest,
   FieldsAnalyzeResponse,
+  GenericFieldsRequest,
+  GenericFieldsResponse,
   PreparationAnalyzeRequest,
   PreparationAnalyzeResponse,
+  SectionClassifyRequest,
+  SectionClassifyResponse,
 } from "./types";
+import {
+  validateGenericFieldsResponse,
+  validateSectionClassifyResponse,
+} from "./validate-generic-response";
 import {
   validateFieldsResponse,
   validatePreparationResponse,
@@ -39,7 +52,10 @@ const errorMessages: Record<
 };
 
 export class AnalysisServiceError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly status?: 404,
+  ) {
     super(message);
     this.name = "AnalysisServiceError";
   }
@@ -59,6 +75,25 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     );
   }
 
+  async loadExecutionPolicy(
+    site: import("./types").SiteDescriptor,
+  ): Promise<ExecutionPolicy | undefined> {
+    const response = await this.request({
+      type: "AUTOFILL_LOAD_EXECUTION_POLICY",
+      payload: site,
+    });
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("executionPolicy" in response)
+    )
+      throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
+    if (response.executionPolicy === null) return undefined;
+    if (!validExecutionPolicy(response.executionPolicy))
+      throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
+    return response.executionPolicy;
+  }
+
   async decideInteractions(
     request: InteractionDecisionRequest,
   ): Promise<InteractionDecisionResponse> {
@@ -67,6 +102,26 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       payload: request,
     });
     return validateInteractionDecisionResponse(request, response);
+  }
+
+  async classifySections(
+    request: SectionClassifyRequest,
+  ): Promise<SectionClassifyResponse> {
+    const response = await this.request({
+      type: "AUTOFILL_GENERIC_CLASSIFY_SECTIONS",
+      payload: request,
+    });
+    return validateSectionClassifyResponse(request, response);
+  }
+
+  async analyzeGenericFields(
+    request: GenericFieldsRequest,
+  ): Promise<GenericFieldsResponse> {
+    const response = await this.request({
+      type: "AUTOFILL_GENERIC_ANALYZE_FIELDS",
+      payload: request,
+    });
+    return validateGenericFieldsResponse(request, response);
   }
 
   async analyzePreparation(
@@ -106,6 +161,7 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     payload: unknown;
   }): Promise<unknown> {
     let envelope: unknown;
+    const finishTiming = startLocalTiming("api", { type: message.type });
     try {
       envelope = await this.sendMessage({
         ...message,
@@ -114,6 +170,8 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
     } catch (error) {
       debugApiMessage(message, { error });
       throw new AnalysisServiceError(errorMessages.NETWORK);
+    } finally {
+      finishTiming();
     }
     debugApiMessage(message, {
       envelope,
@@ -125,7 +183,10 @@ export class RuntimeAnalysisApiClient implements AnalysisApiClient {
       throw new AnalysisServiceError(errorMessages.INVALID_RESPONSE);
     }
     if (!envelope.ok) {
-      throw new AnalysisServiceError(errorMessages[envelope.code]);
+      throw new AnalysisServiceError(
+        errorMessages[envelope.code],
+        envelope.status,
+      );
     }
     this.reportingSupported = envelope.quality === true;
     return envelope.data;

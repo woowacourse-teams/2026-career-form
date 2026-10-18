@@ -13,8 +13,17 @@ public record FieldsAnalysisResponse(
     AnalysisStatus analysisStatus,
     List<FieldAnalysis> fields,
     List<WarningCode> warningCodes,
-    BlockCode blockCode
+    BlockCode blockCode,
+    ExecutionPolicy executionPolicy
 ) {
+
+    public FieldsAnalysisResponse(String snapshotId, Mode mode, AnalysisStatus analysisStatus,
+        List<FieldAnalysis> fields, List<WarningCode> warningCodes, BlockCode blockCode) {
+        this(snapshotId, mode, analysisStatus, fields, warningCodes, blockCode, null);
+    }
+    public FieldsAnalysisResponse withExecutionPolicy(ExecutionPolicy policy) {
+        return new FieldsAnalysisResponse(snapshotId, mode, analysisStatus, fields, warningCodes, blockCode, policy);
+    }
 
     public FieldsAnalysisResponse {
         fields = List.copyOf(fields);

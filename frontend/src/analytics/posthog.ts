@@ -13,11 +13,15 @@ export function createPosthogCapture({
   getDistinctId,
   fetch: fetcher = globalThis.fetch,
 }: CaptureOptions) {
-  return async (event: AnalyticsEvent, properties: AnalyticsProperties) => {
-    if (!key?.trim()) return;
+  return async (
+    event: AnalyticsEvent,
+    properties: AnalyticsProperties,
+    timestamp = new Date(Date.now()).toISOString(),
+  ): Promise<boolean> => {
+    if (!key?.trim()) return false;
     try {
       const distinctId = await getDistinctId();
-      await fetcher(`${host.replace(/\/+$/, "")}/i/v0/e/`, {
+      const response = await fetcher(`${host.replace(/\/+$/, "")}/i/v0/e/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "omit",
@@ -28,6 +32,7 @@ export function createPosthogCapture({
           api_key: key,
           event,
           distinct_id: distinctId,
+          timestamp,
           properties: {
             surface: properties.surface,
             ...(properties.surface === "in_page_panel" && properties.page_host
@@ -37,9 +42,10 @@ export function createPosthogCapture({
           },
         }),
       });
+      return response.ok;
     } catch {
       // Analytics must not interrupt profile actions or log private context.
-      return;
+      return false;
     }
   };
 }

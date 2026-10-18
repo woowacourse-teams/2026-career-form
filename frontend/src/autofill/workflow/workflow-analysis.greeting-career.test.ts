@@ -1,6 +1,9 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { validateFieldsResponse } from "../api/validate-response";
 import { createAnalyzeFields } from "./workflow-analysis";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -48,7 +51,7 @@ it.each([
     let items: ReviewPlanItem[] = [];
     let analyses = 0;
     const analyze = createAnalyzeFields({
-      adapter: greetingWorkflowAdapter,
+      adapter: componentWorkflowAdapter(document),
       pageDocument: document,
       addressRun: { current: { controller: new AbortController() } },
       addressSearch: async () => false,
@@ -60,12 +63,14 @@ it.each([
       completedGenericStateDrivers: { current: new Map() },
       deferredDriverGroups: { current: new Set() },
       apiClient: {
+loadExecutionPolicy: async () => fixturePolicy("greeting"),
         analyzePreparation: async () => {
           throw Error("unexpected prep");
         },
         analyzeFields: async (request) => {
           analyses++;
           return validateFieldsResponse(request, {
+executionPolicy: fixturePolicy("greeting"),
             snapshotId: request.snapshotId,
             mode: "ADAPTER",
             analysisStatus: "COMPLETE",

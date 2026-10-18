@@ -1,0 +1,11 @@
+[Unit]
+Description=Career Form MongoDB container and host observation
+After=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/career-form-monitoring-db/host-state.env
+ExecStart=/usr/bin/python3 /opt/career-form/mongodb-observation/mongodb-host-state.py --container ${MONGODB_CONTAINER} --output-dir ${MONGODB_STATE_DIR} --data-dir ${MONGODB_DATA_DIR}
+UMask=0027
+NoNewPrivileges=true
+TimeoutStartSec=20

@@ -64,6 +64,10 @@ career-form:
       timeout-ms: ${CAREER_FORM_JEV_TIMEOUT_MS:8000}
       min-confidence: ${CAREER_FORM_JEV_MIN_CONFIDENCE:0.8}
       data-policy-reviewed: ${CAREER_FORM_JEV_DATA_POLICY_REVIEWED:false}
+      rate-limit-retries: ${CAREER_FORM_JEV_RATE_LIMIT_RETRIES:2}
+      section-concurrency: ${CAREER_FORM_JEV_SECTION_CONCURRENCY:3}
+      field-batch-size: ${CAREER_FORM_JEV_FIELD_BATCH_SIZE:5}
+      max-concurrent: ${CAREER_FORM_JEV_MAX_CONCURRENT:10}
   llm:
     enabled: ${CAREER_FORM_LLM_ENABLED:}
 

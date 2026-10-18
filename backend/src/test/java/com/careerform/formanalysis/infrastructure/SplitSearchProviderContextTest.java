@@ -63,7 +63,9 @@ class SplitSearchProviderContextTest {
                 "abstentions", batch.decisions().stream().map(d -> Map.of("decisionId", d.decisionId(), "role", d.role())).toList()),
                 (Class<?>) call.getArgument(2));
         });
-        var decisions = java.util.Arrays.stream(Role.values()).map(role ->
+        var searches = List.of(Role.SEARCH_POPUP_OPENER, Role.SEARCH_QUERY_INPUT, Role.SEARCH_SUBMIT,
+            Role.SEARCH_RESULT_CONTAINER, Role.SEARCH_RESULT_ITEM, Role.SEARCH_RESULT_ACTION);
+        var decisions = java.util.stream.Stream.concat(searches.stream(), calendars.stream()).map(role ->
             new InteractionDecisionProvider.Decision(role.name(), role, "education.university.schoolName", List.of())).toList();
         var result = provider.decide(new InteractionDecisionProvider.Batch(2, decisions));
         assertThat(result.results()).hasSize(decisions.size()).allMatch(r -> r instanceof InteractionDecisionProvider.Abstained);

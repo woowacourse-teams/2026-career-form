@@ -36,7 +36,7 @@ public record QualityRecord(
     }
 
     public enum Kind {
-        REQUEST, EXECUTION, AGGREGATE, CANDIDATE, CONFIRMATION, BATCH
+        REQUEST, EXECUTION, AGGREGATE, CANDIDATE, POSTING, CONFIRMATION, BATCH
     }
 
     public record Group(String environment, String site, String structure, String route, String version, String host, QualitySite.Status identity) {

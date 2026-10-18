@@ -2,6 +2,8 @@ import { StrictMode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { SiteApp } from "./SiteApp";
+import { createEmptyProfile } from "../src/profile/model";
+import type { ProfileRepository } from "../src/profile/profile-repository";
 
 beforeEach(() => vi.spyOn(window, "scrollTo").mockImplementation(() => {}));
 afterEach(() => vi.restoreAllMocks());
@@ -124,31 +126,62 @@ it("contains storage and network failures without rejecting actions", async () =
     throw new Error("offline");
   });
   const track = createSiteTracker({ key: "site-key", fetch });
-  await expect(
-    track("landing_viewed", { surface: "site" }),
-  ).resolves.toBeUndefined();
+  await expect(track("landing_viewed", { surface: "site" })).resolves.toBe(
+    false,
+  );
   vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
     throw new Error("unavailable");
   });
   await expect(
     track("install_link_clicked", { surface: "site" }),
-  ).resolves.toBeUndefined();
+  ).resolves.toBe(false);
   expect(fetch).toHaveBeenCalledOnce();
 });
 
-it("wires the installed extension onboarding entrypoint to extension telemetry", async () => {
-  const extensionTracker = await import("../src/analytics/extension-tracker");
-  const track = vi
-    .spyOn(extensionTracker, "trackExtensionEvent")
-    .mockImplementation(() => {});
+it("records the first onboarding visit without counting extension policy pages", async () => {
   const { App } = await import("../entrypoints/onboarding/App");
-  const { rerender } = render(<App />);
-  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
-  fireEvent.click(screen.getByRole("button", { name: /프로필 등록 알아보기/ }));
-  fireEvent.click(screen.getByRole("button", { name: /지원서에서 사용하기/ }));
-  rerender(<App />);
+  const repository: ProfileRepository = {
+    load: async () => createEmptyProfile(),
+    save: async () => {},
+    loadLayout: async () => "a",
+    saveLayout: async () => {},
+  };
+  const track = vi.fn();
+  window.history.replaceState(null, "", "/onboarding.html?page=%2Fprivacy%2F");
+  const { unmount } = render(<App track={track} repository={repository} />);
+  expect(track).not.toHaveBeenCalled();
+  unmount();
+  window.history.replaceState(null, "", "/onboarding.html");
+  const { rerender } = render(<App track={track} repository={repository} />);
+  rerender(<App track={track} repository={repository} />);
   expect(track.mock.calls).toEqual([
     ["onboarding_viewed", { surface: "extension_onboarding" }],
+    ["onboarding_first_viewed", { surface: "extension_onboarding" }],
+  ]);
+});
+it("records the chosen purpose and invokes installed quick registration", () => {
+  const track = vi.fn();
+  const start = vi.fn();
+  render(
+    <SiteApp
+      path="/onboarding/"
+      installed
+      postingsHref="/options.html#postings/new"
+      track={track}
+      surface="extension_onboarding"
+      onStartAutofill={start}
+    />,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: /공고 저장부터 시작하기/ }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: /시작 방법 다시 선택/ }));
+  fireEvent.click(screen.getByRole("button", { name: /자동 기입 준비하기/ }));
+  expect(start).toHaveBeenCalledOnce();
+  expect(track.mock.calls).toEqual([
+    ["onboarding_viewed", { surface: "extension_onboarding" }],
+    ["onboarding_postings_selected", { surface: "extension_onboarding" }],
+    ["onboarding_autofill_selected", { surface: "extension_onboarding" }],
   ]);
 });
 

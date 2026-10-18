@@ -6,9 +6,7 @@ export function resultPreview(
   item: ReviewPlanItem,
   profile?: Profile,
 ): string[] {
-  return savedResultValues(item, profile).map(({ value, sensitive }) =>
-    sensitive && !item.revealed ? "••••••••" : value,
-  );
+  return savedResultValues(item, profile).map(({ value }) => value);
 }
 
 export function savedResultValues(
@@ -16,9 +14,7 @@ export function savedResultValues(
   profile?: Profile,
 ): { value: string; sensitive: boolean }[] {
   if (item.profileValue?.trim())
-    return [
-      { value: item.profileValue, sensitive: item.status === "sensitive" },
-    ];
+    return [{ value: item.profileValue, sensitive: false }];
   if (!profile) return [];
   const key = item.profileFieldKey ?? item.analysis?.profileFieldKey;
   const binding =

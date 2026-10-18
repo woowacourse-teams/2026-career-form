@@ -16,7 +16,7 @@ class MonitoringComposeTest(unittest.TestCase):
         services = config["services"]
         self.assertEqual("127.0.0.1", services["grafana"]["ports"][0]["host_ip"])
         self.assertEqual("3000", services["grafana"]["ports"][0]["published"])
-        self.assertEqual({"80", "3100", "9090"},
+        self.assertEqual({"80", "3100", "9090", "4318"},
                          {port["published"] for port in services["ingest"]["ports"]})
         ui = next(port for port in services["ingest"]["ports"] if port["target"] == 80)
         self.assertEqual("0.0.0.0", ui.get("host_ip", "0.0.0.0"))

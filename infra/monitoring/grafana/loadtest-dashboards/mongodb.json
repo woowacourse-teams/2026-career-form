@@ -1,0 +1,718 @@
+{
+  "uid": "cf-loadtest-db",
+  "title": "DB 상태",
+  "schemaVersion": 39,
+  "version": 8,
+  "editable": false,
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "loadtest"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "앱 환경",
+        "type": "custom",
+        "query": "dev,staging,prod",
+        "current": {
+          "text": "prod",
+          "value": "prod"
+        },
+        "options": [
+          {
+            "text": "dev",
+            "value": "dev",
+            "selected": false
+          },
+          {
+            "text": "staging",
+            "value": "staging",
+            "selected": false
+          },
+          {
+            "text": "prod",
+            "value": "prod",
+            "selected": true
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "title": "지표 읽는 순서",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 5
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**① 처리 성능** - 처리량이 늘 때 P50·P95·P99 지연도 함께 오르는지 확인\n\n**② 연결 풀** - 사용량과 대기 시간을 함께 보고 연결 부족 여부 확인\n\n**③ 서버 자원** - 같은 시간의 CPU와 가용 메모리 확인\n\n처리량·CPU·메모리는 공용 DB 전체, 연결 풀·대기 시간은 선택한 앱 환경 기준입니다. 이상이 있으면 아래 상세 진단을 펼쳐보세요."
+      }
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "처리 성능",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 9,
+      "title": "읽기와 쓰기 처리량",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(rate(mongodb_ss_opcounters{job=\"mongodb\"}[5m])) and on(instance) (max by(instance) (time() - timestamp(mongodb_ss_opcounters{job=\"mongodb\"})) < 90) and on(instance) (mongodb_up{job=\"mongodb\"} == 1)",
+          "legendFormat": "{{legacy_op_type}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "전체 DB 작업 시간 · P50 / P95 / P99",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "앱에서 측정한 DB 작업 전체의 소요 시간입니다. 명령 응답 시간과 측정 범위가 다릅니다.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by(env,instance,operation,le) (rate(career_form_mongo_operation_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,operation) (sum by(env,instance,operation) (increase(career_form_mongo_operation_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,operation) (max by(env,instance,operation) (time() - timestamp(career_form_mongo_operation_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+          "legendFormat": "전체 DB 작업 ({{operation}}) P50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by(env,instance,operation,le) (rate(career_form_mongo_operation_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,operation) (sum by(env,instance,operation) (increase(career_form_mongo_operation_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,operation) (max by(env,instance,operation) (time() - timestamp(career_form_mongo_operation_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+          "legendFormat": "전체 DB 작업 ({{operation}}) P95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by(env,instance,operation,le) (rate(career_form_mongo_operation_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,operation) (sum by(env,instance,operation) (increase(career_form_mongo_operation_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,operation) (max by(env,instance,operation) (time() - timestamp(career_form_mongo_operation_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+          "legendFormat": "전체 DB 작업 ({{operation}}) P99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      }
+    },
+    {
+      "id": 201,
+      "type": "row",
+      "title": "연결 풀",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 10,
+      "title": "환경별 앱 풀",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "각 앱 인스턴스와 풀을 구분하며 idle은 사용 중으로 집계하지 않습니다.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(career_form_mongo_pool_in_use{env=\"$env\"}) and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_pool_in_use{env=\"$env\"})) < 90)",
+          "legendFormat": "{{instance}} 풀 {{pool}} 사용 중",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "(career_form_mongo_pool_idle{env=\"$env\"}) and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_pool_idle{env=\"$env\"})) < 90)",
+          "legendFormat": "{{instance}} 풀 {{pool}} 유휴",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "(career_form_mongo_pool_max{env=\"$env\"}) and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_pool_max{env=\"$env\"})) < 90)",
+          "legendFormat": "{{instance}} 풀 {{pool}} 최대",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      }
+    },
+    {
+      "id": 30,
+      "title": "앱 연결 대기 P50 · P95 · P99",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "P95는 최근 5분 20건 이상일 때 표시됩니다. timeout 건수는 낮은 표본에서도 표시됩니다. 시간은 초, timeout은 건입니다.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by(env,instance,pool,le) (rate(career_form_mongo_checkout_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+          "legendFormat": "{{instance}} 풀 {{pool}} P50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by(env,instance,pool,le) (rate(career_form_mongo_checkout_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+          "legendFormat": "{{instance}} 풀 {{pool}} P95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by(env,instance,pool,le) (rate(career_form_mongo_checkout_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,pool) (sum by(env,instance,pool) (increase(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,pool) (max by(env,instance,pool) (time() - timestamp(career_form_mongo_checkout_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+          "legendFormat": "{{instance}} 풀 {{pool}} P99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      }
+    },
+    {
+      "id": 202,
+      "type": "row",
+      "title": "서버 자원",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 2,
+      "title": "공용 CPU 사용률",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "career:mongodb:cpu_usage{instance=\"career-db\"}",
+          "legendFormat": "공용 DB",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "공용 가용 메모리 비율",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "career:mongodb:memory_available{instance=\"career-db\"}",
+          "legendFormat": "가용 메모리 (%)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "데이터 없음",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      }
+    },
+    {
+      "id": 203,
+      "type": "row",
+      "title": "상세 진단 - DB 명령, 실패율, timeout, 캐시, 디스크 I/O",
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 32,
+          "title": "앱 명령 실패율",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 27,
+            "w": 12,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "드라이버 명령 시도 기준이며 재시도가 포함될 수 있습니다. 명령 건수는 성공/실패/timeout 합계입니다.",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "career:mongodb:command_failure_ratio{env=\"$env\"}",
+              "legendFormat": "{{instance}} 실패율 (%)",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "noValue": "데이터 없음",
+              "custom": {
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "calcs": []
+            }
+          }
+        },
+        {
+          "id": 31,
+          "title": "앱 연결 timeout (최근 5분)",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 27,
+            "w": 12,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "P95는 최근 5분 20건 이상일 때 표시됩니다. timeout 건수는 낮은 표본에서도 표시됩니다. 시간은 초, timeout은 건입니다.",
+          "targets": [
+            {
+              "refId": "B",
+              "expr": "career:mongodb:checkout_timeouts{env=\"$env\"}",
+              "legendFormat": "{{instance}} 풀 {{pool}} timeout 5분 건수",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "데이터 없음",
+              "custom": {
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "calcs": []
+            }
+          }
+        },
+        {
+          "id": 8,
+          "title": "WiredTiger 캐시와 dirty 데이터",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 33,
+            "w": 12,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(mongodb_ss_wt_cache_bytes_currently_in_the_cache{job=\"mongodb\"}) and on(instance) (max by(instance) (time() - timestamp(mongodb_ss_wt_cache_bytes_currently_in_the_cache{job=\"mongodb\"})) < 90) and on(instance) (mongodb_up{job=\"mongodb\"} == 1)",
+              "legendFormat": "사용",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "(mongodb_ss_wt_cache_maximum_bytes_configured{job=\"mongodb\"}) and on(instance) (max by(instance) (time() - timestamp(mongodb_ss_wt_cache_maximum_bytes_configured{job=\"mongodb\"})) < 90) and on(instance) (mongodb_up{job=\"mongodb\"} == 1)",
+              "legendFormat": "최대",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "C",
+              "expr": "(mongodb_ss_wt_cache_tracked_dirty_bytes_in_the_cache{job=\"mongodb\"}) and on(instance) (max by(instance) (time() - timestamp(mongodb_ss_wt_cache_tracked_dirty_bytes_in_the_cache{job=\"mongodb\"})) < 90) and on(instance) (mongodb_up{job=\"mongodb\"} == 1)",
+              "legendFormat": "dirty",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "noValue": "데이터 없음",
+              "custom": {
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "calcs": []
+            }
+          }
+        },
+        {
+          "id": 14,
+          "title": "디스크 I/O 지연",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 33,
+            "w": 12,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "장치별 평균 요청 지연이며 쿼리 지연 또는 CPU iowait와 동일하지 않습니다.",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "career:mongodb:io_read_seconds{instance=\"career-db\"}",
+              "legendFormat": "{{device}} 읽기",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "career:mongodb:io_write_seconds{instance=\"career-db\"}",
+              "legendFormat": "{{device}} 쓰기",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "데이터 없음",
+              "custom": {
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "calcs": []
+            }
+          }
+        },
+        {
+          "id": 34,
+          "title": "DB 명령 응답 시간 · P50 / P95 / P99",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 39,
+            "w": 24,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "description": "MongoDB 명령을 보내고 응답받기까지의 지연입니다. 전체 DB 작업 지연과 비교하여 원인을 살펴보세요.",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.50, sum by(env,instance,command,le) (rate(career_form_mongo_command_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,command) (sum by(env,instance,command) (increase(career_form_mongo_command_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,command) (max by(env,instance,command) (time() - timestamp(career_form_mongo_command_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+              "legendFormat": "DB 명령 응답 ({{command}}) P50",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "histogram_quantile(0.95, sum by(env,instance,command,le) (rate(career_form_mongo_command_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,command) (sum by(env,instance,command) (increase(career_form_mongo_command_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,command) (max by(env,instance,command) (time() - timestamp(career_form_mongo_command_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+              "legendFormat": "DB 명령 응답 ({{command}}) P95",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "C",
+              "expr": "histogram_quantile(0.99, sum by(env,instance,command,le) (rate(career_form_mongo_command_seconds_bucket{job=\"backend\",env=\"$env\"}[5m]))) and on(env,instance,command) (sum by(env,instance,command) (increase(career_form_mongo_command_seconds_count{job=\"backend\",env=\"$env\"}[5m])) >= 20) and on(env,instance,command) (max by(env,instance,command) (time() - timestamp(career_form_mongo_command_seconds_count{job=\"backend\",env=\"$env\"})) < 90)",
+              "legendFormat": "DB 명령 응답 ({{command}}) P99",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "데이터 없음",
+              "custom": {
+                "spanNulls": false
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "calcs": []
+            }
+          }
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      }
+    }
+  ],
+  "links": [
+    {
+      "title": "운영서버 상태",
+      "type": "link",
+      "url": "/d/cf-loadtest-server",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    },
+    {
+      "title": "DB 상태",
+      "type": "link",
+      "url": "/d/cf-loadtest-db",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    }
+  ]
+}

@@ -13,17 +13,17 @@ export interface AddressPort {
   onMessage: { addListener(listener: (message: unknown) => void): void };
   onDisconnect: { addListener(listener: () => void): void };
 }
-function sk(url: string | undefined): boolean {
+function webOrigin(url: string | undefined): string | undefined {
   try {
-    const u = new URL(url ?? "");
-    return (
-      u.origin === "https://www.skcareers.com" &&
-      u.pathname.startsWith("/Application/Index/")
-    );
+    const parsed = new URL(url ?? "");
+    return ["https:", "http:"].includes(parsed.protocol)
+      ? parsed.origin
+      : undefined;
   } catch {
-    return false;
+    return undefined;
   }
 }
+
 function send(port: AddressPort | undefined, message: AddressMessage) {
   try {
     port?.postMessage(message);
@@ -84,8 +84,9 @@ export function createAddressRelay(
       valid =
         valid &&
         s?.frameId === 0 &&
-        sk(s?.url) &&
-        s?.origin === "https://www.skcareers.com";
+        !!webOrigin(s?.url) &&
+        s?.origin === webOrigin(s?.url) &&
+        s?.origin === webOrigin(s?.tab?.url);
     else {
       try {
         const u = new URL(s?.url ?? "");
@@ -95,7 +96,7 @@ export function createAddressRelay(
           u.origin === "https://postcode.map.kakao.com" &&
           u.pathname === "/search" &&
           s?.origin === u.origin &&
-          sk(s?.tab?.url);
+          !!webOrigin(s?.tab?.url);
       } catch {
         valid = false;
       }

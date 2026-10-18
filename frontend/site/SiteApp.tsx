@@ -238,11 +238,17 @@ function Onboarding({
   installed: extensionInstalled,
   profileHref: extensionProfileHref,
   postingsHref,
+  onStartAutofill,
+  track,
+  surface,
 }: {
   onInstall: () => void;
   installed: boolean;
   profileHref?: string;
   postingsHref?: string;
+  onStartAutofill?: () => void;
+  track: TrackEvent;
+  surface: "site" | "extension_onboarding";
 }) {
   const [step, setStep] = useState(0);
   const [postingFlow, setPostingFlow] = useState(false);
@@ -281,34 +287,20 @@ function Onboarding({
         </p>
         <div className={styles.choiceGrid}>
           <section className={styles.choiceCard}>
-            <span className={styles.choiceBadge}>프로필 없이 바로 시작</span>
-            <h2>관심 공고, 놓치지 않게</h2>
-            <p>
-              공고 링크와 마감을 저장하고 원하는 시간에 알림을 받으세요. 프로필
-              등록 없이 바로 사용할 수 있어요.
-            </p>
-            <button
-              className={styles.choiceAction}
-              onClick={() => {
-                setPostingFlow(true);
-                setChoosing(false);
-                go(0);
-              }}
-            >
-              공고 저장부터 시작하기 <Icon name="arrow" />
-            </button>
-            <small>패널에서 시작 → 정보 입력 → 지원 완료</small>
-          </section>
-          <section className={styles.choiceCard}>
             <span className={styles.choiceBadge}>반복 입력 줄이기</span>
             <h2>내 정보는 한 번만</h2>
             <p>
-              프로필을 등록한 뒤 지원서에서 자동 기입을 사용하세요. 입력된
-              내용은 직접 확인할 수 있어요.
+              이름과 연락처부터 등록하고 지원서에서 자동 기입을 사용하세요.
+              나머지는 필요할 때 추가할 수 있어요.
             </p>
             <button
               className={styles.choiceAction}
               onClick={() => {
+                track("onboarding_autofill_selected", { surface });
+                if (onStartAutofill) {
+                  onStartAutofill();
+                  return;
+                }
                 moved.current = true;
                 setChoosing(false);
                 setPostingFlow(false);
@@ -318,6 +310,26 @@ function Onboarding({
               자동 기입 준비하기 <Icon name="arrow" />
             </button>
             <small>프로필 등록 → 자동 기입 → 결과 확인</small>
+          </section>
+          <section className={styles.choiceCard}>
+            <span className={styles.choiceBadge}>프로필 없이 바로 시작</span>
+            <h2>관심 공고, 놓치지 않게</h2>
+            <p>
+              공고 링크와 마감을 저장하고 원하는 시간에 알림을 받으세요. 프로필
+              등록 없이 바로 사용할 수 있어요.
+            </p>
+            <button
+              className={styles.choiceAction}
+              onClick={() => {
+                track("onboarding_postings_selected", { surface });
+                setPostingFlow(true);
+                setChoosing(false);
+                go(0);
+              }}
+            >
+              공고 저장부터 시작하기 <Icon name="arrow" />
+            </button>
+            <small>패널에서 시작 → 정보 입력 → 지원 완료</small>
           </section>
         </div>
         <p className={styles.choiceNote}>
@@ -509,6 +521,7 @@ export function SiteApp({
   installed = false,
   profileHref,
   postingsHref,
+  onStartAutofill,
 }: {
   track?: TrackEvent;
   surface?: "site" | "extension_onboarding";
@@ -516,6 +529,7 @@ export function SiteApp({
   installed?: boolean;
   profileHref?: string;
   postingsHref?: string;
+  onStartAutofill?: () => void;
 }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const landing = normalized === "/";
@@ -542,6 +556,9 @@ export function SiteApp({
           profileHref={profileHref}
           postingsHref={postingsHref}
           onInstall={onInstall}
+          onStartAutofill={onStartAutofill}
+          track={track}
+          surface={surface}
         />
       ) : normalized === "/privacy" || normalized === "/terms" ? (
         <Policy kind={normalized === "/privacy" ? "privacy" : "terms"} />

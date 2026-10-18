@@ -104,7 +104,7 @@ describe("field-scoped profile selection bindings", () => {
       status: "resolved",
       value: "대상",
       standardValueId: "disability-status:eligible",
-      sensitive: true,
+      sensitive: false,
     });
   });
 

@@ -105,3 +105,40 @@ it("stops preparation when the page becomes identified during its API request", 
   expect(apiClient.analyzeFields).not.toHaveBeenCalled();
   expect(clicks).toBe(0);
 });
+
+it.each(["missing", "failed"] as const)(
+  "does not fall back to generic analysis when Hplace execution policy is %s",
+  async (state) => {
+    renderHplaceLogin();
+    const load = vi.fn(async () => createEmptyProfile());
+    const analyzePreparation = vi.fn<AnalysisApiClient["analyzePreparation"]>();
+    const analyzeFields = vi.fn<AnalysisApiClient["analyzeFields"]>();
+    render(
+      <AutofillWorkflow
+        pageDocument={document}
+        repository={{ load }}
+        onExit={() => undefined}
+        apiClient={{
+          loadExecutionPolicy: async () => {
+            if (state === "failed") throw new Error("Synthetic policy failure");
+            return undefined;
+          },
+          analyzePreparation,
+          analyzeFields,
+        }}
+      />,
+    );
+    if (state === "missing")
+      expect(await screen.findByText("아직 지원하지 않아요")).toBeVisible();
+    else
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "사이트 정책을 불러오지 못했습니다",
+      );
+    expect(load).not.toHaveBeenCalled();
+    expect(analyzePreparation).not.toHaveBeenCalled();
+    expect(analyzeFields).not.toHaveBeenCalled();
+    expect(
+      document.querySelector<HTMLInputElement>("[name=email]")!.value,
+    ).toBe("");
+  },
+);

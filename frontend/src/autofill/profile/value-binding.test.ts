@@ -26,7 +26,7 @@ describe("resolveValueBinding", () => {
     ["additionalMajorName", "doubleMajorStatus"],
     ["minorName", "minorStatus"],
   ])(
-    "only resolves %s when its own university row enables it",
+    "resolves %s for an enabled row or a legacy name without a flag",
     (field, flag) => {
       const profile = createEmptyProfile();
       profile.education.push(
@@ -60,7 +60,12 @@ describe("resolveValueBinding", () => {
         value: "가상전공",
         profileEntryId: "enabled",
       });
-      for (const index of [1, 2, 3]) {
+      expect(resolveValueBinding(profile, binding, 2)).toMatchObject({
+        status: "resolved",
+        value: "남아있는전공",
+        profileEntryId: "missing-flag",
+      });
+      for (const index of [1, 3]) {
         expect(resolveValueBinding(profile, binding, index)).toMatchObject({
           status: "missing",
         });

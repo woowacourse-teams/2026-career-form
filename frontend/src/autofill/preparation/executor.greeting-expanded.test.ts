@@ -1,3 +1,5 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
 import { afterEach, beforeEach, expect, it } from "vitest";
 import {
   collectFieldsSnapshot,

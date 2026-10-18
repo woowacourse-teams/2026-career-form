@@ -22,9 +22,14 @@ public record QualityStatsResponse(Instant from, Instant to, List<Row> rows, Lis
                       Double humanCollectedCoverage, Double humanMappedCoverage, Double humanWrittenCoverage, Double humanRetainedCoverage,
                       String humanLabel, String observationLabel, long aiCalls, long aiFailures, long aiTimeouts,
                       Double aiFailureRate, Double aiTimeoutRate, Long analysisP95Ms, long analysisSamples, long analysisOverflow,
-                      Long aiP95Ms, long aiSamples, long aiOverflow, Map<String, Long> reasons) {
+                      Long aiP95Ms, long aiSamples, long aiOverflow, Map<String, Long> reasons, QualityObservedStats observed,
+                      String time, String series, String siteLabel, HumanSample human) {
         public Row { reasons = Map.copyOf(reasons); }
     }
+
+    public record SiteOption(String value, String text) { }
+
+    public record HumanSample(long denominator, long executions, Long collected, Long mapped, Long written, Long retained) { }
 
     public record Failure(Dimension dimension, String cohort, String stage, String reason, String control, long count) {
     }

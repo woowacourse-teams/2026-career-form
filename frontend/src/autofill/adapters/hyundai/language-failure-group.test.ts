@@ -1,7 +1,9 @@
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ReviewPlanItem } from "../../review/review-plan";
-import { hyundaiWorkflowAdapter } from "./workflow";
+import { getWorkflowAdapter } from "../workflow";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -48,7 +50,7 @@ function row(index: number): string {
 function failureGroup(id: string, profileFieldKey: string) {
   const trigger = document.querySelector<HTMLInputElement>(`#${id}`)!;
   const candidateId = `field-${id}`;
-  return hyundaiWorkflowAdapter.stateDriverFailureGroup?.(
+  return getWorkflowAdapter(document).stateDriverFailureGroup?.(
     item(profileFieldKey, candidateId),
     {
       candidateId,

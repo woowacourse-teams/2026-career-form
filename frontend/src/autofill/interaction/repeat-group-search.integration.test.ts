@@ -6,13 +6,7 @@ import type { FieldsAnalyzeResponse } from "../api/types";
 import { validateFieldsResponse } from "../api/validate-response";
 import { collectFieldsSnapshot } from "../dom/collect";
 import { buildReviewPlan } from "../review/review-plan";
-import { prepareCjSchoolClose } from "./cj-major-close-bridge";
 import { executeReadonlySearch } from "./readonly-search-executor";
-
-vi.mock("./cj-major-close-bridge", () => ({
-  prepareCjMajorClose: vi.fn(),
-  prepareCjSchoolClose: vi.fn(),
-}));
 
 // Synthetic education section mirroring the observed structure: titled
 // high-school and university boxes without `*-item` identifiers, each owning
@@ -35,8 +29,8 @@ const PAGE = `<!doctype html><html><body>
       <div class="entry-head"><h5>대학교</h5></div>
       <div id="sectionNormalUniversity0" class="entry-fields" ismultirow="true">
         <dl><dt>학교명</dt>
-          <dd><input type="text" readonly id="zz_school_nm2_0" name="zz_school_nm" aria-label="학교명"><input type="hidden" name="school_code" value=""><button type="button" name="bt_zz_school_nm" data-popup-show="" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_university.fo?num=2_0">검색</button></dd>
-          <dd><input type="text" readonly id="zz_state_nm5_0" name="zz_state_nm" aria-label="학교소재지"><input type="hidden" name="zz_state" value=""><input type="hidden" name="reg_region" value="KOR"><input type="hidden" name="new_country" value="KOR"><button type="button" name="bt_zz_state_nm" data-iframe-url="https://recruit.cj.net/recruit/ko/resume/search/search_school_place.fo?num=5_0">검색</button></dd>
+          <dd><input type="text" readonly id="zz_school_nm2_0" name="zz_school_nm" aria-label="학교명"><input type="hidden" name="school_code" value=""><button type="button" name="bt_zz_school_nm" data-popup-show="" data-iframe-url="https://careers.example.test/recruit/ko/resume/search/search_university.fo?num=2_0">검색</button></dd>
+          <dd><input type="text" readonly id="zz_state_nm5_0" name="zz_state_nm" aria-label="학교소재지"><input type="hidden" name="zz_state" value=""><input type="hidden" name="reg_region" value="KOR"><input type="hidden" name="new_country" value="KOR"><button type="button" name="bt_zz_state_nm" data-iframe-url="https://careers.example.test/recruit/ko/resume/search/search_school_place.fo?num=5_0">검색</button></dd>
         </dl>
         <p class="btn-right"><button type="button">삭제</button></p>
       </div>
@@ -51,12 +45,11 @@ const PAGE = `<!doctype html><html><body>
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  vi.mocked(prepareCjSchoolClose).mockReset();
 });
 
 it("collects, plans and reaches the university school search opener once", async () => {
   const dom = new JSDOM(PAGE, {
-    url: "https://recruit.cj.net/recruit/ko/resume/apply.fo",
+    url: "https://careers.example.test/recruit/ko/resume/apply.fo",
   });
   const doc = dom.window.document;
   for (const name of [
@@ -73,10 +66,6 @@ it("collects, plans and reaches the university school search opener once", async
     throw new Error("unexpected request");
   });
   vi.stubGlobal("fetch", fetcher);
-  vi.mocked(prepareCjSchoolClose).mockResolvedValue({
-    check: async () => true,
-    close: async () => true,
-  });
 
   const target = doc.querySelector<HTMLInputElement>("#zz_school_nm2_0")!;
   const opener = doc.querySelector<HTMLButtonElement>(
@@ -166,7 +155,6 @@ it("collects, plans and reaches the university school search opener once", async
     signal: controller.signal,
   });
 
-  expect(prepareCjSchoolClose).toHaveBeenCalledTimes(1);
   expect(clicked).toHaveBeenCalledTimes(1);
   expect(fetcher).not.toHaveBeenCalled();
   expect(target.value).toBe("");

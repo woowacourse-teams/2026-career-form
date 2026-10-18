@@ -22,25 +22,44 @@ public final class MongoGreetingPolicyProvider implements GreetingPolicyProvider
 
     private final FormAnalysisPolicyMongoRepository policies;
     private final SupportedProfileFields supportedProfileFields;
-    private final long activeVersion;
+    private final long fallbackVersion;
+    private final FormAnalysisCompanyMongoRepository companies;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public MongoGreetingPolicyProvider(
+        FormAnalysisCompanyMongoRepository companies,
         FormAnalysisPolicyMongoRepository policies,
         SupportedProfileFields supportedProfileFields,
-        @Value("${careerform.greeting.active-policy-version:1}") long activeVersion
+        @Value("${careerform.greeting.active-policy-version:8}") long activeVersion
     ) {
         this.policies = policies;
         this.supportedProfileFields = supportedProfileFields;
-        this.activeVersion = activeVersion;
+        this.fallbackVersion = activeVersion;
+        this.companies = companies;
+    }
+
+    // Retain the explicit-version constructor for isolated repository consumers.
+    MongoGreetingPolicyProvider(FormAnalysisPolicyMongoRepository policies, SupportedProfileFields supportedProfileFields, long activeVersion) {
+        this(null, policies, supportedProfileFields, activeVersion);
+    }
+
+    private long activeVersion() {
+        return companies == null ? fallbackVersion : companies.findByCompanyKey(POLICY_KEY)
+            .map(FormAnalysisCompanyDocument::activePolicyVersion).orElse(fallbackVersion);
+    }
+
+    public com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy() {
+        return policies.findByCompanyKeyAndVersion(POLICY_KEY, activeVersion())
+            .map(FormAnalysisPolicyDocument::executionPolicy)
+            .orElseThrow(() -> new IllegalStateException("Component execution policy unavailable"));
     }
 
     @Override
     public LookupResult find() {
-        if (activeVersion < 1) {
-            return new Unavailable();
-        }
         long startedAt = System.nanoTime();
         try {
+            long activeVersion = activeVersion();
+            if(activeVersion < 1)return new Unavailable();
             var result = policies.findByCompanyKeyAndVersion(POLICY_KEY, activeVersion)
                 .filter(document -> POLICY_KEY.equals(document.companyKey())
                     && document.version() == activeVersion)

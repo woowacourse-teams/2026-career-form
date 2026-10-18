@@ -135,6 +135,88 @@ export interface FieldsAnalyzeRequest {
   sections: FieldsSection[];
 }
 
+export type SectionControlKind =
+  | "TEXT"
+  | "TEXTAREA"
+  | "SELECT"
+  | "RADIO"
+  | "CHECKBOX"
+  | "DATE"
+  | "FILE"
+  | "BUTTON"
+  | "OTHER";
+
+/** Section structure only; never profile values, current input values or counts. */
+export interface SectionClassifyRequest {
+  schemaVersion: 1;
+  snapshotId: string;
+  site: SiteDescriptor;
+  sections: Array<{
+    sectionId: string;
+    parentSectionId?: string;
+    title?: string;
+    labels: string[];
+    controlKinds: SectionControlKind[];
+    repeated: boolean;
+  }>;
+}
+
+export type GenericAnalysisStatus =
+  "COMPLETE" | "STATIC_POLICY_PRESENT" | "POLICY_UNAVAILABLE";
+
+export interface SectionClassifyResponse {
+  schemaVersion: 1;
+  snapshotId: string;
+  status: GenericAnalysisStatus;
+  sections: Array<{ sectionId: string; category: string; confidence: number }>;
+}
+
+export interface GenericFieldsSection {
+  sectionId: string;
+  parentSectionId?: string;
+  displayName?: string;
+  fields: FieldCandidate[];
+  items?: FieldsItem[];
+  category?: string;
+}
+
+export interface GenericFieldsRequest {
+  schemaVersion: 2;
+  supportedWriteCommands?: ["SELECT_DATE"];
+  snapshotId: string;
+  site: SiteDescriptor;
+  sections: GenericFieldsSection[];
+}
+
+export interface GenericFieldsResponse {
+  schemaVersion: 3;
+  snapshotId: string;
+  status: GenericAnalysisStatus;
+  fields: Array<{
+    candidateId: string;
+    profileFieldKey: string | null;
+    confidence: number;
+    categoryConfirmed: boolean;
+    reason?: "LLM_UNAVAILABLE";
+    binding?:
+      | {
+          type: "DERIVED";
+          recipe:
+            | "KOREAN_FULL_NAME"
+            | "ENGLISH_FULL_NAME_GIVEN_FIRST"
+            | "ENGLISH_FULL_NAME_FAMILY_FIRST";
+        }
+      | { type: "DATE_PART"; part: "YEAR" | "MONTH" | "DAY" };
+    /** Present when profileFieldKey or a derived name binding is set. */
+    autofillPolicy?: MatchedFieldAnalysis["autofillPolicy"];
+    /** BLOCKED when neither profileFieldKey nor binding is present. */
+    interactionStatus: MatchedFieldAnalysis["interactionStatus"];
+    /** Only when interactionStatus is READY. */
+    writePlan?: { command: WriteCommand };
+  }>;
+  diagnostics: { jevCalls: number; elapsedMs: number };
+}
+
 export type PreparationPlan =
   | {
       actionCandidateId: string;
@@ -195,7 +277,9 @@ export type DerivedRecipe =
   | "UNIVERSITY_ADDITIONAL_MAJOR_1_NAME"
   | "UNIVERSITY_ADDITIONAL_MAJOR_1_CLASSIFICATION"
   | "UNIVERSITY_ADDITIONAL_MAJOR_2_NAME"
-  | "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION";
+  | "UNIVERSITY_ADDITIONAL_MAJOR_2_CLASSIFICATION"
+  | "UNIVERSITY_ADDITIONAL_MAJOR_1_FIELD"
+  | "UNIVERSITY_ADDITIONAL_MAJOR_2_FIELD";
 
 export type ValueBinding =
   | { type: "DIRECT"; profileFieldKey: string }
@@ -246,6 +330,7 @@ export interface NoMatchFieldAnalysis {
 export type FieldAnalysis = MatchedFieldAnalysis | NoMatchFieldAnalysis;
 
 export interface FieldsAnalyzeResponse {
+  executionPolicy?: import("../workflow/execution-policy").ExecutionPolicy;
   snapshotId: string;
   mode: AnalysisMode;
   analysisStatus: AnalysisStatus;
@@ -255,10 +340,21 @@ export interface FieldsAnalyzeResponse {
 }
 
 export interface AnalysisApiClient {
+  loadExecutionPolicy?(
+    site: SiteDescriptor,
+  ): Promise<
+    import("../workflow/execution-policy").ExecutionPolicy | undefined
+  >;
   readonly quality?: import("../quality/observation").QualityObservation;
   decideInteractions?(
     request: InteractionDecisionRequest,
   ): Promise<InteractionDecisionResponse>;
+  classifySections?(
+    request: SectionClassifyRequest,
+  ): Promise<SectionClassifyResponse>;
+  analyzeGenericFields?(
+    request: GenericFieldsRequest,
+  ): Promise<GenericFieldsResponse>;
   analyzePreparation(
     request: PreparationAnalyzeRequest,
   ): Promise<PreparationAnalyzeResponse>;

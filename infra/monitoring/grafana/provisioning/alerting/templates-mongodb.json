@@ -1,0 +1,10 @@
+{
+  "apiVersion": 1,
+  "templates": [
+    {
+      "orgId": 1,
+      "name": "career-db-message",
+      "template": "{{ define \"career.db.message\" }}\n{{ $critical := false }}{{ range .Alerts.Firing }}{{ if eq .Labels.severity \"critical\" }}{{ $critical = true }}{{ end }}{{ end }}\n{{ if .Alerts.Firing }}{{ range .Alerts.Firing }}{{ if or (not $critical) (eq .Labels.severity \"critical\") }}\n[{{ .Labels.severity }}] {{ .Annotations.summary }}\n대상: {{ .Labels.instance }} {{ .Labels.env }} 풀 {{ .Labels.pool }} 명령 {{ .Labels.command }}\n{{ .Annotations.description }}\n{{ if .DashboardURL }}진단: {{ .DashboardURL }}&var-env={{ if .Labels.env }}{{ .Labels.env }}{{ else }}prod{{ end }}&from={{ (.StartsAt.Add -600000000000).UnixMilli }}&to={{ (.StartsAt.Add 1200000000000).UnixMilli }}{{ end }}\n{{ end }}{{ end }}{{ else }}[복구] {{ range .Alerts.Resolved }}{{ if eq .Status \"resolved\" }}{{ .Annotations.summary }} 대상 {{ .Labels.instance }} {{ .Labels.env }}{{ end }}{{ end }}{{ end }}\n{{ end }}"
+    }
+  ]
+}

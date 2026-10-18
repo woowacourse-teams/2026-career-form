@@ -104,7 +104,7 @@ function highSchoolRegion(entry: CatalogEntry): string | undefined {
 }
 
 /**
- * Greeting high-school options expose only the sido abbreviation. Accept it only
+ * Component forms high-school options expose only the sido abbreviation. Accept it only
  * when name and sido together identify exactly this catalog entry.
  */
 export function matchesCatalogHighSchoolRegion(
@@ -129,7 +129,7 @@ function kessSchoolCode(entry: CatalogEntry): string | undefined {
 }
 
 /**
- * Greeting university options name the institution without campus text. Accept
+ * Component forms university options name the institution without campus text. Accept
  * the name only when every catalog record with that label is the same school.
  */
 export function matchesCatalogInstitution(

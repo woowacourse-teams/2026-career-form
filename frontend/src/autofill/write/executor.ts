@@ -12,17 +12,17 @@ import {
 import { ownedDetailControl } from "../adapters/hplace/detail";
 import type { AddressIdentity } from "../address/match";
 import { resolveDocumentCompany } from "../adapters/company";
-import {
-  closeGreetingEmailPopup,
-  waitForGreetingEmailAcceptance,
-} from "../interaction/greeting-email-close-bridge";
+import { runtimeRules } from "../policy/runtime-rules";
+import { startLocalTiming } from "../debug/local-timing";
+import { executionPolicy } from "../workflow/execution-policy";
+import { getWriteAdapter } from "../adapters/write";
+import { resultFieldState } from "../workflow/result-field-state";
 import { acquireDocumentRun } from "../interaction/document-run";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { ReviewPlanItem } from "../review/review-plan";
-import { greetingGpaSafe } from "../adapters/greeting/gpa";
-import { greetingSyntheticDomName } from "../adapters/greeting/collection";
+import { componentGpaSafe } from "../policy/components/gpa";
 import { matchesResultValue } from "../workflow/result-value-match";
 import { executeApprovedCalendarWrite } from "./calendar-executor";
 import { executeButtonDropdownWrite } from "./button-dropdown-executor";
@@ -41,7 +41,47 @@ export { executeApprovedWrites } from "./native-executor";
 export type { WriteResultListener } from "./native-executor";
 export type { ApprovedWriteResult } from "./write-result";
 
-function settledGreetingResult(
+/** Verify retained state without dispatching events or invoking a writer. */
+function settledAdapterResult(
+  item: ReviewPlanItem,
+  initial: ApprovedWriteResult,
+  registry: CandidateRegistry,
+): ApprovedWriteResult {
+  const lookup = registry.lookupField(item.candidateId);
+  const handle =
+    lookup.status === "ready" || lookup.status === "blocked"
+      ? lookup.handle
+      : undefined;
+  const element = handle?.elements[0] ?? handle?.customElements?.[0];
+  if (!handle || !element?.isConnected || handle.isCurrentContext?.() === false)
+    return skipped(
+      item.candidateId,
+      "needs-verification",
+      "STALE_TARGET",
+      "페이지가 변경되어 입력 결과를 확인할 수 없습니다.",
+    );
+  const live = resultFieldState(
+    registry,
+    element.ownerDocument,
+    item.candidateId,
+  );
+  const verified = getWriteAdapter(element.ownerDocument).verifyRetained?.(
+    handle,
+    item,
+  );
+  return live?.visible &&
+    (verified ??
+      matchesResultValue(item, live.value, item.profileValue ?? "", handle))
+    ? initial
+    : skipped(
+        item.candidateId,
+        "needs-verification",
+        "RETAINED_VALUE_UNCONFIRMED",
+        "입력한 값이 유지되는지 확인하지 못했습니다.",
+      );
+}
+
+function settledComponentResult(
   item: ReviewPlanItem,
   initial: ApprovedWriteResult,
   registry: CandidateRegistry | undefined,
@@ -58,32 +98,11 @@ function settledGreetingResult(
   if (item.analysis?.writePlan?.command !== "SET_TEXT")
     return settledGenericResult(item, registry);
   const input = handle.elements[0];
-  const veteranName =
-    "militaryServicePreferentialEmploymentStatus.veteranStatus.veteransRegistrationNumber";
-  const retainedVeteranNumber =
-    handle.candidate.domName === veteranName &&
-    input instanceof HTMLInputElement &&
-    input.name === veteranName &&
-    /^\d{2}-?\d{6}$/.test(input.value) &&
-    /^\d{2}-?\d{6}$/.test(item.profileValue ?? "") &&
-    input.value.replace("-", "") === item.profileValue?.replace("-", "");
-  const phoneName = "basicInformation.phoneNumber.nationalNumber";
-  const retainedPhone =
-    handle.candidate.domName === phoneName &&
-    item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
-    item.analysis.valueBinding?.type === "DIRECT" &&
-    item.analysis.valueBinding.profileFieldKey ===
-      "contact.contact.phoneNumber" &&
-    input instanceof HTMLInputElement &&
-    input.name === phoneName &&
-    matchesResultValue(item, input.value, item.profileValue ?? "", handle);
   return (input instanceof HTMLInputElement ||
     input instanceof HTMLTextAreaElement) &&
     handle.elements.length === 1 &&
-    (input.value === item.profileValue ||
-      retainedVeteranNumber ||
-      retainedPhone) &&
-    greetingGpaSafe(handle, item)
+    matchesResultValue(item, input.value, item.profileValue ?? "", handle) &&
+    componentGpaSafe(handle, item)
     ? initial
     : skipped(
         item.candidateId,
@@ -91,41 +110,6 @@ function settledGreetingResult(
         "RETAINED_VALUE_UNCONFIRMED",
         "입력한 값이 유지되는지 확인하지 못했습니다.",
       );
-}
-
-async function closeGreetingEmailSuggestions(
-  document: Document,
-  items: readonly ReviewPlanItem[],
-  results: readonly ApprovedWriteResult[],
-  registry: CandidateRegistry,
-  current: () => boolean,
-  beforeMutation?: () => Promise<boolean>,
-): Promise<boolean> {
-  const index = items.findIndex(
-    (item) =>
-      item.analysis?.mappingStatus === "ADAPTER_VERIFIED" &&
-      item.analysis?.valueBinding?.type === "DIRECT" &&
-      item.analysis.valueBinding.profileFieldKey === "contact.contact.email",
-  );
-  if (index < 0 || results[index]?.status !== "written") return true;
-  const item = items[index]!;
-  const lookup = registry.lookupField(item.candidateId);
-  if (lookup.status !== "ready" && lookup.status !== "blocked") return false;
-  const input = lookup.handle.elements[0];
-  if (!(input instanceof HTMLInputElement)) return false;
-  const valid = () =>
-    current() &&
-    input.ownerDocument === document &&
-    input.isConnected &&
-    greetingSyntheticDomName(input) === "basicInformation.email" &&
-    input.value === item.profileValue;
-  if (!valid()) return false;
-  if (!(await waitForGreetingEmailAcceptance(input, valid)) || !valid())
-    return false;
-  if (input.getAttribute("aria-expanded") !== "true") return true;
-  if (beforeMutation && !(await beforeMutation())) return false;
-  if (!valid()) return false;
-  return closeGreetingEmailPopup(input, valid);
 }
 
 export async function executeApprovedWritesAfterPageSettles({
@@ -141,13 +125,19 @@ export async function executeApprovedWritesAfterPageSettles({
   document: suppliedDocument,
   calendarOnly = false,
   settledRegistry,
+  currentOrdinaryRegistry,
   onSearchFollowUp,
   hplaceAddress,
+  followUpHaltScope,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
   registry: CandidateRegistry;
   beforeWrite?: (item: ReviewPlanItem) => Promise<void>;
+  /** Fresh, structurally verified Component forms targets for each ordinary write. */
+  currentOrdinaryRegistry?: (
+    item: ReviewPlanItem,
+  ) => Promise<CandidateRegistry>;
   onResult?: WriteResultListener;
   interactionDecisionProvider?: InteractionDecisionProvider;
   assertCurrent?: () => boolean;
@@ -157,14 +147,19 @@ export async function executeApprovedWritesAfterPageSettles({
   calendarOnly?: boolean;
   /** Local profile identity only; never included in analysis requests. */
   hplaceAddress?: AddressIdentity;
-  /** Greeting-only readback registry, with the original candidate IDs safely rebound. */
+  /** Component-engine readback registry, with the original candidate IDs safely rebound. */
   settledRegistry?: () =>
     CandidateRegistry | undefined | Promise<CandidateRegistry | undefined>;
   onSearchFollowUp?: (
     item: ReviewPlanItem,
     controls: readonly SearchFollowUpControl[],
   ) => void;
+  /** Opt-in narrower hold after an unconfirmed search failure; default holds the rest. */
+  followUpHaltScope?: "all" | "row";
 }): Promise<ApprovedWriteResult[]> {
+  const finishTiming = startLocalTiming("write-batch", {
+    count: approvedCandidateIds.size,
+  });
   const first = items
     .map((item) => registry.lookupField(item.candidateId))
     .find((lookup) => "handle" in lookup);
@@ -175,6 +170,12 @@ export async function executeApprovedWritesAfterPageSettles({
           ?.ownerDocument
       : undefined);
   const companyId = document ? resolveDocumentCompany(document) : "generic";
+  const componentWorkflow = document
+    ? executionPolicy(document)?.componentPolicy?.workflow
+    : undefined;
+  const runtimeWorkflow = document
+    ? runtimeRules(document)?.components?.workflow
+    : undefined;
   const release = document ? acquireDocumentRun(document) : undefined;
   if (document && !release)
     return debugWriteRun(
@@ -335,34 +336,37 @@ export async function executeApprovedWritesAfterPageSettles({
       approvedCandidateIds: new Set(),
       registry,
     });
-    let emailSettlementFailed = false;
-    let pendingEmail:
+    let completionFailed = false;
+    let pendingCompletion:
       { item: ReviewPlanItem; result: ApprovedWriteResult } | undefined;
-    const settlePendingEmail = async () => {
-      const pending = pendingEmail;
-      pendingEmail = undefined;
+    const settlePendingCompletion = async () => {
+      const pending = pendingCompletion;
+      pendingCompletion = undefined;
       if (!pending || !document) return;
       let settled = false;
+      let failureMessage = "입력 후 완료 조건을 확인하지 못했습니다.";
       try {
-        settled = await closeGreetingEmailSuggestions(
-          document,
-          [pending.item],
-          [pending.result],
-          registry,
-          runCurrent,
-          beforeMutation,
-        );
+        const lookup = registry.lookupField(pending.item.candidateId);
+        const hook =
+          lookup.status === "ready" || lookup.status === "blocked"
+            ? getWriteAdapter(document).completion?.(
+                lookup.handle,
+                pending.item,
+              )
+            : undefined;
+        if (hook) failureMessage = hook.failureMessage;
+        settled = !!hook && (await hook.settle(runCurrent, beforeMutation));
       } catch {
-        /* An unconfirmed email must not invalidate unrelated writes. */
+        /* Completion failure is recorded against its owning field. */
       }
       if (!settled) {
-        emailSettlementFailed = true;
+        completionFailed = true;
         const index = items.indexOf(pending.item);
         initial[index] = skipped(
           pending.item.candidateId,
           "needs-verification",
           "RETAINED_VALUE_UNCONFIRMED",
-          "이메일 입력 상태 또는 제안 목록 닫힘을 확인하지 못했습니다.",
+          failureMessage,
         );
       }
     };
@@ -371,10 +375,26 @@ export async function executeApprovedWritesAfterPageSettles({
       approvedCandidateIds,
       registry,
       interactionDecisionProvider,
-      assertCurrent: () => runCurrent() && !emailSettlementFailed,
+      assertCurrent: () => runCurrent() && !completionFailed,
       beforeMutation,
       signal,
       writeOrdinary: async (item) => {
+        if (
+          componentWorkflow?.rebindReplacedControls &&
+          currentOrdinaryRegistry
+        ) {
+          registry = await currentOrdinaryRegistry(item);
+          if (!runCurrent())
+            return {
+              result: skipped(
+                item.candidateId,
+                "needs-verification",
+                "STALE_TARGET",
+                "입력 대상이 변경되었습니다.",
+              ),
+              effect: "stop",
+            };
+        }
         const lookup = registry.lookupField(item.candidateId);
         if (lookup.status === "ready" && lookup.handle.buttonDropdown)
           return {
@@ -403,63 +423,38 @@ export async function executeApprovedWritesAfterPageSettles({
           approvedCandidateIds,
           registry,
         })[0]!;
+        const completionLookup = registry.lookupField(item.candidateId);
         if (
-          companyId === "greeting" &&
+          document &&
           result.status === "written" &&
-          item.analysis?.valueBinding?.type === "DIRECT" &&
-          item.analysis.valueBinding.profileFieldKey === "contact.contact.email"
+          (completionLookup.status === "ready" ||
+            completionLookup.status === "blocked") &&
+          getWriteAdapter(document).completion?.(completionLookup.handle, item)
         )
-          pendingEmail = { item, result };
+          pendingCompletion = { item, result };
         return { result, effect: "continue" };
       },
       beforeWrite: async (item) => {
-        // Finish email before a subsequent driver can blur or Escape its popup.
-        await settlePendingEmail();
-        if (!emailSettlementFailed && beforeWrite) await beforeWrite(item);
+        // Complete the previous control before a subsequent write changes focus.
+        await settlePendingCompletion();
+        if (!completionFailed && beforeWrite) await beforeWrite(item);
       },
       onResult: (item, result) => onResult?.(item, result, registry),
       results: initial,
       onSearchFollowUp,
+      ...(followUpHaltScope ? { followUpHaltScope } : {}),
     });
-    await settlePendingEmail();
+    await settlePendingCompletion();
     const executedResults = [...initial];
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    let greetingRegistry: CandidateRegistry | undefined = registry;
-    if (companyId === "greeting" && settledRegistry) {
+    let componentRegistry: CandidateRegistry | undefined = registry;
+    if (componentWorkflow?.rebindReplacedControls && settledRegistry) {
       try {
-        greetingRegistry = await settledRegistry();
+        componentRegistry = await settledRegistry();
       } catch {
-        greetingRegistry = undefined;
+        componentRegistry = undefined;
       }
     }
-    const adapterItems = items.filter(
-      (item, index) =>
-        companyId !== "greeting" &&
-        !halted &&
-        runCurrent() &&
-        initial[index]?.status === "written" &&
-        !item.catalogMatch &&
-        item.analysis?.mappingStatus === "ADAPTER_VERIFIED",
-    );
-    const retried: ApprovedWriteResult[] = [];
-    for (const item of adapterItems) {
-      if (
-        !runCurrent() ||
-        (beforeMutation && !(await beforeMutation())) ||
-        !runCurrent()
-      )
-        break;
-      retried.push(
-        ...executeApprovedWrites({
-          items: [item],
-          approvedCandidateIds: new Set([item.candidateId]),
-          registry,
-        }),
-      );
-    }
-    const adapterResults = new Map(
-      retried.map((result) => [result.candidateId, result]),
-    );
     let profileCurrent = true;
     try {
       profileCurrent = !beforeMutation || (await beforeMutation());
@@ -486,19 +481,19 @@ export async function executeApprovedWritesAfterPageSettles({
       if (item.catalogMatch) {
         const verified = settledGenericResult(
           item,
-          greetingRegistry ?? registry,
+          componentRegistry ?? registry,
         );
         return verified.status === "written" ? result : verified;
       }
       if (
-        companyId === "greeting" &&
+        runtimeWorkflow?.verifySettledValues &&
         item.analysis?.mappingStatus === "ADAPTER_VERIFIED"
       )
         return result.status === "written"
-          ? settledGreetingResult(item, result, greetingRegistry)
+          ? settledComponentResult(item, result, componentRegistry)
           : result;
       return item.analysis?.mappingStatus === "ADAPTER_VERIFIED"
-        ? (adapterResults.get(item.candidateId) ?? result)
+        ? settledAdapterResult(item, result, registry)
         : settledGenericResult(item, registry);
     });
     if (runCurrent())
@@ -514,6 +509,7 @@ export async function executeApprovedWritesAfterPageSettles({
       finalResults,
     );
   } finally {
+    finishTiming();
     release?.();
   }
 }

@@ -1,3 +1,6 @@
+import { fixturePolicy } from "../../../test/fixtures/execution-policy";
+import { usePolicyFixture } from "../../../test/fixtures/execution-policy";
+usePolicyFixture("hyundai");
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
@@ -48,6 +51,7 @@ function analysis(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
       section.items?.flatMap((item) => item.fields) ?? section.fields,
   );
   return {
+executionPolicy: fixturePolicy("hyundai"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -133,7 +137,7 @@ function wireMenus(): void {
   }
 }
 
-it("skips only the language row whose exam selection fails", async () => {
+it("refreshes changed exam mappings and skips only the failing language row", async () => {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -170,6 +174,7 @@ it("skips only the language row whose exam selection fails", async () => {
     },
   ];
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("hyundai"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",

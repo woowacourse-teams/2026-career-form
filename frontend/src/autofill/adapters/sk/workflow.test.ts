@@ -1,3 +1,9 @@
+import { installExecutionPolicy } from "../../workflow/execution-policy";
+import {
+  usePolicyFixture,
+  fixturePolicy,
+} from "../../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
 import { describe, expect, it } from "vitest";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../../api/types";
 import { createStructuralSignature } from "../../dom/candidate-registry";
@@ -8,7 +14,7 @@ import type {
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { getWorkflowAdapter } from "../workflow";
 
-const adapter = getWorkflowAdapter("www.skcareers.com");
+const adapter = getWorkflowAdapter(document);
 const majorSelection = adapter.revealSelections[0]!;
 const militarySelection = adapter.revealSelections.find(
   ({ domName }) => domName === "prsMilitarySvcYN",
@@ -19,6 +25,8 @@ const veteranSelection = adapter.revealSelections.find(
 
 function radioDocument(name: string, label = "있음"): Document {
   const page = document.implementation.createHTMLDocument("fixture");
+  Object.defineProperty(page, "URL", { value: document.URL });
+  installExecutionPolicy(page, fixturePolicy("sk"));
   page.body.innerHTML = `<label><input type="radio" name="${name}" /> ${label}</label>`;
   return page;
 }
@@ -66,11 +74,11 @@ describe("SK conditional selections", () => {
     },
   );
 
-  it("reports a failed selection when the radio cannot be clicked", () => {
+  it("reports a missing writable target when the radio is disabled", () => {
     const page = radioDocument("eduMajorDoubleYN");
     page.querySelector("input")!.disabled = true;
     expect(adapter.selectReveal(page, majorSelection, "있음")).toEqual({
-      code: "SELECTION_FAILED",
+      code: "TARGET_MISSING",
       count: 1,
     });
   });
@@ -136,6 +144,8 @@ describe("SK military and veteran conditional selections", () => {
     "selects the exact military target radio for %s",
     (profileValue) => {
       const page = document.implementation.createHTMLDocument("fixture");
+      Object.defineProperty(page, "URL", { value: document.URL });
+      installExecutionPolicy(page, fixturePolicy("sk"));
       page.body.innerHTML = `
         <label><input type="radio" name="prsMilitarySvcYN" value="0" /> 비대상</label>
         <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
@@ -155,6 +165,8 @@ describe("SK military and veteran conditional selections", () => {
 
   it("selects the non-target military radio without selecting the target", () => {
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `
       <label><input type="radio" name="prsMilitarySvcYN" value="0" /> 비대상</label>
       <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
@@ -174,6 +186,8 @@ describe("SK military and veteran conditional selections", () => {
 
   it("preserves an existing non-target military radio selection", () => {
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `
       <label><input type="radio" name="prsMilitarySvcYN" value="0" checked /> 비대상</label>
       <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
@@ -195,6 +209,8 @@ describe("SK military and veteran conditional selections", () => {
 
   it("keeps an already selected veteran target without a duplicate click", () => {
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `
       <label><input type="radio" name="prsVeteranBenefitYN" value="0" /> 비대상</label>
       <label><input type="radio" name="prsVeteranBenefitYN" value="1" checked /> 대상</label>
@@ -232,6 +248,8 @@ describe("SK military and veteran conditional selections", () => {
     ],
   ] as const)("refuses %s", (_description, markup) => {
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = markup;
 
     expect(adapter.selectReveal(page, militarySelection, "군필")).toEqual({
@@ -247,6 +265,8 @@ describe("SK military and veteran conditional selections", () => {
 
   it("selects only the exact veteran target radio", () => {
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `
       <label><input type="radio" name="prsMilitarySvcYN" value="1" /> 대상</label>
       <label><input type="radio" name="prsVeteranBenefitYN" value="0" /> 비대상</label>
@@ -504,12 +524,14 @@ describe("SK military branch and disability conditional controls", () => {
   );
 
   it("reveals disability only through the exact target radio contract", () => {
-    expect(disabilitySelection).toEqual({
+    expect(disabilitySelection).toMatchObject({
       domName: "prsDisabledYN",
       profileFieldKey: "disability.disability.disabilityStatus",
       itemIndex: 0,
     });
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `
       <label><input type="radio" name="prsDisabledYN" value="0" /> 비대상</label>
       <label><input type="radio" name="prsDisabledYN" value="1" /> 대상</label>
@@ -542,6 +564,8 @@ describe("SK military branch and disability conditional controls", () => {
     ],
   ] as const)("rejects a disability target with %s", (_reason, markup) => {
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = markup;
     expect(adapter.selectReveal(page, disabilitySelection!, "대상")).toEqual({
       code: "TARGET_MISSING",
@@ -551,8 +575,11 @@ describe("SK military branch and disability conditional controls", () => {
 
   it("accepts only verified SK branch option codes after the military target gate", () => {
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `
-      <label><input type="radio" name="prsMilitarySvcYN" value="1" checked /> 대상</label>
+      <label><input type="radio" name="prsMilitarySvcYN" value="0" /> 비대상</label><label><input type="radio" name="prsMilitarySvcYN" value="1" checked /> 대상</label>
+      <select name="prsMilitarySvcStatus"><option value="302001">군필</option></select>
       <select name="prsMilitarySvcCategory">
         <option value="">군별 *필수항목</option>
         <option value="304001">육군</option>
@@ -592,12 +619,16 @@ describe("SK military branch and disability conditional controls", () => {
       },
     } as never;
 
-    expect(adapter.canWriteProfileOption?.(handle, item)).toBe(true);
+    expect(getWorkflowAdapter(page).canWriteProfileOption?.(handle, item)).toBe(
+      true,
+    );
     select.insertAdjacentHTML(
       "beforeend",
       `<option value="999999">육군</option>`,
     );
-    expect(adapter.canWriteProfileOption?.(handle, item)).toBe(false);
+    expect(getWorkflowAdapter(page).canWriteProfileOption?.(handle, item)).toBe(
+      false,
+    );
   });
 });
 
@@ -627,16 +658,24 @@ describe("SK protected preparation contract", () => {
     "rejects an extra same-code wrong-label peer through the real preparation gate: %s",
     (name) => {
       const page = document.implementation.createHTMLDocument("fixture");
+      Object.defineProperty(page, "URL", { value: document.URL });
+      installExecutionPolicy(page, fixturePolicy("sk"));
       page.body.innerHTML = `<label><input type="radio" name="${name}" value="0" disabled>비대상</label><label><input type="radio" name="${name}" value="1">대상</label><label><input type="radio" name="${name}" value="1">예</label>`;
       const target = page.querySelectorAll<HTMLInputElement>("input")[1]!;
       const value = name === "prsMilitarySvcYN" ? "군필" : "대상";
       expect(
-        adapter.canSelectProfileOption?.(preparationHandle(target), value),
+        getWorkflowAdapter(page).canSelectProfileOption?.(
+          preparationHandle(target),
+          value,
+        ),
       ).toBe(false);
       expect(target.checked).toBe(false);
       page.querySelectorAll("label")[2]!.remove();
       expect(
-        adapter.canSelectProfileOption?.(preparationHandle(target), value),
+        getWorkflowAdapter(page).canSelectProfileOption?.(
+          preparationHandle(target),
+          value,
+        ),
       ).toBe(true);
     },
   );
@@ -645,6 +684,8 @@ describe("SK protected preparation contract", () => {
     "rejects a malformed military status preparation boundary: %s",
     (kind) => {
       const page = document.implementation.createHTMLDocument("fixture");
+      Object.defineProperty(page, "URL", { value: document.URL });
+      installExecutionPolicy(page, fixturePolicy("sk"));
       page.body.innerHTML = `<label><input type="radio" name="prsMilitarySvcYN" value="0" disabled>비대상</label><label><input type="radio" name="prsMilitarySvcYN" value="1" checked>대상</label><select name="prsMilitarySvcStatus"><option value="">대상 분류</option><option value="302001">군필</option><option value="302002">미필</option><option value="302003">면제</option><option value="302004">복무중</option></select>`;
       const select = page.querySelector("select")!;
       if (kind === "duplicate-status") page.body.append(select.cloneNode(true));
@@ -666,6 +707,8 @@ describe("SK protected preparation contract", () => {
       ({ domName }) => domName === "prsMilitarySvcYN",
     )!;
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `<label><input type="radio" name="prsMilitarySvcYN" value="0" disabled /> 비대상</label><label><input type="radio" name="prsMilitarySvcYN" value="9" /> 대상</label>`;
     expect(adapter.selectReveal(page, selection, "군필")).toEqual({
       code: "TARGET_MISSING",
@@ -689,6 +732,8 @@ describe("SK protected preparation contract", () => {
       itemIndex: 0,
     };
     const page = document.implementation.createHTMLDocument("fixture");
+    Object.defineProperty(page, "URL", { value: document.URL });
+    installExecutionPolicy(page, fixturePolicy("sk"));
     page.body.innerHTML = `<select name="prsMilitarySvcStatus"><option value="">대상 분류</option><option value="302001">군필</option><option value="302002">미필</option><option value="302003">면제</option><option value="302004">복무중</option></select>`;
     const select = page.querySelector<HTMLSelectElement>("select")!;
     let events = 0;

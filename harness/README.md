@@ -34,6 +34,25 @@ python3 harness/scripts/ensure-environment.py
 
 이 명령은 하네스 테스트, 하네스 코드 커버리지 80%, Git 공백 오류를 검사한다. 애플리케이션 스택이 확정되면 포맷, 린트, 애플리케이션 테스트, 빌드 명령을 이 진입점에 추가한다.
 
+### Wiki 검증 기준 브랜치
+
+Wiki raw는 실제 PR 기준 브랜치에 이미 존재하는 파일을 보호한다. CI에서는
+`GITHUB_BASE_REF`를 사용하고, develop/main push 검증에서는 해당 브랜치를 사용한다.
+로컬 작업 브랜치는 확정한 Issue 계약의 기준을 브랜치별 Git 설정에 기록한다.
+다음은 일반 개발과 릴리스 수정의 예시이며 해당 작업의 기준 하나만 설정한다.
+
+```bash
+git config "branch.$(git branch --show-current).career-form-base" origin/develop
+git config "branch.$(git branch --show-current).career-form-base" origin/release/1.2.0
+```
+
+`verify.py`와 pre-push는 같은 설정을 사용한다. 직접 검사할 때는
+`.venv/bin/python harness/scripts/verify.py --base-ref origin/release/1.2.0`처럼
+기준을 명시할 수 있다. CLI, 브랜치 설정과 PR base가 충돌하거나 ref가 없으면 실패한다.
+기준 ref가 없으면 원래 원격 브랜치를 fetch하며 기존 원격 ref를 다른 SHA로 바꾸지 않는다.
+로컬 develop/main은 같은 이름의 origin ref, 운영 hotfix는 origin/main을 기본으로 쓴다.
+그 밖의 작업 브랜치와 detached HEAD는 기준이 없으면 추측하지 않는다.
+
 ## 범용 자동 입력 기준선 평가
 
 `evaluate-generic-autofill.py`는 비식별 정답 목록과 단계별 관측을 검증하고 사이트별 및 전체 지표를 JSON으로 만든다. 실사이트 관측인 `LIVE_SITE`와 자동 회귀 입력인 `FIXTURE`는 독립된 구획으로 집계한다. fixture 성공은 실사이트 성공에 합산하지 않는다.
@@ -48,6 +67,13 @@ python3 harness/scripts/ensure-environment.py
   --observations harness/fixtures/generic-autofill/observations-v1.1.json \
   --output /tmp/generic-autofill-baseline.json
 ```
+
+합성 대형 페이지(`pages/large-generic-form.html`)의 JEV·OpenAI 기준선 관측과 소요 시간은
+[범용 기준선 측정 드라이버](../frontend/fixtures/generic-baseline/README.md)로 만든 뒤 위 명령으로
+평가한다. 커밋된 기준선 result는 측정 뒤 정답의 대학 `전공`·`학점`(f035, f036)을 `AUTOFILLABLE`로
+보정하고(Issue #242, 분모 67) provider를 다시 호출하지 않은 채 다시 채점한 값이다. 관측은 미매핑
+f035/f036의 `reason_code`만 드라이버 판정 규칙으로 다시 계산했다. 측정 원본은 Issue #236 시점의
+Git 이력에 있고, 보정 기록은 `timing-generic-baseline-v1.json`의 `rescore`에 있다.
 
 계약 `1.1`의 예제는 `alpha`와 `beta`라는 합성 사이트를 사용한다. 예제의 SHA와
 `LIVE_SITE` 구획은 parser 검증용이며 실제 설치본 검증이나 실사이트 실행 근거가 아니다.
@@ -73,7 +99,7 @@ UTF-8로 직렬화한 SHA-256이다. 이는 메타데이터 식별자이지 ZIP 
 - CLEAN 메타데이터와 SHA, digest가 일치할 때만 `VERIFIED`이며 해당 SHA를 기록한다.
 - DIRTY/UNKNOWN은 `revision: "UNVERIFIED"` 및 `revision_status: "UNVERIFIED"`로
   기록하고 `unverified_reason`을 `DIRTY_SOURCE`/`UNKNOWN_SOURCE`로 둔다.
-- 조회할 수 없거나 메타데이터가 누락·손상됐으면 `method: "UNAVAILABLE"`,
+- 조회할 수 없거나 메타데이터가 누락, 손상됐으면 `method: "UNAVAILABLE"`,
   `metadata: null`, `metadata_sha256: null`과 `INSTALLATION_UNAVAILABLE`,
   `METADATA_MISSING`, `METADATA_INVALID` 중 실제 사유를 기록한다. 잘못된 원문은 보관하지 않는다.
 - 설치본의 조회 절차는 `cf-live-autofill-evaluation` 스킬을 따른다. HEAD, 버전 문자열,
@@ -83,7 +109,7 @@ UTF-8로 직렬화한 SHA-256이다. 이는 메타데이터 식별자이지 ZIP 
 평가 계약, 합성 프로필 version과 site 집합이 같을 때만 비교한다. 수치 차이는
 metric별 numerator, denominator와 rate delta로 유지한다. source의 모든 비교 사이트가
 양쪽 모두 측정됐고 서로 다른 VERIFIED revision일 때만 `revision_comparison.status`가
-`COMPARABLE`이며 오입력률·기존 값 훼손 증가 및 품질 하락을 `regressions`에 분리한다.
+`COMPARABLE`이며 오입력률, 기존 값 훼손 증가 및 품질 하락을 `regressions`에 분리한다.
 미확인 revision, 같은 revision 재실행 또는 미확정 사이트는 `HELD`와 정형 사유를
 남기고 revision 기반 회귀를 확정하지 않는다. COMPARABLE도 인과관계 증명은 아니다.
 
@@ -168,5 +194,7 @@ git rev-parse --git-path cf-workflow/plan.md
 - 선택한 Python으로 `harness/scripts/doctor.py`를 실행해 필수 명령, 파일, Git 훅 경로를 확인한다.
 - 선택한 Python으로 `harness/scripts/diagnose-project-access.py`를 실행해 GitHub CLI 인증과 Project 접근을 안전하게 진단한다. Project 좌표는 `harness/project.json`에서 관리한다.
 - Codex 훅이 실행되지 않으면 프로젝트를 신뢰했는지 확인하고 `/hooks`에서 훅을 검토한다.
-- 공유 하네스 파일을 바꾸는 PR에는 `harness-change` 라벨과 다른 팀원 리뷰가 필요하다.
+- 일반 작업과 hotfix에서 공유 하네스 파일을 바꾸면 PR의 `harness-change` 라벨과 같은 라벨을 가진 연결 Issue, 다른 팀원 리뷰가 필요하다.
+- 브랜치 계약이 허용하는 릴리스, main 동기화, revert 시스템 PR은 공유 파일 검사에서 Issue 연결을 요구하지 않는다. 실제 head/base 정보가 없거나 브랜치 흐름이 잘못되면 검사를 통과할 수 없다.
+- 릴리스 생성 본문도 현재 PR 템플릿의 여섯 섹션과 접힌 검증 기록을 따른다. 시스템 PR에는 Issue 종료 참조를 넣지 않고, 아직 수행하지 않은 검증은 미완료로 기록한다.
 - 서버 설정은 `policies/github-setup.md`와 `policies/github-ruleset.md`의 체크리스트를 따른다.

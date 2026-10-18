@@ -8,7 +8,10 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { createEmptyProfile } from "../../src/profile/model";
-import type { ProfileRepository } from "../../src/profile/profile-repository";
+import {
+  ProfileWriteConflictError,
+  type ProfileRepository,
+} from "../../src/profile/profile-repository";
 import { App } from "./App";
 import { PROFILE_CATEGORIES } from "../../src/profile/field-definitions";
 
@@ -295,4 +298,47 @@ describe("options App", () => {
     expect(repository.save).not.toHaveBeenCalled();
     expect(screen.getByLabelText("국문 성")).toHaveValue("기존 값");
   });
+});
+
+it("keeps an unsaved draft when reload confirmation is cancelled and restores latest data after approval", async () => {
+  const repository = createRepository();
+  vi.mocked(repository.save).mockRejectedValueOnce(
+    new ProfileWriteConflictError(),
+  );
+  const latest = createEmptyProfile();
+  latest.personal.koreanFamilyName = "다른 화면 값";
+  vi.mocked(repository.load)
+    .mockResolvedValueOnce(createEmptyProfile())
+    .mockResolvedValueOnce(latest);
+  const confirmReload = vi.fn(() => false);
+  render(<App repository={repository} confirmReload={confirmReload} />);
+  await screen.findByRole("heading", { name: "프로필 관리" });
+  fireEvent.change(screen.getByLabelText("국문 성"), {
+    target: { value: "미저장 편집" },
+  });
+  const reload = await screen.findByRole("button", {
+    name: "최신 프로필 다시 불러오기",
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "다른 화면에서 프로필이 변경",
+  );
+  fireEvent.click(reload);
+  expect(confirmReload).toHaveBeenCalledWith(
+    expect.stringContaining("저장되지 않은 편집"),
+  );
+  expect(screen.getByLabelText("국문 성")).toHaveValue("미저장 편집");
+  expect(repository.load).toHaveBeenCalledTimes(1);
+  confirmReload.mockReturnValue(true);
+  fireEvent.click(reload);
+  await waitFor(() =>
+    expect(screen.getByLabelText("국문 성")).toHaveValue("다른 화면 값"),
+  );
+  fireEvent.change(screen.getByLabelText("국문 성"), {
+    target: { value: "재편집" },
+  });
+  await waitFor(() =>
+    expect(repository.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ personal: { koreanFamilyName: "재편집" } }),
+    ),
+  );
 });

@@ -298,8 +298,7 @@
 .reviewItem[data-status="needs-review"] {
   border-left-color: var(--color-warning);
 }
-.reviewItem[data-status="conflict"],
-.reviewItem[data-status="sensitive"] {
+.reviewItem[data-status="conflict"] {
   border-left-color: var(--color-danger);
 }
 

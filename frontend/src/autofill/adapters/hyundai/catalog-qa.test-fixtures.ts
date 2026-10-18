@@ -7,8 +7,9 @@ import {
 import type { FieldCandidateHandle } from "../../dom/types";
 import type { ReviewPlanItem } from "../../review/review-plan";
 import { executeApprovedWrites } from "../../write/native-executor";
-import { runHyundaiEducationSearch } from "./school-search";
-import { hyundaiWriteAdapter } from "./write";
+import { createCodedSearchModule } from "../../policy/hidden-code/coded-search";
+import { executionPolicy } from "../../workflow/execution-policy";
+import { getWriteAdapter } from "../write";
 
 export type HyundaiCatalogControl =
   | "highSchool"
@@ -55,9 +56,9 @@ export function createHyundaiCatalogFixture(
   if (approval.status !== "selected")
     throw new Error("Fixture entry is not approved");
   const school = !["certificate", "languageTest"].includes(kind);
-  // Schools have no bundled aliases; spacing exercises distinct query/result values.
+  // School policy compares the exact normalized name; catalog aliases are exercised for exams.
   const label = school
-    ? entry.name.replace(/^(.)(.)/u, "$1 $2")
+    ? entry.name
     : (approval.match.labels.find((value) => value !== entry.name) ??
       entry.name);
   const domName = school
@@ -164,7 +165,13 @@ export function createHyundaiCatalogFixture(
         if (mode !== "no-detail") {
           const detail = document.createElement("span");
           detail.id = `catalog-detail-${index}`;
-          detail.textContent = entry.detail;
+          // Native school results expose a compact region, not the catalog metadata string.
+          detail.textContent =
+            kind === "highSchool"
+              ? "강원삼척"
+              : kind === "university"
+                ? "경기광주"
+                : "서울강서";
           button.setAttribute("aria-describedby", detail.id);
           container.append(detail);
         }
@@ -186,14 +193,12 @@ export function createHyundaiCatalogFixture(
   else if (kind === "languageTest") display.addEventListener("click", respond);
   const run = async () => {
     if (school)
-      return runHyundaiEducationSearch(
+      return createCodedSearchModule(
         document,
-        handle,
-        item,
-        controller.signal,
-      );
+        executionPolicy(document)!.browserPolicy!.hiddenCodeContract!,
+      ).runCodedSearch(document, handle, item, controller.signal);
     if (kind === "languageTest") {
-      const attempt = hyundaiWriteAdapter.tryWrite(handle, item);
+      const attempt = getWriteAdapter(document).tryWrite(handle, item);
       return attempt.handled && attempt.written;
     }
     const registry = new CandidateRegistry();
@@ -230,12 +235,12 @@ export function createHyundaiCatalogFixture(
  * using the QA browser's request interception, then inject that generated JS file.
  * await HyundaiCatalogQa.runHyundaiCatalogQa(document, 'happy');
  * Expected: five written reports; four SITE-42 codes/one click each; plain-text certificate has no code/click.
- * duplicate rejects schools/exam; no-detail/stale-query/cancel reject schools only;
+ * duplicate rejects schools/exam; stale-query/cancel reject schools only;
  * stale-identity/wrong-kind/protected reject all five. Modes do not invent certificate choices.
  * For retention: const f = HyundaiCatalogQa.createHyundaiCatalogFixture(document, 'languageTest');
  * await f.run(); await f.run(); // true twice, f.clicks() === 1
  * f.hidden.value = 'CHANGED'; await f.run(); // false, changed value preserved
- * School controls require full, unique, visible, exclusively owned aria-describedby detail.
+ * School controls match compact regions; absent detail is accepted only for a unique catalog school.
  * Native label-region strings without that verified detail are deliberately not supported.
  * This replaces body content; never invoke on a real application. No submit/save/network actions.
  * This exercises adapter writes, not the extension panel, backend, real vendor API, or saved submission.

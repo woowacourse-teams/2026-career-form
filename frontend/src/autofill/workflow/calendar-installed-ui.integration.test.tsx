@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import type { AnalysisApiClient } from "../api/types";
@@ -13,7 +13,7 @@ afterEach(() => {
   ).jsdom.reconfigure({ url: "http://localhost:3000" });
 });
 
-it("runs a checked calendar and an ordinary field from the main workflow button", async () => {
+it("automatically runs an approved calendar and ordinary field without opening an unrelated search", async () => {
   document.body.innerHTML = `
     <section><label>이름 <input id="name-target" name="applicantName" type="text"></label></section>
     <section><label>입학 연월 <input id="date-target" name="startMonth" readonly type="text"></label>
@@ -118,14 +118,6 @@ it("runs a checked calendar and an ordinary field from the main workflow button"
       onExit={() => undefined}
     />,
   );
-  const include = await screen.findByRole("button", {
-    name: /입학 연월 포함하기/,
-  });
-  expect(date.value).toBe("");
-  expect(popup.hidden).toBe(true);
-  expect(schoolOpened).toBe(0);
-  fireEvent.click(include);
-  fireEvent.click(screen.getByRole("button", { name: "2개 항목 기입하기" }));
   await screen.findByRole("heading", { name: "기입 결과" });
   expect(name.value).toBe("합성 사용자");
   expect(date.value).toBe("2026-03");

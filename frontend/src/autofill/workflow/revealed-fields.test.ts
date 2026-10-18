@@ -1,3 +1,6 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { afterEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
 import { getWorkflowAdapter } from "../adapters/workflow";
@@ -23,6 +26,7 @@ it.each(["", "기존 테스트 병과"])(
     profile.military.militarySpecialty = "합성 병과";
     let analyses = 0;
     const apiClient: AnalysisApiClient = {
+      loadExecutionPolicy: async () => fixturePolicy("sk"),
       analyzePreparation: async (request) => ({
         snapshotId: request.snapshotId,
         mode: "ADAPTER",
@@ -32,6 +36,7 @@ it.each(["", "기존 테스트 병과"])(
       analyzeFields: async (request) => {
         analyses++;
         return {
+          executionPolicy: fixturePolicy("sk"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER",
           analysisStatus: "COMPLETE",
@@ -56,7 +61,7 @@ it.each(["", "기존 테스트 병과"])(
       },
     };
     await createWriteRevealedFields({
-      adapter: getWorkflowAdapter("www.skcareers.com"),
+      adapter: getWorkflowAdapter(document),
       apiClient,
       pageDocument: document,
       setWorkflowDiagnostics: () => {},

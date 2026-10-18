@@ -1,6 +1,9 @@
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("greeting");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { greetingWorkflowAdapter } from "../adapters/greeting/workflow";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import { validateFieldsResponse } from "../api/validate-response";
 import type { ApprovedWriteResult } from "../write/executor";
 import { createAnalyzeFields } from "./workflow-analysis";
@@ -69,7 +72,7 @@ async function analyze(
   const errors: string[] = [];
   let results: ApprovedWriteResult[] = [];
   const run = createAnalyzeFields({
-    adapter: greetingWorkflowAdapter,
+    adapter: componentWorkflowAdapter(document),
     pageDocument: document,
     addressRun: { current: { controller: new AbortController() } },
     addressSearch: async () => false,
@@ -81,11 +84,13 @@ async function analyze(
     completedGenericStateDrivers: { current: new Map() },
     deferredDriverGroups: { current: new Set() },
     apiClient: {
+      loadExecutionPolicy: async () => fixturePolicy("greeting"),
       analyzePreparation: async () => {
         throw Error("unexpected preparation");
       },
       analyzeFields: async (request) =>
         validateFieldsResponse(request, {
+          executionPolicy: fixturePolicy("greeting"),
           snapshotId: request.snapshotId,
           mode: "ADAPTER",
           analysisStatus: "COMPLETE",
@@ -153,14 +158,16 @@ it.each([`${prefix}.conversationalProficiency`])(
   10000,
 );
 
-it("keeps aborting when a revealing Greeting driver cannot be applied", async () => {
-  const { errors, text } = await analyze(
+it("defers an unmatched revealing driver and reports each skipped field once", async () => {
+  const { errors, results, text } = await analyze(
     `${prefix}.conversationalProficiency`,
     "languages.languageSkill.conversationalLevel",
     "독일어",
   );
 
-  expect(errors).toHaveLength(1);
+  expect(errors).toEqual([]);
+  expect(results).toHaveLength(2);
+  expect(results.every((result) => result.status === "skipped")).toBe(true);
   expect(text(`${prefix}.foreignLanguage`)).toBe("선택");
   expect(text(`${prefix}.conversationalProficiency`)).toBe("선택");
 });

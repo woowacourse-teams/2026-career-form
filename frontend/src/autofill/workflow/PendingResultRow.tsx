@@ -20,7 +20,7 @@ export function PendingResultRow({
   copyText(value: string): Promise<void>;
 }) {
   const { id, item, reason, written, failureCode } = entry;
-  const { label, shortLabel, sensitive } = pendingResultPresentation(item);
+  const { label, shortLabel } = pendingResultPresentation(item);
   const [unavailable, setUnavailable] = useState(false);
   const [copied, setCopied] = useState<number>();
   const [copyFailed, setCopyFailed] = useState(false);
@@ -57,20 +57,15 @@ export function PendingResultRow({
         </div>
         {values.length > 0 && (
           <div className={styles.values}>
-            {values.map(({ value, sensitive: valueSensitive }, index) => {
-              const masked = (sensitive || valueSensitive) && !item?.revealed;
+            {values.map(({ value }, index) => {
               return (
                 <div className={styles.valueGroup} key={index}>
-                  <span
-                    className={styles.previewValue}
-                    title={masked ? undefined : value}
-                  >
-                    {masked ? "값 가림" : value}
+                  <span className={styles.previewValue} title={value}>
+                    {value}
                   </span>
                   <button
                     type="button"
                     className={styles.copyButton}
-                    disabled={masked}
                     aria-label={`${label}${values.length > 1 ? ` 값 ${index + 1}` : ""} 복사`}
                     onClick={() => void copy(value, index)}
                   >

@@ -1,4 +1,7 @@
-import { render, waitFor } from "@testing-library/react";
+import { usePolicyFixture } from "../../test/fixtures/execution-policy";
+usePolicyFixture("sk");
+import { fixturePolicy } from "../../test/fixtures/execution-policy";
+import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
 import { createEmptyProfile } from "../../profile/model";
@@ -49,6 +52,7 @@ function candidates(request: FieldsAnalyzeRequest): FieldCandidate[] {
 
 function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   return {
+executionPolicy: fixturePolicy("sk"),
     snapshotId: request.snapshotId,
     mode: "ADAPTER",
     analysisStatus: "COMPLETE",
@@ -68,13 +72,33 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
           writePlan: { command: "SELECT_OPTION" as const },
         };
       }
-      if (field.domName === "carRetireDesc") {
+      if (field.domName === "carDeptName") {
         return {
           candidateId: field.candidateId,
           matchType: "MATCH" as const,
           valueBinding: {
             type: "DIRECT" as const,
-            profileFieldKey: "careers.career.terminationReason",
+            profileFieldKey: "careers.career.department",
+          },
+          autofillPolicy: "ALLOWED" as const,
+          mappingStatus: "ADAPTER_VERIFIED" as const,
+          interactionStatus: "READY" as const,
+          writePlan: { command: "SET_TEXT" as const },
+        };
+      }
+      if (
+        field.domName === "carRetireDesc" ||
+        field.domName === "carPosition"
+      ) {
+        return {
+          candidateId: field.candidateId,
+          matchType: "MATCH" as const,
+          valueBinding: {
+            type: "DIRECT" as const,
+            profileFieldKey:
+              field.domName === "carPosition"
+                ? "careers.career.position"
+                : "careers.career.terminationReason",
           },
           autofillPolicy: "ALLOWED" as const,
           mappingStatus: "ADAPTER_VERIFIED" as const,
@@ -98,7 +122,12 @@ function fieldResponse(request: FieldsAnalyzeRequest): FieldsAnalyzeResponse {
   };
 }
 
-function setup(existingRetiredStatus = "") {
+function setup(
+  existingRetiredStatus = "",
+  terminationReason = "계약 종료",
+  revealPosition = false,
+  cancelAfterPass = false,
+) {
   (
     globalThis as unknown as {
       jsdom: { reconfigure(options: { url: string }): void };
@@ -126,12 +155,27 @@ function setup(existingRetiredStatus = "") {
   });
   selects[0]!.value = existingRetiredStatus;
 
+  if (revealPosition) {
+    const position =
+      document.querySelector<HTMLInputElement>("#carPosition_1")!;
+    position.hidden = true;
+    document
+      .querySelector("#carRetireDesc_1")!
+      .addEventListener("input", () => {
+        position.hidden = false;
+      });
+  }
   const profile = createEmptyProfile();
   profile.careers = [
     {
       id: "career-retired",
       sectionId: "career",
-      values: { employmentStatus: "퇴사", terminationReason: "계약 종료" },
+      values: {
+        employmentStatus: "퇴사",
+        terminationReason,
+        ...(revealPosition ? { position: "팀원" } : {}),
+        department: "개발팀",
+      },
     },
     {
       id: "career-current",
@@ -141,6 +185,7 @@ function setup(existingRetiredStatus = "") {
   ];
   let fieldAnalysisCount = 0;
   const apiClient: AnalysisApiClient = {
+loadExecutionPolicy: async () => fixturePolicy("sk"),
     analyzePreparation: async (request) => ({
       snapshotId: request.snapshotId,
       mode: "ADAPTER",
@@ -149,14 +194,32 @@ function setup(existingRetiredStatus = "") {
     }),
     analyzeFields: async (request) => {
       fieldAnalysisCount += 1;
+      if (fieldAnalysisCount > 1) {
+        expect(
+          document.querySelector<HTMLInputElement>("#carDeptName_1")!.value,
+        ).toBe("개발팀");
+      }
       return fieldResponse(request);
     },
   };
 
-  render(
+  let cancelled = false;
+  const view = render(
     <AutofillWorkflow
       apiClient={apiClient}
-      repository={{ load: async () => profile }}
+      repository={{
+        load: async () => {
+          if (
+            cancelAfterPass &&
+            document.querySelector<HTMLInputElement>("#carDeptName_1")!
+              .value === "개발팀"
+          ) {
+            cancelled = true;
+            view.unmount();
+          }
+          return profile;
+        },
+      }}
       pageDocument={document}
       onExit={() => undefined}
     />,
@@ -164,15 +227,17 @@ function setup(existingRetiredStatus = "") {
 
   return {
     selects,
+    cancelled: () => cancelled,
     changeCounts,
     fieldAnalysisCount: () => fieldAnalysisCount,
   };
 }
 
-it("runs each SK career status driver in one stage, reanalyzes, and fills only the revealed retirement reason", async () => {
+it("finishes unchanged fields before refreshing and filling the revealed retirement reason", async () => {
   const run = setup();
 
   await waitFor(() => {
+    expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
     expect(
       document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
     ).toBe("계약 종료");
@@ -189,13 +254,51 @@ it("runs each SK career status driver in one stage, reanalyzes, and fills only t
 it("preserves a conflicting existing status without revealing its retirement reason", async () => {
   const run = setup("1");
 
-  await waitFor(() => {
-    expect(run.fieldAnalysisCount()).toBe(2);
-  });
+  await waitFor(() =>
+    expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible(),
+  );
+  expect(run.fieldAnalysisCount()).toBe(1);
 
   expect(run.selects.map((select) => select.value)).toEqual(["1", "1"]);
   expect(
     document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
   ).toBe("");
   expect(run.changeCounts).toEqual([0, 1]);
+});
+
+it("repeats at the end of another pass when writing the revealed text exposes another field", async () => {
+  const run = setup("", "계약 종료", true);
+  await waitFor(
+    () => {
+      expect(screen.getByRole("heading", { name: "기입 결과" })).toBeVisible();
+      expect(
+        document.querySelector<HTMLInputElement>("#carPosition_1")!.value,
+      ).toBe("팀원");
+    },
+    { timeout: 10000 },
+  );
+  expect(
+    document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
+  ).toBe("계약 종료");
+  expect(run.fieldAnalysisCount()).toBe(3);
+  expect(run.changeCounts).toEqual([1, 1]);
+});
+
+it("does not reanalyze a revealed field when its profile value is missing", async () => {
+  const run = setup("", "");
+  await screen.findByRole("heading", { name: "기입 결과" });
+  expect(run.selects[0]!.value).toBe("0");
+  expect(
+    document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
+  ).toBe("");
+  expect(run.fieldAnalysisCount()).toBe(1);
+});
+
+it("does not start a refresh when cancelled during the final profile check", async () => {
+  const run = setup("", "계약 종료", false, true);
+  await waitFor(() => expect(run.cancelled()).toBe(true));
+  expect(run.fieldAnalysisCount()).toBe(1);
+  expect(
+    document.querySelector<HTMLTextAreaElement>("#carRetireDesc_1")!.value,
+  ).toBe("");
 });

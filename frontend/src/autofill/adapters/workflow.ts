@@ -4,15 +4,17 @@ import {
   settleBasicStateDriver,
 } from "./hplace/basic-write";
 import { ownedBasicControl } from "./hplace/basic-controls";
-import { greetingWorkflowAdapter } from "./greeting/workflow";
 import { isRegistrationItem, writeRegistration } from "./hplace/write";
+import { startLocalTiming } from "../debug/local-timing";
+import { hiddenCodeAdapters } from "../policy/hidden-code";
+import { componentWorkflowAdapter } from "../policy/components/workflow";
 import type { MatchedFieldAnalysis, PreparationPlan } from "../api/types";
 import type { ActionCandidateHandle, FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { Profile, RepeatedProfileCategoryId } from "../../profile/model";
 import { resolveCompany, resolveDocumentCompany } from "./company";
-import { hyundaiWorkflowAdapter } from "./hyundai/workflow";
-import { skWorkflowAdapter } from "./sk/workflow";
+import { policyWorkflowAdapter } from "../policy/workflow";
+import { executionPolicy } from "../workflow/execution-policy";
 import type { FailureReporter } from "../write/failure";
 
 export interface FreshRowPreparation {
@@ -115,6 +117,10 @@ export interface WorkflowAdapter {
     onFailure?: FailureReporter,
     context?: StateDriverContext,
   ): Promise<boolean>;
+  stateDriverFailureTargets?(
+    item: ReviewPlanItem,
+    handle: FieldCandidateHandle,
+  ): Element[] | undefined;
   // Opt-in only: a failed search may defer its whole independently bound row.
   stateDriverFailureGroup?(
     item: ReviewPlanItem,
@@ -192,21 +198,93 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
         ),
 };
 
-export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
+function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {
+  if (typeof source !== "string") {
+    const configured = hiddenCodeAdapters(source);
+    if (configured) return configured.workflow;
+  }
+  if (typeof source !== "string" && executionPolicy(source)?.browserPolicy)
+    return policyWorkflowAdapter(source);
   switch (
     typeof source === "string"
       ? resolveCompany(source)
       : resolveDocumentCompany(source)
   ) {
-    case "greeting":
-      return greetingWorkflowAdapter;
-    case "hyundai":
-      return hyundaiWorkflowAdapter;
-    case "sk":
-      return skWorkflowAdapter;
     case "hplace":
       return hplaceWorkflowAdapter;
+    case "components":
+      return typeof source === "string"
+        ? genericWorkflowAdapter
+        : componentWorkflowAdapter(source);
+    case "policy":
     case "generic":
       return genericWorkflowAdapter;
   }
+}
+
+export function getWorkflowAdapter(source: string | Document): WorkflowAdapter {
+  const adapter = resolveWorkflowAdapter(source);
+  if (
+    import.meta.env.VITE_LOCAL_WORKFLOW_DIAGNOSTICS !== "1" ||
+    import.meta.env.VITE_API_BASE_URL !== "http://localhost:8080"
+  )
+    return adapter;
+  return {
+    ...adapter,
+    ...(adapter.executeStateDriver
+      ? {
+          executeStateDriver: async (
+            ...args: Parameters<
+              NonNullable<WorkflowAdapter["executeStateDriver"]>
+            >
+          ) => {
+            const finish = startLocalTiming("driver-execute", {
+              field: args[1].candidate.domName ?? "",
+              command: args[2].analysis?.writePlan?.command ?? "",
+            });
+            try {
+              return await adapter.executeStateDriver!(...args);
+            } finally {
+              finish();
+            }
+          },
+        }
+      : {}),
+    ...(adapter.waitForStateDriverReady
+      ? {
+          waitForStateDriverReady: async (
+            ...args: Parameters<
+              NonNullable<WorkflowAdapter["waitForStateDriverReady"]>
+            >
+          ) => {
+            const finish = startLocalTiming("driver-ready", {
+              field: args[1].candidate.domName ?? "",
+            });
+            try {
+              return await adapter.waitForStateDriverReady!(...args);
+            } finally {
+              finish();
+            }
+          },
+        }
+      : {}),
+    ...(adapter.settleStateDriver
+      ? {
+          settleStateDriver: async (
+            ...args: Parameters<
+              NonNullable<WorkflowAdapter["settleStateDriver"]>
+            >
+          ) => {
+            const finish = startLocalTiming("driver-settle", {
+              field: args[1].candidate.domName ?? "",
+            });
+            try {
+              return await adapter.settleStateDriver!(...args);
+            } finally {
+              finish();
+            }
+          },
+        }
+      : {}),
+  };
 }

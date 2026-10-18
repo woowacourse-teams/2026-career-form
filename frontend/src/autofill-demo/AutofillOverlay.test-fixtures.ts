@@ -53,12 +53,8 @@ export function createApiClient(): AnalysisApiClient {
 export function createSkFixtureDocument(): Document {
   const fixtureDocument =
     document.implementation.createHTMLDocument("application");
-  return new Proxy(fixtureDocument, {
-    get(target, key) {
-      if (key === "location")
-        return { host: "www.skcareers.com", pathname: "/apply" };
-      const value = Reflect.get(target, key, target);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
+  Object.defineProperty(fixtureDocument, "URL", {
+    value: "https://www.skcareers.com/Application/Index/fixture",
   });
+  return fixtureDocument;
 }

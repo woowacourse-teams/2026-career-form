@@ -18,14 +18,14 @@ import com.careerform.formanalysis.dto.FieldsAnalysisRequest.FormElement;
 
 final class GreetingCompanyFormPolicyFactory {
 
-    static final long VERSION = 1;
+    static final long VERSION = 8;
 
     private GreetingCompanyFormPolicyFactory() {
     }
 
     static FormAnalysisPolicyDocument create() {
         return new FormAnalysisPolicyDocument(
-            "greeting-policy-v1",
+            "greeting-policy-v8",
             "greeting",
             VERSION,
             PreparationFingerprint.noActions(),
@@ -36,7 +36,8 @@ final class GreetingCompanyFormPolicyFactory {
                     FormElement.INPUT, FormControl.TEXT)
             )),
             List.of(),
-            fieldRules()
+            fieldRules(),
+            com.careerform.formanalysis.dto.ExecutionPolicy.greeting()
         );
     }
 
@@ -71,6 +72,11 @@ final class GreetingCompanyFormPolicyFactory {
             "남성", "남성", "여성", "여성", "남자", "남성", "여자", "여성"));
         String high = "educationalBackground.highSchool.";
         add(rules, high + "schoolName", FormControl.TEXT, "education.highSchool.schoolName", "educationhighschool");
+        lookup(rules, high + "schoolLocation", "education.highSchool.schoolRegion", schoolRegionOptions(), "educationhighschool");
+        rules.add(new FieldRule(high + "attendanceType", FormElement.INPUT, FormControl.RADIO,
+            new LookupBinding("education.highSchool.attendanceType", Map.of(
+                "attendance:day", "주간", "attendance:night", "야간", "주간", "주간", "야간", "야간")),
+            false, high + "attendanceType", "educationhighschool"));
         add(rules, high + "completionStatus", FormControl.BUTTON, "education.highSchool.completionStatus", "educationhighschool");
         add(rules, high + "enrollmentPeriod.startDate", FormControl.BUTTON, "education.highSchool.startDate", "educationhighschool");
         add(rules, high + "enrollmentPeriod.endDate", FormControl.BUTTON, "education.highSchool.endDate", "educationhighschool");
@@ -173,6 +179,28 @@ final class GreetingCompanyFormPolicyFactory {
             new LookupBinding(key, options), false, name, groupId));
     }
 
+    private static Map<String, String> schoolRegionOptions() {
+        return Map.ofEntries(
+            Map.entry("region:seoul", "서울"), Map.entry("서울", "서울"),
+            Map.entry("region:busan", "부산"), Map.entry("부산", "부산"),
+            Map.entry("region:daegu", "대구"), Map.entry("대구", "대구"),
+            Map.entry("region:incheon", "인천"), Map.entry("인천", "인천"),
+            Map.entry("region:gwangju", "광주"), Map.entry("광주", "광주"),
+            Map.entry("region:daejeon", "대전"), Map.entry("대전", "대전"),
+            Map.entry("region:ulsan", "울산"), Map.entry("울산", "울산"),
+            Map.entry("region:sejong", "세종"), Map.entry("세종", "세종"),
+            Map.entry("region:gyeonggi", "경기"), Map.entry("경기", "경기"),
+            Map.entry("region:gangwon", "강원"), Map.entry("강원", "강원"),
+            Map.entry("region:chungbuk", "충북"), Map.entry("충북", "충북"),
+            Map.entry("region:chungnam", "충남"), Map.entry("충남", "충남"),
+            Map.entry("region:jeonbuk", "전북"), Map.entry("전북", "전북"),
+            Map.entry("region:jeonnam", "전남"), Map.entry("전남", "전남"),
+            Map.entry("region:gyeongbuk", "경북"), Map.entry("경북", "경북"),
+            Map.entry("region:gyeongnam", "경남"), Map.entry("경남", "경남"),
+            Map.entry("region:jeju", "제주"), Map.entry("제주", "제주"),
+            Map.entry("region:overseas", "해외"), Map.entry("해외", "해외"));
+    }
+
     private static void education(List<FieldRule> rules, String siteGroup, String profileGroup, String groupId) {
         String name = "educationalBackground." + siteGroup + ".*.";
         String key = "education." + profileGroup + ".";
@@ -182,14 +210,13 @@ final class GreetingCompanyFormPolicyFactory {
         add(rules, name + "enrollmentPeriod.startDate", FormControl.BUTTON, key + "startDate", groupId);
         add(rules, name + "enrollmentPeriod.endDate", FormControl.BUTTON, key + "endDate", groupId);
         add(rules, name + "completionStatus", FormControl.BUTTON, key + "completionStatus", groupId);
-        add(rules, name + "attendanceType", FormControl.RADIO, key + "attendanceType", groupId);
+        rules.add(new FieldRule(name + "attendanceType", FormElement.INPUT, FormControl.RADIO,
+            new LookupBinding(key + "attendanceType", Map.of(
+                "attendance:day", "주간", "attendance:night", "야간",
+                "주간", "주간", "야간", "야간")),
+            false, name + "attendanceType", groupId));
         add(rules, name + "gpa.score", FormControl.TEXT, key + "gpaScore", groupId);
-        lookup(rules, name + "schoolLocation", key + "schoolRegion", Map.ofEntries(
-            Map.entry("서울", "서울"), Map.entry("부산", "부산"), Map.entry("대구", "대구"), Map.entry("인천", "인천"),
-            Map.entry("광주", "광주"), Map.entry("대전", "대전"), Map.entry("울산", "울산"), Map.entry("세종", "세종"),
-            Map.entry("경기", "경기"), Map.entry("강원", "강원"), Map.entry("충북", "충북"), Map.entry("충남", "충남"),
-            Map.entry("전북", "전북"), Map.entry("전남", "전남"), Map.entry("경북", "경북"), Map.entry("경남", "경남"),
-            Map.entry("제주", "제주"), Map.entry("해외", "해외")), groupId);
+        lookup(rules, name + "schoolLocation", key + "schoolRegion", schoolRegionOptions(), groupId);
         if (siteGroup.equals("universities"))
             add(rules, name + "totalCreditsEarned", FormControl.TEXT, key + "totalCredits", groupId);
         if (siteGroup.equals("universities")) {

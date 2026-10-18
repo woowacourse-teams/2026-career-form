@@ -1,7 +1,8 @@
-import { greetingCollectionAdapter } from "./greeting/collection";
+import { hiddenCodeAdapters } from "../policy/hidden-code";
+import { createComponentCollectionAdapter } from "../policy/components/collection";
 import { resolveCompany, resolveDocumentCompany } from "./company";
-import { hyundaiCollectionAdapter } from "./hyundai/collection";
-import { skCollectionAdapter } from "./sk/collection";
+import { policyCollectionAdapter } from "../policy/collection";
+import { executionPolicy } from "../workflow/execution-policy";
 
 export type CollectionPhase = "fields" | "preparation";
 export type CollectionSource = "adapter" | "generic";
@@ -12,6 +13,7 @@ export interface CollectionAdapter {
   additionalActionElements?(document: Document): HTMLInputElement[];
   itemGroupId?(element: Element): string | undefined;
   actionDomId(element: HTMLElement): string | undefined;
+  nestedGroupState?(action: HTMLElement): string[] | null | undefined;
   repeatableItemCandidates(container: Element): Element[] | undefined;
   requiresVisibleControl(
     phase: CollectionPhase,
@@ -30,17 +32,22 @@ const genericCollectionAdapter: CollectionAdapter = {
 export function collectionAdapterForHost(
   source: string | Document,
 ): CollectionAdapter {
+  if (typeof source !== "string") {
+    const configured = hiddenCodeAdapters(source);
+    if (configured) return configured.collection;
+  }
+  if (typeof source !== "string" && executionPolicy(source)?.browserPolicy)
+    return policyCollectionAdapter(source);
   switch (
     typeof source === "string"
       ? resolveCompany(source)
       : resolveDocumentCompany(source)
   ) {
-    case "greeting":
-      return greetingCollectionAdapter;
-    case "hyundai":
-      return hyundaiCollectionAdapter;
-    case "sk":
-      return skCollectionAdapter;
+    case "components":
+      return typeof source === "string"
+        ? genericCollectionAdapter
+        : createComponentCollectionAdapter(source);
+    case "policy":
     case "hplace":
     case "generic":
       return genericCollectionAdapter;

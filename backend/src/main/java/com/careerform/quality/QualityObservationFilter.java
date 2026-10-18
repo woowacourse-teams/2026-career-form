@@ -20,7 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @ConditionalOnProperty(prefix = "career-form.quality", name = "enabled", havingValue = "true")
 public final class QualityObservationFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(QualityObservationFilter.class);
-    private static final Set<String> PATHS = Set.of("/api/v1/fields/analyze", "/api/v1/preparation/analyze", "/api/v1/generic/interaction-decisions");
+    private static final Set<String> PATHS = Set.of("/api/v1/fields/analyze", "/api/v1/preparation/analyze", "/api/v1/generic/interaction-decisions", "/api/v1/generic/sections/classify", "/api/v1/generic/fields/analyze");
     private final QualityCollectionService collector;
     private final QualityObservationExecutor observer;
 

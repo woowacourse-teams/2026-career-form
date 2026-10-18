@@ -443,8 +443,15 @@ public final class CompanyFormPolicy {
         ValueBinding valueBinding,
         boolean allowReadonlyWrite,
         @JsonInclude(JsonInclude.Include.NON_NULL) String requiredDomName,
-        @JsonInclude(JsonInclude.Include.NON_NULL) String requiredItemGroupId
+        @JsonInclude(JsonInclude.Include.NON_NULL) String requiredItemGroupId,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Boolean enabledOnly
     ) {
+        public FieldRule(String structuralName, FieldsAnalysisRequest.FormElement element,
+            FieldsAnalysisRequest.FormControl control, ValueBinding valueBinding,
+            boolean allowReadonlyWrite, String requiredDomName, String requiredItemGroupId) {
+            this(structuralName, element, control, valueBinding, allowReadonlyWrite,
+                requiredDomName, requiredItemGroupId, null);
+        }
 
         public FieldRule(
             String structuralName,

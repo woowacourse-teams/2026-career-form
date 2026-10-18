@@ -40,6 +40,23 @@ final class InteractionObservationProjector {
         term("confirm", "confirm"),
         term("submit", "submit")
     );
+    private static final List<Term> EDUCATION_LEVEL_TERMS = List.of(
+        term("고등학교", "high school"),
+        term("high school", "high school"),
+        term("대학교", "university"),
+        term("university", "university"),
+        term("대학원", "graduate school"),
+        term("graduate school", "graduate school"),
+        term("전문학사", "associate"),
+        term("associate", "associate"),
+        term("학사", "bachelor"),
+        term("bachelor", "bachelor"),
+        term("석사", "master"),
+        term("master", "master"),
+        term("박사", "doctor"),
+        term("doctor", "doctor"),
+        term("phd", "doctor")
+    );
 
     Projection project(InteractionDecisionRequest request) {
         List<InteractionDecisionProvider.Decision> decisions = new ArrayList<>();
@@ -63,14 +80,16 @@ final class InteractionObservationProjector {
                     + "_" + (candidateIndex + 1);
                 candidates.add(project(candidateAlias, candidate,
                     decision.role().name().startsWith("SEARCH_RESULT_"),
-                    decision.role().name().startsWith("CALENDAR_")));
+                    decision.role().name().startsWith("CALENDAR_"),
+                    decision.role() == InteractionDecisionRequest.Role.ROW_KIND_OPTION));
                 candidateIds.put(candidateAlias, candidate.candidateId());
             }
             decisions.add(new InteractionDecisionProvider.Decision(
                 decisionAlias,
                 decision.role(),
                 decision.canonicalFieldKey(),
-                candidates
+                candidates,
+                decision.targetKind()
             ));
             originals.put(
                 decisionAlias,
@@ -90,14 +109,17 @@ final class InteractionObservationProjector {
         String candidateAlias,
         InteractionDecisionRequest.Candidate candidate,
         boolean resultRole,
-        boolean calendarRole
+        boolean calendarRole,
+        boolean rowKindRole
     ) {
         List<InteractionDecisionProvider.SemanticLabel> labels = new ArrayList<>();
         if (!resultRole && !calendarRole && candidate.semanticContext() != null
             && candidate.semanticContext().labels() != null) {
             for (InteractionDecisionRequest.SemanticLabel label
                 : candidate.semanticContext().labels()) {
-                String sanitized = sanitize(label.text());
+                String sanitized = rowKindRole
+                    ? sanitizeEducationLevel(label.text())
+                    : sanitize(label.text());
                 if (sanitized != null) {
                     labels.add(new InteractionDecisionProvider.SemanticLabel(
                         label.source().name().toLowerCase(Locale.ROOT)
@@ -142,6 +164,28 @@ final class InteractionObservationProjector {
             }
         }
         return canonical.isEmpty() ? null : String.join("; ", canonical);
+    }
+
+    private static String sanitizeEducationLevel(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String remaining = normalize(raw);
+        Set<String> canonical = new LinkedHashSet<>();
+        for (Term term : EDUCATION_LEVEL_TERMS) {
+            if (remaining.contains(term.match())) {
+                canonical.add(term.canonical());
+                remaining = remaining.replace(term.match(), " ");
+            }
+        }
+        return canonical.isEmpty() ? null : String.join("; ", canonical);
+    }
+
+    private static String normalize(String raw) {
+        return Normalizer.normalize(raw, Normalizer.Form.NFKC)
+            .toLowerCase(Locale.ROOT)
+            .replaceAll("\\s+", " ")
+            .trim();
     }
 
     private static Term term(String match, String canonical) {
