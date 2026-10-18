@@ -1,5 +1,13 @@
 # Wiki Log
 
+## [2026-10-18] ingest | CF-259 범용 검토 화면의 3단계 표시
+
+- Approval-Digest: 2ec99be9cf99938cbeb5b9489acb77830cddf0df2b1bc7355eb47d0497fe35ff
+- Source-Revision: 0ca3ef09cc9d4296f456d807aed2ba3e28cb9731
+- 승인한 후보 네 개를 [CF-259 bundle](../raw/issues/CF-259/manifest.md)에 기록하고
+  [범용 검토 화면의 3단계 표시](topics/generic-review-tiers.md)를 추가했다.
+- 브라우저 QA와 실사이트 검증은 하지 않았다.
+
 ## [2026-10-18] ingest | CF-261 범용 등급의 다른 사람 대상 칸 차단
 
 - Approval-Digest: efaf5d4ecaf8f6976e70d9aefc2c5196e03ffe049bc661bcae08f52f7a236f72
