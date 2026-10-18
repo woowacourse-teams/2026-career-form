@@ -19,6 +19,7 @@ import { getWriteAdapter } from "../adapters/write";
 import { resultFieldState } from "../workflow/result-field-state";
 import { acquireDocumentRun } from "../interaction/document-run";
 import type { InteractionDecisionProvider } from "../api/interaction-types";
+import type { FieldCandidateHandle } from "../dom/types";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { SearchFollowUpControl } from "../interaction/search-follow-up";
 import type { ReviewPlanItem } from "../review/review-plan";
@@ -40,6 +41,33 @@ import {
 export { executeApprovedWrites } from "./native-executor";
 export type { WriteResultListener } from "./native-executor";
 export type { ApprovedWriteResult } from "./write-result";
+
+function legacyValueRetained(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  initialValue: string | undefined,
+  address?: AddressIdentity,
+): boolean {
+  const basic = ownedBasicControl(handle);
+  const target = basic
+    ? basicTarget(basic.key, item.profileValue ?? "")
+    : undefined;
+  return (
+    (ownedDetailControl(handle)?.key !== "detailAddress" ||
+      detailAddressMatches(handle, address)) &&
+    item.profileValue === initialValue &&
+    (basic
+      ? target !== undefined &&
+        basicDateOrder(handle, target) &&
+        basicValue(handle) === target
+      : matchesResultValue(
+          item,
+          handle.elements[0]?.value ?? "",
+          item.profileValue ?? "",
+          handle,
+        ))
+  );
+}
 
 /** Verify retained state without dispatching events or invoking a writer. */
 function settledAdapterResult(
@@ -192,6 +220,7 @@ export async function executeApprovedWritesAfterPageSettles({
         ),
       ),
     );
+  const initialValues = items.map((item) => item.profileValue);
   const url = document?.URL;
   const nativeDigest =
     document && executionPolicy(document)?.browserPolicy?.schemaVersion === 2
@@ -208,7 +237,6 @@ export async function executeApprovedWritesAfterPageSettles({
   try {
     if (companyId === "hplace" && !calendarOnly) {
       const results: ApprovedWriteResult[] = [];
-      const initialValues = items.map((item) => item.profileValue);
       const seen = new Set<string>();
       const current = () =>
         !signal?.aborted &&
@@ -250,28 +278,12 @@ export async function executeApprovedWritesAfterPageSettles({
           profileRetained &&
           current() &&
           lookup.status === "ready" &&
-          (ownedDetailControl(lookup.handle)?.key !== "detailAddress" ||
-            detailAddressMatches(lookup.handle, hplaceAddress)) &&
-          item.profileValue === initialValues[index] &&
-          (ownedBasicControl(lookup.handle)
-            ? basicDateOrder(
-                lookup.handle,
-                basicTarget(
-                  ownedBasicControl(lookup.handle)!.key,
-                  item.profileValue ?? "",
-                ) ?? "",
-              ) &&
-              basicValue(lookup.handle) ===
-                basicTarget(
-                  ownedBasicControl(lookup.handle)!.key,
-                  item.profileValue ?? "",
-                )
-            : matchesResultValue(
-                item,
-                lookup.handle.elements[0]?.value ?? "",
-                item.profileValue ?? "",
-                lookup.handle,
-              ));
+          legacyValueRetained(
+            lookup.handle,
+            item,
+            initialValues[index],
+            hplaceAddress,
+          );
         const finalResult =
           result.status === "written" && !retained
             ? skipped(
@@ -504,6 +516,26 @@ export async function executeApprovedWritesAfterPageSettles({
           "STALE_TARGET",
           "실행 중 프로필 또는 지원서 상태가 변경되어 입력 결과를 확인해 주세요.",
         );
+      const legacy = registry.lookupField(item.candidateId);
+      if ("handle" in legacy && legacy.handle.owner === "legacy") {
+        const lookup = legacy;
+        const retained =
+          lookup.status === "ready" &&
+          legacyValueRetained(
+            lookup.handle,
+            item,
+            initialValues[index],
+            hplaceAddress,
+          );
+        return retained
+          ? result
+          : skipped(
+              item.candidateId,
+              "needs-verification",
+              "RETAINED_VALUE_UNCONFIRMED",
+              "입력한 값이 유지되는지 확인하지 못했습니다.",
+            );
+      }
       if (item.analysis?.writePlan?.command === "SEARCH_SELECTION")
         return settledSearchSelectionResult(item, registry, result);
       if (item.analysis?.writePlan?.command === "SELECT_DATE") return result;

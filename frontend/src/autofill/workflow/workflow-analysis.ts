@@ -232,10 +232,7 @@ export function createAnalyzeFields({
     setStage("analyzing");
     setResultRegistry?.(undefined);
     onActivity?.("matching");
-    const snapshot = await collectFields(
-      pageDocument,
-      run.controller.signal,
-    );
+    const snapshot = await collectFields(pageDocument, run.controller.signal);
     if (
       run.controller.signal.aborted ||
       currentAnalysisGeneration !== analysisGeneration
@@ -327,7 +324,11 @@ export function createAnalyzeFields({
         ? analyzeFieldsSnapshot(snapshot)
         : apiClient.analyzeFields(snapshot.request)));
     if (genericResult && genericStructure)
-      analysis = applyGenericStructureAnalysis(analysis, snapshot, genericStructure);
+      analysis = applyGenericStructureAnalysis(
+        analysis,
+        snapshot,
+        genericStructure,
+      );
     finishMapping();
     const finishAnalysisLog = startLocalTiming("analysis-log");
     debugAnalysis(snapshot, analysis);
@@ -480,10 +481,7 @@ export function createAnalyzeFields({
             .refreshAfterPass)
       )
         return false;
-      const next = await collectFields(
-        pageDocument,
-        run.controller.signal,
-      );
+      const next = await collectFields(pageDocument, run.controller.signal);
       if (
         run.controller.signal.aborted ||
         currentAnalysisGeneration !== analysisGeneration
@@ -1504,10 +1502,7 @@ export function createAnalyzeFields({
             // Full collection retains row identity, option and context checks
             // when a replaced or changed control cannot reuse its old handle.
             ordinaryRegistry = rebindComponentWrites(
-              await collectFields(
-                pageDocument,
-                run.controller.signal,
-              ),
+              await collectFields(pageDocument, run.controller.signal),
             );
             return ordinaryRegistry;
           }
@@ -1518,7 +1513,7 @@ export function createAnalyzeFields({
         ? (item) => presentField(snapshot.registry, item)
         : undefined,
       signal: run.controller.signal,
-      ...(companyId === "hplace"
+      ...(companyId === "hplace" || nativePolicyRequired(pageDocument)
         ? {
             hplaceAddress: {
               address: loadedProfile.contact.addressLine1 ?? "",
