@@ -36,7 +36,7 @@ public final class MongoHplacePolicyProvider implements HplacePolicyProvider {
 
     public com.careerform.formanalysis.dto.ExecutionPolicy executionPolicy() {
         var result = find();
-        if (result instanceof Available available && available.policy().executionPolicy() != null) {
+        if (result instanceof Available available) {
             return available.policy().executionPolicy();
         }
         throw new IllegalStateException("Hplace execution policy unavailable");
@@ -49,10 +49,19 @@ public final class MongoHplacePolicyProvider implements HplacePolicyProvider {
         }
         long startedAt = System.nanoTime();
         try {
-            var result = policies.findByCompanyKeyAndVersion(POLICY_KEY, activeVersion)
+            var documentLookup = policies.findByCompanyKeyAndVersion(POLICY_KEY, activeVersion);
+            // Only an absent v4 document permits the validated legacy contract.
+            // Invalid documents and failed lookups must remain unavailable.
+            long selectedVersion = activeVersion;
+            if (activeVersion == 4 && documentLookup.isEmpty()) {
+                documentLookup = policies.findByCompanyKeyAndVersion(POLICY_KEY, 3);
+                selectedVersion = 3;
+            }
+            final long expectedVersion = selectedVersion;
+            var result = documentLookup
                 .filter(document -> POLICY_KEY.equals(document.companyKey())
-                    && document.version() == activeVersion
-                    && (activeVersion < 4 || document.executionPolicy() != null && !document.sectionContracts().isEmpty()))
+                    && document.version() == expectedVersion
+                    && (expectedVersion < 4 || document.executionPolicy() != null && !document.sectionContracts().isEmpty()))
                 .<LookupResult>map(document -> new Available(CompanyFormPolicy.create(
                     document.companyKey(),
                     document.version(),
