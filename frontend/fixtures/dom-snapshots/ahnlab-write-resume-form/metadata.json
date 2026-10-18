@@ -1,0 +1,135 @@
+{
+  "fixture_id": "ahnlab-write-resume-form",
+  "site_id": "ahnlab",
+  "issue_number": 252,
+  "collected_on": "2026-10-18",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "UNAVAILABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "INSTALLATION_UNAVAILABLE"
+  },
+  "scope": {
+    "description": "유일한 지원서 form 내부의 입력 영역. 추가질문은 프로필 키 미매칭 음성 사례로 보존한다. v2와 다른 페이지 준비 상태에서 재수집했다.",
+    "controls": {
+      "text": 20,
+      "radio": 11,
+      "select": 11,
+      "number": 2,
+      "checkbox": 3,
+      "file": 1
+    },
+    "control_total": 48,
+    "hidden_controls": 4,
+    "options": 332,
+    "labels": 48,
+    "labels_with_for": 12,
+    "broken_for": 0,
+    "duplicate_ids": 0,
+    "buttons": 3,
+    "buttons_before_region_exclusion": 12,
+    "repeat_groups": [19, 3],
+    "excluded": [
+      "type=hidden 입력란 13개",
+      "폼 밖 컨트롤과 팝업",
+      "폼 내부 header/nav/footer 및 session/login/logout/gnb/util/member/user class 토큰 영역 5곳",
+      "제외 영역에 속한 버튼 9개"
+    ]
+  },
+  "failure": {
+    "stage": "MAPPING_AND_WRITE",
+    "expected": "우편번호 칸에는 우편번호만, 기본주소는 기본주소 칸에 들어간다",
+    "actual": "2026-10-17 실사이트 관찰에서 기본주소가 우편번호 칸에 입력되었다. v4 오프라인에서는 수집 단계만 재확인한다.",
+    "conditions": [
+      "우편번호 입력칸은 displayName 없이 수집된다",
+      "실제 형식은 inputType=text, maxLength=126이며 numeric inputMode와 postal-code autocomplete가 없다",
+      "우편번호 title은 DOM에만 있다. 범용 분석은 기존 registry의 실제 요소에서 자체 title/placeholder를 읽어 로컬 등급 검사에만 사용한다"
+    ]
+  },
+  "sanitization": {
+    "removed": [
+      "입력값과 선택·체크 상태",
+      "type=hidden 입력란 13개",
+      "script, style, URL 및 외부 리소스",
+      "폼 내부 header/nav/footer와 세션 관련 영역 5곳"
+    ],
+    "replaced": [
+      "id·name 31개 익명화와 참조 동시 치환",
+      "선택지 코드 14개 합성 치환",
+      "추출 단계 텍스트 3곳을 [TEXT]로 치환",
+      "승인된 오프라인 후처리로 div.row > div.span > span.text 3곳의 본문을 [TEXT]로 치환"
+    ],
+    "preserved": [
+      "사람이 검토한 공통 라벨·안내·옵션·placeholder",
+      "필요한 공통 코드 식별자와 원래의 컨트롤·참조 관계",
+      "추가질문 컨트롤 4개"
+    ],
+    "preserved_common_text": "2026-10-18 사람 개인정보 검토 통과",
+    "redacted_text_count": 6,
+    "redacted_text_extraction": 3,
+    "redacted_text_post_filter": 3,
+    "anonymized_ids": 31,
+    "synthetic_option_codes": 14,
+    "dropped_regions": 5,
+    "dropped_hidden_inputs": 13,
+    "extraction_code": {
+      "path": ".worktrees-evidence/fixture-collect-20261017/extract-v3.js",
+      "sha256": "eadd613b5817c6c0c8c000c774af245f3dbd842d4a180370e9412c25eb227e38",
+      "approved_by_human": true
+    },
+    "post_filter": {
+      "rule": "오프라인에서 div.row > div.span > span.text 전체 3곳의 본문을 [TEXT]로 교체. 브라우저 접근 없음. 태그 개수 불변.",
+      "approved_by_human": true
+    }
+  },
+  "synthetic_behavior": [
+    "원본 CSS 숨김 상태를 hidden 속성으로 합성 보존했다. 숨김 컨트롤 4개.",
+    "추가한 이벤트·서버 동작은 없다"
+  ],
+  "limitations": [
+    "폼 내부 header/session 영역과 그 안의 버튼 9개는 재현 범위에서 제외된다",
+    "폼 밖 주소 검색 팝업, 페이지 CSS·스크립트·이벤트·서버 반응은 재현하지 않는다",
+    "읽기 전용 표시 텍스트 3곳과 추출 시 정제한 텍스트 3곳은 [TEXT]다",
+    "설치본 revision, 확장 브라우저 통합 실행 또는 실사이트 성공률의 근거가 아니다",
+    "백엔드 미실행으로 JEV 매칭은 재검증하지 않았다. 추가질문 NO_MATCH는 고정 API 응답의 소비 회귀 검사다."
+  ],
+  "review": {
+    "privacy": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-18"
+    },
+    "structure": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-18"
+    },
+    "withdrawn_versions": [
+      {
+        "version": "v2",
+        "reason": "폼 내부 header/session 텍스트 잔존으로 철회·삭제"
+      },
+      {
+        "version": "v3",
+        "reason": "읽기 전용 지원자 이름 표시 잔존으로 철회·삭제"
+      }
+    ]
+  },
+  "reproduction": {
+    "command": "cd frontend && npx vitest run --project unit src/autofill/workflow/dom-snapshot.ahnlab.test.ts",
+    "product_revision": "a8b3a5725a4c940e9bdde820d28699c9e1300554",
+    "observed": [
+      "collectFieldsSnapshot으로 우편번호 후보의 displayName 누락을 확인한다",
+      "추가질문을 유지하고 API 기권 응답이 프로필 키 매칭으로 바뀌지 않는지 검사한다",
+      "원래 v4 우편번호 칸에 고정 addressLine1 응답을 주면 자체 title 근거로 FORMAT_KEY_MISMATCH가 되어 승인·쓰기가 차단되고 postalCode 응답은 해당 규칙으로 차단되지 않는지 검사한다"
+    ],
+    "mutation_check": "메모리상 우편번호 입력란에 aria-label=우편번호를 추가하면 displayName과 aria-label 문맥이 생긴다. HTML 원문에는 반영하지 않는다.",
+    "evidence": ".worktrees-evidence/CF-252/fixture-green.log",
+    "external_requests": "Playwright Chromium offline=true 및 HTTP(S) 요청 차단, 외부 요청 시도 0건. 근거: .worktrees-evidence/CF-252/start-implementation.log",
+    "backend_mapping": "NOT RUN: localhost:8080 미실행. 실제 JEV 출력은 검증하지 않음.",
+    "scope_extension": "2026-10-18 사용자 승인(오케스트레이터 추천안: 범용 흐름에서 실제 요소 자체 title/placeholder만 읽기). 공유 수집·정적 후보 타입·API는 확장하지 않는다."
+  },
+  "sanitized_html_sha256": "f85570bc1f96ee0cc2abb5a465f78e993f6b600e6fa92a38e3179d03d86823f8"
+}
