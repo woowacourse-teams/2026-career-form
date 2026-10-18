@@ -844,3 +844,322 @@ describe("gate", () => {
     expect(api.calls).toEqual([]);
   });
 });
+
+describe("generic synthetic name binding flow", () => {
+  const nameField = (
+    candidate: FieldCandidate,
+  ): Partial<GenericFieldsResponse["fields"][number]> =>
+    candidate.displayName === "이름"
+      ? {
+          profileFieldKey: null,
+          binding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+          confidence: 0.92,
+          categoryConfirmed: true,
+          autofillPolicy: "ALLOWED",
+          interactionStatus: "READY",
+          writePlan: { command: "SET_TEXT" },
+        }
+      : {};
+
+  function nameProfile(): Profile {
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "합성성씨";
+    profile.personal.koreanGivenName = "합성이름";
+    return profile;
+  }
+
+  it("proposes the combined name, leaves the page untouched and writes it only after approval", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <label>이름<input name="fullName" /></label>
+      </form>`;
+    const before = controlValues();
+    const api = createClient({ field: nameField });
+    const run = workflow(api.client, nameProfile());
+
+    await run.analyze();
+
+    expect(run.stages.at(-1)).toBe("review");
+    expect(controlValues()).toEqual(before);
+    const item = run.item("fullName");
+    expect(item).toMatchObject({
+      status: "available",
+      selected: true,
+      previewValue: "합성성씨합성이름",
+    });
+    await executeApprovedWritesAfterPageSettles({
+      items: run.state.reviewItems,
+      approvedCandidateIds: new Set([item.candidateId]),
+      registry: run.state.snapshot!.registry,
+      document,
+    });
+    expect(document.querySelector<HTMLInputElement>("[name=fullName]")!.value).toBe(
+      "합성성씨합성이름",
+    );
+    const bodies = JSON.stringify([api.classifyRequests, api.genericRequests]);
+    expect(bodies).not.toContain("합성성씨");
+    expect(bodies).not.toContain("합성이름");
+  });
+
+  it("blocks the recipe field and writes nothing when a name key is empty", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <label>이름<input name="fullName" /></label>
+      </form>`;
+    const profile = nameProfile();
+    profile.personal.koreanGivenName = "";
+    const api = createClient({ field: nameField });
+    const run = workflow(api.client, profile);
+
+    await run.analyze();
+
+    const grade = run.state.grades?.get(run.state.reviewItems[0]!.candidateId);
+    expect(grade).toEqual({ grade: "BLOCKED", reason: "NO_PROFILE_VALUE" });
+    expect(
+      run.state.reviewItems.every((entry) => !entry.selected),
+    ).toBe(true);
+  });
+});
+
+describe("generic synthetic date part flow", () => {
+  type Override = Partial<GenericFieldsResponse["fields"][number]>;
+  const matched: Override = {
+    categoryConfirmed: true,
+    confidence: 0.92,
+    autofillPolicy: "ALLOWED",
+    interactionStatus: "READY",
+  };
+  const derived = (
+    recipe:
+      | "KOREAN_FULL_NAME"
+      | "ENGLISH_FULL_NAME_GIVEN_FIRST"
+      | "ENGLISH_FULL_NAME_FAMILY_FIRST",
+  ): Override => ({
+    ...matched,
+    profileFieldKey: null,
+    binding: { type: "DERIVED", recipe },
+    writePlan: { command: "SET_TEXT" },
+  });
+  const datePart = (part: "YEAR" | "MONTH" | "DAY"): Override => ({
+    ...matched,
+    profileFieldKey: "personal.personal.birthDate",
+    binding: { type: "DATE_PART", part },
+    writePlan: { command: "SELECT_OPTION" },
+  });
+
+  function profile(): Profile {
+    const synthetic = createEmptyProfile();
+    synthetic.personal.koreanFamilyName = "합성성씨";
+    synthetic.personal.koreanGivenName = "합성이름";
+    synthetic.personal.englishFamilyName = "Synthfamily";
+    synthetic.personal.englishGivenName = "Synthgiven";
+    synthetic.personal.birthDate = "2000-01-01";
+    return synthetic;
+  }
+
+  const byLabel = (
+    run: ReturnType<typeof workflow>,
+    label: string,
+  ): ReviewPlanItem => {
+    const found = run.state.reviewItems.find(
+      (entry) => entry.fieldLabel === label,
+    );
+    if (!found) throw new Error(`missing review item ${label}`);
+    return found;
+  };
+
+  const approve = (run: ReturnType<typeof workflow>, labels: string[]) =>
+    executeApprovedWritesAfterPageSettles({
+      items: run.state.reviewItems,
+      approvedCandidateIds: new Set(
+        labels.map((label) => byLabel(run, label).candidateId),
+      ),
+      registry: run.state.snapshot!.registry,
+      document,
+    });
+
+  const selectedText = (name: string) => {
+    const select = document.querySelector<HTMLSelectElement>(`[name=${name}]`)!;
+    return select.selectedOptions[0]?.textContent ?? "";
+  };
+
+  it("proposes and writes the name and every birth date select on the LG structure", async () => {
+    document.body.innerHTML = readFileSync(
+      join(
+        process.cwd(),
+        "fixtures/dom-snapshots/lg-ai-research-birth-split-email/sanitized.html",
+      ),
+      "utf8",
+    );
+    const label = Array.from(document.querySelectorAll("label")).find(
+      (candidate) => candidate.textContent?.includes("생년월일"),
+    )!;
+    const selects = document.querySelectorAll<HTMLSelectElement>(
+      ".birth-date-selects select",
+    );
+    selects[0]!.id = label.htmlFor;
+    selects.forEach((select, index) => {
+      select.name = ["by", "bm", "bd"][index]!;
+    });
+    document.querySelector("#name")!.setAttribute("name", "fullName");
+    const before = controlValues();
+    const api = createClient({
+      field: (candidate) =>
+        candidate.domName === "fullName"
+          ? derived("KOREAN_FULL_NAME")
+          : candidate.domName === "by"
+            ? datePart("YEAR")
+            : candidate.domName === "bm"
+              ? datePart("MONTH")
+              : candidate.domName === "bd"
+                ? datePart("DAY")
+                : {},
+    });
+    const run = workflow(api.client, profile());
+
+    await run.analyze();
+
+    expect(run.stages.at(-1)).toBe("review");
+    expect(controlValues()).toEqual(before);
+    expect(run.item("fullName")).toMatchObject({
+      previewValue: "합성성씨합성이름",
+      status: "available",
+      selected: true,
+    });
+    expect(run.item("by")).toMatchObject({ previewValue: "2000", status: "available" });
+    expect(run.item("bm")).toMatchObject({ previewValue: "1", status: "available" });
+    expect(run.item("bd")).toMatchObject({ previewValue: "1", status: "available" });
+    await executeApprovedWritesAfterPageSettles({
+      items: run.state.reviewItems,
+      approvedCandidateIds: new Set(
+        ["fullName", "by", "bm", "bd"].map((name) => run.item(name).candidateId),
+      ),
+      registry: run.state.snapshot!.registry,
+      document,
+    });
+    expect(document.querySelector<HTMLInputElement>("#name")!.value).toBe(
+      "합성성씨합성이름",
+    );
+    expect(selectedText("by")).toBe("2000");
+    expect(selectedText("bm")).toBe("1");
+    expect(selectedText("bd")).toBe("1");
+    const bodies = JSON.stringify([
+      api.classifyRequests,
+      api.genericRequests,
+      api.decisionRequests,
+    ]);
+    for (const secret of ["합성성씨", "합성이름", "2000-01-01"])
+      expect(bodies).not.toContain(secret);
+    expect(bodies).not.toMatch(/"(?:count|itemCount|entryCount)"/i);
+  });
+
+  const numbered = (from: number, to: number, suffix = "", pad = false) =>
+    Array.from({ length: to - from + 1 }, (_, index) => {
+      const value = String(from + index);
+      return `<option>${pad ? value.padStart(2, "0") : value}${suffix}</option>`;
+    }).join("");
+
+  const mountSuffixForm = (month = numbered(1, 12, "월", true)) => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <label>영문 이름<input name="englishName" /></label>
+        <label>학점<select name="gpa"><option value="">선택</option><option>4.5</option><option>4.0</option><option>3.5</option></select></label>
+        <select name="by"><option value="">년</option>${numbered(1990, 2010, "년")}</select>
+        <select name="bm"><option value="">월</option>${month}</select>
+        <select name="bd"><option value="">일</option>${numbered(1, 31, "일", true)}</select>
+      </form>`;
+  };
+
+  const suffixClient = (
+    recipe: "ENGLISH_FULL_NAME_GIVEN_FIRST" | "ENGLISH_FULL_NAME_FAMILY_FIRST",
+  ) =>
+    createClient({
+      field: (candidate) =>
+        candidate.domName === "englishName"
+          ? derived(recipe)
+          : candidate.domName === "by"
+            ? datePart("YEAR")
+            : candidate.domName === "bm"
+              ? datePart("MONTH")
+              : candidate.domName === "bd"
+                ? datePart("DAY")
+                : candidate.domName === "gpa"
+                  ? datePart("MONTH")
+                  : {},
+    });
+
+  it.each([
+    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "Synthgiven Synthfamily"],
+    ["ENGLISH_FULL_NAME_FAMILY_FIRST", "Synthfamily Synthgiven"],
+  ] as const)(
+    "writes the %s name and suffixed zero-padded date part options on another document",
+    async (recipe, expected) => {
+      mountSuffixForm();
+      const before = controlValues();
+      const run = workflow(suffixClient(recipe).client, profile());
+
+      await run.analyze();
+
+      expect(controlValues()).toEqual(before);
+      expect(byLabel(run, "영문 이름")).toMatchObject({ previewValue: expected });
+      await approve(run, ["영문 이름", "년", "월", "일"]);
+      expect(
+        document.querySelector<HTMLInputElement>("[name=englishName]")!.value,
+      ).toBe(expected);
+      expect(selectedText("by")).toBe("2000년");
+      expect(selectedText("bm")).toBe("01월");
+      expect(selectedText("bd")).toBe("01일");
+    },
+  );
+
+  it("blocks and never writes a numeric select that receives a date part", async () => {
+    mountSuffixForm();
+    const run = workflow(suffixClient("ENGLISH_FULL_NAME_GIVEN_FIRST").client, profile());
+
+    await run.analyze();
+
+    const gpa = run.state.reviewItems.find((entry) => entry.fieldLabel === "학점");
+    expect(gpa?.selected ?? false).toBe(false);
+    const grade = [...run.state.grades!.entries()].find(
+      ([candidateId]) => candidateId === gpa?.candidateId,
+    );
+    expect(grade?.[1] ?? { grade: "BLOCKED" }).toMatchObject({ grade: "BLOCKED" });
+    await executeApprovedWritesAfterPageSettles({
+      items: run.state.reviewItems,
+      approvedCandidateIds: new Set(
+        run.state.reviewItems.map((entry) => entry.candidateId),
+      ),
+      registry: run.state.snapshot!.registry,
+      document,
+    });
+    expect(selectedText("gpa")).not.toBe("4.5");
+    expect(document.querySelector<HTMLSelectElement>("[name=gpa]")!.value).toBe("");
+  });
+
+  it("blocks a month select without the local month and leaves it unwritten", async () => {
+    mountSuffixForm(numbered(2, 12, "월", true));
+    const run = workflow(suffixClient("ENGLISH_FULL_NAME_GIVEN_FIRST").client, profile());
+
+    await run.analyze();
+
+    const month = document.querySelector<HTMLSelectElement>("[name=bm]")!;
+    const monthItem = run.state.reviewItems.find((entry) => {
+      const lookup = run.state.snapshot!.registry.lookupField(entry.candidateId);
+      return "handle" in lookup && lookup.handle.candidate.domName === "bm";
+    });
+    expect(monthItem?.selected ?? false).toBe(false);
+    await executeApprovedWritesAfterPageSettles({
+      items: run.state.reviewItems,
+      approvedCandidateIds: new Set(
+        run.state.reviewItems.map((entry) => entry.candidateId),
+      ),
+      registry: run.state.snapshot!.registry,
+      document,
+    });
+    expect(month.value).toBe("");
+    expect(selectedText("by")).toBe("2000년");
+  });
+});

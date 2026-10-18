@@ -1,5 +1,10 @@
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
-import type { FieldCandidate, SemanticContext } from "../api/types";
+import { matchDatePartOption, type DatePart } from "./date-part-options";
+import type {
+  DerivedRecipe,
+  FieldCandidate,
+  SemanticContext,
+} from "../api/types";
 
 /** Lower bound (inclusive) of confidence for AUTO. */
 export const AUTO_CONFIDENCE_MIN = 0.8;
@@ -17,12 +22,24 @@ export type GradeReason =
   | "MODERATE_CONFIDENCE"
   | "CATEGORY_UNCONFIRMED"
   | "DUPLICATE_KEY_IN_ROW"
+  | "DATE_PART_OPTIONS_MISMATCH"
   | "NO_FIELD_CONTEXT"
   | "FORMAT_KEY_MISMATCH"
   | "OTHER_PERSON_CONTEXT";
 
+/** A match whose value is composed: a name recipe or one part of a date. */
+export type GradeComposite =
+  | { type: "DERIVED"; recipe: DerivedRecipe }
+  | {
+      type: "DATE_PART";
+      part: DatePart;
+      /** The local date. Evaluated locally and never sent. */
+      localDate?: string;
+    };
+
 export interface GradeSibling {
-  profileFieldKey: string;
+  profileFieldKey?: string;
+  composite?: GradeComposite;
   confidence: number;
 }
 
@@ -31,7 +48,9 @@ export interface GradeFieldInput extends Pick<
   "inputType" | "inputMode" | "autocomplete" | "maxLength" | "labels"
 > {
   /** Profile field key such as "personal.personal.nationality". */
-  profileFieldKey: string;
+  profileFieldKey?: string;
+  /** Present when the field is bound to a derived value instead of one key. */
+  composite?: GradeComposite;
   confidence: number;
   categoryConfirmed: boolean;
   /** Whether a profile value exists. Evaluated locally; the value is never passed. */
@@ -71,11 +90,15 @@ const APPLICANT_OWN_FIELD_IDS: Readonly<Record<string, ReadonlySet<string>>> = {
   ]),
 };
 
-function fieldIdOf(key: string): string {
-  return key.split(".")[2] ?? "";
+function fieldIdOf(key: string | undefined): string {
+  return key?.split(".")[2] ?? "";
 }
 
-function isProfileFieldType(value: string, type: "date" | "email" | "tel"): boolean {
+function isProfileFieldType(
+  value: string | undefined,
+  type: "date" | "email" | "tel",
+): boolean {
+  if (!value) return false;
   const [categoryId, sectionId, fieldId] = value.split(".");
   return PROFILE_CATEGORIES.some(
     (category) =>
@@ -90,7 +113,8 @@ function isProfileFieldType(value: string, type: "date" | "email" | "tel"): bool
   );
 }
 
-function educationRecordOf(key: string): string | undefined {
+function educationRecordOf(key: string | undefined): string | undefined {
+  if (!key) return undefined;
   const [categoryId, sectionId] = key.split(".");
   return categoryId === "education" && EDUCATION_RECORDS.has(sectionId ?? "")
     ? sectionId
@@ -125,16 +149,38 @@ function hasMixedEducationRecords(input: GradeFieldInput): boolean {
   });
 }
 
+function compositeSlot(composite: GradeComposite | undefined): string {
+  if (!composite) return "";
+  return composite.type === "DERIVED"
+    ? `DERIVED:${composite.recipe}`
+    : `DATE_PART:${composite.part}`;
+}
+
+function hasDatePartOption(input: GradeFieldInput): boolean {
+  const { composite } = input;
+  return (
+    composite?.type === "DATE_PART" &&
+    input.control === "select" &&
+    composite.localDate !== undefined &&
+    matchDatePartOption(
+      composite.part,
+      composite.localDate,
+      input.options ?? [],
+    ) !== undefined
+  );
+}
+
 function isLowerDuplicate(input: GradeFieldInput): boolean {
   return (input.rowSiblings ?? []).some(
     (sibling) =>
       sibling.profileFieldKey === input.profileFieldKey &&
+      compositeSlot(sibling.composite) === compositeSlot(input.composite) &&
       sibling.confidence >= input.confidence,
   );
 }
 
 function hasOtherPersonContext(input: GradeFieldInput): boolean {
-  const [categoryId, sectionId, fieldId] = input.profileFieldKey.split(".");
+  const [categoryId, sectionId, fieldId] = (input.profileFieldKey ?? "").split(".");
   if (!APPLICANT_OWN_FIELD_IDS[`${categoryId}.${sectionId}`]?.has(fieldId ?? "")) {
     return false;
   }
@@ -155,7 +201,7 @@ function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
       input.maxLength <= 6 && input.inputMode === "numeric") ||
     [input.title, input.placeholder].some((text) => POSTAL_TEXT.test(text ?? ""));
   return postalFormat &&
-    input.profileFieldKey.startsWith("contact.contact.") &&
+    input.profileFieldKey?.startsWith("contact.contact.") === true &&
     ["addressLine1", "addressLine2", "residenceCountry"].includes(fieldIdOf(input.profileFieldKey));
 }
 
@@ -170,7 +216,11 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   if (hasCountryCodeOptions(input)) {
     return { grade: "BLOCKED", reason: "COUNTRY_CODE_OPTIONS" };
   }
-  if (isNonDateField(input)) {
+  if (input.composite?.type === "DATE_PART") {
+    if (!hasDatePartOption(input)) {
+      return { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
+    }
+  } else if (isNonDateField(input)) {
     return { grade: "BLOCKED", reason: "NON_DATE_FIELD" };
   }
   if (hasMixedEducationRecords(input)) {
