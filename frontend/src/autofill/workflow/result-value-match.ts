@@ -1,3 +1,5 @@
+import { normalizeAddress } from "../address/match";
+import { stagedAddressReceipt } from "../policy/staged-address-receipt";
 import { nativeOwnership } from "../policy/native-form-collection";
 import { nativeTarget, nativeValueMatches } from "../policy/native-form-write";
 import {
@@ -126,6 +128,14 @@ export function matchesResultValue(
   expected: string,
   handle?: FieldCandidateHandle,
 ): boolean {
+  const address = handle && stagedAddressReceipt(handle);
+  if (address)
+    return (
+      address.value === current &&
+      (address.index === 1
+        ? normalizeAddress(address.value) === normalizeAddress(expected)
+        : address.value === expected)
+    );
   if (handle?.owner === "native")
     return (
       nativeValueMatches(handle, item) &&

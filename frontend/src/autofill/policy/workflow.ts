@@ -1,3 +1,5 @@
+import { runStagedAddress } from "./staged-address";
+import { stagedAddressPolicy } from "./staged-address-dom";
 import { nativeRepeatableProfileCount } from "./native-form-row-assignment";
 import {
   executeCommittedSearch,
@@ -208,7 +210,13 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       const target = option(el, item.profileValue ?? "", rule);
       return !!target && el.selectedOptions[0] !== target;
     },
-    runAddress: runKakaoAddress,
+    runAddress: (options) =>
+      stagedAddressPolicy(document)
+        ? runStagedAddress(options)
+        : runKakaoAddress(options),
+    get addressFieldNames() {
+      return stagedAddressPolicy(document)?.fields.map((f) => f.name);
+    },
     get diagnosticsTitle() {
       return config()?.diagnosticsTitle;
     },

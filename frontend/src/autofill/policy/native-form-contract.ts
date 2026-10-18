@@ -1,3 +1,7 @@
+import {
+  validStagedAddress,
+  type StagedAddress,
+} from "./staged-address-contract";
 import type { ValueBinding } from "../api/types";
 import type { RepeatedProfileCategoryId } from "../../profile/model";
 
@@ -96,6 +100,7 @@ export interface NativeSection {
   fields: NativeField[];
 }
 export interface NativeForm {
+  address?: StagedAddress;
   capabilities: string[];
   path: string;
   formSelector: string;
@@ -136,6 +141,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
     !object(value) ||
     !keys(value, [
       "capabilities",
+      "address",
       "path",
       "formSelector",
       "rootSelector",
@@ -148,7 +154,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
     return false;
   const p = value as unknown as NativeForm;
   if (
-    !list(p.capabilities, 5) ||
+    !list(p.capabilities, 6) ||
     p.capabilities.length < 4 ||
     new Set(p.capabilities).size !== p.capabilities.length ||
     !p.capabilities.every((c) =>
@@ -158,6 +164,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
         "NATIVE_DRIVERS",
         "NATIVE_DATES",
         "KEYPRESS_COMMITTED_TUPLE",
+        "STAGED_MODAL_COMMIT",
       ].includes(c),
     ) ||
     !str(p.path) ||
@@ -171,6 +178,18 @@ export function validNativeForm(value: unknown): value is NativeForm {
     !list(p.sections, 16) ||
     !p.sections.length ||
     !list(p.unsupportedSections, 32)
+  )
+    return false;
+  if (
+    p.address !== undefined &&
+    (!p.capabilities.includes("STAGED_MODAL_COMMIT") ||
+      !validStagedAddress(p.address) ||
+      p.sections.some((s) => s.id === p.address!.sectionId))
+  )
+    return false;
+  if (
+    p.capabilities.includes("STAGED_MODAL_COMMIT") !==
+    (p.address !== undefined)
   )
     return false;
   if (

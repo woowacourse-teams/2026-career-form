@@ -23,7 +23,7 @@ public final class StoredPolicyActionResolver implements ActionResolver {
         rules = policy.actionRules().stream()
             .flatMap(rule -> rule.structuralNames().stream().map(name -> Map.entry(name, rule)))
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
-        structures = java.util.stream.Stream.concat(policy.preparationFingerprint().actionStructures().stream(),
+        structures = java.util.stream.Stream.concat(java.util.stream.Stream.concat(policy.preparationFingerprint().actionStructures().stream(), StagedAddressContract.actions(policy).stream()),
             policy.sectionContracts().stream().filter(SectionContract::enabled).flatMap(c -> c.actions().stream()))
             .flatMap(structure -> structure.structuralNames().stream().map(name -> Map.entry(name, structure)))
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));

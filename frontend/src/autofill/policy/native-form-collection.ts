@@ -1,3 +1,7 @@
+import {
+  collectStagedAddress,
+  collectStagedAddressAction,
+} from "./staged-address-collection";
 import { nativePreparationRowsCurrent } from "./native-form-row-state";
 import { nativeUnitMatches } from "./native-form-unit";
 import {
@@ -399,6 +403,7 @@ export function collectNativeFields(
         ...(items.length ? { items } : {}),
       });
   }
+  collectStagedAddress(document, registry, sections);
   return {
     registry,
     request: { schemaVersion: 2, snapshotId, site, sections },
@@ -497,6 +502,7 @@ export function collectNativePreparation(
         actionCandidates: candidates,
       });
     }
+  collectStagedAddressAction(document, registry, sections);
   const current = (id: string) => {
     const a = actions.get(id);
     return a && nativeDocument(document, form)

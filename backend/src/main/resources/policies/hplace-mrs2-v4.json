@@ -163,7 +163,8 @@
     },
     "salaryUnit": "GS 실관측: 직접 부모 label.label.money의 ::after content 정확히 \"만원\", million 클래스 없음. 원/억원/표시 없음/미검증 span은 입력 불가.",
     "repeatRowIdentity": "기존 populated 행 전체 보호; identityFields 정확 일치 + populated mapped detail 일치 시에만 이미 입력됨 처리. 불완전/충돌/중복은 섹션 수동, 남은 프로필만 빈 행 배정 및 부족분 ADD.",
-    "singleHighschoolEntity": "코디네이터 확정: 140도 141/142와 같이 기존 값이 하나라도 있으면 전체 보존. 확정 학교 identity 일치는 이미 입력됨, 다른/불명확 identity는 기존 값 사용자 처리. 기본정보에는 적용하지 않음."
+    "singleHighschoolEntity": "코디네이터 확정: 140도 141/142와 같이 기존 값이 하나라도 있으면 전체 보존. 확정 학교 identity 일치는 이미 입력됨, 다른/불명확 identity는 기존 값 사용자 처리. 기본정보에는 적용하지 않음.",
+    "p3": "GS리테일·한국타이어 postcodify 구조 + modalSubmit→HTML 확인창→현주소 로컬 복사. resource currentAddress만 활성; DB/운영 활성화 및 설치 확장 합성 포인터 수용은 별도 미검증. zip/base 직접 쓰기, 상동/reset/다른 주소 자동화 없음."
   },
   "sectionContracts": [
     {
@@ -616,6 +617,16 @@
     {
       "structuralNames": ["hplace.mrs2.foreignExam.add"],
       "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": ["hplace.mrs2.currentAddress.search"],
+      "kind": "SEARCH_ADDRESS",
       "targetSectionId": null,
       "profileFieldKey": null,
       "optionDisplayName": null,
@@ -1299,6 +1310,45 @@
       "requiredDomName": "hplace.mrs2.foreignExam.score",
       "requiredItemGroupId": "hplace.mrs2.foreignExam",
       "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.currentAddress.zipCode",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "contact.contact.postalCode"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.currentAddress.zipCode",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.currentAddress.address",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "contact.contact.addressLine1"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.currentAddress.address",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.currentAddress.detailAddress",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "contact.contact.addressLine2"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.currentAddress.detailAddress",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
     }
   ],
   "executionPolicy": {
@@ -1314,7 +1364,8 @@
           "SINGLE_DEPTH_ROWS",
           "NATIVE_DRIVERS",
           "NATIVE_DATES",
-          "KEYPRESS_COMMITTED_TUPLE"
+          "KEYPRESS_COMMITTED_TUPLE",
+          "STAGED_MODAL_COMMIT"
         ],
         "path": "/mrs2/applicant/resume/writeResume",
         "formSelector": "form#frm",
@@ -2862,7 +2913,70 @@
             "reason": "프로필 키 없음",
             "title": "봉사"
           }
-        ]
+        ],
+        "address": {
+          "protocol": "STAGED_MODAL_COMMIT",
+          "enabled": true,
+          "sectionId": "hplace-mrs2-currentAddress",
+          "actionId": "hplace.mrs2.currentAddress.search",
+          "rowSelector": "section.writeResume[data-code=\"13\"] div[data-row=\"address\"].address",
+          "triggerSelector": "div.addresszipcode button[type=\"button\"][data-type=\"currentAddress\"]",
+          "triggerLabel": "우편번호",
+          "fields": [
+            {
+              "name": "hplace.mrs2.currentAddress.zipCode",
+              "rawName": "currentAddress.zipCode",
+              "key": "contact.contact.postalCode",
+              "readonly": false,
+              "hidden": true
+            },
+            {
+              "name": "hplace.mrs2.currentAddress.address",
+              "rawName": "currentAddress.address",
+              "key": "contact.contact.addressLine1",
+              "readonly": true,
+              "hidden": false
+            },
+            {
+              "name": "hplace.mrs2.currentAddress.detailAddress",
+              "rawName": "currentAddress.detailAddress",
+              "key": "contact.contact.addressLine2",
+              "readonly": false,
+              "hidden": false,
+              "legacyName": "hplace.detail.detailAddress"
+            }
+          ],
+          "postcodeSelector": "span.postCode[data-type=\"currentAddress\"]",
+          "modalSelector": "#modal.modal-bg",
+          "contentSelector": ".modal",
+          "querySelector": "#searchAppAdressForm input[type=\"text\"][placeholder^=\"예 : 반포대교로 201\"]",
+          "searchSelector": "#searchAppAdressForm button",
+          "searchLabel": "검색",
+          "resultsSelector": "#searchAppAdressResult > div.postcodify_search_form",
+          "resultSelector": ":scope > div.postcodify_search_result",
+          "resultAddressSelector": "div.address > a.selector > span.address_info",
+          "resultPostcodeSelector": "div.code5",
+          "resultSelectSelector": "div.address > a.selector",
+          "stageSelectors": [
+            ".internal input.postcode",
+            ".internal input.address",
+            ".internal input.details"
+          ],
+          "commitSelector": "button[data-button=\"modalSubmit\"]",
+          "commitLabel": "저장",
+          "activation": [
+            {
+              "op": "ACTIVATE_PRIMARY",
+              "target": "commit"
+            }
+          ],
+          "confirmSelector": "#wrapDialog > #Dialog",
+          "confirmMessage": "저장하시겠습니까?",
+          "confirmOkSelector": "button[data-button=\"ok\"]",
+          "confirmOkLabel": "확인",
+          "timeoutMs": 2500,
+          "stagePostcodePlaceholder": "-"
+        }
       },
       "runtimeRules": {
         "sectionSelector": "section.writeResume",
@@ -2889,7 +3003,7 @@
       "refreshAfterPass": false,
       "diagnosticsTitle": "지원서 항목 확인",
       "addressAction": {
-        "domId": "unused-native-address",
+        "domId": "hplace.mrs2.currentAddress.search",
         "element": "button"
       },
       "mainWorldBridge": "NONE"

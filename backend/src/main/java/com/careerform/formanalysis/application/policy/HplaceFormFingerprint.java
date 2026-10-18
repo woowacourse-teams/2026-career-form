@@ -42,6 +42,8 @@ public final class HplaceFormFingerprint {
             if (!sections.add(section.sectionId())) return false;
             if (DETAIL_SECTION.equals(section.sectionId())) {
                 if (!matches(new PreparationAnalysisRequest(request.schemaVersion(), request.snapshotId(), request.site(), List.of(section)))) return false;
+            } else if (StagedAddressContract.address(policy.executionPolicy()).path("sectionId").asText().equals(section.sectionId())) {
+                if(!StagedAddressContract.preparation(StagedAddressContract.address(policy.executionPolicy()),section,ids))return false;
             } else {
                 var contract = policy.sectionContracts().stream().filter(c -> c.sectionId().equals(section.sectionId())).findFirst().orElse(null);
                 if (contract == null || !NativeSectionFingerprint.preparation(contract, section, ids)) return false;
@@ -59,6 +61,8 @@ public final class HplaceFormFingerprint {
             if (DETAIL_SECTION.equals(section.sectionId())) {
                 if (!matches(new FieldsAnalysisRequest(request.schemaVersion(), request.snapshotId(), request.site(), List.of(section)))
                     || !section.fields().stream().allMatch(f -> ids.add(f.candidateId()))) return false;
+            } else if (StagedAddressContract.address(policy.executionPolicy()).path("sectionId").asText().equals(section.sectionId())) {
+                if(!StagedAddressContract.fields(StagedAddressContract.address(policy.executionPolicy()),section,ids,request))return false;
             } else {
                 var contract = policy.sectionContracts().stream().filter(c -> c.sectionId().equals(section.sectionId())).findFirst().orElse(null);
                 if (contract == null || !NativeSectionFingerprint.fields(contract, section, ids, items)) return false;

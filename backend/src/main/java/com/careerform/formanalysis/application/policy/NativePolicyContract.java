@@ -22,7 +22,7 @@ final class NativePolicyContract {
         require(browser.path("schemaVersion").asInt() == 2 && browser.path("fields").isArray() && browser.path("fields").isEmpty()
             && browser.path("mainWorldBridge").asText().equals("NONE"));
         var form = browser.path("nativeForm");
-        require(keys(form, "capabilities", "path", "formSelector", "rootSelector", "assetPaths", "maxFieldsRequests", "sections", "unsupportedSections")
+        require(keys(form, "capabilities", "address", "path", "formSelector", "rootSelector", "assetPaths", "maxFieldsRequests", "sections", "unsupportedSections")
             && text(form.path("formSelector")) && text(form.path("rootSelector"))
             && form.isObject() && form.path("path").asText().equals(HplaceApplicantSite.DETAIL_PATH)
             && bounded(form.path("maxFieldsRequests"), 1, 8) && form.path("assetPaths").isArray()
@@ -30,7 +30,11 @@ final class NativePolicyContract {
             && form.path("sections").isArray() && form.path("sections").size() == contracts.size());
         var capabilities = new java.util.HashSet<String>();
         form.path("capabilities").forEach(n -> capabilities.add(n.asText()));
-        require(form.path("capabilities").size() == capabilities.size() && (capabilities.equals(Set.of("SCOPED_FIELDS", "SINGLE_DEPTH_ROWS", "NATIVE_DRIVERS", "NATIVE_DATES")) || capabilities.equals(Set.of("SCOPED_FIELDS", "SINGLE_DEPTH_ROWS", "NATIVE_DRIVERS", "NATIVE_DATES", "KEYPRESS_COMMITTED_TUPLE"))));
+        var core=Set.of("SCOPED_FIELDS", "SINGLE_DEPTH_ROWS", "NATIVE_DRIVERS", "NATIVE_DATES");
+        require(form.path("capabilities").size()==capabilities.size() && capabilities.containsAll(core)
+            && Set.of("SCOPED_FIELDS", "SINGLE_DEPTH_ROWS", "NATIVE_DRIVERS", "NATIVE_DATES", "KEYPRESS_COMMITTED_TUPLE", "STAGED_MODAL_COMMIT").containsAll(capabilities)
+            && capabilities.contains("STAGED_MODAL_COMMIT")==form.has("address"));
+        if(form.has("address")) StagedAddressContract.validate(form.path("address"),rules,browser.path("addressAction"));
         var result = new ArrayList<SectionContract>();
         var ids = new java.util.HashSet<String>();
         for (var section : form.path("sections")) {

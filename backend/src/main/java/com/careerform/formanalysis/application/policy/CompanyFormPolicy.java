@@ -90,8 +90,12 @@ public final class CompanyFormPolicy {
         requireUniqueFieldRules(fieldRules);
         for (ActionRule rule : actionRules) {
             validateActionRule(rule, preparationFingerprint.requiredSectionIds(), isSupportedProfileKey);
-            if (!sectionContracts.isEmpty() && (rule.kind() != ActionKind.ADD || sectionContracts.stream()
-                .flatMap(c -> c.actions().stream()).noneMatch(a -> a.structuralNames().contains(rule.structuralName())))) invalidPolicy();
+            if (!sectionContracts.isEmpty()) {
+                boolean address = rule.kind()==ActionKind.SEARCH_ADDRESS && rule.structuralNames().size()==1
+                    && StagedAddressContract.address(executionPolicy).path("actionId").asText().equals(rule.structuralName());
+                if (!address && (rule.kind()!=ActionKind.ADD || sectionContracts.stream().flatMap(c->c.actions().stream())
+                    .noneMatch(a->a.structuralNames().contains(rule.structuralName())))) invalidPolicy();
+            }
         }
         for (FieldRule rule : fieldRules) {
             if (rule == null || !isSupportedBinding(rule.valueBinding(), isSupportedProfileKey)) {
