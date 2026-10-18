@@ -1,4 +1,5 @@
 import { PROFILE_CATEGORIES } from "../../profile/field-definitions";
+import { matchDatePartOption, type DatePart } from "./date-part-options";
 import type {
   DerivedRecipe,
   FieldCandidate,
@@ -20,10 +21,18 @@ export type GradeReason =
   | "LOW_CONFIDENCE"
   | "MODERATE_CONFIDENCE"
   | "CATEGORY_UNCONFIRMED"
-  | "DUPLICATE_KEY_IN_ROW";
+  | "DUPLICATE_KEY_IN_ROW"
+  | "DATE_PART_OPTIONS_MISMATCH";
 
-/** A match that has no single profile key: a derived value recipe. */
-export type GradeComposite = { type: "DERIVED"; recipe: DerivedRecipe };
+/** A match whose value is composed: a name recipe or one part of a date. */
+export type GradeComposite =
+  | { type: "DERIVED"; recipe: DerivedRecipe }
+  | {
+      type: "DATE_PART";
+      part: DatePart;
+      /** The local date. Evaluated locally and never sent. */
+      localDate?: string;
+    };
 
 export interface GradeSibling {
   profileFieldKey?: string;
@@ -113,7 +122,24 @@ function hasMixedEducationRecords(input: GradeFieldInput): boolean {
 }
 
 function compositeSlot(composite: GradeComposite | undefined): string {
-  return composite ? `${composite.type}:${composite.recipe}` : "";
+  if (!composite) return "";
+  return composite.type === "DERIVED"
+    ? `DERIVED:${composite.recipe}`
+    : `DATE_PART:${composite.part}`;
+}
+
+function hasDatePartOption(input: GradeFieldInput): boolean {
+  const { composite } = input;
+  return (
+    composite?.type === "DATE_PART" &&
+    input.control === "select" &&
+    composite.localDate !== undefined &&
+    matchDatePartOption(
+      composite.part,
+      composite.localDate,
+      input.options ?? [],
+    ) !== undefined
+  );
 }
 
 function isLowerDuplicate(input: GradeFieldInput): boolean {
@@ -136,7 +162,11 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   if (hasCountryCodeOptions(input)) {
     return { grade: "BLOCKED", reason: "COUNTRY_CODE_OPTIONS" };
   }
-  if (isNonDateField(input)) {
+  if (input.composite?.type === "DATE_PART") {
+    if (!hasDatePartOption(input)) {
+      return { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
+    }
+  } else if (isNonDateField(input)) {
     return { grade: "BLOCKED", reason: "NON_DATE_FIELD" };
   }
   if (hasMixedEducationRecords(input)) {

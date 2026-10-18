@@ -723,3 +723,129 @@ describe("generic synthetic name bindings", () => {
     expect(byName("given").grade).toEqual({ grade: "AUTO" });
   });
 });
+
+describe("generic date part bindings", () => {
+  const numbered = (from: number, to: number, suffix = "", pad = false) =>
+    Array.from({ length: to - from + 1 }, (_, index) => {
+      const value = String(from + index);
+      return `<option>${pad ? value.padStart(2, "0") : value}${suffix}</option>`;
+    }).join("");
+
+  function mountBirthSelects(month = numbered(1, 12, "월", true)) {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <select name="by"><option value="">년</option>${numbered(1990, 2010)}</select>
+        <select name="bm"><option value="">월</option>${month}</select>
+        <select name="bd"><option value="">일</option>${numbered(1, 31, "일", true)}</select>
+      </form>`;
+  }
+
+  const part = (kind: "YEAR" | "MONTH" | "DAY"): FieldOverride => ({
+    profileFieldKey: "personal.personal.birthDate",
+    binding: { type: "DATE_PART", part: kind },
+    confidence: 0.92,
+    categoryConfirmed: true,
+    autofillPolicy: "ALLOWED",
+    interactionStatus: "READY",
+    writePlan: { command: "SELECT_OPTION" },
+  });
+  const parts = (candidate: FieldCandidate): FieldOverride =>
+    candidate.domName === "by"
+      ? part("YEAR")
+      : candidate.domName === "bm"
+        ? part("MONTH")
+        : candidate.domName === "bd"
+          ? part("DAY")
+          : {};
+
+  function birthProfile(): Profile {
+    const profile = createEmptyProfile();
+    profile.personal.birthDate = "2000-01-01";
+    return profile;
+  }
+
+  it("binds each part select to the option of the local date through a LOOKUP", async () => {
+    mountBirthSelects();
+
+    const { byName } = await run({ field: parts }, birthProfile());
+
+    expect(byName("by").field).toEqual({
+      candidateId: byName("by").field.candidateId,
+      matchType: "MATCH",
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "personal.personal.birthDate",
+        optionMap: { "2000-01-01": "2000" },
+      },
+      mappingStatus: "LLM_SUGGESTED",
+      autofillPolicy: "ALLOWED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_OPTION" },
+    });
+    expect(byName("bm").field).toMatchObject({
+      valueBinding: { optionMap: { "2000-01-01": "01월" } },
+    });
+    expect(byName("bd").field).toMatchObject({
+      valueBinding: { optionMap: { "2000-01-01": "01일" } },
+    });
+    for (const name of ["by", "bm", "bd"])
+      expect(byName(name).grade).toEqual({ grade: "AUTO" });
+  });
+
+  it("blocks a part whose local value is not among the options", async () => {
+    mountBirthSelects(numbered(2, 12, "월", true));
+
+    const { byName } = await run({ field: parts }, birthProfile());
+
+    expect(byName("bm").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "DATE_PART_OPTIONS_MISMATCH",
+    });
+    expect(byName("by").grade).toEqual({ grade: "AUTO" });
+  });
+
+  it("blocks a numeric non-date select that receives a DATE_PART binding", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <select name="gpa"><option value="">학점</option><option>4.5</option><option>4.0</option><option>3.5</option><option>3.0</option></select>
+      </form>`;
+
+    const { byName } = await run(
+      { field: (candidate) => (candidate.domName === "gpa" ? part("MONTH") : {}) },
+      birthProfile(),
+    );
+
+    expect(byName("gpa").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "DATE_PART_OPTIONS_MISMATCH",
+    });
+  });
+
+  it("blocks a part select without a usable local date", async () => {
+    mountBirthSelects();
+    const empty = birthProfile();
+    empty.personal.birthDate = "";
+
+    const { byName } = await run({ field: parts }, empty);
+
+    expect(byName("by").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "NO_PROFILE_VALUE",
+    });
+  });
+
+  it("does not send the local date or its parts in any request", async () => {
+    mountBirthSelects();
+
+    const { classifyRequests, analyzeRequests } = await run(
+      { field: parts },
+      birthProfile(),
+    );
+
+    const bodies = JSON.stringify([classifyRequests, analyzeRequests]);
+    expect(bodies).not.toContain("2000-01-01");
+    expect(bodies).not.toContain("birthDate");
+  });
+});
