@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { collectFieldsSnapshot } from "../dom/collect";
+import {
+  collectFieldsSnapshot,
+  collectFieldsSnapshotWithDropdowns,
+} from "../dom/collect";
 import {
   analyzeGenericFields,
   createGenericAnalysisCache,
@@ -37,6 +40,20 @@ function collect(mutate?: () => void) {
 // Reviewed v4 structure only. API responses below are mocks, not evidence of
 // live-site matching, local JEV output, or installed-extension behavior.
 describe("AhnLab sanitized application form", () => {
+  it("keeps broken single-control labels in the generic collection path", async () => {
+    collect(() => {
+      document.querySelector('label[for="englishName"]')!
+        .setAttribute("for", "missing-target");
+    });
+    const snapshot = await collectFieldsSnapshotWithDropdowns(document);
+    const fields = snapshot.request.sections.flatMap((section) => section.fields);
+    expect(fields[0]?.displayName).toBe("영문이름");
+    expect(fields[0]?.semanticContext?.labels).toContainEqual({
+      source: "label",
+      text: "영문이름",
+    });
+  });
+
   it("collects the postal input without a display name and preserves its real format", () => {
     const { snapshot, fields, postalField } = collect();
     expect(document.querySelectorAll("input, select").length).toBe(48);

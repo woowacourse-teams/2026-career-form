@@ -201,10 +201,12 @@ export function metadata(value: string | null | undefined): string | undefined {
   return normalized.slice(0, MAX_METADATA_LENGTH);
 }
 
-/** Accept a sibling label only inside a bounded, single-control group. */
+/** Generic context may also recover a broken label over one select cluster. */
 export function unassociatedLabelOf(
   element: HTMLElement,
+  generic = false,
 ): HTMLLabelElement | undefined {
+  const row = generic ? structuralRow(element) : undefined;
   let group = element.parentElement;
   for (
     let depth = 0;
@@ -216,7 +218,16 @@ export function unassociatedLabelOf(
         "input:not([type='hidden']), select, textarea, [contenteditable='true']",
       ),
     ).filter((control) => !inExcludedBranch(control, group!, element));
-    if (controls.length !== 1 || controls[0] !== element) return undefined;
+    const single = controls.length === 1 && controls[0] === element;
+    if (!single && (
+      !generic ||
+      controls.length < 2 ||
+      controls.length > 3 ||
+      !controls.includes(element) ||
+      !controls.every((control) => control instanceof HTMLSelectElement)
+    )) return undefined;
+    if (generic && controls.some((control) => structuralRow(control) !== row))
+      return undefined;
     const labels = Array.from(
       group.querySelectorAll<HTMLLabelElement>(":scope > label"),
     ).filter(
@@ -227,8 +238,29 @@ export function unassociatedLabelOf(
         !label.closest("[hidden], [aria-hidden='true'], [inert]"),
     );
     if (labels.length > 1) return undefined;
-    if (labels.length === 1) return labels[0];
-    if (group.matches("form, fieldset, section")) break;
+    if (labels.length === 1) {
+      const label = labels[0]!;
+      if (generic) {
+        if (structuralRow(label) !== row || !fixedTextChunks(label).length)
+          return undefined;
+        if (!single) {
+          if (!label.htmlFor || group.querySelectorAll("label").length !== 1)
+            return undefined;
+          const branches = Array.from(group.children).filter((child) =>
+            controls.some((control) => child === control || child.contains(control)));
+          if (branches.length > 1 &&
+            branches.some((branch) => !(branch instanceof HTMLSelectElement)))
+            return undefined;
+          const boundary = "fieldset, section, [role='group']";
+          if (controls.some((control) =>
+            control.closest(boundary) !== label.closest(boundary)))
+            return undefined;
+        }
+      }
+      return label;
+    }
+    if (group.matches("form, fieldset, section") ||
+      (generic && (group === row || group.matches("[role='group']")))) break;
   }
   return undefined;
 }
