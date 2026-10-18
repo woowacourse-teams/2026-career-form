@@ -81,6 +81,9 @@ public final class FormAnalysisRouter {
             request.site().host(),
             request.site().pathPattern()
         );
+        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch) {
+            return observed(new ActionRoute(RouteKind.GENERIC, null), null);
+        }
         boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
             lookup = sharedLookup(request.site().host(), request.site().pathPattern());
@@ -110,6 +113,9 @@ public final class FormAnalysisRouter {
             request.site().host(),
             request.site().pathPattern()
         );
+        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch) {
+            return observed(new FieldRoute(RouteKind.GENERIC, null), null, false);
+        }
         boolean greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
             lookup = sharedLookup(request.site().host(), request.site().pathPattern());
@@ -142,6 +148,10 @@ public final class FormAnalysisRouter {
             host,
             pathPattern
         );
+        if (lookup instanceof CompanyFormPolicyProvider.RegisteredPathMismatch) {
+            observe(Operation.INTERACTION, RouteKind.GENERIC, false, null);
+            return GenericRouteKind.GENERIC;
+        }
         var greetingCandidate = false;
         if (lookup instanceof NotRegistered) {
             lookup = sharedLookup(host, pathPattern);

@@ -38,7 +38,7 @@ public final class MongoCompanyFormPolicyProvider
                 return new NotRegistered();
             }
             if (!matchesPath(company.orElseThrow(), pathPattern)) {
-                return new Unavailable();
+                return new RegisteredPathMismatch();
             }
             return loadActivePolicy(company.orElseThrow());
         }

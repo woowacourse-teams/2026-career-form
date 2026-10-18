@@ -48,7 +48,7 @@ class MongoCompanyFormPolicyProviderTest {
     }
 
     @Test
-    @DisplayName("등록되지 않은 host만 generic 대상이고 등록 host의 다른 path는 차단한다")
+    @DisplayName("등록되지 않은 host와 등록 host의 다른 path를 구분한다")
     void reportsAnUnregisteredSite() {
         when(companies.findByHost("unknown.example")).thenReturn(Optional.empty());
 
@@ -58,8 +58,26 @@ class MongoCompanyFormPolicyProviderTest {
         when(companies.findByHost("www.skcareers.com"))
             .thenReturn(Optional.of(company()));
 
-        assertThat(provider.find("www.skcareers.com", "/Other/Page/*"))
-            .isInstanceOf(Unavailable.class);
+        assertThat(provider.find("www.skcareers.com", "/Other/Page/*").getClass().getSimpleName())
+            .isEqualTo("RegisteredPathMismatch");
+    }
+
+    @Test
+    @DisplayName("등록 host의 다른 경로는 공유 Hplace·Greeting 조회 없이 범용 경로를 유지한다")
+    void keepsRegisteredOtherPathsGenericWithoutSharedPolicies() {
+        var router = new com.careerform.formanalysis.application.FormAnalysisRouter(provider,
+            (host, path) -> { throw new AssertionError("shared Greeting lookup"); },
+            () -> { throw new AssertionError("Greeting policy lookup"); },
+            () -> { throw new AssertionError("Hplace policy lookup"); });
+        for (String host : List.of("www.skcareers.com", "talent.hyundai.com", "jobs.greetinghr.com", "synthetic.recruiter.co.kr")) {
+            when(companies.findByHost(host)).thenReturn(Optional.of(company()));
+            String path = "/mrs2/applicant/resume/writeResume";
+            assertThat(router.routeGeneric(host, path)).isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.GenericRouteKind.GENERIC);
+            assertThat(router.route(new FieldsAnalysisRequest(2, "synthetic", new FieldsAnalysisRequest.Site(host, path), List.of())).kind())
+                .isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.GENERIC);
+            assertThat(router.route(new PreparationAnalysisRequest(2, "synthetic", new PreparationAnalysisRequest.Site(host, path), List.of())).kind())
+                .isEqualTo(com.careerform.formanalysis.application.FormAnalysisRouter.RouteKind.GENERIC);
+        }
     }
 
     @Test
