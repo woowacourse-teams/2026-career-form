@@ -38,6 +38,7 @@ import {
 import { captureSearchFollowUp } from "./search-follow-up";
 import { interactive, elements, safeActivation } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
+import { isSafeSurfaceCloseClick } from "../generic/click-policy";
 
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
@@ -146,6 +147,26 @@ function validateRegionContext(
     )
   )
     throw new SearchFailure("unverified_search_form");
+}
+
+/** Close a popup this search opened using only a safe bare close control. */
+function closeOwnedSurface(surface: SearchSurface): boolean {
+  if (surface.kind === "inline-listbox") return true;
+  if (surface.closure() !== "open") return true;
+  const control = Array.from(
+    surface.container.querySelectorAll<HTMLElement>(
+      "button, a[href], input[type=button]",
+    ),
+  ).find(
+    (element) => isSafeSurfaceCloseClick(element, surface.container).allowed,
+  );
+  if (!control) return false;
+  try {
+    control.click();
+  } catch {
+    return false;
+  }
+  return surface.closure() === "closed";
 }
 
 export async function executeReadonlySearch(
@@ -725,6 +746,9 @@ export async function executeReadonlySearch(
       targetCandidateId,
       effect,
       reason,
+      ...(surface && !closeOwnedSurface(surface)
+        ? { surfaceLeftOpen: true as const }
+        : {}),
     };
   } finally {
     followUpObservation?.dispose();

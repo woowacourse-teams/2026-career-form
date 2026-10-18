@@ -11,6 +11,8 @@ export type ApprovedWriteResult =
       status: "skipped";
       reason: string;
       failureCode?: WriteFailureCode;
+      /** A popup the search opened could not be closed after this failure. */
+      surfaceLeftOpen?: true;
       outcome?: "failed" | "needs-verification" | "unsupported" | "unchanged";
       code?:
         | "ALREADY_MATCHED"

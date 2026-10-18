@@ -110,6 +110,8 @@ export type ReadonlySearchExecutionResult = (
         | "search_query_conflict"
         | "decision_abstained"
         | "aborted";
+      /** The popup this search opened is still open after the failure. */
+      surfaceLeftOpen?: true;
     }
 ) & { effect?: SearchEffect };
 

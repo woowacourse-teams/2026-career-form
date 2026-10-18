@@ -214,6 +214,41 @@ describe("mixed education layer search (task 5.1)", () => {
     expectUntouched(true);
   }, 30_000);
 
+  it("closes the layer it opened after a no-match result and touches no other control", async () => {
+    await prepare("sync-replace", [{ name: "<다른학교>", code: "<다른코드>" }]);
+    const { result } = await searchSecondRow();
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "search_results_not_found",
+    });
+    expect(result).not.toHaveProperty("surfaceLeftOpen");
+    expect(
+      fixture!.events.filter((event) => event.type === "close"),
+    ).toHaveLength(1);
+    expect(
+      fixture!.events.filter((event) => event.type === "manual-toggle"),
+    ).toHaveLength(0);
+    expectUntouched(false);
+  }, 30_000);
+
+  it("reports a layer it could not close and clicks no other control", async () => {
+    await prepare("sync-replace", [{ name: "<다른학교>", code: "<다른코드>" }]);
+    fixture!.row(1).branch("college").closeButton.remove();
+    const { result } = await searchSecondRow();
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "search_results_not_found",
+      surfaceLeftOpen: true,
+    });
+    expect(
+      fixture!.events.filter((event) => event.type === "close"),
+    ).toHaveLength(0);
+    expect(
+      fixture!.events.filter((event) => event.type === "manual-toggle"),
+    ).toHaveLength(0);
+    expectUntouched(false);
+  }, 30_000);
+
   it.each([
     [
       "zero-no-mutation",

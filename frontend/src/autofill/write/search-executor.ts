@@ -595,6 +595,8 @@ export async function executeApprovedSearchWrites({
                 searchFailureMessage(failedResult!.reason),
                 searchDiagnosticCode(failedResult!.reason),
               );
+    if (failedResult?.surfaceLeftOpen && results[index]!.status === "skipped")
+      results[index] = { ...results[index]!, surfaceLeftOpen: true };
     onResult?.(item, results[index]!);
     if (result.status === "selected" && result.followUp?.controls.length) {
       onSearchFollowUp?.(item, result.followUp.controls);
@@ -617,7 +619,9 @@ export async function executeApprovedSearchWrites({
         result.effect !== "none")
     ) {
       const rowOnly =
-        followUpHaltScope === "row" && item.profileEntryId !== undefined;
+        followUpHaltScope === "row" &&
+        item.profileEntryId !== undefined &&
+        failedResult?.surfaceLeftOpen !== true;
       for (let later = index + 1; later < items.length; later++) {
         if (
           !approvedCandidateIds.has(items[later]!.candidateId) ||
@@ -625,7 +629,11 @@ export async function executeApprovedSearchWrites({
         )
           continue;
         const laterEntry = items[later]!.profileEntryId;
-        if (rowOnly && laterEntry !== undefined && laterEntry !== item.profileEntryId)
+        if (
+          rowOnly &&
+          laterEntry !== undefined &&
+          laterEntry !== item.profileEntryId
+        )
           continue;
         heldIndexes.add(later);
         results[later] = skipped(

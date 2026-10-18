@@ -49,7 +49,14 @@ function setup(addCareerRow = false) {
     ["enterYmd0", "careers.career.startDate", "2020-01-01", "career-0"],
     ["retireYmd0", "careers.career.endDate", "2021-01-01", "career-0"],
     ...(addCareerRow
-      ? [["second-deptNm0", "careers.career.department", "다른부서", "career-1"]]
+      ? [
+          [
+            "second-deptNm0",
+            "careers.career.department",
+            "다른부서",
+            "career-1",
+          ],
+        ]
       : []),
     ["score", "languages.languageTest.score", "900", "language-0"],
   ];
@@ -142,9 +149,11 @@ describe("reviewed form baseline and empty-search failure boundary", () => {
     expect(handles.slice(0, 5).map((handle) => handle.itemIndex)).toEqual([
       0, 0, 0, 0, 0,
     ]);
-    expect(handles.slice(1, 5).every(
-      (handle) => handle.itemId === handles[0]!.itemId,
-    )).toBe(true);
+    expect(
+      handles
+        .slice(1, 5)
+        .every((handle) => handle.itemId === handles[0]!.itemId),
+    ).toBe(true);
     expect(handles.at(-1)!.sectionId).not.toBe(handles[0]!.sectionId);
   });
 
@@ -172,8 +181,12 @@ describe("reviewed form baseline and empty-search failure boundary", () => {
     expect(results.slice(1).map(failureCodeOf)).toEqual(
       Array(6).fill("SEARCH_FOLLOWUP_HALTED"),
     );
-    expect(document.querySelector<HTMLInputElement>("#corpNm0")!.value).toBe("");
-    expect(document.querySelector<HTMLInputElement>("#second-deptNm0")!.value).toBe("");
+    expect(document.querySelector<HTMLInputElement>("#corpNm0")!.value).toBe(
+      "",
+    );
+    expect(
+      document.querySelector<HTMLInputElement>("#second-deptNm0")!.value,
+    ).toBe("");
     expect(document.querySelector<HTMLInputElement>("#score")!.value).toBe("");
     expect(test.popup.hidden).toBe(false);
   });
@@ -202,6 +215,32 @@ describe("opt-in row-scoped hold after the same empty-search failure", () => {
     expect(value("deptNm0")).toBe("");
     expect(value("second-deptNm0")).toBe("다른부서");
     expect(value("score")).toBe("900");
+  });
+
+  it("falls back to holding the whole list when the failed popup stayed open", async () => {
+    const test = setup(true);
+    vi.mocked(executeReadonlySearch).mockImplementation(async (args) => ({
+      targetCandidateId: args.targetCandidateId,
+      status: "failed",
+      reason: "search_results_not_found",
+      effect: "interaction-started",
+      surfaceLeftOpen: true,
+    }));
+    const results = await executeApprovedWritesAfterPageSettles({
+      items: test.items,
+      registry: test.snapshot.registry,
+      approvedCandidateIds: test.approvedCandidateIds,
+      document,
+      followUpHaltScope: "row",
+    });
+    expect(results.slice(1).map(failureCodeOf)).toEqual(
+      Array(6).fill("SEARCH_FOLLOWUP_HALTED"),
+    );
+    expect(results[0]).toMatchObject({
+      failureCode: "SEARCH_NO_EXACT_MATCH",
+      surfaceLeftOpen: true,
+    });
+    expect(value("score")).toBe("");
   });
 
   it("keeps holding approved items whose profile entry is unknown", async () => {
