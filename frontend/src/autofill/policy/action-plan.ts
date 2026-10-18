@@ -14,6 +14,7 @@ export type DomStep = {
     | "FOCUS"
     | "BLUR"
     | "CLICK"
+    | "ACTIVATE_PRIMARY"
     | "INSERT_TEXT"
     | "EVENT"
     | "KEY"
@@ -60,6 +61,7 @@ export function validDomPlan(value: unknown): value is DomPlan {
         "FOCUS",
         "BLUR",
         "CLICK",
+        "ACTIVATE_PRIMARY",
         "INSERT_TEXT",
         "EVENT",
         "KEY",
@@ -68,6 +70,10 @@ export function validDomPlan(value: unknown): value is DomPlan {
         "REMOVE_ATTRIBUTE",
         "CLASS",
       ].includes(s.op) &&
+      (s.op !== "ACTIVATE_PRIMARY" ||
+        Object.keys(s).every((k) =>
+          ["op", "target", "when", "require"].includes(k),
+        )) &&
       (s.value === undefined ||
         (typeof s.value === "string" && s.value.length <= 1000)) &&
       (s.event === undefined ||
@@ -183,6 +189,20 @@ export function runDomPlan(
         case "CLICK":
           node.click();
           break;
+        case "ACTIVATE_PRIMARY": {
+          if (
+            !validDomPlan([step]) ||
+            !(node instanceof HTMLButtonElement) ||
+            node.type !== "button"
+          )
+            return false;
+          const events = primaryActivationEvents(node);
+          if (!events) return false;
+          for (const dispatch of events) {
+            if (!current() || !dispatch()) return false;
+          }
+          break;
+        }
         case "INSERT_TEXT":
           if (
             node.ownerDocument.activeElement !== node ||
@@ -274,5 +294,70 @@ export function validPlanConditions(value: unknown): value is PlanCondition[] {
     Array.isArray(value) &&
     value.length <= 8 &&
     validDomPlan([{ op: "FOCUS", target: "control", require: value }])
+  );
+}
+
+/** The async address owner revalidates profile approval before EACH synthetic event. */
+export async function activateOwnedPrimary(
+  node: HTMLButtonElement,
+  current: () => Promise<boolean>,
+): Promise<boolean> {
+  const events = primaryActivationEvents(node);
+  if (!events) return false;
+  for (const dispatch of events)
+    if (!(await current()) || !dispatch()) return false;
+  return true;
+}
+function primaryActivationEvents(
+  node: HTMLButtonElement,
+): (() => boolean)[] | undefined {
+  const rect = node.getBoundingClientRect();
+  const clientX = rect.left + rect.width / 2,
+    clientY = rect.top + rect.height / 2;
+  if (
+    !(rect.width > 0 && rect.height > 0) ||
+    !Number.isFinite(clientX) ||
+    !Number.isFinite(clientY)
+  )
+    return;
+  return ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].map(
+    (type) => () => {
+      if (
+        !node.isConnected ||
+        node.type !== "button" ||
+        node.matches(":disabled") ||
+        node.closest('[hidden],[inert],[aria-hidden="true"]')
+      )
+        return false;
+      const now = node.getBoundingClientRect();
+      if (
+        now.left !== rect.left ||
+        now.top !== rect.top ||
+        now.width !== rect.width ||
+        now.height !== rect.height
+      )
+        return false;
+      const init = {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        button: 0,
+        buttons: type.endsWith("down") ? 1 : 0,
+        clientX,
+        clientY,
+        detail: 1,
+      };
+      node.dispatchEvent(
+        type.startsWith("pointer")
+          ? new PointerEvent(type, {
+              ...init,
+              pointerId: 1,
+              pointerType: "mouse",
+              isPrimary: true,
+            })
+          : new MouseEvent(type, init),
+      );
+      return true;
+    },
   );
 }
