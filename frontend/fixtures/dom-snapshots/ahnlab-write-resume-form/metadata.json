@@ -129,7 +129,7 @@
     "evidence": ".worktrees-evidence/CF-252/fixture-green.log",
     "external_requests": "Playwright Chromium offline=true 및 HTTP(S) 요청 차단, 외부 요청 시도 0건. 근거: .worktrees-evidence/CF-252/start-implementation.log",
     "backend_mapping": "NOT RUN: localhost:8080 미실행. 실제 JEV 출력은 검증하지 않음.",
-    "scope_extension": "2026-10-18 오케스트레이터 결정: 사용자 답변 없이 30분 경과 후 범용 분석에서 기존 registry 요소의 자체 title/placeholder를 읽는 방식 채택. 사용자 승인으로 간주하지 않는다. 공유 수집·정적 후보 타입·API는 확장하지 않는다."
+    "scope_extension": "2026-10-18 사용자 승인(오케스트레이터 추천안: 범용 흐름에서 실제 요소 자체 title/placeholder만 읽기). 공유 수집·정적 후보 타입·API는 확장하지 않는다."
   },
   "sanitized_html_sha256": "f85570bc1f96ee0cc2abb5a465f78e993f6b600e6fa92a38e3179d03d86823f8"
 }

@@ -1,5 +1,15 @@
 # Wiki Log
 
+## [2026-10-18] ingest | CF-252 범용 칸 문맥·형식 검사와 DOM fixture 검토 경계
+
+- Approval-Digest: c0af678e0f5e91a1f8edbf7d9446fb69b054b135db7ce4264c1ec2c0c82325cf
+- Source-Revision: e04949fb6c20943a0d0c994dc29c2455d5ffff0c
+- 승인된 수정 후보 네 개를 [CF-252 bundle](../raw/issues/CF-252/manifest.md)에 기록하고
+  [범용 칸 문맥과 형식 검사](topics/generic-field-context-safety.md),
+  [DOM fixture 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md)를 추가했다.
+- 자체 title/placeholder의 범용 로컬 읽기는 2026-10-18 사용자 승인 사항이다.
+  기존 raw는 변경하지 않고 실제 JEV·실사이트 검증의 미실행 경계를 유지한다.
+
 ## [2026-10-17] ingest | CF-244 범용 클릭 경계, 섹션 캐시와 endpoint 부재 전달
 
 - Approval-Digest: c03f361ba687892e12dd432b8b9607ec34af9fd86545fe697a7896e6ba510135
