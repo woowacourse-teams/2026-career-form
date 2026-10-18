@@ -24,12 +24,17 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
 import com.careerform.formanalysis.application.SupportedProfileFields;
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 import com.careerform.formanalysis.exception.ResolverException;
 import com.careerform.formanalysis.exception.TokenLimitExceeded;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.FieldCandidate;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Item;
 import com.careerform.formanalysis.generic.GenericFieldsRequest.Section;
 import com.careerform.formanalysis.generic.GenericFieldsResponse.Reason;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.Binding;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePart;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.DatePartBinding;
+import com.careerform.formanalysis.generic.GenericFieldsResponse.NameBinding;
 import com.careerform.formanalysis.infrastructure.InteractionProviderConditions;
 import com.careerform.formanalysis.infrastructure.adapter.ProviderSemanticSanitizer;
 import com.careerform.formanalysis.infrastructure.adapter.jev.JevClient;
@@ -88,7 +93,12 @@ public final class JevCategoryFieldResolver {
         this.permitTimeoutMs = permitTimeoutMs;
     }
 
-    public record Mapping(String profileFieldKey, double confidence, boolean categoryConfirmed, Reason reason) {
+    public record Mapping(String profileFieldKey, double confidence, boolean categoryConfirmed, Reason reason,
+        Binding binding) {
+
+        public Mapping(String profileFieldKey, double confidence, boolean categoryConfirmed, Reason reason) {
+            this(profileFieldKey, confidence, categoryConfirmed, reason, null);
+        }
     }
 
     public record Resolution(Map<String, Mapping> mappings, int jevCalls) {
@@ -153,7 +163,18 @@ public final class JevCategoryFieldResolver {
                 return;
             }
             String key = JevClient.ABSTAIN.equals(judgement.choice()) ? null : judgement.choice();
-            mappings.put(candidateId, new Mapping(key, judgement.confidence(), work.confirmed(), null));
+            Binding binding = key == null ? null : work.bindings().get(key);
+            if (binding instanceof NameBinding) {
+                key = null;
+            }
+            else if (binding instanceof DatePartBinding date) {
+                key = key.substring("DATE_PART:".length(), key.lastIndexOf(':'));
+                if (!matchesDatePart(work.candidates().get(candidateId), date.part())) {
+                    key = null;
+                    binding = null;
+                }
+            }
+            mappings.put(candidateId, new Mapping(key, judgement.confidence(), work.confirmed(), null, binding));
         });
         return mappings;
     }
@@ -209,7 +230,8 @@ public final class JevCategoryFieldResolver {
     static String instructions(String questionId) {
         return "Map fields." + questionId + " of this job application form section to exactly one applicant "
             + "profile field using its de-identified observation, the section context and confusionBoundaries. "
-            + "Choose ABSTAIN for absent or ambiguous evidence. Do not split full names or invent values.";
+            + "Choose ABSTAIN for absent or ambiguous evidence. Do not split full names or invent values. "
+            + "For an explicit combined full-name target choose the offered name recipe with the required order.";
     }
 
     private Map<String, Object> state(SectionWork work, List<Question> included, boolean reduced) {
@@ -238,6 +260,23 @@ public final class JevCategoryFieldResolver {
                 .toList();
         Map<String, String> criteria = new LinkedHashMap<>();
         keys.forEach(key -> criteria.put(key, "Applicant profile field " + key));
+        Map<String, Binding> bindings = new LinkedHashMap<>();
+        if (keys.containsAll(List.of("personal.personal.koreanFamilyName", "personal.personal.koreanGivenName"))) {
+            bindings.put("KOREAN_FULL_NAME", new NameBinding(DerivedRecipe.KOREAN_FULL_NAME));
+        }
+        if (keys.containsAll(List.of("personal.personal.englishFamilyName", "personal.personal.englishGivenName"))) {
+            bindings.put("ENGLISH_FULL_NAME_GIVEN_FIRST", new NameBinding(DerivedRecipe.ENGLISH_FULL_NAME_GIVEN_FIRST));
+            bindings.put("ENGLISH_FULL_NAME_FAMILY_FIRST", new NameBinding(DerivedRecipe.ENGLISH_FULL_NAME_FAMILY_FIRST));
+        }
+        bindings.keySet().forEach(recipe -> criteria.put(recipe,
+            "Explicit combined full-name target using this exact order: " + recipe));
+        keys.stream().filter(fields::isDateField).forEach(key -> {
+            for (DatePart part : DatePart.values()) {
+                String id = "DATE_PART:" + key + ":" + part;
+                bindings.put(id, new DatePartBinding(part));
+                criteria.put(id, "Select only the " + part + " component of applicant date field " + key);
+            }
+        });
         criteria.put(JevClient.ABSTAIN, ABSTAIN_CRITERION);
 
         Map<String, Object> context = new LinkedHashMap<>();
@@ -277,7 +316,38 @@ public final class JevCategoryFieldResolver {
                 askedRows.put(fingerprint, ids);
             }
         }
-        return new SectionWork(confirmed, Map.copyOf(criteria), context, List.copyOf(questions), assignment);
+        Map<String, FieldCandidate> candidates = new HashMap<>();
+        section.fields().forEach(field -> candidates.put(field.candidateId(), field));
+        if (section.items() != null) {
+            section.items().forEach(item -> item.fields().forEach(field -> candidates.put(field.candidateId(), field)));
+        }
+        return new SectionWork(confirmed, Map.copyOf(criteria), context, List.copyOf(questions), assignment,
+            Map.copyOf(bindings), candidates);
+    }
+
+    private static boolean matchesDatePart(FieldCandidate candidate, DatePart part) {
+        if (candidate.element() != GenericFieldsRequest.FormElement.SELECT
+            || candidate.control() != GenericFieldsRequest.FormControl.SELECT || candidate.options() == null) {
+            return false;
+        }
+        List<String> options = candidate.options().stream().map(GenericFieldsRequest.Option::displayName)
+            .filter(Objects::nonNull).map(String::trim)
+            .filter(label -> !label.isEmpty() && !label.matches("선택(?:하세요)?")).toList();
+        if (options.isEmpty()) {
+            return false;
+        }
+        long matching = options.stream().filter(label -> {
+            if (part == DatePart.YEAR) {
+                return label.matches("[1-9][0-9]{3}");
+            }
+            String suffix = part == DatePart.MONTH ? "월" : "일";
+            if (!label.matches("[0-9]{1,2}" + suffix + "?")) {
+                return false;
+            }
+            int number = Integer.parseInt(label.replace(suffix, ""));
+            return number >= 1 && number <= (part == DatePart.MONTH ? 12 : 31);
+        }).count();
+        return part == DatePart.YEAR ? matching * 2 > options.size() : matching == options.size();
     }
 
     private static String add(List<Question> questions, Map<String, Object> observation) {
@@ -375,7 +445,9 @@ public final class JevCategoryFieldResolver {
         Map<String, String> criteria,
         Map<String, Object> context,
         List<Question> questions,
-        Map<String, String> assignment
+        Map<String, String> assignment,
+        Map<String, Binding> bindings,
+        Map<String, FieldCandidate> candidates
     ) {
     }
 

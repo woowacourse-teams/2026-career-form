@@ -114,7 +114,7 @@ function createApi(options: ApiOptions = {}) {
       if (options.analyzeError) throw options.analyzeError;
       const status = options.analyzeStatus ?? "COMPLETE";
       return {
-        schemaVersion: 2 as const,
+        schemaVersion: 3 as const,
         snapshotId: request.snapshotId,
         status,
         fields:

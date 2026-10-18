@@ -3,6 +3,10 @@ package com.careerform.formanalysis.generic;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import com.careerform.formanalysis.application.port.FieldMappingResolver.DerivedRecipe;
 
 /** 섹션 분류 응답과 같은 봉투(schemaVersion, status)를 쓴다. 진단에는 값 없이 호출 수와 시간만 담는다. */
 public record GenericFieldsResponse(
@@ -13,7 +17,7 @@ public record GenericFieldsResponse(
     Diagnostics diagnostics
 ) {
 
-    private static final int SCHEMA_VERSION = 2;
+    private static final int SCHEMA_VERSION = 3;
 
     public GenericFieldsResponse {
         fields = List.copyOf(fields);
@@ -35,7 +39,7 @@ public record GenericFieldsResponse(
 
     /**
      * profileFieldKey는 매핑하지 못하면 null이다. reason은 공급자를 쓸 수 없을 때만 담는다.
-     * autofillPolicy는 키가 있을 때만, writePlan은 interactionStatus가 READY일 때만 담는다.
+     * autofillPolicy는 키나 이름 레시피가 있을 때만, writePlan은 interactionStatus가 READY일 때만 담는다.
      */
     public record Field(
         String candidateId,
@@ -45,15 +49,42 @@ public record GenericFieldsResponse(
         @JsonInclude(JsonInclude.Include.NON_NULL) Reason reason,
         @JsonInclude(JsonInclude.Include.NON_NULL) AutofillPolicy autofillPolicy,
         InteractionStatus interactionStatus,
-        @JsonInclude(JsonInclude.Include.NON_NULL) WritePlan writePlan
+        @JsonInclude(JsonInclude.Include.NON_NULL) WritePlan writePlan,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Binding binding
     ) {
 
         /** 입력 판정 없이 만든 칸. 쓰기 근거가 없으므로 UNVERIFIED로 두고 autofillPolicy와 writePlan을 비운다. */
         public Field(String candidateId, String profileFieldKey, double confidence, boolean categoryConfirmed,
             Reason reason) {
             this(candidateId, profileFieldKey, confidence, categoryConfirmed, reason, null,
-                InteractionStatus.UNVERIFIED, null);
+                InteractionStatus.UNVERIFIED, null, null);
         }
+
+        public Field(String candidateId, String profileFieldKey, double confidence, boolean categoryConfirmed,
+            Reason reason, AutofillPolicy autofillPolicy, InteractionStatus interactionStatus, WritePlan writePlan) {
+            this(candidateId, profileFieldKey, confidence, categoryConfirmed, reason, autofillPolicy,
+                interactionStatus, writePlan, null);
+        }
+    }
+
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+    @JsonSubTypes({
+        @JsonSubTypes.Type(value = NameBinding.class, name = "DERIVED"),
+        @JsonSubTypes.Type(value = DatePartBinding.class, name = "DATE_PART")
+    })
+    public sealed interface Binding permits NameBinding, DatePartBinding {
+    }
+
+    public record NameBinding(DerivedRecipe recipe) implements Binding {
+    }
+
+    public record DatePartBinding(DatePart part) implements Binding {
+    }
+
+    public enum DatePart {
+        YEAR,
+        MONTH,
+        DAY
     }
 
     public record WritePlan(GenericFieldsRequest.WriteCommand command) {

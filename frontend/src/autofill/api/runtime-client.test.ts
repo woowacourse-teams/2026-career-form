@@ -284,7 +284,7 @@ describe("RuntimeAnalysisApiClient generic endpoints", () => {
 
   it("analyzes generic fields through the generic message and validates the response", async () => {
     const data = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       snapshotId: "generic-1",
       status: "COMPLETE",
       fields: [
@@ -316,7 +316,7 @@ describe("RuntimeAnalysisApiClient generic endpoints", () => {
   it("rejects a generic fields response whose candidate ids do not match", async () => {
     const client = new RuntimeAnalysisApiClient(
       respond({
-        schemaVersion: 2,
+        schemaVersion: 3,
         snapshotId: "generic-1",
         status: "COMPLETE",
         fields: [

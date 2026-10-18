@@ -53,6 +53,22 @@ class GenericFieldsResolverTest {
 
         Set<String> education = keys(key -> key.startsWith("education."));
         Set<String> allButNone = keys(key -> !SectionCategories.categoryOf(key).equals(SectionCategories.NONE));
+        for (String key : List.copyOf(education)) {
+            if (FIELDS.isDateField(key)) {
+                for (String part : List.of("YEAR", "MONTH", "DAY")) {
+                    education.add("DATE_PART:" + key + ":" + part);
+                }
+            }
+        }
+        for (String key : List.copyOf(allButNone)) {
+            if (FIELDS.isDateField(key)) {
+                for (String part : List.of("YEAR", "MONTH", "DAY")) {
+                    allButNone.add("DATE_PART:" + key + ":" + part);
+                }
+            }
+        }
+        allButNone.addAll(List.of("KOREAN_FULL_NAME", "ENGLISH_FULL_NAME_GIVEN_FIRST",
+            "ENGLISH_FULL_NAME_FAMILY_FIRST"));
         assertThat(http.calls()).hasSize(5);
         for (var call : http.calls()) {
             Set<String> criteria = new HashSet<>(call.criteria(call.questionIds().getFirst()));
