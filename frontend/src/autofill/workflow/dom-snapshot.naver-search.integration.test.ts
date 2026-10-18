@@ -5,12 +5,18 @@ import { collectFieldsSnapshot } from "../dom/collect";
 import { resolveDocumentCompany } from "../adapters/company";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { executeReadonlySearch } from "../interaction";
-import { executeApprovedWritesAfterPageSettles } from "../write/executor";
+import {
+  executeApprovedWritesAfterPageSettles,
+  type ApprovedWriteResult,
+} from "../write/executor";
 
 vi.mock("../interaction", async (original) => ({
   ...(await original<typeof import("../interaction")>()),
   executeReadonlySearch: vi.fn(),
 }));
+
+const failureCodeOf = (result: ApprovedWriteResult) =>
+  "failureCode" in result ? result.failureCode : undefined;
 
 const html = readFileSync(
   join(process.cwd(), "fixtures/dom-snapshots/naver-step2-form/sanitized.html"),
@@ -27,7 +33,7 @@ function setup(addCareerRow = false) {
     const copy = row.cloneNode(true) as HTMLElement;
     for (const element of copy.querySelectorAll<HTMLElement>("[id]"))
       element.id = `second-${element.id}`;
-    for (const label of copy.querySelectorAll("label[for]"))
+    for (const label of copy.querySelectorAll<HTMLLabelElement>("label[for]"))
       label.htmlFor = `second-${label.htmlFor}`;
     row.after(copy);
   }
@@ -163,12 +169,55 @@ describe("reviewed form baseline and empty-search failure boundary", () => {
       document,
     });
     expect(results[0]).toMatchObject({ failureCode: "SEARCH_NO_EXACT_MATCH" });
-    expect(results.slice(1).map((result) => result.failureCode)).toEqual(
+    expect(results.slice(1).map(failureCodeOf)).toEqual(
       Array(6).fill("SEARCH_FOLLOWUP_HALTED"),
     );
     expect(document.querySelector<HTMLInputElement>("#corpNm0")!.value).toBe("");
     expect(document.querySelector<HTMLInputElement>("#second-deptNm0")!.value).toBe("");
     expect(document.querySelector<HTMLInputElement>("#score")!.value).toBe("");
     expect(test.popup.hidden).toBe(false);
+  });
+});
+
+describe("opt-in row-scoped hold after the same empty-search failure", () => {
+  const value = (id: string) =>
+    document.querySelector<HTMLInputElement>(`#${id}`)!.value;
+
+  it("holds only the failed career row and still writes other rows and sections", async () => {
+    const test = setup(true);
+    const results = await executeApprovedWritesAfterPageSettles({
+      items: test.items,
+      registry: test.snapshot.registry,
+      approvedCandidateIds: test.approvedCandidateIds,
+      document,
+      followUpHaltScope: "row",
+    });
+    expect(results[0]).toMatchObject({ failureCode: "SEARCH_NO_EXACT_MATCH" });
+    expect(results.slice(1, 5).map(failureCodeOf)).toEqual(
+      Array(4).fill("SEARCH_FOLLOWUP_HALTED"),
+    );
+    expect(results[5]).toMatchObject({ status: "written" });
+    expect(results[6]).toMatchObject({ status: "written" });
+    expect(value("corpNm0")).toBe("");
+    expect(value("deptNm0")).toBe("");
+    expect(value("second-deptNm0")).toBe("다른부서");
+    expect(value("score")).toBe("900");
+  });
+
+  it("keeps holding approved items whose profile entry is unknown", async () => {
+    const test = setup(true);
+    const items = test.items.map((item, index) =>
+      index === 6 ? { ...item, profileEntryId: undefined } : item,
+    );
+    const results = await executeApprovedWritesAfterPageSettles({
+      items,
+      registry: test.snapshot.registry,
+      approvedCandidateIds: test.approvedCandidateIds,
+      document,
+      followUpHaltScope: "row",
+    });
+    expect(results[5]).toMatchObject({ status: "written" });
+    expect(results[6]).toMatchObject({ failureCode: "SEARCH_FOLLOWUP_HALTED" });
+    expect(value("score")).toBe("");
   });
 });

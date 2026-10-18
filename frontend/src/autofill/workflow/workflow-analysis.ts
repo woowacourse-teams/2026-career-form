@@ -1421,6 +1421,7 @@ export function createAnalyzeFields({
         : {}),
       onSearchFollowUp: (item, controls) =>
         onSearchFollowUp?.(item, controls, snapshot.registry),
+      ...(analysis.mode === "GENERIC" ? { followUpHaltScope: "row" as const } : {}),
     });
     if (run.controller.signal.aborted) return;
     const componentDriverResults: ApprovedWriteResult[] = [];
