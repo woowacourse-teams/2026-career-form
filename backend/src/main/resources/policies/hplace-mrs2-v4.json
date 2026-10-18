@@ -2006,7 +2006,8 @@
                       "state": "enabled"
                     }
                   ]
-                }
+                },
+                "emptyRadioLabel": "작성안함"
               },
               {
                 "name": "hplace.mrs2.highschool.locationCode",
@@ -2797,9 +2798,6 @@
                   "detailSelector": "div[data-template=\"detail\"]",
                   "protectedSelector": ".ybmValidateDone:not(.hide), [readonly]",
                   "protectedVisibleSelector": ".ybmValidateDone",
-                  "protectedValueNames": [
-                    "languageExam[{index}].languageExamSn"
-                  ],
                   "forbiddenCodes": ["00091"]
                 },
                 "driver": {

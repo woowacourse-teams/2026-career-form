@@ -53,6 +53,7 @@ export interface NativeField {
   max?: number;
   step?: number;
   options?: Record<string, string>;
+  emptyRadioLabel?: string;
   date?: {
     group: string;
     role: "START" | "END" | "SINGLE";
@@ -312,6 +313,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
             "max",
             "step",
             "options",
+            "emptyRadioLabel",
             "date",
             "driver",
           ]) ||
@@ -352,6 +354,11 @@ export function validNativeForm(value: unknown): value is NativeForm {
             !["COMMITTED", "GRADE_ONLY", "SCORE_ONLY", "REGISTRATION"].includes(
               f.gate.mode,
             ))
+        )
+          return false;
+        if (
+          f.emptyRadioLabel !== undefined &&
+          (f.type !== "radio" || !s.singleEntity || !str(f.emptyRadioLabel))
         )
           return false;
         if (f.scopeSelector !== undefined && !selector(f.scopeSelector))
@@ -589,7 +596,6 @@ function validNativeSearch(s: NativeSearch): boolean {
     (s.kind !== "EXAM" ||
       (!!s.detailSelector &&
         !!s.protectedSelector &&
-        !!s.protectedValueNames?.length &&
         !!s.gradeName &&
         !!s.scoreName &&
         !!s.registrationName &&

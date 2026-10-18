@@ -84,7 +84,6 @@ export function mountSearch(
                 scoreName: "entry.score",
                 registrationName: "entry.registNumber",
                 protectedSelector: ".ybmValidateDone:not(.hide),[readonly]",
-                protectedValueNames: ["entry.languageExamSn"],
                 forbiddenCodes: ["00091"],
               }
             : kind === "license"

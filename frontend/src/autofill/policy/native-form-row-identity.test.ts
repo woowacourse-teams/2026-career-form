@@ -7,6 +7,7 @@ import {
 } from "../dom/collect";
 import { buildReviewPlan } from "../review/review-plan";
 import { localItemCount } from "../workflow/workflow-model";
+import { getWorkflowAdapter } from "../adapters/workflow";
 import { getWriteAdapter } from "../adapters/write";
 import {
   installExecutionPolicy,
@@ -77,7 +78,11 @@ function state(entries: ReturnType<typeof career>[]) {
     command: "ADD_REPEATABLE_GROUP",
     actionCandidateId: action.candidateId,
   } as PreparationPlan;
-  return { review, snapshot, count: localItemCount(plan, prep, profile) };
+  return {
+    review,
+    snapshot,
+    count: localItemCount(plan, prep, profile, getWorkflowAdapter(document)),
+  };
 }
 it.each(["entranceDate", "company", "salary", "careerSn"])(
   "refuses the entire existing row when %s is already populated",
@@ -292,4 +297,17 @@ it("does not suppress a profile when a populated mapped option is unverified", (
   expect(
     state([career("a", "합성회사 A", "2020-01-01")]).count,
   ).toBeUndefined();
+});
+
+it("rejects overlap between an earlier existing row and a later prior assignment", () => {
+  mount(2);
+  control(0, "company").value = "합성회사 B";
+  control(0, "entranceDate").value = "2021.01";
+  const entries = [career("a", "합성회사 A", "2020-01-01")];
+  expect(state(entries).count).toBe(2); // The blank second row is assigned A.
+  control(0, "company").value = "합성회사 A";
+  control(0, "entranceDate").value = "2020.01";
+  const next = state(entries);
+  expect(next.count).toBeUndefined();
+  expect(next.review.items.every((i) => i.disabled)).toBe(true);
 });

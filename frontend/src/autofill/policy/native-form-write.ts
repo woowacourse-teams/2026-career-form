@@ -2,6 +2,7 @@ import {
   nativeRowWritable,
   recordNativeRowWrite,
 } from "./native-form-row-state";
+import { nativeSingleEntityAssigned } from "./native-form-row-assignment";
 import { nativeUnitMatches } from "./native-form-unit";
 import { committedSearchMatches } from "./committed-search";
 import type { FieldCandidateHandle } from "../dom/types";
@@ -249,7 +250,20 @@ export const nativeWriteAdapter: CompanyWriteAdapter = {
       const option = selectedOption(o, handle, item.profileValue ?? "");
       if (!option) return fail;
       if (kind === "radio") {
-        if (handle.elements.some((e) => (e as HTMLInputElement).checked))
+        const checked = handle.elements.filter(
+          (e) => (e as HTMLInputElement).checked,
+        ) as HTMLInputElement[];
+        if (
+          checked.length &&
+          !(
+            checked.length === 1 &&
+            checked[0].value === "" &&
+            o.field.emptyRadioLabel &&
+            text(checked[0].labels?.[0]?.textContent) ===
+              o.field.emptyRadioLabel &&
+            nativeSingleEntityAssigned(o, item.profileEntryId)
+          )
+        )
           return fail;
         // The click dispatches site handlers synchronously; only the selected group is adopted.
         (option as HTMLInputElement).click();

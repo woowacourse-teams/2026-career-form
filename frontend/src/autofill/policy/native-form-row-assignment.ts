@@ -164,18 +164,23 @@ function assignments(
       entries[previous.index]?.id === previous.entryId &&
       (nativeRowBlank(row) || nativeRowHasWrites(o))
     ) {
+      if (used.has(previous.index)) return null;
       used.add(previous.index);
       result.set(row, previous.index);
-      continue;
     }
+  }
+  // Prior assignments reserve profile entries before any existing row is matched.
+  for (const [physicalIndex, row] of rows.entries()) {
+    if (result.has(row)) continue;
     if (nativeRowBlank(row)) {
       blank.push(row);
       continue;
     }
     occupied++;
     existing.set(row, "기존 입력 행은 보존하며 사용자 확인이 필요합니다.");
-    if (section.fields.some((f) => excludedSearchRow(row, f, physicalIndex)))
-      continue;
+    const excluded = section.fields.some((f) =>
+      excludedSearchRow(row, f, physicalIndex),
+    );
     const identity = section.identityFields.map((name) =>
       section.fields.find((f) => f.name === name)!,
     );
@@ -194,6 +199,7 @@ function assignments(
     if (matches.length === 1) {
       const index = matches[0];
       if (
+        !excluded &&
         section.fields.some((f) => {
           const value = fieldValue(row, f, physicalIndex);
           const populated = Array.from(
@@ -261,6 +267,10 @@ function singleEntityAssignment(
   const blocked = {
     reason: "입력 불가(기존 값 — 사용자 처리): 학교 신원을 확인해 주세요.",
   };
+  if (entries.length === 0)
+    return {
+      reason: "프로필 항목 없음: 해당 학력 항목을 등록하지 않았습니다.",
+    };
   if (entries.length !== 1) return blocked;
   const profileDigest = JSON.stringify(entries),
     previous = assigned.get(o.row);
@@ -302,5 +312,20 @@ export function nativeProfileAssignment(
         state?.existing.get(o.row) ??
         "행 신원을 확인할 수 없어 해당 섹션은 사용자 확인이 필요합니다.",
     }
+  );
+}
+
+/** Only a review assigned to one actual profile entry may replace an empty default. */
+export function nativeSingleEntityAssigned(
+  o: NativeOwnership,
+  entryId: string | undefined,
+): boolean {
+  const previous = assigned.get(o.row);
+  return (
+    !!o.section.singleEntity &&
+    !!entryId &&
+    previous?.entryId === entryId &&
+    previous.digest === o.digest &&
+    previous.url === o.url
   );
 }

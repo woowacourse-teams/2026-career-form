@@ -72,6 +72,12 @@ export function protectedSearchRow(
 ) {
   return (
     !!(s.protectedSelector && row.querySelector(s.protectedSelector)) ||
+    s.forbiddenCodes?.includes(
+      (
+        namedSearchControl(row, s.codeName, index) as
+          HTMLInputElement | undefined
+      )?.value ?? "",
+    ) === true ||
     !!(
       s.protectedVisibleSelector &&
       Array.from(row.querySelectorAll(s.protectedVisibleSelector)).some((e) =>
@@ -164,16 +170,5 @@ export function excludedSearchRow(
 ): boolean {
   const s = field.search;
   if (s?.kind !== "EXAM") return false;
-  if (protectedSearchRow(row, s, index)) return true;
-  if (searchReceipt(row, field, index)) return false;
-  const nodes = searchNodes(row, field, index);
-  return (
-    (!!nodes && !emptySearchTuple(nodes)) ||
-    (!!s.detailSelector &&
-      Array.from(
-        row.querySelectorAll(
-          `${s.detailSelector} input, ${s.detailSelector} select, ${s.detailSelector} textarea`,
-        ),
-      ).some((e) => "value" in e && !!e.value))
-  );
+  return protectedSearchRow(row, s, index);
 }

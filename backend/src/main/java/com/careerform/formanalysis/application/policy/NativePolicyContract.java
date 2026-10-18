@@ -54,7 +54,7 @@ final class NativePolicyContract {
             var names = new java.util.HashSet<String>();
             for (var field : section.path("fields")) {
                 String name = field.path("name").asText(), type = field.path("type").asText();
-                require(keys(field, "unit", "name", "rawName", "scopeSelector", "dynamicOptions", "type", "label", "binding", "maxLength", "min", "max", "step", "options", "date", "driver", "search", "gate")
+                require(keys(field, "unit", "name", "rawName", "scopeSelector", "dynamicOptions", "type", "label", "binding", "maxLength", "min", "max", "step", "options", "emptyRadioLabel", "date", "driver", "search", "gate")
                     && names.add(name) && Set.of("text", "number", "textarea", "select", "radio").contains(type)
                     && text(field.path("label")) && field.path("rawName").asText().matches("[A-Za-z][A-Za-z0-9_]*(?:\\[\\{index}])?(?:\\.[A-Za-z][A-Za-z0-9_]*)*"));
                 var structure = contract.fields().stream().filter(f -> f.structuralName().equals(name)).findFirst().orElseThrow();
@@ -65,6 +65,7 @@ final class NativePolicyContract {
                 require(structure.control().name().equalsIgnoreCase(control) && structure.element().name().equalsIgnoreCase(element)
                     && rule.control() == structure.control() && rule.element() == structure.element()
                     && MAPPER.valueToTree(rule.valueBinding()).equals(field.path("binding")));
+                if (field.has("emptyRadioLabel")) require(type.equals("radio") && section.path("singleEntity").asBoolean() && text(field.path("emptyRadioLabel")));
                 if (type.equals("radio") || type.equals("select")) require(field.path("options").isObject()
                     || type.equals("select") && field.path("dynamicOptions").path("labels").isArray()
                         && field.path("dynamicOptions").path("codeFormat").asText().equals("POSITIVE_INTEGER")
@@ -137,8 +138,8 @@ final class NativePolicyContract {
         for(String name:required)require(metadata.path(name).isTextual() && metadata.path(name).asText().matches("data-[a-z]+"));
         if(s.path("kind").asText().equals("EXAM")) {
             for(String name:List.of("detailSelector","protectedSelector","gradeName","scoreName","registrationName"))require(text(s.path(name)));
-            require(s.path("protectedValueNames").isArray() && !s.path("protectedValueNames").isEmpty() && s.path("protectedValueNames").size()<=8
-                && s.path("forbiddenCodes").isArray() && !s.path("forbiddenCodes").isEmpty() && s.path("forbiddenCodes").size()<=16);
+            if(s.has("protectedValueNames")) require(s.path("protectedValueNames").isArray() && !s.path("protectedValueNames").isEmpty() && s.path("protectedValueNames").size()<=8);
+            require(s.path("forbiddenCodes").isArray() && !s.path("forbiddenCodes").isEmpty() && s.path("forbiddenCodes").size()<=16);
             for(var name:s.path("protectedValueNames"))require(text(name));
             for(var code:s.path("forbiddenCodes"))require(text(code));
         }

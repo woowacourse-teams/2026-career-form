@@ -540,3 +540,135 @@ it.each(["college", "graduateSchool"])(
     expect(section?.actionCandidates ?? []).toEqual([]);
   },
 );
+
+import { nativeRepeatableProfileCount } from "./native-form-row-assignment";
+it.each([false, true])(
+  "counts a committed non-certified exam as existing (saved=%s)",
+  async (saved) => {
+    mount();
+    document
+      .querySelector('section[data-code="18"]')!
+      .insertAdjacentHTML(
+        "beforeend",
+        `<div class="subject" data-code="165" data-wrap="foreignExam"><div class="row loop" data-loop="languageExam" data-index="0"><div class="span"><div class="search"><label><input type="search" data-type="foreignExam"></label><div class="searchResult"></div></div><input type="hidden" name="languageExam[0].languageExamName" value="합성 어학시험"><span class="searchResultName">합성 어학시험</span><input class="hidden" name="languageExam[0].languageExamCode" value="EX001"></div><span class="ybmValidateDone hide" style="display:none"></span><div data-template="detail"><input type="hidden" name="languageExam[0].languageExamSn" value="${saved ? "555" : ""}"><input type="number" name="languageExam[0].score" value="150"></div><button type="button" data-button="add"></button></div></div>`,
+      );
+    const profile = createEmptyProfile();
+    profile.languages = [
+      {
+        id: "exam",
+        sectionId: "languageTest",
+        values: { testName: "합성 어학시험", grade: "150" },
+      },
+    ];
+    expect(
+      nativeRepeatableProfileCount(
+        document,
+        "hplace.mrs2.foreignExam.add",
+        profile,
+      ),
+    ).toBe(1);
+    const fields = collectFieldsSnapshot(document).request.sections.find(
+      (s) => s.sectionId === "hplace-mrs2-foreignExam",
+    )!.items![0].fields;
+    expect(fields[0].inert).not.toBe(true);
+    expect(fields[0].displayName).not.toContain("인증 시험");
+    let clicks = 0;
+    document
+      .querySelector('[data-wrap="foreignExam"] button')!
+      .addEventListener("click", () => clicks++);
+    const collect = () => {
+      const c = collectPreparationSnapshot(document);
+      return {
+        registry: c.registry,
+        isTargetSectionVisible: c.isSectionVisible,
+        countRepeatableGroups: (p: import("../api/types").PreparationPlan) =>
+          c.countRepeatableGroups(p.actionCandidateId),
+      };
+    };
+    const preparation = collectPreparationSnapshot(document);
+    const action = preparation.request.sections.find(
+      (s) => s.sectionId === "hplace-mrs2-foreignExam",
+    )!.actionCandidates[0];
+    const result = await executeApprovedPreparationPlans({
+      document,
+      initialSnapshot: collect(),
+      refreshSnapshot: async () => collect(),
+      countRepeatableGroups: (s, p) => s.countRepeatableGroups!(p)!,
+      approvedPlans: [
+        {
+          approved: true,
+          localItemCount: 1,
+          plan: {
+            command: "ADD_REPEATABLE_GROUP",
+            expectedEffect: "GROUP_COUNT_INCREMENT",
+            actionCandidateId: action.candidateId,
+          },
+        },
+      ],
+    });
+    expect(result.status).toBe("completed");
+    expect(clicks).toBe(0);
+  },
+);
+function optionalHighschool(label = "작성안함") {
+  mount();
+  document
+    .querySelector('section[data-code="140"]')!
+    .insertAdjacentHTML(
+      "afterbegin",
+      `<label><input type="radio" name="highschool.graduationTypeCode" value="" checked>${label}</label>`,
+    );
+}
+it("allows an approved highschool profile to replace its empty 작성안함 default", () => {
+  optionalHighschool();
+  const { snapshot, items } = educationReview(highschoolProfile());
+  const target = items.find(
+    (i) =>
+      i.analysis?.valueBinding?.profileFieldKey ===
+      "education.highSchool.completionStatus",
+  )!;
+  target.selected = true;
+  const lookup = snapshot.registry.lookupField(target.candidateId);
+  if (!("handle" in lookup)) throw new Error();
+  expect(target.disabled).toBe(false);
+  expect(getWriteAdapter(document).tryWrite(lookup.handle, target)).toEqual({
+    handled: true,
+    written: true,
+  });
+  expect(
+    document.querySelector<HTMLInputElement>(
+      '[name="highschool.graduationTypeCode"][value="01"]',
+    )!.checked,
+  ).toBe(true);
+});
+it("leaves an optional highschool untouched when the profile has no highschool entry", () => {
+  optionalHighschool();
+  const { items } = educationReview({
+    ...highschoolProfile(),
+    sectionId: "university",
+  });
+  expect(
+    items.every((i) => i.disabled && i.reason.includes("프로필 항목 없음")),
+  ).toBe(true);
+  expect(
+    document.querySelector<HTMLInputElement>(
+      '[name="highschool.graduationTypeCode"][value=""]',
+    )!.checked,
+  ).toBe(true);
+});
+it("does not treat an unrecognized checked empty radio as the approved default", () => {
+  optionalHighschool("다른 상태");
+  const { snapshot, items } = educationReview(highschoolProfile());
+  const target = items.find(
+    (i) =>
+      i.analysis?.valueBinding?.profileFieldKey ===
+      "education.highSchool.completionStatus",
+  )!;
+  target.selected = true;
+  const lookup = snapshot.registry.lookupField(target.candidateId);
+  if (!("handle" in lookup)) throw new Error();
+  expect(getWriteAdapter(document).tryWrite(lookup.handle, target)).toEqual({
+    handled: true,
+    written: false,
+  });
+});

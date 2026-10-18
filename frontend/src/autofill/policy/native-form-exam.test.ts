@@ -141,7 +141,7 @@ it.each(["ybm", "unknown", "missing", "special-code"])(
     expect(widget().code.value).toBe("");
   },
 );
-it.each(["visible-auth", "hidden-auth-without-hide", "readonly", "saved"])(
+it.each(["visible-auth", "hidden-auth-without-hide", "readonly"])(
   "excludes the entire %s row",
   (mode) => {
     mount();
@@ -161,10 +161,6 @@ it.each(["visible-auth", "hidden-auth-without-hide", "readonly", "saved"])(
         "beforeend",
         '<input name="entry.examDate" readonly>',
       );
-    if (mode === "saved")
-      document.querySelector<HTMLInputElement>(
-        '[name="entry.languageExamSn"]',
-      )!.value = "1234";
     expect(collected()).toEqual([]);
   },
 );
@@ -211,7 +207,7 @@ it("does not accept tuple alone when exam detail was never replaced", async () =
       new AbortController().signal,
     ),
   ).toBe(false);
-  expect(collected()).toEqual([]);
+  expect(collected()).toEqual(["synthetic.search.name"]);
 });
 it("guards the click when a user populates detail while results are pending", async () => {
   mount();
