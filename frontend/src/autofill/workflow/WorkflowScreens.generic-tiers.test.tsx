@@ -77,44 +77,55 @@ describe("generic review screen tiers", () => {
   it("lists the auto field as planned and the others under review", () => {
     renderReview([auto, review, blocked, unlinked]);
     expect(screen.getByRole("tab", { name: "자동 기입 예정 1" })).toBeVisible();
-    expect(screen.getByRole("tab", { name: "확인 필요 3" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "확인 필요 1" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "입력 불가 2" })).toBeVisible();
     fireEvent.click(screen.getByRole("tab", { name: "자동 기입 예정 1" }));
     expect(screen.getByText("자동 칸")).toBeVisible();
   });
 
   it("shows tier labels and fixed reasons in the review tab", () => {
     renderReview([auto, review, blocked, unlinked]);
-    fireEvent.click(screen.getByRole("tab", { name: "확인 필요 3" }));
-    const panel = screen.getByRole("tabpanel", { name: "확인 필요 3" });
+    fireEvent.click(screen.getByRole("tab", { name: "확인 필요 1" }));
+    const panel = screen.getByRole("tabpanel", { name: "확인 필요 1" });
     expect(
       within(panel).getAllByText("확인 필요", { selector: "small" }),
     ).toHaveLength(1);
     expect(
-      within(panel).getAllByText("입력 불가", { selector: "small" }),
-    ).toHaveLength(2);
+      within(panel).queryByText("입력 불가", { selector: "small" }),
+    ).toBeNull();
     expect(
       within(panel).getByText(genericReasonText("NO_FIELD_CONTEXT")),
     ).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "입력 불가 2" }));
+    const blockedPanel = screen.getByRole("tabpanel", {
+      name: "입력 불가 2",
+    });
     expect(
-      within(panel).getByText(genericReasonText("FORMAT_KEY_MISMATCH")),
-    ).toBeVisible();
-    expect(
-      within(panel).getByText("저장된 정보와 연결하지 못했습니다."),
-    ).toBeVisible();
-    expect(
-      within(panel).getAllByText("합성 값", { selector: "span" }),
+      within(blockedPanel).getAllByText("입력 불가", {
+        selector: "small",
+      }),
     ).toHaveLength(2);
+    expect(
+      within(blockedPanel).getByText(genericReasonText("FORMAT_KEY_MISMATCH")),
+    ).toBeVisible();
+    expect(
+      within(blockedPanel).getByText("저장된 정보와 연결하지 못했습니다."),
+    ).toBeVisible();
+    expect(
+      within(blockedPanel).getAllByText("합성 값", { selector: "span" }),
+    ).toHaveLength(1);
   });
 
   it("offers inclusion only for the review field", () => {
     const toggle = renderReview([auto, review, blocked, unlinked]);
-    fireEvent.click(screen.getByRole("tab", { name: "확인 필요 3" }));
+    fireEvent.click(screen.getByRole("tab", { name: "입력 불가 2" }));
     expect(
       screen.queryByRole("button", { name: "막힌 칸 포함하기" }),
     ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "연결 못한 칸 포함하기" }),
     ).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "확인 필요 1" }));
     fireEvent.click(screen.getByRole("button", { name: "확인 칸 포함하기" }));
     expect(toggle).toHaveBeenCalledWith("review");
   });

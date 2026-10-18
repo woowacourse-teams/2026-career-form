@@ -110,9 +110,9 @@ export function WorkflowScreens({
   currentCategory,
 }: WorkflowScreensProps) {
   const reviewTabsId = useId();
-  const [reviewTab, setReviewTab] = useState<"planned" | "needs-review">(
-    "needs-review",
-  );
+  const [reviewTab, setReviewTab] = useState<
+    "planned" | "needs-review" | "blocked"
+  >("needs-review");
   if (stage === "analyzing" || stage === "writing") {
     return (
       <WorkflowLoading
@@ -189,6 +189,15 @@ export function WorkflowScreens({
       (item) =>
         item.selected && !item.disabled && !exceptionalItems.includes(item),
     );
+    // Only generic documents carry a grade: split blocked items into their
+    // own tab so they are not counted as needing review.
+    const tiered = reviewItems.some((item) => item.genericGrade);
+    const blockedItems = tiered
+      ? exceptionalItems.filter((item) => item.genericGrade === "BLOCKED")
+      : [];
+    const needsReviewItems = tiered
+      ? exceptionalItems.filter((item) => item.genericGrade !== "BLOCKED")
+      : exceptionalItems;
     return (
       <div className={styles.screen}>
         <style>{resultCss}</style>
@@ -227,8 +236,21 @@ export function WorkflowScreens({
             aria-selected={reviewTab === "needs-review"}
             onClick={() => setReviewTab("needs-review")}
           >
-            확인 필요 <strong>{exceptionalItems.length}</strong>
+            확인 필요 <strong>{needsReviewItems.length}</strong>
           </button>
+          {tiered && (
+            <button
+              type="button"
+              role="tab"
+              data-state="pending"
+              id={`${reviewTabsId}-blocked-tab`}
+              aria-controls={`${reviewTabsId}-blocked-panel`}
+              aria-selected={reviewTab === "blocked"}
+              onClick={() => setReviewTab("blocked")}
+            >
+              입력 불가 <strong>{blockedItems.length}</strong>
+            </button>
+          )}
         </div>
         <section
           role="tabpanel"
@@ -278,12 +300,52 @@ export function WorkflowScreens({
                 : "LLM 분석 일부 미완료"}
           </aside>
         ))}
-        {reviewTab === "needs-review" && exceptionalItems.length > 0 && (
+        {reviewTab === "needs-review" && needsReviewItems.length > 0 && (
           <p className={resultStyles.guidance}>
             자동 기입에서 제외할 항목이 있는지 확인해 주세요.
           </p>
         )}
-        {reviewTab === "needs-review" && exceptionalItems.length > 0 && (
+        {reviewTab === "blocked" && blockedItems.length > 0 && (
+          <section
+            role="tabpanel"
+            id={`${reviewTabsId}-blocked-panel`}
+            aria-labelledby={`${reviewTabsId}-blocked-tab`}
+            className={resultStyles.review}
+            aria-label="입력 불가 항목"
+          >
+            {blockedItems.map((item) => (
+              <article className={resultStyles.row} key={item.candidateId}>
+                <div className={resultStyles.heading} data-has-values="true">
+                  <button
+                    type="button"
+                    className={resultStyles.locate}
+                    aria-label={`${resultFieldLabel(item)} 필드로 이동`}
+                    disabled={!onLocate}
+                    onClick={() => onLocate?.(item.candidateId)}
+                  >
+                    <span>{resultFieldLabel(item)}</span>
+                    {onLocate && <span aria-hidden="true">↗</span>}
+                  </button>
+                  <div className={resultStyles.valueGroup}>
+                    <span className={resultStyles.previewValue}>
+                      {item.previewValue}
+                    </span>
+                  </div>
+                </div>
+                {reasonFor(item) && (
+                  <p className={resultStyles.guidance}>{reasonFor(item)}</p>
+                )}
+                <small
+                  className={resultStyles.writtenTag}
+                  data-generic-grade={item.genericGrade}
+                >
+                  입력 불가
+                </small>
+              </article>
+            ))}
+          </section>
+        )}
+        {reviewTab === "needs-review" && needsReviewItems.length > 0 && (
           <section
             role="tabpanel"
             id={`${reviewTabsId}-needs-review-panel`}
@@ -291,7 +353,7 @@ export function WorkflowScreens({
             className={resultStyles.review}
             aria-label="확인 필요한 항목"
           >
-            {exceptionalItems.map((item) => {
+            {needsReviewItems.map((item) => {
               return (
                 <article className={resultStyles.row} key={item.candidateId}>
                   <div className={resultStyles.heading} data-has-values="true">
