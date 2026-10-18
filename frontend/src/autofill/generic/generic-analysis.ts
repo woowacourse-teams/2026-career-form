@@ -112,7 +112,7 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_DISPLAY_NAME_LENGTH = 120;
 const UNCONFIRMED_CATEGORIES = new Set(["MIXED", "ABSTAIN"]);
 
-const GENERIC_BLOCKED_REASON =
+export const GENERIC_BLOCKED_REASON =
   "자동으로 입력할 수 없는 항목입니다. 직접 확인해 주세요.";
 
 /**
