@@ -31,6 +31,10 @@ function pair(o: NativeOwnership) {
     );
     return all.length === 1 ? all[0] : undefined;
   };
+  const prefix = rawNativeName(scoreField.rawName, o.index)
+    .split(".")
+    .slice(0, -1)
+    .join(".");
   const score = one(scoreField),
     scale = one(scaleField);
   if (
@@ -45,7 +49,7 @@ function pair(o: NativeOwnership) {
       score.name.slice(0, score.name.lastIndexOf(".")) ||
     scale.getAttribute("data-rel-target") !== scale.name ||
     o.row.querySelector(
-      '[name$=".displayScore"],[name$=".displayPerfectScore"]',
+      `[name="${CSS.escape(`${prefix}.displayScore`)}"],[name="${CSS.escape(`${prefix}.displayPerfectScore`)}"]`,
     )
   )
     return;
@@ -64,6 +68,7 @@ export function approveNativeGpa(
   if (!p) return false;
   const score = resolveValueBinding(profile, p.scoreField.binding, index),
     scale = resolveValueBinding(profile, p.scaleField.binding, index);
+  if (score.status === "missing" && scale.status === "missing") return true;
   if (
     score.status !== "resolved" ||
     scale.status !== "resolved" ||

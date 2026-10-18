@@ -129,3 +129,33 @@ it.each(["max", "relation"])(
     expect(score.value).toBe("");
   },
 );
+
+it("reports absent GPA values as missing rather than an invalid pair", () => {
+  mountEducation();
+  const profile = educationProfile();
+  delete profile.education[0].values.gpaScore;
+  delete profile.education[0].values.gpaScale;
+  for (const suffix of [".score", ".perfectScore"]) {
+    document.querySelector<HTMLSelectElement>(
+      '[name="college[0].perfectScore"]',
+    )!.disabled = false;
+    const { item } = educationItem(suffix, 0, profile);
+    expect(item.reason).toBe("입력할 프로필 값이 없습니다.");
+    expect(item.disabled).toBe(true);
+  }
+});
+it.each([
+  "college[0].collegeMajorSubject[0].displayScore",
+  "college[0].collegeMajorSubject[0].displayPerfectScore",
+])("does not treat subject grade %s as the school GPA", (name) => {
+  mountEducation();
+  const field = document.createElement("input");
+  field.name = name;
+  document.querySelector("[data-loop=college]")!.append(field);
+  const { handle, item } = educationItem(".score");
+  expect(nativeWriteAdapter.tryWrite(handle, item)).toEqual({
+    handled: true,
+    written: true,
+  });
+  expect(field.value).toBe("");
+});
