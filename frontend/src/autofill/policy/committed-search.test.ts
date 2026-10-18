@@ -246,3 +246,85 @@ it("does not reuse a receipt after the document policy changes", async () => {
     getWriteAdapter(document).verifyRetained?.(fresh.handle, fresh.item),
   ).toBe(false);
 });
+
+it.each(["zero", "duplicate", "timeout"])(
+  "restores only its query after %s failure and allows retry",
+  async (mode) => {
+    mountSearch();
+    const { handle, item } = searchItem("가상학교");
+    const query = handle.elements[0];
+    let attempts = 0,
+      registrations = 0;
+    query.addEventListener("keypress", () => {
+      attempts++;
+      if (attempts > 1) return showResults(query, ["가상학교"]);
+      if (mode === "timeout") return;
+      showResults(query, mode === "duplicate" ? ["가상학교", "가상학교"] : []);
+      const result = query.closest(".search")!.querySelector(".searchResult")!;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.button = "registKeyword";
+      button.textContent = "등록하기";
+      button.addEventListener("click", () => registrations++);
+      result.append(button);
+    });
+    const adapter = getWorkflowAdapter(document);
+    expect(
+      await adapter.executeStateDriver?.(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(false);
+    expect(query.value).toBe("");
+    expect(widget().name.value).toBe("");
+    expect(widget().code.value).toBe("");
+    expect(
+      await adapter.executeStateDriver?.(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(true);
+    expect(registrations).toBe(0);
+  },
+);
+it("never restores a query subsequently edited by the user", async () => {
+  mountSearch();
+  const { handle, item } = searchItem("가상학교");
+  const query = handle.elements[0];
+  query.addEventListener("keypress", () => {
+    query.value = "사용자 검색어";
+  });
+  expect(
+    await getWorkflowAdapter(document).executeStateDriver?.(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+    ),
+  ).toBe(false);
+  expect(query.value).toBe("사용자 검색어");
+});
+it("does not clear a staged tuple or query after the selected result fails verification", async () => {
+  mountSearch();
+  const { handle, item } = searchItem("가상학교");
+  const query = handle.elements[0];
+  query.addEventListener("keypress", () =>
+    showResults(query, ["가상학교"], () => {
+      widget().code.value = "wrong";
+    }),
+  );
+  expect(
+    await getWorkflowAdapter(document).executeStateDriver?.(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+    ),
+  ).toBe(false);
+  expect(widget().name.value).toBe("가상학교");
+  expect(widget().code.value).toBe("wrong");
+});

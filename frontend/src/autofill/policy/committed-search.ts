@@ -137,173 +137,210 @@ export async function executeCommittedSearch(
   )
     return false;
   const oldResults = new Set(n.results.querySelectorAll(s.resultSelector));
+  const queryWrite = { node: n.query, previous: n.query.value, value };
   if (
     !runDomPlan(
-      [
-        { op: "SET_VALUE", target: "query", value: "{query}" },
-        { op: "EVENT", target: "query", event: "input" },
-        {
-          op: "KEY",
-          target: "query",
-          event: "keypress",
-          key: "Enter",
-          code: "Enter",
-          legacyEnter: true,
-        },
-      ],
+      [{ op: "SET_VALUE", target: "query", value: "{query}" }],
       { query: n.query },
       { query: value },
       current,
     )
   )
     return false;
-  if (!nativeRowWritable(o, [n.query])) return false;
   recordNativeRowWrite(o, [n.query]);
-  const deadline = Date.now() + s.timeoutMs;
-  let buttons: HTMLButtonElement[] = [];
-  while (
-    current() &&
-    n.query.value === value &&
-    emptySearchTuple(n) &&
-    Date.now() < deadline
-  ) {
-    const all = Array.from(n.results.querySelectorAll(s.resultSelector));
-    if (all.some((e) => !oldResults.has(e))) {
-      buttons = all.filter(
-        (e): e is HTMLButtonElement =>
-          e instanceof HTMLButtonElement && e.title === value,
-      );
-      break;
-    }
-    await pause(view, 10);
-  }
-  if (buttons.length !== 1) return false;
-  const button = buttons[0],
-    code = button.getAttribute("data-code") ?? "",
-    meta: Record<string, string> = {};
-  if (
-    !/^[A-Za-z0-9_-]{1,64}$/.test(code) ||
-    /^0+$/.test(code) ||
-    s.forbiddenCodes?.includes(code) ||
-    button.type !== "button" ||
-    !visible(button) ||
-    oldResults.has(button)
-  )
-    return false;
-  if (
-    Array.from(button.attributes).some(
-      (a) =>
-        a.name.startsWith("data-") &&
-        a.name !== "data-code" &&
-        !Object.values(s.metadata).includes(a.name),
+  let completed = false;
+  try {
+    if (
+      !runDomPlan(
+        [
+          { op: "EVENT", target: "query", event: "input" },
+          {
+            op: "KEY",
+            target: "query",
+            event: "keypress",
+            key: "Enter",
+            code: "Enter",
+            legacyEnter: true,
+          },
+        ],
+        { query: n.query },
+        { query: value },
+        current,
+      )
     )
-  )
-    return false;
-  for (const [key, attr] of Object.entries(s.metadata)) {
-    const val = button.getAttribute(attr);
-    if (val === null) return false;
-    meta[key] = val;
-  }
-  if (s.kind !== "PLAIN" && !["true", "false"].includes(meta.score))
-    return false;
-  if (s.kind === "LICENSE" && !["true", "false"].includes(meta.registration))
-    return false;
-  if (
-    s.kind === "EXAM" &&
-    (!["true", "false"].includes(meta.grade) ||
-      meta.setup !== "" ||
-      !(meta.value === "" || meta.value === "null") ||
-      !(
-        meta.perfect === "" ||
-        meta.perfect === "null" ||
-        /^\d+(\.\d+)?$/.test(meta.perfect)
-      ))
-  )
-    return false;
-  const resultCurrent = () =>
-    button.type === "button" &&
-    visible(button) &&
-    current() &&
-    n.query.value === value &&
-    emptySearchTuple(n) &&
-    detailEmpty() &&
-    n.results.contains(button) &&
-    button.title === value &&
-    button.getAttribute("data-code") === code &&
-    Object.entries(s.metadata).every(
-      ([k, a]) => button.getAttribute(a) === meta[k],
-    ) &&
-    Array.from(n.results.querySelectorAll(s.resultSelector)).filter(
-      (e) => e.getAttribute("title") === value,
-    ).length === 1;
-  if (beforeMutation && !(await beforeMutation())) return false;
-  if (!resultCurrent() || !nativeRowWritable(o)) return false;
-  button.click();
-  const tupleCurrent = () =>
-    current() &&
-    JSON.stringify(searchTuple(n)) === JSON.stringify([value, code, value]);
-  const settled = () => {
-    if (!tupleCurrent()) return false;
-    if (s.kind === "LICENSE" && meta.registration === "false") {
-      const reg = namedSearchControl(o.row, s.registrationName!, o.index);
-      if (reg && visible(reg, true)) return false;
-    }
-    if (s.kind !== "EXAM")
-      return (o.field.driver?.dependencies ?? []).every((name) => {
-        const field = o.section.fields.find((f) => f.name === name)!;
-        if (
-          s.kind === "LICENSE" &&
-          meta.registration === "false" &&
-          field.rawName === s.registrationName
-        )
-          return true;
-        const control = namedSearchControl(o.row, field.rawName, o.index);
-        return (
-          !control ||
-          (visible(control) && !("readOnly" in control && control.readOnly))
+      return false;
+    if (!nativeRowWritable(o)) return false;
+    const deadline = Date.now() + s.timeoutMs;
+    let buttons: HTMLButtonElement[] = [];
+    while (
+      current() &&
+      n.query.value === value &&
+      emptySearchTuple(n) &&
+      Date.now() < deadline
+    ) {
+      const all = Array.from(n.results.querySelectorAll(s.resultSelector));
+      if (all.some((e) => !oldResults.has(e))) {
+        buttons = all.filter(
+          (e): e is HTMLButtonElement =>
+            e instanceof HTMLButtonElement && e.title === value,
         );
-      });
-    const next = o.row.querySelector(s.detailSelector!);
-    if (!next || previousDetails.some((e) => next.contains(e))) return false;
-    const grade = namedSearchControl(o.row, s.gradeName!, o.index),
-      score = namedSearchControl(o.row, s.scoreName!, o.index);
-    return (
-      (meta.grade === "true"
-        ? grade instanceof HTMLSelectElement &&
-          visible(grade) &&
-          Array.from(grade.options).some((opt) => opt.value && !opt.disabled)
-        : !grade) &&
-      (meta.score === "true"
-        ? score instanceof HTMLInputElement &&
-          score.type === "number" &&
-          visible(score) &&
-          !score.readOnly
-        : !score)
-    );
-  };
-  const settleDeadline = Date.now() + s.timeoutMs;
-  while (current() && !settled() && Date.now() < settleDeadline)
-    await pause(view, 10);
-  if (beforeMutation && !(await beforeMutation())) return false;
-  if (!settled() || !nativeRowWritable(o, [n.query, n.name, n.code]))
-    return false;
-  recordNativeRowWrite(o, [n.query, n.name, n.code]);
-  const newDetail = s.detailSelector
-    ? o.row.querySelector(s.detailSelector!)!
-    : undefined;
-  recordSearchReceipt({
-    nodes: n,
-    row: o.row,
-    value,
-    code,
-    policy: JSON.stringify(s),
-    url: o.url,
-    form: JSON.stringify(executionPolicy(o.row.ownerDocument)?.browserPolicy),
-    metadata: meta,
-    detail: newDetail,
-    details: newDetail
-      ? Array.from(newDetail.querySelectorAll("input,select,textarea"))
-      : [],
-  });
-  return committedSearchMatches(handle, item);
+        break;
+      }
+      await pause(view, 10);
+    }
+    if (buttons.length !== 1) return false;
+    const button = buttons[0],
+      code = button.getAttribute("data-code") ?? "",
+      meta: Record<string, string> = {};
+    if (
+      !/^[A-Za-z0-9_-]{1,64}$/.test(code) ||
+      /^0+$/.test(code) ||
+      s.forbiddenCodes?.includes(code) ||
+      button.type !== "button" ||
+      !visible(button) ||
+      oldResults.has(button)
+    )
+      return false;
+    if (
+      Array.from(button.attributes).some(
+        (a) =>
+          a.name.startsWith("data-") &&
+          a.name !== "data-code" &&
+          !Object.values(s.metadata).includes(a.name),
+      )
+    )
+      return false;
+    for (const [key, attr] of Object.entries(s.metadata)) {
+      const val = button.getAttribute(attr);
+      if (val === null) return false;
+      meta[key] = val;
+    }
+    if (s.kind !== "PLAIN" && !["true", "false"].includes(meta.score))
+      return false;
+    if (s.kind === "LICENSE" && !["true", "false"].includes(meta.registration))
+      return false;
+    if (
+      s.kind === "EXAM" &&
+      (!["true", "false"].includes(meta.grade) ||
+        meta.setup !== "" ||
+        !(meta.value === "" || meta.value === "null") ||
+        !(
+          meta.perfect === "" ||
+          meta.perfect === "null" ||
+          /^\d+(\.\d+)?$/.test(meta.perfect)
+        ))
+    )
+      return false;
+    const resultCurrent = () =>
+      button.type === "button" &&
+      visible(button) &&
+      current() &&
+      n.query.value === value &&
+      emptySearchTuple(n) &&
+      detailEmpty() &&
+      n.results.contains(button) &&
+      button.title === value &&
+      button.getAttribute("data-code") === code &&
+      Object.entries(s.metadata).every(
+        ([k, a]) => button.getAttribute(a) === meta[k],
+      ) &&
+      Array.from(n.results.querySelectorAll(s.resultSelector)).filter(
+        (e) => e.getAttribute("title") === value,
+      ).length === 1;
+    if (beforeMutation && !(await beforeMutation())) return false;
+    if (!resultCurrent() || !nativeRowWritable(o)) return false;
+    button.click();
+    const tupleCurrent = () =>
+      current() &&
+      JSON.stringify(searchTuple(n)) === JSON.stringify([value, code, value]);
+    const settled = () => {
+      if (!tupleCurrent()) return false;
+      if (s.kind === "LICENSE" && meta.registration === "false") {
+        const reg = namedSearchControl(o.row, s.registrationName!, o.index);
+        if (reg && visible(reg, true)) return false;
+      }
+      if (s.kind !== "EXAM")
+        return (o.field.driver?.dependencies ?? []).every((name) => {
+          const field = o.section.fields.find((f) => f.name === name)!;
+          if (
+            s.kind === "LICENSE" &&
+            meta.registration === "false" &&
+            field.rawName === s.registrationName
+          )
+            return true;
+          const control = namedSearchControl(o.row, field.rawName, o.index);
+          return (
+            !control ||
+            (visible(control) && !("readOnly" in control && control.readOnly))
+          );
+        });
+      const next = o.row.querySelector(s.detailSelector!);
+      if (!next || previousDetails.some((e) => next.contains(e))) return false;
+      const grade = namedSearchControl(o.row, s.gradeName!, o.index),
+        score = namedSearchControl(o.row, s.scoreName!, o.index);
+      return (
+        (meta.grade === "true"
+          ? grade instanceof HTMLSelectElement &&
+            visible(grade) &&
+            Array.from(grade.options).some((opt) => opt.value && !opt.disabled)
+          : !grade) &&
+        (meta.score === "true"
+          ? score instanceof HTMLInputElement &&
+            score.type === "number" &&
+            visible(score) &&
+            !score.readOnly
+          : !score)
+      );
+    };
+    const settleDeadline = Date.now() + s.timeoutMs;
+    while (current() && !settled() && Date.now() < settleDeadline)
+      await pause(view, 10);
+    if (beforeMutation && !(await beforeMutation())) return false;
+    if (!settled() || !nativeRowWritable(o, [n.query, n.name, n.code]))
+      return false;
+    recordNativeRowWrite(o, [n.query, n.name, n.code]);
+    const newDetail = s.detailSelector
+      ? o.row.querySelector(s.detailSelector!)!
+      : undefined;
+    recordSearchReceipt({
+      nodes: n,
+      row: o.row,
+      value,
+      code,
+      policy: JSON.stringify(s),
+      url: o.url,
+      form: JSON.stringify(executionPolicy(o.row.ownerDocument)?.browserPolicy),
+      metadata: meta,
+      detail: newDetail,
+      details: newDetail
+        ? Array.from(newDetail.querySelectorAll("input,select,textarea"))
+        : [],
+    });
+    completed = committedSearchMatches(handle, item);
+    return completed;
+  } finally {
+    // Restore only our unchanged query. Committed tuples, foreign results, and user edits are never reset.
+    if (
+      !completed &&
+      current() &&
+      nativeRowWritable(o) &&
+      emptySearchTuple(n) &&
+      detailEmpty() &&
+      queryWrite.node === n.query &&
+      n.query.value === queryWrite.value &&
+      (!beforeMutation || (await beforeMutation())) &&
+      current() &&
+      nativeRowWritable(o) &&
+      emptySearchTuple(n) &&
+      detailEmpty() &&
+      n.query.value === queryWrite.value
+    ) {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(n.query, queryWrite.previous);
+      recordNativeRowWrite(o, [n.query]);
+      n.query.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
 }
