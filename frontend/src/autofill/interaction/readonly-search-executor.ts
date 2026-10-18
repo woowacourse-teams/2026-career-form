@@ -13,6 +13,7 @@ import {
   type ExecuteReadonlySearchArgs,
   type ReadonlySearchExecutionResult,
   type SearchEffect,
+  type SurfaceLeftOpenReason,
   type TargetIdentity,
 } from "./readonly-search";
 import { SearchFailure, SearchSession } from "./search-session";
@@ -38,6 +39,7 @@ import {
 import { captureSearchFollowUp } from "./search-follow-up";
 import { interactive, elements, safeActivation } from "./search-surface-dom";
 import type { SearchSurface } from "./search-surface";
+import { isSafeSurfaceCloseClick } from "../generic/click-policy";
 
 import { resultActivation } from "./search-result-structure";
 import { bindStructuredEffects } from "./search-result-effects";
@@ -146,6 +148,28 @@ function validateRegionContext(
     )
   )
     throw new SearchFailure("unverified_search_form");
+}
+
+/** Close a popup this search opened using only a safe bare close control. */
+function closeOwnedSurface(
+  surface: SearchSurface,
+): SurfaceLeftOpenReason | undefined {
+  if (surface.kind === "inline-listbox") return undefined;
+  if (surface.closure() !== "open") return undefined;
+  const control = Array.from(
+    surface.container.querySelectorAll<HTMLElement>(
+      "button, a[href], input[type=button]",
+    ),
+  ).find(
+    (element) => isSafeSurfaceCloseClick(element, surface.container).allowed,
+  );
+  if (!control) return "no_safe_close_control";
+  try {
+    control.click();
+  } catch {
+    return "close_not_confirmed";
+  }
+  return surface.closure() === "closed" ? undefined : "close_not_confirmed";
 }
 
 export async function executeReadonlySearch(
@@ -720,11 +744,18 @@ export async function executeReadonlySearch(
     const reason =
       error instanceof SearchFailure ? error.reason : "execution_failed";
     debugSearchFailure(targetCandidateId, step, reason, effect, error);
+    const leftOpenReason = surface ? closeOwnedSurface(surface) : undefined;
     return {
       status: effect === "none" ? "unsupported" : "failed",
       targetCandidateId,
       effect,
       reason,
+      ...(leftOpenReason
+        ? {
+            surfaceLeftOpen: true as const,
+            surfaceLeftOpenReason: leftOpenReason,
+          }
+        : {}),
     };
   } finally {
     followUpObservation?.dispose();

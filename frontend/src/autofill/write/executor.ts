@@ -113,6 +113,7 @@ export async function executeApprovedWritesAfterPageSettles({
   settledRegistry,
   currentOrdinaryRegistry,
   onSearchFollowUp,
+  followUpHaltScope,
 }: {
   items: readonly ReviewPlanItem[];
   approvedCandidateIds: ReadonlySet<string>;
@@ -136,6 +137,8 @@ export async function executeApprovedWritesAfterPageSettles({
     item: ReviewPlanItem,
     controls: readonly SearchFollowUpControl[],
   ) => void;
+  /** Opt-in narrower hold after an unconfirmed search failure; default holds the rest. */
+  followUpHaltScope?: "all" | "row";
 }): Promise<ApprovedWriteResult[]> {
   const finishTiming = startLocalTiming("write-batch", {
     count: approvedCandidateIds.size,
@@ -339,6 +342,7 @@ export async function executeApprovedWritesAfterPageSettles({
       onResult: (item, result) => onResult?.(item, result, registry),
       results: initial,
       onSearchFollowUp,
+      ...(followUpHaltScope ? { followUpHaltScope } : {}),
     });
     await settlePendingCompletion();
     const executedResults = [...initial];

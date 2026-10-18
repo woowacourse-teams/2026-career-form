@@ -1,0 +1,108 @@
+{
+  "fixture_id": "naver-step2-form",
+  "site_id": "naver",
+  "issue_number": 253,
+  "collected_on": "2026-10-17",
+  "provenance": "SANITIZED_SNAPSHOT",
+  "installed_revision": "UNVERIFIED",
+  "revision_evidence": {
+    "method": "UNAVAILABLE",
+    "metadata": null,
+    "metadata_sha256": null,
+    "unverified_reason": "INSTALLATION_UNAVAILABLE"
+  },
+  "scope": {
+    "description": "지원서 2단계 폼(document.forms[0], 컨트롤이 가장 많은 form) 전체. 사용자 지시로 전체 폼 수집. 사용자가 입력을 비운 상태",
+    "controls": {
+      "text": 36,
+      "select": 10
+    },
+    "control_total": 46,
+    "hidden_controls": 24,
+    "options": 152,
+    "labels": 36,
+    "excluded": [
+      "type=hidden 입력란 22개",
+      "컨트롤 4개의 다른 form",
+      "폼 밖 회사명·학교명 조회 팝업(열 때 채워짐)과 달력 레이어",
+      "헤더, 내비게이션, 푸터"
+    ]
+  },
+  "failure": {
+    "stage": "WRITE",
+    "expected": "회사명 검색이 실패해도 그 칸과 그 칸에 의존하는 칸만 보류된다",
+    "actual": "2026-10-17 실사이트 평가에서 회사명 조회 결과 없음 뒤 같은 경력 행과 어학 행의 후속 입력까지 보류되었다",
+    "conditions": [
+      "검색 팝업으로만 채우는 읽기 전용 회사명·학교명 칸",
+      "같은 기입 묶음에 다른 행의 승인 항목"
+    ]
+  },
+  "sanitization": {
+    "removed": [
+      "입력값",
+      "선택 상태",
+      "type=hidden 입력란 22개",
+      "script·style 등 8개",
+      "URL"
+    ],
+    "replaced": [
+      "option value 73개를 합성 코드로 치환"
+    ],
+    "preserved": [
+      "코드 식별자 형태의 id·name·class 토큰",
+      "라벨, 안내 문구, 옵션 텍스트, placeholder 원문"
+    ],
+    "preserved_common_text": "사용자가 개인정보 검토를 통과로 확인했다",
+    "redacted_text_count": 0,
+    "dropped_references": 0,
+    "broken_references_in_original": 0,
+    "duplicate_ids_in_original": 15,
+    "duplicate_ids_after": 14,
+    "duplicate_id_note": "줄어든 1건은 type=hidden 입력란 두 개로만 이루어진 중복 쌍이며 hidden 입력란 제외 규칙의 결과다",
+    "extraction_code": {
+      "path": ".worktrees-evidence/fixture-collect-20261017/extract-v2.js",
+      "sha256": "131f1125409944a711946052461182a08634d86e6e9cbcff481650c600859342",
+      "approved_by_human": true
+    }
+  },
+  "synthetic_behavior": [
+    "원본에서 CSS로 숨겨진 가장 바깥 요소 5곳에 hidden 속성을 합성했다. 숨김 컨트롤 수는 원본 24개, 정제 24개로 같다"
+  ],
+  "limitations": [
+    "회사명·학교명 조회 팝업과 달력은 폼 밖이라 포함하지 않아 검색 실패 보류 동작은 이 정적 자료로 재현하지 않는다(구조 기준선)",
+    "반복 묶음은 수집 시점의 행 수만 포함한다",
+    "페이지 CSS·스크립트·이벤트는 재현하지 않는다",
+    "설치 확장 revision과 실사이트 성공률의 근거가 아니다"
+  ],
+  "review": {
+    "privacy": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-17"
+    },
+    "structure": {
+      "result": "PASSED",
+      "human_reviewed": true,
+      "reviewed_on": "2026-10-17"
+    }
+  },
+  "reproduction": {
+    "command": "cd frontend && npx vitest run --project unit src/autofill/workflow/dom-snapshot.naver-search.integration.test.ts",
+    "product_revision": "a8b3a5725a4c940e9bdde820d28699c9e1300554",
+    "observed": [
+      "실제 collectFieldsSnapshot으로 섹션 4개와 후보 46개, 경력 동일 행 및 별도 어학 섹션 소속을 확인",
+      "executeReadonlySearch만 결과 없음/interaction-started로 mock하고 승인된 프로필 연결을 합성: 공유 쓰기 실행기의 603-626행 분기가 다른 경력 행과 어학 행까지 남은 승인 6개 전체를 보류하고 합성 팝업은 열린 채 유지",
+      "검색 팝업·서버·실제 매핑은 재현하지 않으며 실사이트에서 실제 발화한 분기는 미확인"
+    ],
+    "mutation_check": "메모리에서 회사명 control 제거 시 후보 46→45 및 회사명 후보 소멸 확인. 보류 동작은 별도 검색 mock 경계의 회귀 검사이며 정적 HTML 자체의 실패 재현으로 해석하지 않음",
+    "evidence": ".worktrees-evidence/CF-253/characterize.log; .worktrees-evidence/CF-253/offline-browser.log",
+    "external_requests": "2026-10-17 Playwright Chromium offline context 및 HTTP(S) route abort로 네트워크 차단. file:// 정제본 로드에서 외부 요청 시도 0건, script 0개, 외부 리소스 0개"
+  },
+  "sanitized_html_sha256": "24ee92f36ecbc1508734760ec48552f83a053ae134bd7bc05d1e2d33d333afc6",
+  "whitespace_normalization": {
+    "approved_by_user": "2026-10-18",
+    "scope": "후행 공백·탭 제거, 들여쓰기의 탭 앞 공백 제거(pre-commit 공백 검사용). 그 외 변경 없음",
+    "reviewed_sha256": "86e11c16a71b7e084992c43ff97ba76c0f203d0db2fb22a6b34ea6f3b9e45f89",
+    "diff_w_empty": true
+  }
+}

@@ -86,6 +86,9 @@ export type ReadonlySearchFailureReason =
   | "deadline_exceeded"
   | "run_in_progress";
 
+export type SurfaceLeftOpenReason =
+  "no_safe_close_control" | "close_not_confirmed";
+
 export type SearchEffect = "none" | "interaction-started" | "value-observed";
 
 export type ReadonlySearchExecutionResult = (
@@ -110,6 +113,10 @@ export type ReadonlySearchExecutionResult = (
         | "search_query_conflict"
         | "decision_abstained"
         | "aborted";
+      /** The popup this search opened is still open after the failure. */
+      surfaceLeftOpen?: true;
+      /** De-identified cause when the popup could not be closed. */
+      surfaceLeftOpenReason?: SurfaceLeftOpenReason;
     }
 ) & { effect?: SearchEffect };
 

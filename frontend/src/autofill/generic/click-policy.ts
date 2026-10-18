@@ -15,6 +15,7 @@ const FORBIDDEN_LABELS = [
   STRUCTURAL_CLICK_FORBIDDEN_ACTION,
 ];
 
+const BARE_CLOSE_LABEL = /^(닫기|close|[x×✕])$/i;
 const SUBMIT_INPUT_TYPES = new Set(["submit", "reset", "image"]);
 const NON_NAVIGATING_HREF = /^(#|javascript:\s*void\s*\(\s*0\s*\)\s*;?)$/i;
 
@@ -40,9 +41,23 @@ export function isSafeStructuralClick(
   return reason ? { allowed: false, reason } : { allowed: true };
 }
 
+/**
+ * Whether an element in a search surface the extension opened may be clicked
+ * to close it. Same structural checks as isSafeStructuralClick, but the label
+ * must be a bare close label and must not name any other forbidden action.
+ */
+export function isSafeSurfaceCloseClick(
+  element: Element,
+  scope: Element,
+): ClickDecision {
+  const reason = blockReason(element, scope, true);
+  return reason ? { allowed: false, reason } : { allowed: true };
+}
+
 function blockReason(
   element: Element,
   scope: Element,
+  closeOnly = false,
 ): ClickBlockReason | undefined {
   if (!scope.contains(element)) return "outside-scope";
   if (isInvisible(element)) return "hidden";
@@ -68,7 +83,14 @@ function blockReason(
     return "new-window-target";
   if (element.hasAttribute("formaction") || element.hasAttribute("form"))
     return "form-override-attribute";
-  if (isForbiddenClickLabel(labelOf(element))) return "forbidden-label";
+  const label = labelOf(element);
+  if (closeOnly) {
+    return BARE_CLOSE_LABEL.test(label) &&
+      !FORBIDDEN_LABELS.slice(0, 3).some((pattern) => pattern.test(label))
+      ? undefined
+      : "forbidden-label";
+  }
+  if (isForbiddenClickLabel(label)) return "forbidden-label";
   return undefined;
 }
 
