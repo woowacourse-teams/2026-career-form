@@ -217,11 +217,6 @@ export function collectNativeFields(
   const registry = legacy?.registry ?? new CandidateRegistry();
   const sections: FieldsSection[] = [...(legacy?.request.sections ?? [])];
   const form = nativeForm(document);
-  if (!form || !nativeDocument(document, form))
-    return {
-      registry: new CandidateRegistry(),
-      request: { schemaVersion: 2, snapshotId, site, sections: [] },
-    };
   const claimed = new Set<Element>();
   for (const s of sections)
     for (const f of s.fields) {
@@ -229,16 +224,20 @@ export function collectNativeFields(
       if ("handle" in found) {
         found.handle.owner = "legacy";
         const previous = found.handle.isCurrentContext;
-        const digest = JSON.stringify(form),
+        const digest = JSON.stringify(executionPolicy(document)?.browserPolicy),
           url = document.URL;
         found.handle.isCurrentContext = () =>
           previous?.() !== false &&
           document.URL === url &&
-          nativeDocument(document) &&
-          JSON.stringify(nativeForm(document)) === digest;
+          JSON.stringify(executionPolicy(document)?.browserPolicy) === digest;
         found.handle.elements.forEach((e) => claimed.add(e));
       }
     }
+  if (!form || !nativeDocument(document, form))
+    return {
+      registry,
+      request: { schemaVersion: 2, snapshotId, site, sections },
+    };
   let next = 0;
   for (const { section, root, rows } of scopes(document, form)) {
     const fields: FieldCandidate[] = [];

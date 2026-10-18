@@ -14,7 +14,12 @@ export function resolveCompany(_host: string): CompanyId {
 }
 
 export function isUnsupportedHplace(document: Document): boolean {
-  if (nativePolicyRequired(document)) return !nativeDocument(document);
+  if (nativePolicyRequired(document))
+    return (
+      !nativeDocument(document) &&
+      !registrationControls(document) &&
+      !detailControls(document)
+    );
   return (
     resolveDocumentCompany(document) === "hplace" &&
     !registrationControls(document) &&
