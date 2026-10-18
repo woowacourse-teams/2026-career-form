@@ -1,5 +1,12 @@
 # Wiki Log
 
+## [2026-10-18] update | CF-251 범용 합성 값 binding 소비와 등급 경계
+
+- Approval-Digest: b280bc6ed4d3bd17c43b277a87b1322d47113bd2f22c96c83ea4be78fd8d9ef1
+- Source-Revision: a7eac91a98982932bb6ecd6d34ada6487ac7aa35
+- 승인한 후보 1개를 [CF-251 bundle](../raw/issues/CF-251/manifest.md)에 기록하고 [frontend 검증 경계](topics/generic-binding-frontend-validation.md)의 현재 상태를 소비 완료로 갱신했다.
+- CF-250 raw는 변경하지 않고 History에 남겼다. 실사이트 실행은 하지 않았다.
+
 ## [2026-10-18] ingest | CF-252 범용 칸 문맥·형식 검사와 DOM fixture 검토 경계
 
 - Approval-Digest: c0af678e0f5e91a1f8edbf7d9446fb69b054b135db7ce4264c1ec2c0c82325cf

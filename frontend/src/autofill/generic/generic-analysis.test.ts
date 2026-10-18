@@ -636,3 +636,266 @@ describe("request privacy", () => {
     expect(sent[0]!.semanticContext).toBeDefined();
   });
 });
+
+const direct = (profileFieldKey: string): FieldOverride => ({
+  profileFieldKey,
+  confidence: 0.92,
+  categoryConfirmed: true,
+  autofillPolicy: "ALLOWED",
+  interactionStatus: "READY",
+  writePlan: { command: "SET_TEXT" },
+});
+
+const derived = (
+  recipe: NonNullable<
+    Extract<
+      NonNullable<GenericFieldsResponse["fields"][number]["binding"]>,
+      { type: "DERIVED" }
+    >["recipe"]
+  >,
+  override: FieldOverride = {},
+): FieldOverride => ({
+  profileFieldKey: null,
+  binding: { type: "DERIVED", recipe },
+  confidence: 0.92,
+  categoryConfirmed: true,
+  autofillPolicy: "ALLOWED",
+  interactionStatus: "READY",
+  writePlan: { command: "SET_TEXT" },
+  ...override,
+});
+
+function nameProfile(): Profile {
+  const profile = createEmptyProfile();
+  profile.personal.koreanFamilyName = "합성성씨";
+  profile.personal.koreanGivenName = "합성이름";
+  profile.personal.englishFamilyName = "Synthfamily";
+  profile.personal.englishGivenName = "Synthgiven";
+  return profile;
+}
+
+function mountNameForm() {
+  document.body.innerHTML = `
+    <form>
+      <h2>인적사항</h2>
+      <label>이름<input name="fullName" /></label>
+      <label>영문 이름<input name="englishName" /></label>
+    </form>`;
+}
+
+describe("generic synthetic name bindings", () => {
+  it("keeps a name recipe field as a DERIVED match with the response policy", async () => {
+    mountNameForm();
+
+    const { byName } = await run(
+      {
+        field: (candidate) =>
+          candidate.domName === "fullName"
+            ? derived("KOREAN_FULL_NAME", { autofillPolicy: "CONDITIONAL" })
+            : {},
+      },
+      nameProfile(),
+    );
+
+    expect(byName("fullName").field).toEqual({
+      candidateId: byName("fullName").field.candidateId,
+      matchType: "MATCH",
+      valueBinding: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+      mappingStatus: "LLM_SUGGESTED",
+      autofillPolicy: "CONDITIONAL",
+      interactionStatus: "READY",
+      writePlan: { command: "SET_TEXT" },
+    });
+    expect(byName("fullName").grade).toEqual({ grade: "AUTO" });
+    expect(byName("englishName").field).toMatchObject({ matchType: "NO_MATCH" });
+  });
+
+  it.each([
+    ["KOREAN_FULL_NAME", "koreanGivenName"],
+    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "englishGivenName"],
+    ["ENGLISH_FULL_NAME_FAMILY_FIRST", "englishFamilyName"],
+  ] as const)(
+    "grades %s AUTO with both name keys and BLOCKED without %s",
+    async (recipe, missingKey) => {
+      mountNameForm();
+      const options = {
+        field: (candidate: FieldCandidate) =>
+          candidate.domName === "fullName" ? derived(recipe) : {},
+      };
+
+      const full = await run(options, nameProfile());
+      const fullGrade = full.byName("fullName").grade;
+      document.body.replaceChildren();
+      mountNameForm();
+      const partial = nameProfile();
+      partial.personal[missingKey] = "";
+      const missing = await run(options, partial);
+
+      expect(fullGrade).toEqual({ grade: "AUTO" });
+      expect(missing.byName("fullName").grade).toEqual({
+        grade: "BLOCKED",
+        reason: "NO_PROFILE_VALUE",
+      });
+    },
+  );
+
+  it("keeps split family and given name fields as two DIRECT bindings", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <label>성<input name="family" /></label>
+        <label>이름<input name="given" /></label>
+      </form>`;
+
+    const { byName } = await run(
+      {
+        field: (candidate) =>
+          candidate.domName === "given"
+            ? direct("personal.personal.koreanGivenName")
+            : {},
+      },
+      nameProfile(),
+    );
+
+    expect(byName("family").field).toMatchObject({
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "personal.personal.koreanFamilyName",
+      },
+    });
+    expect(byName("given").field).toMatchObject({
+      valueBinding: {
+        type: "DIRECT",
+        profileFieldKey: "personal.personal.koreanGivenName",
+      },
+    });
+    expect(byName("family").grade).toEqual({ grade: "AUTO" });
+    expect(byName("given").grade).toEqual({ grade: "AUTO" });
+  });
+});
+
+describe("generic date part bindings", () => {
+  const numbered = (from: number, to: number, suffix = "", pad = false) =>
+    Array.from({ length: to - from + 1 }, (_, index) => {
+      const value = String(from + index);
+      return `<option>${pad ? value.padStart(2, "0") : value}${suffix}</option>`;
+    }).join("");
+
+  function mountBirthSelects(month = numbered(1, 12, "월", true)) {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <select name="by"><option value="">년</option>${numbered(1990, 2010)}</select>
+        <select name="bm"><option value="">월</option>${month}</select>
+        <select name="bd"><option value="">일</option>${numbered(1, 31, "일", true)}</select>
+      </form>`;
+  }
+
+  const part = (kind: "YEAR" | "MONTH" | "DAY"): FieldOverride => ({
+    profileFieldKey: "personal.personal.birthDate",
+    binding: { type: "DATE_PART", part: kind },
+    confidence: 0.92,
+    categoryConfirmed: true,
+    autofillPolicy: "ALLOWED",
+    interactionStatus: "READY",
+    writePlan: { command: "SELECT_OPTION" },
+  });
+  const parts = (candidate: FieldCandidate): FieldOverride =>
+    candidate.domName === "by"
+      ? part("YEAR")
+      : candidate.domName === "bm"
+        ? part("MONTH")
+        : candidate.domName === "bd"
+          ? part("DAY")
+          : {};
+
+  function birthProfile(): Profile {
+    const profile = createEmptyProfile();
+    profile.personal.birthDate = "2000-01-01";
+    return profile;
+  }
+
+  it("binds each part select to the option of the local date through a LOOKUP", async () => {
+    mountBirthSelects();
+
+    const { byName } = await run({ field: parts }, birthProfile());
+
+    expect(byName("by").field).toEqual({
+      candidateId: byName("by").field.candidateId,
+      matchType: "MATCH",
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "personal.personal.birthDate",
+        optionMap: { "2000-01-01": "2000" },
+      },
+      mappingStatus: "LLM_SUGGESTED",
+      autofillPolicy: "ALLOWED",
+      interactionStatus: "READY",
+      writePlan: { command: "SELECT_OPTION" },
+    });
+    expect(byName("bm").field).toMatchObject({
+      valueBinding: { optionMap: { "2000-01-01": "01월" } },
+    });
+    expect(byName("bd").field).toMatchObject({
+      valueBinding: { optionMap: { "2000-01-01": "01일" } },
+    });
+    for (const name of ["by", "bm", "bd"])
+      expect(byName(name).grade).toEqual({ grade: "AUTO" });
+  });
+
+  it("blocks a part whose local value is not among the options", async () => {
+    mountBirthSelects(numbered(2, 12, "월", true));
+
+    const { byName } = await run({ field: parts }, birthProfile());
+
+    expect(byName("bm").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "DATE_PART_OPTIONS_MISMATCH",
+    });
+    expect(byName("by").grade).toEqual({ grade: "AUTO" });
+  });
+
+  it("blocks a numeric non-date select that receives a DATE_PART binding", async () => {
+    document.body.innerHTML = `
+      <form>
+        <h2>인적사항</h2>
+        <select name="gpa"><option value="">학점</option><option>4.5</option><option>4.0</option><option>3.5</option><option>3.0</option></select>
+      </form>`;
+
+    const { byName } = await run(
+      { field: (candidate) => (candidate.domName === "gpa" ? part("MONTH") : {}) },
+      birthProfile(),
+    );
+
+    expect(byName("gpa").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "DATE_PART_OPTIONS_MISMATCH",
+    });
+  });
+
+  it("blocks a part select without a usable local date", async () => {
+    mountBirthSelects();
+    const empty = birthProfile();
+    empty.personal.birthDate = "";
+
+    const { byName } = await run({ field: parts }, empty);
+
+    expect(byName("by").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "NO_PROFILE_VALUE",
+    });
+  });
+
+  it("does not send the local date or its parts in any request", async () => {
+    mountBirthSelects();
+
+    const { classifyRequests, analyzeRequests } = await run(
+      { field: parts },
+      birthProfile(),
+    );
+
+    const bodies = JSON.stringify([classifyRequests, analyzeRequests]);
+    expect(bodies).not.toContain("2000-01-01");
+    expect(bodies).not.toContain("birthDate");
+  });
+});

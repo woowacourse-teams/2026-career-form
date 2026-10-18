@@ -288,3 +288,172 @@ describe("gradeGenericField on sanitized fixtures", () => {
     );
   }, 30_000);
 });
+
+describe("gradeGenericField composite name recipes", () => {
+  const recipe = (
+    override: Partial<GradeFieldInput> = {},
+  ): GradeFieldInput => ({
+    confidence: 0.9,
+    categoryConfirmed: true,
+    hasProfileValue: true,
+    control: "text",
+    displayName: "이름",
+    composite: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+    ...override,
+  });
+
+  it("grades a recipe field without a profile key by its confidence", () => {
+    expect(gradeGenericField(recipe())).toEqual({ grade: "AUTO" });
+    expect(gradeGenericField(recipe({ confidence: 0.6 }))).toEqual({
+      grade: "REVIEW",
+      reason: "MODERATE_CONFIDENCE",
+    });
+  });
+
+  it("blocks a recipe whose profile values are not all present", () => {
+    expect(gradeGenericField(recipe({ hasProfileValue: false }))).toEqual({
+      grade: "BLOCKED",
+      reason: "NO_PROFILE_VALUE",
+    });
+  });
+
+  it("treats the same recipe twice in a row as a duplicate and a different recipe as none", () => {
+    expect(
+      gradeGenericField(
+        recipe({
+          rowSiblings: [
+            {
+              composite: { type: "DERIVED", recipe: "KOREAN_FULL_NAME" },
+              confidence: 0.95,
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "REVIEW", reason: "DUPLICATE_KEY_IN_ROW" });
+    expect(
+      gradeGenericField(
+        recipe({
+          rowSiblings: [
+            {
+              composite: {
+                type: "DERIVED",
+                recipe: "ENGLISH_FULL_NAME_GIVEN_FIRST",
+              },
+              confidence: 0.95,
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ grade: "AUTO" });
+  });
+});
+
+describe("gradeGenericField date part selects", () => {
+  const numbered = (from: number, to: number, suffix = "", pad = false) =>
+    Array.from({ length: to - from + 1 }, (_, index) => {
+      const value = String(from + index);
+      return `${pad ? value.padStart(2, "0") : value}${suffix}`;
+    });
+  const part = (
+    datePart: "YEAR" | "MONTH" | "DAY",
+    names: string[],
+    override: Partial<GradeFieldInput> = {},
+  ): GradeFieldInput => ({
+    profileFieldKey: "personal.personal.birthDate",
+    composite: { type: "DATE_PART", part: datePart, localDate: "2000-01-01" },
+    confidence: 0.9,
+    categoryConfirmed: true,
+    hasProfileValue: true,
+    control: "select",
+    displayName: "생년월일",
+    options: options("선택", ...names),
+    ...override,
+  });
+
+  it("does not block a date part select as NON_DATE_FIELD but still blocks a plain DIRECT date select", () => {
+    expect(
+      gradeGenericField(part("YEAR", numbered(1990, 2010))),
+    ).toEqual({ grade: "AUTO" });
+    expect(
+      gradeGenericField(
+        input({
+          profileFieldKey: "personal.personal.birthDate",
+          control: "select",
+          options: options("선택", ...numbered(1990, 2010)),
+        }),
+      ),
+    ).toEqual({ grade: "BLOCKED", reason: "NON_DATE_FIELD" });
+  });
+
+  it.each([
+    ["YEAR", numbered(1990, 2010)],
+    ["YEAR", numbered(1990, 2010, "년")],
+    ["MONTH", numbered(1, 12)],
+    ["MONTH", numbered(1, 12, "월", true)],
+    ["DAY", numbered(1, 31, "일")],
+    ["DAY", numbered(1, 31, "", true)],
+  ] as const)("passes a %s select whose options fit the part", (kind, names) => {
+    expect(gradeGenericField(part(kind, names))).toEqual({ grade: "AUTO" });
+  });
+
+  it("blocks a text control and options that do not fit the part", () => {
+    const mismatch = { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
+    expect(
+      gradeGenericField(part("YEAR", numbered(1990, 2010), { control: "text" })),
+    ).toEqual(mismatch);
+    expect(
+      gradeGenericField(part("MONTH", ["4.5", "4.0", "3.5", "3.0", "2.5"])),
+    ).toEqual(mismatch);
+    expect(
+      gradeGenericField(part("MONTH", numbered(1990, 2010))),
+    ).toEqual(mismatch);
+    expect(
+      gradeGenericField(part("DAY", numbered(1, 12))),
+    ).not.toEqual(mismatch);
+    expect(
+      gradeGenericField(part("DAY", ["가", "나", "다"])),
+    ).toEqual(mismatch);
+  });
+
+  it("blocks when the local date part is missing from the options or ambiguous", () => {
+    const mismatch = { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
+    expect(
+      gradeGenericField(part("YEAR", numbered(2005, 2020))),
+    ).toEqual(mismatch);
+    expect(
+      gradeGenericField(part("MONTH", numbered(2, 12))),
+    ).toEqual(mismatch);
+    expect(
+      gradeGenericField(part("MONTH", [...numbered(1, 12), "01월"])),
+    ).toEqual(mismatch);
+    expect(
+      gradeGenericField(
+        part("YEAR", numbered(1990, 2010), {
+          composite: { type: "DATE_PART", part: "YEAR", localDate: "미입력" },
+        }),
+      ),
+    ).toEqual(mismatch);
+  });
+
+  it("treats the same date part twice in a row as a duplicate and another part as none", () => {
+    const sibling = (kind: "YEAR" | "MONTH") => ({
+      profileFieldKey: "personal.personal.birthDate",
+      composite: {
+        type: "DATE_PART" as const,
+        part: kind,
+        localDate: "2000-01-01",
+      },
+      confidence: 0.95,
+    });
+    expect(
+      gradeGenericField(
+        part("YEAR", numbered(1990, 2010), { rowSiblings: [sibling("YEAR")] }),
+      ),
+    ).toEqual({ grade: "REVIEW", reason: "DUPLICATE_KEY_IN_ROW" });
+    expect(
+      gradeGenericField(
+        part("YEAR", numbered(1990, 2010), { rowSiblings: [sibling("MONTH")] }),
+      ),
+    ).toEqual({ grade: "AUTO" });
+  });
+});

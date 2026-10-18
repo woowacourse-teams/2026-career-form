@@ -15,9 +15,12 @@ import {
   resolveProfileFieldValue,
   type ReviewPlanItem,
 } from "../review/review-plan";
+import { resolveValueBinding } from "../profile/value-binding";
+import { datePartOf, matchDatePartOption } from "./date-part-options";
 import {
   gradeGenericField,
   type FieldGrade,
+  type GradeComposite,
   type GradeReason,
   type GradeSibling,
 } from "./field-grading";
@@ -205,6 +208,37 @@ function classifyEntry(
   };
 }
 
+function compositeOf(
+  response: ResponseField,
+  localDate?: string,
+): GradeComposite | undefined {
+  const { binding } = response;
+  if (binding?.type === "DERIVED")
+    return { type: "DERIVED", recipe: binding.recipe };
+  return binding?.type === "DATE_PART" && response.profileFieldKey
+    ? {
+        type: "DATE_PART",
+        part: binding.part,
+        ...(localDate !== undefined ? { localDate } : {}),
+      }
+    : undefined;
+}
+
+/** Local only: maps the stored date to the option that shows its part. */
+function dateOptionMap(
+  composite: Extract<GradeComposite, { type: "DATE_PART" }>,
+  localDate: string | undefined,
+  candidate: FieldCandidate,
+): Record<string, string> {
+  const option =
+    localDate === undefined
+      ? undefined
+      : matchDatePartOption(composite.part, localDate, candidate.options ?? []);
+  return localDate !== undefined && option !== undefined
+    ? { [localDate]: option }
+    : {};
+}
+
 function convertSection(
   entry: SectionEntry,
   outcome: SectionOutcome,
@@ -215,8 +249,9 @@ function convertSection(
   const matched = section.fields.flatMap((field, index) => {
     const response = outcome.fields[index];
     if (!response) throw new Error("Section result does not match its fields");
-    return response.profileFieldKey && response.reason === undefined
-      ? [{ index, profileFieldKey: response.profileFieldKey, response }]
+    return (response.profileFieldKey || compositeOf(response)) &&
+      response.reason === undefined
+      ? [{ index, response }]
       : [];
   });
   const fields: FieldAnalysis[] = [];
@@ -232,8 +267,19 @@ function convertSection(
       ]);
       return;
     }
-    const profileFieldKey = response.profileFieldKey;
-    if (!profileFieldKey) {
+    const profileFieldKey = response.profileFieldKey ?? undefined;
+    const dateSource =
+      response.binding?.type === "DATE_PART" && profileFieldKey
+        ? resolveValueBinding(
+            profile,
+            { type: "DIRECT", profileFieldKey },
+            itemIndex,
+          )
+        : undefined;
+    const localDate =
+      dateSource?.status === "resolved" ? dateSource.value : undefined;
+    const composite = compositeOf(response, localDate);
+    if (!profileFieldKey && !composite) {
       fields.push(noMatch(candidateId));
       return;
     }
@@ -242,19 +288,25 @@ function convertSection(
         ? matched
             .filter((sibling) => sibling.index !== index)
             .map((sibling) => ({
-              profileFieldKey: sibling.profileFieldKey,
+              profileFieldKey: sibling.response.profileFieldKey ?? undefined,
+              composite: compositeOf(sibling.response),
               confidence: sibling.response.confidence,
             }))
         : undefined;
-    const resolution = resolveProfileFieldValue(
-      profile,
-      profileFieldKey,
-      itemIndex,
-    ).status;
+    const resolution =
+      composite?.type === "DERIVED"
+        ? resolveValueBinding(profile, composite, itemIndex).status
+        : composite?.type === "DATE_PART"
+          ? localDate !== undefined && datePartOf(localDate, composite.part)
+            ? "resolved"
+            : "missing"
+          : resolveProfileFieldValue(profile, profileFieldKey!, itemIndex)
+              .status;
     grades.push([
       candidateId,
       gradeGenericField({
         profileFieldKey,
+        composite,
         confidence: response.confidence,
         categoryConfirmed: response.categoryConfirmed && categoryOpen,
         hasProfileValue:
@@ -275,7 +327,16 @@ function convertSection(
     fields.push({
       candidateId,
       matchType: "MATCH",
-      valueBinding: { type: "DIRECT", profileFieldKey },
+      valueBinding:
+        composite?.type === "DERIVED"
+          ? composite
+          : composite?.type === "DATE_PART"
+            ? {
+                type: "LOOKUP",
+                profileFieldKey: profileFieldKey!,
+                optionMap: dateOptionMap(composite, localDate, candidate),
+              }
+            : { type: "DIRECT", profileFieldKey: profileFieldKey! },
       autofillPolicy: response.autofillPolicy!,
       mappingStatus: "LLM_SUGGESTED",
       interactionStatus: response.interactionStatus,
