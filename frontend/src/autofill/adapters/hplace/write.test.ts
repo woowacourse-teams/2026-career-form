@@ -190,3 +190,95 @@ it.each(["+821012345678", "012-1234-5678", "invalid@example", ""])(
     expect(validation.inputEvents()).toBe(0);
   },
 );
+
+it.each(["", "010-9999-0000"])(
+  "does not report an unchanged visible phone as written with submitted value %j",
+  async (submitted) => {
+    const { item, handle, validation } = setup("mobile");
+    handle.elements.forEach((input, index) => {
+      input.value = ["010", "1234", "5678"][index];
+    });
+    const hidden = document.getElementById(
+      "mobileCombined",
+    ) as HTMLInputElement;
+    hidden.value = submitted;
+    expect(
+      await writeRegistration(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(false);
+    expect(hidden.value).toBe(submitted);
+    expect(validation.inputEvents()).toBe(0);
+  },
+);
+
+it.each(["disabled", "wrong-subject"] as const)(
+  "does not write when submitted phone becomes %s after collection",
+  async (kind) => {
+    const { item, handle, validation } = setup("mobile");
+    const hidden = document.getElementById(
+      "mobileCombined",
+    ) as HTMLInputElement;
+    if (kind === "disabled") hidden.disabled = true;
+    else
+      document.getElementById("password")!.closest(".subject")!.append(hidden);
+    expect(
+      await writeRegistration(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(false);
+    expect(handle.elements.map((input) => input.value)).toEqual(["", "", ""]);
+    expect(validation.inputEvents()).toBe(0);
+  },
+);
+
+it("preserves a submitted phone value when all visible parts are empty", async () => {
+  const { item, handle, validation } = setup("mobile");
+  const hidden = document.getElementById("mobileCombined") as HTMLInputElement;
+  hidden.value = "010-9999-0000";
+  expect(
+    await writeRegistration(
+      document,
+      handle,
+      item,
+      new AbortController().signal,
+    ),
+  ).toBe(false);
+  expect(hidden.value).toBe("010-9999-0000");
+  expect(validation.inputEvents()).toBe(0);
+});
+
+it.each(["inside", "external"])(
+  "does not write after an %s duplicate submitted name is inserted",
+  async (location) => {
+    const { item, handle, validation } = setup("name");
+    const duplicate = document.createElement("input");
+    duplicate.type = "hidden";
+    duplicate.name = "name";
+    if (location === "external") {
+      duplicate.setAttribute("form", "frm");
+      document.body.append(duplicate);
+    } else document.getElementById("frm")!.prepend(duplicate);
+    expect(
+      await writeRegistration(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(false);
+    expect(handle.elements[0].value).toBe("");
+    expect(
+      new FormData(document.getElementById("frm") as HTMLFormElement).getAll(
+        "name",
+      ),
+    ).toHaveLength(2);
+    expect(validation.inputEvents()).toBe(0);
+  },
+);

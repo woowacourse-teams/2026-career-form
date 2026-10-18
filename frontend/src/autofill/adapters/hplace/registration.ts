@@ -29,6 +29,20 @@ function oneInput(
     : undefined;
 }
 
+function successfulControl(element: Element): boolean {
+  if (element.matches(":disabled")) return false;
+  if (element instanceof HTMLInputElement) {
+    if (["button", "submit", "reset", "image"].includes(element.type))
+      return false;
+    return !["checkbox", "radio"].includes(element.type) || element.checked;
+  }
+  if (element instanceof HTMLSelectElement)
+    return Array.from(element.selectedOptions).some(
+      (option) => !option.disabled && !option.closest("optgroup[disabled]"),
+    );
+  return element instanceof HTMLTextAreaElement;
+}
+
 function subject(input: HTMLInputElement, label: string): Element | undefined {
   const root = input.closest(".subject");
   const labels = root?.querySelectorAll(":scope > label.h2");
@@ -87,13 +101,28 @@ export function registrationControls(
     !name ||
     !email ||
     !confirm ||
+    !combined ||
+    combined.matches(":disabled, [aria-disabled=true]") ||
     mobile.some((input) => !input)
+  )
+    return undefined;
+  const submitted = Array.from(form.elements).filter(successfulControl);
+  if (
+    all.some(
+      (input) =>
+        input?.name &&
+        submitted.some(
+          (other) =>
+            other !== input && other.getAttribute("name") === input.name,
+        ),
+    )
   )
     return undefined;
   const phone = mobile as HTMLInputElement[];
   if (
     !subject(name, "성명") ||
     !subject(phone[0], "휴대전화") ||
+    combined.closest(".subject") !== phone[0].closest(".subject") ||
     phone.some(
       (input) =>
         input.closest(".subject") !== phone[0].closest(".subject") ||
@@ -167,8 +196,19 @@ export function registrationValue(
   const inputs = ownedRegistrationControls(handle);
   if (!key || !inputs) return undefined;
   const values = inputs.map((input) => input.value);
+  if (key === "mobile") {
+    const visible = values.every((value) => value === "")
+      ? ""
+      : values.join("-");
+    // Ownership and enabled state were verified above; this control is hidden by design.
+    const combined = inputs[0].ownerDocument.getElementById(
+      "mobileCombined",
+    ) as HTMLInputElement;
+    return combined.value === visible
+      ? visible
+      : `${visible} / ${combined.value}`;
+  }
   if (values.every((value) => value === "")) return "";
-  if (key === "mobile") return values.join("-");
   if (key === "email")
     return values[0] === values[1] ? values[0] : values.join(" / ");
   return values[0];

@@ -4,7 +4,11 @@ import {
   settleBasicStateDriver,
 } from "./hplace/basic-write";
 import { ownedBasicControl } from "./hplace/basic-controls";
-import { isRegistrationItem, writeRegistration } from "./hplace/write";
+import {
+  isRegistrationItem,
+  settleRegistration,
+  writeRegistration,
+} from "./hplace/write";
 import { startLocalTiming } from "../debug/local-timing";
 import { hiddenCodeAdapters } from "../policy/hidden-code";
 import { componentWorkflowAdapter } from "../policy/components/workflow";
@@ -171,8 +175,7 @@ const hplaceWorkflowAdapter: WorkflowAdapter = {
     handle.candidate.domName?.startsWith("hplace.detail.")
       ? settleBasicStateDriver(handle, context?.signal, context?.item)
       : Promise.resolve(
-          !!context &&
-            isRegistrationItem(context.item, handle.candidate.domName),
+          !!context && settleRegistration(handle, context.item, context.signal),
         ),
   stateDriverFailureGroup: (item, handle) =>
     isBasicStateDriver(item, handle.candidate.domName)

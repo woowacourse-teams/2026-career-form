@@ -6,6 +6,7 @@ import {
   registrationBlockReason,
   registrationKey,
   registrationNames,
+  registrationValue,
   type RegistrationKey,
 } from "./registration";
 
@@ -45,6 +46,28 @@ function targetValues(
       ? [value, value]
       : undefined;
   return value ? [value] : undefined;
+}
+
+export function settleRegistration(
+  handle: FieldCandidateHandle,
+  item: ReviewPlanItem,
+  signal?: AbortSignal,
+): boolean {
+  const key = registrationKey(handle);
+  const inputs = ownedRegistrationControls(handle);
+  const values = key ? targetValues(key, item.profileValue ?? "") : undefined;
+  return (
+    !signal?.aborted &&
+    !!inputs &&
+    !!values &&
+    item.candidateId === handle.candidateId &&
+    item.analysis?.candidateId === handle.candidateId &&
+    isRegistrationItem(item, handle.candidate.domName) &&
+    !registrationBlockReason(inputs) &&
+    inputs.length === values.length &&
+    inputs.every((input, index) => input.value === values[index]) &&
+    (key !== "mobile" || registrationValue(handle) === values.join("-"))
+  );
 }
 
 function validator(
@@ -100,8 +123,11 @@ export async function writeRegistration(
     return false;
   const expected = inputs.map((input) => input.value);
   if (
-    expected.some((value) => value !== "") &&
-    !expected.every((value, i) => value === values[i])
+    (expected.some((value) => value !== "") &&
+      !expected.every((value, i) => value === values[i])) ||
+    (key === "mobile" &&
+      expected.every((value) => value === "") &&
+      registrationValue(handle) !== "")
   )
     return false;
   const url = document.URL;
@@ -134,7 +160,8 @@ export async function writeRegistration(
     ) === true &&
     !registrationBlockReason(inputs);
   if (!current()) return false;
-  if (expected.every((value, i) => value === values[i])) return true;
+  if (expected.every((value, i) => value === values[i]))
+    return settleRegistration(handle, item, signal);
   // Blank controls with an old success marker cannot prove current validation.
   if (messages.some((message) => message?.classList.contains("ok")))
     return false;
@@ -169,11 +196,5 @@ export async function writeRegistration(
     input.blur();
     if (!valid || !current()) return false;
   }
-  if (key === "mobile") {
-    const combined = document.getElementById(
-      "mobileCombined",
-    ) as HTMLInputElement;
-    if (combined.value !== values.join("-")) return false;
-  }
-  return current() && inputs.every((input, i) => input.value === values[i]);
+  return current() && settleRegistration(handle, item, signal);
 }

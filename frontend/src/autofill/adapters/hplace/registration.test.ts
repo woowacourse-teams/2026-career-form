@@ -115,3 +115,100 @@ it.each(["frm", "loginForm"])("rejects duplicate frame IDs for %s", (id) => {
   document.body.prepend(duplicate);
   expect(collectFieldsSnapshot(document).request.sections).toEqual([]);
 });
+
+it.each([
+  "disabled",
+  "disabled-fieldset",
+  "aria-disabled",
+  "wrong-subject",
+] as const)("rejects a registration whose submitted phone is %s", (kind) => {
+  mountHplaceRegistration();
+  const hidden = document.getElementById("mobileCombined") as HTMLInputElement;
+  if (kind === "disabled") hidden.disabled = true;
+  if (kind === "aria-disabled") hidden.setAttribute("aria-disabled", "true");
+  if (kind === "disabled-fieldset") {
+    const fieldset = document.createElement("fieldset");
+    fieldset.disabled = true;
+    hidden.before(fieldset);
+    fieldset.append(hidden);
+  }
+  if (kind === "wrong-subject")
+    document.getElementById("password")!.closest(".subject")!.append(hidden);
+  expect(collectFieldsSnapshot(document).request.sections).toEqual([]);
+});
+
+it.each(["", "010-9999-0000"])(
+  "treats equal visible phone parts with submitted value %j as a conflict",
+  (submitted) => {
+    mountHplaceRegistration();
+    ["010", "1234", "5678"].forEach((value, index) => {
+      (
+        document.getElementById(`mobile${index + 1}`) as HTMLInputElement
+      ).value = value;
+    });
+    (document.getElementById("mobileCombined") as HTMLInputElement).value =
+      submitted;
+    const profile = createEmptyProfile();
+    profile.contact.phoneNumber = "010-1234-5678";
+    const snapshot = collectFieldsSnapshot(document);
+    const plan = buildReviewPlan({
+      registry: snapshot.registry,
+      profile,
+      analysis: registrationAnalysis(snapshot.request),
+    });
+    expect(
+      plan.items.find(
+        (item) => item.profileFieldKey === "contact.contact.phoneNumber",
+      )?.status,
+    ).toBe("conflict");
+  },
+);
+
+it.each(
+  ["name", "email", "mobile"].flatMap((name) =>
+    ["inside", "external"].flatMap((location) =>
+      ["", "different-id"].map((id) => ({ name, location, id })),
+    ),
+  ),
+)(
+  "rejects duplicate submitted $name with id '$id' $location the form",
+  ({ name, location, id }) => {
+    mountHplaceRegistration();
+    const duplicate = document.createElement("input");
+    duplicate.type = "hidden";
+    duplicate.name = name;
+    duplicate.id = id;
+    if (location === "external") {
+      duplicate.setAttribute("form", "frm");
+      document.body.append(duplicate);
+    } else document.getElementById("frm")!.prepend(duplicate);
+    expect(collectFieldsSnapshot(document).request.sections).toEqual([]);
+  },
+);
+
+it.each([
+  '<textarea name="name"></textarea>',
+  '<select name="email"><option value="synthetic@example.test" selected>합성</option></select>',
+  '<input type="checkbox" name="mobile" checked>',
+  '<input type="radio" name="mobile" checked>',
+])("rejects another successful submitted control %s", (html) => {
+  mountHplaceRegistration();
+  document.getElementById("frm")!.insertAdjacentHTML("beforeend", html);
+  expect(collectFieldsSnapshot(document).request.sections).toEqual([]);
+});
+
+it.each([
+  '<input name="name" disabled>',
+  '<fieldset disabled><input name="email"></fieldset>',
+  '<input type="checkbox" name="mobile">',
+  '<input type="radio" name="mobile">',
+  '<button type="button" name="name">합성 버튼</button>',
+  '<input type="submit" name="email">',
+  '<select name="mobile"><option disabled selected>합성</option></select>',
+])("ignores a non-successful duplicate control %s", (html) => {
+  mountHplaceRegistration();
+  document.getElementById("frm")!.insertAdjacentHTML("beforeend", html);
+  expect(
+    collectFieldsSnapshot(document).request.sections[0].fields,
+  ).toHaveLength(3);
+});

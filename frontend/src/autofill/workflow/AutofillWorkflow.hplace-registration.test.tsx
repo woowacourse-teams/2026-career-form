@@ -123,3 +123,114 @@ it.each(["preparation", "fields"] as const)(
     );
   },
 );
+
+function registrationProps() {
+  const profile = createEmptyProfile();
+  profile.personal.koreanFamilyName = "합성";
+  profile.personal.koreanGivenName = "사용자";
+  profile.contact.phoneNumber = "01012345678";
+  profile.contact.email = "synthetic@example.test";
+  return {
+    pageDocument: document,
+    onExit: () => undefined,
+    repository: { load: vi.fn(async () => profile) },
+    apiClient: {
+      analyzePreparation: vi.fn(
+        async (request: import("../api/types").PreparationAnalyzeRequest) => ({
+          snapshotId: request.snapshotId,
+          mode: "ADAPTER" as const,
+          analysisStatus: "COMPLETE" as const,
+          preparationPlans: [],
+        }),
+      ),
+      analyzeFields: vi.fn(
+        async (request: import("../api/types").FieldsAnalyzeRequest) =>
+          registrationAnalysis(request),
+      ),
+    },
+  };
+}
+
+it("does not report success after a later email event clears the submitted phone", async () => {
+  mountHplaceRegistration();
+  const validation = installRegistrationValidation();
+  dispose = validation.dispose;
+  document.getElementById("email")!.addEventListener("change", () => {
+    (document.getElementById("mobileCombined") as HTMLInputElement).value = "";
+  });
+  const props = registrationProps();
+  render(<AutofillWorkflow {...props} />);
+  expect(await screen.findByLabelText("확인 필요 1개")).toBeVisible();
+  expect(screen.getByLabelText("입력 완료 2개")).toBeVisible();
+  expect(
+    (document.getElementById("mobileCombined") as HTMLInputElement).value,
+  ).toBe("");
+  expect((document.getElementById("mobile3") as HTMLInputElement).value).toBe(
+    "5678",
+  );
+  expect(validation.clicks()).toBe(0);
+});
+
+it("rechecks submitted phone consistency in the final result after reanalysis", async () => {
+  mountHplaceRegistration();
+  const validation = installRegistrationValidation();
+  dispose = validation.dispose;
+  const props = registrationProps();
+  let requests = 0;
+  props.apiClient.analyzeFields.mockImplementation(async (request) => {
+    requests += 1;
+    if (requests === 2)
+      (document.getElementById("mobileCombined") as HTMLInputElement).value =
+        "";
+    return registrationAnalysis(request);
+  });
+  render(<AutofillWorkflow {...props} />);
+  expect(await screen.findByLabelText("확인 필요 1개")).toBeVisible();
+  expect(screen.getByLabelText("입력 완료 2개")).toBeVisible();
+  expect(
+    (document.getElementById("mobileCombined") as HTMLInputElement).value,
+  ).toBe("");
+  expect(props.apiClient.analyzeFields).toHaveBeenCalledTimes(2);
+  expect(validation.clicks()).toBe(0);
+});
+
+it.each(["", "010-9999-0000"])(
+  "leaves an unchanged visible phone with submitted value %j for review",
+  async (submitted) => {
+    mountHplaceRegistration();
+    const validation = installRegistrationValidation();
+    dispose = validation.dispose;
+    ["010", "1234", "5678"].forEach((value, index) => {
+      (
+        document.getElementById(`mobile${index + 1}`) as HTMLInputElement
+      ).value = value;
+    });
+    (document.getElementById("mobileCombined") as HTMLInputElement).value =
+      submitted;
+    const props = registrationProps();
+    render(<AutofillWorkflow {...props} />);
+    expect(await screen.findByLabelText("확인 필요 1개")).toBeVisible();
+    expect(screen.getByLabelText("입력 완료 2개")).toBeVisible();
+    expect(
+      (document.getElementById("mobileCombined") as HTMLInputElement).value,
+    ).toBe(submitted);
+    expect(validation.clicks()).toBe(0);
+  },
+);
+
+it("rejects a duplicated submitted name before loading a profile or writing", async () => {
+  mountHplaceRegistration();
+  document
+    .getElementById("frm")!
+    .insertAdjacentHTML("afterbegin", '<input type="hidden" name="name">');
+  const validation = installRegistrationValidation();
+  dispose = validation.dispose;
+  const props = registrationProps();
+  render(<AutofillWorkflow {...props} />);
+  expect(await screen.findByText("아직 지원하지 않아요")).toBeVisible();
+  expect(props.repository.load).not.toHaveBeenCalled();
+  expect(props.apiClient.analyzePreparation).not.toHaveBeenCalled();
+  expect(props.apiClient.analyzeFields).not.toHaveBeenCalled();
+  expect(validation.inputEvents()).toBe(0);
+  expect(validation.clicks()).toBe(0);
+});
