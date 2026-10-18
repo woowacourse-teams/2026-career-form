@@ -66,6 +66,7 @@ public final class StoredPolicyFieldMappingResolver implements FieldMappingResol
         String itemGroupId,
         boolean insideRepeatableItem, boolean nativeSection
     ) {
+        if (nativeSection && Boolean.TRUE.equals(candidate.inert())) return new NoMatch(candidate.candidateId());
         if (exactTopLevelDomName && !nativeSection) {
             if (insideRepeatableItem || candidate.domName() == null) {
                 return new NoMatch(candidate.candidateId());

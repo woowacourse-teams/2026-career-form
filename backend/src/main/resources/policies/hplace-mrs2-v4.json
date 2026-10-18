@@ -12,7 +12,150 @@
       "writing/reading ≠ conversationalLevel",
       "joinPossibleDate: 프로필 키 없음",
       "existYn=false 자동 선택 금지"
-    ]
+    ],
+    "p2": [
+      "GS/한국타이어 live 140/141/142/165/168; Enter keypress13, row-local committed tuple; empty exam add/selection may perform site grade lookup, never authentication/delete."
+    ],
+    "p2Disabled": {
+      "majorAndGpa": "P4 중첩행/숫자 GPA 범위; 검색 프로토콜 테스트만",
+      "highschoolCategoryCode": "대응 프로필 키 없음; academicProcess를 고교 계열로 대체하지 않음",
+      "collegeCategoryCode": "대응 프로필 키 없음; majorField를 학교 계열로 대체하지 않음",
+      "headOrBranch": "대응 프로필 키 없음",
+      "examDate": "취득일과 응시일 의미 불일치",
+      "examPerfectScore": "프로필 키 없음",
+      "gradeAndScoreBoth": "단일 grade 값으로 두 의미를 추정하지 않음",
+      "graduateLab": "lab/academicAdviser 실DOM 필드 관측이 없어 미활성"
+    },
+    "observedCodeTables": {
+      "locationCode": {
+        "서울": "101",
+        "부산": "102",
+        "대구": "103",
+        "인천": "104",
+        "광주": "105",
+        "대전": "106",
+        "울산": "107",
+        "경기": "108",
+        "강원": "109",
+        "충북": "110",
+        "충남": "111",
+        "전북": "112",
+        "전남": "113",
+        "경북": "114",
+        "경남": "115",
+        "제주": "116",
+        "세종": "117",
+        "전남광주통합특별시": "118",
+        "미국": "201",
+        "일본": "202",
+        "프랑스": "203",
+        "호주": "204",
+        "중국": "205",
+        "영국": "206",
+        "독일": "207",
+        "캐나다": "208",
+        "스웨덴": "209",
+        "핀란드": "210",
+        "이탈리아": "211",
+        "러시아": "212",
+        "대만": "213",
+        "인도네시아": "214",
+        "말레이시아": "215",
+        "방글라데시": "216",
+        "싱가폴": "217",
+        "인도": "218",
+        "필리핀": "219",
+        "홍콩": "220",
+        "베트남": "221",
+        "뉴질랜드": "222",
+        "오세아니아": "223",
+        "중남미": "224",
+        "아프리카": "225",
+        "기타 아시아": "901",
+        "기타 유럽": "902",
+        "기타 지역": "999"
+      },
+      "collegeCategoryCode": {
+        "가정": "01",
+        "간호": "02",
+        "건축": "03",
+        "공학": "04",
+        "농림": "05",
+        "사범": "06",
+        "법정": "07",
+        "사회": "08",
+        "상경": "09",
+        "신학": "10",
+        "어문": "11",
+        "예체": "12",
+        "의학": "13",
+        "인문": "14",
+        "자연": "15",
+        "부동산": "16",
+        "축수산": "17",
+        "보건": "18",
+        "기타": "99"
+      },
+      "majorCategoryCode": {
+        "인문계열(언어ㆍ문학)": "101",
+        "인문계열(인문과학)": "102",
+        "상경계열(경영·경제)": "103",
+        "상경계열(회계·금융)": "136",
+        "상경계열(통계)": "137",
+        "상경계열(무역)": "141",
+        "사회계열(법률)": "104",
+        "사회계열(사회과학)": "105",
+        "교육계열(교육일반)": "106",
+        "교육계열(유아교육)": "107",
+        "교육계열(특수교육)": "108",
+        "교육계열(초등교육)": "109",
+        "교육계열(중등교육)": "110",
+        "공학계열(건축)": "111",
+        "공학계열(토목·도시)": "112",
+        "공학계열(교통·운송)": "113",
+        "공학계열(기계·금속)": "114",
+        "공학계열(전기·전자)": "115",
+        "공학계열(정밀·에너지)": "116",
+        "공학계열(소재·재료)": "117",
+        "공학계열(컴퓨터·통신)": "118",
+        "공학계열(산업)": "119",
+        "공학계열(화공)": "120",
+        "공학계열(환경)": "139",
+        "공학계열(조선해양)": "140",
+        "자연계열(농림·수산)": "121",
+        "자연계열(생물·화학·환경)": "122",
+        "자연계열(생활과학)": "123",
+        "자연계열(수학·물리·천문·지리)": "124",
+        "자연계열(교통.운송)": "138",
+        "의약계열(의료)": "125",
+        "의약계열(간호)": "126",
+        "의약계열(약학)": "127",
+        "의약계열(치료·보건)": "128",
+        "예체능계열(디자인)": "129",
+        "예체능계열(응용예술)": "130",
+        "예체능계열(무용·체육)": "131",
+        "예체능계열(미술·조형)": "132",
+        "예체능계열(연극·영화)": "133",
+        "예체능계열(음악)": "134",
+        "기타": "135"
+      },
+      "highschoolCategoryCode": {
+        "인문": "01",
+        "상업": "02",
+        "공업": "03",
+        "전산정보": "04",
+        "예술": "05",
+        "농업": "06",
+        "과학": "07",
+        "외국어": "08",
+        "체육": "09",
+        "마이스터": "10",
+        "특성화": "11",
+        "자율형 사립": "12",
+        "자율형 공립": "13",
+        "기타": "99"
+      }
+    }
   },
   "sectionContracts": [
     {
@@ -176,6 +319,229 @@
           "control": "button"
         }
       ]
+    },
+    {
+      "sectionId": "hplace-mrs2-highschool",
+      "parentSectionId": null,
+      "itemGroupId": null,
+      "maxRows": 1,
+      "maxFields": 6,
+      "anchors": [],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.highschool.academyName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.highschool.graduationTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.highschool.locationCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.highschool.dayOrNight",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.highschool.entranceDate",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.highschool.graduationDate",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": []
+    },
+    {
+      "sectionId": "hplace-mrs2-college",
+      "parentSectionId": null,
+      "itemGroupId": "hplace.mrs2.college",
+      "maxRows": 20,
+      "maxFields": 7,
+      "anchors": [],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.college.academyName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.graduationTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.locationCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.degreeTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.entranceTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.entranceDate",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.college.graduationDate",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": [
+        {
+          "structuralNames": ["hplace.mrs2.college.add"],
+          "element": "button",
+          "control": "button"
+        }
+      ]
+    },
+    {
+      "sectionId": "hplace-mrs2-graduateSchool",
+      "parentSectionId": null,
+      "itemGroupId": "hplace.mrs2.graduateSchool",
+      "maxRows": 20,
+      "maxFields": 7,
+      "anchors": [],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.academyName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.graduationTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.locationCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.degreeTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.entranceTypeCode",
+          "element": "input",
+          "control": "radio"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.entranceDate",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.graduateSchool.graduationDate",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": [
+        {
+          "structuralNames": ["hplace.mrs2.graduateSchool.add"],
+          "element": "button",
+          "control": "button"
+        }
+      ]
+    },
+    {
+      "sectionId": "hplace-mrs2-license",
+      "parentSectionId": null,
+      "itemGroupId": "hplace.mrs2.license",
+      "maxRows": 20,
+      "maxFields": 4,
+      "anchors": [],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.license.licenseName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.license.organization",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.license.registNumber",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.license.acquireDate",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": [
+        {
+          "structuralNames": ["hplace.mrs2.license.add"],
+          "element": "button",
+          "control": "button"
+        }
+      ]
+    },
+    {
+      "sectionId": "hplace-mrs2-foreignExam",
+      "parentSectionId": null,
+      "itemGroupId": "hplace.mrs2.foreignExam",
+      "maxRows": 20,
+      "maxFields": 4,
+      "anchors": [],
+      "fields": [
+        {
+          "structuralName": "hplace.mrs2.foreignExam.languageExamName",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.foreignExam.registNumber",
+          "element": "input",
+          "control": "text"
+        },
+        {
+          "structuralName": "hplace.mrs2.foreignExam.gradeCode",
+          "element": "select",
+          "control": "select"
+        },
+        {
+          "structuralName": "hplace.mrs2.foreignExam.score",
+          "element": "input",
+          "control": "text"
+        }
+      ],
+      "actions": [
+        {
+          "structuralNames": ["hplace.mrs2.foreignExam.add"],
+          "element": "button",
+          "control": "button"
+        }
+      ],
+      "excludedRow": {
+        "name": "hplace.mrs2.foreignExam.languageExamName",
+        "reason": "입력 불가(인증 시험 — 사용자 처리)"
+      }
     }
   ],
   "actionRules": [
@@ -201,6 +567,46 @@
     },
     {
       "structuralNames": ["hplace.mrs2.foreignAbility.add"],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": ["hplace.mrs2.college.add"],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": ["hplace.mrs2.graduateSchool.add"],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": ["hplace.mrs2.license.add"],
+      "kind": "ADD",
+      "targetSectionId": null,
+      "profileFieldKey": null,
+      "optionDisplayName": null,
+      "expectedFieldNames": null,
+      "selectableProfileValues": null,
+      "revealedFieldBindings": null
+    },
+    {
+      "structuralNames": ["hplace.mrs2.foreignExam.add"],
       "kind": "ADD",
       "targetSectionId": null,
       "profileFieldKey": null,
@@ -470,6 +876,400 @@
       "requiredDomName": "hplace.mrs2.foreignAbility.speakingLevelCodeSn",
       "requiredItemGroupId": "hplace.mrs2.foreignAbility",
       "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.highschool.academyName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.schoolName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.highschool.academyName",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.highschool.graduationTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.highSchool.completionStatus",
+        "optionMap": {
+          "졸업": "졸업",
+          "졸업예정": "졸업예정",
+          "중퇴": "중퇴",
+          "휴학": "휴학",
+          "재학": "재학",
+          "재학중": "재학"
+        }
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.highschool.graduationTypeCode",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.highschool.locationCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.schoolRegion"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.highschool.locationCode",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.highschool.dayOrNight",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.attendanceType"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.highschool.dayOrNight",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.highschool.entranceDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.startDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.highschool.entranceDate",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.highschool.graduationDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.highSchool.endDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.highschool.graduationDate",
+      "requiredItemGroupId": null,
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.academyName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.schoolName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.academyName",
+      "requiredItemGroupId": "hplace.mrs2.college",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.graduationTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.university.completionStatus",
+        "optionMap": {
+          "졸업": "졸업",
+          "졸업예정": "졸업예정",
+          "수료": "수료",
+          "중퇴": "중퇴",
+          "휴학": "휴학",
+          "재학": "재학",
+          "재학중": "재학"
+        }
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.graduationTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.college",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.locationCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.schoolRegion"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.locationCode",
+      "requiredItemGroupId": "hplace.mrs2.college",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.degreeTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.degreeLevel"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.degreeTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.college",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.entranceTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.university.transferStatus",
+        "optionMap": {
+          "비해당": "입학",
+          "해당": "편입"
+        }
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.entranceTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.college",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.entranceDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.startDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.entranceDate",
+      "requiredItemGroupId": "hplace.mrs2.college",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.college.graduationDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.university.endDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.college.graduationDate",
+      "requiredItemGroupId": "hplace.mrs2.college",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.academyName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.schoolName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.academyName",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.graduationTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "LOOKUP",
+        "profileFieldKey": "education.graduateSchool.completionStatus",
+        "optionMap": {
+          "졸업": "졸업",
+          "졸업예정": "졸업예정",
+          "수료": "수료",
+          "중퇴": "중퇴",
+          "휴학": "휴학",
+          "재학": "재학",
+          "재학중": "재학"
+        }
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.graduationTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.locationCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.schoolRegion"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.locationCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.degreeTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.degreeLevel"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.degreeTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.entranceTypeCode",
+      "element": "input",
+      "control": "radio",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.admissionType"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.entranceTypeCode",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.entranceDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.startDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.entranceDate",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.graduateSchool.graduationDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "education.graduateSchool.endDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.graduateSchool.graduationDate",
+      "requiredItemGroupId": "hplace.mrs2.graduateSchool",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.license.licenseName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.name"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.license.licenseName",
+      "requiredItemGroupId": "hplace.mrs2.license",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.license.organization",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.issuer"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.license.organization",
+      "requiredItemGroupId": "hplace.mrs2.license",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.license.registNumber",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.registrationNo"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.license.registNumber",
+      "requiredItemGroupId": "hplace.mrs2.license",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.license.acquireDate",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "certifications.certificate.acquisitionDate"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.license.acquireDate",
+      "requiredItemGroupId": "hplace.mrs2.license",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.foreignExam.languageExamName",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "languages.languageTest.testName"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.foreignExam.languageExamName",
+      "requiredItemGroupId": "hplace.mrs2.foreignExam",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.foreignExam.registNumber",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "languages.languageTest.registrationNo"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.foreignExam.registNumber",
+      "requiredItemGroupId": "hplace.mrs2.foreignExam",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.foreignExam.gradeCode",
+      "element": "select",
+      "control": "select",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "languages.languageTest.grade"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.foreignExam.gradeCode",
+      "requiredItemGroupId": "hplace.mrs2.foreignExam",
+      "enabledOnly": true
+    },
+    {
+      "structuralName": "hplace.mrs2.foreignExam.score",
+      "element": "input",
+      "control": "text",
+      "valueBinding": {
+        "type": "DIRECT",
+        "profileFieldKey": "languages.languageTest.grade"
+      },
+      "allowReadonlyWrite": false,
+      "requiredDomName": "hplace.mrs2.foreignExam.score",
+      "requiredItemGroupId": "hplace.mrs2.foreignExam",
+      "enabledOnly": true
     }
   ],
   "executionPolicy": {
@@ -484,7 +1284,8 @@
           "SCOPED_FIELDS",
           "SINGLE_DEPTH_ROWS",
           "NATIVE_DRIVERS",
-          "NATIVE_DATES"
+          "NATIVE_DATES",
+          "KEYPRESS_COMMITTED_TUPLE"
         ],
         "path": "/mrs2/applicant/resume/writeResume",
         "formSelector": "form#frm",
@@ -493,7 +1294,7 @@
           "/mrs2/release/js/applicant/writeResume/writeResume.js",
           "/mrs2/release/js/applicant/writeResume/writeResumeTemplate.js"
         ],
-        "maxFieldsRequests": 5,
+        "maxFieldsRequests": 8,
         "sections": [
           {
             "id": "hplace-mrs2-basic-extra",
@@ -992,6 +1793,956 @@
                 }
               }
             ]
+          },
+          {
+            "id": "hplace-mrs2-highschool",
+            "title": "고등학교",
+            "selector": "section.writeResume[data-code=\"140\"]",
+            "enabled": true,
+            "anchors": [],
+            "fields": [
+              {
+                "name": "hplace.mrs2.highschool.academyName",
+                "rawName": "highschool.academyName",
+                "label": "학교명",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.highSchool.schoolName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": "highSchool",
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"highschool\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "highschool.academyCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 2,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.highschool.graduationTypeCode",
+                "rawName": "highschool.graduationTypeCode",
+                "label": "졸업구분",
+                "type": "radio",
+                "binding": {
+                  "type": "LOOKUP",
+                  "profileFieldKey": "education.highSchool.completionStatus",
+                  "optionMap": {
+                    "졸업": "졸업",
+                    "졸업예정": "졸업예정",
+                    "중퇴": "중퇴",
+                    "휴학": "휴학",
+                    "재학": "재학",
+                    "재학중": "재학"
+                  }
+                },
+                "options": {
+                  "졸업": "01",
+                  "졸업예정": "02",
+                  "중퇴": "04",
+                  "휴학": "05",
+                  "재학": "07"
+                },
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1500,
+                  "dependencies": [
+                    "hplace.mrs2.highschool.academyName",
+                    "hplace.mrs2.highschool.locationCode",
+                    "hplace.mrs2.highschool.dayOrNight",
+                    "hplace.mrs2.highschool.entranceDate",
+                    "hplace.mrs2.highschool.graduationDate"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.highschool.academyName",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.highschool.locationCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.highschool.dayOrNight",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.highschool.entranceDate",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.highschool.graduationDate",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.highschool.locationCode",
+                "rawName": "highschool.locationCode",
+                "label": "학교 소재지",
+                "type": "select",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.highSchool.schoolRegion"
+                },
+                "options": {
+                  "서울": "101",
+                  "부산": "102",
+                  "대구": "103",
+                  "인천": "104",
+                  "광주": "105",
+                  "대전": "106",
+                  "울산": "107",
+                  "경기": "108",
+                  "강원": "109",
+                  "충북": "110",
+                  "충남": "111",
+                  "전북": "112",
+                  "전남": "113",
+                  "경북": "114",
+                  "경남": "115",
+                  "제주": "116",
+                  "세종": "117",
+                  "전남광주통합특별시": "118",
+                  "미국": "201",
+                  "일본": "202",
+                  "프랑스": "203",
+                  "호주": "204",
+                  "중국": "205",
+                  "영국": "206",
+                  "독일": "207",
+                  "캐나다": "208",
+                  "스웨덴": "209",
+                  "핀란드": "210",
+                  "이탈리아": "211",
+                  "러시아": "212",
+                  "대만": "213",
+                  "인도네시아": "214",
+                  "말레이시아": "215",
+                  "방글라데시": "216",
+                  "싱가폴": "217",
+                  "인도": "218",
+                  "필리핀": "219",
+                  "홍콩": "220",
+                  "베트남": "221",
+                  "뉴질랜드": "222",
+                  "오세아니아": "223",
+                  "중남미": "224",
+                  "아프리카": "225",
+                  "기타 아시아": "901",
+                  "기타 유럽": "902",
+                  "기타 지역": "999"
+                }
+              },
+              {
+                "name": "hplace.mrs2.highschool.dayOrNight",
+                "rawName": "highschool.dayOrNight",
+                "label": "주야간",
+                "type": "radio",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.highSchool.attendanceType"
+                },
+                "options": {
+                  "주간": "01",
+                  "야간": "02"
+                }
+              },
+              {
+                "name": "hplace.mrs2.highschool.entranceDate",
+                "rawName": "highschool.entranceDate",
+                "label": "입학일",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.highSchool.startDate"
+                },
+                "date": {
+                  "group": "highschoolDate",
+                  "role": "START",
+                  "formats": ["YM"],
+                  "peer": "hplace.mrs2.highschool.graduationDate",
+                  "forbiddenAfterToday": false,
+                  "tokens": ["highschool", "graduationCriteriaDate"],
+                  "maxDateSelector": ".row.in-span > .msg > strong"
+                }
+              },
+              {
+                "name": "hplace.mrs2.highschool.graduationDate",
+                "rawName": "highschool.graduationDate",
+                "label": "졸업일",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.highSchool.endDate"
+                },
+                "date": {
+                  "group": "highschoolDate",
+                  "role": "END",
+                  "formats": ["YM"],
+                  "peer": "hplace.mrs2.highschool.entranceDate",
+                  "forbiddenAfterToday": false,
+                  "tokens": ["highschool", "graduationCriteriaDate"],
+                  "maxDateSelector": ".row.in-span > .msg > strong"
+                }
+              }
+            ]
+          },
+          {
+            "id": "hplace-mrs2-college",
+            "title": "대학교",
+            "selector": "section.writeResume[data-code=\"141\"]",
+            "enabled": true,
+            "anchors": [],
+            "fields": [
+              {
+                "name": "hplace.mrs2.college.academyName",
+                "rawName": "college[{index}].academyName",
+                "label": "학교명",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.schoolName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": "university",
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"college\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "college[{index}].academyCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 2,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.graduationTypeCode",
+                "rawName": "college[{index}].graduationTypeCode",
+                "label": "졸업구분",
+                "type": "radio",
+                "binding": {
+                  "type": "LOOKUP",
+                  "profileFieldKey": "education.university.completionStatus",
+                  "optionMap": {
+                    "졸업": "졸업",
+                    "졸업예정": "졸업예정",
+                    "수료": "수료",
+                    "중퇴": "중퇴",
+                    "휴학": "휴학",
+                    "재학": "재학",
+                    "재학중": "재학"
+                  }
+                },
+                "options": {
+                  "졸업": "01",
+                  "졸업예정": "02",
+                  "수료": "03",
+                  "중퇴": "04",
+                  "휴학": "05",
+                  "재학": "07"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.locationCode",
+                "rawName": "college[{index}].locationCode",
+                "label": "학교 소재지",
+                "type": "select",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.schoolRegion"
+                },
+                "options": {
+                  "서울": "101",
+                  "부산": "102",
+                  "대구": "103",
+                  "인천": "104",
+                  "광주": "105",
+                  "대전": "106",
+                  "울산": "107",
+                  "경기": "108",
+                  "강원": "109",
+                  "충북": "110",
+                  "충남": "111",
+                  "전북": "112",
+                  "전남": "113",
+                  "경북": "114",
+                  "경남": "115",
+                  "제주": "116",
+                  "세종": "117",
+                  "전남광주통합특별시": "118",
+                  "미국": "201",
+                  "일본": "202",
+                  "프랑스": "203",
+                  "호주": "204",
+                  "중국": "205",
+                  "영국": "206",
+                  "독일": "207",
+                  "캐나다": "208",
+                  "스웨덴": "209",
+                  "핀란드": "210",
+                  "이탈리아": "211",
+                  "러시아": "212",
+                  "대만": "213",
+                  "인도네시아": "214",
+                  "말레이시아": "215",
+                  "방글라데시": "216",
+                  "싱가폴": "217",
+                  "인도": "218",
+                  "필리핀": "219",
+                  "홍콩": "220",
+                  "베트남": "221",
+                  "뉴질랜드": "222",
+                  "오세아니아": "223",
+                  "중남미": "224",
+                  "아프리카": "225",
+                  "기타 아시아": "901",
+                  "기타 유럽": "902",
+                  "기타 지역": "999"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.degreeTypeCode",
+                "rawName": "college[{index}].degreeTypeCode",
+                "label": "학위구분",
+                "type": "radio",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.degreeLevel"
+                },
+                "options": {
+                  "전문학사": "40",
+                  "학사": "50"
+                },
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1500,
+                  "dependencies": [
+                    "hplace.mrs2.college.academyName",
+                    "hplace.mrs2.college.graduationTypeCode",
+                    "hplace.mrs2.college.locationCode",
+                    "hplace.mrs2.college.entranceTypeCode",
+                    "hplace.mrs2.college.entranceDate",
+                    "hplace.mrs2.college.graduationDate"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.college.academyName",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.graduationTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.locationCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.entranceTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.entranceDate",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.college.graduationDate",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.entranceTypeCode",
+                "rawName": "college[{index}].entranceTypeCode",
+                "label": "입학구분",
+                "type": "radio",
+                "binding": {
+                  "type": "LOOKUP",
+                  "profileFieldKey": "education.university.transferStatus",
+                  "optionMap": {
+                    "비해당": "입학",
+                    "해당": "편입"
+                  }
+                },
+                "options": {
+                  "입학": "01",
+                  "편입": "02"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.entranceDate",
+                "rawName": "college[{index}].entranceDate",
+                "label": "입학일",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.startDate"
+                },
+                "date": {
+                  "group": "college[{index}].date",
+                  "role": "START",
+                  "formats": ["YM"],
+                  "peer": "hplace.mrs2.college.graduationDate",
+                  "forbiddenAfterToday": false,
+                  "tokens": ["college", "graduationCriteriaDate"],
+                  "maxDateSelector": ".row.in-span > .msg > strong"
+                }
+              },
+              {
+                "name": "hplace.mrs2.college.graduationDate",
+                "rawName": "college[{index}].graduationDate",
+                "label": "졸업일",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.university.endDate"
+                },
+                "date": {
+                  "group": "college[{index}].date",
+                  "role": "END",
+                  "formats": ["YM"],
+                  "peer": "hplace.mrs2.college.entranceDate",
+                  "forbiddenAfterToday": false,
+                  "tokens": ["college", "graduationCriteriaDate"],
+                  "maxDateSelector": ".row.in-span > .msg > strong"
+                }
+              }
+            ],
+            "rows": {
+              "selector": ":scope > div[data-wrap=\"collegeLoop\"][data-type=\"college\"] > div.loop[data-loop=\"college\"]",
+              "namePrefix": "college",
+              "groupId": "hplace.mrs2.college",
+              "maxCount": 20
+            },
+            "action": {
+              "id": "hplace.mrs2.college.add",
+              "selector": "div.collegeBtnSet > button[type=\"button\"][data-button=\"addCollege\"][data-loopname=\"college\"]",
+              "scope": "SECTION",
+              "label": "대학교 추가",
+              "categoryId": "education",
+              "profileSectionId": "university"
+            }
+          },
+          {
+            "id": "hplace-mrs2-graduateSchool",
+            "title": "대학원",
+            "selector": "section.writeResume[data-code=\"142\"]",
+            "enabled": true,
+            "anchors": [],
+            "fields": [
+              {
+                "name": "hplace.mrs2.graduateSchool.academyName",
+                "rawName": "graduateSchool[{index}].academyName",
+                "label": "학교명",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.schoolName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": "graduateSchool",
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"college\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "graduateSchool[{index}].academyCode",
+                  "kind": "PLAIN",
+                  "metadata": {},
+                  "timeoutMs": 1500
+                },
+                "driver": {
+                  "stage": 2,
+                  "timeoutMs": 1500,
+                  "dependencies": [],
+                  "settled": []
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.graduationTypeCode",
+                "rawName": "graduateSchool[{index}].graduationTypeCode",
+                "label": "졸업구분",
+                "type": "radio",
+                "binding": {
+                  "type": "LOOKUP",
+                  "profileFieldKey": "education.graduateSchool.completionStatus",
+                  "optionMap": {
+                    "졸업": "졸업",
+                    "졸업예정": "졸업예정",
+                    "수료": "수료",
+                    "중퇴": "중퇴",
+                    "휴학": "휴학",
+                    "재학": "재학",
+                    "재학중": "재학"
+                  }
+                },
+                "options": {
+                  "졸업": "01",
+                  "졸업예정": "02",
+                  "수료": "03",
+                  "중퇴": "04",
+                  "휴학": "05",
+                  "재학": "07"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.locationCode",
+                "rawName": "graduateSchool[{index}].locationCode",
+                "label": "학교 소재지",
+                "type": "select",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.schoolRegion"
+                },
+                "options": {
+                  "서울": "101",
+                  "부산": "102",
+                  "대구": "103",
+                  "인천": "104",
+                  "광주": "105",
+                  "대전": "106",
+                  "울산": "107",
+                  "경기": "108",
+                  "강원": "109",
+                  "충북": "110",
+                  "충남": "111",
+                  "전북": "112",
+                  "전남": "113",
+                  "경북": "114",
+                  "경남": "115",
+                  "제주": "116",
+                  "세종": "117",
+                  "전남광주통합특별시": "118",
+                  "미국": "201",
+                  "일본": "202",
+                  "프랑스": "203",
+                  "호주": "204",
+                  "중국": "205",
+                  "영국": "206",
+                  "독일": "207",
+                  "캐나다": "208",
+                  "스웨덴": "209",
+                  "핀란드": "210",
+                  "이탈리아": "211",
+                  "러시아": "212",
+                  "대만": "213",
+                  "인도네시아": "214",
+                  "말레이시아": "215",
+                  "방글라데시": "216",
+                  "싱가폴": "217",
+                  "인도": "218",
+                  "필리핀": "219",
+                  "홍콩": "220",
+                  "베트남": "221",
+                  "뉴질랜드": "222",
+                  "오세아니아": "223",
+                  "중남미": "224",
+                  "아프리카": "225",
+                  "기타 아시아": "901",
+                  "기타 유럽": "902",
+                  "기타 지역": "999"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.degreeTypeCode",
+                "rawName": "graduateSchool[{index}].degreeTypeCode",
+                "label": "학위구분",
+                "type": "radio",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.degreeLevel"
+                },
+                "options": {
+                  "석사": "62",
+                  "박사": "72"
+                },
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1500,
+                  "dependencies": [
+                    "hplace.mrs2.graduateSchool.academyName",
+                    "hplace.mrs2.graduateSchool.graduationTypeCode",
+                    "hplace.mrs2.graduateSchool.locationCode",
+                    "hplace.mrs2.graduateSchool.entranceTypeCode",
+                    "hplace.mrs2.graduateSchool.entranceDate",
+                    "hplace.mrs2.graduateSchool.graduationDate"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.graduateSchool.academyName",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.graduationTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.locationCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.entranceTypeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.entranceDate",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.graduateSchool.graduationDate",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.entranceTypeCode",
+                "rawName": "graduateSchool[{index}].entranceTypeCode",
+                "label": "입학구분",
+                "type": "radio",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.admissionType"
+                },
+                "options": {
+                  "입학": "01",
+                  "편입": "02"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.entranceDate",
+                "rawName": "graduateSchool[{index}].entranceDate",
+                "label": "입학일",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.startDate"
+                },
+                "date": {
+                  "group": "graduateSchool[{index}].date",
+                  "role": "START",
+                  "formats": ["YM"],
+                  "peer": "hplace.mrs2.graduateSchool.graduationDate",
+                  "forbiddenAfterToday": false,
+                  "tokens": ["college", "graduationCriteriaDate"],
+                  "maxDateSelector": ".row.in-span > .msg > strong"
+                }
+              },
+              {
+                "name": "hplace.mrs2.graduateSchool.graduationDate",
+                "rawName": "graduateSchool[{index}].graduationDate",
+                "label": "졸업일",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "education.graduateSchool.endDate"
+                },
+                "date": {
+                  "group": "graduateSchool[{index}].date",
+                  "role": "END",
+                  "formats": ["YM"],
+                  "peer": "hplace.mrs2.graduateSchool.entranceDate",
+                  "forbiddenAfterToday": false,
+                  "tokens": ["college", "graduationCriteriaDate"],
+                  "maxDateSelector": ".row.in-span > .msg > strong"
+                }
+              }
+            ],
+            "rows": {
+              "selector": ":scope > div[data-wrap=\"collegeLoop\"][data-type=\"graduateSchool\"] > div.loop[data-loop=\"graduateSchool\"]",
+              "namePrefix": "graduateSchool",
+              "groupId": "hplace.mrs2.graduateSchool",
+              "maxCount": 20
+            },
+            "action": {
+              "id": "hplace.mrs2.graduateSchool.add",
+              "selector": "div.collegeBtnSet > button[type=\"button\"][data-button=\"addCollege\"][data-loopname=\"graduateSchool\"]",
+              "scope": "SECTION",
+              "label": "대학원 추가",
+              "categoryId": "education",
+              "profileSectionId": "graduateSchool"
+            }
+          },
+          {
+            "id": "hplace-mrs2-license",
+            "title": "자격증",
+            "selector": "section.writeResume[data-code=\"18\"] > .subject[data-code=\"168\"][data-wrap=\"license\"]",
+            "enabled": true,
+            "anchors": [],
+            "rows": {
+              "selector": ":scope > .loop[data-loop=\"license\"]",
+              "namePrefix": "license",
+              "groupId": "hplace.mrs2.license",
+              "maxCount": 20
+            },
+            "action": {
+              "id": "hplace.mrs2.license.add",
+              "selector": "button[type=\"button\"][data-button=\"add\"]",
+              "label": "자격증 추가",
+              "categoryId": "certifications",
+              "profileSectionId": "certificate"
+            },
+            "fields": [
+              {
+                "name": "hplace.mrs2.license.licenseName",
+                "rawName": "license[{index}].licenseName",
+                "label": "자격증명",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "certifications.certificate.name"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": "certificate",
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"license\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "license[{index}].licenseCode",
+                  "kind": "LICENSE",
+                  "metadata": {
+                    "score": "data-usescore",
+                    "registration": "data-privateinfo"
+                  },
+                  "timeoutMs": 1500,
+                  "registrationName": "license[{index}].registNumber"
+                },
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1500,
+                  "dependencies": [
+                    "hplace.mrs2.license.organization",
+                    "hplace.mrs2.license.registNumber",
+                    "hplace.mrs2.license.acquireDate"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.license.organization",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.license.registNumber",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.license.acquireDate",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.license.organization",
+                "rawName": "license[{index}].organization",
+                "label": "발급기관",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "certifications.certificate.issuer"
+                },
+                "gate": {
+                  "search": "hplace.mrs2.license.licenseName",
+                  "mode": "COMMITTED"
+                },
+                "maxLength": 64
+              },
+              {
+                "name": "hplace.mrs2.license.registNumber",
+                "rawName": "license[{index}].registNumber",
+                "label": "등록번호",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "certifications.certificate.registrationNo"
+                },
+                "gate": {
+                  "search": "hplace.mrs2.license.licenseName",
+                  "mode": "REGISTRATION"
+                },
+                "maxLength": 64
+              },
+              {
+                "name": "hplace.mrs2.license.acquireDate",
+                "rawName": "license[{index}].acquireDate",
+                "label": "취득일",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "certifications.certificate.acquisitionDate"
+                },
+                "gate": {
+                  "search": "hplace.mrs2.license.licenseName",
+                  "mode": "COMMITTED"
+                },
+                "date": {
+                  "group": "license[{index}].licenseDate",
+                  "role": "SINGLE",
+                  "formats": ["YMD"],
+                  "forbiddenAfterToday": false
+                }
+              }
+            ]
+          },
+          {
+            "id": "hplace-mrs2-foreignExam",
+            "title": "공인 외국어시험",
+            "selector": "section.writeResume[data-code=\"18\"] > .subject[data-code=\"165\"][data-wrap=\"foreignExam\"]",
+            "enabled": true,
+            "anchors": [],
+            "rows": {
+              "selector": ":scope > .loop[data-loop=\"languageExam\"]",
+              "namePrefix": "languageExam",
+              "groupId": "hplace.mrs2.foreignExam",
+              "maxCount": 20
+            },
+            "action": {
+              "id": "hplace.mrs2.foreignExam.add",
+              "selector": "button[type=\"button\"][data-button=\"add\"]",
+              "label": "외국어시험 추가",
+              "categoryId": "languages",
+              "profileSectionId": "languageTest"
+            },
+            "fields": [
+              {
+                "name": "hplace.mrs2.foreignExam.languageExamName",
+                "rawName": "languageExam[{index}].languageExamName",
+                "label": "시험명",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "languages.languageTest.testName"
+                },
+                "search": {
+                  "protocol": "KEYPRESS_COMMITTED_TUPLE",
+                  "catalogKind": "languageTest",
+                  "widgetSelector": "div.span",
+                  "querySelector": "div.search > label > input[type=\"search\"][data-type=\"foreignExam\"]",
+                  "resultsSelector": "div.search > div.searchResult",
+                  "resultSelector": "ul.searchResultList > li > button.ellipsis[data-code][title]",
+                  "displaySelector": ":scope > span.searchResultName",
+                  "codeName": "languageExam[{index}].languageExamCode",
+                  "kind": "EXAM",
+                  "metadata": {
+                    "grade": "data-gradeflag",
+                    "score": "data-scoreflag",
+                    "setup": "data-setupcode",
+                    "value": "data-setupvalue",
+                    "perfect": "data-perfactgrade"
+                  },
+                  "timeoutMs": 1500,
+                  "registrationName": "languageExam[{index}].registNumber",
+                  "gradeName": "languageExam[{index}].gradeCode",
+                  "scoreName": "languageExam[{index}].score",
+                  "detailSelector": "div[data-template=\"detail\"]",
+                  "protectedSelector": ".ybmValidateDone:not(.hide), [readonly]",
+                  "protectedVisibleSelector": ".ybmValidateDone",
+                  "protectedValueNames": [
+                    "languageExam[{index}].languageExamSn"
+                  ],
+                  "forbiddenCodes": ["00091"]
+                },
+                "driver": {
+                  "stage": 1,
+                  "timeoutMs": 1500,
+                  "dependencies": [
+                    "hplace.mrs2.foreignExam.registNumber",
+                    "hplace.mrs2.foreignExam.gradeCode",
+                    "hplace.mrs2.foreignExam.score"
+                  ],
+                  "settled": [
+                    {
+                      "field": "hplace.mrs2.foreignExam.registNumber",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.foreignExam.gradeCode",
+                      "state": "enabled"
+                    },
+                    {
+                      "field": "hplace.mrs2.foreignExam.score",
+                      "state": "enabled"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "hplace.mrs2.foreignExam.registNumber",
+                "rawName": "languageExam[{index}].registNumber",
+                "label": "등록번호",
+                "type": "text",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "languages.languageTest.registrationNo"
+                },
+                "gate": {
+                  "search": "hplace.mrs2.foreignExam.languageExamName",
+                  "mode": "REGISTRATION"
+                },
+                "maxLength": 64
+              },
+              {
+                "name": "hplace.mrs2.foreignExam.gradeCode",
+                "rawName": "languageExam[{index}].gradeCode",
+                "label": "등급",
+                "type": "select",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "languages.languageTest.grade"
+                },
+                "gate": {
+                  "search": "hplace.mrs2.foreignExam.languageExamName",
+                  "mode": "GRADE_ONLY"
+                },
+                "dynamicOptions": {
+                  "codeFormat": "OBSERVED"
+                }
+              },
+              {
+                "name": "hplace.mrs2.foreignExam.score",
+                "rawName": "languageExam[{index}].score",
+                "label": "취득점수",
+                "type": "number",
+                "binding": {
+                  "type": "DIRECT",
+                  "profileFieldKey": "languages.languageTest.grade"
+                },
+                "gate": {
+                  "search": "hplace.mrs2.foreignExam.languageExamName",
+                  "mode": "SCORE_ONLY"
+                },
+                "min": 0,
+                "max": 9999
+              }
+            ],
+            "excludedRow": {
+              "name": "hplace.mrs2.foreignExam.languageExamName",
+              "reason": "입력 불가(인증 시험 — 사용자 처리)"
+            }
           }
         ],
         "unsupportedSections": [

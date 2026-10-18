@@ -28,13 +28,15 @@ final class NativeSectionFingerprint {
     private static boolean fieldSet(SectionContract c, List<FieldsAnalysisRequest.FieldCandidate> fields,
         Set<String> ids, String group, int index, int count) {
         if (fields.isEmpty() || fields.size() > c.maxFields()) return false;
+        boolean excluded = c.excludedRow() != null && fields.size() == 1 && Boolean.TRUE.equals(fields.getFirst().inert())
+            && c.excludedRow().name().equals(fields.getFirst().domName()) && c.excludedRow().reason().equals(fields.getFirst().displayName());
         Set<String> names = new HashSet<>();
         for (var f : fields) {
             var rule = c.fields().stream().filter(r -> r.structuralName().equals(f.domName())).findFirst().orElse(null);
             if (rule == null || !names.add(f.domName()) || !ids.add(f.candidateId()) || !Objects.equals(f.domName(), f.domId())
                 || rule.element() != f.element() || rule.control() != f.control()
                 || f.visibility() != FieldsAnalysisRequest.Visibility.VISIBLE || Boolean.TRUE.equals(f.disabled())
-                || Boolean.TRUE.equals(f.readonly()) || c.enabled() && Boolean.TRUE.equals(f.inert())) return false;
+                || Boolean.TRUE.equals(f.readonly()) || c.enabled() && Boolean.TRUE.equals(f.inert()) && !excluded) return false;
             var repeat = f.semanticContext() == null ? null : f.semanticContext().repeat();
             if (group == null && repeat != null || group != null && (repeat == null || !group.equals(repeat.groupId())
                 || !Integer.valueOf(index).equals(repeat.rowIndex()) || !Integer.valueOf(count).equals(repeat.rowCount()))) return false;

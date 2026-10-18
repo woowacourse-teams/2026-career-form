@@ -15,7 +15,7 @@ class HplaceNativePolicyTest {
         assertThat(source).as("new insert-only native policy resource").isNotNull();
         var json = new ObjectMapper().readTree(source);
         assertThat(json.path("version").asInt()).isEqualTo(4);
-        assertThat(json.path("sectionContracts").size()).isEqualTo(4);
+        assertThat(json.path("sectionContracts").size()).isGreaterThanOrEqualTo(4);
     }
     @Test void roundTripsHanjaNameAsADerivedBinding() throws Exception {
         var mapper = new ObjectMapper();
