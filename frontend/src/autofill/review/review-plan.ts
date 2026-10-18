@@ -303,6 +303,13 @@ function itemForAnalysis(
   components = false,
 ): ReviewPlanItem {
   const fieldLabel = labelFor(analysis.candidateId, registry);
+  const local = registry.lookupField(analysis.candidateId);
+  if ("handle" in local && local.handle.unsupportedReason)
+    return unavailableItem(
+      analysis.candidateId,
+      fieldLabel,
+      local.handle.unsupportedReason,
+    );
   if (analysis.matchType === "NO_MATCH") {
     return unavailableItem(
       analysis.candidateId,

@@ -1,4 +1,8 @@
-import { executionPolicy } from "../workflow/execution-policy";
+import { nativeDocument } from "../policy/native-form-collection";
+import {
+  nativePolicyRequired,
+  executionPolicy,
+} from "../workflow/execution-policy";
 import { detailControls } from "./hplace/detail";
 import { isHplaceDocument } from "./hplace/fingerprint";
 import { registrationControls } from "./hplace/registration";
@@ -10,6 +14,7 @@ export function resolveCompany(_host: string): CompanyId {
 }
 
 export function isUnsupportedHplace(document: Document): boolean {
+  if (nativePolicyRequired(document)) return !nativeDocument(document);
   return (
     resolveDocumentCompany(document) === "hplace" &&
     !registrationControls(document) &&
@@ -22,6 +27,7 @@ const hplaceDocuments = new WeakMap<Document, { url: string; host: string }>();
 export function resolveDocumentCompany(document: Document): CompanyId {
   if (executionPolicy(document)?.browserPolicy) return "policy";
   if (executionPolicy(document)?.componentPolicy) return "components";
+  if (nativePolicyRequired(document)) return "hplace";
   const identity = { url: document.URL, host: document.location?.host ?? "" };
   if (isHplaceDocument(document)) {
     hplaceDocuments.set(document, identity);

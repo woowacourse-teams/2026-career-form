@@ -193,10 +193,17 @@ export async function executeApprovedWritesAfterPageSettles({
       ),
     );
   const url = document?.URL;
+  const nativeDigest =
+    document && executionPolicy(document)?.browserPolicy?.schemaVersion === 2
+      ? JSON.stringify(executionPolicy(document)?.browserPolicy)
+      : undefined;
   const runCurrent = () =>
     !signal?.aborted &&
     assertCurrent?.() !== false &&
     document?.URL === url &&
+    (nativeDigest === undefined ||
+      JSON.stringify(executionPolicy(document!)?.browserPolicy) ===
+        nativeDigest) &&
     (!document || resolveDocumentCompany(document) !== "hplace");
   try {
     if (companyId === "hplace" && !calendarOnly) {
@@ -396,6 +403,28 @@ export async function executeApprovedWritesAfterPageSettles({
             };
         }
         const lookup = registry.lookupField(item.candidateId);
+        if (lookup.status === "ready" && lookup.handle.owner === "legacy") {
+          const success = ownedBasicControl(lookup.handle)
+            ? await writeBasic(lookup.handle, item, runCurrent, beforeMutation)
+            : await writeDetail(
+                lookup.handle,
+                item,
+                runCurrent,
+                beforeMutation,
+                hplaceAddress,
+              );
+          return {
+            result: success
+              ? written(item.candidateId)
+              : skipped(
+                  item.candidateId,
+                  "needs-verification",
+                  "REVIEW_UNAVAILABLE",
+                  "검증된 기존 필드만 입력할 수 있습니다.",
+                ),
+            effect: "continue",
+          };
+        }
         if (lookup.status === "ready" && lookup.handle.buttonDropdown)
           return {
             result: await executeButtonDropdownWrite({

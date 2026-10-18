@@ -206,8 +206,33 @@ function resolveWorkflowAdapter(source: string | Document): WorkflowAdapter {
     const configured = hiddenCodeAdapters(source);
     if (configured) return configured.workflow;
   }
-  if (typeof source !== "string" && executionPolicy(source)?.browserPolicy)
-    return policyWorkflowAdapter(source);
+  if (typeof source !== "string" && executionPolicy(source)?.browserPolicy) {
+    const policy = policyWorkflowAdapter(source);
+    if (executionPolicy(source)?.browserPolicy?.schemaVersion !== 2)
+      return policy;
+    return {
+      ...policy,
+      isStateDriver: (item, name) =>
+        hplaceWorkflowAdapter.isStateDriver(item, name) ||
+        policy.isStateDriver(item, name),
+      stateDriverStage: (item, handle) =>
+        handle.owner === "legacy"
+          ? hplaceWorkflowAdapter.stateDriverStage?.(item, handle)
+          : policy.stateDriverStage?.(item, handle),
+      executeStateDriver: (...args) =>
+        args[1].owner === "legacy"
+          ? hplaceWorkflowAdapter.executeStateDriver!(...args)
+          : policy.executeStateDriver!(...args),
+      settleStateDriver: (...args) =>
+        args[1].owner === "legacy"
+          ? hplaceWorkflowAdapter.settleStateDriver!(...args)
+          : policy.settleStateDriver!(...args),
+      stateDriverFailureGroup: (item, handle) =>
+        handle.owner === "legacy"
+          ? hplaceWorkflowAdapter.stateDriverFailureGroup?.(item, handle)
+          : policy.stateDriverFailureGroup?.(item, handle),
+    };
+  }
   switch (
     typeof source === "string"
       ? resolveCompany(source)

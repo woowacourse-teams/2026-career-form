@@ -30,6 +30,8 @@ type FieldsSnapshot = CollectedSnapshot<
 type AddressRun = {
   controller: AbortController;
   hplaceFieldsRequests?: number;
+  nativeFieldsRequests?: number;
+  nativeProgress?: string;
   button?: Element;
   task?: Promise<AddressResult>;
 };

@@ -1,5 +1,9 @@
 import { runtimeRules } from "../policy/runtime-rules";
-import { installExecutionPolicy, executionPolicy } from "./execution-policy";
+import {
+  nativePolicyRequired,
+  installExecutionPolicy,
+  executionPolicy,
+} from "./execution-policy";
 import {
   createStaticFieldsSession,
   type AnalyzeFieldsSnapshot,
@@ -355,7 +359,8 @@ function PolicyReadyWorkflow({
         if (
           (runtimeRules(pageDocument)?.components?.workflow
             .requireAdapterResponse ||
-            resolveDocumentCompany(pageDocument) === "hplace") &&
+            resolveDocumentCompany(pageDocument) === "hplace" ||
+            nativePolicyRequired(pageDocument)) &&
           analysis.mode !== "ADAPTER"
         )
           throw new Error("Unexpected generic response for registered adapter");
@@ -549,7 +554,8 @@ function PolicyReadyWorkflow({
           followUpAnalysis.analysisStatus === "BLOCKED" ||
           ((runtimeRules(pageDocument)?.components?.workflow
             .requireAdapterResponse ||
-            resolveDocumentCompany(pageDocument) === "hplace") &&
+            resolveDocumentCompany(pageDocument) === "hplace" ||
+            nativePolicyRequired(pageDocument)) &&
             followUpAnalysis.mode !== "ADAPTER")
         )
           throw new Error("Unexpected adapter response");

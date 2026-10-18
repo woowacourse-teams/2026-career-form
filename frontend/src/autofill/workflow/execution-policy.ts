@@ -68,6 +68,15 @@ export function executionPolicyForSite(site: {
     site.host.toLowerCase() + policyPath(site.pathPattern),
   );
 }
+const nativeDocuments = new WeakMap<Document, string>();
+export function nativePolicyRequired(document: Document): boolean {
+  const url = nativeDocuments.get(document);
+  if (url !== document.URL) {
+    nativeDocuments.delete(document);
+    return false;
+  }
+  return url !== undefined;
+}
 const policies = new WeakMap<
   Document,
   { url: string; policy: ExecutionPolicy }
@@ -76,6 +85,9 @@ export function installExecutionPolicy(
   document: Document,
   policy?: ExecutionPolicy,
 ) {
+  nativePolicyRequired(document);
+  if (policy?.browserPolicy?.schemaVersion === 2)
+    nativeDocuments.set(document, document.URL);
   const url = new URL(document.URL);
   const key = url.host.toLowerCase() + policyPath(url.pathname);
   if (!policy) {

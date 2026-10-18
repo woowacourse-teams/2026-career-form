@@ -1,9 +1,16 @@
+import {
+  collectNativeFields,
+  collectNativePreparation,
+} from "../policy/native-form-collection";
 import { runtimeRules, componentName } from "../policy/runtime-rules";
 import { componentPolicy } from "../policy/component-policy";
 import { componentSelector } from "../policy/component-dom";
 import { cachedDomRead, displayState, withDomReadPass } from "./read-pass";
 import { startLocalTiming } from "../debug/local-timing";
-import { executionPolicy } from "../workflow/execution-policy";
+import {
+  nativePolicyRequired,
+  executionPolicy,
+} from "../workflow/execution-policy";
 import { targetOnlyRadio } from "../policy/radio-validation";
 import { resolveDocumentCompany } from "../adapters/company";
 import {
@@ -357,6 +364,17 @@ export function collectFieldsSnapshot(
   try {
     return withDomReadPass(() => {
       const companyId = resolveDocumentCompany(document);
+      if (nativePolicyRequired(document))
+        return collectNativeFields(
+          document,
+          createSnapshotId("fields"),
+          siteOf(document),
+          collectHplaceFields(
+            document,
+            createSnapshotId("fields"),
+            siteOf(document),
+          ),
+        );
       if (companyId === "hplace")
         return collectHplaceFields(
           document,
@@ -1094,6 +1112,17 @@ export function collectPreparationSnapshot(
   document: Document,
 ): PreparationCollectedSnapshot {
   const companyId = resolveDocumentCompany(document);
+  if (nativePolicyRequired(document))
+    return collectNativePreparation(
+      document,
+      createSnapshotId("preparation"),
+      siteOf(document),
+      collectHplacePreparation(
+        document,
+        createSnapshotId("preparation"),
+        siteOf(document),
+      ),
+    );
   if (companyId === "hplace")
     return collectHplacePreparation(
       document,

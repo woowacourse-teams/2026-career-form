@@ -1,3 +1,4 @@
+import { nativeTarget, nativeValueMatches } from "../policy/native-form-write";
 import {
   ownedBasicControl,
   basicSpecs,
@@ -124,6 +125,11 @@ export function matchesResultValue(
   expected: string,
   handle?: FieldCandidateHandle,
 ): boolean {
+  if (handle?.owner === "native")
+    return (
+      nativeValueMatches(handle, item) &&
+      current.trim() === (nativeTarget(handle, expected) ?? expected)
+    );
   const left = current.trim();
   const right = expected.trim();
   if (!left || !right) return false;

@@ -1,3 +1,5 @@
+import { nativePolicyRequired } from "./execution-policy";
+import { nativeForm } from "../policy/native-form-collection";
 import { getWriteAdapter } from "../adapters/write";
 import { runtimeRules } from "../policy/runtime-rules";
 import { dismissCompletedAutocomplete } from "../interaction/autocomplete-completion";
@@ -161,8 +163,22 @@ export function createAnalyzeFields({
     : undefined;
   let analysisGeneration = 0;
   const companyId = resolveDocumentCompany(pageDocument);
+  const nativeDigest = nativePolicyRequired(pageDocument)
+    ? JSON.stringify(executionPolicy(pageDocument)?.browserPolicy)
+    : undefined;
   const rejectChangedHplaceContext = () => {
     const currentCompany = resolveDocumentCompany(pageDocument);
+    if (
+      nativeDigest !== undefined &&
+      JSON.stringify(executionPolicy(pageDocument)?.browserPolicy) !==
+        nativeDigest
+    ) {
+      setExceptionTitle(
+        "페이지 실행 정책이 변경되었습니다. 다시 시작해 주세요",
+      );
+      setStage("exception");
+      return true;
+    }
     if (
       currentCompany === companyId ||
       (companyId !== "hplace" && currentCompany !== "hplace")
@@ -227,6 +243,32 @@ export function createAnalyzeFields({
     const analysisStarted = performance.now();
     // Share the budget across factories in this workflow run. Hplace basic
     // fields batch together; unexpected dependency chains must fail closed.
+    const native = nativeForm(pageDocument);
+    if (native) {
+      const progress = JSON.stringify([...completedStateDriverKeys].sort());
+      if (
+        (run.nativeFieldsRequests ?? 0) >=
+          (native.sections.some(
+            (s) =>
+              s.enabled &&
+              s.rows &&
+              snapshot.request.sections.some(
+                (actual) => actual.sectionId === s.id,
+              ),
+          )
+            ? native.maxFieldsRequests
+            : Math.min(3, native.maxFieldsRequests)) ||
+        run.nativeProgress === progress
+      ) {
+        setExceptionTitle(
+          "입력 분석의 진전을 확인할 수 없습니다. 남은 항목을 직접 확인해 주세요",
+        );
+        setStage("exception");
+        return;
+      }
+      run.nativeFieldsRequests = (run.nativeFieldsRequests ?? 0) + 1;
+      run.nativeProgress = progress;
+    }
     if (companyId === "hplace") {
       if ((run.hplaceFieldsRequests ?? 0) >= 3) {
         setExceptionTitle(
@@ -324,7 +366,8 @@ export function createAnalyzeFields({
     if (
       (executionPolicy(pageDocument)?.componentPolicy?.workflow
         .requireVerifiedMapping ||
-        resolveDocumentCompany(pageDocument) === "hplace") &&
+        resolveDocumentCompany(pageDocument) === "hplace" ||
+        nativePolicyRequired(pageDocument)) &&
       (analysis.mode !== "ADAPTER" ||
         analysis.fields.some(
           (field) => field.mappingStatus !== "ADAPTER_VERIFIED",
@@ -369,6 +412,16 @@ export function createAnalyzeFields({
       return;
     }
 
+    if (
+      nativeDigest !== undefined &&
+      JSON.stringify(analysis.executionPolicy?.browserPolicy) !== nativeDigest
+    ) {
+      setExceptionTitle(
+        "페이지 실행 정책이 변경되었습니다. 다시 시작해 주세요",
+      );
+      setStage("exception");
+      return;
+    }
     // Generic field analysis has no site engine. Keep the separately loaded
     // provider contract without retaining the previous site's mapping engine.
     const providerPolicy =

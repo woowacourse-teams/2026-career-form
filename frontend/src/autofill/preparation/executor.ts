@@ -1,3 +1,7 @@
+import {
+  executionPolicy,
+  nativePolicyRequired,
+} from "../workflow/execution-policy";
 import { acquireDocumentRun } from "../interaction/document-run";
 import { resolveDocumentCompany } from "../adapters/company";
 import type { PreparationPlan } from "../api/types";
@@ -217,6 +221,27 @@ export async function executeApprovedPreparationPlans(
   const release = document ? acquireDocumentRun(document) : undefined;
   if (document && !release) return failure("run-in-progress", 0);
   const url = document?.URL;
+  const nativeDigest =
+    document && nativePolicyRequired(document)
+      ? JSON.stringify(executionPolicy(document)?.browserPolicy)
+      : undefined;
+  if (
+    nativeDigest !== undefined &&
+    options.approvedPlans.some(({ approved, plan }) => {
+      if (!approved) return false;
+      const action = options.initialSnapshot.registry.lookupAction(
+        plan.actionCandidateId,
+      );
+      return (
+        plan.command !== "ADD_REPEATABLE_GROUP" ||
+        action.status !== "ready" ||
+        action.handle.owner !== "native"
+      );
+    })
+  ) {
+    release?.();
+    return failure("action-not-executable", 0);
+  }
   try {
     return await executePreparation({
       ...options,
@@ -224,6 +249,9 @@ export async function executeApprovedPreparationPlans(
         !options.signal?.aborted &&
         options.assertCurrent?.() !== false &&
         document?.URL === url &&
+        (nativeDigest === undefined ||
+          JSON.stringify(executionPolicy(document!)?.browserPolicy) ===
+            nativeDigest) &&
         (!document || resolveDocumentCompany(document) !== "hplace"),
     });
   } finally {
