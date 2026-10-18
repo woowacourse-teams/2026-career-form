@@ -1,5 +1,12 @@
 # Wiki Log
 
+## [2026-10-18] ingest | CF-263 검색 표면 닫기 안전 판정과 사유 타입
+
+- Approval-Digest: b3cd2e7383f13f6aa4efbe5b4a9b8094dbf7cd672175f9a8c840a3b516b52ec3
+- Source-Revision: e0849a8ee250a0f8c588a85b7a0511ad7dc97a68
+- 승인한 세 후보를 [CF-263 bundle](../raw/issues/CF-263/manifest.md)에 기록하고 [검색 표면 닫기 판정](topics/generic-search-surface-close-safety.md)을 추가했다.
+- 기존 raw는 변경하지 않았다. 특성화와 변이 실패는 합성 DOM의 현재 복구 검증이며 과거 커밋 전 RED나 실사이트 검증으로 기록하지 않는다.
+
 ## [2026-10-18] update | CF-251 범용 합성 값 binding 소비와 등급 경계
 
 - Approval-Digest: b280bc6ed4d3bd17c43b277a87b1322d47113bd2f22c96c83ea4be78fd8d9ef1
