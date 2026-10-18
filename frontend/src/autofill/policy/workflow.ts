@@ -1,4 +1,8 @@
 import {
+  executeCommittedSearch,
+  committedSearchMatches,
+} from "./committed-search";
+import {
   currentNativeOwner,
   nativeForm,
   rawNativeName,
@@ -127,6 +131,8 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
         signal.aborted
       )
         return false;
+      if (currentNativeOwner(handle)?.field.search)
+        return executeCommittedSearch(handle, item, signal, beforeMutation);
       const result = nativeWriteAdapter.tryWrite(handle, item);
       return result.handled && result.written;
     },
@@ -298,7 +304,9 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       handle.owner === "native"
         ? !!context &&
           (!context.beforeMutation || (await context.beforeMutation())) &&
-          (await settleNativeDriver(handle, context.item, context.signal)) &&
+          (currentNativeOwner(handle)?.field.search
+            ? committedSearchMatches(handle, context.item)
+            : await settleNativeDriver(handle, context.item, context.signal)) &&
           (!context.beforeMutation || (await context.beforeMutation()))
         : ruleFor(handle.candidate.domName)?.priority
           ? settlePolicySelection(doc, handle)
@@ -344,6 +352,7 @@ export function policyWorkflowAdapter(document: Document): WorkflowAdapter {
       ];
     },
     stateDriverFailureGroup(item, handle) {
+      if (handle.owner === "native") return currentNativeOwner(handle)?.row;
       const input = handle.elements[0];
       if (
         !input?.isConnected ||

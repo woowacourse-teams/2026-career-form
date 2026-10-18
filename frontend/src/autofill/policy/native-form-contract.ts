@@ -1,11 +1,45 @@
 import type { ValueBinding } from "../api/types";
 import type { RepeatedProfileCategoryId } from "../../profile/model";
 
+export interface NativeSearch {
+  protocol: "KEYPRESS_COMMITTED_TUPLE";
+  catalogKind:
+    | "highSchool"
+    | "university"
+    | "graduateSchool"
+    | "certificate"
+    | "languageTest"
+    | null;
+  widgetSelector: string;
+  querySelector: string;
+  resultsSelector: string;
+  resultSelector: string;
+  displaySelector: string;
+  codeName: string;
+  kind: "PLAIN" | "LICENSE" | "EXAM";
+  metadata: Record<string, string>;
+  timeoutMs: number;
+  detailSelector?: string;
+  protectedSelector?: string;
+  protectedVisibleSelector?: string;
+  protectedValueNames?: string[];
+  forbiddenCodes?: string[];
+  gradeName?: string;
+  scoreName?: string;
+  registrationName?: string;
+}
 export interface NativeField {
+  search?: NativeSearch;
+  gate?: {
+    search: string;
+    mode: "COMMITTED" | "GRADE_ONLY" | "SCORE_ONLY" | "REGISTRATION";
+  };
   name: string;
   rawName: string;
   scopeSelector?: string;
-  dynamicOptions?: { labels: string[]; codeFormat: "POSITIVE_INTEGER" };
+  dynamicOptions?:
+    | { labels: string[]; codeFormat: "POSITIVE_INTEGER" }
+    | { codeFormat: "OBSERVED" };
   type: "text" | "number" | "textarea" | "select" | "radio";
   label: string;
   binding: ValueBinding;
@@ -16,9 +50,11 @@ export interface NativeField {
   options?: Record<string, string>;
   date?: {
     group: string;
-    role: "START" | "END";
+    role: "START" | "END" | "SINGLE";
     formats: ("YM" | "YMD")[];
-    peer: string;
+    peer?: string;
+    tokens?: string[];
+    maxDateSelector?: string;
     forbiddenAfterToday: boolean;
   };
   driver?: {
@@ -33,6 +69,7 @@ export interface NativeField {
   };
 }
 export interface NativeSection {
+  excludedRow?: { name: string; reason: string };
   id: string;
   title: string;
   selector: string;
@@ -51,6 +88,7 @@ export interface NativeSection {
     label: string;
     categoryId: RepeatedProfileCategoryId;
     profileSectionId: string;
+    scope?: "SECTION";
   };
   fields: NativeField[];
 }
@@ -107,15 +145,16 @@ export function validNativeForm(value: unknown): value is NativeForm {
     return false;
   const p = value as unknown as NativeForm;
   if (
-    !list(p.capabilities, 4) ||
-    p.capabilities.length !== 4 ||
-    new Set(p.capabilities).size !== 4 ||
+    !list(p.capabilities, 5) ||
+    p.capabilities.length < 4 ||
+    new Set(p.capabilities).size !== p.capabilities.length ||
     !p.capabilities.every((c) =>
       [
         "SCOPED_FIELDS",
         "SINGLE_DEPTH_ROWS",
         "NATIVE_DRIVERS",
         "NATIVE_DATES",
+        "KEYPRESS_COMMITTED_TUPLE",
       ].includes(c),
     ) ||
     !str(p.path) ||
@@ -149,6 +188,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
       !object(s) ||
       !keys(s, [
         "id",
+        "excludedRow",
         "title",
         "selector",
         "enabled",
@@ -193,6 +233,7 @@ export function validNativeForm(value: unknown): value is NativeForm {
           "label",
           "categoryId",
           "profileSectionId",
+          "scope",
         ]) ||
         !name(s.action.id) ||
         !selector(s.action.selector) ||
@@ -204,7 +245,8 @@ export function validNativeForm(value: unknown): value is NativeForm {
           "education",
           "certifications",
         ].includes(s.action.categoryId) ||
-        !name(s.action.profileSectionId))
+        !name(s.action.profileSectionId) ||
+        (s.action.scope !== undefined && s.action.scope !== "SECTION"))
     )
       return false;
     if (
@@ -213,6 +255,8 @@ export function validNativeForm(value: unknown): value is NativeForm {
           !object(f) ||
           !keys(f, [
             "name",
+            "search",
+            "gate",
             "rawName",
             "scopeSelector",
             "dynamicOptions",
@@ -238,22 +282,43 @@ export function validNativeForm(value: unknown): value is NativeForm {
         )
           return false;
         fields.add(f.name);
-        if (f.scopeSelector !== undefined && !selector(f.scopeSelector))
-          return false;
         if (
-          f.dynamicOptions &&
-          (f.type !== "select" ||
-            f.options !== undefined ||
-            !object(f.dynamicOptions) ||
-            !keys(f.dynamicOptions, ["labels", "codeFormat"]) ||
-            f.dynamicOptions.codeFormat !== "POSITIVE_INTEGER" ||
-            !list(f.dynamicOptions.labels, 128) ||
-            !f.dynamicOptions.labels.length ||
-            !f.dynamicOptions.labels.every(str) ||
-            new Set(f.dynamicOptions.labels).size !==
-              f.dynamicOptions.labels.length)
+          f.search &&
+          (!p.capabilities.includes("KEYPRESS_COMMITTED_TUPLE") ||
+            f.type !== "text" ||
+            !f.driver ||
+            !validNativeSearch(f.search))
         )
           return false;
+        if (
+          f.gate &&
+          (!object(f.gate) ||
+            !keys(f.gate, ["search", "mode"]) ||
+            !name(f.gate.search) ||
+            !["COMMITTED", "GRADE_ONLY", "SCORE_ONLY", "REGISTRATION"].includes(
+              f.gate.mode,
+            ))
+        )
+          return false;
+        if (f.scopeSelector !== undefined && !selector(f.scopeSelector))
+          return false;
+        if (f.dynamicOptions) {
+          const d = f.dynamicOptions;
+          if (f.type !== "select" || f.options !== undefined || !object(d))
+            return false;
+          if (d.codeFormat === "OBSERVED") {
+            if (!keys(d, ["codeFormat"]) || f.gate?.mode !== "GRADE_ONLY")
+              return false;
+          } else if (
+            !keys(d, ["labels", "codeFormat"]) ||
+            d.codeFormat !== "POSITIVE_INTEGER" ||
+            !list(d.labels, 128) ||
+            !d.labels.length ||
+            !d.labels.every(str) ||
+            new Set(d.labels).size !== d.labels.length
+          )
+            return false;
+        }
         const b = f.binding;
         if (!(
           (b.type === "DIRECT" &&
@@ -305,13 +370,21 @@ export function validNativeForm(value: unknown): value is NativeForm {
               "formats",
               "peer",
               "forbiddenAfterToday",
+              "tokens",
+              "maxDateSelector",
             ]) ||
             !template(f.date.group) ||
-            !["START", "END"].includes(f.date.role) ||
+            !["START", "END", "SINGLE"].includes(f.date.role) ||
             !list(f.date.formats, 2) ||
             !f.date.formats.length ||
             !f.date.formats.every((v) => v === "YM" || v === "YMD") ||
-            !name(f.date.peer) ||
+            (f.date.role === "SINGLE"
+              ? f.date.peer !== undefined
+              : !name(f.date.peer)) ||
+            (f.date.tokens !== undefined &&
+              (!list(f.date.tokens, 8) || !f.date.tokens.every(name))) ||
+            (f.date.maxDateSelector !== undefined &&
+              !selector(f.date.maxDateSelector)) ||
             typeof f.date.forbiddenAfterToday !== "boolean")
         )
           return false;
@@ -344,10 +417,21 @@ export function validNativeForm(value: unknown): value is NativeForm {
     )
       return false;
     return (
+      (!s.excludedRow ||
+        (object(s.excludedRow) &&
+          keys(s.excludedRow, ["name", "reason"]) &&
+          name(s.excludedRow.name) &&
+          str(s.excludedRow.reason) &&
+          s.fields.some(
+            (f) => f.name === s.excludedRow!.name && f.search?.kind === "EXAM",
+          ))) &&
       s.anchors.every((a) => s.fields.some((f) => f.name === a)) &&
       s.fields.every(
         (f) =>
+          (!f.gate ||
+            s.fields.some((p) => p.name === f.gate!.search && p.search)) &&
           (!f.date ||
+            f.date.role === "SINGLE" ||
             s.fields.some(
               (p) =>
                 p.name === f.date!.peer &&
@@ -369,4 +453,93 @@ export function validNativeForm(value: unknown): value is NativeForm {
       )
     );
   });
+}
+
+function validNativeSearch(s: NativeSearch): boolean {
+  if (
+    !object(s) ||
+    !keys(s, [
+      "protocol",
+      "catalogKind",
+      "widgetSelector",
+      "querySelector",
+      "resultsSelector",
+      "resultSelector",
+      "displaySelector",
+      "codeName",
+      "kind",
+      "metadata",
+      "timeoutMs",
+      "detailSelector",
+      "protectedSelector",
+      "protectedVisibleSelector",
+      "protectedValueNames",
+      "forbiddenCodes",
+      "gradeName",
+      "scoreName",
+      "registrationName",
+    ]) ||
+    s.protocol !== "KEYPRESS_COMMITTED_TUPLE" ||
+    ![
+      null,
+      "highSchool",
+      "university",
+      "graduateSchool",
+      "certificate",
+      "languageTest",
+    ].includes(s.catalogKind) ||
+    !["PLAIN", "LICENSE", "EXAM"].includes(s.kind) ||
+    !integer(s.timeoutMs, 1, 2000) ||
+    !template(s.codeName)
+  )
+    return false;
+  if (
+    ![
+      s.widgetSelector,
+      s.querySelector,
+      s.resultsSelector,
+      s.resultSelector,
+      s.displaySelector,
+    ].every(selector)
+  )
+    return false;
+  if (
+    [s.detailSelector, s.protectedSelector, s.protectedVisibleSelector].some(
+      (x) => x !== undefined && !selector(x),
+    ) ||
+    [s.gradeName, s.scoreName, s.registrationName].some(
+      (x) => x !== undefined && !template(x),
+    )
+  )
+    return false;
+  if (
+    s.protectedValueNames &&
+    (!list(s.protectedValueNames, 8) || !s.protectedValueNames.every(template))
+  )
+    return false;
+  if (
+    s.forbiddenCodes &&
+    (!list(s.forbiddenCodes, 16) || !s.forbiddenCodes.every(str))
+  )
+    return false;
+  const expected =
+    s.kind === "EXAM"
+      ? ["grade", "score", "setup", "value", "perfect"]
+      : s.kind === "LICENSE"
+        ? ["score", "registration"]
+        : [];
+  return (
+    object(s.metadata) &&
+    Object.keys(s.metadata).length === expected.length &&
+    expected.every((k) => /^data-[a-z]+$/.test(s.metadata[k])) &&
+    (s.kind !== "EXAM" ||
+      (!!s.detailSelector &&
+        !!s.protectedSelector &&
+        !!s.protectedValueNames?.length &&
+        !!s.gradeName &&
+        !!s.scoreName &&
+        !!s.registrationName &&
+        !!s.forbiddenCodes?.length)) &&
+    (s.kind !== "LICENSE" || !!s.registrationName)
+  );
 }

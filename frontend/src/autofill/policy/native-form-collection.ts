@@ -1,4 +1,12 @@
 import {
+  excludedSearchRow,
+  searchNodes,
+  sameSearchNodes,
+  protectedSearchRow,
+  searchGate,
+  type SearchNodes,
+} from "./native-form-search-dom";
+import {
   CandidateRegistry,
   createStructuralSignature,
 } from "../dom/candidate-registry";
@@ -24,6 +32,7 @@ import {
 } from "./native-form-contract";
 
 export interface NativeOwnership {
+  search?: SearchNodes;
   form: NativeForm;
   section: NativeSection;
   root: Element;
@@ -119,6 +128,10 @@ function scopes(document: Document, form: NativeForm) {
   });
 }
 function controls(row: Element, field: NativeField, index?: number) {
+  if (field.search) {
+    const n = searchNodes(row, field, index);
+    return n ? [n.query] : [];
+  }
   const all = Array.from(
     row.querySelectorAll(
       `[name="${CSS.escape(rawNativeName(field.rawName, index))}"]`,
@@ -175,6 +188,18 @@ export function currentNativeOwner(
     (o.index === undefined ? o.row !== o.root : scope.rows[o.index] !== o.row)
   )
     return;
+  if (
+    o.search &&
+    !sameSearchNodes(o.search, searchNodes(o.row, o.field, o.index))
+  )
+    return;
+  if (
+    o.section.fields.some(
+      (f) => f.search && protectedSearchRow(o.row, f.search, o.index),
+    )
+  )
+    return;
+  if (!searchGate(o.row, o.field, o.section.fields, o.index)) return;
   const current = controls(o.row, o.field, o.index);
   if (
     current.length !== handle.elements.length ||
@@ -224,12 +249,25 @@ export function collectNativeFields(
       const itemId = section.rows
         ? `${section.id}-item-${position}`
         : undefined;
+      const excluded = section.fields.some((f) =>
+        excludedSearchRow(row, f, index),
+      );
+      if (excluded && !section.excludedRow) continue;
       for (const field of section.fields) {
+        if (
+          excluded
+            ? field.name !== section.excludedRow!.name
+            : !searchGate(row, field, section.fields, index)
+        )
+          continue;
         const elements = controls(row, field, index);
         if (
           !elements.length ||
           elements.some((e) => claimed.has(e)) ||
-          elements.some((e) => !visible(e) || ("readOnly" in e && e.readOnly))
+          (!excluded &&
+            elements.some(
+              (e) => !visible(e) || ("readOnly" in e && e.readOnly),
+            ))
         )
           continue;
         const candidateId = `native-field-${++next}`;
@@ -260,9 +298,9 @@ export function collectNativeFields(
                 ? "textarea"
                 : "input",
           control: field.type === "number" ? "text" : field.type,
-          displayName: field.label,
+          displayName: excluded ? section.excludedRow!.reason : field.label,
           visibility: "visible",
-          ...(!section.enabled ? { inert: true as const } : {}),
+          ...(!section.enabled || excluded ? { inert: true as const } : {}),
           ...(optionElements.size
             ? {
                 options: [...optionElements].map(([optionId, e]) => ({
@@ -302,9 +340,14 @@ export function collectNativeFields(
           optionElements,
           signature: createStructuralSignature(elements),
           isCurrentContext: () => !!currentNativeOwner(handle),
-          unsupportedReason: !section.enabled ? section.reason : undefined,
+          unsupportedReason: excluded
+            ? section.excludedRow!.reason
+            : !section.enabled
+              ? section.reason
+              : undefined,
         };
         owners.set(handle, {
+          search: field.search ? searchNodes(row, field, index) : undefined,
           form,
           section,
           root,
@@ -324,7 +367,7 @@ export function collectNativeFields(
         });
         registry.registerField(
           handle,
-          section.enabled ? undefined : "unsupported",
+          section.enabled && !excluded ? undefined : "unsupported",
         );
         elements.forEach((e) => claimed.add(e));
         (section.rows ? itemFields : fields).push(candidate);
@@ -389,10 +432,12 @@ export function collectNativePreparation(
                 " ",
               ),
             ) &&
-            (rows.length === 0
-              ? e.parentElement === root
-              : e.closest(section.rows!.selector.replace(":scope > ", "")) ===
-                rows.at(-1)),
+            (section.action!.scope === "SECTION"
+              ? !rows.some((row) => row.contains(e))
+              : rows.length === 0
+                ? e.parentElement === root
+                : e.closest(section.rows!.selector.replace(":scope > ", "")) ===
+                  rows.at(-1)),
         );
         if (buttons.length === 1) {
           const candidateId = `native-action-${actions.size}`;

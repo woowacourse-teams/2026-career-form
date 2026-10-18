@@ -25,6 +25,7 @@ export type DomStep = {
   event?: string;
   key?: string;
   code?: string;
+  legacyEnter?: true;
   name?: string;
   composed?: boolean;
   when?: PlanCondition[];
@@ -75,6 +76,7 @@ export function validDomPlan(value: unknown): value is DomPlan {
           "change",
           "keydown",
           "keyup",
+          "keypress",
           "pointerdown",
           "pointerup",
         ].includes(s.event)) &&
@@ -85,6 +87,13 @@ export function validDomPlan(value: unknown): value is DomPlan {
           /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(s.name))) &&
       (s.code === undefined ||
         (typeof s.code === "string" && s.code.length <= 40)) &&
+      (s.legacyEnter === undefined ||
+        (s.legacyEnter === true &&
+          s.op === "KEY" &&
+          s.event === "keypress" &&
+          s.key === "Enter" &&
+          s.code === "Enter")) &&
+      (s.event !== "keypress" || s.legacyEnter === true) &&
       (s.composed === undefined || typeof s.composed === "boolean") &&
       [s.when, s.require].every(
         (list) =>
@@ -107,6 +116,7 @@ export function validDomPlan(value: unknown): value is DomPlan {
           "key",
           "code",
           "composed",
+          "legacyEnter",
           "when",
           "require",
           "name",
@@ -184,15 +194,23 @@ export function runDomPlan(
           )
             return false;
           break;
-        case "KEY":
-          node.dispatchEvent(
-            new KeyboardEvent(step.event!, {
-              key: step.key,
-              ...(step.code ? { code: step.code } : {}),
-              bubbles: true,
-            }),
-          );
+        case "KEY": {
+          if (!validDomPlan([step])) return false;
+          const event = new KeyboardEvent(step.event!, {
+            key: step.key,
+            ...(step.code ? { code: step.code } : {}),
+            bubbles: true,
+            cancelable: step.legacyEnter === true,
+          });
+          if (step.legacyEnter) {
+            Object.defineProperties(event, {
+              keyCode: { get: () => 13 },
+              which: { get: () => 13 },
+            });
+          }
+          node.dispatchEvent(event);
           break;
+        }
         case "POINTER":
           node.dispatchEvent(
             new PointerEvent(step.event!, {

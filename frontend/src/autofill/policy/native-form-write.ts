@@ -1,3 +1,4 @@
+import { committedSearchMatches } from "./committed-search";
 import type { FieldCandidateHandle } from "../dom/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import type { CompanyWriteAdapter } from "../adapters/write";
@@ -32,23 +33,29 @@ export function nativeTarget(
   const f = o.field;
   if (f.date) {
     if (!(el instanceof HTMLInputElement) || el.type !== "text") return;
-    const peer = peerControl(o, f.date.peer),
+    const peer = f.date.peer ? peerControl(o, f.date.peer) : undefined,
       group = rawNativeName(f.date.group, o.index);
-    if (!peer) return;
-    const start = f.date.role === "START" ? el : peer;
+    if (!peer && f.date.role !== "SINGLE") return;
+    const start = f.date.role === "END" ? peer! : el;
     const tokens = start.getAttribute("data-dates")?.split(/\s+/) ?? [];
     const precision = tokens[0]?.slice(group.length + 1);
     if (
       tokens[0] !== `${group}:${precision}` ||
       !f.date.formats.includes(precision as "YM" | "YMD") ||
-      tokens.slice(1).some((t) => t !== "forbiddenAfterToday") ||
+      tokens
+        .slice(1)
+        .some(
+          (t) => t !== "forbiddenAfterToday" && !f.date!.tokens?.includes(t),
+        ) ||
+      (f.date.tokens ?? []).some((t) => !tokens.includes(t)) ||
       tokens.includes("forbiddenAfterToday") !== f.date.forbiddenAfterToday
     )
       return;
     const end = f.date.role === "END" ? el : peer;
     if (
-      end.getAttribute("data-dates") !==
-      `${group}:END${f.date.forbiddenAfterToday ? " forbiddenAfterToday" : ""}`
+      f.date.role !== "SINGLE" &&
+      end!.getAttribute("data-dates") !==
+        `${group}:END${f.date.forbiddenAfterToday ? " forbiddenAfterToday" : ""}`
     )
       return;
     const formatted = formatProfileDate(
@@ -59,7 +66,19 @@ export function nativeTarget(
     const now = new Date(),
       today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     if (f.date.forbiddenAfterToday && value > today) return;
-    if (peer.value) {
+    if (f.date.maxDateSelector) {
+      const constraints = o.row.querySelectorAll(f.date.maxDateSelector);
+      if (constraints.length > 1) return;
+      if (constraints.length === 1) {
+        const raw = constraints[0].textContent?.trim() ?? "";
+        const max = formatProfileDate(
+          raw.replaceAll(".", "-"),
+          precision === "YM" ? "YYYY.MM" : "YYYY.MM.DD",
+        );
+        if (max.status !== "resolved" || formatted.value > max.value) return;
+      }
+    }
+    if (peer?.value) {
       const peerSource =
         precision === "YM"
           ? `${peer.value.replaceAll(".", "-")}-01`
@@ -134,9 +153,12 @@ function selectedOption(
   const observed = o.observedOptions.filter((opt) => opt.label === label);
   const code =
     dynamic &&
-    dynamic.labels.includes(label) &&
+    (dynamic.codeFormat === "OBSERVED" || dynamic.labels.includes(label)) &&
     observed.length === 1 &&
-    /^[1-9][0-9]{0,11}$/.test(observed[0].code)
+    (dynamic.codeFormat === "OBSERVED"
+      ? /^[A-Za-z0-9_-]{1,64}$/.test(observed[0].code) &&
+        !/^0+$/.test(observed[0].code)
+      : /^[1-9][0-9]{0,11}$/.test(observed[0].code))
       ? observed[0].code
       : o.field.options?.[label];
   if (!code) return;
@@ -167,6 +189,8 @@ export function nativeValueMatches(
   handle: FieldCandidateHandle,
   item: ReviewPlanItem,
 ): boolean {
+  if (nativeOwnership(handle)?.field.search)
+    return committedSearchMatches(handle, item);
   const o = authorized(handle, item),
     value = item.profileValue;
   if (!o || value === undefined) return false;
@@ -187,6 +211,8 @@ export const nativeWriteAdapter: CompanyWriteAdapter = {
     const o = authorized(handle, item),
       el = handle.elements[0];
     if (!o) return fail;
+    if (o.field.search)
+      return { handled: true, written: committedSearchMatches(handle, item) };
     if (o.field.driver)
       driverControls.set(
         handle,
