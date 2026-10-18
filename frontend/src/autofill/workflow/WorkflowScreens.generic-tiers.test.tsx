@@ -62,7 +62,6 @@ function renderReview(items: ReviewPlanItem[], toggle = vi.fn()) {
       reviewItems={items}
       partial={false}
       toggleReviewItem={toggle}
-      revealSensitiveItem={vi.fn()}
       executeWrites={vi.fn()}
       results={[]}
       adapter={{} as WorkflowAdapter}
