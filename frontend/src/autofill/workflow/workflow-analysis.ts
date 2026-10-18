@@ -42,6 +42,7 @@ import {
 import {
   analyzeGenericFields,
   applyGenericGrade,
+  genericGradeFor,
   createGenericAnalysisCache,
   type GenericAnalysisCache,
   type GenericAnalysisResult,
@@ -569,7 +570,8 @@ export function createAnalyzeFields({
     const planItems = genericResult
       ? plan.items.map((item) => {
           const graded = applyGenericGrade(
-            item, genericResult.grades.get(item.candidateId),
+            item,
+            genericGradeFor(genericResult, item.candidateId),
           );
           return genericStructure
             ? applyGenericStructureReview(graded, snapshot, genericStructure)

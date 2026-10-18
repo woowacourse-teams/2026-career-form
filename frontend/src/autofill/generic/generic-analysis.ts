@@ -44,9 +44,12 @@ export const GENERIC_SECTION_FAILURE = {
 export type GenericSectionFailure =
   (typeof GENERIC_SECTION_FAILURE)[keyof typeof GENERIC_SECTION_FAILURE];
 
+/** Reason of a candidate field the model could not link to a profile key. */
+export const GENERIC_UNLINKED_REASON = "UNLINKED";
+
 export interface GenericFieldGrade {
   grade: FieldGrade;
-  reason?: GradeReason | GenericSectionFailure;
+  reason?: GradeReason | GenericSectionFailure | typeof GENERIC_UNLINKED_REASON;
 }
 
 export interface GenericSectionResult {
@@ -110,7 +113,7 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_DISPLAY_NAME_LENGTH = 120;
 const UNCONFIRMED_CATEGORIES = new Set(["MIXED", "ABSTAIN"]);
 
-const GENERIC_BLOCKED_REASON =
+export const GENERIC_BLOCKED_REASON =
   "자동으로 입력할 수 없는 항목입니다. 직접 확인해 주세요.";
 
 /**
@@ -121,14 +124,35 @@ export function applyGenericGrade(
   item: ReviewPlanItem,
   grade: GenericFieldGrade | undefined,
 ): ReviewPlanItem {
-  if (!grade || grade.grade === "AUTO") return item;
-  if (grade.grade === "REVIEW") return { ...item, selected: false };
-  return {
+  if (!grade) return item;
+  const graded: ReviewPlanItem = {
     ...item,
+    genericGrade: grade.grade,
+    ...(grade.reason ? { genericReasonCode: grade.reason } : {}),
+  };
+  if (grade.grade === "AUTO") return graded;
+  if (grade.grade === "REVIEW") return { ...graded, selected: false };
+  return {
+    ...graded,
     selected: false,
     disabled: true,
     reason: item.reason || GENERIC_BLOCKED_REASON,
   };
+}
+
+/** The recorded grade, or BLOCKED/unlinked for a field with no profile key. */
+export function genericGradeFor(
+  result: Pick<GenericAnalysisResult, "analysis" | "grades">,
+  candidateId: string,
+): GenericFieldGrade | undefined {
+  const grade = result.grades.get(candidateId);
+  if (grade) return grade;
+  return result.analysis.fields.some(
+    (field) =>
+      field.candidateId === candidateId && field.matchType === "NO_MATCH",
+  )
+    ? { grade: "BLOCKED", reason: GENERIC_UNLINKED_REASON }
+    : undefined;
 }
 
 function controlKind(candidate: FieldCandidate): SectionControlKind {

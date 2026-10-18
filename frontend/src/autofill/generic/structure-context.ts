@@ -6,6 +6,9 @@ import type { FieldsAnalyzeRequest, FieldsAnalyzeResponse } from "../api/types";
 import type { ReviewPlanItem } from "../review/review-plan";
 import { genericRowFor } from "../dom/repeatable-rows";
 
+/** Stable UI reason; detailed structural reasons stay in the local receipt. */
+export const GENERIC_STRUCTURE_BLOCKED_REASON = "STRUCTURE_BLOCKED";
+
 /** Browser-local receipts. None of these nodes or profile indices is serialized. */
 export interface GenericStructureContext {
   blockedScopes: Map<Element, string>;
@@ -181,6 +184,8 @@ export function applyGenericStructureReview(
         disabled: true,
         status: "unavailable",
         reason,
+        genericGrade: "BLOCKED",
+        genericReasonCode: GENERIC_STRUCTURE_BLOCKED_REASON,
       }
     : item;
 }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEmptyProfile, type Profile } from "../../profile/model";
 import type { AnalysisApiClient, GenericFieldsRequest } from "../api/types";
@@ -8,6 +8,7 @@ import { collectFieldsSnapshotWithDropdowns } from "../dom/collect";
 import * as mixed from "../dom/mixed-section-rows";
 import * as preparation from "../workflow/mixed-section-preparation";
 import type { ReviewPlanItem } from "../review/review-plan";
+import { genericReasonText } from "./grade-reason-text";
 
 const observed = vi.hoisted(() => ({
   review: undefined as undefined | ((items: readonly ReviewPlanItem[]) => void),
@@ -188,6 +189,10 @@ describe("structure loop through the entire workflow", () => {
       ["education.graduateSchool.majorName", "master", 0, "합성석사전공"],
     ]);
     expect(majors(items).every((item) => !item.disabled)).toBe(true);
+    expect(majors(items).map((item) => item.genericGrade)).toEqual([
+      "AUTO",
+      "AUTO",
+    ]);
     const done = new Promise<void>((resolve) => {
       observed.result = resolve;
     });
@@ -213,9 +218,35 @@ describe("structure loop through the entire workflow", () => {
     expect(blocked.length).toBeGreaterThan(0);
     expect(blocked.every((item) => item.disabled && !item.selected)).toBe(true);
     expect(
+      blocked.every(
+        (item) =>
+          item.genericGrade === "BLOCKED" &&
+          item.genericReasonCode === "STRUCTURE_BLOCKED",
+      ),
+    ).toBe(true);
+    expect(
       majors(items).find((item) => item.profileEntryId === "bachelor")
         ?.disabled,
     ).not.toBe(true);
+    const reviewTab = screen.getAllByRole("tab")[1]!;
+    fireEvent.click(reviewTab);
+    const panel = document.getElementById(
+      reviewTab.getAttribute("aria-controls")!,
+    )!;
+    expect(panel).toHaveAttribute("role", "tabpanel");
+    const badges = panel.querySelectorAll('[data-generic-grade="BLOCKED"]');
+    expect(badges.length).toBeGreaterThanOrEqual(blocked.length);
+    expect(
+      within(panel).getAllByText(genericReasonText("STRUCTURE_BLOCKED")).length,
+    ).toBeGreaterThanOrEqual(blocked.length);
+    for (const badge of badges) {
+      expect(badge).toBeVisible();
+      expect(
+        within(badge.closest("article")!).queryByRole("button", {
+          name: /포함하기/,
+        }),
+      ).toBeNull();
+    }
     const done = new Promise<void>((resolve) => {
       observed.result = resolve;
     });
@@ -237,6 +268,13 @@ describe("structure loop through the entire workflow", () => {
     );
     expect(blocked.length).toBeGreaterThan(0);
     expect(blocked.every((item) => item.disabled && !item.selected)).toBe(true);
+    expect(
+      blocked.every(
+        (item) =>
+          item.genericGrade === "BLOCKED" &&
+          item.genericReasonCode === "STRUCTURE_BLOCKED",
+      ),
+    ).toBe(true);
     expect(items.some((item) => item.selected && !item.disabled)).toBe(false);
   });
 
