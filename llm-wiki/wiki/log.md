@@ -1,11 +1,22 @@
 # Wiki Log
 
+## [2026-10-18] ingest | CF-252 범용 칸 문맥·형식 검사와 DOM fixture 검토 경계
+
+- Approval-Digest: c0af678e0f5e91a1f8edbf7d9446fb69b054b135db7ce4264c1ec2c0c82325cf
+- Source-Revision: e04949fb6c20943a0d0c994dc29c2455d5ffff0c
+- 승인된 수정 후보 네 개를 [CF-252 bundle](../raw/issues/CF-252/manifest.md)에 기록하고
+  [범용 칸 문맥과 형식 검사](topics/generic-field-context-safety.md),
+  [DOM fixture 검토와 재현 경계](topics/dom-snapshot-review-boundaries.md)를 추가했다.
+- 자체 title/placeholder의 범용 로컬 읽기는 2026-10-18 사용자 승인 사항이다.
+  기존 raw는 변경하지 않고 실제 JEV·실사이트 검증의 미실행 경계를 유지한다.
+
 ## [2026-10-18] ingest | CF-250 범용 응답 합성 값 표현
 
 - Approval-Digest: 0ee8fe6c546245d56ad81d38d4fde2a719b830d39c8181f43ac8a8d48c5fef6b
 - Source-Revision: 01c430db48c9e2d6277a84e544f106dc6b7cc00f
 - 승인한 후보 4개를 [CF-250 bundle](../raw/issues/CF-250/manifest.md)에 기록하고 [합성 값 표현](topics/generic-synthetic-binding-response.md)과 [frontend 검증 경계](topics/generic-binding-frontend-validation.md)를 추가했다.
 - 합성 요청·응답 검증 경계를 유지한다. 기존 raw는 변경하지 않는다.
+
 ## [2026-10-18] ingest | CF-253 범용 검색 실패 격리와 fixture 공백 정규화
 
 - Approval-Digest: 39539b34214157c8ade45d63698fd83be4ca20b3c668b66d2d2de77776379603

@@ -16,6 +16,7 @@ const base: GradeFieldInput = {
   categoryConfirmed: true,
   hasProfileValue: true,
   control: "text",
+  displayName: "성",
 };
 const input = (override: Partial<GradeFieldInput>): GradeFieldInput => ({
   ...base,
@@ -240,6 +241,8 @@ function gradeTable(name: string, table: Record<string, Mock>) {
         categoryConfirmed: mock.confirmed ?? true,
         hasProfileValue: mock.hasValue ?? true,
         control: field.control,
+        displayName: field.displayName,
+        labels: field.semanticContext?.labels,
         inputType: field.semanticContext?.inputType,
         options: field.options,
         rowSiblings,

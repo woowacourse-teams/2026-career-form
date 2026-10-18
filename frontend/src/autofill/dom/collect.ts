@@ -339,6 +339,7 @@ function collectFieldElements(
 export function collectFieldsSnapshot(
   document: Document,
   dropdowns: ReadonlyMap<HTMLElement, ButtonDropdown> = new Map(),
+  options: { recoverBrokenLabels?: boolean } = {},
 ): CollectedSnapshot<FieldsAnalyzeRequest> {
   const finishTiming = startLocalTiming("collect", { version: 2 });
   try {
@@ -606,6 +607,7 @@ export function collectFieldsSnapshot(
             }
             const semanticContext = collectSemanticContext(first, container, {
               generic,
+              recoverBrokenLabels: generic && options.recoverBrokenLabels,
               ...(generic && isChoice && !customRadio && grouped.length > 1
                 ? { group: grouped } : {}),
             });
@@ -785,7 +787,7 @@ export async function collectFieldsSnapshotWithDropdowns(
   if (resolveDocumentCompany(document) !== "generic")
     return collectFieldsSnapshot(document);
   const release = acquireDocumentRun(document);
-  if (!release) return collectFieldsSnapshot(document);
+  if (!release) return collectFieldsSnapshot(document, new Map(), { recoverBrokenLabels: true });
   try {
     const dropdowns = await collectButtonDropdowns(
       document,
@@ -796,7 +798,7 @@ export async function collectFieldsSnapshotWithDropdowns(
           trigger.closest("form") ?? document.body,
         ).allowed,
     );
-    return collectFieldsSnapshot(document, dropdowns);
+    return collectFieldsSnapshot(document, dropdowns, { recoverBrokenLabels: true });
   } finally {
     release();
   }

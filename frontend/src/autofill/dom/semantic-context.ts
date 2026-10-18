@@ -365,12 +365,14 @@ function contextLabels(
 interface ContextOptions {
   generic?: boolean;
   group?: readonly HTMLElement[];
+  recoverBrokenLabels?: boolean;
 }
 
 function genericContextLabels(
   element: HTMLElement,
   section: Element | null,
   group?: readonly HTMLElement[],
+  recoverBrokenLabels = false,
 ): NonNullable<SemanticContext["labels"]> {
   const labels: NonNullable<SemanticContext["labels"]> = [];
   const add = (source: NonNullable<SemanticContext["labels"]>[number]["source"], value?: string | null) => {
@@ -401,7 +403,7 @@ function genericContextLabels(
   add("aria-label", element.getAttribute("aria-label"));
   if ("labels" in element && !group) {
     const trusted = trustedLabels(element as HTMLInputElement);
-    const owned = trusted.length ? trusted : [unassociatedLabelOf(element)];
+    const owned = trusted.length ? trusted : [unassociatedLabelOf(element, recoverBrokenLabels)];
     add("label", owned.filter((label): label is HTMLLabelElement => Boolean(label))
       .map(textOf).filter(Boolean).join(" "));
   }
@@ -436,7 +438,7 @@ export function collectSemanticContext(
   options: ContextOptions = {},
 ): SemanticContext {
   const labels = options.generic
-    ? genericContextLabels(element, section, options.group)
+    ? genericContextLabels(element, section, options.group, options.recoverBrokenLabels)
     : contextLabels(element, section);
   const context: SemanticContext = labels.length ? { labels } : {};
   if (

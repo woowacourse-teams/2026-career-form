@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createEmptyProfile } from "../../profile/model";
-import { collectFieldsSnapshot } from "../dom/collect";
+import {
+  collectFieldsSnapshot,
+  collectFieldsSnapshotWithDropdowns,
+} from "../dom/collect";
 import { collectSemanticContext } from "../dom/semantic-context";
 import { buildReviewPlan } from "../review/review-plan";
 
@@ -28,6 +31,28 @@ const labelTexts = (field: {
 // Sanitized structure from a real LG AI Research application page. This is not
 // evidence of installed-extension behavior or of live-site success rates.
 describe("LG AI Research sanitized application form structure", () => {
+  it("recovers the broken birth label only in the generic collection path", async () => {
+    collect();
+    const snapshot = await collectFieldsSnapshotWithDropdowns(document);
+    const fields = snapshot.request.sections.flatMap((section) => section.fields);
+    expect(fields.slice(3, 6).map((field) => field.displayName)).toEqual([
+      "년",
+      "월",
+      "일",
+    ]);
+    for (const field of fields.slice(3, 6)) {
+      expect(field.semanticContext?.labels ?? []).toContainEqual({
+        source: "label",
+        text: "생년월일 *",
+      });
+    }
+    const defaults = collectFieldsSnapshot(document);
+    expect(
+      defaults.request.sections.flatMap((section) => section.fields)
+        .slice(3, 6).map(labelTexts),
+    ).toEqual([[], [], []]);
+  });
+
   it("collects the birth-date selects without the 생년월일 label context", () => {
     const { fields } = collect();
     expect(fields.map((field) => field.control)).toEqual([

@@ -22,7 +22,9 @@ export type GradeReason =
   | "MODERATE_CONFIDENCE"
   | "CATEGORY_UNCONFIRMED"
   | "DUPLICATE_KEY_IN_ROW"
-  | "DATE_PART_OPTIONS_MISMATCH";
+  | "DATE_PART_OPTIONS_MISMATCH"
+  | "NO_FIELD_CONTEXT"
+  | "FORMAT_KEY_MISMATCH";
 
 /** A match whose value is composed: a name recipe or one part of a date. */
 export type GradeComposite =
@@ -40,7 +42,10 @@ export interface GradeSibling {
   confidence: number;
 }
 
-export interface GradeFieldInput {
+export interface GradeFieldInput extends Pick<
+  SemanticContext,
+  "inputType" | "inputMode" | "autocomplete" | "maxLength" | "labels"
+> {
   /** Profile field key such as "personal.personal.nationality". */
   profileFieldKey?: string;
   /** Present when the field is bound to a derived value instead of one key. */
@@ -50,7 +55,10 @@ export interface GradeFieldInput {
   /** Whether a profile value exists. Evaluated locally; the value is never passed. */
   hasProfileValue: boolean;
   control: FieldCandidate["control"];
-  inputType?: SemanticContext["inputType"];
+  displayName?: string;
+  /** Own DOM attributes, supplied locally by generic analysis, not sent to APIs. */
+  title?: string;
+  placeholder?: string;
   options?: readonly { displayName: string }[];
   /** Other matched fields in the same repeat row, excluding this field. */
   rowSiblings?: readonly GradeSibling[];
@@ -64,12 +72,16 @@ export interface FieldGradeResult {
 const COUNTRY_KEYS = new Set(["nationality", "residenceCountry"]);
 const COUNTRY_CODE_OPTION = /^\+\d{1,3}/;
 const EDUCATION_RECORDS = new Set(["highSchool", "university", "graduateSchool"]);
+const POSTAL_TEXT = /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
 
 function fieldIdOf(key: string | undefined): string {
   return key?.split(".")[2] ?? "";
 }
 
-function isDateProfileFieldKey(value: string | undefined): boolean {
+function isProfileFieldType(
+  value: string | undefined,
+  type: "date" | "email" | "tel",
+): boolean {
   if (!value) return false;
   const [categoryId, sectionId, fieldId] = value.split(".");
   return PROFILE_CATEGORIES.some(
@@ -79,7 +91,7 @@ function isDateProfileFieldKey(value: string | undefined): boolean {
         (section) =>
           section.id === sectionId &&
           section.fields.some(
-            (field) => field.id === fieldId && field.inputType === "date",
+            (field) => field.id === fieldId && field.inputType === type,
           ),
       ),
   );
@@ -103,7 +115,7 @@ function hasCountryCodeOptions(input: GradeFieldInput): boolean {
 }
 
 function isNonDateField(input: GradeFieldInput): boolean {
-  if (!isDateProfileFieldKey(input.profileFieldKey)) return false;
+  if (!isProfileFieldType(input.profileFieldKey, "date")) return false;
   if (input.control !== "text" && input.control !== "textarea") return true;
   return (
     input.inputType !== undefined &&
@@ -151,6 +163,19 @@ function isLowerDuplicate(input: GradeFieldInput): boolean {
   );
 }
 
+function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
+  if (input.inputType === "email" || input.inputType === "tel") {
+    return !isProfileFieldType(input.profileFieldKey, input.inputType);
+  }
+  const postalFormat = input.autocomplete === "postal-code" ||
+    (input.maxLength !== undefined && input.maxLength > 0 &&
+      input.maxLength <= 6 && input.inputMode === "numeric") ||
+    [input.title, input.placeholder].some((text) => POSTAL_TEXT.test(text ?? ""));
+  return postalFormat &&
+    input.profileFieldKey?.startsWith("contact.contact.") === true &&
+    ["addressLine1", "addressLine2", "residenceCountry"].includes(fieldIdOf(input.profileFieldKey));
+}
+
 /**
  * Grades one generic-document match with pure code checks. Reads only its
  * input: no DOM, network, or global state.
@@ -172,12 +197,19 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
   if (hasMixedEducationRecords(input)) {
     return { grade: "BLOCKED", reason: "MIXED_EDUCATION_RECORD" };
   }
+  if (hasFormatKeyMismatch(input)) {
+    return { grade: "BLOCKED", reason: "FORMAT_KEY_MISMATCH" };
+  }
   if (!input.categoryConfirmed) {
     return { grade: "REVIEW", reason: "CATEGORY_UNCONFIRMED" };
   }
   if (input.confidence >= AUTO_CONFIDENCE_MIN) {
     if (isLowerDuplicate(input)) {
       return { grade: "REVIEW", reason: "DUPLICATE_KEY_IN_ROW" };
+    }
+    if (!input.displayName?.trim() &&
+      !input.labels?.some((label) => label.text.trim())) {
+      return { grade: "REVIEW", reason: "NO_FIELD_CONTEXT" };
     }
     return { grade: "AUTO" };
   }

@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { collectFieldsSnapshot } from "../dom/collect";
+import {
+  collectFieldsSnapshot,
+  collectFieldsSnapshotWithDropdowns,
+} from "../dom/collect";
 import { usePolicyFixture } from "../../test/fixtures/execution-policy";
 import { installExecutionPolicy } from "./execution-policy";
 
@@ -56,6 +59,22 @@ function load(mutate?: () => void) {
 // Sanitized structure from a real SK careers application form with one row of
 // each repeatable section added. Not evidence of live-site success rates.
 describe("SK careers sanitized application form structure", () => {
+  it("keeps policy collection requests unchanged when generic label recovery is requested", async () => {
+    load();
+    const withoutSnapshotId = (snapshot: ReturnType<typeof collectFieldsSnapshot>) => {
+      const { snapshotId: _snapshotId, ...request } = snapshot.request;
+      return request;
+    };
+    const baseline = withoutSnapshotId(collectFieldsSnapshot(document));
+    expect(withoutSnapshotId(collectFieldsSnapshot(
+      document,
+      new Map(),
+      { recoverBrokenLabels: true },
+    ))).toEqual(baseline);
+    expect(withoutSnapshotId(await collectFieldsSnapshotWithDropdowns(document)))
+      .toEqual(baseline);
+  }, TIMEOUT_MS);
+
   it("collects the same structural radio question without a company policy or names", () => {
     installExecutionPolicy(document);
     document.body.innerHTML = readFileSync(FIXTURE, "utf8");
