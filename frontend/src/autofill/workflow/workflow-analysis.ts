@@ -38,6 +38,7 @@ import { collectFieldsSnapshotWithDropdowns } from "../dom/collect";
 import {
   analyzeGenericFields,
   applyGenericGrade,
+  genericGradeFor,
   createGenericAnalysisCache,
   type GenericAnalysisCache,
   type GenericAnalysisResult,
@@ -560,7 +561,10 @@ export function createAnalyzeFields({
     const finishAutomaticItems = startLocalTiming("automatic-items");
     const planItems = genericResult
       ? plan.items.map((item) =>
-          applyGenericGrade(item, genericResult.grades.get(item.candidateId)),
+          applyGenericGrade(
+            item,
+            genericGradeFor(genericResult, item.candidateId),
+          ),
         )
       : plan.items;
     const automaticItems = snapshot.registry.withReadCache(() =>

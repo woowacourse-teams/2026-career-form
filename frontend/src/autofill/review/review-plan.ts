@@ -90,6 +90,10 @@ export interface ReviewPlanItem {
   disabled: boolean;
   revealed: boolean;
   reason: string;
+  /** Generic-path only: the grade of the field. Static paths never set it. */
+  genericGrade?: "AUTO" | "REVIEW" | "BLOCKED";
+  /** Generic-path only: the grade reason or section failure code. */
+  genericReasonCode?: string;
   failureCode?: WriteFailureCode;
   analysis?: MatchedFieldAnalysis;
   dateApproval?: DateTargetApproval;
@@ -116,7 +120,10 @@ export function reviewItemsForDisplay(
 ): ReviewPlanItem[] {
   return items
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => item.status !== "unavailable")
+    .filter(
+      ({ item }) =>
+        item.status !== "unavailable" || item.genericGrade === "BLOCKED",
+    )
     .sort((left, right) => {
       const leftOrder = left.item.status === "available" ? 0 : 1;
       const rightOrder = right.item.status === "available" ? 0 : 1;
