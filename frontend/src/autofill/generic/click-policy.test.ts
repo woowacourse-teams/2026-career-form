@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { isSafeStructuralClick } from "./click-policy";
+import { isSafeStructuralClick, isSafeSurfaceCloseClick } from "./click-policy";
 
 function mount(html: string): { scope: Element; target: Element } {
   document.body.innerHTML = `<div data-scope>${html}</div>`;
@@ -212,5 +212,160 @@ describe("isSafeStructuralClick", () => {
       allowed: false,
       reason: "forbidden-label",
     });
+  });
+});
+
+describe("isSafeSurfaceCloseClick", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it.each(["닫기", "close", "Close", "x", "×", "✕"])(
+    "allows a bare close label %s",
+    (label) => {
+      const { scope, target } = mount(
+        `<button type="button" data-target>${label}</button>`,
+      );
+
+      expect(isSafeSurfaceCloseClick(target, scope)).toEqual({ allowed: true });
+    },
+  );
+
+  it("reads a bare close label from the accessible name", () => {
+    const { scope, target } = mount(
+      '<button type="button" aria-label="닫기" data-target></button>',
+    );
+
+    expect(isSafeSurfaceCloseClick(target, scope)).toEqual({ allowed: true });
+  });
+
+  it.each([
+    "저장",
+    "제출",
+    "검색",
+    "지원하기",
+    "삭제",
+    "취소",
+    "초기화",
+    "확인",
+    "저장 닫기",
+    "닫기 저장",
+    "close save",
+    "submit close",
+    "검색 닫기",
+    "닫기 닫기",
+  ])("blocks the label %s as not a bare close control", (label) => {
+    const { scope, target } = mount(
+      `<button type="button" data-target>${label}</button>`,
+    );
+
+    expect(isSafeSurfaceCloseClick(target, scope)).toEqual({
+      allowed: false,
+      reason: "forbidden-label",
+    });
+  });
+
+  it("blocks a close text that is paired with a forbidden accessible name", () => {
+    const { scope, target } = mount(
+      '<button type="button" aria-label="저장" data-target>닫기</button>',
+    );
+
+    expect(isSafeSurfaceCloseClick(target, scope)).toEqual({
+      allowed: false,
+      reason: "forbidden-label",
+    });
+  });
+
+  it("blocks an otherwise safe close label outside the scope", () => {
+    document.body.innerHTML = `
+      <div data-scope><button type="button">닫기</button></div>
+      <button type="button" data-target>닫기</button>
+    `;
+    const scope = document.querySelector("[data-scope]")!;
+    const target = document.querySelector("[data-target]")!;
+
+    expect(isSafeSurfaceCloseClick(target, scope)).toEqual({
+      allowed: false,
+      reason: "outside-scope",
+    });
+  });
+
+  it.each([
+    [
+      "hidden",
+      '<button type="button" hidden data-target>닫기</button>',
+      "hidden",
+    ],
+    [
+      "disabled",
+      '<button type="button" disabled data-target>닫기</button>',
+      "disabled",
+    ],
+    [
+      "submit-input",
+      '<input type="submit" value="닫기" data-target />',
+      "submit-input",
+    ],
+    [
+      "implicit-submit-button",
+      "<form><button data-target>닫기</button></form>",
+      "implicit-submit-button",
+    ],
+    [
+      "navigating-link",
+      '<a href="/next" data-target>닫기</a>',
+      "navigating-link",
+    ],
+    [
+      "new-window-target",
+      '<a href="#" target="_blank" data-target>닫기</a>',
+      "new-window-target",
+    ],
+    [
+      "formaction",
+      '<button type="button" formaction="/save" data-target>닫기</button>',
+      "form-override-attribute",
+    ],
+    [
+      "form attribute",
+      '<button type="button" form="other-form" data-target>닫기</button>',
+      "form-override-attribute",
+    ],
+  ])(
+    "blocks a close label with a structural hazard (%s)",
+    (_name, html, reason) => {
+      const { scope, target } = mount(html);
+
+      expect(isSafeSurfaceCloseClick(target, scope)).toEqual({
+        allowed: false,
+        reason,
+      });
+    },
+  );
+
+  it("allows a type=button close control inside a form and a non-navigating close link", () => {
+    const { scope, target } = mount(
+      '<form><button type="button" data-target>닫기</button></form><a href="#" data-link>닫기</a>',
+    );
+    const link = scope.querySelector("[data-link]")!;
+
+    expect(isSafeSurfaceCloseClick(target, scope)).toEqual({ allowed: true });
+    expect(isSafeSurfaceCloseClick(link, scope)).toEqual({ allowed: true });
+  });
+
+  it("does not click, focus, or change the DOM while deciding", () => {
+    const { scope, target } = mount(
+      '<button type="button" data-target>닫기</button>',
+    );
+    let clicks = 0;
+    scope.addEventListener("click", () => {
+      clicks += 1;
+    });
+    const before = document.body.innerHTML;
+
+    isSafeSurfaceCloseClick(target, scope);
+
+    expect(clicks).toBe(0);
+    expect(document.body.innerHTML).toBe(before);
   });
 });
