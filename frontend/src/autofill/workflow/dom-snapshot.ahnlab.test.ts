@@ -263,4 +263,70 @@ describe("AhnLab sanitized application form", () => {
       expect(writes.every((write) => write.status !== "written")).toBe(true);
     },
   );
+
+  it("blocks a referrer name field matched to a Korean full name recipe", async () => {
+    const { snapshot, fields } = collect(() => {
+      // A name field labelled with the role word, in an enabled referrer area.
+      document.querySelector('label[for="anon-id-4"]')!.textContent = "추천인 성명";
+    });
+    const target = document.getElementById("anon-id-4") as HTMLInputElement;
+    const referrerName = fields.find((field) => {
+      const lookup = snapshot.registry.lookupField(field.candidateId);
+      return "handle" in lookup && lookup.handle.elements.includes(target);
+    })!;
+    expect(referrerName.displayName).toBe("추천인 성명");
+    const profile = createEmptyProfile();
+    profile.personal.koreanFamilyName = "합성";
+    profile.personal.koreanGivenName = "이름";
+    const api = mockApi();
+    const analyze = api.analyzeGenericFields;
+    api.analyzeGenericFields = async (request) => {
+      const response = await analyze(request);
+      return {
+        ...response,
+        fields: response.fields.map((field) =>
+          field.candidateId === referrerName.candidateId
+            ? {
+                ...field,
+                confidence: 1,
+                categoryConfirmed: true,
+                interactionStatus: "READY" as const,
+                autofillPolicy: "ALLOWED" as const,
+                writePlan: { command: "SET_TEXT" as const },
+                binding: { type: "DERIVED" as const, recipe: "KOREAN_FULL_NAME" as const },
+              }
+            : field,
+        ),
+      };
+    };
+    const result = await analyzeGenericFields(
+      snapshot,
+      document,
+      api,
+      profile,
+      createGenericAnalysisCache(),
+    );
+    expect(result.grades.get(referrerName.candidateId)).toEqual({
+      grade: "BLOCKED",
+      reason: "OTHER_PERSON_CONTEXT",
+    });
+    const plan = buildReviewPlan({
+      analysis: result.analysis,
+      profile,
+      registry: snapshot.registry,
+    });
+    const items = plan.items.map((item) =>
+      applyGenericGrade(item, result.grades.get(item.candidateId)),
+    );
+    expect(
+      items.find((item) => item.candidateId === referrerName.candidateId),
+    ).toMatchObject({ selected: false, disabled: true });
+    const writes = executeApprovedWrites({
+      items,
+      approvedCandidateIds: new Set([referrerName.candidateId]),
+      registry: snapshot.registry,
+    });
+    expect(target.value).toBe("");
+    expect(writes.every((write) => write.status !== "written")).toBe(true);
+  });
 });
