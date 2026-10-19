@@ -2693,7 +2693,7 @@
                 "date": {
                   "group": "highschoolDate",
                   "role": "START",
-                  "formats": ["YM"],
+                  "formats": ["YM", "YMD"],
                   "peer": "hplace.mrs2.highschool.graduationDate",
                   "forbiddenAfterToday": false,
                   "tokens": ["highschool", "graduationCriteriaDate"],
@@ -2712,7 +2712,7 @@
                 "date": {
                   "group": "highschoolDate",
                   "role": "END",
-                  "formats": ["YM"],
+                  "formats": ["YM", "YMD"],
                   "peer": "hplace.mrs2.highschool.entranceDate",
                   "forbiddenAfterToday": false,
                   "tokens": ["highschool", "graduationCriteriaDate"],
@@ -2926,7 +2926,7 @@
                 "date": {
                   "group": "college[{index}].date",
                   "role": "START",
-                  "formats": ["YM"],
+                  "formats": ["YM", "YMD"],
                   "peer": "hplace.mrs2.college.graduationDate",
                   "forbiddenAfterToday": false,
                   "tokens": ["college", "graduationCriteriaDate"],
@@ -2945,7 +2945,7 @@
                 "date": {
                   "group": "college[{index}].date",
                   "role": "END",
-                  "formats": ["YM"],
+                  "formats": ["YM", "YMD"],
                   "peer": "hplace.mrs2.college.entranceDate",
                   "forbiddenAfterToday": false,
                   "tokens": ["college", "graduationCriteriaDate"],
@@ -3583,7 +3583,7 @@
                 "date": {
                   "group": "graduateSchool[{index}].date",
                   "role": "START",
-                  "formats": ["YM"],
+                  "formats": ["YM", "YMD"],
                   "peer": "hplace.mrs2.graduateSchool.graduationDate",
                   "forbiddenAfterToday": false,
                   "tokens": ["college", "graduationCriteriaDate"],
@@ -3602,7 +3602,7 @@
                 "date": {
                   "group": "graduateSchool[{index}].date",
                   "role": "END",
-                  "formats": ["YM"],
+                  "formats": ["YM", "YMD"],
                   "peer": "hplace.mrs2.graduateSchool.entranceDate",
                   "forbiddenAfterToday": false,
                   "tokens": ["college", "graduationCriteriaDate"],

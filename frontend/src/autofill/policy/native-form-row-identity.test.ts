@@ -19,6 +19,11 @@ import {
   syntheticNativePolicy,
 } from "./__fixtures__/hplace-mrs2-native.synthetic";
 import { nativeTestItem } from "./__fixtures__/native-test-item";
+import {
+  educationProfile,
+  mountEducation,
+} from "./__fixtures__/hplace-mrs2-education.synthetic";
+import { nativeRepeatableProfileCount } from "./native-form-row-assignment";
 import type { FieldsAnalyzeResponse, PreparationPlan } from "../api/types";
 afterEach(() => installExecutionPolicy(document));
 function mount(rows = 2) {
@@ -311,3 +316,35 @@ it("rejects overlap between an earlier existing row and a later prior assignment
   expect(next.count).toBeUndefined();
   expect(next.review.items.every((i) => i.disabled)).toBe(true);
 });
+
+/** CF-177 C5: an occupied college row keeps its identity under the section's
+ * YMD date token, so the same school is not planned twice. Synthetic values. */
+it.each([
+  ["YM", "2020.03"],
+  ["YMD", "2020.03.01"],
+] as const)(
+  "recognizes an occupied %s college row as the matching profile entry",
+  (format, entrance) => {
+    mountEducation(1, 1, false, { dateInputFormat: format });
+    const set = (name: string, value: string) =>
+      (document.querySelector<HTMLInputElement>(
+        `[name="college[0].${name}"]`,
+      )!.value = value);
+    set("academyName", "합성대학 A");
+    set("academyCode", "SYN001");
+    document.querySelector(
+      "[data-loop=college] .searchResultName",
+    )!.textContent = "합성대학 A";
+    document.querySelector<HTMLInputElement>(
+      '[name="college[0].degreeTypeCode"][value="50"]',
+    )!.checked = true;
+    set("entranceDate", entrance);
+    expect(
+      nativeRepeatableProfileCount(
+        document,
+        "hplace.mrs2.college.add",
+        educationProfile(),
+      ),
+    ).toBe(2);
+  },
+);
