@@ -679,3 +679,42 @@ it("does not treat an unrecognized checked empty radio as the approved default",
     written: false,
   });
 });
+
+import { nativeProfileAssignment } from "./native-form-row-assignment";
+it.each([
+  { selected: "Intermediate High", reason: "이미 입력된 항목입니다." },
+  { selected: "Advanced Low", reason: "행 신원을 확인할 수 없어" },
+])(
+  "treats an existing exam row with $selected as the profile's IH entry only through the exact ACTFL label",
+  ({ selected, reason }) => {
+    mount();
+    const options = ["Advanced Low", "Intermediate High"]
+      .map(
+        (label, i) =>
+          `<option value="G${i}"${label === selected ? " selected" : ""}>${label}</option>`,
+      )
+      .join("");
+    document
+      .querySelector('section[data-code="18"]')!
+      .insertAdjacentHTML(
+        "beforeend",
+        `<div class="subject" data-code="165" data-wrap="foreignExam"><div class="loop" data-loop="languageExam" data-index="0"><div class="span"><div class="search"><label><input type="search" data-type="foreignExam"></label><div class="searchResult"></div></div><input type="hidden" name="languageExam[0].languageExamName" value="합성 어학시험"><span class="searchResultName">합성 어학시험</span><input class="hidden" name="languageExam[0].languageExamCode" value="EX001"></div><span class="ybmValidateDone hide" style="display:none"></span><div data-template="detail"><select name="languageExam[0].gradeCode"><option value=""></option>${options}</select><input type="hidden" name="languageExam[0].languageExamSn"></div><button type="button" data-button="add"></button></div></div>`,
+      );
+    const profile = createEmptyProfile();
+    profile.languages = [
+      {
+        id: "synthetic-actfl",
+        sectionId: "languageTest",
+        values: { testName: "합성 어학시험", grade: "IH" },
+      },
+    ];
+    const exam = item(
+      "hplace.mrs2.foreignExam.languageExamName",
+      "합성 어학시험",
+    );
+    const assignment = nativeProfileAssignment(exam.handle, profile);
+    expect(typeof assignment === "object" && assignment.reason).toContain(
+      reason,
+    );
+  },
+);

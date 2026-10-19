@@ -289,3 +289,52 @@ it("retains an inert structural placeholder for an authenticated row without rea
   }
   expect(JSON.stringify(snapshot.request)).not.toContain("다른 시험");
 });
+it.each([
+  { profile: "IH", code: "G_IH" },
+  { profile: "ih", code: "G_IH" },
+  { profile: "IM2", code: "G_IM2" },
+  { profile: "Intermediate High", code: "G_IH" },
+  { profile: "IM", code: undefined },
+  { profile: "AH", code: undefined },
+  { profile: "상급", code: undefined },
+])(
+  "maps a standard ACTFL grade abbreviation $profile only to one exact observed option",
+  async ({ profile, code }) => {
+    mount();
+    const { handle, item } = searchItem("가상 어학시험");
+    handle.elements[0].addEventListener(
+      "keypress",
+      onSiteEnter(() =>
+        showResults(
+          handle.elements[0],
+          ["가상 어학시험"],
+          () =>
+            setTimeout(() => {
+              document.querySelector('[data-template="detail"]')!.innerHTML =
+                '<select name="entry.gradeCode"><option value=""></option><option value="G_AL">Advanced Low</option><option value="G_IH">Intermediate High</option><option value="G_IM3">Intermediate Mid 3</option><option value="G_IM2">Intermediate Mid 2</option><option value="G_IM1">Intermediate Mid 1</option></select><input name="entry.registNumber"><input name="entry.examDate"><input type="hidden" name="entry.languageExamSn">';
+            }, 30),
+          "234",
+          metadata(true, false),
+        ),
+      ),
+    );
+    expect(
+      await getWorkflowAdapter(document).executeStateDriver?.(
+        document,
+        handle,
+        item,
+        new AbortController().signal,
+      ),
+    ).toBe(true);
+    const field = searchItem(profile, "gradeCode");
+    const select = field.handle.elements[0] as HTMLSelectElement;
+    const result = getWriteAdapter(document).tryWrite(field.handle, field.item);
+    expect(["written" in result && result.written, select.value]).toEqual(
+      code ? [true, code] : [false, ""],
+    );
+    if (code)
+      expect(
+        getWriteAdapter(document).verifyRetained?.(field.handle, field.item),
+      ).toBe(true);
+  },
+);

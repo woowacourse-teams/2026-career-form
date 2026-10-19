@@ -18,6 +18,7 @@ import {
   type NativeOwnership,
 } from "./native-form-collection";
 import { text, visible } from "./primitives";
+import { observedGradeLabel } from "./exam-grade-alias";
 
 const driverControls = new WeakMap<FieldCandidateHandle, Set<string>>();
 const fail = { handled: true, written: false } as const;
@@ -160,9 +161,16 @@ function authorized(handle: FieldCandidateHandle, item: ReviewPlanItem) {
 function selectedOption(
   o: NativeOwnership,
   handle: FieldCandidateHandle,
-  label: string,
+  profileLabel: string,
 ): HTMLOptionElement | HTMLInputElement | undefined {
   const dynamic = o.field.dynamicOptions;
+  const label =
+    dynamic?.codeFormat === "OBSERVED"
+      ? observedGradeLabel(
+          profileLabel,
+          o.observedOptions.map((opt) => opt.label),
+        )
+      : profileLabel;
   const observed = o.observedOptions.filter((opt) => opt.label === label);
   const code =
     dynamic &&
