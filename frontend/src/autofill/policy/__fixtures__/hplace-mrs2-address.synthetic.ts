@@ -54,7 +54,7 @@ export const addressContract = () => ({
     '#searchAppAdressForm input[type="text"][placeholder^="예 : 반포대교로 201"]',
   searchSelector: "#searchAppAdressForm button",
   searchLabel: "검색",
-  resultsSelector: "#searchAppAdressResult > div.postcodify_search_form",
+  resultsSelector: "#searchAppAdressResult.postcodify_search_form",
   resultSelector: ":scope > div.postcodify_search_result",
   resultAddressSelector: "div.address > a.selector > span.address_info",
   resultPostcodeSelector: "div.code5",
@@ -142,7 +142,7 @@ export function mountAddress(
     event("open");
     document.body.insertAdjacentHTML(
       "beforeend",
-      `<div id="modal" class="modal-bg"><div class="modal"><button type="button" data-button="modalClose"></button><div id="searchAppAdressForm"><input type="text" placeholder="예 : 반포대교로 201, 합성"><button type="button">검색</button></div><div id="searchAppAdressResult"><div class="postcodify_search_form"></div></div><div class="internal"><input class="postcode" value="-" readonly><input class="address" readonly><input class="details" maxlength="128"></div><button type="button" data-button="modalSubmit" disabled>저장</button><button type="button" data-button="modalCancel">취소</button></div></div>`,
+      `<div id="modal" class="modal-bg"><div class="modal"><button type="button" data-button="modalClose"></button><div class="row no-margin searchAppAdressForm" id="searchAppAdressForm"><div class="postcodify_search_controls postcode_search_controls"><label for="postcodify_1" style="display:none">검색 키워드</label><input type="text" class="keyword" value="" id="postcodify_1" placeholder="예 : 반포대교로 201, 합성"><button type="button" class="search_button" id="postcodify_1_button">검색</button></div></div><div class="row half-margin"><div id="searchAppAdressResult" class="hide postcodify_search_form postcode_search_form"></div></div><div class="internal"><input class="postcode" value="-" readonly><input class="address" readonly><input class="details" maxlength="128"></div><button type="button" data-button="modalSubmit" disabled>저장</button><button type="button" data-button="modalCancel">취소</button></div></div>`,
     );
     const modal = document.querySelector("#modal")!,
       stage = Array.from(
@@ -174,7 +174,10 @@ export function mountAddress(
       .querySelector("#searchAppAdressForm button")!
       .addEventListener("click", () => {
         event("search");
-        let host = modal.querySelector(".postcodify_search_form")!;
+        // postcodify-3.3.0 adds search_form to its results element itself
+        // (#searchAppAdressResult) and appends rows and status directly to it.
+        let host = modal.querySelector<HTMLElement>("#searchAppAdressResult")!;
+        host.classList.remove("hide");
         host.replaceChildren();
         if (options.loadingRow)
           host.innerHTML =
@@ -188,9 +191,9 @@ export function mountAddress(
           host.replaceChildren();
           for (const r of options.results ?? [addressExpected]) {
             const row = document.createElement("div");
-            row.className = "postcodify_search_result";
+            row.className = "postcodify_search_result postcode_search_result";
             row.innerHTML =
-              '<div class="code6"></div><div class="code5"></div><div class="address"><a class="selector" href="#"><span class="address_info"></span><span class="extra_info"></span></a></div>';
+              '<div class="code6">000-000</div><div class="code5"></div><div class="address"><a class="selector" href="#"><span class="address_info"></span><span class="extra_info"></span></a><a href="#" class="show_old_addresses">▼</a></div><div class="old_addresses" style="display: none;">가상동 1</div>';
             row.querySelector(".code5")!.textContent = r.postalCode;
             row.querySelector(".address_info")!.textContent = r.address;
             row.querySelector(".extra_info")!.textContent =
@@ -208,6 +211,13 @@ export function mountAddress(
                 options.duplicateDelay,
               );
           }
+          const count = (options.results ?? [addressExpected]).length;
+          host.insertAdjacentHTML(
+            "beforeend",
+            count
+              ? `<div class="summary postcodify_search_status postcode_search_status"><div class="result_count">검색 결과: <span>${count}</span></div><div class="search_time">소요 시간: <span>1ms</span></div><div class="network_time">통신 지연: <span>1ms</span></div></div>`
+              : '<div class="empty postcodify_search_status postcode_search_status">검색 결과가 없습니다.</div>',
+          );
         };
         if (options.resultDelay) setTimeout(renderResults, options.resultDelay);
         else renderResults();

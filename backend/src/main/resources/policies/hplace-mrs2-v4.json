@@ -4372,7 +4372,7 @@
           "querySelector": "#searchAppAdressForm input[type=\"text\"][placeholder^=\"예 : 반포대교로 201\"]",
           "searchSelector": "#searchAppAdressForm button",
           "searchLabel": "검색",
-          "resultsSelector": "#searchAppAdressResult > div.postcodify_search_form",
+          "resultsSelector": "#searchAppAdressResult.postcodify_search_form",
           "resultSelector": ":scope > div.postcodify_search_result",
           "resultAddressSelector": "div.address > a.selector > span.address_info",
           "resultPostcodeSelector": "div.code5",

@@ -260,8 +260,10 @@ export async function runStagedAddress({
           since: number;
         }
       | undefined;
+    let hostSeen = false;
     const host = await wait(() => {
       const candidate = one(content, p.resultsSelector);
+      hostSeen ||= !!candidate;
       const matches = candidate ? results(candidate) : [];
       if (!candidate || !matches.length) {
         previous = undefined;
@@ -280,7 +282,11 @@ export async function runStagedAddress({
         if (Date.now() - previous.since >= 40) return candidate;
       } else previous = { host: candidate, matches, since: Date.now() };
     }, guarded);
-    if (!host) return fail("result-not-unique", "result-selection");
+    // A results host that never matched is a contract miss, not an ambiguous result.
+    if (!host)
+      return hostSeen
+        ? fail("result-not-unique", "result-selection")
+        : fail("control-missing", "result-host");
     const matching = results(host);
     if (matching.length !== 1)
       return fail("result-not-unique", "result-selection");

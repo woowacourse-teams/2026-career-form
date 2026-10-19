@@ -10,8 +10,10 @@ import {
   collectPreparationSnapshot,
 } from "../dom/collect";
 import { validBrowserPolicy } from "./validate";
+import { setAutofillDebugEnabled } from "../debug/autofill-debug";
 afterEach(() => {
   installExecutionPolicy(document);
+  setAutofillDebugEnabled(false);
   vi.restoreAllMocks();
 });
 it("collects one owned current-address action and readback triplet without other addresses", () => {
@@ -252,6 +254,47 @@ it("uses the seeded v4 current-address descriptor for real collection and execut
       .some((a) => a.domId === "hplace.mrs2.currentAddress.search"),
   ).toBe(true);
   expect(await s.run()).toMatchObject({ status: "written" });
+});
+it("selects the single postcodify row rendered directly into the served v4 results host", async () => {
+  // Live 현대카드 run: one visible row, yet `result-not-unique`. postcodify-3.3.0
+  // marks #searchAppAdressResult itself as .postcodify_search_form.
+  setAutofillDebugEnabled(true);
+  const log = vi.spyOn(console, "info").mockImplementation(() => {});
+  const s = mountAddress({ extraInfo: "(가상동 1)" });
+  const resource =
+    await import("../../../../backend/src/main/resources/policies/hplace-mrs2-v4.json");
+  const policy = structuredClone(
+    resource.default.executionPolicy,
+  ) as unknown as typeof s.policy;
+  policy.browserPolicy!.nativeForm!.assetPaths =
+    s.policy.browserPolicy!.nativeForm!.assetPaths;
+  installExecutionPolicy(document, policy);
+  const result = await s.run();
+  expect(
+    log.mock.calls.flat().filter((l) => String(l).includes("skip")),
+  ).toEqual([]);
+  expect(result).toMatchObject({ status: "written" });
+  expect(s.inputs().map((e) => e.value)).toEqual([
+    addressExpected.postalCode,
+    addressExpected.address,
+    addressExpected.detail,
+  ]);
+});
+it("reports a missing results host separately from a non-unique result", async () => {
+  setAutofillDebugEnabled(true);
+  const log = vi.spyOn(console, "info").mockImplementation(() => {});
+  const s = mountAddress();
+  const p = addressPolicy();
+  p.browserPolicy!.nativeForm!.address!.resultsSelector =
+    "#searchAppAdressResult > div.postcodify_search_form";
+  installExecutionPolicy(document, p);
+  expect(await s.run()).toMatchObject({ status: "manual" });
+  const lines = log.mock.calls.flat().map(String);
+  expect(lines).toContain(
+    "[CareerForm] skip stage=address key=hplace.mrs2.currentAddress.search reason=control-missing detail=result-host",
+  );
+  expect(lines.some((l) => l.includes("reason=result-not-unique"))).toBe(false);
+  expect(s.events).not.toContain("select");
 });
 it("accepts serialized key order without weakening the primary activation schema", () => {
   const p = addressPolicy();
