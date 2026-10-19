@@ -5,6 +5,7 @@ import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.FIELDS;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.answerAll;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.answers;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.field;
+import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.fixture;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.repeatedSection;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.request;
 import static com.careerform.formanalysis.generic.GenericFieldsJevHttp.section;
@@ -246,6 +247,157 @@ class GenericFieldsResolverTest {
         assertThat(childCall.getFirst().state().path("fields").size()).isEqualTo(1);
         assertThat(childCall.getFirst().state().path("confusionBoundaries").asString())
             .isEqualTo(FIELDS.promptGuidance());
+    }
+
+    private static final String RESPONSIBILITIES = "careers.career.responsibilities";
+    private static final String CERTIFICATE_NAME = "certifications.certificate.name";
+    private static final String CERTIFICATE_ISSUER = "certifications.certificate.issuer";
+    private static final String TEST_NAME = "languages.languageTest.testName";
+    private static final String TEST_GRADE = "languages.languageTest.grade";
+    private static final List<String> TARGET_KEYS =
+        List.of(RESPONSIBILITIES, CERTIFICATE_NAME, CERTIFICATE_ISSUER, TEST_NAME, TEST_GRADE);
+    private static final List<String> FIXTURES =
+        List.of("naver-career-sections.request.json", "independent-synthetic-sections.request.json");
+
+    /** 구조 의미가 명확한 칸만 담은 이상적인 JEV 판단. 점수·언어 발급기관·프로젝트 상세·검색 팝업 칸은 일부러 뺀다. */
+    private static final Map<String, String> IDEAL = Map.ofEntries(
+        Map.entry("CAREER|업무내용(요약)", RESPONSIBILITIES), Map.entry("CAREER|담당 업무", RESPONSIBILITIES),
+        Map.entry("CERTIFICATE|자격/면허종류", CERTIFICATE_NAME), Map.entry("CERTIFICATE|자격증명", CERTIFICATE_NAME),
+        Map.entry("CERTIFICATE|발급기관", CERTIFICATE_ISSUER), Map.entry("CERTIFICATE|수여 기관", CERTIFICATE_ISSUER),
+        Map.entry("LANGUAGE|시험", TEST_NAME), Map.entry("LANGUAGE|어학 시험명", TEST_NAME),
+        Map.entry("LANGUAGE|등급", TEST_GRADE), Map.entry("LANGUAGE|급수", TEST_GRADE));
+
+    private static String ideal(String category, String label) {
+        return IDEAL.get(category + "|" + label);
+    }
+
+    /** 섹션에서 JEV가 실제로 받는 질문 순서: 섹션 칸 다음 첫 반복 행(구조가 같은 행은 한 번만 묻는다). */
+    private static List<FieldCandidate> askedCandidates(GenericFieldsRequest.Section section) {
+        List<FieldCandidate> asked = new ArrayList<>(section.fields());
+        if (section.items() != null && !section.items().isEmpty()) {
+            asked.addAll(section.items().getFirst().fields());
+        }
+        return asked;
+    }
+
+    /** 정제된 관측 문구와 무관하게 요청 구조 의미로 판단하는 이상적인 JEV. */
+    private static GenericFieldsJevHttp.Reply idealReply(GenericFieldsRequest request,
+        GenericFieldsJevHttp.Call call) {
+        var section = request.sections().stream()
+            .filter(candidate -> candidate.category().equals(call.category())).findFirst().orElseThrow();
+        List<FieldCandidate> asked = askedCandidates(section);
+        Map<String, String> choices = new java.util.LinkedHashMap<>();
+        for (int index = 0; index < asked.size(); index++) {
+            choices.put("field_" + index, ideal(section.category(), asked.get(index).displayName()));
+        }
+        return answers(call, choices, 0.9);
+    }
+
+    private static Map<String, String> expectedByCandidate(GenericFieldsRequest request) {
+        Map<String, String> expected = new java.util.LinkedHashMap<>();
+        for (var section : request.sections()) {
+            List<FieldCandidate> all = new ArrayList<>(section.fields());
+            if (section.items() != null) {
+                section.items().forEach(item -> all.addAll(item.fields()));
+            }
+            all.forEach(candidate -> expected.put(candidate.candidateId(),
+                ideal(section.category(), candidate.displayName())));
+        }
+        return expected;
+    }
+
+    @Test
+    @DisplayName("두 독립 fixture에서 대상 5개 키가 해당 범주 criteria에만 있고 다른 범주 키는 섞이지 않는다")
+    void targetKeysAreOfferedOnlyInsideTheirCategory() {
+        for (String name : FIXTURES) {
+            var local = new GenericFieldsJevHttp();
+            local.respond(call -> answerAll(call, null, 0.9));
+            new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES, 3, 5, 10, 8000)
+                .resolve(fixture(name));
+
+            assertThat(local.calls()).hasSize(3);
+            for (var call : local.calls()) {
+                Set<String> criteria = new HashSet<>(call.criteria(call.questionIds().getFirst()));
+                String prefix = switch (call.category()) {
+                    case "CAREER" -> "careers.";
+                    case "CERTIFICATE" -> "certifications.";
+                    default -> "languages.";
+                };
+                assertThat(criteria).contains(JevClient.ABSTAIN)
+                    .allSatisfy(key -> assertThat(key.startsWith(prefix) || key.equals(JevClient.ABSTAIN)
+                        || key.startsWith("DATE_PART:" + prefix)).as(key).isTrue());
+                assertThat(criteria).containsAll(TARGET_KEYS.stream().filter(key -> key.startsWith(prefix)).toList());
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("두 독립 fixture에서 이상적인 JEV 판단이 기존 키로 전달되고 모호한 칸은 연결되지 않는다")
+    void clearTargetsReachMappingsAndAmbiguousFieldsStayUnlinked() {
+        for (String name : FIXTURES) {
+            GenericFieldsRequest request = fixture(name);
+            var local = new GenericFieldsJevHttp();
+            local.respond(call -> idealReply(request, call));
+            var resolution = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(local), FIELDS, CATEGORIES,
+                3, 5, 10, 8000).resolve(request);
+
+            Map<String, String> expected = expectedByCandidate(request);
+            expected.forEach((candidateId, key) -> {
+                assertThat(resolution.mappings()).containsKey(candidateId);
+                Mapping mapping = resolution.mappings().get(candidateId);
+                assertThat(mapping.profileFieldKey()).as(name + " " + candidateId).isEqualTo(key);
+                assertThat(mapping.categoryConfirmed()).isTrue();
+                assertThat(mapping.reason()).isNull();
+            });
+            assertThat(expected.values().stream().filter(java.util.Objects::nonNull).distinct().toList())
+                .containsExactlyInAnyOrderElementsOf(TARGET_KEYS);
+        }
+    }
+
+    @Test
+    @DisplayName("다른 범주 키를 고른 응답은 범주 한정 때문에 연결되지 않는다")
+    void crossCategoryChoiceIsNotLinked() {
+        GenericFieldsRequest request = fixture(FIXTURES.getFirst());
+        http.respond(call -> answerAll(call, CERTIFICATE_ISSUER, 0.9));
+        var resolution = resolver(3, 5, 10).resolve(request);
+
+        assertThat(resolution.mappings().get("nv-cert-issuer").profileFieldKey()).isEqualTo(CERTIFICATE_ISSUER);
+        assertThat(resolution.mappings().get("nv-lang-issuer").profileFieldKey()).isNull();
+        assertThat(resolution.mappings().get("nv-career-job-0").profileFieldKey()).isNull();
+    }
+
+    @Test
+    @DisplayName("잘못된 범주·JEV 기권·단일 질문 토큰 초과는 공급자 요청 흔적으로 구분된다")
+    void wrongCategoryAbstainAndTokenLimitLeaveDifferentTraces() {
+        GenericFieldsRequest request = fixture(FIXTURES.getFirst());
+        var careerOnly = new GenericFieldsRequest(2, "snap", request.site(), List.of(request.sections().getFirst()));
+
+        // 잘못된 범주: criteria에 대상 키가 아예 없고, JEV는 기권만 고를 수 있다.
+        var wrong = new GenericFieldsRequest(2, "snap", request.site(), List.of(new GenericFieldsRequest.Section(
+            "sec-wrong", null, "경력사항", List.of(), careerOnly.sections().getFirst().items(), "EDUCATION")));
+        http.respond(call -> answerAll(call, RESPONSIBILITIES, 0.9));
+        assertThat(resolver(1, 5, 10).resolve(wrong).mappings().get("nv-career-job-0").profileFieldKey()).isNull();
+        assertThat(http.calls().getFirst().criteria(http.calls().getFirst().questionIds().getLast()))
+            .doesNotContain(RESPONSIBILITIES);
+
+        // 기권: criteria에 키가 있으나 JEV가 ABSTAIN을 고른다.
+        var abstainHttp = new GenericFieldsJevHttp();
+        abstainHttp.respond(call -> answerAll(call, JevClient.ABSTAIN, 0.9));
+        var abstained = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(abstainHttp), FIELDS, CATEGORIES, 1, 5, 10, 8000)
+            .resolve(careerOnly);
+        assertThat(abstained.mappings().get("nv-career-job-0").profileFieldKey()).isNull();
+        assertThat(abstainHttp.calls().getFirst().criteria(abstainHttp.calls().getFirst().questionIds().getFirst()))
+            .contains(RESPONSIBILITIES);
+
+        // 단일 질문 토큰 초과: 축소 state로 한 번 더 묻고도 넘으면 null이 되며 호출 수가 늘어난다.
+        var limitHttp = new GenericFieldsJevHttp();
+        limitHttp.respond(call -> tokenLimit());
+        var limited = new JevCategoryFieldResolver(GenericFieldsJevHttp.client(limitHttp), FIELDS, CATEGORIES, 1, 5, 10, 8000)
+            .resolve(careerOnly);
+        assertThat(limited.mappings().get("nv-career-job-0").profileFieldKey()).isNull();
+        assertThat(limited.mappings().get("nv-career-job-0").reason()).isNull();
+        assertThat(limitHttp.calls()).hasSizeGreaterThan(1);
+        assertThat(limitHttp.calls().getLast().state().path("fields").size()).isEqualTo(1);
     }
 
     private JevCategoryFieldResolver resolver(int sectionConcurrency, int batchSize, int maxConcurrent) {

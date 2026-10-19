@@ -135,6 +135,16 @@ final class GenericFieldsJevHttp extends HttpClient {
             "usage", Map.of("input_tokens", 11, "output_tokens", 3))));
     }
 
+    /** src/test/resources/generic의 비식별 요청 fixture를 읽는다. */
+    static GenericFieldsRequest fixture(String name) {
+        try (var stream = GenericFieldsJevHttp.class.getResourceAsStream("/generic/" + name)) {
+            return JSON.readValue(java.util.Objects.requireNonNull(stream, name), GenericFieldsRequest.class);
+        }
+        catch (java.io.IOException exception) {
+            throw new java.io.UncheckedIOException(exception);
+        }
+    }
+
     static Reply tokenLimit() {
         return new Reply(400, "{\"error_type\":\"max_tokens_exceeded\"}");
     }
