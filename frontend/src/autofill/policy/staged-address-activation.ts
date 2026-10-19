@@ -1,4 +1,4 @@
-/** The async address owner revalidates profile approval before EACH synthetic event. */
+/** Revalidate approval before each optional pointer event and the site-owned click. */
 export async function activateOwnedPrimary(
   node: HTMLButtonElement,
   current: () => Promise<boolean>,
@@ -9,63 +9,49 @@ export async function activateOwnedPrimary(
     !node.closest("#modal.modal-bg > .modal")
   )
     return false;
-  const events = primaryActivationEvents(node);
-  if (!events) return false;
-  for (const dispatch of events)
-    if (!(await current()) || !dispatch()) return false;
-  activated();
-  return true;
-}
-function primaryActivationEvents(
-  node: HTMLButtonElement,
-): (() => boolean)[] | undefined {
+  const view = node.ownerDocument.defaultView!;
   const rect = node.getBoundingClientRect();
-  const clientX = rect.left + rect.width / 2,
-    clientY = rect.top + rect.height / 2;
+  // The site's jQuery handler only needs HTMLElement.click(). Geometry and
+  // PointerEvent availability are not prerequisites for that owned activation.
   if (
-    !(rect.width > 0 && rect.height > 0) ||
-    !Number.isFinite(clientX) ||
-    !Number.isFinite(clientY)
-  )
-    return;
-  return ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].map(
-    (type) => () => {
-      if (
-        !node.isConnected ||
-        node.type !== "button" ||
-        node.matches(":disabled") ||
-        node.closest('[hidden],[inert],[aria-hidden="true"]')
-      )
-        return false;
-      const now = node.getBoundingClientRect();
-      if (
-        now.left !== rect.left ||
-        now.top !== rect.top ||
-        now.width !== rect.width ||
-        now.height !== rect.height
-      )
-        return false;
+    typeof view.PointerEvent === "function" &&
+    rect.width > 0 &&
+    rect.height > 0
+  ) {
+    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup"]) {
+      if (!(await current()) || !ready()) return false;
       const init = {
         bubbles: true,
         cancelable: true,
         composed: true,
         button: 0,
         buttons: type.endsWith("down") ? 1 : 0,
-        clientX,
-        clientY,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
         detail: 1,
       };
       node.dispatchEvent(
         type.startsWith("pointer")
-          ? new PointerEvent(type, {
+          ? new view.PointerEvent(type, {
               ...init,
               pointerId: 1,
               pointerType: "mouse",
               isPrimary: true,
             })
-          : new MouseEvent(type, init),
+          : new view.MouseEvent(type, init),
       );
-      return true;
-    },
-  );
+    }
+  }
+  if (!(await current()) || !ready()) return false;
+  node.click();
+  activated();
+  return true;
+  function ready() {
+    return (
+      node.isConnected &&
+      node.type === "button" &&
+      !node.matches(":disabled") &&
+      !node.closest('[hidden],[inert],[aria-hidden="true"]')
+    );
+  }
 }

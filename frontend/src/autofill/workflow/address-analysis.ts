@@ -1,4 +1,3 @@
-import { debugPreparationCounts } from "../debug/structural-diagnostics";
 import { normalizeStagedRoad } from "../policy/staged-address-road";
 import { stagedAddressNodes } from "../policy/staged-address-dom";
 import { runStagedAddress } from "../policy/staged-address";
@@ -124,7 +123,6 @@ export async function runAddressAnalysis({
     onActivity?.("address");
     if (!run.task) {
       const onClick = () => {
-        debugPreparationCounts("address", 1, 1);
         onAddressOperation?.(staged.button);
       };
       staged.button.addEventListener("click", onClick, { once: true });

@@ -22,7 +22,7 @@ function target() {
   });
   return button;
 }
-it("activates only a primary pointer with coordinates and complete mouse compatibility sequence", async () => {
+it("uses optional primary pointer compatibility signals then the native site-owned click", async () => {
   const button = target();
   const events: unknown[] = [];
   for (const name of [
@@ -50,7 +50,7 @@ it("activates only a primary pointer with coordinates and complete mouse compati
     ["mousedown", 0, 1, 60, 50, false, null],
     ["pointerup", 0, 0, 60, 50, false, true],
     ["mouseup", 0, 0, 60, 50, false, null],
-    ["click", 0, 0, 60, 50, false, null],
+    ["click", 0, 0, 0, 0, false, null],
   ]);
 });
 it("rechecks ownership between each event and never finishes a revoked activation", async () => {
@@ -81,20 +81,27 @@ it.each([
 ])("rejects arbitrary activation options %j", (extra) => {
   expect(validDomPlan([{ ...activation[0], ...extra }])).toBe(false);
 });
-it.each(["submit", "disabled", "zero-size"])(
+it.each(["submit", "disabled"])(
   "refuses unsafe activation target %s",
   async (kind) => {
     const button = target();
     if (kind === "submit") button.type = "submit";
     if (kind === "disabled") button.disabled = true;
-    if (kind === "zero-size")
-      vi.mocked(button.getBoundingClientRect).mockReturnValue(new DOMRect());
     let clicked = false;
     button.addEventListener("click", () => (clicked = true));
     expect(await activateOwnedPrimary(button, async () => true)).toBe(false);
     expect(clicked).toBe(false);
   },
 );
+
+it("uses native click when an owned button has no pointer geometry", async () => {
+  const button = target();
+  vi.mocked(button.getBoundingClientRect).mockReturnValue(new DOMRect());
+  let clicks = 0;
+  button.addEventListener("click", () => clicks++);
+  expect(await activateOwnedPrimary(button, async () => true)).toBe(true);
+  expect(clicks).toBe(1);
+});
 
 it("rejects primary activation in generic plans without dispatching any event", () => {
   const button = target();

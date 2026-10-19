@@ -26,7 +26,16 @@ export type StructuralSkipReason =
   | "blocked"
   | "disabled-timeout"
   | "policy-missing"
-  | "build-unavailable";
+  | "build-unavailable"
+  | "result-click-no-effect"
+  | "result-not-unique"
+  | "staging-mismatch"
+  | "submit-disabled-timeout"
+  | "submit-no-effect"
+  | "confirm-missing"
+  | "confirm-ambiguous"
+  | "readback-mismatch"
+  | "cleanup-failed";
 let scope: Set<string> | undefined;
 let scopeStage: "collect" | "prepare" = "collect";
 function line(message: string) {
@@ -52,7 +61,7 @@ export function debugRuntimeSkip(
   id: string,
   reason: StructuralSkipReason,
   detail: string,
-  stage: "collect" | "prepare" | "write" | "result" = "write",
+  stage: "collect" | "prepare" | "write" | "result" | "address" = "write",
 ) {
   line(`skip stage=${stage} key=${id} reason=${reason} detail=${detail}`);
 }

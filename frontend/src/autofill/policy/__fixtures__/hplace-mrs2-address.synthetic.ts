@@ -90,7 +90,7 @@ export function addressPolicy() {
 }
 export function mountAddress(
   options: {
-    results?: { address: string; postalCode: string }[];
+    results?: readonly { address: string; postalCode: string }[];
     confirm?: "missing" | "duplicate" | "wrong";
     stageWrong?: boolean;
     delay?: number;
@@ -99,6 +99,16 @@ export function mountAddress(
     onLoadCurrent?: () => void;
     copyWrong?: boolean;
     noPointerResponse?: boolean;
+    liveHandler?: boolean;
+    submitDisabled?: boolean;
+    keepModal?: boolean;
+    brokenClose?: boolean;
+    resultDelay?: number;
+    replaceResultHost?: boolean;
+    extraInfo?: string;
+    loadingRow?: boolean;
+    duplicateDelay?: number;
+    confirmRevealDelay?: number;
   } = {},
 ) {
   mountSyntheticNative(0);
@@ -142,42 +152,72 @@ export function mountAddress(
       .querySelector('[data-button="modalClose"]')!
       .addEventListener("click", () => {
         event("modal-close");
-        modal.remove();
+        if (!options.brokenClose) modal.remove();
       });
     stage[2].value = options.detailBeforeSelection ?? "";
     const submit = modal.querySelector<HTMLButtonElement>(
       '[data-button="modalSubmit"]',
     )!;
-    vi.spyOn(submit, "getBoundingClientRect").mockReturnValue(
-      new DOMRect(20, 30, 80, 40),
-    );
+    if (!options.liveHandler)
+      vi.spyOn(submit, "getBoundingClientRect").mockReturnValue(
+        new DOMRect(20, 30, 80, 40),
+      );
+    // writeResume.js polls .val() independently of input events, once per second.
+    if (options.liveHandler) {
+      const interval = setInterval(() => {
+        if (!modal.isConnected) return clearInterval(interval);
+        submit.disabled =
+          !!options.submitDisabled || !stage.every((e) => e.value);
+      }, 1000);
+    }
     modal
       .querySelector("#searchAppAdressForm button")!
       .addEventListener("click", () => {
         event("search");
-        const host = modal.querySelector(".postcodify_search_form")!;
+        let host = modal.querySelector(".postcodify_search_form")!;
         host.replaceChildren();
-        for (const r of options.results ?? [addressExpected]) {
-          const row = document.createElement("div");
-          row.className = "postcodify_search_result";
-          row.innerHTML =
-            '<div class="code6"></div><div class="code5"></div><div class="address"><a class="selector" href="#"><span class="address_info"></span><span class="extra_info"></span></a></div>';
-          row.querySelector(".code5")!.textContent = r.postalCode;
-          row.querySelector(".address_info")!.textContent = r.address;
-          row.querySelector("a")!.addEventListener("click", (e) => {
-            e.preventDefault();
-            stage[0].value = r.postalCode;
-            stage[1].value = options.stageWrong ? "다른주소" : r.address;
-            event("select");
-          });
-          host.append(row);
-        }
+        if (options.loadingRow)
+          host.innerHTML =
+            '<div class="postcodify_search_result">검색 중</div>';
+        const renderResults = () => {
+          if (options.replaceResultHost) {
+            const replacement = host.cloneNode(false) as HTMLElement;
+            host.replaceWith(replacement);
+            host = replacement;
+          }
+          host.replaceChildren();
+          for (const r of options.results ?? [addressExpected]) {
+            const row = document.createElement("div");
+            row.className = "postcodify_search_result";
+            row.innerHTML =
+              '<div class="code6"></div><div class="code5"></div><div class="address"><a class="selector" href="#"><span class="address_info"></span><span class="extra_info"></span></a></div>';
+            row.querySelector(".code5")!.textContent = r.postalCode;
+            row.querySelector(".address_info")!.textContent = r.address;
+            row.querySelector(".extra_info")!.textContent =
+              options.extraInfo ?? "";
+            row.querySelector("a")!.addEventListener("click", (e) => {
+              e.preventDefault();
+              stage[0].value = r.postalCode;
+              stage[1].value = options.stageWrong ? "다른주소" : r.address;
+              event("select");
+            });
+            host.append(row);
+            if (options.duplicateDelay)
+              setTimeout(
+                () => host.append(row.cloneNode(true)),
+                options.duplicateDelay,
+              );
+          }
+        };
+        if (options.resultDelay) setTimeout(renderResults, options.resultDelay);
+        else renderResults();
       });
     stage[2].addEventListener("input", () => {
       event("details");
-      setTimeout(() => {
-        submit.disabled = !stage.every((e) => e.value);
-      }, options.delay ?? 10);
+      if (!options.liveHandler)
+        setTimeout(() => {
+          submit.disabled = !stage.every((e) => e.value);
+        }, options.delay ?? 10);
     });
     const pointer: string[] = [];
     for (const name of [
@@ -193,35 +233,46 @@ export function mountAddress(
         if (
           name !== "click" ||
           options.noPointerResponse ||
-          pointer.join(",") !==
-            "pointerdown,mousedown,pointerup,mouseup,click" ||
+          (!options.liveHandler &&
+            pointer.join(",") !==
+              "pointerdown,mousedown,pointerup,mouseup,click") ||
           !stage.every((e) => e.value) ||
           options.confirm === "missing"
         )
           return;
-        for (let i = 0; i < (options.confirm === "duplicate" ? 2 : 1); i++) {
-          const wrap = document.createElement("div");
-          wrap.id = "wrapDialog";
-          wrap.innerHTML = `<div id="Dialog"><p>${options.confirm === "wrong" ? "다른 항목을 저장하시겠습니까?" : "저장하시겠습니까?"}</p><button type="button" data-button="ok">확인</button><button type="button" data-button="cancel">취소</button></div>`;
-          wrap
-            .querySelector('[data-button="ok"]')!
-            .addEventListener("click", () => {
-              event("ok");
-              inputs().forEach((e, i) => (e.value = stage[i].value));
-              if (options.copyWrong) inputs()[2].value = "다른 상세";
-              document.querySelector("span.postCode")!.textContent =
-                stage[0].value;
-              modal.remove();
-              wrap.remove();
-            });
-          wrap
-            .querySelector('[data-button="cancel"]')!
-            .addEventListener("click", () => {
-              event("cancel");
-              wrap.remove();
-            });
-          document.body.append(wrap);
-        }
+        const showConfirm = () => {
+          for (let i = 0; i < (options.confirm === "duplicate" ? 2 : 1); i++) {
+            const wrap = document.createElement("div");
+            wrap.id = "wrapDialog";
+            wrap.innerHTML = `<div id="Dialog"><p>${options.confirm === "wrong" ? "다른 항목을 저장하시겠습니까?" : "저장하시겠습니까?"}</p>\n\t<div><button type="button" data-button="ok">확인</button> <button type="button" data-button="cancel">취소</button> <button type="button" style="width:0;height:0;opacity:0"></button>\n\t</div>\n</div>`;
+            wrap
+              .querySelector('[data-button="ok"]')!
+              .addEventListener("click", () => {
+                event("ok");
+                inputs().forEach((e, i) => (e.value = stage[i].value));
+                if (options.copyWrong) inputs()[2].value = "다른 상세";
+                document.querySelector("span.postCode")!.textContent =
+                  stage[0].value;
+                if (!options.keepModal) modal.remove();
+                wrap.remove();
+              });
+            wrap
+              .querySelector('[data-button="cancel"]')!
+              .addEventListener("click", () => {
+                event("cancel");
+                wrap.remove();
+              });
+            if (options.confirmRevealDelay) {
+              wrap.style.display = "none";
+              setTimeout(
+                () => (wrap.style.display = ""),
+                options.confirmRevealDelay,
+              );
+            }
+            document.body.append(wrap);
+          }
+        };
+        showConfirm();
       });
   });
   const controller = new AbortController();

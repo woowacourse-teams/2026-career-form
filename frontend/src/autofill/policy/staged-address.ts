@@ -1,3 +1,8 @@
+import {
+  debugPreparationCounts,
+  debugRuntimeSkip,
+  type StructuralSkipReason,
+} from "../debug/structural-diagnostics";
 import { recordStagedAddress } from "./staged-address-receipt";
 import type { AddressExecutionOptions, AddressResult } from "../address/types";
 import { normalizeAddress } from "../address/match";
@@ -26,15 +31,31 @@ export async function runStagedAddress({
   loadCurrent,
   signal,
 }: AddressExecutionOptions): Promise<AddressResult> {
+  const fail = (
+    reason: StructuralSkipReason,
+    step: string,
+    message?: string,
+  ) => {
+    debugRuntimeSkip(
+      "hplace.mrs2.currentAddress.search",
+      reason,
+      step,
+      "address",
+    );
+    return manual(message);
+  };
   const n = stagedAddressNodes(document);
-  if (!n || n.button !== button) return manual();
+  if (!n || n.button !== button)
+    return fail("owner-mismatch", "original-contract");
   const p = n.policy,
     url = document.URL,
     policy = JSON.stringify(executionPolicy(document)),
     approved = JSON.stringify(expected);
   const desired = [expected.postalCode, expected.address, expected.detail];
   if (!validStagedRoad(expected.address))
-    return manual(
+    return fail(
+      "staging-mismatch",
+      "profile-road",
       "지원하지 않는 도로명주소 표기입니다. 시도명과 도로명·건물번호를 직접 확인해 주세요.",
     );
   if (
@@ -46,7 +67,7 @@ export async function runStagedAddress({
         (n.fields[i].maxLength >= 0 && v.length > n.fields[i].maxLength),
     )
   )
-    return manual();
+    return fail("staging-mismatch", "profile-triplet");
   const initial = n.fields.map((e) => e.value),
     initialPostcode = n.postcode.textContent;
   const tupleMatches = () =>
@@ -73,14 +94,18 @@ export async function runStagedAddress({
       return false;
     }
   };
-  if (!(await profile())) return manual();
+  if (!(await profile())) return fail("staging-mismatch", "profile-approval");
   if (initial.some(Boolean))
     return tupleMatches()
       ? {
           status: "written",
           reason: "이미 입력됨 — 현주소 세 값이 일치합니다.",
         }
-      : manual("기존 주소가 있어 덮어쓰지 않았습니다.");
+      : fail(
+          "existing-value",
+          "original-triplet",
+          "기존 주소가 있어 덮어쓰지 않았습니다.",
+        );
   const untouched = () =>
     n.fields.every((e, i) => e.value === initial[i]) &&
     n.postcode.textContent === initialPostcode;
@@ -89,12 +114,11 @@ export async function runStagedAddress({
     document.querySelector(p.modalSelector) ||
     document.querySelector(p.confirmSelector)
   )
-    return manual();
+    return fail("owner-mismatch", "existing-overlay");
   const view = document.defaultView!;
   let modal: HTMLElement | undefined,
     detail: HTMLInputElement | undefined,
-    detailBefore = "",
-    writtenDetail: string | undefined;
+    detailBefore = "";
   const fresh = () => current() && untouched();
   const wait = async <T>(
     read: () => T | undefined,
@@ -108,12 +132,12 @@ export async function runStagedAddress({
       await pause(view);
     } while (Date.now() < deadline);
   };
-  let activated = false;
   let close: HTMLElement | undefined;
   let confirmations: { node: HTMLElement; cancel: HTMLElement | undefined }[] =
     [];
   const execute = async (): Promise<AddressResult> => {
-    if (!(await profile()) || !fresh()) return manual();
+    if (!(await profile()) || !fresh())
+      return fail("staging-mismatch", "open-approval");
     n.button.click();
     modal = await wait(
       () => one(document, p.modalSelector),
@@ -122,10 +146,12 @@ export async function runStagedAddress({
         fresh() &&
         !document.querySelector(p.confirmSelector),
     );
-    if (!modal) return manual();
+    if (!modal) return fail("control-missing", "modal-open");
+    close = one(modal, p.modalCloseSelector);
     const owner = modal,
       content = one(owner, p.contentSelector);
-    if (!content || !visible(content, true)) return manual();
+    if (!content || !visible(content, true))
+      return fail("owner-mismatch", "modal-content");
     const query = one(content, p.querySelector),
       search = one(content, p.searchSelector);
     const stages = p.stageSelectors.map((s) => one(content, s));
@@ -155,7 +181,7 @@ export async function runStagedAddress({
           !e.disabled,
       )
     )
-      return manual();
+      return fail("control-shape", "modal-controls");
     const stage = stages as HTMLInputElement[];
     detail = stage[2];
     detailBefore = detail.value;
@@ -166,7 +192,7 @@ export async function runStagedAddress({
       stage[1].value ||
       (detailBefore && detailBefore !== desired[2])
     )
-      return manual();
+      return fail("staging-mismatch", "initial-staging");
     const owned = () =>
       fresh() &&
       one(document, p.modalSelector) === owner &&
@@ -179,7 +205,7 @@ export async function runStagedAddress({
       visible(content, true);
     const guarded = async () => (await profile()) && owned();
     if (!(await guarded()) || document.querySelector(p.confirmSelector))
-      return manual();
+      return fail("staging-mismatch", "search-approval");
     if (
       !runDomPlan(
         [
@@ -191,7 +217,7 @@ export async function runStagedAddress({
         () => owned() && !document.querySelector(p.confirmSelector),
       )
     )
-      return manual();
+      return fail("staging-mismatch", "search-input");
     const old = new Set(content.querySelectorAll(p.resultSelectSelector));
     if (
       !(await guarded()) ||
@@ -200,11 +226,9 @@ export async function runStagedAddress({
       search.type !== "button" ||
       search.textContent?.trim() !== p.searchLabel
     )
-      return manual();
+      return fail("staging-mismatch", "search-activation");
     search.click();
-    const host = await wait(() => one(content, p.resultsSelector), guarded);
-    if (!host) return manual();
-    const results = () =>
+    const results = (host: HTMLElement) =>
       Array.from(host.querySelectorAll(p.resultSelector)).flatMap((row) => {
         const address = one(row, p.resultAddressSelector),
           zip = one(row, p.resultPostcodeSelector),
@@ -226,25 +250,53 @@ export async function runStagedAddress({
             ]
           : [];
       });
-    await wait(
-      () => (host.querySelector(p.resultSelector) ? true : undefined),
-      guarded,
-    );
-    const matching = results();
-    if (matching.length !== 1) return manual();
+    // Postcodify may retain a loading/stale row or replace the result wrapper
+    // while its request completes. Reacquire the owned host and wait for an
+    // exact candidate, rather than treating the first arbitrary row as done.
+    let previous:
+      | {
+          host: HTMLElement;
+          matches: ReturnType<typeof results>;
+          since: number;
+        }
+      | undefined;
+    const host = await wait(() => {
+      const candidate = one(content, p.resultsSelector);
+      const matches = candidate ? results(candidate) : [];
+      if (!candidate || !matches.length) {
+        previous = undefined;
+        return;
+      }
+      if (
+        previous?.host === candidate &&
+        previous.matches.length === matches.length &&
+        previous.matches.every(
+          (m, i) =>
+            m.select === matches[i].select &&
+            m.address === matches[i].address &&
+            m.zip === matches[i].zip,
+        )
+      ) {
+        if (Date.now() - previous.since >= 40) return candidate;
+      } else previous = { host: candidate, matches, since: Date.now() };
+    }, guarded);
+    if (!host) return fail("result-not-unique", "result-selection");
+    const matching = results(host);
+    if (matching.length !== 1)
+      return fail("result-not-unique", "result-selection");
     const result = matching[0];
     if (
       !(await guarded()) ||
       one(content, p.resultsSelector) !== host ||
       query.value !== desired[1] ||
-      results().length !== 1 ||
-      results()[0].select !== result.select ||
+      results(host).length !== 1 ||
+      results(host)[0].select !== result.select ||
       document.querySelector(p.confirmSelector) ||
       !emptyPostcode() ||
       stage[1].value ||
       detail.value !== detailBefore
     )
-      return manual();
+      return fail("staging-mismatch", "result-approval");
     result.select.click();
     const staged = () =>
       stage[0].value === desired[0] &&
@@ -253,16 +305,15 @@ export async function runStagedAddress({
       !(await wait(() => (staged() ? true : undefined), guarded)) ||
       detail.value !== detailBefore
     )
-      return manual();
+      return fail("result-click-no-effect", "result-staging");
     if (
       !(await guarded()) ||
       !visible(detail) ||
       document.querySelector(p.confirmSelector) ||
       (detail.maxLength >= 0 && desired[2].length > detail.maxLength)
     )
-      return manual();
+      return fail("staging-mismatch", "detail-approval");
     // Only the editable modal detail is written. Original zip/base/detail are site-owned.
-    writtenDetail = desired[2];
     if (
       !runDomPlan(
         [
@@ -275,7 +326,7 @@ export async function runStagedAddress({
         () => owned() && staged() && !document.querySelector(p.confirmSelector),
       )
     )
-      return manual();
+      return fail("staging-mismatch", "detail-input");
     const complete = () => staged() && stage[2].value === desired[2];
     const commitReady = async () =>
       (await guarded()) &&
@@ -287,7 +338,7 @@ export async function runStagedAddress({
         commitReady,
       ))
     )
-      return manual();
+      return fail("submit-disabled-timeout", "submit-ready");
     // A dialog appearing before the owned click (including during pointerdown) is foreign.
     if (
       !(await activateOwnedPrimary(
@@ -298,7 +349,6 @@ export async function runStagedAddress({
           commit.textContent?.trim() === p.commitLabel &&
           visible(commit),
         () => {
-          activated = true;
           confirmations = Array.from(
             document.querySelectorAll<HTMLElement>(p.confirmSelector),
           ).map((node) => ({
@@ -308,19 +358,33 @@ export async function runStagedAddress({
         },
       ))
     )
-      return manual();
-    if (!(await guarded()) || !complete()) return manual();
+      return fail("submit-no-effect", "submit-activation");
+    if (!(await guarded()) || !complete())
+      return fail("staging-mismatch", "submit-approval");
     // The site creates its HTML dialog synchronously in the owned activation handler.
     // No later unrelated dialog may be adopted during a timeout window.
     const confirmation =
       confirmations.length === 1 ? confirmations[0].node : undefined;
+    if (!confirmations.length) {
+      fail("submit-no-effect", "submit-activation");
+      return fail("confirm-missing", "confirm-lookup");
+    }
+    if (confirmations.length !== 1)
+      return fail("confirm-ambiguous", "confirm-lookup");
     if (
       !confirmation ||
       one(document, p.confirmSelector) !== confirmation ||
-      !visible(confirmation, true) ||
       confirmation.closest(p.modalSelector)
     )
-      return manual();
+      return fail("owner-mismatch", "confirm-owner");
+    const confirmVisible = await wait(
+      () => (visible(confirmation, true) ? true : undefined),
+      async () =>
+        (await guarded()) &&
+        complete() &&
+        one(document, p.confirmSelector) === confirmation,
+    );
+    if (!confirmVisible) return fail("confirm-missing", "confirm-visible");
     const ok = one(confirmation, p.confirmOkSelector);
     // Compare the message without either action button's label.
     const confirmText = () => {
@@ -335,7 +399,7 @@ export async function runStagedAddress({
       ok.textContent?.trim() !== p.confirmOkLabel ||
       confirmText() !== p.confirmMessage
     )
-      return manual();
+      return fail("staging-mismatch", "confirm-contract");
     if (
       !(await guarded()) ||
       !complete() ||
@@ -345,7 +409,7 @@ export async function runStagedAddress({
       ok.type !== "button" ||
       !visible(ok)
     )
-      return manual();
+      return fail("staging-mismatch", "confirm-approval");
     ok.click();
     const committed = await wait(
       () =>
@@ -354,78 +418,72 @@ export async function runStagedAddress({
           : undefined,
       profile,
     );
-    if (!committed) return manual();
-    writtenDetail = undefined;
+    if (!committed) return fail("readback-mismatch", "commit-readback");
     recordStagedAddress(n);
+    debugPreparationCounts("address", 1, 1);
     return {
       status: "written",
       reason: "현주소 검색 결과와 세 값의 로컬 반영을 확인했습니다.",
     };
   };
-  const outcome = await execute().catch(() => manual());
+  const outcome = await execute().catch(() =>
+    fail("staging-mismatch", "step-exception"),
+  );
   if (outcome.status === "written") return outcome;
-  if (activated) {
-    // The synchronous owned click establishes cancellation ownership, even if approval
-    // is subsequently revoked. Never adopt replacement dialogs or press their OK.
-    for (const { node, cancel } of confirmations) {
-      if (
-        document.URL === url &&
-        node.isConnected &&
-        node.matches(p.confirmSelector) &&
-        one(node, p.confirmCancelSelector) === cancel &&
-        cancel instanceof HTMLButtonElement &&
-        cancel.type === "button" &&
-        cancel.textContent?.trim() === p.confirmCancelLabel &&
-        visible(cancel)
-      )
-        cancel.click();
-    }
-    const pending =
-      confirmations.some(({ node }) => node.isConnected) ||
-      !!document.querySelector(p.confirmSelector);
+  // The synchronous owned click establishes cancellation ownership, even if approval
+  // is subsequently revoked. Never adopt replacement dialogs or press their OK.
+  for (const { node, cancel } of confirmations) {
     if (
-      !pending &&
       document.URL === url &&
-      modal?.isConnected &&
-      one(document, p.modalSelector) === modal &&
-      close instanceof HTMLButtonElement &&
-      one(modal, p.modalCloseSelector) === close &&
-      close.type === "button" &&
-      visible(close)
+      node.isConnected &&
+      node.matches(p.confirmSelector) &&
+      one(node, p.confirmCancelSelector) === cancel &&
+      cancel instanceof HTMLButtonElement &&
+      cancel.type === "button" &&
+      cancel.textContent?.trim() === p.confirmCancelLabel &&
+      visible(cancel)
     )
-      close.click();
-    const originalsUnchanged =
-      untouched() && sameAddressNodes(n, stagedAddressNodes(document));
-    if (!originalsUnchanged)
-      return manual(
-        "주소 원본의 변경을 감지했습니다. 세 값을 직접 확인해 주세요.",
-      );
-    if (
-      pending ||
-      modal?.isConnected ||
-      document.querySelector(p.modalSelector)
-    )
-      return manual(
-        "주소 입력을 중단했습니다. 남은 주소 확인창이나 모달을 취소한 뒤 직접 확인해 주세요.",
-      );
-    return manual(
-      "주소 입력을 중단하고 확인창과 모달을 닫았습니다. 원래 주소 세 값은 변경하지 않았습니다.",
+      cancel.click();
+  }
+  const overlaysGone = () =>
+    !confirmations.some(({ node }) => node.isConnected) &&
+    !document.querySelector(p.confirmSelector);
+  if (!overlaysGone())
+    await wait(
+      () => (overlaysGone() ? true : undefined),
+      async () => document.URL === url,
     );
-  }
-  // Before activation only our unchanged staging text may be restored.
+  const pending = !overlaysGone();
   if (
-    writtenDetail !== undefined &&
-    detail?.isConnected &&
-    modal &&
+    !pending &&
+    document.URL === url &&
+    modal?.isConnected &&
     one(document, p.modalSelector) === modal &&
-    modal.contains(detail) &&
-    detail.value === writtenDetail &&
-    current()
-  ) {
-    Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value",
-    )!.set!.call(detail, detailBefore);
-  }
-  return outcome;
+    close instanceof HTMLButtonElement &&
+    one(modal, p.modalCloseSelector) === close &&
+    close.type === "button" &&
+    visible(close)
+  )
+    close.click();
+  if (modal?.isConnected)
+    await wait(
+      () => (!modal?.isConnected ? true : undefined),
+      async () => document.URL === url,
+    );
+  const originalsUnchanged =
+    untouched() && sameAddressNodes(n, stagedAddressNodes(document));
+  if (!originalsUnchanged) fail("readback-mismatch", "original-triplet");
+  if (pending || modal?.isConnected || document.querySelector(p.modalSelector))
+    fail("cleanup-failed", pending ? "confirm-cancel" : "modal-close");
+  if (!originalsUnchanged)
+    return manual(
+      "주소 원본의 변경을 감지했습니다. 세 값을 직접 확인해 주세요.",
+    );
+  if (pending || modal?.isConnected || document.querySelector(p.modalSelector))
+    return manual(
+      "주소 입력을 중단했습니다. 남은 주소 확인창이나 모달을 취소한 뒤 직접 확인해 주세요.",
+    );
+  return manual(
+    "주소 입력을 중단하고 확인창과 모달을 닫았습니다. 원래 주소 세 값은 변경하지 않았습니다.",
+  );
 }
