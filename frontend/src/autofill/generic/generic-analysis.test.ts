@@ -899,3 +899,128 @@ describe("generic date part bindings", () => {
     expect(bodies).not.toContain("birthDate");
   });
 });
+
+describe("generic select and radio option values", () => {
+  const choice = (key: string): ((candidate: FieldCandidate) => FieldOverride) =>
+    (candidate) =>
+      candidate.domName === "choice"
+        ? {
+            profileFieldKey: key,
+            confidence: 0.92,
+            categoryConfirmed: true,
+            autofillPolicy: "ALLOWED",
+            interactionStatus: "READY",
+            writePlan: { command: "SELECT_OPTION" },
+          }
+        : {};
+  const militaryProfile = (value: string): Profile => {
+    const profile = createEmptyProfile();
+    profile.military.militaryStatus = value;
+    return profile;
+  };
+  const certificateProfile = (grade: string): Profile => {
+    const profile = createEmptyProfile();
+    profile.certifications.push({
+      id: "entry-1",
+      sectionId: "certificate",
+      values: { grade },
+    });
+    return profile;
+  };
+  const radios = (...labels: string[]) => `
+    <form>
+      <h2>병역</h2>
+      ${labels
+        .map(
+          (label, index) =>
+            `<label><input type="radio" name="choice" value="${index}" />${label}</label>`,
+        )
+        .join("")}
+    </form>`;
+  const select = (...labels: string[]) => `
+    <form>
+      <h2>자격</h2>
+      <label>등급<select name="choice"><option value="">선택</option>${labels
+        .map((label) => `<option>${label}</option>`)
+        .join("")}</select></label>
+    </form>`;
+
+  it.each([
+    ["a radio group", radios("비대상", "군필", "미필")],
+    ["another radio group", radios("대상 아님", "군필", "복무중")],
+  ])("converts a stored military status through a LOOKUP on %s", async (_name, html) => {
+    document.body.innerHTML = html;
+
+    const { byName } = await run(
+      { field: choice("military.military.militaryStatus") },
+      militaryProfile("military-status:served"),
+    );
+
+    expect(byName("choice").field).toMatchObject({
+      valueBinding: {
+        type: "LOOKUP",
+        profileFieldKey: "military.military.militaryStatus",
+        optionMap: { "military-status:served": "군필" },
+      },
+    });
+    expect(byName("choice").grade).toEqual({ grade: "AUTO" });
+  });
+
+  it.each([
+    ["a radio group without the label", radios("비대상", "미필")],
+    ["a radio group with a duplicate label", radios("군필", "군필", "미필")],
+  ])("blocks a stored military status on %s", async (_name, html) => {
+    document.body.innerHTML = html;
+
+    const { byName } = await run(
+      { field: choice("military.military.militaryStatus") },
+      militaryProfile("military-status:served"),
+    );
+
+    expect(byName("choice").field).toMatchObject({
+      valueBinding: { type: "DIRECT" },
+    });
+    expect(byName("choice").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "OPTION_VALUE_UNMATCHED",
+    });
+  });
+
+  it.each([
+    ["a grade select", select("1급", "2급"), "1급", "1급"],
+    ["a width-variant grade select", select("ａ급", "ｂ급"), "A급", "ａ급"],
+  ])("converts a free-text grade through a LOOKUP on %s", async (_name, html, grade, option) => {
+    document.body.innerHTML = html;
+
+    const { byName } = await run(
+      { field: choice("certifications.certificate.grade") },
+      certificateProfile(grade),
+    );
+
+    expect(byName("choice").field).toMatchObject({
+      valueBinding: { type: "LOOKUP", optionMap: { [grade]: option } },
+    });
+    expect(byName("choice").grade).toEqual({ grade: "AUTO" });
+  });
+
+  it.each([
+    ["a certificate grade", "certifications.certificate.grade", select("A등급", "B등급")],
+    ["a language score", "languages.languageTest.grade", select("1급", "2급")],
+  ])("blocks a numeric value on %s select", async (_name, key, html) => {
+    document.body.innerHTML = html;
+    const profile = createEmptyProfile();
+    profile.certifications.push({
+      id: "c1", sectionId: "certificate", values: { grade: "850" },
+    });
+    profile.languages.push({
+      id: "l1", sectionId: "languageTest", values: { grade: "850" },
+    });
+
+    const { byName } = await run({ field: choice(key) }, profile);
+
+    expect(byName("choice").grade).toEqual({
+      grade: "BLOCKED",
+      reason: "OPTION_VALUE_UNMATCHED",
+    });
+  });
+});
