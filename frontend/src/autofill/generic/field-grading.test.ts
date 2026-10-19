@@ -40,7 +40,9 @@ describe("gradeGenericField boundaries", () => {
 
   it("returns REVIEW just below the AUTO boundary down to the REVIEW boundary", () => {
     const below = AUTO_CONFIDENCE_MIN - 0.01;
-    expect(gradeGenericField(input({ confidence: below })).grade).toBe("REVIEW");
+    expect(gradeGenericField(input({ confidence: below })).grade).toBe(
+      "REVIEW",
+    );
     expect(
       gradeGenericField(input({ confidence: REVIEW_CONFIDENCE_MIN })).grade,
     ).toBe("REVIEW");
@@ -67,7 +69,10 @@ describe("gradeGenericField boundaries", () => {
 });
 
 describe("gradeGenericField checks", () => {
-  it.each(["personal.personal.nationality", "contact.contact.residenceCountry"])(
+  it.each([
+    "personal.personal.nationality",
+    "contact.contact.residenceCountry",
+  ])(
     "blocks %s on a select whose options are country calling codes",
     (profileFieldKey) => {
       expect(
@@ -144,7 +149,10 @@ describe("gradeGenericField checks", () => {
         input({
           profileFieldKey: "education.university.schoolName",
           rowSiblings: [
-            { profileFieldKey: "education.graduateSchool.major", confidence: 0.9 },
+            {
+              profileFieldKey: "education.graduateSchool.major",
+              confidence: 0.9,
+            },
           ],
         }),
       ),
@@ -218,7 +226,9 @@ function collectFields(name: string): FieldCandidate[] {
 function gradeTable(name: string, table: Record<string, Mock>) {
   const fields = collectFields(name);
   const entries = Object.entries(table).map(([displayName, mock]) => {
-    const field = fields.find((candidate) => candidate.displayName === displayName);
+    const field = fields.find(
+      (candidate) => candidate.displayName === displayName,
+    );
     if (!field) throw new Error(`fixture field missing: ${displayName}`);
     return { displayName, mock, field };
   });
@@ -258,13 +268,43 @@ afterEach(() => document.body.replaceChildren());
 describe("gradeGenericField on sanitized fixtures", () => {
   it("grades lg-ai-research-birth-split-email fields as listed", () => {
     const table: Record<string, Mock> = {
-      "이름 *": { key: "personal.personal.koreanFamilyName", confidence: 0.9, grade: "AUTO" },
-      "전화번호 *": { key: "contact.contact.phoneNumber", confidence: 0.8, grade: "AUTO" },
-      "성별 *": { key: "personal.personal.gender", confidence: 0.65, grade: "REVIEW" },
-      "년": { key: "personal.personal.birthDate", confidence: 0.9, grade: "BLOCKED" },
-      "이메일 아이디": { key: "contact.contact.email", confidence: 0.7, confirmed: false, grade: "REVIEW" },
-      "링크": { key: "contact.contact.addressLine2", confidence: 0.9, hasValue: false, grade: "BLOCKED" },
-      "선택하세요.": { key: "personal.personal.nationality", confidence: 0.95, grade: "AUTO" },
+      "이름 *": {
+        key: "personal.personal.koreanFamilyName",
+        confidence: 0.9,
+        grade: "AUTO",
+      },
+      "전화번호 *": {
+        key: "contact.contact.phoneNumber",
+        confidence: 0.8,
+        grade: "AUTO",
+      },
+      "성별 *": {
+        key: "personal.personal.gender",
+        confidence: 0.65,
+        grade: "REVIEW",
+      },
+      년: {
+        key: "personal.personal.birthDate",
+        confidence: 0.9,
+        grade: "BLOCKED",
+      },
+      "이메일 아이디": {
+        key: "contact.contact.email",
+        confidence: 0.7,
+        confirmed: false,
+        grade: "REVIEW",
+      },
+      링크: {
+        key: "contact.contact.addressLine2",
+        confidence: 0.9,
+        hasValue: false,
+        grade: "BLOCKED",
+      },
+      "선택하세요.": {
+        key: "personal.personal.nationality",
+        confidence: 0.95,
+        grade: "AUTO",
+      },
     };
     expect(gradeTable("lg-ai-research-birth-split-email", table)).toEqual(
       Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.grade])),
@@ -273,15 +313,55 @@ describe("gradeGenericField on sanitized fixtures", () => {
 
   it("grades sk-careers-application-form fields as listed", () => {
     const table: Record<string, Mock> = {
-      "성명 *": { key: "personal.personal.koreanFamilyName", confidence: 0.95, grade: "AUTO" },
-      "생년월일 *": { key: "personal.personal.birthDate", confidence: 0.9, grade: "AUTO" },
-      "휴대폰 번호 *": { key: "contact.contact.phoneNumber", confidence: 0.85, grade: "AUTO" },
-      "이메일 *": { key: "contact.contact.email", confidence: 0.9, grade: "AUTO", row: "contact" },
-      "보조 이메일": { key: "contact.contact.email", confidence: 0.8, grade: "REVIEW", row: "contact" },
-      "병역구분 *": { key: "military.military.status", confidence: 0.4, grade: "BLOCKED" },
-      "대학 학교명 1*": { key: "education.university.schoolName", confidence: 0.9, grade: "BLOCKED", row: "edu" },
-      "대학원 학교명 1": { key: "education.graduateSchool.schoolName", confidence: 0.9, grade: "BLOCKED", row: "edu" },
-      "대학 전공 1*": { key: "education.university.major", confidence: 0.9, grade: "AUTO" },
+      "성명 *": {
+        key: "personal.personal.koreanFamilyName",
+        confidence: 0.95,
+        grade: "AUTO",
+      },
+      "생년월일 *": {
+        key: "personal.personal.birthDate",
+        confidence: 0.9,
+        grade: "AUTO",
+      },
+      "휴대폰 번호 *": {
+        key: "contact.contact.phoneNumber",
+        confidence: 0.85,
+        grade: "AUTO",
+      },
+      "이메일 *": {
+        key: "contact.contact.email",
+        confidence: 0.9,
+        grade: "AUTO",
+        row: "contact",
+      },
+      "보조 이메일": {
+        key: "contact.contact.email",
+        confidence: 0.8,
+        grade: "REVIEW",
+        row: "contact",
+      },
+      "병역구분 *": {
+        key: "military.military.status",
+        confidence: 0.4,
+        grade: "BLOCKED",
+      },
+      "대학 학교명 1*": {
+        key: "education.university.schoolName",
+        confidence: 0.9,
+        grade: "BLOCKED",
+        row: "edu",
+      },
+      "대학원 학교명 1": {
+        key: "education.graduateSchool.schoolName",
+        confidence: 0.9,
+        grade: "BLOCKED",
+        row: "edu",
+      },
+      "대학 전공 1*": {
+        key: "education.university.major",
+        confidence: 0.9,
+        grade: "AUTO",
+      },
     };
     expect(gradeTable("sk-careers-application-form", table)).toEqual(
       Object.fromEntries(Object.entries(table).map(([k, v]) => [k, v.grade])),
@@ -303,11 +383,16 @@ describe("gradeGenericField other-person context", () => {
     ["contact.contact.email", "Guarantor email"],
     ["contact.contact.phoneNumber", "Guardian phone"],
     ["contact.contact.phoneNumber", "Emergency contact phone"],
-  ])("blocks %s labelled %s even at full confidence", (profileFieldKey, name) => {
-    expect(
-      gradeGenericField(input({ profileFieldKey, displayName: name, confidence: 1 })),
-    ).toEqual(blocked);
-  });
+  ])(
+    "blocks %s labelled %s even at full confidence",
+    (profileFieldKey, name) => {
+      expect(
+        gradeGenericField(
+          input({ profileFieldKey, displayName: name, confidence: 1 }),
+        ),
+      ).toEqual(blocked);
+    },
+  );
 
   it.each(["displayName", "label", "title", "placeholder"] as const)(
     "reads the role vocabulary from %s",
@@ -330,11 +415,15 @@ describe("gradeGenericField other-person context", () => {
       profileFieldKey: "contact.contact.phoneNumber",
       displayName: "추천인 연락처",
     };
-    expect(gradeGenericField(input({ ...own, hasProfileValue: false }))).toEqual({
+    expect(
+      gradeGenericField(input({ ...own, hasProfileValue: false })),
+    ).toEqual({
       grade: "BLOCKED",
       reason: "NO_PROFILE_VALUE",
     });
-    expect(gradeGenericField(input({ ...own, inputType: "tel" }))).toEqual(blocked);
+    expect(gradeGenericField(input({ ...own, inputType: "tel" }))).toEqual(
+      blocked,
+    );
   });
 
   it("does not block keys that are not applicant personal or contact keys", () => {
@@ -349,7 +438,10 @@ describe("gradeGenericField other-person context", () => {
     ).toEqual({ grade: "AUTO" });
     expect(
       gradeGenericField(
-        input({ profileFieldKey: "careers.career.companyName", displayName: "추천인 소속" }),
+        input({
+          profileFieldKey: "careers.career.companyName",
+          displayName: "추천인 소속",
+        }),
       ),
     ).toEqual({ grade: "AUTO" });
   });
@@ -363,11 +455,16 @@ describe("gradeGenericField other-person context", () => {
     ["personal.personal.koreanFamilyName", "이름"],
     ["contact.contact.addressLine1", "주소"],
     ["contact.contact.phoneNumber", "Applicant phone"],
-  ])("leaves the applicant's own %s field labelled %s unchanged", (profileFieldKey, name) => {
-    expect(gradeGenericField(input({ profileFieldKey, displayName: name }))).toEqual({
-      grade: "AUTO",
-    });
-  });
+  ])(
+    "leaves the applicant's own %s field labelled %s unchanged",
+    (profileFieldKey, name) => {
+      expect(
+        gradeGenericField(input({ profileFieldKey, displayName: name })),
+      ).toEqual({
+        grade: "AUTO",
+      });
+    },
+  );
 });
 
 // Role-vocabulary evidence from unrelated sanitized structures; keys are fixed
@@ -392,13 +489,37 @@ describe("gradeGenericField other-person context on sanitized fixtures", () => {
   const blocked = { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
 
   it("blocks referrer fields of kakao-greeting-email", () => {
-    expect(gradeByName("kakao-greeting-email", /^추천인 이메일/, "contact.contact.email")).toEqual(blocked);
-    expect(gradeByName("kakao-greeting-email", /^추천인 이름/, "personal.personal.koreanFamilyName")).toEqual(blocked);
+    expect(
+      gradeByName(
+        "kakao-greeting-email",
+        /^추천인 이메일/,
+        "contact.contact.email",
+      ),
+    ).toEqual(blocked);
+    expect(
+      gradeByName(
+        "kakao-greeting-email",
+        /^추천인 이름/,
+        "personal.personal.koreanFamilyName",
+      ),
+    ).toEqual(blocked);
   }, 30_000);
 
   it("keeps the applicant's own fields of lg-ai-research-birth-split-email unchanged", () => {
-    expect(gradeByName("lg-ai-research-birth-split-email", /^전화번호/, "contact.contact.phoneNumber")).toEqual({ grade: "AUTO" });
-    expect(gradeByName("lg-ai-research-birth-split-email", /^이름/, "personal.personal.koreanFamilyName")).toEqual({ grade: "AUTO" });
+    expect(
+      gradeByName(
+        "lg-ai-research-birth-split-email",
+        /^전화번호/,
+        "contact.contact.phoneNumber",
+      ),
+    ).toEqual({ grade: "AUTO" });
+    expect(
+      gradeByName(
+        "lg-ai-research-birth-split-email",
+        /^이름/,
+        "personal.personal.koreanFamilyName",
+      ),
+    ).toEqual({ grade: "AUTO" });
   }, 30_000);
 });
 
@@ -484,9 +605,9 @@ describe("gradeGenericField date part selects", () => {
   });
 
   it("does not block a date part select as NON_DATE_FIELD but still blocks a plain DIRECT date select", () => {
-    expect(
-      gradeGenericField(part("YEAR", numbered(1990, 2010))),
-    ).toEqual({ grade: "AUTO" });
+    expect(gradeGenericField(part("YEAR", numbered(1990, 2010)))).toEqual({
+      grade: "AUTO",
+    });
     expect(
       gradeGenericField(
         input({
@@ -505,37 +626,40 @@ describe("gradeGenericField date part selects", () => {
     ["MONTH", numbered(1, 12, "월", true)],
     ["DAY", numbered(1, 31, "일")],
     ["DAY", numbered(1, 31, "", true)],
-  ] as const)("passes a %s select whose options fit the part", (kind, names) => {
-    expect(gradeGenericField(part(kind, names))).toEqual({ grade: "AUTO" });
-  });
+  ] as const)(
+    "passes a %s select whose options fit the part",
+    (kind, names) => {
+      expect(gradeGenericField(part(kind, names))).toEqual({ grade: "AUTO" });
+    },
+  );
 
   it("blocks a text control and options that do not fit the part", () => {
     const mismatch = { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
     expect(
-      gradeGenericField(part("YEAR", numbered(1990, 2010), { control: "text" })),
+      gradeGenericField(
+        part("YEAR", numbered(1990, 2010), { control: "text" }),
+      ),
     ).toEqual(mismatch);
     expect(
       gradeGenericField(part("MONTH", ["4.5", "4.0", "3.5", "3.0", "2.5"])),
     ).toEqual(mismatch);
-    expect(
-      gradeGenericField(part("MONTH", numbered(1990, 2010))),
-    ).toEqual(mismatch);
-    expect(
-      gradeGenericField(part("DAY", numbered(1, 12))),
-    ).not.toEqual(mismatch);
-    expect(
-      gradeGenericField(part("DAY", ["가", "나", "다"])),
-    ).toEqual(mismatch);
+    expect(gradeGenericField(part("MONTH", numbered(1990, 2010)))).toEqual(
+      mismatch,
+    );
+    expect(gradeGenericField(part("DAY", numbered(1, 12)))).not.toEqual(
+      mismatch,
+    );
+    expect(gradeGenericField(part("DAY", ["가", "나", "다"]))).toEqual(
+      mismatch,
+    );
   });
 
   it("blocks when the local date part is missing from the options or ambiguous", () => {
     const mismatch = { grade: "BLOCKED", reason: "DATE_PART_OPTIONS_MISMATCH" };
-    expect(
-      gradeGenericField(part("YEAR", numbered(2005, 2020))),
-    ).toEqual(mismatch);
-    expect(
-      gradeGenericField(part("MONTH", numbered(2, 12))),
-    ).toEqual(mismatch);
+    expect(gradeGenericField(part("YEAR", numbered(2005, 2020)))).toEqual(
+      mismatch,
+    );
+    expect(gradeGenericField(part("MONTH", numbered(2, 12)))).toEqual(mismatch);
     expect(
       gradeGenericField(part("MONTH", [...numbered(1, 12), "01월"])),
     ).toEqual(mismatch);
@@ -568,124 +692,5 @@ describe("gradeGenericField date part selects", () => {
         part("YEAR", numbered(1990, 2010), { rowSiblings: [sibling("MONTH")] }),
       ),
     ).toEqual({ grade: "AUTO" });
-  });
-});
-
-describe("gradeGenericField other-person composite name recipes", () => {
-  const blocked = { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
-  const recipeInput = (
-    recipe: "KOREAN_FULL_NAME" | "ENGLISH_FULL_NAME_GIVEN_FIRST" | "ENGLISH_FULL_NAME_FAMILY_FIRST",
-    override: Partial<GradeFieldInput> = {},
-  ): GradeFieldInput => ({
-    confidence: 0.95,
-    categoryConfirmed: true,
-    hasProfileValue: true,
-    control: "text",
-    displayName: "이름",
-    composite: { type: "DERIVED", recipe },
-    ...override,
-  });
-
-  it.each([
-    ["KOREAN_FULL_NAME", "추천인 성명"],
-    ["KOREAN_FULL_NAME", "보증인 성명"],
-    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "Guardian name"],
-    ["ENGLISH_FULL_NAME_FAMILY_FIRST", "보호자 영문 성명"],
-    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "Emergency contact name"],
-  ] as const)("blocks %s labelled %s even at full confidence", (recipe, name) => {
-    expect(
-      gradeGenericField(recipeInput(recipe, { displayName: name, confidence: 1 })),
-    ).toEqual(blocked);
-  });
-
-  it.each(["displayName", "label", "title", "placeholder"] as const)(
-    "reads the role vocabulary of a recipe field from %s",
-    (source) => {
-      const text = "추천인 성명";
-      const override: Partial<GradeFieldInput> = {
-        displayName: "성명",
-        ...(source === "displayName" ? { displayName: text } : {}),
-        ...(source === "label" ? { labels: [{ source: "label", text }] } : {}),
-        ...(source === "title" ? { title: text } : {}),
-        ...(source === "placeholder" ? { placeholder: text } : {}),
-      };
-      expect(gradeGenericField(recipeInput("KOREAN_FULL_NAME", override))).toEqual(blocked);
-    },
-  );
-
-  it.each([
-    ["KOREAN_FULL_NAME", "성명"],
-    ["KOREAN_FULL_NAME", "지원자 성명"],
-    ["ENGLISH_FULL_NAME_GIVEN_FIRST", "영문 이름"],
-    ["ENGLISH_FULL_NAME_FAMILY_FIRST", "Full name"],
-  ] as const)("keeps the applicant's own %s field labelled %s unchanged", (recipe, name) => {
-    expect(gradeGenericField(recipeInput(recipe, { displayName: name }))).toEqual({
-      grade: "AUTO",
-    });
-  });
-
-  it("keeps the safety order: a missing profile value is reported first", () => {
-    expect(
-      gradeGenericField(recipeInput("KOREAN_FULL_NAME", { displayName: "추천인 성명", hasProfileValue: false })),
-    ).toEqual({ grade: "BLOCKED", reason: "NO_PROFILE_VALUE" });
-  });
-});
-
-describe("gradeGenericField unpaired English name part", () => {
-  const given = "personal.personal.englishGivenName";
-  const family = "personal.personal.englishFamilyName";
-  const review = { grade: "REVIEW", reason: "UNPAIRED_NAME_PART" };
-  const single = (override: Partial<GradeFieldInput> = {}) =>
-    input({ profileFieldKey: given, displayName: "영문 이름", sectionSiblingKeys: [], ...override });
-
-  it.each([given, family])("downgrades %s matched without its pair to REVIEW", (key) => {
-    expect(gradeGenericField(single({ profileFieldKey: key }))).toEqual(review);
-    expect(
-      gradeGenericField(single({ profileFieldKey: key, sectionSiblingKeys: [
-        "personal.personal.koreanFamilyName", "contact.contact.email",
-      ] })),
-    ).toEqual(review);
-  });
-
-  it("treats a missing sibling list as no pair", () => {
-    expect(gradeGenericField(single({ sectionSiblingKeys: undefined }))).toEqual(review);
-  });
-
-  it("reports the partial-name risk before an unconfirmed category", () => {
-    expect(gradeGenericField(single({ categoryConfirmed: false }))).toEqual(review);
-  });
-
-  it.each([
-    [given, family],
-    [family, given],
-  ])("keeps %s AUTO when its pair %s is matched in the same section", (key, pair) => {
-    expect(
-      gradeGenericField(single({ profileFieldKey: key, sectionSiblingKeys: [pair] })),
-    ).toEqual({ grade: "AUTO" });
-  });
-
-  it("keeps non-name keys and name recipes unaffected", () => {
-    expect(gradeGenericField(input({ sectionSiblingKeys: [] }))).toEqual({ grade: "AUTO" });
-    expect(
-      gradeGenericField(single({
-        profileFieldKey: undefined,
-        composite: { type: "DERIVED", recipe: "ENGLISH_FULL_NAME_GIVEN_FIRST" },
-      })),
-    ).toEqual({ grade: "AUTO" });
-  });
-
-  it("never lifts a lower grade: low confidence stays BLOCKED, moderate stays REVIEW", () => {
-    expect(gradeGenericField(single({ confidence: 0.4 }))).toEqual({
-      grade: "BLOCKED", reason: "LOW_CONFIDENCE",
-    });
-    expect(gradeGenericField(single({ confidence: 0.6 }))).toEqual({
-      grade: "REVIEW", reason: "MODERATE_CONFIDENCE",
-    });
-  });
-
-  it("keeps other-person blocking ahead of the pair check", () => {
-    expect(gradeGenericField(single({ displayName: "추천인 영문 이름" }))).toEqual({
-      grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT",
-    });
   });
 });

@@ -78,8 +78,13 @@ export interface FieldGradeResult {
 
 const COUNTRY_KEYS = new Set(["nationality", "residenceCountry"]);
 const COUNTRY_CODE_OPTION = /^\+\d{1,3}/;
-const EDUCATION_RECORDS = new Set(["highSchool", "university", "graduateSchool"]);
-const POSTAL_TEXT = /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
+const EDUCATION_RECORDS = new Set([
+  "highSchool",
+  "university",
+  "graduateSchool",
+]);
+const POSTAL_TEXT =
+  /우편\s*번호|\bpostal(?:[\s_-]*code)?\b|\bzip(?:[\s_-]*code)?\b/i;
 
 /** Role words for a person other than the applicant (referee, guarantor, guardian, emergency contact). */
 const OTHER_PERSON_ROLE =
@@ -87,12 +92,21 @@ const OTHER_PERSON_ROLE =
 /** Applicant's own contact and identity keys that must never fill another person's field. */
 const APPLICANT_OWN_FIELD_IDS: Readonly<Record<string, ReadonlySet<string>>> = {
   "personal.personal": new Set([
-    "koreanFamilyName", "koreanGivenName", "hanjaFamilyName", "hanjaGivenName",
-    "englishFamilyName", "englishGivenName",
+    "koreanFamilyName",
+    "koreanGivenName",
+    "hanjaFamilyName",
+    "hanjaGivenName",
+    "englishFamilyName",
+    "englishGivenName",
   ]),
   "contact.contact": new Set([
-    "email", "secondaryEmail", "phoneNumber", "residenceCountry", "postalCode",
-    "addressLine1", "addressLine2",
+    "email",
+    "secondaryEmail",
+    "phoneNumber",
+    "residenceCountry",
+    "postalCode",
+    "addressLine1",
+    "addressLine2",
   ]),
 };
 
@@ -189,8 +203,12 @@ function hasOtherPersonContext(input: GradeFieldInput): boolean {
   // Every derived recipe composes the applicant's own name, so it is never
   // right for another person's field.
   if (input.composite?.type !== "DERIVED") {
-    const [categoryId, sectionId, fieldId] = (input.profileFieldKey ?? "").split(".");
-    if (!APPLICANT_OWN_FIELD_IDS[`${categoryId}.${sectionId}`]?.has(fieldId ?? "")) {
+    const [categoryId, sectionId, fieldId] = (
+      input.profileFieldKey ?? ""
+    ).split(".");
+    if (
+      !APPLICANT_OWN_FIELD_IDS[`${categoryId}.${sectionId}`]?.has(fieldId ?? "")
+    ) {
       return false;
     }
   }
@@ -221,13 +239,22 @@ function hasFormatKeyMismatch(input: GradeFieldInput): boolean {
   if (input.inputType === "email" || input.inputType === "tel") {
     return !isProfileFieldType(input.profileFieldKey, input.inputType);
   }
-  const postalFormat = input.autocomplete === "postal-code" ||
-    (input.maxLength !== undefined && input.maxLength > 0 &&
-      input.maxLength <= 6 && input.inputMode === "numeric") ||
-    [input.title, input.placeholder].some((text) => POSTAL_TEXT.test(text ?? ""));
-  return postalFormat &&
+  const postalFormat =
+    input.autocomplete === "postal-code" ||
+    (input.maxLength !== undefined &&
+      input.maxLength > 0 &&
+      input.maxLength <= 6 &&
+      input.inputMode === "numeric") ||
+    [input.title, input.placeholder].some((text) =>
+      POSTAL_TEXT.test(text ?? ""),
+    );
+  return (
+    postalFormat &&
     input.profileFieldKey?.startsWith("contact.contact.") === true &&
-    ["addressLine1", "addressLine2", "residenceCountry"].includes(fieldIdOf(input.profileFieldKey));
+    ["addressLine1", "addressLine2", "residenceCountry"].includes(
+      fieldIdOf(input.profileFieldKey),
+    )
+  );
 }
 
 /**
@@ -267,8 +294,10 @@ export function gradeGenericField(input: GradeFieldInput): FieldGradeResult {
     if (isLowerDuplicate(input)) {
       return { grade: "REVIEW", reason: "DUPLICATE_KEY_IN_ROW" };
     }
-    if (!input.displayName?.trim() &&
-      !input.labels?.some((label) => label.text.trim())) {
+    if (
+      !input.displayName?.trim() &&
+      !input.labels?.some((label) => label.text.trim())
+    ) {
       return { grade: "REVIEW", reason: "NO_FIELD_CONTEXT" };
     }
     return { grade: "AUTO" };

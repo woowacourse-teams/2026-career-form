@@ -33,9 +33,14 @@ const recipe = (value: Recipe): Override => ({
   profileFieldKey: null,
   binding: { type: "DERIVED", recipe: value },
 });
-const direct = (profileFieldKey: string): Override => ({ ...READY, profileFieldKey });
+const direct = (profileFieldKey: string): Override => ({
+  ...READY,
+  profileFieldKey,
+});
 
-function api(responses: Readonly<Record<string, Override>>): GenericAnalysisApi {
+function api(
+  responses: Readonly<Record<string, Override>>,
+): GenericAnalysisApi {
   return {
     classifySections: async (request) => ({
       schemaVersion: 1,
@@ -109,9 +114,13 @@ async function approveAll(responses: Readonly<Record<string, Override>>) {
   };
   return {
     grade: (name: string) => result.grades.get(idOf(name)),
-    item: (name: string) => items.find((entry) => entry.candidateId === idOf(name)),
+    item: (name: string) =>
+      items.find((entry) => entry.candidateId === idOf(name)),
     written: (name: string) =>
-      writes.some((write) => write.candidateId === idOf(name) && write.status === "written"),
+      writes.some(
+        (write) =>
+          write.candidateId === idOf(name) && write.status === "written",
+      ),
   };
 }
 
@@ -124,14 +133,20 @@ describe("other-person composite name fields", () => {
     ["보호자 성명", "KOREAN_FULL_NAME"],
     ["Referee full name", "ENGLISH_FULL_NAME_GIVEN_FIRST"],
     ["비상연락 영문 성명", "ENGLISH_FULL_NAME_FAMILY_FIRST"],
-  ] as const)("blocks a field labelled %s bound to %s and never writes it", async (label, value) => {
-    document.body.innerHTML = `<form><h2>인적사항</h2><label>${label}<input name="other"></label></form>`;
-    const run = await approveAll({ other: recipe(value) });
-    expect(run.grade("other")).toEqual(OTHER);
-    expect(run.item("other")).toMatchObject({ selected: false, disabled: true });
-    expect(run.written("other")).toBe(false);
-    expect(input("other").value).toBe("");
-  });
+  ] as const)(
+    "blocks a field labelled %s bound to %s and never writes it",
+    async (label, value) => {
+      document.body.innerHTML = `<form><h2>인적사항</h2><label>${label}<input name="other"></label></form>`;
+      const run = await approveAll({ other: recipe(value) });
+      expect(run.grade("other")).toEqual(OTHER);
+      expect(run.item("other")).toMatchObject({
+        selected: false,
+        disabled: true,
+      });
+      expect(run.written("other")).toBe(false);
+      expect(input("other").value).toBe("");
+    },
+  );
 
   it("keeps the applicant's own name fields composed and written", async () => {
     document.body.innerHTML =
@@ -206,7 +221,9 @@ describe("single English name part", () => {
   it("writes the composed full name when the response is an English recipe", async () => {
     document.body.innerHTML =
       '<form><h2>인적사항</h2><label>영문 이름<input name="en"></label></form>';
-    const run = await approveAll({ en: recipe("ENGLISH_FULL_NAME_FAMILY_FIRST") });
+    const run = await approveAll({
+      en: recipe("ENGLISH_FULL_NAME_FAMILY_FIRST"),
+    });
     expect(run.grade("en")).toEqual({ grade: "AUTO" });
     expect(input("en").value).toBe("Synthfamily Synthgiven");
   });
