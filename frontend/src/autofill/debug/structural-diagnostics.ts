@@ -2,6 +2,7 @@
 import { isAutofillDebugEnabled } from "./autofill-debug";
 import type { CandidateRegistry } from "../dom/candidate-registry";
 import type { ReviewPlan } from "../review/review-plan";
+import type { WriteFailureCode } from "../write/failure";
 export type StructuralSkipReason =
   | "owner-mismatch"
   | "label-mismatch"
@@ -35,7 +36,20 @@ export type StructuralSkipReason =
   | "confirm-missing"
   | "confirm-ambiguous"
   | "readback-mismatch"
-  | "cleanup-failed";
+  | "cleanup-failed"
+  | "no-response"
+  | "driver-deferred"
+  | "analysis-limit"
+  | "unsupported-section";
+/** Numeric-only `stage name=` lines outside the collection scope. */
+export type DebugStageName =
+  | "preparation"
+  | "preparation-plan"
+  | "preparation-initial"
+  | "preparation-follow-up"
+  | "preparation-majors"
+  | "address"
+  | "drivers";
 let scope: Set<string> | undefined;
 let scopeStage: "collect" | "prepare" = "collect";
 function line(message: string) {
@@ -62,8 +76,11 @@ export function debugRuntimeSkip(
   reason: StructuralSkipReason,
   detail: string,
   stage: "collect" | "prepare" | "write" | "result" | "address" = "write",
+  failureCode?: WriteFailureCode,
 ) {
-  line(`skip stage=${stage} key=${id} reason=${reason} detail=${detail}`);
+  line(
+    `skip stage=${stage} key=${id} reason=${reason} detail=${detail}${failureCode ? ` failureCode=${failureCode}` : ""}`,
+  );
 }
 type Candidates = {
   fields?: readonly unknown[];
@@ -138,14 +155,21 @@ export async function debugRunBuild(
   }
   line(`build revision=${revision} source_state=${state}`);
 }
+export function debugStageCounts(
+  name: DebugStageName,
+  planned: number,
+  executed: number,
+) {
+  line(
+    `stage name=${name} collected=0 accepted=0 rejected=0 planned=${planned} executed=${executed}`,
+  );
+}
 export function debugPreparationCounts(
   stage: "preparation" | "address",
   planned: number,
   executed: number,
 ) {
-  line(
-    `stage name=${stage} collected=0 accepted=0 rejected=0 planned=${planned} executed=${executed}`,
-  );
+  debugStageCounts(stage, planned, executed);
 }
 export function debugReviewDecisions(
   plan: ReviewPlan,
