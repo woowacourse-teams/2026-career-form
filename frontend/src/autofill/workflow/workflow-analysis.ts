@@ -4,6 +4,7 @@ import {
   debugStageCounts,
 } from "../debug/structural-diagnostics";
 import { prepareNativeMajorsAfterSchool } from "./native-major-preparation";
+import { reportNativeMajorsOfFailedSchools } from "./native-major-unavailable";
 import { nativePolicyRequired } from "./execution-policy";
 import { nativeForm } from "../policy/native-form-collection";
 import { getWriteAdapter } from "../adapters/write";
@@ -1133,6 +1134,33 @@ export function createAnalyzeFields({
               failureCodes.get(item.candidateId) ?? "SEARCH_UNCONFIRMED",
             );
           });
+          // A partially successful stage still prepares the majors of its
+          // committed schools; failed schools report their extra majors.
+          if (writesVerified && analysis.mode !== "GENERIC") {
+            const majors = (run.nativeMajors ??= {
+              attempted: new WeakSet(),
+              unavailable: [],
+            });
+            await prepareNativeMajorsAfterSchool({
+              document: pageDocument,
+              profile: loadedProfile,
+              handles: currentStateDriverItems
+                .filter((_, index) => successful[index])
+                .map((driver) => driver.handle),
+              state: majors,
+              apiClient,
+              signal: run.controller.signal,
+              beforeMutation: profileCurrent,
+            });
+            reportNativeMajorsOfFailedSchools({
+              document: pageDocument,
+              profile: loadedProfile,
+              handles: currentStateDriverItems
+                .filter((_, index) => !successful[index])
+                .map((driver) => driver.handle),
+              state: majors,
+            });
+          }
         }
         await analyzeFields(
           loadedProfile,
