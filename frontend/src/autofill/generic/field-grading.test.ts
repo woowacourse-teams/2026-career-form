@@ -470,8 +470,12 @@ describe("gradeGenericField other-person context", () => {
 // Role-vocabulary evidence from unrelated sanitized structures; keys are fixed
 // mocks and the grading input mirrors what generic analysis passes.
 describe("gradeGenericField other-person context on sanitized fixtures", () => {
-  function gradeByName(name: string, pattern: RegExp, key: string) {
-    const field = collectFields(name).find((candidate) =>
+  function gradeByName(
+    fields: readonly FieldCandidate[],
+    pattern: RegExp,
+    key: string,
+  ) {
+    const field = fields.find((candidate) =>
       pattern.test(candidate.displayName ?? ""),
     );
     if (!field) throw new Error(`fixture field missing: ${pattern}`);
@@ -489,36 +493,22 @@ describe("gradeGenericField other-person context on sanitized fixtures", () => {
   const blocked = { grade: "BLOCKED", reason: "OTHER_PERSON_CONTEXT" };
 
   it("blocks referrer fields of kakao-greeting-email", () => {
+    const fields = collectFields("kakao-greeting-email");
     expect(
-      gradeByName(
-        "kakao-greeting-email",
-        /^추천인 이메일/,
-        "contact.contact.email",
-      ),
+      gradeByName(fields, /^추천인 이메일/, "contact.contact.email"),
     ).toEqual(blocked);
     expect(
-      gradeByName(
-        "kakao-greeting-email",
-        /^추천인 이름/,
-        "personal.personal.koreanFamilyName",
-      ),
+      gradeByName(fields, /^추천인 이름/, "personal.personal.koreanFamilyName"),
     ).toEqual(blocked);
   }, 30_000);
 
   it("keeps the applicant's own fields of lg-ai-research-birth-split-email unchanged", () => {
+    const fields = collectFields("lg-ai-research-birth-split-email");
     expect(
-      gradeByName(
-        "lg-ai-research-birth-split-email",
-        /^전화번호/,
-        "contact.contact.phoneNumber",
-      ),
+      gradeByName(fields, /^전화번호/, "contact.contact.phoneNumber"),
     ).toEqual({ grade: "AUTO" });
     expect(
-      gradeByName(
-        "lg-ai-research-birth-split-email",
-        /^이름/,
-        "personal.personal.koreanFamilyName",
-      ),
+      gradeByName(fields, /^이름/, "personal.personal.koreanFamilyName"),
     ).toEqual({ grade: "AUTO" });
   }, 30_000);
 });
