@@ -60,6 +60,7 @@ const KEY_OF_SCHOOL_LABEL: Record<string, string> = {
 };
 
 interface MockOptions {
+  category?: string;
   abstain?: Array<"REPEAT_ADD" | "SECTION_REVEAL" | "ROW_KIND_OPTION">;
   /** Key returned for graduate school rows instead of the right one. */
   graduateKey?: string;
@@ -128,6 +129,7 @@ function mockApi(options: MockOptions = {}) {
         sections: request.sections.map((section) => ({
           sectionId: section.sectionId,
           category:
+            options.category ??
             CATEGORY_OF_TITLE.find(([pattern]) =>
               pattern.test(section.title ?? ""),
             )?.[1] ?? "NONE",
@@ -210,7 +212,7 @@ function recordQa(name: string, evidence: unknown) {
 }
 
 describe("runGenericStructureLoop", () => {
-  it("grows one career row to three without touching save or next", async () => {
+  it.each(["careers", "CAREER"])("grows one career row to three without touching save or next (%s)", async (category) => {
     document.body.innerHTML = `<form action="/submit"><section>
       <h3>경력</h3>
       <div id="rows">${careerRow(0)}</div>
@@ -236,7 +238,7 @@ describe("runGenericStructureLoop", () => {
       ...createEmptyProfile(),
       careers: entries(3, "career"),
     };
-    const api = mockApi();
+    const api = mockApi({ category });
     const onAction = vi.fn();
 
     const result = await runGenericStructureLoop({
@@ -433,13 +435,13 @@ describe("runGenericStructureLoop", () => {
       ],
     };
 
-    it("links the bachelor and master entries by row kind option without the mixed-section rules", async () => {
+    it.each(["education", "EDUCATION"])("links the bachelor and master entries by row kind option without the mixed-section rules (%s)", async (category) => {
       educationDocument();
       // The default collection does use the mixed rules on this document.
       collectFieldsSnapshot(document);
       expect(vi.mocked(detectMixedSectionGroup)).toHaveBeenCalled();
       vi.clearAllMocks();
-      const api = mockApi();
+      const api = mockApi({ category });
 
       const result = await runGenericStructureLoop({
         document,

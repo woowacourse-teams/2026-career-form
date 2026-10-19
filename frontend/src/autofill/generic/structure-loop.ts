@@ -164,6 +164,14 @@ const REVEAL_PRIORITY: readonly ProfileCategoryId[] = [
   "projects",
   "publications",
 ];
+const REPEAT_CATEGORY_BY_RESPONSE = new Map<string, ProfileCategoryId>([
+  ["EDUCATION", "education"],
+  ["CAREER", "careers"],
+  ["CERTIFICATE", "certifications"],
+  ["LANGUAGE", "languages"],
+  ["PROJECT", "projects"],
+  ["PUBLICATION", "publications"],
+]);
 const TARGET_OF_ROW_KIND: Record<EducationRowKind, TargetKind> = {
   HIGH_SCHOOL: "HIGH_SCHOOL",
   JUNIOR_COLLEGE: "ASSOCIATE",
@@ -362,7 +370,11 @@ export async function runGenericStructureLoop(
       if (response.status !== "COMPLETE") return;
       for (const { sectionId, category } of response.sections) {
         const key = idToKey.get(sectionId);
-        if (key) classified.set(key, category);
+        if (key)
+          classified.set(
+            key,
+            REPEAT_CATEGORY_BY_RESPONSE.get(category) ?? category,
+          );
       }
     } catch {
       // Unclassified groups are reported as blocked below.
