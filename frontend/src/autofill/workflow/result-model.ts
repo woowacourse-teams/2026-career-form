@@ -157,6 +157,8 @@ export function buildResultModel(input: ResultModelInput): ResultModel {
       review("입력 못함", failureCode ?? item.failureCode);
     } else if (entry?.unchanged && matches) {
       skip("기존 값 유지");
+    } else if (item.status === "conflict" && !written && !matches) {
+      review("기존 값과 다름");
     } else if (
       result?.status === "skipped" &&
       !isSkippedByApproval(result) &&
